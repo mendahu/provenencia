@@ -121,6 +121,19 @@ func valueSource(col string) Path {
 	return chain(inbound("observations", col), up("citation_id", "artifact_id", "source_id"))
 }
 
+// ownedValue is the effect of a value row an Observation owns in col: the
+// change carries the Source and handles of the Observations that hold it.
+func ownedValue(entity, col string) Effect {
+	return Effect{
+		Entity:         entity,
+		Source:         valueSource(col),
+		CitationSource: valueSource(col),
+		SourceScope:    valueSource(col),
+		Handles:        valueMembers(col),
+		HandleScope:    valueMembers(col),
+	}
+}
+
 // usesProperty reports whether the change moves the Properties workspace's
 // usedBy counts.
 func (e Effect) usesProperty(ch rowchange.Change) bool {
@@ -203,22 +216,9 @@ var registry = map[string]Effect{
 		SourceScope: chain(inbound("artifacts", "file_id"), field("source_id")),
 		Search:      []SearchDoc{{Kind: DocSource, Path: chain(inbound("artifacts", "file_id"), field("source_id"))}},
 	},
-	"date_values": {
-		Entity:         "date_value",
-		Source:         valueSource("value_date_id"),
-		CitationSource: valueSource("value_date_id"),
-		SourceScope:    valueSource("value_date_id"),
-		Handles:        valueMembers("value_date_id"),
-		HandleScope:    valueMembers("value_date_id"),
-	},
-	"name_values": {
-		Entity:         "name_value",
-		Source:         valueSource("value_name_id"),
-		CitationSource: valueSource("value_name_id"),
-		SourceScope:    valueSource("value_name_id"),
-		Handles:        valueMembers("value_name_id"),
-		HandleScope:    valueMembers("value_name_id"),
-	},
+	"date_values":      ownedValue("date_value", "value_date_id"),
+	"name_values":      ownedValue("name_value", "value_name_id"),
+	"depiction_values": ownedValue("depiction_value", "value_depiction_id"),
 	"source_types": {
 		Entity:     "source_type",
 		Vocabulary: true,
