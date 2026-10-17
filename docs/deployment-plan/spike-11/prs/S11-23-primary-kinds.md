@@ -347,3 +347,15 @@ None.
 
 **Title:** S11-23 — One home for primary kinds
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-23-primary-kinds.md`.
+
+## Landed
+
+Differences from the plan:
+
+- The leading comment in `core/database/searchindex/handles.go` documented the deleted `Kind*` constants and was reworded.
+- `search.isHandleKind` is kept and reads the registry per D-7 / D-9, although the §3 In row says "deleted".
+- The AC-2.6 line numbers moved by one to five lines at the base.
+- §10 step 4 mutation checks were run locally and reverted: adding `case source` to Swift `EvidencePrimaryKind` makes `TestSwiftVocabularyMatchesGo/primary_kinds` fail; adding a `RoleRoot` type to `seedTypes` makes `TestVocabKeysMatchSeed` fail.
+- Added `TestHandleKindsArePrimaryKinds`, which ties the registry's `Handle` kinds to `vocabkey.PrimaryKinds()` (dropping `handle(KindPlace, 2)` makes it fail).
+- Two doc fixes: `docs/matching-model.md` "Not knobs" no longer names `ProfiledKinds` or `OriginProvenencia`, and the `add-searchable-kind` skill has a `Handle` row.
+- `TestVocabKeysMatchSeed` hand-lists the eight Property keys; a typed key list is left for S11-02.
