@@ -37,6 +37,7 @@ var samples = map[string][]samplePair{
 	},
 	propertymeta.ValueTypeInteger: {
 		ofInt(3, 3), ofInt(3, 4), ofInt(3, 6), ofInt(0, 0), ofInt(-2, 2),
+		ofInt(math.MaxInt64, math.MaxInt64-1), ofInt(math.MaxInt64, math.MinInt64), ofInt(math.MinInt64, math.MinInt64+2),
 	},
 }
 

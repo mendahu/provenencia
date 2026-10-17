@@ -27,6 +27,9 @@ func TestIntegerCompare(t *testing.T) {
 		{"gap at tolerance 0", 3, 4, 0, valuecompare.Different, 0, valuecompare.CauseBeyondTolerance, 1},
 		{"gap within tolerance", 3, 4, 2, valuecompare.Near, 1 - 1.0/3, valuecompare.CauseGap, 1},
 		{"gap beyond tolerance", 3, 6, 2, valuecompare.Different, 0, valuecompare.CauseBeyondTolerance, 3},
+		{"gap past float precision", 1<<53 + 1, 1 << 53, 0, valuecompare.Different, 0, valuecompare.CauseBeyondTolerance, 1},
+		{"full int64 span", math.MaxInt64, math.MinInt64, 0, valuecompare.Different, 0, valuecompare.CauseBeyondTolerance, math.MaxUint64},
+		{"full int64 span swapped", math.MinInt64, math.MaxInt64, 3, valuecompare.Different, 0, valuecompare.CauseBeyondTolerance, math.MaxUint64},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			rules := matchregistry.Default().Value

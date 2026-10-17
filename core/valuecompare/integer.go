@@ -1,24 +1,27 @@
 package valuecompare
 
-import (
-	"fmt"
-	"math"
-)
+import "fmt"
 
 // integer compares counts and other whole numbers. Equal is Same; a gap within
 // Tolerance is Near and falls off with the gap; beyond it they disagree.
 type integer struct{}
 
 func (integer) compare(a, b Value, r Rules) (Result, Detail) {
-	gap := math.Abs(float64(a.Integer) - float64(b.Integer))
-	det := Detail{Distance: gap, Unit: UnitCount}
+	// The gap as a uint64 is exact for any pair of int64s; float64 would lose
+	// it past 2^53.
+	lo, hi := a.Integer, b.Integer
+	if lo > hi {
+		lo, hi = hi, lo
+	}
+	gap := uint64(hi) - uint64(lo)
+	det := Detail{Distance: float64(gap), Unit: UnitCount}
 	switch {
-	case a.Integer == b.Integer:
+	case gap == 0:
 		det.Cause = CauseExact
 		return Result{Relation: Same, Similarity: 1}, det
-	case gap <= float64(r.Integers.Tolerance):
+	case gap <= uint64(r.Integers.Tolerance):
 		det.Cause = CauseGap
-		return Result{Relation: Near, Similarity: falloff(gap, float64(r.Integers.Tolerance))}, det
+		return Result{Relation: Near, Similarity: falloff(det.Distance, float64(r.Integers.Tolerance))}, det
 	}
 	det.Cause = CauseBeyondTolerance
 	return Result{Relation: Different}, det
