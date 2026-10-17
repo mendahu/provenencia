@@ -174,6 +174,7 @@ type PartMatch struct {
 - **`Cause` is a shared vocabulary of codes:** `exact`, `case`, `fold`, `alias`, `abbreviation`, `initial`, `spelling`, `precision`, `missing_part`, `overlap`, `gap`, `beyond_tolerance`, `generation_conflict`, `empty`, `phrase_only`. UI copy, reason codes and labeler features are all keyed on these.
 - **`Parts` explains the match.** Which words or ends paired is what the UI shows and what the labeler records as features.
 - **No strings to parse.** The display text is for showing; logic reads the codes.
+- **Echoes the callers' value refs.** Each value can carry an opaque ref (an Observation id) that the layers never read and `Detail` hands back, so the claim evidence view knows exactly which Observations spoke without the layers knowing about the catalog. Segment comparison does the same for a whole segment: bridge ends, role or term, and the neighbor's agreeing values.
 - **Rich enough to word evidence lines.** The claim evidence view ([`claim-evidence.md`](claim-evidence.md)) builds each sentence ("same name, different spelling", "same date, recorded less precisely") from the relation and `Cause` alone.
 
 ### Purity requirements

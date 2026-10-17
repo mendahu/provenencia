@@ -75,11 +75,21 @@ New chrome and copy: a Claude Design brief ([`add-design-brief`](../../../.agent
 - **The lines compare only the neighbor's own values** (her husband's name), never the relationship itself.
 - **The heading is "Through <name>"** (`promote.sheet.through`): no relationship, and no reason it matters.
 
-**Proposed:**
+**Decided (2026-10-17): one statement per relationship, many Observations behind it.**
+
+The researcher wants to say "these are the same person because their births match". Behind that sentence is a lot of evidence, and the application gathers and pins all of it so the researcher doesn't have to.
+
 - **Use segments.** A relationship section exists only when the Source segment (this Subject – bridge – neighbor) corresponds to a member segment (member – bridge – neighbor's member). Correspondence comes from segment comparison (layer 5): same bridge kind, role or term, and direction, with inverse terms (parent ↔ child). A spouse only meets a spouse.
-- **Say what the relationship is and why it counts.** Heading: "Both records name the same spouse: Robert Gates". The lines under it compare Robert's values ("His name matches · 1871 census") and the relationship's own values where it has them (the marriage date).
-- **Pin the relationship too.** The bridge's own Observations (the relationship type, the role) are evidence for the claim, alongside the neighbor's matching values.
-- **Order sections by importance.** Core relationships first (birth, death, parents and children, spouses, per the spike's sparse-data principle), then the rest.
+- **Every corresponding relationship counts, as much evidence as there is,** ordered core first (birth, death, parents and children, spouses, per the sparse-data principle), then the rest.
+- **One line per matching relationship:** "Their births match" or "Both records name the same spouse: Robert Gates". One checkbox. Matching segments start checked; partial ones are pinnable and start unchecked, like property lines.
+- **The line is a bundle.** Checking it pins every Observation that backs the segment, on both sides:
+  - the bridge's own Observations: its two ends (who and which event), and its role or relationship type;
+  - the neighbor's properties that agree: for a birth, its event type and its date;
+  - where the relationship has its own values (a marriage date), those too.
+
+  For "their births match" that is roughly ten Observations: about five on the Source, and five on the member. The count follows the data; the bundle is whatever the segment comparison used.
+- **Expandable, not required.** The line opens to show what's behind it ("Birth · 3 Mar 1817 · 1871 census"), but the researcher never has to tick the parts.
+- **Collapsing members works the same way:** several members whose births all match are one line, "Their births match · 4 records".
 
 ## Retires
 
@@ -88,6 +98,5 @@ New chrome and copy: a Claude Design brief ([`add-design-brief`](../../../.agent
 
 ## Open questions
 
-- **Which relationships get a section:** every corresponding bridge kind, ordered core first (proposed), or only the core ones?
-- **Pinning the bridge's own Observations** (relationship type, role) on the person's claim: wanted?
+- **Where a bundle's pins land.** On the person's claim (with backfill onto each member's claim), as today. The neighbor event gets its own claim and pins from its own row; duplicates across claims are accepted on purpose (§9).
 
