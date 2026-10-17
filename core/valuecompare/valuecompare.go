@@ -55,7 +55,7 @@ const (
 	CausePhraseOnly         Cause = "phrase_only"
 	// CauseNoMatch: nothing in common.
 	CauseNoMatch Cause = "no_match"
-	// CauseTooLong: text with more words than the alignment may compare.
+	// CauseTooLong: text or a name with more words than may be compared.
 	CauseTooLong Cause = "too_long"
 	// CauseOrder: text whose shared words are out of order.
 	CauseOrder Cause = "order"

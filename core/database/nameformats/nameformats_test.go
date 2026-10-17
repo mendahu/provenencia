@@ -142,7 +142,7 @@ func TestRowOnlyProfileFormatsWithoutCode(t *testing.T) {
 }
 
 func TestLoadIDRefusesBadWeight(t *testing.T) {
-	for name, weight := range map[string]float64{"negative": -1, "infinite": math.Inf(1)} {
+	for name, weight := range map[string]float64{"negative": -1, "infinite": math.Inf(1), "huge": 1e308} {
 		t.Run(name, func(t *testing.T) {
 			c, err := database.Create(t.TempDir(), "t.provenencia")
 			if err != nil {

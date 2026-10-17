@@ -1,6 +1,7 @@
 package valuecompare
 
 import (
+	"math"
 	"slices"
 	"sort"
 	"strings"
@@ -264,7 +265,7 @@ func (n name) compare(a, b Value, r Rules) (Result, Detail) {
 	for _, w := range pairWeight {
 		pairedWeight += w
 	}
-	if totalWeight <= 0 || pairedWeight <= 0 {
+	if totalWeight <= 0 || pairedWeight <= 0 || !finite(totalWeight) || !finite(pairedWeight) {
 		return Result{Relation: Unknown}, Detail{Cause: CauseEmpty}
 	}
 
@@ -404,3 +405,6 @@ func sharesAny(a, b []string) bool {
 	}
 	return false
 }
+
+// finite reports whether f is neither NaN nor infinite.
+func finite(f float64) bool { return !math.IsNaN(f) && !math.IsInf(f, 0) }

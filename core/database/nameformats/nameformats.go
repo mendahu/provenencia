@@ -186,6 +186,9 @@ func Load(q Querier) (Loaded, error) {
 	}, nil
 }
 
+// maxWeight is far above the built-in 1.5; it refuses weights whose sums overflow.
+const maxWeight = 1000
+
 // LoadID reads one profile. sql.ErrNoRows when the id is absent.
 func LoadID(q Querier, id []byte) (Profile, error) {
 	var p Profile
@@ -226,9 +229,9 @@ func LoadID(q Querier, id []byte) (Profile, error) {
 			rows.Close()
 			return Profile{}, err
 		}
-		if math.IsNaN(weight) || math.IsInf(weight, 0) || weight < 0 {
+		if math.IsNaN(weight) || math.IsInf(weight, 0) || weight < 0 || weight > maxWeight {
 			rows.Close()
-			return Profile{}, fmt.Errorf("nameformats: profile %q weight %q is %v; a weight is a finite number of 0 or more", p.Key, slot, weight)
+			return Profile{}, fmt.Errorf("nameformats: profile %q weight %q is %v; a weight is a finite number from 0 to %v", p.Key, slot, weight, float64(maxWeight))
 		}
 		switch slot {
 		case "family":

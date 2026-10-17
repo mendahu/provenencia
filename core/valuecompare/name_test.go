@@ -99,6 +99,15 @@ func withoutWeights(r *valuecompare.Rules) {
 	r.Names.Western.Weights = valuecompare.NameWeights{Family: 1, FirstGiven: -2}
 }
 
+// withHugeWeights adds a pattern whose weights are each finite but sum past
+// the largest float.
+func withHugeWeights(r *valuecompare.Rules) {
+	p := matchregistry.Default().Value.Names.Western
+	h := 1e308
+	p.Weights = valuecompare.NameWeights{Family: h, FirstGiven: h, OtherGiven: h, Nick: h, Untyped: h}
+	r.Names.Patterns = map[string]valuecompare.NamePattern{"huge": p}
+}
+
 func withFlipped(r *valuecompare.Rules) {
 	r.Names.Patterns = map[string]valuecompare.NamePattern{"flipped": flipped()}
 }
@@ -245,8 +254,10 @@ var nameCases = []nameCase{
 		rel: valuecompare.Near, sim: (0.8*(F+U) + 0.75*2*G1) / (F + G1 + G1 + U), why: valuecompare.CauseRole},
 	{name: "AC-2.1 cause does not depend on the side, swapped", a: nv("g=John|_=Robins"), b: nv("s=Robins|g=Jon"),
 		rel: valuecompare.Near, sim: (0.8*(F+U) + 0.75*2*G1) / (F + G1 + G1 + U), why: valuecompare.CauseRole},
-	{name: "AC-1.17 weights that sum to nothing are unknown", rules: withoutWeights,
+	{name: "weights that sum to nothing are unknown", rules: withoutWeights,
 		a: nv("g=Jan|s=Robins"), b: nv("s=Robins"), rel: valuecompare.Unknown, why: valuecompare.CauseEmpty},
+	{name: "weights that sum past the largest float are unknown", rules: withHugeWeights,
+		a: patterned(nv("g=John|s=Robins"), "huge"), b: patterned(nv("s=Robins"), "huge"), rel: valuecompare.Unknown, why: valuecompare.CauseEmpty},
 	{name: "AC-1.16 unknown key reads Western", rules: withFlipped,
 		a: patterned(nv("g=Robins|s=James"), "missing"), b: nv("g=James|s=Robins"),
 		rel: valuecompare.Different, why: valuecompare.CauseBelowMinimum},
