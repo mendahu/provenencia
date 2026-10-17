@@ -87,7 +87,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | S11-01 | One-page matching model | 1 | Diagram, glossary, knob inventory with starting values and estimates | — | — | [plan](prs/S11-01-matching-model.md) | Planned |
 | S11-22 | Pure value types | 1 | Date and name value structs, display helpers, part types, value-type and cardinality constants move to pure packages | — | — | [plan](prs/S11-22-pure-value-types.md) | Planned |
-| S11-23 | One home for primary kinds | 1 | `person` / `event` / `place`, their locked property keys, and the Origin constants in one pure place; the hand-written lists use it | — | S11-22 | — | Scoped |
+| S11-23 | One home for primary kinds | 1 | `person` / `event` / `place`, the Property keys matching reads by name, and the Origin constants and check in one pure place; the hand-written lists use it | — | S11-22 | [plan](prs/S11-23-primary-kinds.md) | Blocked — on S11-22 |
 | S11-02 | Value compare core and match registry | 2 | `valuecompare` contract, `Key`, text / term / integer, `matchregistry` skeleton and value section, the guard, the matching skill | — | S11-01, S11-22, S11-23 | — | Scoped |
 | S11-03 | Value compare: names | 2 | Name comparer on relations; word helpers move in from `autoreconcile`; alias seeds to `namealiases` | — | S11-02 | — | Scoped |
 | S11-04 | Value compare: dates | 2 | Date comparer on relations; date windows move in; `ABT` as a range | — | S11-02 | — | Scoped |
@@ -232,7 +232,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-23 — One home for primary kinds
 
-**Ships.** `person`, `event`, `place` and their locked property keys in one pure place; `promote.primaryKinds`, `match.ProfiledKinds`, `promotealign/layer.go` and the `FakeStore` literals use it. `sourcegraphprogress` drops its `promote` import. `OriginProvenencia` / `OriginUser`, declared today in nine packages (`properties`, `subjecttypes`, `propertyterms`, `sourcetypes`, `metadatafields`, `nameformats`, `claimconfidencegrades`, `sourcecredibilitygrades`, `core/connectrules`), get the same pure home. Closes "Primary Subject kinds" in [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md).
+**Ships.** `person`, `event`, `place` and the Property keys matching reads by name (their locked keys plus `sex_at_birth` and `gender`) in one pure place, `core/vocabkey`; `promote.primaryKinds`, `match.ProfiledKinds`, `promotealign/layer.go` and the `FakeStore` literals use it. `sourcegraphprogress` drops its `promote` import. `OriginProvenencia` / `OriginUser`, declared today in nine packages (`properties`, `subjecttypes`, `propertyterms`, `sourcetypes`, `metadatafields`, `nameformats`, `claimconfidencegrades`, `sourcecredibilitygrades`, `core/connectrules`), get the same pure home, with the origin check the seven `originOK` copies repeat. Closes "Primary Subject kinds" in [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md).
 **Not this PR.** Registry keys (S11-02 uses these).
 **Check.** No hand-written kind list remains (grep); tests pass.
 **Context.** [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md) "Primary Subject kinds".
