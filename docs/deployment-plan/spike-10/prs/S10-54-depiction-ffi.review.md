@@ -7,7 +7,7 @@ Round 2 was not run. The two blockers (X-1, X-2) were test and project-file gaps
 
 ## To user
 
-- **Error copy (D-9).** "The picture of that region couldn’t be read." for `ingest.unsupported_image`, and "Invalid depiction value." for `depictionvalues.invalid`. Recommendation: keep both.
+- **Error copy (D-9).** "The picture of that region couldn’t be read." for `ingest.unsupported_image`, and "Invalid depiction value." for `depictionvalues.invalid`. **Answered:** keep both (user, 2026-10-17).
 
 ## Writer's own calls
 
@@ -16,7 +16,6 @@ Round 2 was not run. The two blockers (X-1, X-2) were test and project-file gaps
 - D-5: the create and append responses now return listed rows, in draft order.
 - D-6: the source graph reads the depiction with a join; `depictionvalues.LookupManyTx` is not added.
 - D-8: labels move onto `PropertyValueType` as an exhaustive switch.
-- D-9: the copy above.
 - D-10: the unused `observationsToInputs` is deleted.
 - `FakeStore` produces no depictions, and the pill keeps the default colour (both go to S10-34).
 
