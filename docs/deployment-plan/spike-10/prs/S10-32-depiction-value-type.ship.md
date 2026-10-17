@@ -1,7 +1,7 @@
 # Ship log — S10-32 Depiction value and `likeness` on Person
 
 **Plan:** [`S10-32-depiction-value-type.md`](S10-32-depiction-value-type.md) · **Branch:** `s10-32-depiction-value` · **PR:** #430
-**State:** fixing 3
+**State:** ready
 
 The plan refresh (`36ef0065`) is the branch's first commit, on the user's call (2026-10-17): no separate docs PR. Base `ae26c629`.
 
@@ -109,3 +109,9 @@ Do: `sqlListSelect` adds `LEFT JOIN citations dc ON dc.id = o.citation_id` and `
 Check: the test passes, and fails on (a) and (b) with the old `Readable`; `grep -rn ValidateRegionDocument core` prints nothing; `CGO_ENABLED=1 go test -tags fts5 ./core/...` passes; scripts/check-pr.sh PASS.
 
 Docs: the plan's Landed note and the `completed.md` S10-32 sentence say the read checks the region against the Citation's page and the image's type.
+
+## Round 3 — fix
+Head `79729824`. Gate PASS (orchestrator run). F-6 done (`481bc985`): `Readable(v, citationLocatorJSON, imageMediaType)` checks the region against the Citation's page with `ValidateDepictionRegion` and drops an image whose File is not `image/png`; the two new test rows fail with the old `Readable`. `ValidateRegionDocument` deleted.
+
+## Result (final)
+Gate PASS · open: none · follow-ups: SEC-2, UX-1 (S10-54) · logged: MNT-4, MNT-5 (fixed), MNT-6, UX-2 · rejected by user: SEC-1 · to user: manual check §10.1 (CON-3)
