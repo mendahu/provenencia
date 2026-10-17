@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
+	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -229,24 +230,62 @@ func TestForEntityFieldsFollowTheRecords(t *testing.T) {
 	}
 }
 
-// The Person page lists no depiction field before the gallery exists (S10-35).
-func TestForEntityLikenessHasNoField(t *testing.T) {
+// The Person page lists likenesses apart from its fields, earliest first.
+func TestForEntityLikenesses(t *testing.T) {
 	f := newFixture(t)
-	src := f.source("Register")
-	a := f.personOn(src)
+	register, census := f.source("Register"), f.source("Census")
+	a, b := f.personOn(register), f.personOn(census)
 	f.cite(a, f.nameIn(a, "given=James|surname=Robins"))
-	likeness, err := properties.Lookup(f.c, "likeness", vocabkey.OriginProvenencia)
-	must(t, err)
-	art := observationstest.FileArtifact(t, f.c, userID, src.ID)
-	_, _, err = observationstest.SaveCitation(f.c, userID, art, observations.Input{
-		SubjectID: a.ID, PropertyID: likeness.ID,
-		Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 40, 30, 100)},
-	})
-	must(t, err)
+	oa := observationstest.SaveLikeness(t, f.c, userID, register.ID, a.ID, 100)
+	ob := observationstest.SaveLikeness(t, f.c, userID, census.ID, b.ID, 200)
 	h := f.promote(a, nil)
+	f.promote(b, h)
 	d := f.detail(h)
 	if len(d.Fields) != 1 || d.Fields[0].PropertyKey != "name" {
 		t.Fatalf("fields %+v", d.Fields)
+	}
+	if len(d.Likenesses) != 2 {
+		t.Fatalf("likenesses %+v", d.Likenesses)
+	}
+	first := d.Likenesses[0]
+	if first.Record.SourceTitle != "Register" || !bytes.Equal(first.Record.ObservationID, oa.ID) ||
+		!bytes.Equal(first.Record.CitationID, oa.CitationID) || len(first.ImageFileID) != 16 {
+		t.Fatalf("first %+v", first)
+	}
+	if !bytes.Equal(d.Likenesses[1].Record.ObservationID, ob.ID) || d.Likenesses[1].Record.SourceTitle != "Census" {
+		t.Fatalf("second %+v", d.Likenesses[1])
+	}
+
+	only := newFixture(t)
+	n := only.personOn(only.source("Register"))
+	only.cite(n, only.nameIn(n, "given=Ann"))
+	if got := only.detail(only.promote(n, nil)); len(got.Likenesses) != 0 {
+		t.Fatalf("likenesses %+v", got.Likenesses)
+	}
+}
+
+// A likeness whose image File is not a PNG is neither listed nor the lead.
+func TestForEntityLikenessNeedsAPNG(t *testing.T) {
+	f := newFixture(t)
+	src := f.source("Register")
+	a := f.personOn(src)
+	oa := observationstest.SaveLikeness(t, f.c, userID, src.ID, a.ID, 100)
+	h := f.promote(a, nil)
+	db, err := f.c.DB()
+	must(t, err)
+	var image []byte
+	must(t, db.QueryRow(`SELECT dv.image_file_id FROM observations o
+		JOIN depiction_values dv ON dv.id = o.value_depiction_id WHERE o.id = ?`, oa.ID).Scan(&image))
+	_, err = db.Exec(`UPDATE files SET media_type = 'image/jpeg' WHERE id = ?`, image)
+	must(t, err)
+	if d := f.detail(h); len(d.Likenesses) != 0 {
+		t.Fatalf("likenesses %+v", d.Likenesses)
+	}
+	f.c.Graph().Drop()
+	rows, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{h})
+	must(t, err)
+	if len(rows) != 1 || rows[0].LikenessImageFileID != nil {
+		t.Fatalf("header leads with %x", rows[0].LikenessImageFileID)
 	}
 }
 

@@ -11,8 +11,6 @@ struct PlaceDetailView: View {
         ConclusionDetailPage<PlaceDetailContent, PlaceDetailChain>(
             session: session,
             entityId: entityId,
-            mark: .subjectPlace,
-            thumbnailLabel: L10n.Conclusions.placeNoImage,
             pageIdentifier: "places.detail",
             errorIdentifier: "places.detail.error",
             make: { PlaceDetailContent(detail: $0) },

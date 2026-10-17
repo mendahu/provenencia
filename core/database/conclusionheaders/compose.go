@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/likenesses"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/hops"
@@ -435,9 +436,17 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 	for _, n := range nodes {
 		byID[string(n.ID)] = n
 	}
+	gallery, err := likenesses.ForEntities(g, need)
+	if err != nil {
+		return nil, err
+	}
 	fresh := map[string]PersonHeader{}
 	for _, id := range need {
-		h, err := onePerson(v, byID[string(id)], g, pg)
+		var lead []byte
+		if ls := gallery[string(id)]; len(ls) > 0 {
+			lead = ls[0].ImageFileID
+		}
+		h, err := onePerson(v, byID[string(id)], g, pg, lead)
 		if err != nil {
 			return nil, err
 		}
@@ -458,8 +467,8 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 	return out, nil
 }
 
-func onePerson(v vocab, n *graphcache.Node, g *graphcache.Graph, pg *placeGraph) (PersonHeader, error) {
-	h := PersonHeader{Entity: entityOf(n)}
+func onePerson(v vocab, n *graphcache.Node, g *graphcache.Graph, pg *placeGraph, lead []byte) (PersonHeader, error) {
+	h := PersonHeader{Entity: entityOf(n), LikenessImageFileID: lead}
 	name, count, err := keptName(n, v.prop(vocabkey.PropertyName))
 	if err != nil {
 		return PersonHeader{}, err

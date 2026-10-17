@@ -11,8 +11,6 @@ struct PersonDetailView: View {
         ConclusionDetailPage<PersonDetailContent, PersonDetailVitals>(
             session: session,
             entityId: entityId,
-            mark: .subjectPerson,
-            thumbnailLabel: L10n.Conclusions.personNoLikeness,
             pageIdentifier: "persons.detail",
             errorIdentifier: "persons.detail.error",
             make: { PersonDetailContent(detail: $0, orders: session.nameFormat) },

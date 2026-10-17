@@ -1153,6 +1153,11 @@ message PersonHeader {
   // List*Headers responses only.
   int64 updated_revision = 6;
   string updated_at = 7;
+  // likeness_image_rel_path is the objects/… path of the likeness the Person
+  // leads with on its page and in the Persons list (S10-35: the earliest
+  // gallery likeness); empty when none. Filled on ListPersonHeaders and
+  // GetConclusionDetail only.
+  string likeness_image_rel_path = 8;
 }
 
 // ListPersonHeaders returns every unmerged Person in list order: by the title
@@ -1333,6 +1338,15 @@ message GetConclusionDetailRequest {
   string entity_id = 2;
 }
 
+// LikenessDetail is one likeness a Person page's gallery shows (S10-35),
+// earliest recorded first. record is its earliest Observation, as the Why
+// shows it; the tile opens that record's Citation. image_rel_path is empty
+// when the File's path cannot be derived.
+message LikenessDetail {
+  string image_rel_path = 1;
+  ReconcilerOutcomeDetail record = 2;
+}
+
 message ConclusionDetail {
   CanonicalEntity entity = 1;
   repeated ConclusionField fields = 2;
@@ -1345,6 +1359,7 @@ message ConclusionDetail {
     EventHeader event = 5;
     PlaceHeader place = 6;
   }
+  repeated LikenessDetail likenesses = 7;
 }
 
 // ProposePromoteGraphAlignment loads one Source's Evidence layer and proposes
