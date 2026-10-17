@@ -1,6 +1,6 @@
 # S11-01 — One-page matching model
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 11 · Slice 1 — Graspable model and pure foundations
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: docs only)
@@ -13,7 +13,7 @@
 **Rules that bind:** —
 **Context:** [`comparison-layers.md`](../comparison-layers.md) (whole), [`claim-evidence.md`](../claim-evidence.md), working rules "Registry numbers: carry over, then estimate", "One match registry", "Matching is a stack of pure layers"; [`ideas/matching-test-suite.md`](../../../ideas/matching-test-suite.md) "First: make the algorithm graspable"
 **Planned:** 2026-10-17 against `main` @ `af50bd6`
-**Review:** — (not reviewed yet)
+**Review:** [`S11-01-matching-model.review.md`](S11-01-matching-model.review.md) — Fits with changes / Not ready → fixed, 1 round
 
 ### Implementer — read this first
 
@@ -59,13 +59,13 @@ One domain doc explains the matching algorithm Spike 11 builds: the six layers, 
 | --- | --- | --- |
 | AC-3.1 | The knob inventory | It has one row per knob in §6's inventory, with key, starting value, source (today's symbol or "estimate" with a reason), and what it changes |
 | AC-3.2 | A carried-over knob | Its source names today's symbol: name agree 2.5 → `core/graphalign/registry.go` `DefaultConfig` name `PropertyScale` |
-| AC-3.3 | The removed-knobs table | Every tunable in today's `core/match/registry.go` and `core/graphalign/registry.go` that has no row in the inventory is listed as removed, with the reason |
+| AC-3.3 | The removed-knobs and not-a-knob tables | Every exported var, const and `Config` field in today's `core/match/registry.go` and `core/graphalign/registry.go`, and every value in `DefaultConfig`, is an inventory Source, a removed row, or a not-a-knob row |
 
 ## 3. Scope
 
 | In | Covered by |
 | --- | --- |
-| `docs/matching-model.md` (new): diagram, layer table, worked example, glossary, retired words, knob inventory, removed knobs | STEP-1 – STEP-5, AC-1.1 – AC-3.3 |
+| `docs/matching-model.md` (new): diagram, layer table, worked example, glossary, retired words, knob inventory, removed knobs, not-a-knob list | STEP-1 – STEP-5, AC-1.1 – AC-3.3 |
 | Banner on `docs/matching.md` and `docs/promote-graph-alignment.md`; section markers on the superseded parts of the latter | STEP-6 |
 | Links from the Spike 11 README and `comparison-layers.md` to the model | STEP-7 |
 
@@ -96,11 +96,11 @@ One domain doc explains the matching algorithm Spike 11 builds: the six layers, 
 | --- | --- | --- | --- |
 | D-1 | The model is a new `docs/matching-model.md` (new), not a rewrite of `docs/matching.md` | `docs/matching.md` must keep describing the running code until the layer PRs replace it; a domain rule that outlives the spike belongs in a domain doc, not in the spike folder | Rewriting `docs/matching.md` now — because it would describe code that does not exist for several PRs |
 | D-2 | The diagram is a `text` code block, like `docs/promote-graph-alignment.md` and the spike docs | Repo style; renders everywhere | Mermaid or an image — because no domain doc uses them |
-| D-3 | Glossary terms: value, value type, relation (each of `Same`, `Equivalent`, `Contains`, `Overlaps`, `Near`, `Different`, `Unknown`), similarity, detail, cause, value ref, key, property comparison, outcome (agree, partial, conflict, unknown), Subject comparison, evidence, agree weight, conflict penalty, pair (compared together), profile, entity comparison, lifespan, segment, bridge, cardinality, support, credit, shortlisting, shortlist key, shortlisted handle, nominated handle, candidate, anchor, accept bar, queue, dirty pair, settle, band, contested, match registry, knob | These are the words the layer PRs and the evidence sheet use | A longer list — because a term no PR uses is noise |
+| D-3 | Glossary terms: value, value type, speaking pair, relation (each of `Same`, `Equivalent`, `Contains`, `Overlaps`, `Near`, `Different`, `Unknown`), similarity, detail, cause, value ref, key, property comparison, outcome (agree, partial, conflict, unknown), Subject comparison, evidence, agree weight, conflict penalty, pair (compared together), profile, entity comparison, lifespan, segment, bridge, cardinality, support, credit, shortlisting, shortlist key, shortlisted handle, nominated handle, candidate, anchor, accept bar, queue, dirty pair, settle, band, contested, match registry, knob | These are the words the layer PRs and the evidence sheet use | A longer list — because a term no PR uses is noise |
 | D-4 | Retired words, each with its replacement: score (→ similarity or evidence), points (→ evidence), weight (→ agree weight), contradiction (→ conflict penalty), scale and floor (→ relation outcome and `Near` minimum), fan-out (→ cardinality), signature (→ bridge key), support for a link (→ support; the reconciler's support count keeps its own name), `Rank` (→ shortlisting + entity comparison), profile in `core/match` (→ subject registry section), blocking (→ shortlisting), frequency / m / u / discount (→ removed) | The vocabulary problems found while scoping ([`comparison-layers.md`](../comparison-layers.md#why)) | Leaving old words undocumented — because both vocabularies will be in the code for several PRs |
-| D-5 | Who updates the old docs: S11-05 points `docs/matching.md` at the model for comparers; S11-13 deletes `docs/matching.md` (its content is in the model and in code comments); S11-16 rewrites `docs/promote-graph-alignment.md` §4.1, §5, §6 and §12 against the model. This PR only adds the banner and markers | Each doc changes in the PR that makes it false (working rule "One matching skill, grown with the layers") | Deleting the old docs now — because they still describe the running code |
-| D-6 | Inventory keys are dotted paths of the planned registry: `section.Group.Field` (`value.Names.UntypedAffinity`, `subject.person.name.Agree`, `alignment.AcceptBar`). The table is a plain Markdown table with exactly the columns Key, Start, Source, Changes | S11-02's drift guard parses this table and compares it with `matchregistry.Default()`; one parseable shape | Prose lists — because a guard can't read them |
-| D-7 | Starting values: carried over from today's symbol where the knob exists; otherwise an estimate written as "estimate: <one-sentence reason>". The values are the ones in §6's inventory | Working rule "Registry numbers: carry over, then estimate" | Picking new values by feel — because nothing measures them yet |
+| D-5 | Who updates the old docs: S11-05 points `docs/matching.md` at the model for comparers; S11-13 deletes `docs/matching.md` (its content is in the model and in code comments); S11-16 rewrites `docs/promote-graph-alignment.md` §4.1, §5, §6 and §12 against the model, and re-points the links into those sections from `docs/conclusion-layer-data-model.md` (L256) and `docs/conclusion-reconciliation.md` (L141). This PR only adds the banner and markers | Each doc changes in the PR that makes it false (working rule "One matching skill, grown with the layers") | Deleting the old docs now — because they still describe the running code |
+| D-6 | Inventory keys are dotted paths of the planned registry: `section.Group.Field` (`value.Names.UntypedAffinity`, `subject.person.name.Agree`, `alignment.AcceptBar`). The table is a plain Markdown table with exactly the columns Key, Start, Source, Changes, and every registry field is a row, numeric or not (data such as particles and cardinality included). **The Go registry is the only source of a current value.** Start is the value a knob started with; S11-02's drift guard compares **keys only** (every registry field has a row, every row is a field), never values, so tuning a knob is one edit | One table the guard can read, and no number kept equal in two places (`core/match/registry.go`: "no number is written twice") | A guard that compares values — because every tuning edit would also edit the doc; prose lists — because a guard can't read them |
+| D-7 | Starting values: carried over from today's symbol where the knob exists and has a fixed value; otherwise an estimate written as "estimate: <one-sentence reason>", including values today's code derives at run time (frequency weights). A symbol whose value is carried into a new knob while the symbol itself goes is listed in the inventory as the Source and in the removed table as "value carried into <key>". The values are the ones in §6's inventory | Working rule "Registry numbers: carry over, then estimate" | Picking new values by feel — because nothing measures them yet |
 | D-8 | The comparison-layers doc stays as the spike's design record; the model links to it for the reasoning and does not copy the decision history | The model is the "what"; the spike doc is the "why", archived at spike close with `archive-docs` | Merging both — because the model would carry dated decision notes forever |
 
 ## 6. Design
@@ -152,10 +152,10 @@ None — docs only.
    6 graph alignment    layer × canon       → rows: target, band, contested, reasons
    ```
 3. **Layer table:** one row per layer: package, input, output, registry section (AC-1.2).
-4. **Worked example:** Gracie (AC-1.3). Name `Same` → property agree → Subject evidence 2.5; birth segment with date `Same`, one-cardinality support 1.5 + credit 0.5 × 2.0 = 2.5; total evidence 5.0 ≥ strong 4 → strong; no conflict → not contested.
+4. **Worked example:** Gracie (AC-1.3). Name `Same` → property agree → her own evidence 2.5. Her birth on both sides: event type agrees (0.5) and date `Same` (2), so the birth's own evidence is 2.5. Birth segment: one-cardinality support 1.5 + credit 0.5 × 2.5 = 2.75. Total evidence 2.5 + 2.75 = 5.25 ≥ strong 4 → strong; no conflict → not contested. (With only the birth on one side, there is no lifespan conflict and its 0.1 agree is not counted, since one side has no lifespan.)
 5. **Glossary** (D-3) and **retired words** (D-4).
 6. **Knob inventory** (D-6, D-7): the table below.
-7. **Removed knobs** (AC-3.3): the second table below.
+7. **Not knobs** and **removed knobs** (AC-3.3): the two lists below.
 
 ### Knob inventory (starting values)
 
@@ -167,6 +167,8 @@ None — docs only.
 | `value.Words.AliasCredit` | 0.98 | `match.AliasCredit` | Nickname or abbreviation hit |
 | `value.Words.FoldCredit` | 0.95 | `match` `foldOnly` | Pair equal only after folding accents |
 | `value.Words.MaxExactPairing` | 12 | `match.MaxExactPairing` | Words above this pair greedily |
+| `value.Words.Particles` | `o`, `mc`, `mac`, `st`, `d`, `fitz` | `match.SpacedParticles` | Words that rejoin the next word |
+| `value.Words.Folds` | today's map | `match.LetterFolds` | Letters replaced when folding |
 | `value.Text.Partial` | 0.7 | `DefaultText.Partial` | Cap for text that shares only some words |
 | `value.Names.NearMinimum` | 0.75 | `graphalign` name `PropertyScale.Floor` | Below this a name pair is `Different` |
 | `value.Names.UntypedAffinity` | 0.8 | `DefaultNames.UntypedAffinity` | Typed word against an untyped one |
@@ -179,8 +181,9 @@ None — docs only.
 | `value.Names.Western.OtherGiven` | 0.5 | `WesternNamePattern.Weights` | Middle names and initials |
 | `value.Names.Western.Nick` | 0.3 | `WesternNamePattern.Weights` | Nickname part weight |
 | `value.Names.Western.Untyped` | 1 | `WesternNamePattern.Weights` | Untyped part weight |
+| `value.Names.Western.PartRoles` | today's map | `WesternNamePattern.PartRoles` | Which part type plays which role |
 | `value.Dates.Tolerance` | 2 | `DefaultDates.Tolerance` | Most years apart that can still be `Near` |
-| `value.Dates.NearMinimum` | 0 | estimate: any pair within tolerance is `Near`; tolerance already bounds it | Below this a date pair is `Different` |
+| `value.Dates.NearMinimum` | 0 | `graphalign` `ValueTypeScale["date"].Floor` | Below this a date pair is `Different` |
 | `value.Dates.MissingDay` | 0.9 | `DefaultDates.MissingDay` | Same month, a day missing on one side |
 | `value.Dates.MissingMonth` | 0.8 | `DefaultDates.MissingMonth` | A month missing on one side |
 | `value.Dates.OtherDay` | 0.7 | `DefaultDates.OtherDay` | Same month, different known days |
@@ -199,10 +202,12 @@ None — docs only.
 | `subject.person.lifespan.Conflict` | 20 | estimate: impossible together, must never recover | Points lost for impossible lifespans |
 | `subject.event.event_type.Agree` | 0.5 | estimate: generic, says little alone (decided low) | Points for the same event type |
 | `subject.event.event_type.Conflict` | 20 | estimate: a birth is never a death | Points lost for different event types |
-| `subject.event.date.Agree` | 2 | `graphalign` frequency weight lifted to `AcceptScore` 2 (frequency removed, value kept) | Points for matching dates (one pair with start / end) |
-| `subject.event.date.Conflict` | 3 | `graphalign` `ConflictPenalty` | Points lost for different dates |
-| `subject.place.toponym.Agree` | 3 | `graphalign` lifted weight 2 + toponym `PropertyAgreement` 1 | A matching toponym alone reads medium |
-| `subject.place.toponym.Conflict` | 3 | `graphalign` `ConflictPenalty` | Points lost for different toponyms |
+| `subject.event.date.Agree` | 2 | estimate: today's cold-start frequency weight ln(0.85 / 0.1) ≈ 2.1, rounded | Points for matching dates (one pair with start / end) |
+| `subject.event.date.Conflict` | 3 | `graphalign` `DefaultConfig.ConflictPenalty` | Points lost for different dates |
+| `subject.place.toponym.Agree` | 3 | estimate: today's cold-start ln(0.9 / 0.1) + toponym `PropertyAgreement` 1 ≈ 3.2, rounded, so a toponym alone reads medium | A matching toponym alone reads medium |
+| `subject.place.toponym.Conflict` | 3 | `graphalign` `DefaultConfig.ConflictPenalty` | Points lost for different toponyms |
+| `subject.Pairs.event.date` | `date` with `start_date` / `end_date` | `match.DatePeriods` | Compared as one period |
+| `subject.Pairs.person.sex` | `sex_at_birth` with `gender` | decided ([`comparison-layers.md`](../comparison-layers.md#layer-3-subject-comparison)) | Compared as one pair |
 | `lifespan.MaxYears` | 110 | estimate: longest plausible human life | Born to died, at most |
 | `lifespan.ParentMinYears` | 12 | estimate: the design's "about 12–60 years" | Youngest age at a child's birth |
 | `lifespan.ParentMaxYears` | 60 | estimate: the design's "about 12–60 years" | Oldest age at a child's birth |
@@ -212,8 +217,11 @@ None — docs only.
 | `segment.OneCredit` | 0.5 | `graphalign` `NeighborCreditLow` | Share of the neighbor's own evidence passed on, one-cardinality |
 | `segment.OtherSupport` | 0.25 | `graphalign` `EdgeSupportHigh` | Points for any other matching link |
 | `segment.OtherCredit` | 0.25 | `graphalign` `NeighborCreditHigh` | Share of the neighbor's evidence passed on, other links |
-| `segment.PartOf.MinOwnEvidence` | 2 | `graphalign` `SignatureScale` `part_of` `MinNode` | A place's own evidence needed before `part_of` support counts |
-| `segment.PartOf.ConflictFactor` | 1 | `graphalign` `SignatureScale` `part_of` from-end `ConflictFactor` | A different parent cancels the part's own evidence |
+| `segment.PartOf.From.MinOwnEvidence` | 2 | `graphalign` `SignatureScale` `part_of` from-end `MinNode` | The part's own evidence needed before `part_of` support counts |
+| `segment.PartOf.To.MinOwnEvidence` | 2 | `graphalign` `SignatureScale` `part_of` to-end `MinNode` | The whole's own evidence needed before `part_of` support counts |
+| `segment.PartOf.From.ConflictFactor` | 1 | `graphalign` `SignatureScale` `part_of` from-end `ConflictFactor` | A different parent cancels the part's own evidence |
+| `segment.Cardinality.birth` | `one` | decided (working rule on segment compare) | Participation · subject · birth is one per person |
+| `segment.Cardinality.death` | `one` | decided (working rule on segment compare) | Participation · subject · death is one per person |
 | `alignment.AcceptBar` | 2 | `graphalign` `AcceptScore` | Least evidence for the walk to place a pair |
 | `alignment.Bands.Strong` | 4 | `graphalign` `StrongScore` | Strong band from this evidence |
 | `alignment.Bands.Medium` | 3 | `graphalign` `MediumScore` | Medium band |
@@ -224,22 +232,30 @@ None — docs only.
 | `alignment.SettleMargin` | 1 | estimate: one point, a third of a band | Lead a rival needs to displace a placed pair |
 | `alignment.SettleRounds` | 10 | estimate: a safety cap; dirty pairs normally settle in two or three | Most settle rounds |
 | `alignment.Shortlist.YearBucket` | 2 | estimate: the date tolerance, so a `Near` date shares a bucket | Width of an event's year bucket |
+| `alignment.Shortlist.person` | name words, not initials | decided ([`comparison-layers.md`](../comparison-layers.md#layer-6-procedure)) | Shortlist keys for a person |
+| `alignment.Shortlist.event` | event type + year bucket | decided ([`comparison-layers.md`](../comparison-layers.md#layer-6-procedure)) | Shortlist keys for an event |
+| `alignment.Shortlist.place` | toponym | decided ([`comparison-layers.md`](../comparison-layers.md#layer-6-procedure)) | Shortlist keys for a place |
 | `evidence.Checked` | `Same`, `Equivalent` | decided ([`claim-evidence.md`](../claim-evidence.md#lines)) | Relations whose lines start checked |
 | `evidence.Pinnable` | `Contains`, `Overlaps`, `Near` | decided ([`claim-evidence.md`](../claim-evidence.md#lines)) | Pinnable but unchecked |
 | `evidence.Defining.event` | `event_type` | decided ([`claim-evidence.md`](../claim-evidence.md#evidence-through-relationships)) | Neighbor properties bundled into a relationship line |
 
-Cardinality and shortlist keys per kind are listed under the knobs in the model too, as data rows: one-cardinality links participation · subject · birth and participation · subject · death; shortlist keys person name words (not initials), event type + year bucket, place toponym.
+### Not knobs
+
+These are identifiers or catalog data, not tunables, and have no row: `OriginProvenencia`, `AliasAbbreviation`, `AliasNickname`, `WesternPattern` (a key), `BuiltinNamePatterns` (the set holding `WesternNamePattern`), `DefaultNames.Patterns` / `Pattern`, `DefaultWordRules.Aliases` (catalog tables passed in at run time), `ProfiledKinds` (S11-23), and `graphalign` `Config.Names` (a test hook).
 
 ### Removed knobs
 
 | Today | Why removed |
 | --- | --- |
-| `DefaultNames.Frequency`, `FrequencyDiscount`, `FrequencyMinPeople`; `graphalign` `MPrior`, `UPrior`, `PropertyAgreement`, frequency `ValueTypeScale` entries | Frequency weighting is descoped |
+| `DefaultNames.Frequency`, `FrequencyDiscount`, `FrequencyMinPeople`; `graphalign` `MPrior`, `UPrior`, frequency `ValueTypeScale` entries | Frequency weighting is descoped |
+| `graphalign` `PropertyAgreement` | Frequency weighting is descoped; the toponym bonus is folded into `subject.place.toponym.Agree` |
 | `graphalign` `FanOutLowMax`, `FanOutUnknown` | Replaced by declared cardinality |
-| `graphalign` `ValueTypeScale` floors | Replaced by relation outcomes and the `Near` minimum |
+| `graphalign` `ValueTypeScale` floors other than date, `PropertyScale` sex / gender `Floor` 1 | Replaced by relation outcomes and the `Near` minimum |
+| `graphalign` `DefaultConfig.ConflictPenalty` | Value carried into `subject.event.date.Conflict` and `subject.place.toponym.Conflict`; its second role, the conflict-with-decision margin, is replaced by the contested marker and the settle margin |
+| `graphalign` `mFor` fallback 0.85, `uOr` fallback 0.1 | Frequency weighting is descoped |
+| `DefaultProfile` `start_date` / `end_date` features | Replaced by the `date` pair in `subject.Pairs.event.date` |
 | `DefaultDates.ApproxToleranceFactor` | Replaced by `ABT` as a range |
 | `DefaultProfile` weights and `MinScore` (`Rank`'s 10-point scale), `DefaultSuggestionLimit` | `Rank` is replaced by shortlisting and entity comparison; one weight set |
-| `graphalign` `ConflictPenalty` as the conflict-with-decision margin | Replaced by the contested marker and the settle margin |
 
 ## 7. Steps
 
@@ -251,7 +267,7 @@ Check: every layer in the diagram has a table row; package names match the map's
 **STEP-2 — Worked example**
 Files: `docs/matching-model.md` (new).
 Do: write the Gracie trace (§6 outline item 4) using only inventory numbers (AC-1.3).
-Check: each number in the example appears in the inventory table.
+Check: each number in the example appears in the inventory table, and the sums are 2.5, 2.75 and 5.25.
 
 **STEP-3 — Glossary and retired words**
 Files: `docs/matching-model.md` (new).
@@ -260,22 +276,22 @@ Check: every D-3 term has a row; `rg -n "e\.g\.|etc\." docs/matching-model.md` p
 
 **STEP-4 — Knob inventory**
 Files: `docs/matching-model.md` (new).
-Do: copy §6's knob inventory table, then the cardinality and shortlist-key data rows (AC-3.1, AC-3.2, D-6, D-7). Verify each carried-over value against its source symbol in `core/match/registry.go`, `core/match/words.go`, `core/autoreconcile/spelling.go`, `core/graphalign/registry.go` and `core/database/promotealign/canon.go`.
-Check: for each row whose Source names a symbol, the value equals that symbol's value at the planning base.
+Do: copy §6's knob inventory table (AC-3.1, AC-3.2, D-6, D-7). Verify each carried-over value against its source symbol in `core/match/registry.go`, `core/match/words.go`, `core/autoreconcile/spelling.go`, `core/graphalign/registry.go` and `core/database/promotealign/canon.go`.
+Check: for each row whose Source names a symbol (not "estimate" or "decided"), the value equals that symbol's value at the planning base.
 
 **STEP-5 — Removed knobs**
 Files: `docs/matching-model.md` (new).
-Do: copy §6's removed-knobs table; list any tunable in `core/match/registry.go` or `core/graphalign/registry.go` that is in neither table (AC-3.3).
-Check: every exported var, const and `Config` field in those two files is either an inventory Source or a removed row.
+Do: copy §6's not-a-knob list and removed-knobs table (AC-3.3).
+Check: every exported var, const and `Config` field in `core/match/registry.go` and `core/graphalign/registry.go`, and every value set in `DefaultConfig`, is an inventory Source, a removed row, or a not-a-knob entry.
 
 **STEP-6 — Banners and markers**
 Files: `docs/matching.md`, `docs/promote-graph-alignment.md`.
-Do: add to each, under its title, one line: "Spike 11 replaces this. The target model is matching-model.md", written as a relative link to that file In `docs/promote-graph-alignment.md`, add "(superseded in Spike 11; see `matching-model.md`)" to the §4.1, §5, §6 and §12 headings' first line (D-5).
+Do: add one blockquote line directly under each file's `# ` title: `> **Spike 11 replaces this page.** The target model is matching-model.md.`, with matching-model.md written as a relative Markdown link. In `docs/promote-graph-alignment.md`, add one blockquote line directly under each of the `## 4.1`, `# 5`, `# 6` and `# 12` headings: `> Superseded in Spike 11; see matching-model.md.`, with the same link (D-5). Heading text is unchanged.
 Check: both files link to `matching-model.md`.
 
 **STEP-7 — Wire and docs**
 Files: `docs/deployment-plan/spike-11/README.md` (documents table), `docs/deployment-plan/spike-11/comparison-layers.md` (status line), `docs/deployment-plan/spike-11/deployment-plan.md` (map row), `docs/deployment-plan/spike-11/completed.md`, this plan.
-Do: link the model from the README's documents table and from the comparison-layers status line; per the Definition of done.
+Do: link the model from the README's documents table and from the comparison-layers status line. In the map row, set Status to `Landed [#N](https://github.com/mendahu/provenencia/pull/N)`. Add to `completed.md`: "## S11-01 — One-page matching model / **Landed** <date> in #N. `docs/matching-model.md` (new) holds the six-layer model, the glossary and the knob inventory with starting values; `docs/matching.md` and `docs/promote-graph-alignment.md` point at it." Set this plan's status to Landed.
 Check: `python3 scripts/check-plan-docs.py` reports no new errors; every link added resolves (`ls` each target).
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
@@ -299,7 +315,7 @@ Must stay green: everything `scripts/check-pr.sh` runs (unchanged by a docs PR).
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated)
-- [ ] Domain doc updated if a rule in docs/*.md changed: docs/matching-model.md added; banners on docs/matching.md and docs/promote-graph-alignment.md
+- [ ] Domain doc updated if a rule in docs/*.md changed: docs/matching-model.md (new) added; banners on docs/matching.md and docs/promote-graph-alignment.md
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 
@@ -322,7 +338,7 @@ Must stay green: everything `scripts/check-pr.sh` runs (unchanged by a docs PR).
 
 - A value in §6's inventory differs from its source symbol at the planning base.
 - `comparison-layers.md` and this plan disagree on a layer's input or output.
-- A tunable in `core/match/registry.go` or `core/graphalign/registry.go` fits neither table.
+- An exported var, const or `Config` field in `core/match/registry.go` or `core/graphalign/registry.go` fits none of the three lists.
 
 ## 12. Open questions
 

@@ -423,7 +423,7 @@ So every property weight is a plain registry number. The labeler can fit them la
 - **Each layer takes its own section as an argument** (rule 5). Tests override it without editing the defaults.
 - **Typed keys,** not pipe-joined strings: `BridgeKey{Kind, Role, NeighborType, End}`, `PropertyKey`, `SubjectType`. A misspelled key fails to compile.
 - **Catalog data is passed in at runtime,** never copied: alias tables, stored name patterns. Their install seeds stay where they are.
-- **Data model facts stay in the catalog and vocabulary** (cardinality, neutral / directed / inverse terms, bridge kinds). The registry refers to them by key.
+- **Data model facts stay in the catalog and vocabulary** (property cardinality, neutral / directed / inverse terms, bridge kinds). The registry refers to them by key. Bridge cardinality (a person has one birth) is different: it's a matching rule declared in the registry's segment section.
 - **The reconciler keeps its own numbers** (`MinMajoritySupport`); it imports the spelling floor from value compare.
 - **One weight set.** `Rank`'s separate scale goes away with the layers.
 
