@@ -171,7 +171,7 @@ type PartMatch struct {
 }
 ```
 
-- **`Cause` is a shared vocabulary of codes:** `exact`, `case`, `fold`, `alias`, `abbreviation`, `initial`, `spelling`, `precision`, `missing_part`, `overlap`, `gap`, `beyond_tolerance`, `generation_conflict`, `empty`, `phrase_only`. UI copy, reason codes and labeler features are all keyed on these.
+- **`Cause` is a shared vocabulary of codes:** `exact`, `case`, `fold`, `alias`, `abbreviation`, `initial`, `spelling`, `precision`, `missing_part`, `overlap`, `gap`, `beyond_tolerance`, `generation_conflict`, `empty`, `phrase_only`, `no_match` (nothing in common), `order` (text whose shared words are out of order), `unsupported` (no comparer, or two value types). UI copy, reason codes and labeler features are all keyed on these.
 - **`Parts` explains the match.** Which words or ends paired is what the UI shows and what the labeler records as features.
 - **No strings to parse.** The display text is for showing; logic reads the codes.
 - **Echoes the callers' value refs.** Each value can carry an opaque ref (an Observation id) that the layers never read and `Detail` hands back, so the claim evidence view knows exactly which Observations spoke without the layers knowing about the catalog. Segment comparison does the same for a whole segment: bridge ends, role or term, and the neighbor's agreeing values.
@@ -407,7 +407,7 @@ So every property weight is a plain registry number. The labeler can fit them la
 
 ## Match registry
 
-**Decided (2026-10-17): one registry package, `core/matchregistry`, for every matching tunable.** Today the numbers are spread over `core/match/registry.go`, `core/graphalign/registry.go`, `promotealign/canon.go` (`seedCandidateLimit`), `match/words.go` (`foldOnly`) and `autoreconcile/spelling.go` (`SpellingFloor`, `SpellingShortMin`). Two weight sets exist for the same property (`Rank`'s name 10, Promote's 2.5), and some keys are pipe-joined strings.
+**Decided (2026-10-17): one registry package, `core/matchregistry`, for every matching tunable.** Today the numbers are spread over `core/match/registry.go`, `core/graphalign/registry.go`, `promotealign/canon.go` (`seedCandidateLimit`), `match/words.go` (`foldOnly`) and `autoreconcile/spelling.go` (`SpellingFloor`, `SpellingShortMin`; moved to `core/valuecompare` and `core/matchregistry` in S11-02). Two weight sets exist for the same property (`Rank`'s name 10, Promote's 2.5), and some keys are pipe-joined strings.
 
 **One pure package, one `Default()`, one file per section:**
 

@@ -2,7 +2,7 @@
 
 **Status:** idea, 2026-10-12. Not scheduled. Descoped from Spike 10 (S10-26).
 
-**Spike 11 moves the code this note names.** `wordSimilarity`, `DefaultWordRules` and `core/autoreconcile/spelling.go` become value compare (`core/valuecompare`) and the match registry (`core/matchregistry`) in S11-03 / S11-05 ([`comparison-layers.md`](../deployment-plan/spike-11/comparison-layers.md)). Read the code paths below as "today's". **One conflict to settle when this is pulled in:** a shared code scores 0.7 below, but a name pair now needs at least 0.75 to be `Near`, so a sound-alike would read `Different`. The likely shape is `Near` with cause `phonetic` and its own minimum in the registry.
+**Spike 11 moves the code this note names.** The spelling helpers that lived in `core/autoreconcile` moved to value compare (`core/valuecompare`) in S11-02; `wordSimilarity` and `DefaultWordRules` follow into value compare and the match registry (`core/matchregistry`) in S11-03 / S11-05 ([`comparison-layers.md`](../deployment-plan/spike-11/comparison-layers.md)). Read the code paths below as "today's". **One conflict to settle when this is pulled in:** a shared code scores 0.7 below, but a name pair now needs at least 0.75 to be `Near`, so a sound-alike would read `Different`. The likely shape is `Near` with cause `phonetic` and its own minimum in the registry.
 
 A sound-alike tier under near-spelling, for two surnames that are not a one-edit misspelling and still share a code. Beider–Morse is the more precise phonetic algorithm and stays a separate later idea ([`international-names.md`](international-names.md)). This note is the Daitch–Mokotoff design if that is the one pulled back.
 
@@ -16,7 +16,7 @@ A shared code scores **0.7**. That is above 0 and below the lowest one-edit scor
 
 The tier applies to every role. Alias tables stay given, nick, and untyped. Surnames are why this tier exists.
 
-Do not change [`core/autoreconcile/spelling.go`](../../core/autoreconcile/spelling.go). The reconciler keeps merging only edit-distance variants. Display, `NormalizeForm`, and `sort_key` do not code, so the Person page still keeps both spellings.
+Do not change `SpellingSimilarity` in [`core/valuecompare/words.go`](../../core/valuecompare/words.go). The reconciler keeps merging only edit-distance variants. Display, `NormalizeForm`, and `sort_key` do not code, so the Person page still keeps both spellings.
 
 ## Pairs
 
