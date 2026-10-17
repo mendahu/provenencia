@@ -1,6 +1,6 @@
 # S11-04 — Value compare: dates
 
-**Status:** Planned
+**Status:** Landed in [#445](https://github.com/mendahu/provenencia/pull/445) (2026-10-17)
 **Spike / slice:** Spike 11 · Slice 2 — Value compare, everywhere
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a Go comparer, moved date helpers, docs)
