@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 type exhibitObs struct {
@@ -236,7 +237,7 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 			if mem.prop != in.prop || mem.valueType != in.valueType {
 				continue
 			}
-			if exhibitCompatible(in.valueType, in.value, mem.value) {
+			if exhibitCompatible(cfg.Value, in.valueType, in.value, mem.value) {
 				chosen = mem
 				pinned = true
 				sim, comparable = match.Compare(cfg.Value, in.valueType, in.value, mem.value)
@@ -296,8 +297,8 @@ func cloneDate(d *datevalue.Value) *datevalue.Value {
 	return &c
 }
 
-func exhibitCompatible(valueType string, a, b match.Value) bool {
-	return autoreconcile.Compatible(valueType, a.Auto(), b.Auto())
+func exhibitCompatible(rules valuecompare.Rules, valueType string, a, b match.Value) bool {
+	return autoreconcile.Compatible(rules, valueType, a.Auto(), b.Auto())
 }
 
 // acceptedMembers maps each handle to its accepted member Subjects, in claim

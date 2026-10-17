@@ -121,7 +121,7 @@ func TestPipeline(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.group+"/"+tc.name, func(t *testing.T) {
-			got, err := Reconcile(propertymeta.ValueTypeText, tc.in, nil, propertymeta.CardinalitySingle)
+			got, err := Reconcile(testRules, propertymeta.ValueTypeText, tc.in, nil, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -151,7 +151,7 @@ func TestPipelineMultipleCardinality(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Reconcile(propertymeta.ValueTypeText, tc.in, nil, propertymeta.CardinalityMultiple)
+			got, err := Reconcile(testRules, propertymeta.ValueTypeText, tc.in, nil, propertymeta.CardinalityMultiple)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -177,7 +177,7 @@ func TestPipelineOutcomes(t *testing.T) {
 		from("x", text(8, "Upper Canada")),         // kept
 		from("x", lowTrust(text(9, "Muddy York"))), // weak
 	}
-	got, err := Reconcile(propertymeta.ValueTypeText, in, nil, propertymeta.CardinalitySingle)
+	got, err := Reconcile(testRules, propertymeta.ValueTypeText, in, nil, propertymeta.CardinalitySingle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +212,7 @@ func TestPipelineOutcomes(t *testing.T) {
 
 func TestPipelineConcluded(t *testing.T) {
 	in := []Candidate{text(1, "A"), text(2, "A"), text(3, "B")}
-	got, err := Reconcile(propertymeta.ValueTypeText, in, &Value{Text: "b", HasText: true}, propertymeta.CardinalitySingle)
+	got, err := Reconcile(testRules, propertymeta.ValueTypeText, in, &Value{Text: "b", HasText: true}, propertymeta.CardinalitySingle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -255,14 +255,14 @@ func TestPipelineInvariants(t *testing.T) {
 				in = append(in, c)
 			}
 			where := fmt.Sprintf("seed %d list %d: %+v", seed, list, in)
-			got, err := Reconcile(propertymeta.ValueTypeText, in, nil, propertymeta.CardinalitySingle)
+			got, err := Reconcile(testRules, propertymeta.ValueTypeText, in, nil, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatalf("%s: %v", where, err)
 			}
 
 			shuffled := append([]Candidate(nil), in...)
 			rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
-			if again, _ := Reconcile(propertymeta.ValueTypeText, shuffled, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(again, got) {
+			if again, _ := Reconcile(testRules, propertymeta.ValueTypeText, shuffled, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(again, got) {
 				t.Fatalf("%s: input order changed the result", where)
 			}
 
@@ -363,7 +363,7 @@ func TestOutvotedVote(t *testing.T) {
 			map[byte]Vote{1: {}, 2: {}, 3: {Support: 3, Of: 4}, 4: {}}},
 	}
 	for _, tc := range cases {
-		got, err := Reconcile(tc.valueType, tc.in, nil, propertymeta.CardinalitySingle)
+		got, err := Reconcile(testRules, tc.valueType, tc.in, nil, propertymeta.CardinalitySingle)
 		if err != nil {
 			t.Fatal(err)
 		}

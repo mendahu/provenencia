@@ -1,10 +1,8 @@
 package autoreconcile
 
 import (
-	"strconv"
-	"strings"
-
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // A module is what one value type supplies to the shared pipeline
@@ -44,12 +42,15 @@ type module interface {
 // wholeValue is the unit name of a module with one unit per value.
 const wholeValue = ""
 
-func moduleFor(valueType string) module {
+// moduleFor is valueType's module under rules, nil for an unknown type.
+// Values are the same, and fold, by value compare's relations: Same groups,
+// Contains folds, and no other relation does (D-2 of S11-06).
+func moduleFor(rules valuecompare.Rules, valueType string) module {
 	switch valueType {
-	case propertymeta.ValueTypeText:
-		return keyModule{keyOf: textKey}
-	case propertymeta.ValueTypeInteger:
-		return keyModule{keyOf: func(v Value) (string, bool) { return strconv.FormatInt(v.Integer, 10), true }}
+	case propertymeta.ValueTypeText, propertymeta.ValueTypeInteger:
+		return keyModule{keyOf: func(v Value) (string, bool) {
+			return valuecompare.Key(v.compareValue(valueType), valuecompare.Same, rules)
+		}}
 	case propertymeta.ValueTypeTerm:
 		return keyModule{keyOf: termKey}
 	case propertymeta.ValueTypeSubject:
@@ -65,11 +66,21 @@ func moduleFor(valueType string) module {
 			return idKey(v.Depiction.ImageFileID)
 		}}
 	case propertymeta.ValueTypeName:
-		return nameModule{}
+		particles := make(map[string]bool, len(rules.Words.Particles))
+		for _, p := range rules.Words.Particles {
+			particles[p] = true
+		}
+		return nameModule{rules: rules, particles: particles}
 	case propertymeta.ValueTypeDate:
-		return dateModule{}
+		return dateModule{rules: rules}
 	}
 	return nil
+}
+
+// compareValue is v in the shape value compare reads: the text, integer or
+// date of a value of valueType. Names go through nameUnit.compareValue.
+func (v Value) compareValue(valueType string) valuecompare.Value {
+	return valuecompare.Value{Type: valueType, Text: v.Text, Integer: v.Integer, Date: v.Date}
 }
 
 // keyModule is a value type whose values are the same exactly when their
@@ -97,13 +108,6 @@ func (keyModule) assemble(members []Candidate, _ map[string][]unit) Value {
 	return members[0].Value
 }
 
-// textKey: trimmed and case-insensitive (York = york). Blank text is no
-// evidence.
-func textKey(v Value) (string, bool) {
-	k := strings.ToLower(strings.TrimSpace(v.Text))
-	return k, k != ""
-}
-
 // termKey: the same term. A neutral term is no evidence: an "unknown" sex at
 // birth never wins or outvotes a recorded one.
 func termKey(v Value) (string, bool) {
@@ -122,8 +126,8 @@ func idKey(id []byte) (string, bool) { return string(id), len(id) > 0 }
 // not count against them, as in the pipeline's grouping; values that share
 // no unit, or where either is no evidence, are not compatible. Promote
 // graph alignment counts a comparison as an agreement by this test (S9-41).
-func Compatible(valueType string, a, b Value) bool {
-	m := moduleFor(valueType)
+func Compatible(rules valuecompare.Rules, valueType string, a, b Value) bool {
+	m := moduleFor(rules, valueType)
 	if m == nil || !Carries(valueType, a) || !Carries(valueType, b) {
 		return false
 	}

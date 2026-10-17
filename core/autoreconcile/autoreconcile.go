@@ -25,7 +25,6 @@ package autoreconcile
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
@@ -213,11 +212,12 @@ func (r Result) State() State {
 }
 
 // Reconcile reconciles candidates for a Property of valueType and cardinality
-// (single or multiple). The result does not depend on the input order. A
+// (single or multiple), deciding "the same value" with value compare under
+// rules. The result does not depend on the input order. A
 // non-nil concluded value always takes rank 1: it joins the auto-reconciled
 // value it equals, or stands alone with support 0 ahead of the rest.
-func Reconcile(valueType string, candidates []Candidate, concluded *Value, cardinality string) (Result, error) {
-	m := moduleFor(valueType)
+func Reconcile(rules valuecompare.Rules, valueType string, candidates []Candidate, concluded *Value, cardinality string) (Result, error) {
+	m := moduleFor(rules, valueType)
 	if m == nil {
 		return Result{}, fmt.Errorf("%w: %q", ErrUnknownValueType, valueType)
 	}
@@ -286,37 +286,11 @@ func SortKey(valueType string, v Value) (key string, ok bool) {
 		if v.Date == nil {
 			return "", false
 		}
-		lo, _, ok := DateBounds(*v.Date)
-		if !ok || lo == nil {
+		w, ok := valuecompare.DateWindow(*v.Date)
+		if !ok || w.Lo == nil {
 			return "", false
 		}
-		return fmt.Sprintf("%020d", int64(*lo)+dateSortOffset), true
+		return fmt.Sprintf("%020d", int64(*w.Lo)+dateSortOffset), true
 	}
 	return "", false
-}
-
-// dateKey matches on every structured field. Containment and overlap are
-// dateModule.fold, not this key.
-func dateKey(d *datevalue.Value) string {
-	parts := []string{
-		d.Kind, d.Qualifier, d.Calendar,
-		optInt(d.StartYear), optInt(d.StartMonth), optInt(d.StartDay),
-		optInt(d.StartHour), optInt(d.StartMinute), optInt(d.StartSecond), optInt(d.StartMillisecond),
-		d.StartTZ,
-		optInt(d.EndYear), optInt(d.EndMonth), optInt(d.EndDay),
-		optInt(d.EndHour), optInt(d.EndMinute), optInt(d.EndSecond), optInt(d.EndMillisecond),
-		d.EndTZ,
-		d.Phrase,
-	}
-	for i, p := range parts {
-		parts[i] = strconv.Quote(p)
-	}
-	return strings.Join(parts, "|")
-}
-
-func optInt(p *int) string {
-	if p == nil {
-		return "-"
-	}
-	return strconv.Itoa(*p)
 }

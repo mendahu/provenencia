@@ -30,7 +30,7 @@ func between(y1 int, m1, d1 *int, y2 int, m2, d2 *int) datevalue.Value {
 
 func dateUnitOf(t *testing.T, d datevalue.Value) unit {
 	t.Helper()
-	units, ok := (dateModule{}).split(Value{Date: &d})
+	units, ok := (dateModule{rules: testRules}).split(Value{Date: &d})
 	if !ok {
 		t.Fatalf("no window for %+v", d)
 	}
@@ -110,7 +110,7 @@ func TestDateFold(t *testing.T) {
 		{"about 1985 folds into 1985", abtYear, year, true},
 		{"1985 does not fold into about 1985", year, abtYear, false},
 		{"about 1985 folds into May 1985", abtYear, month, true},
-		{"about 1985 does not fold into 1986", abtYear, year86, false},
+		{"about 1985 folds into 1986", abtYear, year86, true},
 		{"before 1900 folds into 1885", bef1900, y1885, true},
 		{"before 1900 folds into 1900", bef1900, y1900, true},
 		{"before 1900 does not fold into 1901", bef1900, y1901, false},
@@ -125,7 +125,7 @@ func TestDateFold(t *testing.T) {
 		{"1880–1885 does not fold into 1886", span, y1886, false},
 		{"overlapping ranges do not fold", overlapA, overlapB, false},
 		{"the other overlap does not fold either", overlapB, overlapA, false},
-		{"a day folds into its hour", day, withHour, true},
+		{"a day and its hour are one value", day, withHour, false},
 		{"an hour does not fold into its day", withHour, day, false},
 		{"equal years do not fold", year, year, false},
 		{"3 May does not fold into 14 May", day3May, day, false},
@@ -136,11 +136,11 @@ func TestDateFold(t *testing.T) {
 		{"1885 does not fold into 1890", y1885, y1890, false},
 		{"1984 does not fold into 1986", year84, year86, false},
 		{"about May folds into 14 May", abtMay, day, true},
-		{"about May does not fold into June", abtMay, junMonth, false},
+		{"about May folds into June", abtMay, junMonth, true},
 		{"March–June folds into 14 May", maySpan, mayDay, false}, // mayDay is 1880; span is 1985
 		{"March–June 1985 folds into 14 May 1985", between(1985, mar, nil, 1985, jun, nil), day, true},
 		{"March–June 1985 does not fold into August", between(1985, mar, nil, 1985, jun, nil), ymd(1985, aug, day14), false},
-		{"a one-day range folds into that day", sameDayRange, day, true},
+		{"a one-day range and that day are one value", sameDayRange, day, false},
 		{"that day does not fold into its one-day range", day, sameDayRange, false},
 		{"before a day folds into that day", befDay, day, true},
 		{"after a day folds into that day", aftDay, day, true},
@@ -158,7 +158,7 @@ func TestDateFold(t *testing.T) {
 	if len(cases) < 50 {
 		t.Fatalf("date cases = %d, want at least 50", len(cases))
 	}
-	m := dateModule{}
+	m := dateModule{rules: testRules}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := m.fold("", dateUnitOf(t, tc.from), dateUnitOf(t, tc.to))
@@ -166,36 +166,6 @@ func TestDateFold(t *testing.T) {
 				t.Fatalf("fold = %v, want %v", got, tc.fold)
 			}
 		})
-	}
-}
-
-func TestDateBounds(t *testing.T) {
-	lo, hi, ok := DateBounds(ymd(1970, ip(1), ip(1)))
-	if !ok || lo == nil || hi == nil || *lo != 0 || *hi != 0 {
-		t.Fatalf("epoch %+v %+v ok=%v", lo, hi, ok)
-	}
-	lo, hi, ok = DateBounds(ymd(1985, nil, nil))
-	if !ok || lo == nil || hi == nil || *lo >= *hi {
-		t.Fatalf("year bounds %+v %+v", lo, hi)
-	}
-	dayLo, dayHi, ok := DateBounds(ymd(1985, ip(5), ip(14)))
-	if !ok || dayLo == nil || dayHi == nil || *dayLo != *dayHi || *dayLo <= *lo || *dayHi >= *hi {
-		t.Fatalf("day %+v %+v outside year %+v %+v", dayLo, dayHi, lo, hi)
-	}
-	lo, hi, ok = DateBounds(qualified(datevalue.QualifierBEF, 1900, nil, nil))
-	if !ok || lo != nil || hi == nil {
-		t.Fatalf("before %+v %+v ok=%v", lo, hi, ok)
-	}
-	lo, hi, ok = DateBounds(qualified(datevalue.QualifierAFT, 1872, nil, nil))
-	if !ok || lo == nil || hi != nil {
-		t.Fatalf("after %+v %+v ok=%v", lo, hi, ok)
-	}
-	phrase := datevalue.Value{Kind: datevalue.KindPoint, Phrase: "Christmas"}
-	if _, _, ok := DateBounds(phrase); ok {
-		t.Fatal("phrase-only has a window")
-	}
-	if _, ok := (dateModule{}).split(Value{Date: &phrase}); ok {
-		t.Fatal("phrase-only is evidence")
 	}
 }
 
@@ -254,6 +224,36 @@ func TestDateReconcile(t *testing.T) {
 			want: [][]byte{{1, 2}, {3}}, state: StateMixed, folded: []byte{1},
 		},
 		{
+			name: "about 1985 folds into 1986",
+			cands: []Candidate{
+				{ObservationID: id(1), Value: Value{Date: datePtr(qualified(datevalue.QualifierABT, 1985, nil, nil))}},
+				date(2, 1986, nil, nil),
+			},
+			want: [][]byte{{1, 2}}, state: StateMerged,
+			shown: datePtr(ymd(1986, nil, nil)), folded: []byte{1},
+		},
+		{
+			name: "a day and its clock time are one value",
+			cands: []Candidate{
+				date(1, 1985, may, day14),
+				{ObservationID: id(2), Value: Value{Date: datePtr(func() datevalue.Value {
+					d := ymd(1985, may, day14)
+					d.StartHour = ip(15)
+					return d
+				}())}},
+			},
+			want: [][]byte{{1, 2}}, state: StateMerged,
+		},
+		{
+			name: "a range with only an end year folds into a year it contains",
+			cands: []Candidate{
+				{ObservationID: id(1), Value: Value{Date: &datevalue.Value{Kind: datevalue.KindRange, EndYear: ip(1900)}}},
+				date(2, 1885, nil, nil),
+			},
+			want: [][]byte{{1, 2}}, state: StateMerged,
+			shown: datePtr(ymd(1885, nil, nil)), folded: []byte{1},
+		},
+		{
 			name: "a phrase is no evidence",
 			cands: []Candidate{
 				{ObservationID: id(1), Value: Value{Date: &datevalue.Value{Kind: datevalue.KindPoint, Phrase: "Christmas"}}},
@@ -264,7 +264,7 @@ func TestDateReconcile(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Reconcile(propertymeta.ValueTypeDate, tc.cands, nil, propertymeta.CardinalitySingle)
+			got, err := Reconcile(testRules, propertymeta.ValueTypeDate, tc.cands, nil, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}

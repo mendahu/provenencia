@@ -6,9 +6,13 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
+
+// testRules are the shipped value compare rules; no test mutates them.
+var testRules = matchregistry.Default().Value
 
 func id(n byte) []byte { return []byte{0, 0, 0, n} }
 
@@ -123,7 +127,7 @@ func TestReconcile(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Reconcile(tc.valueType, tc.candidates, tc.concluded, propertymeta.CardinalitySingle)
+			got, err := Reconcile(testRules, tc.valueType, tc.candidates, tc.concluded, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -138,7 +142,7 @@ func TestReconcile(t *testing.T) {
 }
 
 func TestReconcileRepresentative(t *testing.T) {
-	got, err := Reconcile(propertymeta.ValueTypeText, []Candidate{text(9, "York"), text(4, "York ")}, nil, propertymeta.CardinalitySingle)
+	got, err := Reconcile(testRules, propertymeta.ValueTypeText, []Candidate{text(9, "York"), text(4, "York ")}, nil, propertymeta.CardinalitySingle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +151,7 @@ func TestReconcileRepresentative(t *testing.T) {
 	}
 
 	concluded := &Value{Name: parse("given=JAMES|surname=ROBINS")}
-	got, err = Reconcile(propertymeta.ValueTypeName,
+	got, err = Reconcile(testRules, propertymeta.ValueTypeName,
 		[]Candidate{nm(9, "given=james|surname=robins"), nm(4, "given=James|surname=Robins")}, concluded, propertymeta.CardinalitySingle)
 	if err != nil {
 		t.Fatal(err)
@@ -159,7 +163,7 @@ func TestReconcileRepresentative(t *testing.T) {
 
 func TestReconcileOrderIndependent(t *testing.T) {
 	in := []Candidate{text(1, "A"), text(2, "B"), text(3, "B"), text(4, "C"), text(5, "A"), text(6, "D")}
-	want, err := Reconcile(propertymeta.ValueTypeText, in, nil, propertymeta.CardinalitySingle)
+	want, err := Reconcile(testRules, propertymeta.ValueTypeText, in, nil, propertymeta.CardinalitySingle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +173,7 @@ func TestReconcileOrderIndependent(t *testing.T) {
 		for i, j := range p {
 			shuffled[i] = in[j]
 		}
-		got, err := Reconcile(propertymeta.ValueTypeText, shuffled, nil, propertymeta.CardinalitySingle)
+		got, err := Reconcile(testRules, propertymeta.ValueTypeText, shuffled, nil, propertymeta.CardinalitySingle)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -181,7 +185,7 @@ func TestReconcileOrderIndependent(t *testing.T) {
 
 func TestReconcileDoesNotMutateInput(t *testing.T) {
 	in := []Candidate{text(3, "A"), text(1, "B")}
-	if _, err := Reconcile(propertymeta.ValueTypeText, in, nil, propertymeta.CardinalitySingle); err != nil {
+	if _, err := Reconcile(testRules, propertymeta.ValueTypeText, in, nil, propertymeta.CardinalitySingle); err != nil {
 		t.Fatal(err)
 	}
 	if in[0].ObservationID[3] != 3 {
@@ -190,13 +194,13 @@ func TestReconcileDoesNotMutateInput(t *testing.T) {
 }
 
 func TestReconcileErrors(t *testing.T) {
-	if _, err := Reconcile("colour", nil, nil, propertymeta.CardinalitySingle); !errors.Is(err, ErrUnknownValueType) {
+	if _, err := Reconcile(testRules, "colour", nil, nil, propertymeta.CardinalitySingle); !errors.Is(err, ErrUnknownValueType) {
 		t.Fatalf("unknown type: %v", err)
 	}
-	if _, err := Reconcile(propertymeta.ValueTypeName, []Candidate{text(1, "A")}, nil, propertymeta.CardinalitySingle); !errors.Is(err, ErrValueMismatch) {
+	if _, err := Reconcile(testRules, propertymeta.ValueTypeName, []Candidate{text(1, "A")}, nil, propertymeta.CardinalitySingle); !errors.Is(err, ErrValueMismatch) {
 		t.Fatalf("mismatched candidate: %v", err)
 	}
-	if _, err := Reconcile(propertymeta.ValueTypeText, nil, &Value{Integer: 1, HasInteger: true}, propertymeta.CardinalitySingle); !errors.Is(err, ErrValueMismatch) {
+	if _, err := Reconcile(testRules, propertymeta.ValueTypeText, nil, &Value{Integer: 1, HasInteger: true}, propertymeta.CardinalitySingle); !errors.Is(err, ErrValueMismatch) {
 		t.Fatalf("mismatched concluded: %v", err)
 	}
 }
@@ -206,7 +210,7 @@ func TestSortKey(t *testing.T) {
 	if !ok || k != "obrien mary" {
 		t.Fatalf("name %q %v", k, ok)
 	}
-	got, err := Reconcile(propertymeta.ValueTypeName,
+	got, err := Reconcile(testRules, propertymeta.ValueTypeName,
 		[]Candidate{nm(1, "given=J.|surname=ROBINS|suffix=Jr."), nm(2, "given=James|surname=Robins")}, nil, propertymeta.CardinalitySingle)
 	if err != nil {
 		t.Fatal(err)
