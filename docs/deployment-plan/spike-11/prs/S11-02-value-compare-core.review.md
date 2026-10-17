@@ -65,3 +65,10 @@
 
 ### X-9 · minor · Smaller choices
 **Answer:** Fixed where a choice was open. `matchregistry` is imported only in `names.go` (D-8). The `LetterFolds` snapshot is noted in D-10. `Parts` contents are stated in D-7. The T-5 arithmetic is right as written: the reviewer confirmed six words. The generator wording stands. D-18 needs no commit for STEP-9.
+
+## Round 2
+
+### M-8 · minor · The skill still lists `Supports` after M-3 removed it
+**Answer:** Fixed. D-17's "adding a comparer" now says to add the new type to T-3's expected `ComparerTypes()` list.
+
+Logged, not raised: the `Key` row could also name `autoreconcile` `textKey` / `termKey` (S11-06 moves them); two word-similarity functions exist until S11-05, as "Build, then migrate" allows.
