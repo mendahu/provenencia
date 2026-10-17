@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // NicknameAdd is how many product nickname rows were new.
@@ -48,7 +49,7 @@ func AddProductNicknames(c *database.Catalog) (NicknameAdd, error) {
 
 func productNicknames() (match.AliasTable, bool) {
 	for _, table := range match.AliasTables() {
-		if table.Key == "nicknames" && table.Origin == match.OriginProvenencia && table.Kind == match.AliasNickname {
+		if table.Key == "nicknames" && table.Origin == vocabkey.OriginProvenencia && table.Kind == match.AliasNickname {
 			return table, true
 		}
 	}

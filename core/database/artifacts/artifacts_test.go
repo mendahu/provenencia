@@ -23,6 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/derivatives"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -42,7 +43,7 @@ func TestArtifacts(t *testing.T) {
 	mustSource := func(t *testing.T, c *database.Catalog) sources.Source {
 		t.Helper()
 		typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-			Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+			Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -276,7 +277,7 @@ func TestArtifacts(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-					Key: "photo", Origin: sourcetypes.OriginProvenencia, Label: "Photo",
+					Key: "photo", Origin: vocabkey.OriginProvenencia, Label: "Photo",
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -423,7 +424,7 @@ func TestArtifactDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -570,7 +571,7 @@ func TestArtifactDeletePurgesDisk(t *testing.T) {
 		t.Fatal(err)
 	}
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -787,7 +788,7 @@ func TestArtifactDeleteKeepsSharedThumbnail(t *testing.T) {
 	if err := users.Upsert(c, userID, "Jake", r); err != nil {
 		t.Fatal(err)
 	}
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -54,7 +54,7 @@ user                 -- created by the researcher in this project
 plugin:<plugin_id>   -- reserved prefix for future plugin-contributed vocabulary
 ```
 
-`<plugin_id>` is a stable plugin slug (lowercase ASCII letters, digits, hyphens). No other `origin` prefixes are reserved yet; do not invent ad hoc origins outside these three shapes without updating this catalog.
+`<plugin_id>` is a stable plugin slug (lowercase ASCII letters, digits, hyphens). No other `origin` prefixes are reserved yet; do not invent ad hoc origins outside these three shapes without updating this catalog. Go code names these origins through `core/vocabkey` (`OriginProvenencia`, `OriginUser`, `ValidOrigin`, `IsPluginOrigin`).
 
 ### Uniqueness and foreign keys
 

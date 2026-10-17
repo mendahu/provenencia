@@ -463,7 +463,7 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 | `match/pairs.go` leaders and weighting (`weigh`, `pairValues`) | The strict profile; negatives and cardinality move to property compare |
 | `graphalign` `alikeNew`, `pairNode` (property part) | Subject compare |
 | `conclusionheaders` `laterStart` / `earlierEnd` (year only, while reconciliation uses days) | Value compare's date windows |
-| `autoreconciler.hasValue` (copy of `autoreconcile.carries`) | One function |
+| ~~`autoreconciler.hasValue`~~ — done in S10-52: `autoreconcile.Carries` | One function |
 | `Stats.ValueFreq`, `countNameWords` | Removed (frequency descoped) |
 
 **Lighter touch (still in scope):**

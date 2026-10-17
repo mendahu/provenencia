@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -23,12 +24,12 @@ func TestProperties(t *testing.T) {
 			name: "upsert lookup list",
 			run: func(t *testing.T, c *database.Catalog, _ []byte) {
 				id, err := properties.Upsert(c, properties.Property{
-					Key: "occupation", Origin: properties.OriginProvenencia, Label: "Occupation", ValueType: propertymeta.ValueTypeText,
+					Key: "occupation", Origin: vocabkey.OriginProvenencia, Label: "Occupation", ValueType: propertymeta.ValueTypeText,
 				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				got, err := properties.Lookup(c, "occupation", properties.OriginProvenencia)
+				got, err := properties.Lookup(c, "occupation", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -45,7 +46,7 @@ func TestProperties(t *testing.T) {
 			name: "rejects bad value type",
 			run: func(t *testing.T, c *database.Catalog, _ []byte) {
 				if _, err := properties.Upsert(c, properties.Property{
-					Key: "x", Origin: properties.OriginUser, Label: "X", ValueType: "boolean",
+					Key: "x", Origin: vocabkey.OriginUser, Label: "X", ValueType: "boolean",
 				}); !errors.Is(err, properties.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
@@ -60,7 +61,7 @@ func TestProperties(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got.Key != "custom-fact" || got.Origin != properties.OriginUser || got.Cardinality != propertymeta.CardinalitySingle {
+				if got.Key != "custom-fact" || got.Origin != vocabkey.OriginUser || got.Cardinality != propertymeta.CardinalitySingle {
 					t.Fatalf("got %+v", got)
 				}
 				updated, err := writes.Call(c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
@@ -136,12 +137,12 @@ func TestProperties(t *testing.T) {
 			name: "upsert accepts depiction",
 			run: func(t *testing.T, c *database.Catalog, _ []byte) {
 				id, err := properties.Upsert(c, properties.Property{
-					Key: "snapshot", Origin: properties.OriginProvenencia, Label: "Snapshot", ValueType: propertymeta.ValueTypeDepiction,
+					Key: "snapshot", Origin: vocabkey.OriginProvenencia, Label: "Snapshot", ValueType: propertymeta.ValueTypeDepiction,
 				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				got, err := properties.Lookup(c, "snapshot", properties.OriginProvenencia)
+				got, err := properties.Lookup(c, "snapshot", vocabkey.OriginProvenencia)
 				if err != nil || got.ValueType != propertymeta.ValueTypeDepiction || string(got.ID) != string(id) {
 					t.Fatalf("got %+v %v", got, err)
 				}
@@ -151,12 +152,12 @@ func TestProperties(t *testing.T) {
 			name: "upsert allows proveniencia term",
 			run: func(t *testing.T, c *database.Catalog, _ []byte) {
 				id, err := properties.Upsert(c, properties.Property{
-					Key: "event_type", Origin: properties.OriginProvenencia, Label: "Event type", ValueType: propertymeta.ValueTypeTerm,
+					Key: "event_type", Origin: vocabkey.OriginProvenencia, Label: "Event type", ValueType: propertymeta.ValueTypeTerm,
 				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				got, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+				got, err := properties.Lookup(c, "event_type", vocabkey.OriginProvenencia)
 				if err != nil || got.ValueType != propertymeta.ValueTypeTerm || string(got.ID) != string(id) {
 					t.Fatalf("got %+v %v", got, err)
 				}

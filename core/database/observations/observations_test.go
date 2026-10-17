@@ -3,9 +3,6 @@ package observations_test
 import (
 	"database/sql"
 	"errors"
-	"image"
-	"image/color"
-	"image/png"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -18,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -33,6 +31,7 @@ import (
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -74,7 +73,7 @@ func TestObservations(t *testing.T) {
 			t.Fatal(err)
 		}
 		typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-			Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+			Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -95,15 +94,15 @@ func TestObservations(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		personType, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+		personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		placeType, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+		placeType, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		eventType, err := subjecttypes.Lookup(c, "event", subjecttypes.OriginProvenencia)
+		eventType, err := subjecttypes.Lookup(c, "event", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -131,31 +130,31 @@ func TestObservations(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		toponymProp, err := properties.Lookup(c, "toponym", properties.OriginProvenencia)
+		toponymProp, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		sexProp, err := properties.Lookup(c, "sex_at_birth", properties.OriginProvenencia)
+		sexProp, err := properties.Lookup(c, "sex_at_birth", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		nameProp, err := properties.Lookup(c, "name", properties.OriginProvenencia)
+		nameProp, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		dateProp, err := properties.Lookup(c, "date", properties.OriginProvenencia)
+		dateProp, err := properties.Lookup(c, "date", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		likeness, err := properties.Lookup(c, "likeness", properties.OriginProvenencia)
+		likeness, err := properties.Lookup(c, "likeness", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		femaleTerm, err := propertyterms.Lookup(c, sexProp.ID, "female", propertyterms.OriginProvenencia)
+		femaleTerm, err := propertyterms.Lookup(c, sexProp.ID, "female", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		maleTerm, err := propertyterms.Lookup(c, sexProp.ID, "male", propertyterms.OriginProvenencia)
+		maleTerm, err := propertyterms.Lookup(c, sexProp.ID, "male", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -595,7 +594,7 @@ func TestObservations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				year := 1844
-				res, _, err := saveCitation(c, userID, s.artifact, observations.Input{
+				res, _, err := observationstest.SaveCitation(c, userID, s.artifact, observations.Input{
 					SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
 					Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
 				})
@@ -606,11 +605,11 @@ func TestObservations(t *testing.T) {
 				if len(oldDateID) != 16 {
 					t.Fatalf("date id %x", oldDateID)
 				}
-				eventNameProp, err := properties.Lookup(c, "event_name", properties.OriginProvenencia)
+				eventNameProp, err := properties.Lookup(c, "event_name", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
-				changes, err := updateObservation(c, userID, observations.Input{
+				changes, err := observationstest.UpdateObservation(c, userID, observations.Input{
 					ID: res.Observations[0].ID, SubjectID: s.event.ID, PropertyID: eventNameProp.ID,
 					ValueText: "Birth", HasText: true,
 				})
@@ -662,19 +661,19 @@ func TestObservations(t *testing.T) {
 			name: "edge rows refuse update and delete",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				personProp, err := properties.Lookup(c, "person", properties.OriginProvenencia)
+				personProp, err := properties.Lookup(c, "person", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
-				eventProp, err := properties.Lookup(c, "event", properties.OriginProvenencia)
+				eventProp, err := properties.Lookup(c, "event", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
-				roleProp, err := properties.Lookup(c, "role", properties.OriginProvenencia)
+				roleProp, err := properties.Lookup(c, "role", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
-				roleTerm, err := propertyterms.Lookup(c, roleProp.ID, "witness", propertyterms.OriginProvenencia)
+				roleTerm, err := propertyterms.Lookup(c, roleProp.ID, "witness", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -773,10 +772,10 @@ func TestObservations(t *testing.T) {
 			name: "likeness saves its region and image",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				art := fileArtifact(t, c, userID, s.source.ID)
-				res, changes, err := saveCitation(c, userID, art, observations.Input{
+				art := observationstest.FileArtifact(t, c, userID, s.source.ID)
+				res, changes, err := observationstest.SaveCitation(c, userID, art, observations.Input{
 					SubjectID: s.person.ID, PropertyID: s.likeness.ID,
-					Depiction: &observations.DepictionInput{RegionJSON: likenessRegion, ImagePath: crop(t, 300, 200, 128)},
+					Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 300, 200, 128)},
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -804,7 +803,7 @@ func TestObservations(t *testing.T) {
 					t.Fatal(err)
 				}
 				file, err := files.Lookup(c, imageID)
-				if err != nil || region != likenessRegion || file.MediaType != "image/png" {
+				if err != nil || region != observationstest.LikenessRegion || file.MediaType != "image/png" {
 					t.Fatalf("region=%q file=%+v %v", region, file, err)
 				}
 				if got, want := changeKinds(changes, "observation", "file", "depiction_value"),
@@ -817,7 +816,7 @@ func TestObservations(t *testing.T) {
 				}
 				row := list[0]
 				if string(row.ValueDepictionID) != string(obs.ValueDepictionID) || row.Depiction == nil ||
-					row.Depiction.RegionJSON != likenessRegion || string(row.Depiction.ImageFileID) != string(imageID) {
+					row.Depiction.RegionJSON != observationstest.LikenessRegion || string(row.Depiction.ImageFileID) != string(imageID) {
 					t.Fatalf("listed %+v depiction %+v", row, row.Depiction)
 				}
 			},
@@ -845,7 +844,7 @@ func TestObservations(t *testing.T) {
 					{"point out of range", `{"version":1,"selectors":[` + pt + `[{"x":5,"y":5},{"x":0.4,"y":0.1},{"x":0.4,"y":0.5}]}]}`},
 					{"self-intersecting", `{"version":1,"selectors":[` + pt + `[{"x":0.1,"y":0.1},{"x":0.5,"y":0.5},{"x":0.5,"y":0.1},{"x":0.1,"y":0.5}]}]}`},
 					{"no region selector", `{"version":1,"selectors":[{"type":"page","artifact_page":3}]}`},
-					{"page differs from the Citation's", strings.Replace(likenessRegion, `"artifact_page":1`, `"artifact_page":9`, 1)},
+					{"page differs from the Citation's", strings.Replace(observationstest.LikenessRegion, `"artifact_page":1`, `"artifact_page":9`, 1)},
 				} {
 					damages = append(damages, damage{name: bad.name, update: setRegion(bad.region), keepImage: true})
 				}
@@ -863,10 +862,10 @@ func TestObservations(t *testing.T) {
 				for _, bad := range damages {
 					t.Run(bad.name, func(t *testing.T) {
 						c, s := mustSeed(t)
-						art := fileArtifact(t, c, userID, s.source.ID)
-						res, _, err := saveCitation(c, userID, art, observations.Input{
+						art := observationstest.FileArtifact(t, c, userID, s.source.ID)
+						res, _, err := observationstest.SaveCitation(c, userID, art, observations.Input{
 							SubjectID: s.person.ID, PropertyID: s.likeness.ID,
-							Depiction: &observations.DepictionInput{RegionJSON: likenessRegion, ImagePath: crop(t, 300, 200, 128)},
+							Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 300, 200, 128)},
 						})
 						if err != nil {
 							t.Fatal(err)
@@ -903,7 +902,7 @@ func TestObservations(t *testing.T) {
 								(len(row.Depiction.ImageFileID) > 0) != bad.keepImage {
 								t.Fatalf("%s: image %x, keep=%v", name, row.Depiction.ImageFileID, bad.keepImage)
 							}
-							if kept := row.Depiction.RegionJSON == likenessRegion; kept != bad.keepRegion ||
+							if kept := row.Depiction.RegionJSON == observationstest.LikenessRegion; kept != bad.keepRegion ||
 								(row.Depiction.RegionJSON != "") != bad.keepRegion {
 								t.Fatalf("%s: region %q, keep=%v", name, row.Depiction.RegionJSON, bad.keepRegion)
 							}
@@ -916,8 +915,8 @@ func TestObservations(t *testing.T) {
 			name: "likeness refuses",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				art := fileArtifact(t, c, userID, s.source.ID)
-				good := crop(t, 300, 200, 128)
+				art := observationstest.FileArtifact(t, c, userID, s.source.ID)
+				good := observationstest.Crop(t, 300, 200, 128)
 				symlink := filepath.Join(t.TempDir(), "link.png")
 				if err := os.Symlink(good, symlink); err != nil {
 					t.Fatal(err)
@@ -932,11 +931,11 @@ func TestObservations(t *testing.T) {
 					return observations.Input{SubjectID: s.person.ID, PropertyID: s.likeness.ID,
 						Depiction: &observations.DepictionInput{RegionJSON: region, ImagePath: path}}
 				}
-				withText := like(likenessRegion, good)
+				withText := like(observationstest.LikenessRegion, good)
 				withText.ValueText, withText.HasText = "x", true
 				onName := observations.Input{SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
-					Depiction: &observations.DepictionInput{RegionJSON: likenessRegion, ImagePath: good}}
-				unstaged := like(likenessRegion, good)
+					Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: good}}
+				unstaged := like(observationstest.LikenessRegion, good)
 				tests := []struct {
 					name   string
 					art    artifacts.Artifact
@@ -945,18 +944,18 @@ func TestObservations(t *testing.T) {
 					// unstaged skips StageDepictions
 					unstaged bool
 				}{
-					{name: "symlink crop", art: art, inputs: []observations.Input{like(likenessRegion, symlink)}, want: ingest.ErrSymlink},
-					{name: "html named png", art: art, inputs: []observations.Input{like(likenessRegion, html)}, want: ingest.ErrUnsupportedImage},
+					{name: "symlink crop", art: art, inputs: []observations.Input{like(observationstest.LikenessRegion, symlink)}, want: ingest.ErrSymlink},
+					{name: "html named png", art: art, inputs: []observations.Input{like(observationstest.LikenessRegion, html)}, want: ingest.ErrUnsupportedImage},
 					{name: "region on another page", art: art, inputs: []observations.Input{like(page2, good)}, want: locator.ErrInvalid},
 					{name: "region with no region selector", art: art, inputs: []observations.Input{like(noRegion, good)}, want: locator.ErrInvalid},
 					{name: "region not a locator", art: art, inputs: []observations.Input{like(`not json`, good)}, want: locator.ErrInvalid},
-					{name: "artifact with no file", art: s.artifact, inputs: []observations.Input{like(likenessRegion, good)}, want: observations.ErrInvalid},
+					{name: "artifact with no file", art: s.artifact, inputs: []observations.Input{like(observationstest.LikenessRegion, good)}, want: observations.ErrInvalid},
 					{name: "likeness with text", art: art, inputs: []observations.Input{withText}, want: observations.ErrInvalid},
 					{name: "likeness with no depiction", art: art, inputs: []observations.Input{{SubjectID: s.person.ID, PropertyID: s.likeness.ID}}, want: observations.ErrInvalid},
 					{name: "depiction on a name", art: art, inputs: []observations.Input{onName}, want: observations.ErrInvalid},
 					{name: "unstaged depiction", art: art, inputs: []observations.Input{unstaged}, want: observations.ErrInvalid, unstaged: true},
 					{name: "second input bad", art: art, want: observations.ErrInvalid, inputs: []observations.Input{
-						like(likenessRegion, good),
+						like(observationstest.LikenessRegion, good),
 						{SubjectID: s.person.ID, PropertyID: s.sexProp.ID},
 					}},
 				}
@@ -968,10 +967,10 @@ func TestObservations(t *testing.T) {
 						var err error
 						if tt.unstaged {
 							_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-								return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: tt.art.ID, LocatorJSON: likenessLocator}, tt.inputs)
+								return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: tt.art.ID, LocatorJSON: observationstest.LikenessLocator}, tt.inputs)
 							})
 						} else {
-							_, _, err = saveCitation(c, userID, tt.art, tt.inputs...)
+							_, _, err = observationstest.SaveCitation(c, userID, tt.art, tt.inputs...)
 						}
 						if !errors.Is(err, tt.want) {
 							t.Fatalf("got %v want %v", err, tt.want)
@@ -993,10 +992,10 @@ func TestObservations(t *testing.T) {
 			name: "likeness update replaces the image",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				art := fileArtifact(t, c, userID, s.source.ID)
-				res, _, err := saveCitation(c, userID, art, observations.Input{
+				art := observationstest.FileArtifact(t, c, userID, s.source.ID)
+				res, _, err := observationstest.SaveCitation(c, userID, art, observations.Input{
 					SubjectID: s.person.ID, PropertyID: s.likeness.ID,
-					Depiction: &observations.DepictionInput{RegionJSON: likenessRegion, ImagePath: crop(t, 300, 200, 128)},
+					Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 300, 200, 128)},
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -1024,9 +1023,9 @@ func TestObservations(t *testing.T) {
 				}
 
 				newRegion := `{"version":1,"selectors":[{"type":"page","artifact_page":1},{"type":"region","unit":"normalized","points":[{"x":0.2,"y":0.2},{"x":0.6,"y":0.2},{"x":0.6,"y":0.7}]}]}`
-				changes, err := updateObservation(c, userID, observations.Input{
+				changes, err := observationstest.UpdateObservation(c, userID, observations.Input{
 					ID: obs.ID, SubjectID: s.person.ID, PropertyID: s.likeness.ID,
-					Depiction: &observations.DepictionInput{RegionJSON: newRegion, ImagePath: crop(t, 200, 200, 200)},
+					Depiction: &observations.DepictionInput{RegionJSON: newRegion, ImagePath: observationstest.Crop(t, 200, 200, 200)},
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -1049,9 +1048,9 @@ func TestObservations(t *testing.T) {
 
 				// A crop that re-encodes to the same PNG keeps the File and its object.
 				keepValue, _, keepFile := lookup()
-				if _, err := updateObservation(c, userID, observations.Input{
+				if _, err := observationstest.UpdateObservation(c, userID, observations.Input{
 					ID: obs.ID, SubjectID: s.person.ID, PropertyID: s.likeness.ID,
-					Depiction: &observations.DepictionInput{RegionJSON: newRegion, ImagePath: crop(t, 200, 200, 200)},
+					Depiction: &observations.DepictionInput{RegionJSON: newRegion, ImagePath: observationstest.Crop(t, 200, 200, 200)},
 				}); err != nil {
 					t.Fatal(err)
 				}
@@ -1062,7 +1061,7 @@ func TestObservations(t *testing.T) {
 
 				// A polarity change keeps the value row and its File.
 				beforeValue, _, beforeFile := lookup()
-				changes, err = updateObservation(c, userID, observations.Input{
+				changes, err = observationstest.UpdateObservation(c, userID, observations.Input{
 					ID: obs.ID, SubjectID: s.person.ID, PropertyID: s.likeness.ID,
 					Polarity: observations.PolarityNegative, ValueDepictionID: beforeValue,
 				})
@@ -1078,7 +1077,7 @@ func TestObservations(t *testing.T) {
 				}
 
 				// A value row that is not the Observation's own is refused.
-				if _, err := updateObservation(c, userID, observations.Input{
+				if _, err := observationstest.UpdateObservation(c, userID, observations.Input{
 					ID: obs.ID, SubjectID: s.person.ID, PropertyID: s.likeness.ID, ValueDepictionID: oldValue,
 				}); !errors.Is(err, observations.ErrInvalid) {
 					t.Fatalf("got %v", err)
@@ -1089,8 +1088,8 @@ func TestObservations(t *testing.T) {
 			name: "likeness and name swap releases the replaced value",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				art := fileArtifact(t, c, userID, s.source.ID)
-				res, _, err := saveCitation(c, userID, art, observations.Input{
+				art := observationstest.FileArtifact(t, c, userID, s.source.ID)
+				res, _, err := observationstest.SaveCitation(c, userID, art, observations.Input{
 					SubjectID: s.person.ID, PropertyID: s.nameProp.ID, Name: &namevalue.Value{Form: "Ada"},
 				})
 				if err != nil {
@@ -1100,9 +1099,9 @@ func TestObservations(t *testing.T) {
 				nameID := obs.ValueNameID
 				objectsBefore := objectCount(t, c)
 
-				changes, err := updateObservation(c, userID, observations.Input{
+				changes, err := observationstest.UpdateObservation(c, userID, observations.Input{
 					ID: obs.ID, SubjectID: s.person.ID, PropertyID: s.likeness.ID,
-					Depiction: &observations.DepictionInput{RegionJSON: likenessRegion, ImagePath: crop(t, 300, 200, 128)},
+					Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 300, 200, 128)},
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -1119,7 +1118,7 @@ func TestObservations(t *testing.T) {
 					t.Fatalf("objects %d want %d", got, objectsBefore+1)
 				}
 
-				changes, err = updateObservation(c, userID, observations.Input{
+				changes, err = observationstest.UpdateObservation(c, userID, observations.Input{
 					ID: obs.ID, SubjectID: s.person.ID, PropertyID: s.nameProp.ID, Name: &namevalue.Value{Form: "Ada"},
 				})
 				if err != nil {
@@ -1141,11 +1140,11 @@ func TestObservations(t *testing.T) {
 			name: "likeness delete releases its image",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				art := fileArtifact(t, c, userID, s.source.ID)
+				art := observationstest.FileArtifact(t, c, userID, s.source.ID)
 				objectsBefore := objectCount(t, c)
-				res, _, err := saveCitation(c, userID, art, observations.Input{
+				res, _, err := observationstest.SaveCitation(c, userID, art, observations.Input{
 					SubjectID: s.person.ID, PropertyID: s.likeness.ID,
-					Depiction: &observations.DepictionInput{RegionJSON: likenessRegion, ImagePath: crop(t, 300, 200, 128)},
+					Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 300, 200, 128)},
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -1170,10 +1169,10 @@ func TestObservations(t *testing.T) {
 				}
 
 				// Two likenesses whose crops re-encode to the same PNG share one File.
-				same := crop(t, 300, 200, 90)
-				res, _, err = saveCitation(c, userID, art,
-					observations.Input{SubjectID: s.person.ID, PropertyID: s.likeness.ID, Depiction: &observations.DepictionInput{RegionJSON: likenessRegion, ImagePath: same}},
-					observations.Input{SubjectID: s.person.ID, PropertyID: s.likeness.ID, Depiction: &observations.DepictionInput{RegionJSON: likenessRegion, ImagePath: same}},
+				same := observationstest.Crop(t, 300, 200, 90)
+				res, _, err = observationstest.SaveCitation(c, userID, art,
+					observations.Input{SubjectID: s.person.ID, PropertyID: s.likeness.ID, Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: same}},
+					observations.Input{SubjectID: s.person.ID, PropertyID: s.likeness.ID, Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: same}},
 				)
 				if err != nil {
 					t.Fatal(err)
@@ -1199,11 +1198,11 @@ func TestObservations(t *testing.T) {
 			name: "likeness blocks subject delete",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				art := fileArtifact(t, c, userID, s.source.ID)
+				art := observationstest.FileArtifact(t, c, userID, s.source.ID)
 				objectsBefore := objectCount(t, c)
-				res, _, err := saveCitation(c, userID, art, observations.Input{
+				res, _, err := observationstest.SaveCitation(c, userID, art, observations.Input{
 					SubjectID: s.person.ID, PropertyID: s.likeness.ID,
-					Depiction: &observations.DepictionInput{RegionJSON: likenessRegion, ImagePath: crop(t, 300, 200, 128)},
+					Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 300, 200, 128)},
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -1240,54 +1239,6 @@ func TestObservations(t *testing.T) {
 	}
 }
 
-// A depiction's region sits on the page its Citation cites.
-const (
-	likenessLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
-	likenessRegion  = `{"version":1,"selectors":[{"type":"page","artifact_page":1},{"type":"region","unit":"normalized","points":[{"x":0.1,"y":0.1},{"x":0.4,"y":0.1},{"x":0.4,"y":0.5}]}]}`
-)
-
-func writePNG(t *testing.T, path string, w, h int, c color.Color) {
-	t.Helper()
-	img := image.NewRGBA(image.Rect(0, 0, w, h))
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			img.Set(x, y, c)
-		}
-	}
-	f, err := os.Create(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
-	if err := png.Encode(f, img); err != nil {
-		t.Fatal(err)
-	}
-}
-
-// crop writes a w x h PNG filled with gray shade and returns its path.
-func crop(t *testing.T, w, h int, shade uint8) string {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "crop.png")
-	writePNG(t, path, w, h, color.Gray{Y: shade})
-	return path
-}
-
-// fileArtifact imports a 300 x 200 red PNG and creates an Artifact on its File.
-func fileArtifact(t *testing.T, c *database.Catalog, userID, sourceID []byte) artifacts.Artifact {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "page.png")
-	writePNG(t, path, 300, 200, color.RGBA{R: 255, A: 255})
-	res, err := ingest.File(c, path, userID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: sourceID, FileID: res.File.ID, Label: "Photograph"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return art
-}
-
 // objectCount is the number of regular files under the catalog's objects/.
 func objectCount(t *testing.T, c *database.Catalog) int {
 	t.Helper()
@@ -1322,39 +1273,6 @@ func rowCount(t *testing.T, c *database.Catalog, query string, args ...any) int 
 		t.Fatal(err)
 	}
 	return n
-}
-
-// saveCitation stages every depiction, then files the Citation and its
-// Observations in one write, discarding any stage left over afterwards.
-func saveCitation(c *database.Catalog, userID []byte, art artifacts.Artifact, inputs ...observations.Input) (citations.CreateResult, []rowchange.Change, error) {
-	discard, err := ingest.StageDepictions(c, inputs)
-	if err != nil {
-		return citations.CreateResult{}, nil, err
-	}
-	defer discard()
-	var changes []rowchange.Change
-	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		r, ch, err := citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: art.ID, LocatorJSON: likenessLocator}, inputs)
-		changes = ch
-		return r, ch, err
-	})
-	return res, changes, err
-}
-
-// updateObservation stages the input's depiction, then updates the Observation.
-func updateObservation(c *database.Catalog, userID []byte, in observations.Input) ([]rowchange.Change, error) {
-	discard, err := ingest.StageDepictions(c, []observations.Input{in})
-	if err != nil {
-		return nil, err
-	}
-	defer discard()
-	var changes []rowchange.Change
-	_, _, err = writes.Run(c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-		_, ch, err := observations.Update(tx, userID, in)
-		changes = ch
-		return struct{}{}, ch, err
-	})
-	return changes, err
 }
 
 func deleteObservation(c *database.Catalog, userID, id []byte) error {

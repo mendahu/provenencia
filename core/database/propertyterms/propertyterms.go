@@ -6,9 +6,11 @@ package propertyterms
 import (
 	"database/sql"
 	"errors"
+	"strings"
+
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"strings"
+	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
@@ -30,9 +32,6 @@ var ErrLocked = apperr.New(apperr.CodePropertyTermsLocked, apperr.KindUser)
 var ErrInUse = apperr.New(apperr.CodePropertyTermsInUse, apperr.KindConflict)
 
 const (
-	OriginProvenencia = "provenencia"
-	OriginUser        = "user"
-
 	// KeyPlaceRelationshipType is product-only: researchers cannot mint terms.
 	KeyPlaceRelationshipType = "place_relationship_type"
 	// Locked place_relationship_type keys. Walk / cycle behaviour is keyed
@@ -89,7 +88,7 @@ func Upsert(c *database.Catalog, t Term) ([]byte, error) {
 	t.Origin = strings.TrimSpace(t.Origin)
 	t.Label = strings.TrimSpace(t.Label)
 	t.Description = strings.TrimSpace(t.Description)
-	if len(t.PropertyID) != 16 || t.Key == "" || t.Label == "" || !originOK(t.Origin) {
+	if len(t.PropertyID) != 16 || t.Key == "" || t.Label == "" || !vocabkey.ValidOrigin(t.Origin) {
 		return nil, ErrInvalid
 	}
 	id := t.ID
@@ -144,7 +143,7 @@ func Create(tx *database.Tx, userID, propertyID []byte, label, description strin
 	if key == "" {
 		return Term{}, nil, ErrInvalid
 	}
-	if _, err := scanTerm(tx.QueryRow(sqlLookup, propertyID, key, OriginUser)); err == nil {
+	if _, err := scanTerm(tx.QueryRow(sqlLookup, propertyID, key, vocabkey.OriginUser)); err == nil {
 		return Term{}, nil, ErrDuplicateKey.WithParams(key)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return Term{}, nil, err
@@ -166,14 +165,14 @@ func Create(tx *database.Tx, userID, propertyID []byte, label, description strin
 	} else {
 		desc = description
 	}
-	if _, err := tx.Exec(sqlUpsert, id, propertyID, key, OriginUser, label, desc, 0, nil, 0); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, propertyID, key, vocabkey.OriginUser, label, desc, 0, nil, 0); err != nil {
 		return Term{}, nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
 		"id":          {Old: nil, New: uid.String()},
 		"property_id": {Old: nil, New: uuidString(propertyID)},
 		"key":         {Old: nil, New: key},
-		"origin":      {Old: nil, New: OriginUser},
+		"origin":      {Old: nil, New: vocabkey.OriginUser},
 		"label":       {Old: nil, New: label},
 	}
 	if description != "" {
@@ -210,7 +209,7 @@ func Update(tx *database.Tx, userID, id []byte, label, description string) (Term
 	if err != nil {
 		return Term{}, nil, err
 	}
-	if existing.Origin != OriginUser {
+	if existing.Origin != vocabkey.OriginUser {
 		return Term{}, nil, ErrLocked
 	}
 
@@ -369,7 +368,7 @@ func directedBit(on bool) int {
 
 func propertyTermsLocked(tx *sql.Tx, propertyID []byte) (bool, error) {
 	var key string
-	err := tx.QueryRow(sqlPropertyKey, propertyID, "provenencia").Scan(&key)
+	err := tx.QueryRow(sqlPropertyKey, propertyID, vocabkey.OriginProvenencia).Scan(&key)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	}
@@ -377,13 +376,6 @@ func propertyTermsLocked(tx *sql.Tx, propertyID []byte) (bool, error) {
 		return false, err
 	}
 	return key == KeyPlaceRelationshipType, nil
-}
-
-func originOK(origin string) bool {
-	if origin == OriginProvenencia || origin == OriginUser {
-		return true
-	}
-	return strings.HasPrefix(origin, "plugin:") && len(origin) > len("plugin:")
 }
 
 func uuidString(id []byte) string {

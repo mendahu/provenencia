@@ -23,6 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -68,7 +69,7 @@ func newScopeSeed(t *testing.T) scopeSeed {
 		t.Fatal(err)
 	}
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -83,11 +84,11 @@ func newScopeSeed(t *testing.T) scopeSeed {
 	if err != nil {
 		t.Fatal(err)
 	}
-	personType, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	eventType, err := subjecttypes.Lookup(c, "event", subjecttypes.OriginProvenencia)
+	eventType, err := subjecttypes.Lookup(c, "event", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,17 +105,17 @@ func newScopeSeed(t *testing.T) scopeSeed {
 	}
 	person := mkSubject(personType.ID, "Bob", 0)
 	event := mkSubject(eventType.ID, "Birth", 4)
-	placeType, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+	placeType, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
 	place := mkSubject(placeType.ID, "Boston", 8)
 	place2 := mkSubject(placeType.ID, "Salem", 12)
-	toponymProp, err := properties.Lookup(c, "toponym", properties.OriginProvenencia)
+	toponymProp, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dateProp, err := properties.Lookup(c, "date", properties.OriginProvenencia)
+	dateProp, err := properties.Lookup(c, "date", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}

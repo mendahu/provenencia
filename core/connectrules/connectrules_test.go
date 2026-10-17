@@ -1,6 +1,10 @@
 package connectrules
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/mendahu/provenencia/core/vocabkey"
+)
 
 func TestProductMatrix(t *testing.T) {
 	t.Cleanup(ResetForTest)
@@ -16,25 +20,25 @@ func TestProductMatrix(t *testing.T) {
 	if _, ok := Edge("participation", "role"); ok {
 		t.Fatal("role is disambiguation, not an edge")
 	}
-	if !IsDisambiguation("participation", "role", OriginProvenencia) {
+	if !IsDisambiguation("participation", "role", vocabkey.OriginProvenencia) {
 		t.Fatal("participation role")
 	}
-	if !IsDisambiguation("relationship", "relationship_type", OriginProvenencia) {
+	if !IsDisambiguation("relationship", "relationship_type", vocabkey.OriginProvenencia) {
 		t.Fatal("relationship_type")
 	}
-	if IsDisambiguation("location", "role", OriginProvenencia) {
+	if IsDisambiguation("location", "role", vocabkey.OriginProvenencia) {
 		t.Fatal("location has no role")
 	}
-	if !IsConnectionFacet("participation", "person", OriginProvenencia) {
+	if !IsConnectionFacet("participation", "person", vocabkey.OriginProvenencia) {
 		t.Fatal("seeded edge")
 	}
-	if !IsConnectionFacet("participation", "role", OriginProvenencia) {
+	if !IsConnectionFacet("participation", "role", vocabkey.OriginProvenencia) {
 		t.Fatal("seeded role")
 	}
 	if IsConnectionFacet("participation", "person", "user") {
 		t.Fatal("user-origin edge is not a connection facet")
 	}
-	if IsConnectionFacet("person", "role", OriginProvenencia) {
+	if IsConnectionFacet("person", "role", vocabkey.OriginProvenencia) {
 		t.Fatal("role on person is not a bridge facet")
 	}
 }
@@ -97,7 +101,7 @@ func TestRegisterPluginBridge(t *testing.T) {
 	if IsConnectionFacet("dna_match", "person", "user") {
 		t.Fatal("user origin must not match plugin bridge")
 	}
-	if IsConnectionFacet("dna_match", "person", OriginProvenencia) {
+	if IsConnectionFacet("dna_match", "person", vocabkey.OriginProvenencia) {
 		t.Fatal("provenencia origin must not match plugin bridge")
 	}
 

@@ -13,6 +13,7 @@ import (
 	_ "github.com/mendahu/provenencia/core/database/sourcefill"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 type propertyInfo struct {
@@ -162,7 +163,7 @@ func keptName(n *graphcache.Node, propertyID []byte) *namevalue.Value {
 
 func namePropertyID(props map[string]propertyInfo) []byte {
 	for id, info := range props {
-		if info.Key == "name" && info.Origin == "provenencia" {
+		if info.Key == vocabkey.PropertyName && info.Origin == vocabkey.OriginProvenencia {
 			return []byte(id)
 		}
 	}

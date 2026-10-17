@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/identity"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 func TestFolderName(t *testing.T) {
@@ -117,7 +118,7 @@ func TestComplete(t *testing.T) {
 				if len(types) != 1 {
 					t.Fatalf("seeded source types %d", len(types))
 				}
-				if _, err := sourcetypes.Lookup(p, "birth_certificate", sourcetypes.OriginProvenencia); err != nil {
+				if _, err := sourcetypes.Lookup(p, "birth_certificate", vocabkey.OriginProvenencia); err != nil {
 					t.Fatal(err)
 				}
 				if filepath.Base(res.ProjectDir) != "robins-family"+database.Suffix {

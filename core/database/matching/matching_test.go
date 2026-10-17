@@ -28,6 +28,7 @@ import (
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -63,7 +64,7 @@ func newFixture(t *testing.T) *fixture {
 	must(t, err)
 	must(t, users.Upsert(c, userID, "Tester", r))
 	must(t, subjectvocab.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
@@ -76,12 +77,12 @@ func newFixture(t *testing.T) *fixture {
 	f := &fixture{t: t, c: c, db: db, source: src, artifact: art,
 		types: map[string]subjecttypes.Type{}, props: map[string]properties.Property{}}
 	for _, k := range []string{"person", "event", "place", "participation"} {
-		st, err := subjecttypes.Lookup(c, k, subjecttypes.OriginProvenencia)
+		st, err := subjecttypes.Lookup(c, k, vocabkey.OriginProvenencia)
 		must(t, err)
 		f.types[k] = st
 	}
 	for _, k := range []string{"name", "sex_at_birth", "event_type", "date", "toponym"} {
-		p, err := properties.Lookup(c, k, properties.OriginProvenencia)
+		p, err := properties.Lookup(c, k, vocabkey.OriginProvenencia)
 		must(t, err)
 		f.props[k] = p
 	}
@@ -109,7 +110,7 @@ func namedParts(form, given, surname string) value {
 
 func termed(prop, key string) value {
 	return func(f *fixture, s subjects.Subject) observations.Input {
-		term, err := propertyterms.Lookup(f.c, f.props[prop].ID, key, propertyterms.OriginProvenencia)
+		term, err := propertyterms.Lookup(f.c, f.props[prop].ID, key, vocabkey.OriginProvenencia)
 		must(f.t, err)
 		return observations.Input{SubjectID: s.ID, PropertyID: f.props[prop].ID, ValueTermID: term.ID}
 	}
@@ -434,7 +435,7 @@ func negated(v value) value {
 // would have written it.
 func (f *fixture) addCachedTerm(entityID []byte, prop string, rank int, key string, support int, reason string) {
 	f.t.Helper()
-	term, err := propertyterms.Lookup(f.c, f.props[prop].ID, key, propertyterms.OriginProvenencia)
+	term, err := propertyterms.Lookup(f.c, f.props[prop].ID, key, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	_, err = f.db.Exec(`INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_term_id, support, against, reason)
 		VALUES (?, ?, ?, ?, ?, 0, ?)`, entityID, f.props[prop].ID, rank, term.ID, support, reason)

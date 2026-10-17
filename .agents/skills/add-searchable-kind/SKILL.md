@@ -45,6 +45,7 @@ Add a `KindSpec`:
 | `ContextSections` | Sections that boost this kind (`sources`, `source-types`, …) |
 | `ContextBoost` | Multiplier when request location section matches |
 | `Priority` | Share of the kind tenth of the score (`ScoreMix`). Persons 4, events 3, places 2, sources 1, other 0. The searcher normalizes by the maximum and does not read the name. |
+| `Handle` | True for Conclusion handle kinds (person, event, place). Set only by the `handle` helper in `init`; drives member counts and the handle field map. `TestHandleKindsArePrimaryKinds` ties it to `vocabkey.PrimaryKinds()`. |
 | `DefaultInEverything` | Include when no facet filter (Spike 3: true for Sources/types/fields) |
 
 Kind constants live in `core/search/search.go`. Section strings must match

@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // loadStats returns this catalog's scan. A commit that names handles drops it.
@@ -256,13 +257,13 @@ func addFanOut(q Querier, b connectrules.Bridge, kin kinship, sums map[string]fa
 func profilePropertyKeys() []string {
 	seen := map[string]bool{}
 	var keys []string
-	for _, kind := range match.ProfiledKinds() {
+	for _, kind := range vocabkey.PrimaryKinds() {
 		profile, ok := match.DefaultProfile(kind)
 		if !ok {
 			continue
 		}
 		for _, prop := range profile.Properties() {
-			if prop.Origin != connectrules.OriginProvenencia || seen[prop.Key] {
+			if prop.Origin != vocabkey.OriginProvenencia || seen[prop.Key] {
 				continue
 			}
 			seen[prop.Key] = true

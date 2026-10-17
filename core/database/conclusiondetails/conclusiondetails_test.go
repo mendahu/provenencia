@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -28,6 +29,7 @@ import (
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -63,14 +65,14 @@ func newFixture(t *testing.T) *fixture {
 	must(t, subjectvocab.Install(c))
 	must(t, sourcecredibilitygrades.Install(c))
 	must(t, claimconfidencegrades.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	f := &fixture{t: t, c: c, typeID: typeID, arts: map[string]artifacts.Artifact{}}
-	f.person, err = subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	f.person, err = subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	must(t, err)
-	f.name, err = properties.Lookup(c, "name", properties.OriginProvenencia)
+	f.name, err = properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 	must(t, err)
-	f.sex, err = properties.Lookup(c, "sex_at_birth", properties.OriginProvenencia)
+	f.sex, err = properties.Lookup(c, "sex_at_birth", vocabkey.OriginProvenencia)
 	must(t, err)
 	return f
 }
@@ -227,10 +229,31 @@ func TestForEntityFieldsFollowTheRecords(t *testing.T) {
 	}
 }
 
+// The Person page lists no depiction field before the gallery exists (S10-35).
+func TestForEntityLikenessHasNoField(t *testing.T) {
+	f := newFixture(t)
+	src := f.source("Register")
+	a := f.personOn(src)
+	f.cite(a, f.nameIn(a, "given=James|surname=Robins"))
+	likeness, err := properties.Lookup(f.c, "likeness", vocabkey.OriginProvenencia)
+	must(t, err)
+	art := observationstest.FileArtifact(t, f.c, userID, src.ID)
+	_, _, err = observationstest.SaveCitation(f.c, userID, art, observations.Input{
+		SubjectID: a.ID, PropertyID: likeness.ID,
+		Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 40, 30, 100)},
+	})
+	must(t, err)
+	h := f.promote(a, nil)
+	d := f.detail(h)
+	if len(d.Fields) != 1 || d.Fields[0].PropertyKey != "name" {
+		t.Fatalf("fields %+v", d.Fields)
+	}
+}
+
 func TestForEntityEvidence(t *testing.T) {
 	f := newFixture(t)
 	register, census, gazette := f.source("Register"), f.source("Census"), f.source("Gazette")
-	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", sourcecredibilitygrades.OriginProvenencia)
+	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", vocabkey.OriginProvenencia)
 	must(t, err)
 	p6in2 := sourcecredibility.UpsertInput{SourceID: register.ID, CredibilityGradeID: g.ID}
 	p6act1 := "create_source_credibility_assessment"
@@ -241,7 +264,7 @@ func TestForEntityEvidence(t *testing.T) {
 		return sourcecredibility.Upsert(tx, userID, p6in2)
 	})
 	must(t, err)
-	hg, err := sourcecredibilitygrades.Lookup(f.c, "high_trust", sourcecredibilitygrades.OriginProvenencia)
+	hg, err := sourcecredibilitygrades.Lookup(f.c, "high_trust", vocabkey.OriginProvenencia)
 	must(t, err)
 	p6in5 := sourcecredibility.UpsertInput{SourceID: gazette.ID, CredibilityGradeID: hg.ID}
 	p6act4 := "create_source_credibility_assessment"

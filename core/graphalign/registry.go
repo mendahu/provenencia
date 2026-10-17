@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // The registry: every walk and band tunable graph alignment reads, in one
@@ -23,7 +24,7 @@ func DefaultConfig() Config {
 		// on the scale. Toponym +1 clears medium (3) and stays short of
 		// strong (4) until an edge adds support.
 		PropertyAgreement: map[match.Property]float64{
-			{Key: "toponym", Origin: "provenencia"}: 1,
+			{Key: "toponym", Origin: vocabkey.OriginProvenencia}: 1,
 		},
 		// Value-type defaults. A property entry replaces one of these.
 		// Frequency weights are filled when the score is computed.
@@ -46,13 +47,13 @@ func DefaultConfig() Config {
 		// Sex and gender: agreement is a small nudge and a mismatch subtracts
 		// 1 rather than the global penalty.
 		PropertyScale: map[match.Property]Scale{
-			{Key: "name", Origin: "provenencia"}: {
+			{Key: "name", Origin: vocabkey.OriginProvenencia}: {
 				Floor: 0.75, Weight: 2.5, Contradiction: 3,
 			},
-			{Key: "sex_at_birth", Origin: "provenencia"}: {
+			{Key: "sex_at_birth", Origin: vocabkey.OriginProvenencia}: {
 				Floor: 1, Weight: 0.6, Contradiction: 1,
 			},
-			{Key: "gender", Origin: "provenencia"}: {
+			{Key: "gender", Origin: vocabkey.OriginProvenencia}: {
 				Floor: 1, Weight: 0.6, Contradiction: 1,
 			},
 		},

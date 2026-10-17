@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -24,12 +25,12 @@ func TestUpsertLookupList(t *testing.T) {
 			name: "upsert lookup refresh data type",
 			run: func(t *testing.T, c *database.Catalog) {
 				id, err := Upsert(c, Field{
-					Key: "author", Origin: OriginProvenencia, Label: "Author", DataType: DataTypeText,
+					Key: "author", Origin: vocabkey.OriginProvenencia, Label: "Author", DataType: DataTypeText,
 				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				got, err := Lookup(c, "author", OriginProvenencia)
+				got, err := Lookup(c, "author", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -37,11 +38,11 @@ func TestUpsertLookupList(t *testing.T) {
 					t.Fatalf("got %+v", got)
 				}
 				if _, err := Upsert(c, Field{
-					Key: "author", Origin: OriginProvenencia, Label: "Author", DataType: DataTypeURL,
+					Key: "author", Origin: vocabkey.OriginProvenencia, Label: "Author", DataType: DataTypeURL,
 				}); err != nil {
 					t.Fatal(err)
 				}
-				got, err = Lookup(c, "author", OriginProvenencia)
+				got, err = Lookup(c, "author", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -54,7 +55,7 @@ func TestUpsertLookupList(t *testing.T) {
 			name: "rejects bad data type",
 			run: func(t *testing.T, c *database.Catalog) {
 				if _, err := Upsert(c, Field{
-					Key: "x", Origin: OriginUser, Label: "X", DataType: "number",
+					Key: "x", Origin: vocabkey.OriginUser, Label: "X", DataType: "number",
 				}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
@@ -64,12 +65,12 @@ func TestUpsertLookupList(t *testing.T) {
 			name: "upsert accepts url data type",
 			run: func(t *testing.T, c *database.Catalog) {
 				id, err := Upsert(c, Field{
-					Key: "landing-page", Origin: OriginUser, Label: "Landing page", DataType: DataTypeURL,
+					Key: "landing-page", Origin: vocabkey.OriginUser, Label: "Landing page", DataType: DataTypeURL,
 				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				got, err := Lookup(c, "landing-page", OriginUser)
+				got, err := Lookup(c, "landing-page", vocabkey.OriginUser)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -81,7 +82,7 @@ func TestUpsertLookupList(t *testing.T) {
 		{
 			name: "lookup missing",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Lookup(c, "nope", OriginProvenencia)
+				_, err := Lookup(c, "nope", vocabkey.OriginProvenencia)
 				if !errors.Is(err, sql.ErrNoRows) {
 					t.Fatalf("got %v", err)
 				}
@@ -137,7 +138,7 @@ func TestDelete(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				id, err := Upsert(c, Field{
-					Key: "author", Origin: OriginProvenencia, Label: "Author", DataType: DataTypeText,
+					Key: "author", Origin: vocabkey.OriginProvenencia, Label: "Author", DataType: DataTypeText,
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -148,7 +149,7 @@ func TestDelete(t *testing.T) {
 				if latestAction(t, c) != "delete_metadata_field" {
 					t.Fatalf("action %q", latestAction(t, c))
 				}
-				_, err = Lookup(c, "author", OriginProvenencia)
+				_, err = Lookup(c, "author", vocabkey.OriginProvenencia)
 				if !errors.Is(err, sql.ErrNoRows) {
 					t.Fatalf("got %v", err)
 				}
@@ -159,7 +160,7 @@ func TestDelete(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-					Key: "book", Origin: sourcetypes.OriginUser, Label: "Book",
+					Key: "book", Origin: vocabkey.OriginUser, Label: "Book",
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -230,7 +231,7 @@ func TestDelete(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-					Key: "book", Origin: sourcetypes.OriginUser, Label: "Book",
+					Key: "book", Origin: vocabkey.OriginUser, Label: "Book",
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -242,7 +243,7 @@ func TestDelete(t *testing.T) {
 					t.Fatal(err)
 				}
 				id, err := Upsert(c, Field{
-					Key: "author", Origin: OriginUser, Label: "Author", DataType: DataTypeText,
+					Key: "author", Origin: vocabkey.OriginUser, Label: "Author", DataType: DataTypeText,
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -318,7 +319,7 @@ func TestCreateUpdateGetByID(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if f.Key != "grandmas-album-code" || f.Origin != OriginUser {
+				if f.Key != "grandmas-album-code" || f.Origin != vocabkey.OriginUser {
 					t.Fatalf("got %+v", f)
 				}
 			},
@@ -347,7 +348,7 @@ func TestCreateUpdateGetByID(t *testing.T) {
 			name: "same key different origin does not collide",
 			run: func(t *testing.T, c *database.Catalog) {
 				if _, err := Upsert(c, Field{
-					Key: "photographer", Origin: OriginProvenencia, Label: "Photographer", DataType: DataTypeText,
+					Key: "photographer", Origin: vocabkey.OriginProvenencia, Label: "Photographer", DataType: DataTypeText,
 				}); err != nil {
 					t.Fatal(err)
 				}
@@ -355,7 +356,7 @@ func TestCreateUpdateGetByID(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if f.Key != "photographer" || f.Origin != OriginUser {
+				if f.Key != "photographer" || f.Origin != vocabkey.OriginUser {
 					t.Fatalf("got %+v", f)
 				}
 			},
@@ -400,7 +401,7 @@ func TestCreateUpdateGetByID(t *testing.T) {
 			name: "update provenencia field",
 			run: func(t *testing.T, c *database.Catalog) {
 				id, err := Upsert(c, Field{
-					Key: "author", Origin: OriginProvenencia, Label: "Author", DataType: DataTypeText,
+					Key: "author", Origin: vocabkey.OriginProvenencia, Label: "Author", DataType: DataTypeText,
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -409,7 +410,7 @@ func TestCreateUpdateGetByID(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if updated.Key != "author" || updated.Origin != OriginProvenencia ||
+				if updated.Key != "author" || updated.Origin != vocabkey.OriginProvenencia ||
 					updated.Label != "Author renamed" || updated.DataType != DataTypeText ||
 					updated.Description != "edited" {
 					t.Fatalf("got %+v", updated)
@@ -446,12 +447,12 @@ func TestCreateUpdateGetByID(t *testing.T) {
 					t.Fatalf("empty %+v %v", got, err)
 				}
 				if _, err := Upsert(c, Field{
-					Key: "author", Origin: OriginProvenencia, Label: "Author", DataType: DataTypeText,
+					Key: "author", Origin: vocabkey.OriginProvenencia, Label: "Author", DataType: DataTypeText,
 				}); err != nil {
 					t.Fatal(err)
 				}
 				if _, err := Upsert(c, Field{
-					Key: "notes", Origin: OriginUser, Label: "Notes", DataType: DataTypeText,
+					Key: "notes", Origin: vocabkey.OriginUser, Label: "Notes", DataType: DataTypeText,
 				}); err != nil {
 					t.Fatal(err)
 				}

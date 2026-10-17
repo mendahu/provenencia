@@ -33,6 +33,7 @@ import (
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -64,7 +65,7 @@ func newFixture(t *testing.T) *fixture {
 	must(t, err)
 	must(t, users.Upsert(c, userID, "Tester", r))
 	must(t, subjectvocab.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
@@ -72,13 +73,13 @@ func newFixture(t *testing.T) *fixture {
 	must(t, err)
 	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
-	name, err := properties.Lookup(c, "name", properties.OriginProvenencia)
+	name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 	must(t, err)
 	return &fixture{t: t, c: c, source: src, artifact: art, name: name}
 }
 
 func (f *fixture) typeID(key string) []byte {
-	st, err := subjecttypes.Lookup(f.c, key, subjecttypes.OriginProvenencia)
+	st, err := subjecttypes.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return st.ID
 }
@@ -342,7 +343,7 @@ func TestPersonsByIDs(t *testing.T) {
 
 func (f *fixture) prop(key string) properties.Property {
 	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, properties.OriginProvenencia)
+	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return p
 }
@@ -350,7 +351,7 @@ func (f *fixture) prop(key string) properties.Property {
 func (f *fixture) term(propertyKey, termKey string) propertyterms.Term {
 	f.t.Helper()
 	p := f.prop(propertyKey)
-	term, err := propertyterms.Lookup(f.c, p.ID, termKey, propertyterms.OriginProvenencia)
+	term, err := propertyterms.Lookup(f.c, p.ID, termKey, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return term
 }
@@ -506,7 +507,7 @@ func (f *fixture) book(title string) (sources.Source, artifacts.Artifact) {
 
 func (f *fixture) lowTrust(src sources.Source) {
 	f.t.Helper()
-	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", sourcecredibilitygrades.OriginProvenencia)
+	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", vocabkey.OriginProvenencia)
 	must(f.t, err)
 	p6in11 := sourcecredibility.UpsertInput{
 		SourceID: src.ID, CredibilityGradeID: g.ID,
@@ -760,7 +761,7 @@ func TestListHeadersCarryUpdated(t *testing.T) {
 	db, err := f.c.DB()
 	must(t, err)
 	// A handle with no scope row, inserted before the graph is first loaded.
-	personType, err := subjecttypes.Lookup(f.c, "person", subjecttypes.OriginProvenencia)
+	personType, err := subjecttypes.Lookup(f.c, "person", vocabkey.OriginProvenencia)
 	must(t, err)
 	raw, err := uuid.NewV7()
 	must(t, err)

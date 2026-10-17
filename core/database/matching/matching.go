@@ -29,6 +29,7 @@ import (
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // Querier is *sql.Tx or *sql.DB.
@@ -152,7 +153,7 @@ func start(q Querier, typeSQL string, id []byte, opts Options) ([]byte, Result, 
 		res.Profiled = true
 		return typeID, res, *opts.Profile, nil
 	}
-	if res.Origin != "provenencia" {
+	if res.Origin != vocabkey.OriginProvenencia {
 		return typeID, res, match.Profile{}, nil
 	}
 	p, ok := match.DefaultProfile(res.Kind)

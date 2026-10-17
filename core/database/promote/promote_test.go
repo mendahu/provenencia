@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -246,7 +247,7 @@ func TestSave(t *testing.T) {
 				if err := claimconfidencegrades.Install(c); err != nil {
 					t.Fatal(err)
 				}
-				high, err := claimconfidencegrades.Lookup(c, "high_confidence", claimconfidencegrades.OriginProvenencia)
+				high, err := claimconfidencegrades.Lookup(c, "high_confidence", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -376,7 +377,7 @@ func newCatalog(t *testing.T) (*database.Catalog, func(key string) subjects.Subj
 		t.Fatal(err)
 	}
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -389,7 +390,7 @@ func newCatalog(t *testing.T) (*database.Catalog, func(key string) subjects.Subj
 	}
 	return c, func(key string) subjects.Subject {
 		t.Helper()
-		st, err := subjecttypes.Lookup(c, key, subjecttypes.OriginProvenencia)
+		st, err := subjecttypes.Lookup(c, key, vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}

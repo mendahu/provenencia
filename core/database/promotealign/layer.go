@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 type primarySubject struct {
@@ -33,7 +34,7 @@ func loadLayer(g *graphcache.Graph, q Querier, sourceID []byte) (graphalign.Laye
 	var subjects []graphalign.Subject
 	byKind := map[string][][]byte{}
 	for _, s := range sg.Subjects {
-		if !promote.PrimaryKind(s.TypeKey, s.TypeOrigin) {
+		if !vocabkey.IsPrimaryType(s.TypeKey, s.TypeOrigin) {
 			continue
 		}
 		if _, ok := match.DefaultProfile(s.TypeKey); !ok {
@@ -90,7 +91,7 @@ func loadMetas(g *graphcache.Graph) ([]match.PropertyMeta, error) {
 	}
 	seen := map[match.Property]bool{}
 	var out []match.PropertyMeta
-	for _, kind := range []string{"person", "event", "place"} {
+	for _, kind := range vocabkey.PrimaryKinds() {
 		profile, ok := match.DefaultProfile(kind)
 		if !ok {
 			continue
@@ -114,13 +115,13 @@ func loadMetas(g *graphcache.Graph) ([]match.PropertyMeta, error) {
 
 // neighborTypeProperty is the Property whose term types a bridge's neighbor
 // in an edge signature (an event's type). Kinds without one sign by kind only.
-var neighborTypeProperty = map[string]string{"event": "event_type"}
+var neighborTypeProperty = map[string]string{vocabkey.Event: vocabkey.PropertyEventType}
 
 // Product hops used to discover undirected bridges on the layer.
 var (
-	hopPersonToEvent  = hops.MustHop("participation", "person", "event", nil)
+	hopPersonToEvent  = hops.MustHop("participation", vocabkey.Person, vocabkey.Event, nil)
 	hopEventToPlace   = hops.PlacesOfEvent
-	hopPersonRelated  = hops.MustHop("relationship", "person", "related_to", nil)
+	hopPersonRelated  = hops.MustHop("relationship", vocabkey.Person, "related_to", nil)
 	hopPlaceParent    = hops.ParentsOfPlace
 	hopPlaceSuccessor = hops.SuccessorsOfPlace
 )
@@ -163,7 +164,7 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 	}
 
 	// Person ↔ event (participation), any role.
-	participations, err := walk("person", hopPersonToEvent)
+	participations, err := walk(vocabkey.Person, hopPersonToEvent)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +176,7 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 	for _, e := range participations {
 		events = append(events, e.To)
 	}
-	eventTypes, err := observedTerms(q, events, neighborTypeProperty["event"])
+	eventTypes, err := observedTerms(q, events, neighborTypeProperty[vocabkey.Event])
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +189,7 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 	}
 
 	// Event ↔ place (location).
-	locations, err := walk("event", hopEventToPlace)
+	locations, err := walk(vocabkey.Event, hopEventToPlace)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +199,7 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 	}
 
 	// Person ↔ person (relationship).
-	relationships, err := walk("person", hopPersonRelated)
+	relationships, err := walk(vocabkey.Person, hopPersonRelated)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +229,7 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 		{hopPlaceParent, "part_of"},
 		{hopPlaceSuccessor, "succeeded_by"},
 	} {
-		edges, err := walk("place", step.hop)
+		edges, err := walk(vocabkey.Place, step.hop)
 		if err != nil {
 			return nil, err
 		}

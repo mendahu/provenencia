@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
@@ -175,7 +176,7 @@ func applyRow(tx *sql.Tx, sourceID []byte, row BatchRow, targets pinTargets) (*W
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if !PrimaryKind(st.Key, st.Origin) {
+	if !vocabkey.IsPrimaryType(st.Key, st.Origin) {
 		return nil, nil, nil, ErrUnsupportedType
 	}
 

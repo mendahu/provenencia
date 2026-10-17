@@ -87,12 +87,12 @@ These are the calls for this spike. PR plans treat them as binding.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | S11-01 | One-page matching model | 1 | Diagram, glossary, knob inventory with starting values and estimates | — | — | [plan](prs/S11-01-matching-model.md) | Landed #432 |
 | S11-22 | Pure value types | 1 | Date and name value structs, display helpers, part types, value-type and cardinality constants move to pure packages | — | — | [plan](prs/S11-22-pure-value-types.md) | Landed #434 |
-| S11-23 | One home for primary kinds | 1 | `person` / `event` / `place`, their locked property keys, and the Origin constants in one pure place; the hand-written lists use it | — | S11-22 | — | Scoped |
+| S11-23 | One home for primary kinds | 1 | `person` / `event` / `place`, the Property keys matching reads by name, and the Origin constants and check in one pure place; the hand-written lists use it | — | S11-22 | [plan](prs/S11-23-primary-kinds.md) | Landed #438 |
 | S11-02 | Value compare core and match registry | 2 | `valuecompare` contract, `Key`, text / term / integer, `matchregistry` skeleton and value section, the guard, the matching skill | — | S11-01, S11-22, S11-23 | — | Scoped |
 | S11-03 | Value compare: names | 2 | Name comparer on relations; word helpers move in from `autoreconcile`; alias seeds to `namealiases` | — | S11-02 | — | Scoped |
 | S11-04 | Value compare: dates | 2 | Date comparer on relations; date windows move in; `ABT` as a range | — | S11-02 | — | Scoped |
 | S11-05 | Migrate matching onto value compare | 2 | `match`, `graphalign`, `promotealign` call `valuecompare`; `match`'s comparers deleted | — | S11-03, S11-04 | — | Scoped |
-| S11-06 | Migrate the reconciler onto value compare | 2 | `Compatible`, keys, grouping policy, place-chain windows, `hasValue` copy | — | S11-05 | — | Scoped |
+| S11-06 | Migrate the reconciler onto value compare | 2 | `Compatible`, keys, grouping policy, place-chain windows | — | S11-05 | — | Scoped |
 | S11-07 | One normalization key across the core | 2 | Search rescoring, search-index dedupe, term dedupe, alias tokens use `Key` | — | S11-05 | — | Scoped |
 | S11-08 | One normalization helper in Swift | 2 | Shared Swift normalize for filters; `FakeStore` groups names by parts | — | S11-06 | — | Scoped |
 | S11-09 | Property compare | 3 | `propertycompare`: negatives, neutral terms, cardinality, outcome table | — | S11-05 | — | Scoped |
@@ -234,7 +234,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-23 — One home for primary kinds
 
-**Ships.** `person`, `event`, `place` and their locked property keys in one pure place; `promote.primaryKinds`, `match.ProfiledKinds`, `promotealign/layer.go` and the `FakeStore` literals use it. `sourcegraphprogress` drops its `promote` import. `OriginProvenencia` / `OriginUser`, declared today in nine packages (`properties`, `subjecttypes`, `propertyterms`, `sourcetypes`, `metadatafields`, `nameformats`, `claimconfidencegrades`, `sourcecredibilitygrades`, `core/connectrules`), get the same pure home. Closes "Primary Subject kinds" in [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md).
+**Ships.** `person`, `event`, `place` and the Property keys matching reads by name (their locked keys plus `sex_at_birth` and `gender`) in one pure place, `core/vocabkey`; `promote.primaryKinds`, `match.ProfiledKinds`, `promotealign/layer.go` and the `FakeStore` literals use it. `sourcegraphprogress` drops its `promote` import. `OriginProvenencia` / `OriginUser`, declared today in nine packages (`properties`, `subjecttypes`, `propertyterms`, `sourcetypes`, `metadatafields`, `nameformats`, `claimconfidencegrades`, `sourcecredibilitygrades`, `core/connectrules`), get the same pure home, with the origin check the seven `originOK` copies repeat. Closes "Primary Subject kinds" in [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md).
 **Not this PR.** Registry keys (S11-02 uses these).
 **Check.** No hand-written kind list remains (grep); tests pass.
 **Context.** [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md) "Primary Subject kinds".
@@ -243,7 +243,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-02 — Value compare core and match registry
 
-**Ships.** `core/valuecompare`: pure value types, `Result` (relation + similarity), `Detail` (parts, cause codes, value refs), `Key`, and the text, term and integer comparers. `core/matchregistry` with `Default()` and the value section. Registry keys use S11-23's kinds and property keys. One repo-walking guard (purity and numeric literals over a list of layer packages; the guard also lists `core/datevalue`, `core/namevalue` and `core/propertymeta`), contract tests, and the inventory-drift guard. The matching skill (`add-match-rule`), first version.
+**Ships.** `core/valuecompare`: pure value types, `Result` (relation + similarity), `Detail` (parts, cause codes, value refs), `Key`, and the text, term and integer comparers. `core/matchregistry` with `Default()` and the value section. Registry keys are `core/vocabkey` constants (S11-23) used directly as typed `SubjectType` / `PropertyKey` keys; no re-declared key constants. The purity guard lists `core/vocabkey`. One repo-walking guard (purity and numeric literals over a list of layer packages; the guard also lists `core/datevalue`, `core/namevalue` and `core/propertymeta`), contract tests, and the inventory-drift guard. The matching skill (`add-match-rule`), first version.
 **Not this PR.** Names (S11-03), dates (S11-04), any caller (S11-05).
 **Check.** `go test ./core/valuecompare/... ./core/matchregistry/...` passes with no build tags; the contract tests run against every comparer.
 **Context.** [Layer 1](comparison-layers.md#layer-1-value-comparison), [relations](comparison-layers.md#relations), [detail](comparison-layers.md#detail), [purity](comparison-layers.md#purity-requirements), [match registry](comparison-layers.md#match-registry).
@@ -271,7 +271,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-06 — Migrate the reconciler onto value compare
 
-**Ships.** `autoreconcile` keys, `Compatible`, `subsumes` / `partFits` and the pipeline's grouping use `valuecompare` relations under a grouping policy the plan decides (recommendation on record: group on `Same` and `Contains`, not `Equivalent`). `conclusionheaders` place chains use day-precision windows. `autoreconciler.hasValue` calls `carries`. [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) says what the reconciler now uses.
+**Ships.** `autoreconcile` keys, `Compatible`, `subsumes` / `partFits` and the pipeline's grouping use `valuecompare` relations under a grouping policy the plan decides (recommendation on record: group on `Same` and `Contains`, not `Equivalent`). `conclusionheaders` place chains use day-precision windows. [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) says what the reconciler now uses.
 **Not this PR.** Pins (S11-19).
 **Check.** `Sainte-Anne` / `Sainte Anne` group; `J. Robins` folds into `James Robins`; a place chain with two same-year dates folds by day; `Montréal` / `Montreal` follow the chosen policy.
 **Context.** [Reuse inventory](comparison-layers.md#reuse-across-the-app); [decided 2026-10-17](comparison-layers.md#decided-on-2026-10-17) (reconciler grouping); rule "The reconciler keeps its own decisions"; [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md).
@@ -304,7 +304,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 **Ships.** `core/subjectcompare` and the registry's subject section: per Subject type and property, agree weight and conflict penalty (event type: low agree, very large conflict); the pairs (sex with gender; `date` with `start_date` / `end_date`); similarity and evidence.
 **Not this PR.** Profiles (S11-11), lifespan (S11-12), callers (S11-13).
 **Check.** The layer 3 examples hold (name 1.0 / 2.5; name + gender 1.0 / 3.1; birth vs death with matching dates ≈ 0.09).
-Ports `subjectvocab`'s `TestDefaultProfileCardinality` as "every registry `PropertyKey` is a seeded Property". Extends the matching skill.
+Ports `subjectvocab`'s `TestDefaultProfileCardinality` as "every registry `PropertyKey` is a `vocabkey` constant"; S11-23's `TestVocabKeysMatchSeed` ties those constants to the seed. Extends the matching skill.
 **Context.** [Layer 3](comparison-layers.md#layer-3-subject-comparison); rule "Sparse data first".
 
 #### S11-11 — Subject profile and entity compare

@@ -41,6 +41,9 @@ new Install into **`onboarding.createCatalog` only**.
    create time; existing catalogs are not backfilled on open.
 3. All registry rows are **`origin = provenencia`**. Researcher/plugin rows use
    Upsert APIs with `user` / `plugin:<id>` — never put those in the registry.
+   Origins, primary kinds and the Property keys code reads by name come from
+   `core/vocabkey`. A vocabulary package does not declare its own
+   `OriginProvenencia` or origin check; it calls `vocabkey.ValidOrigin`.
 4. **No seed `INSERT`s** in `migrations/*.sql`. DDL-only migrations for new tables.
 5. Adding rows to the registry is enough for normal growth of the create-time
    starter. Do not reintroduce open-time heal.
@@ -139,3 +142,4 @@ Join/suggestion tables have **no `origin`** column.
 - Treat `provenencia` as a `builtin` boolean — use `origin`
 - Expand the full horizon catalog in one PR “just because” it is listed in the docs
 - Reintroduce open-time Ensure/heal for seeded vocabulary
+- Write `"provenencia"`, `"plugin:"`, a primary kind or a `vocabkey` Property key as a Go string literal outside the seed (SQL text keeps its literals)

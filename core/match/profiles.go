@@ -1,5 +1,7 @@
 package match
 
+import "github.com/mendahu/provenencia/core/vocabkey"
+
 // Feature is one Property a Profile weighs.
 type Feature struct {
 	Property Property
@@ -63,4 +65,4 @@ func (p Profile) Properties() []Property {
 	return out
 }
 
-func product(key string) Property { return Property{Key: key, Origin: "provenencia"} }
+func product(key string) Property { return Property{Key: key, Origin: vocabkey.OriginProvenencia} }

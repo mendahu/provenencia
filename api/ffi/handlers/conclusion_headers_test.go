@@ -22,6 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -40,7 +41,7 @@ func namedPerson(t *testing.T) (dir, handleRef string) {
 		t.Fatal(err)
 	}
 	if err := withProjectCatalog(req.ProjectDir, func(c *database.Catalog) error {
-		name, err := properties.Lookup(c, "name", properties.OriginProvenencia)
+		name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
@@ -199,7 +200,7 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 	}
 	var subjectID []byte
 	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
-		st, err := subjecttypes.Lookup(c, "event", subjecttypes.OriginProvenencia)
+		st, err := subjecttypes.Lookup(c, "event", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
@@ -210,19 +211,19 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 			return err
 		}
 		subjectID = s.ID
-		name, err := properties.Lookup(c, "event_name", properties.OriginProvenencia)
+		name, err := properties.Lookup(c, "event_name", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
-		eventType, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+		eventType, err := properties.Lookup(c, "event_type", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
-		term, err := propertyterms.Lookup(c, eventType.ID, "birth", propertyterms.OriginProvenencia)
+		term, err := propertyterms.Lookup(c, eventType.ID, "birth", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
-		dateProp, err := properties.Lookup(c, "date", properties.OriginProvenencia)
+		dateProp, err := properties.Lookup(c, "date", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
@@ -307,7 +308,7 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		t.Fatal(err)
 	}
 	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
-		st, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+		st, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
@@ -317,7 +318,7 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		toponym, err := properties.Lookup(c, "toponym", properties.OriginProvenencia)
+		toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
@@ -365,7 +366,7 @@ func TestWorkspaceNavCountsConclusionHandles(t *testing.T) {
 			return err
 		}
 		for _, key := range []string{"event", "place", "place"} {
-			st, err := subjecttypes.Lookup(c, key, subjecttypes.OriginProvenencia)
+			st, err := subjecttypes.Lookup(c, key, vocabkey.OriginProvenencia)
 			if err != nil {
 				return err
 			}

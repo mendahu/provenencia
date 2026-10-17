@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/objectstore"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -82,7 +83,7 @@ func TestReleaseSchedulesPurge(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c, userID := testCatalog(t)
 			typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-				Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+				Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 			})
 			if err != nil {
 				t.Fatal(err)

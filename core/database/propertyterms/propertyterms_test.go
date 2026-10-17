@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -70,12 +71,12 @@ func TestPropertyTerms(t *testing.T) {
 			name: "upsert lookup list",
 			run: func(t *testing.T, c *database.Catalog, _, propID []byte) {
 				id, err := Upsert(c, Term{
-					PropertyID: propID, Key: "birth", Origin: OriginProvenencia, Label: "Birth",
+					PropertyID: propID, Key: "birth", Origin: vocabkey.OriginProvenencia, Label: "Birth",
 				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				got, err := Lookup(c, propID, "birth", OriginProvenencia)
+				got, err := Lookup(c, propID, "birth", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -95,7 +96,7 @@ func TestPropertyTerms(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got.Key != "land-grant" || got.Origin != OriginUser {
+				if got.Key != "land-grant" || got.Origin != vocabkey.OriginUser {
 					t.Fatalf("got %+v", got)
 				}
 				updated, err := runUpdate(c, userID, got.ID, "Land Grant 2", "")
@@ -118,7 +119,7 @@ func TestPropertyTerms(t *testing.T) {
 			name: "refuse mutate product term",
 			run: func(t *testing.T, c *database.Catalog, userID, propID []byte) {
 				id, err := Upsert(c, Term{
-					PropertyID: propID, Key: "death", Origin: OriginProvenencia, Label: "Death",
+					PropertyID: propID, Key: "death", Origin: vocabkey.OriginProvenencia, Label: "Death",
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -183,7 +184,7 @@ func TestPropertyTerms(t *testing.T) {
 				t.Fatal(err)
 			}
 			propID, err := properties.Upsert(c, properties.Property{
-				Key: "event_type", Origin: properties.OriginProvenencia,
+				Key: "event_type", Origin: vocabkey.OriginProvenencia,
 				Label: "Event type", ValueType: propertymeta.ValueTypeTerm,
 			})
 			if err != nil {

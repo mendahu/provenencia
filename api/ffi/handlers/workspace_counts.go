@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -29,15 +30,15 @@ func GetWorkspaceNavCounts(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		persons, err := canonicalentities.CountByTypeKey(c, "person")
+		persons, err := canonicalentities.CountByTypeKey(c, vocabkey.Person)
 		if err != nil {
 			return err
 		}
-		events, err := canonicalentities.CountByTypeKey(c, "event")
+		events, err := canonicalentities.CountByTypeKey(c, vocabkey.Event)
 		if err != nil {
 			return err
 		}
-		places, err := canonicalentities.CountByTypeKey(c, "place")
+		places, err := canonicalentities.CountByTypeKey(c, vocabkey.Place)
 		if err != nil {
 			return err
 		}
