@@ -205,19 +205,19 @@ func Create(tx *database.Tx, userID []byte, label, valueType, description, cardi
 		fields["description"] = rowchange.FieldDiff{Old: nil, New: description}
 	}
 	return Property{
-		ID:          append([]byte(nil), id...),
-		Key:         key,
-		Origin:      OriginUser,
-		Label:       label,
-		Description: description,
-		ValueType:   valueType,
-		Cardinality: cardinality,
-	}, []rowchange.Change{{
-		EntityType: "property",
-		EntityID:   append([]byte(nil), id...),
-		Action:     rowchange.ActionCreate,
-		Fields:     fields,
-	}}, nil
+			ID:          append([]byte(nil), id...),
+			Key:         key,
+			Origin:      OriginUser,
+			Label:       label,
+			Description: description,
+			ValueType:   valueType,
+			Cardinality: cardinality,
+		}, []rowchange.Change{{
+			EntityType: "property",
+			EntityID:   append([]byte(nil), id...),
+			Action:     rowchange.ActionCreate,
+			Fields:     fields,
+		}}, nil
 }
 
 // Update patches label, description, and cardinality for a project Property
