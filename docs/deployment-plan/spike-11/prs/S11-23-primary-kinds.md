@@ -1,18 +1,18 @@
 # S11-23 — One home for primary kinds
 
-**Status:** Blocked — on S11-22
+**Status:** Planned
 **Spike / slice:** Spike 11 · Slice 1 — Graspable model and pure foundations
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: Go constants and the Swift fake)
 **Board:** —
-**Depends on:** S11-22 (in progress; this plan is written against [its plan](S11-22-pure-value-types.md), not its code)
+**Depends on:** S11-22 (landed [#434](https://github.com/mendahu/provenencia/pull/434))
 **Blocks:** S11-02
 **Branch:** `s11-23-primary-kinds`
 **Version bump:** none — internal refactor, no behavior change ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-seeded-vocabulary`](../../../../.agents/skills/add-seeded-vocabulary/SKILL.md), [`add-catalog-query`](../../../../.agents/skills/add-catalog-query/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`
 **Context:** working rules "Pure value types and kinds come first", "Pure means the package builds and tests with no build tags and no `core/database` import", "High tolerance for churn", "One wire vocabulary"; [`docs/seeded-vocabulary.md` §1.1](../../../seeded-vocabulary.md#11-vocabulary-origin-namespace); [`ideas/shared-list-helpers.md`](../../../ideas/shared-list-helpers.md) (its "Primary Subject kinds" note moved into the map's S11-23 scope entry)
-**Planned:** 2026-10-17 against `origin/main` @ `233e87a`, plus [S11-22's plan](S11-22-pure-value-types.md) as landed code
+**Planned:** 2026-10-17 against `origin/main` @ `ac05ae8` (S11-22 landed)
 **Review:** [`S11-23-primary-kinds.review.md`](S11-23-primary-kinds.review.md) — Fits with changes / Ready with changes → fixed, 2 rounds
 
 ### Implementer — read this first
@@ -54,7 +54,7 @@ The primary Subject kinds (`person`, `event`, `place`), the seeded Property keys
 | AC-2.1 | Search S-1 below | No output |
 | AC-2.2 | Search S-2 below | Hits only in `core/vocabkey/vocabkey.go` (new): the two exported origin constants |
 | AC-2.3 | Search S-3 below | Hits only in `core/vocabkey/vocabkey.go` (new) |
-| AC-2.6 | Search S-4 below | Exactly these hits, none of which is a kind or a Property key (D-13): `core/database/observations/observations.go` four value-type lines (L413, L445, L524, L527 at the base); `core/search/registry.go` the two document-line tags (L255, L257); `core/database/searchindex/handles.go` the three `tagged(…, "name"/"toponym")` lines (L273, L285, L289), whose remaining literal is the tag |
+| AC-2.6 | Search S-4 below | Exactly these hits, none of which is a kind or a Property key (D-13): `core/database/observations/observations.go` four value-type lines (L417, L449, L528, L531 at the base); `core/search/registry.go` the two document-line tags (L255, L257); `core/database/searchindex/handles.go` the three `tagged(…, "name"/"toponym")` lines (L273, L285, L289), whose remaining literal is the tag |
 | AC-2.4 | A seed type is added with role `root`, or a constant in `vocabkey` names a key the seed lacks | `TestVocabKeysMatchSeed` fails |
 | AC-2.5 | A case is added to or removed from Swift `EvidencePrimaryKind` | `TestSwiftVocabularyMatchesGo/primary_kinds` fails |
 
@@ -104,7 +104,7 @@ rg -n --type go -g '!*_test.go' -g '!core/vocabkey/**' -g '!core/propertymeta/**
 
 ## 4. Current state
 
-Rows marked **(after S11-22)** describe the code S11-22's plan leaves; the rest are true at `233e87a` and S11-22 does not touch them.
+Rows marked **(after S11-22)** describe code S11-22 changed; every row was rechecked at `ac05ae8`.
 
 | Area | Where | Today |
 | --- | --- | --- |
@@ -116,15 +116,15 @@ Rows marked **(after S11-22)** describe the code S11-22's plan leaves; the rest 
 | Single spellings | Kind literals: `api/ffi/handlers/promote_align.go` switches L64–68, L163–171, L180–188; `api/ffi/handlers/conclusion_detail.go` L116–128; `api/ffi/handlers/workspace_counts.go` L32, L36, L40; `core/database/conclusionheaders/compose.go` L232, L305, L355 (`v.typeID[...]`); `core/database/promotealign/layer.go` L121, L123, L166, L191, L201, L231; `canon.go` L214, L217, L220; `core/database/sourcefill/load.go` L178; `core/database/sourceeventtitles/sourceeventtitles.go` L120. Property-key literals: `core/database/conclusionheaders/compose.go` 17 `v.prop("…")` reads (L462–L1021); `sourceeventtitles.go` L104, L133, L179, L194, L210; `core/database/searchindex/handles.go` L273, L289 (first argument of `extraValues`); `api/ffi/handlers/source_read.go` L160 | Spelled by hand beside the constants this PR adds |
 | Search registry | `core/search/registry.go` `KindSpec` (L69), `init` helper `handle` (L127) registers the three handle kinds; `core/search/fts.go` L432 `case KindPerson, KindEvent, KindPlace:` picks the handle field map | The registry does not say which kinds are handle hits, so `fts.go` lists them twice |
 | Omnibar presentation | `macos/App/Features/Workspace/OmnibarHitPresentation.swift` `leadThumbnail` L103 `case "person", "event", "place":` | A sixth Swift list |
-| Origin constants | `OriginProvenencia` declared in `core/database/properties/properties.go` L37, `core/database/subjecttypes/subjecttypes.go` L26, `core/database/propertyterms/propertyterms.go` L33, `core/database/sourcetypes/sourcetypes.go` L38, `core/database/metadatafields/metadatafields.go` L38, `core/database/nameformats/nameformats.go` L19, `core/database/claimconfidencegrades/grades.go` L19, `core/database/sourcecredibilitygrades/grades.go` L17, `core/connectrules/connectrules.go` L21, `core/match/registry.go` L68; `OriginUser` beside six of them; `core/database/deleteimpact/kinds.go` L33–35 `originProvenencia`, `originUser`, `originPluginPref` | About 330 qualified uses (`<pkg>.OriginProvenencia` / `OriginUser`) in 63 files (11 non-test, 52 test); 82 files name an origin constant, including `deleteimpact` |
-| Origin checks | `originOK` in `properties.go` L463, `propertyterms.go` L382, `sourcetypes.go` L428, `metadatafields.go` L412, `core/database/claimconfidencegrades/grades.go` L140, `core/database/sourcecredibilitygrades/grades.go` L138: provenencia, user, or `plugin:<id>`. `subjecttypes.go` L214: provenencia or `plugin:<id>` (no user). `core/database/deleteimpact/impact.go` L134: the plugin test inline | Seven copies of one prefix test |
+| Origin constants | `OriginProvenencia` declared in `core/database/properties/properties.go` L38, `core/database/subjecttypes/subjecttypes.go` L26, `core/database/propertyterms/propertyterms.go` L33, `core/database/sourcetypes/sourcetypes.go` L38, `core/database/metadatafields/metadatafields.go` L38, `core/database/nameformats/nameformats.go` L19, `core/database/claimconfidencegrades/grades.go` L19, `core/database/sourcecredibilitygrades/grades.go` L17, `core/connectrules/connectrules.go` L21, `core/match/registry.go` L68; `OriginUser` beside six of them; `core/database/deleteimpact/kinds.go` L33–35 `originProvenencia`, `originUser`, `originPluginPref` | About 330 qualified uses (`<pkg>.OriginProvenencia` / `OriginUser`) in 63 files (11 non-test, 52 test); 82 files name an origin constant, including `deleteimpact` |
+| Origin checks | `originOK` in `properties.go` L448, `propertyterms.go` L382, `sourcetypes.go` L428, `metadatafields.go` L412, `core/database/claimconfidencegrades/grades.go` L140, `core/database/sourcecredibilitygrades/grades.go` L138: provenencia, user, or `plugin:<id>`. `subjecttypes.go` L214: provenencia or `plugin:<id>` (no user). `core/database/deleteimpact/impact.go` L134: the plugin test inline | Seven copies of one prefix test |
 | Raw origin literals | `"provenencia"` in non-test Go: `core/match/profiles.go` L66, `core/graphalign/registry.go` L26, L49, L52, L55, `api/ffi/handlers/source_read.go` L160, `core/database/propertyterms/propertyterms.go` L372, `core/database/searchindex/handles.go` L94, `core/database/sourcefill/load.go` L178, `core/database/sourceeventtitles/sourceeventtitles.go` L120, `core/database/matching/matching.go` L154, `canon.go` L55, L165, L198 | Origin spelled by hand |
 | Seed | `core/database/subjectvocab/registry.go` `seedTypes` (person, event, place are `RoleRoot`; bridges `RoleBridge`; source `RoleReification`), `seedProperties`, `seedBindings` | Declared data with literal keys. **(after S11-22)** value types and cardinality read `propertymeta` |
 | Seed tests | `core/database/subjectvocab/profile_test.go` `TestDefaultProfileCardinality` L21 loops `[]string{"person", "event", "place"}`; `core/match/registry_test.go` L77 and `core/database/autoreconciler/autoreconciler_test.go` L82 loop the same list | Three test copies |
 | Swift kinds | `macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift` `EvidencePrimaryKind` (`person`, `event`, `place`; `CaseIterable`) | Swift's typed home, used by the Evidence graph and Promote |
-| Swift fake | `macos/App/Platform/FakeStore.swift` `searchCatalog` local `handleKinds` L1015; `promoteSubject` guard L1346; alignment proposal L1457; apply L1549; `primaryTypeKeys` L3007 | Five literal sets of the same three keys |
+| Swift fake | `macos/App/Platform/FakeStore.swift` `searchCatalog` local `handleKinds` L1015; `promoteSubject` guard L1346; alignment proposal L1457; apply L1549; `primaryTypeKeys` L3008 | Five literal sets of the same three keys |
 | Swift guard | `api/ffi/swift_vocabulary_test.go` `TestSwiftVocabularyMatchesGo` with `swiftEnumBody` and the constants `swiftVocabulary`, `swiftValueKinds`, `swiftMarks` | Reads Swift enums and fails on drift; does not read `EvidencePrimaryKind` |
-| Properties package | `core/database/properties/properties.go` const block L37–38 (Origin); **(after S11-22)** the value-type and cardinality constants are gone to `core/propertymeta`; `originOK` unchanged | — |
+| Properties package | `core/database/properties/properties.go` const block L38–39 (Origin); **(after S11-22)** the value-type and cardinality constants are gone to `core/propertymeta`; `originOK` unchanged | — |
 | Skills and docs | `.agents/skills/add-seeded-vocabulary/SKILL.md` (rules list L42 on, "Do not" list L139); `docs/seeded-vocabulary.md` §1.1 "Reserved `origin` values" (L49–57) | Name no Go home for origins |
 
 **Precedent.** S11-22 ([plan](S11-22-pure-value-types.md)) has the same shape: a pure `core/<singular>` package, one commit per concern that repoints every caller, nothing kept for compatibility. Copy its commit rhythm and its D-6 style of "done means this search has no hits". The Swift guard is one more row in `TestSwiftVocabularyMatchesGo`'s table, like the `value types` row (`rawCase`). S10-49 made `CitationComposerAuthoring.typeRank` read `EvidencePrimaryKind` instead of key strings; `OmnibarHitPresentation` follows it.

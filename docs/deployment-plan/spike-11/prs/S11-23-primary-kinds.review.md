@@ -12,7 +12,7 @@ None.
 - Origins get one home and so does their check: six `originOK` copies are replaced by `vocabkey.ValidOrigin` (D-4). This widens the map row a little, and the map was updated to match.
 - The Property-key set is the keys matching reads by name: the locked keys plus `sex_at_birth` and `gender`, minus `likeness` (D-6, D-8). The map scope entry was updated.
 - Swift's `EvidencePrimaryKind` stays where it is and becomes the Swift home (D-10).
-- Status is `Blocked — on S11-22`, because the plan is written against S11-22's plan. When S11-22 lands, the implementer's base check covers the `(after S11-22)` rows.
+- Status was `Blocked — on S11-22` until S11-22 landed; see the refresh at the end.
 
 ## Round 1
 
@@ -76,3 +76,7 @@ All round-1 answers were checked against the code and hold.
 
 ### Below the bar
 D-6 now says "Swift's seven `SeededPropertyKey` keys plus `event_type`". The reviewer noted that S11-22's plan counts six value types, while `ValueTypeDepiction` (S10-32) makes seven. That belongs to S11-22's base check, and I passed it on to the user.
+
+## Refresh after S11-22 landed
+
+S11-22 landed in #434, and its Landed note lists no change that touches this plan. At `ac05ae8`, I reran the §4 rows and searches S-1 to S-4. Only line numbers moved: `properties.go` Origin L38, `originOK` L448, `FakeStore.primaryTypeKeys` L3008, and the `observations.go` value-type lines. The plan is updated, and the status is Planned.
