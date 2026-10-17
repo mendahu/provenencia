@@ -6,6 +6,7 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namevalues"
@@ -55,7 +56,7 @@ func listedProtosFromSource(c *database.Catalog, sg graphcache.SourceGraph, cita
 	for _, s := range sg.Subjects {
 		subjectLabels[string(s.ID)] = s.Label
 	}
-	var out []*engine.Observation
+	var rows []observations.Listed
 	for _, o := range sg.Observations {
 		if citationID != nil && !bytes.Equal(o.CitationID, citationID) {
 			continue
@@ -64,7 +65,15 @@ func listedProtosFromSource(c *database.Catalog, sg graphcache.SourceGraph, cita
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, listedObservationProto(listed))
+		rows = append(rows, listed)
+	}
+	paths, err := depictionPaths(c, rows)
+	if err != nil {
+		return nil, err
+	}
+	var out []*engine.Observation
+	for _, l := range rows {
+		out = append(out, listedObservationProto(l, paths))
 	}
 	return out, nil
 }
@@ -88,6 +97,9 @@ func listedFromSource(o graphcache.SourceObservation, props map[string]propertyI
 	}
 	if label, ok := subjectLabels[string(o.ValueSubjectID)]; ok {
 		l.ValueSubjectLabel = label
+	}
+	if len(o.DepictionID) > 0 {
+		l.Depiction = &depictionvalues.Value{ID: o.DepictionID, RegionJSON: o.DepictionRegion, ImageFileID: o.DepictionImageFileID}
 	}
 	if len(o.Date) > 0 {
 		d, err := valuecodec.UnmarshalDate(o.Date)
