@@ -1,7 +1,7 @@
 # Review — S10-52 Depiction auto-reconciler module
 
 **Verdict:** Fits with changes — Ready with changes (all applied)
-**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Rounds:** 2, then a refresh round after S10-54 landed (main @ `27ef7e2`): Fits with changes — Ready with changes (applied). **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 - None.
@@ -11,8 +11,8 @@
 - The loader reads images through `depictionvalues.Readable`; a refused image is `no_evidence` (D-2, D-5, after M-1).
 - The cache column has no FK, so it never keeps an image File alive (D-4).
 - A shared test-fixture package `observationstest`, with `observations_test.go` moved onto it (D-10, after M-2).
-- `depictionvalues.Joined`, with `observations.go` moved onto it (D-5, after M-9). It edits two files S10-54's branch also edits; §11 says how to rebase.
-- Planned against S10-54's plan, not its branch; no code dependency between the two.
+- The loader reuses S10-54's `depictionvalues.FromJoin` (D-5, after M-9).
+- Depends on S10-54 (landed #433) for `FromJoin`; first planned against S10-54's plan while it was in progress.
 
 ## Round 1
 
@@ -67,7 +67,7 @@
 **Answer:** Fixed — `Value.Depiction *depictionvalues.Value`, the shape of `Date`, `Name`, and `observations.Listed.Depiction` (D-1); `Carries` is `Depiction != nil`, the key reads `Depiction.ImageFileID` (D-2); `graphcache` keeps a plain `[]byte` (D-8). `HasDepiction` is gone.
 
 ### M-9 · blocker · D-5 copies the joined-depiction assembly from `observations.go`
-**Answer:** Fixed — `depictionvalues.Joined` (D-5) with `TestJoined` (T-7); `observations.go` and the loader both call it; the loader selects `o.value_depiction_id` for its id.
+**Answer:** Fixed — `depictionvalues.Joined` (D-5) with `TestJoined` (T-7); the loader selects `o.value_depiction_id` for its id. Superseded at the refresh: S10-54 landed `depictionvalues.FromJoin`, the same helper, with `observations.go` and `sourcefill` already on it; the plan reuses it, and `Joined` and T-7 are dropped.
 
 ### X-9 · minor · AC-4.2's `no_evidence` outcome untested
 **Answer:** Fixed — T-1 asserts `Outcomes[0].Reason == ReasonNoEvidence`.
@@ -86,3 +86,34 @@
 
 ### X-14 · nit · AC-1.1 side assertions
 **Answer:** Fixed — T-3 names the nil fields and the `kept` outcomes.
+
+## Refresh (main @ `27ef7e2`, after S10-54 landed in #433)
+
+Rebased; every Current state row re-checked. Changes: D-5 calls `depictionvalues.FromJoin` (S10-54) instead of adding `Joined`; `observations.go` and `depictionvalues.go` are no longer touched; T-7 dropped; header Depends on and Planned base updated.
+
+### X-1 · blocker · T-4 reads the new image through the Observation captured before the edit
+**Answer:** Fixed — `imageOf` takes the Observation id and joins its current `value_depiction_id`; every call passes `.ID`.
+
+### X-2 · major · T-3's unreadable-image case and upkeep checks
+**Answer:** Fixed — case 6 says it skips `assertUpkeepEqualsRebuild` and `Verify`, and why.
+
+### X-3 · major · T-3 cases left to assemble
+**Answer:** Fixed — T-3 has a common start and seven numbered cases with their own writes; the provisional case files B by `identityclaims.Create` after `promote(a)`; the stale-image `UPDATE` matches on the image id with `bytes.Repeat([]byte{1}, 16)`.
+
+### X-4 · minor · photos share one File
+**Answer:** Declined — several Artifacts on one File are valid (`artifacts_file_id_idx` is not unique) and the region check reads the Citation's own Artifact; logged.
+
+### X-5 · minor · the package-doc paragraph has a stale clause
+**Answer:** Fixed — D-2 replaces "Subjects stay on an exact-key module until S9-28." in the sentence it edits.
+
+### X-6 · nit · `matching.sqlEntityValues` filter
+**Answer:** Declined — `scanEntityValues` skips Properties not in `wanted` (`core/database/matching/matching.go`, `if !wanted[prop] { continue }`); the row is true.
+
+### M-10 · major · the log still named `Joined`
+**Answer:** Fixed — Writer's own calls and the M-9 answer updated; this section records the refresh.
+
+### M-11 · major · T-4 hand-writes the stage-then-update helper
+**Answer:** Fixed — `updateObservation` moves into `observationstest` as `UpdateObservation` (D-10); T-4 calls it; the `ingest` import is dropped from STEP-2.
+
+### Below the bar · `graphcache.Value.ImageFileID` vs `SourceObservation.DepictionImageFileID`
+**Answer:** Declined — `graphcache.Value` names its fields by the cache column (`Date`, `Name`, `EntityID`); `ImageFileID` mirrors `value_image_file_id`, while `SourceObservation` prefixes depiction fields because it holds every value type of an Observation.
