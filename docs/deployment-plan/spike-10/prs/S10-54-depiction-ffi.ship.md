@@ -1,7 +1,7 @@
 # Ship log — S10-54 Depiction values over the FFI
 
 **Plan:** [`S10-54-depiction-ffi.md`](S10-54-depiction-ffi.md) · **Branch:** `s10-54-depiction-ffi` · **PR:** #433
-**State:** fixing 1
+**State:** ready
 
 Base: `main` @ `233e87ad`. The branch was cut by the orchestrator and carries the plan refresh (`635bb9fd`, after S10-32 landed in #430; review log refresh rounds 1–2: Fits — Ready).
 
@@ -42,3 +42,12 @@ Check: those rows pass; scripts/check-pr.sh PASS.
 Files: `docs/deployment-plan/spike-10/prs/S10-54-depiction-ffi.md`.
 Do: add to the Landed note: `GoStore` gained a private `mapDepictionInput` shared by the draft and update-request mappings; `CatalogObservationDraft.depiction` is declared without `= nil` (same behavior); responses go through one `listedProtos` helper (F-1).
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10-54-depiction-ffi.md` passes.
+
+## Round 1 — fix
+Head `43d77eaa`. Gate PASS (orchestrator run). F-1 done (`listedProtos`; `depictionPaths` and `listedObservationProto` each have one caller); F-2 done (each new assertion seen to fail once, then restored); F-3 done.
+
+## Round 2 — review
+Scope `d08a33c8...43d77eaa`; lenses CON and MNT (the two with Fix-now findings). Both clean: CON-1, CON-2, CON-3, MNT-1, MNT-2, MNT-3 resolved; no new blockers. Noted, no change on the wire: `listedProtosFromSource` returns an empty slice instead of nil for no rows.
+
+## Result
+Gate PASS · CI see PR · open: none · follow-ups: UX-2 (S10-34 crop size or crop copy), PRF-1 (stage images outside the session lock; S10-53 staging API) · logged: PRF-2 · to user: UX-1 (copy the user already chose)
