@@ -108,7 +108,7 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg *Config) Pr
 | **Catalog adapter** (S9-42) | Build `Layer` / `Canon` / `Stats`, call `Align`, map the proposal to FFI | Contain scoring or walk policy |
 | **Promote page** (S9-44) | Present rows, decisions, Done | Reimplement alignment |
 
-Alignment **orchestrates**; matching / pairwise evaluation **judges a pair**. Alignment must not call only today’s bulk `Rank` API for every hop — that API is “score against the catalog.” It calls the **pairwise** unit (with edge terms when neighbors are already mapped). `Rank` and the promote score share `ComparerFor` and keep their own scales, so a menu point total is not a promote score.
+Alignment **orchestrates**; matching / pairwise evaluation **judges a pair**. Alignment must not call only today’s bulk `Rank` API for every hop — that API is “score against the catalog.” It calls the **pairwise** unit (with edge terms when neighbors are already mapped). `Rank` and the promote score share `match.Compare` and keep their own scales, so a menu point total is not a promote score.
 
 **Package boundary:** graph alignment is **its own module**, not folded into Promote UI or FFI handlers. Config for the walk and scorer lives in **one registry file** in that pure package (same idea as matching’s `registry.go`): every tunable dogfood will tweak —
 
@@ -163,16 +163,15 @@ A layer is **one Source’s Subjects**, not one connected component. *Map the re
 
 Nothing names a Property or a relationship. Every weight comes from metadata or from data.
 
-**Node comparisons.** The score does not name a property. For each property both sides carry, `ComparerFor` returns a similarity (the same comparer `Rank` uses; `Rank`'s point total stays its own). A registry scale turns that similarity into points:
+**Node comparisons.** The score does not name a property. For each property both sides carry, `match.Compare` returns a similarity from value compare (the same one `Rank` uses; `Rank`'s point total stays its own). A registry scale turns that similarity into points:
 
-- Similarity at or above the scale's floor contributes `weight × similarity`. Similarity 1 agrees. A lower resemblance is partial.
-- Similarity below the floor conflicts for a single-value property and is unknown for a multiple-value one (residences never conflict on a difference). A comparable zero is below every floor.
+- A positive similarity contributes `weight × similarity`; 1 agrees, less is partial. A comparable 0 conflicts for a single-value property and is unknown for a multiple-value one.
 - Unknown (nothing to compare) is 0.
 
 The scale is looked up by property, then by value type. A property added later is another entry.
 
 - **Frequency scales** (text, terms, dates, integers, unless a property replaces them) derive the weight from catalog frequency: `u` is how often unrelated handles share the value, `m` is the prior that the same entity's records agree. A lone exact agreement is lifted to the accept bar (2, also the weak bar), and any agreement bonus is kept. A toponym's bonus makes an exact toponym medium and leaves it short of strong until an edge adds support. A partial is that lifted weight times the similarity, so a one-letter toponym typo is weak.
-- **Fixed scales** are not lifted. Name: floor 0.75, weight 2.5, contradiction 3. An identical name is 2.5, still under medium. Its points are then scaled by `1 − discount`, the name's frequency among the project's filed people (`Stats.Words`; [`matching.md`](matching.md), Name frequency): at most 20% fewer. Similarity and pinning are unchanged, so an identical common name still reads `agree` and pins. A given name that exists only on one side does not lower that: Jake Robins against James Kenneth Jake Robins agrees, and so does James against James Kenneth. A shared surname with a different given name (about 0.6) conflicts. Sex at birth and gender: floor 1, weight 0.6, contradiction 1. Agreement is a small nudge. A mismatch subtracts 1 and does not erase a name that cleared its floor. A neutral term (`property_terms.neutral`, seeded on unknown and indeterminate) is not comparable, so it neither agrees nor conflicts; matching, Rank and the reconciler read the same flag.
+- **Fixed scales** are not lifted. Name: weight 2.5, contradiction 3. An identical name is 2.5, still under medium. A name with words on one side only is a partial (`Jake Robins` against `James Kenneth Jake Robins` is 2.5 × 0.75); a different first given name or surname on each side conflicts (value compare's `Different`). Sex at birth and gender: weight 0.6, contradiction 1. Agreement is a small nudge. A mismatch subtracts 1. A neutral term (`property_terms.neutral`, seeded on unknown and indeterminate) is not comparable, so it neither agrees nor conflicts; matching, Rank and the reconciler read the same flag.
 
 `autoreconcile.Compatible` is sameness for reconciliation and for pins. A partial name can make the row weak without being pinned. A line is pinned only when the values are the same.
 
