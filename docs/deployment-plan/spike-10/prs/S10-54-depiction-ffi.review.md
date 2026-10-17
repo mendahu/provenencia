@@ -1,9 +1,9 @@
 # Review — S10-54 Depiction values over the FFI
 
-**Verdict:** Fits with changes — Not ready → all findings answered and applied. No blocker is open.
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits — Ready (refresh round 2, after S10-32 landed). First review: Fits with changes — Not ready → all findings answered and applied. No blocker is open.
+**Rounds:** 1, then a refresh round after S10-32 landed (see below). **Reviewers:** maintainability (opus), executability (sonnet)
 
-Round 2 was not run. The two blockers (X-1, X-2) were test and project-file gaps, fixed in place, and neither reshaped the plan. The plan stays `Blocked — on S10-32`; when S10-32 lands, the refresh (plan-pr "Refresh an existing plan") reruns review-plan.
+Round 2 was not run. The two blockers (X-1, X-2) were test and project-file gaps, fixed in place, and neither reshaped the plan. The refresh after S10-32 landed (below) reran review-plan for two rounds.
 
 ## To user
 
@@ -65,3 +65,39 @@ Round 2 was not run. The two blockers (X-1, X-2) were test and project-file gaps
 
 ### Disagreements with the S10-32 plan
 **Answer:** The header keeps "in progress", per the user (2026-10-17). §11 now stops if `observations.Update` does not return `Listed.Depiction` filled.
+
+## Refresh round 1 — after S10-32 landed (#430), against `main` @ `233e87ad`
+
+The writer refreshed the plan (plan-pr "Refresh an existing plan"): §4 verified at `233e87ad`; S10-32's Landed note added `depictionvalues.Readable`, which every reader of a stored depiction goes through. Changed: header, §4 S10-32 and Source graph rows, D-4 (an omitted File gives an empty path, not `sql.ErrNoRows` — replaces round-1 X-5's answer), D-6 (`Readable` at `sourcefill` load, since `SourceGraph` holds no Citation locator), AC-2.3, T-12, §11.
+
+### Writer's own calls (refresh)
+- D-4: an empty `image_rel_path` in place of `sql.ErrNoRows`, matching `Readable`'s "that half empty".
+- D-6: `Readable` runs at Source load and the cache stores its output, not in `listedFromSource`.
+
+### M-1 · major · D-6 copies `scanListed`'s depiction-join hydration into `sourcefill`
+**Answer:** Fixed. D-6 adds `depictionvalues.FromJoin`; `scanListed` and `sourcefill` both call it. STEP-2 lists `observations.go` and the `depictionvalues` files; T-13 tests it. `listedFromSource` keeps gating on `DepictionID`, equivalent because `image_file_id` is `NOT NULL` (`000052.sql`).
+
+### M-2 · minor · Codebase fit row for `depictionPaths` still names the missing-File error
+**Answer:** Fixed. The row now says an omitted File gives an empty path.
+
+### X-1 · blocker · AC-3.1 and T-6 claim the value id survives a replaced crop
+**Answer:** Fixed. Verified: S10-32's "likeness update replaces the image" asserts a new value id (`observations_test.go:1034`). AC-3.1 and T-6 now expect a new `value_depiction_id`.
+
+### X-2 · minor · AC-2.3 "first / second" is ambiguous
+**Answer:** Fixed. AC-2.3 states the result per damage, for both RPCs.
+
+### X-3 · minor · D-5 changes connect's order without saying so
+**Answer:** Fixed. D-5 states `CreateCitedBridge` moves from ref order to draft order, and that no caller reads its order.
+
+### X-4 · minor · S10-36 moved to Spike 11
+**Answer:** Fixed. References now name S11-20; the map's S10-54 Out line too.
+
+### X-5 · nit · `check-plan-docs` warning on `…`
+Logged. Pre-existing (a quote of the map's Testable line).
+
+### X-6 · nit · `GoStore` conclusion fields map `depiction` to `.depiction` instead of `.text`
+Logged. No consumer branches on it (reviewer checked `ReconciledValueRowModel`, composer `supportedValueTypes`).
+
+## Refresh round 2
+
+Fresh reviewers, with the plan and this log. Maintainability: Fits, every answer holds, no new blocker; one nit (`FromJoin`'s mixed nullable and plain arguments mirror `scanListed`'s scan types — logged). Executability: Ready; nits logged: `Catalog.DB()` returns `(*sql.DB, error)` in T-12's damage step; T-2's "exactly one new object" assumes `IngestArtifactFile` writes no thumbnail under `objects/` (the reviewer found none).

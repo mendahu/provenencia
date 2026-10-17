@@ -703,12 +703,12 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-54 — Depiction values over the FFI
 
-**Plan:** [`prs/S10-54-depiction-ffi.md`](prs/S10-54-depiction-ffi.md) — Blocked — on S10-32
+**Plan:** [`prs/S10-54-depiction-ffi.md`](prs/S10-54-depiction-ffi.md) — Planned
 
 | | |
 | --- | --- |
 | **In** | `engine.proto`: a depiction value input on `ObservationDraft` (region locator and the crop's absolute path) and the saved value on `Observation` (region and the image's object path). Every handler that writes Observations (`citations`, `observations`, `connect`) calls S10-32's core entry point; no handler stages an image itself. Swift store types carry the value; Swift `PropertyValueType.depiction` and its *Depiction* label, with the vocabulary parity test's entry; the source graph's depiction region. No chrome. |
-| **Out** | The composer row and rendering (S10-34). Promote's exhibit images (S10-36). |
+| **Out** | The composer row and rendering (S10-34). Promote's exhibit images (S11-20, moved from S10-36). |
 | **Testable** | A save through the FFI with a crop path stores the image and returns its path. A path to a symlink is refused with the ingest error code. Reading the Citation's Observations returns the region and image path. |
 | **Depends on** | S10-32 |
 
