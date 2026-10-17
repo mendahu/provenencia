@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/autoreconcile"
@@ -254,5 +255,99 @@ func TestGetConclusionDetailListsLikenesses(t *testing.T) {
 	}
 	if got := d.GetPerson().GetLikenessImageRelPath(); got == "" || got != d.GetLikenesses()[0].GetImageRelPath() {
 		t.Fatalf("person lead %q, first tile %q", got, d.GetLikenesses()[0].GetImageRelPath())
+	}
+}
+
+func TestSetPreferredLikeness(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
+	saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 100))
+	b := saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 200)).GetObservations()[0].GetId()
+	entity := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: personID}).Entity.GetId()
+	set := func(observationID string) (*engine.SetPreferredLikenessResponse, error) {
+		out, err := SetPreferredLikeness(marshalProto(t, &engine.SetPreferredLikenessRequest{
+			ProjectDir: dir, UserId: userID, EntityId: entity, ObservationId: observationID,
+		}))
+		if err != nil {
+			return nil, err
+		}
+		var resp engine.SetPreferredLikenessResponse
+		if err := proto.Unmarshal(out, &resp); err != nil {
+			t.Fatal(err)
+		}
+		return &resp, nil
+	}
+	detail := func() *engine.ConclusionDetail {
+		t.Helper()
+		out, err := GetConclusionDetail(marshalProto(t, &engine.GetConclusionDetailRequest{ProjectDir: dir, EntityId: entity}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var d engine.ConclusionDetail
+		if err := proto.Unmarshal(out, &d); err != nil {
+			t.Fatal(err)
+		}
+		return &d
+	}
+	contains := func(ids []string, id string) bool {
+		for _, x := range ids {
+			if x == id {
+				return true
+			}
+		}
+		return false
+	}
+
+	resp, err := set(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !contains(resp.GetEffects().GetHandles(), entity) || !contains(resp.GetEffects().GetHandleScopes(), entity) {
+		t.Fatalf("effects %+v", resp.GetEffects())
+	}
+	d := detail()
+	if len(d.GetLikenesses()) != 2 || d.GetLikenesses()[0].GetPreferred() || !d.GetLikenesses()[1].GetPreferred() {
+		t.Fatalf("likenesses %+v", d.GetLikenesses())
+	}
+	if d.GetPerson().GetLikenessImageRelPath() != d.GetLikenesses()[1].GetImageRelPath() {
+		t.Fatalf("lead %q, second tile %q", d.GetPerson().GetLikenessImageRelPath(), d.GetLikenesses()[1].GetImageRelPath())
+	}
+
+	resp, err = set(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.GetEffects().GetRevision() != 0 {
+		t.Fatalf("repeat wrote revision %d", resp.GetEffects().GetRevision())
+	}
+
+	if _, err := set(""); err != nil {
+		t.Fatal(err)
+	}
+	d = detail()
+	if d.GetLikenesses()[0].GetPreferred() || d.GetLikenesses()[1].GetPreferred() ||
+		d.GetPerson().GetLikenessImageRelPath() != d.GetLikenesses()[0].GetImageRelPath() {
+		t.Fatalf("after clear %+v", d)
+	}
+
+	fresh, err := uuid.NewV7()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = set(fresh.String())
+	var ae *apperr.Error
+	if !errors.As(err, &ae) || ae.Code() != apperr.CodeCanonicalEntitiesInvalid {
+		t.Fatalf("err = %v, want %s", err, apperr.CodeCanonicalEntitiesInvalid)
+	}
+
+	if _, err := set(b); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DeleteObservation(marshalProto(t, &engine.DeleteObservationRequest{ProjectDir: dir, UserId: userID, ObservationId: b})); err != nil {
+		t.Fatal(err)
+	}
+	d = detail()
+	if len(d.GetLikenesses()) != 1 || d.GetPerson().GetLikenessImageRelPath() != d.GetLikenesses()[0].GetImageRelPath() || d.GetLikenesses()[0].GetPreferred() {
+		t.Fatalf("after delete %+v", d)
 	}
 }

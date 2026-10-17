@@ -3,12 +3,15 @@ package handlers
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/files"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
+	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -33,6 +36,46 @@ func GetConclusionDetail(in []byte) ([]byte, error) {
 			return err
 		}
 		return attachLikenesses(c, d, lead, out)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
+// SetPreferredLikeness chooses a Person's portrait among its gallery
+// likenesses, or clears the choice (S10-39).
+func SetPreferredLikeness(in []byte) ([]byte, error) {
+	var req engine.SetPreferredLikenessRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("set_preferred_likeness", err)
+	}
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	entityID, err := parseID(req.GetEntityId())
+	if err != nil {
+		return nil, err
+	}
+	var observationID []byte
+	if req.GetObservationId() != "" {
+		if observationID, err = parseID(req.GetObservationId()); err != nil {
+			return nil, err
+		}
+	}
+	var out *engine.SetPreferredLikenessResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		_, wrote, err := writes.Run(c, writes.Op{Action: "set_preferred_likeness", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := canonicalentities.SetPreferredLikeness(tx, userID, entityID, observationID)
+				return struct{}{}, changes, err
+			})
+		if err != nil {
+			return err
+		}
+		out = &engine.SetPreferredLikenessResponse{Effects: writeEffectsProto(wrote)}
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -172,6 +215,7 @@ func attachLikenesses(c *database.Catalog, d conclusiondetails.Detail, lead []by
 		out.Likenesses = append(out.Likenesses, &engine.LikenessDetail{
 			ImageRelPath: paths[string(l.ImageFileID)],
 			Record:       reconcilerOutcomeProto(l.Record),
+			Preferred:    l.Preferred,
 		})
 	}
 	return nil
