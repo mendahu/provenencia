@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/datevalue"
 )
 
 func intVal(n int) *int { return &n }
@@ -19,8 +20,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "point day round trip",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:       KindPoint,
+				id, err := Insert(c, datevalue.Value{
+					Kind:       datevalue.KindPoint,
 					StartYear:  intVal(1985),
 					StartMonth: intVal(5),
 					StartDay:   intVal(14),
@@ -32,7 +33,7 @@ func TestInsertLookup(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got.Kind != KindPoint || got.Qualifier != "" {
+				if got.Kind != datevalue.KindPoint || got.Qualifier != "" {
 					t.Fatalf("got kind=%q qual=%q", got.Kind, got.Qualifier)
 				}
 				if got.StartYear == nil || *got.StartYear != 1985 ||
@@ -48,8 +49,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "point year only",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:      KindPoint,
+				id, err := Insert(c, datevalue.Value{
+					Kind:      datevalue.KindPoint,
 					StartYear: intVal(1985),
 				})
 				if err != nil {
@@ -59,7 +60,7 @@ func TestInsertLookup(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got.Kind != KindPoint || got.StartYear == nil || *got.StartYear != 1985 {
+				if got.Kind != datevalue.KindPoint || got.StartYear == nil || *got.StartYear != 1985 {
 					t.Fatalf("got %+v", got)
 				}
 				if got.StartMonth != nil || got.StartDay != nil || got.StartHour != nil {
@@ -71,7 +72,7 @@ func TestInsertLookup(t *testing.T) {
 			// SQLite binds at most 32,766 values per statement.
 			name: "lookup many past the bind limit",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{Kind: KindPoint, StartYear: intVal(1850)})
+				id, err := Insert(c, datevalue.Value{Kind: datevalue.KindPoint, StartYear: intVal(1850)})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -96,8 +97,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "point month precision",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:       KindPoint,
+				id, err := Insert(c, datevalue.Value{
+					Kind:       datevalue.KindPoint,
 					StartYear:  intVal(1985),
 					StartMonth: intVal(5),
 				})
@@ -116,8 +117,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "point with time through millisecond",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:             KindPoint,
+				id, err := Insert(c, datevalue.Value{
+					Kind:             datevalue.KindPoint,
 					StartYear:        intVal(2020),
 					StartMonth:       intVal(1),
 					StartDay:         intVal(2),
@@ -144,8 +145,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "point with hour only",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:       KindPoint,
+				id, err := Insert(c, datevalue.Value{
+					Kind:       datevalue.KindPoint,
 					StartYear:  intVal(2020),
 					StartMonth: intVal(6),
 					StartDay:   intVal(1),
@@ -166,8 +167,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "point with free-text timezone",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:        KindPoint,
+				id, err := Insert(c, datevalue.Value{
+					Kind:        datevalue.KindPoint,
 					StartYear:   intVal(1985),
 					StartMonth:  intVal(5),
 					StartDay:    intVal(14),
@@ -190,8 +191,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "point phrase only",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:   KindPoint,
+				id, err := Insert(c, datevalue.Value{
+					Kind:   datevalue.KindPoint,
 					Phrase: "Christmas",
 				})
 				if err != nil {
@@ -209,8 +210,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "point phrase with year",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:      KindPoint,
+				id, err := Insert(c, datevalue.Value{
+					Kind:      datevalue.KindPoint,
 					StartYear: intVal(1887),
 					Phrase:    "Christmas",
 				})
@@ -229,8 +230,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "range with distinct free-text timezones",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:       KindRange,
+				id, err := Insert(c, datevalue.Value{
+					Kind:       datevalue.KindRange,
 					StartYear:  intVal(2020),
 					StartMonth: intVal(1),
 					StartDay:   intVal(1),
@@ -257,14 +258,14 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects end_tz on point",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
-					Kind:       KindPoint,
+				_, err := Insert(c, datevalue.Value{
+					Kind:       datevalue.KindPoint,
 					StartYear:  intVal(1985),
 					StartMonth: intVal(5),
 					StartDay:   intVal(14),
 					EndTZ:      "UTC",
 				})
-				if !errors.Is(err, ErrInvalid) {
+				if !errors.Is(err, datevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -272,8 +273,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects empty point without phrase",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{Kind: KindPoint})
-				if !errors.Is(err, ErrInvalid) {
+				_, err := Insert(c, datevalue.Value{Kind: datevalue.KindPoint})
+				if !errors.Is(err, datevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -281,12 +282,12 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects phrase-only point with start_tz",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
-					Kind:    KindPoint,
+				_, err := Insert(c, datevalue.Value{
+					Kind:    datevalue.KindPoint,
 					Phrase:  "Christmas",
 					StartTZ: "UTC",
 				})
-				if !errors.Is(err, ErrInvalid) {
+				if !errors.Is(err, datevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -294,13 +295,13 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects legacy exact kind",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
+				_, err := Insert(c, datevalue.Value{
 					Kind:       "exact",
 					StartYear:  intVal(1985),
 					StartMonth: intVal(5),
 					StartDay:   intVal(14),
 				})
-				if !errors.Is(err, ErrInvalid) {
+				if !errors.Is(err, datevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -308,11 +309,11 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects legacy year kind",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
+				_, err := Insert(c, datevalue.Value{
 					Kind:      "year",
 					StartYear: intVal(1985),
 				})
-				if !errors.Is(err, ErrInvalid) {
+				if !errors.Is(err, datevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -320,9 +321,9 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "point with ABT",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:      KindPoint,
-					Qualifier: QualifierABT,
+				id, err := Insert(c, datevalue.Value{
+					Kind:      datevalue.KindPoint,
+					Qualifier: datevalue.QualifierABT,
 					StartYear: intVal(1890),
 				})
 				if err != nil {
@@ -332,7 +333,7 @@ func TestInsertLookup(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got.Qualifier != QualifierABT || got.Kind != KindPoint {
+				if got.Qualifier != datevalue.QualifierABT || got.Kind != datevalue.KindPoint {
 					t.Fatalf("got kind=%q qual=%q", got.Kind, got.Qualifier)
 				}
 			},
@@ -340,9 +341,9 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "point day with ABT",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:       KindPoint,
-					Qualifier:  QualifierABT,
+				id, err := Insert(c, datevalue.Value{
+					Kind:       datevalue.KindPoint,
+					Qualifier:  datevalue.QualifierABT,
 					StartYear:  intVal(1985),
 					StartMonth: intVal(5),
 					StartDay:   intVal(14),
@@ -354,7 +355,7 @@ func TestInsertLookup(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got.Qualifier != QualifierABT {
+				if got.Qualifier != datevalue.QualifierABT {
 					t.Fatalf("qual %q", got.Qualifier)
 				}
 			},
@@ -362,9 +363,9 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "point with BEF",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:      KindPoint,
-					Qualifier: QualifierBEF,
+				id, err := Insert(c, datevalue.Value{
+					Kind:      datevalue.KindPoint,
+					Qualifier: datevalue.QualifierBEF,
 					StartYear: intVal(1900),
 				})
 				if err != nil {
@@ -374,7 +375,7 @@ func TestInsertLookup(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got.Qualifier != QualifierBEF {
+				if got.Qualifier != datevalue.QualifierBEF {
 					t.Fatalf("qual %q", got.Qualifier)
 				}
 			},
@@ -382,9 +383,9 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "point with AFT",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:       KindPoint,
-					Qualifier:  QualifierAFT,
+				id, err := Insert(c, datevalue.Value{
+					Kind:       datevalue.KindPoint,
+					Qualifier:  datevalue.QualifierAFT,
 					StartYear:  intVal(1872),
 					StartMonth: intVal(3),
 					StartDay:   intVal(1),
@@ -396,7 +397,7 @@ func TestInsertLookup(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got.Qualifier != QualifierAFT {
+				if got.Qualifier != datevalue.QualifierAFT {
 					t.Fatalf("qual %q", got.Qualifier)
 				}
 			},
@@ -404,8 +405,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "year range round trip",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:      KindRange,
+				id, err := Insert(c, datevalue.Value{
+					Kind:      datevalue.KindRange,
 					StartYear: intVal(1880),
 					EndYear:   intVal(1885),
 				})
@@ -416,7 +417,7 @@ func TestInsertLookup(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got.Kind != KindRange ||
+				if got.Kind != datevalue.KindRange ||
 					got.StartYear == nil || *got.StartYear != 1880 ||
 					got.EndYear == nil || *got.EndYear != 1885 {
 					t.Fatalf("got %+v", got)
@@ -426,8 +427,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "datetime range round trip",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:        KindRange,
+				id, err := Insert(c, datevalue.Value{
+					Kind:        datevalue.KindRange,
 					StartYear:   intVal(2020),
 					StartMonth:  intVal(1),
 					StartDay:    intVal(1),
@@ -455,8 +456,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "month range round trip",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:       KindRange,
+				id, err := Insert(c, datevalue.Value{
+					Kind:       datevalue.KindRange,
 					StartYear:  intVal(1880),
 					StartMonth: intVal(1),
 					EndYear:    intVal(1880),
@@ -478,8 +479,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects unknown kind",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{Kind: "phrase", StartYear: intVal(1900)})
-				if !errors.Is(err, ErrInvalid) {
+				_, err := Insert(c, datevalue.Value{Kind: "phrase", StartYear: intVal(1900)})
+				if !errors.Is(err, datevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -487,13 +488,13 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects ABT on range",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
-					Kind:      KindRange,
-					Qualifier: QualifierABT,
+				_, err := Insert(c, datevalue.Value{
+					Kind:      datevalue.KindRange,
+					Qualifier: datevalue.QualifierABT,
 					StartYear: intVal(1880),
 					EndYear:   intVal(1885),
 				})
-				if !errors.Is(err, ErrInvalid) {
+				if !errors.Is(err, datevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -501,13 +502,13 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects BEF on range",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
-					Kind:      KindRange,
-					Qualifier: QualifierBEF,
+				_, err := Insert(c, datevalue.Value{
+					Kind:      datevalue.KindRange,
+					Qualifier: datevalue.QualifierBEF,
 					StartYear: intVal(1880),
 					EndYear:   intVal(1885),
 				})
-				if !errors.Is(err, ErrInvalid) {
+				if !errors.Is(err, datevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -515,12 +516,12 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects unknown qualifier",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
-					Kind:      KindPoint,
+				_, err := Insert(c, datevalue.Value{
+					Kind:      datevalue.KindPoint,
 					Qualifier: "CIR",
 					StartYear: intVal(1900),
 				})
-				if !errors.Is(err, ErrInvalid) {
+				if !errors.Is(err, datevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -528,8 +529,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "accepts minute without hour",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:        KindPoint,
+				id, err := Insert(c, datevalue.Value{
+					Kind:        datevalue.KindPoint,
 					StartYear:   intVal(2020),
 					StartMonth:  intVal(1),
 					StartDay:    intVal(1),
@@ -550,8 +551,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "accepts day without month",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:      KindPoint,
+				id, err := Insert(c, datevalue.Value{
+					Kind:      datevalue.KindPoint,
 					StartYear: intVal(1985),
 					StartDay:  intVal(14),
 				})
@@ -570,8 +571,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "accepts hour without year",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:      KindPoint,
+				id, err := Insert(c, datevalue.Value{
+					Kind:      datevalue.KindPoint,
 					StartHour: intVal(12),
 				})
 				if err != nil {
@@ -589,8 +590,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "accepts month only",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
-					Kind:       KindPoint,
+				id, err := Insert(c, datevalue.Value{
+					Kind:       datevalue.KindPoint,
 					StartMonth: intVal(5),
 				})
 				if err != nil {
@@ -608,12 +609,12 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects range end before start",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
-					Kind:      KindRange,
+				_, err := Insert(c, datevalue.Value{
+					Kind:      datevalue.KindRange,
 					StartYear: intVal(1885),
 					EndYear:   intVal(1880),
 				})
-				if !errors.Is(err, ErrInvalid) {
+				if !errors.Is(err, datevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -621,8 +622,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects range end time before start time",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
-					Kind:       KindRange,
+				_, err := Insert(c, datevalue.Value{
+					Kind:       datevalue.KindRange,
 					StartYear:  intVal(2020),
 					StartMonth: intVal(1),
 					StartDay:   intVal(1),
@@ -632,7 +633,7 @@ func TestInsertLookup(t *testing.T) {
 					EndDay:     intVal(1),
 					EndHour:    intVal(11),
 				})
-				if !errors.Is(err, ErrInvalid) {
+				if !errors.Is(err, datevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -641,7 +642,7 @@ func TestInsertLookup(t *testing.T) {
 			name: "lookup rejects short id",
 			run: func(t *testing.T, c *database.Catalog) {
 				_, err := Lookup(c, []byte{1})
-				if !errors.Is(err, ErrInvalid) {
+				if !errors.Is(err, datevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -660,7 +661,7 @@ func TestInsertLookup(t *testing.T) {
 			name: "rejects closed catalog",
 			run: func(t *testing.T, c *database.Catalog) {
 				c.Close()
-				_, err := Insert(c, Value{Kind: KindPoint, StartYear: intVal(1900)})
+				_, err := Insert(c, datevalue.Value{Kind: datevalue.KindPoint, StartYear: intVal(1900)})
 				if !errors.Is(err, database.ErrClosed) {
 					t.Fatalf("got %v", err)
 				}

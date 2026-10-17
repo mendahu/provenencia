@@ -3,7 +3,7 @@ package promotealign
 import (
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -27,7 +27,7 @@ func TestOverlappingBoundsAreSimilarAndUnpinned(t *testing.T) {
 		t.Fatalf("overlap %+v, want an unpinned resemblance", lines[0])
 	}
 	if lines[0].IncomingDate == nil || lines[0].MemberDate == nil ||
-		lines[0].IncomingDate.Qualifier != datevalues.QualifierBEF ||
+		lines[0].IncomingDate.Qualifier != datevalue.QualifierBEF ||
 		lines[0].MemberDate.StartYear == nil || *lines[0].MemberDate.StartYear != 1985 {
 		t.Fatalf("dates %+v %+v", lines[0].IncomingDate, lines[0].MemberDate)
 	}
@@ -42,7 +42,7 @@ func TestDisjointDatesConflict(t *testing.T) {
 	year := 2001
 	member := exhibitObs{
 		id: []byte("mem"), prop: prop, valueType: propertymeta.ValueTypeDate,
-		value: match.Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year}},
+		value: match.Value{Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year}},
 	}
 	lines := pairExhibits([]exhibitObs{incoming}, nil, []exhibitObs{member}, graphalign.DefaultConfig(), graphalign.Stats{})
 	if len(lines) != 1 || lines[0].Outcome != match.OutcomeConflict || lines[0].Pinned {
@@ -50,10 +50,10 @@ func TestDisjointDatesConflict(t *testing.T) {
 	}
 }
 
-func befDate(year, month, day int) *datevalues.Value {
+func befDate(year, month, day int) *datevalue.Value {
 	y, m, d := year, month, day
-	return &datevalues.Value{
-		Kind: datevalues.KindPoint, Qualifier: datevalues.QualifierBEF,
+	return &datevalue.Value{
+		Kind: datevalue.KindPoint, Qualifier: datevalue.QualifierBEF,
 		StartYear: &y, StartMonth: &m, StartDay: &d,
 	}
 }

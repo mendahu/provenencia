@@ -1,58 +1,58 @@
-package datevalues_test
+package datevalue_test
 
 import (
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 )
 
 func TestCompactDisplay(t *testing.T) {
 	y, m, d := 1882, 4, 3
 	tests := []struct {
 		name string
-		v    datevalues.Value
+		v    datevalue.Value
 		want string
 	}{
 		{
 			name: "year only",
-			v:    datevalues.Value{Kind: datevalues.KindPoint, StartYear: &y},
+			v:    datevalue.Value{Kind: datevalue.KindPoint, StartYear: &y},
 			want: "1882",
 		},
 		{
 			name: "about month",
-			v: datevalues.Value{
-				Kind: datevalues.KindPoint, Qualifier: datevalues.QualifierABT,
+			v: datevalue.Value{
+				Kind: datevalue.KindPoint, Qualifier: datevalue.QualifierABT,
 				StartYear: &y, StartMonth: &m,
 			},
 			want: "About 1882-04",
 		},
 		{
 			name: "full day",
-			v: datevalues.Value{
-				Kind:      datevalues.KindPoint,
+			v: datevalue.Value{
+				Kind:      datevalue.KindPoint,
 				StartYear: &y, StartMonth: &m, StartDay: &d,
 			},
 			want: "1882-04-03",
 		},
 		{
 			name: "month only",
-			v:    datevalues.Value{Kind: datevalues.KindPoint, StartMonth: &m},
+			v:    datevalue.Value{Kind: datevalue.KindPoint, StartMonth: &m},
 			want: "--04",
 		},
 		{
 			name: "day without month",
-			v:    datevalues.Value{Kind: datevalues.KindPoint, StartYear: &y, StartDay: &d},
+			v:    datevalue.Value{Kind: datevalue.KindPoint, StartYear: &y, StartDay: &d},
 			want: "1882--03",
 		},
 		{
 			name: "phrase only",
-			v:    datevalues.Value{Kind: datevalues.KindPoint, Phrase: "Christmas"},
+			v:    datevalue.Value{Kind: datevalue.KindPoint, Phrase: "Christmas"},
 			want: "Christmas",
 		},
 		{
 			name: "range",
-			v: datevalues.Value{
-				Kind:      datevalues.KindRange,
+			v: datevalue.Value{
+				Kind:      datevalue.KindRange,
 				StartYear: &y, EndYear: &y, EndMonth: &m, EndDay: &d,
 			},
 			want: "Between 1882 and 1882-04-03",
@@ -60,7 +60,7 @@ func TestCompactDisplay(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := datevalues.CompactDisplay(tt.v); got != tt.want {
+			if got := datevalue.CompactDisplay(tt.v); got != tt.want {
 				t.Fatalf("got %q want %q", got, tt.want)
 			}
 		})

@@ -24,6 +24,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
@@ -45,7 +46,7 @@ type Value struct {
 	TermID     []byte
 	TermKey    string
 	TermLabel  string
-	Date       *datevalues.Value
+	Date       *datevalue.Value
 	Name       *namevalues.Value
 }
 

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 )
 
 // name is a structured name. The form is a transcription and is not compared;
@@ -406,7 +406,7 @@ func TestScoreDatePeriod(t *testing.T) {
 	})
 	t.Run("both with a date", func(t *testing.T) {
 		m := Score(ev, Values{pDate: {year(1817)}}, dated(1817))
-		if r, ok := reasonFor(m, pDate); !ok || r.Similarity != 1 || r.Candidate.Date.Kind == datevalues.KindRange {
+		if r, ok := reasonFor(m, pDate); !ok || r.Similarity != 1 || r.Candidate.Date.Kind == datevalue.KindRange {
 			t.Fatalf("%+v", m.Reasons)
 		}
 	})

@@ -17,7 +17,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -35,6 +34,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/valuecodec"
@@ -281,8 +281,8 @@ func intIn(s subjects.Subject, p properties.Property, n int64) observations.Inpu
 func ip(n int) *int { return &n }
 
 func dateIn(s subjects.Subject, p properties.Property, y int, m, d *int) observations.Input {
-	return observations.Input{SubjectID: s.ID, PropertyID: p.ID, Date: &datevalues.Value{
-		Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: ip(y), StartMonth: m, StartDay: d,
+	return observations.Input{SubjectID: s.ID, PropertyID: p.ID, Date: &datevalue.Value{
+		Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: ip(y), StartMonth: m, StartDay: d,
 	}}
 }
 

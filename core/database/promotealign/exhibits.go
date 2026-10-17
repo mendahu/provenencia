@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -292,7 +293,7 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 	return out
 }
 
-func cloneDate(d *datevalues.Value) *datevalues.Value {
+func cloneDate(d *datevalue.Value) *datevalue.Value {
 	if d == nil {
 		return nil
 	}

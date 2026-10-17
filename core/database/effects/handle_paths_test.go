@@ -9,7 +9,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -22,6 +21,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -150,7 +150,7 @@ func TestHandlePaths(t *testing.T) {
 			ArtifactID: art.ID, LocatorJSON: locator,
 		}, []observations.Input{{
 			SubjectID: boston.ID, PropertyID: dateProp.ID,
-			Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+			Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
 		}})
 	})
 	if err != nil {

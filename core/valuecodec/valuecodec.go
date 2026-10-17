@@ -11,12 +11,12 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 )
 
 // DateToProto carries a DateValue's components into its message.
-func DateToProto(v datevalues.Value) *engine.DateValueInput {
+func DateToProto(v datevalue.Value) *engine.DateValueInput {
 	return &engine.DateValueInput{
 		Kind:             v.Kind,
 		Qualifier:        v.Qualifier,
@@ -43,8 +43,8 @@ func DateToProto(v datevalues.Value) *engine.DateValueInput {
 
 // DateFromProto is the inverse of DateToProto. Unset components stay nil
 // (unknown, never zero).
-func DateFromProto(d *engine.DateValueInput) datevalues.Value {
-	return datevalues.Value{
+func DateFromProto(d *engine.DateValueInput) datevalue.Value {
+	return datevalue.Value{
 		Kind:             d.GetKind(),
 		Qualifier:        d.GetQualifier(),
 		Calendar:         d.GetCalendar(),
@@ -92,13 +92,13 @@ func NameFromProto(n *engine.NameValueInput) namevalues.Value {
 }
 
 // MarshalDate encodes a DateValue as its protobuf message bytes.
-func MarshalDate(v datevalues.Value) ([]byte, error) { return proto.Marshal(DateToProto(v)) }
+func MarshalDate(v datevalue.Value) ([]byte, error) { return proto.Marshal(DateToProto(v)) }
 
 // UnmarshalDate decodes MarshalDate output.
-func UnmarshalDate(b []byte) (datevalues.Value, error) {
+func UnmarshalDate(b []byte) (datevalue.Value, error) {
 	var d engine.DateValueInput
 	if err := proto.Unmarshal(b, &d); err != nil {
-		return datevalues.Value{}, err
+		return datevalue.Value{}, err
 	}
 	return DateFromProto(&d), nil
 }

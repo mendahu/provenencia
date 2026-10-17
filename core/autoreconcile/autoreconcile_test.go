@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
@@ -23,8 +23,8 @@ func name(n byte, form string) Candidate {
 func ip(v int) *int { return &v }
 
 func date(n byte, y int, m, d *int) Candidate {
-	return Candidate{ObservationID: id(n), Value: Value{Date: &datevalues.Value{
-		Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: ip(y), StartMonth: m, StartDay: d,
+	return Candidate{ObservationID: id(n), Value: Value{Date: &datevalue.Value{
+		Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: ip(y), StartMonth: m, StartDay: d,
 	}}}
 }
 
@@ -245,7 +245,7 @@ func TestSortKey(t *testing.T) {
 		prev = k
 	}
 	for _, vt := range []string{propertymeta.ValueTypeDate, propertymeta.ValueTypeTerm, propertymeta.ValueTypeSubject} {
-		if _, ok := SortKey(vt, Value{TermID: []byte("x"), SubjectID: []byte("x"), Date: &datevalues.Value{}}); ok {
+		if _, ok := SortKey(vt, Value{TermID: []byte("x"), SubjectID: []byte("x"), Date: &datevalue.Value{}}); ok {
 			t.Fatalf("%s has no sort key yet", vt)
 		}
 	}

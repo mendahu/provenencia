@@ -10,7 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/matching"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/namevalues"
@@ -26,6 +25,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
@@ -117,8 +117,8 @@ func termed(prop, key string) value {
 
 func dated(y int, m, d *int) value {
 	return func(f *fixture, s subjects.Subject) observations.Input {
-		return observations.Input{SubjectID: s.ID, PropertyID: f.props["date"].ID, Date: &datevalues.Value{
-			Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: ip(y), StartMonth: m, StartDay: d,
+		return observations.Input{SubjectID: s.ID, PropertyID: f.props["date"].ID, Date: &datevalue.Value{
+			Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: ip(y), StartMonth: m, StartDay: d,
 		}}
 	}
 }

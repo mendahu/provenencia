@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
@@ -179,7 +179,7 @@ func TestPairValuesNegatives(t *testing.T) {
 
 func TestValueLabel(t *testing.T) {
 	year := 1890
-	d := datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year}
+	d := datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year}
 	tests := []struct {
 		v    Value
 		want string

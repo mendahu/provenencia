@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
@@ -143,7 +143,7 @@ func TestEvaluateStrayName(t *testing.T) {
 func TestEvaluateDatePeriod(t *testing.T) {
 	prop := func(k string) match.Property { return match.Property{Key: k, Origin: "provenencia"} }
 	year := func(y int) match.Value {
-		return match.Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &y}}
+		return match.Value{Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &y}}
 	}
 	metas := []match.PropertyMeta{
 		{Property: prop("date"), ValueType: propertymeta.ValueTypeDate},

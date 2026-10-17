@@ -10,7 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -23,6 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -234,7 +234,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	event := f.subject("event", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{
 			{SubjectID: s.ID, PropertyID: f.prop("event_type").ID, ValueTermID: birth.ID},
-			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &y}},
+			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}},
 		}
 	})
 	place := f.subject("place", func(s subjects.Subject) []observations.Input {
@@ -373,7 +373,7 @@ func TestHandleSearchEventsAndPlaces(t *testing.T) {
 	event := f.promote(f.subject("event", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{
 			{SubjectID: s.ID, PropertyID: f.prop("event_type").ID, ValueTermID: birth.ID},
-			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &y, StartMonth: &m}},
+			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y, StartMonth: &m}},
 		}
 	}), nil)
 	place := f.promote(f.subject("place", func(s subjects.Subject) []observations.Input {

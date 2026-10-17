@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
-	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
@@ -24,7 +24,7 @@ type ValueRef struct {
 	Negative      bool
 	// Date is the value's structured date, for a client to format; nil for
 	// any other value type.
-	Date *datevalues.Value
+	Date *datevalue.Value
 }
 
 // PairResult is the outcome of comparing two sides' values of one Property.
@@ -109,7 +109,7 @@ func (v Value) Label() string {
 		}
 		return strings.Join(parts, " ")
 	case v.Date != nil:
-		return datevalues.CompactDisplay(*v.Date)
+		return datevalue.CompactDisplay(*v.Date)
 	case v.Term != "":
 		if v.TermLabel != "" {
 			return v.TermLabel

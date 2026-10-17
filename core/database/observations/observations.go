@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -137,7 +138,7 @@ type Listed struct {
 	// ValueSubjectLabel is subjects.label for value_subject_id (empty when unset).
 	ValueSubjectLabel string
 	// Date is the joined date_values row when value_date_id is set.
-	Date *datevalues.Value
+	Date *datevalue.Value
 	// Depiction is the joined depiction_values row when value_depiction_id is set.
 	// An empty RegionJSON means the stored region is not a valid region of the
 	// Citation's page; an empty ImageFileID means the stored image is not a
@@ -156,8 +157,8 @@ type Input struct {
 	HasText        bool
 	ValueInteger   int64
 	HasInteger     bool
-	Date           *datevalues.Value // when set, InsertTx inside the caller's tx
-	ValueDateID    []byte            // existing date_values.id when Date is nil
+	Date           *datevalue.Value // when set, InsertTx inside the caller's tx
+	ValueDateID    []byte           // existing date_values.id when Date is nil
 	Name           *namevalues.Value
 	ValueNameID    []byte
 	ValueSubjectID []byte
@@ -656,7 +657,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 		l.ValueNameForm = nameForm
 		l.ValueSubjectLabel = subjectLabel
 		if kind.Valid && kind.String != "" {
-			dv := datevalues.Value{
+			dv := datevalue.Value{
 				ID:               append([]byte(nil), dateID...),
 				Kind:             kind.String,
 				Qualifier:        qual.String,
@@ -725,7 +726,7 @@ func FillListedDisplayText(l *Listed) {
 	case l.ValueSubjectLabel != "":
 		l.ValueText = l.ValueSubjectLabel
 	case l.Date != nil:
-		l.ValueText = datevalues.CompactDisplay(*l.Date)
+		l.ValueText = datevalue.CompactDisplay(*l.Date)
 	default:
 		return
 	}
@@ -800,7 +801,7 @@ func mapConstraint(err error) error {
 	return err
 }
 
-func dateUpdateChange(prev, next datevalues.Value) *rowchange.Change {
+func dateUpdateChange(prev, next datevalue.Value) *rowchange.Change {
 	fields := map[string]rowchange.FieldDiff{}
 	add := func(key string, old, new any) {
 		if old != new {
@@ -885,7 +886,7 @@ func namePartsJSON(parts []namevalues.Part) []map[string]any {
 	return out
 }
 
-func dateValueMap(id []byte, v datevalues.Value) map[string]any {
+func dateValueMap(id []byte, v datevalue.Value) map[string]any {
 	return map[string]any{
 		"id":                uuidJSON(id),
 		"kind":              emptyAsNil(v.Kind),
@@ -919,7 +920,7 @@ func nameValueMap(id []byte, v namevalues.Value) map[string]any {
 	}
 }
 
-func dateCreateChange(id []byte, v datevalues.Value) rowchange.Change {
+func dateCreateChange(id []byte, v datevalue.Value) rowchange.Change {
 	return rowchange.Change{
 		EntityType: "date_value",
 		EntityID:   append([]byte(nil), id...),

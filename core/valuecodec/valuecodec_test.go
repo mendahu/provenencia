@@ -4,19 +4,19 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 )
 
 func ip(n int) *int { return &n }
 
 func TestDateRoundTrip(t *testing.T) {
-	for _, v := range []datevalues.Value{
-		{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: ip(1985), StartMonth: ip(5)},
-		{Kind: datevalues.KindPoint, Qualifier: "ABT", Calendar: "gregorian", StartYear: ip(1817), StartMonth: ip(0), StartDay: ip(14)},
-		{Kind: datevalues.KindRange, Calendar: "gregorian", StartYear: ip(1850), EndYear: ip(1860), EndMonth: ip(12),
+	for _, v := range []datevalue.Value{
+		{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: ip(1985), StartMonth: ip(5)},
+		{Kind: datevalue.KindPoint, Qualifier: "ABT", Calendar: "gregorian", StartYear: ip(1817), StartMonth: ip(0), StartDay: ip(14)},
+		{Kind: datevalue.KindRange, Calendar: "gregorian", StartYear: ip(1850), EndYear: ip(1860), EndMonth: ip(12),
 			StartHour: ip(9), StartMinute: ip(30), StartSecond: ip(1), StartMillisecond: ip(250), StartTZ: "EST", EndTZ: "UTC"},
-		{Kind: datevalues.KindPoint, Phrase: "the winter after the fire"},
+		{Kind: datevalue.KindPoint, Phrase: "the winter after the fire"},
 	} {
 		b, err := MarshalDate(v)
 		if err != nil {

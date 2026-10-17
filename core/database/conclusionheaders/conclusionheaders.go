@@ -13,9 +13,9 @@ import (
 	"database/sql"
 
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 )
 
 // Querier is *sql.Tx or *sql.DB.
@@ -50,7 +50,7 @@ type LifeFacts struct {
 	Event      *canonicalentities.Entity
 	EventCount int
 	// Date is the event's date, else its start date.
-	Date      *datevalues.Value
+	Date      *datevalue.Value
 	DateCount int
 	Places    []HeaderPlace
 }

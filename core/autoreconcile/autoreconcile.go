@@ -29,8 +29,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
@@ -82,7 +82,7 @@ type Value struct {
 	Neutral    bool   // the term is no evidence either way (its catalog flag)
 	SubjectID  []byte // the cited subject
 	EntityID   []byte // that subject's accepted handle, when the loader resolved one
-	Date       *datevalues.Value
+	Date       *datevalue.Value
 	Name       *namevalues.Value
 }
 
@@ -323,7 +323,7 @@ func NormalizeForm(form string) string {
 
 // dateKey matches on every structured field. Containment and overlap are
 // dateModule.fold, not this key.
-func dateKey(d *datevalues.Value) string {
+func dateKey(d *datevalue.Value) string {
 	parts := []string{
 		d.Kind, d.Qualifier, d.Calendar,
 		optInt(d.StartYear), optInt(d.StartMonth), optInt(d.StartDay),
