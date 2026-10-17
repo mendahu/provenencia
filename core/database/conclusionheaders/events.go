@@ -4,10 +4,10 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/effects"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/eventtitle"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -28,11 +28,11 @@ type EventHeader struct {
 	EventNameCount int
 	EventType      *EventType
 	EventTypeCount int
-	Date           *datevalues.Value
+	Date           *datevalue.Value
 	DateCount      int
-	StartDate      *datevalues.Value
+	StartDate      *datevalue.Value
 	StartDateCount int
-	EndDate        *datevalues.Value
+	EndDate        *datevalue.Value
 	EndDateCount   int
 	Subjects       []EventSubject
 	Places         []HeaderPlace
@@ -46,7 +46,7 @@ type EventHeader struct {
 // EventSubject is one person on an event through a subject-role participation.
 type EventSubject struct {
 	Entity         canonicalentities.Entity
-	Name           *namevalues.Value
+	Name           *namevalue.Value
 	NameValueCount int
 }
 
@@ -80,7 +80,7 @@ func FirstPlaceName(places []HeaderPlace) string {
 	return ""
 }
 
-func unmarshalDate(b []byte) (*datevalues.Value, error) {
+func unmarshalDate(b []byte) (*datevalue.Value, error) {
 	if len(b) == 0 {
 		return nil, nil
 	}

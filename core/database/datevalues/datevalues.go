@@ -1,25 +1,6 @@
-// Package datevalues stores shared genealogical DateValue rows.
-//
-// Kinds validated by Insert (DDL stays flexible for later kinds):
-//
-//   - kind "point": one date; precision = whichever start_* components the
-//     evidence asserts (gaps allowed); optional start_tz; qualifier
-//     "" / "ABT" / "BEF" / "AFT"; no end_* (including end_tz). Phrase-only
-//     points are allowed when no civil components are set.
-//   - kind "range": one date in a bounded uncertainty window (BET); each side
-//     needs at least one civil component; optional start_tz / end_tz;
-//     start <= end when shared fields can be compared; qualifier empty only
-//
-// Missing fields mean unknown/not asserted, not midnight. Year is not
-// required when a month, day, or clock field is set.
-//
-// Qualifiers on point: ABT ≈ about; BEF = before / no later than;
-// AFT = after / no earlier than. The bound is the start_* civil components.
-// Between is kind "range", not a qualifier.
-//
-// start_tz / end_tz are free-text zone labels as stated (IANA id, offset,
-// historical name, or "local time"). Empty means unspecified. They are not
-// parsed into UTC offsets in this package.
+// Package datevalues stores shared genealogical DateValue rows. The value
+// type, its kinds and qualifiers, validation and display live in the pure
+// package core/datevalue; this package holds the queries.
 package datevalues
 
 import (
@@ -27,21 +8,12 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/datevalue"
 )
 
-var ErrInvalid = apperr.New(apperr.CodeDateValuesInvalid, apperr.KindUser)
-
 const (
-	KindPoint = "point"
-	KindRange = "range"
-
-	QualifierABT = "ABT" // about / approximately
-	QualifierBEF = "BEF" // before / no later than start_*
-	QualifierAFT = "AFT" // after / no earlier than start_*
-
 	sqlInsert = `INSERT INTO date_values (
 		id, kind, qualifier, calendar,
 		start_year, start_month, start_day,
@@ -79,39 +51,8 @@ const (
 		FROM date_values WHERE id IN (`
 )
 
-// Value is one date_values row.
-type Value struct {
-	ID               []byte
-	Kind             string
-	Qualifier        string // "" | ABT | BEF | AFT on point kinds
-	Calendar         string
-	StartYear        *int
-	StartMonth       *int
-	StartDay         *int
-	StartHour        *int
-	StartMinute      *int
-	StartSecond      *int
-	StartMillisecond *int
-	StartTZ          string // free-text zone; empty = unspecified
-	EndYear          *int
-	EndMonth         *int
-	EndDay           *int
-	EndHour          *int
-	EndMinute        *int
-	EndSecond        *int
-	EndMillisecond   *int
-	EndTZ            string // free-text zone; empty = unspecified
-	Phrase           string
-}
-
-type side struct {
-	year, month, day     *int
-	hour, minute, second *int
-	millisecond          *int
-}
-
 // Insert mints a UUIDv7 id, validates, inserts, and returns the id.
-func Insert(c *database.Catalog, v Value) ([]byte, error) {
+func Insert(c *database.Catalog, v datevalue.Value) ([]byte, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, err
@@ -122,14 +63,14 @@ func Insert(c *database.Catalog, v Value) ([]byte, error) {
 // InsertTx validates and inserts on an existing connection or transaction.
 func InsertTx(q interface {
 	Exec(query string, args ...any) (sql.Result, error)
-}, v Value) ([]byte, error) {
+}, v datevalue.Value) ([]byte, error) {
 	v.Kind = strings.TrimSpace(v.Kind)
 	v.Qualifier = strings.TrimSpace(v.Qualifier)
 	v.Calendar = strings.TrimSpace(v.Calendar)
 	v.Phrase = strings.TrimSpace(v.Phrase)
 	v.StartTZ = strings.TrimSpace(v.StartTZ)
 	v.EndTZ = strings.TrimSpace(v.EndTZ)
-	if err := validate(v); err != nil {
+	if err := datevalue.Validate(v); err != nil {
 		return nil, err
 	}
 	id, err := uuid.NewV7()
@@ -167,9 +108,9 @@ func InsertTx(q interface {
 }
 
 // UpdateTx rewrites the date_values row id. The id stays the same.
-func UpdateTx(tx *sql.Tx, id []byte, v Value) error {
+func UpdateTx(tx *sql.Tx, id []byte, v datevalue.Value) error {
 	if tx == nil || len(id) != 16 {
-		return ErrInvalid
+		return datevalue.ErrInvalid
 	}
 	v.Kind = strings.TrimSpace(v.Kind)
 	v.Qualifier = strings.TrimSpace(v.Qualifier)
@@ -177,13 +118,13 @@ func UpdateTx(tx *sql.Tx, id []byte, v Value) error {
 	v.Phrase = strings.TrimSpace(v.Phrase)
 	v.StartTZ = strings.TrimSpace(v.StartTZ)
 	v.EndTZ = strings.TrimSpace(v.EndTZ)
-	if err := validate(v); err != nil {
+	if err := datevalue.Validate(v); err != nil {
 		return err
 	}
 	var one int
 	if err := tx.QueryRow(sqlExists, id).Scan(&one); err != nil {
 		if err == sql.ErrNoRows {
-			return ErrInvalid
+			return datevalue.ErrInvalid
 		}
 		return err
 	}
@@ -215,10 +156,10 @@ func UpdateTx(tx *sql.Tx, id []byte, v Value) error {
 }
 
 // Lookup returns the date_values row for id, or sql.ErrNoRows.
-func Lookup(c *database.Catalog, id []byte) (Value, error) {
+func Lookup(c *database.Catalog, id []byte) (datevalue.Value, error) {
 	db, err := c.DB()
 	if err != nil {
-		return Value{}, err
+		return datevalue.Value{}, err
 	}
 	return LookupTx(db, id)
 }
@@ -227,9 +168,9 @@ func Lookup(c *database.Catalog, id []byte) (Value, error) {
 // sqlbatch.Size ids, keyed by string(id). Missing ids are omitted.
 func LookupManyTx(q interface {
 	Query(query string, args ...any) (*sql.Rows, error)
-}, ids [][]byte) (map[string]Value, error) {
+}, ids [][]byte) (map[string]datevalue.Value, error) {
 	ids = database.UniqueBlobIDs(ids)
-	out := make(map[string]Value, len(ids))
+	out := make(map[string]datevalue.Value, len(ids))
 	if len(ids) == 0 {
 		return out, nil
 	}
@@ -252,134 +193,17 @@ func LookupManyTx(q interface {
 // LookupTx returns the date_values row for id on an existing connection or transaction.
 func LookupTx(q interface {
 	QueryRow(query string, args ...any) *sql.Row
-}, id []byte) (Value, error) {
+}, id []byte) (datevalue.Value, error) {
 	if q == nil || len(id) != 16 {
-		return Value{}, ErrInvalid
+		return datevalue.Value{}, datevalue.ErrInvalid
 	}
 	v, err := scanValue(q.QueryRow(sqlLookup, id))
 	if err != nil {
-		return Value{}, err
+		return datevalue.Value{}, err
 	}
 	v.ID = append([]byte(nil), id...)
 	return v, nil
 }
-
-func validate(v Value) error {
-	start := side{
-		year: v.StartYear, month: v.StartMonth, day: v.StartDay,
-		hour: v.StartHour, minute: v.StartMinute, second: v.StartSecond,
-		millisecond: v.StartMillisecond,
-	}
-	end := side{
-		year: v.EndYear, month: v.EndMonth, day: v.EndDay,
-		hour: v.EndHour, minute: v.EndMinute, second: v.EndSecond,
-		millisecond: v.EndMillisecond,
-	}
-	qual := v.Qualifier
-
-	switch v.Kind {
-	case KindPoint:
-		if !pointQualifierOK(qual) {
-			return ErrInvalid
-		}
-		if !end.empty() || v.EndTZ != "" {
-			return ErrInvalid
-		}
-		if !hasCivil(start) {
-			// Phrase-forward point: no year/month/day/time. Timezone or
-			// millisecond-only is not enough.
-			if v.Phrase == "" || v.StartTZ != "" || start.millisecond != nil {
-				return ErrInvalid
-			}
-			return nil
-		}
-		return validateComponentRanges(start)
-	case KindRange:
-		if qual != "" {
-			return ErrInvalid
-		}
-		if err := validateComponentRanges(start); err != nil {
-			return err
-		}
-		if err := validateComponentRanges(end); err != nil {
-			return err
-		}
-		if !sideLessOrEqual(start, end) {
-			return ErrInvalid
-		}
-	default:
-		return ErrInvalid
-	}
-	return nil
-}
-
-func pointQualifierOK(qual string) bool {
-	switch qual {
-	case "", QualifierABT, QualifierBEF, QualifierAFT:
-		return true
-	default:
-		return false
-	}
-}
-
-func hasCivil(s side) bool {
-	return s.year != nil || s.month != nil || s.day != nil ||
-		s.hour != nil || s.minute != nil || s.second != nil
-}
-
-// validateComponentRanges requires at least one civil field and in-range
-// values. Gaps (day without month, hour without year) are allowed.
-func validateComponentRanges(s side) error {
-	if !hasCivil(s) {
-		return ErrInvalid
-	}
-	if s.month != nil && !monthOK(*s.month) {
-		return ErrInvalid
-	}
-	if s.day != nil && !dayOK(*s.day) {
-		return ErrInvalid
-	}
-	if s.hour != nil && (*s.hour < 0 || *s.hour > 23) {
-		return ErrInvalid
-	}
-	if s.minute != nil && (*s.minute < 0 || *s.minute > 59) {
-		return ErrInvalid
-	}
-	if s.second != nil && (*s.second < 0 || *s.second > 59) {
-		return ErrInvalid
-	}
-	if s.millisecond != nil && (*s.millisecond < 0 || *s.millisecond > 999) {
-		return ErrInvalid
-	}
-	return nil
-}
-
-func (s side) empty() bool {
-	return s.year == nil && s.month == nil && s.day == nil &&
-		s.hour == nil && s.minute == nil && s.second == nil && s.millisecond == nil
-}
-
-// sideLessOrEqual compares cascading components; a missing field on either
-// side stops the comparison (treat as equal at that precision).
-func sideLessOrEqual(a, b side) bool {
-	levelsA := []*int{a.year, a.month, a.day, a.hour, a.minute, a.second, a.millisecond}
-	levelsB := []*int{b.year, b.month, b.day, b.hour, b.minute, b.second, b.millisecond}
-	for i := range levelsA {
-		if levelsA[i] == nil || levelsB[i] == nil {
-			return true
-		}
-		if *levelsA[i] < *levelsB[i] {
-			return true
-		}
-		if *levelsA[i] > *levelsB[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func monthOK(m int) bool { return m >= 1 && m <= 12 }
-func dayOK(d int) bool   { return d >= 1 && d <= 31 }
 
 func nullIfEmpty(s string) any {
 	s = strings.TrimSpace(s)
@@ -405,9 +229,9 @@ func intPtr(n sql.NullInt64) *int {
 }
 
 // scanValue reads the sqlLookup column list, after any leading columns.
-func scanValue(row interface{ Scan(dest ...any) error }, lead ...any) (Value, error) {
+func scanValue(row interface{ Scan(dest ...any) error }, lead ...any) (datevalue.Value, error) {
 	var (
-		v                                                         Value
+		v                                                         datevalue.Value
 		qual, cal, phrase, startTZ, endTZ                         sql.NullString
 		startY, startM, startD, startH, startMin, startS, startMs sql.NullInt64
 		endY, endM, endD, endH, endMin, endS, endMs               sql.NullInt64
@@ -423,7 +247,7 @@ func scanValue(row interface{ Scan(dest ...any) error }, lead ...any) (Value, er
 		&phrase,
 	)
 	if err := row.Scan(dest...); err != nil {
-		return Value{}, err
+		return datevalue.Value{}, err
 	}
 	v.Qualifier = qual.String
 	v.Calendar = cal.String

@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/datevalue"
 )
 
 // PlaceRelationshipKind is how a related Place appears on a Place detail.
@@ -21,8 +21,8 @@ type PlaceRelationship struct {
 	Entity    canonicalentities.Entity
 	Title     string
 	Kind      string
-	StartDate *datevalues.Value // membership span, or the other place's period
-	EndDate   *datevalues.Value
+	StartDate *datevalue.Value // membership span, or the other place's period
+	EndDate   *datevalue.Value
 }
 
 // PlaceHeader is one Place as a row. Names are the kept toponyms in rank
@@ -35,8 +35,8 @@ type PlaceRelationship struct {
 type PlaceHeader struct {
 	Entity               canonicalentities.Entity
 	Names                []string
-	StartDate            *datevalues.Value
-	EndDate              *datevalues.Value
+	StartDate            *datevalue.Value
+	EndDate              *datevalue.Value
 	Kind                 string
 	Parents              []string
 	ParentsAreCandidates bool
@@ -50,12 +50,12 @@ type PlaceHeader struct {
 }
 
 // TodayDate is a Gregorian point for "today's chain" on Place rows.
-func TodayDate() datevalues.Value {
+func TodayDate() datevalue.Value {
 	now := time.Now()
 	y, m, d := now.Date()
 	month, day := int(m), d
-	return datevalues.Value{
-		Kind: datevalues.KindPoint, Calendar: "gregorian",
+	return datevalue.Value{
+		Kind: datevalue.KindPoint, Calendar: "gregorian",
 		StartYear: &y, StartMonth: &month, StartDay: &day,
 	}
 }

@@ -85,8 +85,8 @@ These are the calls for this spike. PR plans treat them as binding.
 
 | PR | Title | Slice | Scope | Brief | Depends on | Plan | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| S11-01 | One-page matching model | 1 | Diagram, glossary, knob inventory with starting values and estimates | — | — | [plan](prs/S11-01-matching-model.md) | Planned |
-| S11-22 | Pure value types | 1 | Date and name value structs, display helpers, part types, value-type and cardinality constants move to pure packages | — | — | [plan](prs/S11-22-pure-value-types.md) | Planned |
+| S11-01 | One-page matching model | 1 | Diagram, glossary, knob inventory with starting values and estimates | — | — | [plan](prs/S11-01-matching-model.md) | Landed #432 |
+| S11-22 | Pure value types | 1 | Date and name value structs, display helpers, part types, value-type and cardinality constants move to pure packages | — | — | [plan](prs/S11-22-pure-value-types.md) | Landed #434 |
 | S11-23 | One home for primary kinds | 1 | `person` / `event` / `place`, the Property keys matching reads by name, and the Origin constants and check in one pure place; the hand-written lists use it | — | S11-22 | [plan](prs/S11-23-primary-kinds.md) | Blocked — on S11-22 |
 | S11-02 | Value compare core and match registry | 2 | `valuecompare` contract, `Key`, text / term / integer, `matchregistry` skeleton and value section, the guard, the matching skill | — | S11-01, S11-22, S11-23 | — | Scoped |
 | S11-03 | Value compare: names | 2 | Name comparer on relations; word helpers move in from `autoreconcile`; alias seeds to `namealiases` | — | S11-02 | — | Scoped |
@@ -218,6 +218,8 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-01 — One-page matching model
 
+**Landed 2026-10-17** in [#432](https://github.com/mendahu/provenencia/pull/432). See [`completed.md`](completed.md).
+
 **Ships.** A domain doc (`docs/matching.md` rewritten, or a new `docs/matching-model.md` that replaces it) with one diagram of the six layers, the glossary (relation, similarity, evidence, segment, shortlist, candidate, band, contested…), and the knob inventory: every registry field, its section, starting value or estimate with reasoning, and what it changes.
 **Not this PR.** Any code. `core/matchregistry` (S11-02).
 **Check.** A reader can trace a Promote row from value compare to band on one page; every knob in the comparison-layers doc appears in the inventory with a value.
@@ -241,7 +243,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-02 — Value compare core and match registry
 
-**Ships.** `core/valuecompare`: pure value types, `Result` (relation + similarity), `Detail` (parts, cause codes, value refs), `Key`, and the text, term and integer comparers. `core/matchregistry` with `Default()` and the value section. Registry keys are `core/vocabkey` constants (S11-23) used directly as typed `SubjectType` / `PropertyKey` keys; no re-declared key constants. The purity guard lists `core/vocabkey`. One repo-walking guard (purity and numeric literals over a list of layer packages), contract tests, and the inventory-drift guard. The matching skill (`add-match-rule`), first version.
+**Ships.** `core/valuecompare`: pure value types, `Result` (relation + similarity), `Detail` (parts, cause codes, value refs), `Key`, and the text, term and integer comparers. `core/matchregistry` with `Default()` and the value section. Registry keys are `core/vocabkey` constants (S11-23) used directly as typed `SubjectType` / `PropertyKey` keys; no re-declared key constants. The purity guard lists `core/vocabkey`. One repo-walking guard (purity and numeric literals over a list of layer packages; the guard also lists `core/datevalue`, `core/namevalue` and `core/propertymeta`), contract tests, and the inventory-drift guard. The matching skill (`add-match-rule`), first version.
 **Not this PR.** Names (S11-03), dates (S11-04), any caller (S11-05).
 **Check.** `go test ./core/valuecompare/... ./core/matchregistry/...` passes with no build tags; the contract tests run against every comparer.
 **Context.** [Layer 1](comparison-layers.md#layer-1-value-comparison), [relations](comparison-layers.md#relations), [detail](comparison-layers.md#detail), [purity](comparison-layers.md#purity-requirements), [match registry](comparison-layers.md#match-registry).

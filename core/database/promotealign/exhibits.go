@@ -10,10 +10,11 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 type exhibitObs struct {
@@ -228,7 +229,7 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 			continue
 		}
 		cmp := match.ComparerFor(in.valueType)
-		if in.valueType == properties.ValueTypeName && cfg.Names != nil {
+		if in.valueType == propertymeta.ValueTypeName && cfg.Names != nil {
 			cmp = *cfg.Names
 		}
 		var chosen *exhibitObs
@@ -264,7 +265,7 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 		}
 		card := in.cardinality
 		if card == "" {
-			card = properties.CardinalitySingle
+			card = propertymeta.CardinalitySingle
 		}
 		outcome, weight := graphalign.ScoreSimilarity(sim, discount, comparable, card, in.prop, in.valueType, []match.Value{in.value}, cfg, stats)
 		if outcome == match.OutcomeUnknown {
@@ -292,7 +293,7 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 	return out
 }
 
-func cloneDate(d *datevalues.Value) *datevalues.Value {
+func cloneDate(d *datevalue.Value) *datevalue.Value {
 	if d == nil {
 		return nil
 	}

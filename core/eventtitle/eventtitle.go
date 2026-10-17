@@ -12,7 +12,7 @@ package eventtitle
 import (
 	"strings"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // Rule is one row of the naming matrix, in precedence order.
@@ -40,7 +40,7 @@ const (
 // Subject is one subject-role person, in stable order. A nil Name reads as
 // "unnamed person".
 type Subject struct {
-	Name *namevalues.Value
+	Name *namevalue.Value
 }
 
 // Parts are what an Event's title can be chosen from.

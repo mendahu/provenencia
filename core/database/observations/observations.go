@@ -4,8 +4,9 @@ package observations
 import (
 	"bytes"
 	"database/sql"
-	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
+
+	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
@@ -15,6 +16,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -131,11 +135,11 @@ type Listed struct {
 	// ValueNameForm is name_values.form for value_name_id (empty when unset).
 	ValueNameForm string
 	// Name is the joined name_values row plus parts when value_name_id is set.
-	Name *namevalues.Value
+	Name *namevalue.Value
 	// ValueSubjectLabel is subjects.label for value_subject_id (empty when unset).
 	ValueSubjectLabel string
 	// Date is the joined date_values row when value_date_id is set.
-	Date *datevalues.Value
+	Date *datevalue.Value
 	// Depiction is the joined depiction_values row when value_depiction_id is set.
 	// An empty RegionJSON means the stored region is not a valid region of the
 	// Citation's page; an empty ImageFileID means the stored image is not a
@@ -154,9 +158,9 @@ type Input struct {
 	HasText        bool
 	ValueInteger   int64
 	HasInteger     bool
-	Date           *datevalues.Value // when set, InsertTx inside the caller's tx
-	ValueDateID    []byte            // existing date_values.id when Date is nil
-	Name           *namevalues.Value
+	Date           *datevalue.Value // when set, InsertTx inside the caller's tx
+	ValueDateID    []byte           // existing date_values.id when Date is nil
+	Name           *namevalue.Value
 	ValueNameID    []byte
 	ValueSubjectID []byte
 	ValueTermID    []byte
@@ -397,19 +401,19 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 
 func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, existing *Observation) (resolvedValue, error) {
 	switch valueType {
-	case properties.ValueTypeText:
+	case propertymeta.ValueTypeText:
 		text := strings.TrimSpace(in.ValueText)
 		if !in.HasText || text == "" || hasOtherScalars(in, "text") {
 			return resolvedValue{}, ErrInvalid
 		}
 		return resolvedValue{Text: text}, nil
-	case properties.ValueTypeInteger:
+	case propertymeta.ValueTypeInteger:
 		if !in.HasInteger || hasOtherScalars(in, "integer") {
 			return resolvedValue{}, ErrInvalid
 		}
 		v := in.ValueInteger
 		return resolvedValue{Integer: &v}, nil
-	case properties.ValueTypeDate:
+	case propertymeta.ValueTypeDate:
 		if hasOtherScalars(in, "date") {
 			return resolvedValue{}, ErrInvalid
 		}
@@ -441,7 +445,7 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 			return resolvedValue{}, ErrInvalid
 		}
 		return resolvedValue{DateID: in.ValueDateID}, nil
-	case properties.ValueTypeName:
+	case propertymeta.ValueTypeName:
 		if hasOtherScalars(in, "name") {
 			return resolvedValue{}, ErrInvalid
 		}
@@ -473,7 +477,7 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 			return resolvedValue{}, ErrInvalid
 		}
 		return resolvedValue{NameID: in.ValueNameID}, nil
-	case properties.ValueTypeSubject:
+	case propertymeta.ValueTypeSubject:
 		if len(in.ValueSubjectID) != 16 || hasOtherScalars(in, "subject") {
 			return resolvedValue{}, ErrInvalid
 		}
@@ -485,7 +489,7 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 			return resolvedValue{}, err
 		}
 		return resolvedValue{SubjectID: in.ValueSubjectID}, nil
-	case properties.ValueTypeTerm:
+	case propertymeta.ValueTypeTerm:
 		if len(in.ValueTermID) != 16 || hasOtherScalars(in, "term") {
 			return resolvedValue{}, ErrInvalid
 		}
@@ -497,7 +501,7 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 			return resolvedValue{}, err
 		}
 		return resolvedValue{TermID: in.ValueTermID}, nil
-	case properties.ValueTypeDepiction:
+	case propertymeta.ValueTypeDepiction:
 		if hasOtherScalars(in, "depiction") {
 			return resolvedValue{}, ErrInvalid
 		}
@@ -642,19 +646,12 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 		l.ValueSubjectID = append([]byte(nil), subjectID...)
 		l.ValueTermID = append([]byte(nil), termID...)
 		l.ValueDepictionID = append([]byte(nil), depictionID...)
-		if len(depictionImage) > 0 {
-			dv := depictionvalues.Readable(depictionvalues.Value{
-				ID:          append([]byte(nil), depictionID...),
-				RegionJSON:  depictionRegion.String,
-				ImageFileID: append([]byte(nil), depictionImage...),
-			}, citationLocator.String, imageMediaType.String)
-			l.Depiction = &dv
-		}
+		l.Depiction = depictionvalues.FromJoin(depictionID, depictionRegion, depictionImage, citationLocator, imageMediaType)
 		l.ValueTermLabel = termLabel
 		l.ValueNameForm = nameForm
 		l.ValueSubjectLabel = subjectLabel
 		if kind.Valid && kind.String != "" {
-			dv := datevalues.Value{
+			dv := datevalue.Value{
 				ID:               append([]byte(nil), dateID...),
 				Kind:             kind.String,
 				Qualifier:        qual.String,
@@ -723,7 +720,7 @@ func FillListedDisplayText(l *Listed) {
 	case l.ValueSubjectLabel != "":
 		l.ValueText = l.ValueSubjectLabel
 	case l.Date != nil:
-		l.ValueText = datevalues.CompactDisplay(*l.Date)
+		l.ValueText = datevalue.CompactDisplay(*l.Date)
 	default:
 		return
 	}
@@ -798,7 +795,7 @@ func mapConstraint(err error) error {
 	return err
 }
 
-func dateUpdateChange(prev, next datevalues.Value) *rowchange.Change {
+func dateUpdateChange(prev, next datevalue.Value) *rowchange.Change {
 	fields := map[string]rowchange.FieldDiff{}
 	add := func(key string, old, new any) {
 		if old != new {
@@ -836,7 +833,7 @@ func dateUpdateChange(prev, next datevalues.Value) *rowchange.Change {
 	}
 }
 
-func nameUpdateChange(prev, next namevalues.Value) *rowchange.Change {
+func nameUpdateChange(prev, next namevalue.Value) *rowchange.Change {
 	fields := map[string]rowchange.FieldDiff{}
 	if prev.Form != next.Form {
 		fields["form"] = rowchange.FieldDiff{Old: prev.Form, New: next.Form}
@@ -859,7 +856,7 @@ func nameUpdateChange(prev, next namevalues.Value) *rowchange.Change {
 	}
 }
 
-func namePartsEqual(a, b []namevalues.Part) bool {
+func namePartsEqual(a, b []namevalue.Part) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -871,7 +868,7 @@ func namePartsEqual(a, b []namevalues.Part) bool {
 	return true
 }
 
-func namePartsJSON(parts []namevalues.Part) []map[string]any {
+func namePartsJSON(parts []namevalue.Part) []map[string]any {
 	out := make([]map[string]any, len(parts))
 	for i, p := range parts {
 		out[i] = map[string]any{
@@ -883,7 +880,7 @@ func namePartsJSON(parts []namevalues.Part) []map[string]any {
 	return out
 }
 
-func dateValueMap(id []byte, v datevalues.Value) map[string]any {
+func dateValueMap(id []byte, v datevalue.Value) map[string]any {
 	return map[string]any{
 		"id":                uuidJSON(id),
 		"kind":              emptyAsNil(v.Kind),
@@ -909,7 +906,7 @@ func dateValueMap(id []byte, v datevalues.Value) map[string]any {
 	}
 }
 
-func nameValueMap(id []byte, v namevalues.Value) map[string]any {
+func nameValueMap(id []byte, v namevalue.Value) map[string]any {
 	return map[string]any{
 		"id":    uuidJSON(id),
 		"form":  v.Form,
@@ -917,7 +914,7 @@ func nameValueMap(id []byte, v namevalues.Value) map[string]any {
 	}
 }
 
-func dateCreateChange(id []byte, v datevalues.Value) rowchange.Change {
+func dateCreateChange(id []byte, v datevalue.Value) rowchange.Change {
 	return rowchange.Change{
 		EntityType: "date_value",
 		EntityID:   append([]byte(nil), id...),
@@ -948,7 +945,7 @@ func dateCreateChange(id []byte, v datevalues.Value) rowchange.Change {
 	}
 }
 
-func nameCreateChange(id []byte, v namevalues.Value) rowchange.Change {
+func nameCreateChange(id []byte, v namevalue.Value) rowchange.Change {
 	parts := make([]map[string]any, len(v.Parts))
 	for i, p := range v.Parts {
 		parts[i] = map[string]any{

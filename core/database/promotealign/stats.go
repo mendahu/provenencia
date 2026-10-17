@@ -6,9 +6,9 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -159,7 +159,7 @@ func countNameWords(q Querier) (match.WordCounts, error) {
 		return match.WordCounts{}, err
 	}
 	defer rows.Close()
-	var people [][]namevalues.Value
+	var people [][]namevalue.Value
 	var last []byte
 	for rows.Next() {
 		var id, blob []byte

@@ -2,7 +2,7 @@ package subjectvocab
 
 import (
 	"github.com/mendahu/provenencia/core/connectrules"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // Declarative provenencia Interpretation subject vocabulary (create-time starter).
@@ -153,28 +153,28 @@ var seedTypes = []seedType{
 }
 
 var seedProperties = []seedProperty{
-	{Key: "name", Label: "Name", ValueType: properties.ValueTypeName},
-	{Key: "sex_at_birth", Label: "Sex at birth", Description: "Sex recorded or assigned at birth. Product term vocabulary.", ValueType: properties.ValueTypeTerm},
-	{Key: "gender", Label: "Gender", Description: "Gender identity. Separate from sex recorded or assigned at birth. Product term vocabulary.", ValueType: properties.ValueTypeTerm},
-	{Key: "event_type", Label: "Event type", Description: "Kind of event (birth, census, …). Product term vocabulary.", ValueType: properties.ValueTypeTerm},
-	{Key: "event_name", Label: "Event name", Description: "Recorded name of a historical event. Not a personal NameValue.", ValueType: properties.ValueTypeText},
-	{Key: "date", Label: "Date", Description: "Point-in-time when the event occurred (or the best single date when a span is unknown). Prefer this for births, deaths, and other one-day facts. Use start/end date instead when the event clearly lasts across a range.", ValueType: properties.ValueTypeDate},
-	{Key: "start_date", Label: "Start date", Description: "When a multi-day or open-ended event began (census day range, residence, military service, voyage). Leave empty for instantaneous events that only need Date.", ValueType: properties.ValueTypeDate},
-	{Key: "end_date", Label: "End date", Description: "When a spanned event ended or was last known. Pair with Start date; leave empty for instantaneous events that only need Date.", ValueType: properties.ValueTypeDate},
-	{Key: "role", Label: "Role", Description: "Participation role (subject, father, …). Product term vocabulary.", ValueType: properties.ValueTypeTerm},
-	{Key: "relationship_type", Label: "Relationship type", Description: "Directed kinship: person is this type of related_to. Spouse, sibling, and cousin are symmetric.", ValueType: properties.ValueTypeTerm},
-	{Key: "place_relationship_type", Label: "Place relationship type", Description: "Part of or succeeded by. Product-locked vocabulary.", ValueType: properties.ValueTypeTerm},
-	{Key: "from", Label: "From", Description: "Place relationship: the part, or the predecessor", ValueType: properties.ValueTypeSubject},
-	{Key: "to", Label: "To", Description: "Place relationship: the whole, or the successor", ValueType: properties.ValueTypeSubject},
-	{Key: "person", Label: "Person", Description: "Target hint: person (on a relationship: who is the typed relative)", ValueType: properties.ValueTypeSubject},
-	{Key: "event", Label: "Event", Description: "Target hint: event", ValueType: properties.ValueTypeSubject},
-	{Key: "place", Label: "Place", Description: "Target hint: place", ValueType: properties.ValueTypeSubject},
-	{Key: "related_to", Label: "Related to", Description: "Target hint: person (on a relationship: the other end — person is the X of related_to)", ValueType: properties.ValueTypeSubject},
-	{Key: "mentions", Label: "Mentions", Description: "Target hint: source", ValueType: properties.ValueTypeSubject},
-	{Key: "remark", Label: "Remark", Description: "Free-text commentary about a source subject", ValueType: properties.ValueTypeText},
-	{Key: "toponym", Label: "Toponym", Description: "Place name as interpreted from a Source", ValueType: properties.ValueTypeText, Cardinality: properties.CardinalityMultiple},
-	{Key: "interests", Label: "Interests", Description: "Free-text interests. More than one value is allowed.", ValueType: properties.ValueTypeText, Cardinality: properties.CardinalityMultiple},
-	{Key: "likeness", Label: "Likeness", Description: "A picture of this person: a region of a cited page and the image of it. More than one is allowed.", ValueType: properties.ValueTypeDepiction, Cardinality: properties.CardinalityMultiple},
+	{Key: "name", Label: "Name", ValueType: propertymeta.ValueTypeName},
+	{Key: "sex_at_birth", Label: "Sex at birth", Description: "Sex recorded or assigned at birth. Product term vocabulary.", ValueType: propertymeta.ValueTypeTerm},
+	{Key: "gender", Label: "Gender", Description: "Gender identity. Separate from sex recorded or assigned at birth. Product term vocabulary.", ValueType: propertymeta.ValueTypeTerm},
+	{Key: "event_type", Label: "Event type", Description: "Kind of event (birth, census, …). Product term vocabulary.", ValueType: propertymeta.ValueTypeTerm},
+	{Key: "event_name", Label: "Event name", Description: "Recorded name of a historical event. Not a personal NameValue.", ValueType: propertymeta.ValueTypeText},
+	{Key: "date", Label: "Date", Description: "Point-in-time when the event occurred (or the best single date when a span is unknown). Prefer this for births, deaths, and other one-day facts. Use start/end date instead when the event clearly lasts across a range.", ValueType: propertymeta.ValueTypeDate},
+	{Key: "start_date", Label: "Start date", Description: "When a multi-day or open-ended event began (census day range, residence, military service, voyage). Leave empty for instantaneous events that only need Date.", ValueType: propertymeta.ValueTypeDate},
+	{Key: "end_date", Label: "End date", Description: "When a spanned event ended or was last known. Pair with Start date; leave empty for instantaneous events that only need Date.", ValueType: propertymeta.ValueTypeDate},
+	{Key: "role", Label: "Role", Description: "Participation role (subject, father, …). Product term vocabulary.", ValueType: propertymeta.ValueTypeTerm},
+	{Key: "relationship_type", Label: "Relationship type", Description: "Directed kinship: person is this type of related_to. Spouse, sibling, and cousin are symmetric.", ValueType: propertymeta.ValueTypeTerm},
+	{Key: "place_relationship_type", Label: "Place relationship type", Description: "Part of or succeeded by. Product-locked vocabulary.", ValueType: propertymeta.ValueTypeTerm},
+	{Key: "from", Label: "From", Description: "Place relationship: the part, or the predecessor", ValueType: propertymeta.ValueTypeSubject},
+	{Key: "to", Label: "To", Description: "Place relationship: the whole, or the successor", ValueType: propertymeta.ValueTypeSubject},
+	{Key: "person", Label: "Person", Description: "Target hint: person (on a relationship: who is the typed relative)", ValueType: propertymeta.ValueTypeSubject},
+	{Key: "event", Label: "Event", Description: "Target hint: event", ValueType: propertymeta.ValueTypeSubject},
+	{Key: "place", Label: "Place", Description: "Target hint: place", ValueType: propertymeta.ValueTypeSubject},
+	{Key: "related_to", Label: "Related to", Description: "Target hint: person (on a relationship: the other end — person is the X of related_to)", ValueType: propertymeta.ValueTypeSubject},
+	{Key: "mentions", Label: "Mentions", Description: "Target hint: source", ValueType: propertymeta.ValueTypeSubject},
+	{Key: "remark", Label: "Remark", Description: "Free-text commentary about a source subject", ValueType: propertymeta.ValueTypeText},
+	{Key: "toponym", Label: "Toponym", Description: "Place name as interpreted from a Source", ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalityMultiple},
+	{Key: "interests", Label: "Interests", Description: "Free-text interests. More than one value is allowed.", ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalityMultiple},
+	{Key: "likeness", Label: "Likeness", Description: "A picture of this person: a region of a cited page and the image of it. More than one is allowed.", ValueType: propertymeta.ValueTypeDepiction, Cardinality: propertymeta.CardinalityMultiple},
 }
 
 // Non-bridge bindings from docs/seeded-vocabulary.md §3.3.

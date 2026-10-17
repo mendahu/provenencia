@@ -1,6 +1,6 @@
 package autoreconcile
 
-import "github.com/mendahu/provenencia/core/database/datevalues"
+import "github.com/mendahu/provenencia/core/datevalue"
 
 // The date module (conclusion-reconciliation.md §7.1). A date is a window
 // over its civil components. Missing finer fields are unknown, never zero.
@@ -30,7 +30,7 @@ type dateWindow struct {
 }
 
 type dateUnit struct {
-	date   datevalues.Value
+	date   datevalue.Value
 	window dateWindow
 }
 
@@ -65,7 +65,7 @@ func (dateModule) assemble(_ []Candidate, settled map[string][]unit) Value {
 
 // DateBounds returns the inclusive proleptic day numbers of d's window.
 // A nil bound is open. ok is false when d has no year to place.
-func DateBounds(d datevalues.Value) (lo, hi *int, ok bool) {
+func DateBounds(d datevalue.Value) (lo, hi *int, ok bool) {
 	w, ok := windowOf(d)
 	if !ok {
 		return nil, nil, false
@@ -100,8 +100,8 @@ type DateEnd struct {
 // end finishes), and an open end on a side with no year. ok is false when d
 // has no year to place, or a month or day that does not exist. Civil
 // components are read as Gregorian, as DateBounds does.
-func DateEnds(d datevalues.Value) (first, last DateEnd, ok bool) {
-	if d.Kind == datevalues.KindRange {
+func DateEnds(d datevalue.Value) (first, last DateEnd, ok bool) {
+	if d.Kind == datevalue.KindRange {
 		if d.StartYear == nil && d.EndYear == nil {
 			return DateEnd{}, DateEnd{}, false
 		}
@@ -131,9 +131,9 @@ func DateEnds(d datevalues.Value) (first, last DateEnd, ok bool) {
 	}
 	first, last = e, e
 	switch d.Qualifier {
-	case datevalues.QualifierBEF:
+	case datevalue.QualifierBEF:
 		first = DateEnd{Open: true}
-	case datevalues.QualifierAFT:
+	case datevalue.QualifierAFT:
 		last = DateEnd{Open: true}
 	}
 	return first, last, true
@@ -183,7 +183,7 @@ const (
 func Always() Window { return Window{} }
 
 // WindowOfDate is DateBounds as a Window. ok is false when d has no year.
-func WindowOfDate(d datevalues.Value) (Window, bool) {
+func WindowOfDate(d datevalue.Value) (Window, bool) {
 	lo, hi, ok := DateBounds(d)
 	if !ok {
 		return Window{}, false
@@ -193,7 +193,7 @@ func WindowOfDate(d datevalues.Value) (Window, bool) {
 
 // PeriodWindow is a Place's existence span from optional start and end
 // dates. Missing sides are open; both missing is Always.
-func PeriodWindow(start, end *datevalues.Value) Window {
+func PeriodWindow(start, end *datevalue.Value) Window {
 	w := Always()
 	if start != nil {
 		if sw, ok := WindowOfDate(*start); ok {
@@ -211,7 +211,7 @@ func PeriodWindow(start, end *datevalues.Value) Window {
 // LinkMembership is when a hierarchical place relationship holds.
 // An undated link (nil start and end) holds on the overlap of the two
 // places' periods. A dated link holds inside its own span and both periods.
-func LinkMembership(linkStart, linkEnd *datevalues.Value, fromPeriod, toPeriod Window) (Window, bool) {
+func LinkMembership(linkStart, linkEnd *datevalue.Value, fromPeriod, toPeriod Window) (Window, bool) {
 	base, ok := Intersect(fromPeriod, toPeriod)
 	if !ok {
 		return Window{}, false
@@ -363,29 +363,29 @@ func openEnds(w dateWindow) int {
 	return n
 }
 
-func windowOf(d datevalues.Value) (dateWindow, bool) {
+func windowOf(d datevalue.Value) (dateWindow, bool) {
 	switch d.Kind {
-	case datevalues.KindRange:
+	case datevalue.KindRange:
 		return rangeWindow(d)
 	default:
 		return pointWindow(d)
 	}
 }
 
-func pointWindow(d datevalues.Value) (dateWindow, bool) {
+func pointWindow(d datevalue.Value) (dateWindow, bool) {
 	lo, hi, prec, ok := spanOf(d.StartYear, d.StartMonth, d.StartDay, d.StartHour, d.StartMinute, d.StartSecond, d.StartMillisecond)
 	if !ok {
 		return dateWindow{}, false
 	}
 	w := dateWindow{lo: lo, hi: hi, precision: prec}
 	switch d.Qualifier {
-	case datevalues.QualifierBEF:
+	case datevalue.QualifierBEF:
 		w.openLo = true
 		w.qualified = true
-	case datevalues.QualifierAFT:
+	case datevalue.QualifierAFT:
 		w.openHi = true
 		w.qualified = true
-	case datevalues.QualifierABT:
+	case datevalue.QualifierABT:
 		w.qualified = true
 	case "":
 	default:
@@ -394,7 +394,7 @@ func pointWindow(d datevalues.Value) (dateWindow, bool) {
 	return w, true
 }
 
-func rangeWindow(d datevalues.Value) (dateWindow, bool) {
+func rangeWindow(d datevalue.Value) (dateWindow, bool) {
 	sLo, _, sPrec, sOK := spanOf(d.StartYear, d.StartMonth, d.StartDay, d.StartHour, d.StartMinute, d.StartSecond, d.StartMillisecond)
 	_, eHi, ePrec, eOK := spanOf(d.EndYear, d.EndMonth, d.EndDay, d.EndHour, d.EndMinute, d.EndSecond, d.EndMillisecond)
 	if !sOK || !eOK {

@@ -53,3 +53,7 @@ None. (One map edit made on the reviewer's evidence: S11-23 now also gives `Orig
 
 ### X-8 · nit · Lint warnings
 **Answer:** Fixed. Full paths are used, and the map row links the plan.
+
+## Amendment — 2026-10-17 (ship loop, base check)
+
+The implementer stopped on the base check at `origin/main` @ `233e87ad`: `core/database/properties/properties.go` gained `ValueTypeDepiction` and `researcherCreatable` after the planning base `af50bd6`. **User decision:** `ValueTypeDepiction` moves to `core/propertymeta` with the other value types (nine constants in all); `researcherCreatable` stays in `core/database/properties` and reads `propertymeta`. §3, §4, D-5, §6 Go core, STEP-1 and STEP-2 updated; line numbers refreshed to `233e87ad`. No other row changed (importer counts re-checked by the implementer).

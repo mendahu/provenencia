@@ -9,10 +9,11 @@ import (
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // The app reads Go's wire vocabulary through one Swift file. This test reads
@@ -115,12 +116,12 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		},
 		{
 			name: "date qualifiers", path: swiftVocabulary, enum: "DateQualifier", re: staticLet,
-			want: sorted(datevalues.QualifierABT, datevalues.QualifierBEF, datevalues.QualifierAFT),
+			want: sorted(datevalue.QualifierABT, datevalue.QualifierBEF, datevalue.QualifierAFT),
 		},
 		{
 			name: "value types", path: swiftValueKinds, enum: "PropertyValueType", re: rawCase,
-			want: sorted(properties.ValueTypeText, properties.ValueTypeInteger, properties.ValueTypeDate,
-				properties.ValueTypeName, properties.ValueTypeSubject, properties.ValueTypeTerm),
+			want: sorted(propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeDate,
+				propertymeta.ValueTypeName, propertymeta.ValueTypeSubject, propertymeta.ValueTypeTerm, propertymeta.ValueTypeDepiction),
 		},
 		{
 			name: "subject marks", path: swiftMarks, enum: "PVMarkKey", re: subjectMark,

@@ -1,4 +1,4 @@
-package datevalues
+package datevalue
 
 import (
 	"fmt"

@@ -10,12 +10,12 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"google.golang.org/protobuf/proto"
 
 	// promotableSubject creates a person Subject and returns a promote request for it.
@@ -349,7 +349,7 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		}
 		var in []observations.Input
 		for _, form := range forms {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluestest.Western(form)})
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluetest.Western(form)})
 		}
 		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID[:], citations.CreateInput{

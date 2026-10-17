@@ -1,4 +1,4 @@
-package namevalues
+package namevalue
 
 import "testing"
 

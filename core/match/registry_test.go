@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // Every comparer setting has a registry value, so nothing falls back to a
@@ -53,7 +53,7 @@ func TestBareComparersMatchTheRegistry(t *testing.T) {
 		{date(1817, ip(5), ip(14)), date(1817, ip(5), nil)},
 		{span(ip(1815), ip(1820)), date(1822, nil, nil)},
 		{bound("BEF", 1820), date(1815, nil, nil)},
-		{Value{Date: &datevalues.Value{StartYear: ip(1817), Qualifier: "ABT"}}, date(1820, nil, nil)},
+		{Value{Date: &datevalue.Value{StartYear: ip(1817), Qualifier: "ABT"}}, date(1820, nil, nil)},
 	} {
 		bare, _ := DateComparer{}.Compare(pair[0], pair[1])
 		reg, _ := DefaultDates.Compare(pair[0], pair[1])
@@ -90,7 +90,7 @@ func TestDefaultProfilesUseRegistryComparers(t *testing.T) {
 // The Western pattern gives every product part type a role, so a new part
 // type forces a decision here.
 func TestWesternPatternCoversEveryPartType(t *testing.T) {
-	for _, pt := range namevalues.PartTypes() {
+	for _, pt := range namevalue.PartTypes() {
 		if _, ok := WesternNamePattern.PartRoles[pt.Key]; !ok {
 			t.Errorf("part type %q has no role in the Western pattern", pt.Key)
 		}

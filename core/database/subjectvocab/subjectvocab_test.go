@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -34,7 +35,7 @@ func TestSubjectVocab(t *testing.T) {
 					t.Fatalf("props %v len=%d want %d", err, len(props), len(seedProperties))
 				}
 				et, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
-				if err != nil || et.ValueType != properties.ValueTypeTerm {
+				if err != nil || et.ValueType != propertymeta.ValueTypeTerm {
 					t.Fatalf("event_type %+v %v", et, err)
 				}
 				terms, err := propertyterms.ListByProperty(c, et.ID)
@@ -71,7 +72,7 @@ func TestSubjectVocab(t *testing.T) {
 					t.Fatalf("event bindings %v len=%d want 5", err, len(eb))
 				}
 				en, err := properties.Lookup(c, "event_name", properties.OriginProvenencia)
-				if err != nil || en.ValueType != properties.ValueTypeText || en.Origin != properties.OriginProvenencia {
+				if err != nil || en.ValueType != propertymeta.ValueTypeText || en.Origin != properties.OriginProvenencia {
 					t.Fatalf("event_name %+v %v", en, err)
 				}
 				var nameBinding *Binding
@@ -391,7 +392,7 @@ func TestInstallSeedsEngagementTravelInterestsAndGender(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if interests.ValueType != properties.ValueTypeText || interests.Cardinality != properties.CardinalityMultiple {
+	if interests.ValueType != propertymeta.ValueTypeText || interests.Cardinality != propertymeta.CardinalityMultiple {
 		t.Fatalf("interests %+v", interests)
 	}
 	if LockedBinding("person", "interests") {
@@ -402,7 +403,7 @@ func TestInstallSeedsEngagementTravelInterestsAndGender(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if gender.ValueType != properties.ValueTypeTerm || gender.Cardinality != properties.CardinalitySingle {
+	if gender.ValueType != propertymeta.ValueTypeTerm || gender.Cardinality != propertymeta.CardinalitySingle {
 		t.Fatalf("gender %+v", gender)
 	}
 	if LockedBinding("person", "gender") {
@@ -464,7 +465,7 @@ func TestInstallSeedsLikeness(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if likeness.ValueType != properties.ValueTypeDepiction || likeness.Cardinality != properties.CardinalityMultiple || likeness.Label != "Likeness" {
+	if likeness.ValueType != propertymeta.ValueTypeDepiction || likeness.Cardinality != propertymeta.CardinalityMultiple || likeness.Label != "Likeness" {
 		t.Fatalf("likeness %+v", likeness)
 	}
 	if !LockedBinding("person", "likeness") {

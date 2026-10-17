@@ -3,7 +3,7 @@ package match
 import (
 	"math"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // NameRole is what a name part means for matching. A name pattern maps part
@@ -155,7 +155,7 @@ type nameWord struct {
 // nameWords splits a name into weighted, role-tagged words under its
 // pattern. Only parts are read. Generation words come back separately. A
 // name whose parts yield no comparable word is not comparable.
-func nameWords(n *namevalues.Value, p NamePattern, particles map[string]bool) (words []nameWord, generation []string) {
+func nameWords(n *namevalue.Value, p NamePattern, particles map[string]bool) (words []nameWord, generation []string) {
 	firstGiven := true
 	for _, part := range n.Parts {
 		role := p.role(part.Type)
@@ -208,7 +208,7 @@ func (c NameComparer) affinity(a, b NameRole) float64 {
 // The discount is separate from the score: the role-weighted mean of how
 // common the paired words are in the project (see discount). It never lowers
 // the similarity.
-func (c NameComparer) compareNames(a *namevalues.Value, pa NamePattern, b *namevalues.Value, pb NamePattern) (float64, float64, bool) {
+func (c NameComparer) compareNames(a *namevalue.Value, pa NamePattern, b *namevalue.Value, pb NamePattern) (float64, float64, bool) {
 	r := c.Words.resolve(true)
 	wa, ga := nameWords(a, pa, r.particles)
 	wb, gb := nameWords(b, pb, r.particles)

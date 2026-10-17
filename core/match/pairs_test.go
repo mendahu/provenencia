@@ -4,9 +4,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // cached is a handle value as the cache loader fills it.
@@ -179,7 +179,7 @@ func TestPairValuesNegatives(t *testing.T) {
 
 func TestValueLabel(t *testing.T) {
 	year := 1890
-	d := datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year}
+	d := datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year}
 	tests := []struct {
 		v    Value
 		want string
@@ -190,7 +190,7 @@ func TestValueLabel(t *testing.T) {
 		{integer(42), "42"},
 		{Value{Date: &d}, "1890"},
 		{name("James Robins"), "James Robins"},
-		{Value{Name: &namevalues.Value{Parts: []namevalues.Part{{Value: "James"}, {Value: "Robins"}}}}, "James Robins"},
+		{Value{Name: &namevalue.Value{Parts: []namevalue.Part{{Value: "James"}, {Value: "Robins"}}}}, "James Robins"},
 	}
 	for _, tt := range tests {
 		if got := tt.v.Label(); got != tt.want {
@@ -279,7 +279,7 @@ func TestOrderIgnoresTermLabel(t *testing.T) {
 
 func TestPairValuesRefDate(t *testing.T) {
 	probe, cand := date(1890, nil, nil), date(1890, nil, nil)
-	r := pairValues(ComparerFor(properties.ValueTypeDate), "", []Value{probe}, []Value{cand})
+	r := pairValues(ComparerFor(propertymeta.ValueTypeDate), "", []Value{probe}, []Value{cand})
 	if r.Probe.Date != probe.Date || r.Candidate.Date != cand.Date || r.Probe.Date == nil {
 		t.Errorf("refs = %+v / %+v, want the input date pointers", r.Probe, r.Candidate)
 	}

@@ -10,8 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promotealign"
@@ -26,8 +24,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/writes"
@@ -132,7 +132,7 @@ func (f *fixture) person(src sources.Source, art artifacts.Artifact, name string
 	f.t.Helper()
 	s := f.bare(src, "person")
 	f.cite(art, s, observations.Input{
-		PropertyID: f.prop("name").ID, Name: namevaluestest.Western(name),
+		PropertyID: f.prop("name").ID, Name: namevaluetest.Western(name),
 	})
 	return s
 }
@@ -338,10 +338,10 @@ func TestProposePlacePartOfChain(t *testing.T) {
 
 func TestProposeOverlappingBoundShowsTheDateAndResembles(t *testing.T) {
 	f := newFixture(t)
-	bef := func(year, month, day int) *datevalues.Value {
+	bef := func(year, month, day int) *datevalue.Value {
 		y, m, d := year, month, day
-		return &datevalues.Value{
-			Kind: datevalues.KindPoint, Qualifier: datevalues.QualifierBEF,
+		return &datevalue.Value{
+			Kind: datevalue.KindPoint, Qualifier: datevalue.QualifierBEF,
 			StartYear: &y, StartMonth: &m, StartDay: &d,
 		}
 	}
@@ -390,7 +390,7 @@ func TestProposeOverlappingBoundShowsTheDateAndResembles(t *testing.T) {
 func TestProposeOneHopDateExhibit(t *testing.T) {
 	f := newFixture(t)
 	year := 1901
-	date := &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &year}
+	date := &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &year}
 
 	aPerson := f.person(f.source, f.artifact, "Gracie")
 	aBirth := f.bare(f.source, "event")
@@ -492,7 +492,7 @@ func TestStatsCountsNameWords(t *testing.T) {
 	f.promote(f.person(f.source, f.artifact, "José Smith"))
 	merged := f.promote(f.person(f.source, f.artifact, "Jane Smith")).Entity.ID
 	// A second reconciled value on the first handle that also spells Smith.
-	blob, err := valuecodec.MarshalName(*namevaluestest.Western("J. Smith"))
+	blob, err := valuecodec.MarshalName(*namevaluetest.Western("J. Smith"))
 	must(t, err)
 	_, err = db.Exec(`INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_name, support, against, reason)
 		VALUES (?, ?, 2, ?, 1, 0, 'kept')`, both, f.prop("name").ID, blob)
@@ -606,8 +606,8 @@ func TestStatsFanOut(t *testing.T) {
 // The handle's person also has a death in 1901; a layer event dated 1901 must
 // not "agree" with it unless that event is mapped to the death.
 func TestProposeOneHopExhibitsPairOnlyTheMappedNeighbor(t *testing.T) {
-	yearOf := func(y int) *datevalues.Value {
-		return &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &y}
+	yearOf := func(y int) *datevalue.Value {
+		return &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
 	}
 	tests := []struct {
 		name        string
@@ -1089,7 +1089,7 @@ func TestProposeJudgesAgainstTheMajority(t *testing.T) {
 	t.Run("a stray name", func(t *testing.T) {
 		f := newFixture(t)
 		handle := f.promote(f.person(f.source, f.artifact, "Mary Smith")).Entity.ID
-		blob, err := valuecodec.MarshalName(*namevaluestest.Western("James Robins"))
+		blob, err := valuecodec.MarshalName(*namevaluetest.Western("James Robins"))
 		must(t, err)
 		db, err := f.c.DB()
 		must(t, err)
@@ -1257,7 +1257,7 @@ func birthEvent(f *fixture, src sources.Source, art artifacts.Artifact, year int
 	f.cite(art, b,
 		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
 		observations.Input{PropertyID: f.prop("date").ID, Polarity: polarity,
-			Date: &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &year}},
+			Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &year}},
 	)
 	return b
 }

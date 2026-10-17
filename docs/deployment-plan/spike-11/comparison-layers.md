@@ -1,6 +1,6 @@
 # Comparison Layers
 
-**Status:** requirements, scoped 2026-10-16 – 17. Not a PR map yet. The matching design for [Spike 11](README.md): six layers from value comparison to graph alignment, bands, the match registry, and the reuse inventory. Background: [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md) ("First: make the algorithm graspable"). Today's code: [`matching.md`](../../matching.md), [`promote-graph-alignment.md`](../../promote-graph-alignment.md).
+**Status:** requirements, scoped 2026-10-16 – 17. Not a PR map yet. The matching design for [Spike 11](README.md): six layers from value comparison to graph alignment, bands, the match registry, and the reuse inventory. Background: [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md) ("First: make the algorithm graspable"). The lasting one-page model and knob inventory: [`matching-model.md`](../../matching-model.md). Today's code: [`matching.md`](../../matching.md), [`promote-graph-alignment.md`](../../promote-graph-alignment.md).
 
 ## Why
 
@@ -213,7 +213,7 @@ func Compare(a, b Side, meta PropertyMeta, rules Rules) PropertyResult // proper
   - polarity (positive or negative);
   - for a term, its neutral flag.
 - **No reconciler context.** Support counts and standing (kept, outvoted, denied…) describe an entity's group, not a Subject. They never reach layer 2. Layer 4 translates them before comparing (§ Entities).
-- **`PropertyMeta`:** value type and cardinality.
+- **`PropertyMeta`:** value type and cardinality (`propertymeta.Meta`, in `core/propertymeta`).
 - **No points, no catalog statistics.** Layer 2 says *whether* the sides agree and *which values spoke*, not how much it's worth.
 
 ### What it does, in order
@@ -495,13 +495,7 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 
 Agreed 2026-10-17. Record linkage calls the first step "blocking", which reads as "rejected"; we don't use that word.
 
-| Term | Means |
-|---|---|
-| **Shortlisting** | The cheap index lookup that decides which handles get compared at all |
-| **Shortlist key** | A normalized value used for that lookup: a name word, an event type + year, a toponym |
-| **Shortlisted handle** | A handle the lookup returned. Nothing has been compared yet |
-| **Nominated handle** | A handle reached through a link from an accepted pair; no lookup needed |
-| **Candidate** | A shortlisted or nominated handle that has been scored and kept (top K) |
+The terms are defined in the model's [glossary](../../matching-model.md#glossary): shortlisting, shortlist key, shortlisted handle, nominated handle, candidate.
 
 Flow: shortlist or nominate → score → keep the top K as candidates → accept.
 

@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/ingest"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -149,6 +152,34 @@ func TestCreateCitedBridge(t *testing.T) {
 					t.Fatalf("observations %d", len(created.GetObservations()))
 				}
 			},
+		},
+		{
+			name: "stages a depiction draft",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, sourceID, artifactID, personID, eventID, personProp, eventProp, roleProp, roleTerm := connectFixture(t)
+				link := filepath.Join(t.TempDir(), "link.jpg")
+				if err := os.Symlink(writeCrop(t, 300, 200, 128), link); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.CreateCitedBridgeRequest{
+					ProjectDir:    dir,
+					UserId:        userID,
+					SourceId:      sourceID,
+					FromSubjectId: personID,
+					ToSubjectId:   eventID,
+					BridgeTypeKey: "participation",
+					ArtifactId:    artifactID,
+					LocatorJson:   validLocatorJSON,
+					Observations: []*engine.ObservationDraft{
+						{PropertyId: personProp, ValueSubjectId: personID},
+						{PropertyId: eventProp, ValueSubjectId: eventID},
+						{PropertyId: roleProp, ValueTermId: roleTerm},
+						{PropertyId: personProp, Depiction: &engine.DepictionValueInput{RegionJson: likenessRegionJSON, ImagePath: link}},
+					},
+				}
+			},
+			wantErr:   true,
+			wantErrIs: ingest.ErrSymlink,
 		},
 		{
 			name: "refuses person place",

@@ -8,7 +8,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -16,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/eventtitle"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -92,7 +92,7 @@ func (f *fixture) bridge(kind string, from, to subjects.Subject, obs []observati
 
 func (f *fixture) named(s subjects.Subject, form string) {
 	f.t.Helper()
-	f.cite(s, observations.Input{PropertyID: f.name.ID, Name: namevaluestest.Western(form)})
+	f.cite(s, observations.Input{PropertyID: f.name.ID, Name: namevaluetest.Western(form)})
 }
 
 func TestCanonicalWalks(t *testing.T) {

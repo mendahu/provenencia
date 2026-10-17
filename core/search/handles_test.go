@@ -10,8 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -23,6 +21,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -98,7 +98,7 @@ func (f *handleFixture) person(forms ...string) subjects.Subject {
 	return f.subject("person", func(s subjects.Subject) []observations.Input {
 		var in []observations.Input
 		for _, form := range forms {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: namevaluestest.Western(form)})
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: namevaluetest.Western(form)})
 		}
 		return in
 	})
@@ -200,7 +200,7 @@ func TestHandleSearchFindsOutvotedNames(t *testing.T) {
 func TestHandleSearchFollowsEdits(t *testing.T) {
 	f := newHandleFixture(t)
 	s := f.subject("person", func(s subjects.Subject) []observations.Input {
-		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: namevaluestest.Western("Ada Byron")}}
+		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: namevaluetest.Western("Ada Byron")}}
 	})
 	ada := f.promote(s, nil)
 	obs, err := observations.ListBySubject(f.c, s.ID)
@@ -210,7 +210,7 @@ func TestHandleSearchFollowsEdits(t *testing.T) {
 	nameID := f.prop("name").ID
 	if _, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: f.user}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 		return observations.Update(tx, f.user, observations.Input{
-			ID: obs[0].ID, SubjectID: s.ID, PropertyID: nameID, Name: namevaluestest.Western("Ada Lovelace"),
+			ID: obs[0].ID, SubjectID: s.ID, PropertyID: nameID, Name: namevaluetest.Western("Ada Lovelace"),
 		})
 	}); err != nil {
 		t.Fatal(err)
@@ -234,7 +234,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	event := f.subject("event", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{
 			{SubjectID: s.ID, PropertyID: f.prop("event_type").ID, ValueTermID: birth.ID},
-			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &y}},
+			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}},
 		}
 	})
 	place := f.subject("place", func(s subjects.Subject) []observations.Input {
@@ -316,7 +316,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	if _, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: f.user}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 		return observations.Update(tx, f.user, observations.Input{
 			ID: jamesObs.ID, SubjectID: person.ID, PropertyID: nameID,
-			Name: namevaluestest.Western("John Robins"),
+			Name: namevaluetest.Western("John Robins"),
 		})
 	}); err != nil {
 		t.Fatal(err)
@@ -373,7 +373,7 @@ func TestHandleSearchEventsAndPlaces(t *testing.T) {
 	event := f.promote(f.subject("event", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{
 			{SubjectID: s.ID, PropertyID: f.prop("event_type").ID, ValueTermID: birth.ID},
-			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &y, StartMonth: &m}},
+			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y, StartMonth: &m}},
 		}
 	}), nil)
 	place := f.promote(f.subject("place", func(s subjects.Subject) []observations.Input {

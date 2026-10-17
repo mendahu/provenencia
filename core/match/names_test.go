@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // nv builds a name from "type=value" parts separated by "|", with a form
@@ -17,7 +17,7 @@ import (
 //	g given (initials too) · n nick · s surname · sp surname_prefix ·
 //	x suffix · p prefix · u undetermined · _ untyped
 func nv(spec string) Value {
-	n := &namevalues.Value{Form: "(as written)"}
+	n := &namevalue.Value{Form: "(as written)"}
 	for i, item := range strings.Split(spec, "|") {
 		code, val, ok := strings.Cut(item, "=")
 		if !ok {
@@ -27,15 +27,15 @@ func nv(spec string) Value {
 		if !known {
 			panic("bad part code " + code)
 		}
-		n.Parts = append(n.Parts, namevalues.Part{Idx: i, Type: typ, Value: val})
+		n.Parts = append(n.Parts, namevalue.Part{Idx: i, Type: typ, Value: val})
 	}
 	return Value{Name: n}
 }
 
 var partCodes = map[string]string{
-	"g": namevalues.PartTypeGiven, "n": namevalues.PartTypeNick,
-	"s": namevalues.PartTypeSurname, "sp": namevalues.PartTypeSurnamePrefix, "x": namevalues.PartTypeSuffix,
-	"p": namevalues.PartTypePrefix, "u": namevalues.PartTypeUndetermined, "_": "",
+	"g": namevalue.PartTypeGiven, "n": namevalue.PartTypeNick,
+	"s": namevalue.PartTypeSurname, "sp": namevalue.PartTypeSurnamePrefix, "x": namevalue.PartTypeSuffix,
+	"p": namevalue.PartTypePrefix, "u": namevalue.PartTypeUndetermined, "_": "",
 }
 
 // patterned is a comparer whose pattern is a copy of the Western one,
@@ -49,7 +49,7 @@ func patterned(edit func(*NamePattern)) NameComparer {
 }
 
 // formOnly is a name with no parts.
-func formOnly(form string) Value { return Value{Name: &namevalues.Value{Form: form}} }
+func formOnly(form string) Value { return Value{Name: &namevalue.Value{Form: form}} }
 
 // withForm replaces a name's form.
 func withForm(v Value, form string) Value {
@@ -449,11 +449,11 @@ func TestNameComparerInvariants(t *testing.T) {
 	for _, seed := range []int64{1, 2, 3, 4} {
 		rng := rand.New(rand.NewSource(seed))
 		gen := func() Value {
-			n := &namevalues.Value{Form: forms[rng.Intn(len(forms))]}
+			n := &namevalue.Value{Form: forms[rng.Intn(len(forms))]}
 			for i, k := 0, rng.Intn(5); i < k; i++ {
 				code := codes[rng.Intn(len(codes))]
 				pool := pools[code]
-				n.Parts = append(n.Parts, namevalues.Part{Idx: i, Type: partCodes[code], Value: pool[rng.Intn(len(pool))]})
+				n.Parts = append(n.Parts, namevalue.Part{Idx: i, Type: partCodes[code], Value: pool[rng.Intn(len(pool))]})
 			}
 			return Value{Name: n}
 		}
@@ -536,9 +536,9 @@ func untyped(v Value) Value {
 // own order.
 func surnamesFirst(v Value) Value {
 	n := *v.Name
-	var front, rest []namevalues.Part
+	var front, rest []namevalue.Part
 	for _, p := range v.Name.Parts {
-		if p.Type == namevalues.PartTypeSurname {
+		if p.Type == namevalue.PartTypeSurname {
 			front = append(front, p)
 		} else {
 			rest = append(rest, p)
@@ -554,7 +554,7 @@ func surnamesFirst(v Value) Value {
 
 func addPart(v Value, code, value string) Value {
 	n := *v.Name
-	n.Parts = append(append([]namevalues.Part(nil), v.Name.Parts...), namevalues.Part{Idx: len(v.Name.Parts), Type: partCodes[code], Value: value})
+	n.Parts = append(append([]namevalue.Part(nil), v.Name.Parts...), namevalue.Part{Idx: len(v.Name.Parts), Type: partCodes[code], Value: value})
 	return Value{Name: &n}
 }
 

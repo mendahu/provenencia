@@ -3,6 +3,7 @@ package files
 import (
 	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/mattn/go-sqlite3"
@@ -231,5 +232,74 @@ func TestLookupByChecksumTx(t *testing.T) {
 	}
 	if _, err := LookupByChecksumTx(tx, "xyz"); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("bad hex: %v", err)
+	}
+}
+
+func TestRelPaths(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stored []File
+	for _, f := range []File{
+		{ChecksumSHA256: strings.Repeat("a", 64), MediaType: "image/png", ByteSize: 1},
+		{ChecksumSHA256: strings.Repeat("b", 64), MediaType: "application/pdf", ByteSize: 2},
+	} {
+		id, err := NewID()
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.ID = id
+		if err := Insert(tx, f); err != nil {
+			t.Fatal(err)
+		}
+		stored = append(stored, f)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	unknown, err := NewID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name string
+		ids  [][]byte
+		want map[string]string
+	}{
+		{name: "no ids", ids: nil, want: map[string]string{}},
+		{name: "unknown id omitted", ids: [][]byte{stored[0].ID, stored[1].ID, unknown}, want: map[string]string{}},
+	}
+	for _, f := range stored {
+		rel, err := StorageRelPath(f.ChecksumSHA256, f.MediaType)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tests[1].want[string(f.ID)] = rel
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := RelPaths(c, tt.ids)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %v want %v", got, tt.want)
+			}
+			for k, v := range tt.want {
+				if got[k] != v {
+					t.Fatalf("got %v want %v", got, tt.want)
+				}
+			}
+		})
 	}
 }

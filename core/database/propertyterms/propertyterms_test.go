@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -183,7 +184,7 @@ func TestPropertyTerms(t *testing.T) {
 			}
 			propID, err := properties.Upsert(c, properties.Property{
 				Key: "event_type", Origin: properties.OriginProvenencia,
-				Label: "Event type", ValueType: properties.ValueTypeTerm,
+				Label: "Event type", ValueType: propertymeta.ValueTypeTerm,
 			})
 			if err != nil {
 				t.Fatal(err)

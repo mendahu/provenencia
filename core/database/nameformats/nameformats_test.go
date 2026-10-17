@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 func TestMissingDefaultUsesWestern(t *testing.T) {
@@ -61,19 +61,19 @@ func TestInstallLoadsWesternAndFormats(t *testing.T) {
 		t.Fatalf("label %q", loaded.Profile.Label)
 	}
 	roles := map[string]bool{}
-	for _, pt := range namevalues.PartTypes() {
+	for _, pt := range namevalue.PartTypes() {
 		if _, ok := loaded.Profile.Pattern.PartRoles[pt.Key]; !ok {
 			t.Errorf("part type %q has no role", pt.Key)
 		}
 		roles[pt.Key] = true
 	}
-	if len(roles) != len(namevalues.PartTypes()) {
+	if len(roles) != len(namevalue.PartTypes()) {
 		t.Fatalf("roles %d", len(roles))
 	}
-	vincent := namevalues.Value{Parts: []namevalues.Part{
-		{Idx: 0, Value: "Vincent", Type: namevalues.PartTypeGiven},
-		{Idx: 1, Value: "van", Type: namevalues.PartTypeSurnamePrefix},
-		{Idx: 2, Value: "Gogh", Type: namevalues.PartTypeSurname},
+	vincent := namevalue.Value{Parts: []namevalue.Part{
+		{Idx: 0, Value: "Vincent", Type: namevalue.PartTypeGiven},
+		{Idx: 1, Value: "van", Type: namevalue.PartTypeSurnamePrefix},
+		{Idx: 2, Value: "Gogh", Type: namevalue.PartTypeSurname},
 	}}
 	if got := loaded.Profile.Format(vincent, StyleSorted); got != "van Gogh, Vincent" {
 		t.Fatalf("sorted %q", got)
@@ -81,7 +81,7 @@ func TestInstallLoadsWesternAndFormats(t *testing.T) {
 	if got := loaded.Profile.Format(vincent, StyleNatural); got != "Vincent van Gogh" {
 		t.Fatalf("natural %q", got)
 	}
-	bare := namevalues.Value{Form: "Vincent van Gogh"}
+	bare := namevalue.Value{Form: "Vincent van Gogh"}
 	if got := loaded.Profile.Format(bare, StyleSorted); got != "Vincent van Gogh" {
 		t.Fatalf("form %q", got)
 	}
@@ -114,8 +114,8 @@ func TestRowOnlyProfileFormatsWithoutCode(t *testing.T) {
 		typ   string
 		trail string
 	}{
-		{0, namevalues.PartTypeGiven, ""},
-		{1, namevalues.PartTypeSurname, " — "},
+		{0, namevalue.PartTypeGiven, ""},
+		{1, namevalue.PartTypeSurname, " — "},
 	}
 	for _, row := range parts {
 		if _, err := db.Exec(`INSERT INTO name_format_profile_parts
@@ -128,10 +128,10 @@ func TestRowOnlyProfileFormatsWithoutCode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	name := namevalues.Value{Form: "unused", Parts: []namevalues.Part{
-		{Idx: 0, Value: "Gogh", Type: namevalues.PartTypeSurname},
-		{Idx: 1, Value: "Vincent", Type: namevalues.PartTypeGiven},
-		{Idx: 2, Value: "painter", Type: namevalues.PartTypeUndetermined},
+	name := namevalue.Value{Form: "unused", Parts: []namevalue.Part{
+		{Idx: 0, Value: "Gogh", Type: namevalue.PartTypeSurname},
+		{Idx: 1, Value: "Vincent", Type: namevalue.PartTypeGiven},
+		{Idx: 2, Value: "painter", Type: namevalue.PartTypeUndetermined},
 	}}
 	if got := p.Format(name, StyleSorted); got != "Vincent Gogh — painter" {
 		t.Fatalf("got %q", got)
@@ -139,9 +139,9 @@ func TestRowOnlyProfileFormatsWithoutCode(t *testing.T) {
 }
 
 func nameValue(given, particle, surname string) match.Value {
-	return match.Value{Name: &namevalues.Value{Parts: []namevalues.Part{
-		{Idx: 0, Value: given, Type: namevalues.PartTypeGiven},
-		{Idx: 1, Value: particle, Type: namevalues.PartTypeSurnamePrefix},
-		{Idx: 2, Value: surname, Type: namevalues.PartTypeSurname},
+	return match.Value{Name: &namevalue.Value{Parts: []namevalue.Part{
+		{Idx: 0, Value: given, Type: namevalue.PartTypeGiven},
+		{Idx: 1, Value: particle, Type: namevalue.PartTypeSurnamePrefix},
+		{Idx: 2, Value: surname, Type: namevalue.PartTypeSurname},
 	}}}
 }

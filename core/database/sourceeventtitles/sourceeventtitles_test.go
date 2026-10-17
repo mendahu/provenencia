@@ -8,7 +8,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -23,6 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/eventtitle"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -141,7 +141,7 @@ func (f *fixture) location(event, place subjects.Subject) {
 func TestForSource(t *testing.T) {
 	f := newFixture(t)
 	name := func(form string) observations.Input {
-		return observations.Input{PropertyID: f.prop("name"), Name: namevaluestest.Western(form)}
+		return observations.Input{PropertyID: f.prop("name"), Name: namevaluetest.Western(form)}
 	}
 	text := func(key, v string) observations.Input {
 		return observations.Input{PropertyID: f.prop(key), ValueText: v, HasText: true}

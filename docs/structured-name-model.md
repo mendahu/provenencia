@@ -63,7 +63,7 @@ CREATE TABLE name_value_parts (
 ) STRICT;
 ```
 
-Parts are ordered by `idx` within a NameValue. `type` is stored as TEXT (nullable). **Product-known keys** live in the compiled `namevalues` registry (`PartTypes()`); Insert rejects unknown non-empty types. Empty type means an untyped segment. The GEDCOM-aligned key set is catalogued in [`seeded-vocabulary.md`](seeded-vocabulary.md) §4.1. UI shows **localized labels** for those keys (S7-02b) — not free-text type entry. User-minted part types (catalog rows, like `property_terms`) are deferred.
+Parts are ordered by `idx` within a NameValue. `type` is stored as TEXT (nullable). **Product-known keys** live in the compiled `core/namevalue` registry (`PartTypes()`); Insert rejects unknown non-empty types. Empty type means an untyped segment. The GEDCOM-aligned key set is catalogued in [`seeded-vocabulary.md`](seeded-vocabulary.md) §4.1. UI shows **localized labels** for those keys (S7-02b) — not free-text type entry. User-minted part types (catalog rows, like `property_terms`) are deferred.
 
 Applications use the same keys for search, reconcile, and format profiles. Absence of parts is valid. Culture-specific *display order* is handled by name format profiles rather than by closing the column in DDL.
 

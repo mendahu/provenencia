@@ -87,6 +87,24 @@ func LookupMany(c *database.Catalog, ids [][]byte) (map[string]File, error) {
 	return out, nil
 }
 
+// RelPaths returns the objects/… path of each File, keyed by id string. An id
+// with no row, or whose path cannot be derived, is omitted.
+func RelPaths(c *database.Catalog, ids [][]byte) (map[string]string, error) {
+	byID, err := LookupMany(c, ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]string, len(byID))
+	for id, f := range byID {
+		rel, err := StorageRelPath(f.ChecksumSHA256, f.MediaType)
+		if err != nil {
+			continue
+		}
+		out[id] = rel
+	}
+	return out, nil
+}
+
 // LookupByChecksum returns a File by SHA-256 hex, or sql.ErrNoRows.
 func LookupByChecksum(c *database.Catalog, checksumHex string) (File, error) {
 	db, err := c.DB()

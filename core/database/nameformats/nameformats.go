@@ -11,8 +11,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 const (
@@ -63,17 +63,17 @@ func (p Profile) Order(style string) []PartOrder {
 // Format joins name's parts in this profile's order for style. A part type
 // the style does not list follows, in stored order. No parts returns form.
 // form is never rewritten.
-func (p Profile) Format(name namevalues.Value, style string) string {
+func (p Profile) Format(name namevalue.Value, style string) string {
 	return Format(name, p.Order(style))
 }
 
 // Format joins name's parts by order. An empty order keeps stored order,
 // spaces between parts. No parts returns form.
-func Format(name namevalues.Value, order []PartOrder) string {
+func Format(name namevalue.Value, order []PartOrder) string {
 	if len(name.Parts) == 0 {
 		return strings.TrimSpace(name.Form)
 	}
-	byType := map[string][]namevalues.Part{}
+	byType := map[string][]namevalue.Part{}
 	var stored []string
 	seen := map[string]bool{}
 	for _, part := range name.Parts {
@@ -124,7 +124,7 @@ func Format(name namevalues.Value, order []PartOrder) string {
 	return b.String()
 }
 
-func joinPartValues(parts []namevalues.Part) string {
+func joinPartValues(parts []namevalue.Part) string {
 	var words []string
 	for _, part := range parts {
 		word := strings.TrimSpace(part.Value)

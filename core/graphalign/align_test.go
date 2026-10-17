@@ -5,10 +5,10 @@ import (
 	"math"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 func id(s string) []byte { return []byte(s) }
@@ -35,20 +35,20 @@ func vals(pairs ...any) match.Values {
 
 func personMetas() []match.PropertyMeta {
 	return []match.PropertyMeta{
-		{Property: match.Property{Key: "name", Origin: "provenencia"}, ValueType: properties.ValueTypeText},
-		{Property: match.Property{Key: "sex_at_birth", Origin: "provenencia"}, ValueType: properties.ValueTypeTerm},
+		{Property: match.Property{Key: "name", Origin: "provenencia"}, ValueType: propertymeta.ValueTypeText},
+		{Property: match.Property{Key: "sex_at_birth", Origin: "provenencia"}, ValueType: propertymeta.ValueTypeTerm},
 	}
 }
 
 func placeMetas() []match.PropertyMeta {
 	return []match.PropertyMeta{
-		{Property: match.Property{Key: "toponym", Origin: "provenencia"}, ValueType: properties.ValueTypeText},
+		{Property: match.Property{Key: "toponym", Origin: "provenencia"}, ValueType: propertymeta.ValueTypeText},
 	}
 }
 
 func eventMetas() []match.PropertyMeta {
 	return []match.PropertyMeta{
-		{Property: match.Property{Key: "event_type", Origin: "provenencia"}, ValueType: properties.ValueTypeTerm},
+		{Property: match.Property{Key: "event_type", Origin: "provenencia"}, ValueType: propertymeta.ValueTypeTerm},
 	}
 }
 
@@ -490,18 +490,18 @@ func TestGracieObituaryGolden(t *testing.T) {
 
 func nameVals(given, surname string) match.Values {
 	p := match.Property{Key: "name", Origin: "provenencia"}
-	return match.Values{p: {{Name: &namevalues.Value{
+	return match.Values{p: {{Name: &namevalue.Value{
 		Form: given + " " + surname,
-		Parts: []namevalues.Part{
-			{Idx: 0, Type: namevalues.PartTypeGiven, Value: given},
-			{Idx: 1, Type: namevalues.PartTypeSurname, Value: surname},
+		Parts: []namevalue.Part{
+			{Idx: 0, Type: namevalue.PartTypeGiven, Value: given},
+			{Idx: 1, Type: namevalue.PartTypeSurname, Value: surname},
 		},
 	}}}}
 }
 
 func nameMetas() []match.PropertyMeta {
 	return []match.PropertyMeta{
-		{Property: match.Property{Key: "name", Origin: "provenencia"}, ValueType: properties.ValueTypeName},
+		{Property: match.Property{Key: "name", Origin: "provenencia"}, ValueType: propertymeta.ValueTypeName},
 	}
 }
 
@@ -541,15 +541,15 @@ func TestUnreachableFallbackScoresOnTheWalkScale(t *testing.T) {
 }
 
 func TestPartialNamesAreWeak(t *testing.T) {
-	given := func(i int, v string) namevalues.Part {
-		return namevalues.Part{Idx: i, Type: namevalues.PartTypeGiven, Value: v}
+	given := func(i int, v string) namevalue.Part {
+		return namevalue.Part{Idx: i, Type: namevalue.PartTypeGiven, Value: v}
 	}
-	sur := func(i int, v string) namevalues.Part {
-		return namevalues.Part{Idx: i, Type: namevalues.PartTypeSurname, Value: v}
+	sur := func(i int, v string) namevalue.Part {
+		return namevalue.Part{Idx: i, Type: namevalue.PartTypeSurname, Value: v}
 	}
-	full := func(parts ...namevalues.Part) match.Values {
+	full := func(parts ...namevalue.Part) match.Values {
 		p := match.Property{Key: "name", Origin: "provenencia"}
-		return match.Values{p: {{Name: &namevalues.Value{Parts: parts}}}}
+		return match.Values{p: {{Name: &namevalue.Value{Parts: parts}}}}
 	}
 	alignOne := func(probe, handle match.Values) graphalign.Row {
 		s, h := id("s"), id("h")
@@ -598,7 +598,7 @@ func TestPartialNamesAreWeak(t *testing.T) {
 	}
 
 	sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
-	metas := append(nameMetas(), match.PropertyMeta{Property: sex, ValueType: properties.ValueTypeTerm})
+	metas := append(nameMetas(), match.PropertyMeta{Property: sex, ValueType: propertymeta.ValueTypeTerm})
 	withSex := func(base match.Values, term string) match.Values {
 		out := match.Values{}
 		for k, v := range base {
@@ -622,16 +622,16 @@ func TestPartialNamesAreWeak(t *testing.T) {
 
 func TestMissingGivenOrPrefixIsNotANameConflict(t *testing.T) {
 	name := match.Property{Key: "name", Origin: "provenencia"}
-	parts := func(ps ...namevalues.Part) match.Values {
-		return match.Values{name: {{Name: &namevalues.Value{Parts: ps}}}}
+	parts := func(ps ...namevalue.Part) match.Values {
+		return match.Values{name: {{Name: &namevalue.Value{Parts: ps}}}}
 	}
 	mrs := parts(
-		namevalues.Part{Idx: 0, Type: namevalues.PartTypePrefix, Value: "Mrs."},
-		namevalues.Part{Idx: 1, Type: namevalues.PartTypeSurname, Value: "Robins"},
+		namevalue.Part{Idx: 0, Type: namevalue.PartTypePrefix, Value: "Mrs."},
+		namevalue.Part{Idx: 1, Type: namevalue.PartTypeSurname, Value: "Robins"},
 	)
 	marion := parts(
-		namevalues.Part{Idx: 0, Type: namevalues.PartTypeGiven, Value: "Marion"},
-		namevalues.Part{Idx: 1, Type: namevalues.PartTypeSurname, Value: "Robins"},
+		namevalue.Part{Idx: 0, Type: namevalue.PartTypeGiven, Value: "Marion"},
+		namevalue.Part{Idx: 1, Type: namevalue.PartTypeSurname, Value: "Robins"},
 	)
 	cfg := graphalign.DefaultConfig()
 	ev := match.Evaluate(mrs, marion, nameMetas())
@@ -657,7 +657,7 @@ func TestMissingGivenOrPrefixIsNotANameConflict(t *testing.T) {
 
 func TestSexAgreementAloneStaysUnderWeak(t *testing.T) {
 	sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
-	meta := []match.PropertyMeta{{Property: sex, ValueType: properties.ValueTypeTerm}}
+	meta := []match.PropertyMeta{{Property: sex, ValueType: propertymeta.ValueTypeTerm}}
 	male := match.Values{sex: {{Term: "male"}}}
 	ev := match.Evaluate(male, male, meta)
 	sc := graphalign.ScoreCandidate(ev, male, 0, 1, graphalign.DefaultConfig(), graphalign.Stats{})
@@ -698,7 +698,7 @@ func TestContestedHandleIsDecidedTheSameEveryRun(t *testing.T) {
 			}
 			handle := nameVals("John", "Smith")
 			handle[sex] = []match.Value{male}
-			metas := append(nameMetas(), match.PropertyMeta{Property: sex, ValueType: properties.ValueTypeTerm})
+			metas := append(nameMetas(), match.PropertyMeta{Property: sex, ValueType: propertymeta.ValueTypeTerm})
 			layer := graphalign.Layer{
 				Subjects: []graphalign.Subject{
 					{ID: id("s-a"), Ref: "PER-A", Kind: "person", Values: tt.a},
@@ -1375,7 +1375,7 @@ func TestPartOfDoesNotFileADifferentToponym(t *testing.T) {
 		},
 		Bridges: []graphalign.Bridge{{A: child, B: parent, Signature: sig}},
 		Metas: []match.PropertyMeta{{
-			Property: cn, ValueType: properties.ValueTypeText, Cardinality: properties.CardinalityMultiple,
+			Property: cn, ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalityMultiple,
 		}},
 	}
 	canon := graphalign.Canon{
@@ -1645,7 +1645,7 @@ func TestScoreSimilarityDiscount(t *testing.T) {
 		{"a conflict is not scaled", 0, 0.5, match.OutcomeConflict, -3},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			outcome, points := graphalign.ScoreSimilarity(tt.similarity, tt.discount, true, properties.CardinalitySingle, nameProp, properties.ValueTypeName, nil, cfg, graphalign.Stats{})
+			outcome, points := graphalign.ScoreSimilarity(tt.similarity, tt.discount, true, propertymeta.CardinalitySingle, nameProp, propertymeta.ValueTypeName, nil, cfg, graphalign.Stats{})
 			if outcome != tt.outcome || math.Abs(points-tt.points) > 1e-9 {
 				t.Fatalf("got %v %.4f, want %v %.4f", outcome, points, tt.outcome, tt.points)
 			}
@@ -1667,7 +1667,7 @@ func TestScoreSimilarityWeightedCredit(t *testing.T) {
 		{"the leader is an agreement", 1, match.OutcomeAgree, 2.5},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			outcome, points := graphalign.ScoreSimilarity(tt.similarity, 0, true, properties.CardinalitySingle, nameProp, properties.ValueTypeName, nil, cfg, graphalign.Stats{})
+			outcome, points := graphalign.ScoreSimilarity(tt.similarity, 0, true, propertymeta.CardinalitySingle, nameProp, propertymeta.ValueTypeName, nil, cfg, graphalign.Stats{})
 			if outcome != tt.outcome || math.Abs(points-tt.points) > 1e-9 {
 				t.Fatalf("got %v %.4f, want %v %.4f", outcome, points, tt.outcome, tt.points)
 			}

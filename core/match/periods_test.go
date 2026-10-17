@@ -3,7 +3,7 @@ package match
 import (
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 )
 
 var (
@@ -13,7 +13,7 @@ var (
 )
 
 func year(y int) Value {
-	return Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &y}}
+	return Value{Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &y}}
 }
 
 func denied(v Value) Value {
@@ -122,7 +122,7 @@ func TestPoolPeriodsMonthsAndDays(t *testing.T) {
 	cand := Values{pStart: {date(1815, ip(3), ip(2))}, pEnd: {date(1820, ip(6), nil)}}
 	_, b := poolPeriods(pDate, probe, cand)
 	d := b[len(b)-1].Date
-	if d == nil || d.Kind != datevalues.KindRange || *d.StartMonth != 3 || *d.StartDay != 2 || *d.EndMonth != 6 || d.EndDay != nil {
+	if d == nil || d.Kind != datevalue.KindRange || *d.StartMonth != 3 || *d.StartDay != 2 || *d.EndMonth != 6 || d.EndDay != nil {
 		t.Fatalf("%+v", d)
 	}
 }

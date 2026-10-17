@@ -1,6 +1,6 @@
 # S11-22 — Pure value types
 
-**Status:** Planned
+**Status:** Landed in [#434](https://github.com/mendahu/provenencia/pull/434) (2026-10-17)
 **Spike / slice:** Spike 11 · Slice 1 — Graspable model and pure foundations
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a Go package move)
@@ -14,6 +14,7 @@
 **Context:** working rules "Pure value types and kinds come first", "Pure means the package builds and tests with no build tags and no `core/database` import", "High tolerance for churn"; [`comparison-layers.md`](../comparison-layers.md#purity-requirements)
 **Planned:** 2026-10-17 against `origin/main` @ `af50bd6`
 **Review:** [`S11-22-pure-value-types.review.md`](S11-22-pure-value-types.review.md) — Fits with changes / Ready with changes → fixed, 1 round
+**Amended:** 2026-10-17 against `origin/main` @ `233e87ad` — `ValueTypeDepiction` (added by S10 depiction work after the planning base) moves to `propertymeta` with the other value types (nine constants); `researcherCreatable` stays in `core/database/properties`. User decision after the implementer stopped on the base check; see the review log.
 
 ### Implementer — read this first
 
@@ -57,7 +58,7 @@ The date value, the name value, and the property value-type and cardinality cons
 
 | In | Covered by |
 | --- | --- |
-| `core/propertymeta` (new): `ValueType*` (six), `CardinalitySingle`, `CardinalityMultiple` | STEP-1, STEP-2, AC-1.1 |
+| `core/propertymeta` (new): `ValueType*` (seven, including `ValueTypeDepiction`), `CardinalitySingle`, `CardinalityMultiple` | STEP-1, STEP-2, AC-1.1 |
 | `core/datevalue` (new): `Value`, `KindPoint`, `KindRange`, `QualifierABT` / `BEF` / `AFT`, `ErrInvalid`, `Validate`, `CompactDisplay` | STEP-3, STEP-4, AC-1.1, AC-2.2 |
 | `core/namevalue` (new): `Value`, `Part`, `PartType*`, `ErrInvalid`, `Validate`, `PartTypeInfo`, `PartTypes`, `KnownPartType`; `core/namevalue/namevaluetest` (new) `Western` | STEP-5, STEP-6, AC-1.1 |
 | Every caller moved to the new packages; the old symbols deleted | STEP-2, STEP-4, STEP-6, AC-1.3 |
@@ -77,13 +78,13 @@ The date value, the name value, and the property value-type and cardinality cons
 | Area | Where | Today |
 | --- | --- | --- |
 | Date value | `core/database/datevalues/datevalues.go` `Value` (L83), `KindPoint`, `KindRange`, `QualifierABT/BEF/AFT` (L37–43, in a const block with the unexported `sql*` constants L45–79), `ErrInvalid` (L35), `validate` (L267) and its helpers `side`, `pointQualifierOK`, `hasCivil`, `validateComponentRanges`, `side.empty`, `sideLessOrEqual`, `monthOK`, `dayOK` — all pure | The file imports `core/database` for `*database.Catalog` and `database.UniqueBlobIDs`, and `sqlbatch` |
-| Date display | `core/database/datevalues/display.go` `CompactDisplay` and `appendPhrase`, `applyQualifier`, `formatSide`; `display_test.go` | Pure; imports `fmt`, `strings` |
+| Date display | core/database/datevalues/display.go `CompactDisplay` and `appendPhrase`, `applyQualifier`, `formatSide`; `display_test.go` | Pure; imports `fmt`, `strings` |
 | Date queries | `datevalues.go` `Insert`, `InsertTx`, `UpdateTx`, `Lookup`, `LookupManyTx`, `LookupTx`, `nullIfEmpty`, `nullInt`, `intPtr`, `scanValue` | Stay. `InsertTx` / `UpdateTx` trim, then call `validate` |
 | Name value | `core/database/namevalues/namevalues.go` `Value` (L68), `Part` (L60), `PartType*` (L29–35, in a block with `sql*` L37–56), `ErrInvalid` (L25), `validate(form, parts)` (L300) | Pure symbols in a package that imports `core/database` |
-| Name part registry | `core/database/namevalues/registry.go` `PartTypeInfo`, `PartTypes`, `KnownPartType`, `partTypeRegistry`, `partTypeByKey`, `init`; `registry_test.go` | Pure; imports `strings` |
-| Name test helper | `core/database/namevalues/namevaluestest/namevaluestest.go` `Western` | Pure; 11 test files import it |
+| Name part registry | core/database/namevalues/registry.go `PartTypeInfo`, `PartTypes`, `KnownPartType`, `partTypeRegistry`, `partTypeByKey`, `init`; `registry_test.go` | Pure; imports `strings` |
+| Name test helper | core/database/namevalues/namevaluestest/namevaluestest.go `Western` | Pure; 11 test files import it |
 | Name queries | `namevalues.go` `Insert`, `InsertTx`, `UpdateTx`, `Lookup`, `LookupTx`, `LookupMany`, `LookupManyTx`, `nullIfEmpty` | Stay |
-| Property constants | `core/database/properties/properties.go` const block L37–51: `OriginProvenencia`, `OriginUser` (stay), `ValueType{Text,Integer,Date,Name,Subject,Term}`, `CardinalitySingle`, `CardinalityMultiple` (move); `sql*` constants from L53; used inside `valueTypeOK` L466, `cardinalityOK` L475 | Pure constants in a package that imports `core/database`, `catalogmodel`, `rowchange`, `deleteimpact` |
+| Property constants | `core/database/properties/properties.go` const block L35–53: `OriginProvenencia`, `OriginUser` (stay), `ValueType{Text,Integer,Date,Name,Subject,Term,Depiction}`, `CardinalitySingle`, `CardinalityMultiple` (move); `sql*` constants from L55; used inside `valueTypeOK` L470, `researcherCreatable` L480 (stays in `properties`), `cardinalityOK` | Pure constants in a package that imports `core/database`, `catalogmodel`, `rowchange`, `deleteimpact` |
 | Importers | Counted by import path (`rg -l 'provenencia/core/database/<pkg>"' core api`). datevalues: 21 non-test files in 12 packages; 7 also call queries (`core/database/autoreconciler/autoreconciler.go`, `core/database/matching/matching.go`, `core/database/observations/observations.go`, `core/database/observations/update.go`, `core/database/conclusiondetails/conclusiondetails.go`, `core/database/promotealign/exhibits.go`, `core/database/sourcefill/load.go`); 26 test files. namevalues: 25 non-test files in 16 packages, 8 call queries; 26 test files. properties: 18 non-test files; the import survives in 4 that use queries or `properties.Property` (`api/ffi/handlers/subject_defs.go`, `core/database/connect/connect.go`, `core/database/subjectvocab/subjectvocab.go`, `core/database/observations/observations.go`); `api/ffi/handlers/subject_defs.go` and `core/database/connect/connect.go` use no moved constant and do not change; 45 test files | Pure-only users include `core/valuecodec`, `core/eventtitle`, `core/autoreconcile`, `core/match`, `core/graphalign`, `api/ffi/handlers/source_read.go` |
 | Skills, rules and docs | `.agents/skills/add-date-value/SKILL.md` L4, L12, L19–24, L71; `.agents/skills/add-name-value/SKILL.md` L4, L12, L19–24, L39, L57–58; `.agents/skills/add-catalog-query/SKILL.md` L30 and L40 ("Domain validation sentinels stay in this package"); `.cursor/rules/date-values.mdc`, `.cursor/rules/name-values.mdc` (`description`, `globs`); `docs/seeded-vocabulary.md` L501; `docs/structured-name-model.md` L66; Swift doc comments `macos/App/Features/Names/NameValueDraft.swift` L4, `macos/App/Features/Dates/DateValueDraft.swift` L4, `macos/App/Features/Names/NamePartType.swift` L3; `core/match/profiles.go` L14 comment | Name only `core/database/datevalues` / `namevalues` / `properties` |
 | Tests | `core/database/datevalues/datevalues_test.go` `TestInsertLookup` and peers; `display_test.go`; `core/database/namevalues/namevalues_test.go`; `registry_test.go` | Validation is tested through `Insert` against a catalog |
@@ -98,7 +99,7 @@ The date value, the name value, and the property value-type and cardinality cons
 | D-2 | Types move; the database packages keep their names and their queries, and import the pure packages | The queries need `*database.Catalog`; moving the queries instead would rename 15 query call sites for no gain | Moving the queries into a new package — because the types are what the layers need |
 | D-3 | `validate` becomes exported `Validate(v Value) error` in each pure package, with its helpers; `InsertTx` / `UpdateTx` call `datevalue.Validate(v)` / `namevalue.Validate(namevalue.Value{Form: v.Form, Parts: parts})` after their trimming | Validation is pure and is part of the type's contract; the layers and the FFI can call it | Leaving `validate` in the DB package — because the pure package would then accept values it can't check |
 | D-4 | `ErrInvalid` moves with `Validate`; the database packages return the pure package's `ErrInvalid` (same `apperr` code, `core/apperr/apperr.go` L34–35) | One error value per type; `errors.Is` callers update their import | Two `ErrInvalid` vars with one code — because `errors.Is` would fail across them |
-| D-5 | `propertymeta` holds only the eight value-type and cardinality constants, untyped exactly as today. `OriginProvenencia` / `OriginUser`, `properties.Property`, `OriginCounts`, the error vars and `valueTypeOK` / `cardinalityOK` / `originOK` stay in `core/database/properties`; the two checks read `propertymeta` | Mechanical move; typed `ValueType` / `Cardinality` types are S11-02's call when the registry needs typed keys | Introducing typed constants now — because it changes every comparison in 60 files for no behavior |
+| D-5 | `propertymeta` holds only the nine value-type and cardinality constants, untyped exactly as today. `OriginProvenencia` / `OriginUser`, `properties.Property`, `OriginCounts`, the error vars and `valueTypeOK` / `researcherCreatable` / `cardinalityOK` / `originOK` stay in `core/database/properties`; those checks read `propertymeta` | Mechanical move; typed `ValueType` / `Cardinality` types are S11-02's call when the registry needs typed keys | Introducing typed constants now — because it changes every comparison in 60 files for no behavior |
 | D-6 | Done means none of these remain: `datevalues\.(Value|KindPoint|KindRange|QualifierABT|QualifierBEF|QualifierAFT|ErrInvalid|CompactDisplay)\b`, `namevalues\.(Value|Part|PartType\w*|PartTypes|PartTypeInfo|KnownPartType|ErrInvalid)\b`, `properties\.(ValueType\w+|Cardinality\w+)\b` (and the `properties.Cardinality*` / `properties.ValueType*` comment wording), and `namevaluestest` | The churn rule: no aliases, no re-exports, nothing kept for compatibility | Type aliases in the old packages — because they are compatibility shims |
 | D-7 | Moved tests: `display_test.go` → `core/datevalue/display_test.go` (new), as external `package datevalue_test`, cases unchanged; `registry_test.go` → `core/namevalue/registry_test.go` (new), internal `package namevalue`; `namevaluestest` → `core/namevalue/namevaluetest` (new). New `TestValidate` files: `core/datevalue/validate_test.go` (new) internal `package datevalue`; `core/namevalue/validate_test.go` (new) external `package namevalue_test`, because it uses `namevaluetest` (an internal test importing it would be an import cycle). The catalog-backed tests in the database packages stay, with `ErrInvalid` requalified | Pure functions are tested where they live, with no catalog | Moving the `Insert` tests — because they test the queries |
 | D-8 | One commit per package, in the order propertymeta → datevalue → namevalue, each repointing every caller and passing the full suite | Each commit leaves the tree building; a reviewer can read one move at a time | One big commit — because a failure in one move hides the others |
@@ -128,8 +129,8 @@ None — no catalog change.
 
 | Package | Change |
 | --- | --- |
-| `core/propertymeta` *(new)* | `propertymeta.go`: the eight value-type and cardinality constants from `properties.go` L37–51, unchanged values |
-| `core/database/properties` | The eight constants removed; `valueTypeOK`, `cardinalityOK` and every internal use read `propertymeta`; Origin constants stay |
+| `core/propertymeta` *(new)* | `propertymeta.go`: the nine value-type and cardinality constants from `properties.go` L35–53, unchanged values |
+| `core/database/properties` | The nine constants removed; `valueTypeOK`, `researcherCreatable`, `cardinalityOK` and every internal use read `propertymeta`; Origin constants stay |
 | `core/datevalue` *(new)* | `datevalue.go`: `Value`, the five kind and qualifier constants, `ErrInvalid`, `func Validate(v Value) error` and its unexported helpers; `display.go`: `CompactDisplay` and helpers |
 | `core/database/datevalues` | Keeps queries and the `sql*` constants; `InsertTx` / `UpdateTx` call `datevalue.Validate`; signatures take and return `datevalue.Value` |
 | `core/namevalue` *(new)* | `namevalue.go`: `Value`, `Part`, `PartType*`, `ErrInvalid`, `func Validate(v Value) error`; `registry.go`: `PartTypeInfo`, `PartTypes`, `KnownPartType` and their unexported state |
@@ -154,11 +155,11 @@ None — no copy.
 
 **STEP-1 — Create `core/propertymeta`**
 Files: `core/propertymeta/propertymeta.go` (new), `core/database/properties/properties.go`. Skill: `add-catalog-query`.
-Do: move the eight value-type and cardinality constants (D-5); repoint `properties.go`'s own uses.
+Do: move the nine value-type and cardinality constants (D-5); repoint `properties.go`'s own uses.
 Check: `go build ./core/propertymeta/ ./core/database/properties/` passes.
 
 **STEP-2 — Repoint property constant users**
-Files: every file using `properties.ValueType*` or `properties.Cardinality*` (`rg -l 'properties\.(ValueType|Cardinality)' core api`; 17 files at the planning base, plus their tests), and the comments in `core/match/profiles.go` L14, `core/match/pair.go` and `core/autoreconcile/autoreconcile.go`.
+Files: every file using `properties.ValueType*` or `properties.Cardinality*` (`rg -l 'properties\.(ValueType|Cardinality)' core api`; 16 files at `233e87ad`, plus their tests), and the comments in `core/match/profiles.go` L14, `core/match/pair.go` and `core/autoreconcile/autoreconcile.go`.
 Do: replace the qualifier with `propertymeta`; add the import; drop the `properties` import where nothing else uses it (it survives in the four files §4 names). Comments naming `properties.ValueType*` or `properties.Cardinality*` say `propertymeta`.
 Check: `gofmt -l core api` prints nothing; `CGO_ENABLED=1 go test -tags fts5 ./api/... ./core/...` passes. Commit (D-8).
 
@@ -261,3 +262,11 @@ None.
 
 **Title:** S11-22 — Pure value types
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-22-pure-value-types.md`.
+
+## Landed
+
+Differences from the plan:
+
+- Three file paths in §4 Current state (`display.go`, `registry.go`, `namevaluestest.go` under the old packages) are plain text, not code spans, because the plan-docs check rejects paths that no longer exist.
+- A fourth Swift comment, `macos/App/Platform/ConclusionVocabulary.swift`, also named `datevalues.Qualifier*` and now names `datevalue.Qualifier*`; §4 missed it.
+- The code is otherwise as planned; `ValueTypeDepiction` moved with the other value types per the Amended line.
