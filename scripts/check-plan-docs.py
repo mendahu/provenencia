@@ -13,6 +13,7 @@ PR plans (docs/deployment-plan/<spike>/prs/S#-NN-<slug>.md), per plan-pr:
   - no soft words (consider, maybe, TBD, e.g., ...) in Scope, Decisions,
     Design, Steps, or Definition of done
   - every repo path in backticks exists, unless its line says (new)
+    (not checked once the plan is Landed)
   - every relative link resolves
   - every AC is covered by a test or the manual check; every test cites
     an AC or a Decision; every STEP has a Check
@@ -267,7 +268,8 @@ def check_plan(report: Report, text: str) -> None:
     if map_doc.exists() and report.path.name not in map_doc.read_text(encoding="utf-8"):
         report.warn(0, f"{display(map_doc)} does not link this plan in the PR map")
 
-    check_paths(report, lines)
+    if not status.startswith("Landed in"):
+        check_paths(report, lines)
     check_links(report, lines)
 
 
