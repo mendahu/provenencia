@@ -1,7 +1,7 @@
 # Review — S10-52 Depiction auto-reconciler module
 
-**Verdict:** round 1: Fits with changes — Ready with changes (all applied)
-**Rounds:** 1 (round 2 pending: X-1 was a blocker). **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes (all applied)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 - None.
@@ -11,6 +11,7 @@
 - The loader reads images through `depictionvalues.Readable`; a refused image is `no_evidence` (D-2, D-5, after M-1).
 - The cache column has no FK, so it never keeps an image File alive (D-4).
 - A shared test-fixture package `observationstest`, with `observations_test.go` moved onto it (D-10, after M-2).
+- `depictionvalues.Joined`, with `observations.go` moved onto it (D-5, after M-9). It edits two files S10-54's branch also edits; §11 says how to rebase.
 - Planned against S10-54's plan, not its branch; no code dependency between the two.
 
 ## Round 1
@@ -59,3 +60,29 @@
 
 ### M-7 · nit · `knownValueType` becomes a forwarding wrapper
 **Answer:** Fixed — deleted; `Reconcile` and `Compatible` call `moduleFor` once (D-2).
+
+## Round 2
+
+### M-8 · blocker · `autoreconcile.Value` holds a depiction as two loose fields
+**Answer:** Fixed — `Value.Depiction *depictionvalues.Value`, the shape of `Date`, `Name`, and `observations.Listed.Depiction` (D-1); `Carries` is `Depiction != nil`, the key reads `Depiction.ImageFileID` (D-2); `graphcache` keeps a plain `[]byte` (D-8). `HasDepiction` is gone.
+
+### M-9 · blocker · D-5 copies the joined-depiction assembly from `observations.go`
+**Answer:** Fixed — `depictionvalues.Joined` (D-5) with `TestJoined` (T-7); `observations.go` and the loader both call it; the loader selects `o.value_depiction_id` for its id.
+
+### X-9 · minor · AC-4.2's `no_evidence` outcome untested
+**Answer:** Fixed — T-1 asserts `Outcomes[0].Reason == ReasonNoEvidence`.
+
+### X-10 · minor · T-4 region and write shape
+**Answer:** Fixed — T-4 gives the region literal and the `writes.Call` / `observations.Listed` shape.
+
+### X-11 · minor · "no other change" vs imports
+**Answer:** Fixed — D-10 allows the import list and D-5's move; the stop condition matches.
+
+### X-12 · minor · `TestLoaderQueryCountIsConstant` is not evidence for D-5
+**Answer:** Fixed — removed from the stop conditions; §8 says why it stays only as a must-stay-green suite.
+
+### X-13 · nit · §7 doc placement
+**Answer:** Fixed — after the paragraph that starts "The same *same value* test".
+
+### X-14 · nit · AC-1.1 side assertions
+**Answer:** Fixed — T-3 names the nil fields and the `kept` outcomes.

@@ -714,7 +714,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-52 — Depiction auto-reconciler module
 
-**Plan:** [`prs/S10-52-depiction-reconciler.md`](prs/S10-52-depiction-reconciler.md) — Draft
+**Plan:** [`prs/S10-52-depiction-reconciler.md`](prs/S10-52-depiction-reconciler.md) — Planned
 
 | | |
 | --- | --- |
