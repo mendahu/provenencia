@@ -171,7 +171,7 @@ type PartMatch struct {
 }
 ```
 
-- **`Cause` is a shared vocabulary of codes:** `exact`, `case`, `fold`, `alias`, `abbreviation`, `initial`, `spelling`, `precision`, `missing_part`, `overlap`, `gap`, `beyond_tolerance`, `generation_conflict`, `empty`, `phrase_only`, `no_match` (nothing in common), `order` (text whose shared words are out of order), `unsupported` (no comparer, or two value types). UI copy, reason codes and labeler features are all keyed on these.
+- **`Cause` is a shared vocabulary of codes:** `exact`, `case`, `fold`, `alias`, `abbreviation`, `initial`, `spelling`, `precision`, `missing_part`, `overlap`, `gap`, `beyond_tolerance`, `generation_conflict`, `empty`, `phrase_only`, `no_match` (nothing in common), `too_long` (text with more words than the alignment may compare), `order` (text whose shared words are out of order), `unsupported` (no comparer, or two value types). UI copy, reason codes and labeler features are all keyed on these.
 - **`Parts` explains the match.** Which words or ends paired is what the UI shows and what the labeler records as features.
 - **No strings to parse.** The display text is for showing; logic reads the codes.
 - **Echoes the callers' value refs.** Each value can carry an opaque ref (an Observation id) that the layers never read and `Detail` hands back, so the claim evidence view knows exactly which Observations spoke without the layers knowing about the catalog. Segment comparison does the same for a whole segment: bridge ends, role or term, and the neighbor's agreeing values.
@@ -182,7 +182,7 @@ type PartMatch struct {
 - **Its own package,** importing only the standard library and other pure packages. Today `core/match` imports `core/database/properties`, `datevalues` and `namevalues`, which pull in `core/database`, `graphcache` and a migration at start-up. That's why `go test ./core/match` fails without `-tags fts5`.
 - **Its own value types.** The date and name values it compares must come from a package with no database dependency. Either move the structs out of `core/database/datevalues` and `namevalues`, or define layer-1 types that loaders fill.
 - **An import guard test** fails if the package's dependencies grow to include anything under `core/database`.
-- **The word primitives move in.** `SpellingSimilarity`, `NormalizeForm` and `IsInitial` live in `core/autoreconcile` today. They are value comparison, and both matching and reconciliation should import them from layer 1.
+- **The word primitives move in.** `SpellingSimilarity`, `NormalizeForm` and `IsInitial` live in `core/autoreconcile` today (moved to `core/valuecompare` in S11-02). They are value comparison, and both matching and reconciliation should import them from layer 1.
 
 ### Tests
 

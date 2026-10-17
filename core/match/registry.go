@@ -7,8 +7,10 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// The registry: every number the matching algorithm uses, every built-in name
-// pattern, and every default profile, in one file. Tune here.
+// The registry: the numbers the matching algorithm uses, every built-in name
+// pattern, and every default profile. The value section (words, text,
+// integers) lives in core/matchregistry and is read from here; tune it there.
+// The rest are tuned here until their layer lands.
 //
 // Comparers read their defaults from this file: a nil setting on any
 // comparer falls back to the value below, so a bare NameComparer{} and
@@ -30,13 +32,13 @@ var value = matchregistry.Default().Value
 // Words (names and free text)
 
 // SpacedParticles are words that rejoin with the next word before scoring.
-// Add a word here; comparison reads this list. A period initial ("O.") never
-// rejoins. Entries are comparison tokens (lowercase, punctuation already
+// Read from matchregistry.Default().Value.Words.Particles; add a word there.
+// A period initial ("O.") never rejoins. Entries are comparison tokens (lowercase, punctuation already
 // dropped). van and de are not here: a typed surname prefix is a part role.
 var SpacedParticles = value.Words.Particles
 
-// LetterFolds replaces letters that survive accent stripping. Add a letter
-// here; comparison reads this map. Keys are comparison tokens (lowercase).
+// LetterFolds replaces letters that survive accent stripping. Read
+// from matchregistry.Default().Value.Words.Folds; add a letter there. Keys are comparison tokens (lowercase).
 // An empty map still drops combining marks, so José and Jose stay a fold.
 var LetterFolds = value.Words.Folds
 
