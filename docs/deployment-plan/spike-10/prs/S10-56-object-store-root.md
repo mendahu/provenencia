@@ -15,6 +15,10 @@
 **Planned:** 2026-10-17 against `s10-53-stage-image` @ `39ee4860` (#424's head; `main` @ `1c99ef4e` plus S10-53)
 **Review:** [`S10-56-object-store-root.review.md`](S10-56-object-store-root.review.md) — Fits, Ready with changes (applied); 2 rounds
 
+## Landed
+
+Differences from this plan: the prune cases are a separate `TestRemoveObjectPrunesEmptyShards`, because the `TestRemoveObject` table cannot assert folder removal; a folder whose only entry is a Finder `.DS_Store` counts as empty, and the prune removes that file (user decision, 2026-10-17); a symlinked objects folder now has its own message, error `ingest.unsafe_objects` with Swift copy, overriding the plan's "no Swift, no strings" (user decision, 2026-10-17); a symlinked shard folder such as `objects/ab` is `ErrNotRegular`, the same as a symlinked object. The in-app manual check is left to the user.
+
 ### Implementer — read this first
 
 1. **This file is the whole task.** Read it top to bottom before you change code. Then read every file under **Current state** and load every skill under **Skills to load**.
