@@ -19,7 +19,7 @@ Base `233e87ad`, head `d08a33c8`. Verdicts: CON clean, MNT changes needed, UX cl
 | MNT-2 | MNT | minor | Two gates for "has a depiction" (`FromJoin` vs `listedFromSource`) | Fix now → F-1 (comment) | rides along: `source_read.go` is in F-1; equivalence holds by `NOT NULL` (`000052.sql`) |
 | MNT-3 | MNT | nit | Stray blank line in `observationProto` | Fix now → F-1 | rides along; one line in a file F-1 touches |
 | CON-3 | CON | nit | Landed note misses `mapDepictionInput` and `depiction` without `= nil` | Fix now → F-3 | one clause in a doc F-3 touches |
-| UX-1 | UX | minor | `ingest.unsupported_image` copy has no next step | Rejected | the copy is the user's answer in the plan review log ("keep both", 2026-10-17); raised in the report for the user |
+| UX-1 | UX | minor | `ingest.unsupported_image` copy has no next step | Fixed by user decision | first rejected (the user's plan-review copy); the user then asked for the reviewer's next step, applied directly with no further review round (2026-10-17) |
 | UX-2 | UX | minor | An oversized crop shows import copy (`ingest.too_large`, 512 MB title) | Follow-up | S10-34: render crops at ≤ 2048 px long edge (what Go stores), or crop-specific copy; the plan's Out row covers import copy |
 | PRF-1 | PRF | minor | Image decode runs under the catalog session lock | Follow-up | D-3 and S10-53 place staging inside `withProjectCatalog`; splitting the staging API is an S10-53 shape change |
 | PRF-2 | PRF | minor | Create and append list the whole Citation to return written rows | Logged | bounded by Observations per Citation, indexed; same as `CreateCitedBridge` before this PR |
@@ -50,4 +50,4 @@ Head `43d77eaa`. Gate PASS (orchestrator run). F-1 done (`listedProtos`; `depict
 Scope `d08a33c8...43d77eaa`; lenses CON and MNT (the two with Fix-now findings). Both clean: CON-1, CON-2, CON-3, MNT-1, MNT-2, MNT-3 resolved; no new blockers. Noted, no change on the wire: `listedProtosFromSource` returns an empty slice instead of nil for no rows.
 
 ## Result
-Gate PASS · CI see PR · open: none · follow-ups: UX-2 (S10-34 crop size or crop copy), PRF-1 (stage images outside the session lock; S10-53 staging API) · logged: PRF-2 · to user: UX-1 (copy the user already chose)
+Gate PASS · CI see PR · open: none · follow-ups: UX-2 (S10-34 crop size or crop copy), PRF-1 (stage images outside the session lock; S10-53 staging API) · logged: PRF-2 · to user: — (UX-1 answered: copy gains a next step)

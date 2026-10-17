@@ -7,7 +7,7 @@ Round 2 was not run. The two blockers (X-1, X-2) were test and project-file gaps
 
 ## To user
 
-- **Error copy (D-9).** "The picture of that region couldn’t be read." for `ingest.unsupported_image`, and "Invalid depiction value." for `depictionvalues.invalid`. **Answered:** keep both (user, 2026-10-17).
+- **Error copy (D-9).** "The picture of that region couldn’t be read." for `ingest.unsupported_image`, and "Invalid depiction value." for `depictionvalues.invalid`. **Answered:** keep both (user, 2026-10-17). Changed after ship review UX-1: `ingest.unsupported_image` adds the next step "Draw the region again, or try a smaller one." (user, 2026-10-17).
 
 ## Writer's own calls
 

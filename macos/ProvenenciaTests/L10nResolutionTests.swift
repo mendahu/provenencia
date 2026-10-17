@@ -84,7 +84,7 @@ struct L10nResolutionTests {
         let unknown = L10n.Errors.message(code: "internal.unknown")
         let image = L10n.Errors.message(code: "ingest.unsupported_image")
         let invalid = L10n.Errors.message(code: "depictionvalues.invalid")
-        #expect(image == "The picture of that region couldn’t be read.")
+        #expect(image == "The picture of that region couldn’t be read. Draw the region again, or try a smaller one.")
         #expect(invalid == "Invalid depiction value.")
         #expect(image != unknown)
         #expect(invalid != unknown)

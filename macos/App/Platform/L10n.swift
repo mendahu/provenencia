@@ -9251,7 +9251,7 @@ enum L10n {
         )
         static let ingestUnsupportedImage = LocalizedStringResource(
             "error.ingest.unsupported_image",
-            defaultValue: "The picture of that region couldn’t be read.",
+            defaultValue: "The picture of that region couldn’t be read. Draw the region again, or try a smaller one.",
             comment: "FFI error ingest.unsupported_image (a depiction crop Go could not decode)"
         )
         static let nameValuesInvalid = LocalizedStringResource(
