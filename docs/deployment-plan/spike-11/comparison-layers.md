@@ -416,6 +416,20 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 | `autoreconcile.Compatible` and grouping | Stays in the reconciler as its own decision logic, built on value compare (and property compare where it helps) instead of its own key rules |
 | `match.Value`'s reconciler fields (`Support`, `Against`, `Reason`, `Denied`) | The profile builder package. `Negative` stays as layer 2 polarity |
 
+## Vocabulary: finding candidates
+
+Agreed 2026-10-17. Record linkage calls the first step "blocking", which reads as "rejected"; we don't use that word.
+
+| Term | Means |
+|---|---|
+| **Shortlisting** | The cheap index lookup that decides which handles get compared at all |
+| **Shortlist key** | A normalized value used for that lookup: a name word, an event type + year, a toponym |
+| **Shortlisted handle** | A handle the lookup returned. Nothing has been compared yet |
+| **Nominated handle** | A handle reached through a link from an accepted pair; no lookup needed |
+| **Candidate** | A shortlisted or nominated handle that has been scored and kept (top K) |
+
+Flow: shortlist or nominate → score → keep the top K as candidates → accept.
+
 ## Open questions
 
 - **How far neighbor credit travels.** Today credit stops at one hop to avoid circular evidence (A supports B supports A). Start with one hop plus chains from the walk, or allow damped multi-hop credit with cycles blocked? Goldens where a triple chain should win will show whether one hop under-rewards chains.
