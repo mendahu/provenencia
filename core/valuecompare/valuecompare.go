@@ -10,6 +10,7 @@ package valuecompare
 import (
 	"sort"
 
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
@@ -53,6 +54,9 @@ const (
 	CauseGenerationConflict Cause = "generation_conflict"
 	CauseEmpty              Cause = "empty"
 	CausePhraseOnly         Cause = "phrase_only"
+	// CauseBelowMinimum: a pair close enough to be Near but under its type's
+	// minimum, so Different.
+	CauseBelowMinimum Cause = "below_minimum"
 	// CauseNoMatch: nothing in common.
 	CauseNoMatch Cause = "no_match"
 	// CauseTooLong: text or a name with more words than may be compared.
@@ -61,9 +65,6 @@ const (
 	CauseOrder Cause = "order"
 	// CauseRole: words paired across part types (a surname against a given name).
 	CauseRole Cause = "role"
-	// CauseBelowMinimum: a pair close enough to be Near but under its type's
-	// minimum, so Different.
-	CauseBelowMinimum Cause = "below_minimum"
 	// CauseUnsupported: no comparer for the type, or two value types.
 	CauseUnsupported Cause = "unsupported"
 )
@@ -93,7 +94,10 @@ const (
 // Unit is the unit of Detail.Distance.
 type Unit string
 
-const UnitCount Unit = "count"
+const (
+	UnitCount Unit = "count"
+	UnitDays  Unit = "days"
+)
 
 // Result is what Compare decides.
 type Result struct {
@@ -108,7 +112,7 @@ type Detail struct {
 	OnlyB      []Part
 	Broader    Side    // for Contains: the less specific side
 	Distance   float64 // for curve types: the raw gap …
-	Unit       Unit    // … and its unit (UnitCount)
+	Unit       Unit    // … and its unit (UnitCount, UnitDays)
 	Cause      Cause   // the rule that decided the relation
 	RefA, RefB []byte  // the callers' value refs, echoed
 }
@@ -129,8 +133,8 @@ type PartMatch struct {
 
 // Value is one value to compare. Type is a propertymeta.ValueType* constant.
 // Text is present when NormalizeForm leaves a word, a term when its key is
-// non-empty; an integer is always present. Ref is the caller's id for the
-// value, echoed in the Detail.
+// non-empty; an integer is always present; a date is present when not nil.
+// Ref is the caller's id for the value, echoed in the Detail.
 type Value struct {
 	Type    string
 	Text    string
@@ -140,6 +144,7 @@ type Value struct {
 	// name-format key that gives the parts their roles and weights.
 	Name        *namevalue.Value
 	NamePattern string
+	Date        *datevalue.Value
 	Ref         []byte
 }
 
@@ -154,6 +159,7 @@ var comparers = map[string]comparer{
 	propertymeta.ValueTypeText:    text{},
 	propertymeta.ValueTypeTerm:    term{},
 	propertymeta.ValueTypeInteger: integer{},
+	propertymeta.ValueTypeDate:    date{},
 	propertymeta.ValueTypeName:    name{},
 }
 

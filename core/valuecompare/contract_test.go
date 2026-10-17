@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -55,6 +56,27 @@ var samples = map[string][]samplePair{
 		ofName("g=Robins|s=James", "g=James|s=Robins"), ofName("g=J.|s=Robbins", "g=James|s=Robins"),
 		ofName("g=James|s=Robins|x=Jr.", "g=James|s=Robins|x=Sr."), ofName("p=Rev.|x=Jr.", "g=James"),
 		{formOnly("James Robins"), nv("g=James")}, {valuecompare.Value{Type: propertymeta.ValueTypeName}, nv("g=James")},
+	},
+	propertymeta.ValueTypeDate: {
+		// AC-1.x pairs, one family per row.
+		ofDate(dp(ymd(1817, 0, 0)), dp(ymd(1817, 0, 0))), ofDate(dp(bound(datevalue.QualifierBEF, 1820)), dp(bound(datevalue.QualifierBEF, 1820))),
+		ofDate(dp(about(1817, 0, 0)), dp(about(1817, 0, 0))), ofDate(dp(between(1817, 0, 0, 1817, 0, 0)), dp(ymd(1817, 0, 0))),
+		ofDate(dp(between(1820, 0, 0, 1815, 0, 0)), dp(between(1815, 0, 0, 1820, 0, 0))),
+		ofDate(dp(ymd(1817, 5, 0)), dp(ymd(1817, 5, 14))), ofDate(dp(ymd(1817, 0, 0)), dp(ymd(1817, 9, 0))),
+		ofDate(dp(about(1817, 0, 0)), dp(ymd(1818, 0, 0))), ofDate(dp(about(1817, 0, 0)), dp(ymd(1817, 0, 0))),
+		ofDate(dp(bound(datevalue.QualifierBEF, 1820)), dp(bound(datevalue.QualifierBEF, 1830))), ofDate(dp(bound(datevalue.QualifierBEF, 1820)), dp(ymd(1815, 0, 0))),
+		ofDate(dp(between(1815, 0, 0, 1820, 0, 0)), dp(ymd(1818, 0, 0))),
+		ofDate(dp(about(1817, 3, 0)), dp(ymd(1817, 4, 0))), ofDate(dp(about(1817, 3, 3)), dp(ymd(1817, 3, 4))),
+		ofDate(dp(about(1817, 1, 0)), dp(ymd(1816, 12, 15))), ofDate(dp(about(1817, 1, 1)), dp(ymd(1816, 12, 31))),
+		ofDate(dp(between(1815, 0, 0, 1820, 0, 0)), dp(between(1819, 0, 0, 1825, 0, 0))),
+		ofDate(dp(ymd(1817, 5, 14)), dp(ymd(1817, 5, 20))), ofDate(dp(ymd(1817, 5, 0)), dp(ymd(1817, 9, 0))),
+		ofDate(dp(ymd(1817, 0, 0)), dp(ymd(1818, 0, 0))), ofDate(dp(ymd(1817, 12, 0)), dp(ymd(1818, 1, 0))),
+		ofDate(dp(bound(datevalue.QualifierAFT, 1820)), dp(ymd(1819, 0, 0))), ofDate(dp(between(1815, 0, 0, 1820, 0, 0)), dp(ymd(1822, 0, 0))),
+		ofDate(dp(about(1817, 0, 0)), dp(about(1820, 0, 0))),
+		ofDate(dp(ymd(1817, 0, 0)), dp(ymd(1820, 0, 0))), ofDate(dp(bound(datevalue.QualifierBEF, 1820)), dp(ymd(1823, 0, 0))),
+		ofDate(dp(bound(datevalue.QualifierBEF, 1800)), dp(bound(datevalue.QualifierAFT, 1810))),
+		ofDate(dp(phrase("spring")), dp(ymd(1817, 0, 0))), ofDate(dp(phrase("spring")), dp(phrase("spring"))),
+		ofDate(dp(noYearRange()), dp(ymd(1817, 0, 0))), ofDate(nil, dp(ymd(1817, 0, 0))), ofDate(nil, nil),
 	},
 	propertymeta.ValueTypeInteger: {
 		ofInt(3, 3), ofInt(3, 4), ofInt(3, 6), ofInt(0, 0), ofInt(-2, 2),
@@ -198,9 +220,53 @@ var generators = map[string]func(rng *rand.Rand) samplePair{
 		keys := []string{"male", "female", "unknown", "other", ""}
 		return ofTerm(keys[rng.Intn(len(keys))], keys[rng.Intn(len(keys))])
 	},
+	propertymeta.ValueTypeDate: func(rng *rand.Rand) samplePair {
+		a, b := randomDate(rng), randomDate(rng)
+		return ofDate(&a, &b)
+	},
 	propertymeta.ValueTypeInteger: func(rng *rand.Rand) samplePair {
 		return ofInt(int64(rng.Intn(10)), int64(rng.Intn(10)))
 	},
+}
+
+// randomDate draws one side of a date pair: a point, ABT, BEF or AFT point, a
+// range, or a phrase with no year.
+func randomDate(rng *rand.Rand) datevalue.Value {
+	draw := func() (y, m, d int) {
+		y = 1815 + rng.Intn(7)
+		if rng.Intn(2) == 0 {
+			return y, 0, 0
+		}
+		m = 1 + rng.Intn(12)
+		if rng.Intn(2) == 0 {
+			return y, m, 0
+		}
+		return y, m, 1 + rng.Intn(28)
+	}
+	switch n := rng.Intn(10); {
+	case n < 4:
+		return ymd(draw())
+	case n == 4:
+		return about(draw())
+	case n == 5:
+		y, m, d := draw()
+		v := ymd(y, m, d)
+		v.Qualifier = datevalue.QualifierBEF
+		return v
+	case n == 6:
+		y, m, d := draw()
+		v := ymd(y, m, d)
+		v.Qualifier = datevalue.QualifierAFT
+		return v
+	case n < 9:
+		y1, m1, d1 := draw()
+		y2, m2, d2 := draw()
+		if datevalue.DaysFromCivil(y1, max(m1, 1), max(d1, 1)) > datevalue.DaysFromCivil(y2, max(m2, 1), max(d2, 1)) {
+			y1, m1, d1, y2, m2, d2 = y2, m2, d2, y1, m1, d1
+		}
+		return between(y1, m1, d1, y2, m2, d2)
+	}
+	return phrase("spring")
 }
 
 // contractPairs are a type's sample rows, then its generated pairs.
@@ -319,7 +385,7 @@ func TestComparerContract(t *testing.T) {
 					// A value against itself.
 					for _, v := range []valuecompare.Value{p.a, p.b} {
 						self, selfDet := valuecompare.Compare(v, v, rules)
-						if self.Relation != valuecompare.Same && !(self.Relation == valuecompare.Unknown && selfDet.Cause == valuecompare.CauseEmpty) {
+						if self.Relation != valuecompare.Same && !(self.Relation == valuecompare.Unknown && (selfDet.Cause == valuecompare.CauseEmpty || selfDet.Cause == valuecompare.CausePhraseOnly)) {
 							t.Fatalf("%s: against itself %+v %+v", label(), self, selfDet)
 						}
 					}
