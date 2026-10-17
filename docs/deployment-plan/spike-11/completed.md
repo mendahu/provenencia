@@ -4,7 +4,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 
 ## S11-03 — Value compare: names
 
-**Landed 2026-10-17** in [#447](https://github.com/mendahu/provenencia/pull/447). Value compare now relates two names by their parts: `Same`, `Equivalent`, `Contains`, `Near`, `Different` or `Unknown`, a similarity, and a detail that lists which word paired with which, in which role, and why. Initials and alias tables joined value compare's word similarity, and a name `Key` agrees with `Compare`. The name types moved to `core/valuecompare`, the product alias and nickname seeds with their license to `core/database/namealiases`, and the name knobs into the registry; `core/match` reads them from there and shares the pairing and alias lookup. No caller uses the new comparer yet; nothing changes for researchers.
+**Landed 2026-10-17** in [#447](https://github.com/mendahu/provenencia/pull/447). Value compare now relates two names by their parts: `Same`, `Equivalent`, `Contains`, `Near`, `Different` or `Unknown`, a similarity, and a detail that lists which word paired with which, in which role, and why. Initials and alias tables joined value compare's word similarity, and a name `Key` agrees with `Compare`. The name types moved to `core/valuecompare`, the product alias and nickname seeds with their license to `core/database/namealiases`, and the name knobs into the registry; `core/match` reads them from there and shares the pairing and alias lookup. A name of more than `value.Names.MaxWords` (32) words is `Unknown` (`too_long`), and the alias index is built once per catalog load. No caller uses the new comparer yet; nothing changes for researchers.
 
 ## S11-02 — Value compare core and match registry
 
