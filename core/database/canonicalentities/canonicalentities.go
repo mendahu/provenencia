@@ -3,6 +3,7 @@
 package canonicalentities
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/likenesses"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -27,7 +29,9 @@ const (
 	sqlListByType = `SELECT ` + sqlColumns + ` FROM canonical_entities
 		WHERE subject_type_id = ?
 		ORDER BY ref COLLATE NOCASE`
-	sqlTypePrefix = `SELECT ref_prefix FROM subject_types WHERE id = ?`
+	sqlPreferred    = `SELECT preferred_likeness_observation_id FROM canonical_entities WHERE id = ?`
+	sqlSetPreferred = `UPDATE canonical_entities SET preferred_likeness_observation_id = ? WHERE id = ?`
+	sqlTypePrefix   = `SELECT ref_prefix FROM subject_types WHERE id = ?`
 	// Merged handles are folded into their target and never counted.
 	sqlCountByTypeKey = `SELECT COUNT(*) FROM canonical_entities e
 		JOIN subject_types st ON st.id = e.subject_type_id
@@ -253,6 +257,58 @@ func requireTypePrefix(tx *sql.Tx, typeID []byte) (string, error) {
 		return "", ErrInvalid
 	}
 	return prefix, nil
+}
+
+// SetPreferredLikeness chooses one of the handle's gallery likenesses as its
+// portrait by the likeness's record Observation, or clears the choice when
+// observationID is empty. A display pointer, not evidence. An unchanged
+// choice returns no changes.
+func SetPreferredLikeness(tx *database.Tx, userID, entityID, observationID []byte) ([]rowchange.Change, error) {
+	if tx == nil || len(entityID) != 16 {
+		return nil, ErrInvalid
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return nil, err
+	}
+	var prev []byte
+	if err := tx.QueryRow(sqlPreferred, entityID).Scan(&prev); errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrInvalid
+	} else if err != nil {
+		return nil, err
+	}
+	if len(observationID) > 0 {
+		if len(observationID) != 16 {
+			return nil, ErrInvalid
+		}
+		gallery, err := likenesses.ForEntities(tx.Tx, [][]byte{entityID})
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := likenesses.ByObservation(gallery[string(entityID)], observationID); !ok {
+			return nil, ErrInvalid
+		}
+	}
+	if bytes.Equal(prev, observationID) {
+		return nil, nil
+	}
+	if _, err := tx.Exec(sqlSetPreferred, nullBlob(observationID), entityID); err != nil {
+		return nil, err
+	}
+	return []rowchange.Change{{
+		EntityType: "canonical_entity",
+		EntityID:   append([]byte(nil), entityID...),
+		Action:     rowchange.ActionUpdate,
+		Fields: map[string]rowchange.FieldDiff{
+			"preferred_likeness_observation_id": {Old: uuidJSON(prev), New: uuidJSON(observationID)},
+		},
+	}}, nil
+}
+
+func nullBlob(b []byte) any {
+	if len(b) == 0 {
+		return nil
+	}
+	return b
 }
 
 func nullStr(s string) any {
