@@ -164,7 +164,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **[S10-D12](design/S10-D12-person-detail.md)** | Person detail | **S10-23** | S10-35 gallery and S10-39 preferred portrait. Design both with the gender treatment, before S10-23 |
 | ~~S10-D13~~ | Promote page | ~~S10-36~~ | Moved to Spike 11 (S11-D2) with the evidence sheet rebuild, 2026-10-17 |
 | **S10-D14** | Evidence graph — zoomed-out card | **S10-46**, descoped 2026-10-11 | — |
-| **[S10-D15](design/S10-D15-composer-depiction-row.md)** | Citation composer — depiction row | **S10-34** | — |
+| **[S10-D15](design/archive/S10-D15-composer-depiction-row.md)** | Citation composer — depiction row | **S10-34** | — |
 
 S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote) and it gates S10-20. S10-18 does not wait on it. S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D1, the adaptive choice field, is descoped with S10-14 and is not drawn. Term fields keep the control they have. S10-D2 is not drawn: name-then-type on Create Source is a field swap, so S10-15 stands on its own. S10-D9…D11 are three briefs for the shared conclusion lists. Events and Places specify the same last-updated cell as Persons so `ConclusionListPage` does not grow three treatments. S10-D8 is the Sources list, a different page, and it gates S10-41. That board draws the same last-updated cell, the evidence-status filter, and text search. Sort, type, status, and query ship from that one board. List scroll is the history-entry anchor in S10-40, including Sources. D9…D11 do not draw those controls. S10-22 changes no Sources-list chrome; it moves that list's cache and engine read onto the shared last-activity patch. Only the Persons list thumb becomes a likeness. S10-D6, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. The depiction row is its own brief, S10-D15, written just before S10-34. S10-D3 does not draw it. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb. Whichever of D8 and D9 is designed first draws the last-updated cell; the other copies it.
 
@@ -269,7 +269,7 @@ SLICE 8 — Likeness
   S10-54  Depiction values over the FFI: draft input, image path in responses — done, #433
   S10-52  Depiction auto-reconciler module; cache stores the image — done, #437
   S10-33  Crop cache — descoped 2026-10-16. The image is the value (S10-32).
-  ✎ S10-D15 ──▶ S10-34  Composer depiction row: draw, render, save (after S10-16)
+  S10-34  Composer depiction row: draw, render, save (after S10-16) — done, #442
   (S10-36 moved to Spike 11 S11-20, 2026-10-17)
   S10-35  Person gallery + Persons list thumb (S10-D12 and S10-D9 already designed)
   S10-39  Preferred portrait leads the page and the list (same boards)
@@ -729,9 +729,9 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-34 — Composer depiction row
 
-**Plan:** [`prs/S10-34-composer-depiction-row.md`](prs/S10-34-composer-depiction-row.md) — Planned
+**Plan:** [`prs/S10-34-composer-depiction-row.md`](prs/S10-34-composer-depiction-row.md) — Landed #442
 
-**Brief:** [S10-D15](design/S10-D15-composer-depiction-row.md), written 2026-10-17. Not drawn on S10-D3.
+**Brief:** [S10-D15](design/archive/S10-D15-composer-depiction-row.md), written 2026-10-17. Not drawn on S10-D3.
 
 | | |
 | --- | --- |

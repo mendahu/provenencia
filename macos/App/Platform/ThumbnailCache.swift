@@ -64,6 +64,17 @@ final class ThumbnailCache {
         return image
     }
 
+    /// A synchronous hit: the decoded image when it is already cached, else
+    /// nil. Never reads the disk; a hit moves the key to the newest LRU slot.
+    func cachedImage(projectDir: String, relPath: String) -> NSImage? {
+        let trimmed = relPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let key = Key(projectDir: projectDir, relPath: trimmed)
+        guard case .image(let img) = store[key] else { return nil }
+        touch(key)
+        return img
+    }
+
     func clear() {
         store.removeAll()
         order.removeAll()

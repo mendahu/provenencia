@@ -10,6 +10,7 @@ final class EvidenceCardView: NSView {
     let layout: EvidenceCardLayout
     private let card: EvidenceCanvasCard
     private let isGhost: Bool
+    private var loads: [String: Task<Void, Never>] = [:]
 
     convenience init(card: EvidenceCanvasCard, actions: [NSAccessibilityCustomAction]) {
         self.init(card: card, actions: actions, isGhost: false)
@@ -57,6 +58,27 @@ final class EvidenceCardView: NSView {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         syncBackingScale()
+        if window == nil {
+            loads.values.forEach { $0.cancel() }
+            loads = [:]
+        } else {
+            loadMissingLikenesses()
+        }
+    }
+
+    /// One decode per missing likeness image, repainting when it lands. A
+    /// ghost, and a card with no project folder, paint the placeholder only.
+    private func loadMissingLikenesses() {
+        guard !isGhost, !card.projectDir.isEmpty else { return }
+        let projectDir = card.projectDir
+        for relPath in Self.likenessRelPaths(card) where loads[relPath] == nil {
+            guard ThumbnailCache.shared.cachedImage(projectDir: projectDir, relPath: relPath) == nil else { continue }
+            loads[relPath] = Task { @MainActor [weak self] in
+                _ = await ThumbnailCache.shared.image(projectDir: projectDir, relPath: relPath)
+                guard !Task.isCancelled else { return }
+                self?.needsDisplay = true
+            }
+        }
     }
 
     override func viewDidChangeBackingProperties() {
@@ -92,6 +114,15 @@ final class EvidenceCardView: NSView {
         NSGraphicsContext.current?.cgContext.setAlpha(alpha)
         _ = Self.measure(card, painter: Painter(outset: GraphCanvasItemLayer.paintOutset))
         NSGraphicsContext.restoreGraphicsState()
+    }
+
+    /// The images of the card's likeness rows, in row order.
+    private static func likenessRelPaths(_ card: EvidenceCanvasCard) -> [String] {
+        let observations: [CatalogObservation] = switch card.placed {
+        case .subject(let placed, _): placed.observations
+        case .bridge(let placed): EvidenceBridgeCard.extraObservations(for: placed)
+        }
+        return observations.compactMap(likenessRelPath)
     }
 
     private static func measure(_ card: EvidenceCanvasCard, painter: Painter? = nil) -> EvidenceCardLayout {
@@ -182,6 +213,26 @@ private final class Painter {
             NSImage.SymbolConfiguration(pointSize: min(rect.width, rect.height), weight: .regular)
         ) ?? base
         drawTinted(image, in: place(rect), color: ns(color))
+    }
+
+    /// An aspect-fit image in a rounded tile; the placeholder fill when not loaded.
+    func tile(_ image: NSImage?, in rect: CGRect) {
+        let target = place(rect)
+        NSGraphicsContext.saveGraphicsState()
+        let clip = NSBezierPath(roundedRect: target, xRadius: 4, yRadius: 4)
+        clip.addClip()
+        ns(PVColor.surfaceHover).setFill()
+        target.fill()
+        if let image, image.size.width > 0, image.size.height > 0 {
+            let fit = min(target.width / image.size.width, target.height / image.size.height)
+            let size = CGSize(width: image.size.width * fit, height: image.size.height * fit)
+            let drawRect = CGRect(
+                x: target.midX - size.width / 2, y: target.midY - size.height / 2,
+                width: size.width, height: size.height
+            )
+            image.draw(in: drawRect, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+        }
+        NSGraphicsContext.restoreGraphicsState()
     }
 
     func mark(_ key: PVMarkKey, in rect: CGRect, _ color: Color) {
@@ -345,7 +396,7 @@ private extension EvidenceCardView {
                 style.line
             )
         }
-        paintRows(rowRects, tint: style.tint, chip: style.chip, ink: style.ink, hovered: state.hoveredActionID, width: width, valueWidth: subjectValueWidth, leading: EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceSubjectCard.shellPaddingX), trailing: EvidenceSubjectCard.shellPaddingX, orders: card.nameOrders, painter: painter)
+        paintRows(rowRects, tint: style.tint, chip: style.chip, ink: style.ink, hovered: state.hoveredActionID, width: width, valueWidth: subjectValueWidth, leading: EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceSubjectCard.shellPaddingX), trailing: EvidenceSubjectCard.shellPaddingX, orders: card.nameOrders, projectDir: card.projectDir, painter: painter)
         paintAdd(addRect, quiet: !placed.isCited, canCite: state.canCite, hovered: state.hoveredActionID == EvidenceSubjectCard.addPropertyActionID, tint: style.tint, chip: style.chip, ink: style.ink, paddingX: EvidenceSubjectCard.shellPaddingX, painter: painter)
         if !placed.isCited {
             painter?.fill(
@@ -447,7 +498,7 @@ private extension EvidenceCardView {
         if let first = rowRects.first, let last = rowRects.last {
             painter?.fill(CGRect(x: 0, y: first.1.minY - 1, width: width, height: last.1.maxY - first.1.minY + 1), PVColor.borderSubtle)
         }
-        paintRows(rowRects, tint: PVColor.surfaceCard, chip: PVColor.surfaceHover, ink: PVColor.textMuted, hovered: state.hoveredActionID, width: width, valueWidth: bridgeValueWidth, leading: EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceBridgeCard.shellPaddingX), trailing: EvidenceBridgeCard.shellPaddingX, orders: card.nameOrders, painter: painter)
+        paintRows(rowRects, tint: PVColor.surfaceCard, chip: PVColor.surfaceHover, ink: PVColor.textMuted, hovered: state.hoveredActionID, width: width, valueWidth: bridgeValueWidth, leading: EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceBridgeCard.shellPaddingX), trailing: EvidenceBridgeCard.shellPaddingX, orders: card.nameOrders, projectDir: card.projectDir, painter: painter)
         paintAdd(addRect, quiet: !placed.isCited, canCite: state.canCite, hovered: state.hoveredActionID == EvidenceSubjectCard.addPropertyActionID, tint: PVColor.surfaceCard, chip: PVColor.surfaceHover, ink: PVColor.textMuted, paddingX: EvidenceBridgeCard.shellPaddingX, painter: painter)
         strokeCard(
             rect,
@@ -574,6 +625,7 @@ private extension EvidenceCardView {
         leading: CGFloat,
         trailing: CGFloat,
         orders: NameFormatOrders = NameFormatOrders(),
+        projectDir: String = "",
         painter: Painter?
     ) {
         guard let painter else { return }
@@ -599,12 +651,17 @@ private extension EvidenceCardView {
                 )
                 valueX += 30
             }
-            painter.text(
-                ObservationValueDisplay.string(for: observation, orders: orders),
-                in: CGRect(x: valueX, y: rect.minY + 22, width: max(valueWidth - (valueX - leading), 20), height: rect.height - 30),
-                font: PVFont.nsBody(size: 13, italic: negated),
-                color: negated ? PVColor.danger : PVColor.textPrimary, lines: 2
-            )
+            if let relPath = likenessRelPath(observation) {
+                let image = ThumbnailCache.shared.cachedImage(projectDir: projectDir, relPath: relPath)
+                painter.tile(image, in: CGRect(x: valueX, y: rect.minY + 22, width: likenessTile, height: likenessTile))
+            } else {
+                painter.text(
+                    ObservationValueDisplay.string(for: observation, orders: orders),
+                    in: CGRect(x: valueX, y: rect.minY + 22, width: max(valueWidth - (valueX - leading), 20), height: rect.height - 30),
+                    font: PVFont.nsBody(size: 13, italic: negated),
+                    color: negated ? PVColor.danger : PVColor.textPrimary, lines: 2
+                )
+            }
             painter.symbol(PVSymbol.penLine.rawValue, in: CGRect(x: width - trailing - 12, y: rect.midY - 6, width: 12, height: 12), PVColor.textFaint)
         }
         let observations = rows.map(\.0)
@@ -764,12 +821,25 @@ private extension EvidenceCardView {
         let title = label.isEmpty ? placed.typeLabel : label
         return wrappedHeight(title, width: bridgeBodyWidth, font: PVFont.nsDisplay(size: 14, weight: PVFontWeight.medium), maxLines: 2) + 1 + lineHeight(mono(9.5))
     }
+    /// Side of a likeness row's image tile.
+    static var likenessTile: CGFloat { 32 }
+
+    /// The image path when the row holds a depiction, else nil.
+    static func likenessRelPath(_ observation: CatalogObservation) -> String? {
+        guard let path = observation.depiction?.imageRelPath.trimmingCharacters(in: .whitespacesAndNewlines),
+              !path.isEmpty else { return nil }
+        return path
+    }
+
     static func propertyRowHeight(
         _ observation: CatalogObservation,
         valueWidth: CGFloat,
         valueFont: NSFont,
         orders: NameFormatOrders = NameFormatOrders()
     ) -> CGFloat {
+        if likenessRelPath(observation) != nil {
+            return max(EvidenceSubjectCard.propertyRowHeight, lineHeight(mono(9)) + 3 + likenessTile + 16)
+        }
         let valueHeight = wrappedHeight(
             ObservationValueDisplay.string(for: observation, orders: orders),
             width: valueWidth,

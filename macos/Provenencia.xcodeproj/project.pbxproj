@@ -358,6 +358,12 @@
 		B0E8631619214033F0948729 /* DerivedPlaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B042B09EC818DE35F967C981 /* DerivedPlaceTests.swift */; };
 		B0CABB2D1B7B37092BF31774 /* ConclusionVocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C30618199D5D309E96D3DF /* ConclusionVocabulary.swift */; };
 		B068D7E4621B621E234A1886 /* ConclusionDatePlaceLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B071B391C06B014BFC0BA7F1 /* ConclusionDatePlaceLine.swift */; };
+		A53400000000000000001001 /* DepictionValueDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000001 /* DepictionValueDraft.swift */; };
+		A53400000000000000001002 /* CitationComposerModel+Depiction.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000002 /* CitationComposerModel+Depiction.swift */; };
+		A53400000000000000001003 /* ArtifactRegionCrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000003 /* ArtifactRegionCrop.swift */; };
+		A53400000000000000001004 /* ArtifactFileFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000004 /* ArtifactFileFixtures.swift */; };
+		A53400000000000000001005 /* CitationComposerDepictionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000005 /* CitationComposerDepictionTests.swift */; };
+		A53400000000000000001006 /* ArtifactRegionCropTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000006 /* ArtifactRegionCropTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -739,6 +745,12 @@
 		B042B09EC818DE35F967C981 /* DerivedPlaceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DerivedPlaceTests.swift; sourceTree = "<group>"; };
 		B0C30618199D5D309E96D3DF /* ConclusionVocabulary.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConclusionVocabulary.swift; sourceTree = "<group>"; };
 		B071B391C06B014BFC0BA7F1 /* ConclusionDatePlaceLine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConclusionDatePlaceLine.swift; sourceTree = "<group>"; };
+		A53400000000000000000001 /* DepictionValueDraft.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "DepictionValueDraft.swift"; sourceTree = "<group>"; };
+		A53400000000000000000002 /* CitationComposerModel+Depiction.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "CitationComposerModel+Depiction.swift"; sourceTree = "<group>"; };
+		A53400000000000000000003 /* ArtifactRegionCrop.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "ArtifactRegionCrop.swift"; sourceTree = "<group>"; };
+		A53400000000000000000004 /* ArtifactFileFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "ArtifactFileFixtures.swift"; sourceTree = "<group>"; };
+		A53400000000000000000005 /* CitationComposerDepictionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "CitationComposerDepictionTests.swift"; sourceTree = "<group>"; };
+		A53400000000000000000006 /* ArtifactRegionCropTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "ArtifactRegionCropTests.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1177,6 +1189,7 @@
 				A70B0000000000000000000E /* ArtifactRegionTool.swift */,
 				A70B00000000000000000010 /* ArtifactRegionGeometry.swift */,
 				A70B00000000000000000012 /* ArtifactRegionOverlay.swift */,
+				A53400000000000000000003 /* ArtifactRegionCrop.swift */,
 			);
 			path = ArtifactViewer;
 			sourceTree = "<group>";
@@ -1188,6 +1201,8 @@
 				A71900000000000000000001 /* CitationComposerContext.swift */,
 				A71200000000000000000001 /* CitationFieldsDraft.swift */,
 				AA0000000000000000000670 /* CitationTranscriptionModel.swift */,
+				A53400000000000000000002 /* CitationComposerModel+Depiction.swift */,
+				A53400000000000000000001 /* DepictionValueDraft.swift */,
 				A71300000000000000000001 /* CitationObservationRows.swift */,
 				A71400000000000000000001 /* CitationConnections.swift */,
 				A71500000000000000000001 /* CitationComposerVocabulary.swift */,
@@ -1281,6 +1296,9 @@
 				A70800000000000000000005 /* CitationComposerModelTests.swift */,
 				A71D00000000000000000007 /* OCRImageTests.swift */,
 				A71D00000000000000000009 /* CitationAutoTranscribeTests.swift */,
+				A53400000000000000000006 /* ArtifactRegionCropTests.swift */,
+				A53400000000000000000005 /* CitationComposerDepictionTests.swift */,
+				A53400000000000000000004 /* ArtifactFileFixtures.swift */,
 				A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */,
 				AA00000000000000000000F6 /* EvidenceSubjectCardFooterTests.swift */,
 				AA00000000000000000000F8 /* EvidenceCardLayoutTests.swift */,
@@ -1893,6 +1911,8 @@
 				A71100000000000000000002 /* InterpretationValueKinds.swift in Sources */,
 				A71200000000000000000002 /* CitationFieldsDraft.swift in Sources */,
 				AA0000000000000000000671 /* CitationTranscriptionModel.swift in Sources */,
+				A53400000000000000001002 /* CitationComposerModel+Depiction.swift in Sources */,
+				A53400000000000000001001 /* DepictionValueDraft.swift in Sources */,
 				A71300000000000000000002 /* CitationObservationRows.swift in Sources */,
 				A71400000000000000000002 /* CitationConnections.swift in Sources */,
 				A71500000000000000000002 /* CitationComposerVocabulary.swift in Sources */,
@@ -2094,6 +2114,7 @@
 				A70B0000000000000000000F /* ArtifactRegionTool.swift in Sources */,
 				A70B00000000000000000011 /* ArtifactRegionGeometry.swift in Sources */,
 				A70B00000000000000000013 /* ArtifactRegionOverlay.swift in Sources */,
+				A53400000000000000001003 /* ArtifactRegionCrop.swift in Sources */,
 				A70800000000000000000002 /* CitationComposerView.swift in Sources */,
 				A70800000000000000000004 /* CitationComposerModel.swift in Sources */,
 				A70C00000000000000000002 /* CitationComposerEntry.swift in Sources */,
@@ -2180,6 +2201,9 @@
 				A70800000000000000000006 /* CitationComposerModelTests.swift in Sources */,
 				A71D00000000000000000008 /* OCRImageTests.swift in Sources */,
 				A71D0000000000000000000A /* CitationAutoTranscribeTests.swift in Sources */,
+				A53400000000000000001006 /* ArtifactRegionCropTests.swift in Sources */,
+				A53400000000000000001005 /* CitationComposerDepictionTests.swift in Sources */,
+				A53400000000000000001004 /* ArtifactFileFixtures.swift in Sources */,
 				A71800000000000000000002 /* EvidenceGraphPlacementTests.swift in Sources */,
 				AA00000000000000000000F7 /* EvidenceSubjectCardFooterTests.swift in Sources */,
 				AA00000000000000000000F9 /* EvidenceCardLayoutTests.swift in Sources */,

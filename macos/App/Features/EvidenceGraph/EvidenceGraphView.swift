@@ -1051,14 +1051,16 @@ private struct EvidenceGraphDocumentBody: View {
             EvidenceCanvasCard(
                 placed: .bridge(placed),
                 text: text[bridge: placed, in: snapshot],
-                state: state(placed.id)
+                state: state(placed.id),
+                projectDir: model.session.projectKey.projectDir
             )
         } + subjects.map { placed in
             EvidenceCanvasCard(
                 placed: .subject(placed, model.presentation(for: placed.kind.rawValue)),
                 text: text[subject: placed],
                 state: state(placed.id),
-                nameOrders: model.session.nameFormat
+                nameOrders: model.session.nameFormat,
+                projectDir: model.session.projectKey.projectDir
             )
         }
     }

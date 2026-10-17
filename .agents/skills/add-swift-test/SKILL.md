@@ -14,6 +14,7 @@ Product logic under test lives in `macos/App/`. Tests live in **`macos/Provenenc
 ## What to test
 
 - Models (`OnboardingModel`), path helpers (`InstallPaths`), store fakes.
+- Artifact files on disk (a PNG, a PDF, the catalog row that points at them): use `ArtifactFileFixtures` in `macos/ProvenenciaTests/ArtifactFileFixtures.swift`; do not write another copy.
 - Inject `FakeStore` and `OnboardingFolders` with dirs under `FileManager.default.temporaryDirectory`.
 - When adding a catalog `GenealogyStore` API on `FakeStore`, call `markCatalogSessionHeld` (same as real traffic) so `CatalogSessionStoreTests` / overlap coverage stay honest.
 - **No** `GoStore`, `provenencia_call`, dylib, or generated `engine.pb.swift`.

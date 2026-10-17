@@ -16,9 +16,9 @@ struct CitationAutoTranscribeTests {
     private let namePropertyID = "prop-name"
 
     @Test func pdfArtifactDoesNotSendToOCR() async {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        seedArtifact(store, mediaType: "application/pdf", relPath: "objects/file-0.pdf")
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "application/pdf", relPath: "objects/file-0.pdf")
         let engine = FakeOCREngine()
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
         await model.prepare()
@@ -34,9 +34,9 @@ struct CitationAutoTranscribeTests {
     }
 
     @Test func pasteFillsTranscriptionFromSelection() async {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        seedArtifact(store, mediaType: "application/pdf", relPath: "objects/file-0.pdf")
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "application/pdf", relPath: "objects/file-0.pdf")
         let engine = FakeOCREngine()
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
         await model.prepare()
@@ -60,9 +60,9 @@ struct CitationAutoTranscribeTests {
     }
 
     @Test func emptySelectionDoesNotPaste() async {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        seedArtifact(store, mediaType: "application/pdf", relPath: "objects/file-0.pdf")
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "application/pdf", relPath: "objects/file-0.pdf")
         let engine = FakeOCREngine()
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
         await model.prepare()
@@ -77,9 +77,9 @@ struct CitationAutoTranscribeTests {
     }
 
     @Test func pasteReplaceDoesNotOverwriteWithoutConfirm() async {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        seedArtifact(store, mediaType: "application/pdf", relPath: "objects/file-0.pdf")
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "application/pdf", relPath: "objects/file-0.pdf")
         let engine = FakeOCREngine()
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
         await model.prepare()
@@ -98,10 +98,10 @@ struct CitationAutoTranscribeTests {
     }
 
     @Test func scannedPDFDisablesPaste() async throws {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        try writeBlankPDF(projectDir: projectDir, relPath: "objects/scan.pdf", pageCount: 2)
-        seedArtifact(store, mediaType: "application/pdf", relPath: "objects/scan.pdf")
+        try ArtifactFileFixtures.writeBlankPDF(projectDir: projectDir, relPath: "objects/scan.pdf", pageCount: 2)
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "application/pdf", relPath: "objects/scan.pdf")
         let engine = FakeOCREngine()
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
         await model.prepare()
@@ -119,10 +119,10 @@ struct CitationAutoTranscribeTests {
     }
 
     @Test func imageArtifactDoesNotPaste() async throws {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        try writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
-        seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
+        try ArtifactFileFixtures.writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
         let engine = FakeOCREngine()
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
         await model.prepare()
@@ -135,9 +135,9 @@ struct CitationAutoTranscribeTests {
     }
 
     @Test func missingImageFileDisablesButton() async {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/missing.png")
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/missing.png")
         let engine = FakeOCREngine()
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
         await model.prepare()
@@ -153,9 +153,9 @@ struct CitationAutoTranscribeTests {
     }
 
     @Test func audioArtifactDisablesButton() async {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        seedArtifact(store, mediaType: "audio/mpeg", relPath: "objects/file-0.mp3")
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "audio/mpeg", relPath: "objects/file-0.mp3")
         let engine = FakeOCREngine()
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
         await model.prepare()
@@ -169,10 +169,10 @@ struct CitationAutoTranscribeTests {
     }
 
     @Test func fillWritesTranscriptionAndDirtiesFields() async throws {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        try writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
-        seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
+        try ArtifactFileFixtures.writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
         let engine = FakeOCREngine()
         engine.result = .success("Alderwick")
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
@@ -190,10 +190,10 @@ struct CitationAutoTranscribeTests {
     }
 
     @Test func emptyResultKeepsPriorText() async throws {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        try writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
-        seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
+        try ArtifactFileFixtures.writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
         let engine = FakeOCREngine()
         engine.result = .success("   ")
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
@@ -209,10 +209,10 @@ struct CitationAutoTranscribeTests {
     }
 
     @Test func failureKeepsPriorText() async throws {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        try writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
-        seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
+        try ArtifactFileFixtures.writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
         let engine = FakeOCREngine()
         engine.result = .failure(TestOCRError.failed)
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
@@ -228,10 +228,10 @@ struct CitationAutoTranscribeTests {
     }
 
     @Test func replaceDoesNotOverwriteWithoutConfirm() async throws {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        try writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
-        seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
+        try ArtifactFileFixtures.writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
         let engine = FakeOCREngine()
         engine.result = .success("new")
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
@@ -248,10 +248,10 @@ struct CitationAutoTranscribeTests {
     }
 
     @Test func wholePageWarnsOnlyWhenOversizedAndNoRegion() async throws {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        try writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
-        seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
+        try ArtifactFileFixtures.writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
         let engine = FakeOCREngine()
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
         await model.prepare()
@@ -284,10 +284,10 @@ struct CitationAutoTranscribeTests {
     }
 
     @Test func regionCropIsSmallerThanFullImage() async throws {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        try writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
-        seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
+        try ArtifactFileFixtures.writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
         let engine = FakeOCREngine()
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
         await model.prepare()
@@ -303,10 +303,10 @@ struct CitationAutoTranscribeTests {
     }
 
     @Test func disabledWhileRunningAndLocatorHeld() async throws {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        try writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
-        seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
+        try ArtifactFileFixtures.writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
         let engine = FakeOCREngine()
         engine.shouldHold = true
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
@@ -328,10 +328,10 @@ struct CitationAutoTranscribeTests {
     }
 
     @Test func editingFieldClearsCallout() async throws {
-        let projectDir = uniqueProjectDir()
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         let store = makeStore(projectDir: projectDir)
-        try writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
-        seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
+        try ArtifactFileFixtures.writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
         let engine = FakeOCREngine()
         engine.result = .failure(TestOCRError.failed)
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
@@ -340,48 +340,6 @@ struct CitationAutoTranscribeTests {
         #expect(model.transcriptionOCRMessage != nil)
         model.transcription = "typed"
         #expect(model.transcriptionOCRMessage == nil)
-    }
-
-    private func uniqueProjectDir() -> String {
-        FileManager.default.temporaryDirectory
-            .appendingPathComponent("pv-auto-transcribe-\(UUID().uuidString).provenencia", isDirectory: true)
-            .path
-    }
-
-    private func writePNG(projectDir: String, relPath: String, width: Int = 8, height: Int = 8) throws {
-        let image = NSImage(size: NSSize(width: width, height: height))
-        image.lockFocus()
-        NSColor.red.setFill()
-        NSBezierPath(rect: NSRect(x: 0, y: 0, width: width, height: height)).fill()
-        image.unlockFocus()
-        guard let tiff = image.tiffRepresentation,
-              let rep = NSBitmapImageRep(data: tiff),
-              let data = rep.representation(using: .png, properties: [:])
-        else {
-            throw TestOCRError.failed
-        }
-        let url = URL(fileURLWithPath: projectDir).appendingPathComponent(relPath)
-        try FileManager.default.createDirectory(
-            at: url.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try data.write(to: url)
-    }
-
-    private func writeBlankPDF(projectDir: String, relPath: String, pageCount: Int) throws {
-        let document = PDFDocument()
-        for _ in 0..<pageCount {
-            document.insert(PDFPage(), at: document.pageCount)
-        }
-        guard let data = document.dataRepresentation() else {
-            throw TestOCRError.failed
-        }
-        let url = URL(fileURLWithPath: projectDir).appendingPathComponent(relPath)
-        try FileManager.default.createDirectory(
-            at: url.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try data.write(to: url)
     }
 
     private func makeStore(projectDir: String) -> FakeStore {
@@ -429,26 +387,6 @@ struct CitationAutoTranscribeTests {
             subjectID: subjectID, gridX: 0, gridY: 0
         )
         return store
-    }
-
-    private func seedArtifact(_ store: FakeStore, mediaType: String, relPath: String) {
-        store.artifactsBySource[sourceID] = [
-            CatalogArtifact(
-                id: "art-0",
-                ref: "ART-0",
-                sourceID: sourceID,
-                fileID: "file-0",
-                label: "Scan 1",
-                description: "",
-                file: CatalogFileRef(
-                    id: "file-0",
-                    relPath: relPath,
-                    originalFilename: URL(fileURLWithPath: relPath).lastPathComponent,
-                    mediaType: mediaType,
-                    byteSize: 10
-                )
-            ),
-        ]
     }
 
     private func makeModel(
