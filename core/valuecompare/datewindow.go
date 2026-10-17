@@ -167,3 +167,55 @@ func copyBound(v *int) *int {
 	x := *v
 	return &x
 }
+
+// AboutEnds reads d as compared: DateEnds, then an ABT point widens by units of
+// its most precise part on each side. Year precision (no month; a day with no
+// month reads as its year) widens by years, month precision by months, day
+// precision by days. DateEnds stays as written.
+func AboutEnds(d datevalue.Value, units int) (first, last DateEnd, ok bool) {
+	first, last, ok = DateEnds(d)
+	if !ok || d.Kind == datevalue.KindRange || d.Qualifier != datevalue.QualifierABT {
+		return first, last, ok
+	}
+	y, m, day := first.Year, first.Month, first.Day
+	switch {
+	case m == 0:
+		first, ok = boundEnd(intPtr(y-units), nil, nil)
+		if ok {
+			last, ok = boundEnd(intPtr(y+units), nil, nil)
+		}
+	case day == 0:
+		y1, m1 := datevalue.AddMonths(y, m, -units)
+		y2, m2 := datevalue.AddMonths(y, m, units)
+		first, ok = boundEnd(intPtr(y1), intPtr(m1), nil)
+		if ok {
+			last, ok = boundEnd(intPtr(y2), intPtr(m2), nil)
+		}
+	default:
+		y1, m1, d1 := datevalue.AddDays(y, m, day, -units)
+		y2, m2, d2 := datevalue.AddDays(y, m, day, units)
+		first, ok = boundEnd(intPtr(y1), intPtr(m1), intPtr(d1))
+		if ok {
+			last, ok = boundEnd(intPtr(y2), intPtr(m2), intPtr(d2))
+		}
+	}
+	if !ok {
+		return DateEnd{}, DateEnd{}, false
+	}
+	return first, last, true
+}
+
+func intPtr(v int) *int { return &v }
+
+// EndsWindow is the days from the first end's start to the last end's finish;
+// an open end leaves that side of the window open.
+func EndsWindow(first, last DateEnd) Window {
+	var w Window
+	if !first.Open {
+		w.Lo = intPtr(first.Lo)
+	}
+	if !last.Open {
+		w.Hi = intPtr(last.Hi)
+	}
+	return w
+}

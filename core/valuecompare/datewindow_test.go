@@ -164,3 +164,53 @@ func TestWindow(t *testing.T) {
 		t.Error("open-high windows contain by their low end")
 	}
 }
+
+func TestAboutEnds(t *testing.T) {
+	day := datevalue.DaysFromCivil
+	for _, tc := range []struct {
+		name   string
+		d      datevalue.Value
+		lo, hi int
+	}{
+		{"about a year", about(1817, 0, 0), day(1816, 1, 1), day(1818, 12, 31)},
+		{"about a month", about(1817, 3, 0), day(1817, 2, 1), day(1817, 4, 30)},
+		{"about January", about(1817, 1, 0), day(1816, 12, 1), day(1817, 2, 28)},
+		{"about a day", about(1817, 1, 1), day(1816, 12, 31), day(1817, 1, 2)},
+		{"a plain year", ymd(1817, 0, 0), day(1817, 1, 1), day(1817, 12, 31)},
+		{"a range is not widened", between(1815, 0, 0, 1820, 0, 0), day(1815, 1, 1), day(1820, 12, 31)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			first, last, ok := valuecompare.AboutEnds(tc.d, 1)
+			if !ok || first.Lo != tc.lo || last.Hi != tc.hi {
+				t.Fatalf("got %d..%d ok=%v, want %d..%d", first.Lo, last.Hi, ok, tc.lo, tc.hi)
+			}
+			w := valuecompare.EndsWindow(first, last)
+			if w.Lo == nil || w.Hi == nil || *w.Lo != tc.lo || *w.Hi != tc.hi {
+				t.Fatalf("window %+v", w)
+			}
+		})
+	}
+	t.Run("two units", func(t *testing.T) {
+		first, last, ok := valuecompare.AboutEnds(about(1817, 0, 0), 2)
+		if !ok || first.Year != 1815 || last.Year != 1819 {
+			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
+		}
+	})
+	t.Run("a phrase has no ends", func(t *testing.T) {
+		if _, _, ok := valuecompare.AboutEnds(phrase("spring"), 1); ok {
+			t.Fatal("ok")
+		}
+	})
+	t.Run("open ends", func(t *testing.T) {
+		first, last, _ := valuecompare.AboutEnds(bound(datevalue.QualifierBEF, 1820), 1)
+		w := valuecompare.EndsWindow(first, last)
+		if w.Lo != nil || w.Hi == nil || *w.Hi != datevalue.DaysFromCivil(1820, 12, 31) {
+			t.Fatalf("BEF window %+v", w)
+		}
+		first, last, _ = valuecompare.AboutEnds(bound(datevalue.QualifierAFT, 1820), 1)
+		w = valuecompare.EndsWindow(first, last)
+		if w.Hi != nil || w.Lo == nil || *w.Lo != datevalue.DaysFromCivil(1820, 1, 1) {
+			t.Fatalf("AFT window %+v", w)
+		}
+	})
+}

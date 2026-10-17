@@ -1,6 +1,13 @@
 package valuecompare_test
 
-import "github.com/mendahu/provenencia/core/datevalue"
+import (
+	"testing"
+
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
+)
 
 // Date builders shared by the date tests. A month or day of 0 is not named.
 
@@ -49,3 +56,144 @@ func noYearRange() datevalue.Value {
 }
 
 func dp(v datevalue.Value) *datevalue.Value { return &v }
+
+// dateValue wraps a date for Compare; nil is no date.
+func dateValue(d *datevalue.Value) valuecompare.Value {
+	return valuecompare.Value{Type: propertymeta.ValueTypeDate, Date: d}
+}
+
+// ofDate wraps two dates as a sample pair; a nil pointer is no date.
+func ofDate(a, b *datevalue.Value) samplePair { return samplePair{dateValue(a), dateValue(b)} }
+
+type dateCase struct {
+	name     string
+	a, b     *datevalue.Value
+	rel      valuecompare.Relation
+	sim      float64
+	cause    valuecompare.Cause
+	broader  valuecompare.Side
+	distance float64
+}
+
+func TestDateCompare(t *testing.T) {
+	bef, aft := datevalue.QualifierBEF, datevalue.QualifierAFT
+	span := func(w float64) float64 { return 0.8 - 0.05*(w-1) }
+	same, contains, overlaps, nearRel, different, unknown := valuecompare.Same, valuecompare.Contains, valuecompare.Overlaps, valuecompare.Near, valuecompare.Different, valuecompare.Unknown
+	a, b, none := valuecompare.SideA, valuecompare.SideB, valuecompare.SideNone
+	exact, precision, overlap, gap, beyond := valuecompare.CauseExact, valuecompare.CausePrecision, valuecompare.CauseOverlap, valuecompare.CauseGap, valuecompare.CauseBeyondTolerance
+	cases := []dateCase{
+		{"AC-1.1 year", dp(ymd(1817, 0, 0)), dp(ymd(1817, 0, 0)), same, 1, exact, none, 0},
+		{"AC-1.1 before", dp(bound(bef, 1820)), dp(bound(bef, 1820)), same, 1, exact, none, 0},
+		{"AC-1.1 about", dp(about(1817, 0, 0)), dp(about(1817, 0, 0)), same, 1, exact, none, 0},
+		{"AC-1.1 range of one year", dp(between(1817, 0, 0, 1817, 0, 0)), dp(ymd(1817, 0, 0)), same, 1, exact, none, 0},
+		{"AC-1.1 inverted range", dp(between(1820, 0, 0, 1815, 0, 0)), dp(between(1815, 0, 0, 1820, 0, 0)), same, 1, exact, none, 0},
+		{"AC-1.2 missing day", dp(ymd(1817, 5, 0)), dp(ymd(1817, 5, 14)), contains, 0.9, precision, a, 0},
+		{"AC-1.2 missing month", dp(ymd(1817, 0, 0)), dp(ymd(1817, 9, 0)), contains, 0.8, precision, a, 0},
+		{"AC-1.3 about next year", dp(about(1817, 0, 0)), dp(ymd(1818, 0, 0)), contains, span(3), precision, a, 0},
+		{"AC-1.3 about same year", dp(about(1817, 0, 0)), dp(ymd(1817, 0, 0)), contains, span(3), precision, a, 0},
+		{"AC-1.4 before a wider before", dp(bound(bef, 1820)), dp(bound(bef, 1830)), contains, 0.2, precision, b, 0},
+		{"AC-1.4 before a point", dp(bound(bef, 1820)), dp(ymd(1815, 0, 0)), contains, 0.2, precision, a, 0},
+		{"AC-1.5 range holds a year", dp(between(1815, 0, 0, 1820, 0, 0)), dp(ymd(1818, 0, 0)), contains, span(6), precision, a, 0},
+		{"AC-1.6 about month", dp(about(1817, 3, 0)), dp(ymd(1817, 4, 0)), contains, 0.8, precision, a, 0},
+		{"AC-1.6 about day", dp(about(1817, 3, 3)), dp(ymd(1817, 3, 4)), contains, 0.8, precision, a, 0},
+		{"AC-1.6 about month over a year end", dp(about(1817, 1, 0)), dp(ymd(1816, 12, 15)), contains, 0.8, precision, a, 0},
+		{"AC-1.6 about day over a year end", dp(about(1817, 1, 1)), dp(ymd(1816, 12, 31)), contains, 0.8, precision, a, 0},
+		{"AC-1.7 overlapping ranges", dp(between(1815, 0, 0, 1820, 0, 0)), dp(between(1819, 0, 0, 1825, 0, 0)), overlaps, span(7), overlap, none, 0},
+		{"AC-1.8 other day", dp(ymd(1817, 5, 14)), dp(ymd(1817, 5, 20)), nearRel, 0.7, gap, none, 6},
+		{"AC-1.8 other month", dp(ymd(1817, 5, 0)), dp(ymd(1817, 9, 0)), nearRel, 0.6, gap, none, 93},
+		{"AC-1.9 next year", dp(ymd(1817, 0, 0)), dp(ymd(1818, 0, 0)), nearRel, 0.8 * (1 - 1.0/3), gap, none, 1},
+		{"AC-1.9 across a year end", dp(ymd(1817, 12, 0)), dp(ymd(1818, 1, 0)), nearRel, 0.8 * (1 - (31.0/365)/3), gap, none, 1},
+		{"AC-1.10 after a point", dp(bound(aft, 1820)), dp(ymd(1819, 0, 0)), nearRel, 0.2 * (1 - 1.0/3), gap, none, 1},
+		{"AC-1.10 range and a point", dp(between(1815, 0, 0, 1820, 0, 0)), dp(ymd(1822, 0, 0)), nearRel, span(6) * (1 - 2.0/3), gap, none, 366},
+		{"AC-1.10 two abouts", dp(about(1817, 0, 0)), dp(about(1820, 0, 0)), nearRel, span(3) * (1 - 1.0/3), gap, none, 1},
+		{"AC-1.11 three years", dp(ymd(1817, 0, 0)), dp(ymd(1820, 0, 0)), different, 0, beyond, none, 731},
+		{"AC-1.11 before and three years", dp(bound(bef, 1820)), dp(ymd(1823, 0, 0)), different, 0, beyond, none, 731},
+		{"AC-1.11 before and after", dp(bound(bef, 1800)), dp(bound(aft, 1810)), different, 0, beyond, none, 3288},
+		{"AC-1.12 phrase", dp(phrase("spring")), dp(ymd(1817, 0, 0)), unknown, 0, valuecompare.CausePhraseOnly, none, 0},
+		{"AC-1.12 range with no year", dp(noYearRange()), dp(ymd(1817, 0, 0)), unknown, 0, valuecompare.CauseEmpty, none, 0},
+		{"AC-1.12 no date", nil, dp(ymd(1817, 0, 0)), unknown, 0, valuecompare.CauseEmpty, none, 0},
+		{"AC-1.13 day with no month", dp(datevalue.Value{Kind: datevalue.KindPoint, StartYear: optInt(1817), StartDay: optInt(14)}),
+			dp(datevalue.Value{Kind: datevalue.KindPoint, StartYear: optInt(1817), StartDay: optInt(20)}), same, 1, exact, none, 0},
+	}
+	rules := matchregistry.Default().Value
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, swap := range []bool{false, true} {
+				x, y, broader := tc.a, tc.b, tc.broader
+				if swap {
+					x, y = y, x
+					if broader != none {
+						broader = map[valuecompare.Side]valuecompare.Side{a: b, b: a}[broader]
+					}
+				}
+				res, det := valuecompare.Compare(dateValue(x), dateValue(y), rules)
+				if res.Relation != tc.rel || !near(res.Similarity, tc.sim) {
+					t.Fatalf("swap=%v: %s at %v, want %s at %v", swap, res.Relation, res.Similarity, tc.rel, tc.sim)
+				}
+				// An unknown pair names its cause from the first side that failed.
+				if tc.rel != unknown || !swap {
+					if det.Cause != tc.cause {
+						t.Fatalf("swap=%v: cause %s, want %s", swap, det.Cause, tc.cause)
+					}
+				}
+				if det.Broader != broader {
+					t.Fatalf("swap=%v: broader %q, want %q", swap, det.Broader, broader)
+				}
+				if det.Distance != tc.distance {
+					t.Fatalf("swap=%v: distance %v, want %v", swap, det.Distance, tc.distance)
+				}
+				wantUnit := valuecompare.Unit("")
+				if tc.rel == nearRel || tc.rel == different {
+					wantUnit = valuecompare.UnitDays
+				}
+				if det.Unit != wantUnit || len(det.Parts) != 0 {
+					t.Fatalf("swap=%v: unit %q, %d parts", swap, det.Unit, len(det.Parts))
+				}
+			}
+		})
+	}
+	t.Run("AC-1.14 tolerance 0", func(t *testing.T) {
+		r := matchregistry.Default().Value
+		r.Dates.Tolerance = 0
+		res, det := valuecompare.Compare(dateValue(dp(ymd(1817, 0, 0))), dateValue(dp(ymd(1818, 0, 0))), r)
+		if res.Relation != different || det.Cause != beyond {
+			t.Fatalf("%+v %+v", res, det)
+		}
+	})
+	t.Run("below the near minimum", func(t *testing.T) {
+		r := matchregistry.Default().Value
+		r.Dates.NearMinimum = 0.6
+		res, det := valuecompare.Compare(dateValue(dp(ymd(1817, 0, 0))), dateValue(dp(ymd(1818, 0, 0))), r)
+		if res.Relation != different || res.Similarity != 0 || det.Cause != valuecompare.CauseBelowMinimum || det.Distance != 1 {
+			t.Fatalf("%+v %+v", res, det)
+		}
+	})
+}
+
+func TestDateKey(t *testing.T) {
+	rules := matchregistry.Default().Value
+	key := func(d datevalue.Value, level valuecompare.Relation) (string, bool) {
+		return valuecompare.Key(dateValue(&d), level, rules)
+	}
+	// AC-2.3
+	k1, ok1 := key(ymd(1817, 0, 0), valuecompare.Same)
+	k2, ok2 := key(between(1817, 1, 0, 1817, 12, 0), valuecompare.Same)
+	if !ok1 || !ok2 || k1 != k2 {
+		t.Errorf("1817 keys %q (%v) and %q (%v)", k1, ok1, k2, ok2)
+	}
+	if k, ok := key(ymd(1817, 0, 0), valuecompare.Equivalent); !ok || k != k1 {
+		t.Errorf("Equivalent key = %q, %v", k, ok)
+	}
+	if k, ok := key(bound(datevalue.QualifierBEF, 1820), valuecompare.Same); !ok || k != "*..-54422" {
+		t.Errorf("BEF 1820 key = %q, %v", k, ok)
+	}
+	if k, ok := key(phrase("spring"), valuecompare.Same); ok || k != "" {
+		t.Errorf("phrase key = %q, %v", k, ok)
+	}
+	if k, ok := key(ymd(1817, 0, 0), valuecompare.Near); ok || k != "" {
+		t.Errorf("Near key = %q, %v", k, ok)
+	}
+	if k, ok := valuecompare.Key(dateValue(nil), valuecompare.Same, rules); ok || k != "" {
+		t.Errorf("no date key = %q, %v", k, ok)
+	}
+}
