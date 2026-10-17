@@ -729,7 +729,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-34 — Composer depiction row
 
-**Plan:** [`prs/S10-34-composer-likeness.md`](prs/S10-34-composer-likeness.md) — Blocked — on board S10-D15
+**Plan:** [`prs/S10-34-composer-depiction-row.md`](prs/S10-34-composer-depiction-row.md) — Blocked — on board S10-D15
 
 **Brief:** [S10-D15](design/S10-D15-composer-depiction-row.md), written 2026-10-17. Not drawn on S10-D3.
 
