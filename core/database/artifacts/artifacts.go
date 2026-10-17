@@ -14,7 +14,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/ref"
@@ -250,7 +249,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return nil, err
 	}
-	objects, err := deleteimpact.ReleaseSnapshot(tx.Tx, snap)
+	err = deleteimpact.ReleaseSnapshot(tx, snap)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +266,6 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if existing.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: existing.Description, New: nil}
 	}
-	files.PurgeAfterCommit(tx, objects)
 	return []rowchange.Change{{
 		EntityType: "artifact",
 		EntityID:   append([]byte(nil), id...),

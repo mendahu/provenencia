@@ -17,7 +17,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/effects"
-	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -248,15 +247,14 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if err != nil {
 		return nil, err
 	}
-	released, err := deleteimpact.ReleaseFacets(tx.Tx, catalogmodel.KindSubject, id)
+	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindSubject, id)
 	if err != nil {
 		return nil, err
 	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return nil, err
 	}
-	files.PurgeAfterCommit(tx, released.Objects)
-	releasedHandles, err := effects.Handles(tx.Tx, released.Changes)
+	releasedHandles, err := effects.Handles(tx.Tx, released)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +274,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if prev.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: prev.Description, New: nil}
 	}
-	return append(released.Changes, rowchange.Change{
+	return append(released, rowchange.Change{
 		EntityType: "subject",
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionDelete,

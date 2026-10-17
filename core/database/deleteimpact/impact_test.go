@@ -384,15 +384,14 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			if !got.Allowed || got.Gate != deleteimpact.GateOK {
 				t.Fatalf("bridge %+v", got)
 			}
-			db, err := c.DB()
+			tx, err := c.BeginWrite()
 			if err != nil {
 				t.Fatal(err)
 			}
-			tx, err := db.Begin()
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() { _ = tx.Rollback() }()
+			defer func() {
+				_ = tx.Rollback()
+				c.EndWrite()
+			}()
 			if _, err := tx.Exec(`DELETE FROM subjects WHERE id = ?`, bridge.Subject.ID); err == nil {
 				t.Fatal("raw subject delete should fail while facets remain")
 			}
@@ -615,54 +614,56 @@ func TestSnapshotOwnedThenRelease(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tx, err = db.Begin()
+	wtx, err := c.BeginWrite()
 	if err != nil {
 		t.Fatal(err)
 	}
-	snap1, err := deleteimpact.SnapshotOwned(tx, catalogmodel.KindArtifact, art1.ID)
+	snap1, err := deleteimpact.SnapshotOwned(wtx.Tx, catalogmodel.KindArtifact, art1.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, art1.ID); err != nil {
+	if _, err := wtx.Exec(`DELETE FROM artifacts WHERE id = ?`, art1.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := deleteimpact.ReleaseSnapshot(tx, snap1); err != nil {
+	if err := deleteimpact.ReleaseSnapshot(wtx, snap1); err != nil {
 		t.Fatal(err)
 	}
 	var left int
-	if err := tx.QueryRow(`SELECT COUNT(*) FROM files WHERE id = ?`, fileA).Scan(&left); err != nil {
+	if err := wtx.QueryRow(`SELECT COUNT(*) FROM files WHERE id = ?`, fileA).Scan(&left); err != nil {
 		t.Fatal(err)
 	}
 	if left != 1 {
 		t.Fatalf("shared file removed early left=%d", left)
 	}
-	if err := tx.Commit(); err != nil {
+	if err := wtx.Commit(); err != nil {
 		t.Fatal(err)
 	}
+	c.EndWrite()
 
-	tx, err = db.Begin()
+	wtx, err = c.BeginWrite()
 	if err != nil {
 		t.Fatal(err)
 	}
-	snap2, err := deleteimpact.SnapshotOwned(tx, catalogmodel.KindArtifact, art2.ID)
+	snap2, err := deleteimpact.SnapshotOwned(wtx.Tx, catalogmodel.KindArtifact, art2.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, art2.ID); err != nil {
+	if _, err := wtx.Exec(`DELETE FROM artifacts WHERE id = ?`, art2.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := deleteimpact.ReleaseSnapshot(tx, snap2); err != nil {
+	if err := deleteimpact.ReleaseSnapshot(wtx, snap2); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.QueryRow(`SELECT COUNT(*) FROM files WHERE id = ?`, fileA).Scan(&left); err != nil {
+	if err := wtx.QueryRow(`SELECT COUNT(*) FROM files WHERE id = ?`, fileA).Scan(&left); err != nil {
 		t.Fatal(err)
 	}
 	if left != 0 {
 		t.Fatalf("last pointer left files=%d", left)
 	}
-	if err := tx.Commit(); err != nil {
+	if err := wtx.Commit(); err != nil {
 		t.Fatal(err)
 	}
+	c.EndWrite()
 }
 
 func TestImpactSourceAndArtifact(t *testing.T) {

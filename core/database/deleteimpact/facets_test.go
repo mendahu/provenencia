@@ -157,21 +157,20 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 // effects.Handles on the released changes is the set subject delete recomputes.
 func TestReleaseFacetsReportsHandles(t *testing.T) {
 	f := newConclusionFixture(t)
-	db, err := f.c.DB()
+	tx, err := f.c.BeginWrite()
 	if err != nil {
 		t.Fatal(err)
 	}
-	tx, err := db.Begin()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = tx.Rollback() }()
+	defer func() {
+		_ = tx.Rollback()
+		f.c.EndWrite()
+	}()
 	// obsA is pinned on both claims of one handle: one handle, reported once.
 	got, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindObservation, f.obsA)
 	if err != nil {
 		t.Fatal(err)
 	}
-	handles, err := effects.Handles(tx, got.Changes)
+	handles, err := effects.Handles(tx.Tx, got)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +178,7 @@ func TestReleaseFacetsReportsHandles(t *testing.T) {
 		t.Fatalf("handles %v", handles)
 	}
 	var types []string
-	for _, ch := range got.Changes {
+	for _, ch := range got {
 		types = append(types, ch.EntityType)
 	}
 	sort.Strings(types)
