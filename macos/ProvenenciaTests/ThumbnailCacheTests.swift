@@ -111,4 +111,32 @@ struct ThumbnailCacheTests {
         #expect(imgB != nil)
         #expect(cache.entryCount == 1)
     }
+
+    @Test func cachedThumbnailFallsBackToTheGivenMark() {
+        let given = CachedThumbnail.fallbackContent(
+            fallbackMark: .subjectPerson, fallbackLabel: nil,
+            typeIconKey: "type_book", mediaType: "", originalFilename: ""
+        )
+        guard case .mark(let key)? = given.glyph else {
+            Issue.record("expected a mark, got \(String(describing: given.glyph))")
+            return
+        }
+        #expect(key == .subjectPerson)
+
+        let typed = CachedThumbnail.fallbackContent(
+            fallbackMark: nil, fallbackLabel: nil,
+            typeIconKey: "type_book", mediaType: "", originalFilename: ""
+        )
+        guard case .mark(let typeKey)? = typed.glyph else {
+            Issue.record("expected the type mark, got \(String(describing: typed.glyph))")
+            return
+        }
+        #expect(typeKey == PVMarkKey(catalogKey: "type_book"))
+
+        let bare = CachedThumbnail.fallbackContent(
+            fallbackMark: nil, fallbackLabel: nil,
+            typeIconKey: nil, mediaType: "", originalFilename: ""
+        )
+        #expect(bare.glyph == nil && bare.image == nil && !bare.loading)
+    }
 }
