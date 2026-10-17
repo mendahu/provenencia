@@ -76,3 +76,21 @@ func Readable(v Value, citationLocatorJSON, imageMediaType string) Value {
 	}
 	return v
 }
+
+// FromJoin turns the columns of a join into the value to show, or nil when the
+// Observation has no depiction (imageFileID empty: depiction_values.image_file_id
+// is NOT NULL). The caller joins depiction_values on observations.value_depiction_id,
+// citations on observations.citation_id (for the locator), and files on
+// depiction_values.image_file_id (for the media type). The result has passed
+// Readable and shares no slice with its inputs.
+func FromJoin(id []byte, region sql.NullString, imageFileID []byte, citationLocator, imageMediaType sql.NullString) *Value {
+	if len(imageFileID) == 0 {
+		return nil
+	}
+	v := Readable(Value{
+		ID:          append([]byte(nil), id...),
+		RegionJSON:  region.String,
+		ImageFileID: append([]byte(nil), imageFileID...),
+	}, citationLocator.String, imageMediaType.String)
+	return &v
+}
