@@ -108,3 +108,12 @@ Stop condition 2 also covers a lead that has no outcome row.
 
 ### X-18 · nit · "aside" in the brief versus the `meta` slot
 **Answer:** Fixed. The §6 macOS row says the brief's "aside" is the kit header's `meta` slot.
+
+## Board check (after round 2)
+
+The user sent the board links and exports on 2026-10-17. Persons list frame 08 matches PSL-7 and the plan. Person Detail frames 2j and 2k match PDP-7 to PDP-9, and add detail the brief did not give. The plan now follows the board on each of these (§6 macOS, Strings, D-11, D-13, AC-3.2, T-8, §10):
+- 120pt tile columns with a 96pt crop at the leading edge;
+- 16pt gaps between columns, 20pt between rows, and 16pt under the section header;
+- the caption truncates within the 120pt column;
+- tile label "Likeness from {title}. Open citation", and tile help "Open citation";
+- header thumb label "Likeness from {lead's Source title}", which replaces the role-neutral "Likeness" from round 2. "Likeness" stays only as the fallback when no tile matches.
