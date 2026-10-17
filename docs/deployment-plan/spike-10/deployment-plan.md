@@ -692,7 +692,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-32 — Depiction value
 
-**Plan:** [`prs/S10-32-depiction-value-type.md`](prs/S10-32-depiction-value-type.md) — Blocked — on S10-55, S10-53
+**Plan:** [`prs/S10-32-depiction-value-type.md`](prs/S10-32-depiction-value-type.md) — Planned
 
 | | |
 | --- | --- |
