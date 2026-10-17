@@ -24,6 +24,13 @@ func words(parts []valuecompare.Part) []string {
 	return out
 }
 
+func pm(a, b string, rel valuecompare.Relation, sim float64, cause valuecompare.Cause) valuecompare.PartMatch {
+	return valuecompare.PartMatch{
+		A: valuecompare.Part{Kind: valuecompare.PartWord, Text: a}, B: valuecompare.Part{Kind: valuecompare.PartWord, Text: b},
+		Relation: rel, Similarity: sim, Cause: cause,
+	}
+}
+
 func TestTextCompare(t *testing.T) {
 	rules := matchregistry.Default().Value
 	for _, tc := range []struct {
@@ -34,32 +41,32 @@ func TestTextCompare(t *testing.T) {
 		cause        valuecompare.Cause
 		broader      valuecompare.Side
 		onlyA, onlyB []string
-		parts        int
+		parts        []valuecompare.PartMatch
 	}{
-		{name: "exact", a: "York", b: "York", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseExact, parts: 1},
-		{name: "case", a: "York", b: "york", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseCase, parts: 1},
-		{name: "particle", a: "O Brien", b: "O'Brien", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseCase, parts: 1},
-		{name: "dash", a: "Sainte-Anne", b: "Sainte Anne", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseCase, parts: 2},
-		{name: "fold", a: "Montréal", b: "Montreal", want: valuecompare.Equivalent, sim: 0.95, cause: valuecompare.CauseFold, parts: 1},
+		{name: "exact", a: "York", b: "York", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseExact, parts: []valuecompare.PartMatch{pm("york", "york", valuecompare.Same, 1, valuecompare.CauseExact)}},
+		{name: "case", a: "York", b: "york", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseCase, parts: []valuecompare.PartMatch{pm("york", "york", valuecompare.Same, 1, valuecompare.CauseExact)}},
+		{name: "particle", a: "O Brien", b: "O'Brien", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseCase, parts: []valuecompare.PartMatch{pm("obrien", "obrien", valuecompare.Same, 1, valuecompare.CauseExact)}},
+		{name: "dash", a: "Sainte-Anne", b: "Sainte Anne", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseCase, parts: []valuecompare.PartMatch{pm("sainte", "sainte", valuecompare.Same, 1, valuecompare.CauseExact), pm("anne", "anne", valuecompare.Same, 1, valuecompare.CauseExact)}},
+		{name: "fold", a: "Montréal", b: "Montreal", want: valuecompare.Equivalent, sim: 0.95, cause: valuecompare.CauseFold, parts: []valuecompare.PartMatch{pm("montréal", "montreal", valuecompare.Equivalent, 0.95, valuecompare.CauseFold)}},
 		{
 			name: "contains", a: "York", b: "York, Upper Canada",
 			want: valuecompare.Contains, sim: 0.7 * (1 + 1) / (1 + 3), cause: valuecompare.CauseMissingPart,
-			broader: valuecompare.SideA, onlyB: []string{"upper", "canada"}, parts: 1,
+			broader: valuecompare.SideA, onlyB: []string{"upper", "canada"}, parts: []valuecompare.PartMatch{pm("york", "york", valuecompare.Same, 1, valuecompare.CauseExact)},
 		},
 		{
 			name: "contains from the other side", a: "York, Upper Canada", b: "York",
 			want: valuecompare.Contains, sim: 0.7 * (1 + 1) / (1 + 3), cause: valuecompare.CauseMissingPart,
-			broader: valuecompare.SideB, onlyA: []string{"upper", "canada"}, parts: 1,
+			broader: valuecompare.SideB, onlyA: []string{"upper", "canada"}, parts: []valuecompare.PartMatch{pm("york", "york", valuecompare.Same, 1, valuecompare.CauseExact)},
 		},
 		{
 			name: "overlaps", a: "York, Ontario", b: "Toronto, York",
 			want: valuecompare.Overlaps, sim: 0.7 * (1 + 1) / (2 + 2), cause: valuecompare.CauseOverlap,
-			onlyA: []string{"ontario"}, onlyB: []string{"toronto"}, parts: 1,
+			onlyA: []string{"ontario"}, onlyB: []string{"toronto"}, parts: []valuecompare.PartMatch{pm("york", "york", valuecompare.Same, 1, valuecompare.CauseExact)},
 		},
-		{name: "order", a: "Upper Canada, York", b: "York, Upper Canada", want: valuecompare.Different, sim: 0, cause: valuecompare.CauseOrder, onlyA: []string{"york"}, onlyB: []string{"york"}, parts: 2},
-		{name: "spelling one word", a: "Provenance", b: "Provenanced", want: valuecompare.Near, sim: 1 - 1.0/11, cause: valuecompare.CauseSpelling, parts: 1},
-		{name: "spelling two words", a: "Upper Canada", b: "Upper Kanada", want: valuecompare.Near, sim: (1 + 1 + 5.0/6 + 5.0/6) / 4, cause: valuecompare.CauseSpelling, parts: 2},
-		{name: "short variant", a: "Ann", b: "Anne", want: valuecompare.Near, sim: 0.75, cause: valuecompare.CauseSpelling, parts: 1},
+		{name: "order", a: "Upper Canada, York", b: "York, Upper Canada", want: valuecompare.Different, sim: 0, cause: valuecompare.CauseOrder, onlyA: []string{"york"}, onlyB: []string{"york"}, parts: []valuecompare.PartMatch{pm("upper", "upper", valuecompare.Same, 1, valuecompare.CauseExact), pm("canada", "canada", valuecompare.Same, 1, valuecompare.CauseExact)}},
+		{name: "spelling one word", a: "Provenance", b: "Provenanced", want: valuecompare.Near, sim: 1 - 1.0/11, cause: valuecompare.CauseSpelling, parts: []valuecompare.PartMatch{pm("provenance", "provenanced", valuecompare.Near, 1-1.0/11, valuecompare.CauseSpelling)}},
+		{name: "spelling two words", a: "Upper Canada", b: "Upper Kanada", want: valuecompare.Near, sim: (1 + 1 + 5.0/6 + 5.0/6) / 4, cause: valuecompare.CauseSpelling, parts: []valuecompare.PartMatch{pm("upper", "upper", valuecompare.Same, 1, valuecompare.CauseExact), pm("canada", "kanada", valuecompare.Near, 5.0/6, valuecompare.CauseSpelling)}},
+		{name: "short variant", a: "Ann", b: "Anne", want: valuecompare.Near, sim: 0.75, cause: valuecompare.CauseSpelling, parts: []valuecompare.PartMatch{pm("ann", "anne", valuecompare.Near, 0.75, valuecompare.CauseSpelling)}},
 		{name: "substitution", a: "Mary", b: "Mark", want: valuecompare.Different, sim: 0, cause: valuecompare.CauseNoMatch, onlyA: []string{"mary"}, onlyB: []string{"mark"}},
 		{name: "empty", a: "!!!", b: "York", want: valuecompare.Unknown, sim: 0, cause: valuecompare.CauseEmpty},
 	} {
@@ -74,8 +81,8 @@ func TestTextCompare(t *testing.T) {
 			if !slices.Equal(words(det.OnlyA), tc.onlyA) || !slices.Equal(words(det.OnlyB), tc.onlyB) {
 				t.Errorf("OnlyA %v OnlyB %v, want %v %v", words(det.OnlyA), words(det.OnlyB), tc.onlyA, tc.onlyB)
 			}
-			if len(det.Parts) != tc.parts {
-				t.Errorf("Parts = %+v, want %d", det.Parts, tc.parts)
+			if !slices.Equal(det.Parts, tc.parts) {
+				t.Errorf("Parts = %+v, want %+v", det.Parts, tc.parts)
 			}
 		})
 	}
