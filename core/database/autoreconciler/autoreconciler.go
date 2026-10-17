@@ -42,10 +42,10 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
-	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -68,7 +68,8 @@ import (
 //	13: subject-valued Properties map to the accepted handle (S9-28).
 //	14: a term is neutral by its catalog flag (property_terms.neutral), not
 //	    by key.
-const CacheVersion = 14
+//	15: depiction values reconcile by image File (S10-52).
+const CacheVersion = 15
 
 // Querier is *sql.Tx or *sql.DB.
 type Querier interface {
@@ -88,8 +89,8 @@ const (
 
 	sqlInsert = `INSERT INTO auto_reconciler_values
 		(entity_id, property_id, rank, value_text, value_integer, value_term_id,
-		 value_entity_id, value_date, value_name, date_lo, date_hi, sort_key, support, against, reason)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		 value_entity_id, value_date, value_name, value_image_file_id, date_lo, date_hi, sort_key, support, against, reason)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// One row per Observation on an accepted or provisional member of the
 	// batch (rejected members don't count), with its evidence: polarity, the
@@ -99,6 +100,7 @@ const (
 	sqlLoadCandidates = `SELECT ic.entity_id, o.id, o.property_id, p.value_type, p.cardinality,
 			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_term_id,
 			COALESCE(t.key, ''), COALESCE(t.neutral, 0), o.value_subject_id,
+			o.value_depiction_id, dpv.region_json, dpv.image_file_id, c.locator_json, dpf.media_type,
 			ic.status = 'provisional', o.polarity = 'negative', a.source_id,
 			COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
 				WHERE key = 'standard' AND origin = 'provenencia'), 0),
@@ -111,12 +113,12 @@ const (
 		JOIN citations c ON c.id = o.citation_id
 		JOIN artifacts a ON a.id = c.artifact_id
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
+		LEFT JOIN depiction_values dpv ON dpv.id = o.value_depiction_id
+		LEFT JOIN files dpf ON dpf.id = dpv.image_file_id
 		LEFT JOIN source_credibility_assessments sca ON sca.source_id = a.source_id
 		LEFT JOIN source_credibility_grades sg ON sg.id = sca.credibility_grade_id
 		LEFT JOIN claim_confidence_grades cg ON cg.id = ic.confidence_grade_id
 		WHERE ic.status IN ('accepted', 'provisional')
-		  -- S10-52 replaces this with a depiction module.
-		  AND p.value_type <> 'depiction'
 		  AND ic.entity_id IN (`
 
 	sqlAcceptedEntities = `SELECT subject_id, entity_id FROM identity_claims
@@ -375,6 +377,8 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			text                              sql.NullString
 			integer                           sql.NullInt64
 			dateID, nameID, termID, subjectID []byte
+			depictionID, imageID              []byte
+			region, locatorJSON, mediaType    sql.NullString
 			termKey                           string
 			neutral                           bool
 			provisional, negative             bool
@@ -383,6 +387,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			uncertain                         bool
 		)
 		if err := rows.Scan(&entityID, &obsID, &propertyID, &valueType, &cardinality, &text, &integer, &dateID, &nameID, &termID, &termKey, &neutral, &subjectID,
+			&depictionID, &region, &imageID, &locatorJSON, &mediaType,
 			&provisional, &negative, &sourceID, &credibility, &uncertain, &confidence); err != nil {
 			_ = rows.Close()
 			return nil, err
@@ -398,6 +403,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			Text: text.String, HasText: text.Valid,
 			Integer: integer.Int64, HasInteger: integer.Valid,
 			TermID: termID, TermKey: termKey, Neutral: neutral, SubjectID: subjectID,
+			Depiction: depictionvalues.FromJoin(depictionID, region, imageID, locatorJSON, mediaType),
 		}, SourceID: sourceID, Negative: negative, Provisional: provisional,
 			Provenance: autoreconcile.Provenance{Credibility: credibility, Uncertain: uncertain, ClaimConfidence: confidence}}
 		all = append(all, pending{g: g, c: c, dateID: dateID, nameID: nameID})
@@ -446,7 +452,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			p.c.Value.Name = &n
 		}
 		// An Observation missing its type's value has nothing to autoreconcile.
-		if !hasValue(p.g.valueType, p.c.Value) {
+		if !autoreconcile.Carries(p.g.valueType, p.c.Value) {
 			continue
 		}
 		p.g.candidates = append(p.g.candidates, p.c)
@@ -459,24 +465,6 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 		return bytes.Compare(groups[i].propertyID, groups[j].propertyID) < 0
 	})
 	return groups, nil
-}
-
-func hasValue(valueType string, v autoreconcile.Value) bool {
-	switch valueType {
-	case propertymeta.ValueTypeText:
-		return v.HasText
-	case propertymeta.ValueTypeInteger:
-		return v.HasInteger
-	case propertymeta.ValueTypeTerm:
-		return len(v.TermID) > 0
-	case propertymeta.ValueTypeDate:
-		return v.Date != nil
-	case propertymeta.ValueTypeName:
-		return v.Name != nil
-	case propertymeta.ValueTypeSubject:
-		return len(v.SubjectID) > 0
-	}
-	return false
 }
 
 func acceptedEntities(q Querier, ids [][]byte) (map[string][]byte, error) {
@@ -503,6 +491,7 @@ func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) 
 		integer           any
 		termID            any
 		valueEntity       any
+		imageFileID       any
 		dateBlob, nameBlb any
 		dateLo, dateHi    any
 	)
@@ -517,6 +506,9 @@ func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) 
 	}
 	if len(v.EntityID) > 0 {
 		valueEntity = v.EntityID
+	}
+	if v.Depiction != nil && len(v.Depiction.ImageFileID) > 0 {
+		imageFileID = v.Depiction.ImageFileID
 	}
 	if v.Date != nil {
 		b, err := valuecodec.MarshalDate(*v.Date)
@@ -543,7 +535,7 @@ func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) 
 	if k, ok := autoreconcile.SortKey(g.valueType, v); ok {
 		sortKey = k
 	}
-	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, rank, text, integer, termID, valueEntity, dateBlob, nameBlb, dateLo, dateHi, sortKey,
+	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, rank, text, integer, termID, valueEntity, dateBlob, nameBlb, imageFileID, dateLo, dateHi, sortKey,
 		cl.Support, cl.Against, string(cl.Reason))
 	return err
 }

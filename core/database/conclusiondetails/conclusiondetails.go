@@ -254,7 +254,7 @@ func loadProperties(g *graphcache.Graph, q Querier, entityID, subjectTypeID []by
 			return nil, nil, err
 		}
 		p, ok := props[string(id)]
-		if !ok || p.ValueType == propertymeta.ValueTypeSubject {
+		if !ok || p.ValueType == propertymeta.ValueTypeSubject || p.ValueType == propertymeta.ValueTypeDepiction {
 			continue
 		}
 		f := &Field{
@@ -293,7 +293,7 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 	for prop, ranks := range n.Values {
 		f, ok := byProp[prop]
 		if !ok {
-			continue // a subject-valued Property, or one the outcomes no longer name
+			continue // a subject-valued or depiction Property, or one the outcomes no longer name
 		}
 		for _, rank := range ranks {
 			v := ReconciledValue{

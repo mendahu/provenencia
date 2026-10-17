@@ -114,7 +114,7 @@ func (g *Graph) loadValues(ids [][]byte) (map[string]map[string][]Value, error) 
 	out := map[string]map[string][]Value{}
 	q := `SELECT r.entity_id, r.property_id, r.rank, r.reason,
 			r.value_text, r.value_integer, r.value_term_id, COALESCE(t.key, ''),
-			r.value_entity_id, r.value_date, r.value_name, r.support, r.against
+			r.value_entity_id, r.value_date, r.value_name, r.value_image_file_id, r.support, r.against
 		FROM ` + g.valueTable + ` r
 		LEFT JOIN property_terms t ON t.id = r.value_term_id
 		WHERE r.entity_id IN (` + placeholders(len(ids)) + `)
@@ -136,9 +136,10 @@ func (g *Graph) loadValues(ids [][]byte) (map[string]map[string][]Value, error) 
 			entityVal        []byte
 			dateBlob         []byte
 			nameBlob         []byte
+			imageID          []byte
 			support, against int
 		)
-		if err := rows.Scan(&entityID, &propID, &rank, &reason, &text, &integer, &termID, &termKey, &entityVal, &dateBlob, &nameBlob, &support, &against); err != nil {
+		if err := rows.Scan(&entityID, &propID, &rank, &reason, &text, &integer, &termID, &termKey, &entityVal, &dateBlob, &nameBlob, &imageID, &support, &against); err != nil {
 			return nil, err
 		}
 		ek, pk := string(entityID), string(propID)
@@ -150,11 +151,12 @@ func (g *Graph) loadValues(ids [][]byte) (map[string]map[string][]Value, error) 
 			Text: text.String, HasText: text.Valid,
 			Integer: integer.Int64, HasInteger: integer.Valid,
 			TermID: cloneID(termID), TermKey: termKey,
-			EntityID: cloneID(entityVal),
-			Date:     append([]byte(nil), dateBlob...),
-			Name:     append([]byte(nil), nameBlob...),
-			Support:  support,
-			Against:  against,
+			EntityID:    cloneID(entityVal),
+			Date:        append([]byte(nil), dateBlob...),
+			Name:        append([]byte(nil), nameBlob...),
+			ImageFileID: cloneID(imageID),
+			Support:     support,
+			Against:     against,
 		})
 	}
 	return out, rows.Err()

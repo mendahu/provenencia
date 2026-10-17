@@ -137,6 +137,9 @@ Each module answers three questions:
 | **subject** | candidate Subjects map to the **same handle**; unpromoted Subjects drop out | none | the handle (an edge of the canonical graph) | unpromoted |
 | **date** | §7.1 | precision containment | §7.1 | empty |
 | **name** | §7.2 | subsumption per part type | §7.2 | no parts |
+| **depiction** | the same image File (the same pixels) | none | the image | an image `depictionvalues.Readable` refuses |
+
+A depiction's value is its image File; the loader reads it through `depictionvalues.Readable`, and the cache stores it as `value_image_file_id`. `likeness` is `multiple`, so a person's images form a gallery, which shows `kept` and `weak` values. The Person page lists no depiction field.
 
 The same *same value* test (`autoreconcile.Compatible`) decides which Promote comparisons are pinned ([`promote-graph-alignment.md`](promote-graph-alignment.md) §6), so a pin and a Person page never disagree about whether two values match. Scoring uses matching's comparers, so a partial resemblance can raise a match without being pinned.
 
@@ -273,6 +276,7 @@ The auto-reconciler, its cache, the pages that read it, place chains, Promote, a
 | Names: parts by type, subsumption, one name per Person, majority outvotes misspellings only | `core/autoreconcile` |
 | Dates: containment fold, qualifiers and ranges fold into the narrowest closed value, disjoint points stay mixed; `date_lo` / `date_hi` and `sort_key` | `core/autoreconcile` |
 | Per-Property cardinality on that same pipeline | `core/autoreconcile` |
+| Depictions by image File, cached as `value_image_file_id` | `core/autoreconcile`, `core/database/autoreconciler` |
 | Cache, evidence, outcomes, and upkeep (credibility and certainty included) | `core/database/autoreconciler` |
 | Detail read: each field's state, values, and outcomes with their evidence | `core/database/conclusiondetails` |
 | Subject-valued bridges filed by their ends | `core/database/identityclaims` |
