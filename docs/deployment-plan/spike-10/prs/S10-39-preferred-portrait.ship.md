@@ -1,7 +1,7 @@
 # Ship log — S10-39 Preferred portrait
 
 **Plan:** [`S10-39-preferred-portrait.md`](S10-39-preferred-portrait.md) · **Branch:** `s10-39-preferred-portrait` · **PR:** #450
-**State:** fixing 1
+**State:** ready
 
 Base `a439ae24` (main).
 
@@ -46,3 +46,19 @@ Files: `core/database/likenesses/likenesses_test.go`.
 Test first: a new `TestForEntitiesPreferred` case, "stronger negative denying the pointed image falls back". On a fresh fixture with likenesses A (earliest) and B, set the pointer to B with the existing `(*fixture).setPreferred`, then file a stronger negative on B's image the way S10-35's `TestDepictionsReconcileByImage` does (reuse its helper/setup; do not add a new mechanism). Expect: gallery is [A]; `likenesses.Lead` returns A; no likeness has `Preferred` set; the stored `preferred_likeness_observation_id` is still B. The production code is expected to pass it already; report if it does not.
 Do: also replace the hand-written `sameBools` with `slices.Equal` and delete `sameBools`. No production code changes.
 Check: `go test -tags fts5 ./core/database/likenesses/` passes; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `79beb466`. Gate PASS (orchestrator run). F-1 done with no production change: the deny case passed on its first run, as the fix plan expected (`go test -count=1 -tags fts5 -run TestForEntitiesPreferred ./core/database/likenesses/` PASS, 6 cases). The test asserts gallery [A], which only holds if B is denied. `sameBools` replaced by `slices.Equal`.
+
+## Round 2 — review
+Scope `b544f736...79beb466`, lenses CON and MNT (the two with Fix-now findings).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| CON-2 | CON | major | (round 1) deny case untested | Resolved | Reviewer mutation-checked with `go test -overlay`: the case fails when the negative misses B's image, when it is not stronger, when it is positive, and when the `InGallery()` filter is disabled (only this case fails then) |
+| MNT-3 | MNT | minor | (round 1) `sameBools` | Resolved | `rg sameBools core/` empty |
+
+No new findings. Both verdicts Clean.
+
+## Result
+Gate PASS · CI see PR · open blockers/majors: none (CON-1 is the §10 manual check, the user's) · follow-ups: MNT-1 (M-4), MNT-2, MNT-4 (M-3), MNT-5, UX-1, UX-2, UX-3, PRF-1 · to user: CON-1 manual check; MNT-1 pull-forward option
