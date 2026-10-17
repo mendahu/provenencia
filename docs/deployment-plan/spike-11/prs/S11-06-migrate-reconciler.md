@@ -1,6 +1,6 @@
 # S11-06 — Migrate the reconciler onto value compare
 
-**Status:** Planned
+**Status:** Landed in [#456](https://github.com/mendahu/provenencia/pull/456) (2026-10-17)
 **Spike / slice:** Spike 11 · Slice 2 — Value compare, everywhere
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the reconciler's grouping rules change in Go; pages render the cache as they do today)
@@ -331,3 +331,11 @@ None. The user answered the three product calls on 2026-10-17 (D-2, D-3, D-5).
 
 **Title:** S11-06 — Migrate the reconciler onto value compare
 **Body:** objective in one sentence; what shipped against US-1 – US-5; AC evidence (test names); the "Expected changes" rows with their rules; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-06-migrate-reconciler.md`.
+
+## Landed
+
+Differences from the plan:
+
+- Extra tests beyond T-1 to T-7: four `TestModules` and three `TestCompatible` text rows, three `TestDateReconcile` rows, four `TestReconcileNamesWords` rows.
+- `TestCompatibleIgnoresAliases` lives in `modules_test.go` with the other `Compatible` tests.
+- The in-app check (§10 steps 3 and 4) is left for the user.
