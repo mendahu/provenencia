@@ -451,6 +451,44 @@ func TestInstallSeedsEngagementTravelInterestsAndGender(t *testing.T) {
 	}
 }
 
+func TestInstallSeedsLikeness(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	if err := Install(c); err != nil {
+		t.Fatal(err)
+	}
+	likeness, err := properties.Lookup(c, "likeness", properties.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if likeness.ValueType != properties.ValueTypeDepiction || likeness.Cardinality != properties.CardinalityMultiple || likeness.Label != "Likeness" {
+		t.Fatalf("likeness %+v", likeness)
+	}
+	if !LockedBinding("person", "likeness") {
+		t.Fatal("likeness binding is not locked")
+	}
+	person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bindings, err := ListBindings(c, person.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort := -1
+	for _, b := range bindings {
+		if b.Property.Key == "likeness" {
+			sort = b.SortOrder
+		}
+	}
+	if sort != 4 {
+		t.Fatalf("likeness person sort order %d", sort)
+	}
+}
+
 func TestInstallSeedsFuneralAndPallbearer(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
