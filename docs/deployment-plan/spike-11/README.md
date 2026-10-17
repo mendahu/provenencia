@@ -13,6 +13,7 @@ This spike is entirely about the Promote flow's matching: making the algorithm g
 | Doc | Role |
 | --- | --- |
 | [**Comparison layers**](comparison-layers.md) | Requirements for layers 1–6 (value, property, Subject, entity and segment comparison, graph alignment), the lifespan check, the rules every layer follows, and the reuse and retirement inventory |
+| [**Claim evidence**](claim-evidence.md) | Requirements for the Promote sheet's pins: every member's evidence, grouped by property, lazily queried, in plain language |
 
 ## Spike-wide principle: sparse data first
 
@@ -29,6 +30,7 @@ Three generations back, records thin out. Often all there is is a name and a bir
 - **First PR: make the algorithm graspable.** The one-page model with a diagram, the glossary, and the knob inventory, pulled together from the comparison-layers doc. Docs first; it lands before any code moves.
 - **The test suite comes after the model is re-implemented** (scenario files, invariants, simulator, scoreboard, labeler, fitting, dogfood export from [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md)). Re-implementing will teach us things that change it. Each layer's PR still carries its own unit tests and invariants.
 - **Registry starting numbers** are settled with the PR map.
+- **Claim evidence is the last slice,** after the algorithm is re-implemented. It needs a Claude Design brief.
 
 ## Decided so far
 
