@@ -1,6 +1,7 @@
 package conclusionheaders_test
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 	"testing"
@@ -17,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -313,11 +315,65 @@ func TestListPersonsQueryCountIsConstant(t *testing.T) {
 	f.c.Graph().Drop()
 	many, err := conclusionheaders.ListPersonsQueryCount(f.c)
 	must(t, err)
-	// The name row is one query; birth and death are one more, for the whole
-	// list. The count stays put as the list grows.
+	// The name row is one query; birth and death are one more, and the
+	// likeness lead one more, each for the whole list. The count stays put as the list grows.
 	if one < 1 || many != one {
 		t.Fatalf("queries: %d for 1 Person, %d for 51", one, many)
 	}
+}
+
+func TestPersonHeaderLeadsWithEarliestLikeness(t *testing.T) {
+	f := newFixture(t)
+	s, _, h := f.person("Ann Lee")
+	_, _, other := f.person("Bob Lee")
+	likeness, err := properties.Lookup(f.c, "likeness", vocabkey.OriginProvenencia)
+	must(t, err)
+	save := func(shade uint8) observations.Observation {
+		art := observationstest.FileArtifact(t, f.c, userID, f.source.ID)
+		res, _, err := observationstest.SaveCitation(f.c, userID, art, observations.Input{
+			SubjectID: s.ID, PropertyID: likeness.ID,
+			Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 40, 30, shade)},
+		})
+		must(t, err)
+		return res.Observations[0]
+	}
+	imageOf := func(o observations.Observation) []byte {
+		db, err := f.c.DB()
+		must(t, err)
+		var id []byte
+		must(t, db.QueryRow(`SELECT dv.image_file_id FROM observations o
+			JOIN depiction_values dv ON dv.id = o.value_depiction_id WHERE o.id = ?`, o.ID).Scan(&id))
+		return id
+	}
+	lead := func(rows []conclusionheaders.PersonHeader, id []byte) []byte {
+		for _, r := range rows {
+			if bytes.Equal(r.Entity.ID, id) {
+				return r.LikenessImageFileID
+			}
+		}
+		t.Fatalf("no row for %x", id)
+		return nil
+	}
+	if got := lead(f.list(), h); got != nil {
+		t.Fatalf("lead before any likeness: %x", got)
+	}
+	a := save(100)
+	if got := lead(f.list(), h); !bytes.Equal(got, imageOf(a)) {
+		t.Fatalf("lead after A: %x, want %x", got, imageOf(a))
+	}
+	save(200)
+	if got := lead(f.list(), h); !bytes.Equal(got, imageOf(a)) {
+		t.Fatalf("lead after B: %x, want %x", got, imageOf(a))
+	}
+	byIDs, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{h, other})
+	must(t, err)
+	if got := lead(byIDs, h); !bytes.Equal(got, imageOf(a)) {
+		t.Fatalf("PersonsByIDs lead %x", got)
+	}
+	if got := lead(byIDs, other); got != nil {
+		t.Fatalf("person without a likeness leads with %x", got)
+	}
+	must(t, f.c.Graph().Verify())
 }
 
 func TestPersonsByIDs(t *testing.T) {
