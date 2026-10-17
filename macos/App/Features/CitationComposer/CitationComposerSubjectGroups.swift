@@ -139,7 +139,9 @@ struct CitationComposerObservationsColumn: View {
             hoveredLineID?.contains("bridge:\(bridgeID):") == true && hoveredLineID != line.id
         } ?? false
         let fresh = isFresh(line)
-        return HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
+        // A likeness line centres its label against the thumbnail; text lines share a baseline.
+        let rowAlignment: VerticalAlignment = line.imageRelPath == nil ? .firstTextBaseline : .center
+        return HStack(alignment: rowAlignment, spacing: PVSpacing.space4) {
             Group {
                 if let markKey = line.markKey {
                     PVMark(markKey, size: 14, decorative: true)
@@ -155,7 +157,7 @@ struct CitationComposerObservationsColumn: View {
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(minWidth: 92, maxWidth: 124, alignment: .leading)
-            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space2) {
+            HStack(alignment: rowAlignment, spacing: PVSpacing.space2) {
                 if line.negative {
                     Text(L10n.CitationComposer.notWord)
                         .italic()
