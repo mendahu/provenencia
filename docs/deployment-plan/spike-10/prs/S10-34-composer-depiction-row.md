@@ -1,18 +1,18 @@
 # S10-34 — Composer depiction row: draw a face, save it, see it
 
-**Status:** Blocked — on board S10-D15
+**Status:** Blocked — on review-plan round 2
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-34--composer-depiction-row)
-**Brief:** [S10-D15](../design/S10-D15-composer-depiction-row.md), board not agreed yet
-**Board:** the user sends the Claude Design link when the board is agreed; it is recorded here, and before this plan is `Planned` §6 macOS describes each agreed frame in words
-**Depends on:** S10-16 (landed [#384](https://github.com/mendahu/provenencia/pull/384)), S10-54 (landed [#433](https://github.com/mendahu/provenencia/pull/433)), S10-D15; S10-52 is in progress and this plan assumes it has landed — it changes no file this plan names (its plan §6 macOS: "None — no Swift change"), so its landing changes no row here
+**Brief:** [S10-D15](../design/S10-D15-composer-depiction-row.md), board agreed 2026-10-17
+**Board:** Claude Design project *Citation Composer*, file *Citation Composer.dc.html*, section "Depiction row" (Enhancement · S10-D15 → PR S10-34), frames D1a–D10 and D5c: <https://claude.ai/design/p/8b120853-4ba4-4c0d-8492-75e76b9f9b7a?via=share> (the implementer opens it locally). §6 "Frames" describes each frame in words, and the plan was checked against an export of the board
+**Depends on:** S10-16 (landed [#384](https://github.com/mendahu/provenencia/pull/384)), S10-54 (landed [#433](https://github.com/mendahu/provenencia/pull/433)), S10-D15; S10-52 (landed [#437](https://github.com/mendahu/provenencia/pull/437); it changed no file this plan names)
 **Blocks:** —
 **Branch:** `s10-34-composer-depiction-row`
 **Version bump:** none — Spike 10 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** —
 **Context:** [S10-D15](../design/S10-D15-composer-depiction-row.md) CDR-1 to CDR-14; [depictions and likenesses](../depictions-and-likenesses.md) ("Shape": rendering hangs off the value type, the key decides where it shows; "The image"); [S10-54 plan](S10-54-depiction-ffi.md) (store types) and its Landed note; [S10-D3](../design/archive/S10-D3-citation-composer.md) CC-3, CC-4, CC-12; working rules "A depiction's value is its own row: region plus image", "The client renders the image; Go validates it and stores its own copy", "`likeness` is new catalogs only"
-**Planned:** 2026-10-17 against `main` @ `ac05ae8` (S10-54 landed; S10-52 assumed landed)
+**Planned:** 2026-10-17 against `main` @ `cf1f051` (S10-52 and S10-54 landed); first drafted against `ac05ae8`
 **Review:** [`S10-34-composer-depiction-row.review.md`](S10-34-composer-depiction-row.review.md) — round 1: Fits with changes / Not ready → changes applied; round 2 runs once the board is agreed
 
 ### Implementer — read this first
@@ -161,6 +161,9 @@ The engine and the FFI can already store a depiction: a region on the Citation's
 | D-15 | A loaded depiction with `regionHidden` shows the Callout `depictionRegionHidden` *(new)* in the value area; Save is disabled until a region is drawn (CDR-14). | Go hides a region that no longer matches the Citation's page (`depictionvalues.Readable`) | Saving without a region, which Go refuses |
 | D-16 | `FakeStore` stores depictions. `appendFakeObservations` and `fakeObservation` map `valueDepictionID` and `depiction`. A draft or update input with a depiction appends ` depiction=1 depictionFile=present` or ` depictionFile=missing` (from `FileManager.default.fileExists(atPath:)`) to the recorded string, and returns `valueDepictionID = "dep-<n>"` from a private counter `depictionSequence` *(new)* and `depiction = CatalogDepictionValue(regionJSON: input.regionJSON, imageRelPath: "objects/fake/dep-<n>.png")`. An update with no input copies the stored observation's `valueDepictionID` and `depiction`. Error hooks `addObservationsToCitationError` and `updateObservationError` *(new)* throw when set. | Model tests assert the call order, the file during the call, and the error path without Go; hooks are named after the call | A test-only store subclass |
 | D-17 | Tests: `macos/ProvenenciaTests/ArtifactFileFixtures.swift` *(new)* `enum ArtifactFileFixtures` holds `uniqueProjectDir()`, `writePNG(projectDir:relPath:width:height:topHalfRed:)`, `writeBlankPDF(projectDir:relPath:pageCount:)`, `writeMarkedPDF(projectDir:relPath:rotation:)` (one 100×200 pt page, a black 10×10 pt square at the unrotated top-left), and `seedArtifact(_:mediaType:relPath:)`, moved from `CitationAutoTranscribeTests` (which calls them). Model tests go in `CitationComposerDepictionTests.swift` *(new)* with private `makeStore` / `makeModel` that follow `CitationComposerModelTests`' and add `prop-likeness` (key `likeness`, label `Likeness`, `valueType "depiction"`) bound to the person type. Render tests go in `ArtifactRegionCropTests.swift` *(new)*; the crop tests in `OCRImageTests` move there with the functions. `.agents/skills/add-swift-test/SKILL.md` gains one line: shared file fixtures live in `ArtifactFileFixtures`. | One home for Artifact files on disk | Copying the helpers |
+| D-19 | `depictionCaption` *(new)* on the model picks the caption: needs page → `depictionCaptionNeedsPage`; `regionHidden` and no new region → `depictionCaptionHidden`; no region → `depictionCaptionEmpty`; edit session whose locator differs from its baseline → `depictionCaptionRedrawn`; otherwise `depictionCaptionBox`. | One derived value; the board draws five states | A caption stored on the draft |
+| D-20 | The save-error `PVCallout` in `CitationPropertyFields` gains the title `rowStateError` ("Not saved") and moves from after Negative to directly under the value controls, for every value type. | The agreed board (D9a) places and titles it so; one shared form keeps one error placement | A depiction-only error Callout beside the shared one |
+| D-21 | Depiction copy: the edit sheet subtitle is `editDepictionSubtitle(ref:)` for a depiction Property (every depiction edit, including a hidden region); the duplicate note is `depictionDuplicatedFrom(person, property)`; `leaveDraftDetail` / `unsavedSummary` use `leaveDepictionDraft(property:person:ref:)` when the open property draft is a depiction with a region and a person, else the existing `leaveDraft`. The property argument is the Property's label as stored, not lowercased, so "Likeness" keeps its capital in English; the board's lowercase is not reproduced. | The board's copy; lowercasing a label is wrong in languages that capitalize nouns | `localizedLowercase` on the label |
 | D-18 | `xcodebuild`, the Swift tests, and the manual check run on a Mac. Without one, the implementer finishes the non-Xcode checks, stops before STEP-1's Swift check, and reports which checks did not run. | Precedent: S10-23 D-11 | Claiming a Swift check that was not run |
 
 ## 6. Design
@@ -199,21 +202,44 @@ None — the S10-54 fields carry everything.
 
 ### macOS
 
-The frame descriptions are added from the agreed S10-D15 board before this plan leaves `Blocked`. The rows below follow the brief's inventory.
+The rows follow the brief's inventory; "Frames" below describes the agreed board.
 
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
-| Depiction value area | `CitationPropertyFields` `valueControls` `.depiction` case | `macos/App/Features/CitationComposer/CitationComposerAuthoringBox.swift` | `PVThumbnail` preview at CDR-4's size (D-14); `PVButton` `depictionDraw` / `depictionRedraw` → `startDepictionDrawing()`, disabled when `depictionNeedsPage`; `PVCallout` for `depictionNeedsPage` and `depictionRegionHidden`. Shared by the edit sheet |
+| Depiction value area | `CitationPropertyFields` `valueControls` `.depiction` case | `macos/App/Features/CitationComposer/CitationComposerAuthoringBox.swift` | Under the existing "Value" label: an optional warning `PVCallout` (needs page, or hidden region) across the full width, then a row of a 96pt `PVThumbnail` preview (D-14; empty shows the kit's empty dash) and, to its right, a column of an italic caption (`depictionCaption` *(new)*, D-19) above a small secondary `PVButton` with `.crop` — `depictionDraw` or `depictionRedraw` → `startDepictionDrawing()`, disabled when `depictionNeedsPage`. Shared by the edit sheet |
+| Save error | `PVCallout(tone: .danger, title: L10n.CitationComposer.rowStateError, message:)` | `CitationComposerAuthoringBox.swift` `CitationPropertyFields` | D-20: directly under the value controls and above Negative, for every value type |
 | Viewer wiring | `ArtifactViewer` | `macos/App/Features/CitationComposer/CitationComposerViewerPane.swift` | `committedRegion: model.viewerRegion`, `onCommitRegion: { model.commitViewerRegion($0) }`. The locator strip keeps reading `model.locator`. `clearMenuButton` and Set page disabled while `isDrawingDepiction` |
-| Drawing hint | `PVCallout(tone: .info)` + ghost `PVButton` Cancel | `macos/App/Features/CitationComposer/CitationComposerViewerPane.swift` | Above the canvas while drawing: `depictionDrawingHint`, or `depictionWrongPage(page)` with tone `.warning`. Escape calls `cancelDepictionDrawing()` |
+| Drawing hint | `PVCallout(tone: .info)` + ghost `PVButton` `depictionCancel` | `macos/App/Features/CitationComposer/CitationComposerViewerPane.swift` | A band between the locator strip and the canvas, at both widths: the Callout fills the band, Cancel sits to its right. `depictionDrawingHint`, or `depictionWrongPage(page)` with tone `.warning`. Escape calls `cancelDepictionDrawing()` |
 | Saved depiction line | `CachedThumbnail` → `PVThumbnail` | `CitationComposerSubjectGroups.swift` `lineRow`; `CitationComposerAuthoring.swift` `CitationSavedLine` | D-13 |
-| Dialog presentation | `pvFormDialog` | `macos/App/Features/CitationComposer/CitationComposerView.swift` | D-7 bindings |
+| Dialog presentation | `pvFormDialog` | `macos/App/Features/CitationComposer/CitationComposerView.swift` | D-7 bindings; D-21 subtitle |
 
-States: no region → Save disabled, no preview; render failed → `depictionRenderFailed` as the dialog error, region kept; image loading or unreadable → kit thumbnail states; existing PDF Citation with no page → Callout, Draw disabled; hidden region → Callout, Save disabled. Accessibility: D-13 labels; the preview reads `depictionPreviewLabel`; drawing stays pointer-only.
+States: no region → Save disabled, empty preview; render failed → `depictionRenderFailed` in the save-error Callout, region kept; image loading → the kit thumbnail's skeleton; unreadable → the image placeholder glyph; existing PDF Citation with no page → warning Callout, Draw disabled; hidden region → warning Callout, Save disabled. Accessibility: D-13 labels; the preview reads `depictionPreviewLabel`; drawing stays pointer-only.
+
+#### Frames
+
+The agreed board (see **Board**) draws the composer as shipped by S10-16 with these changes. Sample data: a wedding photo of five, a two-page parish newsletter, Ada Lovelace, Ben Ford, Clara Ford.
+
+- **D1a — Likeness in the pick.** The New observation dialog on Ada over the wedding photo; the property combo is open with Interests, Likeness, Name, Occupation. Value still reads "Choose a property first".
+- **D1b — Likeness chosen, nothing drawn.** Subject Ada, Property Likeness. The Value field is the value area: an empty 96pt preview, the caption "Nothing drawn yet. Draw the region on the file", and **Draw on the file**. Save observation disabled. The Citation's transcription reads "No transcription yet".
+- **D2a / D2b — Drawing mode, wide and narrow.** The dialog is gone. The rectangle radio is selected in the tool strip. Between the locator strip and the canvas, the info Callout "Draw the region with the tools above. Escape goes back to the observation." with **Cancel** to its right. The Artifact and Citation selects, Auto transcribe, and Clear are disabled; the label and transcription fields stay as they are. The locator strip still shows the Citation's own region chip; the canvas shows only the rectangle being drawn. The Observations header reads "Unsaved: a draft observation" (existing).
+- **D3 — Ready to save.** The dialog is back: Ada, Likeness, the preview of her face, the caption "The rectangle around the region, up to 2,048 px on its long edge", **Draw again**. Save observation enabled. The canvas behind shows her region.
+- **D4 — Next face.** Ada's likeness line is under her with the existing Saved badge. The dialog stays open: Subject empty and focused ("Person, event or place"), Property **empty** in the frame, value area empty. See D-11: the plan keeps Likeness, as the brief and the board caption say; the frame's empty Property field is a drawing slip.
+- **D5a / D5b — Saved lines, wide and narrow.** Ada: Likeness (32pt thumbnail), Occupation Bridesmaid. Ben: Likeness with the hover actions Edit, Duplicate, Delete. Clara: italic *not*, then the thumbnail, then the Negative badge. The line keeps its usual height.
+- **D5c — Thumbnail states.** Ben's thumbnail loading: the kit skeleton. Clara's unreadable: the image placeholder glyph. VoiceOver: "Likeness, Ben Ford" on the line, "Likeness of Ben Ford" on the thumbnail.
+- **D6a — Edit.** Edit observation, subtitle "OBS-L2BEN · saves on its own. A redraw replaces the image" (D-21). The kind chips are locked with the existing note "A saved row keeps its kind. Duplicate it to record the other". Ben's region shows on the canvas in place of the Citation's. Caption as D3; **Draw again**; Cancel and Save observation.
+- **D6b — Edit, redraw.** Drawing mode over Ben's face, as D2a; the header reads "Unsaved: changes to an observation" (existing).
+- **D6c — Edit, ready to save.** The new region on the canvas; the caption "Redrawn. Saving replaces the saved image".
+- **D7 — Duplicate.** New observation with Ada, Likeness, her region, caption as D3, **Draw again**; the origin note "Duplicated from Ada Lovelace’s likeness. Saving cuts its own image; the original is unchanged" (D-21); the subject combo open, being changed to Clara.
+- **D8a — PDF, new Citation.** Newsletter page 2, Citation "New". After the face is drawn the tool strip shows "Page 2 set" and the locator strip reads Entire document › Page 2 of 2 › the Citation's region chip. Dialog with Ben, Likeness, caption as D3.
+- **D8b — PDF, wrong page.** Existing Citation on page 1, viewer on page 2 in drawing mode: the Callout is the warning "Draw on page 1, this citation's page." with Cancel.
+- **D8c — PDF, no page.** Existing Citation with no page. In the value area, above the preview row, the warning Callout "Set this citation's page to draw a region."; caption "Draw is unavailable until the citation has a page"; **Draw on the file** disabled; Save disabled.
+- **D9a — Save refused.** Under the value area and above Negative, the danger Callout titled "Not saved" with "Draw the region again, or try a smaller one."; region and preview kept; Save enabled.
+- **D9b — Hidden region.** Edit on Clara's negative likeness: the warning Callout "This region no longer matches the citation's page. Draw it again."; caption "Save waits for the region to be drawn again"; **Draw again**; Save disabled. Clara's line still shows her saved image. The board's subtitle here lacks the redraw sentence; D-21 shows it on every depiction edit.
+- **D10 — Leave.** Drawing mode with a region drawn; the existing leave confirm "Leave with unsaved work?" with "The likeness of Clara Ford you drew is not saved. Everything already saved on CIT-0102 stays." (D-21), Keep editing and Discard and leave. Keep editing returns to drawing mode.
 
 ### Strings
 
-L10n keys *(new)* in `L10n.CitationComposer`, with the brief's copy (the agreed board may change it before `Planned`):
+L10n keys *(new)* in `L10n.CitationComposer`, copy from the agreed board:
 
 - `depictionDraw` = "Draw on the file"
 - `depictionRedraw` = "Draw again"
@@ -226,8 +252,16 @@ L10n keys *(new)* in `L10n.CitationComposer`, with the brief's copy (the agreed 
 - `depictionNeedsPage` = "Set this citation's page to draw a region."
 - `depictionRegionHidden` = "This region no longer matches the citation's page. Draw it again."
 - `depictionRenderFailed` = "The region could not be cut from the file. Draw it again."
+- `depictionCaptionEmpty` = "Nothing drawn yet. Draw the region on the file"
+- `depictionCaptionBox` = "The rectangle around the region, up to 2,048 px on its long edge"
+- `depictionCaptionRedrawn` = "Redrawn. Saving replaces the saved image"
+- `depictionCaptionNeedsPage` = "Draw is unavailable until the citation has a page"
+- `depictionCaptionHidden` = "Save waits for the region to be drawn again"
+- `editDepictionSubtitle(ref:)` = "%1$@ · saves on its own. A redraw replaces the image"
+- `depictionDuplicatedFrom(_ person: String, _ property: String)` = "Duplicated from %1$@’s %2$@. Saving cuts its own image; the original is unchanged"
+- `leaveDepictionDraft(property:person:ref:)` = "The %1$@ of %2$@ you drew is not saved. Everything already saved on %3$@ stays."
 
-Removed: none.
+Reused: `rowStateError` ("Not saved") as the save-error title. Removed: none.
 
 ## 7. Steps
 
@@ -266,10 +300,10 @@ Files: `CitationComposerModel+Authoring.swift` (`duplicate(line:)`).
 Do: D-10.
 Check: T-18 passes; `duplicateDoesNotWriteAndConfirmsADirtyDraft` passes.
 
-**STEP-8 — Dialog value area**
-Files: `CitationComposerAuthoringBox.swift` (`valueControls`, post-save focus). Skill: `add-ui-component`.
-Do: §6 macOS row "Depiction value area", per the agreed board.
-Check: the app builds in `xcodebuild`; manual check steps 1–4.
+**STEP-8 — Dialog value area and depiction copy**
+Files: `CitationComposerAuthoringBox.swift` (`valueControls`, the save-error Callout, post-save focus), `CitationComposerModel+Depiction.swift` (`depictionCaption`), `CitationComposerModel.swift` (`leaveDraftDetail`, `unsavedSummary`), `CitationComposerView.swift` (`editSheetSubtitle`), `CitationComposerModel+Authoring.swift` (`duplicate(line:)` note). Skill: `add-ui-component`.
+Do: §6 macOS rows "Depiction value area" and "Save error", frames D1b, D3, D6a, D6c, D8c, D9a, D9b, D10; D-19, D-20, D-21.
+Check: T-22, T-23 pass; the app builds in `xcodebuild`; manual check steps 1–4.
 
 **STEP-9 — Saved depiction line**
 Files: `CitationComposerAuthoring.swift` (`CitationSavedLine`, `groups`), `CitationComposerSubjectGroups.swift` (`lineRow`).
@@ -309,6 +343,8 @@ Swift Testing. Model tests use `FakeStore` with `prop-likeness` bound to person 
 | T-18 | Swift | `CitationComposerDepictionTests.swift` `duplicateCopiesTheRegionNotTheImage` *(new)* | duplicate → same subject, property, polarity, region; empty `valueDepictionID` and `imageRelPath`; no write; focus `.subject` | AC-2.3, D-10 |
 | T-19 | Swift | `CitationComposerDepictionTests.swift` `savedLineCarriesItsImage` *(new)* | listed depiction with `imageRelPath "objects/ab/cd.png"` → line `imageRelPath` that path, `valueText` empty | AC-1.7, D-13 |
 | T-20 | Swift | `CitationComposerDepictionTests.swift` `drawingDisablesCitationControlsAndLeaveReturns` *(new)* | while drawing → `isDrawingDepiction`; navigation requested → leave confirm; Keep editing → `presented == .drawingDepiction(over: .authoring)` | AC-1.9, AC-1.10, D-7 |
+| T-22 | Swift | `CitationComposerDepictionTests.swift` `captionFollowsTheDraft` *(new)* | no region → `depictionCaptionEmpty`; region → `depictionCaptionBox`; edit after a redraw → `depictionCaptionRedrawn`; existing PDF Citation with no page → `depictionCaptionNeedsPage`; hidden region → `depictionCaptionHidden` | D-19 |
+| T-23 | Swift | `CitationComposerDepictionTests.swift` `depictionCopyNamesThePropertyAndPerson` *(new)* | drawn draft on Clara → `unsavedSummary` is `leaveDepictionDraft("Likeness", "Clara Ford", ref)`; duplicate of Ada's line → note is `depictionDuplicatedFrom("Ada Lovelace", "Likeness")` | D-21 |
 | T-21 | Swift | `CitationComposerDepictionTests.swift` `hiddenRegionAsksForARedraw` *(new)* | edit a depiction loaded with empty `regionJSON` → `editCanConfirm == false`; after a commit → true | AC-2.4, D-15 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `CitationComposerModelTests` (`saveKeepsTheSubject`, `incompatibleSubjectClearsPropertyAndDisablesSave`, `propertyDraftWalksSubjectThenPropertyThenValue`), `CitationAutoTranscribeTests`, and `OCRImageTests` after the moves.
@@ -365,7 +401,7 @@ On a Mac, in a project created after S10-32 (so it has Likeness), with a Source 
 
 ## 12. Open questions
 
-- **Board not agreed.** S10-D15 is written; the user sends the Claude Design link when the board is agreed. Then §6 macOS gains a word description of each frame, §6 Strings is checked against it, and the plan goes through `review-plan` round 2.
+None.
 
 ## 13. PR
 
