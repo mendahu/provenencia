@@ -30,7 +30,8 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 | [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md) — "make the algorithm graspable" (one-page model, glossary, knob inventory) | S11-01 | — |
 | Same — "are the levers right?" | S11-02 – S11-16 (the layer rewrite) | — |
 | Same — known gaps | [`comparison-layers.md`](comparison-layers.md) open questions | — |
-| Claim evidence shows only the first member; "Through <name>" wording | S11-19, S11-20 | S11-D2 |
+| Claim evidence shows only the first member; "Through <name>" wording | S11-19, S11-25, S11-20 | S11-D2 |
+| [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md) — "Primary Subject kinds", "In-list text matching" | S11-23, S11-08 | — |
 | Reuse inventory ([`comparison-layers.md`](comparison-layers.md#reuse-across-the-app)) | S11-05 – S11-08, S11-13, S11-19 | — |
 
 **Stays in the ideas folder** — the rest of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md): scenario files and goldens runner, random-graph invariants, the simulated world, the scoreboard, the labeler, fitting, and dogfood export. Whether they join this spike is decided after the re-implementation.
@@ -63,8 +64,13 @@ These are the calls for this spike. PR plans treat them as binding.
 - **Bands come from evidence** ([bands](comparison-layers.md#bands)): similarity only gates candidates and gives the first sort. The accept bar is its own setting. A conflict shows a contested marker; it never caps the band.
 - **Frequency weighting is gone**, for names, event types and toponyms ([frequency](comparison-layers.md#frequency)).
 - **One match registry** ([match registry](comparison-layers.md#match-registry)): `core/matchregistry`, one file per section (value, subject, segment, alignment, evidence), typed keys, each layer gets its section as an argument. Catalog data (aliases, name patterns) is passed in; data-model facts (cardinality, term flags, bridge kinds) stay in the catalog. A guard test fails on numeric literals other than 0 and 1 in layer packages; another fails when the knob inventory drifts from the registry.
-- **`core/database/matching` is deleted, not migrated.** Nothing calls `ForSubject` or `ForEntity` outside its tests. Merge hints are rebuilt on subject compare over two profiles when their UI exists.
+- **`core/database/matching` is deleted.** `ForSubject` and `ForEntity` have no callers outside tests; merge hints are rebuilt on subject compare over two profiles when their UI exists. Its one live function, `SubjectsValues` (called from `promotealign/layer.go`), moves to the loader that feeds `propertycompare` and `subjectprofile` in S11-13.
 - **The reconciler keeps its own decisions** and builds them on value compare. Its grouping policy is decided in S11-06's plan.
+- **Pure value types and kinds come first.** The date and name value structs, their display helpers, the name part-type registry, and the value-type and cardinality constants move out of `core/database` into pure packages (S11-22), and primary Subject kinds get one home (S11-23), before any layer is built. No layer defines its own copy.
+- **One matching skill, grown with the layers.** S11-02 adds a skill (working name `add-match-rule`) for the steps every change repeats: the knob in its registry section, its inventory row, contract tests, the guard list entry. S11-10, S11-14 and S11-16 extend it. Each migration PR also updates the domain docs and idea files it makes false (`matching.md`, `promote-graph-alignment.md`, `conclusion-reconciliation.md`, `seeded-vocabulary.md`, `ideas/daitch-mokotoff.md`, `ideas/name-matching-enhancements.md`).
+- **One guard, not one per package.** The purity and numeric-literal checks are one repo-walking test (like `core/writes/begin_test.go` `TestBeginOnlyInDatabaseAndWrites`) with a list of layer packages; each layer PR adds its line.
+- **One wire vocabulary.** Promote's flags and reason codes extend `graphalign.RowFlags` and `graphalign.Reason`, and Swift parses them in `Platform/ConclusionVocabulary.swift` under `api/ffi/swift_vocabulary_test.go`, along with the relation and cause codes the evidence sheet words.
+- **The pin policy has one owner, in Go.** Default pins come from the registry evidence section, applied in Go at Apply for rows whose sheet was never opened, and by the evidence RPC for rows that were.
 
 ### Claim evidence
 
@@ -77,8 +83,10 @@ These are the calls for this spike. PR plans treat them as binding.
 | PR | Title | Slice | Scope | Brief | Depends on | Plan | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | S11-01 | One-page matching model | 1 | Diagram, glossary, knob inventory with starting values and estimates | — | — | — | Scoped |
-| S11-02 | Value compare core and match registry | 2 | `valuecompare` contract, `Key`, text / term / integer, `matchregistry` skeleton and value section, guard tests | — | S11-01 | — | Scoped |
-| S11-03 | Value compare: names | 2 | Name comparer on relations; word helpers move in from `autoreconcile` | — | S11-02 | — | Scoped |
+| S11-22 | Pure value types | 1 | Date and name value structs, display helpers, part types, value-type and cardinality constants move to pure packages | — | — | — | Scoped |
+| S11-23 | One home for primary kinds | 1 | `person` / `event` / `place` and their locked property keys in one pure place; the hand-written lists use it | — | S11-22 | — | Scoped |
+| S11-02 | Value compare core and match registry | 2 | `valuecompare` contract, `Key`, text / term / integer, `matchregistry` skeleton and value section, the guard, the matching skill | — | S11-01, S11-22, S11-23 | — | Scoped |
+| S11-03 | Value compare: names | 2 | Name comparer on relations; word helpers move in from `autoreconcile`; alias seeds to `namealiases` | — | S11-02 | — | Scoped |
 | S11-04 | Value compare: dates | 2 | Date comparer on relations; date windows move in; `ABT` as a range | — | S11-02 | — | Scoped |
 | S11-05 | Migrate matching onto value compare | 2 | `match`, `graphalign`, `promotealign` call `valuecompare`; `match`'s comparers deleted | — | S11-03, S11-04 | — | Scoped |
 | S11-06 | Migrate the reconciler onto value compare | 2 | `Compatible`, keys, grouping policy, place-chain windows, `hasValue` copy | — | S11-05 | — | Scoped |
@@ -88,14 +96,16 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-10 | Subject compare | 3 | `subjectcompare` + registry subject section; pairs; similarity and evidence | — | S11-09 | — | Scoped |
 | S11-11 | Subject profile and entity compare | 3 | `subjectprofile.Build`: strict profile, denied as negatives, `Excluding` | — | S11-10 | — | Scoped |
 | S11-12 | Lifespan for people | 3 | Profile builder derives a lifespan; subject compare checks it | — | S11-11 | — | Scoped |
-| S11-13 | Migrate Promote scoring onto subject compare | 3 | Property scoring, seeding, duplicate rows; delete `core/match`, `core/database/matching`, frequency | — | S11-12 | — | Scoped |
+| S11-24 | Delete frequency weighting | 3 | `Stats.ValueFreq`, `Stats.Words`, m / u priors, frequency scales and their benchmark go | — | S11-05 | — | Scoped |
+| S11-13 | Migrate Promote scoring onto subject compare | 3 | Property scoring, seeding, duplicate rows; values loader moves; delete `core/match`, `core/database/matching` | — | S11-12, S11-24 | — | Scoped |
 | S11-14 | Segment compare | 4 | `segmentcompare`, typed bridge keys, birth / death cardinality, one-hop credit | — | S11-13 | — | Scoped |
 | S11-15 | Shortlist index | 4 | Key → handles per kind on `graphcache`; registry shortlist keys | — | S11-13 | — | Scoped |
 | S11-16 | Rewrite graph alignment | 4 | Layer 6 procedure, bands from evidence, accept bar; old walk and registry deleted | — | S11-14, S11-15 | — | Scoped |
 | S11-17 | Contested flag through FFI | 4 | Proposal rows carry contested and move reasons to Swift | — | S11-16 | — | Scoped |
 | S11-18 | Contested marker on Promote rows | 4 | The marker on the page | S11-D1 | S11-17, S11-D1 | — | Scoped |
-| S11-19 | Claim evidence query | 5 | Lazy per-row RPC; member lines, collapse, relationship bundles, pin policy; `attachExhibits` removed | — | S11-16 | — | Scoped |
-| S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy | S11-D2 | S11-19, S11-D2 | — | Scoped |
+| S11-19 | Claim evidence query | 5 | Go query: member lines, collapse, relationship bundles; registry evidence section | — | S11-16 | — | Scoped |
+| S11-25 | Claim evidence RPC and pin policy | 5 | Lazy per-row RPC; Go default pins at Apply; Swift drafting moves onto it; proposal field 9 and `attachExhibits` removed | — | S11-19 | — | Scoped |
+| S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy | S11-D2 | S11-25, S11-D2 | — | Scoped |
 | S11-21 | Large-Source performance check | 6 | 100-Subject benchmark; memoize only if it fails | — | S11-16 | — | Scoped |
 | S11-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
@@ -111,9 +121,12 @@ These are the calls for this spike. PR plans treat them as binding.
 **✎ = design brief**, just before the PR it gates. **Check** = what you can verify when the slice lands.
 
 ```text
-SLICE 1 — Graspable model
-  S11-01  One-page matching model
-  Check: one doc explains every layer, term and knob; each knob has a starting value.
+SLICE 1 — Graspable model and pure foundations
+  S11-01  One-page matching model       (parallel with S11-22)
+  S11-22  Pure value types
+  S11-23  One home for primary kinds
+  Check: one doc explains every layer, term and knob; each knob has a starting value;
+         date and name values, value types and kinds import nothing from core/database.
 
 SLICE 2 — Value compare, everywhere
   S11-02  Value compare core and match registry
@@ -132,6 +145,7 @@ SLICE 3 — Property, Subject and entity compare
   S11-10  Subject compare
   S11-11  Subject profile and entity compare
   S11-12  Lifespan for people
+  S11-24  Delete frequency weighting    (any time after S11-05)
   S11-13  Migrate Promote scoring onto subject compare
   Check: a birth is never proposed on a death; a person who died before the
          Subject's birth is not proposed; core/match, core/database/matching and
@@ -149,6 +163,7 @@ SLICE 4 — Segments and graph alignment
 
 SLICE 5 — Claim evidence
   S11-19  Claim evidence query
+  S11-25  Claim evidence RPC and pin policy
   ✎ S11-D2 ──▶ S11-20  Claim evidence sheet
   Check: five named members show as matches with identical values collapsed;
          "They have a matching birth event" pins its bundle; pins land on every member.
@@ -161,18 +176,20 @@ SLICE 6 — Performance
 S11-99 — Dogfood close / docs
 ```
 
-Parallel: S11-03 with S11-04; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 6 after S11-16. S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
+Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 6 after S11-16. S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
 
 ### Dependencies at a glance
 
 ```text
-S11-01 ──▶ S11-02 ──▶ S11-03 ──┐
+S11-22 ──▶ S11-23 ──┐
+S11-01 ─────────────┴──▶ S11-02 ──▶ S11-03 ──┐
                  └──▶ S11-04 ──┴──▶ S11-05 ──▶ S11-06 ──▶ S11-08
                                        ├──▶ S11-07
-                                       └──▶ S11-09 ──▶ S11-10 ──▶ S11-11 ──▶ S11-12 ──▶ S11-13
+                                       ├──▶ S11-24 ─────────────────────────────────────┐
+                                       └──▶ S11-09 ──▶ S11-10 ──▶ S11-11 ──▶ S11-12 ──┴──▶ S11-13
 S11-13 ──▶ S11-14 ──┐
 S11-13 ──▶ S11-15 ──┴──▶ S11-16 ──▶ S11-17 ──▶ S11-18
-                            ├──▶ S11-19 ──▶ S11-20
+                            ├──▶ S11-19 ──▶ S11-25 ──▶ S11-20
                             └──▶ S11-21
 S11-D1 ──▶ S11-18
 S11-D2 ──▶ S11-20
@@ -184,7 +201,7 @@ S11-D2 ──▶ S11-20
 
 Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not restate.
 
-### Slice 1 — Graspable model
+### Slice 1 — Graspable model and pure foundations
 
 #### S11-01 — One-page matching model
 
@@ -193,18 +210,32 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 **Check.** A reader can trace a Promote row from value compare to band on one page; every knob in the comparison-layers doc appears in the inventory with a value.
 **Context.** Rule "Registry numbers: carry over, then estimate"; [`comparison-layers.md`](comparison-layers.md) whole; [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md) "First: make the algorithm graspable"; [`promote-graph-alignment.md`](../../promote-graph-alignment.md) (superseded sections are marked).
 
+#### S11-22 — Pure value types
+
+**Ships.** `datevalues.Value` and `namevalues.Value`, their display helpers (`CompactDisplay` and kin), the name part-type registry, and `properties`' value-type and cardinality constants move to pure packages with no `core/database` import. Every caller (about 65 files, including `valuecodec`, `eventtitle`, `autoreconcile`) points at them. The database packages keep only their queries. `add-date-value` and `add-name-value` skills say where the types live.
+**Not this PR.** Any comparison change.
+**Check.** `go list -deps` of the new packages has nothing under `core/database`; `go build ./...` and the tests pass.
+**Context.** Rule "Pure value types and kinds come first"; [purity](comparison-layers.md#purity-requirements).
+
+#### S11-23 — One home for primary kinds
+
+**Ships.** `person`, `event`, `place` and their locked property keys in one pure place; `promote.primaryKinds`, `match.ProfiledKinds`, `promotealign/layer.go` and the `FakeStore` literals use it. `sourcegraphprogress` drops its `promote` import. Closes "Primary Subject kinds" in [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md).
+**Not this PR.** Registry keys (S11-02 uses these).
+**Check.** No hand-written kind list remains (grep); tests pass.
+**Context.** [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md) "Primary Subject kinds".
+
 ### Slice 2 — Value compare, everywhere
 
 #### S11-02 — Value compare core and match registry
 
-**Ships.** `core/valuecompare`: pure value types, `Result` (relation + similarity), `Detail` (parts, cause codes, value refs), `Key`, and the text, term and integer comparers. `core/matchregistry` with `Default()` and the value section. Import guard, contract tests, the no-magic-numbers guard, and the inventory-drift guard.
+**Ships.** `core/valuecompare`: pure value types, `Result` (relation + similarity), `Detail` (parts, cause codes, value refs), `Key`, and the text, term and integer comparers. `core/matchregistry` with `Default()` and the value section. Registry keys use S11-23's kinds and property keys. One repo-walking guard (purity and numeric literals over a list of layer packages), contract tests, and the inventory-drift guard. The matching skill (`add-match-rule`), first version.
 **Not this PR.** Names (S11-03), dates (S11-04), any caller (S11-05).
 **Check.** `go test ./core/valuecompare/... ./core/matchregistry/...` passes with no build tags; the contract tests run against every comparer.
 **Context.** [Layer 1](comparison-layers.md#layer-1-value-comparison), [relations](comparison-layers.md#relations), [detail](comparison-layers.md#detail), [purity](comparison-layers.md#purity-requirements), [match registry](comparison-layers.md#match-registry).
 
 #### S11-03 — Value compare: names
 
-**Ships.** The name comparer on relations and parts detail: folds, particles, aliases (tokens normalized), initials, spelling (`Near` minimum 0.8 for words, 0.75 for names), generation conflict, swapped part types → `Near`. `SpellingSimilarity`, `EditDistance`, `NormalizeForm` and `IsInitial` move in from `core/autoreconcile`. No frequency.
+**Ships.** The name comparer on relations and parts detail: folds, particles, aliases (tokens normalized), initials, spelling (`Near` minimum 0.8 for words, 0.75 for names), generation conflict, swapped part types → `Near`. `SpellingSimilarity`, `EditDistance`, `NormalizeForm` and `IsInitial` move in from `core/autoreconcile`. `AliasTable`, `NameRole` and `NamePattern` move to `valuecompare`; the alias and nickname seeds, `Register`, and `third_party/nicknames/` move to `namealiases`, with `add-seeded-vocabulary` and [`seeded-vocabulary.md`](../../seeded-vocabulary.md) updated. No frequency.
 **Not this PR.** Callers (S11-05). The reconciler's grouping (S11-06).
 **Check.** Today's `names_test.go` ladders and generated invariants pass on the new relations; the worked name cases in the relations table hold.
 **Context.** [Relations](comparison-layers.md#relations) worked cases; [`matching.md`](../../matching.md) Names.
@@ -218,14 +249,14 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-05 — Migrate matching onto value compare
 
-**Ships.** `core/match` (`Score`, `Evaluate`, `pairValues`, `poolPeriods`), `core/graphalign` and `core/database/promotealign` (`pairExhibits`, stats) call `valuecompare`; `nameformats.Loaded.Comparer` builds its rules. `match`'s comparers, `DiscountComparer` and the name frequency discount are deleted.
+**Ships.** `core/match` (`Score`, `Evaluate`, `pairValues`, `poolPeriods`), `core/graphalign` and `core/database/promotealign` (`pairExhibits`, stats) call `valuecompare`; `nameformats.Loaded.Comparer` builds its rules. `match`'s comparers, `DiscountComparer` and the name frequency discount are deleted. [`matching.md`](../../matching.md) and `ideas/daitch-mokotoff.md` point at the new code.
 **Not this PR.** Layer 2 and up (slice 3). The reconciler (S11-06).
 **Check.** The obituary golden and sparse cases pass (expected values updated where relations change them); `core/match` has no comparer types left.
 **Context.** Rules "Build, then migrate", "High tolerance for churn"; [what moves where](comparison-layers.md#what-moves-where-in-todays-code).
 
 #### S11-06 — Migrate the reconciler onto value compare
 
-**Ships.** `autoreconcile` keys, `Compatible`, `subsumes` / `partFits` and the pipeline's grouping use `valuecompare` relations under a grouping policy the plan decides (recommendation on record: group on `Same` and `Contains`, not `Equivalent`). `conclusionheaders` place chains use day-precision windows. `autoreconciler.hasValue` calls `carries`.
+**Ships.** `autoreconcile` keys, `Compatible`, `subsumes` / `partFits` and the pipeline's grouping use `valuecompare` relations under a grouping policy the plan decides (recommendation on record: group on `Same` and `Contains`, not `Equivalent`). `conclusionheaders` place chains use day-precision windows. `autoreconciler.hasValue` calls `carries`. [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) says what the reconciler now uses.
 **Not this PR.** Pins (S11-19).
 **Check.** `Sainte-Anne` / `Sainte Anne` group; `J. Robins` folds into `James Robins`; a place chain with two same-year dates folds by day; `Montréal` / `Montreal` follow the chosen policy.
 **Context.** [Reuse inventory](comparison-layers.md#reuse-across-the-app); [decided 2026-10-17](comparison-layers.md#decided-on-2026-10-17) (reconciler grouping); rule "The reconciler keeps its own decisions"; [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md).
@@ -239,7 +270,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-08 — One normalization helper in Swift
 
-**Ships.** One Swift normalize helper (case and diacritic fold, matching `Key`'s text rules) used by `PVComboBox`, the list filters (`PropertiesModel`, `SourcesModel`, `GraphCanvasItemLayer`, `PVFloatingMenuSelection`); `FakeStore` groups names by parts, not by lowercase form.
+**Ships.** `PVComboBoxMatch.normalize` becomes the shared Swift normalize helper (case and diacritic fold, a locale parameter defaulting to the current one), used by `PVComboBox`, the list filters (`PropertiesModel`, `SourcesModel`, `GraphCanvasItemLayer`, `PVFloatingMenuSelection`) and `DateValueTranscriptionMatch`; `FakeStore` groups names by parts, not by lowercase form. Closes "In-list text matching" in [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md).
 **Not this PR.** Go changes.
 **Check.** Filtering `jose` finds `José` in every list; `FakeStore`-backed tests group names like Go does.
 **Context.** [Reuse inventory](comparison-layers.md#reuse-across-the-app) "Lighter touch"; [`add-swift-test`](../../../.agents/skills/add-swift-test/SKILL.md).
@@ -258,6 +289,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 **Ships.** `core/subjectcompare` and the registry's subject section: per Subject type and property, agree weight and conflict penalty (event type: low agree, very large conflict); the pairs (sex with gender; `date` with `start_date` / `end_date`); similarity and evidence.
 **Not this PR.** Profiles (S11-11), lifespan (S11-12), callers (S11-13).
 **Check.** The layer 3 examples hold (name 1.0 / 2.5; name + gender 1.0 / 3.1; birth vs death with matching dates ≈ 0.09).
+Ports `subjectvocab`'s `TestDefaultProfileCardinality` as "every registry `PropertyKey` is a seeded Property". Extends the matching skill.
 **Context.** [Layer 3](comparison-layers.md#layer-3-subject-comparison); rule "Sparse data first".
 
 #### S11-11 — Subject profile and entity compare
@@ -276,37 +308,44 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-13 — Migrate Promote scoring onto subject compare
 
-**Ships.** `graphalign` scores candidates' properties with entity compare; `promotealign` seeds with it instead of `match.Rank`; duplicate-row checks (`alikeNew`, `pairNode`) use subject compare. Delete `core/match`, `core/database/matching`, `Stats.ValueFreq`, `Stats.Words`, the m / u priors and frequency scales.
+**Ships.** `graphalign` scores candidates' properties with entity compare; `promotealign` seeds with it instead of `match.Rank`; duplicate-row checks (`alikeNew`, `pairNode`) use subject compare. `matching.SubjectsValues` moves to the loader that feeds `propertycompare` and `subjectprofile`. Delete `core/match` and `core/database/matching`.
 **Not this PR.** Segments and the walk (slice 4): the old walk stays until S11-16, calling the new scoring.
 **Check.** Golden and sparse cases pass; a birth is never proposed on a death; the packages are gone and `go build ./...` passes.
-**Context.** Rules "`core/database/matching` is deleted", "Frequency weighting is gone"; [frequency](comparison-layers.md#frequency).
+**Context.** Rule "`core/database/matching` is deleted".
+
+#### S11-24 — Delete frequency weighting
+
+**Ships.** Remove `Stats.ValueFreq`, `Stats.Words`, `countNameWords`, the m / u priors (`MPrior`, `UPrior`), the frequency scales and their lift, and `BenchmarkLoadStatsNames`; event type and toponym get plain weights.
+**Not this PR.** Fan-out (S11-14).
+**Check.** Golden and sparse cases pass with plain weights; no frequency symbol remains (grep).
+**Context.** Rule "Frequency weighting is gone"; [frequency](comparison-layers.md#frequency).
 
 ### Slice 4 — Segments and graph alignment
 
 #### S11-14 — Segment compare
 
-**Ships.** `core/segmentcompare`: neighbor by entity compare, bridge by subject compare on its properties plus direction and inverse terms; typed `BridgeKey`; registry segment section (subject of birth / death is one-cardinality, neighbor credit one hop, link support). The layer loader reads link kinds from `connectrules` instead of a list in code. Output carries value refs for the evidence bundle.
+**Ships.** `core/segmentcompare`: neighbor by entity compare, bridge by subject compare on its properties plus direction and inverse terms; typed `BridgeKey`; registry segment section (subject of birth / death is one-cardinality, neighbor credit one hop, link support). The layer loader reads link kinds from `connectrules` instead of a list in code. Output carries value refs for the evidence bundle. Fan-out goes: `Stats.FanOut`, `promotealign/stats.go`'s `addFanOut` / `sqlFanOut`, `FanOutUnknown`. Extends the matching skill.
 **Not this PR.** The walk (S11-16).
 **Check.** A spouse never corresponds to a sibling; parent ↔ child corresponds with ends swapped; differing births subtract; differing residences are unknown.
 **Context.** [Segments](comparison-layers.md#segments-layer-5-and-graph-alignment-layer-6).
 
 #### S11-15 — Shortlist index
 
-**Ships.** A key → handles map per kind on `graphcache`, built with `valuecompare.Key` from the registry's shortlist keys (person name words, not initials; event type + year bucket; toponym), dropped on a handle commit.
+**Ships.** A key → handles map per kind on `graphcache`, built with `valuecompare.Key` from the registry's shortlist keys (person name words, not initials; event type + year bucket; toponym). It reuses `graphcache`'s stats slot (`Stats` / `SetStats` / `statsOK`, renamed), dropped on a handle commit like today.
 **Not this PR.** Using it in the walk (S11-16). A coarse misspelling key (open; [decided 2026-10-17](comparison-layers.md#decided-on-2026-10-17)).
 **Check.** "J. Robins" shortlists every handle with `robins`; aliases share a key; no `Same` / `Equivalent` pair is missed (property test).
 **Context.** [Layer 6 procedure](comparison-layers.md#layer-6-procedure) step 1; [vocabulary](comparison-layers.md#vocabulary-finding-candidates).
 
 #### S11-16 — Rewrite graph alignment
 
-**Ships.** `graphalign.Align` follows the layer 6 procedure: shortlist and nominate, top K with ties, one queue, segments around accepted pairs, dirty-pair settling with reasons, bands from evidence, the accept bar, the contested flag on rows. Registry alignment section. Delete the old walk, fallback, `refineOneHop` and `core/graphalign/registry.go`.
+**Ships.** `graphalign.Align` follows the layer 6 procedure: shortlist and nominate, top K with ties, one queue, segments around accepted pairs, dirty-pair settling with reasons, bands from evidence, the accept bar. Contested is a `RowFlags` field and move reasons are `Reason` codes; the plan decides whether `ConflictWithFixed` is subsumed. Registry alignment section. Delete the old walk, fallback, `refineOneHop` and `core/graphalign/registry.go`. [`promote-graph-alignment.md`](../../promote-graph-alignment.md) and the matching skill are updated.
 **Not this PR.** FFI and UI for contested (S11-17, S11-18). Memoization (S11-21).
 **Check.** The invariants hold (order, decided rows, re-run, start-independence); name + birth date proposes strong; a decision moves only its neighborhood.
 **Context.** [Layer 6 procedure](comparison-layers.md#layer-6-procedure), [bands](comparison-layers.md#bands).
 
 #### S11-17 — Contested flag through FFI
 
-**Ships.** The proposal's contested flag and move reasons reach Swift through `engine.proto` and the Promote handler.
+**Ships.** The contested flag and move reasons reach Swift through `engine.proto` and the Promote handler. Promote's reason codes move from `PromoteFlow.swift` into `Platform/ConclusionVocabulary.swift`, under `api/ffi/swift_vocabulary_test.go`.
 **Not this PR.** The marker (S11-18).
 **Check.** A handler test returns contested on a row with a conflicting comparison.
 **Context.** [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md); [bands](comparison-layers.md#bands).
@@ -322,10 +361,17 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-19 — Claim evidence query
 
-**Ships.** A lazy per-row RPC from the page's targets: property lines per member through property compare, identical values collapsed, relationship lines through segment compare with bundles, the registry evidence section (pin defaults, defining properties), wording keys from cause codes. Pins write one incoming Observation against many member Observations. `attachExhibits`, `pairExhibits`, `withRowLines` and `refLine` are removed from the proposal read.
-**Not this PR.** The sheet (S11-20).
-**Check.** Five named members give one collapsed name line of five; a matching birth gives one relationship line whose pin writes its whole bundle; Done backfills every member's claim.
+**Ships.** A Go query from a row's target and its neighbors' targets: property lines per member through property compare, identical values collapsed, relationship lines through segment compare with bundles, the registry evidence section (pin defaults, defining properties), wording keys from cause codes.
+**Not this PR.** The RPC, Apply defaults and Swift (S11-25). If the plan finds the pin tables can't hold one incoming Observation against many member Observations, a migration PR is cut ahead of it.
+**Check.** Five named members give one collapsed name line of five; a matching birth gives one relationship line whose bundle holds every Observation behind it.
 **Context.** [`claim-evidence.md`](claim-evidence.md); [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §9.
+
+#### S11-25 — Claim evidence RPC and pin policy
+
+**Ships.** A lazy per-row RPC over S11-19's query. Apply computes default pins in Go for rows whose sheet was never opened. Swift's pin drafting (`PromoteFlow.swift` `draftedPins`, `draftedArgument`, `kept.pins`) moves onto the RPC. `PromoteGraphAlignmentRow.comparisons` (field 9), `attachExhibits`, `pairExhibits`, `withRowLines` and `refLine` are deleted. Pins write one incoming Observation against many member Observations; Done backfills every member's claim.
+**Not this PR.** The new sheet layout (S11-20); the shipped sheet reads the new lines unchanged in shape.
+**Check.** Done on a row never opened pins its matching lines; opening the sheet shows the same defaults; every member's claim is backfilled.
+**Context.** Rule "The pin policy has one owner, in Go"; [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md).
 
 #### S11-20 — Claim evidence sheet
 
@@ -338,7 +384,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-21 — Large-Source performance check
 
-**Ships.** A benchmark on a generated 100-Subject Source against a few thousand handles, with a budget, in the test suite. Memoization of layers 1–4 across re-runs only if the benchmark fails; if built, a test that cached and uncached runs propose the same.
+**Ships.** A budgeted `Test…` (not a `Benchmark…`, which `scripts/check-pr.sh` never runs) on a 100-Subject Source against a few thousand handles, reusing `promotealign/bench_test.go`'s `newFixture` and `bulkCanon`. Memoization of layers 1–4 across re-runs only if the benchmark fails; if built, a test that cached and uncached runs propose the same.
 **Not this PR.** Anything the benchmark doesn't need.
 **Check.** The benchmark passes; the PR says whether memoization was needed.
 **Context.** [Layer 6 procedure](comparison-layers.md#layer-6-procedure) step 6.
