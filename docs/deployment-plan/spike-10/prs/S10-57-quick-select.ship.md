@@ -1,7 +1,7 @@
 # Ship log — S10-57 Hold Shift to select; Select disarms after one rectangle
 
 **Plan:** [`S10-57-quick-select.md`](S10-57-quick-select.md) · **Branch:** `s10-57-quick-select` · **PR:** #428
-**State:** review 2
+**State:** ready
 
 ## Round 0 — implement
 Base: branch `s10-57-quick-select` cut from `main` @ `af50bd67`. The plan merged as S10-56 in #426, which reused the object store's number (#425). It is renumbered to S10-57 on this branch: files renamed, map row and scope entry updated (user, 2026-10-17).
@@ -34,3 +34,9 @@ Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10
 
 ## Round 1 — fix
 Head `455ab6fd`. Gate PASS (orchestrator run). F-1 done (docs only; no failing test applies). Deviations: none.
+
+## Round 2 — review
+Lenses: CON, UX (the lenses with Fix-now findings). Scope `8b071471...455ab6fd`. Both clean; CON-1 (repo half) and UX-3 resolved. The PR body's "Deviations: None" is rewritten at finish. No new blockers → no Fix plan 2.
+
+## Result
+Gate PASS · CI see PR #428 · open: none · follow-ups: CON-2/UX-4, UX-1, UX-2, MNT-1, MNT-2 · to user: manual check (§10) · user decisions: renumber S10-56 → S10-57
