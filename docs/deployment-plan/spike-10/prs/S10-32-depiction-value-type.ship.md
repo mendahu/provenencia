@@ -1,7 +1,7 @@
 # Ship log — S10-32 Depiction value and `likeness` on Person
 
 **Plan:** [`S10-32-depiction-value-type.md`](S10-32-depiction-value-type.md) · **Branch:** `s10-32-depiction-value` · **PR:** #430
-**State:** fixing 1
+**State:** review 2
 
 The plan refresh (`36ef0065`) is the branch's first commit, on the user's call (2026-10-17): no separate docs PR. Base `ae26c629`.
 
@@ -14,7 +14,7 @@ Five lenses on `ae26c629...0532a08b`. Verdicts: CON changes needed; MNT, UX, SEC
 | ID | Lens | Severity | Title | Decision | Evidence / reason |
 | --- | --- | --- | --- | --- | --- |
 | CON-1 | CON | major | T-7's date-release clause has no test | Fix now → F-1 | Plain: no test replaces a date value on update (`rg 'FROM date_values'` hits only the delete row); reviewer ran it via `-overlay`, behavior correct |
-| CON-2, MNT-2 | CON, MNT | minor | Whitespace-only re-indent of `properties.Create` return block | Fix now → F-2 | `git diff -w` drops the hunk. Not in a file the fix plan touches, but it reverts this PR's own noise; zero risk |
+| CON-2, MNT-2 | CON, MNT | minor | Whitespace-only re-indent of `properties.Create` return block | Fix now → F-2 → Rejected | F-2 not reproduced: the re-indent is gofmt's output; `gofmt -l` flags `ae26c629`'s own `properties.go`, and the gate gofmts every changed file |
 | CON-3 | CON | minor | Manual check §10.1 not run | Follow-up → user's manual check | The user runs the manual check before merge (ship-pr step 8) |
 | MNT-1 | MNT | minor | `ValidateDepictionRegion` decodes twice via a second decoder | Follow-up | `core/locator` split into `decode` + `validateDoc`; pairs with SEC-1's point cap, before S10-54 |
 | MNT-3 | MNT | minor | `resolvedValue` carries value changes three ways | Follow-up | Contradicts D-8's named fields; log with M-8 (declared value-column list) |
@@ -40,3 +40,6 @@ Check: the test passes; scripts/check-pr.sh PASS.
 Files: `core/database/properties/properties.go`.
 Do: restore the leading whitespace of the `return Property{…}, []rowchange.Change{{…}}, nil` block to match `ae26c629`. `git diff -w ae26c629 -- core/database/properties/properties.go` must be unchanged by this commit.
 Check: `git diff ae26c629 -- core/database/properties/properties.go` shows no whitespace-only hunk; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `b41f9b06`. Gate PASS (orchestrator run). F-1 done (`2728a9b2`): `TestObservations/date_replaced_by_another_Property_releases_its_value` passes and fails with `deleteimpact.invalid` when the `observations.value_date_id` release entry is removed. F-2 not applied: restoring `main`'s indentation (`0968541f`) failed the gofmt gate, and `main`'s file fails `gofmt -l` itself; reverted in `b41f9b06`. Dropped CON-2 / MNT-2 as Rejected.
