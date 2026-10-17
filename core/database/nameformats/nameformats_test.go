@@ -1,6 +1,7 @@
 package nameformats
 
 import (
+	"math"
 	"testing"
 
 	"github.com/google/uuid"
@@ -137,6 +138,35 @@ func TestRowOnlyProfileFormatsWithoutCode(t *testing.T) {
 	}}
 	if got := p.Format(name, StyleSorted); got != "Vincent Gogh — painter" {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func TestLoadIDRefusesBadWeight(t *testing.T) {
+	for name, weight := range map[string]float64{"negative": -1, "infinite": math.Inf(1)} {
+		t.Run(name, func(t *testing.T) {
+			c, err := database.Create(t.TempDir(), "t.provenencia")
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = c.Close() })
+			db, err := c.DB()
+			if err != nil {
+				t.Fatal(err)
+			}
+			id, err := uuid.NewV7()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(`INSERT INTO name_format_profiles (id, key, origin, label) VALUES (?, 'bad', 'user', 'Bad')`, id[:]); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(`INSERT INTO name_format_profile_weights (profile_id, slot, weight) VALUES (?, 'family', ?)`, id[:], weight); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := LoadID(db, id[:]); err == nil {
+				t.Fatalf("weight %v loaded", weight)
+			}
+		})
 	}
 }
 

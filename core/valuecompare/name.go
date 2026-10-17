@@ -248,15 +248,7 @@ func (n name) compare(a, b Value, r Rules) (Result, Detail) {
 		contributors = append(contributors, contributor{rel: Contains, why: CauseMissingPart, broader: SideA})
 	}
 
-	// (8) The weakest contributor decides the relation, the first at that
-	// relation its cause.
-	weakest := weakestOf(contributors)
-	det.Cause = weakest.why
-	if weakest.rel == Contains {
-		det.Broader = weakest.broader
-	}
-
-	// (9) Similarity: what the pairs earned over the weight of every word.
+	// Weights that sum to nothing give no similarity to take.
 	totalWeight := float64(len(ga)+len(gb)) * r.Names.Generation
 	for _, w := range wa {
 		totalWeight += w.weight
@@ -268,6 +260,19 @@ func (n name) compare(a, b Value, r Rules) (Result, Detail) {
 	for _, w := range pairWeight {
 		pairedWeight += w
 	}
+	if totalWeight <= 0 || pairedWeight <= 0 {
+		return Result{Relation: Unknown}, Detail{Cause: CauseEmpty}
+	}
+
+	// (8) The weakest contributor decides the relation, the first at that
+	// relation its cause.
+	weakest := weakestOf(contributors)
+	det.Cause = weakest.why
+	if weakest.rel == Contains {
+		det.Broader = weakest.broader
+	}
+
+	// (9) Similarity: what the pairs earned over the weight of every word.
 	similarity := meanSimilarity(det.Parts, pairWeight, totalWeight)
 
 	// (10) A Near name under the minimum is Different.

@@ -9,6 +9,8 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"math"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/match"
@@ -223,6 +225,10 @@ func LoadID(q Querier, id []byte) (Profile, error) {
 		if err := rows.Scan(&slot, &weight); err != nil {
 			rows.Close()
 			return Profile{}, err
+		}
+		if math.IsNaN(weight) || math.IsInf(weight, 0) || weight < 0 {
+			rows.Close()
+			return Profile{}, fmt.Errorf("nameformats: profile %q weight %q is %v; a weight is a finite number of 0 or more", p.Key, slot, weight)
 		}
 		switch slot {
 		case "family":
