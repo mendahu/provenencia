@@ -222,7 +222,7 @@ SLICE 5 — Artifacts and multi-select
   ✎ S10-D7 ──▶ S10-19  Event mark, then sidebar and toolbar. Does not wait on S10-18 — done, #393
   S10-49  Glyph consolidation: one subject-mark rule, PVGlyph in thumbnails, omnibar, Properties (after S10-19) — done, #394
   ✎ S10-D6 ──▶ S10-20  File select, Open, and box-select (after S10-01 and S10-03) — done, #396
-  S10-56  Hold Shift to select; Shift-click toggles a card; Select disarms after its rectangle (after S10-20) — planned
+  S10-57  Hold Shift to select; Shift-click toggles a card; Select disarms after its rectangle (after S10-20) — planned
   Check: drop a file on the page and Add Artifact opens with that file
          chosen. Name it and confirm: the card is there. Cancel: it is not.
          Open the file from the card. On the graph, pick a file and Open
@@ -507,11 +507,11 @@ S10-33 crop cache — descoped 2026-10-16
 | **Testable** | Two files: the select lists both, and Open sends the chosen one to the system app. Changing the selection does not open it. A fileless artifact is not in the list. A Source with no file shows neither control. Box three subject cards with a bridge inside the rectangle: the bridge is not selected. Drag one subject, all three land together and survive reload. Without Select armed, dragging empty canvas still pans. Select works without holding Shift, and its help shows Shift. |
 | **Depends on** | S10-01, S10-03, S10-D6 |
 
-#### S10-56 — Hold Shift to select
+#### S10-57 — Hold Shift to select
 
 **Brief:** — (no new chrome: the S10-D6 Select button, its armed paint, and the rectangle already exist)
 
-**Plan:** [`prs/S10-56-quick-select.md`](prs/S10-56-quick-select.md) — Planned
+**Plan:** [`prs/S10-57-quick-select.md`](prs/S10-57-quick-select.md) — Planned
 
 | | |
 | --- | --- |
