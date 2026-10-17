@@ -285,7 +285,9 @@ storage: objects/8f/ce/8fce3b....jpg
 
 The basename is the full lowercase hex checksum plus an optional MIME-derived extension (`.jpg`, `.pdf`, …) from `media_type`. Unknown or empty media types keep the bare hex name. The exact sharding convention (`objects/{first two hex}/{next two}/{full hex}{ext}`) is fixed as above unless a migration notes otherwise.
 
-The stored object is the **original file bytes** (JPEG, PNG, PDF, …). Hash names do not encrypt or wrap the payload. A user who opens the object in a normal viewer sees the picture or document. The ingest filename is `files.original_filename`, not the path on disk.
+The stored object is the **original file bytes** of an import (JPEG, PNG, PDF, …). Hash names do not encrypt or wrap the payload. A user who opens the object in a normal viewer sees the picture or document. The ingest filename is `files.original_filename`, not the path on disk.
+
+A File can also hold an image the app rendered (a depiction, S10-32). Go checks its path as for an import, decodes only PNG or JPEG within the pixel budget (`core/raster`), and stores its own PNG, never the app's bytes (`ingest.StageImage`). A staged image's object is written inside the write that commits its `files` row. An object is removed only by `files.PurgeUnreferenced`, when no row names its checksum; every object write and purge runs inside `catalogsession.Do`, which runs a project's operations one at a time, so a delete and an import of the same bytes cannot interleave.
 
 This keeps projects relocatable and prevents `storage_path` and checksum from becoming competing sources of truth.
 
