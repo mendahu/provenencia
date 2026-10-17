@@ -131,6 +131,7 @@ type comparer interface {
 
 // comparers are the supported value types.
 var comparers = map[string]comparer{
+	propertymeta.ValueTypeText:    text{},
 	propertymeta.ValueTypeTerm:    term{},
 	propertymeta.ValueTypeInteger: integer{},
 }

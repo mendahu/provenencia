@@ -1,6 +1,7 @@
 package valuecompare
 
 import (
+	"slices"
 	"strings"
 	"unicode"
 
@@ -185,4 +186,109 @@ func EditDistance(a, b []rune) int {
 		}
 	}
 	return d[len(a)][len(b)]
+}
+
+// wordSimilarity is how two comparison tokens relate, in this order: byte-equal
+// tokens are Same, 1 (exact); an initial against anything else is no pair
+// (text has no initials); tokens equal after folding are Equivalent at
+// FoldCredit (fold); a spelling variant is Near at its ratio (spelling); else
+// no pair, 0. A relation of Different means no pair.
+func wordSimilarity(x, y string, w WordRules) (float64, Relation, Cause) {
+	if x == y {
+		return 1, Same, CauseExact
+	}
+	if IsInitial(x) || IsInitial(y) {
+		return 0, Different, CauseNoMatch
+	}
+	fx, fy := FoldWord(x, w.Folds), FoldWord(y, w.Folds)
+	if fx == fy {
+		return w.FoldCredit, Equivalent, CauseFold
+	}
+	if sim := SpellingSimilarity(fx, fy, w.FuzzyFloor, w.ShortVariantMinLength); sim > 0 {
+		return sim, Near, CauseSpelling
+	}
+	return 0, Different, CauseNoMatch
+}
+
+// wordPair is one aligned pair, by index into each side's words.
+type wordPair struct {
+	i, j int
+	sim  float64
+	rel  Relation
+	why  Cause
+}
+
+// alignWords pairs the words of a with the words of b in order: the
+// order-preserving pairing with the highest total word similarity, a pair
+// counting only above 0. Among equal totals it takes the most pairs; then,
+// walking back from the last cell, the diagonal before skipping a word of a,
+// and skipping a word of a before skipping a word of b. It returns the pairs in
+// a's order and the indexes left unpaired on each side.
+func alignWords(a, b []string, w WordRules) (pairs []wordPair, onlyA, onlyB []int) {
+	type cell struct {
+		total  float64
+		pairs  int
+		choice int
+	}
+	const (
+		diagonal = iota
+		skipA
+		skipB
+	)
+	better := func(x, y cell) bool {
+		return x.total > y.total || (x.total == y.total && x.pairs > y.pairs)
+	}
+	sims := make([][]wordPair, len(a))
+	for i := range a {
+		sims[i] = make([]wordPair, len(b))
+		for j := range b {
+			sim, rel, why := wordSimilarity(a[i], b[j], w)
+			sims[i][j] = wordPair{i: i, j: j, sim: sim, rel: rel, why: why}
+		}
+	}
+	grid := make([][]cell, len(a)+1)
+	for i := range grid {
+		grid[i] = make([]cell, len(b)+1)
+	}
+	for i := 1; i <= len(a); i++ {
+		for j := 1; j <= len(b); j++ {
+			best := cell{total: -1}
+			if p := sims[i-1][j-1]; p.sim > 0 {
+				diag := grid[i-1][j-1]
+				best = cell{total: diag.total + p.sim, pairs: diag.pairs + 1, choice: diagonal}
+			}
+			if up := grid[i-1][j]; better(cell{total: up.total, pairs: up.pairs}, best) {
+				best = cell{total: up.total, pairs: up.pairs, choice: skipA}
+			}
+			if left := grid[i][j-1]; better(cell{total: left.total, pairs: left.pairs}, best) {
+				best = cell{total: left.total, pairs: left.pairs, choice: skipB}
+			}
+			grid[i][j] = best
+		}
+	}
+	i, j := len(a), len(b)
+	for i > 0 && j > 0 {
+		switch grid[i][j].choice {
+		case diagonal:
+			pairs = append(pairs, sims[i-1][j-1])
+			i--
+			j--
+		case skipA:
+			onlyA = append(onlyA, i-1)
+			i--
+		default:
+			onlyB = append(onlyB, j-1)
+			j--
+		}
+	}
+	for ; i > 0; i-- {
+		onlyA = append(onlyA, i-1)
+	}
+	for ; j > 0; j-- {
+		onlyB = append(onlyB, j-1)
+	}
+	slices.Reverse(pairs)
+	slices.Reverse(onlyA)
+	slices.Reverse(onlyB)
+	return pairs, onlyA, onlyB
 }

@@ -2,6 +2,7 @@ package valuecompare_test
 
 import (
 	"bytes"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/matchregistry"
@@ -10,6 +11,10 @@ import (
 )
 
 func TestCompareUnsupported(t *testing.T) {
+	want := []string{propertymeta.ValueTypeInteger, propertymeta.ValueTypeTerm, propertymeta.ValueTypeText}
+	if got := valuecompare.ComparerTypes(); !slices.Equal(got, want) {
+		t.Errorf("ComparerTypes() = %v, want %v", got, want)
+	}
 	rules := matchregistry.Default().Value
 	for _, typ := range []string{
 		propertymeta.ValueTypeName, propertymeta.ValueTypeDate,
