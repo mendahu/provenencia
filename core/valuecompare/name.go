@@ -130,6 +130,13 @@ type contributor struct {
 
 type wordPairing struct{ a, b int }
 
+// leftover is what one side keeps unpaired: its parts, whether one is a family
+// word, and whether one is the first given word.
+type leftover struct {
+	parts         []Part
+	family, first bool
+}
+
 func (n name) compare(a, b Value, r Rules) (Result, Detail) {
 	wa, ga := nameWords(a, r)
 	wb, gb := nameWords(b, r)
@@ -160,7 +167,7 @@ func (n name) compare(a, b Value, r Rules) (Result, Detail) {
 			earned[i][j] = sim * n.affinity(x.role, y.role, r.Names) * (x.weight + y.weight)
 		}
 	}
-	wordEarned, rowTo := BestAssignment(earned, r.Words.MaxExactPairing)
+	_, rowTo := BestAssignment(earned, r.Words.MaxExactPairing)
 	var pairing []wordPairing
 	usedA, usedB := make([]bool, len(wa)), make([]bool, len(wb))
 	for i, j := range rowTo {
@@ -194,60 +201,23 @@ func (n name) compare(a, b Value, r Rules) (Result, Detail) {
 	}
 
 	// (6) Leftovers.
-	var onlyA, onlyB []Part
-	var famA, famB, firstA, firstB bool
-	for i, w := range wa {
-		if !usedA[i] {
-			onlyA = append(onlyA, w.part())
-			famA = famA || w.role == RoleFamily
-			firstA = firstA || w.first
-		}
-	}
-	for i, w := range wb {
-		if !usedB[i] {
-			onlyB = append(onlyB, w.part())
-			famB = famB || w.role == RoleFamily
-			firstB = firstB || w.first
-		}
-	}
-	for i, t := range ga {
-		if !genUsedA[i] {
-			onlyA = append(onlyA, Part{Kind: PartGeneration, Text: t})
-		}
-	}
-	for i, t := range gb {
-		if !genUsedB[i] {
-			onlyB = append(onlyB, Part{Kind: PartGeneration, Text: t})
-		}
-	}
-	if len(onlyA) > 0 && len(onlyB) > 0 && ((famA && famB) || (firstA && firstB)) {
+	la, lb := leftoverOf(wa, ga, usedA, genUsedA), leftoverOf(wb, gb, usedB, genUsedB)
+	if len(la.parts) > 0 && len(lb.parts) > 0 && ((la.family && lb.family) || (la.first && lb.first)) {
 		return Result{Relation: Different}, Detail{Cause: CauseNoMatch}
 	}
 
-	// (7) Contributors.
-	det := Detail{OnlyA: onlyA, OnlyB: onlyB}
+	// (7) Contributors, and the weight each pair earns from.
+	det := Detail{OnlyA: la.parts, OnlyB: lb.parts}
 	var contributors []contributor
+	var pairWeight []float64
 	for _, p := range pairing {
 		x, y := wa[p.a], wb[p.b]
-		sim, rel, why := n.word(x, y, r)
-		c := contributor{rel: rel, why: why}
-		switch {
-		case x.role != y.role:
-			c.rel, c.why = Near, CauseRole
-			if rel == Near {
-				c.why = CauseSpelling
-			}
-		case rel == Contains:
-			c.broader = SideB
-			if IsInitial(x.text) {
-				c.broader = SideA
-			}
-		}
+		c, sim := n.pair(x, y, r)
 		contributors = append(contributors, c)
 		det.Parts = append(det.Parts, PartMatch{
-			A: x.part(), B: y.part(), Relation: c.rel,
-			Similarity: sim * n.affinity(x.role, y.role, r.Names), Cause: c.why,
+			A: x.part(), B: y.part(), Relation: c.rel, Similarity: sim, Cause: c.why,
 		})
+		pairWeight = append(pairWeight, x.weight+y.weight)
 	}
 	for _, t := range genPairs {
 		contributors = append(contributors, contributor{rel: Same, why: CauseExact})
@@ -255,16 +225,92 @@ func (n name) compare(a, b Value, r Rules) (Result, Detail) {
 			A: Part{Kind: PartGeneration, Text: t}, B: Part{Kind: PartGeneration, Text: t},
 			Relation: Same, Similarity: 1, Cause: CauseExact,
 		})
+		pairWeight = append(pairWeight, r.Names.Generation+r.Names.Generation)
 	}
 	switch {
-	case len(onlyA) > 0 && len(onlyB) > 0:
+	case len(la.parts) > 0 && len(lb.parts) > 0:
 		contributors = append(contributors, contributor{rel: Near, why: CauseOverlap})
-	case len(onlyA) > 0:
+	case len(la.parts) > 0:
 		contributors = append(contributors, contributor{rel: Contains, why: CauseMissingPart, broader: SideB})
-	case len(onlyB) > 0:
+	case len(lb.parts) > 0:
 		contributors = append(contributors, contributor{rel: Contains, why: CauseMissingPart, broader: SideA})
 	}
-	// Contains contributors that name both sides as broader are one Near.
+
+	// (8) The weakest contributor decides the relation, the first at that
+	// relation its cause.
+	weakest := weakestOf(contributors)
+	det.Cause = weakest.why
+	if weakest.rel == Contains {
+		det.Broader = weakest.broader
+	}
+
+	// (9) Similarity: what the pairs earned over the weight of every word.
+	totalWeight := float64(len(ga)+len(gb)) * r.Names.Generation
+	for _, w := range wa {
+		totalWeight += w.weight
+	}
+	for _, w := range wb {
+		totalWeight += w.weight
+	}
+	pairedWeight := 0.0
+	for _, w := range pairWeight {
+		pairedWeight += w
+	}
+	similarity := meanSimilarity(det.Parts, pairWeight, totalWeight)
+
+	// (10) A Near name under the minimum is Different.
+	if weakest.rel == Near && meanSimilarity(det.Parts, pairWeight, pairedWeight) < r.Names.NearMinimum {
+		det.Cause, det.Broader = CauseBelowMinimum, SideNone
+		return Result{Relation: Different}, det
+	}
+	return Result{Relation: weakest.rel, Similarity: similarity}, det
+}
+
+// pair is what a word pair says about the relation and the similarity it
+// earns: a role mismatch is Near, for the role unless the spelling already was.
+func (n name) pair(x, y nameWord, r Rules) (contributor, float64) {
+	sim, rel, why := n.word(x, y, r)
+	c := contributor{rel: rel, why: why}
+	switch {
+	case x.role != y.role:
+		c.rel, c.why = Near, CauseRole
+		if rel == Near {
+			c.why = CauseSpelling
+		}
+	case rel == Contains:
+		c.broader = SideB
+		if IsInitial(x.text) {
+			c.broader = SideA
+		}
+	}
+	return c, sim * n.affinity(x.role, y.role, r.Names)
+}
+
+// leftoverOf is a side's unpaired words, as parts with their kinds, then its
+// unpaired generation words.
+func leftoverOf(words []nameWord, gen []string, usedWord, usedGen []bool) leftover {
+	tokens, kinds := wordTexts(words)
+	var idx []int
+	var l leftover
+	for i, w := range words {
+		if !usedWord[i] {
+			idx = append(idx, i)
+			l.family = l.family || w.role == RoleFamily
+			l.first = l.first || w.first
+		}
+	}
+	l.parts = wordParts(tokens, kinds, idx)
+	for i, t := range gen {
+		if !usedGen[i] {
+			l.parts = append(l.parts, Part{Kind: PartGeneration, Text: t})
+		}
+	}
+	return l
+}
+
+// weakestOf is the contributor at the weakest relation, the first of those.
+// Contains contributors that name both sides as broader are one Near first.
+func weakestOf(contributors []contributor) contributor {
 	var broaderA, broaderB bool
 	for _, c := range contributors {
 		if c.rel == Contains {
@@ -273,60 +319,16 @@ func (n name) compare(a, b Value, r Rules) (Result, Detail) {
 		}
 	}
 	if broaderA && broaderB {
-		contributors = slices.DeleteFunc(contributors, func(c contributor) bool { return c.rel == Contains })
+		contributors = slices.DeleteFunc(slices.Clone(contributors), func(c contributor) bool { return c.rel == Contains })
 		contributors = append(contributors, contributor{rel: Near, why: CauseOverlap})
 	}
-
-	// (8) The weakest contributor decides the relation, the first at that
-	// relation its cause.
 	weakest := contributors[0]
 	for _, c := range contributors[1:] {
 		if slices.Index(relationOrder, c.rel) > slices.Index(relationOrder, weakest.rel) {
 			weakest = c
 		}
 	}
-	det.Cause = weakest.why
-	if weakest.rel == Contains {
-		det.Broader = weakest.broader
-	}
-
-	// (9) Similarity: what the pairs earned over the weight of every word.
-	pairedWeight := 0.0
-	for _, p := range pairing {
-		pairedWeight += wa[p.a].weight + wb[p.b].weight
-	}
-	genWeight := float64(len(genPairs)) * (r.Names.Generation + r.Names.Generation)
-	earnedTotal := wordEarned + genWeight
-	pairedWeight += genWeight
-	totalWeight := pairedWeight
-	for i, w := range wa {
-		if !usedA[i] {
-			totalWeight += w.weight
-		}
-	}
-	for i, w := range wb {
-		if !usedB[i] {
-			totalWeight += w.weight
-		}
-	}
-	for i := range ga {
-		if !genUsedA[i] {
-			totalWeight += r.Names.Generation
-		}
-	}
-	for i := range gb {
-		if !genUsedB[i] {
-			totalWeight += r.Names.Generation
-		}
-	}
-	similarity := earnedTotal / totalWeight
-
-	// (10) A Near name under the minimum is Different.
-	if weakest.rel == Near && earnedTotal/pairedWeight < r.Names.NearMinimum {
-		det.Cause, det.Broader = CauseBelowMinimum, SideNone
-		return Result{Relation: Different}, det
-	}
-	return Result{Relation: weakest.rel, Similarity: similarity}, det
+	return weakest
 }
 
 // word is the word table for two name words: initials count and the catalog's
@@ -339,15 +341,8 @@ func (name) word(x, y nameWord, r Rules) (float64, Relation, Cause) {
 // sameParts pairs two names with the same key: their sorted words position by
 // position, then their generation words.
 func sameParts(wa, wb []nameWord, ga, gb []string, w WordRules) []PartMatch {
-	texts := func(words []nameWord) ([]string, []PartKind) {
-		t, k := make([]string, len(words)), make([]PartKind, len(words))
-		for i, word := range words {
-			t[i], k[i] = word.text, PartKind(word.role)
-		}
-		return t, k
-	}
-	ta, ka := texts(wa)
-	tb, kb := texts(wb)
+	ta, ka := wordTexts(wa)
+	tb, kb := wordTexts(wb)
 	parts := positionalParts(ta, tb, ka, kb, w)
 	sa, sb := slices.Clone(ga), slices.Clone(gb)
 	slices.Sort(sa)
@@ -359,6 +354,15 @@ func sameParts(wa, wb []nameWord, ga, gb []string, w WordRules) []PartMatch {
 		})
 	}
 	return parts
+}
+
+// wordTexts are the words' tokens and part kinds, in order.
+func wordTexts(words []nameWord) ([]string, []PartKind) {
+	t, k := make([]string, len(words)), make([]PartKind, len(words))
+	for i, word := range words {
+		t[i], k[i] = word.text, PartKind(word.role)
+	}
+	return t, k
 }
 
 func sharesAny(a, b []string) bool {
