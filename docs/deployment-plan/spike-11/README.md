@@ -15,6 +15,15 @@ This spike is entirely about the Promote flow's matching: making the algorithm g
 | [**Comparison layers**](comparison-layers.md) | Requirements for layers 1–6 (value, property, Subject, entity and segment comparison, graph alignment), the lifespan check, the rules every layer follows, and the reuse and retirement inventory |
 | [**Claim evidence**](claim-evidence.md) | Requirements for the Promote sheet's pins: every member's evidence, grouped by property, lazily queried, in plain language |
 
+## Spike-wide rule: high tolerance for churn
+
+We are in early development and no one is using the app yet. So this spike optimizes for one thing: a composable, robust, reusable matching module, with the old tech debt gone.
+
+- **No compatibility layers.** No adapters, shims, wrappers, feature flags, deprecated aliases or "keep the old path for now". Nothing exists to minimize the size or number of PRs.
+- **Migration PRs are ruthless.** Each one moves every caller onto the new piece and deletes the old code in the same PR. Nothing is kept "just in case".
+- **Behavior changes are fine** when the design calls for them (scores, bands, groupings). Goldens are updated, not preserved.
+- **Old data shapes can break.** Catalog migrations may reshape or drop what matching used to need; there is no user data to protect.
+
 ## Spike-wide principle: sparse data first
 
 Three generations back, records thin out. Often all there is is a name and a birth date. The algorithm has to work well on a small set of key information: get the **core properties** and the **core relationships** right, and everything else reinforces them.
