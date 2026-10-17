@@ -141,7 +141,7 @@ func DateEnds(d datevalue.Value) (first, last DateEnd, ok bool) {
 
 // boundEnd is the end one bound covers at its precision.
 func boundEnd(year, month, day *int) (DateEnd, bool) {
-	lo, hi, _, ok := spanOf(year, month, day, nil, nil, nil, nil)
+	lo, hi, ok := datevalue.BoundDays(year, month, day)
 	if !ok {
 		return DateEnd{}, false
 	}
@@ -153,10 +153,7 @@ func boundEnd(year, month, day *int) (DateEnd, bool) {
 	if day != nil {
 		e.Day = *day
 	}
-	jan1 := daysFromCivil(y, 1, 1)
-	n := float64(daysFromCivil(y+1, 1, 1) - jan1)
-	e.From = float64(y) + float64(lo-jan1)/n
-	e.To = float64(y) + float64(hi-jan1+1)/n
+	e.From, e.To, _ = datevalue.YearLine(lo, hi)
 	return e, true
 }
 
@@ -407,68 +404,26 @@ func rangeWindow(d datevalue.Value) (dateWindow, bool) {
 	return w, true
 }
 
-// spanOf is the inclusive day span a bound covers at its precision.
+// spanOf is the inclusive day span a bound covers at its precision, and that
+// precision: 1 year, 2 month, 3 day, then one per clock field.
 func spanOf(year, month, day, hour, minute, second, ms *int) (lo, hi, prec int, ok bool) {
-	if year == nil {
+	lo, hi, ok = datevalue.BoundDays(year, month, day)
+	if !ok {
 		return 0, 0, 0, false
 	}
-	y := *year
 	prec = 1
 	if month == nil {
-		return daysFromCivil(y, 1, 1), daysFromCivil(y, 12, 31), prec, true
-	}
-	m := *month
-	if m < 1 || m > 12 {
-		return 0, 0, 0, false
+		return lo, hi, prec, true
 	}
 	prec = 2
 	if day == nil {
-		return daysFromCivil(y, m, 1), daysFromCivil(y, m, lastDay(y, m)), prec, true
-	}
-	d := *day
-	if d < 1 || d > lastDay(y, m) {
-		return 0, 0, 0, false
+		return lo, hi, prec, true
 	}
 	prec = 3
-	n := daysFromCivil(y, m, d)
-	if hour != nil {
-		prec++
-	}
-	if minute != nil {
-		prec++
-	}
-	if second != nil {
-		prec++
-	}
-	if ms != nil {
-		prec++
-	}
-	return n, n, prec, true
-}
-
-func lastDay(year, month int) int {
-	switch month {
-	case 1, 3, 5, 7, 8, 10, 12:
-		return 31
-	case 4, 6, 9, 11:
-		return 30
-	default:
-		if isLeap(year) {
-			return 29
+	for _, c := range []*int{hour, minute, second, ms} {
+		if c != nil {
+			prec++
 		}
-		return 28
 	}
-}
-
-func isLeap(year int) bool {
-	return year%4 == 0 && (year%100 != 0 || year%400 == 0)
-}
-
-// daysFromCivil is the proleptic Gregorian day number, 1970-01-01 = 0.
-func daysFromCivil(year, month, day int) int {
-	a := (14 - month) / 12
-	y := year + 4800 - a
-	m := month + 12*a - 3
-	jdn := day + (153*m+2)/5 + 365*y + y/4 - y/100 + y/400 - 32045
-	return jdn - 2440588
+	return lo, hi, prec, true
 }
