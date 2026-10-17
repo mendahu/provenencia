@@ -1,7 +1,7 @@
 # Ship log — S11-01 One-page matching model
 
 **Plan:** [`S11-01-matching-model.md`](S11-01-matching-model.md) · **Branch:** `claude/modest-gates-tunm8o` (session-designated; plan header names `s11-01-matching-model`) · **PR:** #432
-**State:** landing
+**State:** ready
 
 Gate note: this ship runs in a Linux cloud session. `scripts/check-pr.sh` runs every check except `xcode-test` (macOS only); the PR is docs only, and CI runs the Xcode tests on the non-draft PR.
 
@@ -84,3 +84,7 @@ No Fix plan 2 (no round-2 blocker).
 
 ## Landing
 Do, in one commit "Record S11-01 as landed in pull request 432.": the plan's Status → Landed 2026-10-17 in #432; the map row and scope entry for S11-01 in `deployment-plan.md` → Landed #432; the `completed.md` paragraph from the implementer's round-0 report (state that the model also fixes lifespan under `subject` and `sex_at_birth` keys); plus the two minors above: plan STEP-2 check → "the sums are 2.6, 2.75 and 5.35"; key grammar → "a Subject kind, a property key, a derived property (`lifespan`), or a bridge or participation key".
+Head `9df157c`. Gate PASS (bar `xcode-test`). Plan Status Landed #432; map row and scope entry Landed; `completed.md` paragraph written by the implementer from the plan (no paragraph in the round-0 report); both round-2 minors applied.
+
+## Result
+Gate PASS (Linux; `xcode-test` left to CI) · CI: pending on ready · open: none · follow-ups: PRF-1 (S11-15 / S11-16 plans: cap or nominate the event shortlist bucket) · to user: Q1–Q3 answered 2026-10-17
