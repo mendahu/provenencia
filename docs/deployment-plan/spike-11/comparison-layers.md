@@ -112,14 +112,14 @@ Today every comparer returns 0–1, but the numbers mean different things by typ
 | `Different` | No match | yes |
 | `Unknown` | Nothing to compare | yes |
 
-Proposed relation per value type. Every cell is a proposal to confirm; the name row is chosen to keep today's agree / conflict calls:
+Relation per value type (confirmed 2026-10-17; worked examples below the table):
 
 | Type | Same | Equivalent | Contains | Overlaps | Near | Different |
 |---|---|---|---|---|---|---|
 | name | all shared parts same | fold, alias, abbreviation | parts on one side only (`Robins` / `James Robins`), initial / word | — | spelling variant | any shared role disagrees (`Mary Robins` / `James Robins`), generation conflict |
 | date | same span | — | one span inside the other | spans overlap | apart, within tolerance | beyond tolerance |
 | text | same words | folded words | all of one side's words in the other | some words shared | one-word spelling variant | nothing shared |
-| term | same key | — (later: a term-affinity table, e.g. birth / baptism → `Near`) | — | — | — | different key |
+| term | same key | — | — | — | — | different key (birth / baptism, son / child) |
 | integer | equal | — | — | — | within tolerance | beyond tolerance |
 
 **Decided (2026-10-16):**
@@ -127,6 +127,19 @@ Proposed relation per value type. Every cell is a proposal to confirm; the name 
 - **`Contains` scores below 1.** `Robins` vs `James Robins` is no longer a perfect match. How far below 1 is a tuning question.
 - **`Near` has a minimum similarity per type.** It lives in layer 1's `Rules`, because "near or different" is layer 1's call. Layer 2 then needs no floors.
 - **One `Contains`, two causes.** Less precise (`1817` vs `3 Mar 1817`, `J.` vs `James`) and less complete (`Robins` vs `James Robins`) are both `Contains`. `Detail.Cause` tells them apart (`precision`, `missing_part`), so callers that care can treat them differently.
+
+**Worked cases decided 2026-10-17:**
+
+| Pair | Relation |
+|---|---|
+| surname "James", given "Robins" / James Robins (part types swapped) | `Near` |
+| Mary Smith / Mary Robins (surname change at marriage) | `Different`: marriage evidence comes from links, not from the name |
+| ABT 1817 / 1818 | Read `ABT` as a range (below): 1816–1818 contains 1818, so `Contains` |
+| BEF 1820 / BEF 1830 | `Contains` |
+| Upper Canada, York / York, Upper Canada | `Different`: text is compared as written, and a toponym should name one place |
+| birth / baptism; son / child | `Different`. A term-affinity table is not planned |
+
+**`ABT` is a range of one unit of its most precise part,** on each side: `ABT 1817` is 1816–1818; `ABT Mar 1817` is Feb–Apr 1817; `ABT 3 Mar 1817` is 2–4 Mar 1817. It then follows the range rules (`Same`, `Contains`, `Overlaps`, `Near`, `Different`). This replaces "ABT doubles the tolerance" in today's `DateComparer`.
 
 **Parts combine by one rule.** Names and text are made of parts. Each part pair gets its own relation and similarity. The value's relation is the weakest relation among the parts both sides carry, and parts on one side only make it `Contains`. Its similarity is the weighted mean of the part similarities. The weights come from `Rules`, e.g. name roles from the name pattern.
 
@@ -296,11 +309,12 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 | Bridge cardinality | Neighbor matches | Neighbor differs | No corresponding link |
 |---|---|---|---|
-| One (subject of a birth) | strong support | **conflict: subtracts evidence** | unknown |
-| Many (parent of, residence) | support | unknown | unknown |
+| One: subject of a birth, subject of a death | strong support | **conflict: subtracts evidence** | unknown |
+| Not declared: everything else (parents, spouses, children, residences, witnesses…) | support | unknown | unknown |
 
 **Decided:**
-- **Cardinality is declared on the bridge type in the registry,** replacing fan-out measured from the catalog (the same kind of statistic as the descoped frequency). More thought on its shape to come.
+- **Cardinality is declared in the registry,** replacing fan-out measured from the catalog (the same kind of statistic as the descoped frequency).
+- **Only birth and death are declared, as one (2026-10-17).** A person has at most one birth and one death; that's axiomatic. More than two parents and more than one spouse are reasonable and common, so modelling limits there gets too complex. Every other bridge has no declared cardinality: a matching neighbor supports, and a differing one is unknown. The key is participation · subject · event type, so adding another axiomatic case later is one registry entry.
 - **A conflict through a one-cardinality bridge subtracts evidence.**
 - **Segment evidence includes how well the neighbor itself matched** (today's credit).
 
@@ -454,6 +468,4 @@ Flow: shortlist or nominate → score → keep the top K as candidates → accep
 ## Open questions
 
 - **Bands.** How the page's strong / medium / weak come from similarity and evidence, once segment evidence is added. Next to discuss.
-- **Bridge cardinality's shape** in the registry.
-- **The relation table per value type** (§ Relations): every cell is a proposal to confirm.
 - **Starting registry numbers** (weights, penalties, lifespan constants, K, accept bar, settle margin): open until the PR map.
