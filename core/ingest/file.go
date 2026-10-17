@@ -59,6 +59,89 @@ type Result struct {
 	IngestedAs string // sanitized base name of the path the user picked
 }
 
+// openChecked runs every check an app-supplied path gets before its bytes are
+// read: an absolute path, no symlink, a regular non-empty file within limit,
+// and the same checks again on the opened descriptor. The caller closes the file.
+func openChecked(absPath string, limit int64) (*os.File, error) {
+	if absPath == "" || !filepath.IsAbs(absPath) {
+		return nil, ErrInvalid
+	}
+	info, err := os.Lstat(absPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrMissing
+		}
+		return nil, mapOpenErr(err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		return nil, ErrSymlink
+	}
+	if !info.Mode().IsRegular() {
+		return nil, ErrNotAFile
+	}
+	if info.Size() == 0 {
+		return nil, ErrEmpty
+	}
+	if info.Size() > limit {
+		return nil, ErrTooLarge.WithParams(formatByteSize(info.Size()))
+	}
+
+	src, err := openSource(absPath)
+	if err != nil {
+		return nil, mapOpenErr(err)
+	}
+	st, err := src.Stat()
+	if err != nil {
+		_ = src.Close()
+		return nil, err
+	}
+	if !st.Mode().IsRegular() {
+		_ = src.Close()
+		return nil, ErrNotAFile
+	}
+	if st.Size() == 0 {
+		_ = src.Close()
+		return nil, ErrEmpty
+	}
+	if st.Size() > limit {
+		_ = src.Close()
+		return nil, ErrTooLarge.WithParams(formatByteSize(st.Size()))
+	}
+	return src, nil
+}
+
+// insertFile inserts row and returns its audited create change. A checksum
+// that is already stored is errChecksumTaken.
+func insertFile(tx *sql.Tx, row files.File) (rowchange.Change, error) {
+	if err := files.Insert(tx, row); err != nil {
+		if files.IsUniqueConflict(err) {
+			return rowchange.Change{}, errChecksumTaken
+		}
+		return rowchange.Change{}, err
+	}
+	uid, err := uuid.FromBytes(row.ID)
+	if err != nil {
+		return rowchange.Change{}, err
+	}
+	fields := map[string]rowchange.FieldDiff{
+		"id":              {Old: nil, New: uid.String()},
+		"checksum_sha256": {Old: nil, New: row.ChecksumSHA256},
+		"byte_size":       {Old: nil, New: row.ByteSize},
+	}
+	if row.OriginalFilename != "" {
+		fields["original_filename"] = rowchange.FieldDiff{Old: nil, New: row.OriginalFilename}
+	}
+	if row.MediaType != "" {
+		fields["media_type"] = rowchange.FieldDiff{Old: nil, New: row.MediaType}
+	}
+	return rowchange.Change{
+		EntityType: "file",
+		EntityID:   row.ID,
+		Action:     rowchange.ActionCreate,
+		Fields:     fields,
+	}, nil
+}
+
 // File reads absPath into the catalog object store. Same bytes reuse the existing
 // File row, verify or repair the object, and record a reuse_file audit event.
 func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
@@ -66,52 +149,14 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 		return Result{}, err
 	}
 	absPath = strings.TrimSpace(absPath)
-	if absPath == "" || !filepath.IsAbs(absPath) {
-		return Result{}, ErrInvalid
-	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Result{}, err
 	}
-
-	info, err := os.Lstat(absPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return Result{}, ErrMissing
-		}
-		return Result{}, mapOpenErr(err)
-	}
-	if info.Mode()&os.ModeSymlink != 0 {
-		return Result{}, ErrSymlink
-	}
-	if !info.Mode().IsRegular() {
-		return Result{}, ErrNotAFile
-	}
-	if info.Size() == 0 {
-		return Result{}, ErrEmpty
-	}
-	if info.Size() > maxBytes {
-		return Result{}, ErrTooLarge.WithParams(formatByteSize(info.Size()))
-	}
-
-	src, err := openSource(absPath)
-	if err != nil {
-		return Result{}, mapOpenErr(err)
-	}
-	defer src.Close()
-
-	st, err := src.Stat()
+	src, err := openChecked(absPath, maxBytes)
 	if err != nil {
 		return Result{}, err
 	}
-	if !st.Mode().IsRegular() {
-		return Result{}, ErrNotAFile
-	}
-	if st.Size() == 0 {
-		return Result{}, ErrEmpty
-	}
-	if st.Size() > maxBytes {
-		return Result{}, ErrTooLarge.WithParams(formatByteSize(st.Size()))
-	}
+	defer src.Close()
 
 	objectsDir := filepath.Join(c.Dir(), "objects")
 	tmpPath, checksum, byteSize, sniffed, err := streamSource(src, objectsDir)
@@ -153,7 +198,7 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 	id, err := files.NewID()
 	if err != nil {
 		if wrote {
-			_ = os.Remove(objPath)
+			files.PurgeUnreferenced(c, []files.Object{{ChecksumSHA256: checksum, MediaType: mediaType}})
 		}
 		return Result{}, err
 	}
@@ -169,33 +214,11 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 		Action: "create_file",
 		UserID: userID,
 	}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
-		if err := files.Insert(tx.Tx, row); err != nil {
-			if files.IsUniqueConflict(err) {
-				return Result{}, nil, errChecksumTaken
-			}
-			return Result{}, nil, err
-		}
-		uid, err := uuid.FromBytes(id)
+		ch, err := insertFile(tx.Tx, row)
 		if err != nil {
 			return Result{}, nil, err
 		}
-		fields := map[string]rowchange.FieldDiff{
-			"id":              {Old: nil, New: uid.String()},
-			"checksum_sha256": {Old: nil, New: checksum},
-			"byte_size":       {Old: nil, New: row.ByteSize},
-		}
-		if filename != "" {
-			fields["original_filename"] = rowchange.FieldDiff{Old: nil, New: filename}
-		}
-		if mediaType != "" {
-			fields["media_type"] = rowchange.FieldDiff{Old: nil, New: mediaType}
-		}
-		return Result{File: row, RelPath: relPath, Reused: false, IngestedAs: filename}, []rowchange.Change{{
-			EntityType: "file",
-			EntityID:   id,
-			Action:     rowchange.ActionCreate,
-			Fields:     fields,
-		}}, nil
+		return Result{File: row, RelPath: relPath, Reused: false, IngestedAs: filename}, []rowchange.Change{ch}, nil
 	})
 	if err != nil {
 		if errors.Is(err, errChecksumTaken) {
@@ -208,7 +231,7 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 			return reuseFile(c, existing, relPath, filename, userID)
 		}
 		if wrote {
-			_ = os.Remove(objPath)
+			files.PurgeUnreferenced(c, []files.Object{{ChecksumSHA256: checksum, MediaType: mediaType}})
 		}
 		return Result{}, err
 	}
