@@ -1,9 +1,6 @@
 package locator
 
-import (
-	"encoding/json"
-	"strings"
-)
+import "strings"
 
 // ValidateDepictionRegion checks the region locator of a depiction value
 // against the locator of the Citation that holds it.
@@ -15,18 +12,18 @@ import (
 // artifact_page (page_label is not compared). The region need not lie inside
 // a region of the Citation's own locator.
 func ValidateDepictionRegion(regionJSON, citationLocatorJSON string) error {
-	if err := Validate(regionJSON); err != nil {
-		return err
-	}
-	if err := Validate(citationLocatorJSON); err != nil {
-		return err
-	}
-	region, err := parse(regionJSON)
+	region, err := decode(regionJSON)
 	if err != nil {
 		return err
 	}
-	citation, err := parse(citationLocatorJSON)
+	if err := validateDoc(region); err != nil {
+		return err
+	}
+	citation, err := decode(citationLocatorJSON)
 	if err != nil {
+		return err
+	}
+	if err := validateDoc(citation); err != nil {
 		return err
 	}
 	regions := 0
@@ -58,12 +55,4 @@ func ValidateDepictionRegion(regionJSON, citationLocatorJSON string) error {
 		return ErrInvalid
 	}
 	return nil
-}
-
-func parse(locatorJSON string) (document, error) {
-	var doc document
-	if err := json.Unmarshal([]byte(strings.TrimSpace(locatorJSON)), &doc); err != nil {
-		return document{}, ErrInvalid
-	}
-	return doc, nil
 }
