@@ -221,7 +221,7 @@ SLICE 5 — Artifacts and multi-select
   ✎ S10-D7 ──▶ S10-19  Event mark, then sidebar and toolbar. Does not wait on S10-18 — done, #393
   S10-49  Glyph consolidation: one subject-mark rule, PVGlyph in thumbnails, omnibar, Properties (after S10-19) — done, #394
   ✎ S10-D6 ──▶ S10-20  File select, Open, and box-select (after S10-01 and S10-03) — done, #396
-  S10-56  Hold Shift to select; Shift-click toggles a card; Select disarms after its rectangle (after S10-20)
+  S10-56  Hold Shift to select; Shift-click toggles a card; Select disarms after its rectangle (after S10-20) — planned
   Check: drop a file on the page and Add Artifact opens with that file
          chosen. Name it and confirm: the card is there. Cancel: it is not.
          Open the file from the card. On the graph, pick a file and Open
@@ -509,7 +509,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 **Brief:** — (no new chrome: the S10-D6 Select button, its armed paint, and the rectangle already exist)
 
-**Plan:** [`prs/S10-56-quick-select.md`](prs/S10-56-quick-select.md) — Draft
+**Plan:** [`prs/S10-56-quick-select.md`](prs/S10-56-quick-select.md) — Planned
 
 | | |
 | --- | --- |

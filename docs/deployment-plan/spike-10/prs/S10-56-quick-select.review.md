@@ -1,7 +1,7 @@
 # Review — S10-56 Hold Shift to select; Select disarms after one rectangle
 
-**Verdict:** Fits with changes — Ready with changes (round 1, applied)
-**Rounds:** 1 (round 2 pending). **Reviewers:** maintainability (claude-opus), executability (claude-sonnet)
+**Verdict:** Fits — Ready with changes (applied)
+**Rounds:** 2. **Reviewers:** maintainability (claude-opus), executability (claude-sonnet)
 
 ## To user
 
@@ -59,3 +59,32 @@ Logged. Select re-engages on sheet close if Shift is still held; that is intende
 
 ### M-6 · nit · "Next adds" overclaims
 **Answer:** Fixed — reworded: a future host gets the signal and the toggle, and supplies its own engage precedence.
+
+## Round 2
+
+Maintainability: every round-1 answer holds; no new blocker. Verdict Fits.
+Executability: every round-1 answer holds; no new blocker. Verdict Ready with changes.
+
+### X-9 · major · Shift seed on install may fire before `onShiftHeldChanged` is wired
+**Answer:** Fixed — STEP-3: `wirePointer()` calls `model.setShiftSelectHeld(pointer.shiftHeld)` after wiring; §6 notes the seed only sets the pointer flag.
+
+### X-10 · major · STEP-3's check needs STEP-4's paint
+**Answer:** Fixed — STEP-3 checks pointer behavior only; the paint halves of §10 steps 1, 10, 11 are STEP-4's check.
+
+### X-11 · minor · STEP-3 does not name the `mouseDown` change
+**Answer:** Fixed — STEP-3 Do names `mouseDown(with:)` (D-11).
+
+### X-12 · minor · "three sentences" should be four
+**Answer:** Fixed.
+
+### X-13 · minor · Landed status wording not given
+**Answer:** Fixed — STEP-5 gives the map suffix, the scope-entry line (copied from S10-20's), and the `completed.md` section form.
+
+### X-14 · minor · Test suite placement
+**Answer:** Fixed — T-1, T-2, T-3, T-4, T-5 are in `GraphCanvasPointerPressTests` (where `marqueeController()` and `controller()` live); T-9 is in `GraphCanvasPointerHitTestingTests`.
+
+### X-15 · minor · T-8 call order
+**Answer:** Fixed — T-8 lists the calls in order.
+
+### X-16 · nit · README cell wording
+**Answer:** Fixed — only the parenthetical changes.
