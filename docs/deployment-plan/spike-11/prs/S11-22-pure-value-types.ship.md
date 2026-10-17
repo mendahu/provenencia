@@ -44,4 +44,4 @@ Lenses: CON, MNT. Scope `51764575...dbae6ae2`.
 CON: clean — CON-1 resolved. MNT: clean — MNT-1, MNT-2 resolved; MNT-3 stays logged. Observation (not a finding): the dropped namevalues paragraph also said "keep DDL as open TEXT"; restore it in the query package comment next time that file is edited. No round-2 blockers, so no Fix plan 2.
 
 ## Result
-Gate PASS (`dbae6ae2`) · CI pending · open: none · follow-ups: SEC-note (`Validate` assumes callers trimmed — S11-02 decides), MNT-3 (nit), "open TEXT" note · to user: — (base-check stop answered 2026-10-17)
+Gate PASS (`82bef42c`, after merging main for S11-01 doc conflicts in completed.md and deployment-plan.md) · CI pending · open: none · follow-ups: SEC-note (`Validate` assumes callers trimmed — S11-02 decides), MNT-3 (nit), "open TEXT" note · to user: — (base-check stop answered 2026-10-17)
