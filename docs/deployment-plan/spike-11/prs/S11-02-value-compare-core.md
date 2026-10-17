@@ -1,6 +1,6 @@
 # S11-02 — Value compare core and match registry
 
-**Status:** Planned
+**Status:** Landed in [#441](https://github.com/mendahu/provenencia/pull/441) (2026-10-17)
 **Spike / slice:** Spike 11 · Slice 2 — Value compare, everywhere
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: new Go packages, a guard test and a skill)
@@ -367,3 +367,14 @@ None.
 
 **Title:** S11-02 — Value compare core and match registry
 **Body:** objective in one sentence; what shipped against US-1 – US-4; AC evidence (test names, the deliberate guard failures from STEP-6 and STEP-7); deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-02-value-compare-core.md`.
+
+## Landed
+
+Differences from the plan:
+
+- `TestComparerContract` and `TestKeyContract` run the sample table and 500 generated pairs under four seeds (the integer tolerance is the seed index, 0 to 3), not one seed.
+- `ComparerTypes()` is asserted in `TestCompareUnsupported` as T-3 says; `TestCompareEchoesRefs` (new) holds the AC-1.12 ref echo, which T-3 lists under the same test.
+- For `no_match` and `order`, `Detail.OnlyA` / `OnlyB` list the unpaired words (D-7 says only that `Parts` is empty for `no_match`).
+- `core/matchregistry/value.go` names the old sources as "the reconciler's old spelling floor" and "old short-word minimum" instead of the deleted constant names, so STEP-2's `rg SpellingFloor|SpellingShortMin core` check prints nothing.
+- `daitch-mokotoff.md` L5 says "the spelling helpers that lived in `core/autoreconcile`" instead of naming `spelling.go`, so STEP-10's `rg` check prints only the allowed files.
+- The STEP-6 and STEP-7 deliberate failures needed `-tags fts5`: with a `core/database` import in `core/propertymeta`, the test binary panics at init without it, so the `pure` failure shows with the tag.
