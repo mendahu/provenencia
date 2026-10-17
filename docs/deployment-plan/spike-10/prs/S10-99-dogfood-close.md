@@ -9,11 +9,11 @@
 **Blocks:** —
 **Branch:** `s10-99-dogfood-close`
 **Version bump:** none — docs only ([`docs/versioning.md`](../../../versioning.md): no bump for docs-only changes)
-**Skills to load:** [`archive-docs`](../../../../.agents/skills/archive-docs/SKILL.md)
+**Skills to load:** [`archive-docs`](../../../../.agents/skills/archive-docs/SKILL.md), [`implement-pr`](../../../../.agents/skills/implement-pr/SKILL.md) (step 8, which this PR skips and amends)
 **Rules that bind:** —
 **Context:** map row S10-99 and "Docs to update as work lands" (S10-99 line) in [`../deployment-plan.md`](../deployment-plan.md); precedent [#326](https://github.com/mendahu/provenencia/pull/326) (Spike 9 close); [`archive/spike-9/README.md`](../../archive/spike-9/README.md) for shape
 **Planned:** 2026-10-17 against `main` @ `bdce4cd`
-**Review:** — (not reviewed yet)
+**Review:** [`S10-99-dogfood-close.review.md`](S10-99-dogfood-close.review.md) — round 1: Fits with changes; Ready with changes (applied)
 
 ### Implementer — read this first
 
@@ -34,7 +34,7 @@ Spike 10 is closed. Its folder `docs/deployment-plan/spike-10/` (the PR map, `co
 
 **Why now.** Every Spike 10 PR has landed or been descoped; S10-39 ([#450](https://github.com/mendahu/provenencia/pull/450)) was the last. The user checked the dogfood bar on a real project (2026-10-17). The `likeness` Property on existing dogfood projects was handled by the user outside this repo (2026-10-17).
 
-**What stays.** No code, no schema, no domain doc rule changes. The domain docs already carry Spike 10's contracts (each PR updated them as it landed). The dogfood log keeps its open notes. The ideas folder keeps its leftover notes. Spike 11's docs are not edited.
+**What stays.** No code, no schema, no domain doc rule changes. Two skills gain the close-PR rule (S-1, S-2). The domain docs already carry Spike 10's contracts (each PR updated them as it landed). The dogfood log keeps its open notes. The ideas folder keeps its leftover notes. Spike 11's docs are not edited.
 
 ## 2. User stories
 
@@ -52,6 +52,7 @@ Spike 10 is closed. Its folder `docs/deployment-plan/spike-10/` (the PR map, `co
 | --- | --- | --- |
 | AC-2.1 | T-1's `rg` command | Prints only the two Spike 11 plan lines named in T-1 |
 | AC-2.2 | T-2's link check over every edited file | Exit 0, no output |
+| AC-2.3 | T-7 | No output: no doc says "Spike 10 is the dogfood UX cleanup" or "not Spike 10", and `docs/matching.md` "Not yet handled" no longer lists Abbreviations |
 
 **US-3.** As a planner of a later spike, every Spike 10 leftover has a home, so that nothing descoped is lost.
 
@@ -59,6 +60,7 @@ Spike 10 is closed. Its folder `docs/deployment-plan/spike-10/` (the PR map, `co
 | --- | --- | --- |
 | AC-3.1 | The **Leftovers** table in the archive README | Every row links a file that exists (T-2) |
 | AC-3.2 | `docs/ideas/depictions-and-likenesses.md` | Its Status line no longer says Spike 10 takes a crop cache or Promote's side-by-side crops; it says Promote comparing two likenesses is Spike 11 (S11-20) |
+| AC-3.3 | `.agents/skills/archive-docs/SKILL.md` and `.agents/skills/implement-pr/SKILL.md` | T-8 prints one line from each |
 
 ## 3. Scope
 
@@ -70,6 +72,8 @@ Spike 10 is closed. Its folder `docs/deployment-plan/spike-10/` (the PR map, `co
 | Fix the stale Status line and Windows bullet in `docs/ideas/depictions-and-likenesses.md` | STEP-2, AC-3.2 |
 | `docs/deployment-plan/README.md`: Current and Completed | STEP-3, AC-1.3 |
 | Delete `docs/deployment-plan/spike-10/` | STEP-4, STEP-6, AC-1.1 |
+| Drop present-tense "Spike 10" pointers in three docs (R-11 to R-13) | STEP-2, AC-2.3 |
+| Write the close-PR rule into `archive-docs` and `implement-pr` (S-1, S-2) | STEP-3, AC-3.3 |
 
 | Out | Home |
 | --- | --- |
@@ -79,6 +83,7 @@ Spike 10 is closed. Its folder `docs/deployment-plan/spike-10/` (the PR map, `co
 | Removing `S10-…` ids from code comments, skills, or review lenses | Not planned: `archive-docs` "Retarget" allows ids that do not link to a deleted file (D-8) |
 | Rewording `docs/ideas/*.md` beyond the lines in §6 "Retarget edits" | Not planned |
 | Moving the three design notes to `docs/ideas/archive/` | Not planned (D-2) |
+| Other skill edits for spike closes (for example `ship-pr` or `plan-spike`) | Not planned: S-1 and S-2 are the two places a close PR's plan meets a rule |
 | A catalog upgrade tool for `likeness`, `engagement`, or `interests` on existing projects | Not planned: the user handled the dogfood projects (2026-10-17) |
 | The sentence "Spike 10 and earlier cut each PR as an In / Out / Testable table" in `docs/deployment-plan/README.md` | Not planned: still true of the archived spikes (D-9) |
 
@@ -91,13 +96,15 @@ Verified at `bdce4cd`.
 | Spike folder | `docs/deployment-plan/spike-10/` | `README.md`, `deployment-plan.md`, `deployment-plan.review.md`, `completed.md`, `depictions-and-likenesses.md`, `international-names.md`, `name-matching-enhancements.md`, `design/README.md`, `design/archive/` (13 briefs, one brief review log), `prs/` (plans, review logs, ship logs). All operational; nothing in `.agents/`, `.cursor/`, `core/`, `api/`, or `macos/` links into it |
 | Deployment-plan index | `docs/deployment-plan/README.md` | **Current** says Spike 10 is open and links `spike-10/` and `spike-10/deployment-plan.md`. **Completed** starts at Spike 9 |
 | Archive | `docs/deployment-plan/archive/` | `spike-1.md`, `spike-2/` … `spike-9/`. No `spike-10/` |
-| Inbound link | `docs/matching.md` line 163 | Links `deployment-plan/spike-10/name-matching-enhancements.md` and says event and place affinity is Spike 10; that was descoped (S10-31) |
+| Inbound link | `docs/matching.md` line 163, under "Not yet handled" | Links `deployment-plan/spike-10/name-matching-enhancements.md`; lists Abbreviations, which shipped (lines 93–94 are their contract), and says event and place affinity is Spike 10, which was descoped (S10-31) |
 | Inbound link | `docs/dogfood/ux.md` line 49 | Links `../deployment-plan/spike-10/` |
 | Inbound link | `docs/ideas/source-structure.md` line 58 | Links `../deployment-plan/spike-10/`; says box-select "is still S10-20" (it landed, [#396](https://github.com/mendahu/provenencia/pull/396)) |
 | Inbound link | `docs/ideas/international-names.md` line 3 | Links `../deployment-plan/spike-10/international-names.md` |
 | Inbound link | `docs/ideas/depictions-and-likenesses.md` line 3 | Links `../deployment-plan/spike-10/depictions-and-likenesses.md`; says Spike 10 takes a crop cache (descoped, S10-33) and Promote's side-by-side crops (moved to S11-20). Line 11 ("Windows.") says "The cache row is the same" |
 | Inbound link | `docs/ideas/archive/name-matching-enhancements.md` line 3 | Links `../../deployment-plan/spike-10/name-matching-enhancements.md` |
 | Inbound link | `docs/ideas/archive/glyph-consolidation.md` line 3 | Links `../../deployment-plan/spike-10/prs/S10-19-event-mark-sidebar.review.md` |
+| Present tense | `docs/conclusion-layer-data-model.md` "Weak claims" paragraph, `docs/ideas/identity-claim-review.md` line 3, `docs/promote-graph-alignment.md` line 49 | "Spike 10 is the dogfood UX cleanup." (twice) and "not Spike 10" read as if Spike 10 were open |
+| Close-PR rule | `.agents/skills/archive-docs/SKILL.md` "Spike close — checklist"; `.agents/skills/implement-pr/SKILL.md` step 8 | Neither says what a close PR does with its own plan; step 8 requires a `completed.md` paragraph and a Landed note |
 | Text only, not links | `docs/deployment-plan/spike-11/prs/S11-02-value-compare-core.md` line 292, `docs/deployment-plan/spike-11/prs/S11-03-value-compare-names.md` line 264 | An `rg --glob '!docs/deployment-plan/spike-10/**'` inside a landed plan's Check. Stays (D-7) |
 | Domain docs already updated | `docs/matching.md`, `docs/interpretation-layer-data-model.md` (`depiction`), `docs/source-layer-data-model.md`, `docs/conclusion-reconciliation.md`, `docs/conclusion-layer-data-model.md` (Unpromote §5, `preferred_likeness_observation_id`), `docs/audit-revision-history.md` (`canonical_entity`), `docs/seeded-vocabulary.md` (`gender`, `engagement`, `interests`, `likeness`), `docs/structured-name-model.md`, `docs/deployment-plan/archive/spike-3/navigation-history.md` (list scroll) | Carry the contracts the archive README points at |
 | Tests | — | None: docs only |
@@ -113,11 +120,11 @@ Verified at `bdce4cd`.
 | D-3 | The archive README is the text in §6 "Archive README", copied verbatim. | The README is the deliverable; its content is the decision. | Letting the implementer distill — because that is a judgment call this plan makes |
 | D-4 | Each inbound link is fixed by the exact replacement in §6 "Retarget edits". Links to Spike 10 point at the directory `archive/spike-10/`, the same way links point at `archive/spike-9/`. | Exact edits leave nothing to choose. | Linking `archive/spike-10/README.md` — the index already links spike directories |
 | D-5 | STEP-4 deletes everything in `docs/deployment-plan/spike-10/` except `prs/S10-99-dogfood-close.md`, `prs/S10-99-dogfood-close.review.md`, and `prs/S10-99-dogfood-close.ship.md`. STEP-6 deletes those three last, in the commit that records the ship log, so the folder is gone at the PR's head. | `ship-pr` writes and commits the ship log beside this plan until the end; deleting the plan first would break that loop. | Deleting the whole folder in STEP-4 — because the orchestrator would recreate `prs/` for its ship log |
-| D-6 | No Landed note and no `completed.md` paragraph. The PR body carries any deviation. | Both files are deleted by this PR. | Writing them and deleting them in the same PR |
+| D-6 | No Landed note and no `completed.md` paragraph; `implement-pr` step 8 is skipped. The PR body carries any deviation. S-1 and S-2 write D-5 and D-6 into the skills. | Both files are deleted by this PR. Every spike has an `S#-99` close, so the rule belongs in `archive-docs`, not in each plan. | Writing them and deleting them in the same PR; repeating D-5 and D-6 in every close plan |
 | D-7 | The two landed Spike 11 plans that name `docs/deployment-plan/spike-10/**` in an `rg --glob` are left as they are. | They are landed history, not links; an exclude glob for a missing folder is harmless. | Editing landed Spike 11 plans |
-| D-8 | `S10-…` ids in code comments, `.agents/skills/`, and review lenses stay. | `archive-docs` "Retarget": ids are fine when they do not link to a deleted file. T-1 proves none link. | A sweep of ids |
+| D-8 | `S10-…` ids in code comments, `.agents/skills/`, and review lenses stay. Present-tense "Spike 10" pointers in docs are fixed (R-11 to R-13), as the Spike 9 close did. | `archive-docs` "Retarget": ids are fine when they do not link to a deleted file. T-1 proves none link. | A sweep of ids |
 | D-9 | `docs/deployment-plan/README.md` changes only the **Current** paragraph and adds one **Completed** row. | The rest of that file is still true. | Rewriting "How a spike is planned" |
-| D-10 | Gate: `scripts/check-pr.sh`, run twice. STEP-3 runs it before any deletion: it passes. STEP-6 runs it at the PR head, after this plan is gone: `plan-docs` prints "no plans or briefs changed" and passes. Between STEP-4 and STEP-6 the gate is not run, because this plan links `../deployment-plan.md`, which STEP-4 deletes, and `plan-docs` would fail on that. Off macOS, `xcode-test (needs macOS)` is the one accepted failure, because this PR changes no Swift or Xcode file; CI runs Xcode on the PR. | The gate answers for docs at both ends, and no run needs a judgment about an expected failure. | Running the gate after STEP-4 and accepting a `plan-docs` failure — because the implementer would have to judge which errors are expected |
+| D-10 | Gate: `scripts/check-pr.sh` on the user's Mac, as `ship-pr` requires, run twice. STEP-3 runs it before any deletion. STEP-6 runs it at the PR head, after this plan is gone, when `plan-docs` prints "no plans or briefs changed". Between STEP-4 and STEP-6 the gate is not run, because this plan links `../deployment-plan.md`, which STEP-4 deletes. | Both runs pass with no failure to judge. | Running after STEP-4 and accepting a `plan-docs` failure; an off-Mac exception — because `ship-pr` says the gate cannot pass off the Mac |
 
 ## 6. Design
 
@@ -129,7 +136,7 @@ Verified at `bdce4cd`.
 
 **Builds on.** `archive-docs` "Spike close — checklist"; the Spike 9 close ([#326](https://github.com/mendahu/provenencia/pull/326)).
 **Deletes.** `docs/deployment-plan/spike-10/` and everything in it (D-1, D-5).
-**Next adds.** The Spike 11 close follows the same shape.
+**Next adds.** The Spike 11 close reads S-1 in `archive-docs` instead of repeating D-5 and D-6.
 
 ### Schema
 
@@ -158,7 +165,7 @@ None — no user-facing copy.
 ```markdown
 # Spike 10 — Dogfood UX
 
-**Done.** The annoyances logged while entering real research are gone, names match across accents and abbreviations, and a face on a photo is evidence. Live models: [`matching.md`](../../../matching.md), [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md), [`source-layer-data-model.md`](../../../source-layer-data-model.md), [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md), [`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md), [`audit-revision-history.md`](../../../audit-revision-history.md), [`seeded-vocabulary.md`](../../../seeded-vocabulary.md), [`navigation-history.md`](../spike-3/navigation-history.md).
+**Done.** The annoyances logged while entering real research are gone, names match across accents and abbreviations, and a face on a photo is evidence. Live models: [`matching.md`](../../../matching.md), [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md), [`source-layer-data-model.md`](../../../source-layer-data-model.md), [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md), [`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md), [`audit-revision-history.md`](../../../audit-revision-history.md), [`seeded-vocabulary.md`](../../../seeded-vocabulary.md), [`structured-name-model.md`](../../../structured-name-model.md), [`navigation-history.md`](../spike-3/navigation-history.md).
 
 ## Decisions
 
@@ -174,7 +181,7 @@ None — no user-facing copy.
 - **The Sources list is one page.** Sort, type, evidence status, and text search persist per project and user. Status counts primaries in one grouped read. Search filters the loaded rows by title and ref; it is not the omnibar.
 - **One mark per subject kind.** The Event mark is a calendar, drawn everywhere through `PVMark`.
 - **Gender wins over sex at birth on the Person page.** `gender` is seeded `man`, `woman`, `non_binary`, and researchers add terms. Sex at birth borrows a tint and says “· at birth”.
-- **Names match the way records are written.** Accent folding is matching only (0.95); display, `NormalizeForm`, and `sort_key` never fold, so José and Jose stay separate groupings. Abbreviation and nickname tables are catalog vocabulary (0.98). Spaced particles rejoin. A value counts by its support, and a negative Observation is a contradiction. Date windows compare in days. The Western name-format profile is a catalog row. Project name frequency shipped and Spike 11 removes it ([`comparison-layers.md`](../../spike-11/comparison-layers.md#frequency)).
+- **Names match the way records are written.** Accent folding is matching only; display, `NormalizeForm`, and `sort_key` never fold, so José and Jose stay separate groupings. Abbreviation and nickname tables are catalog vocabulary. Spaced particles rejoin. A value counts by its support, and a negative Observation is a contradiction. Date windows compare in days. The Western name-format profile is a catalog row.
 - **A depiction is an owned value row: a region plus an image File.** The app renders the region; Go checks, decodes, and re-encodes its own PNG and never stores the app's bytes. The image is not an Artifact and not a thumbnail. A File is released when no declared pointer remains, and one purge removes its object.
 - **A gallery is the reconciled likeness values; a preferred portrait is a display pointer.** With no choice, the earliest likeness leads the Person page and the People list.
 - **Unpromote deletes a filing.** It deletes the Subject's claim and the bridge claims on that Source that use it. It does not reject, and the handle stays.
@@ -182,31 +189,31 @@ None — no user-facing copy.
 
 ## Refused
 
-An adaptive choice field. A default role on a new connection. Omnibar whole-word rank (already right). Simplified cards, culling cards to the window, and a canvas cover. A crop cache. Daitch–Mokotoff. Related event types and place chains in matching. A collation locale. Census-scale layers. Rejecting a claim. A handle delete.
+An adaptive choice field. A default role on a new connection. Omnibar whole-word rank (already right). Simplified cards, culling cards to the window, and a canvas cover. A crop cache. Related event types (birth and baptism) in matching. A handle delete. Parked items are under Leftovers.
 
 ## Leftovers
 
 | Item | Home |
 | --- | --- |
-| Promote compares two likenesses as pictures | Spike 11, S11-20 |
-| Other depiction keys, signature, transparent polygon, Windows PDF draw | [`depictions-and-likenesses.md`](../../../ideas/depictions-and-likenesses.md) |
-| Other name patterns, transliteration, calendars, collation locale | [`international-names.md`](../../../ideas/international-names.md) |
+| Promote compares two likenesses as pictures; place chains; concluded values first | Spike 11 |
+| Depiction leftovers | [`depictions-and-likenesses.md`](../../../ideas/depictions-and-likenesses.md) |
+| International-name leftovers, including the collation locale | [`international-names.md`](../../../ideas/international-names.md) |
 | Daitch–Mokotoff | [`daitch-mokotoff.md`](../../../ideas/daitch-mokotoff.md) |
-| Matcher leftovers | [`name-matching-enhancements.md`](../../../ideas/archive/name-matching-enhancements.md) |
+| Matcher calibration and a labelled set | [`matching-test-suite.md`](../../../ideas/matching-test-suite.md) |
 | Place a common cluster in one action | [`evidence-graph-structure-shortcuts.md`](../../../ideas/evidence-graph-structure-shortcuts.md) |
-| Reject a claim, remove a member, weak-claim review | [`identity-claim-review.md`](../../../ideas/identity-claim-review.md) |
-| Census-scale layers, guided extract, a page-change guard for depictions, keyboard multi-select | [`docs/dogfood/ux.md`](../../../dogfood/ux.md) |
+| Reject a claim, remove a member, weak-claim review, remember researcher decisions | [`identity-claim-review.md`](../../../ideas/identity-claim-review.md) |
+| Dogfood notes still open, including census-scale layers and guided extract | [`docs/dogfood/ux.md`](../../../dogfood/ux.md) |
 ```
 
 ### Retarget edits
 
 Each edit replaces the whole OLD text with the NEW text. Match on the OLD text, not a line number. The text is written in fenced blocks so it can be copied exactly.
 
-**R-1** — `docs/matching.md`. OLD is the start of the line; the rest of the line (from ` [`ideas/archive/…`) stays.
+**R-1** — `docs/matching.md`, under "Not yet handled". OLD is the start of the line; the rest of the line (from ` [`ideas/archive/…`) stays. Abbreviations leave this list: they are the live contract in the same file (the word tiers and the alias-table bullet).
 
 ```text
 OLD: - **Abbreviations, event and place affinity:** Spike 10, [`deployment-plan/spike-10/name-matching-enhancements.md`](deployment-plan/spike-10/name-matching-enhancements.md). Known-as, concluded values, calibration, and rejected-claim memory:
-NEW: - **Abbreviations:** shipped in [Spike 10](deployment-plan/archive/spike-10/). Event and place affinity, known-as, concluded values, calibration, and rejected-claim memory:
+NEW: - **Event and place affinity, known-as, concluded values, calibration, and rejected-claim memory:**
 ```
 
 **R-2** — `docs/dogfood/ux.md`.
@@ -223,11 +230,10 @@ OLD: - Canvas growth landed in [Spike 10](../deployment-plan/spike-10/) (S10-03)
 NEW: - Canvas growth and box-select landed in [Spike 10](../deployment-plan/archive/spike-10/).
 ```
 
-**R-4** — `docs/ideas/international-names.md`, the end of line 3.
+**R-4** — `docs/ideas/international-names.md`, the whole line 3 (it starts `**Status:** idea, not scheduled. Spike 10 takes accent folding`).
 
 ```text
-OLD: Design: [`spike-10/international-names.md`](../deployment-plan/spike-10/international-names.md). Abbreviations, project name frequency, and the rest of the matcher are in [`name-matching-enhancements.md`](archive/name-matching-enhancements.md) for the leftovers, and in that same spike for what it builds.
-NEW: What shipped: [Spike 10](../deployment-plan/archive/spike-10/). Matcher leftovers: [`name-matching-enhancements.md`](archive/name-matching-enhancements.md).
+NEW: **Status:** idea, not scheduled. Spike 10 shipped accent folding in matching, spaced particles, nickname tables, and the Western profile ([decisions](../deployment-plan/archive/spike-10/)). Daitch–Mokotoff: [`daitch-mokotoff.md`](daitch-mokotoff.md). Matcher leftovers: [`name-matching-enhancements.md`](archive/name-matching-enhancements.md).
 ```
 
 **R-5** — `docs/ideas/depictions-and-likenesses.md`, the whole line 3.
@@ -272,6 +278,43 @@ NEW: [Spike 11 — Promote matching refinement](spike-11/) is open. Plan: [`spik
 | [Spike 10](archive/spike-10/) | Dogfood fixes. Names match across accents and abbreviations. A face on a photo is a depiction value. |
 ```
 
+**R-11** — `docs/conclusion-layer-data-model.md`, the end of the "Weak claims" paragraph. Delete the sentence (and the space before it):
+
+```text
+OLD:  Spike 10 is the dogfood UX cleanup.
+NEW: (nothing)
+```
+
+**R-12** — `docs/ideas/identity-claim-review.md`, line 3.
+
+```text
+OLD: Claim management is not scheduled. Spike 10 is the dogfood UX cleanup. Rules live
+NEW: Claim management is not scheduled. Rules live
+```
+
+**R-13** — `docs/promote-graph-alignment.md`.
+
+```text
+OLD: ([`ideas/identity-claim-review.md`](ideas/identity-claim-review.md)), not Spike 10.
+NEW: ([`ideas/identity-claim-review.md`](ideas/identity-claim-review.md)), not this page.
+```
+
+### Skill edits
+
+The next spike close hits D-5 and D-6 again (`.agents/skills/plan-spike/map-template.md` gives every spike an `S#-99` row), so the rule moves into the skills.
+
+**S-1** — `.agents/skills/archive-docs/SKILL.md`, in "Spike close — checklist", insert this line directly after `- [ ] Update docs/ideas/README.md if an idea moved`:
+
+```text
+- [ ] The close PR (S#-99) deletes its own plan, review log, and ship log in its last commit, the one that records the ship log. It writes no Landed note and no completed.md paragraph; the PR body carries any deviation
+```
+
+**S-2** — `.agents/skills/implement-pr/SKILL.md`, step 8. Append one sentence to the end of the step (after "then the gate again, then push."):
+
+```text
+A spike close (S#-99) skips this step: its plan and completed.md are deleted by the PR ([`archive-docs`](../archive-docs/SKILL.md)).
+```
+
 ## 7. Steps
 
 **STEP-1 — Write the archive README**
@@ -280,14 +323,14 @@ Do: create the file with the §6 "Archive README" text, without the surrounding 
 Check: `wc -l docs/deployment-plan/archive/spike-10/README.md` prints at most 80; `grep -c '^## ' docs/deployment-plan/archive/spike-10/README.md` prints 3.
 
 **STEP-2 — Retarget inbound links**
-Files: `docs/matching.md`, `docs/dogfood/ux.md`, `docs/ideas/source-structure.md`, `docs/ideas/international-names.md`, `docs/ideas/depictions-and-likenesses.md`, `docs/ideas/archive/name-matching-enhancements.md`, `docs/ideas/archive/glyph-consolidation.md`.
-Do: apply R-1 to R-8.
-Check: `rg -n 'spike-10/' docs/matching.md docs/dogfood/ux.md docs/ideas` prints only lines containing `archive/spike-10/`; T-6 prints nothing; `rg -c 'archive/spike-10/' docs/ideas/international-names.md docs/ideas/archive/name-matching-enhancements.md` prints 1 for each; `rg -c 'review.md' docs/ideas/archive/glyph-consolidation.md` prints nothing.
+Files: `docs/matching.md`, `docs/conclusion-layer-data-model.md`, `docs/promote-graph-alignment.md`, `docs/ideas/identity-claim-review.md`, `docs/dogfood/ux.md`, `docs/ideas/source-structure.md`, `docs/ideas/international-names.md`, `docs/ideas/depictions-and-likenesses.md`, `docs/ideas/archive/name-matching-enhancements.md`, `docs/ideas/archive/glyph-consolidation.md`.
+Do: apply R-1 to R-8 and R-11 to R-13.
+Check: `rg -n 'spike-10/' docs/matching.md docs/dogfood/ux.md docs/ideas` prints only lines containing `archive/spike-10/`; T-6 prints nothing; `rg -c 'archive/spike-10/' docs/ideas/international-names.md docs/ideas/archive/name-matching-enhancements.md` prints 1 for each; `rg -c 'review.md' docs/ideas/archive/glyph-consolidation.md` prints nothing; T-7 prints nothing.
 
-**STEP-3 — Update the deployment-plan index**
-Files: `docs/deployment-plan/README.md`.
-Do: apply R-9 and R-10.
-Check: `rg -n 'spike-10' docs/deployment-plan/README.md` prints only the new Completed row; T-1 and T-2 print what §8 says; `scripts/check-pr.sh` passes (D-10).
+**STEP-3 — Update the deployment-plan index and the close-PR rule**
+Files: `docs/deployment-plan/README.md`, `.agents/skills/archive-docs/SKILL.md`, `.agents/skills/implement-pr/SKILL.md`.
+Do: apply R-9, R-10, S-1, and S-2.
+Check: `rg -n 'spike-10' docs/deployment-plan/README.md` prints only the new Completed row; T-8 prints one line from each skill; T-1 and T-2 print what §8 says; `scripts/check-pr.sh` passes (D-10).
 
 **STEP-4 — Delete the spike folder**
 Files: `docs/deployment-plan/spike-10/`.
@@ -310,7 +353,7 @@ Branch `s10-99-dogfood-close` from `main`. Four commits, then STEP-6's:
 
 1. STEP-1: "Distill Spike 10 into a decisions note."
 2. STEP-2: "Point the Spike 10 links in docs and ideas at the decisions note."
-3. STEP-3: "List Spike 11 as the only open spike."
+3. STEP-3: "List Spike 11 as the only open spike, and say how a spike close handles its own plan."
 4. STEP-4: "Delete the Spike 10 working folder."
 
 ## 8. Tests
@@ -323,6 +366,8 @@ Branch `s10-99-dogfood-close` from `main`. Four commits, then STEP-6's:
 | T-4 | Docs (shell) | Command T-4 below, at the PR head | `README.md`, `archive`, `spike-11` | AC-1.1, D-5 |
 | T-5 | Docs (shell) | Command T-5 below | The Spike 11 Current line and the Spike 10 Completed row, Spike 10 above Spike 9 | AC-1.3, D-9 |
 | T-6 | Docs (shell) | Command T-6 below | No output | AC-3.2 |
+| T-7 | Docs (shell) | Command T-7 below | No output | AC-2.3, D-8 |
+| T-8 | Docs (shell) | Command T-8 below | One line from `archive-docs/SKILL.md`, one from `implement-pr/SKILL.md` | AC-3.3, D-6 |
 
 Commands, copied as written (plain `|` is regex alternation):
 
@@ -339,6 +384,10 @@ ls docs/deployment-plan
 rg -n 'Spike 1[01]' docs/deployment-plan/README.md
 # T-6
 rg -n 'crop cache|side-by-side|cache row' docs/ideas/depictions-and-likenesses.md
+# T-7
+rg -n 'Spike 10 is the dogfood|not Spike 10|\*\*Abbreviations' docs --glob '!docs/deployment-plan/spike-10/**'
+# T-8
+rg -n 'S#-99' .agents/skills/archive-docs/SKILL.md .agents/skills/implement-pr/SKILL.md
 ```
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `plan-docs` if a Spike 11 plan or brief links a deleted file (T-1 catches it first).
@@ -348,7 +397,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `p
 ```
 - [ ] Every AC in §2 is true: test name or manual check line for each
 - [ ] Every T-# in §8 exists and passes
-- [ ] scripts/check-pr.sh at STEP-3 and at the PR head prints check-pr: PASS, or on non-macOS fails only xcode-test (needs macOS) (D-10)
+- [ ] scripts/check-pr.sh on the user's Mac, at STEP-3 and at the PR head, prints check-pr: PASS (D-10)
 - [ ] No Out line was implemented; nothing outside §4 / §6 was edited
 - [ ] No user-facing copy changed
 - [ ] No VERSION bump
