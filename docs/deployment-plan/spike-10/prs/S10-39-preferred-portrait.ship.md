@@ -1,7 +1,7 @@
 # Ship log — S10-39 Preferred portrait
 
 **Plan:** [`S10-39-preferred-portrait.md`](S10-39-preferred-portrait.md) · **Branch:** `s10-39-preferred-portrait` · **PR:** #450
-**State:** fixing (user)
+**State:** ready
 
 Base `a439ae24` (main).
 
@@ -71,3 +71,6 @@ Files: `core/database/nullblob.go` (new, beside `userid.go`), `core/database/can
 Failing test first: `TestNullBlob` (table): nil → nil, `[]byte{}` → nil, a 16-byte id → the same bytes.
 Do: add `func NullBlob(b []byte) any` with a doc comment in `userid.go`'s style ("binds an empty BLOB as SQL NULL"). In `SetPreferredLikeness`, call `database.NullBlob(observationID)` and delete the private `nullBlob`. Do not touch the other packages' copies. Update the plan's Landed note (or the PR's deviation line) to say `canonicalentities` uses `database.NullBlob` (user, 2026-10-17).
 Check: `go test -tags fts5 ./core/database/ ./core/database/canonicalentities/` passes; scripts/check-pr.sh PASS.
+
+## User fix — result
+Head `98cbce64`. Gate PASS (orchestrator run). F-2 done: `TestNullBlob` red first (`undefined: NullBlob`), then green. MNT-1 → Fixed for this PR's copy; the remaining copies and `uuidJSON` stay in M-4.
