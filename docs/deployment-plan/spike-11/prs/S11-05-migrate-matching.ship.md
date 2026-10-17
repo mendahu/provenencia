@@ -1,7 +1,7 @@
 # Ship log — S11-05 Migrate matching onto value compare
 
 **Plan:** [`S11-05-migrate-matching.md`](S11-05-migrate-matching.md) · **Branch:** `s11-05-migrate-matching` · **PR:** #451
-**State:** fixing 1
+**State:** review 2
 
 Worktree: `.claude/worktrees/s11-05-migrate-matching`, cut from `main` @ `75ed63c`.
 
@@ -48,3 +48,9 @@ Check: `go test ./core/match/...` passes unchanged; scripts/check-pr.sh PASS.
 Files: `core/graphalign/align_test.go`.
 Failing test first: n/a (asserts current behaviour) — add `wantReason` to the table in the subtest "a different first name is no candidate" (`TestUnreachableFallbackScoresOnTheWalkScale`, ~L517–548): `graphalign.ReasonNoMatch` for that case and whatever the second case produces today; compare `row.Reason` in the `t.Fatalf` condition. At L289 reword "toponym + DefaultText Rank" to "toponym + text value compare in Rank".
 Check: `go test ./core/graphalign/...` passes; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `d11e8f1`. Gate PASS (orchestrator run); `check-plan-docs.py` on S11-02/03/05: 0 errors. F-1–F-4 done. Deviation: F-4's second case pins `ReasonAgrees` (today's behaviour), not the `weak` the fix plan guessed.
+
+## Round 2 — review
+Lenses: CON, MNT, UX (each had a finding resolved in Fix plan 1). Scope `4f4b5a2...d11e8f1` (code: `31b94d6...d11e8f1`).
