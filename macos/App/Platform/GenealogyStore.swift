@@ -371,6 +371,21 @@ struct CatalogNameValuePart: Sendable, Equatable {
     var type: String
 }
 
+/// A depiction to save: the region locator and the absolute path of the image
+/// the app rendered from it. Go stages the file; its bytes never cross the FFI.
+struct CatalogDepictionValueInput: Sendable, Equatable {
+    var regionJSON: String
+    var imagePath: String
+}
+
+/// A saved depiction: its region locator and the `objects/…` path (relative to
+/// the project folder) of the image Go stored. Either is empty when the stored
+/// half is not one Go would show.
+struct CatalogDepictionValue: Sendable, Equatable {
+    var regionJSON: String
+    var imageRelPath: String
+}
+
 /// A structured NameValue: the full-form reading plus optional ordered parts.
 struct CatalogNameValue: Sendable, Equatable {
     var form: String
@@ -643,6 +658,10 @@ struct CatalogObservation: Sendable, Equatable, Identifiable {
     var propertyValueType: String
     /// Product/user term key when `valueTermID` is set (empty when unknown).
     var valueTermKey: String = ""
+    /// depiction_values.id when the Observation holds a depiction.
+    var valueDepictionID: String = ""
+    /// The saved depiction when listed; response data, never sent back to Go.
+    var depiction: CatalogDepictionValue? = nil
 }
 
 struct CatalogProperty: Sendable, Equatable, Identifiable {
@@ -1269,10 +1288,13 @@ protocol GenealogyStore: Sendable {
         transcriptionNote: String
     ) async throws -> (CatalogCitation, CatalogWriteEffects)
 
+    /// `depictionInput` is a new region and crop for a depiction Observation;
+    /// nil keeps the value named by `observation.valueDepictionID`.
     func updateObservation(
         projectDir: String,
         userID: String,
-        observation: CatalogObservation
+        observation: CatalogObservation,
+        depictionInput: CatalogDepictionValueInput?
     ) async throws -> (CatalogObservation, CatalogWriteEffects)
 
     func deleteObservation(projectDir: String, userID: String, observationID: String) async throws -> CatalogWriteEffects
@@ -1335,9 +1357,23 @@ struct CatalogObservationDraft: Sendable {
     var valueSubjectID: String = ""
     var valueTermID: String = ""
     var notes: [String] = []
+    var depiction: CatalogDepictionValueInput?
 }
 
 extension GenealogyStore {
+    func updateObservation(
+        projectDir: String,
+        userID: String,
+        observation: CatalogObservation
+    ) async throws -> (CatalogObservation, CatalogWriteEffects) {
+        try await updateObservation(
+            projectDir: projectDir,
+            userID: userID,
+            observation: observation,
+            depictionInput: nil
+        )
+    }
+
     /// Promote onto a new handle with no grade or argument (the graph card's Confirm).
     func promoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogPromoteResult {
         try await promoteSubject(

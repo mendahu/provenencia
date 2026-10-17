@@ -623,6 +623,8 @@ Product value types are **`text`**, **`integer`**, **`date`**, **`name`**, **`su
 
 `value_type = 'depiction'` means the value is a `depiction_values` row (`value_depiction_id`): a region locator on the Citation's page and `image_file_id`, an image File Go stored from the app's rendering of that region. The row is owned by its Observation and released with it. `likeness` on `person` is the seeded depiction Property.
 
+Over the FFI a save sends `DepictionValueInput` (the region and the absolute path of the app's rendering); Go stages it before the write. Responses and reads return `DepictionValue`: the region and the image's `objects/…` path. The client never sends or receives the image's File id.
+
 **Who may create a Property with `value_type = term` or `depiction`:** product/plugin Install (Interpretation subject registry) only. Researcher Property create (`origin=user`) must **not** offer or accept `term` or `depiction` — those Properties stay `text` / `integer` / `date` / `name` / `subject`. Researchers may still mint additional **term rows** (`origin=user`) under an existing registry term Property via the composer picker.
 
 The semantic vocabulary is open, but the primitive value system is intentionally constrained. A researcher may define a new Property without introducing a new storage type.
