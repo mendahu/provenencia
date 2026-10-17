@@ -3,6 +3,7 @@ package likenesses_test
 import (
 	"bytes"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/google/uuid"
@@ -16,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/sourcecredibility"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -186,24 +188,12 @@ func preferredFlags(g []likenesses.Likeness) []bool {
 	return out
 }
 
-func sameBools(a, b []bool) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
 func TestForEntitiesPreferred(t *testing.T) {
 	t.Run("no pointer leads with the earliest", func(t *testing.T) {
 		f := newFixture(t)
 		h, a, _, _ := f.twoLikenesses()
 		g := f.gallery(h)
-		if !sameBools(preferredFlags(g), []bool{false, false}) {
+		if !slices.Equal(preferredFlags(g), []bool{false, false}) {
 			t.Fatalf("flags %v", preferredFlags(g))
 		}
 		l, ok := likenesses.Lead(g)
@@ -216,7 +206,7 @@ func TestForEntitiesPreferred(t *testing.T) {
 		h, a, b, _ := f.twoLikenesses()
 		f.setPreferred(h, b.ID)
 		g := f.gallery(h)
-		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], a.ID) || !sameBools(preferredFlags(g), []bool{false, true}) {
+		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], a.ID) || !slices.Equal(preferredFlags(g), []bool{false, true}) {
 			t.Fatalf("gallery %+v", g)
 		}
 		l, ok := likenesses.Lead(g)
@@ -236,6 +226,32 @@ func TestForEntitiesPreferred(t *testing.T) {
 		g := f.gallery(h)
 		l, ok := likenesses.Lead(g)
 		if len(g) != 1 || !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) || l.Preferred {
+			t.Fatalf("gallery %+v lead %+v", g, l)
+		}
+		if !bytes.Equal(f.pointer(h), b.ID) {
+			t.Fatalf("pointer row %x", f.pointer(h))
+		}
+	})
+	t.Run("stronger negative denying the pointed image falls back", func(t *testing.T) {
+		f := newFixture(t)
+		h, a, b, _ := f.twoLikenesses()
+		f.setPreferred(h, b.ID)
+		album := f.source("Album")
+		c := f.personOn(album)
+		_, _, err := observationstest.SaveCitation(f.c, userID, observationstest.FileArtifact(t, f.c, userID, album.ID), observations.Input{
+			SubjectID: c.ID, PropertyID: f.likeness.ID, Polarity: observations.PolarityNegative,
+			Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 40, 30, 200)}})
+		must(t, err)
+		grade, err := sourcecredibilitygrades.Lookup(f.c, "high_trust", vocabkey.OriginProvenencia)
+		must(t, err)
+		_, err = writes.Call(f.c, writes.Op{Action: "create_source_credibility_assessment", UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+			return sourcecredibility.Upsert(tx, userID, sourcecredibility.UpsertInput{SourceID: album.ID, CredibilityGradeID: grade.ID})
+		})
+		must(t, err)
+		f.promote(c, h)
+		g := f.gallery(h)
+		l, ok := likenesses.Lead(g)
+		if len(g) != 1 || !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) || !slices.Equal(preferredFlags(g), []bool{false}) {
 			t.Fatalf("gallery %+v lead %+v", g, l)
 		}
 		if !bytes.Equal(f.pointer(h), b.ID) {
