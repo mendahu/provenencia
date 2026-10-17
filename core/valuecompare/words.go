@@ -52,10 +52,15 @@ func IsInitial(word string) bool {
 // slashes, each token normalized, and a particle rejoined with the word that
 // follows it. particles is the set of particle tokens.
 func SplitWords(s string, particles map[string]bool) []string {
+	return splitWords(s, func(token string) bool { return particles[token] })
+}
+
+// splitWords is SplitWords with the particle test as a function.
+func splitWords(s string, isParticle func(token string) bool) []string {
 	raw := rawTokens(s)
 	var out []string
 	for i := 0; i < len(raw); i++ {
-		if i+1 < len(raw) && spacedParticle(raw[i], particles) {
+		if i+1 < len(raw) && spacedParticle(raw[i], isParticle) {
 			if n := NormalizeForm(raw[i] + raw[i+1]); n != "" {
 				out = append(out, n)
 			}
@@ -93,11 +98,11 @@ func rawTokens(s string) []string {
 	return out
 }
 
-func spacedParticle(raw string, particles map[string]bool) bool {
+func spacedParticle(raw string, isParticle func(token string) bool) bool {
 	if periodInitial(raw) {
 		return false
 	}
-	return particles[NormalizeForm(raw)]
+	return isParticle(NormalizeForm(raw))
 }
 
 // periodInitial is a lone cased letter written with a period ("O.").
@@ -193,15 +198,15 @@ func EditDistance(a, b []rune) int {
 // tokens are Same, 1 (exact); an initial against anything else is no pair
 // (text has no initials); tokens equal after folding are Equivalent at
 // FoldCredit (fold); a word over MaxSpellingLength runes has no spelling pair; a spelling variant is Near at its ratio (spelling); else
-// no pair, 0. A relation of Different means no pair.
-func wordSimilarity(x, y string, w WordRules) (float64, Relation, Cause) {
+// no pair, 0. A relation of Different means no pair. fx and fy are x and y
+// folded by the caller, once per word.
+func wordSimilarity(x, y, fx, fy string, w WordRules) (float64, Relation, Cause) {
 	if x == y {
 		return 1, Same, CauseExact
 	}
 	if IsInitial(x) || IsInitial(y) {
 		return 0, Different, CauseNoMatch
 	}
-	fx, fy := FoldWord(x, w.Folds), FoldWord(y, w.Folds)
 	if fx == fy {
 		return w.FoldCredit, Equivalent, CauseFold
 	}
@@ -228,8 +233,9 @@ type wordPair struct {
 // counting only above 0. Among equal totals it takes the most pairs; then,
 // walking back from the last cell, the diagonal before skipping a word of a,
 // and skipping a word of a before skipping a word of b. It returns the pairs in
-// a's order and the indexes left unpaired on each side.
-func alignWords(a, b []string, w WordRules) (pairs []wordPair, onlyA, onlyB []int) {
+// a's order and the indexes left unpaired on each side, and every cell's
+// similarity for a caller that needs another pair. fa and fb are a and b folded.
+func alignWords(a, b, fa, fb []string, w WordRules) (pairs []wordPair, onlyA, onlyB []int, sims [][]wordPair) {
 	type cell struct {
 		total  float64
 		pairs  int
@@ -243,11 +249,11 @@ func alignWords(a, b []string, w WordRules) (pairs []wordPair, onlyA, onlyB []in
 	better := func(x, y cell) bool {
 		return x.total > y.total || (x.total == y.total && x.pairs > y.pairs)
 	}
-	sims := make([][]wordPair, len(a))
+	sims = make([][]wordPair, len(a))
 	for i := range a {
 		sims[i] = make([]wordPair, len(b))
 		for j := range b {
-			sim, rel, why := wordSimilarity(a[i], b[j], w)
+			sim, rel, why := wordSimilarity(a[i], b[j], fa[i], fb[j], w)
 			sims[i][j] = wordPair{i: i, j: j, sim: sim, rel: rel, why: why}
 		}
 	}
@@ -295,5 +301,5 @@ func alignWords(a, b []string, w WordRules) (pairs []wordPair, onlyA, onlyB []in
 	slices.Reverse(pairs)
 	slices.Reverse(onlyA)
 	slices.Reverse(onlyB)
-	return pairs, onlyA, onlyB
+	return pairs, onlyA, onlyB, sims
 }
