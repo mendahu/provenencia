@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
@@ -21,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -298,12 +298,13 @@ type row struct {
 	Support, Against     int
 	Reason               string
 	ValueEntityID        []byte
+	ImageFileID          []byte
 }
 
 func snapshot(t *testing.T, q autoreconciler.Querier) []row {
 	t.Helper()
 	rows, err := q.Query(`SELECT entity_id, property_id, rank, value_text, value_integer, value_term_id,
-		value_date, value_name, date_lo, date_hi, sort_key, support, against, reason, value_entity_id
+		value_date, value_name, date_lo, date_hi, sort_key, support, against, reason, value_entity_id, value_image_file_id
 		FROM auto_reconciler_values
 		ORDER BY entity_id, property_id, rank`)
 	must(t, err)
@@ -311,7 +312,7 @@ func snapshot(t *testing.T, q autoreconciler.Querier) []row {
 	var out []row
 	for rows.Next() {
 		var r row
-		must(t, rows.Scan(&r.EntityID, &r.PropertyID, &r.Rank, &r.Text, &r.Integer, &r.TermID, &r.Date, &r.Name, &r.DateLo, &r.DateHi, &r.SortKey, &r.Support, &r.Against, &r.Reason, &r.ValueEntityID))
+		must(t, rows.Scan(&r.EntityID, &r.PropertyID, &r.Rank, &r.Text, &r.Integer, &r.TermID, &r.Date, &r.Name, &r.DateLo, &r.DateHi, &r.SortKey, &r.Support, &r.Against, &r.Reason, &r.ValueEntityID, &r.ImageFileID))
 		out = append(out, r)
 	}
 	must(t, rows.Err())
@@ -641,53 +642,220 @@ func TestReconciledNames(t *testing.T) {
 	f.assertUpkeepEqualsRebuild("TestAutoReconciledNames")
 }
 
-// A likeness is evidence the reconciler has no module for yet (S10-52): it is
-// skipped, and the handle's other values reconcile as before.
-func TestLikenessIsSkipped(t *testing.T) {
-	f := newFixture(t)
-	p := f.subject("person")
-	obs := f.cite(nameIn(p, f.props["name"], "given=James|surname=Robins"))
+// photo is an Artifact on a PNG File under src. Every photo shares one File.
+func (f *fixture) photo(src sources.Source) artifacts.Artifact {
+	f.t.Helper()
+	return observationstest.FileArtifact(f.t, f.c, userID, src.ID)
+}
 
-	// The image never has to exist for this test: raw rows stand in for a saved
-	// likeness, inserted before the promote so upkeep reads them.
+// likenessIn is a likeness whose crop is a 40 x 30 PNG of one gray shade.
+func (f *fixture) likenessIn(s subjects.Subject, shade uint8) observations.Input {
+	return observations.Input{SubjectID: s.ID, PropertyID: f.props["likeness"].ID,
+		Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(f.t, 40, 30, shade)}}
+}
+
+// citeOn files the Observations on a Citation of art, through the real
+// likeness save path.
+func (f *fixture) citeOn(art artifacts.Artifact, in ...observations.Input) []observations.Observation {
+	f.t.Helper()
+	res, _, err := observationstest.SaveCitation(f.c, userID, art, in...)
+	must(f.t, err)
+	return res.Observations
+}
+
+// imageOf is the Observation's current image File id.
+func (f *fixture) imageOf(observationID []byte) []byte {
+	f.t.Helper()
 	db, err := f.c.DB()
-	must(t, err)
-	fileID, depictionID, obsID := make([]byte, 16), make([]byte, 16), make([]byte, 16)
-	for _, id := range [][]byte{fileID, depictionID, obsID} {
-		u, err := uuid.NewV7()
-		must(t, err)
-		copy(id, u[:])
-	}
-	_, err = db.Exec(`INSERT INTO files (id, checksum_sha256, media_type, byte_size) VALUES (?, ?, 'image/png', 1)`,
-		fileID, strings.Repeat("ab", 32))
-	must(t, err)
-	_, err = db.Exec(`INSERT INTO depiction_values (id, region_json, image_file_id) VALUES (?, ?, ?)`,
-		depictionID, locator, fileID)
-	must(t, err)
-	obsRef, err := ref.Mint(ref.PrefixObservation)
-	must(t, err)
-	_, err = db.Exec(`INSERT INTO observations (id, ref, citation_id, subject_id, property_id, polarity, value_depiction_id)
-		VALUES (?, ?, ?, ?, ?, 'positive', ?)`,
-		obsID, obsRef, obs[0].CitationID, p.ID, f.props["likeness"].ID, depictionID)
-	must(t, err)
+	must(f.t, err)
+	var id []byte
+	must(f.t, db.QueryRow(`SELECT dv.image_file_id FROM observations o
+		JOIN depiction_values dv ON dv.id = o.value_depiction_id WHERE o.id = ?`, observationID).Scan(&id))
+	return id
+}
 
-	h := f.promote(p)
-	all := f.rows()
-	if names := rowsFor(all, h, f.props["name"].ID); len(names) != 1 {
-		t.Fatalf("names %+v", names)
+// Two likenesses are the same value exactly when they hold the same image.
+func TestDepictionsReconcileByImage(t *testing.T) {
+	type world struct {
+		f      *fixture
+		a, b   subjects.Subject
+		oa, ob observations.Observation
+		h      []byte
 	}
-	if got := rowsFor(all, h, f.props["likeness"].ID); len(got) != 0 {
-		t.Fatalf("likeness values %+v", got)
+	start := func(t *testing.T, shadeB uint8) *world {
+		f := newFixture(t)
+		pr, pc := f.photo(f.source), f.photo(f.other)
+		a, b := f.subject("person"), f.subjectOn(f.other, "person")
+		oa := f.citeOn(pr, f.likenessIn(a, 100))[0]
+		ob := f.citeOn(pc, f.likenessIn(b, shadeB))[0]
+		h := f.promote(a)
+		_, err := f.c.Graph().Node(h)
+		must(t, err)
+		return &world{f: f, a: a, b: b, oa: oa, ob: ob, h: h}
 	}
-	for _, o := range f.outcomes() {
-		if bytes.Equal(o.PropertyID, f.props["likeness"].ID) {
-			t.Fatalf("likeness outcome %+v", o)
+	likenessRows := func(w *world) []row {
+		return rowsFor(w.f.rows(), w.h, w.f.props["likeness"].ID)
+	}
+	byImage := func(t *testing.T, w *world, image []byte) row {
+		t.Helper()
+		for _, r := range likenessRows(w) {
+			if bytes.Equal(r.ImageFileID, image) {
+				return r
+			}
 		}
+		t.Fatalf("no likeness row for image %x in %+v", image, likenessRows(w))
+		return row{}
 	}
-	f.assertUpkeepEqualsRebuild("likeness skipped")
-	if err := f.c.Graph().Verify(); err != nil {
-		t.Fatal(err)
+	outcomeOf := func(w *world, id []byte) outcome {
+		for _, o := range w.f.outcomes() {
+			if bytes.Equal(o.ObservationID, id) {
+				return o
+			}
+		}
+		w.f.t.Fatalf("no outcome for %x", id)
+		return outcome{}
 	}
+	// finish holds upkeep to a rebuild and the graph cache to the catalog.
+	finish := func(t *testing.T, w *world, name string) {
+		t.Helper()
+		w.f.assertUpkeepEqualsRebuild(name)
+		n, err := w.f.c.Graph().Node(w.h)
+		must(t, err)
+		cached := n.Values[string(w.f.props["likeness"].ID)]
+		rows := likenessRows(w)
+		if len(cached) != len(rows) {
+			t.Fatalf("node has %d likeness values, table %d", len(cached), len(rows))
+		}
+		for i := range rows {
+			if !bytes.Equal(cached[i].ImageFileID, rows[i].ImageFileID) {
+				t.Fatalf("node value %d image %x, table %x", i, cached[i].ImageFileID, rows[i].ImageFileID)
+			}
+		}
+		must(t, w.f.c.Graph().Verify())
+	}
+
+	t.Run("two images are two values", func(t *testing.T) {
+		w := start(t, 200)
+		w.f.join(w.b, w.h)
+		rows := likenessRows(w)
+		if len(rows) != 2 {
+			t.Fatalf("rows %+v", rows)
+		}
+		for _, img := range [][]byte{w.f.imageOf(w.oa.ID), w.f.imageOf(w.ob.ID)} {
+			r := byImage(t, w, img)
+			if r.Reason != "kept" || r.Support != 1 {
+				t.Fatalf("row %+v", r)
+			}
+			if r.Text != nil || r.Integer != nil || r.TermID != nil || r.Date != nil || r.Name != nil || r.ValueEntityID != nil {
+				t.Fatalf("other value columns set: %+v", r)
+			}
+		}
+		for _, id := range [][]byte{w.oa.ID, w.ob.ID} {
+			if o := outcomeOf(w, id); o.Reason != "kept" {
+				t.Fatalf("outcome %+v", o)
+			}
+		}
+		finish(t, w, "two images")
+	})
+	t.Run("the same pixels are one value", func(t *testing.T) {
+		w := start(t, 100)
+		w.f.join(w.b, w.h)
+		if !bytes.Equal(w.f.imageOf(w.oa.ID), w.f.imageOf(w.ob.ID)) {
+			t.Fatal("two shade-100 crops are two Files")
+		}
+		rows := likenessRows(w)
+		if len(rows) != 1 || rows[0].Reason != "kept" || rows[0].Support != 2 {
+			t.Fatalf("rows %+v", rows)
+		}
+		for _, id := range [][]byte{w.oa.ID, w.ob.ID} {
+			o := outcomeOf(w, id)
+			if o.Reason != "kept" || o.ValueRank == nil || *o.ValueRank != rows[0].Rank {
+				t.Fatalf("outcome %+v", o)
+			}
+		}
+		finish(t, w, "same pixels")
+	})
+	t.Run("a stronger negative denies", func(t *testing.T) {
+		w := start(t, 200)
+		f := w.f
+		album := f.newSource("Album")
+		c := f.subjectOn(album, "person")
+		oc := f.citeOn(f.photo(album), negative(f.likenessIn(c, 200)))[0]
+		must(t, f.credibility(album, "high_trust"))
+		f.join(w.b, w.h)
+		f.join(c, w.h)
+		if r := byImage(t, w, f.imageOf(w.ob.ID)); r.Reason != "denied" {
+			t.Fatalf("shade 200 %+v", r)
+		}
+		if r := byImage(t, w, f.imageOf(w.oa.ID)); r.Reason != "kept" {
+			t.Fatalf("shade 100 %+v", r)
+		}
+		if o := outcomeOf(w, w.ob.ID); o.Reason != "denied" || !bytes.Equal(o.DeniedBy, oc.ID) {
+			t.Fatalf("outcome %+v", o)
+		}
+		finish(t, w, "denied")
+	})
+	t.Run("a provisional member", func(t *testing.T) {
+		w := start(t, 200)
+		_, err := writes.Call(w.f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+			return identityclaims.Create(tx, userID, identityclaims.CreateInput{SubjectID: w.b.ID, EntityID: w.h, Status: identityclaims.StatusProvisional})
+		})
+		must(t, err)
+		if r := byImage(t, w, w.f.imageOf(w.ob.ID)); r.Reason != "provisional" {
+			t.Fatalf("shade 200 %+v", r)
+		}
+		if r := byImage(t, w, w.f.imageOf(w.oa.ID)); r.Reason != "kept" {
+			t.Fatalf("shade 100 %+v", r)
+		}
+		if o := outcomeOf(w, w.ob.ID); o.Reason != "provisional" {
+			t.Fatalf("outcome %+v", o)
+		}
+		finish(t, w, "provisional")
+	})
+	t.Run("a low-trust Source is weak", func(t *testing.T) {
+		w := start(t, 200)
+		must(t, w.f.credibility(w.f.other, "low_trust"))
+		w.f.join(w.b, w.h)
+		if r := byImage(t, w, w.f.imageOf(w.ob.ID)); r.Reason != "weak" {
+			t.Fatalf("shade 200 %+v", r)
+		}
+		if r := byImage(t, w, w.f.imageOf(w.oa.ID)); r.Reason != "kept" {
+			t.Fatalf("shade 100 %+v", r)
+		}
+		finish(t, w, "weak")
+	})
+	t.Run("an unreadable image is no evidence", func(t *testing.T) {
+		w := start(t, 200)
+		w.f.join(w.b, w.h)
+		db, err := w.f.c.DB()
+		must(t, err)
+		_, err = db.Exec(`UPDATE files SET media_type = 'image/jpeg' WHERE id = ?`, w.f.imageOf(w.ob.ID))
+		must(t, err)
+		must(t, autoreconciler.Rebuild(db))
+		w.f.c.Graph().Drop()
+		if rows := likenessRows(w); len(rows) != 1 {
+			t.Fatalf("rows %+v", rows)
+		}
+		if o := outcomeOf(w, w.ob.ID); o.Reason != "no_evidence" {
+			t.Fatalf("outcome %+v", o)
+		}
+	})
+	t.Run("Verify sees a stale image", func(t *testing.T) {
+		w := start(t, 200)
+		w.f.join(w.b, w.h)
+		w.f.c.Graph().Drop()
+		db, err := w.f.c.DB()
+		must(t, err)
+		_, err = db.Exec(`UPDATE auto_reconciler_values SET value_image_file_id = ?
+			WHERE entity_id = ? AND property_id = ? AND value_image_file_id = ?`,
+			bytes.Repeat([]byte{1}, 16), w.h, w.f.props["likeness"].ID, w.f.imageOf(w.oa.ID))
+		must(t, err)
+		_, err = w.f.c.Graph().Node(w.h)
+		must(t, err)
+		if err := w.f.c.Graph().Verify(); err == nil {
+			t.Fatal("Verify passed with a stale image id")
+		}
+	})
 }
 
 // A stale cache rebuilds on open: old versions, and the 3 and 4 stamped by
@@ -889,7 +1057,7 @@ func TestReconciledEvidence(t *testing.T) {
 }
 
 func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
-	for _, stale := range []int{0, 2, 3, 4, 5, 6, 7} {
+	for _, stale := range []int{0, 2, 3, 4, 5, 6, 7, 14} {
 		t.Run(fmt.Sprint("version ", stale), func(t *testing.T) {
 			f := newFixture(t)
 			p := f.subject("person")
@@ -1038,6 +1206,38 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 					return struct{}{}, changes, err
 				})
 				must(f.t, err)
+			}
+		}},
+		{"a likeness region edit replaces its image value", func(f *fixture) {
+			const region50 = `{"version":1,"selectors":[{"type":"page","artifact_page":1},{"type":"region","unit":"normalized","points":[{"x":0.5,"y":0.5},{"x":0.9,"y":0.5},{"x":0.9,"y":0.9}]}]}`
+			pr, pc := f.photo(f.source), f.photo(f.other)
+			a, b := f.subject("person"), f.subjectOn(f.other, "person")
+			oa := f.citeOn(pr, f.likenessIn(a, 100))[0]
+			f.citeOn(pc, f.likenessIn(b, 200))
+			h := f.promote(a)
+			f.join(b, h)
+			old := f.imageOf(oa.ID)
+			_, err := observationstest.UpdateObservation(f.c, userID, observations.Input{
+				ID: oa.ID, SubjectID: a.ID, PropertyID: f.props["likeness"].ID,
+				Depiction: &observations.DepictionInput{RegionJSON: region50, ImagePath: observationstest.Crop(f.t, 40, 30, 50)}})
+			must(f.t, err)
+			now := f.imageOf(oa.ID)
+			if bytes.Equal(old, now) {
+				f.t.Fatal("the edit kept the old image")
+			}
+			rows := rowsFor(f.rows(), h, f.props["likeness"].ID)
+			if len(rows) != 2 {
+				f.t.Fatalf("rows %+v", rows)
+			}
+			seen := false
+			for _, r := range rows {
+				if bytes.Equal(r.ImageFileID, old) {
+					f.t.Fatalf("old image still cached: %+v", r)
+				}
+				seen = seen || bytes.Equal(r.ImageFileID, now)
+			}
+			if !seen {
+				f.t.Fatalf("new image not cached: %+v", rows)
 			}
 		}},
 		{"observations added before and after promote on two members", func(f *fixture) {

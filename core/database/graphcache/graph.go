@@ -76,19 +76,20 @@ type Node struct {
 
 // Value is one auto_reconciler_values row. Date and Name are the stored blobs.
 type Value struct {
-	Rank       int
-	Reason     string
-	Text       string
-	HasText    bool
-	Integer    int64
-	HasInteger bool
-	TermID     []byte
-	TermKey    string
-	EntityID   []byte
-	Date       []byte
-	Name       []byte
-	Support    int
-	Against    int
+	Rank        int
+	Reason      string
+	Text        string
+	HasText     bool
+	Integer     int64
+	HasInteger  bool
+	TermID      []byte
+	TermKey     string
+	EntityID    []byte
+	Date        []byte
+	Name        []byte
+	ImageFileID []byte
+	Support     int
+	Against     int
 }
 
 // Member is one accepted or provisional identity claim.

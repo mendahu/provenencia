@@ -8,19 +8,20 @@ import (
 
 // TruthRow is one value a fresh reconcile would write for an entity.
 type TruthRow struct {
-	PropertyID []byte
-	Rank       int
-	Reason     string
-	Text       string
-	HasText    bool
-	Integer    int64
-	HasInteger bool
-	TermID     []byte
-	EntityID   []byte
-	Date       []byte
-	Name       []byte
-	Support    int
-	Against    int
+	PropertyID  []byte
+	Rank        int
+	Reason      string
+	Text        string
+	HasText     bool
+	Integer     int64
+	HasInteger  bool
+	TermID      []byte
+	EntityID    []byte
+	Date        []byte
+	Name        []byte
+	ImageFileID []byte
+	Support     int
+	Against     int
 }
 
 // TruthFunc recomputes values from observations. autoreconciler registers it.
@@ -235,6 +236,7 @@ func valueEqual(v Value, t TruthRow) bool {
 		bytes.Equal(v.EntityID, t.EntityID) &&
 		bytes.Equal(v.Date, t.Date) &&
 		bytes.Equal(v.Name, t.Name) &&
+		bytes.Equal(v.ImageFileID, t.ImageFileID) &&
 		v.Support == t.Support &&
 		v.Against == t.Against
 }

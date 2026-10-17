@@ -93,5 +93,8 @@ func truthRow(g *group, rank int, cl autoreconcile.ReconciledValue) (graphcache.
 		}
 		row.Name = b
 	}
+	if v.Depiction != nil {
+		row.ImageFileID = append([]byte(nil), v.Depiction.ImageFileID...)
+	}
 	return row, nil
 }
