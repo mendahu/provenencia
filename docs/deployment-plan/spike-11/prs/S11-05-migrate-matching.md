@@ -252,7 +252,7 @@ Check: `go build ./...` and `go vet -tags fts5 ./core/... ./api/...` pass; `CGO_
 **STEP-3 — The matching skill**
 Files: `.agents/skills/add-match-rule/SKILL.md`.
 Do: D-13.
-Check: `rg -n 'namealiases.Rules' .agents/skills/add-match-rule/SKILL.md` prints one line.
+Check: `rg -n 'valuerules.Load' .agents/skills/add-match-rule/SKILL.md` prints one line.
 
 **STEP-4 — Docs that named the deleted code**
 Files: `docs/matching.md`, `docs/promote-graph-alignment.md`, `docs/ideas/daitch-mokotoff.md`, `docs/matching-model.md`.

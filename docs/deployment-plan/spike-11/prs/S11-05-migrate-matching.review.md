@@ -49,3 +49,12 @@ Logged for S11-10, which ports the profile check onto `vocabkey`.
 
 ### X-9 · minor · Checks that cannot run here; rule modifiers for T-1
 **Answer:** Fixed for T-1 (each case copies `Default().Value` and sets the field). `check-pr.sh` runs on the user's Mac (STEP-5), as in S11-04.
+
+## Round 2
+
+Maintainability: Fits with changes.
+
+### M-6 · blocker · STEP-3's check searched for `namealiases.Rules`, which D-13's skill line does not name
+**Answer:** Fixed. STEP-3's check is `rg -n 'valuerules.Load' .agents/skills/add-match-rule/SKILL.md`.
+
+Logged, not raised: `matching.ForEntity` loads the name format before `rank` loads it again through `valuerules.Load` (deleted with the package in S11-13); `core/autoreconcile/names.go` reads registry words without catalog aliases (S11-06).
