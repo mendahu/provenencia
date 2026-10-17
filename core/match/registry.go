@@ -2,7 +2,6 @@ package match
 
 import (
 	"github.com/mendahu/provenencia/core/matchregistry"
-	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
@@ -49,7 +48,7 @@ var DefaultWordRules = WordRules{
 	// 1 turns fuzzy matching off.
 	FuzzyFloor: Set(value.Words.FuzzyFloor),
 	// An initial against a word it begins: "J." ~ "James".
-	InitialCredit: Set(0.5),
+	InitialCredit: Set(value.Words.InitialCredit),
 	// Words at least this long may differ by one added or dropped letter
 	// below FuzzyFloor (Ann ~ Anne, Jon ~ John).
 	ShortVariantMinLength: Set(value.Words.ShortVariantMinLength),
@@ -61,16 +60,15 @@ var DefaultWordRules = WordRules{
 
 // AliasCredit is an abbreviation or nickname table hit. Exact is 1. A
 // fold-only pair is lower (foldOnly).
-const AliasCredit = 0.98
+var AliasCredit = value.Words.AliasCredit
 
 // noAliasTables is the comparer default: no abbreviation or nickname hits
 // until a catalog load supplies rows.
 var noAliasTables []valuecompare.AliasTable
 
-// MaxExactPairing bounds the exact best-pairing search (2^n states over the
-// shorter word list); longer lists pair greedily. A performance limit, not a
-// scoring weight: names never get close.
-const MaxExactPairing = 12
+// MaxExactPairing bounds the exact best-pairing search; longer lists pair
+// greedily. Read from the registry's value section.
+var MaxExactPairing = value.Words.MaxExactPairing
 
 // ---------------------------------------------------------------------------
 // Names
@@ -84,9 +82,9 @@ var DefaultNames = NameComparer{
 	Pattern: Set(valuecompare.WesternPattern),
 
 	// Affinities: how much a pair of words counts when their roles differ.
-	UntypedAffinity: Set(0.8), // a typed word against an untyped one
-	NickAffinity:    Set(0.9), // a nickname against a given name
-	CrossRole:       Set(0.5), // any other mismatch: surname against given
+	UntypedAffinity: Set(value.Names.UntypedAffinity), // a typed word against an untyped one
+	NickAffinity:    Set(value.Names.NickAffinity),    // a nickname against a given name
+	CrossRole:       Set(value.Names.CrossRole),       // any other mismatch: surname against given
 
 	// Both names have family words and none resembles any word of the other.
 	GivenOnlyFactor: Set(0.5),
@@ -106,29 +104,8 @@ var DefaultNames = NameComparer{
 }
 
 // WesternNamePattern: given names then surname, with GEDCOM-style part types.
-// The first given name leads; middle names and initials count less; titles
-// and surname particles are ignored. Every product part type (namevalues
-// registry) must have a role here.
-var WesternNamePattern = valuecompare.NamePattern{
-	PartRoles: map[string]valuecompare.NameRole{
-		namevalue.PartTypeSurname:       valuecompare.RoleFamily,
-		namevalue.PartTypeGiven:         valuecompare.RoleGiven,
-		namevalue.PartTypeNick:          valuecompare.RoleNick,
-		namevalue.PartTypeSuffix:        valuecompare.RoleGeneration,
-		namevalue.PartTypePrefix:        valuecompare.RoleIgnored,
-		namevalue.PartTypeSurnamePrefix: valuecompare.RoleIgnored,
-		namevalue.PartTypeUndetermined:  valuecompare.RoleUntyped,
-		"":                              valuecompare.RoleUntyped,
-	},
-	// What a matched word of each role earns and an unmatched one costs.
-	Weights: valuecompare.NameWeights{
-		Family:     1.5,
-		FirstGiven: 1,
-		OtherGiven: 0.5, // middle names and initials
-		Nick:       0.3,
-		Untyped:    1,
-	},
-}
+// Read from the registry's value section; tune it there.
+var WesternNamePattern = value.Names.Western
 
 // BuiltinNamePatterns are the patterns that ship in code. A later NamePatterns
 // source reads name_format_profiles instead; nothing else changes.

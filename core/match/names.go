@@ -171,7 +171,13 @@ func (c NameComparer) compareNames(a *namevalue.Value, pa valuecompare.NamePatte
 			earned[i][j] = s * c.affinity(x.role, y.role) * (x.weight + y.weight)
 		}
 	}
-	totalEarned, usedA, usedB := bestAssignment(earned)
+	totalEarned, rowTo := valuecompare.BestAssignment(earned, MaxExactPairing)
+	usedA, usedB := make([]bool, len(wa)), make([]bool, len(wb))
+	for i, j := range rowTo {
+		if j >= 0 {
+			usedA[i], usedB[j] = true, true
+		}
+	}
 	total := countedWeight(wa, usedA, usedB) + countedWeight(wb, usedB, usedA)
 	if total == 0 {
 		return 0, 0, false

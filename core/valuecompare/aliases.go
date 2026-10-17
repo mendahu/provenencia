@@ -17,3 +17,16 @@ type AliasTable struct {
 	Roles              []NameRole
 	Sets               [][]string
 }
+
+// AliasIndex is a catalog's alias tables, indexed once per load. The zero
+// index hits nothing.
+type AliasIndex struct {
+	sets []aliasSet
+}
+
+// aliasSet is one equivalence set, the roles that may use it, and its kind.
+type aliasSet struct {
+	tokens map[string]bool
+	roles  map[NameRole]bool
+	kind   AliasKind
+}
