@@ -280,6 +280,7 @@
 		6D245285E4AB8AAFDE78E313 /* PVIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36412B0A6A6851ADB45A7AA8 /* PVIcon.swift */; };
 		6F7945720B05D7777BFA79A2 /* WorkspaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F03B00F6F0D021AFCDAD2DEB /* WorkspaceModel.swift */; };
 		826574F8CA8D24BE551A88BF /* WorkspaceModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */; };
+		AA0000000000000000000A13 /* ObservationDepictionMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000A12 /* ObservationDepictionMappingTests.swift */; };
 		F203948576A1B2C3D4E5F607 /* WorkspaceNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F203948576A1B2C3D4E5F605 /* WorkspaceNavigationTests.swift */; };
 		840A56FF5DC13597C1DFDDF9 /* TrafficLights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85C0991FB99984CAEB385DA4 /* TrafficLights.swift */; };
 		854A784AE802C0EF7A484971 /* PVToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FC0B0A893C7248A08303738 /* PVToast.swift */; };
@@ -503,6 +504,7 @@
 		AA0000000000000000000623 /* PVDeleteImpactTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVDeleteImpactTests.swift; sourceTree = "<group>"; };
 		11ADAF744C32587CD34CDD23 /* PVLogoMark.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVLogoMark.swift; sourceTree = "<group>"; };
 		164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceModelTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000A12 /* ObservationDepictionMappingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ObservationDepictionMappingTests.swift; sourceTree = "<group>"; };
 		F203948576A1B2C3D4E5F605 /* WorkspaceNavigationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceNavigationTests.swift; sourceTree = "<group>"; };
 		16D4D3531F81FABFCDDE4F84 /* PVField.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVField.swift; sourceTree = "<group>"; };
 		1B183C69AA74C2C22006FC05 /* Fonts */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = Fonts; path = Fonts; sourceTree = "<group>"; };
@@ -1243,6 +1245,7 @@
 				AA0000000000000000000400 /* ProjectFilesTests.swift */,
 				164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */,
 				F203948576A1B2C3D4E5F605 /* WorkspaceNavigationTests.swift */,
+				AA0000000000000000000A12 /* ObservationDepictionMappingTests.swift */,
 				AA000000000000000000041B /* WorkspaceSessionTests.swift */,
 				AA0000000000000000000423 /* CatalogQueryRegistryTests.swift */,
 				AA000000000000000000042D /* PlaceRegistryTests.swift */,
@@ -2140,6 +2143,7 @@
 				AA0000000000000000000401 /* ProjectFilesTests.swift in Sources */,
 				826574F8CA8D24BE551A88BF /* WorkspaceModelTests.swift in Sources */,
 				F203948576A1B2C3D4E5F607 /* WorkspaceNavigationTests.swift in Sources */,
+				AA0000000000000000000A13 /* ObservationDepictionMappingTests.swift in Sources */,
 				AA000000000000000000041C /* WorkspaceSessionTests.swift in Sources */,
 				AA0000000000000000000424 /* CatalogQueryRegistryTests.swift in Sources */,
 				AA000000000000000000042E /* PlaceRegistryTests.swift in Sources */,

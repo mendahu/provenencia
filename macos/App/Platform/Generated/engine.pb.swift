@@ -5761,6 +5761,42 @@ public nonisolated struct Provenencia_Engine_V1_NameValueInput: Sendable {
   public init() {}
 }
 
+/// DepictionValueInput is a depiction to save: a region locator on the
+/// Citation's page and the absolute path of the PNG or JPEG the app rendered
+/// from that region. Go checks and re-encodes it; the file's bytes are never
+/// stored and never cross the FFI.
+public nonisolated struct Provenencia_Engine_V1_DepictionValueInput: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var regionJson: String = String()
+
+  public var imagePath: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// DepictionValue is a saved depiction: its region locator and the objects/…
+/// path, relative to the project folder, of the PNG Go stored. Either is empty
+/// when the stored half is not one Go would show (a region not on the
+/// Citation's page, an image that is not a stored PNG).
+public nonisolated struct Provenencia_Engine_V1_DepictionValue: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var regionJson: String = String()
+
+  public var imageRelPath: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 /// Citation is one citations row.
 public nonisolated struct Provenencia_Engine_V1_Citation: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -5891,6 +5927,21 @@ public nonisolated struct Provenencia_Engine_V1_Observation: @unchecked Sendable
     set {_uniqueStorage()._propertyValueType = newValue}
   }
 
+  public var valueDepictionID: String {
+    get {_storage._valueDepictionID}
+    set {_uniqueStorage()._valueDepictionID = newValue}
+  }
+
+  /// Response data; never read from a request.
+  public var depiction: Provenencia_Engine_V1_DepictionValue {
+    get {_storage._depiction ?? Provenencia_Engine_V1_DepictionValue()}
+    set {_uniqueStorage()._depiction = newValue}
+  }
+  /// Returns true if `depiction` has been explicitly set.
+  public var hasDepiction: Bool {_storage._depiction != nil}
+  /// Clears the value of `depiction`. Subsequent reads from it will return its default value.
+  public mutating func clearDepiction() {_uniqueStorage()._depiction = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -5950,6 +6001,15 @@ public nonisolated struct Provenencia_Engine_V1_ObservationDraft: Sendable {
 
   public var notes: [String] = []
 
+  public var depiction: Provenencia_Engine_V1_DepictionValueInput {
+    get {_depiction ?? Provenencia_Engine_V1_DepictionValueInput()}
+    set {_depiction = newValue}
+  }
+  /// Returns true if `depiction` has been explicitly set.
+  public var hasDepiction: Bool {self._depiction != nil}
+  /// Clears the value of `depiction`. Subsequent reads from it will return its default value.
+  public mutating func clearDepiction() {self._depiction = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -5957,6 +6017,7 @@ public nonisolated struct Provenencia_Engine_V1_ObservationDraft: Sendable {
   fileprivate var _valueInteger: Int64? = nil
   fileprivate var _date: Provenencia_Engine_V1_DateValueInput? = nil
   fileprivate var _name: Provenencia_Engine_V1_NameValueInput? = nil
+  fileprivate var _depiction: Provenencia_Engine_V1_DepictionValueInput? = nil
 }
 
 public nonisolated struct Provenencia_Engine_V1_CreateCitationWithObservationsRequest: Sendable {
@@ -6382,11 +6443,23 @@ public nonisolated struct Provenencia_Engine_V1_UpdateObservationRequest: Sendab
   /// Clears the value of `observation`. Subsequent reads from it will return its default value.
   public mutating func clearObservation() {self._observation = nil}
 
+  /// A new region and its crop for the depiction Observation. Unset keeps the
+  /// value named by observation.value_depiction_id.
+  public var depictionInput: Provenencia_Engine_V1_DepictionValueInput {
+    get {_depictionInput ?? Provenencia_Engine_V1_DepictionValueInput()}
+    set {_depictionInput = newValue}
+  }
+  /// Returns true if `depictionInput` has been explicitly set.
+  public var hasDepictionInput: Bool {self._depictionInput != nil}
+  /// Clears the value of `depictionInput`. Subsequent reads from it will return its default value.
+  public mutating func clearDepictionInput() {self._depictionInput = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _observation: Provenencia_Engine_V1_Observation? = nil
+  fileprivate var _depictionInput: Provenencia_Engine_V1_DepictionValueInput? = nil
 }
 
 public nonisolated struct Provenencia_Engine_V1_UpdateObservationResponse: Sendable {
@@ -16981,6 +17054,76 @@ nonisolated extension Provenencia_Engine_V1_NameValueInput: SwiftProtobuf.Messag
   }
 }
 
+nonisolated extension Provenencia_Engine_V1_DepictionValueInput: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DepictionValueInput"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}region_json\0\u{3}image_path\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.regionJson) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.imagePath) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.regionJson.isEmpty {
+      try visitor.visitSingularStringField(value: self.regionJson, fieldNumber: 1)
+    }
+    if !self.imagePath.isEmpty {
+      try visitor.visitSingularStringField(value: self.imagePath, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_DepictionValueInput, rhs: Provenencia_Engine_V1_DepictionValueInput) -> Bool {
+    if lhs.regionJson != rhs.regionJson {return false}
+    if lhs.imagePath != rhs.imagePath {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_DepictionValue: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DepictionValue"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}region_json\0\u{3}image_rel_path\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.regionJson) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.imageRelPath) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.regionJson.isEmpty {
+      try visitor.visitSingularStringField(value: self.regionJson, fieldNumber: 1)
+    }
+    if !self.imageRelPath.isEmpty {
+      try visitor.visitSingularStringField(value: self.imageRelPath, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_DepictionValue, rhs: Provenencia_Engine_V1_DepictionValue) -> Bool {
+    if lhs.regionJson != rhs.regionJson {return false}
+    if lhs.imageRelPath != rhs.imageRelPath {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 nonisolated extension Provenencia_Engine_V1_Citation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Citation"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}artifact_id\0\u{3}locator_json\0\u{1}transcription\0\u{1}label\0\u{3}transcription_uncertain\0\u{3}transcription_note\0")
@@ -17048,7 +17191,7 @@ nonisolated extension Provenencia_Engine_V1_Citation: SwiftProtobuf.Message, Swi
 
 nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Observation"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}citation_id\0\u{3}subject_id\0\u{3}property_id\0\u{1}polarity\0\u{3}value_text\0\u{3}value_integer\0\u{3}value_date_id\0\u{1}date\0\u{3}value_name_id\0\u{1}name\0\u{3}value_subject_id\0\u{3}value_term_id\0\u{3}property_key\0\u{3}property_label\0\u{3}property_value_type\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}citation_id\0\u{3}subject_id\0\u{3}property_id\0\u{1}polarity\0\u{3}value_text\0\u{3}value_integer\0\u{3}value_date_id\0\u{1}date\0\u{3}value_name_id\0\u{1}name\0\u{3}value_subject_id\0\u{3}value_term_id\0\u{3}property_key\0\u{3}property_label\0\u{3}property_value_type\0\u{3}value_depiction_id\0\u{1}depiction\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -17068,6 +17211,8 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
     var _propertyKey: String = String()
     var _propertyLabel: String = String()
     var _propertyValueType: String = String()
+    var _valueDepictionID: String = String()
+    var _depiction: Provenencia_Engine_V1_DepictionValue? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -17095,6 +17240,8 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
       _propertyKey = source._propertyKey
       _propertyLabel = source._propertyLabel
       _propertyValueType = source._propertyValueType
+      _valueDepictionID = source._valueDepictionID
+      _depiction = source._depiction
     }
   }
 
@@ -17130,6 +17277,8 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
         case 15: try { try decoder.decodeSingularStringField(value: &_storage._propertyKey) }()
         case 16: try { try decoder.decodeSingularStringField(value: &_storage._propertyLabel) }()
         case 17: try { try decoder.decodeSingularStringField(value: &_storage._propertyValueType) }()
+        case 18: try { try decoder.decodeSingularStringField(value: &_storage._valueDepictionID) }()
+        case 19: try { try decoder.decodeSingularMessageField(value: &_storage._depiction) }()
         default: break
         }
       }
@@ -17193,6 +17342,12 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
       if !_storage._propertyValueType.isEmpty {
         try visitor.visitSingularStringField(value: _storage._propertyValueType, fieldNumber: 17)
       }
+      if !_storage._valueDepictionID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._valueDepictionID, fieldNumber: 18)
+      }
+      try { if let v = _storage._depiction {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -17219,6 +17374,8 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
         if _storage._propertyKey != rhs_storage._propertyKey {return false}
         if _storage._propertyLabel != rhs_storage._propertyLabel {return false}
         if _storage._propertyValueType != rhs_storage._propertyValueType {return false}
+        if _storage._valueDepictionID != rhs_storage._valueDepictionID {return false}
+        if _storage._depiction != rhs_storage._depiction {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -17230,7 +17387,7 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
 
 nonisolated extension Provenencia_Engine_V1_ObservationDraft: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ObservationDraft"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subject_id\0\u{3}property_id\0\u{1}polarity\0\u{3}value_text\0\u{3}value_integer\0\u{1}date\0\u{3}value_date_id\0\u{1}name\0\u{3}value_name_id\0\u{3}value_subject_id\0\u{3}value_term_id\0\u{1}notes\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subject_id\0\u{3}property_id\0\u{1}polarity\0\u{3}value_text\0\u{3}value_integer\0\u{1}date\0\u{3}value_date_id\0\u{1}name\0\u{3}value_name_id\0\u{3}value_subject_id\0\u{3}value_term_id\0\u{1}notes\0\u{1}depiction\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -17250,6 +17407,7 @@ nonisolated extension Provenencia_Engine_V1_ObservationDraft: SwiftProtobuf.Mess
       case 10: try { try decoder.decodeSingularStringField(value: &self.valueSubjectID) }()
       case 11: try { try decoder.decodeSingularStringField(value: &self.valueTermID) }()
       case 12: try { try decoder.decodeRepeatedStringField(value: &self.notes) }()
+      case 13: try { try decoder.decodeSingularMessageField(value: &self._depiction) }()
       default: break
       }
     }
@@ -17296,6 +17454,9 @@ nonisolated extension Provenencia_Engine_V1_ObservationDraft: SwiftProtobuf.Mess
     if !self.notes.isEmpty {
       try visitor.visitRepeatedStringField(value: self.notes, fieldNumber: 12)
     }
+    try { if let v = self._depiction {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -17312,6 +17473,7 @@ nonisolated extension Provenencia_Engine_V1_ObservationDraft: SwiftProtobuf.Mess
     if lhs.valueSubjectID != rhs.valueSubjectID {return false}
     if lhs.valueTermID != rhs.valueTermID {return false}
     if lhs.notes != rhs.notes {return false}
+    if lhs._depiction != rhs._depiction {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -18253,7 +18415,7 @@ nonisolated extension Provenencia_Engine_V1_UpdateCitationResponse: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_UpdateObservationRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UpdateObservationRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{1}observation\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{1}observation\0\u{3}depiction_input\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -18264,6 +18426,7 @@ nonisolated extension Provenencia_Engine_V1_UpdateObservationRequest: SwiftProto
       case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.userID) }()
       case 3: try { try decoder.decodeSingularMessageField(value: &self._observation) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._depictionInput) }()
       default: break
       }
     }
@@ -18283,6 +18446,9 @@ nonisolated extension Provenencia_Engine_V1_UpdateObservationRequest: SwiftProto
     try { if let v = self._observation {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     } }()
+    try { if let v = self._depictionInput {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -18290,6 +18456,7 @@ nonisolated extension Provenencia_Engine_V1_UpdateObservationRequest: SwiftProto
     if lhs.projectDir != rhs.projectDir {return false}
     if lhs.userID != rhs.userID {return false}
     if lhs._observation != rhs._observation {return false}
+    if lhs._depictionInput != rhs._depictionInput {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

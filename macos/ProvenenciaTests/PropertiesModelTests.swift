@@ -646,4 +646,12 @@ struct PropertiesModelTests {
         #expect(model.isEditingIdentity == false)
         #expect(!model.canSubmitEdit(label: "Plugin fact", description: ""))
     }
+
+    @Test func depictionIsRegistryOnlyAndLabelled() {
+        #expect(L10n.string(SubjectPropertyValueType.label("depiction")) == "Depiction")
+        #expect(L10n.string(PropertyValueType.depiction.label) == "Depiction")
+        #expect(L10n.string(SubjectPropertyValueType.label("nope")) == "Text")
+        #expect(!SubjectPropertyValueType.researcherCreatable.contains("depiction"))
+        #expect(PropertyValueType(rawValue: "depiction") == .depiction)
+    }
 }

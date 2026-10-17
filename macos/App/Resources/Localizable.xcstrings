@@ -2454,6 +2454,18 @@
         }
       }
     },
+    "error.depictionvalues.invalid": {
+      "comment": "FFI error depictionvalues.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid depiction value."
+          }
+        }
+      }
+    },
     "error.file.not_found": {
       "comment": "FFI error file.not_found",
       "extractionState": "manual",
@@ -2894,6 +2906,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Programs and installers can’t be attached"
+          }
+        }
+      }
+    },
+    "error.ingest.unsupported_image": {
+      "comment": "FFI error ingest.unsupported_image (a depiction crop Go could not decode)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The picture of that region couldn’t be read. Draw the region again, or try a smaller one."
           }
         }
       }
@@ -9554,6 +9578,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Date"
+          }
+        }
+      }
+    },
+    "properties.valueType.depiction": {
+      "comment": "Property value type label: depiction (registry-only)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Depiction"
           }
         }
       }

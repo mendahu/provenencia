@@ -10,6 +10,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/hops"
@@ -74,9 +75,13 @@ func loadSourceSubjects(q graphcache.Querier, sourceID []byte) ([]graphcache.Sou
 
 func loadSourceObservations(q graphcache.Querier, sourceID []byte) ([]graphcache.SourceObservation, error) {
 	rows, err := q.Query(`SELECT o.id, o.ref, o.citation_id, o.subject_id, o.property_id, o.polarity,
-			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_subject_id, o.value_term_id, o.value_depiction_id
+			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_subject_id, o.value_term_id, o.value_depiction_id,
+			dpv.region_json, dpv.image_file_id, dc.locator_json, dpf.media_type
 		FROM observations o
 		JOIN subjects s ON s.id = o.subject_id
+		LEFT JOIN depiction_values dpv ON dpv.id = o.value_depiction_id
+		LEFT JOIN citations dc ON dc.id = o.citation_id
+		LEFT JOIN files dpf ON dpf.id = dpv.image_file_id
 		WHERE s.source_id = ?
 		ORDER BY o.ref COLLATE NOCASE`, sourceID)
 	if err != nil {
@@ -86,12 +91,16 @@ func loadSourceObservations(q graphcache.Querier, sourceID []byte) ([]graphcache
 	var dateIDs, nameIDs [][]byte
 	for rows.Next() {
 		var (
-			o       graphcache.SourceObservation
-			text    sql.NullString
-			integer sql.NullInt64
+			o                               graphcache.SourceObservation
+			text                            sql.NullString
+			integer                         sql.NullInt64
+			depictionRegion                 sql.NullString
+			depictionImage                  []byte
+			citationLocator, imageMediaType sql.NullString
 		)
 		if err := rows.Scan(&o.ID, &o.Ref, &o.CitationID, &o.SubjectID, &o.PropertyID, &o.Polarity,
-			&text, &integer, &o.DateID, &o.NameID, &o.ValueSubjectID, &o.TermID, &o.DepictionID); err != nil {
+			&text, &integer, &o.DateID, &o.NameID, &o.ValueSubjectID, &o.TermID, &o.DepictionID,
+			&depictionRegion, &depictionImage, &citationLocator, &imageMediaType); err != nil {
 			_ = rows.Close()
 			return nil, err
 		}
@@ -106,6 +115,9 @@ func loadSourceObservations(q graphcache.Querier, sourceID []byte) ([]graphcache
 		o.ValueSubjectID = append([]byte(nil), o.ValueSubjectID...)
 		o.TermID = append([]byte(nil), o.TermID...)
 		o.DepictionID = append([]byte(nil), o.DepictionID...)
+		if dv := depictionvalues.FromJoin(o.DepictionID, depictionRegion, depictionImage, citationLocator, imageMediaType); dv != nil {
+			o.DepictionRegion, o.DepictionImageFileID = dv.RegionJSON, dv.ImageFileID
+		}
 		if len(o.DateID) > 0 {
 			dateIDs = append(dateIDs, o.DateID)
 		}

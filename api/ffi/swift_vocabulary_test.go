@@ -120,7 +120,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		{
 			name: "value types", path: swiftValueKinds, enum: "PropertyValueType", re: rawCase,
 			want: sorted(properties.ValueTypeText, properties.ValueTypeInteger, properties.ValueTypeDate,
-				properties.ValueTypeName, properties.ValueTypeSubject, properties.ValueTypeTerm),
+				properties.ValueTypeName, properties.ValueTypeSubject, properties.ValueTypeTerm, properties.ValueTypeDepiction),
 		},
 		{
 			name: "subject marks", path: swiftMarks, enum: "PVMarkKey", re: subjectMark,

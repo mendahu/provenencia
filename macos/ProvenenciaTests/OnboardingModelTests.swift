@@ -696,7 +696,8 @@ private struct ThrowingStore: GenealogyStore {
     func updateObservation(
         projectDir _: String,
         userID _: String,
-        observation _: CatalogObservation
+        observation _: CatalogObservation,
+        depictionInput _: CatalogDepictionValueInput?
     ) async throws -> (CatalogObservation, CatalogWriteEffects) { throw StoreBoom.boom }
     func deleteObservation(projectDir _: String, userID _: String, observationID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom

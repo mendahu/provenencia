@@ -642,14 +642,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 		l.ValueSubjectID = append([]byte(nil), subjectID...)
 		l.ValueTermID = append([]byte(nil), termID...)
 		l.ValueDepictionID = append([]byte(nil), depictionID...)
-		if len(depictionImage) > 0 {
-			dv := depictionvalues.Readable(depictionvalues.Value{
-				ID:          append([]byte(nil), depictionID...),
-				RegionJSON:  depictionRegion.String,
-				ImageFileID: append([]byte(nil), depictionImage...),
-			}, citationLocator.String, imageMediaType.String)
-			l.Depiction = &dv
-		}
+		l.Depiction = depictionvalues.FromJoin(depictionID, depictionRegion, depictionImage, citationLocator, imageMediaType)
 		l.ValueTermLabel = termLabel
 		l.ValueNameForm = nameForm
 		l.ValueSubjectLabel = subjectLabel
