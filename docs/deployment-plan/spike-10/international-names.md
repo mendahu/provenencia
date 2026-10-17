@@ -1,6 +1,6 @@
 # International names: accents, scripts, and non-Western name structures
 
-**Status:** pulled into [Spike 10](deployment-plan.md). This note is the design for the PRs. Patterns and scripts this spike does not build are in [`ideas/international-names.md`](../../ideas/international-names.md). Other matcher leftovers are in [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md). It touches matching ([`matching.md`](../../matching.md)), the name reconciler (S9-13), and the name-format work ([`structured-name-model.md`](../../structured-name-model.md) §4).
+**Status:** pulled into [Spike 10](deployment-plan.md). This note is the design for the PRs. Patterns and scripts this spike does not build are in [`ideas/international-names.md`](../../ideas/international-names.md). Other matcher leftovers are in [`ideas/archive/name-matching-enhancements.md`](../../ideas/archive/name-matching-enhancements.md). It touches matching ([`matching.md`](../../matching.md)), the name reconciler (S9-13), and the name-format work ([`structured-name-model.md`](../../structured-name-model.md) §4).
 
 ## Why
 

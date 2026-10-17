@@ -6,7 +6,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 ## Status
 
-**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, S10-08, S10-12, S10-13, S10-15, S10-42, and S10-43 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), [#370](https://github.com/mendahu/provenencia/pull/370), [#371](https://github.com/mendahu/provenencia/pull/371), [#372](https://github.com/mendahu/provenencia/pull/372), [#375](https://github.com/mendahu/provenencia/pull/375), [#373](https://github.com/mendahu/provenencia/pull/373), and [#374](https://github.com/mendahu/provenencia/pull/374) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. S10-10 was descoped in [#370](https://github.com/mendahu/provenencia/pull/370): a common cluster belongs in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md), which covers more than a default role. S10-11 was already done in [#356](https://github.com/mendahu/provenencia/pull/356): a citation with 70 Observations opens quickly. S10-14 and S10-D1 were descoped in [#370](https://github.com/mendahu/provenencia/pull/370): an adaptive choice field is not a priority for this spike. S10-26 was descoped 2026-10-12: Daitch–Mokotoff is [`ideas/daitch-mokotoff.md`](../../ideas/daitch-mokotoff.md). S10-38 and S10-45 landed together in [#382](https://github.com/mendahu/provenencia/pull/382) (2026-10-12), so Slice 9 is done. S10-31 and S10-37 were descoped 2026-10-16, which closes Slice 7: related events and place chains are in [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md), and the collation locale is in [`ideas/international-names.md`](../../ideas/international-names.md). Later landings go in [`completed.md`](completed.md).
+**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, S10-08, S10-12, S10-13, S10-15, S10-42, and S10-43 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), [#370](https://github.com/mendahu/provenencia/pull/370), [#371](https://github.com/mendahu/provenencia/pull/371), [#372](https://github.com/mendahu/provenencia/pull/372), [#375](https://github.com/mendahu/provenencia/pull/375), [#373](https://github.com/mendahu/provenencia/pull/373), and [#374](https://github.com/mendahu/provenencia/pull/374) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. S10-10 was descoped in [#370](https://github.com/mendahu/provenencia/pull/370): a common cluster belongs in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md), which covers more than a default role. S10-11 was already done in [#356](https://github.com/mendahu/provenencia/pull/356): a citation with 70 Observations opens quickly. S10-14 and S10-D1 were descoped in [#370](https://github.com/mendahu/provenencia/pull/370): an adaptive choice field is not a priority for this spike. S10-26 was descoped 2026-10-12: Daitch–Mokotoff is [`ideas/daitch-mokotoff.md`](../../ideas/daitch-mokotoff.md). S10-38 and S10-45 landed together in [#382](https://github.com/mendahu/provenencia/pull/382) (2026-10-12), so Slice 9 is done. S10-31 and S10-37 were descoped 2026-10-16, which closes Slice 7: related events and place chains are in [`ideas/archive/name-matching-enhancements.md`](../../ideas/archive/name-matching-enhancements.md), and the collation locale is in [`ideas/international-names.md`](../../ideas/international-names.md). S10-36 and its brief S10-D13 moved to Spike 11 on 2026-10-17, where the evidence sheet is rebuilt (S11-20, S11-D2). Later landings go in [`completed.md`](completed.md).
 
 > **Goal of this spike:** the annoyances logged while entering real research are gone, and the app still behaves the way Spike 8 and Spike 9 decided.
 
@@ -21,7 +21,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 5. **Entry defaults.** A date modal opens on Year and, when the transcription has a date, that date is already filled. A full name line can be split into parts. The name-part type control does not jump width and cycles same-letter matches.
 6. **Small chrome.** Create Source asks for the name first. Enter saves a Property title. Clicking outside a sheet closes it, and asks first when the sheet is dirty. Opening an existing project selects the oldest user, not "create a new user." Searching `marriage` ranks title-word hits above fuzzy name prefixes. People, Places, and Events use one mark each, and the Event mark is not an hourglass. A Person page shows sex or gender, with gender winning when both exist.
 7. **Names match the way records are written.** José matches Jose in suggestions and stays a separate grouping on the Person page. Jas. matches James. O Brien matches O'Brien. A rare surname outweighs Smith. Name format profiles live in the catalog; the Western profile is the one this spike seeds. A negative observation counts as a contradiction.
-8. **A face is evidence.** A polygon on a photo is a depiction Observation. The Person page shows those crops, and one can be marked to lead that page and the People list. Promote compares two likenesses as pictures. Empty transcription is valid.
+8. **A face is evidence.** A polygon on a photo is a depiction Observation. The Person page shows those crops, and one can be marked to lead that page and the People list. Promote comparing two likenesses as pictures moved to Spike 11 (S11-20). Empty transcription is valid.
 9. **A filing can be taken back.** Unpromote on a promoted card deletes that Subject's Identity Claim and the bridge claims on this Source that used it, after a confirm that names those bridges. The card shows Promote again. The handle stays. Other members' claims are not rejected.
 10. **Long titles stay in their column.** The Promote target menu keeps its width when a title is long. The full title is available when the label is cut off. Typing `par` in a combo box lists *parent* above *grandparent*.
 11. **Interests are a Person property.** A new catalog has an unlocked, multiple, text `interests` Property on Person. An existing catalog is unchanged.
@@ -70,7 +70,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Composer depiction row | S10-34 | S10-D15 |
 | Person gallery + list thumb | S10-35 | S10-D12, S10-D9 |
 | Preferred portrait | S10-39 | S10-D12, S10-D9 (same boards as S10-35) |
-| Promote compares two crops | S10-36 | S10-D13 |
+| Promote compares two crops | S10-36, moved to Spike 11 S11-20 (2026-10-17) | S10-D13 → S11-D2 |
 | Project collation locale (no picker) | S10-37, descoped 2026-10-16 | — |
 | Seed event type `engagement`; couple title like marriage | S10-38 | — |
 | List scroll on the history entry | S10-40 | — |
@@ -90,7 +90,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 - [Depictions leftovers](../../ideas/depictions-and-likenesses.md) — other keys, signature, transparent polygon, Windows PDF draw.
 - [International-name leftovers](../../ideas/international-names.md) — other name patterns, transliteration, Beider–Morse, calendars and double dating, per-person `name_format`, a collation picker.
 - [Daitch–Mokotoff](../../ideas/daitch-mokotoff.md) — phonetic tier under near-spelling. Replaces S10-26. Lee and Leigh do not share a code.
-- [Name-matching leftovers](../../ideas/name-matching-enhancements.md) — population frequency, known-as, concluded values, calibration, researcher-defined weights, age-to-birth-year, rejected-claim memory, blocking.
+- [Name-matching leftovers](../../ideas/archive/name-matching-enhancements.md) — population frequency, known-as, concluded values, calibration, researcher-defined weights, age-to-birth-year, rejected-claim memory, blocking.
 - [Evidence graph structure shortcuts](../../ideas/evidence-graph-structure-shortcuts.md) — place a wedding, birth, or residence in one action, or paste a cluster already on the canvas. Replaces S10-10.
 
 ## Working rules
@@ -162,7 +162,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | [**S10-D10**](design/archive/S10-D10-events-list.md) | Events list | **S10-22** | — |
 | [**S10-D11**](design/archive/S10-D11-places-list.md) | Places list | **S10-22** | — |
 | **[S10-D12](design/S10-D12-person-detail.md)** | Person detail | **S10-23** | S10-35 gallery and S10-39 preferred portrait. Design both with the gender treatment, before S10-23 |
-| **S10-D13** | Promote page | **S10-36** | Evidence sheet shows two crops |
+| ~~S10-D13~~ | Promote page | ~~S10-36~~ | Moved to Spike 11 (S11-D2) with the evidence sheet rebuild, 2026-10-17 |
 | **S10-D14** | Evidence graph — zoomed-out card | **S10-46**, descoped 2026-10-11 | — |
 | **S10-D15** | Citation composer — depiction row | **S10-34** | — |
 
@@ -254,7 +254,7 @@ SLICE 7 — How names compare (no new chrome)  (done 2026-10-16)
   S10-28  Support-weighted scores, negative evidence, reasons name the pair — done, #411
   S10-50  Promote sheet lines show the values they compared (term labels; rows with no exhibit) (after S10-28) — done, #413
   S10-30  Date windows, ABT-on-spans, date vs start/end — done, #415
-  S10-31  Birth~baptism, death~burial, place part_of — descoped. See ideas/name-matching-enhancements.md.
+  S10-31  Birth~baptism, death~burial, place part_of — descoped. See ideas/archive/name-matching-enhancements.md.
   S10-37  Collation locale on name ordering — descoped. See ideas/international-names.md.
   Check: José suggests Jose and the Person page still shows both spellings.
          Jas. Smith suggests James Smith. One female among many males does not
@@ -270,7 +270,7 @@ SLICE 8 — Likeness
   S10-52  Depiction auto-reconciler module; cache stores the image
   S10-33  Crop cache — descoped 2026-10-16. The image is the value (S10-32).
   ✎ S10-D15 ──▶ S10-34  Composer depiction row: draw, render, save (after S10-16)
-  ✎ S10-D13 ──▶ S10-36  Promote evidence sheet shows the two crops
+  (S10-36 moved to Spike 11 S11-20, 2026-10-17)
   S10-35  Person gallery + Persons list thumb (S10-D12 and S10-D9 already designed)
   S10-39  Preferred portrait leads the page and the list (same boards)
   Check: a group photo yields one crop per face. The Person page shows the
@@ -649,7 +649,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-31 — Related events and place chains
 
-**Descoped 2026-10-16.** Birth~baptism and death~burial term affinity, and crediting a `part_of` place chain as a partial, are in [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md).
+**Descoped 2026-10-16.** Birth~baptism and death~burial term affinity, and crediting a `part_of` place chain as a partial, are in [`ideas/archive/name-matching-enhancements.md`](../../ideas/archive/name-matching-enhancements.md).
 
 #### S10-37 — Collation locale
 
@@ -759,6 +759,8 @@ S10-33 crop cache — descoped 2026-10-16
 | **Depends on** | S10-35, S10-D12, S10-D9 |
 
 #### S10-36 — Promote compares crops
+
+**Moved to Spike 11 (2026-10-17).** Spike 11 rebuilds the evidence sheet (S11-19, S11-25, S11-20), so the crops land there, in S11-20 and its brief S11-D2, instead of being built twice. S10-54 still lands in this spike.
 
 **Brief:** S10-D13.
 

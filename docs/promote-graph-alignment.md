@@ -2,7 +2,7 @@
 
 ## Status
 
-**Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). Renamed from “Promote alignment” to **Promote graph alignment** (2026-10-07) so the name names the graph-to-graph proposal, not property-only matching. It replaced the per-Property compare checklist and the per-Subject walk; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3–§5.4 now state its model rules. How we got here, and the directions we turned down: [`ideas/promote-matching.md`](ideas/promote-matching.md). Matching today: [`matching.md`](matching.md).
+**Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). Renamed from “Promote alignment” to **Promote graph alignment** (2026-10-07) so the name names the graph-to-graph proposal, not property-only matching. It replaced the per-Property compare checklist and the per-Subject walk; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3–§5.4 now state its model rules. How we got here, and the directions we turned down: [`ideas/archive/promote-matching.md`](ideas/archive/promote-matching.md). Matching today: [`matching.md`](matching.md).
 
 **The data model doesn't change:** one Identity Claim per Subject and handle, with Observation pins on the claim and backfill (§5, §5.1).
 
@@ -12,7 +12,7 @@
 
 Promote files Interpretation Subjects onto canonical handles. A Subject's identity is carried mostly by its **neighbors** (its birth event, its places, its family), not by its own Properties. An Evidence graph is also much bigger than one Subject: the reference case, an obituary, has 41 Subjects. Ticking agreements Property by Property, Subject by Subject, is the wrong amount of work. Most of those agreements the machine can decide, and none of them can see the structure that actually identifies people.
 
-**The picture** ([`ideas/promote-matching.md`](ideas/promote-matching.md#the-stack-how-to-picture-the-problem)):
+**The picture** ([`ideas/archive/promote-matching.md`](ideas/archive/promote-matching.md#the-stack-how-to-picture-the-problem)):
 - every Evidence graph is a **layer**;
 - the layers stack so that Subjects about the same thing line up in **columns**;
 - a handle is a column, and an Identity Claim is a vertical link;
@@ -256,7 +256,7 @@ Spike 9 was replanned around this on 2026-10-06. The close note is [`deployment-
   - S9-18, folded into S9-17 and S9-44.
 
   S9-D16 is a **rethink**: it replaces the S9-D9 / S9-D10 frames on the Promote board.
-- **Later, learned weights:** start logging the suggestions shown and the decisions made, so m and u can be fitted from real accepts and rejects ([`ideas/promote-matching.md`](ideas/promote-matching.md#directions-we-circled-none-chosen)). This is out of scope for Spike 9.
+- **Later, learned weights:** start logging the suggestions shown and the decisions made, so m and u can be fitted from real accepts and rejects ([`ideas/archive/promote-matching.md`](ideas/archive/promote-matching.md#directions-we-circled-none-chosen)). This is out of scope for Spike 9.
 
 ---
 
