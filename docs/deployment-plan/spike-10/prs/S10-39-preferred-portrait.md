@@ -1,9 +1,9 @@
 # S10-39 — Preferred portrait
 
-**Status:** Planned
+**Status:** Landed in [#450](https://github.com/mendahu/provenencia/pull/450) (2026-10-17)
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-39--preferred-portrait)
-**Brief:** [S10-D12](../design/S10-D12-person-detail.md) (PDP-10, PDP-11 ship here), board agreed 2026-10-16; [S10-D9](../design/archive/S10-D9-persons-list.md) (PSL-8 ships here), board agreed before S10-22
+**Brief:** [S10-D12](../design/archive/S10-D12-person-detail.md) (PDP-10, PDP-11 ship here), board agreed 2026-10-16; [S10-D9](../design/archive/S10-D9-persons-list.md) (PSL-8 ships here), board agreed before S10-22
 **Board:** [Person Detail](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail.dc.html*, the Portrait frame (brief §5 frame 10); [Persons list](https://claude.ai/design/p/5c00cb55-8261-4579-b0e6-bc571ab23f78?via=share), file *Persons List.dc.html*, the Preferred portrait frame (brief §5 frame 8). The implementer opens these links (user, 2026-10-17). §6 macOS also describes each frame in words. Where the board and a Decision differ, follow the Decision and report the difference in the PR body.
 **Depends on:** S10-35 (landed [#446](https://github.com/mendahu/provenencia/pull/446); [`S10-35-person-gallery.md`](S10-35-person-gallery.md) and its Landed note), S10-D12, S10-D9
 **Blocks:** —
@@ -29,6 +29,10 @@
 ---
 
 **Machines.** STEP-1 to STEP-4 and STEP-5's Go tests run on Linux. STEP-5's `./scripts/generate-proto.sh` needs `protoc`, `protoc-gen-go`, and `protoc-gen-swift`. STEP-6 to STEP-10's Swift checks, `scripts/check-pr.sh`'s Xcode stage, and §10 need a Mac. On a machine without them, run every check it can, and report each one it could not run as not run.
+
+## Landed
+
+Differences from this plan: `WorkspaceDestinationHost` also puts `.id(entityId)` on `PersonDetailView`, so the `@State` portrait model, which holds the entity id, is rebuilt when one Person page replaces another; `ThrowingStore` in `OnboardingModelTests.swift` gained a `setPreferredLikeness` stub (a `GenealogyStore` conformer the file list did not name). The `evaluate-ui-component` verdict (D-15): the tile and the artifact card share only the Badge and ghost-button pairing, so no shell is extracted and none is queued. The manual check in section 10 (VoiceOver, the 120pt column at the default size, the menu keyboard regression) needs a person at the Mac and was not run by the implementer; the Go and Swift tests in section 8 cover every AC except those. The Claude Design boards were not opened.
 
 ## 1. Objective
 
