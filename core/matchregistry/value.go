@@ -13,6 +13,8 @@ func defaultValue() valuecompare.Rules {
 			ShortVariantMinLength: 3,
 			// match foldOnly: a match that exists only after folding.
 			FoldCredit: 0.95,
+			// An estimate: a word this long is a run-on, not a spelling variant.
+			MaxSpellingLength: 32,
 			// match.SpacedParticles. A typed surname prefix (van, de) is a
 			// part role, not a particle.
 			Particles: []string{"o", "mc", "mac", "st", "d", "fitz"},
@@ -28,8 +30,9 @@ func defaultValue() valuecompare.Rules {
 				'ı': "i",
 			},
 		},
-		// match.DefaultText.Partial.
-		Text: valuecompare.TextRules{Partial: 0.7},
+		// match.DefaultText.Partial; MaxWords is an estimate, well above a toponym or
+		// a short remark.
+		Text: valuecompare.TextRules{Partial: 0.7, MaxWords: 64},
 		// match.DefaultIntegers.Tolerance: any difference disagrees.
 		Integers: valuecompare.IntegerRules{Tolerance: 0},
 	}

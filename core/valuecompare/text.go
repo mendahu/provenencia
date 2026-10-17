@@ -36,6 +36,10 @@ func (text) compare(a, b Value, r Rules) (Result, Detail) {
 		det := Detail{Cause: CauseFold, Parts: positionalParts(wa, wb, r.Words)}
 		return Result{Relation: Equivalent, Similarity: meanSimilarity(det.Parts, len(wa), len(wb))}, det
 	}
+	// The alignment is quadratic in the words: bound it.
+	if len(wa) > r.Text.MaxWords || len(wb) > r.Text.MaxWords {
+		return Result{Relation: Unknown}, Detail{Cause: CauseTooLong}
+	}
 	pairs, onlyA, onlyB := alignWords(wa, wb, r.Words)
 	det := Detail{}
 	for _, p := range pairs {

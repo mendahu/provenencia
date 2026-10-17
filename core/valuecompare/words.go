@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"golang.org/x/text/unicode/norm"
 )
@@ -191,7 +192,7 @@ func EditDistance(a, b []rune) int {
 // wordSimilarity is how two comparison tokens relate, in this order: byte-equal
 // tokens are Same, 1 (exact); an initial against anything else is no pair
 // (text has no initials); tokens equal after folding are Equivalent at
-// FoldCredit (fold); a spelling variant is Near at its ratio (spelling); else
+// FoldCredit (fold); a word over MaxSpellingLength runes has no spelling pair; a spelling variant is Near at its ratio (spelling); else
 // no pair, 0. A relation of Different means no pair.
 func wordSimilarity(x, y string, w WordRules) (float64, Relation, Cause) {
 	if x == y {
@@ -203,6 +204,10 @@ func wordSimilarity(x, y string, w WordRules) (float64, Relation, Cause) {
 	fx, fy := FoldWord(x, w.Folds), FoldWord(y, w.Folds)
 	if fx == fy {
 		return w.FoldCredit, Equivalent, CauseFold
+	}
+	// The edit-distance table is the product of the lengths: bound it.
+	if utf8.RuneCountInString(fx) > w.MaxSpellingLength || utf8.RuneCountInString(fy) > w.MaxSpellingLength {
+		return 0, Different, CauseNoMatch
 	}
 	if sim := SpellingSimilarity(fx, fy, w.FuzzyFloor, w.ShortVariantMinLength); sim > 0 {
 		return sim, Near, CauseSpelling

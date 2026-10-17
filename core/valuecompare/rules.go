@@ -23,6 +23,10 @@ type WordRules struct {
 	// FoldCredit is the similarity of two words equal only after accent and
 	// letter folding (Montréal ~ Montreal).
 	FoldCredit float64
+	// MaxSpellingLength is the longest word, in runes, that may pair as a
+	// spelling variant. A longer word pairs only when equal or equal after
+	// folding, which keeps the edit-distance table small.
+	MaxSpellingLength int
 	// Particles are comparison tokens that rejoin with the following word
 	// before comparing (o, mc, mac). A period initial never rejoins.
 	Particles []string
@@ -36,6 +40,10 @@ type TextRules struct {
 	// Partial scales the similarity of a value that contains, or overlaps,
 	// another: the share of words in common is multiplied by it.
 	Partial float64
+	// MaxWords is the most words either side may have for the word alignment
+	// to run. Beyond it, texts that are not Same or Equivalent are Unknown
+	// (too_long), so the alignment's cost stays bounded.
+	MaxWords int
 }
 
 // IntegerRules are how two integers compare.

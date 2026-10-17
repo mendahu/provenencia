@@ -1,8 +1,10 @@
 package valuecompare_test
 
 import (
+	"fmt"
 	"math"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/matchregistry"
@@ -130,4 +132,48 @@ func TestTextKey(t *testing.T) {
 	if k, ok := key("York", valuecompare.Near); ok || k != "" {
 		t.Errorf("Key at Near = %q, %v", k, ok)
 	}
+}
+
+// TestTextBounds: the alignment is quadratic, so the registry bounds the words
+// of a text and the length of a word that may pair as a spelling variant.
+func TestTextBounds(t *testing.T) {
+	rules := matchregistry.Default().Value
+	gen := func(prefix string, n int) string {
+		out := make([]string, n)
+		for i := range out {
+			out[i] = fmt.Sprintf("%s%c%c", prefix, 'a'+i/26, 'a'+i%26)
+		}
+		return strings.Join(out, " ")
+	}
+	long := rules.Text.MaxWords + 1
+	t.Run("too long", func(t *testing.T) {
+		res, det := valuecompare.Compare(textValue(gen("x", long)), textValue(gen("y", long)), rules)
+		if res.Relation != valuecompare.Unknown || res.Similarity != 0 || det.Cause != valuecompare.CauseTooLong ||
+			len(det.Parts) != 0 || len(det.OnlyA) != 0 || len(det.OnlyB) != 0 {
+			t.Errorf("= %+v %+v", res, det)
+		}
+	})
+	t.Run("over-limit same", func(t *testing.T) {
+		s := gen("x", long)
+		if res, det := valuecompare.Compare(textValue(s), textValue(s), rules); res.Relation != valuecompare.Same || det.Cause != valuecompare.CauseExact {
+			t.Errorf("= %+v %+v", res, det)
+		}
+	})
+	t.Run("over-limit fold", func(t *testing.T) {
+		a := gen("x", long)
+		if res, det := valuecompare.Compare(textValue(a+" é"), textValue(a+" e"), rules); res.Relation != valuecompare.Equivalent || det.Cause != valuecompare.CauseFold {
+			t.Errorf("= %+v %+v", res, det)
+		}
+	})
+	t.Run("spelling length", func(t *testing.T) {
+		at := strings.Repeat("a", rules.Words.MaxSpellingLength)
+		res, det := valuecompare.Compare(textValue(at), textValue(at[1:]), rules)
+		if res.Relation != valuecompare.Near || det.Cause != valuecompare.CauseSpelling {
+			t.Errorf("at the limit = %+v %+v", res, det)
+		}
+		res, det = valuecompare.Compare(textValue(at), textValue(at+"a"), rules)
+		if res.Relation != valuecompare.Different || det.Cause != valuecompare.CauseNoMatch {
+			t.Errorf("over the limit = %+v %+v", res, det)
+		}
+	})
 }
