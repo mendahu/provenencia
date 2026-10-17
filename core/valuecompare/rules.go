@@ -9,6 +9,7 @@ type Rules struct {
 	Words    WordRules
 	Text     TextRules
 	Integers IntegerRules
+	Dates    DateRules
 }
 
 // WordRules are how two words compare.
@@ -51,4 +52,30 @@ type IntegerRules struct {
 	// Tolerance is the largest gap that still resembles (Near). 0 makes any
 	// difference a disagreement.
 	Tolerance int64
+}
+
+// DateRules are how two dates compare.
+type DateRules struct {
+	// Tolerance is the most civil years apart two dates may be and still be Near.
+	Tolerance int
+	// NearMinimum is the least similarity of a Near date; below it the pair is Different.
+	NearMinimum float64
+	// MissingDay is a point inside a month that names no day (May 1817 / 14 May 1817).
+	MissingDay float64
+	// MissingMonth is a point inside a year that names no month (1817 / Sep 1817).
+	MissingMonth float64
+	// OtherDay is two points in one month on different days.
+	OtherDay float64
+	// OtherMonth is two points in one year in different months.
+	OtherMonth float64
+	// YearsApartFrom is where two points in different years start their fall-off.
+	YearsApartFrom float64
+	// SpanOneYear is a range, bound or ABT on either side spanning a year or less.
+	SpanOneYear float64
+	// SpanPerExtraYear is taken off SpanOneYear for each further year of span.
+	SpanPerExtraYear float64
+	// SpanFloor is the least span score, and the score of an open span (BEF, AFT).
+	SpanFloor float64
+	// AboutUnits is how many units of its most precise part ABT widens each side.
+	AboutUnits int
 }

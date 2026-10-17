@@ -9,7 +9,7 @@ import (
 
 // The registry: the numbers the matching algorithm uses, every built-in name
 // pattern, and every default profile. The value section (words, text,
-// integers) lives in core/matchregistry and is read from here; tune it there.
+// integers, dates) lives in core/matchregistry and is read from here; tune it there.
 // The rest are tuned here until their layer lands.
 //
 // Comparers read their defaults from this file: a nil setting on any
@@ -198,23 +198,23 @@ var BuiltinNamePatterns = NamePatternSet{
 // each date's day window, so the fall-off counts days.
 var DefaultDates = DateComparer{
 	// Years apart that still resemble; beyond is a disagreement.
-	Tolerance: Set(2),
+	Tolerance: Set(value.Dates.Tolerance),
 	// ABT on either point multiplies the tolerance; on a range or bound it
 	// does not (only two points widen it).
 	ApproxToleranceFactor: Set(2),
 
 	// Two points in the same year (identical dates are always 1):
-	MissingDay:   Set(0.9), // same month, a day missing on one side
-	MissingMonth: Set(0.8), // a month missing on one side
-	OtherDay:     Set(0.7), // same month, different known days
-	OtherMonth:   Set(0.6), // different known months
+	MissingDay:   Set(value.Dates.MissingDay),   // same month, a day missing on one side
+	MissingMonth: Set(value.Dates.MissingMonth), // a month missing on one side
+	OtherDay:     Set(value.Dates.OtherDay),     // same month, different known days
+	OtherMonth:   Set(value.Dates.OtherMonth),   // different known months
 	// Points years apart fall off linearly from this, within the tolerance.
-	YearsApartFrom: Set(0.8),
+	YearsApartFrom: Set(value.Dates.YearsApartFrom),
 
 	// A range or bound on either side, sharing a day: judged by the wider span.
-	SpanOneYear:      Set(0.8),  // a span of a year or less
-	SpanPerExtraYear: Set(0.05), // less for each extra year of width
-	SpanFloor:        Set(0.2),  // never below; open spans (BEF, AFT, FROM)
+	SpanOneYear:      Set(value.Dates.SpanOneYear),      // a span of a year or less
+	SpanPerExtraYear: Set(value.Dates.SpanPerExtraYear), // less for each extra year of width
+	SpanFloor:        Set(value.Dates.SpanFloor),        // never below; open spans (BEF, AFT, FROM)
 }
 
 // PeriodProperties are the Properties whose dates make a period: a thing's
