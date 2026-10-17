@@ -1,7 +1,7 @@
 # Ship log — S10-32 Depiction value and `likeness` on Person
 
 **Plan:** [`S10-32-depiction-value-type.md`](S10-32-depiction-value-type.md) · **Branch:** `s10-32-depiction-value` · **PR:** #430
-**State:** fixing 2 — user re-rated round-1 findings
+**State:** ready
 
 The plan refresh (`36ef0065`) is the branch's first commit, on the user's call (2026-10-17): no separate docs PR. Base `ae26c629`.
 
@@ -84,3 +84,9 @@ Do: add `func Readable(v Value) Value` *(new)* in `depictionvalues`: it returns 
 Check: the test passes; `CGO_ENABLED=1 go test -tags fts5 ./core/database/... ./core/locator/...` passes; scripts/check-pr.sh PASS.
 
 Also in this round (docs, the implementer): the plan's **Landed** note records F-3 to F-5 and that F-4 overrides D-8 by the user's call; the PR follow-ups no longer list MNT-1, MNT-3, SEC-3, or SEC-1.
+
+## Round 2 — fix (user's re-rating)
+Head `ab848b35`. Gate PASS (orchestrator run). F-3 done (`a1a96ed6`): one `json.Unmarshal` in `core/locator`; `parse` deleted. F-4 done (`dd129ae8`): `resolvedValue.ValueChanges`; old fields gone; change-order tests pass unedited. F-5 done (`ac70707d`): `depictionvalues.Readable` on every `scanListed` depiction, `locator.ValidateRegionDocument`; the new test fails on all four bad regions with `Readable` disabled. No review round 3: the user decides.
+
+## Result (after user re-rating)
+Gate PASS · open: none · follow-ups: SEC-2, UX-1 (S10-54) · rejected by user: SEC-1 · to user: manual check §10.1 (CON-3); whether to run a review round on the round-2 fix commits
