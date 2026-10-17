@@ -75,21 +75,18 @@ New chrome and copy: a Claude Design brief ([`add-design-brief`](../../../.agent
 - **The lines compare only the neighbor's own values** (her husband's name), never the relationship itself.
 - **The heading is "Through <name>"** (`promote.sheet.through`): no relationship, and no reason it matters.
 
-**Decided (2026-10-17): one statement per relationship, many Observations behind it.**
+**Decided (2026-10-17): the relationship is abstracted; the neighbor's properties are shown.**
 
-The researcher wants to say "these are the same person because their births match". Behind that sentence is a lot of evidence, and the application gathers and pins all of it so the researcher doesn't have to.
+The researcher wants to say "these are the same person because they have a matching birth event", then check the evidence that the births really match. The plumbing that connects them is handled for them.
 
-- **Use segments.** A relationship section exists only when the Source segment (this Subject – bridge – neighbor) corresponds to a member segment (member – bridge – neighbor's member). Correspondence comes from segment comparison (layer 5): same bridge kind, role or term, and direction, with inverse terms (parent ↔ child). A spouse only meets a spouse.
-- **Every corresponding relationship counts, as much evidence as there is,** ordered core first (birth, death, parents and children, spouses, per the sparse-data principle), then the rest.
-- **One line per matching relationship:** "Their births match" or "Both records name the same spouse: Robert Gates". One checkbox. Matching segments start checked; partial ones are pinnable and start unchecked, like property lines.
-- **The line is a bundle.** Checking it pins every Observation that backs the segment, on both sides:
-  - the bridge's own Observations: its two ends (who and which event), and its role or relationship type;
-  - the neighbor's properties that agree: for a birth, its event type and its date;
-  - where the relationship has its own values (a marriage date), those too.
-
-  For "their births match" that is roughly ten Observations: about five on the Source, and five on the member. The count follows the data; the bundle is whatever the segment comparison used.
-- **Expandable, not required.** The line opens to show what's behind it ("Birth · 3 Mar 1817 · 1871 census"), but the researcher never has to tick the parts.
-- **Collapsing members works the same way:** several members whose births all match are one line, "Their births match · 4 records".
+- **Use segments.** A relationship section exists only when the Source segment (this Subject – bridge – neighbor) corresponds to a member segment (member – bridge – neighbor's member). Correspondence comes from segment comparison (layer 5): same bridge kind, role or term, and direction, with inverse terms (parent ↔ child). A spouse only meets a spouse. Every corresponding relationship counts, ordered core first (birth, death, parents and children, spouses), then the rest.
+- **The heading says what matched and why it counts:** "They have a matching birth event", "They have a matching spouse: Robert Gates".
+- **Abstracted (bundled, not shown):** everything that only connects the two, on both sides:
+  - the bridge's two end Observations (who, and which event or person);
+  - everything on the bridge itself: its role, its relationship type, any other bridge values;
+  - the neighbor's **defining properties**, declared per kind in the registry. For an event that is `event_type`: "birth" is what the heading already says.
+- **Shown as checkable lines:** the neighbor's other properties, exactly like the Subject's own property lines. Under "They have a matching birth event": the birth date lines. Under "They have a matching spouse": Robert's name, sex, and so on. Same rules as property lines: grouped by property, identical member values collapse into one line, matches start checked, partial matches pinnable and unchecked, disagreements shown and not pinnable.
+- **Registry rule, not code:** "a segment's bundle is all of its bridge's Observations plus the neighbor kind's defining properties". Event's defining property is `event_type`; adding one for another kind is one entry.
 
 ## Retires
 
@@ -98,5 +95,7 @@ The researcher wants to say "these are the same person because their births matc
 
 ## Open questions
 
+- **When the bundle is pinned.** Proposed: whenever at least one line in its section is pinned, since the bundle is what makes those lines evidence for this claim; nothing in the section checked, no bundle.
+- **A matching relationship with nothing else to check** (both have a birth, neither has a date): show one checkable line, "Both records have a birth event", unchecked? Or show nothing?
 - **Where a bundle's pins land.** On the person's claim (with backfill onto each member's claim), as today. The neighbor event gets its own claim and pins from its own row; duplicates across claims are accepted on purpose (§9).
 
