@@ -43,6 +43,9 @@ const (
 	ValueTypeName    = "name"
 	ValueTypeSubject = "subject"
 	ValueTypeTerm    = "term"
+	// ValueTypeDepiction's value is a depiction_values row: a region of the
+	// Citation's page and the image File Go stored from it.
+	ValueTypeDepiction = "depiction"
 
 	// CardinalitySingle aims for one value. Several survivors are mixed.
 	CardinalitySingle = "single"
@@ -143,7 +146,8 @@ func Upsert(c *database.Catalog, p Property) ([]byte, error) {
 
 // Create mints a kebab-case key from label and inserts a user-origin Property.
 // The caller records the returned change as create_property.
-// value_type = term is registry/Install only — Create refuses it for researchers.
+// value_type = term and depiction are registry/Install only — Create refuses
+// them for researchers (researcherCreatable).
 // An empty cardinality is single.
 func Create(tx *database.Tx, userID []byte, label, valueType, description, cardinality string) (Property, []rowchange.Change, error) {
 	if tx == nil {
@@ -153,7 +157,7 @@ func Create(tx *database.Tx, userID []byte, label, valueType, description, cardi
 		return Property{}, nil, err
 	}
 	valueType = strings.TrimSpace(valueType)
-	if valueType == ValueTypeTerm {
+	if !researcherCreatable(valueType) {
 		return Property{}, nil, ErrInvalid
 	}
 	key := slug.Kebab(label)
@@ -201,19 +205,19 @@ func Create(tx *database.Tx, userID []byte, label, valueType, description, cardi
 		fields["description"] = rowchange.FieldDiff{Old: nil, New: description}
 	}
 	return Property{
-		ID:          append([]byte(nil), id...),
-		Key:         key,
-		Origin:      OriginUser,
-		Label:       label,
-		Description: description,
-		ValueType:   valueType,
-		Cardinality: cardinality,
-	}, []rowchange.Change{{
-		EntityType: "property",
-		EntityID:   append([]byte(nil), id...),
-		Action:     rowchange.ActionCreate,
-		Fields:     fields,
-	}}, nil
+			ID:          append([]byte(nil), id...),
+			Key:         key,
+			Origin:      OriginUser,
+			Label:       label,
+			Description: description,
+			ValueType:   valueType,
+			Cardinality: cardinality,
+		}, []rowchange.Change{{
+			EntityType: "property",
+			EntityID:   append([]byte(nil), id...),
+			Action:     rowchange.ActionCreate,
+			Fields:     fields,
+		}}, nil
 }
 
 // Update patches label, description, and cardinality for a project Property
@@ -465,7 +469,19 @@ func originOK(origin string) bool {
 
 func valueTypeOK(vt string) bool {
 	switch vt {
-	case ValueTypeText, ValueTypeInteger, ValueTypeDate, ValueTypeName, ValueTypeSubject, ValueTypeTerm:
+	case ValueTypeText, ValueTypeInteger, ValueTypeDate, ValueTypeName, ValueTypeSubject, ValueTypeTerm, ValueTypeDepiction:
+		return true
+	default:
+		return false
+	}
+}
+
+// researcherCreatable lists the value types a researcher may give a new
+// Property. It matches Swift's SubjectPropertyValueType.researcherCreatable;
+// term and depiction are Install/registry only.
+func researcherCreatable(valueType string) bool {
+	switch valueType {
+	case ValueTypeText, ValueTypeInteger, ValueTypeDate, ValueTypeName, ValueTypeSubject:
 		return true
 	default:
 		return false

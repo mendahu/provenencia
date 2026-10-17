@@ -136,14 +136,21 @@ Every finding gets exactly one decision, written in the ship log.
 
 | Decision | When |
 | --- | --- |
-| **Fix now** | Verified blocker or major whose Fit is this PR. A minor only when the fix plan already touches that file and the change is a few lines |
-| **Follow-up** | Fit is a preparatory PR or an idea; a Reshape; minors not fixed now. Goes to the PR body's follow-up list, and to `docs/ideas/` or the map if the user agrees |
+| **Fix now** | Verified blocker or major whose Fit is this PR. A defect in code this PR adds or changes, whatever later PR would first reach it. A minor only when the fix plan already touches that file and the change is a few lines |
+| **Follow-up** | Fit is a preparatory PR or an idea, for code this PR does not add, change, or make worse; a Reshape; minors not fixed now. Goes to the PR body's follow-up list, and to `docs/ideas/` or the map if the user agrees |
 | **Rejected** | Refuted, out of the plan's scope with no harm, or contradicted by a Decision or working rule. One line of evidence |
 | **To user** | Contradicts a plan Decision, an AC, or a working rule but looks right; a product call; two lenses that disagree and the code cannot settle it. Pauses the loop |
 | **Logged** | Nits |
 
 A finding that contradicts the plan is never fixed by quietly changing the
 plan. The plan's Decisions bind the orchestrator too.
+
+**Re-rate before you decide.** A reviewer's severity is a floor to check, not
+a ceiling. Raise it when the finding is rated down for a reason
+[`review-pr`](../review-pr/SKILL.md) "Rate the code as merged" rules out:
+"nothing calls it yet", "the plan said so", "it is small". A finding whose
+`Fit:` names a later PR, in code this PR adds, is **Fix now** (or **To user**
+when it contradicts a Decision), never Follow-up.
 
 5. **Write the fix plan** in the ship log, in the plan's Step shape:
 

@@ -119,13 +119,30 @@ func TestProperties(t *testing.T) {
 			},
 		},
 		{
-			name: "create refuses term value type",
+			name: "create refuses registry-only and unknown value types",
 			run: func(t *testing.T, c *database.Catalog, userID []byte) {
-				_, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
-					return properties.Create(tx, userID, "Event Kind", properties.ValueTypeTerm, "", "")
+				for _, vt := range []string{properties.ValueTypeTerm, properties.ValueTypeDepiction, "not_a_type"} {
+					_, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+						return properties.Create(tx, userID, "Event Kind", vt, "", "")
+					})
+					if !errors.Is(err, properties.ErrInvalid) {
+						t.Fatalf("%s: got %v", vt, err)
+					}
+				}
+			},
+		},
+		{
+			name: "upsert accepts depiction",
+			run: func(t *testing.T, c *database.Catalog, _ []byte) {
+				id, err := properties.Upsert(c, properties.Property{
+					Key: "snapshot", Origin: properties.OriginProvenencia, Label: "Snapshot", ValueType: properties.ValueTypeDepiction,
 				})
-				if !errors.Is(err, properties.ErrInvalid) {
-					t.Fatalf("got %v", err)
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := properties.Lookup(c, "snapshot", properties.OriginProvenencia)
+				if err != nil || got.ValueType != properties.ValueTypeDepiction || string(got.ID) != string(id) {
+					t.Fatalf("got %+v %v", got, err)
 				}
 			},
 		},

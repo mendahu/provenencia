@@ -338,6 +338,7 @@ mentions            subject       app target hint: source
 remark              text          free-text commentary about a source subject
 toponym             text          place name as interpreted from a Source (not a personal NameValue); cardinality `multiple`
 interests           text          free-text interests; cardinality `multiple`; unlocked on person
+likeness            depiction     region plus image; cardinality `multiple`; locked on person; new catalogs only (S10-32)
 ```
 
 Target Subject type hints are application-only (not SQL allow-lists). See the Interpretation doc.
@@ -358,6 +359,7 @@ person          name                # locked
 person          sex_at_birth        # term
 person          gender              # term; unlocked
 person          interests           # text; multiple; unlocked
+person          likeness            # depiction; multiple; locked
 
 event           event_type          # term; locked
 event           event_name          # text; unlocked

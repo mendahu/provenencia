@@ -73,12 +73,32 @@ at the end under **Outside my lens**, one line each. The orchestrator routes it.
 
 | Severity | Means | Loop effect |
 | --- | --- | --- |
-| **blocker** | Must not merge: an AC not met, a regression, data loss, a security hole, a hang, debt expensive to undo | Fixed before the PR is done |
+| **blocker** | Must not merge: an AC not met, a regression, data loss, a security hole, a hang, debt expensive to undo, a defect in code this PR adds that a later PR in the map will reach | Fixed before the PR is done |
 | **major** | Should be fixed in this PR: a real problem on a real path, cheap enough here | Fixed this PR, or explicitly deferred by the orchestrator |
 | **minor** | Worth doing; not worth a round | Fixed only if the fix plan already touches the file; else follow-up |
 | **nit** | Taste | Logged, never fixed in the loop |
 
 Each rubric has its own severity table; use it.
+
+### Rate the code as merged
+
+Severity measures the defect in the code once it is on `main`, not how soon
+something calls it. Three framings never lower a severity:
+
+- **"Nothing calls it yet."** A later PR in the map that will call this code
+  (an FFI field, a renderer, a handler) makes the defect reachable. When the
+  defect is in code this PR adds or changes, it is fixed **in this PR**, at
+  the severity it will have once that caller lands. Do not write
+  `Fit: follow-up (S#-NN)` for it. Naming the PR that exposes a hole is not a
+  reason to ship the hole.
+- **"The plan said so."** A Decision that spells out the weaker shape does not
+  make the debt smaller. Rate it by the debt, and say which Decision it
+  contradicts so the orchestrator can take it to the user.
+- **"It is small."** A ten-line private copy of an existing mechanism is still
+  a second mechanism.
+
+`Fit: follow-up` is for problems in code this PR does not add, change, or
+make worse.
 
 **Evidence rules.** A finding with no evidence is not a finding. Conformance and
 regression findings carry the failing test (see the conformance rubric). A

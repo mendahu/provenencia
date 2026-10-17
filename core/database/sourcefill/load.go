@@ -74,7 +74,7 @@ func loadSourceSubjects(q graphcache.Querier, sourceID []byte) ([]graphcache.Sou
 
 func loadSourceObservations(q graphcache.Querier, sourceID []byte) ([]graphcache.SourceObservation, error) {
 	rows, err := q.Query(`SELECT o.id, o.ref, o.citation_id, o.subject_id, o.property_id, o.polarity,
-			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_subject_id, o.value_term_id
+			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_subject_id, o.value_term_id, o.value_depiction_id
 		FROM observations o
 		JOIN subjects s ON s.id = o.subject_id
 		WHERE s.source_id = ?
@@ -91,7 +91,7 @@ func loadSourceObservations(q graphcache.Querier, sourceID []byte) ([]graphcache
 			integer sql.NullInt64
 		)
 		if err := rows.Scan(&o.ID, &o.Ref, &o.CitationID, &o.SubjectID, &o.PropertyID, &o.Polarity,
-			&text, &integer, &o.DateID, &o.NameID, &o.ValueSubjectID, &o.TermID); err != nil {
+			&text, &integer, &o.DateID, &o.NameID, &o.ValueSubjectID, &o.TermID, &o.DepictionID); err != nil {
 			_ = rows.Close()
 			return nil, err
 		}
@@ -105,6 +105,7 @@ func loadSourceObservations(q graphcache.Querier, sourceID []byte) ([]graphcache
 		o.NameID = append([]byte(nil), o.NameID...)
 		o.ValueSubjectID = append([]byte(nil), o.ValueSubjectID...)
 		o.TermID = append([]byte(nil), o.TermID...)
+		o.DepictionID = append([]byte(nil), o.DepictionID...)
 		if len(o.DateID) > 0 {
 			dateIDs = append(dateIDs, o.DateID)
 		}

@@ -362,15 +362,15 @@ func releaseConnectionFacets(tx *sql.Tx, subjectID []byte) (released, error) {
 // release uses it; ordinary Observations go through observations.Delete.
 func eraseObservation(tx *sql.Tx, id []byte) (released, error) {
 	var (
-		obsID, citationID, subjectID, propertyID, dateID, nameID, valueSubjectID, termID []byte
-		ref, polarity                                                                    string
-		text                                                                             sql.NullString
-		integer                                                                          sql.NullInt64
+		obsID, citationID, subjectID, propertyID, dateID, nameID, valueSubjectID, termID, depictionID []byte
+		ref, polarity                                                                                 string
+		text                                                                                          sql.NullString
+		integer                                                                                       sql.NullInt64
 	)
 	if err := tx.QueryRow(`SELECT id, ref, citation_id, subject_id, property_id, polarity,
-		value_text, value_integer, value_date_id, value_name_id, value_subject_id, value_term_id
+		value_text, value_integer, value_date_id, value_name_id, value_subject_id, value_term_id, value_depiction_id
 		FROM observations WHERE id = ?`, id).Scan(&obsID, &ref, &citationID, &subjectID, &propertyID,
-		&polarity, &text, &integer, &dateID, &nameID, &valueSubjectID, &termID); err != nil {
+		&polarity, &text, &integer, &dateID, &nameID, &valueSubjectID, &termID, &depictionID); err != nil {
 		return released{}, err
 	}
 	out, err := releaseFacets(tx, catalogmodel.KindObservation, id)
@@ -398,18 +398,19 @@ func eraseObservation(tx *sql.Tx, id []byte) (released, error) {
 		EntityID:   obsID,
 		Action:     rowchange.ActionDelete,
 		Fields: rowchange.DeletedRow(map[string]any{
-			"id":               uuidJSON(obsID),
-			"ref":              ref,
-			"citation_id":      uuidJSON(citationID),
-			"subject_id":       uuidJSON(subjectID),
-			"property_id":      uuidJSON(propertyID),
-			"polarity":         polarity,
-			"value_text":       nullStringJSON(text),
-			"value_integer":    integerJSON,
-			"value_date_id":    uuidJSON(dateID),
-			"value_name_id":    uuidJSON(nameID),
-			"value_subject_id": uuidJSON(valueSubjectID),
-			"value_term_id":    uuidJSON(termID),
+			"id":                 uuidJSON(obsID),
+			"ref":                ref,
+			"citation_id":        uuidJSON(citationID),
+			"subject_id":         uuidJSON(subjectID),
+			"property_id":        uuidJSON(propertyID),
+			"polarity":           polarity,
+			"value_text":         nullStringJSON(text),
+			"value_integer":      integerJSON,
+			"value_date_id":      uuidJSON(dateID),
+			"value_name_id":      uuidJSON(nameID),
+			"value_subject_id":   uuidJSON(valueSubjectID),
+			"value_term_id":      uuidJSON(termID),
+			"value_depiction_id": uuidJSON(depictionID),
 		}),
 	})
 	return out, nil

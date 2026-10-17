@@ -1,7 +1,7 @@
 # Review — S10-32 Depiction value and `likeness` on Person
 
 **Verdict:** Fits with changes — Ready with changes (all applied)
-**Rounds on this shape:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
+**Rounds on this shape:** 2, then one refresh round (2026-10-17) after S10-55 and S10-53 landed. **Reviewers:** maintainability (opus), executability (sonnet)
 
 This log reviews the shape planned after the Slice 8 re-cut: an owned `depiction_values` row (region plus a staged image File). The earlier shape (the value is the Citation, with a reconciler module) is kept below under "Earlier shape (superseded)".
 
@@ -15,9 +15,51 @@ None. The shape follows the user's answers of 2026-10-16: the value is its own r
 - D-5: a depiction shows one page; a Citation with two page selectors cannot hold one, and the region need not lie inside the Citation's own region.
 - D-7: callers stage with `ingest.StageDepictions` before `writes.Run`; the staged image rides in `Input.Depiction` behind `observations.StagedFile`, so no write signature changes and no `core/database` package imports `ingest`.
 - D-9: date and name updates move onto `releaseReplacedValue` with depictions (one release path on update).
+- D-9 (refresh): a depiction update replaces its value row, so one `ReleaseReplaced` frees the old row and image; dates and names still update in place.
 - D-11: the auto-reconciler skips depiction Observations until S10-52; `CacheVersion` is not bumped.
 - Out: a Citation locator edit after a likeness is saved is not kept in step; the stored image stays a true copy.
 - Out: the Swift value type and label move to S10-54, so this PR has no Swift change.
+
+## Refresh round (2026-10-17)
+
+The plan was refreshed against `main` @ `ae26c629` after S10-55 (#423), S10-53 (#424), and S10-56 (#425) landed. Every Current state row was re-checked; none was false. Changes from the landed code: `ReleaseReplaced` takes `*database.Tx` and schedules its own purge, so `updateOne` moves to `*database.Tx` and `Update` makes no purge call (D-9). Fresh reviewers: Fits with changes; Ready with changes. No blocker, so no second refresh round.
+
+### M-R1 · major · Replace the depiction row on update instead of rewriting it in place
+`ReleaseReplaced(tx, "observations.value_depiction_id", old)` already deletes the old row and its image File when unreferenced (`release.go` `releaseSnapItem` → `releaseOwnedSnap` → `releaseFile`, which counts every FK into `files`, so a deduped new crop keeps the File).
+**Answer:** Fixed (verified in `release.go`). D-9: a set `Depiction` always takes D-8's insert path; the old row and image go through `releaseReplacedValue`. Dropped `depictionvalues.UpdateTx` (D-6, T-4), `depictionUpdateChange` (D-12, Codebase fit), and the second release. AC-2.1 and T-7 now expect a new value row and the changes `observation` update, `depiction_value` delete, `file` create, `depiction_value` create; T-7 adds the same-crop case. This departs from the date update shape on purpose (round-1 M-6): a depiction row owns a File, a date row does not.
+
+### M-R2 · minor · `updateOne` passes `tx` to more `*sql.Tx` helpers than D-9 named
+**Answer:** Fixed with X-R3. D-9 names `requireSubjectSource`, `getPropertyTx`, `resolveValue`, `replaceNotes` as taking `tx.Tx`.
+
+### M-R3 · minor · Owned value rows are audited on update but not on delete
+**Answer:** Logged, not planned, beside M-8: an owned release that emits its own delete changes from the `effects` Entity would remove `releaseReplacedValue`'s `entity` and row-map arguments, but it changes audit for every owned table.
+
+### X-R1 · major · STEP-6 does not compile without the `update.go` call site
+**Answer:** Fixed. STEP-6 Files lists `update.go`, limited to the `resolveValue` call gaining `citationID`.
+
+### X-R2 · major · T-9 sits in an internal test package with none of T-5's helpers
+**Answer:** Fixed. T-9 is a `TestObservations` row, "likeness blocks subject delete"; `observations_test.go` already imports `subjects`. STEP-7 and §4 drop `subjects_test.go`; the manual-check `-run` pattern drops `TestDeleteSubjectWithLikeness`.
+
+### X-R3 · minor · D-9's `*database.Tx` switch touches more calls
+**Answer:** Fixed with M-R2.
+
+### X-R4 · minor · D-5 selector cases
+**Answer:** Fixed. Any selector type on the region other than `artifact`, `page`, `region` is refused; `page_label` is not compared; the Citation locator keeps whatever `Validate` allows except the page rule. T-3 has rows for each.
+
+### X-R5 · minor · `StageDepictions` small behaviors
+**Answer:** Fixed in D-7: an input whose `Image` is set is skipped; the error is `StageImage`'s; a `Depiction` on another value type is staged, refused by the write, and discarded.
+
+### X-R6 · minor · D-10 and T-6 mechanical choices
+**Answer:** Fixed. D-10 gives the column position and the `scanListed` rule; D-9's keep case carries the id through; STEP-6 adds `objectCount`.
+
+### X-R7 · minor · Checks skip `core/ingest` and the dependency check
+**Answer:** Fixed. STEP-6's check adds `./core/ingest/...` and the `go list -deps` grep.
+
+### X-R8 · minor · STEP-9 wording
+**Answer:** Fixed. STEP-9 quotes the value-type sentence and the "Who may create" phrases, and gives the §3.2 row alignment.
+
+### X-R9 · nit · Map status and uncommitted edits
+**Answer:** Fixed. The map's S10-32 Plan line reads "— Planned"; the refresh is committed.
 
 ## Round 1
 

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
@@ -83,7 +84,7 @@ func newFixture(t *testing.T) *fixture {
 		must(t, err)
 		f.types[k] = st
 	}
-	for _, k := range []string{"name", "sex_at_birth", "event_type", "date", "toponym"} {
+	for _, k := range []string{"name", "sex_at_birth", "event_type", "date", "toponym", "likeness"} {
 		p, err := properties.Lookup(c, k, properties.OriginProvenencia)
 		must(t, err)
 		f.props[k] = p
@@ -638,6 +639,55 @@ func TestReconciledNames(t *testing.T) {
 	})
 
 	f.assertUpkeepEqualsRebuild("TestAutoReconciledNames")
+}
+
+// A likeness is evidence the reconciler has no module for yet (S10-52): it is
+// skipped, and the handle's other values reconcile as before.
+func TestLikenessIsSkipped(t *testing.T) {
+	f := newFixture(t)
+	p := f.subject("person")
+	obs := f.cite(nameIn(p, f.props["name"], "given=James|surname=Robins"))
+
+	// The image never has to exist for this test: raw rows stand in for a saved
+	// likeness, inserted before the promote so upkeep reads them.
+	db, err := f.c.DB()
+	must(t, err)
+	fileID, depictionID, obsID := make([]byte, 16), make([]byte, 16), make([]byte, 16)
+	for _, id := range [][]byte{fileID, depictionID, obsID} {
+		u, err := uuid.NewV7()
+		must(t, err)
+		copy(id, u[:])
+	}
+	_, err = db.Exec(`INSERT INTO files (id, checksum_sha256, media_type, byte_size) VALUES (?, ?, 'image/png', 1)`,
+		fileID, strings.Repeat("ab", 32))
+	must(t, err)
+	_, err = db.Exec(`INSERT INTO depiction_values (id, region_json, image_file_id) VALUES (?, ?, ?)`,
+		depictionID, locator, fileID)
+	must(t, err)
+	obsRef, err := ref.Mint(ref.PrefixObservation)
+	must(t, err)
+	_, err = db.Exec(`INSERT INTO observations (id, ref, citation_id, subject_id, property_id, polarity, value_depiction_id)
+		VALUES (?, ?, ?, ?, ?, 'positive', ?)`,
+		obsID, obsRef, obs[0].CitationID, p.ID, f.props["likeness"].ID, depictionID)
+	must(t, err)
+
+	h := f.promote(p)
+	all := f.rows()
+	if names := rowsFor(all, h, f.props["name"].ID); len(names) != 1 {
+		t.Fatalf("names %+v", names)
+	}
+	if got := rowsFor(all, h, f.props["likeness"].ID); len(got) != 0 {
+		t.Fatalf("likeness values %+v", got)
+	}
+	for _, o := range f.outcomes() {
+		if bytes.Equal(o.PropertyID, f.props["likeness"].ID) {
+			t.Fatalf("likeness outcome %+v", o)
+		}
+	}
+	f.assertUpkeepEqualsRebuild("likeness skipped")
+	if err := f.c.Graph().Verify(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // A stale cache rebuilds on open: old versions, and the 3 and 4 stamped by

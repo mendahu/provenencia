@@ -48,17 +48,32 @@ type point struct {
 
 // Validate checks locator JSON against version-1 invariants for known selector types.
 func Validate(locatorJSON string) error {
+	doc, err := decode(locatorJSON)
+	if err != nil {
+		return err
+	}
+	return validateDoc(doc)
+}
+
+// decode parses locator JSON and checks the document envelope: non-empty,
+// valid JSON, version 1, at least one selector.
+func decode(locatorJSON string) (document, error) {
 	locatorJSON = strings.TrimSpace(locatorJSON)
 	if locatorJSON == "" {
-		return ErrInvalid
+		return document{}, ErrInvalid
 	}
 	var doc document
 	if err := json.Unmarshal([]byte(locatorJSON), &doc); err != nil {
-		return ErrInvalid
+		return document{}, ErrInvalid
 	}
 	if doc.Version != 1 || len(doc.Selectors) == 0 {
-		return ErrInvalid
+		return document{}, ErrInvalid
 	}
+	return doc, nil
+}
+
+// validateDoc checks each selector of a decoded document.
+func validateDoc(doc document) error {
 	for i, sel := range doc.Selectors {
 		switch strings.TrimSpace(sel.Type) {
 		case TypeArtifact:

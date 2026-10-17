@@ -79,6 +79,7 @@ func listedFromSource(o graphcache.SourceObservation, props map[string]propertyI
 			ValueInteger: o.Integer, HasInteger: o.HasInteger,
 			ValueDateID: o.DateID, ValueNameID: o.NameID,
 			ValueSubjectID: o.ValueSubjectID, ValueTermID: o.TermID,
+			ValueDepictionID: o.DepictionID,
 		},
 		PropertyKey: info.Key, PropertyLabel: info.Label, PropertyValueType: info.ValueType,
 	}

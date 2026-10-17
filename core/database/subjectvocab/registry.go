@@ -174,6 +174,7 @@ var seedProperties = []seedProperty{
 	{Key: "remark", Label: "Remark", Description: "Free-text commentary about a source subject", ValueType: properties.ValueTypeText},
 	{Key: "toponym", Label: "Toponym", Description: "Place name as interpreted from a Source", ValueType: properties.ValueTypeText, Cardinality: properties.CardinalityMultiple},
 	{Key: "interests", Label: "Interests", Description: "Free-text interests. More than one value is allowed.", ValueType: properties.ValueTypeText, Cardinality: properties.CardinalityMultiple},
+	{Key: "likeness", Label: "Likeness", Description: "A picture of this person: a region of a cited page and the image of it. More than one is allowed.", ValueType: properties.ValueTypeDepiction, Cardinality: properties.CardinalityMultiple},
 }
 
 // Non-bridge bindings from docs/seeded-vocabulary.md §3.3.
@@ -185,6 +186,7 @@ var seedBindings = []seedBinding{
 	{TypeKey: "person", PropertyKey: "sex_at_birth", SortOrder: 1},
 	{TypeKey: "person", PropertyKey: "gender", SortOrder: 2},
 	{TypeKey: "person", PropertyKey: "interests", SortOrder: 3},
+	{TypeKey: "person", PropertyKey: "likeness", SortOrder: 4, Locked: true},
 
 	{TypeKey: "event", PropertyKey: "event_type", SortOrder: 0, Locked: true},
 	{TypeKey: "event", PropertyKey: "event_name", SortOrder: 1},

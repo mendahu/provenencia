@@ -45,7 +45,7 @@ func Update(tx *database.Tx, userID []byte, in Input) (Listed, []rowchange.Chang
 		return Listed{}, nil, ErrEdgeLocked
 	}
 
-	_, changes, err := updateOne(tx.Tx, prev.CitationID, prev, in)
+	_, changes, err := updateOne(tx, prev.CitationID, prev, in)
 	if err != nil {
 		return Listed{}, nil, err
 	}
@@ -143,10 +143,11 @@ func scanRawObservation(row rowScanner) (Observation, error) {
 		valueInt          sql.NullInt64
 		dateID, nameID    []byte
 		subjectID, termID []byte
+		depictionID       []byte
 	)
 	if err := row.Scan(
 		&obs.ID, &obs.Ref, &obs.CitationID, &obs.SubjectID, &obs.PropertyID, &obs.Polarity,
-		&valueText, &valueInt, &dateID, &nameID, &subjectID, &termID,
+		&valueText, &valueInt, &dateID, &nameID, &subjectID, &termID, &depictionID,
 	); err != nil {
 		return Observation{}, err
 	}
@@ -162,6 +163,7 @@ func scanRawObservation(row rowScanner) (Observation, error) {
 	obs.ValueNameID = append([]byte(nil), nameID...)
 	obs.ValueSubjectID = append([]byte(nil), subjectID...)
 	obs.ValueTermID = append([]byte(nil), termID...)
+	obs.ValueDepictionID = append([]byte(nil), depictionID...)
 	return obs, nil
 }
 
@@ -256,18 +258,19 @@ func observationRowMap(o Observation) map[string]any {
 		integer = o.ValueInteger
 	}
 	return map[string]any{
-		"id":               uuidJSON(o.ID),
-		"ref":              o.Ref,
-		"citation_id":      uuidJSON(o.CitationID),
-		"subject_id":       uuidJSON(o.SubjectID),
-		"property_id":      uuidJSON(o.PropertyID),
-		"polarity":         o.Polarity,
-		"value_text":       emptyAsNil(o.ValueText),
-		"value_integer":    integer,
-		"value_date_id":    uuidJSON(o.ValueDateID),
-		"value_name_id":    uuidJSON(o.ValueNameID),
-		"value_subject_id": uuidJSON(o.ValueSubjectID),
-		"value_term_id":    uuidJSON(o.ValueTermID),
+		"id":                 uuidJSON(o.ID),
+		"ref":                o.Ref,
+		"citation_id":        uuidJSON(o.CitationID),
+		"subject_id":         uuidJSON(o.SubjectID),
+		"property_id":        uuidJSON(o.PropertyID),
+		"polarity":           o.Polarity,
+		"value_text":         emptyAsNil(o.ValueText),
+		"value_integer":      integer,
+		"value_date_id":      uuidJSON(o.ValueDateID),
+		"value_name_id":      uuidJSON(o.ValueNameID),
+		"value_subject_id":   uuidJSON(o.ValueSubjectID),
+		"value_term_id":      uuidJSON(o.ValueTermID),
+		"value_depiction_id": uuidJSON(o.ValueDepictionID),
 	}
 }
 
