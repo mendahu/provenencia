@@ -326,25 +326,10 @@ func TestPersonHeaderLeadsWithEarliestLikeness(t *testing.T) {
 	f := newFixture(t)
 	s, _, h := f.person("Ann Lee")
 	_, _, other := f.person("Bob Lee")
-	likeness, err := properties.Lookup(f.c, "likeness", vocabkey.OriginProvenencia)
-	must(t, err)
 	save := func(shade uint8) observations.Observation {
-		art := observationstest.FileArtifact(t, f.c, userID, f.source.ID)
-		res, _, err := observationstest.SaveCitation(f.c, userID, art, observations.Input{
-			SubjectID: s.ID, PropertyID: likeness.ID,
-			Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 40, 30, shade)},
-		})
-		must(t, err)
-		return res.Observations[0]
+		return observationstest.SaveLikeness(t, f.c, userID, f.source.ID, s.ID, shade)
 	}
-	imageOf := func(o observations.Observation) []byte {
-		db, err := f.c.DB()
-		must(t, err)
-		var id []byte
-		must(t, db.QueryRow(`SELECT dv.image_file_id FROM observations o
-			JOIN depiction_values dv ON dv.id = o.value_depiction_id WHERE o.id = ?`, o.ID).Scan(&id))
-		return id
-	}
+	imageOf := func(o observations.Observation) []byte { return observationstest.ImageOf(t, f.c, o.ID) }
 	lead := func(rows []conclusionheaders.PersonHeader, id []byte) []byte {
 		for _, r := range rows {
 			if bytes.Equal(r.Entity.ID, id) {

@@ -666,17 +666,6 @@ func (f *fixture) citeOn(art artifacts.Artifact, in ...observations.Input) []obs
 	return res.Observations
 }
 
-// imageOf is the Observation's current image File id.
-func (f *fixture) imageOf(observationID []byte) []byte {
-	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
-	var id []byte
-	must(f.t, db.QueryRow(`SELECT dv.image_file_id FROM observations o
-		JOIN depiction_values dv ON dv.id = o.value_depiction_id WHERE o.id = ?`, observationID).Scan(&id))
-	return id
-}
-
 // Two likenesses are the same value exactly when they hold the same image.
 func TestDepictionsReconcileByImage(t *testing.T) {
 	type world struct {
@@ -750,7 +739,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		if len(rows) != 2 {
 			t.Fatalf("rows %+v", rows)
 		}
-		for _, img := range [][]byte{w.f.imageOf(w.oa.ID), w.f.imageOf(w.ob.ID)} {
+		for _, img := range [][]byte{observationstest.ImageOf(t, w.f.c, w.oa.ID), observationstest.ImageOf(t, w.f.c, w.ob.ID)} {
 			r := byImage(t, w, img)
 			if r.Reason != "kept" || r.Support != 1 {
 				t.Fatalf("row %+v", r)
@@ -765,9 +754,9 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 			}
 		}
 		g := gallery(w)
-		if len(g) != 2 || !bytes.Equal(g[0].ImageFileID, w.f.imageOf(w.oa.ID)) ||
+		if len(g) != 2 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.c, w.oa.ID)) ||
 			len(g[0].ObservationIDs) != 1 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) ||
-			!bytes.Equal(g[1].ImageFileID, w.f.imageOf(w.ob.ID)) || !bytes.Equal(g[1].ObservationIDs[0], w.ob.ID) {
+			!bytes.Equal(g[1].ImageFileID, observationstest.ImageOf(t, w.f.c, w.ob.ID)) || !bytes.Equal(g[1].ObservationIDs[0], w.ob.ID) {
 			t.Fatalf("gallery %+v", g)
 		}
 		finish(t, w, "two images")
@@ -780,14 +769,15 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 			Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 40, 30, 150)}})
 		must(t, err)
 		g := gallery(w)
-		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) || !bytes.Equal(g[0].ImageFileID, w.f.imageOf(w.oa.ID)) {
+		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.c, w.oa.ID)) {
 			t.Fatalf("gallery %+v", g)
 		}
+		finish(t, w, "redraw")
 	})
 	t.Run("the same pixels are one value", func(t *testing.T) {
 		w := start(t, 100)
 		w.f.join(w.b, w.h)
-		if !bytes.Equal(w.f.imageOf(w.oa.ID), w.f.imageOf(w.ob.ID)) {
+		if !bytes.Equal(observationstest.ImageOf(t, w.f.c, w.oa.ID), observationstest.ImageOf(t, w.f.c, w.ob.ID)) {
 			t.Fatal("two shade-100 crops are two Files")
 		}
 		rows := likenessRows(w)
@@ -815,16 +805,16 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		must(t, f.credibility(album, "high_trust"))
 		f.join(w.b, w.h)
 		f.join(c, w.h)
-		if r := byImage(t, w, f.imageOf(w.ob.ID)); r.Reason != "denied" {
+		if r := byImage(t, w, observationstest.ImageOf(t, f.c, w.ob.ID)); r.Reason != "denied" {
 			t.Fatalf("shade 200 %+v", r)
 		}
-		if r := byImage(t, w, f.imageOf(w.oa.ID)); r.Reason != "kept" {
+		if r := byImage(t, w, observationstest.ImageOf(t, f.c, w.oa.ID)); r.Reason != "kept" {
 			t.Fatalf("shade 100 %+v", r)
 		}
 		if o := outcomeOf(w, w.ob.ID); o.Reason != "denied" || !bytes.Equal(o.DeniedBy, oc.ID) {
 			t.Fatalf("outcome %+v", o)
 		}
-		if g := gallery(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, f.imageOf(w.oa.ID)) {
+		if g := gallery(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, f.c, w.oa.ID)) {
 			t.Fatalf("gallery %+v", g)
 		}
 		finish(t, w, "denied")
@@ -835,16 +825,16 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 			return identityclaims.Create(tx, userID, identityclaims.CreateInput{SubjectID: w.b.ID, EntityID: w.h, Status: identityclaims.StatusProvisional})
 		})
 		must(t, err)
-		if r := byImage(t, w, w.f.imageOf(w.ob.ID)); r.Reason != "provisional" {
+		if r := byImage(t, w, observationstest.ImageOf(t, w.f.c, w.ob.ID)); r.Reason != "provisional" {
 			t.Fatalf("shade 200 %+v", r)
 		}
-		if r := byImage(t, w, w.f.imageOf(w.oa.ID)); r.Reason != "kept" {
+		if r := byImage(t, w, observationstest.ImageOf(t, w.f.c, w.oa.ID)); r.Reason != "kept" {
 			t.Fatalf("shade 100 %+v", r)
 		}
 		if o := outcomeOf(w, w.ob.ID); o.Reason != "provisional" {
 			t.Fatalf("outcome %+v", o)
 		}
-		if g := gallery(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, w.f.imageOf(w.oa.ID)) {
+		if g := gallery(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.c, w.oa.ID)) {
 			t.Fatalf("gallery %+v", g)
 		}
 		finish(t, w, "provisional")
@@ -853,13 +843,13 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		w := start(t, 200)
 		must(t, w.f.credibility(w.f.other, "low_trust"))
 		w.f.join(w.b, w.h)
-		if r := byImage(t, w, w.f.imageOf(w.ob.ID)); r.Reason != "weak" {
+		if r := byImage(t, w, observationstest.ImageOf(t, w.f.c, w.ob.ID)); r.Reason != "weak" {
 			t.Fatalf("shade 200 %+v", r)
 		}
-		if r := byImage(t, w, w.f.imageOf(w.oa.ID)); r.Reason != "kept" {
+		if r := byImage(t, w, observationstest.ImageOf(t, w.f.c, w.oa.ID)); r.Reason != "kept" {
 			t.Fatalf("shade 100 %+v", r)
 		}
-		if g := gallery(w); len(g) != 2 {
+		if g := gallery(w); len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) || !bytes.Equal(g[1].ObservationIDs[0], w.ob.ID) {
 			t.Fatalf("gallery %+v", g)
 		}
 		finish(t, w, "weak")
@@ -869,7 +859,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		w.f.join(w.b, w.h)
 		db, err := w.f.c.DB()
 		must(t, err)
-		_, err = db.Exec(`UPDATE files SET media_type = 'image/jpeg' WHERE id = ?`, w.f.imageOf(w.ob.ID))
+		_, err = db.Exec(`UPDATE files SET media_type = 'image/jpeg' WHERE id = ?`, observationstest.ImageOf(t, w.f.c, w.ob.ID))
 		must(t, err)
 		must(t, autoreconciler.Rebuild(db))
 		w.f.c.Graph().Drop()
@@ -891,7 +881,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		must(t, err)
 		_, err = db.Exec(`UPDATE auto_reconciler_values SET value_image_file_id = ?
 			WHERE entity_id = ? AND property_id = ? AND value_image_file_id = ?`,
-			bytes.Repeat([]byte{1}, 16), w.h, w.f.props["likeness"].ID, w.f.imageOf(w.oa.ID))
+			bytes.Repeat([]byte{1}, 16), w.h, w.f.props["likeness"].ID, observationstest.ImageOf(t, w.f.c, w.oa.ID))
 		must(t, err)
 		_, err = w.f.c.Graph().Node(w.h)
 		must(t, err)
@@ -1259,12 +1249,12 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			f.citeOn(pc, f.likenessIn(b, 200))
 			h := f.promote(a)
 			f.join(b, h)
-			old := f.imageOf(oa.ID)
+			old := observationstest.ImageOf(t, f.c, oa.ID)
 			_, err := observationstest.UpdateObservation(f.c, userID, observations.Input{
 				ID: oa.ID, SubjectID: a.ID, PropertyID: f.props["likeness"].ID,
 				Depiction: &observations.DepictionInput{RegionJSON: region50, ImagePath: observationstest.Crop(f.t, 40, 30, 50)}})
 			must(f.t, err)
-			now := f.imageOf(oa.ID)
+			now := observationstest.ImageOf(t, f.c, oa.ID)
 			if bytes.Equal(old, now) {
 				f.t.Fatal("the edit kept the old image")
 			}

@@ -80,17 +80,6 @@ func (f *fixture) personOn(src sources.Source) subjects.Subject {
 	return s
 }
 
-func (f *fixture) likenessOn(src sources.Source, s subjects.Subject, shade uint8) observations.Observation {
-	f.t.Helper()
-	art := observationstest.FileArtifact(f.t, f.c, userID, src.ID)
-	res, _, err := observationstest.SaveCitation(f.c, userID, art, observations.Input{
-		SubjectID: s.ID, PropertyID: f.likeness.ID,
-		Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(f.t, 40, 30, shade)},
-	})
-	must(f.t, err)
-	return res.Observations[0]
-}
-
 func (f *fixture) promote(s subjects.Subject, onto []byte) []byte {
 	f.t.Helper()
 	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
@@ -98,16 +87,6 @@ func (f *fixture) promote(s subjects.Subject, onto []byte) []byte {
 	})
 	must(f.t, err)
 	return res.Entity.ID
-}
-
-func (f *fixture) imageOf(observationID []byte) []byte {
-	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
-	var id []byte
-	must(f.t, db.QueryRow(`SELECT dv.image_file_id FROM observations o
-		JOIN depiction_values dv ON dv.id = o.value_depiction_id WHERE o.id = ?`, observationID).Scan(&id))
-	return id
 }
 
 func TestForEntities(t *testing.T) {
@@ -133,8 +112,8 @@ func TestForEntities(t *testing.T) {
 		f := newFixture(t)
 		reg, cen := f.source("Register"), f.source("Census")
 		a, b := f.personOn(reg), f.personOn(cen)
-		oa := f.likenessOn(reg, a, 100)
-		ob := f.likenessOn(cen, b, 200)
+		oa := observationstest.SaveLikeness(t, f.c, userID, reg.ID, a.ID, 100)
+		ob := observationstest.SaveLikeness(t, f.c, userID, cen.ID, b.ID, 200)
 		h := f.promote(a, nil)
 		f.promote(b, h)
 		got, err := likenesses.ForEntities(f.c.Graph(), [][]byte{h})
@@ -150,7 +129,7 @@ func TestForEntities(t *testing.T) {
 		got, err = likenesses.ForEntities(f.c.Graph(), [][]byte{h})
 		must(t, err)
 		g = got[string(h)]
-		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], oa.ID) || !bytes.Equal(g[0].ImageFileID, f.imageOf(oa.ID)) ||
+		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], oa.ID) || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, f.c, oa.ID)) ||
 			!bytes.Equal(g[1].ObservationIDs[0], ob.ID) {
 			t.Fatalf("after redraw %+v", g)
 		}

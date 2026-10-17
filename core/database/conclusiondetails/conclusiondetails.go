@@ -384,19 +384,16 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field, leads ma
 			return nil, err
 		}
 		o.ValueRank = int(rank.Int64)
+		o.Recorded.Text, o.Recorded.HasText = text.String, text.Valid
+		o.Recorded.Integer, o.Recorded.HasInteger = integer.Int64, integer.Valid
+		o.Recorded.TermID = termID
 		f, ok := byProp[string(propertyID)]
 		if !ok {
 			if leads[string(o.ObservationID)] {
-				o.Recorded.Text, o.Recorded.HasText = text.String, text.Valid
-				o.Recorded.Integer, o.Recorded.HasInteger = integer.Int64, integer.Valid
-				o.Recorded.TermID = termID
 				leadOutcomes[string(o.ObservationID)] = o
 			}
 			continue
 		}
-		o.Recorded.Text, o.Recorded.HasText = text.String, text.Valid
-		o.Recorded.Integer, o.Recorded.HasInteger = integer.Int64, integer.Valid
-		o.Recorded.TermID = termID
 		all = append(all, pending{f: f, o: o, dateID: dateID, nameID: nameID})
 		if len(dateID) > 0 {
 			dateIDs = append(dateIDs, dateID)

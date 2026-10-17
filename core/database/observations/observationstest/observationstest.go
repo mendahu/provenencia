@@ -16,8 +16,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/ingest"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -103,4 +105,38 @@ func UpdateObservation(c *database.Catalog, userID []byte, in observations.Input
 		return struct{}{}, ch, err
 	})
 	return changes, err
+}
+
+// SaveLikeness files a likeness of the Subject on a fresh photo under the
+// Source, through the real save path: shade picks its 40 x 30 crop.
+func SaveLikeness(t testing.TB, c *database.Catalog, userID, sourceID, subjectID []byte, shade uint8) observations.Observation {
+	t.Helper()
+	likeness, err := properties.Lookup(c, "likeness", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	art := FileArtifact(t, c, userID, sourceID)
+	res, _, err := SaveCitation(c, userID, art, observations.Input{
+		SubjectID: subjectID, PropertyID: likeness.ID,
+		Depiction: &observations.DepictionInput{RegionJSON: LikenessRegion, ImagePath: Crop(t, 40, 30, shade)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return res.Observations[0]
+}
+
+// ImageOf is the Observation's current image File id.
+func ImageOf(t testing.TB, c *database.Catalog, observationID []byte) []byte {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var id []byte
+	if err := db.QueryRow(`SELECT dv.image_file_id FROM observations o
+		JOIN depiction_values dv ON dv.id = o.value_depiction_id WHERE o.id = ?`, observationID).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
 }

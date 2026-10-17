@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
+	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -229,28 +230,14 @@ func TestForEntityFieldsFollowTheRecords(t *testing.T) {
 	}
 }
 
-// likenessOn files a likeness of s on src, saved now: shade picks its crop.
-func (f *fixture) likenessOn(src sources.Source, s subjects.Subject, shade uint8) observations.Observation {
-	f.t.Helper()
-	likeness, err := properties.Lookup(f.c, "likeness", vocabkey.OriginProvenencia)
-	must(f.t, err)
-	art := observationstest.FileArtifact(f.t, f.c, userID, src.ID)
-	res, _, err := observationstest.SaveCitation(f.c, userID, art, observations.Input{
-		SubjectID: s.ID, PropertyID: likeness.ID,
-		Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(f.t, 40, 30, shade)},
-	})
-	must(f.t, err)
-	return res.Observations[0]
-}
-
 // The Person page lists likenesses apart from its fields, earliest first.
 func TestForEntityLikenesses(t *testing.T) {
 	f := newFixture(t)
 	register, census := f.source("Register"), f.source("Census")
 	a, b := f.personOn(register), f.personOn(census)
 	f.cite(a, f.nameIn(a, "given=James|surname=Robins"))
-	oa := f.likenessOn(register, a, 100)
-	ob := f.likenessOn(census, b, 200)
+	oa := observationstest.SaveLikeness(t, f.c, userID, register.ID, a.ID, 100)
+	ob := observationstest.SaveLikeness(t, f.c, userID, census.ID, b.ID, 200)
 	h := f.promote(a, nil)
 	f.promote(b, h)
 	d := f.detail(h)
@@ -282,7 +269,7 @@ func TestForEntityLikenessNeedsAPNG(t *testing.T) {
 	f := newFixture(t)
 	src := f.source("Register")
 	a := f.personOn(src)
-	oa := f.likenessOn(src, a, 100)
+	oa := observationstest.SaveLikeness(t, f.c, userID, src.ID, a.ID, 100)
 	h := f.promote(a, nil)
 	db, err := f.c.DB()
 	must(t, err)
@@ -293,6 +280,12 @@ func TestForEntityLikenessNeedsAPNG(t *testing.T) {
 	must(t, err)
 	if d := f.detail(h); len(d.Likenesses) != 0 {
 		t.Fatalf("likenesses %+v", d.Likenesses)
+	}
+	f.c.Graph().Drop()
+	rows, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{h})
+	must(t, err)
+	if len(rows) != 1 || rows[0].LikenessImageFileID != nil {
+		t.Fatalf("header leads with %x", rows[0].LikenessImageFileID)
 	}
 }
 
