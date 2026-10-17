@@ -18,7 +18,7 @@
 // Changed from that CSV: each canonical name and its direct nicknames
 // are one set. Sets that only share a nickname stay separate. Tokens
 // are comparison forms, lowercase with punctuation removed (k.c. is kc).
-package match
+package namealiases
 
 // nicknameSets is the product nickname table. Install writes it.
 // Scoring reads the catalog copy, not this variable.

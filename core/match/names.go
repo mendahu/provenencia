@@ -7,69 +7,16 @@ import (
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
-// NameRole is what a name part means for matching. A name pattern maps part
-// types to roles, so cultures differ in data, not in comparer code. Roles
-// never stop two words from pairing; they only weigh and discount.
-type NameRole string
-
-const (
-	RoleFamily     NameRole = "family"     // surname
-	RoleGiven      NameRole = "given"      // given names and initials, in order
-	RoleNick       NameRole = "nick"       // an alternative given name
-	RoleUntyped    NameRole = "untyped"    // undetermined, untyped, or a form word
-	RoleGeneration NameRole = "generation" // Jr., Sr., III: compared separately
-	RoleIgnored    NameRole = "ignored"    // titles, surname particles
-)
-
-// NameWeights are what a matched word of each role earns and what an
-// unmatched one costs. FirstGiven is the first given word in part order;
-// OtherGiven every later one (middle names, initials).
-type NameWeights struct {
-	Family, FirstGiven, OtherGiven, Nick, Untyped float64
-}
-
-// NamePattern is everything culture-specific about comparing names: which
-// part type plays which role, and how much each role weighs. The built-in
-// Western pattern is in the registry; more patterns are data, not code.
-type NamePattern struct {
-	Key string
-	// PartRoles maps part types to roles; a type missing here is untyped.
-	PartRoles map[string]NameRole
-	Weights   NameWeights
-}
-
-func (p NamePattern) role(partType string) NameRole {
-	if r, ok := p.PartRoles[partType]; ok {
-		return r
-	}
-	return RoleUntyped
-}
-
-func (p NamePattern) weight(role NameRole, firstGiven bool) float64 {
-	switch role {
-	case RoleFamily:
-		return p.Weights.Family
-	case RoleGiven:
-		if firstGiven {
-			return p.Weights.FirstGiven
-		}
-		return p.Weights.OtherGiven
-	case RoleNick:
-		return p.Weights.Nick
-	}
-	return p.Weights.Untyped
-}
-
 // NamePatterns supplies name patterns by key. Today it is BuiltinNamePatterns;
 // it is the seam where a catalog read of name format profiles plugs in.
 type NamePatterns interface {
-	NamePattern(key string) (NamePattern, bool)
+	NamePattern(key string) (valuecompare.NamePattern, bool)
 }
 
 // NamePatternSet is a fixed set of patterns by key.
-type NamePatternSet map[string]NamePattern
+type NamePatternSet map[string]valuecompare.NamePattern
 
-func (s NamePatternSet) NamePattern(key string) (NamePattern, bool) {
+func (s NamePatternSet) NamePattern(key string) (valuecompare.NamePattern, bool) {
 	p, ok := s[key]
 	return p, ok
 }
@@ -130,7 +77,7 @@ func (c NameComparer) CompareDiscount(a, b Value) (similarity, discount float64,
 
 // pattern resolves a name's pattern: its own key if the source has it, else
 // the comparer's pattern, else the registry's default, else Western.
-func (c NameComparer) pattern(key string) NamePattern {
+func (c NameComparer) pattern(key string) valuecompare.NamePattern {
 	src := c.Patterns
 	if src == nil {
 		src = DefaultNames.Patterns
@@ -149,25 +96,25 @@ func (c NameComparer) pattern(key string) NamePattern {
 // nameWord is one comparable word of a name.
 type nameWord struct {
 	text   string
-	role   NameRole
+	role   valuecompare.NameRole
 	weight float64
 }
 
 // nameWords splits a name into weighted, role-tagged words under its
 // pattern. Only parts are read. Generation words come back separately. A
 // name whose parts yield no comparable word is not comparable.
-func nameWords(n *namevalue.Value, p NamePattern, particles map[string]bool) (words []nameWord, generation []string) {
+func nameWords(n *namevalue.Value, p valuecompare.NamePattern, particles map[string]bool) (words []nameWord, generation []string) {
 	firstGiven := true
 	for _, part := range n.Parts {
-		role := p.role(part.Type)
+		role := p.Role(part.Type)
 		for _, w := range valuecompare.SplitWords(part.Value, particles) {
 			switch role {
-			case RoleIgnored:
-			case RoleGeneration:
+			case valuecompare.RoleIgnored:
+			case valuecompare.RoleGeneration:
 				generation = append(generation, w)
 			default:
-				words = append(words, nameWord{text: w, role: role, weight: p.weight(role, firstGiven)})
-				if role == RoleGiven {
+				words = append(words, nameWord{text: w, role: role, weight: p.Weight(role, firstGiven)})
+				if role == valuecompare.RoleGiven {
 					firstGiven = false
 				}
 			}
@@ -178,13 +125,13 @@ func nameWords(n *namevalue.Value, p NamePattern, particles map[string]bool) (wo
 
 // affinity is how far two words' roles agree: 1 for the same role, less when
 // the types differ.
-func (c NameComparer) affinity(a, b NameRole) float64 {
+func (c NameComparer) affinity(a, b valuecompare.NameRole) float64 {
 	switch {
 	case a == b:
 		return 1
-	case a == RoleUntyped || b == RoleUntyped:
+	case a == valuecompare.RoleUntyped || b == valuecompare.RoleUntyped:
 		return setting(c.UntypedAffinity, *DefaultNames.UntypedAffinity)
-	case (a == RoleNick && b == RoleGiven) || (a == RoleGiven && b == RoleNick):
+	case (a == valuecompare.RoleNick && b == valuecompare.RoleGiven) || (a == valuecompare.RoleGiven && b == valuecompare.RoleNick):
 		return setting(c.NickAffinity, *DefaultNames.NickAffinity)
 	}
 	return setting(c.CrossRole, *DefaultNames.CrossRole)
@@ -209,7 +156,7 @@ func (c NameComparer) affinity(a, b NameRole) float64 {
 // The discount is separate from the score: the role-weighted mean of how
 // common the paired words are in the project (see discount). It never lowers
 // the similarity.
-func (c NameComparer) compareNames(a *namevalue.Value, pa NamePattern, b *namevalue.Value, pb NamePattern) (float64, float64, bool) {
+func (c NameComparer) compareNames(a *namevalue.Value, pa valuecompare.NamePattern, b *namevalue.Value, pb valuecompare.NamePattern) (float64, float64, bool) {
 	r := c.Words.resolve(true)
 	wa, ga := nameWords(a, pa, r.particles)
 	wb, gb := nameWords(b, pb, r.particles)
@@ -224,7 +171,13 @@ func (c NameComparer) compareNames(a *namevalue.Value, pa NamePattern, b *nameva
 			earned[i][j] = s * c.affinity(x.role, y.role) * (x.weight + y.weight)
 		}
 	}
-	totalEarned, usedA, usedB := bestAssignment(earned)
+	totalEarned, rowTo := valuecompare.BestAssignment(earned, MaxExactPairing)
+	usedA, usedB := make([]bool, len(wa)), make([]bool, len(wb))
+	for i, j := range rowTo {
+		if j >= 0 {
+			usedA[i], usedB[j] = true, true
+		}
+	}
 	total := countedWeight(wa, usedA, usedB) + countedWeight(wb, usedB, usedA)
 	if total == 0 {
 		return 0, 0, false
@@ -276,7 +229,7 @@ func familyConflict(wa, wb []nameWord, r wordRules) bool {
 	}
 	var hasA, hasB bool
 	for _, x := range wa {
-		if x.role == RoleFamily {
+		if x.role == valuecompare.RoleFamily {
 			hasA = true
 			if resembles(x, wb) {
 				return false
@@ -284,7 +237,7 @@ func familyConflict(wa, wb []nameWord, r wordRules) bool {
 		}
 	}
 	for _, y := range wb {
-		if y.role == RoleFamily {
+		if y.role == valuecompare.RoleFamily {
 			hasB = true
 			if resembles(y, wa) {
 				return false

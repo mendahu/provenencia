@@ -11,6 +11,7 @@ import (
 	"sort"
 
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
@@ -58,10 +59,12 @@ const (
 	CauseBelowMinimum Cause = "below_minimum"
 	// CauseNoMatch: nothing in common.
 	CauseNoMatch Cause = "no_match"
-	// CauseTooLong: text with more words than the alignment may compare.
+	// CauseTooLong: text or a name with more words than may be compared.
 	CauseTooLong Cause = "too_long"
 	// CauseOrder: text whose shared words are out of order.
 	CauseOrder Cause = "order"
+	// CauseRole: words paired across part types (a surname against a given name).
+	CauseRole Cause = "role"
 	// CauseUnsupported: no comparer for the type, or two value types.
 	CauseUnsupported Cause = "unsupported"
 )
@@ -78,7 +81,15 @@ const (
 // PartKind is the kind of a compared part.
 type PartKind string
 
-const PartWord PartKind = "word"
+const (
+	PartWord PartKind = "word"
+	// The name part kinds are the name roles, so PartKind(role) converts.
+	PartFamily     PartKind = "family"
+	PartGiven      PartKind = "given"
+	PartNick       PartKind = "nick"
+	PartUntyped    PartKind = "untyped"
+	PartGeneration PartKind = "generation"
+)
 
 // Unit is the unit of Detail.Distance.
 type Unit string
@@ -129,8 +140,12 @@ type Value struct {
 	Text    string
 	Term    string
 	Integer int64
-	Date    *datevalue.Value
-	Ref     []byte
+	// Name is a name value; only its Parts are read. NamePattern is the stored
+	// name-format key that gives the parts their roles and weights.
+	Name        *namevalue.Value
+	NamePattern string
+	Date        *datevalue.Value
+	Ref         []byte
 }
 
 // comparer compares and keys the values of one value type.
@@ -145,6 +160,7 @@ var comparers = map[string]comparer{
 	propertymeta.ValueTypeTerm:    term{},
 	propertymeta.ValueTypeInteger: integer{},
 	propertymeta.ValueTypeDate:    date{},
+	propertymeta.ValueTypeName:    name{},
 }
 
 // Compare relates a to b under rules. Values of different types, and types
@@ -165,7 +181,10 @@ func Compare(a, b Value, rules Rules) (Result, Detail) {
 // Key is v's normalized key at level: two values of one type have the same key
 // exactly when Compare relates them at that level or closer (Same for level
 // Same; Same or Equivalent for level Equivalent). Any other level, an empty
-// value, or an unsupported type has no key.
+// value, or an unsupported type has no key. Name keys ignore alias tables: an
+// alias joins two words that share a set, and sets do not chain (Chris ~
+// Christine, Chris ~ Christopher, Christine ≁ Christopher), so no key can hold
+// them.
 func Key(v Value, level Relation, rules Rules) (string, bool) {
 	c, ok := comparers[v.Type]
 	if !ok || (level != Same && level != Equivalent) {

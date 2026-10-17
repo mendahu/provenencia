@@ -559,7 +559,7 @@ New catalogs install this profile at create. The rows are the `seedProfiles` lis
 
 ## 4.5 Abbreviation and nickname tables
 
-Schema: `name_alias_tables`, `name_alias_members`, `name_alias_roles`. Rows are create-time Install, not SQL seeds. The product lists are `productAliasTables` in `core/match/registry.go` (`namealiases.Install`).
+Schema: `name_alias_tables`, `name_alias_members`, `name_alias_roles`. Rows are create-time Install, not SQL seeds. The product lists are `productAliasTables` in `core/database/namealiases/registry.go` (`namealiases.Install`).
 
 Origin is the only attribution: `provenencia`, `user`, or `plugin:<id>`, unique on `(key, origin)`. Every installed table is consulted. Origin does not turn a table off. There is no editor UI.
 
@@ -579,7 +579,7 @@ abbreviations
   robert robt
 ```
 
-The nickname table is `nicknameSets` in [`core/match/nicknames_seed.go`](../core/match/nicknames_seed.go). Each set is one canonical name and the nicknames listed for it. A nickname that belongs to two canonical names does not join those sets, so Chris connects Christine and also Christopher, and Tina does not connect Christopher. The list is names.csv from [carltonnorthern/nicknames](https://github.com/carltonnorthern/nicknames), Apache License 2.0. The license and the upstream credit are in [`core/match/third_party/nicknames/`](../core/match/third_party/nicknames/).
+The nickname table is `nicknameSets` in [`core/database/namealiases/nicknames_seed.go`](../core/database/namealiases/nicknames_seed.go). Each set is one canonical name and the nicknames listed for it. A nickname that belongs to two canonical names does not join those sets, so Chris connects Christine and also Christopher, and Tina does not connect Christopher. The list is names.csv from [carltonnorthern/nicknames](https://github.com/carltonnorthern/nicknames), Apache License 2.0. The license and the upstream credit are in [`core/database/namealiases/third_party/nicknames/`](../core/database/namealiases/third_party/nicknames/).
 
 `Register` appends a table for a future plugin. Install writes whatever is registered at catalog create. Open does not heal. Scoring reads these rows and no in-code list. Opening a project loads them once onto the catalog graph and keeps them until the project closes. A future editor calls `namealiases.Invalidate` after a change. An empty catalog makes no abbreviation or nickname hits. `namealiases.AddProductNicknames` copies the product nickname list into a catalog created before that list grew. A set already stored in full is left as it is. Call `namealiases.Invalidate` if that catalog stays open.
 

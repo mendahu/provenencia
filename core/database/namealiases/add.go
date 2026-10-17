@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -47,16 +47,16 @@ func AddProductNicknames(c *database.Catalog) (NicknameAdd, error) {
 	return added, nil
 }
 
-func productNicknames() (match.AliasTable, bool) {
-	for _, table := range match.AliasTables() {
-		if table.Key == "nicknames" && table.Origin == vocabkey.OriginProvenencia && table.Kind == match.AliasNickname {
+func productNicknames() (valuecompare.AliasTable, bool) {
+	for _, table := range AliasTables() {
+		if table.Key == "nicknames" && table.Origin == vocabkey.OriginProvenencia && table.Kind == valuecompare.AliasNickname {
 			return table, true
 		}
 	}
-	return match.AliasTable{}, false
+	return valuecompare.AliasTable{}, false
 }
 
-func addProductNicknames(tx *sql.Tx, seed match.AliasTable) (NicknameAdd, error) {
+func addProductNicknames(tx *sql.Tx, seed valuecompare.AliasTable) (NicknameAdd, error) {
 	var id []byte
 	err := tx.QueryRow(`SELECT id FROM name_alias_tables WHERE key = ? AND origin = ?`,
 		seed.Key, seed.Origin).Scan(&id)
@@ -238,7 +238,7 @@ func insertSet(tx *sql.Tx, tableID []byte, idx int, tokens []string) (int, error
 	return n, nil
 }
 
-func insertNicknameTable(tx *sql.Tx, seed match.AliasTable) (NicknameAdd, error) {
+func insertNicknameTable(tx *sql.Tx, seed valuecompare.AliasTable) (NicknameAdd, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
 		return NicknameAdd{}, err

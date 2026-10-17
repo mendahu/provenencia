@@ -1,6 +1,7 @@
 package valuecompare_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/matchregistry"
@@ -64,5 +65,78 @@ func TestSpellingSimilarity(t *testing.T) {
 	}
 	if valuecompare.SpellingSimilarity("robins", "robbins", 1, words.ShortVariantMinLength) != 0 {
 		t.Error("a floor of 1 turns spelling variants off")
+	}
+}
+
+var nameRoles = []valuecompare.NameRole{valuecompare.RoleGiven, valuecompare.RoleNick, valuecompare.RoleUntyped}
+
+func aliasIndexOf(kind valuecompare.AliasKind, sets ...[]string) valuecompare.AliasIndex {
+	return valuecompare.NewAliasIndex([]valuecompare.AliasTable{{Key: "t", Kind: kind, Roles: nameRoles, Sets: sets}})
+}
+
+// Names add initials and alias tables to the word table; text adds neither.
+func TestWordSimilarityNames(t *testing.T) {
+	words := matchregistry.Default().Value.Words
+	abbreviations := aliasIndexOf(valuecompare.AliasAbbreviation, []string{"james", "jas"})
+	nicknames := aliasIndexOf(valuecompare.AliasNickname, []string{"james", "jim"})
+	given, family := valuecompare.RoleGiven, valuecompare.RoleFamily
+	for _, tc := range []struct {
+		name string
+		x, y string
+		opts valuecompare.WordOptionsType
+		sim  float64
+		rel  valuecompare.Relation
+		why  valuecompare.Cause
+	}{
+		{"initial with initials", "j", "james", valuecompare.WordOptions(true, valuecompare.AliasIndex{}, given, given), words.InitialCredit, valuecompare.Contains, valuecompare.CauseInitial},
+		{"initial without initials", "j", "james", valuecompare.WordOptions(false, valuecompare.AliasIndex{}, given, given), 0, valuecompare.Different, valuecompare.CauseNoMatch},
+		{"initial of another word", "w", "james", valuecompare.WordOptions(true, valuecompare.AliasIndex{}, given, given), 0, valuecompare.Different, valuecompare.CauseNoMatch},
+		{"abbreviation", "jas", "james", valuecompare.WordOptions(true, abbreviations, given, given), words.AliasCredit, valuecompare.Equivalent, valuecompare.CauseAbbreviation},
+		{"nickname", "jim", "james", valuecompare.WordOptions(true, nicknames, given, given), words.AliasCredit, valuecompare.Equivalent, valuecompare.CauseAlias},
+		{"nickname as surnames", "jim", "james", valuecompare.WordOptions(true, nicknames, family, family), 0, valuecompare.Different, valuecompare.CauseNoMatch},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sim, rel, why := valuecompare.WordSimilarity(tc.x, tc.y, words, tc.opts)
+			if math.Abs(sim-tc.sim) > 1e-9 || rel != tc.rel || why != tc.why {
+				t.Errorf("got %v %s %s, want %v %s %s", sim, rel, why, tc.sim, tc.rel, tc.why)
+			}
+		})
+	}
+}
+
+// The index normalizes its tokens, drops empty ones, and the zero index hits
+// nothing.
+func TestAliasIndex(t *testing.T) {
+	given := valuecompare.RoleGiven
+	idx := aliasIndexOf(valuecompare.AliasAbbreviation, []string{"Jas.", " JIM ", ""}, []string{"", "  "})
+	if kind, ok := idx.Hit("jas", "jim", given, given); !ok || kind != valuecompare.AliasAbbreviation {
+		t.Errorf("normalized tokens: got %q %v", kind, ok)
+	}
+	if _, ok := idx.Hit("jas", "", given, given); ok {
+		t.Error("an empty token hit")
+	}
+	if _, ok := idx.Hit("jas", "jim", valuecompare.RoleFamily, given); ok {
+		t.Error("a role the table does not allow hit")
+	}
+	// A token in several sets: Hit finds the set that holds the other token,
+	// and misses when no one set holds both.
+	multi := valuecompare.NewAliasIndex([]valuecompare.AliasTable{{
+		Key: "t", Kind: valuecompare.AliasNickname, Roles: []valuecompare.NameRole{given},
+		Sets: [][]string{{"ben", "benji"}, {"ben", "benedict"}, {"benjamin", "jamie"}},
+	}})
+	if _, ok := multi.Hit("ben", "benedict", given, given); !ok {
+		t.Error("a token in several sets missed the later set")
+	}
+	if _, ok := multi.Hit("benedict", "ben", given, given); !ok {
+		t.Error("the hit is not symmetric")
+	}
+	if _, ok := multi.Hit("benji", "benedict", given, given); ok {
+		t.Error("tokens in different sets hit")
+	}
+	if _, ok := multi.Hit("ben", "jamie", given, given); ok {
+		t.Error("tokens in different sets hit")
+	}
+	if _, ok := (valuecompare.AliasIndex{}).Hit("jas", "jim", given, given); ok {
+		t.Error("the zero index hit")
 	}
 }

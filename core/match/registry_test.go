@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/datevalue"
-	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -88,22 +87,8 @@ func TestDefaultProfilesUseRegistryComparers(t *testing.T) {
 	}
 }
 
-// The Western pattern gives every product part type a role, so a new part
-// type forces a decision here.
-func TestWesternPatternCoversEveryPartType(t *testing.T) {
-	for _, pt := range namevalue.PartTypes() {
-		if _, ok := WesternNamePattern.PartRoles[pt.Key]; !ok {
-			t.Errorf("part type %q has no role in the Western pattern", pt.Key)
-		}
-	}
-	if _, ok := WesternNamePattern.PartRoles[""]; !ok {
-		t.Error("untyped parts have no role in the Western pattern")
-	}
-	for key, p := range BuiltinNamePatterns {
-		if p.Key != key {
-			t.Errorf("pattern %q is registered as %q", p.Key, key)
-		}
-	}
+// The default pattern key is one the built-in set holds.
+func TestDefaultPatternIsBuiltIn(t *testing.T) {
 	if _, ok := BuiltinNamePatterns.NamePattern(*DefaultNames.Pattern); !ok {
 		t.Errorf("the default pattern %q is not built in", *DefaultNames.Pattern)
 	}

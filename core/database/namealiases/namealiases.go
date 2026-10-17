@@ -1,5 +1,5 @@
 // Package namealiases stores abbreviation and nickname tables. The product
-// lists live in core/match. Install writes them once when a catalog is
+// lists are in registry.go. Install writes them once when a catalog is
 // created. AddProductNicknames copies the current product nickname sets into
 // a catalog that already exists. Scoring reads these rows and no other list.
 // An open project keeps that read on the catalog graph until the project
@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // Querier is *sql.DB or *sql.Tx.
@@ -36,7 +37,7 @@ func Install(c *database.Catalog) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	for _, table := range match.AliasTables() {
+	for _, table := range AliasTables() {
 		id, err := uuid.NewV7()
 		if err != nil {
 			return err
@@ -80,23 +81,23 @@ func Install(c *database.Catalog) error {
 }
 
 // Load reads every alias table. No rows returns a nil slice.
-func Load(q Querier) ([]match.AliasTable, error) {
+func Load(q Querier) ([]valuecompare.AliasTable, error) {
 	rows, err := q.Query(`SELECT id, key, origin, label, kind FROM name_alias_tables ORDER BY key, origin`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var tables []match.AliasTable
+	var tables []valuecompare.AliasTable
 	ids := map[string]int{}
 	for rows.Next() {
 		var id []byte
-		var table match.AliasTable
+		var table valuecompare.AliasTable
 		var kind string
 		if err := rows.Scan(&id, &table.Key, &table.Origin, &table.Label, &kind); err != nil {
 			return nil, err
 		}
-		table.Kind = match.AliasKind(kind)
+		table.Kind = valuecompare.AliasKind(kind)
 		ids[string(id)] = len(tables)
 		tables = append(tables, table)
 	}
@@ -148,7 +149,7 @@ func Load(q Querier) ([]match.AliasTable, error) {
 		if !ok {
 			continue
 		}
-		tables[at].Roles = append(tables[at].Roles, match.NameRole(role))
+		tables[at].Roles = append(tables[at].Roles, valuecompare.NameRole(role))
 	}
 	if err := roles.Err(); err != nil {
 		return nil, err
@@ -189,7 +190,7 @@ func Warm(c *database.Catalog) error {
 	if g == nil {
 		return database.ErrClosed
 	}
-	g.SetAliasTables(append([]match.AliasTable(nil), tables...))
+	g.SetAliasTables(append([]valuecompare.AliasTable(nil), tables...))
 	return nil
 }
 
@@ -204,7 +205,7 @@ func Invalidate(c *database.Catalog) error {
 // replace whatever list the base comparer had.
 func Comparer(g *graphcache.Graph, q Querier, base match.NameComparer) (match.NameComparer, error) {
 	if raw, ok := g.AliasTables(); ok {
-		tables, ok := raw.([]match.AliasTable)
+		tables, ok := raw.([]valuecompare.AliasTable)
 		if !ok {
 			return match.NameComparer{}, fmt.Errorf("namealiases: alias cache has %T", raw)
 		}
@@ -217,8 +218,8 @@ func Comparer(g *graphcache.Graph, q Querier, base match.NameComparer) (match.Na
 	return withAliases(base, tables), nil
 }
 
-func withAliases(base match.NameComparer, tables []match.AliasTable) match.NameComparer {
-	copied := append([]match.AliasTable(nil), tables...)
-	base.Words.Aliases = &copied
+func withAliases(base match.NameComparer, tables []valuecompare.AliasTable) match.NameComparer {
+	index := valuecompare.NewAliasIndex(tables)
+	base.Words.Aliases = &index
 	return base
 }

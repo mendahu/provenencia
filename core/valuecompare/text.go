@@ -23,14 +23,14 @@ func (text) compare(a, b Value, r Rules) (Result, Detail) {
 		if a.Text == b.Text {
 			det.Cause = CauseExact
 		}
-		det.Parts = positionalParts(wa, wb, r.Words)
+		det.Parts = positionalParts(wa, wb, nil, nil, r.Words)
 		return Result{Relation: Same, Similarity: 1}, det
 	}
 	// The same words in the same order once accents and letters are folded.
 	fa, fb := foldWords(wa, r.Words), foldWords(wb, r.Words)
 	if slices.Equal(fa, fb) {
-		det := Detail{Cause: CauseFold, Parts: positionalParts(wa, wb, r.Words)}
-		return Result{Relation: Equivalent, Similarity: meanSimilarity(det.Parts, len(wa), len(wb))}, det
+		det := Detail{Cause: CauseFold, Parts: positionalParts(wa, wb, nil, nil, r.Words)}
+		return Result{Relation: Equivalent, Similarity: meanSimilarity(det.Parts, textPairWeights(len(det.Parts)), float64(len(wa)+len(wb)))}, det
 	}
 	// The alignment is quadratic in the words: bound it.
 	if len(wa) > r.Text.MaxWords || len(wb) > r.Text.MaxWords {
@@ -44,7 +44,7 @@ func (text) compare(a, b Value, r Rules) (Result, Detail) {
 			Relation: p.rel, Similarity: p.sim, Cause: p.why,
 		})
 	}
-	det.OnlyA, det.OnlyB = wordParts(wa, onlyA), wordParts(wb, onlyB)
+	det.OnlyA, det.OnlyB = wordParts(wa, nil, onlyA), wordParts(wb, nil, onlyB)
 	switch {
 	case len(pairs) == 0:
 		det.Cause = CauseNoMatch
@@ -53,7 +53,7 @@ func (text) compare(a, b Value, r Rules) (Result, Detail) {
 		det.Cause = CauseOrder
 		return Result{Relation: Different}, det
 	}
-	mean := meanSimilarity(det.Parts, len(wa), len(wb))
+	mean := meanSimilarity(det.Parts, textPairWeights(len(det.Parts)), float64(len(wa)+len(wb)))
 	switch {
 	case len(onlyA) > 0 && len(onlyB) > 0:
 		det.Cause = CauseOverlap
@@ -92,8 +92,9 @@ func foldWords(words []string, w WordRules) []string {
 }
 
 // positionalParts pairs two equal-length word lists position by position: 1
-// for a byte-equal pair, FoldCredit for any other.
-func positionalParts(wa, wb []string, w WordRules) []PartMatch {
+// for a byte-equal pair, FoldCredit for any other. kindsA and kindsB give each
+// word's part kind; nil means every word is a PartWord.
+func positionalParts(wa, wb []string, kindsA, kindsB []PartKind, w WordRules) []PartMatch {
 	parts := make([]PartMatch, len(wa))
 	for i := range wa {
 		// Not the word table: the initial rule applies only when aligning.
@@ -101,28 +102,48 @@ func positionalParts(wa, wb []string, w WordRules) []PartMatch {
 		if wa[i] != wb[i] {
 			part.Relation, part.Similarity, part.Cause = Equivalent, w.FoldCredit, CauseFold
 		}
-		part.A, part.B = Part{Kind: PartWord, Text: wa[i]}, Part{Kind: PartWord, Text: wb[i]}
+		part.A, part.B = Part{Kind: kindAt(kindsA, i), Text: wa[i]}, Part{Kind: kindAt(kindsB, i), Text: wb[i]}
 		parts[i] = part
 	}
 	return parts
 }
 
-func wordParts(words []string, idx []int) []Part {
+// kindAt is the part kind of word i; nil kinds mean PartWord.
+func kindAt(kinds []PartKind, i int) PartKind {
+	if kinds == nil {
+		return PartWord
+	}
+	return kinds[i]
+}
+
+// wordParts are the words at idx as parts, with their kinds (nil: PartWord).
+func wordParts(words []string, kinds []PartKind, idx []int) []Part {
 	var out []Part
 	for _, i := range idx {
-		out = append(out, Part{Kind: PartWord, Text: words[i]})
+		out = append(out, Part{Kind: kindAt(kinds, i), Text: words[i]})
 	}
 	return out
 }
 
-// meanSimilarity is the mean over every word on both sides: a word scores its
-// pair's similarity, an unpaired word scores 0.
-func meanSimilarity(parts []PartMatch, na, nb int) float64 {
-	var total float64
-	for _, p := range parts {
-		total += p.Similarity + p.Similarity // one word on each side
+// textPairWeights are the weights of n text pairs: one word on each side.
+func textPairWeights(n int) []float64 {
+	out := make([]float64, n)
+	for i := range out {
+		out[i] = 1 + 1
 	}
-	return total / float64(na+nb)
+	return out
+}
+
+// meanSimilarity is the weighted mean over every word on both sides: a pair
+// earns its similarity times pairWeight[k] (the two words' weights), and total
+// is the weight of every word, paired or not. An unpaired word earns 0. Text
+// weighs every word 1; names weigh a word by its role.
+func meanSimilarity(parts []PartMatch, pairWeight []float64, total float64) float64 {
+	var earned float64
+	for k, p := range parts {
+		earned += p.Similarity * pairWeight[k]
+	}
+	return earned / total
 }
 
 // crossesOrder reports whether an unpaired word of a resembles an unpaired word

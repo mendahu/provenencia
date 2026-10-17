@@ -13,15 +13,16 @@ import (
 // notYetBuilt are the prefixes of inventory rows whose registry fields land
 // with their layer. The layer's PR deletes its prefixes.
 var notYetBuilt = []string{
-	"value.Words.InitialCredit",
-	"value.Words.AliasCredit",
-	"value.Words.MaxExactPairing",
-	"value.Names.",
 	"subject.",
 	"segment.",
 	"alignment.",
 	"evidence.",
 }
+
+// catalogData are registry fields that hold catalog data passed in at run
+// time, never tunables. They get no inventory row; each is named under "Not
+// knobs". The one list the guard keeps beside notYetBuilt.
+var catalogData = []string{"value.Names.Aliases", "value.Names.Patterns"}
 
 // TestKnobInventoryMatchesRegistry keeps docs/matching-model.md's knob
 // inventory in step with Default(): every registry field has a row, and every
@@ -29,6 +30,19 @@ var notYetBuilt = []string{
 func TestKnobInventoryMatchesRegistry(t *testing.T) {
 	rows := inventoryKeys(t)
 	fields := registryKeys(reflect.ValueOf(Default()))
+	notKnobs := notKnobsSection(t)
+
+	for _, c := range catalogData {
+		if !typeHasPath(reflect.TypeOf(Default()), strings.Split(c, ".")) {
+			t.Errorf("catalogData entry %s names no field of the registry type", c)
+		}
+		if slices.ContainsFunc(rows, func(r string) bool { return strings.HasPrefix(r, c) }) {
+			t.Errorf("catalogData entry %s has an inventory row: catalog data is not a knob", c)
+		}
+		if !strings.Contains(notKnobs, "`"+c+"`") {
+			t.Errorf("catalogData entry %s is not named in backticks under ## Not knobs", c)
+		}
+	}
 
 	covered := func(key string) bool {
 		return slices.ContainsFunc(notYetBuilt, func(p string) bool { return strings.HasPrefix(key, p) })
@@ -51,6 +65,54 @@ func TestKnobInventoryMatchesRegistry(t *testing.T) {
 			t.Errorf("notYetBuilt prefix %q matches no inventory row", p)
 		}
 	}
+}
+
+// typeHasPath reports whether the dotted path (the first element the
+// lowercased top-level field name) names a field of t.
+func typeHasPath(t reflect.Type, path []string) bool {
+	for i, name := range path {
+		for t.Kind() == reflect.Pointer {
+			t = t.Elem()
+		}
+		if t.Kind() != reflect.Struct {
+			return false
+		}
+		var found bool
+		for j := range t.NumField() {
+			f := t.Field(j)
+			if f.Name == name || (i == 0 && strings.ToLower(f.Name) == name) {
+				t, found = f.Type, true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+// notKnobsSection is the body of the "Not knobs" section.
+func notKnobsSection(t *testing.T) string {
+	body, err := os.ReadFile("../../docs/matching-model.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []string
+	in := false
+	for _, line := range strings.Split(string(body), "\n") {
+		if strings.HasPrefix(line, "## ") {
+			in = strings.TrimSpace(strings.TrimPrefix(line, "## ")) == "Not knobs"
+			continue
+		}
+		if in {
+			out = append(out, line)
+		}
+	}
+	if len(out) == 0 {
+		t.Fatal("no ## Not knobs section found")
+	}
+	return strings.Join(out, "\n")
 }
 
 // inventoryKeys are the first backticked cell of each row of the "Knob
@@ -88,6 +150,9 @@ func registryKeys(v reflect.Value) []string {
 	var out []string
 	var walk func(path string, v reflect.Value)
 	walk = func(path string, v reflect.Value) {
+		if slices.Contains(catalogData, path) {
+			return
+		}
 		switch v.Kind() {
 		case reflect.Struct:
 			for i := range v.NumField() {

@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -184,7 +185,7 @@ func insertTable(t *testing.T, db *sql.DB, key, origin, kind string, sets [][]st
 	}
 }
 
-func tableByKey(t *testing.T, tables []match.AliasTable, key string) match.AliasTable {
+func tableByKey(t *testing.T, tables []valuecompare.AliasTable, key string) valuecompare.AliasTable {
 	t.Helper()
 	for _, table := range tables {
 		if table.Key == key {
@@ -192,10 +193,10 @@ func tableByKey(t *testing.T, tables []match.AliasTable, key string) match.Alias
 		}
 	}
 	t.Fatalf("no table %q", key)
-	return match.AliasTable{}
+	return valuecompare.AliasTable{}
 }
 
-func hasSet(table match.AliasTable, a, b string) bool {
+func hasSet(table valuecompare.AliasTable, a, b string) bool {
 	for _, set := range table.Sets {
 		foundA, foundB := false, false
 		for _, token := range set {
@@ -279,7 +280,7 @@ func TestAddProductNicknamesGrowsTheShortList(t *testing.T) {
 	if !hasSet(product, "chris", "christine") || hasSet(product, "tina", "christopher") {
 		t.Fatal("shared nickname joined two formal names")
 	}
-	user := match.AliasTable{}
+	user := valuecompare.AliasTable{}
 	for _, table := range tables {
 		if table.Origin == "user" {
 			user = table
@@ -290,7 +291,7 @@ func TestAddProductNicknamesGrowsTheShortList(t *testing.T) {
 	}
 }
 
-func setsWithAll(table match.AliasTable, tokens ...string) int {
+func setsWithAll(table valuecompare.AliasTable, tokens ...string) int {
 	n := 0
 	for _, set := range table.Sets {
 		have := map[string]bool{}

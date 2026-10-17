@@ -23,6 +23,8 @@ S10-29 seeds `western` only. Both surname words keep the single family weight. S
 | Particle sort | Dutch *van der*; German *von*; Portuguese *da* | Matching already ignores them. Sorting needs a per-profile rule: *van Gogh* under V or G. |
 | Single names | Mononyms; enslaved people recorded by given name only | A missing role is already left out. Context (owner, place, date) has to carry more of the weight, on the profile. |
 
+A `generation` weight slot, and one declared slot list read by both `nameformats.LoadID` and `seedProfiles`, would replace the registry's `value.Names.Generation` knob (S11-03 kept it a knob).
+
 `maternal_surname` as its own part type is not seeded. GEDCOM has no patronymic type, so export needs a mapping when export exists.
 
 ## Name changes

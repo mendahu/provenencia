@@ -194,18 +194,39 @@ func EditDistance(a, b []rune) int {
 	return d[len(a)][len(b)]
 }
 
+// wordOptions are what a caller adds to the word table: names read initials
+// and alias tables, text neither.
+type wordOptions struct {
+	initials     bool       // whether lone letters match as initials
+	aliases      AliasIndex // abbreviation and nickname tables
+	roleX, roleY NameRole   // the roles an alias hit must allow
+}
+
 // wordSimilarity is how two comparison tokens relate, in this order: byte-equal
-// tokens are Same, 1 (exact); an initial against anything else is no pair
-// (text has no initials); tokens equal after folding are Equivalent at
-// FoldCredit (fold); a word over MaxSpellingLength runes has no spelling pair; a spelling variant is Near at its ratio (spelling); else
-// no pair, 0. A relation of Different means no pair. fx and fy are x and y
-// folded by the caller, once per word.
-func wordSimilarity(x, y, fx, fy string, w WordRules) (float64, Relation, Cause) {
+// tokens are Same, 1 (exact); an initial against anything else is a pair at
+// InitialCredit, Contains (initial), when initials count and the first letters
+// agree, else no pair; two tokens in one alias set whose tables allow both
+// roles are Equivalent at AliasCredit (abbreviation for an abbreviation table,
+// alias for any other); tokens equal after folding are Equivalent at
+// FoldCredit (fold); a word over MaxSpellingLength runes has no spelling pair;
+// a spelling variant is Near at its ratio (spelling); else no pair, 0. A
+// relation of Different means no pair. fx and fy are x and y folded by the
+// caller, once per word.
+func wordSimilarity(x, y, fx, fy string, w WordRules, o wordOptions) (float64, Relation, Cause) {
 	if x == y {
 		return 1, Same, CauseExact
 	}
 	if IsInitial(x) || IsInitial(y) {
+		if o.initials && []rune(x)[0] == []rune(y)[0] {
+			return w.InitialCredit, Contains, CauseInitial
+		}
 		return 0, Different, CauseNoMatch
+	}
+	if kind, ok := o.aliases.Hit(x, y, o.roleX, o.roleY); ok {
+		if kind == AliasAbbreviation {
+			return w.AliasCredit, Equivalent, CauseAbbreviation
+		}
+		return w.AliasCredit, Equivalent, CauseAlias
 	}
 	if fx == fy {
 		return w.FoldCredit, Equivalent, CauseFold
@@ -253,7 +274,7 @@ func alignWords(a, b, fa, fb []string, w WordRules) (pairs []wordPair, onlyA, on
 	for i := range a {
 		sims[i] = make([]wordPair, len(b))
 		for j := range b {
-			sim, rel, why := wordSimilarity(a[i], b[j], fa[i], fb[j], w)
+			sim, rel, why := wordSimilarity(a[i], b[j], fa[i], fb[j], w, wordOptions{})
 			sims[i][j] = wordPair{i: i, j: j, sim: sim, rel: rel, why: why}
 		}
 	}
