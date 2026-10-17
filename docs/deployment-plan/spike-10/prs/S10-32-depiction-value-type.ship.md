@@ -1,7 +1,7 @@
 # Ship log — S10-32 Depiction value and `likeness` on Person
 
 **Plan:** [`S10-32-depiction-value-type.md`](S10-32-depiction-value-type.md) · **Branch:** `s10-32-depiction-value` · **PR:** #430
-**State:** ready
+**State:** fixing 3
 
 The plan refresh (`36ef0065`) is the branch's first commit, on the user's call (2026-10-17): no separate docs PR. Base `ae26c629`.
 
@@ -90,3 +90,22 @@ Head `ab848b35`. Gate PASS (orchestrator run). F-3 done (`a1a96ed6`): one `json.
 
 ## Result (after user re-rating)
 Gate PASS · open: none · follow-ups: SEC-2, UX-1 (S10-54) · rejected by user: SEC-1 · to user: manual check §10.1 (CON-3); whether to run a review round on the round-2 fix commits
+
+## Round 3 — review (user-approved, 2026-10-17)
+MNT and SEC on `df8f6e27...3faeb65c`, under the updated criteria. MNT-1, MNT-3, SEC-3 Resolved. Verdicts: MNT clean, SEC clean.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| SEC-4 | SEC | minor → blocker (re-rated) | `Readable` checks the region's shape, not its page match or the image's type | Fix now → F-6 | Re-rated under `security.md`: a read returning an untrusted catalog value this PR adds, which S10-54 / S10-34 will reach. `scanListed` keeps `image_file_id` as stored (could name the Artifact's PDF); `ValidateDepictionRegion` runs only on write (`depiction.go:54`). The reviewer's "impact stays inside the project" is the object-store guard, which does not stop the wrong file being shown as a likeness |
+| MNT-6 | MNT | nit | Date and name update branches repeat a nil-check-and-wrap | Logged | |
+| PRF-O2 | MNT→PRF | — | `Readable` decodes and checks each region on every list read | Rejected | Few likenesses per Subject; point counts are hand-drawn (SEC-1, user) |
+
+### Fix plan 3
+
+**F-6 — The read checks a depiction against its Citation and its File** (from SEC-4)
+Files: `core/database/observations/observations.go`, `core/database/observations/observations_test.go`, `core/database/depictionvalues/depictionvalues.go`, `core/database/depictionvalues/depictionvalues_test.go` (if `Readable` has a test there), `core/locator/depiction.go`, `core/locator/depiction_test.go`.
+Failing test first: extend `TestObservations/likeness_read_drops_a_stored_region_that_is_not_valid` with two rows: (a) raw SQL sets the stored region's page selector to `artifact_page: 9` while the Citation's locator is page 1 → `Depiction.RegionJSON == ""`, `ImageFileID` kept; (b) raw SQL points `depiction_values.image_file_id` at the Artifact's own File (`media_type` not `image/png`; use a non-PNG Artifact File, or set that File's `media_type` to `application/pdf` with raw SQL) → `Depiction.ImageFileID` empty, `RegionJSON` kept. Both through `ListByCitation` and `ListBySubject`.
+Do: `sqlListSelect` adds `LEFT JOIN citations dc ON dc.id = o.citation_id` and `LEFT JOIN files dpf ON dpf.id = dpv.image_file_id`, selecting `dc.locator_json` and `dpf.media_type` after `dpv.image_file_id`. `depictionvalues.Readable` becomes `Readable(v Value, citationLocatorJSON, imageMediaType string) Value`: `RegionJSON` is emptied unless `locator.ValidateDepictionRegion(v.RegionJSON, citationLocatorJSON)` passes; `ImageFileID` is emptied unless `imageMediaType == "image/png"` (what `ingest.StageImage` always stores). `scanListed` passes both. Delete `locator.ValidateRegionDocument` and `TestValidateRegionDocument` (no caller left; Q7); keep `regionDocPages` unexported, and move its useful table rows into `TestValidateDepictionRegion` if they are not already covered there. Update the `Readable` and `Listed.Depiction` comments: an empty `RegionJSON` means the stored region is not a valid region of the Citation's page; an empty `ImageFileID` means the stored image is not a Go-stored PNG.
+Check: the test passes, and fails on (a) and (b) with the old `Readable`; `grep -rn ValidateRegionDocument core` prints nothing; `CGO_ENABLED=1 go test -tags fts5 ./core/...` passes; scripts/check-pr.sh PASS.
+
+Docs: the plan's Landed note and the `completed.md` S10-32 sentence say the read checks the region against the Citation's page and the image's type.
