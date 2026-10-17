@@ -32,7 +32,7 @@
 
 ## Landed
 
-No differences from this plan. The manual check in section 10 (faces drawn in S10-34's composer, VoiceOver, the image-state outline) needs a person at the Mac and was not run by the implementer; the Go and Swift tests in section 8 cover every AC except the pixels of the outline and the unreadable-file mark.
+Differences from this plan: `taskID` also folds in `fallbackMark` (D-13 said unchanged); T-8's plain thumb has `imageLabel` nil, not "Likeness"; `PVList` has a private `init(optionalThumbnail:)` (D-17 did not name it); the likeness test helpers are shared in `observationstest` rather than package-local (T-2b, T-3); `ThumbnailCache` decodes at no more than 512 px (review PRF-1/SEC-1). The manual check in section 10 (faces drawn in S10-34's composer, VoiceOver, the image-state outline) needs a person at the Mac and was not run by the implementer; the Go and Swift tests in section 8 cover every AC except the pixels of the outline and the unreadable-file mark.
 
 ## 1. Objective
 
