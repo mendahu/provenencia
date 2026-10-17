@@ -1,6 +1,17 @@
 import Foundation
+import os
 import Testing
 @testable import Provenencia
+
+/// Counts loader calls. Loaders run off the main actor and can overlap, so the
+/// count is guarded by a lock.
+private final class Counter: Sendable {
+    private let value = OSAllocatedUnfairLock(initialState: 0)
+
+    var count: Int { value.withLock { $0 } }
+
+    func increment() { value.withLock { $0 += 1 } }
+}
 
 @Suite(.serialized)
 @MainActor
@@ -33,13 +44,10 @@ struct WorkspaceSessionTests {
     @Test func loadsAndCachesValue() async {
         let session = makeSession()
         let key = CatalogQueryKey.sourcesList(project: session.projectKey)
-        final class Counter: @unchecked Sendable {
-            var count = 0
-        }
         let counter = Counter()
 
         let handle = session.ensureQuery(key) {
-            counter.count += 1
+            counter.increment()
             return ["alpha"]
         }
         await waitForFetchComplete(handle)
@@ -48,7 +56,7 @@ struct WorkspaceSessionTests {
         #expect(counter.count == 1)
 
         _ = session.ensureQuery(key) {
-            counter.count += 1
+            counter.increment()
             return ["beta"]
         }
         await Task.yield()
@@ -59,23 +67,20 @@ struct WorkspaceSessionTests {
     @Test func dedupesConcurrentLoads() async {
         let session = makeSession()
         let key = CatalogQueryKey.metadataFieldsList(project: session.projectKey)
-        final class Counter: @unchecked Sendable {
-            var count = 0
-        }
         let counter = Counter()
         let gate = Gate()
 
         await withTaskGroup(of: Void.self) { group in
             group.addTask { @MainActor in
                 _ = session.ensureQuery(key) {
-                    counter.count += 1
+                    counter.increment()
                     await gate.waitForOpen()
                     return ["shared"]
                 }
             }
             group.addTask { @MainActor in
                 _ = session.ensureQuery(key) {
-                    counter.count += 1
+                    counter.increment()
                     await gate.waitForOpen()
                     return ["shared"]
                 }
@@ -94,13 +99,10 @@ struct WorkspaceSessionTests {
     @Test func invalidateTriggersReload() async {
         let session = makeSession()
         let key = CatalogQueryKey.sourceTypesList(project: session.projectKey)
-        final class Counter: @unchecked Sendable {
-            var count = 0
-        }
         let counter = Counter()
 
         let handle = session.ensureQuery(key) {
-            counter.count += 1
+            counter.increment()
             return ["first"]
         }
         await waitForFetchComplete(handle)
@@ -108,7 +110,7 @@ struct WorkspaceSessionTests {
 
         session.invalidate(key)
         _ = session.ensureQuery(key) {
-            counter.count += 1
+            counter.increment()
             return ["second"]
         }
         await waitForFetchComplete(handle)
@@ -122,21 +124,18 @@ struct WorkspaceSessionTests {
         let keyA = CatalogQueryKey.sourcesList(project: session.projectKey)
         let keyB = CatalogQueryKey.sourceTypesList(project: session.projectKey)
         let keyOther = CatalogQueryKey.sourcesList(project: otherProject)
-        final class Counter: @unchecked Sendable {
-            var count = 0
-        }
         let counter = Counter()
 
         let handleA = session.ensureQuery(keyA) {
-            counter.count += 1
+            counter.increment()
             return ["a"]
         }
         let handleB = session.ensureQuery(keyB) {
-            counter.count += 1
+            counter.increment()
             return ["b"]
         }
         let handleOther = session.ensureQuery(keyOther) {
-            counter.count += 1
+            counter.increment()
             return ["other"]
         }
         await waitForFetchComplete(handleA)
@@ -147,15 +146,15 @@ struct WorkspaceSessionTests {
         session.invalidateAll { $0.project == session.projectKey }
 
         _ = session.ensureQuery(keyA) {
-            counter.count += 1
+            counter.increment()
             return ["a2"]
         }
         _ = session.ensureQuery(keyB) {
-            counter.count += 1
+            counter.increment()
             return ["b2"]
         }
         _ = session.ensureQuery(keyOther) {
-            counter.count += 1
+            counter.increment()
             return ["other2"]
         }
         await waitForFetchComplete(handleA)
@@ -168,21 +167,18 @@ struct WorkspaceSessionTests {
     @Test func staleWhileRevalidate() async {
         let session = makeSession()
         let key = CatalogQueryKey.typeSuggestions(project: session.projectKey, typeId: "t1")
-        final class Counter: @unchecked Sendable {
-            var count = 0
-        }
         let counter = Counter()
         let gate = Gate()
 
         let handle = session.ensureQuery(key) {
-            counter.count += 1
+            counter.increment()
             return ["first"]
         }
         await waitForFetchComplete(handle)
 
         session.invalidate(key)
         _ = session.ensureQuery(key) {
-            counter.count += 1
+            counter.increment()
             await gate.waitForOpen()
             return ["second"]
         }
