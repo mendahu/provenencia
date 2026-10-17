@@ -1,7 +1,7 @@
 # Ship log — S11-05 Migrate matching onto value compare
 
 **Plan:** [`S11-05-migrate-matching.md`](S11-05-migrate-matching.md) · **Branch:** `s11-05-migrate-matching` · **PR:** #451
-**State:** review 2
+**State:** ready
 
 Worktree: `.claude/worktrees/s11-05-migrate-matching`, cut from `main` @ `75ed63c`.
 
@@ -54,3 +54,7 @@ Head `d11e8f1`. Gate PASS (orchestrator run); `check-plan-docs.py` on S11-02/03/
 
 ## Round 2 — review
 Lenses: CON, MNT, UX (each had a finding resolved in Fix plan 1). Scope `4f4b5a2...d11e8f1` (code: `31b94d6...d11e8f1`).
+Head `d11e8f1`. CON Clean (CON-1, CON-2 resolved) · MNT Clean (MNT-1, MNT-2 resolved) · UX Clean (UX-1 documentation verified). No new blockers; no Fix plan 2.
+
+## Result
+Gate PASS · CI pending at ready · open: none · follow-ups: Promote "find another record" idea (UX-1), MNT-3 (S11-16) · to user: CON-1 (→ skip landed plans), UX-1 (→ accept, document), minors (→ fix now) — all answered 2026-10-17. Manual check §10 steps 3–4 left for the user.
