@@ -7,7 +7,7 @@ import (
 )
 
 // The registry: the numbers the matching algorithm uses, every built-in name
-// pattern, and every default profile. The value section (words, text,
+// pattern, and every default profile. The value section (words, names, text,
 // integers) lives in core/matchregistry and is read from here; tune it there.
 // The rest are tuned here until their layer lands.
 //
