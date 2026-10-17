@@ -27,7 +27,10 @@ This is a different question from **"Why was this suggested?"**, which is matchi
 ### Lines
 
 - **One line per member per property.** Five members with names give five name lines.
-- **Grouped by property, not by Subject** (decided 2026-10-17): a Name section, a Sex section, and so on, each listing every member's line. One-hop groups ("her birth's date") are their own sections, as today.
+- **Grouped by property, not by Subject** (decided 2026-10-17): a Name section, a Sex section, and so on. One-hop groups are their own sections (§ Evidence through relationships).
+- **Members with an identical value collapse into one line** (decided 2026-10-17): "The names match · 12 records", expandable to each member and its Source. Checking the line pins all of them; expanding lets the researcher uncheck one.
+- **No "select all".** Lines that match start checked; the researcher changes from there.
+- **Pairs compared together show as one section** (decided 2026-10-17): sex at birth with gender, and an event's `date` with `start_date` / `end_date`.
 - **What starts checked** (decided 2026-10-17):
 
   | Relation | Shown | Pinnable | Starts checked |
@@ -64,6 +67,20 @@ The copy is overhauled so the screen says what it is for. Lines are sentences bu
 
 New chrome and copy: a Claude Design brief ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md)) gates the PR, and all copy goes through L10n ([`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md)).
 
+### Evidence through relationships
+
+**Today** (`attachExhibits`, `bridgeNeighbors`):
+- **Every bridge counts, on both sides, with no key relationships.** On the layer, every bridge the loader reads (participation, location, relationship, `part_of`, `succeeded_by`) gives a neighbor group. On the entity side, any bridge of any type between the handle's members and the neighbor's handle's members qualifies.
+- **The bridge type is never checked.** A spouse on the Source can pair with a member who is that person's *sibling* in another Source. Matching checks that (`corresponds`); the evidence view doesn't.
+- **The lines compare only the neighbor's own values** (her husband's name), never the relationship itself.
+- **The heading is "Through <name>"** (`promote.sheet.through`): no relationship, and no reason it matters.
+
+**Proposed:**
+- **Use segments.** A relationship section exists only when the Source segment (this Subject – bridge – neighbor) corresponds to a member segment (member – bridge – neighbor's member). Correspondence comes from segment comparison (layer 5): same bridge kind, role or term, and direction, with inverse terms (parent ↔ child). A spouse only meets a spouse.
+- **Say what the relationship is and why it counts.** Heading: "Both records name the same spouse: Robert Gates". The lines under it compare Robert's values ("His name matches · 1871 census") and the relationship's own values where it has them (the marriage date).
+- **Pin the relationship too.** The bridge's own Observations (the relationship type, the role) are evidence for the claim, alongside the neighbor's matching values.
+- **Order sections by importance.** Core relationships first (birth, death, parents and children, spouses, per the spike's sparse-data principle), then the rest.
+
 ## Retires
 
 - `pairExhibits`, `comparerDiscount` and `exhibitCompatible` (`core/database/promotealign/exhibits.go`).
@@ -71,5 +88,6 @@ New chrome and copy: a Claude Design brief ([`add-design-brief`](../../../.agent
 
 ## Open questions
 
-- **Large entities.** With fifty members, a property section is fifty lines. Is a per-section "select all" enough, or do members that share one value collapse into an expandable line?
-- **Lines across properties that span properties.** Sex with gender, and an event's `date` against `start_date` / `end_date`, are compared as pairs in Subject comparison. Does the evidence view show them as one section?
+- **Which relationships get a section:** every corresponding bridge kind, ordered core first (proposed), or only the core ones?
+- **Pinning the bridge's own Observations** (relationship type, role) on the person's claim: wanted?
+
