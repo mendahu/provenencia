@@ -115,6 +115,8 @@ const (
 		LEFT JOIN source_credibility_grades sg ON sg.id = sca.credibility_grade_id
 		LEFT JOIN claim_confidence_grades cg ON cg.id = ic.confidence_grade_id
 		WHERE ic.status IN ('accepted', 'provisional')
+		  -- S10-52 replaces this with a depiction module.
+		  AND p.value_type <> 'depiction'
 		  AND ic.entity_id IN (`
 
 	sqlAcceptedEntities = `SELECT subject_id, entity_id FROM identity_claims
