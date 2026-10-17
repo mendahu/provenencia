@@ -1,6 +1,6 @@
 # S10-56 — Object store stays inside objects/; deletes prune empty folders
 
-**Status:** Planned
+**Status:** Landed in [#425](https://github.com/mendahu/provenencia/pull/425) (2026-10-17)
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-56--object-store-stays-inside-objects-deletes-prune-empty-folders)
 **Brief:** — (no new chrome: an engine change to how object files are read, written, and removed)
