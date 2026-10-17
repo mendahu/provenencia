@@ -287,7 +287,7 @@ Check: every exported var, const and `Config` field in `core/match/registry.go` 
 
 **STEP-6 — Banners and markers**
 Files: `docs/matching.md`, `docs/promote-graph-alignment.md`.
-Do: add one blockquote line directly under each file's `# ` title: `> **Spike 11 replaces this page.** The target model is [matching-model.md](matching-model.md); until then this page describes the running code.` in `docs/matching.md`, and `> **Spike 11 replaces §4.1, §5, §6 and §12.** The target model is [matching-model.md](matching-model.md); until then those sections describe the running code.` in `docs/promote-graph-alignment.md`, each with matching-model.md as a relative Markdown link. In `docs/promote-graph-alignment.md`, add one blockquote line directly under each of the `## 4.1`, `# 5`, `# 6` and `# 12` headings: `> Superseded in Spike 11; see matching-model.md.`, with the same link (D-5). Heading text is unchanged.
+Do: add one blockquote line directly under each file's `# ` title: `> **Spike 11 replaces this page.** The target model is matching-model.md; until then this page describes the running code.` in `docs/matching.md`, and `> **Spike 11 replaces §4.1, §5, §6 and §12.** The target model is matching-model.md; until then those sections describe the running code.` in `docs/promote-graph-alignment.md`, each with matching-model.md as a relative Markdown link. In `docs/promote-graph-alignment.md`, add one blockquote line directly under each of the `## 4.1`, `# 5`, `# 6` and `# 12` headings: `> Superseded in Spike 11; see matching-model.md.`, with the same link (D-5). Heading text is unchanged.
 Check: both files link to `matching-model.md`.
 
 **STEP-7 — Wire and docs**
