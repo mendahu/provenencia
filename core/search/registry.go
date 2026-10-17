@@ -77,6 +77,9 @@ type KindSpec struct {
 	ContextSections []string
 	ContextBoost    float64
 	Fields          []FieldWeight
+	// Handle marks a Conclusion handle kind (person, event, place): its hits
+	// carry member counts and read the handle field map.
+	Handle bool
 }
 
 // Registry is the declarative searchable-kind table for Spike 3+.
@@ -129,6 +132,7 @@ func init() {
 			Kind:                kind,
 			DefaultInEverything: true,
 			Priority:            priority,
+			Handle:              true,
 			Fields: []FieldWeight{
 				{Name: "title", Weight: 10},
 				{Name: "ref", Weight: 12},

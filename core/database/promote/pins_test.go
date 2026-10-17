@@ -23,6 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -52,7 +53,7 @@ func newPinFixture(t *testing.T) *pinFixture {
 	f.must(err)
 	f.must(users.Upsert(c, userID, "Tester", r))
 	f.must(subjectvocab.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	f.must(err)
 	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
@@ -60,13 +61,13 @@ func newPinFixture(t *testing.T) *pinFixture {
 	f.must(err)
 	f.artifact, err = runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	f.must(err)
-	f.person, err = subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	f.person, err = subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	f.must(err)
-	f.place, err = subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+	f.place, err = subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 	f.must(err)
-	f.name, err = properties.Lookup(c, "name", properties.OriginProvenencia)
+	f.name, err = properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 	f.must(err)
-	f.toponym, err = properties.Lookup(c, "toponym", properties.OriginProvenencia)
+	f.toponym, err = properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	f.must(err)
 	return f
 }

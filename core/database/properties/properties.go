@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
@@ -35,9 +36,6 @@ var ErrInUse = apperr.New(apperr.CodePropertiesInUse, apperr.KindConflict)
 var ErrOriginLocked = apperr.New(apperr.CodePropertiesOriginLocked, apperr.KindConflict)
 
 const (
-	OriginProvenencia = "provenencia"
-	OriginUser        = "user"
-
 	sqlUpsert = `INSERT INTO properties (id, key, origin, label, description, value_type, cardinality)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(key, origin) DO UPDATE SET
@@ -97,7 +95,7 @@ func Upsert(c *database.Catalog, p Property) ([]byte, error) {
 	if p.Cardinality == "" {
 		p.Cardinality = propertymeta.CardinalitySingle
 	}
-	if p.Key == "" || p.Label == "" || !originOK(p.Origin) || !valueTypeOK(p.ValueType) || !cardinalityOK(p.Cardinality) {
+	if p.Key == "" || p.Label == "" || !vocabkey.ValidOrigin(p.Origin) || !valueTypeOK(p.ValueType) || !cardinalityOK(p.Cardinality) {
 		return nil, ErrInvalid
 	}
 	id := p.ID
@@ -149,7 +147,7 @@ func Create(tx *database.Tx, userID []byte, label, valueType, description, cardi
 	if key == "" {
 		return Property{}, nil, ErrInvalid
 	}
-	if _, err := LookupTx(tx.Tx, key, OriginUser); err == nil {
+	if _, err := LookupTx(tx.Tx, key, vocabkey.OriginUser); err == nil {
 		return Property{}, nil, ErrDuplicateKey.WithParams(key)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return Property{}, nil, err
@@ -175,13 +173,13 @@ func Create(tx *database.Tx, userID []byte, label, valueType, description, cardi
 	} else {
 		desc = description
 	}
-	if _, err := tx.Exec(sqlUpsert, id, key, OriginUser, label, desc, valueType, cardinality); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, desc, valueType, cardinality); err != nil {
 		return Property{}, nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
 		"id":          {Old: nil, New: uid.String()},
 		"key":         {Old: nil, New: key},
-		"origin":      {Old: nil, New: OriginUser},
+		"origin":      {Old: nil, New: vocabkey.OriginUser},
 		"label":       {Old: nil, New: label},
 		"value_type":  {Old: nil, New: valueType},
 		"cardinality": {Old: nil, New: cardinality},
@@ -192,7 +190,7 @@ func Create(tx *database.Tx, userID []byte, label, valueType, description, cardi
 	return Property{
 			ID:          append([]byte(nil), id...),
 			Key:         key,
-			Origin:      OriginUser,
+			Origin:      vocabkey.OriginUser,
 			Label:       label,
 			Description: description,
 			ValueType:   valueType,
@@ -228,7 +226,7 @@ func Update(tx *database.Tx, userID, id []byte, label, valueType, description, c
 	if err != nil {
 		return Property{}, nil, err
 	}
-	if existing.Origin != OriginUser && existing.Origin != OriginProvenencia {
+	if existing.Origin != vocabkey.OriginUser && existing.Origin != vocabkey.OriginProvenencia {
 		return Property{}, nil, ErrLocked
 	}
 	if valueType != existing.ValueType {
@@ -241,7 +239,7 @@ func Update(tx *database.Tx, userID, id []byte, label, valueType, description, c
 		return Property{}, nil, ErrInvalid
 	}
 	cardinalityChanged := cardinality != existing.Cardinality
-	if cardinalityChanged && existing.Origin != OriginUser {
+	if cardinalityChanged && existing.Origin != vocabkey.OriginUser {
 		return Property{}, nil, ErrLocked
 	}
 
@@ -379,9 +377,9 @@ func CountByOrigin(c *database.Catalog) (OriginCounts, error) {
 			return OriginCounts{}, err
 		}
 		switch {
-		case origin == OriginProvenencia:
+		case origin == vocabkey.OriginProvenencia:
 			out.Seeded += n
-		case origin == OriginUser:
+		case origin == vocabkey.OriginUser:
 			out.User += n
 		default:
 			out.Plugin += n
@@ -443,13 +441,6 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		Action:     rowchange.ActionDelete,
 		Fields:     fields,
 	}}, nil
-}
-
-func originOK(origin string) bool {
-	if origin == OriginProvenencia || origin == OriginUser {
-		return true
-	}
-	return strings.HasPrefix(origin, "plugin:") && len(origin) > len("plugin:")
 }
 
 func valueTypeOK(vt string) bool {

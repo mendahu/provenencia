@@ -12,25 +12,13 @@ import (
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// Handle kinds (Conclusion layer). Documents are match text from the header
+// Handle documents (Conclusion layer) are match text from the header
 // composers: the title the list shows, plus the secondary line (a Person's
 // life, a Place's names and chain). autoreconciler.RecomputeTx reprojects
 // the handles it rewrites and their header dependents, in the same transaction.
-const (
-	KindPerson = "person"
-	KindEvent  = "event"
-	KindPlace  = "place"
-)
-
-// handleKinds are the Conclusion kinds that have a search document.
-var handleKinds = map[string]bool{
-	KindPerson: true,
-	KindEvent:  true,
-	KindPlace:  true,
-}
-
 const (
 	sqlHandleHeads = `SELECT e.id, e.ref, COALESCE(e.label, ''), st.key, st.origin, e.merged_into_id IS NOT NULL
 		FROM canonical_entities e JOIN subject_types st ON st.id = e.subject_type_id
@@ -91,7 +79,7 @@ func reprojectHandleBatch(q Querier, ids [][]byte) error {
 			_ = rows.Close()
 			return err
 		}
-		if handleKinds[typeKey] && typeOrigin == "provenencia" {
+		if vocabkey.IsPrimaryType(typeKey, typeOrigin) {
 			h.kind = typeKey
 		}
 		h.id = uuidString(id)
@@ -116,7 +104,7 @@ func reprojectHandleBatch(q Querier, ids [][]byte) error {
 		h, ok := heads[string(id)]
 		if !ok {
 			// Gone: drop any document of any handle kind.
-			for kind := range handleKinds {
+			for _, kind := range vocabkey.PrimaryKinds() {
 				if err := Delete(q, kind, uuidString(id)); err != nil {
 					return err
 				}
@@ -208,11 +196,11 @@ func loadHandleHeaders(q Querier, heads map[string]handleHead) (handleHeaders, e
 		}
 		id := []byte(key)
 		switch h.kind {
-		case KindPerson:
+		case vocabkey.Person:
 			persons = append(persons, id)
-		case KindEvent:
+		case vocabkey.Event:
 			events = append(events, id)
-		case KindPlace:
+		case vocabkey.Place:
 			places = append(places, id)
 		}
 	}
@@ -263,20 +251,20 @@ func matchText(h handleHead, v handleValues, headers handleHeaders) (string, []s
 	var title string
 	var secondary []string
 	switch h.kind {
-	case KindPerson:
+	case vocabkey.Person:
 		if p, ok := headers.persons[h.id]; ok {
 			if p.Name != nil {
 				title = strings.TrimSpace(p.Name.Form)
 			}
 			secondary = append(secondary, personLifeMatch(p)...)
 		}
-		secondary = append(secondary, tagged(extraValues(v, "name", title), "name")...)
-	case KindEvent:
+		secondary = append(secondary, tagged(extraValues(v, vocabkey.PropertyName, title), "name")...)
+	case vocabkey.Event:
 		if e, ok := headers.events[h.id]; ok {
 			title = eventMatchTitle(e)
 			secondary = append(secondary, eventMatchSecondary(e)...)
 		}
-	case KindPlace:
+	case vocabkey.Place:
 		if p, ok := headers.places[h.id]; ok {
 			if len(p.Names) > 0 {
 				title = p.Names[0]
@@ -286,7 +274,7 @@ func matchText(h handleHead, v handleValues, headers handleHeaders) (string, []s
 			}
 			secondary = append(secondary, p.Parents...)
 		}
-		secondary = append(secondary, tagged(extraValues(v, "toponym", title), "toponym")...)
+		secondary = append(secondary, tagged(extraValues(v, vocabkey.PropertyToponym, title), "toponym")...)
 	}
 	if h.label != "" {
 		if title == "" {

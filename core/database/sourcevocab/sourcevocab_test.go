@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -36,7 +37,7 @@ func TestInstall(t *testing.T) {
 				if len(types) != 1 || len(fields) != 3 {
 					t.Fatalf("types=%d fields=%d", len(types), len(fields))
 				}
-				cert, err := sourcetypes.Lookup(c, "birth_certificate", sourcetypes.OriginProvenencia)
+				cert, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -58,7 +59,7 @@ func TestInstall(t *testing.T) {
 				if err := Install(c); err != nil {
 					t.Fatal(err)
 				}
-				cert, err := sourcetypes.Lookup(c, "birth_certificate", sourcetypes.OriginProvenencia)
+				cert, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -66,7 +67,7 @@ func TestInstall(t *testing.T) {
 				if err := Install(c); err != nil {
 					t.Fatal(err)
 				}
-				cert, err = sourcetypes.Lookup(c, "birth_certificate", sourcetypes.OriginProvenencia)
+				cert, err = sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -85,7 +86,7 @@ func TestInstall(t *testing.T) {
 				if err := Install(c); err != nil {
 					t.Fatal(err)
 				}
-				cert, err := sourcetypes.Lookup(c, "birth_certificate", sourcetypes.OriginProvenencia)
+				cert, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -100,7 +101,7 @@ func TestInstall(t *testing.T) {
 				if err := runSourceTypeDelete(c, userID, cert.ID); err != nil {
 					t.Fatal(err)
 				}
-				_, err = sourcetypes.Lookup(c, "birth_certificate", sourcetypes.OriginProvenencia)
+				_, err = sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
 				if !errors.Is(err, sql.ErrNoRows) {
 					t.Fatalf("want ErrNoRows got %v", err)
 				}
@@ -112,11 +113,11 @@ func TestInstall(t *testing.T) {
 				if err := Install(c); err != nil {
 					t.Fatal(err)
 				}
-				cert, err := sourcetypes.Lookup(c, "birth_certificate", sourcetypes.OriginProvenencia)
+				cert, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
-				field, err := metadatafields.Lookup(c, "issue_date", metadatafields.OriginProvenencia)
+				field, err := metadatafields.Lookup(c, "issue_date", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -133,21 +134,21 @@ func TestInstall(t *testing.T) {
 			name: "user origin twin left alone",
 			run: func(t *testing.T, c *database.Catalog) {
 				if _, err := sourcetypes.Upsert(c, sourcetypes.Type{
-					Key: "birth_certificate", Origin: sourcetypes.OriginUser, Label: "My Birth Cert",
+					Key: "birth_certificate", Origin: vocabkey.OriginUser, Label: "My Birth Cert",
 				}); err != nil {
 					t.Fatal(err)
 				}
 				if err := Install(c); err != nil {
 					t.Fatal(err)
 				}
-				userRow, err := sourcetypes.Lookup(c, "birth_certificate", sourcetypes.OriginUser)
+				userRow, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginUser)
 				if err != nil {
 					t.Fatal(err)
 				}
 				if userRow.Label != "My Birth Cert" {
 					t.Fatalf("user row mutated: %+v", userRow)
 				}
-				prov, err := sourcetypes.Lookup(c, "birth_certificate", sourcetypes.OriginProvenencia)
+				prov, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -178,7 +179,7 @@ func TestAppendSuggestion(t *testing.T) {
 			name: "appends in call order and is idempotent",
 			run: func(t *testing.T, c *database.Catalog) {
 				typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-					Key: "book", Origin: sourcetypes.OriginUser, Label: "Book",
+					Key: "book", Origin: vocabkey.OriginUser, Label: "Book",
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -215,7 +216,7 @@ func TestAppendSuggestion(t *testing.T) {
 			name: "removing a suggestion leaves the field in the vocabulary",
 			run: func(t *testing.T, c *database.Catalog) {
 				typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-					Key: "book", Origin: sourcetypes.OriginUser, Label: "Book",
+					Key: "book", Origin: vocabkey.OriginUser, Label: "Book",
 				})
 				if err != nil {
 					t.Fatal(err)

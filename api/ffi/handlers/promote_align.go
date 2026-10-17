@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -61,11 +62,11 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 			return
 		}
 		switch kind {
-		case "person":
+		case vocabkey.Person:
 			personIDs = append(personIDs, id)
-		case "event":
+		case vocabkey.Event:
 			eventIDs = append(eventIDs, id)
-		case "place":
+		case vocabkey.Place:
 			placeIDs = append(placeIDs, id)
 		}
 	}
@@ -160,15 +161,15 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 				ViaNeighborSubjectId: uuidString(a.ViaNeighbor),
 			}
 			switch r.Kind {
-			case "person":
+			case vocabkey.Person:
 				if h, ok := personByID[string(a.HandleID)]; ok {
 					alt.Header = &engine.PromoteGraphAlignmentAlternative_Person{Person: personHeaderProto(h)}
 				}
-			case "event":
+			case vocabkey.Event:
 				if h, ok := eventByID[string(a.HandleID)]; ok {
 					alt.Header = &engine.PromoteGraphAlignmentAlternative_Event{Event: eventHeaderProto(h)}
 				}
-			case "place":
+			case vocabkey.Place:
 				if h, ok := placeByID[string(a.HandleID)]; ok {
 					alt.Header = &engine.PromoteGraphAlignmentAlternative_Place{Place: placeHeaderProto(h)}
 				}
@@ -177,15 +178,15 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 		}
 		if r.Target == graphalign.TargetHandle && len(r.HandleID) == 16 {
 			switch r.Kind {
-			case "person":
+			case vocabkey.Person:
 				if h, ok := personByID[string(r.HandleID)]; ok {
 					row.Header = &engine.PromoteGraphAlignmentRow_Person{Person: personHeaderProto(h)}
 				}
-			case "event":
+			case vocabkey.Event:
 				if h, ok := eventByID[string(r.HandleID)]; ok {
 					row.Header = &engine.PromoteGraphAlignmentRow_Event{Event: eventHeaderProto(h)}
 				}
-			case "place":
+			case vocabkey.Place:
 				if h, ok := placeByID[string(r.HandleID)]; ok {
 					row.Header = &engine.PromoteGraphAlignmentRow_Place{Place: placeHeaderProto(h)}
 				}

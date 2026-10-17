@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/slug"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeSourceTypesInvalid, apperr.KindUser)
@@ -35,9 +36,6 @@ var ErrInUse = apperr.New(apperr.CodeSourceTypesInUse, apperr.KindConflict)
 var ErrOriginLocked = apperr.New(apperr.CodeSourceTypesOriginLocked, apperr.KindConflict)
 
 const (
-	OriginProvenencia = "provenencia"
-	OriginUser        = "user"
-
 	sqlUpsert = `INSERT INTO source_types (id, key, origin, label, description, icon_key)
 		VALUES (?, ?, ?, ?, ?, ?)
 		ON CONFLICT(key, origin) DO UPDATE SET
@@ -99,7 +97,7 @@ func Upsert(c *database.Catalog, t Type) ([]byte, error) {
 		return nil, err
 	}
 	t.IconKey = iconKey
-	if t.Key == "" || t.Label == "" || !originOK(t.Origin) {
+	if t.Key == "" || t.Label == "" || !vocabkey.ValidOrigin(t.Origin) {
 		return nil, ErrInvalid
 	}
 	id := t.ID
@@ -193,7 +191,7 @@ func Create(tx *database.Tx, label, description, iconKey string) (Type, []rowcha
 	if key == "" {
 		return Type{}, nil, ErrInvalid
 	}
-	if _, err := lookupTx(tx.Tx, key, OriginUser); err == nil {
+	if _, err := lookupTx(tx.Tx, key, vocabkey.OriginUser); err == nil {
 		return Type{}, nil, ErrDuplicateKey.WithParams(key)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return Type{}, nil, err
@@ -218,13 +216,13 @@ func Create(tx *database.Tx, label, description, iconKey string) (Type, []rowcha
 	} else {
 		desc = description
 	}
-	if _, err := tx.Exec(sqlUpsert, id, key, OriginUser, label, desc, iconKey); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, desc, iconKey); err != nil {
 		return Type{}, nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
 		"id":       {Old: nil, New: uid.String()},
 		"key":      {Old: nil, New: key},
-		"origin":   {Old: nil, New: OriginUser},
+		"origin":   {Old: nil, New: vocabkey.OriginUser},
 		"label":    {Old: nil, New: label},
 		"icon_key": {Old: nil, New: iconKey},
 	}
@@ -262,7 +260,7 @@ func Update(tx *database.Tx, id []byte, label, description, iconKey string) (Typ
 	if err != nil {
 		return Type{}, nil, err
 	}
-	if existing.Origin != OriginUser && existing.Origin != OriginProvenencia {
+	if existing.Origin != vocabkey.OriginUser && existing.Origin != vocabkey.OriginProvenencia {
 		return Type{}, nil, ErrLocked
 	}
 	normalizedIcon := existing.IconKey
@@ -360,9 +358,9 @@ func CountByOrigin(c *database.Catalog) (OriginCounts, error) {
 			return OriginCounts{}, err
 		}
 		switch {
-		case origin == OriginProvenencia:
+		case origin == vocabkey.OriginProvenencia:
 			out.Seeded += n
-		case origin == OriginUser:
+		case origin == vocabkey.OriginUser:
 			out.User += n
 		default:
 			out.Plugin += n
@@ -423,13 +421,6 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		Action:     rowchange.ActionDelete,
 		Fields:     fields,
 	}}, nil
-}
-
-func originOK(origin string) bool {
-	if origin == OriginProvenencia || origin == OriginUser {
-		return true
-	}
-	return strings.HasPrefix(origin, "plugin:") && len(origin) > len("plugin:")
 }
 
 func getByIDTx(tx *sql.Tx, id []byte) (Type, error) {

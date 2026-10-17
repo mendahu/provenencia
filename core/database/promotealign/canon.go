@@ -3,11 +3,11 @@ package promotealign
 import (
 	"sort"
 
-	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // seedCandidateLimit is the number of property-only candidates kept per
@@ -52,7 +52,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 			return err
 		}
 		kind := typeKey(types, n.SubjectTypeID)
-		if !promotePrimary(kind, "provenencia") {
+		if !vocabkey.IsPrimaryKind(kind) {
 			return nil
 		}
 		vals, err := handleValues(props, terms, n, namePattern)
@@ -162,7 +162,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 					continue
 				}
 				nKind := typeKey(types, neighbor.SubjectTypeID)
-				if !promotePrimary(nKind, "provenencia") {
+				if !vocabkey.IsPrimaryKind(nKind) {
 					continue
 				}
 				from, to, sig := canonSignature(id, selfKind, n, l, neighbor, props, kin)
@@ -194,10 +194,6 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 	return out, nil
 }
 
-func promotePrimary(kind, origin string) bool {
-	return origin == "provenencia" && (kind == "person" || kind == "event" || kind == "place")
-}
-
 func canonSignature(self []byte, selfKind string, n *graphcache.Node, l graphcache.Link, neighbor *graphcache.Node, props map[string]match.Property, kin kinship) (from, to []byte, sig graphalign.EdgeSignature) {
 	if l.FromEnd {
 		from, to = self, l.Neighbor
@@ -211,13 +207,13 @@ func canonSignature(self []byte, selfKind string, n *graphcache.Node, l graphcac
 	var typeTerm string
 	if l.BridgeTypeKey == "participation" {
 		event := neighbor
-		if selfKind == "event" {
+		if selfKind == vocabkey.Event {
 			event = n
 		}
-		if l.NeighborTypeKey == "event" {
+		if l.NeighborTypeKey == vocabkey.Event {
 			event = neighbor
 		}
-		typeTerm = keptTerm(event, props, neighborTypeProperty["event"])
+		typeTerm = keptTerm(event, props, neighborTypeProperty[vocabkey.Event])
 	}
 	sig = graphalign.EdgeSignature{
 		BridgeType: l.BridgeTypeKey, RoleOrType: role,
@@ -304,7 +300,7 @@ func typeByKey(g *graphcache.Graph) (map[string][]byte, error) {
 	}
 	out := map[string][]byte{}
 	for _, t := range v.Types {
-		if t.Origin != connectrules.OriginProvenencia {
+		if t.Origin != vocabkey.OriginProvenencia {
 			continue
 		}
 		out[t.Key] = append([]byte(nil), t.ID...)

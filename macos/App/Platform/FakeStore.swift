@@ -1012,7 +1012,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         location: WorkspaceLocation,
         kinds: [String]
     ) async throws -> [CatalogSearchHit] {
-        let handleKinds: Set<String> = ["person", "event", "place"]
+        let handleKinds = Self.primaryTypeKeys
         let wanted = Set(kinds)
         var scored: [(hit: CatalogSearchHit, score: Double)] = []
         if wanted.isEmpty || !wanted.isDisjoint(with: handleKinds) {
@@ -1343,7 +1343,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             else {
                 throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
             }
-            guard ["person", "event", "place"].contains(type.key) else {
+            guard Self.primaryTypeKeys.contains(type.key) else {
                 throw CoreInvokeError.coded(status: 1, code: "promote.unsupported_type", kind: .user, params: [])
             }
             if membershipBySubject[subjectID] != nil {
@@ -1454,7 +1454,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             let types = Dictionary(uniqueKeysWithValues: (subjectTypesByProject[projectDir] ?? []).map { ($0.id, $0) })
             let rows = subjects.compactMap { subject -> CatalogPromoteGraphAlignmentRow? in
                 guard let type = types[subject.subjectTypeID],
-                      ["person", "event", "place"].contains(type.key)
+                      Self.primaryTypeKeys.contains(type.key)
                 else { return nil }
                 if let membership = membershipBySubject[subject.id] {
                     return CatalogPromoteGraphAlignmentRow(
@@ -1546,7 +1546,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 }
                 guard let subject = (subjectsBySource[sourceID] ?? []).first(where: { $0.id == row.subjectID }),
                       let type = subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID }),
-                      ["person", "event", "place"].contains(type.key)
+                      Self.primaryTypeKeys.contains(type.key)
                 else {
                     throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
                 }
@@ -3005,7 +3005,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     /// Subject type keys Promote starts from; the fake has no origin to check.
-    private static let primaryTypeKeys: Set<String> = ["person", "event", "place"]
+    private static let primaryTypeKeys = Set(EvidencePrimaryKind.allCases.map(\.rawValue))
 
     private func graphProgress(for sourceID: String, projectDir: String) -> SourceGraphProgress {
         if let override = graphProgressBySource[sourceID] {

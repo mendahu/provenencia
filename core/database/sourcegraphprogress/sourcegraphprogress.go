@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeSourcesInvalid, apperr.KindUser)
@@ -57,7 +57,7 @@ func (p *Progress) add(key, origin string, n, filed int32) {
 	if key != "source" {
 		p.SubjectCount += n
 	}
-	if promote.PrimaryKind(key, origin) {
+	if vocabkey.IsPrimaryType(key, origin) {
 		p.PrimaryCount += n
 		p.FiledCount += filed
 	}

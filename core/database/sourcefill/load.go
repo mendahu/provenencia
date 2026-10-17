@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 func init() {
@@ -187,7 +188,7 @@ func loadSourceMembers(q graphcache.Querier, sourceID []byte) ([]graphcache.Sour
 func loadTitleEdges(q graphcache.Querier, sourceID []byte, subjects []graphcache.SourceSubject) ([]graphcache.SourceEdge, []graphcache.SourceEdge, error) {
 	var events [][]byte
 	for _, s := range subjects {
-		if s.TypeKey == "event" && s.TypeOrigin == "provenencia" {
+		if s.TypeKey == vocabkey.Event && s.TypeOrigin == vocabkey.OriginProvenencia {
 			events = append(events, s.ID)
 		}
 	}

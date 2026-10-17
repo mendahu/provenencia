@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -53,7 +54,7 @@ func TestSourceGraphProgress(t *testing.T) {
 			t.Fatal(err)
 		}
 		typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-			Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+			Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -74,15 +75,15 @@ func TestSourceGraphProgress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		personType, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+		personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		placeType, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+		placeType, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		sourceType, err := subjecttypes.Lookup(c, "source", subjecttypes.OriginProvenencia)
+		sourceType, err := subjecttypes.Lookup(c, "source", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -115,7 +116,7 @@ func TestSourceGraphProgress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		toponym, err := properties.Lookup(c, "toponym", properties.OriginProvenencia)
+		toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -251,7 +252,7 @@ func TestPrimaryAndFiledCounts(t *testing.T) {
 		t.Fatal(err)
 	}
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -268,7 +269,7 @@ func TestPrimaryAndFiledCounts(t *testing.T) {
 	}
 	newSubject := func(src sources.Source, typeKey, label string) subjects.Subject {
 		t.Helper()
-		st, err := subjecttypes.Lookup(c, typeKey, subjecttypes.OriginProvenencia)
+		st, err := subjecttypes.Lookup(c, typeKey, vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}

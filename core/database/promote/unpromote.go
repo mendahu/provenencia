@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // Unpromote is the inverse of Save for one primary Subject: it deletes the
@@ -41,7 +42,7 @@ func Unpromote(tx *database.Tx, userID, subjectID []byte) ([]rowchange.Change, e
 	if err != nil {
 		return nil, err
 	}
-	if !PrimaryKind(st.Key, st.Origin) {
+	if !vocabkey.IsPrimaryType(st.Key, st.Origin) {
 		return nil, ErrUnsupportedType
 	}
 	claim, err := identityclaims.AcceptedEntityForSubjectTx(q, subject.ID)

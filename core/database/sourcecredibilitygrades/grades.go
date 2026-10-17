@@ -9,14 +9,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeSourceCredibilityInvalid, apperr.KindUser)
 
 const (
-	OriginProvenencia = "provenencia"
-	OriginUser        = "user"
-
 	sqlUpsert = `INSERT INTO source_credibility_grades (id, key, origin, label, sort_order)
 		VALUES (?, ?, ?, ?, ?)
 		ON CONFLICT(key, origin) DO UPDATE SET
@@ -49,7 +47,7 @@ func Upsert(c *database.Catalog, g Grade) ([]byte, error) {
 	g.Key = strings.TrimSpace(g.Key)
 	g.Origin = strings.TrimSpace(g.Origin)
 	g.Label = strings.TrimSpace(g.Label)
-	if g.Key == "" || g.Label == "" || !originOK(g.Origin) {
+	if g.Key == "" || g.Label == "" || !vocabkey.ValidOrigin(g.Origin) {
 		return nil, ErrInvalid
 	}
 	id := g.ID
@@ -133,11 +131,4 @@ func scanGrade(row rowScanner) (Grade, error) {
 		return Grade{}, err
 	}
 	return g, nil
-}
-
-func originOK(origin string) bool {
-	if origin == OriginProvenencia || origin == OriginUser {
-		return true
-	}
-	return strings.HasPrefix(origin, "plugin:") && len(origin) > len("plugin:")
 }

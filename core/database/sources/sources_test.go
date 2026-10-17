@@ -19,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -122,7 +123,7 @@ func TestSources(t *testing.T) {
 	mustType := func(t *testing.T, c *database.Catalog) []byte {
 		t.Helper()
 		id, err := sourcetypes.Upsert(c, sourcetypes.Type{
-			Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+			Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -677,7 +678,7 @@ func TestSourceDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -736,7 +737,7 @@ func TestSourceDelete(t *testing.T) {
 	if err := subjectvocab.Install(c); err != nil {
 		t.Fatal(err)
 	}
-	personType, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 func TestInstallAndLoad(t *testing.T) {
@@ -240,7 +241,7 @@ func TestAddProductNicknamesFillsAnEmptyCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(tables) != 1 || tables[0].Key != "nicknames" || tables[0].Origin != match.OriginProvenencia {
+	if len(tables) != 1 || tables[0].Key != "nicknames" || tables[0].Origin != vocabkey.OriginProvenencia {
 		t.Fatalf("tables %+v", tables)
 	}
 	if !hasSet(tables[0], "chris", "christine") || hasSet(tables[0], "tina", "christopher") {
@@ -251,7 +252,7 @@ func TestAddProductNicknamesFillsAnEmptyCatalog(t *testing.T) {
 func TestAddProductNicknamesGrowsTheShortList(t *testing.T) {
 	c := newCatalog(t)
 	db := mustDB(t, c)
-	insertTable(t, db, "nicknames", match.OriginProvenencia, "nickname", [][]string{{"james", "jim", "jimmy"}})
+	insertTable(t, db, "nicknames", vocabkey.OriginProvenencia, "nickname", [][]string{{"james", "jim", "jimmy"}})
 	insertTable(t, db, "nicknames", "user", "nickname", [][]string{{"xyzzy", "plugh"}})
 
 	added, err := AddProductNicknames(c)
@@ -268,7 +269,7 @@ func TestAddProductNicknamesGrowsTheShortList(t *testing.T) {
 	product := tableByKey(t, tables, "nicknames")
 	// Load orders by key, origin. Both tables share the key. Take provenencia.
 	for _, table := range tables {
-		if table.Key == "nicknames" && table.Origin == match.OriginProvenencia {
+		if table.Key == "nicknames" && table.Origin == vocabkey.OriginProvenencia {
 			product = table
 		}
 	}

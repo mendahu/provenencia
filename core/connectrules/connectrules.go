@@ -10,6 +10,8 @@ package connectrules
 import (
 	"strings"
 	"sync"
+
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 const (
@@ -17,8 +19,6 @@ const (
 	DisambiguationRole                  = "role"
 	DisambiguationRelationshipType      = "relationship_type"
 	DisambiguationPlaceRelationshipType = "place_relationship_type"
-
-	OriginProvenencia = "provenencia"
 )
 
 // Endpoint binds a Property key on a bridge to the node type it points at.
@@ -50,7 +50,7 @@ type Rule struct {
 // Product bridges and refusals. Omitted pairs refuse by default.
 var productBridges = []Bridge{
 	{
-		Origin: OriginProvenencia, BridgeTypeKey: "participation",
+		Origin: vocabkey.OriginProvenencia, BridgeTypeKey: "participation",
 		Endpoints: []Endpoint{
 			{PropertyKey: "person", TypeKey: "person"},
 			{PropertyKey: "event", TypeKey: "event"},
@@ -59,7 +59,7 @@ var productBridges = []Bridge{
 		Pairs:          [][2]string{{"person", "event"}, {"event", "person"}},
 	},
 	{
-		Origin: OriginProvenencia, BridgeTypeKey: "relationship",
+		Origin: vocabkey.OriginProvenencia, BridgeTypeKey: "relationship",
 		Endpoints: []Endpoint{
 			{PropertyKey: "person", TypeKey: "person"},
 			{PropertyKey: "related_to", TypeKey: "person"},
@@ -68,7 +68,7 @@ var productBridges = []Bridge{
 		Pairs:          [][2]string{{"person", "person"}},
 	},
 	{
-		Origin: OriginProvenencia, BridgeTypeKey: "location",
+		Origin: vocabkey.OriginProvenencia, BridgeTypeKey: "location",
 		Endpoints: []Endpoint{
 			{PropertyKey: "event", TypeKey: "event"},
 			{PropertyKey: "place", TypeKey: "place"},
@@ -77,7 +77,7 @@ var productBridges = []Bridge{
 		Pairs:          [][2]string{{"event", "place"}, {"place", "event"}},
 	},
 	{
-		Origin: OriginProvenencia, BridgeTypeKey: "place_relationship",
+		Origin: vocabkey.OriginProvenencia, BridgeTypeKey: "place_relationship",
 		Endpoints: []Endpoint{
 			{PropertyKey: "from", TypeKey: "place"},
 			{PropertyKey: "to", TypeKey: "place"},
@@ -115,7 +115,7 @@ func rebuild() {
 	for _, b := range bridges {
 		origin := strings.TrimSpace(b.Origin)
 		if origin == "" {
-			origin = OriginProvenencia
+			origin = vocabkey.OriginProvenencia
 		}
 		disamb := b.Disambiguation
 		if disamb == "" {
@@ -336,7 +336,7 @@ func BridgeBindings() []Binding {
 		seen[b.BridgeTypeKey] = true
 		origin := strings.TrimSpace(b.Origin)
 		if origin == "" {
-			origin = OriginProvenencia
+			origin = vocabkey.OriginProvenencia
 		}
 		order := 0
 		for _, e := range b.Endpoints {
@@ -349,7 +349,7 @@ func BridgeBindings() []Binding {
 		if HasDisambiguation(b.Disambiguation) {
 			out = append(out, Binding{
 				Origin: origin, TypeKey: b.BridgeTypeKey, PropertyKey: b.Disambiguation,
-				SortOrder: order, Locked: origin == OriginProvenencia,
+				SortOrder: order, Locked: origin == vocabkey.OriginProvenencia,
 			})
 		}
 	}

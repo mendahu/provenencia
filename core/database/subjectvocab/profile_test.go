@@ -5,6 +5,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // A default matching Feature carries the cardinality the seeded Property
@@ -18,7 +19,7 @@ func TestDefaultProfileCardinality(t *testing.T) {
 		}
 		card[p.Key] = c
 	}
-	for _, kind := range []string{"person", "event", "place"} {
+	for _, kind := range vocabkey.PrimaryKinds() {
 		prof, ok := match.DefaultProfile(kind)
 		if !ok {
 			t.Fatalf("no default profile for %s", kind)

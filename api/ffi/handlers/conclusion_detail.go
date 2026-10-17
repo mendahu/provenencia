@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -108,24 +109,24 @@ func attachHeader(c *database.Catalog, d conclusiondetails.Detail, out *engine.C
 	if err != nil {
 		return err
 	}
-	if st.Origin != subjecttypes.OriginProvenencia {
+	if st.Origin != vocabkey.OriginProvenencia {
 		return nil
 	}
 	ids := [][]byte{d.Entity.ID}
 	switch st.Key {
-	case "person":
+	case vocabkey.Person:
 		h, err := conclusionheaders.PersonsByIDs(c, ids)
 		if err != nil || len(h) != 1 {
 			return err
 		}
 		out.Header = &engine.ConclusionDetail_Person{Person: personHeaderProto(h[0])}
-	case "event":
+	case vocabkey.Event:
 		h, err := conclusionheaders.EventsByIDs(c, ids)
 		if err != nil || len(h) != 1 {
 			return err
 		}
 		out.Header = &engine.ConclusionDetail_Event{Event: eventHeaderProto(h[0])}
-	case "place":
+	case vocabkey.Place:
 		h, err := conclusionheaders.PlacesByIDs(c, ids)
 		if err != nil || len(h) != 1 {
 			return err

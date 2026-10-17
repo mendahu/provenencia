@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/hops"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // headerChainDepth is how far a place row's parent chain climbs, and how far
@@ -105,7 +106,7 @@ func AssociationEndpoints(q Querier, ids [][]byte) ([][]byte, error) {
 		}
 		origin := b.Origin
 		if origin == "" {
-			origin = connectrules.OriginProvenencia
+			origin = vocabkey.OriginProvenencia
 		}
 		where += "(st.origin = ? AND st.key = ?)"
 		args = append(args, origin, b.BridgeTypeKey)

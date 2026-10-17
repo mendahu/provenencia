@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -41,7 +42,7 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 		t.Fatal(err)
 	}
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -56,11 +57,11 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	place, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+	place, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	toponym, err := properties.Lookup(c, "toponym", properties.OriginProvenencia)
+	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -194,7 +194,7 @@ Keys are dotted paths of the planned registry: `section.Group.Field`. A Capitali
 
 ## Not knobs
 
-These are identifiers or catalog data, not tunables, and have no row: `OriginProvenencia`, `AliasAbbreviation`, `AliasNickname`, `WesternPattern` (a key), `BuiltinNamePatterns` (the set holding `WesternNamePattern`), `DefaultNames.Patterns` / `Pattern`, `DefaultWordRules.Aliases` (catalog tables passed in at run time), `ProfiledKinds` (S11-23), and `graphalign` `Config.Names` (a test hook).
+These are identifiers or catalog data, not tunables, and have no row: the vocabulary origins and primary kinds (`core/vocabkey`), `AliasAbbreviation`, `AliasNickname`, `WesternPattern` (a key), `BuiltinNamePatterns` (the set holding `WesternNamePattern`), `DefaultNames.Patterns` / `Pattern`, `DefaultWordRules.Aliases` (catalog tables passed in at run time), and `graphalign` `Config.Names` (a test hook).
 
 ## Removed knobs
 

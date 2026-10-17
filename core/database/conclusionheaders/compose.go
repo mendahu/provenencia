@@ -12,12 +12,12 @@ import (
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/nameformats"
-	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // vocab is the label map a header resolves at read time. Term labels and
@@ -49,7 +49,7 @@ func loadVocab(g *graphcache.Graph) (vocab, error) {
 		termLabel: map[string]string{},
 		typeID:    map[string][]byte{},
 	}
-	if err := scanVocab(g, `SELECT id, key FROM properties WHERE origin = ?`, []any{properties.OriginProvenencia}, func(id []byte, key, _ string) {
+	if err := scanVocab(g, `SELECT id, key FROM properties WHERE origin = ?`, []any{vocabkey.OriginProvenencia}, func(id []byte, key, _ string) {
 		v.propID[key] = append([]byte(nil), id...)
 	}); err != nil {
 		return vocab{}, err
@@ -59,7 +59,7 @@ func loadVocab(g *graphcache.Graph) (vocab, error) {
 	}); err != nil {
 		return vocab{}, err
 	}
-	if err := scanVocab(g, `SELECT id, key FROM subject_types WHERE origin = ?`, []any{properties.OriginProvenencia}, func(id []byte, key, _ string) {
+	if err := scanVocab(g, `SELECT id, key FROM subject_types WHERE origin = ?`, []any{vocabkey.OriginProvenencia}, func(id []byte, key, _ string) {
 		v.typeID[key] = append([]byte(nil), id...)
 	}); err != nil {
 		return vocab{}, err
@@ -230,7 +230,7 @@ func persons(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PersonHeader
 	if err != nil {
 		return nil, err
 	}
-	nodes, err := nodesOf(g, v.typeID["person"], ids, all)
+	nodes, err := nodesOf(g, v.typeID[vocabkey.Person], ids, all)
 	if err != nil {
 		return nil, err
 	}
@@ -303,7 +303,7 @@ func events(g *graphcache.Graph, ids [][]byte, all, store bool) ([]EventHeader, 
 	if err != nil {
 		return nil, err
 	}
-	nodes, err := nodesOf(g, v.typeID["event"], ids, all)
+	nodes, err := nodesOf(g, v.typeID[vocabkey.Event], ids, all)
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +353,7 @@ func places(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PlaceHeader, 
 	if err != nil {
 		return nil, err
 	}
-	nodes, err := nodesOf(g, v.typeID["place"], ids, all)
+	nodes, err := nodesOf(g, v.typeID[vocabkey.Place], ids, all)
 	if err != nil {
 		return nil, err
 	}
@@ -460,7 +460,7 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 
 func onePerson(v vocab, n *graphcache.Node, g *graphcache.Graph, pg *placeGraph) (PersonHeader, error) {
 	h := PersonHeader{Entity: entityOf(n)}
-	name, count, err := keptName(n, v.prop("name"))
+	name, count, err := keptName(n, v.prop(vocabkey.PropertyName))
 	if err != nil {
 		return PersonHeader{}, err
 	}
@@ -478,7 +478,7 @@ func onePerson(v vocab, n *graphcache.Node, g *graphcache.Graph, pg *placeGraph)
 		if ev == nil {
 			continue
 		}
-		_, key, _ := keptTerm(ev, v.prop("event_type"))
+		_, key, _ := keptTerm(ev, v.prop(vocabkey.PropertyEventType))
 		if key != "birth" && key != "death" {
 			continue
 		}
@@ -511,12 +511,12 @@ type lifePick struct {
 }
 
 func lifeFrom(v vocab, ev *graphcache.Node) (lifePick, error) {
-	date, dateCount, dateKey, dateOK, err := keptDateAt(ev, v.prop("date"))
+	date, dateCount, dateKey, dateOK, err := keptDateAt(ev, v.prop(vocabkey.PropertyDate))
 	if err != nil {
 		return lifePick{}, err
 	}
 	if date == nil {
-		date, dateCount, dateKey, dateOK, err = keptDateAt(ev, v.prop("start_date"))
+		date, dateCount, dateKey, dateOK, err = keptDateAt(ev, v.prop(vocabkey.PropertyStartDate))
 		if err != nil {
 			return lifePick{}, err
 		}
@@ -616,18 +616,18 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 func oneEvent(g *graphcache.Graph, v vocab, pg *placeGraph, n *graphcache.Node) (EventHeader, error) {
 	h := EventHeader{Entity: entityOf(n)}
 	h.EventName, h.EventNameCount = keptText(n, v.prop("event_name"))
-	if id, key, count := keptTerm(n, v.prop("event_type")); key != "" {
+	if id, key, count := keptTerm(n, v.prop(vocabkey.PropertyEventType)); key != "" {
 		h.EventType = &EventType{ID: id, Key: key}
 		h.EventTypeCount = count
 	}
 	var err error
-	if h.Date, h.DateCount, _, _, err = keptDateAt(n, v.prop("date")); err != nil {
+	if h.Date, h.DateCount, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyDate)); err != nil {
 		return EventHeader{}, err
 	}
-	if h.StartDate, h.StartDateCount, _, _, err = keptDateAt(n, v.prop("start_date")); err != nil {
+	if h.StartDate, h.StartDateCount, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyStartDate)); err != nil {
 		return EventHeader{}, err
 	}
-	if h.EndDate, h.EndDateCount, _, _, err = keptDateAt(n, v.prop("end_date")); err != nil {
+	if h.EndDate, h.EndDateCount, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyEndDate)); err != nil {
 		return EventHeader{}, err
 	}
 	h.Places, err = eventPlaces(g, v, pg, n)
@@ -651,7 +651,7 @@ func oneEvent(g *graphcache.Graph, v vocab, pg *placeGraph, n *graphcache.Node) 
 		if person == nil {
 			continue
 		}
-		name, count, err := keptName(person, v.prop("name"))
+		name, count, err := keptName(person, v.prop(vocabkey.PropertyName))
 		if err != nil {
 			return EventHeader{}, err
 		}
@@ -745,7 +745,7 @@ func eventPlaces(g *graphcache.Graph, v vocab, pg *placeGraph, ev *graphcache.No
 		if n == nil {
 			continue
 		}
-		raw = append(raw, HeaderPlace{Entity: entityOf(n), Names: toponyms(n, v.prop("toponym"))})
+		raw = append(raw, HeaderPlace{Entity: entityOf(n), Names: toponyms(n, v.prop(vocabkey.PropertyToponym))})
 	}
 	if len(raw) == 0 {
 		return nil, nil
@@ -758,14 +758,14 @@ func eventPlaces(g *graphcache.Graph, v vocab, pg *placeGraph, ev *graphcache.No
 }
 
 func eventWhen(v vocab, ev *graphcache.Node) (*datevalue.Value, error) {
-	date, _, _, _, err := keptDateAt(ev, v.prop("date"))
+	date, _, _, _, err := keptDateAt(ev, v.prop(vocabkey.PropertyDate))
 	if err != nil {
 		return nil, err
 	}
 	if date != nil {
 		return date, nil
 	}
-	date, _, _, _, err = keptDateAt(ev, v.prop("start_date"))
+	date, _, _, _, err = keptDateAt(ev, v.prop(vocabkey.PropertyStartDate))
 	return date, err
 }
 
@@ -805,12 +805,12 @@ func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 }
 
 func placeShell(n *graphcache.Node, v vocab) (PlaceHeader, error) {
-	h := PlaceHeader{Entity: entityOf(n), Names: toponyms(n, v.prop("toponym"))}
+	h := PlaceHeader{Entity: entityOf(n), Names: toponyms(n, v.prop(vocabkey.PropertyToponym))}
 	var err error
-	if h.StartDate, _, _, _, err = keptDateAt(n, v.prop("start_date")); err != nil {
+	if h.StartDate, _, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyStartDate)); err != nil {
 		return PlaceHeader{}, err
 	}
-	if h.EndDate, _, _, _, err = keptDateAt(n, v.prop("end_date")); err != nil {
+	if h.EndDate, _, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyEndDate)); err != nil {
 		return PlaceHeader{}, err
 	}
 	return h, nil
@@ -1015,11 +1015,11 @@ func rememberPlaceLink(pg *placeGraph, g *graphcache.Graph, v vocab, id []byte, 
 }
 
 func assocDatesOf(v vocab, n *graphcache.Node) (assocDates, error) {
-	start, _, _, _, err := keptDateAt(n, v.prop("start_date"))
+	start, _, _, _, err := keptDateAt(n, v.prop(vocabkey.PropertyStartDate))
 	if err != nil {
 		return assocDates{}, err
 	}
-	end, _, _, _, err := keptDateAt(n, v.prop("end_date"))
+	end, _, _, _, err := keptDateAt(n, v.prop(vocabkey.PropertyEndDate))
 	if err != nil {
 		return assocDates{}, err
 	}

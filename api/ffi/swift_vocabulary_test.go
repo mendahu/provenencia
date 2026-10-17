@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // The app reads Go's wire vocabulary through one Swift file. This test reads
@@ -23,6 +24,7 @@ const (
 	swiftVocabulary = "../../macos/App/Platform/ConclusionVocabulary.swift"
 	swiftValueKinds = "../../macos/App/Platform/InterpretationValueKinds.swift"
 	swiftMarks      = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
+	swiftGraphKinds = "../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift"
 )
 
 // swiftEnumBody returns the source between `enum <name>` and its closing
@@ -124,6 +126,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 				propertymeta.ValueTypeName, propertymeta.ValueTypeSubject, propertymeta.ValueTypeTerm, propertymeta.ValueTypeDepiction),
 		},
 		{
+			name: "primary kinds", path: swiftGraphKinds, enum: "EvidencePrimaryKind", re: rawCase,
+			want: sorted(vocabkey.PrimaryKinds()...),
+		},
+		{
 			name: "subject marks", path: swiftMarks, enum: "PVMarkKey", re: subjectMark,
 			want: subjectMarkSymbols(),
 		},
@@ -150,7 +156,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		}
 		c := installedCatalog(t)
 		for _, key := range keys {
-			if _, err := properties.Lookup(c, key, properties.OriginProvenencia); err != nil {
+			if _, err := properties.Lookup(c, key, vocabkey.OriginProvenencia); err != nil {
 				t.Errorf("Swift names %q, which is not a seeded Property: %v", key, err)
 			}
 		}
@@ -165,12 +171,12 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			if len(keys) == 0 {
 				t.Fatalf("%s: no keys read", tc.enum)
 			}
-			prop, err := properties.Lookup(c, tc.property, properties.OriginProvenencia)
+			prop, err := properties.Lookup(c, tc.property, vocabkey.OriginProvenencia)
 			if err != nil {
 				t.Fatal(err)
 			}
 			for _, key := range keys {
-				if _, err := propertyterms.Lookup(c, prop.ID, key, properties.OriginProvenencia); err != nil {
+				if _, err := propertyterms.Lookup(c, prop.ID, key, vocabkey.OriginProvenencia); err != nil {
 					t.Errorf("Swift names %s term %q, which is not seeded: %v", tc.property, key, err)
 				}
 			}
