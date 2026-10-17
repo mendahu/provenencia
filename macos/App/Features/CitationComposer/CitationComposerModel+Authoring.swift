@@ -111,11 +111,6 @@ extension CitationComposerModel {
     }
 
     func setAuthoringCitation(_ id: String) {
-        // A region belongs to its Citation's page; the preview always renders
-        // from the open Citation's viewer.
-        if id != authoringCitationID {
-            mutateProperty { $0.values.depictionDraft = .empty() }
-        }
         selectCitation(id.isEmpty ? nil : id)
     }
 
@@ -538,7 +533,7 @@ extension CitationComposerModel {
         draft.error = nil
         authoring = .property(draft)
         let values = draft.values
-        let isDepiction = property.valueType == PropertyValueType.depiction.rawValue
+        let isDepiction = vocabulary.isDepiction(propertyID: values.propertyID)
         do {
             let written: ([CatalogObservation], CatalogWriteEffects)
             if isDepiction {

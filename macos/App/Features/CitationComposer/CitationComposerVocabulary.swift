@@ -145,6 +145,25 @@ struct CitationComposerVocabulary: Equatable {
         )
     }
 
+    /// The Property menu for a field that already holds `propertyID`: the
+    /// subject's list, plus the held Property when no subject is picked yet
+    /// (a run of likenesses keeps Likeness while the person is chosen), so the
+    /// field never reads empty above a value area it still drives.
+    func propertyOptions(
+        forSubjectID subjectID: String,
+        keeping propertyID: String,
+        capabilities: ArtifactLocatorCapabilities
+    ) -> [CatalogProperty] {
+        var options = propertyOptions(forSubjectID: subjectID, capabilities: capabilities)
+        if !propertyID.isEmpty,
+           !options.contains(where: { $0.id == propertyID }),
+           let held = property(id: propertyID)
+        {
+            options.append(held)
+        }
+        return options
+    }
+
     func isDepiction(propertyID: String) -> Bool {
         property(id: propertyID)?.valueType == PropertyValueType.depiction.rawValue
     }

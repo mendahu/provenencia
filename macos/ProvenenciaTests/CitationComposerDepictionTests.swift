@@ -294,6 +294,7 @@ struct CitationComposerDepictionTests {
         let citationRegion = rect(0.5, 0.5, 0.9, 0.9)
         #expect(model.setRegion(citationRegion))
         openLikenessDraft(model)
+        #expect(model.depictionPreview == nil)
         model.startDepictionDrawing()
         #expect(model.presented == .drawingDepiction(over: .authoring))
         #expect(model.armedRegionTool == .rectangle)
@@ -303,6 +304,7 @@ struct CitationComposerDepictionTests {
         #expect(model.locator.region == citationRegion)
         #expect(model.presented == .authoring)
         #expect(model.viewerRegion == face)
+        #expect(model.depictionPreview?.size == CGSize(width: 4, height: 4))
 
         model.startDepictionDrawing()
         model.cancelDepictionDrawing()
@@ -355,6 +357,43 @@ struct CitationComposerDepictionTests {
         #expect(bare.presented == .authoring)
     }
 
+    @Test func viewerToolIsUnarmedOnTheWrongPage() async throws {
+        let (projectDir, store) = try seeded(.pdf)
+        seedCitation(
+            store,
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"},{"type":"page","artifact_page":1}]}"#
+        )
+        let model = makeModel(store: store, projectDir: projectDir, citationID: "cit-1")
+        await model.prepare()
+        openLikenessDraft(model)
+        model.startDepictionDrawing()
+        #expect(model.viewerArmedRegionTool == .rectangle)
+        model.artifactViewer.setPage(2)
+        #expect(model.depictionWrongPage)
+        #expect(model.viewerArmedRegionTool == nil)
+        #expect(model.armedRegionTool == .rectangle)
+        model.artifactViewer.setPage(1)
+        #expect(model.viewerArmedRegionTool == .rectangle)
+        model.disarmRegionTool()
+        #expect(model.presented == .authoring)
+        #expect(model.armedRegionTool == nil)
+    }
+
+    @Test func tabFromPropertySkipsADisabledDraw() {
+        #expect(
+            CitationAuthoringNavigation.tabDestination(
+                from: .property, committed: likenessID, via: .tab,
+                draftAfterCommit: CitationAuthoringDraftAfterCommit()
+            ) == .value
+        )
+        #expect(
+            CitationAuthoringNavigation.tabDestination(
+                from: .property, committed: likenessID, via: .tab,
+                draftAfterCommit: CitationAuthoringDraftAfterCommit(propertyValueTakesFocus: false)
+            ) == nil
+        )
+    }
+
     @Test func unsavedDepictionHoldsLeave() async throws {
         let (projectDir, store) = try seeded()
         let model = makeModel(store: store, projectDir: projectDir)
@@ -365,6 +404,37 @@ struct CitationComposerDepictionTests {
         #expect(model.shouldHoldNavigation(.back))
         model.keepEditingAfterLeave()
         #expect(model.presented == .authoring)
+    }
+
+    @Test func keepEditingAfterACitationSwitchKeepsTheRegion() async throws {
+        let (projectDir, store) = try seeded()
+        seedCitation(store)
+        var second = try #require(store.citationsByID["cit-1"])
+        second.id = "cit-2"
+        second.ref = "CIT-2"
+        store.citationsByID["cit-2"] = second
+        let model = makeModel(store: store, projectDir: projectDir)
+        await model.prepare()
+        model.setAuthoringCitation("cit-1")
+        await model.awaitIdentitySwitch()
+        openLikenessDraft(model)
+        model.startDepictionDrawing()
+        let face = rect(0.25, 0.25, 0.75, 0.75)
+        #expect(model.commitViewerRegion(face))
+        model.transcription = "unsaved note"
+
+        model.setAuthoringCitation("cit-2")
+        #expect(model.pendingLeave?.keepDraft == true)
+        #expect(draftValues(model)?.depictionDraft.locator.region == face)
+        model.keepEditingAfterLeave()
+        #expect(model.activeCitationID == "cit-1")
+        #expect(draftValues(model)?.depictionDraft.locator.region == face)
+
+        model.setAuthoringCitation("cit-2")
+        model.discardLeaveChanges()
+        await model.awaitIdentitySwitch()
+        #expect(model.activeCitationID == "cit-2")
+        #expect(draftValues(model)?.depictionDraft.hasRegion == false)
     }
 
     @Test func drawingDisablesCitationControlsAndLeaveReturns() async throws {
@@ -386,6 +456,18 @@ struct CitationComposerDepictionTests {
         #expect(model.pendingImpact == nil)
         #expect(model.presented == .drawingDepiction(over: .authoring))
         #expect(!model.setPageFromViewer())
+
+        let locatorBefore = model.locator
+        let artifactBefore = model.selectedArtifactID
+        let transcriptionBefore = model.transcription
+        model.clearRegion()
+        model.requestSelectArtifact("art-other")
+        model.requestAutoTranscribe()
+        model.requestPasteTranscription()
+        #expect(model.locator == locatorBefore)
+        #expect(model.selectedArtifactID == artifactBefore)
+        #expect(model.pendingTranscriptionConfirm == nil)
+        #expect(model.transcription == transcriptionBefore)
 
         #expect(model.shouldHoldNavigation(.back))
         #expect(model.pendingLeave != nil)
@@ -440,6 +522,12 @@ struct CitationComposerDepictionTests {
                 isDepiction: model.vocabulary.isDepiction(propertyID: values.propertyID)
             ) == .subject
         )
+        let options = model.vocabulary.propertyOptions(
+            forSubjectID: values.subjectID,
+            keeping: values.propertyID,
+            capabilities: model.depictionCapabilities
+        )
+        #expect(options.first { $0.id == likenessID }?.label == "Likeness")
         var next = values
         model.applyObservationSubject(benID, field: .propertySubject, values: &next)
         #expect(next.subjectID == benID)

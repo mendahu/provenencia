@@ -56,11 +56,7 @@ struct CitationComposerAuthoringBox: View {
     }
 
     private func propertyFocus(for values: ObservationRowValues) -> CitationAuthoringFocus {
-        CitationAuthoringNavigation.initialPropertyFocus(
-            subjectID: values.subjectID,
-            propertyID: values.propertyID,
-            isDepiction: model.vocabulary.isDepiction(propertyID: values.propertyID)
-        )
+        CitationAuthoringNavigation.initialPropertyFocus(values: values, vocabulary: model.vocabulary)
     }
 
     private func form<Content: View>(
@@ -432,7 +428,7 @@ struct CitationPropertyFields: View {
                     )
                 }
             case PropertyValueType.depiction.rawValue:
-                CitationDepictionValueArea(model: model, draft: values.depictionDraft)
+                CitationDepictionValueArea(model: model, draft: values.depictionDraft, focus: focus)
             default:
                 PVInput(
                     text: .constant(""),
@@ -467,7 +463,12 @@ struct CitationPropertyFields: View {
             from: field,
             committed: committed,
             via: via,
-            draftAfterCommit: CitationAuthoringDraftAfterCommit()
+            draftAfterCommit: CitationAuthoringDraftAfterCommit(
+                propertyValueTakesFocus: !(
+                    model.vocabulary.isDepiction(propertyID: committed)
+                        && (model.depictionNeedsPage || model.isTranscribing)
+                )
+            )
         ) else { return false }
         // The next field may be inserted by this same commit. A name or date
         // editor is not in the hierarchy until the following turn, and a deep
@@ -486,6 +487,7 @@ struct CitationPropertyFields: View {
     private var propertyOptions: [PVComboBoxOption] {
         model.vocabulary.propertyOptions(
             forSubjectID: values.subjectID,
+            keeping: values.propertyID,
             capabilities: model.depictionCapabilities
         ).map {
             PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key)
@@ -915,6 +917,7 @@ private struct FlowLayout: Layout {
 struct CitationDepictionValueArea: View {
     @Bindable var model: CitationComposerModel
     var draft: DepictionValueDraft
+    var focus: FocusState<CitationAuthoringFocus?>.Binding
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space4) {
@@ -943,7 +946,7 @@ struct CitationDepictionValueArea: View {
                         .foregroundStyle(PVColor.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
                     PVButton(
-                        draft.hasRegion
+                        draft.hasRegion || !draft.valueDepictionID.isEmpty
                             ? L10n.CitationComposer.depictionRedraw
                             : L10n.CitationComposer.depictionDraw,
                         variant: .secondary,
@@ -953,6 +956,7 @@ struct CitationDepictionValueArea: View {
                         model.startDepictionDrawing()
                     }
                     .disabled(model.depictionNeedsPage)
+                    .focused(focus, equals: .value)
                     .accessibilityIdentifier("citationComposer.depiction.draw")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

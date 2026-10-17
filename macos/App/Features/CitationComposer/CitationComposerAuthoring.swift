@@ -32,6 +32,9 @@ enum CitationAuthoringFocus: Hashable {
 /// not a guess about what was on screen before the keystroke.
 struct CitationAuthoringDraftAfterCommit: Equatable {
     var bridgeHasTerm = false
+    /// False when the value area has no control to land on (a depiction's
+    /// Draw button while it is disabled), so Tab goes on to the footer.
+    var propertyValueTakesFocus = true
 }
 
 /// Field order for the observation dialogs. The combo reports the commit;
@@ -51,7 +54,7 @@ enum CitationAuthoringNavigation {
     ) -> CitationAuthoringFocus? {
         switch field {
         case .subject: .property
-        case .property: .value
+        case .property: draftAfterCommit.propertyValueTakesFocus ? .value : nil
         case .endA: .endB
         case .endB: draftAfterCommit.bridgeHasTerm ? .term : nil
         case .value, .term: nil
@@ -79,6 +82,18 @@ enum CitationAuthoringNavigation {
         if subjectID.isEmpty { return .subject }
         if propertyID.isEmpty { return .property }
         return isDepiction ? .subject : .property
+    }
+
+    /// Property focus for a draft's values; the one place the depiction rule lives.
+    static func initialPropertyFocus(
+        values: ObservationRowValues,
+        vocabulary: CitationComposerVocabulary
+    ) -> CitationAuthoringFocus {
+        initialPropertyFocus(
+            subjectID: values.subjectID,
+            propertyID: values.propertyID,
+            isDepiction: vocabulary.isDepiction(propertyID: values.propertyID)
+        )
     }
 
     static func initialBridgeFocus(endA: String, endB: String, hasTermField: Bool, termID: String) -> CitationAuthoringFocus {

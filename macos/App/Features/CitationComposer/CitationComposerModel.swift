@@ -209,10 +209,6 @@ final class CitationComposerModel {
     var armedRegionTool: ArtifactRegionTool?
     @ObservationIgnored
     var depictionPreviewMemo: DepictionPreviewMemo?
-    /// A commit was refused on the wrong PDF page; the overlay's disarm that
-    /// follows it must not end drawing.
-    @ObservationIgnored
-    var ignoreNextDisarm = false
     var viewerPage: Int { artifactViewer.page }
     var viewerPageCount: Int { artifactViewer.pageCount }
     var locatorCapabilities: ArtifactLocatorCapabilities {
@@ -336,8 +332,8 @@ final class CitationComposerModel {
                 : activeCitationRef
             if case .property(let draft) = authoring,
                draft.values.depictionDraft.hasRegion,
+               vocabulary.isDepiction(propertyID: draft.values.propertyID),
                let property = vocabulary.property(id: draft.values.propertyID),
-               property.valueType == PropertyValueType.depiction.rawValue,
                let person = vocabulary.subjectsByID[draft.values.subjectID]?.label,
                !person.isEmpty
             {
@@ -738,10 +734,6 @@ final class CitationComposerModel {
     }
     func disarmRegionTool() {
         if isDrawingDepiction {
-            if ignoreNextDisarm {
-                ignoreNextDisarm = false
-                return
-            }
             cancelDepictionDrawing()
             return
         }
@@ -1010,6 +1002,7 @@ final class CitationComposerModel {
     }
 
     private func loadCitationPreservingAuthoring(_ id: String?) async {
+        let before = activeCitationID
         if id == nil || id?.isEmpty == true {
             openBlankCitation()
         } else if let id {
@@ -1022,6 +1015,11 @@ final class CitationComposerModel {
             }
         }
         if Task.isCancelled { return }
+        if activeCitationID != before {
+            // A region belongs to its Citation's page; the preview always
+            // renders from the open Citation's viewer.
+            mutateProperty { $0.values.depictionDraft = .empty() }
+        }
         let blank = id == nil || id?.isEmpty == true
         await presentAfterIdentityChange(keepReadingPage: blank)
     }

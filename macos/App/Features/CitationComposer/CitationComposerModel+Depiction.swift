@@ -1,9 +1,11 @@
 import AppKit
 import Foundation
 
-/// One rendered preview, keyed by what it was cut from.
+/// One rendered cut, keyed by what it was cut from. Save reuses the bitmap
+/// the preview already drew.
 struct DepictionPreviewMemo {
     var key: String
+    var cgImage: CGImage
     var image: NSImage
 }
 
@@ -70,19 +72,41 @@ extension CitationComposerModel {
         isExistingCitation ? fields.baseline.locator.page : fields.values.locator.page
     }
 
+    /// How the PDF page rule treats a depiction region drawn now.
+    private enum DepictionPageCheck {
+        case ok
+        case needsPage
+        case wrongPage(Int)
+        case stampViewerPage
+    }
+
+    private var depictionPageCheck: DepictionPageCheck {
+        guard depictionCapabilities.supportsPageLocator else { return .ok }
+        if let page = depictionPage {
+            return artifactViewer.page == page ? .ok : .wrongPage(page)
+        }
+        return isExistingCitation ? .needsPage : .stampViewerPage
+    }
+
     /// An existing PDF Citation saved with no page cannot take a region.
     var depictionNeedsPage: Bool {
-        isExistingCitation
-            && depictionCapabilities.supportsPageLocator
-            && fields.baseline.locator.page == nil
+        if case .needsPage = depictionPageCheck { return true }
+        return false
     }
 
     /// Drawing on a PDF page other than the Citation's.
     var depictionWrongPage: Bool {
-        guard isDrawingDepiction, depictionCapabilities.supportsPageLocator,
-              let page = depictionPage
-        else { return false }
-        return artifactViewer.page != page
+        guard isDrawingDepiction, case .wrongPage = depictionPageCheck else { return false }
+        return true
+    }
+
+    /// The tool the viewer overlay sees: unarmed while drawing could not commit
+    /// (wrong page, no page), so the overlay never offers a refused region.
+    var viewerArmedRegionTool: ArtifactRegionTool? {
+        get {
+            isDrawingDepiction && (depictionWrongPage || depictionNeedsPage) ? nil : armedRegionTool
+        }
+        set { armedRegionTool = newValue }
     }
 
     /// True when the open edit has a region unlike the saved one.
@@ -106,21 +130,30 @@ extension CitationComposerModel {
 
     /// The image a save would send, derived so it always matches the draft.
     var depictionPreview: NSImage? {
-        guard let draft = currentDepictionDraft, draft.hasRegion, let region = draft.locator.region else {
-            return nil
-        }
+        guard let draft = currentDepictionDraft else { return nil }
+        return renderedDepiction(for: draft)?.image
+    }
+
+    /// The cut of a draft's region from the open file, reused while the file
+    /// and region are unchanged.
+    private func renderedDepiction(for draft: DepictionValueDraft) -> DepictionPreviewMemo? {
+        guard draft.hasRegion, let region = draft.locator.region else { return nil }
         let key = [
             selectedArtifact?.id ?? "",
             artifactViewer.kind.rawValue,
             String(artifactViewer.isLoading),
             draft.locator.encodeJSON(),
         ].joined(separator: "|")
-        if let memo = depictionPreviewMemo, memo.key == key { return memo.image }
+        if let memo = depictionPreviewMemo, memo.key == key { return memo }
         guard let rendered = ArtifactRegionCrop.render(artifactViewer, page: draft.locator.page, region: region)
         else { return nil }
-        let image = NSImage(cgImage: rendered, size: .zero)
-        depictionPreviewMemo = DepictionPreviewMemo(key: key, image: image)
-        return image
+        let memo = DepictionPreviewMemo(
+            key: key,
+            cgImage: rendered,
+            image: NSImage(cgImage: rendered, size: .zero)
+        )
+        depictionPreviewMemo = memo
+        return memo
     }
 
     // MARK: - Drawing
@@ -133,14 +166,12 @@ extension CitationComposerModel {
             artifactViewer.setPage(page)
         }
         artifactViewer.closeFind()
-        ignoreNextDisarm = false
         if armedRegionTool == nil { armedRegionTool = .rectangle }
         show(.drawingDepiction(over: base))
     }
 
     func cancelDepictionDrawing() {
         guard case .drawingDepiction(let over) = presented else { return }
-        ignoreNextDisarm = false
         armedRegionTool = nil
         restore(over)
     }
@@ -152,18 +183,13 @@ extension CitationComposerModel {
         guard var draft = currentDepictionDraft else { return setRegion(region) }
         guard !isTranscribing else { return false }
         let capabilities = depictionCapabilities
-        if capabilities.supportsPageLocator {
-            if let page = depictionPage {
-                guard artifactViewer.page == page else {
-                    // The viewer reports a disarm right after a commit; keep drawing.
-                    ignoreNextDisarm = true
-                    return false
-                }
-            } else if isExistingCitation {
-                return false
-            } else {
-                _ = setPage(artifactViewer.page)
-            }
+        switch depictionPageCheck {
+        case .ok:
+            break
+        case .needsPage, .wrongPage:
+            return false
+        case .stampViewerPage:
+            _ = setPage(artifactViewer.page)
         }
         guard draft.locator.setRegion(
             region,
@@ -202,19 +228,20 @@ extension CitationComposerModel {
         for values: ObservationRowValues,
         perform: (CatalogDepictionValueInput) async throws -> T
     ) async throws -> T {
-        let draft = values.depictionDraft
-        guard let region = draft.locator.region,
-              let rendered = ArtifactRegionCrop.render(artifactViewer, page: draft.locator.page, region: region)
+        guard let rendered = renderedDepiction(for: values.depictionDraft)?.cgImage
         else { throw DepictionRenderFailed() }
         let url: URL
         do {
-            url = try ArtifactRegionCrop.writeTemporaryPNG(rendered)
+            url = try await Task.detached { try ArtifactRegionCrop.writeTemporaryPNG(rendered) }.value
         } catch {
             throw DepictionRenderFailed()
         }
         defer { try? FileManager.default.removeItem(at: url) }
         return try await perform(
-            CatalogDepictionValueInput(regionJSON: draft.locator.encodeJSON(), imagePath: url.path)
+            CatalogDepictionValueInput(
+                regionJSON: values.depictionDraft.locator.encodeJSON(),
+                imagePath: url.path
+            )
         )
     }
 }

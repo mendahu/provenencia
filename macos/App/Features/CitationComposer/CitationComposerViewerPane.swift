@@ -21,7 +21,7 @@ struct CitationComposerViewerPane: View {
                 showsToolStrip: false,
                 locatorPage: model.locator.page,
                 onSetPage: { model.setPageFromViewer() },
-                armedRegionTool: $model.armedRegionTool,
+                armedRegionTool: $model.viewerArmedRegionTool,
                 committedRegion: model.viewerRegion,
                 onCommitRegion: { model.commitViewerRegion($0) },
                 onDisarmRegionTool: { model.disarmRegionTool() },
