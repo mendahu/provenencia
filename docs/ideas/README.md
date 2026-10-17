@@ -28,7 +28,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`international-names.md`](international-names.md) — leftovers after Spike 10 (other name patterns, transliteration, calendars)
 - [`daitch-mokotoff.md`](daitch-mokotoff.md) — phonetic tier descoped from Spike 10 (S10-26)
 - [`name-matching-enhancements.md`](name-matching-enhancements.md) — leftovers after Spike 10 (known-as, concluded values, calibration, blocking)
-- [`matching-test-suite.md`](matching-test-suite.md) — scenario goldens, invariants, a simulated world, a scoreboard, and a labeler that fits the registry numbers
+- [`matching-test-suite.md`](matching-test-suite.md) — scenario goldens, invariants, a simulated world, a scoreboard, and a labeler that fits the registry numbers. Its "make the algorithm graspable" part is Spike 11 (S11-01); the rest waits on the re-implementation
 - [`share-packages.md`](share-packages.md)
 - [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
 - [`large-jpeg-thumbnails.md`](large-jpeg-thumbnails.md) — JPEGs over the 64-megapixel decode budget save and keep the missing-image glyph

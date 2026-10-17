@@ -513,4 +513,4 @@ Flow: shortlist or nominate → score → keep the top K as candidates → accep
 
 ## Open questions
 
-- **Starting registry numbers** (weights, penalties, lifespan constants, K, accept bar, settle margin): open until the PR map.
+- None for the design. Starting registry numbers follow the map's working rule "Registry numbers: carry over, then estimate" ([`deployment-plan.md`](deployment-plan.md#working-rules)).
