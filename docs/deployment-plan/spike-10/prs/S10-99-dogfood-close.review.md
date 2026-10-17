@@ -62,3 +62,16 @@ The plan links `../deployment-plan.md`, which STEP-4 deletes; `check-plan-docs.p
 
 ### M-9 · nit · Live models misses `structured-name-model.md`
 **Answer:** Fixed.
+
+## Round 2
+
+### X-8 · minor · T-5's expected output omits the kept "Spike 10 and earlier" line
+**Answer:** Fixed — T-5 expects three lines and names the kept one (D-9).
+
+### X-9 · nit · T-1 wording vs `rg -n` output
+**Answer:** Fixed — T-1 expects two lines starting with the two `path:line:` prefixes.
+
+### X-10 · nit · The branch must already contain the plan
+**Answer:** Fixed — a Stop condition: the plan is on `main` when the branch is cut.
+
+Executability round 2: **Ready**.

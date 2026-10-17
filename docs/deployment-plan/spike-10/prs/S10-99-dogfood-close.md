@@ -360,11 +360,11 @@ Branch `s10-99-dogfood-close` from `main`. Four commits, then STEP-6's:
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Docs (shell) | Command T-1 below | Prints exactly two lines: `docs/deployment-plan/spike-11/prs/S11-02-value-compare-core.md:292` and `docs/deployment-plan/spike-11/prs/S11-03-value-compare-names.md:264` | AC-2.1, D-7 |
+| T-1 | Docs (shell) | Command T-1 below | Prints exactly two lines, starting `docs/deployment-plan/spike-11/prs/S11-02-value-compare-core.md:292:` and `docs/deployment-plan/spike-11/prs/S11-03-value-compare-names.md:264:` | AC-2.1, D-7 |
 | T-2 | Docs (shell) | Command T-2 below | Exit 0, no output | AC-2.2, AC-3.1 |
 | T-3 | Docs (shell) | Command T-3 below | ≤ 80 lines; `## Decisions`, `## Refused`, `## Leftovers` | AC-1.2, D-3 |
 | T-4 | Docs (shell) | Command T-4 below, at the PR head | `README.md`, `archive`, `spike-11` | AC-1.1, D-5 |
-| T-5 | Docs (shell) | Command T-5 below | The Spike 11 Current line and the Spike 10 Completed row, Spike 10 above Spike 9 | AC-1.3, D-9 |
+| T-5 | Docs (shell) | Command T-5 below | Three lines: "Spike 10 and earlier cut each PR…" (kept, D-9), the Spike 11 Current line, and the Spike 10 Completed row, which sits directly above the Spike 9 row | AC-1.3, D-9 |
 | T-6 | Docs (shell) | Command T-6 below | No output | AC-3.2 |
 | T-7 | Docs (shell) | Command T-7 below | No output | AC-2.3, D-8 |
 | T-8 | Docs (shell) | Command T-8 below | One line from `archive-docs/SKILL.md`, one from `implement-pr/SKILL.md` | AC-3.3, D-6 |
@@ -424,7 +424,8 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `p
 - T-1 prints a line other than the two Spike 11 plan lines, and that line is in a file outside §6 "Retarget edits".
 - A skill under `.agents/skills/` or a file under `core/`, `api/`, or `macos/` links into `docs/deployment-plan/spike-10/`.
 - `main` has a Spike 10 PR still open or a map row in `docs/deployment-plan/spike-10/deployment-plan.md` whose status is not landed or descoped (other than S10-99).
-- A §6 "Retarget edits" old text is not in its file.
+- A §6 "Retarget edits" or "Skill edits" OLD text or anchor is not in its file.
+- This plan is not on `main` when the branch is cut (STEP-4 and STEP-6 delete it from the branch).
 
 ## 12. Open questions
 
