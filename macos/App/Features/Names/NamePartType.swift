@@ -1,6 +1,6 @@
 import Foundation
 
-/// Product NameValue part-type registry. Keys match `namevalues.PartTypes()`.
+/// Product NameValue part-type registry. Keys match `namevalue.PartTypes()`.
 enum NamePartType: String, CaseIterable, Sendable {
     case prefix
     case given

@@ -3,32 +3,32 @@ package autoreconcile
 import (
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
-func ymd(y int, m, d *int) datevalues.Value {
-	return datevalues.Value{
-		Kind: datevalues.KindPoint, Calendar: "gregorian",
+func ymd(y int, m, d *int) datevalue.Value {
+	return datevalue.Value{
+		Kind: datevalue.KindPoint, Calendar: "gregorian",
 		StartYear: ip(y), StartMonth: m, StartDay: d,
 	}
 }
 
-func qualified(qual string, y int, m, d *int) datevalues.Value {
+func qualified(qual string, y int, m, d *int) datevalue.Value {
 	v := ymd(y, m, d)
 	v.Qualifier = qual
 	return v
 }
 
-func between(y1 int, m1, d1 *int, y2 int, m2, d2 *int) datevalues.Value {
-	return datevalues.Value{
-		Kind: datevalues.KindRange, Calendar: "gregorian",
+func between(y1 int, m1, d1 *int, y2 int, m2, d2 *int) datevalue.Value {
+	return datevalue.Value{
+		Kind: datevalue.KindRange, Calendar: "gregorian",
 		StartYear: ip(y1), StartMonth: m1, StartDay: d1,
 		EndYear: ip(y2), EndMonth: m2, EndDay: d2,
 	}
 }
 
-func dateUnitOf(t *testing.T, d datevalues.Value) unit {
+func dateUnitOf(t *testing.T, d datevalue.Value) unit {
 	t.Helper()
 	units, ok := (dateModule{}).split(Value{Date: &d})
 	if !ok {
@@ -58,14 +58,14 @@ func TestDateFold(t *testing.T) {
 	day14Jun := ymd(1985, jun, day14)
 	year84 := ymd(1984, nil, nil)
 	year86 := ymd(1986, nil, nil)
-	abtYear := qualified(datevalues.QualifierABT, 1985, nil, nil)
-	abtMay := qualified(datevalues.QualifierABT, 1985, may, nil)
-	bef1900 := qualified(datevalues.QualifierBEF, 1900, nil, nil)
-	bef1890 := qualified(datevalues.QualifierBEF, 1890, nil, nil)
-	befMay := qualified(datevalues.QualifierBEF, 1985, may, nil)
-	aft1872 := qualified(datevalues.QualifierAFT, 1872, nil, nil)
-	aft1880 := qualified(datevalues.QualifierAFT, 1880, nil, nil)
-	aftMay := qualified(datevalues.QualifierAFT, 1985, may, nil)
+	abtYear := qualified(datevalue.QualifierABT, 1985, nil, nil)
+	abtMay := qualified(datevalue.QualifierABT, 1985, may, nil)
+	bef1900 := qualified(datevalue.QualifierBEF, 1900, nil, nil)
+	bef1890 := qualified(datevalue.QualifierBEF, 1890, nil, nil)
+	befMay := qualified(datevalue.QualifierBEF, 1985, may, nil)
+	aft1872 := qualified(datevalue.QualifierAFT, 1872, nil, nil)
+	aft1880 := qualified(datevalue.QualifierAFT, 1880, nil, nil)
+	aftMay := qualified(datevalue.QualifierAFT, 1985, may, nil)
 	y1885 := ymd(1885, nil, nil)
 	y1882 := ymd(1882, nil, nil)
 	y1886 := ymd(1886, nil, nil)
@@ -83,8 +83,8 @@ func TestDateFold(t *testing.T) {
 	leap := ymd(1984, ip(2), ip(29))
 	feb1985 := ymd(1985, ip(2), nil)
 	sameDayRange := between(1985, may, day14, 1985, may, day14)
-	befDay := qualified(datevalues.QualifierBEF, 1985, may, day14)
-	aftDay := qualified(datevalues.QualifierAFT, 1985, may, day14)
+	befDay := qualified(datevalue.QualifierBEF, 1985, may, day14)
+	aftDay := qualified(datevalue.QualifierAFT, 1985, may, day14)
 	otherCal := day
 	otherCal.Calendar = "julian"
 	maySpan := between(1985, mar, nil, 1985, jun, nil)
@@ -94,7 +94,7 @@ func TestDateFold(t *testing.T) {
 	// fold(from, into): from is wider and contains into.
 	cases := []struct {
 		name     string
-		from, to datevalues.Value
+		from, to datevalue.Value
 		fold     bool
 	}{
 		{"year folds into its month", year, month, true},
@@ -182,15 +182,15 @@ func TestDateBounds(t *testing.T) {
 	if !ok || dayLo == nil || dayHi == nil || *dayLo != *dayHi || *dayLo <= *lo || *dayHi >= *hi {
 		t.Fatalf("day %+v %+v outside year %+v %+v", dayLo, dayHi, lo, hi)
 	}
-	lo, hi, ok = DateBounds(qualified(datevalues.QualifierBEF, 1900, nil, nil))
+	lo, hi, ok = DateBounds(qualified(datevalue.QualifierBEF, 1900, nil, nil))
 	if !ok || lo != nil || hi == nil {
 		t.Fatalf("before %+v %+v ok=%v", lo, hi, ok)
 	}
-	lo, hi, ok = DateBounds(qualified(datevalues.QualifierAFT, 1872, nil, nil))
+	lo, hi, ok = DateBounds(qualified(datevalue.QualifierAFT, 1872, nil, nil))
 	if !ok || lo == nil || hi != nil {
 		t.Fatalf("after %+v %+v ok=%v", lo, hi, ok)
 	}
-	phrase := datevalues.Value{Kind: datevalues.KindPoint, Phrase: "Christmas"}
+	phrase := datevalue.Value{Kind: datevalue.KindPoint, Phrase: "Christmas"}
 	if _, _, ok := DateBounds(phrase); ok {
 		t.Fatal("phrase-only has a window")
 	}
@@ -206,8 +206,8 @@ func TestDateReconcile(t *testing.T) {
 		cands  []Candidate
 		want   [][]byte
 		state  State
-		shown  *datevalues.Value // rank-1 displayed date, when one value
-		folded []byte            // observation ids whose reason is folded
+		shown  *datevalue.Value // rank-1 displayed date, when one value
+		folded []byte           // observation ids whose reason is folded
 		noEvid []byte
 	}{
 		{
@@ -247,7 +247,7 @@ func TestDateReconcile(t *testing.T) {
 		{
 			name: "before 1900 does not glue 1885 and 1890",
 			cands: []Candidate{
-				{ObservationID: id(1), Value: Value{Date: datePtr(qualified(datevalues.QualifierBEF, 1900, nil, nil))}},
+				{ObservationID: id(1), Value: Value{Date: datePtr(qualified(datevalue.QualifierBEF, 1900, nil, nil))}},
 				date(2, 1885, nil, nil),
 				date(3, 1890, nil, nil),
 			},
@@ -256,7 +256,7 @@ func TestDateReconcile(t *testing.T) {
 		{
 			name: "a phrase is no evidence",
 			cands: []Candidate{
-				{ObservationID: id(1), Value: Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, Phrase: "Christmas"}}},
+				{ObservationID: id(1), Value: Value{Date: &datevalue.Value{Kind: datevalue.KindPoint, Phrase: "Christmas"}}},
 				date(2, 1985, may, day14),
 			},
 			want: [][]byte{{2}}, state: StateSingle, noEvid: []byte{1},
@@ -264,7 +264,7 @@ func TestDateReconcile(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Reconcile(properties.ValueTypeDate, tc.cands, nil, properties.CardinalitySingle)
+			got, err := Reconcile(propertymeta.ValueTypeDate, tc.cands, nil, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -298,7 +298,7 @@ func TestDateReconcile(t *testing.T) {
 	}
 }
 
-func datePtr(d datevalues.Value) *datevalues.Value { return &d }
+func datePtr(d datevalue.Value) *datevalue.Value { return &d }
 
 func equalIDs(got, want [][]byte) bool {
 	if len(got) != len(want) {
@@ -361,7 +361,7 @@ func TestPeriodWindowAndLinkMembership(t *testing.T) {
 		t.Fatal("1923 should miss Ireland⊂UK until 1922")
 	}
 	// About 1841 overlaps both UC and PC undated memberships.
-	abt := mustWindow(t, qualified(datevalues.QualifierABT, 1841, nil, nil))
+	abt := mustWindow(t, qualified(datevalue.QualifierABT, 1841, nil, nil))
 	ucMem, _ := LinkMembership(nil, nil, always, uc)
 	pcMem, _ := LinkMembership(nil, nil, always, pc)
 	if !HoldsAt(abt, ucMem) || !HoldsAt(abt, pcMem) {
@@ -381,9 +381,9 @@ func TestPeriodWindowAndLinkMembership(t *testing.T) {
 	}
 }
 
-func ptrDate(d datevalues.Value) *datevalues.Value { return &d }
+func ptrDate(d datevalue.Value) *datevalue.Value { return &d }
 
-func mustWindow(t *testing.T, d datevalues.Value) Window {
+func mustWindow(t *testing.T, d datevalue.Value) Window {
 	t.Helper()
 	w, ok := WindowOfDate(d)
 	if !ok {
@@ -432,26 +432,26 @@ func TestDateEnds(t *testing.T) {
 		}
 	})
 	t.Run("before", func(t *testing.T) {
-		first, last, ok := DateEnds(qualified(datevalues.QualifierBEF, 1820, nil, nil))
+		first, last, ok := DateEnds(qualified(datevalue.QualifierBEF, 1820, nil, nil))
 		if !ok || !first.Open || first.Year != 0 || last.Open || last.Year != 1820 {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
 	t.Run("after", func(t *testing.T) {
-		first, last, ok := DateEnds(qualified(datevalues.QualifierAFT, 1820, nil, nil))
+		first, last, ok := DateEnds(qualified(datevalue.QualifierAFT, 1820, nil, nil))
 		if !ok || first.Open || !last.Open || last.Year != 0 {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
 	t.Run("range with no end", func(t *testing.T) {
-		d := datevalues.Value{Kind: datevalues.KindRange, StartYear: ip(1815)}
+		d := datevalue.Value{Kind: datevalue.KindRange, StartYear: ip(1815)}
 		first, last, ok := DateEnds(d)
 		if !ok || first.Open || !last.Open {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
 	t.Run("range with no start", func(t *testing.T) {
-		d := datevalues.Value{Kind: datevalues.KindRange, EndYear: ip(1815)}
+		d := datevalue.Value{Kind: datevalue.KindRange, EndYear: ip(1815)}
 		first, last, ok := DateEnds(d)
 		if !ok || !first.Open || last.Open {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
@@ -474,30 +474,30 @@ func TestDateEnds(t *testing.T) {
 		}
 	})
 	t.Run("about is a point", func(t *testing.T) {
-		first, last, ok := DateEnds(qualified(datevalues.QualifierABT, 1817, nil, nil))
+		first, last, ok := DateEnds(qualified(datevalue.QualifierABT, 1817, nil, nil))
 		if !ok || first != last || first.Open {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
 	t.Run("empty kind is a point", func(t *testing.T) {
-		d := datevalues.Value{StartYear: ip(1817)}
+		d := datevalue.Value{StartYear: ip(1817)}
 		first, last, ok := DateEnds(d)
 		if !ok || first != last {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
 	t.Run("point with only end fields", func(t *testing.T) {
-		d := datevalues.Value{Kind: datevalues.KindPoint, EndYear: ip(1817)}
+		d := datevalue.Value{Kind: datevalue.KindPoint, EndYear: ip(1817)}
 		first, _, ok := DateEnds(d)
 		if !ok || first.Year != 1817 {
 			t.Fatalf("got %+v ok=%v", first, ok)
 		}
 	})
-	for name, d := range map[string]datevalues.Value{
+	for name, d := range map[string]datevalue.Value{
 		"month 13":        ymd(1817, ip(13), nil),
 		"day 31 in April": ymd(1817, ip(4), ip(31)),
-		"phrase only":     {Kind: datevalues.KindPoint, Phrase: "spring"},
-		"range, no year":  {Kind: datevalues.KindRange},
+		"phrase only":     {Kind: datevalue.KindPoint, Phrase: "spring"},
+		"range, no year":  {Kind: datevalue.KindRange},
 		"range, bad end":  between(1815, nil, nil, 1817, ip(13), nil),
 	} {
 		t.Run("not ok: "+name, func(t *testing.T) {

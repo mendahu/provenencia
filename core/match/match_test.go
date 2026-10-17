@@ -7,21 +7,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // name is a structured name. The form is a transcription and is not compared;
 // the words become given names and a surname, the way a researcher files parts.
 func name(form string) Value {
-	n := &namevalues.Value{Form: form}
+	n := &namevalue.Value{Form: form}
 	words := strings.Fields(form)
 	for i, w := range words {
-		typ := namevalues.PartTypeGiven
+		typ := namevalue.PartTypeGiven
 		if i == len(words)-1 {
-			typ = namevalues.PartTypeSurname
+			typ = namevalue.PartTypeSurname
 		}
-		n.Parts = append(n.Parts, namevalues.Part{Idx: i, Value: w, Type: typ})
+		n.Parts = append(n.Parts, namevalue.Part{Idx: i, Value: w, Type: typ})
 	}
 	return Value{Name: n}
 }
@@ -406,7 +406,7 @@ func TestScoreDatePeriod(t *testing.T) {
 	})
 	t.Run("both with a date", func(t *testing.T) {
 		m := Score(ev, Values{pDate: {year(1817)}}, dated(1817))
-		if r, ok := reasonFor(m, pDate); !ok || r.Similarity != 1 || r.Candidate.Date.Kind == datevalues.KindRange {
+		if r, ok := reasonFor(m, pDate); !ok || r.Similarity != 1 || r.Candidate.Date.Kind == datevalue.KindRange {
 			t.Fatalf("%+v", m.Reasons)
 		}
 	})

@@ -27,7 +27,7 @@ Package name is the folder name (`users`, `datevalues`, later `sources`, …). C
 
 Researcher FFI/onboarding obtain `c` from **`catalogsession.Do`** / **`withProjectCatalog`** (see `.agents/skills/use-catalog-session/SKILL.md`). Package tests may still `database.Create` / `Open` + `defer Close()`.
 
-Shared genealogical dates: follow `.agents/skills/add-date-value/SKILL.md` (`core/database/datevalues`), not a new ad-hoc date package.
+Shared genealogical dates: follow `.agents/skills/add-date-value/SKILL.md` (`core/datevalue` for the type, `core/database/datevalues` for queries), not a new ad-hoc date package.
 
 Product-seeded vocabulary (`origin=provenencia` registries + `Ensure`): follow `.agents/skills/add-seeded-vocabulary/SKILL.md`.
 
@@ -37,7 +37,7 @@ Official **resource / vocab `Delete`**: follow `.agents/skills/add-catalog-delet
 
 - Take `*database.Catalog`. Get the handle with `c.DB()`; return that error (`database.ErrClosed`).
 - Keep SQL as unexported consts next to the functions. Do not add `core/database/queries/`.
-- Domain validation sentinels stay in this package (`users.ErrInvalid`). Do **not** add them to `core/database/errors.go` (that file is lock/format/folder/closed only).
+- Domain validation sentinels stay in this package (`users.ErrInvalid`), except for a value type that matching layers compare: that lives in a pure `core/<singular>` package (`core/datevalue`, `core/namevalue`) that owns its type, `Validate` and `ErrInvalid`, and the table package keeps only the queries. Do **not** add them to `core/database/errors.go` (that file is lock/format/folder/closed only).
 - `database` must **not** import table packages (import cycle). Use-cases (`onboarding`, later FFI) import both.
 - `Delete` for a resource or vocab row calls `deleteimpact.Impact` in the same tx, then deletes the parent, then owned-outbound release. Facet/field deletes (notes, metadata clear) stay ordinary writes.
 - Research writes call `audit.Record` in the same tx. A new audited `EntityType` needs a non-`None` effect, and delete changes carry the parent FK — follow `.agents/skills/add-audit-scope/SKILL.md`. "Last activity" reads (`Updated`) come from the display cache, `Graph.Activity`, which loads `audit_transaction_scopes` once and follows commits.
@@ -52,5 +52,6 @@ Run `CGO_ENABLED=1 go test ./core/database/...` (and the use-case package you ca
 
 - Add `<table>.go` / `<table>_test.go` under `core/database/` itself
 - Attach table methods to `Catalog`
+- Add a new value struct under `core/database/<table>` when a matching layer compares it (put it in a pure `core/<singular>` package)
 - Put identity, FFI, or ingest in the query package
 - Reach into `Catalog`’s unexported `db` field from another package

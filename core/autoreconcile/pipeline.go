@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // The shared reconciliation pipeline (conclusion-reconciliation.md §5). Every
@@ -154,7 +154,7 @@ func reconcile(m module, candidates []Candidate, concluded *Value, cardinality s
 	for _, name := range sortedKeys(byName) {
 		vals := byName[name]
 		foldValues(m, name, vals)
-		if cardinality == properties.CardinalityMultiple {
+		if cardinality == propertymeta.CardinalityMultiple {
 			for _, v := range vals {
 				if v.into == nil {
 					v.fate = ReasonKept

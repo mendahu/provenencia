@@ -4,7 +4,7 @@
 package graphalign
 
 import (
-	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/match"
 )
 
@@ -161,11 +161,11 @@ type Exhibit struct {
 	// Observation: the record says the Subject is not this value.
 	IncomingNegative    bool
 	IncomingSource      string
-	IncomingDate        *datevalues.Value
+	IncomingDate        *datevalue.Value
 	MemberObservationID []byte
 	MemberDisplay       string
 	MemberSource        string
-	MemberDate          *datevalues.Value
+	MemberDate          *datevalue.Value
 }
 
 // Reason is why a row reads as it does. Codes, not copy: the page words them.

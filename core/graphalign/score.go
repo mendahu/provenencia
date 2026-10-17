@@ -3,8 +3,8 @@ package graphalign
 import (
 	"strconv"
 
-	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // Scored is the pairwise + edge result ScoreCandidate returns.
@@ -108,7 +108,7 @@ func ApplyScale(similarity float64, comparable bool, cardinality string, scale S
 		}
 		return match.OutcomePartial, points
 	}
-	if cardinality == properties.CardinalityMultiple {
+	if cardinality == propertymeta.CardinalityMultiple {
 		return match.OutcomeUnknown, 0
 	}
 	return match.OutcomeConflict, -scale.Contradiction

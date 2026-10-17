@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/slug"
 )
 
@@ -36,22 +37,6 @@ var ErrOriginLocked = apperr.New(apperr.CodePropertiesOriginLocked, apperr.KindC
 const (
 	OriginProvenencia = "provenencia"
 	OriginUser        = "user"
-
-	ValueTypeText    = "text"
-	ValueTypeInteger = "integer"
-	ValueTypeDate    = "date"
-	ValueTypeName    = "name"
-	ValueTypeSubject = "subject"
-	ValueTypeTerm    = "term"
-	// ValueTypeDepiction's value is a depiction_values row: a region of the
-	// Citation's page and the image File Go stored from it.
-	ValueTypeDepiction = "depiction"
-
-	// CardinalitySingle aims for one value. Several survivors are mixed.
-	CardinalitySingle = "single"
-	// CardinalityMultiple keeps every distinct surviving value. Majority
-	// does not crowd one out; weak evidence still drops.
-	CardinalityMultiple = "multiple"
 
 	sqlUpsert = `INSERT INTO properties (id, key, origin, label, description, value_type, cardinality)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -110,7 +95,7 @@ func Upsert(c *database.Catalog, p Property) ([]byte, error) {
 	p.ValueType = strings.TrimSpace(p.ValueType)
 	p.Cardinality = strings.TrimSpace(p.Cardinality)
 	if p.Cardinality == "" {
-		p.Cardinality = CardinalitySingle
+		p.Cardinality = propertymeta.CardinalitySingle
 	}
 	if p.Key == "" || p.Label == "" || !originOK(p.Origin) || !valueTypeOK(p.ValueType) || !cardinalityOK(p.Cardinality) {
 		return nil, ErrInvalid
@@ -179,7 +164,7 @@ func Create(tx *database.Tx, userID []byte, label, valueType, description, cardi
 	description = strings.TrimSpace(description)
 	cardinality = strings.TrimSpace(cardinality)
 	if cardinality == "" {
-		cardinality = CardinalitySingle
+		cardinality = propertymeta.CardinalitySingle
 	}
 	if label == "" || !valueTypeOK(valueType) || !cardinalityOK(cardinality) {
 		return Property{}, nil, ErrInvalid
@@ -469,7 +454,7 @@ func originOK(origin string) bool {
 
 func valueTypeOK(vt string) bool {
 	switch vt {
-	case ValueTypeText, ValueTypeInteger, ValueTypeDate, ValueTypeName, ValueTypeSubject, ValueTypeTerm, ValueTypeDepiction:
+	case propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeDate, propertymeta.ValueTypeName, propertymeta.ValueTypeSubject, propertymeta.ValueTypeTerm, propertymeta.ValueTypeDepiction:
 		return true
 	default:
 		return false
@@ -481,7 +466,7 @@ func valueTypeOK(vt string) bool {
 // term and depiction are Install/registry only.
 func researcherCreatable(valueType string) bool {
 	switch valueType {
-	case ValueTypeText, ValueTypeInteger, ValueTypeDate, ValueTypeName, ValueTypeSubject:
+	case propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeDate, propertymeta.ValueTypeName, propertymeta.ValueTypeSubject:
 		return true
 	default:
 		return false
@@ -489,7 +474,7 @@ func researcherCreatable(valueType string) bool {
 }
 
 func cardinalityOK(cardinality string) bool {
-	return cardinality == CardinalitySingle || cardinality == CardinalityMultiple
+	return cardinality == propertymeta.CardinalitySingle || cardinality == propertymeta.CardinalityMultiple
 }
 
 func uuidString(id []byte) string {

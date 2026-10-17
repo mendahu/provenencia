@@ -7,8 +7,8 @@ import (
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/namealiases"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/onboarding"
 )
 
@@ -67,7 +67,7 @@ func TestDoKeepsAliasTablesForTheOpenProject(t *testing.T) {
 }
 
 func aliasGiven(text string) match.Value {
-	return match.Value{Name: &namevalues.Value{Parts: []namevalues.Part{{
-		Value: text, Type: namevalues.PartTypeGiven,
+	return match.Value{Name: &namevalue.Value{Parts: []namevalue.Part{{
+		Value: text, Type: namevalue.PartTypeGiven,
 	}}}}
 }

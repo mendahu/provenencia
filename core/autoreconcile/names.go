@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // The name module (conclusion-reconciliation.md §7.2). The pipeline does the
@@ -47,16 +47,16 @@ type nameModule struct{}
 
 // nameUnit is one part type's parts of one name.
 type nameUnit struct {
-	parts []string          // normalized words, in idx order
-	raw   []namevalues.Part // the parts as recorded
-	words [][]string        // each raw part's normalized words
+	parts []string         // normalized words, in idx order
+	raw   []namevalue.Part // the parts as recorded
+	words [][]string       // each raw part's normalized words
 }
 
 // readName is a name's non-empty parts by type, and the types in the order
 // they first appear.
-func readName(n *namevalues.Value) (byType map[string]nameUnit, order []string) {
+func readName(n *namevalue.Value) (byType map[string]nameUnit, order []string) {
 	byType = map[string]nameUnit{}
-	parts := append([]namevalues.Part(nil), n.Parts...)
+	parts := append([]namevalue.Part(nil), n.Parts...)
 	sort.SliceStable(parts, func(i, j int) bool { return parts[i].Idx < parts[j].Idx })
 	for _, p := range parts {
 		words := strings.Fields(NormalizeForm(p.Value))
@@ -178,7 +178,7 @@ func (nameModule) assemble(members []Candidate, settled map[string][]unit) Value
 	// recorded part whose words are all present already (given [James,
 	// Kevin] + [James, Kenneth] → James, Kevin, Kenneth).
 	parts := map[string][]string{}
-	raw := map[string][]namevalues.Part{}
+	raw := map[string][]namevalue.Part{}
 	for _, typ := range order {
 		for _, u := range settled[typ] {
 			nu := u.data.(nameUnit)
@@ -210,11 +210,11 @@ func (nameModule) assemble(members []Candidate, settled map[string][]unit) Value
 		}
 	}
 
-	name := &namevalues.Value{}
+	name := &namevalue.Value{}
 	var words []string
 	for _, typ := range order {
 		for _, p := range raw[typ] {
-			name.Parts = append(name.Parts, namevalues.Part{Idx: len(name.Parts), Value: p.Value, Type: p.Type})
+			name.Parts = append(name.Parts, namevalue.Part{Idx: len(name.Parts), Value: p.Value, Type: p.Type})
 			words = append(words, strings.TrimSpace(p.Value))
 		}
 	}

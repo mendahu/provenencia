@@ -86,7 +86,7 @@ enum SeededSexAtBirthTerm {
     static let male = "male"
 }
 
-/// A DateValue qualifier (`datevalues.Qualifier*`).
+/// A DateValue qualifier (`datevalue.Qualifier*`).
 enum DateQualifier {
     static let about = "ABT"
     static let before = "BEF"

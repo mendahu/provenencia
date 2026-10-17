@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 func term(n byte, termID, key string) Candidate {
@@ -41,40 +41,40 @@ func TestModules(t *testing.T) {
 		state        State
 		displayed    string // the first value's text, when checked
 	}{
-		{"text", "trimmed and case-insensitive", properties.ValueTypeText,
+		{"text", "trimmed and case-insensitive", propertymeta.ValueTypeText,
 			[]Candidate{text(1, "  York "), text(2, "YORK"), text(3, "york")}, [][]byte{{1, 2, 3}}, StateMerged, "  York "},
-		{"text", "non-ASCII case folds", properties.ValueTypeText,
+		{"text", "non-ASCII case folds", propertymeta.ValueTypeText,
 			[]Candidate{text(1, "ÉMILE"), text(2, "émile")}, [][]byte{{1, 2}}, StateMerged, "ÉMILE"},
-		{"text", "inner spacing and punctuation still matter", properties.ValueTypeText,
+		{"text", "inner spacing and punctuation still matter", propertymeta.ValueTypeText,
 			[]Candidate{text(1, "Upper Canada"), text(2, "Upper  Canada"), text(3, "U.C.")}, [][]byte{{1}, {2}, {3}}, StateMixed, ""},
-		{"text", "the best-ranked member's spelling is displayed", properties.ValueTypeText,
+		{"text", "the best-ranked member's spelling is displayed", propertymeta.ValueTypeText,
 			[]Candidate{text(1, "york"), highTrust(text(2, "York"))}, [][]byte{{1, 2}}, StateMerged, "York"},
-		{"text", "blank is no evidence", properties.ValueTypeText,
+		{"text", "blank is no evidence", propertymeta.ValueTypeText,
 			[]Candidate{text(1, ""), text(2, "  ")}, nil, StateEmpty, ""},
-		{"integer", "equal values", properties.ValueTypeInteger,
+		{"integer", "equal values", propertymeta.ValueTypeInteger,
 			[]Candidate{integer(1, 34), integer(2, 34), integer(3, 0)}, [][]byte{{1, 2}, {3}}, StateMerged, ""},
-		{"integer", "negative and zero are values", properties.ValueTypeInteger,
+		{"integer", "negative and zero are values", propertymeta.ValueTypeInteger,
 			[]Candidate{integer(1, -1), integer(2, 0)}, [][]byte{{1}, {2}}, StateMixed, ""},
-		{"term", "the same term", properties.ValueTypeTerm,
+		{"term", "the same term", propertymeta.ValueTypeTerm,
 			[]Candidate{term(1, "m", "male"), term(2, "m", "male")}, [][]byte{{1, 2}}, StateMerged, ""},
-		{"term", "a neutral term is no evidence", properties.ValueTypeTerm,
+		{"term", "a neutral term is no evidence", propertymeta.ValueTypeTerm,
 			[]Candidate{term(1, "m", "male"), neutralTerm(2, "u", "unknown"), neutralTerm(3, "i", "indeterminate")}, [][]byte{{1}}, StateSingle, ""},
-		{"term", "only neutral terms: empty", properties.ValueTypeTerm,
+		{"term", "only neutral terms: empty", propertymeta.ValueTypeTerm,
 			[]Candidate{neutralTerm(1, "u", "unknown")}, nil, StateEmpty, ""},
-		{"term", "a term with no key still counts", properties.ValueTypeTerm,
+		{"term", "a term with no key still counts", propertymeta.ValueTypeTerm,
 			[]Candidate{term(1, "f", ""), term(2, "m", "")}, [][]byte{{1}, {2}}, StateMixed, ""},
-		{"name", "a name with no parts is no evidence, whatever its form", properties.ValueTypeName,
+		{"name", "a name with no parts is no evidence, whatever its form", propertymeta.ValueTypeName,
 			[]Candidate{name(1, "James Robins"), nm(2, "given=James|surname=Robins")}, [][]byte{{2}}, StateSingle, ""},
-		{"depiction", "the same image is one value", properties.ValueTypeDepiction,
+		{"depiction", "the same image is one value", propertymeta.ValueTypeDepiction,
 			[]Candidate{depiction(1, "a"), depiction(2, "a")}, [][]byte{{1, 2}}, StateMerged, ""},
-		{"depiction", "two images", properties.ValueTypeDepiction,
+		{"depiction", "two images", propertymeta.ValueTypeDepiction,
 			[]Candidate{depiction(1, "a"), depiction(2, "b")}, [][]byte{{1}, {2}}, StateMixed, ""},
-		{"depiction", "an unreadable image is no evidence", properties.ValueTypeDepiction,
+		{"depiction", "an unreadable image is no evidence", propertymeta.ValueTypeDepiction,
 			[]Candidate{depiction(1, "")}, nil, StateEmpty, ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.module+"/"+tc.name, func(t *testing.T) {
-			got, err := Reconcile(tc.valueType, tc.in, nil, properties.CardinalitySingle)
+			got, err := Reconcile(tc.valueType, tc.in, nil, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -93,13 +93,13 @@ func TestModules(t *testing.T) {
 
 // Every value type has a module, and mismatched values are refused.
 func TestModuleFor(t *testing.T) {
-	for _, vt := range []string{properties.ValueTypeText, properties.ValueTypeInteger, properties.ValueTypeTerm,
-		properties.ValueTypeSubject, properties.ValueTypeName, properties.ValueTypeDate, properties.ValueTypeDepiction} {
+	for _, vt := range []string{propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeTerm,
+		propertymeta.ValueTypeSubject, propertymeta.ValueTypeName, propertymeta.ValueTypeDate, propertymeta.ValueTypeDepiction} {
 		if moduleFor(vt) == nil {
 			t.Errorf("%s has no module", vt)
 		}
 	}
-	if _, err := Reconcile(properties.ValueTypeName, []Candidate{{ObservationID: id(1), Value: Value{Name: &namevalues.Value{}}}}, nil, properties.CardinalitySingle); err != nil {
+	if _, err := Reconcile(propertymeta.ValueTypeName, []Candidate{{ObservationID: id(1), Value: Value{Name: &namevalue.Value{}}}}, nil, propertymeta.CardinalitySingle); err != nil {
 		t.Fatalf("an empty name is no evidence, not an error: %v", err)
 	}
 }
@@ -107,8 +107,8 @@ func TestModuleFor(t *testing.T) {
 // A person's likenesses are a gallery: every distinct image stays.
 func TestReconcileDepictionMultiple(t *testing.T) {
 	t.Run("distinct images are distinct values", func(t *testing.T) {
-		got, err := Reconcile(properties.ValueTypeDepiction,
-			[]Candidate{depiction(1, "a"), depiction(2, "a"), depiction(3, "b")}, nil, properties.CardinalityMultiple)
+		got, err := Reconcile(propertymeta.ValueTypeDepiction,
+			[]Candidate{depiction(1, "a"), depiction(2, "a"), depiction(3, "b")}, nil, propertymeta.CardinalityMultiple)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -125,15 +125,15 @@ func TestReconcileDepictionMultiple(t *testing.T) {
 		}
 	})
 	t.Run("no depiction is a mismatch", func(t *testing.T) {
-		_, err := Reconcile(properties.ValueTypeDepiction,
-			[]Candidate{{ObservationID: id(1)}}, nil, properties.CardinalityMultiple)
+		_, err := Reconcile(propertymeta.ValueTypeDepiction,
+			[]Candidate{{ObservationID: id(1)}}, nil, propertymeta.CardinalityMultiple)
 		if !errors.Is(err, ErrValueMismatch) {
 			t.Fatalf("err %v", err)
 		}
 	})
 	t.Run("an unreadable image is no evidence", func(t *testing.T) {
-		got, err := Reconcile(properties.ValueTypeDepiction,
-			[]Candidate{depiction(1, "")}, nil, properties.CardinalityMultiple)
+		got, err := Reconcile(propertymeta.ValueTypeDepiction,
+			[]Candidate{depiction(1, "")}, nil, propertymeta.CardinalityMultiple)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -185,31 +185,31 @@ func TestCompatible(t *testing.T) {
 		a, b      Candidate
 		want      bool
 	}{
-		{"text: trimmed and case-insensitive", properties.ValueTypeText, text(1, " York"), text(2, "york"), true},
-		{"text: different", properties.ValueTypeText, text(1, "York"), text(2, "Toronto"), false},
-		{"text: blank is no evidence", properties.ValueTypeText, text(1, ""), text(2, ""), false},
-		{"integer: equal", properties.ValueTypeInteger, integer(1, 34), integer(2, 34), true},
-		{"integer: different", properties.ValueTypeInteger, integer(1, 34), integer(2, 35), false},
-		{"term: the same term", properties.ValueTypeTerm, term(1, "m", "male"), term(2, "m", "male"), true},
-		{"term: different terms", properties.ValueTypeTerm, term(1, "m", "male"), term(2, "f", "female"), false},
-		{"term: a neutral term is no evidence", properties.ValueTypeTerm, neutralTerm(1, "u", "unknown"), neutralTerm(2, "u", "unknown"), false},
-		{"name: the same parts", properties.ValueTypeName,
+		{"text: trimmed and case-insensitive", propertymeta.ValueTypeText, text(1, " York"), text(2, "york"), true},
+		{"text: different", propertymeta.ValueTypeText, text(1, "York"), text(2, "Toronto"), false},
+		{"text: blank is no evidence", propertymeta.ValueTypeText, text(1, ""), text(2, ""), false},
+		{"integer: equal", propertymeta.ValueTypeInteger, integer(1, 34), integer(2, 34), true},
+		{"integer: different", propertymeta.ValueTypeInteger, integer(1, 34), integer(2, 35), false},
+		{"term: the same term", propertymeta.ValueTypeTerm, term(1, "m", "male"), term(2, "m", "male"), true},
+		{"term: different terms", propertymeta.ValueTypeTerm, term(1, "m", "male"), term(2, "f", "female"), false},
+		{"term: a neutral term is no evidence", propertymeta.ValueTypeTerm, neutralTerm(1, "u", "unknown"), neutralTerm(2, "u", "unknown"), false},
+		{"name: the same parts", propertymeta.ValueTypeName,
 			nm(1, "given=James|surname=Robins"), nm(2, "given=James|surname=Robins"), true},
-		{"name: an initial folds into the full given name", properties.ValueTypeName,
+		{"name: an initial folds into the full given name", propertymeta.ValueTypeName,
 			nm(1, "given=J.|surname=Robins"), nm(2, "given=James|surname=Robins"), true},
-		{"name: fold either way round", properties.ValueTypeName,
+		{"name: fold either way round", propertymeta.ValueTypeName,
 			nm(1, "given=James|surname=Robins"), nm(2, "given=J.|surname=Robins"), true},
-		{"name: a part only one carries does not count against", properties.ValueTypeName,
+		{"name: a part only one carries does not count against", propertymeta.ValueTypeName,
 			nm(1, "given=James"), nm(2, "given=James|surname=Robins"), true},
-		{"name: a spelling variant differs", properties.ValueTypeName,
+		{"name: a spelling variant differs", propertymeta.ValueTypeName,
 			nm(1, "given=James|surname=Robins"), nm(2, "given=James|surname=Robbins"), false},
-		{"name: no shared part", properties.ValueTypeName,
+		{"name: no shared part", propertymeta.ValueTypeName,
 			nm(1, "given=James"), nm(2, "surname=Robins"), false},
-		{"name: no parts is no evidence", properties.ValueTypeName, name(1, "James Robins"), name(2, "James Robins"), false},
-		{"depiction: the same image", properties.ValueTypeDepiction, depiction(1, "a"), depiction(2, "a"), true},
-		{"depiction: different images", properties.ValueTypeDepiction, depiction(1, "a"), depiction(2, "b"), false},
-		{"depiction: an unreadable image is no evidence", properties.ValueTypeDepiction, depiction(1, ""), depiction(2, ""), false},
-		{"mismatched value", properties.ValueTypeInteger, text(1, "34"), integer(2, 34), false},
+		{"name: no parts is no evidence", propertymeta.ValueTypeName, name(1, "James Robins"), name(2, "James Robins"), false},
+		{"depiction: the same image", propertymeta.ValueTypeDepiction, depiction(1, "a"), depiction(2, "a"), true},
+		{"depiction: different images", propertymeta.ValueTypeDepiction, depiction(1, "a"), depiction(2, "b"), false},
+		{"depiction: an unreadable image is no evidence", propertymeta.ValueTypeDepiction, depiction(1, ""), depiction(2, ""), false},
+		{"mismatched value", propertymeta.ValueTypeInteger, text(1, "34"), integer(2, 34), false},
 		{"unknown value type", "colour", text(1, "red"), text(2, "red"), false},
 	}
 	for _, tc := range cases {

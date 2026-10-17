@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // A module is what one value type supplies to the shared pipeline
@@ -46,17 +46,17 @@ const wholeValue = ""
 
 func moduleFor(valueType string) module {
 	switch valueType {
-	case properties.ValueTypeText:
+	case propertymeta.ValueTypeText:
 		return keyModule{keyOf: textKey}
-	case properties.ValueTypeInteger:
+	case propertymeta.ValueTypeInteger:
 		return keyModule{keyOf: func(v Value) (string, bool) { return strconv.FormatInt(v.Integer, 10), true }}
-	case properties.ValueTypeTerm:
+	case propertymeta.ValueTypeTerm:
 		return keyModule{keyOf: termKey}
-	case properties.ValueTypeSubject:
+	case propertymeta.ValueTypeSubject:
 		// The accepted handle. The loader fills EntityID; an unpromoted or
 		// missing end has none and is no evidence.
 		return keyModule{keyOf: func(v Value) (string, bool) { return idKey(v.EntityID) }}
-	case properties.ValueTypeDepiction:
+	case propertymeta.ValueTypeDepiction:
 		// The same image File, so the same pixels; no readable image is no evidence.
 		return keyModule{keyOf: func(v Value) (string, bool) {
 			if v.Depiction == nil {
@@ -64,9 +64,9 @@ func moduleFor(valueType string) module {
 			}
 			return idKey(v.Depiction.ImageFileID)
 		}}
-	case properties.ValueTypeName:
+	case propertymeta.ValueTypeName:
 		return nameModule{}
-	case properties.ValueTypeDate:
+	case propertymeta.ValueTypeDate:
 		return dateModule{}
 	}
 	return nil

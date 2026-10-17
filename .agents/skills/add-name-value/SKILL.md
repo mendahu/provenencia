@@ -1,7 +1,7 @@
 ---
 name: add-name-value
 description: >-
-  Uses or extends Provenencia shared genealogical name_values (core/database/namevalues).
+  Uses or extends Provenencia shared genealogical name_values (pure type in core/namevalue, queries in core/database/namevalues).
   Use when inserting/looking up NameValues, name_value_parts, form/parts rules,
   name_value_id FKs, open part-type vocabulary, structured-name-model, or
   Source/Interpretation/Conclusion name metadata.
@@ -9,19 +9,25 @@ description: >-
 
 # Add or use a NameValue
 
-Shared cross-layer personal names live in **`core/database/namevalues`**, not in Source-only packages. Authoritative design: [`docs/structured-name-model.md`](../../../docs/structured-name-model.md).
+Shared cross-layer personal names live in **`core/namevalue`** (the pure type, validation and part-type registry) and **`core/database/namevalues`** (the queries), not in Source-only packages. Authoritative design: [`docs/structured-name-model.md`](../../../docs/structured-name-model.md).
 
 New **tables/columns** need a catalog migration first (`.agents/skills/add-catalog-migration/SKILL.md`). Do not invent a second name representation.
 
 ## Package
 
 ```
-core/database/namevalues/
+core/namevalue/              # pure: no core/database import
+  namevalue.go               # Value, Part, PartType*, ErrInvalid, Validate
+  registry.go                # PartTypeInfo, PartTypes, KnownPartType
+  namevaluetest/             # Western fixture helper
+  validate_test.go
+  registry_test.go
+core/database/namevalues/    # queries
   namevalues.go
   namevalues_test.go
 ```
 
-Call sites: `namevalues.Insert(c, v)` / `namevalues.Lookup(c, id)`. Minted id is UUIDv7 BLOB. Domain errors: `namevalues.ErrInvalid` (`namevalues.invalid`).
+Types and checks: `namevalue.Value`, `namevalue.Validate(v)`. Call sites for storage: `namevalues.Insert(c, v)` / `namevalues.Lookup(c, id)`. Minted id is UUIDv7 BLOB. Domain errors: `namevalue.ErrInvalid` (`namevalues.invalid`). Matching layers import `core/namevalue`, never `core/database/namevalues`.
 
 ## Model (authoritative)
 
@@ -36,7 +42,7 @@ Absence of parts is valid when further segmentation is unnecessary or culturally
 
 ### Part types
 
-`type` is a **product-known key** from the compiled registry in `namevalues` (`PartTypes()` / `KnownPartType`). Keys match [`seeded-vocabulary.md`](../../../docs/seeded-vocabulary.md) §4.1 (`prefix`, `given`, `surname`, …). Empty type = untyped segment (allowed). Insert **rejects** unknown non-empty types.
+`type` is a **product-known key** from the compiled registry in `namevalue` (`PartTypes()` / `KnownPartType`). Keys match [`seeded-vocabulary.md`](../../../docs/seeded-vocabulary.md) §4.1 (`prefix`, `given`, `surname`, …). Empty type = untyped segment (allowed). `Validate` (and so Insert) **rejects** unknown non-empty types.
 
 UI (S7-02b) picks from the registry with **localized labels** (`L10nKey`). Do **not** offer free-text type entry. User-minted part types / a catalog `name_part_types` table are a later extensibility PR — keep DDL as open TEXT until then.
 
@@ -52,12 +58,12 @@ Referencing tables use `name_value_id BLOB REFERENCES name_values(id)`. Observat
 
 ## Extending helpers
 
-1. Prefer extending validation + the part-type **registry** in `namevalues` over ad-hoc SQL elsewhere.
-2. Keep `apperr` codes in `core/apperr`; package owns `ErrInvalid`.
+1. Prefer extending validation + the part-type **registry** in `namevalue` (pure) and queries in `namevalues` over ad-hoc SQL elsewhere.
+2. Keep `apperr` codes in `core/apperr`; `core/namevalue` owns `ErrInvalid`.
 3. Functions take `*database.Catalog` today (same as `datevalues`). Tx-scoped inserts wait until an audited write path needs them.
-4. Table-driven tests in `namevalues_test.go`; run `CGO_ENABLED=1 go test ./core/database/namevalues/`.
+4. Pure checks: table-driven tests in `core/namevalue/validate_test.go` (no catalog); run `go test ./core/namevalue/...`. Query tests: `namevalues_test.go`; run `CGO_ENABLED=1 go test ./core/database/namevalues/`.
 5. Do **not** add shipped-SQL substring greps in `migrate_test.go`.
-6. Adding a product part type: append to `registry.go` + consts + seeded-vocabulary §4.1 + L10n in S7-02b — not a migration.
+6. Adding a product part type: append to `core/namevalue/registry.go` + consts + seeded-vocabulary §4.1 + L10n in S7-02b — not a migration.
 
 ## Do not
 

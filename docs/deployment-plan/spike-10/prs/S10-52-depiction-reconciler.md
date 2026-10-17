@@ -30,7 +30,7 @@
 
 ## Landed
 
-No differences from this plan beyond test shape: T-3's cases share a small `world` struct and a `finish` helper (upkeep equals rebuild, the loaded node's `likeness` image ids, `Verify`) in `TestDepictionsReconcileByImage`. The manual check on a Mac (open a dogfood project on the branch build; the Person page shows the same fields as on `main`) was not run.
+D-11 applied: S11-22 landed in #434 before this PR merged, so the merge from `main` spells every value-type and cardinality constant `propertymeta.*`, and the date and name value types are `core/datevalue` and `core/namevalue`. Otherwise no differences from this plan beyond test shape: T-3's cases share a small `world` struct and a `finish` helper (upkeep equals rebuild, the loaded node's `likeness` image ids, `Verify`) in `TestDepictionsReconcileByImage`. The manual check on a Mac (open a dogfood project on the branch build; the Person page shows the same fields as on `main`) was not run.
 
 ## 1. Objective
 

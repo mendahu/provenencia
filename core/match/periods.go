@@ -2,8 +2,8 @@ package match
 
 import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // Period pooling: an Event's date is compared with another Event's start and
@@ -54,7 +54,7 @@ func hasVoting(vs []Value) bool {
 // firstLeader is the index of the value that speaks for a single-cardinality
 // Property: the first leader in tie order; -1 when none votes.
 func firstLeader(vs []Value) int {
-	info := weigh(vs, properties.CardinalitySingle)
+	info := weigh(vs, propertymeta.CardinalitySingle)
 	best := -1
 	for i := range vs {
 		if info[i].leader && (best < 0 || order(vs, info, i, best) < 0) {
@@ -81,20 +81,20 @@ func period(pp PeriodProperties, vs Values) (Value, bool) {
 			end, hasEnd = last, true
 		}
 	}
-	d := datevalues.Value{Calendar: "gregorian"}
+	d := datevalue.Value{Calendar: "gregorian"}
 	switch {
 	case hasStart && hasEnd:
 		if start.Lo > end.Hi {
 			return Value{}, false
 		}
-		d.Kind = datevalues.KindRange
+		d.Kind = datevalue.KindRange
 		d.StartYear, d.StartMonth, d.StartDay = endFields(start)
 		d.EndYear, d.EndMonth, d.EndDay = endFields(end)
 	case hasStart:
-		d.Kind, d.Qualifier = datevalues.KindPoint, datevalues.QualifierAFT
+		d.Kind, d.Qualifier = datevalue.KindPoint, datevalue.QualifierAFT
 		d.StartYear, d.StartMonth, d.StartDay = endFields(start)
 	case hasEnd:
-		d.Kind, d.Qualifier = datevalues.KindPoint, datevalues.QualifierBEF
+		d.Kind, d.Qualifier = datevalue.KindPoint, datevalue.QualifierBEF
 		d.StartYear, d.StartMonth, d.StartDay = endFields(end)
 	default:
 		return Value{}, false

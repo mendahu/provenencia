@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // Pair selection: which one value on each side speaks for a Feature, and how
@@ -24,7 +24,7 @@ type ValueRef struct {
 	Negative      bool
 	// Date is the value's structured date, for a client to format; nil for
 	// any other value type.
-	Date *datevalues.Value
+	Date *datevalue.Value
 }
 
 // PairResult is the outcome of comparing two sides' values of one Property.
@@ -68,15 +68,15 @@ func (vs Values) HasPositive() bool {
 func (v Value) valueType() string {
 	switch {
 	case v.Name != nil:
-		return properties.ValueTypeName
+		return propertymeta.ValueTypeName
 	case v.Date != nil:
-		return properties.ValueTypeDate
+		return propertymeta.ValueTypeDate
 	case v.Term != "":
-		return properties.ValueTypeTerm
+		return propertymeta.ValueTypeTerm
 	case v.HasInteger:
-		return properties.ValueTypeInteger
+		return propertymeta.ValueTypeInteger
 	case v.HasText:
-		return properties.ValueTypeText
+		return propertymeta.ValueTypeText
 	}
 	return ""
 }
@@ -109,7 +109,7 @@ func (v Value) Label() string {
 		}
 		return strings.Join(parts, " ")
 	case v.Date != nil:
-		return datevalues.CompactDisplay(*v.Date)
+		return datevalue.CompactDisplay(*v.Date)
 	case v.Term != "":
 		if v.TermLabel != "" {
 			return v.TermLabel
@@ -202,7 +202,7 @@ func weigh(vs []Value, card string) []voteInfo {
 			topShown = max(topShown, e)
 		}
 	}
-	if card == properties.CardinalityMultiple {
+	if card == propertymeta.CardinalityMultiple {
 		for i := range info {
 			if info[i].voting {
 				info[i].leader, info[i].weight = true, 1
@@ -367,7 +367,7 @@ func pairValues(cmp Comparer, card string, probe, candidate []Value) PairResult 
 			}
 		}
 	}
-	if leaderComparable && !leaderPositive && card != properties.CardinalityMultiple {
+	if leaderComparable && !leaderPositive && card != propertymeta.CardinalityMultiple {
 		return leaders.contradiction()
 	}
 	if !credit.found {

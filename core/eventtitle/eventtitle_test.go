@@ -3,8 +3,8 @@ package eventtitle_test
 import (
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/eventtitle"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 func named(forms ...string) []eventtitle.Subject {
@@ -14,7 +14,7 @@ func named(forms ...string) []eventtitle.Subject {
 			out = append(out, eventtitle.Subject{})
 			continue
 		}
-		out = append(out, eventtitle.Subject{Name: &namevalues.Value{Form: f}})
+		out = append(out, eventtitle.Subject{Name: &namevalue.Value{Form: f}})
 	}
 	return out
 }

@@ -1,7 +1,7 @@
 package match
 
 import (
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // Comparer judges two values of one Property. Similarity is 0…1: 1 is the
@@ -35,15 +35,15 @@ func CompareDiscount(cmp Comparer, a, b Value) (similarity, discount float64, co
 // value types that are not compared (subject).
 func ComparerFor(valueType string) Comparer {
 	switch valueType {
-	case properties.ValueTypeName:
+	case propertymeta.ValueTypeName:
 		return DefaultNames
-	case properties.ValueTypeText:
+	case propertymeta.ValueTypeText:
 		return DefaultText
-	case properties.ValueTypeTerm:
+	case propertymeta.ValueTypeTerm:
 		return TermComparer{}
-	case properties.ValueTypeDate:
+	case propertymeta.ValueTypeDate:
 		return DefaultDates
-	case properties.ValueTypeInteger:
+	case propertymeta.ValueTypeInteger:
 		return DefaultIntegers
 	}
 	return nil

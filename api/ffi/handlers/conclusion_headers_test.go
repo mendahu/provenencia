@@ -12,9 +12,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -22,6 +19,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -60,10 +60,10 @@ func namedPerson(t *testing.T) (dir, handleRef string) {
 			return citations.CreateWithObservations(tx, userID[:], citations.CreateInput{
 				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
 			}, []observations.Input{
-				{SubjectID: subjectID[:], PropertyID: name.ID, Name: &namevalues.Value{Form: "James Robins", Parts: []namevalues.Part{
-					{Idx: 0, Value: "James", Type: namevalues.PartTypeGiven}, {Idx: 1, Value: "Robins", Type: namevalues.PartTypeSurname},
+				{SubjectID: subjectID[:], PropertyID: name.ID, Name: &namevalue.Value{Form: "James Robins", Parts: []namevalue.Part{
+					{Idx: 0, Value: "James", Type: namevalue.PartTypeGiven}, {Idx: 1, Value: "Robins", Type: namevalue.PartTypeSurname},
 				}}},
-				{SubjectID: subjectID[:], PropertyID: name.ID, Name: namevaluestest.Western("Jim Robins")},
+				{SubjectID: subjectID[:], PropertyID: name.ID, Name: namevaluetest.Western("Jim Robins")},
 			})
 		})
 		return err
@@ -116,7 +116,7 @@ func TestListPersonHeaders(t *testing.T) {
 					t.Fatalf("updated %d %q", h.GetUpdatedRevision(), h.GetUpdatedAt())
 				}
 				n := h.GetName()
-				if n.GetForm() != "James Jim Robins" || len(n.GetParts()) != 3 || n.GetParts()[2].GetType() != namevalues.PartTypeSurname {
+				if n.GetForm() != "James Jim Robins" || len(n.GetParts()) != 3 || n.GetParts()[2].GetType() != namevalue.PartTypeSurname {
 					t.Fatalf("name %+v", n)
 				}
 			},
@@ -237,7 +237,7 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 			}, []observations.Input{
 				{SubjectID: s.ID, PropertyID: name.ID, ValueText: "The Great Fire", HasText: true},
 				{SubjectID: s.ID, PropertyID: eventType.ID, ValueTermID: term.ID},
-				{SubjectID: s.ID, PropertyID: dateProp.ID, Date: &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &year}},
+				{SubjectID: s.ID, PropertyID: dateProp.ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &year}},
 			})
 		})
 		if err != nil {

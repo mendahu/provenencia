@@ -13,12 +13,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/nameformats"
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -32,6 +29,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -95,7 +95,7 @@ func (f *fixture) person(forms ...string) (subjects.Subject, []observations.Obse
 	if len(forms) > 0 {
 		var in []observations.Input
 		for _, form := range forms {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.name.ID, Name: namevaluestest.Western(form)})
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.name.ID, Name: namevaluetest.Western(form)})
 		}
 		res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
@@ -167,7 +167,7 @@ func TestListPersons(t *testing.T) {
 		_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 			return observations.Update(tx, userID, observations.Input{
 				ID: jamesObs[1].ID, SubjectID: jamesObs[1].SubjectID, PropertyID: f.name.ID,
-				Name: namevaluestest.Western("James Robins"),
+				Name: namevaluetest.Western("James Robins"),
 			})
 		})
 		must(t, err)
@@ -185,7 +185,7 @@ func TestListPersonsSortsBySortedPartsNotForm(t *testing.T) {
 	must(t, nameformats.Install(f.c))
 	f.person("Aaron Zimmerman")
 	f.person("Zachary Adams")
-	formOnly := &namevalues.Value{Form: "Aaron Aardvark"}
+	formOnly := &namevalue.Value{Form: "Aaron Aardvark"}
 	personType := f.typeID("person")
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: personType}, nil)
@@ -244,7 +244,7 @@ func TestHeadersShowKeptValuesOnly(t *testing.T) {
 			name: "a provisional member's name is not the Person's name",
 			kind: "person",
 			cite: func(f *fixture) []observations.Input {
-				return []observations.Input{{PropertyID: f.name.ID, Name: namevaluestest.Western("Ghost Name")}}
+				return []observations.Input{{PropertyID: f.name.ID, Name: namevaluetest.Western("Ghost Name")}}
 			},
 			check: func(t *testing.T, f *fixture, entityID []byte) {
 				for _, h := range f.list() {
@@ -355,9 +355,9 @@ func (f *fixture) term(propertyKey, termKey string) propertyterms.Term {
 	return term
 }
 
-func pointYear(year int) *datevalues.Value {
+func pointYear(year int) *datevalue.Value {
 	y := year
-	return &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &y}
+	return &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
 }
 
 // event promotes a new event Subject with the given Observations.
@@ -816,7 +816,7 @@ func TestListHeadersCarryUpdated(t *testing.T) {
 	_, err = writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 		return observations.Update(tx, userID, observations.Input{
 			ID: bobObs[0].ID, SubjectID: bobSubject.ID, PropertyID: f.name.ID,
-			Name: namevaluestest.Western("Bob Smith"), Notes: []string{"seen"},
+			Name: namevaluetest.Western("Bob Smith"), Notes: []string{"seen"},
 		})
 	})
 	must(t, err)

@@ -213,7 +213,7 @@ func Compare(a, b Side, meta PropertyMeta, rules Rules) PropertyResult // proper
   - polarity (positive or negative);
   - for a term, its neutral flag.
 - **No reconciler context.** Support counts and standing (kept, outvoted, denied…) describe an entity's group, not a Subject. They never reach layer 2. Layer 4 translates them before comparing (§ Entities).
-- **`PropertyMeta`:** value type and cardinality.
+- **`PropertyMeta`:** value type and cardinality (`propertymeta.Meta`, in `core/propertymeta`).
 - **No points, no catalog statistics.** Layer 2 says *whether* the sides agree and *which values spoke*, not how much it's worth.
 
 ### What it does, in order

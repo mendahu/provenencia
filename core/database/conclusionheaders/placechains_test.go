@@ -7,7 +7,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -15,6 +14,7 @@ import (
 	// placeSubject cites a Place (and optional period) but does not promote — call
 	// promoteSubject after placeRel so bridges file with the ends.
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -107,7 +107,7 @@ func TestPlaceParentsAtDateFromPeriods(t *testing.T) {
 	}
 	// About 1841 → both UC and PC candidates.
 	abt := *pointYear(1841)
-	abt.Qualifier = datevalues.QualifierABT
+	abt.Qualifier = datevalue.QualifierABT
 	got, err := conclusionheaders.ParentsAtDate(f.c, torontoID, abt)
 	must(t, err)
 	if !sameSet(got, []string{"Upper Canada", "Province of Canada"}) {

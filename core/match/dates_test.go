@@ -6,24 +6,24 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 )
 
 func span(lo, hi *int) Value {
-	return Value{Date: &datevalues.Value{Kind: datevalues.KindRange, StartYear: lo, EndYear: hi}}
+	return Value{Date: &datevalue.Value{Kind: datevalue.KindRange, StartYear: lo, EndYear: hi}}
 }
 
 // span2 is BET month1 year1 AND month2 year2.
 func span2(y1, m1, y2, m2 int) Value {
-	return Value{Date: &datevalues.Value{Kind: datevalues.KindRange, StartYear: &y1, StartMonth: &m1, EndYear: &y2, EndMonth: &m2}}
+	return Value{Date: &datevalue.Value{Kind: datevalue.KindRange, StartYear: &y1, StartMonth: &m1, EndYear: &y2, EndMonth: &m2}}
 }
 
 func bound(q string, y int) Value {
-	return Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, Qualifier: q, StartYear: &y}}
+	return Value{Date: &datevalue.Value{Kind: datevalue.KindPoint, Qualifier: q, StartYear: &y}}
 }
 
 func date(y int, m, d *int) Value {
-	return Value{Date: &datevalues.Value{StartYear: &y, StartMonth: m, StartDay: d}}
+	return Value{Date: &datevalue.Value{StartYear: &y, StartMonth: m, StartDay: d}}
 }
 
 func TestDateComparerScores(t *testing.T) {
@@ -43,7 +43,7 @@ func TestDateComparerScores(t *testing.T) {
 		{"a year apart", DateComparer{}, date(1817, nil, nil), date(1818, nil, nil), 0.8 * 2 / 3, true},
 		{"beyond tolerance", DateComparer{}, date(1817, nil, nil), date(1820, nil, nil), 0, true},
 		{"wider tolerance", DateComparer{Tolerance: Set(5)}, date(1817, nil, nil), date(1820, nil, nil), 0.8 * 3 / 6, true},
-		{"about widens", DateComparer{}, Value{Date: &datevalues.Value{StartYear: ip(1817), Qualifier: "ABT"}}, date(1820, nil, nil), 0.8 * 2 / 5, true},
+		{"about widens", DateComparer{}, Value{Date: &datevalue.Value{StartYear: ip(1817), Qualifier: "ABT"}}, date(1820, nil, nil), 0.8 * 2 / 5, true},
 		{"same month, different days", DateComparer{}, date(1817, ip(5), ip(14)), date(1817, ip(5), ip(20)), 0.7, true},
 		{"range contains the point", DateComparer{}, span(ip(1815), ip(1820)), date(1818, nil, nil), 0.8 - 0.05*5, true},
 		{"tight range contains the point", DateComparer{}, span(ip(1817), ip(1818)), date(1817, nil, nil), 0.8 - 0.05, true},
@@ -70,7 +70,7 @@ func TestDateComparerScores(t *testing.T) {
 		{"months range contains the day", DateComparer{}, span2(1817, 3, 1817, 6), date(1817, ip(5), ip(14)), 0.8, true},
 		{"months range, a later month", DateComparer{}, span2(1817, 3, 1817, 6), date(1817, ip(9), ip(14)), 0.8 * (1 - (90.5/365)/3), true},
 		{"empty range", DateComparer{}, span(nil, nil), date(1818, nil, nil), 0, false},
-		{"phrase only", DateComparer{}, Value{Date: &datevalues.Value{Phrase: "spring"}}, date(1817, nil, nil), 0, false},
+		{"phrase only", DateComparer{}, Value{Date: &datevalue.Value{Phrase: "spring"}}, date(1817, nil, nil), 0, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -87,7 +87,7 @@ func TestDateComparerScores(t *testing.T) {
 
 func TestDateComparerDayWithoutMonth(t *testing.T) {
 	dayOnly := func(y, d int) Value {
-		return Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &y, StartDay: &d}}
+		return Value{Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &y, StartDay: &d}}
 	}
 	tests := []struct {
 		name string
@@ -108,7 +108,7 @@ func TestDateComparerDayWithoutMonth(t *testing.T) {
 
 func TestDateComparerABT(t *testing.T) {
 	about := func(y int) Value {
-		return Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, Qualifier: datevalues.QualifierABT, StartYear: ip(y)}}
+		return Value{Date: &datevalue.Value{Kind: datevalue.KindPoint, Qualifier: datevalue.QualifierABT, StartYear: ip(y)}}
 	}
 	tests := []struct {
 		name string
@@ -214,7 +214,7 @@ func TestDateComparerInvariants(t *testing.T) {
 				}
 				return r
 			}
-			d := &datevalues.Value{Kind: datevalues.KindPoint, Qualifier: quals[rng.Intn(len(quals))], StartYear: opt(rng, 1810, 15)}
+			d := &datevalue.Value{Kind: datevalue.KindPoint, Qualifier: quals[rng.Intn(len(quals))], StartYear: opt(rng, 1810, 15)}
 			if d.StartYear != nil {
 				d.StartMonth = opt(rng, 1, 12)
 				if d.StartMonth != nil {
