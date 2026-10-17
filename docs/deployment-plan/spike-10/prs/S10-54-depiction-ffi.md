@@ -19,7 +19,7 @@
 
 ## Landed
 
-Differences from this plan: the test file gained helpers beside the three the plan names (`likenessDraft`, `saveLikeness`, `checkSavedLikeness`, and a second region constant `likenessRegion2JSON`); `TestUpdateObservation` shares a `saved` row across its likeness rows; `mapObservation` and `mapObservationDraft` lost `private` as D-7 says, and `mapCatalogObservation` stays private; `T-1` inserts its two Files with one transaction and checks `RelPaths` against `StorageRelPath` of each. The manual check on a Mac (the Properties pill reads *Depiction* with VoiceOver; the composer still offers no Likeness; covers and Artifact thumbnails unchanged) was not run; the Xcode tests pass in `scripts/check-pr.sh`.
+Differences from this plan: the test file gained helpers beside the three the plan names (`likenessDraft`, `saveLikeness`, `checkSavedLikeness`, and a second region constant `likenessRegion2JSON`); `TestUpdateObservation` shares a `saved` row across its likeness rows; `mapObservation` and `mapObservationDraft` lost `private` as D-7 says, and `mapCatalogObservation` stays private; `GoStore` gained a private `mapDepictionInput` shared by the draft and update-request mappings; `CatalogObservationDraft.depiction` is declared without `= nil` (same behavior); responses go through one `listedProtos` helper; `T-1` inserts its two Files with one transaction and checks `RelPaths` against `StorageRelPath` of each. The manual check on a Mac (the Properties pill reads *Depiction* with VoiceOver; the composer still offers no Likeness; covers and Artifact thumbnails unchanged) was not run; the Xcode tests pass in `scripts/check-pr.sh`.
 
 ### Implementer — read this first
 
