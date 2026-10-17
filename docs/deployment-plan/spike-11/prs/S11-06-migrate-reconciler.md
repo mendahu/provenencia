@@ -1,19 +1,19 @@
 # S11-06 — Migrate the reconciler onto value compare
 
-**Status:** Blocked — on S11-05 (planned against S11-05's plan; on landing, recheck the §4 rows marked "after S11-05")
+**Status:** Planned
 **Spike / slice:** Spike 11 · Slice 2 — Value compare, everywhere
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the reconciler's grouping rules change in Go; pages render the cache as they do today)
 **Board:** —
-**Depends on:** S11-05 ([plan](S11-05-migrate-matching.md), in progress)
+**Depends on:** S11-05 (landed [#451](https://github.com/mendahu/provenencia/pull/451))
 **Blocks:** S11-08
 **Branch:** `s11-06-migrate-reconciler`
 **Version bump:** none — Spike 11 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships, as Spike 10 did ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-match-rule`](../../../../.agents/skills/add-match-rule/SKILL.md), [`add-date-value`](../../../../.agents/skills/add-date-value/SKILL.md), [`add-name-value`](../../../../.agents/skills/add-name-value/SKILL.md)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`
 **Context:** [relations](../comparison-layers.md#relations), [reuse across the app](../comparison-layers.md#reuse-across-the-app), [decided on 2026-10-17](../comparison-layers.md#decided-on-2026-10-17); [`docs/conclusion-reconciliation.md`](../../../conclusion-reconciliation.md) §5, §7, §7.1, §7.2, §10; [S11-02 plan](S11-02-value-compare-core.md) D-8; [S11-04 plan](S11-04-value-compare-dates.md); [S11-05 plan](S11-05-migrate-matching.md) D-2, D-3, D-6, D-10; working rules "Build, then migrate", "High tolerance for churn", "The reconciler keeps its own decisions", "One match registry"
-**Planned:** 2026-10-17 against `main` @ `75ed63c` (S11-05 not landed)
-**Review:** [`S11-06-migrate-reconciler.review.md`](S11-06-migrate-reconciler.review.md) — Fits with changes / Ready with changes → fixed, 1 round
+**Planned:** 2026-10-17 against `main` @ `9c3b6f1` (S11-05 landed; first drafted at `75ed63c`)
+**Review:** [`S11-06-migrate-reconciler.review.md`](S11-06-migrate-reconciler.review.md) — Fits with changes / Ready with changes → fixed, 1 round; refreshed after S11-05 landed
 
 ### Implementer — read this first
 
@@ -114,7 +114,7 @@ The auto-reconciler decides "the same value" with value compare instead of its o
 
 ## 4. Current state
 
-Verified at `75ed63c` unless marked "after S11-05" (read from the [S11-05 plan](S11-05-migrate-matching.md); recheck on landing).
+Verified at `9c3b6f1`, after S11-05 landed.
 
 | Area | Where | Today |
 | --- | --- | --- |
@@ -128,11 +128,11 @@ Verified at `75ed63c` unless marked "after S11-05" (read from the [S11-05 plan](
 | Place chains | `core/database/conclusionheaders/placechains.go` `linkHolds` (`LinkMembership`), `queryWindow`, `chainQueryDate` (`WindowOfDate`), `AttachPlaceRelationships` (`PeriodWindow`, `LinkMembership`), `membershipDates`, `yearOf`, `laterStart`, `earlierEnd` (year only); `compose.go` three `PeriodWindow` calls, two `SortKey` calls | Two same-year starts keep the first argument |
 | Place tests | `core/database/conclusionheaders/placechains_test.go` (package `conclusionheaders_test`, year-only fixture), `export_test.go` | No day-precision case |
 | Value compare | `core/valuecompare/datewindow.go` `DateEnds`, `AboutEnds`, `EndsWindow`, `Window`; `valuecompare.go` `Compare`, `Key`; `name.go` `name.compare` (any-order pairing, `Detail.Parts`, `Broader`), `nameWords` (type `""` → `RoleUntyped` under `Western`); `text.go` `text.key`; `datewindow_test.go` `TestDateEnds` | No as-written window helper |
-| Promote pair selection (after S11-05) | `core/match/pairs.go` `compatible(a, b Value)` → `autoreconcile.Compatible(t, a.Auto(), b.Auto())`, called from `pairValues` (which takes `rules valuecompare.Rules`, S11-05 D-3) and from `refutedBy` | `refutedBy(v, others, info)` has no rules |
-| Promote exhibits (after S11-05) | `core/database/promotealign/exhibits.go` `exhibitCompatible(valueType, a, b)`, called in `pairExhibits`, which reads `cfg.Value` (S11-05 D-6, D-10) | — |
+| Promote pair selection | `core/match/pairs.go` `compatible(a, b Value)` → `autoreconcile.Compatible(t, a.Auto(), b.Auto())`, called from `pairValues` (which takes `rules valuecompare.Rules`, S11-05 D-3) and from `refutedBy` | `refutedBy(v, others, info)` has no rules |
+| Promote exhibits | `core/database/promotealign/exhibits.go` `exhibitCompatible(valueType, a, b)`, called in `pairExhibits`, which reads `cfg.Value` (S11-05 D-6, D-10) | — |
 | Docs | `docs/conclusion-reconciliation.md` §7 table (text, integer, date, name rows), L144 (`Compatible`), §7.1, §7.2, §12; `docs/deployment-plan/spike-11/comparison-layers.md` L454, the duplicates rows for `autoreconcile` keys and `Compatible`, "Decided on 2026-10-17" reconciler bullet; map working rule "The reconciler keeps its own decisions"; `.agents/skills/add-match-rule/SKILL.md` "Dates compute similarity through `falloff`" bullet | Describe the old keys and "ABT as its point" |
 
-**Precedent.** S11-05 (D-2, D-6): a caller converts its own value to `valuecompare.Value` in one adapter and passes the rules it holds; copy that. S10-52 (`447917a`, `CacheVersion` 15): a reconciler rule change bumps `CacheVersion` with one history line, and the rebuild-equals-upkeep tests cover it; copy that. The measured "Expected changes" come from a prototype of D-1 – D-9 on `75ed63c` (with `matchregistry.Default().Value` passed in Promote's two call sites in place of S11-05's rules); every other Go test passed.
+**Precedent.** S11-05 (D-2, D-6): a caller converts its own value to `valuecompare.Value` in one adapter and passes the rules it holds; copy that. S10-52 (`447917a`, `CacheVersion` 15): a reconciler rule change bumps `CacheVersion` with one history line, and the rebuild-equals-upkeep tests cover it; copy that. The measured "Expected changes" come from a prototype of D-1 – D-10 (with the review's fixes) on `9c3b6f1`, with S11-05's rules at Promote's two call sites; every other Go test under `./core/... ./api/...` passed.
 
 ## 5. Decisions
 
@@ -269,7 +269,7 @@ Table-driven where a test holds more than one case (`.cursor/rules/go-tests.mdc`
 | T-7 | Go | `core/database/conclusionheaders/placechains_internal_test.go` `TestMembershipDatesByDay` *(new)*, `TestPeriodWindowAndLinkMembership` (moved) | `membershipDates(placeLink{}, from, to)`: starts `1 MAR 1850` / `1 SEP 1850` → `1 SEP 1850` both ways; ends `31 OCT 1867` / `1 JUL 1867` → `1 JUL 1867` both ways; the moved test unchanged but for the names | AC-4.1, AC-4.2, AC-4.3, D-7 |
 | T-8 | Go | The whole Go suite, including `core/database/autoreconciler` rebuild-equals-upkeep tests | Passes; every moved value is a row below | AC-5.3, D-8, D-12 |
 
-**Expected changes.** Measured on the prototype at `75ed63c`; every other test passed.
+**Expected changes.** Measured on the prototype at `9c3b6f1`; every other test passed.
 
 | Test · assertion | Old | New | Rule | Step |
 | --- | --- | --- | --- | --- |
@@ -312,12 +312,12 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break if 
 | Risk | Mitigation |
 | --- | --- |
 | A grouping change hides a value a researcher relied on (two clock times on one day, a Julian and a Gregorian date) | Out lines name them; the values stay in the cache with their outcomes; S11-99's dogfood pass looks for it |
-| Pins move under S11-05's numbers in a way the prototype (run before S11-05) could not see | D-12: a failing Promote test that is not a row is a Stop condition |
+| A pin moves in a way no test covers | The prototype at `9c3b6f1` ran Promote's suites on S11-05's rules with no change; D-12 makes any new failing Promote test a Stop condition |
 | Name units under `Western`'s untyped weight change a Near minimum outcome | Fold reads only `Contains` with `Same` / initial pairs; `Near` never folds, so the minimum cannot change a grouping |
 
 **Stop and report if:**
 
-- S11-05 landed with `pairValues`, `refutedBy`, `pairExhibits` or `cfg.Value` shaped differently from §4's "after S11-05" rows.
+- `pairValues`, `refutedBy`, `pairExhibits` or `cfg.Value` no longer has the shape §4 gives.
 - An expected value changes that is not a row of "Expected changes", or a row's new value differs.
 - `valuecompare.Key` for a name with only untyped parts returns no key for a unit that has words.
 - `core/valuecompare` or `core/matchregistry` needs a change beyond `DateWindow`, its test, and the `words.go` header comment.

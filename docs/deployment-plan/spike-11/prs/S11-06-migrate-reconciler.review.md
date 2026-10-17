@@ -20,7 +20,6 @@ Round 2 was not run: no finding asked for a reshape, and the one blocker that ch
 - D-4: name units compare as untyped words, so no part type weighs more than another; only `Same` and initial pairs fold.
 - D-6: `valuecompare.DateWindow` (as written) for sort keys, `date_lo` / `date_hi` and place periods.
 - D-7: `PeriodWindow` / `LinkMembership` move to `conclusionheaders`, not into value compare; `comparison-layers.md` L454 is corrected.
-- Status stays `Blocked — on S11-05` until S11-05 lands and the "after S11-05" rows are rechecked.
 
 ## Round 1
 
@@ -75,3 +74,9 @@ Grouping would read value compare's tokens (particles rejoined) and outvoting `s
 
 ### X-10 · minor · Checks that cannot run before S11-05
 **Answer:** Declined as a change: recorded by the status `Blocked — on S11-05` and the Stop condition on S11-05's shapes.
+
+## Refresh after S11-05 landed (#451)
+
+- Merged `main` @ `9c3b6f1`. The §4 rows that were read from S11-05's plan hold in the landed code: `pairValues(rules, valueType, card, …)`, `refutedBy(v, others, info)` without rules, `compatible(a, b)`, `exhibitCompatible(valueType, a, b)` called in `pairExhibits`, which reads `cfg.Value`. S11-05 did not touch `core/autoreconcile`, `autoreconciler`, or the place-chain code the plan names.
+- A fresh prototype of D-1 – D-10 with the round-1 fixes, using S11-05's real rules at Promote's call sites, ran `go test -tags fts5 ./core/... ./api/...`: the only moves are the §8 "Expected changes" rows. No Decision changed, so no new review round.
+- X-10 is closed. Status → Planned.
