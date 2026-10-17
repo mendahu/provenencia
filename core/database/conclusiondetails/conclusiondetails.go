@@ -107,6 +107,7 @@ type LikenessTile struct {
 	ImageFileID []byte
 	Record      Outcome
 	Preferred   bool // the Person's chosen portrait (S10-39)
+	Leads       bool // the likeness the header leads with (likenesses.Likeness.Leads)
 }
 
 // Detail is one handle's detail.
@@ -188,7 +189,7 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 	}
 	for _, l := range gallery[string(entityID)] {
 		if o, ok := leadOutcomes[string(l.ObservationIDs[0])]; ok {
-			d.Likenesses = append(d.Likenesses, LikenessTile{ImageFileID: l.ImageFileID, Record: o, Preferred: l.Preferred})
+			d.Likenesses = append(d.Likenesses, LikenessTile{ImageFileID: l.ImageFileID, Record: o, Preferred: l.Preferred, Leads: l.Leads})
 		}
 	}
 	for _, f := range fields {

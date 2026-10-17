@@ -259,6 +259,9 @@ func TestForEntityLikenesses(t *testing.T) {
 	if d.Likenesses[0].Preferred || d.Likenesses[1].Preferred {
 		t.Fatalf("preferred before a choice: %+v", d.Likenesses)
 	}
+	if !d.Likenesses[0].Leads || d.Likenesses[1].Leads {
+		t.Fatalf("leads before a choice: %+v", d.Likenesses)
+	}
 	_, err := writes.Call(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		ch, err := canonicalentities.SetPreferredLikeness(tx, userID, h, ob.ID)
 		return struct{}{}, ch, err
@@ -267,6 +270,9 @@ func TestForEntityLikenesses(t *testing.T) {
 	d = f.detail(h)
 	if len(d.Likenesses) != 2 || d.Likenesses[0].Preferred || !d.Likenesses[1].Preferred {
 		t.Fatalf("after choosing B: %+v", d.Likenesses)
+	}
+	if d.Likenesses[0].Leads || !d.Likenesses[1].Leads {
+		t.Fatalf("leads after choosing B: %+v", d.Likenesses)
 	}
 
 	only := newFixture(t)

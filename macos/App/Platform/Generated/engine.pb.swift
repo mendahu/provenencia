@@ -4567,6 +4567,11 @@ public nonisolated struct Provenencia_Engine_V1_LikenessDetail: Sendable {
   /// (S10-39); at most one.
   public var preferred: Bool = false
 
+  /// leads is true for the likeness the Person's header leads with: the
+  /// preferred one when set, else the earliest; exactly one per gallery. The
+  /// tile that leads shows the Portrait Badge (user, 2026-10-17).
+  public var leads: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -14586,7 +14591,7 @@ nonisolated extension Provenencia_Engine_V1_GetConclusionDetailRequest: SwiftPro
 
 nonisolated extension Provenencia_Engine_V1_LikenessDetail: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LikenessDetail"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}image_rel_path\0\u{1}record\0\u{1}preferred\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}image_rel_path\0\u{1}record\0\u{1}preferred\0\u{1}leads\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -14597,6 +14602,7 @@ nonisolated extension Provenencia_Engine_V1_LikenessDetail: SwiftProtobuf.Messag
       case 1: try { try decoder.decodeSingularStringField(value: &self.imageRelPath) }()
       case 2: try { try decoder.decodeSingularMessageField(value: &self._record) }()
       case 3: try { try decoder.decodeSingularBoolField(value: &self.preferred) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.leads) }()
       default: break
       }
     }
@@ -14616,6 +14622,9 @@ nonisolated extension Provenencia_Engine_V1_LikenessDetail: SwiftProtobuf.Messag
     if self.preferred != false {
       try visitor.visitSingularBoolField(value: self.preferred, fieldNumber: 3)
     }
+    if self.leads != false {
+      try visitor.visitSingularBoolField(value: self.leads, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -14623,6 +14632,7 @@ nonisolated extension Provenencia_Engine_V1_LikenessDetail: SwiftProtobuf.Messag
     if lhs.imageRelPath != rhs.imageRelPath {return false}
     if lhs._record != rhs._record {return false}
     if lhs.preferred != rhs.preferred {return false}
+    if lhs.leads != rhs.leads {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

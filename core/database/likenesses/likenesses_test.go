@@ -188,6 +188,14 @@ func preferredFlags(g []likenesses.Likeness) []bool {
 	return out
 }
 
+func leadsFlags(g []likenesses.Likeness) []bool {
+	out := make([]bool, len(g))
+	for i := range g {
+		out[i] = g[i].Leads
+	}
+	return out
+}
+
 func TestForEntitiesPreferred(t *testing.T) {
 	t.Run("no pointer leads with the earliest", func(t *testing.T) {
 		f := newFixture(t)
@@ -195,6 +203,9 @@ func TestForEntitiesPreferred(t *testing.T) {
 		g := f.gallery(h)
 		if !slices.Equal(preferredFlags(g), []bool{false, false}) {
 			t.Fatalf("flags %v", preferredFlags(g))
+		}
+		if !slices.Equal(leadsFlags(g), []bool{true, false}) {
+			t.Fatalf("leads %v", leadsFlags(g))
 		}
 		l, ok := likenesses.Lead(g)
 		if !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) {
@@ -208,6 +219,9 @@ func TestForEntitiesPreferred(t *testing.T) {
 		g := f.gallery(h)
 		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], a.ID) || !slices.Equal(preferredFlags(g), []bool{false, true}) {
 			t.Fatalf("gallery %+v", g)
+		}
+		if !slices.Equal(leadsFlags(g), []bool{false, true}) {
+			t.Fatalf("leads %v", leadsFlags(g))
 		}
 		l, ok := likenesses.Lead(g)
 		if !ok || !bytes.Equal(l.ObservationIDs[0], b.ID) {
@@ -227,6 +241,9 @@ func TestForEntitiesPreferred(t *testing.T) {
 		l, ok := likenesses.Lead(g)
 		if len(g) != 1 || !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) || l.Preferred {
 			t.Fatalf("gallery %+v lead %+v", g, l)
+		}
+		if !slices.Equal(leadsFlags(g), []bool{true}) {
+			t.Fatalf("leads %v", leadsFlags(g))
 		}
 		if !bytes.Equal(f.pointer(h), b.ID) {
 			t.Fatalf("pointer row %x", f.pointer(h))
@@ -254,6 +271,9 @@ func TestForEntitiesPreferred(t *testing.T) {
 		if len(g) != 1 || !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) || !slices.Equal(preferredFlags(g), []bool{false}) {
 			t.Fatalf("gallery %+v lead %+v", g, l)
 		}
+		if !slices.Equal(leadsFlags(g), []bool{true}) {
+			t.Fatalf("leads %v", leadsFlags(g))
+		}
 		if !bytes.Equal(f.pointer(h), b.ID) {
 			t.Fatalf("pointer row %x", f.pointer(h))
 		}
@@ -270,12 +290,19 @@ func TestForEntitiesPreferred(t *testing.T) {
 		if p := f.pointer(h); p != nil {
 			t.Fatalf("pointer %x", p)
 		}
-		l, ok := likenesses.Lead(f.gallery(h))
+		g := f.gallery(h)
+		if !slices.Equal(leadsFlags(g), []bool{true}) {
+			t.Fatalf("leads %v", leadsFlags(g))
+		}
+		l, ok := likenesses.Lead(g)
 		if !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) {
 			t.Fatalf("lead %+v", l)
 		}
 	})
 	t.Run("empty gallery has no lead", func(t *testing.T) {
+		if len(leadsFlags(nil)) != 0 {
+			t.Fatal("flags")
+		}
 		if _, ok := likenesses.Lead(nil); ok {
 			t.Fatal("ok")
 		}

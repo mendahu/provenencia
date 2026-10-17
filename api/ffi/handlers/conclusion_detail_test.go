@@ -309,6 +309,9 @@ func TestSetPreferredLikeness(t *testing.T) {
 	if len(d.GetLikenesses()) != 2 || d.GetLikenesses()[0].GetPreferred() || !d.GetLikenesses()[1].GetPreferred() {
 		t.Fatalf("likenesses %+v", d.GetLikenesses())
 	}
+	if d.GetLikenesses()[0].GetLeads() || !d.GetLikenesses()[1].GetLeads() {
+		t.Fatalf("leads after choosing B %+v", d.GetLikenesses())
+	}
 	if d.GetPerson().GetLikenessImageRelPath() != d.GetLikenesses()[1].GetImageRelPath() {
 		t.Fatalf("lead %q, second tile %q", d.GetPerson().GetLikenessImageRelPath(), d.GetLikenesses()[1].GetImageRelPath())
 	}
@@ -328,6 +331,9 @@ func TestSetPreferredLikeness(t *testing.T) {
 	if d.GetLikenesses()[0].GetPreferred() || d.GetLikenesses()[1].GetPreferred() ||
 		d.GetPerson().GetLikenessImageRelPath() != d.GetLikenesses()[0].GetImageRelPath() {
 		t.Fatalf("after clear %+v", d)
+	}
+	if !d.GetLikenesses()[0].GetLeads() || d.GetLikenesses()[1].GetLeads() {
+		t.Fatalf("leads after clear %+v", d.GetLikenesses())
 	}
 
 	fresh, err := uuid.NewV7()

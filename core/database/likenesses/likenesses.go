@@ -24,6 +24,9 @@ type Likeness struct {
 	// Preferred is true for the likeness the handle's preferred_likeness_observation_id
 	// names (S10-39); at most one.
 	Preferred bool
+	// Leads is the likeness the handle leads with: the preferred one when it is
+	// in the gallery, else the earliest; exactly one in a non-empty gallery.
+	Leads bool
 }
 
 const sqlGallery = `SELECT v.entity_id, v.rank, v.reason, v.value_image_file_id,
@@ -95,11 +98,14 @@ func ForEntities(q sqlbatch.Querier, entityIDs [][]byte) (map[string][]Likeness,
 			}
 			return ls[i].Rank < ls[j].Rank
 		})
+		lead := 0
 		if p, ok := pointers[entity]; ok {
 			if i, ok := ByObservation(ls, p); ok {
 				ls[i].Preferred = true
+				lead = i
 			}
 		}
+		ls[lead].Leads = true
 	}
 	return out, nil
 }
@@ -123,12 +129,9 @@ func ByObservation(gallery []Likeness, observationID []byte) (i int, ok bool) {
 // is empty.
 func Lead(gallery []Likeness) (l Likeness, ok bool) {
 	for _, g := range gallery {
-		if g.Preferred {
+		if g.Leads {
 			return g, true
 		}
 	}
-	if len(gallery) == 0 {
-		return Likeness{}, false
-	}
-	return gallery[0], true
+	return Likeness{}, false
 }

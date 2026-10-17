@@ -1363,6 +1363,10 @@ message LikenessDetail {
   // preferred is true for the likeness chosen as the Person's portrait
   // (S10-39); at most one.
   bool preferred = 3;
+  // leads is true for the likeness the Person's header leads with: the
+  // preferred one when set, else the earliest; exactly one per gallery. The
+  // tile that leads shows the Portrait Badge (user, 2026-10-17).
+  bool leads = 4;
 }
 
 message ConclusionDetail {

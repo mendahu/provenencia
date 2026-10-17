@@ -10941,7 +10941,11 @@ type LikenessDetail struct {
 	Record       *ReconcilerOutcomeDetail `protobuf:"bytes,2,opt,name=record,proto3" json:"record,omitempty"`
 	// preferred is true for the likeness chosen as the Person's portrait
 	// (S10-39); at most one.
-	Preferred     bool `protobuf:"varint,3,opt,name=preferred,proto3" json:"preferred,omitempty"`
+	Preferred bool `protobuf:"varint,3,opt,name=preferred,proto3" json:"preferred,omitempty"`
+	// leads is true for the likeness the Person's header leads with: the
+	// preferred one when set, else the earliest; exactly one per gallery. The
+	// tile that leads shows the Portrait Badge (user, 2026-10-17).
+	Leads         bool `protobuf:"varint,4,opt,name=leads,proto3" json:"leads,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10993,6 +10997,13 @@ func (x *LikenessDetail) GetRecord() *ReconcilerOutcomeDetail {
 func (x *LikenessDetail) GetPreferred() bool {
 	if x != nil {
 		return x.Preferred
+	}
+	return false
+}
+
+func (x *LikenessDetail) GetLeads() bool {
+	if x != nil {
+		return x.Leads
 	}
 	return false
 }
@@ -18428,11 +18439,12 @@ const file_engine_proto_rawDesc = "" +
 	"\x1aGetConclusionDetailRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x1b\n" +
-	"\tentity_id\x18\x02 \x01(\tR\bentityId\"\x9c\x01\n" +
+	"\tentity_id\x18\x02 \x01(\tR\bentityId\"\xb2\x01\n" +
 	"\x0eLikenessDetail\x12$\n" +
 	"\x0eimage_rel_path\x18\x01 \x01(\tR\fimageRelPath\x12F\n" +
 	"\x06record\x18\x02 \x01(\v2..provenencia.engine.v1.ReconcilerOutcomeDetailR\x06record\x12\x1c\n" +
-	"\tpreferred\x18\x03 \x01(\bR\tpreferred\"\xbd\x03\n" +
+	"\tpreferred\x18\x03 \x01(\bR\tpreferred\x12\x14\n" +
+	"\x05leads\x18\x04 \x01(\bR\x05leads\"\xbd\x03\n" +
 	"\x10ConclusionDetail\x12>\n" +
 	"\x06entity\x18\x01 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x12>\n" +
 	"\x06fields\x18\x02 \x03(\v2&.provenencia.engine.v1.ConclusionFieldR\x06fields\x12!\n" +
