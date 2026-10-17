@@ -180,6 +180,20 @@ func TestRemoveObjectPrunesEmptyShards(t *testing.T) {
 			stay:   []string{"objects/ab/ef/two.png", "objects/ab"},
 			gone:   []string{"objects/ab/cd/one.png", "objects/ab/cd"},
 		},
+		{
+			name:   "Finder DS_Store files count as empty",
+			put:    []string{"objects/ab/cd/one.png", "objects/ab/cd/.DS_Store", "objects/ab/.DS_Store"},
+			remove: "objects/ab/cd/one.png",
+			stay:   []string{"objects"},
+			gone:   []string{"objects/ab/cd/one.png", "objects/ab/cd/.DS_Store", "objects/ab/cd", "objects/ab/.DS_Store", "objects/ab"},
+		},
+		{
+			name:   "DS_Store beside another file keeps the shard",
+			put:    []string{"objects/ab/cd/one.png", "objects/ab/cd/.DS_Store", "objects/ab/cd/other.txt"},
+			remove: "objects/ab/cd/one.png",
+			stay:   []string{"objects/ab/cd/.DS_Store", "objects/ab/cd/other.txt", "objects/ab/cd", "objects/ab"},
+			gone:   []string{"objects/ab/cd/one.png"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

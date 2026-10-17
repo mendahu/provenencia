@@ -141,7 +141,8 @@ func matches(root *os.Root, inner, checksum string) (bool, error) {
 // following a symlink out of that folder. rel is the slash-separated path from
 // the project folder and must start with objects/. A missing object returns nil.
 // It then removes the shard folders the removal left empty, up to but not
-// including objects/.
+// including objects/. A folder whose only entry is a Finder `.DS_Store` counts
+// as empty.
 func RemoveObject(projectDir, rel string) error {
 	inner, err := innerPath(rel)
 	if err != nil {
@@ -160,11 +161,29 @@ func RemoveObject(projectDir, rel string) error {
 	}
 	// root.Remove refuses a folder that still holds anything, which ends the walk.
 	for dir := filepath.Dir(inner); dir != "."; dir = filepath.Dir(dir) {
-		if root.Remove(dir) != nil {
+		if root.Remove(dir) == nil {
+			continue
+		}
+		if !onlyFinderMetadata(root, dir) || root.Remove(filepath.Join(dir, finderMetadata)) != nil || root.Remove(dir) != nil {
 			break
 		}
 	}
 	return nil
+}
+
+// finderMetadata is the file Finder leaves in a folder it has shown.
+const finderMetadata = ".DS_Store"
+
+// onlyFinderMetadata reports whether dir under root holds nothing but a
+// regular file named .DS_Store.
+func onlyFinderMetadata(root *os.Root, dir string) bool {
+	d, err := root.Open(dir)
+	if err != nil {
+		return false
+	}
+	defer d.Close()
+	entries, err := d.ReadDir(2)
+	return err == nil && len(entries) == 1 && entries[0].Name() == finderMetadata && entries[0].Type().IsRegular()
 }
 
 // createTempIn creates an exclusive temp file named prefix plus 16 random hex
