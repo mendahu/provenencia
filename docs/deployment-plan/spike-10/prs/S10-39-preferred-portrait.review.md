@@ -34,6 +34,17 @@ Fresh executability reviewer on the plan and this log. Every round-1 answer hold
 | X-10 | minor | Success toast form unstated | **Fixed.** D-9 names `VocabularyToast(…, tone: .success)` |
 | X-11 | nit | `observations.Delete` route in T-1 | **Fixed.** T-1 names `writes.Call` + `observations.Delete(tx, userID, id)` |
 
+## Refresh after S10-35 landed (2026-10-17)
+
+Main @ `ced9508` (#446). Every (S10-35) row held; the fixture moved to `observationstest.SaveLikeness` and `likenesses_test.go` was already external, so D-14's package switch and its stop condition were removed. Fresh executability dry run: **Ready with changes**.
+
+| ID | Severity | Finding | Answer |
+| --- | --- | --- | --- |
+| X-12 | major | `ByObservation` returns a copy, so `ForEntities` cannot mark the entry it returns | **Fixed.** D-2: `ByObservation` returns `(i int, ok bool)`; `ForEntities` sets `ls[i].Preferred`; D-3 checks `ok` |
+| X-13 | minor | T-3 and T-4 do not say how the pointer is set | **Fixed.** Both use `writes.Call` + `SetPreferredLikeness`; T-3 needs no `Drop` (the commit drops the row) |
+| X-14 | minor | The brief move leaves its own relative links and landed plans' links unstated | **Fixed.** STEP-10 names both and lints the moved brief and the two landed plans |
+| X-15 | nit | A skipped tile could be the header's portrait | **Logged in D-4.** S10-35's stop conditions make a lead without an outcome row impossible |
+
 ## Verdict
 
-Maintainability **Fits with changes** (applied). Executability **Ready with changes** (applied). No open blocker. M-1 was answered by the user: consolidated in this PR (D-16). Status stays `Blocked — on S10-35 landing` until §4's (S10-35) rows are redone against its Landed note.
+Maintainability **Fits with changes** (applied). Executability **Ready with changes** (applied). No open blocker. M-1 was answered by the user: consolidated in this PR (D-16). Refreshed against S10-35's landed code; status **Planned**.
