@@ -291,7 +291,7 @@ func SetPreferredLikeness(tx *database.Tx, userID, entityID, observationID []byt
 	if bytes.Equal(prev, observationID) {
 		return nil, nil
 	}
-	if _, err := tx.Exec(sqlSetPreferred, nullBlob(observationID), entityID); err != nil {
+	if _, err := tx.Exec(sqlSetPreferred, database.NullBlob(observationID), entityID); err != nil {
 		return nil, err
 	}
 	return []rowchange.Change{{
@@ -302,13 +302,6 @@ func SetPreferredLikeness(tx *database.Tx, userID, entityID, observationID []byt
 			"preferred_likeness_observation_id": {Old: uuidJSON(prev), New: uuidJSON(observationID)},
 		},
 	}}, nil
-}
-
-func nullBlob(b []byte) any {
-	if len(b) == 0 {
-		return nil
-	}
-	return b
 }
 
 func nullStr(s string) any {
