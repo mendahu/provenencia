@@ -407,6 +407,26 @@ func TestOpenObject(t *testing.T) {
 			},
 			wantErr: objectstore.ErrUnsafeObjects,
 		},
+		{
+			name: "objects/ab symlinked outside",
+			setup: func(t *testing.T) string {
+				p, out := t.TempDir(), t.TempDir()
+				if err := os.MkdirAll(filepath.Join(p, "objects"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.MkdirAll(filepath.Join(out, "cd"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(out, "cd", "abcd.png"), []byte("bytes"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(out, filepath.Join(p, "objects", "ab")); err != nil {
+					t.Fatal(err)
+				}
+				return p
+			},
+			wantErr: objectstore.ErrNotRegular,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

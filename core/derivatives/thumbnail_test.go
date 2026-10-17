@@ -11,6 +11,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -304,6 +305,28 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 					t.Fatal(err)
 				}
 				if err := os.Symlink(outside, objPath); err != nil {
+					t.Fatal(err)
+				}
+				return id
+			},
+			wantIs: ErrCorruptObject,
+		},
+		{
+			name: "source's shard folder is a symlink",
+			srcID: func(t *testing.T) []byte {
+				data := bombPNG(t, 6, 6)
+				id := installSourceFile(t, c, data, "image/png", "shard.png")
+				sum := sha256.Sum256(data)
+				rel, err := files.StorageRelPath(hex.EncodeToString(sum[:]), "image/png")
+				if err != nil {
+					t.Fatal(err)
+				}
+				shard := filepath.Join(c.Dir(), filepath.FromSlash(strings.Join(strings.Split(rel, "/")[:2], "/")))
+				moved := filepath.Join(t.TempDir(), "moved")
+				if err := os.Rename(shard, moved); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(moved, shard); err != nil {
 					t.Fatal(err)
 				}
 				return id

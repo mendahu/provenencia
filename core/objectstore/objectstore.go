@@ -58,9 +58,26 @@ func openObjectsRoot(projectDir string, create bool) (*os.Root, error) {
 	return proj.OpenRoot(objectpath.Dir)
 }
 
-// openRegular opens inner under root for reading. Anything but a regular file
-// is ErrNotRegular, checked before the open so a FIFO cannot block it.
+// openRegular opens inner under root for reading. Anything but a regular file,
+// or a shard folder that is not a real folder, is ErrNotRegular. The checks
+// come before the open so a FIFO cannot block it.
 func openRegular(root *os.Root, inner string) (*os.File, error) {
+	// Each shard folder must be a real folder: a symlink there is refused like
+	// a symlinked object. The folders are checked top-down, so a missing one
+	// is fs.ErrNotExist.
+	var dirs []string
+	for dir := filepath.Dir(inner); dir != "."; dir = filepath.Dir(dir) {
+		dirs = append(dirs, dir)
+	}
+	for i := len(dirs) - 1; i >= 0; i-- {
+		dst, err := root.Lstat(dirs[i])
+		if err != nil {
+			return nil, err
+		}
+		if !dst.IsDir() {
+			return nil, ErrNotRegular
+		}
+	}
 	st, err := root.Lstat(inner)
 	if err != nil {
 		return nil, err
