@@ -4,7 +4,7 @@ import (
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
-	"github.com/mendahu/provenencia/core/vocabkey"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // The registry: the numbers the matching algorithm uses, every built-in name
@@ -63,59 +63,9 @@ var DefaultWordRules = WordRules{
 // fold-only pair is lower (foldOnly).
 const AliasCredit = 0.98
 
-// AliasKind is abbreviation or nickname. Both score AliasCredit.
-type AliasKind string
-
-const (
-	AliasAbbreviation AliasKind = "abbreviation"
-	AliasNickname     AliasKind = "nickname"
-)
-
-// AliasTable is one contributed list. Origin records who contributed it
-// (provenencia, user, or plugin:<id>) and does not turn the table off.
-// A set is one equivalence group. Roles are the part roles that may use it.
-type AliasTable struct {
-	Key, Origin, Label string
-	Kind               AliasKind
-	Roles              []NameRole
-	Sets               [][]string
-}
-
-func aliasPartRoles() []NameRole {
-	return []NameRole{RoleGiven, RoleNick, RoleUntyped}
-}
-
 // noAliasTables is the comparer default: no abbreviation or nickname hits
 // until a catalog load supplies rows.
-var noAliasTables []AliasTable
-
-// productAliasTables is the create-time seed. Install writes this list.
-// Scoring does not read it. Tokens are normalized comparison forms.
-var productAliasTables = []AliasTable{
-	{
-		Key: "abbreviations", Origin: vocabkey.OriginProvenencia, Label: "Abbreviations",
-		Kind: AliasAbbreviation, Roles: aliasPartRoles(),
-		Sets: [][]string{
-			{"james", "jas"},
-			{"william", "wm"},
-			{"charles", "chas"},
-			{"thomas", "thos"},
-			{"george", "geo"},
-			{"elizabeth", "eliz"},
-			{"john", "jno"},
-			{"robert", "robt"},
-		},
-	},
-	{
-		Key: "nicknames", Origin: vocabkey.OriginProvenencia, Label: "Nicknames",
-		Kind: AliasNickname, Roles: aliasPartRoles(),
-		// Each set is one canonical name and its direct nicknames, from
-		// carltonnorthern/nicknames. A nickname shared by two canonical
-		// names does not join those sets. License and credit:
-		// third_party/nicknames/.
-		Sets: nicknameSets,
-	},
-}
+var noAliasTables []valuecompare.AliasTable
 
 // MaxExactPairing bounds the exact best-pairing search (2^n states over the
 // shorter word list); longer lists pair greedily. A performance limit, not a
@@ -131,7 +81,7 @@ var DefaultNames = NameComparer{
 	Patterns: BuiltinNamePatterns,
 	// The pattern for names that don't name one (today: every name).
 	// Later: the project default name format.
-	Pattern: Set(WesternPattern),
+	Pattern: Set(valuecompare.WesternPattern),
 
 	// Affinities: how much a pair of words counts when their roles differ.
 	UntypedAffinity: Set(0.8), // a typed word against an untyped one
@@ -155,27 +105,23 @@ var DefaultNames = NameComparer{
 	Words: DefaultWordRules,
 }
 
-// WesternPattern is the key of the built-in Western name pattern.
-const WesternPattern = "western"
-
 // WesternNamePattern: given names then surname, with GEDCOM-style part types.
 // The first given name leads; middle names and initials count less; titles
 // and surname particles are ignored. Every product part type (namevalues
 // registry) must have a role here.
-var WesternNamePattern = NamePattern{
-	Key: WesternPattern,
-	PartRoles: map[string]NameRole{
-		namevalue.PartTypeSurname:       RoleFamily,
-		namevalue.PartTypeGiven:         RoleGiven,
-		namevalue.PartTypeNick:          RoleNick,
-		namevalue.PartTypeSuffix:        RoleGeneration,
-		namevalue.PartTypePrefix:        RoleIgnored,
-		namevalue.PartTypeSurnamePrefix: RoleIgnored,
-		namevalue.PartTypeUndetermined:  RoleUntyped,
-		"":                              RoleUntyped,
+var WesternNamePattern = valuecompare.NamePattern{
+	PartRoles: map[string]valuecompare.NameRole{
+		namevalue.PartTypeSurname:       valuecompare.RoleFamily,
+		namevalue.PartTypeGiven:         valuecompare.RoleGiven,
+		namevalue.PartTypeNick:          valuecompare.RoleNick,
+		namevalue.PartTypeSuffix:        valuecompare.RoleGeneration,
+		namevalue.PartTypePrefix:        valuecompare.RoleIgnored,
+		namevalue.PartTypeSurnamePrefix: valuecompare.RoleIgnored,
+		namevalue.PartTypeUndetermined:  valuecompare.RoleUntyped,
+		"":                              valuecompare.RoleUntyped,
 	},
 	// What a matched word of each role earns and an unmatched one costs.
-	Weights: NameWeights{
+	Weights: valuecompare.NameWeights{
 		Family:     1.5,
 		FirstGiven: 1,
 		OtherGiven: 0.5, // middle names and initials
@@ -187,7 +133,7 @@ var WesternNamePattern = NamePattern{
 // BuiltinNamePatterns are the patterns that ship in code. A later NamePatterns
 // source reads name_format_profiles instead; nothing else changes.
 var BuiltinNamePatterns = NamePatternSet{
-	WesternPattern: WesternNamePattern,
+	valuecompare.WesternPattern: WesternNamePattern,
 }
 
 // ---------------------------------------------------------------------------

@@ -99,11 +99,6 @@ func TestWesternPatternCoversEveryPartType(t *testing.T) {
 	if _, ok := WesternNamePattern.PartRoles[""]; !ok {
 		t.Error("untyped parts have no role in the Western pattern")
 	}
-	for key, p := range BuiltinNamePatterns {
-		if p.Key != key {
-			t.Errorf("pattern %q is registered as %q", p.Key, key)
-		}
-	}
 	if _, ok := BuiltinNamePatterns.NamePattern(*DefaultNames.Pattern); !ok {
 		t.Errorf("the default pattern %q is not built in", *DefaultNames.Pattern)
 	}

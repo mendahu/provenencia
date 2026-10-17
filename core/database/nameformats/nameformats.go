@@ -13,6 +13,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 const (
@@ -43,7 +44,7 @@ type Profile struct {
 	Origin      string
 	Label       string
 	Description string
-	Pattern     match.NamePattern
+	Pattern     valuecompare.NamePattern
 	Natural     []PartOrder
 	Sorted      []PartOrder
 }
@@ -193,7 +194,7 @@ func LoadID(q Querier, id []byte) (Profile, error) {
 		return Profile{}, err
 	}
 	p.Description = description.String
-	p.Pattern = match.NamePattern{Key: p.Key, PartRoles: map[string]match.NameRole{}}
+	p.Pattern = valuecompare.NamePattern{PartRoles: map[string]valuecompare.NameRole{}}
 	rows, err := q.Query(`SELECT part_type, role FROM name_format_profile_roles WHERE profile_id = ?`, id)
 	if err != nil {
 		return Profile{}, err
@@ -204,7 +205,7 @@ func LoadID(q Querier, id []byte) (Profile, error) {
 			rows.Close()
 			return Profile{}, err
 		}
-		p.Pattern.PartRoles[partType] = match.NameRole(role)
+		p.Pattern.PartRoles[partType] = valuecompare.NameRole(role)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
@@ -265,5 +266,5 @@ func LoadID(q Querier, id []byte) (Profile, error) {
 }
 
 func builtinLoaded() Loaded {
-	return Loaded{Key: match.WesternPattern, Builtin: true}
+	return Loaded{Key: valuecompare.WesternPattern, Builtin: true}
 }

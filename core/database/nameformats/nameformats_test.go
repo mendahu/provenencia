@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 func TestMissingDefaultUsesWestern(t *testing.T) {
@@ -23,7 +24,7 @@ func TestMissingDefaultUsesWestern(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !loaded.Builtin || loaded.Key != match.WesternPattern {
+	if !loaded.Builtin || loaded.Key != valuecompare.WesternPattern {
 		t.Fatalf("got builtin=%v key=%q", loaded.Builtin, loaded.Key)
 	}
 	a := nameValue("Vincent", "van", "Gogh")
@@ -54,7 +55,7 @@ func TestInstallLoadsWesternAndFormats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if loaded.Builtin || loaded.Key != match.WesternPattern {
+	if loaded.Builtin || loaded.Key != valuecompare.WesternPattern {
 		t.Fatalf("got %+v", loaded)
 	}
 	if loaded.Profile.Label != "Western" {

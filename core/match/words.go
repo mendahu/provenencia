@@ -32,7 +32,7 @@ type WordRules struct {
 	Folds *map[rune]string
 	// Aliases are abbreviation and nickname tables loaded from the catalog.
 	// Nil and empty both hit nothing. Every table in the slice is consulted.
-	Aliases *[]AliasTable
+	Aliases *[]valuecompare.AliasTable
 }
 
 // wordRules are WordRules resolved against the registry.
@@ -48,7 +48,7 @@ type wordRules struct {
 // aliasSet is one equivalence set and the roles that may use it.
 type aliasSet struct {
 	tokens map[string]bool
-	roles  map[NameRole]bool
+	roles  map[valuecompare.NameRole]bool
 }
 
 func (r WordRules) resolve(initials bool) wordRules {
@@ -68,10 +68,10 @@ func (r WordRules) resolve(initials bool) wordRules {
 	}
 }
 
-func indexAliases(tables []AliasTable) []aliasSet {
+func indexAliases(tables []valuecompare.AliasTable) []aliasSet {
 	var sets []aliasSet
 	for _, table := range tables {
-		roles := make(map[NameRole]bool, len(table.Roles))
+		roles := make(map[valuecompare.NameRole]bool, len(table.Roles))
 		for _, role := range table.Roles {
 			roles[role] = true
 		}
@@ -91,7 +91,7 @@ func indexAliases(tables []AliasTable) []aliasSet {
 	return sets
 }
 
-func aliasHit(x, y string, roleX, roleY NameRole, sets []aliasSet) bool {
+func aliasHit(x, y string, roleX, roleY valuecompare.NameRole, sets []aliasSet) bool {
 	for _, set := range sets {
 		if set.tokens[x] && set.tokens[y] && set.roles[roleX] && set.roles[roleY] {
 			return true
@@ -143,7 +143,7 @@ func compareForms(a, b string, partial float64, r wordRules) (float64, bool) {
 // different name (Mary ~ Mark). An initial is a lone cased letter ("J"); a
 // lone character in an uncased script (蒋, 王) is a whole word. Empty roles
 // skip the alias tables, so free text does not consult them.
-func wordSimilarity(x, y string, roleX, roleY NameRole, r wordRules) float64 {
+func wordSimilarity(x, y string, roleX, roleY valuecompare.NameRole, r wordRules) float64 {
 	if x == y {
 		return 1
 	}
@@ -295,4 +295,14 @@ func greedyAssign(rows, cols int, at func(i, j int) float64, rowUsed, colUsed []
 		}
 	}
 	return total
+}
+
+// aliasTablesOf is the list on the comparer. Nil and empty both hit nothing.
+func aliasTablesOf(p *[]valuecompare.AliasTable) []valuecompare.AliasTable {
+	if p == nil {
+		return nil
+	}
+	out := make([]valuecompare.AliasTable, len(*p))
+	copy(out, *p)
+	return out
 }
