@@ -257,7 +257,7 @@ func addFanOut(q Querier, b connectrules.Bridge, kin kinship, sums map[string]fa
 func profilePropertyKeys() []string {
 	seen := map[string]bool{}
 	var keys []string
-	for _, kind := range match.ProfiledKinds() {
+	for _, kind := range vocabkey.PrimaryKinds() {
 		profile, ok := match.DefaultProfile(kind)
 		if !ok {
 			continue

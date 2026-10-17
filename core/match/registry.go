@@ -252,11 +252,6 @@ var DefaultIntegers = IntegerComparer{
 // passes no limit.
 const DefaultSuggestionLimit = 10
 
-// ProfiledKinds are the subject type keys DefaultProfile knows.
-func ProfiledKinds() []string {
-	return []string{"person", "event", "place"}
-}
-
 // DefaultProfile is the shipped algorithm for a Subject type key, or false
 // when the type has none. Every consumer (Promote suggestions, merge hints)
 // reads these unless it passes its own Profile.

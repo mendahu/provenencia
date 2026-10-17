@@ -6,6 +6,7 @@ import (
 	"context"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // Kind identifiers for SearchHit.kind (stable across retrieval backends).
@@ -15,9 +16,9 @@ const (
 	KindMetadataField = "metadata_field"
 	// Conclusion handles (S9-34a). Not in the omnibar's default set until
 	// S9-35; callers ask for them with Query.Kinds.
-	KindPerson = "person"
-	KindEvent  = "event"
-	KindPlace  = "place"
+	KindPerson = vocabkey.Person
+	KindEvent  = vocabkey.Event
+	KindPlace  = vocabkey.Place
 )
 
 // Section values match macOS WorkspaceSection raw values.

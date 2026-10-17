@@ -81,7 +81,7 @@ func newFixture(t *testing.T) *fixture {
 	f.source = f.newSource("Register")
 	f.artifact = f.arts[string(f.source.ID)]
 	f.other = f.newSource("Census")
-	for _, k := range []string{"person", "event", "place"} {
+	for _, k := range vocabkey.PrimaryKinds() {
 		st, err := subjecttypes.Lookup(c, k, vocabkey.OriginProvenencia)
 		must(t, err)
 		f.types[k] = st

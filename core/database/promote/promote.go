@@ -29,15 +29,6 @@ var (
 	ErrStale = apperr.New(apperr.CodePromoteStale, apperr.KindConflict)
 )
 
-// primaryKinds are the Subject types Promote starts from. Bridge kinds
-// (participation, location, relationship) are filed by the walk (S9-28).
-var primaryKinds = map[string]bool{"person": true, "event": true, "place": true}
-
-// PrimaryKind reports whether Promote starts from Subjects of this type.
-func PrimaryKind(key, origin string) bool {
-	return origin == vocabkey.OriginProvenencia && primaryKinds[key]
-}
-
 // Input is one Promote step. A nil EntityID mints a new handle; otherwise
 // the Subject joins that handle, which must be unmerged and of its type.
 type Input struct {
@@ -96,7 +87,7 @@ func Save(tx *database.Tx, userID []byte, in Input) (Result, []rowchange.Change,
 	if err != nil {
 		return Result{}, nil, err
 	}
-	if !PrimaryKind(st.Key, st.Origin) {
+	if !vocabkey.IsPrimaryType(st.Key, st.Origin) {
 		return Result{}, nil, ErrUnsupportedType
 	}
 	if _, err := identityclaims.AcceptedEntityForSubjectTx(q, subject.ID); err == nil {

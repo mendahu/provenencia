@@ -52,7 +52,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 			return err
 		}
 		kind := typeKey(types, n.SubjectTypeID)
-		if !promotePrimary(kind, vocabkey.OriginProvenencia) {
+		if !vocabkey.IsPrimaryKind(kind) {
 			return nil
 		}
 		vals, err := handleValues(props, terms, n, namePattern)
@@ -162,7 +162,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 					continue
 				}
 				nKind := typeKey(types, neighbor.SubjectTypeID)
-				if !promotePrimary(nKind, vocabkey.OriginProvenencia) {
+				if !vocabkey.IsPrimaryKind(nKind) {
 					continue
 				}
 				from, to, sig := canonSignature(id, selfKind, n, l, neighbor, props, kin)
@@ -192,10 +192,6 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 		out.Handles = append(out.Handles, h)
 	}
 	return out, nil
-}
-
-func promotePrimary(kind, origin string) bool {
-	return origin == "provenencia" && (kind == "person" || kind == "event" || kind == "place")
 }
 
 func canonSignature(self []byte, selfKind string, n *graphcache.Node, l graphcache.Link, neighbor *graphcache.Node, props map[string]match.Property, kin kinship) (from, to []byte, sig graphalign.EdgeSignature) {

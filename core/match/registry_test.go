@@ -6,6 +6,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // Every comparer setting has a registry value, so nothing falls back to a
@@ -74,7 +75,7 @@ func TestDefaultProfilesUseRegistryComparers(t *testing.T) {
 		"name": DefaultNames, "date": DefaultDates, "start_date": DefaultDates,
 		"end_date": DefaultDates, "toponym": DefaultText,
 	}
-	for _, kind := range []string{"person", "event", "place"} {
+	for _, kind := range vocabkey.PrimaryKinds() {
 		p, ok := DefaultProfile(kind)
 		if !ok {
 			t.Fatalf("no %s profile", kind)
