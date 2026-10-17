@@ -201,15 +201,15 @@ func InsertManyTx(tx *sql.Tx, citationID []byte, inputs []Input, opts InsertOpti
 }
 
 type resolvedValue struct {
-	Text                   string
-	Integer                *int64
-	DateID, NameID         []byte
-	SubjectID, TermID      []byte
-	DepictionID            []byte
-	DateChange, NameChange *rowchange.Change
-	// DepictionChanges are the image file create (when new) and the
-	// depiction_value create, in that order.
-	DepictionChanges []rowchange.Change
+	Text              string
+	Integer           *int64
+	DateID, NameID    []byte
+	SubjectID, TermID []byte
+	DepictionID       []byte
+	// ValueChanges are the audit changes for the value rows this resolve wrote
+	// (a date or name create or update; a depiction's image file create, when
+	// new, then its depiction_value create), in write order.
+	ValueChanges []rowchange.Change
 }
 
 // requireSubjectSource rejects an observation whose subject is homed to a
@@ -339,13 +339,7 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 			"value_depiction_id": uuidJSON(resolved.DepictionID),
 		}),
 	}}
-	if resolved.DateChange != nil {
-		changes = append(changes, *resolved.DateChange)
-	}
-	if resolved.NameChange != nil {
-		changes = append(changes, *resolved.NameChange)
-	}
-	changes = append(changes, resolved.DepictionChanges...)
+	changes = append(changes, resolved.ValueChanges...)
 
 	for _, body := range in.Notes {
 		body = strings.TrimSpace(body)
@@ -424,17 +418,18 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 				}
 				next := *in.Date
 				next.ID = append([]byte(nil), existing.ValueDateID...)
-				return resolvedValue{
-					DateID:     append([]byte(nil), existing.ValueDateID...),
-					DateChange: dateUpdateChange(prev, next),
-				}, nil
+				resolved := resolvedValue{DateID: append([]byte(nil), existing.ValueDateID...)}
+				if ch := dateUpdateChange(prev, next); ch != nil {
+					resolved.ValueChanges = []rowchange.Change{*ch}
+				}
+				return resolved, nil
 			}
 			dateID, err := datevalues.InsertTx(tx, *in.Date)
 			if err != nil {
 				return resolvedValue{}, err
 			}
 			ch := dateCreateChange(dateID, *in.Date)
-			return resolvedValue{DateID: dateID, DateChange: &ch}, nil
+			return resolvedValue{DateID: dateID, ValueChanges: []rowchange.Change{ch}}, nil
 		}
 		if len(in.ValueDateID) != 16 {
 			return resolvedValue{}, ErrInvalid
@@ -455,17 +450,18 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 				}
 				next := *in.Name
 				next.ID = append([]byte(nil), existing.ValueNameID...)
-				return resolvedValue{
-					NameID:     append([]byte(nil), existing.ValueNameID...),
-					NameChange: nameUpdateChange(prev, next),
-				}, nil
+				resolved := resolvedValue{NameID: append([]byte(nil), existing.ValueNameID...)}
+				if ch := nameUpdateChange(prev, next); ch != nil {
+					resolved.ValueChanges = []rowchange.Change{*ch}
+				}
+				return resolved, nil
 			}
 			nameID, err := namevalues.InsertTx(tx, *in.Name)
 			if err != nil {
 				return resolvedValue{}, err
 			}
 			ch := nameCreateChange(nameID, *in.Name)
-			return resolvedValue{NameID: nameID, NameChange: &ch}, nil
+			return resolvedValue{NameID: nameID, ValueChanges: []rowchange.Change{ch}}, nil
 		}
 		if len(in.ValueNameID) != 16 {
 			return resolvedValue{}, ErrInvalid

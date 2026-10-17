@@ -65,7 +65,7 @@ func resolveDepiction(tx *sql.Tx, citationID []byte, d *DepictionInput) (resolve
 	}
 	v.RegionJSON = strings.TrimSpace(v.RegionJSON)
 	changes := append(fileChanges, depictionCreateChange(id, v))
-	return resolvedValue{DepictionID: id, DepictionChanges: changes}, nil
+	return resolvedValue{DepictionID: id, ValueChanges: changes}, nil
 }
 
 func depictionCreateChange(id []byte, v depictionvalues.Value) rowchange.Change {

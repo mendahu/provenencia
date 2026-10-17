@@ -132,13 +132,7 @@ func updateOne(tx *database.Tx, citationID []byte, prev Observation, in Input) (
 	obs.ValueTermID = append([]byte(nil), resolved.TermID...)
 	obs.ValueDepictionID = append([]byte(nil), resolved.DepictionID...)
 	changes := extra
-	if resolved.DateChange != nil {
-		changes = append(changes, *resolved.DateChange)
-	}
-	if resolved.NameChange != nil {
-		changes = append(changes, *resolved.NameChange)
-	}
-	changes = append(changes, resolved.DepictionChanges...)
+	changes = append(changes, resolved.ValueChanges...)
 	if ch := observationUpdateChange(prev, obs); ch != nil {
 		changes = append([]rowchange.Change{*ch}, changes...)
 	}
