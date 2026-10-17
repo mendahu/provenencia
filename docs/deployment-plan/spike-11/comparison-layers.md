@@ -171,7 +171,7 @@ type PartMatch struct {
 }
 ```
 
-- **`Cause` is a shared vocabulary of codes:** `exact`, `case`, `fold`, `alias`, `abbreviation`, `initial`, `spelling`, `precision`, `missing_part`, `overlap`, `gap`, `beyond_tolerance`, `generation_conflict`, `empty`, `phrase_only`, `no_match` (nothing in common), `too_long` (text with more words than the alignment may compare), `order` (text whose shared words are out of order), `unsupported` (no comparer, or two value types). UI copy, reason codes and labeler features are all keyed on these.
+- **`Cause` is a shared vocabulary of codes:** `exact`, `case`, `fold`, `alias`, `abbreviation`, `initial`, `spelling`, `precision`, `missing_part`, `overlap`, `gap`, `beyond_tolerance`, `generation_conflict`, `empty`, `phrase_only`, `below_minimum` (a pair close enough to be `Near` but under its type's minimum, so `Different`), `no_match` (nothing in common), `too_long` (text with more words than the alignment may compare), `order` (text whose shared words are out of order), `unsupported` (no comparer, or two value types). UI copy, reason codes and labeler features are all keyed on these.
 - **`Parts` explains the match.** Which words or ends paired is what the UI shows and what the labeler records as features.
 - **No strings to parse.** The display text is for showing; logic reads the codes.
 - **Echoes the callers' value refs.** Each value can carry an opaque ref (an Observation id) that the layers never read and `Detail` hands back, so the claim evidence view knows exactly which Observations spoke without the layers knowing about the catalog. Segment comparison does the same for a whole segment: bridge ends, role or term, and the neighbor's agreeing values.
@@ -451,13 +451,13 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 - **A normalized key per value type** beside `Compare`: `valuecompare.Key(v, level)`, where `level` is `Same` or `Equivalent`. Two values have the same key exactly when `Compare` says that relation. One function then serves reconciler grouping, search index dedupe, term dedupe and sort-independent equality, instead of the six text rules there are today.
 - **Leave-one-out profiles:** `subjectprofile.Build(entity, Excluding(member))`. "Does this member still fit the rest?" is the weak-claim review, and costs one option.
 - **Profiles on both sides:** because a profile is Subject-shaped, entity-vs-entity (merge hints) is layer 3 on two profiles, with no new code.
-- **The date window primitives** (`Overlaps`, `Contains`, `Intersect`, `HoldsAt`) move into value compare's date module, so place chains and reconciliation use the same day-precision rules as matching.
+- **The date window primitives** (`Window` with `Overlaps`, `Contains`, `Intersect`) moved into value compare in S11-04, with `AboutEnds` and `EndsWindow`; `DateBounds`, `WindowOfDate`, `PeriodWindow` and `LinkMembership` follow in S11-06, so place chains and reconciliation use the same day-precision rules as matching.
 
 **Duplicates to retire:**
 
 | Duplicate | Replaced by |
 |---|---|
-| `autoreconcile` `textKey`, `termKey`, `dateKey`, `subsumes` / `partFits`, `IsInitial`, `SpellingSimilarity`, `EditDistance`, `NormalizeForm`, `DateEnds` and windows | Value compare (the reconciler imports it) |
+| `autoreconcile` `textKey`, `termKey`, `dateKey`, `subsumes` / `partFits`, `IsInitial`, `SpellingSimilarity`, `EditDistance`, `NormalizeForm`, `DateEnds` and windows (`DateEnds` and windows moved in S11-04) | Value compare (the reconciler imports it) |
 | `autoreconcile.Compatible` | Value compare's relation, under the reconciler's own grouping policy (rule 7) |
 | `promotealign.pairExhibits` (its own pairing; ignores negatives and cardinality) | Property compare's speaking pair |
 | `match/pairs.go` leaders and weighting (`weigh`, `pairValues`) | The strict profile; negatives and cardinality move to property compare |

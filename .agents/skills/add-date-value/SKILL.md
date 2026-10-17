@@ -19,6 +19,7 @@ New **columns** need a catalog migration first (`.agents/skills/add-catalog-migr
 core/datevalue/              # pure: no core/database import
   datevalue.go               # Value, kinds, qualifiers, ErrInvalid, Validate
   display.go                 # CompactDisplay
+  calendar.go                # DaysFromCivil, DaysInMonth, BoundDays, YearLine, AddMonths, AddDays
   validate_test.go
   display_test.go
 core/database/datevalues/    # queries
@@ -27,6 +28,8 @@ core/database/datevalues/    # queries
 ```
 
 Types and checks: `datevalue.Value`, `datevalue.Validate(v)`, `datevalue.CompactDisplay(v)`. Call sites for storage: `datevalues.Insert(c, v)` / `datevalues.Lookup(c, id)`. Minted id is UUIDv7 BLOB. Domain errors: `datevalue.ErrInvalid` (`datevalues.invalid`). Matching layers import `core/datevalue`, never `core/database/datevalues`.
+
+Calendar arithmetic (day numbers, month lengths, the days a bound covers) lives in `core/datevalue/calendar.go`; the date ends and day windows that compare dates live in `core/valuecompare/datewindow.go` (`DateEnds`, `AboutEnds`, `Window`). Do not write a second calendar.
 
 `TestLayerPackages` in `core/matchregistry/guard_test.go` keeps this package pure; a new pure value package adds a row.
 
