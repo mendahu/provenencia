@@ -306,6 +306,21 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 **Graph alignment (layer 6)** holds everything that searches or decides: seeding and candidates (with the property-only fallback), listing segments around candidate pairs, one-to-one, propagation (each accepted pair becomes an anchor), conflicts, and chains. It replaces the three walk-like passes today (walk, fallback re-walk, refinement) with one defined procedure. **Chains come from the walk:** an accepted pair is an anchor whose own segments then count, so a double or triple segment match is several well-supported Subjects, not a multiplied score.
 
+### Layer 6 procedure
+
+**Decided (2026-10-17).** A pair is compared only when something cheap put it forward: a shared shortlist key, or a link to an accepted pair. Nothing is compared just because it exists. A Source with 100 Subjects stays at a few thousand pure comparisons, not hundreds of thousands. Terms are in § Vocabulary.
+
+1. **Shortlist.** For each Subject, look up research handles that share a shortlist key. Keys are declared per kind in the registry and built with value compare's `Key`, so shortlisting and comparison agree on "the same". Examples: person, name words (not initials); event, type + year bucket within tolerance; place, toponym. The index is one key → handles map per kind on the in-memory catalog graph (`graphcache`), built once and dropped with a handle commit, like the stats. Guarantee: shortlisting never misses a pair value compare would call `Same` or `Equivalent` (aliases share a key).
+2. **Score and keep the top K.** Entity comparison (layer 4) on shortlisted handles; keep the best K per Subject (registry, about 5). Nominated handles skip shortlisting.
+3. **One queue.** Every candidate enters one best-first queue at the start, scored on its properties. Anchors (decided rows, already-promoted Subjects) add segment evidence to their neighbors' entries. There is no separate fallback pass and no second walk: an isolated Subject is a candidate that never gets link support. **The answer does not depend on where the walk starts.**
+4. **Accept, then compare segments around the pair only.** Pop the best pair; accept it if it clears the accept bar and keeps one-to-one. On accept, run segment comparison (layer 5) for each layer neighbor of the Subject against each corresponding research neighbor of the handle: degree × degree, a handful. Re-score and re-queue what changed; skip stale queue entries by version.
+5. **Settle dirty pairs.** A pair is dirty when a neighbor was placed, moved or released after it was scored. When the queue empties, re-score only dirty pairs. A pair that falls under the bar, or that a rival beats by the settle margin, is released and re-queued, which makes its neighbors dirty. Changes ripple only as far as they reach. A round cap is the safety net. This replaces today's refinement loop (`refineOneHop`), which re-scores everything each round. Each move has a reason ("Alice moved because Gracie was placed"), which feeds the page's "updated because…" mark.
+6. **Remember results across re-runs: last, and only if a test shows it's needed.** Layers 1–4 are pure in (Subject values, handle values), and a decision changes placements, not values, so their results could be memoized while the Promote page is open. This is the final step of the plan, gated by a performance test on a large Source. No pre-optimizing: if the test passes without it, it isn't built. If built, an invariant checks that cached and uncached runs give identical proposals.
+
+**Registry knobs this adds:** shortlist keys per kind, K, the accept bar, the settle margin and round cap.
+
+**Invariants** (from [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md)): order doesn't matter, decided rows don't move, stable on re-run, and the same proposal whether or not any row starts decided, given the same decisions.
+
 ### Lifespan: a derived property for people
 
 **Decided (2026-10-16): lifespan applies to people only.** Person matching is the chief job, and events and places differ enough that a lifespan wouldn't help them. Dates on a person's neighbors constrain each other. An entity that died before the Subject was born is not that Subject, even when neither side has the other's event.
@@ -434,4 +449,5 @@ Flow: shortlist or nominate → score → keep the top K as candidates → accep
 
 - **How far neighbor credit travels.** Today credit stops at one hop to avoid circular evidence (A supports B supports A). Start with one hop plus chains from the walk, or allow damped multi-hop credit with cycles blocked? Goldens where a triple chain should win will show whether one hop under-rewards chains.
 - **Bridge cardinality's shape** in the registry (more thoughts to come).
+- **Misspellings and shortlisting.** "Robnis" vs "Robins" is `Near` and shares no exact key, so it's missed unless another key or a link catches it. Start by accepting the gap (links catch most of it) and let the sparse-data tier measure it; a coarse key (surname consonant skeleton, `rbns`) is the fallback.
 - **The reconciler's grouping rules.** Which relations make two values "show once" is the reconciler's call (rule 7), designed with its own PR. Today's disagreements to resolve there: `Montréal` / `Montreal` and `Jim` / `James` agree in matching but don't group or pin; `J. Robins` / `James Robins` groups but only scores partial.
