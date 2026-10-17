@@ -19,9 +19,9 @@ matchregistry ──────────────────────
 | # | Layer | Package | Input | Output | Registry section |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Value compare | `core/valuecompare` | Two values of one value type | A relation, a similarity from 0 to 1, and a detail saying which parts paired | `value` |
-| 2 | Property compare | `core/propertycompare` | Every value two Subjects hold for one property, with the property's value type and cardinality | An outcome (agree, partial, conflict, unknown) and the speaking pair | `value` (the `Near` minimums) |
-| 3 | Subject compare | `core/subjectcompare` | Two Subjects of one type, with every property each holds | A similarity and evidence in points | `subject`, `lifespan` |
-| 4 | Entity compare | `core/subjectprofile` (`Build`) with `core/subjectcompare` | A Subject and an entity's reconciled conclusion, built into a Subject-shaped profile | A similarity and evidence in points | `subject`, `lifespan` |
+| 2 | Property compare | `core/propertycompare` | Every value two Subjects hold for one property, with the property's value type and cardinality | An outcome (agree, partial, conflict, unknown) and the speaking pair | `value` (passed through to layer 1) |
+| 3 | Subject compare | `core/subjectcompare` | Two Subjects of one type, with every property each holds | A similarity and evidence in points | `subject` |
+| 4 | Entity compare | `core/subjectprofile` (`Build`) with `core/subjectcompare` | A Subject and an entity's reconciled conclusion, built into a Subject-shaped profile | A similarity and evidence in points | `subject` |
 | 5 | Segment compare | `core/segmentcompare` | A segment on the layer and a segment in the research graph | An outcome, a similarity, evidence, and a detail | `segment`, `subject` |
 | 6 | Graph alignment | `core/graphalign` | The layer's Subjects and the research graph's handles | Rows: target, band, contested mark, reasons, alternatives | `alignment`, `segment`, `subject` |
 
@@ -34,12 +34,10 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 
 1. **Value compare.** The two names are `Same`; the two dates are `Same`; the two event types are `Same`.
 2. **Property compare.** Name: relation `Same` on a single-value property, so the outcome is agree.
-3. **Subject compare, Gracie.** `subject.person.name.Agree` is 2.5, so her own evidence is 2.5.
+3. **Subject compare, Gracie.** `subject.person.name.Agree` is 2.5. Both sides also derive a lifespan, "born 1 May 1901", from their birth; the windows are consistent, so `subject.person.lifespan.Agree` 0.1 counts. Her own evidence is 2.5 + 0.1 = 2.6.
 4. **Subject compare, the birth.** Event type agrees: `subject.event.event_type.Agree` 0.5. The date agrees: `subject.event.date.Agree` 2. The birth's own evidence is 0.5 + 2 = 2.5.
-5. **Segment compare.** Gracie is the subject of the birth, and `segment.Cardinality.birth` is `one`, so a matching neighbor earns `segment.OneSupport` 1.5 plus `segment.OneCredit` 0.5 of the neighbor's own evidence: 1.5 + 0.5 × 2.5 = 2.75.
-6. **Graph alignment.** Total evidence is 2.5 + 2.75 = 5.25. That clears `alignment.AcceptBar` (2), so the walk places the pair, and it is at least `alignment.Bands.Strong` (4), so the band is strong. Nothing conflicted, so the row is not contested.
-
-With only the birth on one side there is no lifespan conflict, and the lifespan's `subject.person.lifespan.Agree` of 0.1 is not counted, since one side has no lifespan.
+5. **Segment compare.** Gracie is the subject of the birth, and `segment.Cardinality.birth` is `one`, so a matching neighbor earns `segment.OneSupport` 1.5 plus `segment.OneCredit` 0.5 of the birth's own evidence: 1.5 + 0.5 × 2.5 = 2.75.
+6. **Graph alignment.** Total evidence is 2.6 + 2.75 = 5.35. That clears `alignment.AcceptBar` (2), so the walk places the pair, and it is at least `alignment.Bands.Strong` (4), so the band is strong. Nothing conflicted, so the row is not contested.
 
 ## Glossary
 
@@ -89,7 +87,7 @@ With only the birth on one side there is no lifespan conflict, and the lifespan'
 | **band** | Strong, medium, weak or no match, for a whole row, from its evidence |
 | **contested** | A visible mark on a row whose comparisons include a conflict, whatever its band |
 | **match registry** | The one package holding every matching tunable, one section per layer group |
-| **knob** | One registry field a researcher or developer can tune |
+| **knob** | One registry field a developer can tune; changing it is one edit in the registry |
 
 ## Retired words
 
@@ -112,7 +110,7 @@ Both vocabularies are in the code for several PRs. These old words go.
 
 ## Knob inventory
 
-Keys are dotted paths of the planned registry: `section.Group.Field`. The Go registry is the only source of a current value. Start is the value a knob started with. The registry's drift guard compares keys only: every registry field has a row, and every row is a field. Tuning a knob is one edit, in the registry.
+Keys are dotted paths of the planned registry: `section.Group.Field`. A Capitalized part is a registry field. A lowercase part is a typed map key: a Subject kind, a property key, or a bridge or participation key; a pair compared together is keyed by its lead property (`sex_at_birth` covers `gender`). The `evidence` section is the claim evidence sheet's line policy ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md)), not evidence points; the Promote evidence sheet reads it, no comparison layer does. The Go registry is the only source of a current value. Start is the value a knob started with. The registry's drift guard compares keys only: every registry field has a row, and every row is a field. Tuning a knob is one edit, in the registry.
 
 | Key | Start | Source | Changes |
 | --- | --- | --- | --- |
@@ -151,10 +149,15 @@ Keys are dotted paths of the planned registry: `section.Group.Field`. The Go reg
 | `value.Integers.Tolerance` | 0 | `DefaultIntegers.Tolerance` | Most an integer pair may differ and be `Near` |
 | `subject.person.name.Agree` | 2.5 | `graphalign` name `PropertyScale.Weight` | Points for a matching name |
 | `subject.person.name.Conflict` | 3 | `graphalign` name `PropertyScale.Contradiction` | Points lost for a different name |
-| `subject.person.sex.Agree` | 0.6 | `graphalign` sex / gender `PropertyScale.Weight` | Points for matching sex or gender (one pair) |
-| `subject.person.sex.Conflict` | 1 | `graphalign` sex / gender `PropertyScale.Contradiction` | Points lost when they differ |
+| `subject.person.sex_at_birth.Agree` | 0.6 | `graphalign` sex / gender `PropertyScale.Weight` | Points for matching sex or gender (the `sex_at_birth` / `gender` pair) |
+| `subject.person.sex_at_birth.Conflict` | 1 | `graphalign` sex / gender `PropertyScale.Contradiction` | Points lost when they differ (the `sex_at_birth` / `gender` pair) |
 | `subject.person.lifespan.Agree` | 0.1 | estimate: near zero, the dates are already counted through their segments | Points for overlapping lifespans |
 | `subject.person.lifespan.Conflict` | 20 | estimate: impossible together, must never recover | Points lost for impossible lifespans |
+| `subject.person.lifespan.MaxYears` | 110 | estimate: longest plausible human life | Born to died, at most |
+| `subject.person.lifespan.ParentMinYears` | 12 | estimate: the design's "about 12–60 years" | Youngest age at a child's birth |
+| `subject.person.lifespan.ParentMaxYears` | 60 | estimate: the design's "about 12–60 years" | Oldest age at a child's birth |
+| `subject.person.lifespan.MotherMaxYears` | 50 | estimate: "narrower for mothers"; used only when the parent's sex is recorded female | Oldest mother at a child's birth |
+| `subject.person.lifespan.MarriageMinYears` | 14 | estimate: the design's "roughly 14 or older" | Youngest age at a marriage |
 | `subject.event.event_type.Agree` | 0.5 | estimate: generic, says little alone (decided low) | Points for the same event type |
 | `subject.event.event_type.Conflict` | 20 | estimate: a birth is never a death | Points lost for different event types |
 | `subject.event.date.Agree` | 2 | estimate: today's cold-start frequency weight ln(0.85 / 0.1) ≈ 2.1, rounded | Points for matching dates (one pair with start / end) |
@@ -162,12 +165,7 @@ Keys are dotted paths of the planned registry: `section.Group.Field`. The Go reg
 | `subject.place.toponym.Agree` | 3 | estimate: today's cold-start ln(0.9 / 0.1) + toponym `PropertyAgreement` 1 ≈ 3.2, rounded, so a toponym alone reads medium | A matching toponym alone reads medium |
 | `subject.place.toponym.Conflict` | 3 | `graphalign` `DefaultConfig.ConflictPenalty` | Points lost for different toponyms |
 | `subject.Pairs.event.date` | `date` with `start_date` / `end_date` | `match.DatePeriods` | Compared as one period |
-| `subject.Pairs.person.sex` | `sex_at_birth` with `gender` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-3-subject-comparison)) | Compared as one pair |
-| `lifespan.MaxYears` | 110 | estimate: longest plausible human life | Born to died, at most |
-| `lifespan.ParentMinYears` | 12 | estimate: the design's "about 12–60 years" | Youngest age at a child's birth |
-| `lifespan.ParentMaxYears` | 60 | estimate: the design's "about 12–60 years" | Oldest age at a child's birth |
-| `lifespan.MotherMaxYears` | 50 | estimate: "narrower for mothers"; used only when the parent's sex is recorded female | Oldest mother at a child's birth |
-| `lifespan.MarriageMinYears` | 14 | estimate: the design's "roughly 14 or older" | Youngest age at a marriage |
+| `subject.Pairs.person.sex_at_birth` | `sex_at_birth` with `gender` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-3-subject-comparison)) | Compared as one pair |
 | `segment.OneSupport` | 1.5 | `graphalign` `EdgeSupportLow` | Points for a matching one-cardinality link (birth, death) |
 | `segment.OneCredit` | 0.5 | `graphalign` `NeighborCreditLow` | Share of the neighbor's own evidence passed on, one-cardinality |
 | `segment.OtherSupport` | 0.25 | `graphalign` `EdgeSupportHigh` | Points for any other matching link |
