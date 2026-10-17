@@ -2,16 +2,9 @@
 // part-type registry and validation live in the pure package core/namevalue;
 // this package holds the queries.
 //
-// A NameValue always has a full-form normalized reading (`form`). Ordered
-// parts are optional. namevalue.Part `type` is a product-known key from the compiled
-// registry (see registry.go) when set; empty type means an untyped segment.
-// Insert rejects unknown non-empty types. User-minted part-type vocabulary
-// (DB rows) is deferred — keep DDL as open TEXT.
-//
 // NameValues are value objects (UUID for persistence only). Observation saves
 // call UpdateTx to rewrite a row an observation already points at, so
 // value_name_id stays stable. Other callers attach a new row.
-// Format profiles and project defaults live elsewhere (structured-name-model §4).
 package namevalues
 
 import (
