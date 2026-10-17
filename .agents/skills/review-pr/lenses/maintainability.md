@@ -146,6 +146,12 @@ one this code will be touched by: does this shape give it a slot (a registry
 entry, an enum case, a column already there), or will that PR have to undo or
 fork this one? Only futures that are written down count.
 
+Count what the next named add must touch. A per-type field, `case`, or
+nil-checked append that every new type repeats (`DateChange`, `NameChange`,
+`DepictionChanges`, each read by the same append blocks), where one list or
+one entry would serve them all, is a fork the next add pays for. When the map
+or an idea file names that next type, it is a **blocker**.
+
 ### Q9. State and caches
 
 One owner per concern; a parent machine instead of sibling ping-pong; caches
@@ -247,23 +253,38 @@ that way is the PR that adds the second caller.
   wall clock, or the current time zone implicitly cannot be tested for every
   style, so callers re-implement it to make it testable. Context is a
   parameter with a `.current` default.
+- **Inside one package too.** A second way to do a job the package already
+  does is a second mechanism even when it is private and short: a private
+  `parse` that unmarshals the same format beside the exported `Validate`, a
+  second scan of the same row shape, a local trim or normalize rule beside the
+  one the store applies. The next rule added to one path (a version check, a
+  size limit) silently misses the other.
 - **The fix shape.** Extend the one mechanism (a style case, a context
-  parameter, a declared cache hook) and move the existing callers onto it in
-  the same PR. Delete what that makes dead (Q7).
+  parameter, a declared cache hook, a split of the exported function into its
+  steps) and move the existing callers onto it in the same PR. Delete what that
+  makes dead (Q7).
 
 ## Severity in this lens
 
 | Severity | Use when |
 | --- | --- |
-| **blocker** | Debt that is expensive to undo once merged: wrong layer for domain logic, a second mechanism beside an existing one (Q14), including a small one shaped for one screen, bypassing a registry CI expects, a schema shape the next named add must fight, a split brain that can show the wrong row, a cache that reloads what the write already reported (Q9), a cost on a common path that grows with the catalog or its history (rate it with the performance lens) |
+| **blocker** | Debt that is expensive to undo once merged: wrong layer for domain logic; a second mechanism beside an existing one (Q14), including a small or private one in the same package and one shaped for one screen; bypassing a registry CI expects; a schema shape, or a per-type field or case, that the next named add must fight or repeat (Q8); a split brain that can show the wrong row; a cache that reloads what the write already reported (Q9); a cost on a common path that grows with the catalog or its history (rate it with the performance lens) |
 | **major** | A clear structural win in this PR's files: reuse an existing helper, delete what this made dead, update the skill it made false |
 | **minor** | Naming polish, a small extraction, a comment |
+| **nit** | Taste |
+
+When unsure between two severities, pick the higher one; the orchestrator can
+lower it with evidence, but cannot see a problem rated below its weight.
 
 **Precedent is not a mitigation.** Rate a finding by the debt after merge. A
 change that copies, extends, or widens an existing weak pattern adds to it;
 "the code already did this" lowers nothing. Say which existing code shares
 the problem so the fix plan can include it or log it.
-| **nit** | Taste |
+
+**The plan is not a mitigation either.** A Decision that names the weaker
+shape (three per-type fields, a private decoder) does not lower the severity.
+Rate the debt, cite the Decision it contradicts, and the orchestrator takes it
+to the user (see [`review-pr`](../SKILL.md) "Rate the code as merged").
 
 ## Known traps
 
@@ -280,6 +301,8 @@ the rule; do not restate it.
 - New files in legacy `DesignSystem/Components/Core|Forms|Research/` or loose at a layer root — Q4.
 - A screen-shaped value type that formats beside an existing shared formatter — Q14.
 - Invalidating a list to move one field the write already reported — Q9.
+- A private decoder beside the package's exported validator for the same format (S10-32 `locator.parse` beside `Validate`) — Q14.
+- One result field per value type, each with its own append, when the map names more types (S10-32 `DateChange` / `NameChange` / `DepictionChanges`) — Q8.
 
 ## Good finding shape
 

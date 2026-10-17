@@ -134,7 +134,7 @@ IDs: `M-#` maintainability, `X-#` executability, `K-#` map.
 
 | Severity | Means |
 | --- | --- |
-| **blocker** | Adds debt that is expensive to undo later (wrong layer, a second mechanism beside an existing one, bypassing a registry, a schema shape the next named add must fight), or the implementer cannot proceed without a decision. Must be answered before Planned |
+| **blocker** | Adds debt that is expensive to undo later (wrong layer, a second mechanism beside an existing one even inside one package, bypassing a registry, a schema shape or per-type field the next named add must fight or repeat), a Decision or Out line that defers a known defect in code this PR adds to the later PR that will first reach it, or the implementer cannot proceed without a decision. Must be answered before Planned |
 | **major** | A clear, cheap win in this PR's files. Fixed, or declined with evidence |
 | **minor** | A judgment call. The writer may decline with one line |
 | **nit** | Taste. Logged, not answered |
