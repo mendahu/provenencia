@@ -1,7 +1,7 @@
 # Ship log — S11-01 One-page matching model
 
 **Plan:** [`S11-01-matching-model.md`](S11-01-matching-model.md) · **Branch:** `claude/modest-gates-tunm8o` (session-designated; plan header names `s11-01-matching-model`) · **PR:** #432
-**State:** fixing 1
+**State:** review 2
 
 Gate note: this ship runs in a Linux cloud session. `scripts/check-pr.sh` runs every check except `xcode-test` (macOS only); the PR is docs only, and CI runs the Xcode tests on the non-draft PR.
 
@@ -53,7 +53,7 @@ Check: the numbers 2.6, 2.75, 5.35 appear; "not counted" does not.
 
 **F-4 — Narrow the banners** (from UX-3, MNT-5; Q3)
 Files: `docs/matching.md`, `docs/promote-graph-alignment.md` (top banner only; section markers unchanged), plan STEP-6.
-Do: `matching.md`: "**Spike 11 replaces this page.** The target model is [matching-model.md](matching-model.md); until then this page describes the running code." `promote-graph-alignment.md`: "**Spike 11 replaces §4.1, §5, §6 and §12.** The target model is [matching-model.md](matching-model.md); until then those sections describe the running code." Keep the existing link form used there.
+Do: `matching.md`: "**Spike 11 replaces this page.** The target model is `[matching-model.md](matching-model.md)`; until then this page describes the running code." `promote-graph-alignment.md`: "**Spike 11 replaces §4.1, §5, §6 and §12.** The target model is `[matching-model.md](matching-model.md)`; until then those sections describe the running code." Keep the existing link form used there.
 
 **F-5 — Glossary: a developer tunes knobs** (from UX-2)
 Files: `docs/matching-model.md` glossary.
@@ -61,10 +61,13 @@ Do: knob → "One registry field a developer can tune; changing it is one edit i
 
 **F-6 — Say what the `evidence` section is** (from MNT-4)
 Files: `docs/matching-model.md`.
-Do: one sentence above the inventory (or in the key description): "The `evidence` section is the claim evidence sheet's line policy ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md)), not evidence points; the Promote evidence sheet reads it, no comparison layer does."
+Do: one sentence above the inventory (or in the key description): "The `evidence` section is the claim evidence sheet's line policy (link to `claim-evidence.md`), not evidence points; the Promote evidence sheet reads it, no comparison layer does."
 
 **F-7 — One home for the shortlisting terms** (from MNT-3)
 Files: `docs/deployment-plan/spike-11/comparison-layers.md` lines ~494–506.
 Do: replace the five-row shortlisting definitions table with one line linking to the model's glossary (`../../matching-model.md#glossary`); keep the "Agreed 2026-10-17 … we don't use that word" decision sentence. Check that the model's glossary has all five terms.
 
 Check for the round: `scripts/check-pr.sh` PASS bar `xcode-test`; every link in changed files resolves.
+
+## Round 1 — fix
+Head `8fd64d4`. Gate PASS (bar `xcode-test`, not macOS); links in changed docs resolve. F-1 – F-7 done. Deviations: plan STEP-6 writes the banner text without a link (plan-docs cannot resolve it from the plan's folder); worked example step 5 says "birth's own evidence".
