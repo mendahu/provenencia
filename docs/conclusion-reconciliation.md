@@ -129,27 +129,30 @@ Each module answers three questions:
 - **Fold?** When does a less specific value fold into a more specific one?
 - **Merge?** How does a group become one displayed value?
 
+**Grouping policy (decided 2026-10-17, S11-06).** Modules decide sameness with value compare ([`matching-model.md`](matching-model.md) layer 1): values group on `Same` and fold on `Contains`; `Equivalent` (an accent fold, an alias) never groups or folds. Terms, subjects and depictions keep their catalog identity.
+
 | Value type | Same value | Fold | Merge | No evidence |
 | --- | --- | --- | --- | --- |
-| **text** | equal after trimming whitespace, ignoring case (*York* = *york*) | none | the best-ranked member's text | empty |
-| **integer** | equal | none | the value | — |
+| **text** | the same words, ignoring case, punctuation and spacing (value compare's `Same`; *Sainte-Anne* = *Sainte Anne*); accents count (*Montréal*, *Montreal* are two) | none | the best-ranked member's text | empty |
+| **integer** | equal (value compare's `Same`) | none | the value | — |
 | **term** | same term | none | the term | terms flagged `property_terms.neutral` (seeded on *unknown*, *indeterminate*) |
 | **subject** | candidate Subjects map to the **same handle**; unpromoted Subjects drop out | none | the handle (an edge of the canonical graph) | unpromoted |
-| **date** | §7.1 | precision containment | §7.1 | empty |
-| **name** | §7.2 | subsumption per part type | §7.2 | no parts |
+| **date** | the same span of days (§7.1) | span containment | §7.1 | empty |
+| **name** | §7.2 | containment per part type (§7.2) | §7.2 | no parts |
 | **depiction** | the same image File (the same pixels) | none | the image | an image `depictionvalues.Readable` refuses |
 
 A depiction's value is its image File; the loader reads it through `depictionvalues.Readable`, and the cache stores it as `value_image_file_id`. `likeness` is `multiple`, so a person's images form a gallery, which shows `kept` and `weak` values. The Person page lists no depiction field.
 
-The same *same value* test (`autoreconcile.Compatible`) decides which Promote comparisons are pinned ([`promote-graph-alignment.md`](promote-graph-alignment.md) §6), so a pin and a Person page never disagree about whether two values match. Scoring uses matching's comparers, so a partial resemblance can raise a match without being pinned.
+The same *same value* test (`autoreconcile.Compatible`) decides which Promote comparisons are pinned ([`promote-graph-alignment.md`](promote-graph-alignment.md) §6), so a pin and a Person page never disagree about whether two values match. Scoring uses value compare's similarity, so a partial resemblance can raise a match without being pinned.
 
 ## 7.1 Dates
 
 From [`structured-date-model.md`](structured-date-model.md): missing components are unknown, never zero.
 
-- Equal structured dates merge.
+- Dates with the same span merge.
 - A wider point folds into a narrower one it contains (`MAY 1985` + `14 MAY 1985` → `14 MAY 1985`).
-- `ABT` uses the same span as an unqualified point of that precision (about 1985 overlaps May 1985 and does not reach 1986). `BEF` is open on the low side through the end of its bound; `AFT` is open on the high side from the start of its bound. A range is the window from the start of its first bound to the end of its second. Qualifiers and ranges fold into the narrowest closed value they contain.
+- `ABT` is a range of one unit of its most precise part, as in matching (`ABT 1985` is 1984 – 1986, so it folds into `1986`). `BEF` is open on the low side through the end of its bound; `AFT` open on the high side from the start of its bound. A range is the window from the start of its first bound to the end of its second; a range with one side is open on the other. Clock times and calendars are not compared. Qualifiers and ranges fold into the narrowest closed value they contain.
+- `date_lo` / `date_hi` and the sort key read the date as written (`ABT` not widened).
 - **Disjoint points stay mixed** (decided 2026-10-06). They are not widened into a range and not collapsed to the precision they share. `APR` and `MAY`, and `3 MAY 1985` and `14 JUN 1985`, stay two values.
 - An open window does not glue the closed dates it contains. `BEF 1900` folds into `1885` when that is the only closed date it overlaps, and `1885` and `1890` stay separate.
 - A phrase with no year, month, or day is no evidence.
@@ -160,8 +163,8 @@ From [`structured-name-model.md`](structured-name-model.md). Built in S9-13b (se
 
 - **Parts only.** `form` is a transcription and is never compared. A name with no parts is `no_evidence`.
 - **Format-agnostic.** A part type is only an identifier: parts are compared only with parts of the same type, and no type behaves differently from another. A prefix, a surname and a given name are all just types. Culture lives in name format profiles, not here.
-- **The comparable unit is the part type.** A candidate's value for a type is its ordered list of **words** of that type: each part normalized (case, punctuation and whitespace ignored; accents are not folded) and split into words. A hyphen or a space inside a part is the same as separate parts: *Smith-Jones* = *Smith Jones* = *Smith* + *Jones*. Words are compared; the best-ranked record's recorded parts are displayed.
-- **Fold (subsumption):** a list folds into a fuller one when its parts map, in order, onto a subsequence, each equal or an initial of it: `[J]` → `[James]`, `[James]` → `[James, Kenneth]`, `[J, K]` → `[James, Kenneth]`. The `initial` part type is retired; an initial is the part it stands for.
+- **The comparable unit is the part type.** A candidate's value for a type is its ordered list of **words** of that type: each part normalized (value compare's words: case, punctuation and whitespace ignored, particles rejoined so *Mc Donald* = *McDonald*; accents are not folded; word order inside a type does not matter) and split into words. A hyphen or a space inside a part is the same as separate parts: *Smith-Jones* = *Smith Jones* = *Smith* + *Jones*. Words are compared; the best-ranked record's recorded parts are displayed.
+- **Fold:** a type's words fold into a fuller list when value compare finds the list contains them and every word they pair is the same word or an initial of it: `[J]` → `[James]`, `[James]` → `[James, Kenneth]`, `[J, K]` → `[James, Kenneth]`. An accent fold or an alias never folds (`[Jose]` stays beside `[José, Kenneth]`). The `initial` part type is retired; an initial is the part it stands for.
 - **Deny** compares whole names: a negative denies positives with the same parts by type.
 - **Majority only outvotes misspellings** (decided 2026-10-05). Within a type, a majority winner outvotes a minority value only when it is a **spelling variant** of the winner: the same number of parts, each equal or similar (`valuecompare.SpellingSimilarity`, shared with matching: at least 0.8 similarity by edit distance with adjacent swaps, or one added or dropped letter from 3 letters up). *Robbins* beside *Robins* is outvoted. *Jake* beside *James*, or a married *Smith* beside *Robins*, never is: sources often record a nickname as a given name and seldom say so.
 - **Weak evidence still drops** within a type, and denial still applies.
@@ -274,7 +277,7 @@ The auto-reconciler, its cache, the pages that read it, place chains, Promote, a
 | --- | --- |
 | Shared pipeline and simple modules (text, integer, term); every value cached with its reason | `core/autoreconcile` |
 | Names: parts by type, subsumption, one name per Person, majority outvotes misspellings only | `core/autoreconcile` |
-| Dates: containment fold, qualifiers and ranges fold into the narrowest closed value, disjoint points stay mixed; `date_lo` / `date_hi` and `sort_key` | `core/autoreconcile` |
+| Dates: value compare's span keys and containment fold, ABT as a range; `date_lo` / `date_hi` and `sort_key` as written | `core/autoreconcile` |
 | Per-Property cardinality on that same pipeline | `core/autoreconcile` |
 | Depictions by image File, cached as `value_image_file_id` | `core/autoreconcile`, `core/database/autoreconciler` |
 | Cache, evidence, outcomes, and upkeep (credibility and certainty included) | `core/database/autoreconciler` |

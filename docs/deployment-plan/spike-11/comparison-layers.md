@@ -451,14 +451,14 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 - **A normalized key per value type** beside `Compare`: `valuecompare.Key(v, level)`, where `level` is `Same` or `Equivalent`. Two values have the same key exactly when `Compare` says that relation. One function then serves reconciler grouping, search index dedupe, term dedupe and sort-independent equality, instead of the six text rules there are today.
 - **Leave-one-out profiles:** `subjectprofile.Build(entity, Excluding(member))`. "Does this member still fit the rest?" is the weak-claim review, and costs one option.
 - **Profiles on both sides:** because a profile is Subject-shaped, entity-vs-entity (merge hints) is layer 3 on two profiles, with no new code.
-- **The date window primitives** (`Window` with `Overlaps`, `Contains`, `Intersect`) moved into value compare in S11-04, with `AboutEnds` and `EndsWindow`; `DateBounds`, `WindowOfDate`, `PeriodWindow` and `LinkMembership` follow in S11-06, so place chains and reconciliation use the same day-precision rules as matching.
+- **The date window primitives** (`Window` with `Overlaps`, `Contains`, `Intersect`) moved into value compare in S11-04, with `AboutEnds` and `EndsWindow`; `DateBounds` and `WindowOfDate` became `valuecompare.DateWindow`, and `PeriodWindow` and `LinkMembership` moved to `conclusionheaders` on it, in S11-06, so place chains and reconciliation use the same day-precision rules as matching.
 
 **Duplicates to retire:**
 
 | Duplicate | Replaced by |
 |---|---|
-| `autoreconcile` `textKey`, `termKey`, `dateKey`, `subsumes` / `partFits`, `IsInitial`, `SpellingSimilarity`, `EditDistance`, `NormalizeForm`, `DateEnds` and windows (`DateEnds` and windows moved in S11-04) | Value compare (the reconciler imports it) |
-| `autoreconcile.Compatible` | Value compare's relation, under the reconciler's own grouping policy (rule 7) |
+| `autoreconcile` `textKey`, `termKey`, `dateKey`, `subsumes` / `partFits`, `IsInitial`, `SpellingSimilarity`, `EditDistance`, `NormalizeForm`, `DateEnds` and windows (`DateEnds` and windows moved in S11-04) | Value compare (the reconciler imports it) — done in S11-06 |
+| `autoreconcile.Compatible` | Value compare's relation, under the reconciler's own grouping policy (rule 7) — done in S11-06 |
 | `promotealign.pairExhibits` (its own pairing; ignores negatives and cardinality) | Property compare's speaking pair |
 | `match/pairs.go` leaders and weighting (`weigh`, `pairValues`) | The strict profile; negatives and cardinality move to property compare |
 | `graphalign` `alikeNew`, `pairNode` (property part) | Subject compare |
@@ -503,7 +503,7 @@ Flow: shortlist or nominate → score → keep the top K as candidates → accep
 
 - **Neighbor credit travels one hop.** Start with one walk and one hop; chains come from the walk. Revisit only if goldens show chains under-rewarded.
 - **Misspellings and shortlisting: start simple.** Accept the gap ("Robnis" vs "Robins" shares no exact key); links catch most of it. A coarse key (surname consonant skeleton) is the fallback if the sparse-data tier shows a problem.
-- **Reconciler grouping rules** are the reconciler's own decision, designed in its PR. Today's disagreements to resolve there: `Montréal` / `Montreal` and `Jim` / `James` agree in matching but don't group or pin; `J. Robins` / `James Robins` groups but only scores partial.
+- **Reconciler grouping rules** are the reconciler's own decision, designed in its PR. Today's disagreements to resolve there: `Montréal` / `Montreal` and `Jim` / `James` agree in matching but don't group or pin; `J. Robins` / `James Robins` groups but only scores partial. Decided in S11-06: `Same` groups, `Contains` folds, `Equivalent` never; text never folds; ABT is a range.
 
 ## Open questions
 

@@ -10,8 +10,9 @@ import (
 )
 
 // Word helpers: normalizing, splitting, folding and spelling variants. Shared
-// by the text comparer and, until the callers move, by core/match and the
-// reconciler's name module, so each agrees on what a word and a misspelling is.
+// by the text and name comparers and by the reconciler's name module
+// (`SplitWords`, `SpellingSimilarity`), so each agrees on what a word and a
+// misspelling is.
 
 // NormalizeForm ignores case, punctuation, and whitespace differences: the
 // name sort key, and the text core/match tokenizes. Dashes
