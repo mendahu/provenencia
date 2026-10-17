@@ -45,3 +45,5 @@ CON: clean — CON-1 resolved. MNT: clean — MNT-1, MNT-2 resolved; MNT-3 stays
 
 ## Result
 Gate PASS (`82bef42c`, after merging main for S11-01 doc conflicts in completed.md and deployment-plan.md) · CI pending · open: none · follow-ups: SEC-note (`Validate` assumes callers trimmed — S11-02 decides), MNT-3 (nit), "open TEXT" note · to user: — (base-check stop answered 2026-10-17)
+
+**Main merge 2 (S10-54, #433):** one conflict in `api/ffi/swift_vocabulary_test.go` — main added `ValueTypeDepiction` to the value-type drift list; resolved onto `propertymeta` (all seven). D-6 pattern still has no hits. Gate PASS against `27ef7e24`.
