@@ -1,6 +1,6 @@
 # Comparison Layers
 
-**Status:** requirements, scoped 2026-10-16 – 17. Not a PR map yet. The matching design for [Spike 11](README.md): six layers from value comparison to graph alignment, bands, the match registry, and the reuse inventory. Background: [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md) ("First: make the algorithm graspable"). Today's code: [`matching.md`](../../matching.md), [`promote-graph-alignment.md`](../../promote-graph-alignment.md).
+**Status:** requirements, scoped 2026-10-16 – 17. Not a PR map yet. The matching design for [Spike 11](README.md): six layers from value comparison to graph alignment, bands, the match registry, and the reuse inventory. Background: [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md) ("First: make the algorithm graspable"). The lasting one-page model and knob inventory: [`matching-model.md`](../../matching-model.md). Today's code: [`matching.md`](../../matching.md), [`promote-graph-alignment.md`](../../promote-graph-alignment.md).
 
 ## Why
 
