@@ -188,7 +188,7 @@ func loadSourceMembers(q graphcache.Querier, sourceID []byte) ([]graphcache.Sour
 func loadTitleEdges(q graphcache.Querier, sourceID []byte, subjects []graphcache.SourceSubject) ([]graphcache.SourceEdge, []graphcache.SourceEdge, error) {
 	var events [][]byte
 	for _, s := range subjects {
-		if s.TypeKey == "event" && s.TypeOrigin == vocabkey.OriginProvenencia {
+		if s.TypeKey == vocabkey.Event && s.TypeOrigin == vocabkey.OriginProvenencia {
 			events = append(events, s.ID)
 		}
 	}

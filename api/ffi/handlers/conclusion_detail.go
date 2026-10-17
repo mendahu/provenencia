@@ -114,19 +114,19 @@ func attachHeader(c *database.Catalog, d conclusiondetails.Detail, out *engine.C
 	}
 	ids := [][]byte{d.Entity.ID}
 	switch st.Key {
-	case "person":
+	case vocabkey.Person:
 		h, err := conclusionheaders.PersonsByIDs(c, ids)
 		if err != nil || len(h) != 1 {
 			return err
 		}
 		out.Header = &engine.ConclusionDetail_Person{Person: personHeaderProto(h[0])}
-	case "event":
+	case vocabkey.Event:
 		h, err := conclusionheaders.EventsByIDs(c, ids)
 		if err != nil || len(h) != 1 {
 			return err
 		}
 		out.Header = &engine.ConclusionDetail_Event{Event: eventHeaderProto(h[0])}
-	case "place":
+	case vocabkey.Place:
 		h, err := conclusionheaders.PlacesByIDs(c, ids)
 		if err != nil || len(h) != 1 {
 			return err

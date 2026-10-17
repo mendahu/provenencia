@@ -258,7 +258,7 @@ func matchText(h handleHead, v handleValues, headers handleHeaders) (string, []s
 			}
 			secondary = append(secondary, personLifeMatch(p)...)
 		}
-		secondary = append(secondary, tagged(extraValues(v, "name", title), "name")...)
+		secondary = append(secondary, tagged(extraValues(v, vocabkey.PropertyName, title), "name")...)
 	case vocabkey.Event:
 		if e, ok := headers.events[h.id]; ok {
 			title = eventMatchTitle(e)
@@ -274,7 +274,7 @@ func matchText(h handleHead, v handleValues, headers handleHeaders) (string, []s
 			}
 			secondary = append(secondary, p.Parents...)
 		}
-		secondary = append(secondary, tagged(extraValues(v, "toponym", title), "toponym")...)
+		secondary = append(secondary, tagged(extraValues(v, vocabkey.PropertyToponym, title), "toponym")...)
 	}
 	if h.label != "" {
 		if title == "" {

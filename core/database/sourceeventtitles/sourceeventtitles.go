@@ -103,7 +103,7 @@ func ForSource(q Querier, sourceID []byte) ([]Title, error) {
 	}
 	var nameIDs [][]byte
 	for _, e := range people {
-		if n, ok := first[key(e.To, "name")]; ok {
+		if n, ok := first[key(e.To, vocabkey.PropertyName)]; ok {
 			nameIDs = append(nameIDs, n.nameID)
 		}
 	}
@@ -119,7 +119,7 @@ func ForSource(q Querier, sourceID []byte) ([]Title, error) {
 func FromStored(sg graphcache.SourceGraph, propKey map[string]string, terms map[string]struct{ Key, Label string }) []Title {
 	var events []titledEvent
 	for _, s := range sg.Subjects {
-		if s.TypeKey != "event" || s.TypeOrigin != vocabkey.OriginProvenencia {
+		if s.TypeKey != vocabkey.Event || s.TypeOrigin != vocabkey.OriginProvenencia {
 			continue
 		}
 		events = append(events, titledEvent{id: s.ID, ref: s.Ref, label: s.Label})
@@ -132,7 +132,7 @@ func FromStored(sg graphcache.SourceGraph, propKey map[string]string, terms map[
 		}
 		keyName := propKey[string(o.PropertyID)]
 		switch keyName {
-		case "event_name", "event_type", "name", "toponym":
+		case "event_name", vocabkey.PropertyEventType, vocabkey.PropertyName, vocabkey.PropertyToponym:
 		default:
 			continue
 		}
@@ -178,7 +178,7 @@ func assemble(events []titledEvent, first map[string]naming, people, places []ca
 		}
 		seen[pair] = true
 		var subject eventtitle.Subject
-		if n, ok := first[key(e.To, "name")]; ok {
+		if n, ok := first[key(e.To, vocabkey.PropertyName)]; ok {
 			if v, ok := names[string(n.nameID)]; ok {
 				subject.Name = &v
 			}
@@ -193,7 +193,7 @@ func assemble(events []titledEvent, first map[string]naming, people, places []ca
 		if _, done := placeOf[string(e.From)]; done {
 			continue
 		}
-		if n, ok := first[key(e.To, "toponym")]; ok && n.text != "" {
+		if n, ok := first[key(e.To, vocabkey.PropertyToponym)]; ok && n.text != "" {
 			placeOf[string(e.From)] = n.text
 		}
 	}
@@ -209,7 +209,7 @@ func assemble(events []titledEvent, first map[string]naming, people, places []ca
 		if n, ok := first[key(e.id, "event_name")]; ok {
 			parts.RecordedName = n.text
 		}
-		if n, ok := first[key(e.id, "event_type")]; ok {
+		if n, ok := first[key(e.id, vocabkey.PropertyEventType)]; ok {
 			parts.TypeKey = n.termKey
 			parts.TypeLabel = n.termText
 			if parts.TypeLabel == "" {

@@ -207,13 +207,13 @@ func canonSignature(self []byte, selfKind string, n *graphcache.Node, l graphcac
 	var typeTerm string
 	if l.BridgeTypeKey == "participation" {
 		event := neighbor
-		if selfKind == "event" {
+		if selfKind == vocabkey.Event {
 			event = n
 		}
-		if l.NeighborTypeKey == "event" {
+		if l.NeighborTypeKey == vocabkey.Event {
 			event = neighbor
 		}
-		typeTerm = keptTerm(event, props, neighborTypeProperty["event"])
+		typeTerm = keptTerm(event, props, neighborTypeProperty[vocabkey.Event])
 	}
 	sig = graphalign.EdgeSignature{
 		BridgeType: l.BridgeTypeKey, RoleOrType: role,

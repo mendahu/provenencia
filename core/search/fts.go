@@ -241,7 +241,8 @@ func containsKind(kinds []string, kind string) bool {
 }
 
 func isHandleKind(kind string) bool {
-	return kind == KindPerson || kind == KindEvent || kind == KindPlace
+	spec, ok := kindSpec(kind)
+	return ok && spec.Handle
 }
 
 // fillMemberCounts sets MemberCount on handle hits: one query for the page.
@@ -412,6 +413,13 @@ func mergeTrigramCandidates(ctx context.Context, db *sql.DB, byKey map[string]do
 }
 
 func fieldValuesForKind(kind, title, refCol, secondary, body string) map[string]string {
+	if isHandleKind(kind) {
+		return map[string]string{
+			"title": title,
+			"ref":   refCol,
+			"other": secondary,
+		}
+	}
 	switch kind {
 	case KindSource:
 		notes, metadata, filename := splitTaggedBody(body)
@@ -428,12 +436,6 @@ func fieldValuesForKind(kind, title, refCol, secondary, body string) map[string]
 			"label":       title,
 			"key":         secondary,
 			"description": secondary,
-		}
-	case KindPerson, KindEvent, KindPlace:
-		return map[string]string{
-			"title": title,
-			"ref":   refCol,
-			"other": secondary,
 		}
 	default:
 		return map[string]string{

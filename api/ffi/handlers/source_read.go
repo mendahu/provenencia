@@ -163,7 +163,7 @@ func keptName(n *graphcache.Node, propertyID []byte) *namevalue.Value {
 
 func namePropertyID(props map[string]propertyInfo) []byte {
 	for id, info := range props {
-		if info.Key == "name" && info.Origin == vocabkey.OriginProvenencia {
+		if info.Key == vocabkey.PropertyName && info.Origin == vocabkey.OriginProvenencia {
 			return []byte(id)
 		}
 	}

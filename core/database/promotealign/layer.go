@@ -119,9 +119,9 @@ var neighborTypeProperty = map[string]string{vocabkey.Event: vocabkey.PropertyEv
 
 // Product hops used to discover undirected bridges on the layer.
 var (
-	hopPersonToEvent  = hops.MustHop("participation", "person", "event", nil)
+	hopPersonToEvent  = hops.MustHop("participation", vocabkey.Person, vocabkey.Event, nil)
 	hopEventToPlace   = hops.PlacesOfEvent
-	hopPersonRelated  = hops.MustHop("relationship", "person", "related_to", nil)
+	hopPersonRelated  = hops.MustHop("relationship", vocabkey.Person, "related_to", nil)
 	hopPlaceParent    = hops.ParentsOfPlace
 	hopPlaceSuccessor = hops.SuccessorsOfPlace
 )
@@ -164,7 +164,7 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 	}
 
 	// Person ↔ event (participation), any role.
-	participations, err := walk("person", hopPersonToEvent)
+	participations, err := walk(vocabkey.Person, hopPersonToEvent)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 	for _, e := range participations {
 		events = append(events, e.To)
 	}
-	eventTypes, err := observedTerms(q, events, neighborTypeProperty["event"])
+	eventTypes, err := observedTerms(q, events, neighborTypeProperty[vocabkey.Event])
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +189,7 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 	}
 
 	// Event ↔ place (location).
-	locations, err := walk("event", hopEventToPlace)
+	locations, err := walk(vocabkey.Event, hopEventToPlace)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 	}
 
 	// Person ↔ person (relationship).
-	relationships, err := walk("person", hopPersonRelated)
+	relationships, err := walk(vocabkey.Person, hopPersonRelated)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +229,7 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 		{hopPlaceParent, "part_of"},
 		{hopPlaceSuccessor, "succeeded_by"},
 	} {
-		edges, err := walk("place", step.hop)
+		edges, err := walk(vocabkey.Place, step.hop)
 		if err != nil {
 			return nil, err
 		}
