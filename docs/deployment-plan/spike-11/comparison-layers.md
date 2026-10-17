@@ -335,6 +335,21 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 **Invariants** (from [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md)): order doesn't matter, decided rows don't move, stable on re-run, and the same proposal whether or not any row starts decided, given the same decisions.
 
+### Bands
+
+**Decided (2026-10-17).** A band (strong, medium, weak, no match) always describes a whole row: one Subject on the Source against its proposed handle. The per-property detail stays in the row's sheet.
+
+| Step | Uses |
+|---|---|
+| Minimum to be a candidate; first sort for the top K | **similarity** (entity comparison) |
+| Queue order, acceptance, order of alternatives, band | **evidence**: properties + segments |
+
+- **Similarity gates and roughly sorts; it never decides.** Sparse Subjects tie: "John Smith" against 30 John Smiths is 1.0 for all of them. Every candidate tied at the K cutoff is kept, up to a hard cap, so the right one isn't cut before its segments are looked at. Nominated handles skip K entirely.
+- **Evidence decides everything after that,** so the dropdown never ranks a name-only look-alike above the handle whose family lines up.
+- **The accept bar is its own registry setting,** separate from the weak floor, even if they start equal. "Can the walk place this?" and "what does the researcher see?" are different questions.
+- **A contested marker, not a cap.** A row whose comparisons include a conflict shows a visible "contested" mark, whatever its band. The band stays a pure evidence cutoff. Large registry penalties already handle impossible pairs.
+- **The strong cutoff must be reachable by the sparse case:** a matching name plus a matching birth link. The sparse-data tier pins that case.
+
 ### Lifespan: a derived property for people
 
 **Decided (2026-10-16): lifespan applies to people only.** Person matching is the chief job, and events and places differ enough that a lifespan wouldn't help them. Dates on a person's neighbors constrain each other. An entity that died before the Subject was born is not that Subject, even when neither side has the other's event.
@@ -467,5 +482,4 @@ Flow: shortlist or nominate → score → keep the top K as candidates → accep
 
 ## Open questions
 
-- **Bands.** How the page's strong / medium / weak come from similarity and evidence, once segment evidence is added. Next to discuss.
 - **Starting registry numbers** (weights, penalties, lifespan constants, K, accept bar, settle margin): open until the PR map.
