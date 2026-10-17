@@ -14,13 +14,13 @@ Base `233e87a`, head `5408b6b`. Verdicts: CON changes needed · MNT changes need
 | ID | Lens | Severity | Title | Decision | Evidence / reason |
 | --- | --- | --- | --- | --- | --- |
 | CON-1 | CON | major | Layer table gives layer 2 the `Near` minimums | Fix now → F-1 | verified: `comparison-layers.md` "Near has a minimum similarity per type. It lives in layer 1's Rules"; the parenthetical is implementer wording, not §6 |
-| CON-2, MNT-1 | CON, MNT | major | `lifespan` is a sixth top-level registry section | To user → Q1 | verified: map rule "one file per section (value, subject, segment, alignment, evidence)" and `comparison-layers.md` `subject.go` row "lifespan rules and constants"; keys come verbatim from the plan's §6 table |
-| MNT-2 | MNT | major | Key grammar unstated; `sex` is not a property key | To user → Q1 | verified: rows use 2–4 segments with mixed case; `subjectvocab` has `sex_at_birth` and `gender`, no `sex`; keys are §6 verbatim |
-| UX-1 | UX | minor | Worked example drops the 0.1 lifespan agree though both sides have a birth | To user → Q2 | verified: `comparison-layers.md` lifespan "subject of a birth at D: born at D … Overlaps or Contains is consistent"; sentence is the plan's §6 item 4 |
-| UX-3, MNT-5 | UX, MNT | minor | Banners overstate what is replaced / don't say the page describes running code | To user → Q3 | text prescribed verbatim by STEP-6; D-5 keeps §1–§3, §9 of `promote-graph-alignment.md` |
-| UX-2 | UX | minor | Glossary says a researcher can tune knobs | Fix now → F-2 | README "Not this spike: researcher-facing tuning"; implementer wording, file already in the fix |
-| MNT-4 | MNT | minor | "evidence" names points and the `evidence` registry section | Fix now → F-3 | glossary evidence = points; `evidence.*` rows are the claim-evidence sheet's line policy; few lines |
-| MNT-3 | MNT | minor | Shortlisting terms defined twice, already drifting | Fix now → F-4 | `comparison-layers.md` table vs model glossary ("year" vs "year bucket"); file already touched; D-8 keeps decision history, only the definitions move |
+| CON-2, MNT-1 | CON, MNT | major | `lifespan` is a sixth top-level registry section | To user → Q1 → Fix now F-2 | verified: map rule "one file per section (value, subject, segment, alignment, evidence)" and `comparison-layers.md` `subject.go` row "lifespan rules and constants"; keys come verbatim from the plan's §6 table |
+| MNT-2 | MNT | major | Key grammar unstated; `sex` is not a property key | To user → Q1 → Fix now F-2 | verified: rows use 2–4 segments with mixed case; `subjectvocab` has `sex_at_birth` and `gender`, no `sex`; keys are §6 verbatim |
+| UX-1 | UX | minor | Worked example drops the 0.1 lifespan agree though both sides have a birth | To user → Q2 → Fix now F-3 | verified: `comparison-layers.md` lifespan "subject of a birth at D: born at D … Overlaps or Contains is consistent"; sentence is the plan's §6 item 4 |
+| UX-3, MNT-5 | UX, MNT | minor | Banners overstate what is replaced / don't say the page describes running code | To user → Q3 → Fix now F-4 | text prescribed verbatim by STEP-6; D-5 keeps §1–§3, §9 of `promote-graph-alignment.md` |
+| UX-2 | UX | minor | Glossary says a researcher can tune knobs | Fix now → F-5 | README "Not this spike: researcher-facing tuning"; implementer wording, file already in the fix |
+| MNT-4 | MNT | minor | "evidence" names points and the `evidence` registry section | Fix now → F-6 | glossary evidence = points; `evidence.*` rows are the claim-evidence sheet's line policy; few lines |
+| MNT-3 | MNT | minor | Shortlisting terms defined twice, already drifting | Fix now → F-7 | `comparison-layers.md` table vs model glossary ("year" vs "year bucket"); file already touched; D-8 keeps decision history, only the definitions move |
 | PRF-1 | PRF | minor | Event shortlist bucket grows with the catalog | Follow-up | design question for the S11-15 / S11-16 plans; nothing in this docs PR |
 
 ### To user
