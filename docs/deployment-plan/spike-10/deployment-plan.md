@@ -62,6 +62,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Related event types + place chains | S10-31, descoped 2026-10-16 | — |
 | File release from the declared model; one object purge | S10-55 | — |
 | Stage a client image: shared ingest checks, bounded decode, PNG re-encode | S10-53 | — |
+| Object store stays inside `objects/` and prunes empty folders | S10-56 | — |
 | Depiction value (region + image) + `likeness` | S10-32 | — |
 | Depiction values over the FFI | S10-54 | — |
 | Depiction auto-reconciler module | S10-52 | — |
@@ -261,6 +262,7 @@ SLICE 7 — How names compare (no new chrome)  (done 2026-10-16)
 SLICE 8 — Likeness
   S10-55  File release from the declared model; one object purge — done, #423
   S10-53  Stage a client image: shared ingest checks, bounded decode, PNG re-encode — done, #424
+  S10-56  Object store stays inside objects/; deletes prune empty folders
   S10-32  Depiction value (region + image File) + likeness on person (engine)
   S10-54  Depiction values over the FFI: draft input, image path in responses
   S10-52  Depiction auto-reconciler module; cache stores the image
@@ -659,6 +661,17 @@ S10-33 crop cache — descoped 2026-10-16
 | **Out** | Who calls it (S10-32). Auditing thumbnails. A Go PDF renderer. |
 | **Testable** | A symlink, a directory, an empty file, a file over the cap, a non-image, a decompression bomb past the pixel budget, and a polyglot whose sniff is not an allowed raster are refused before any write. A valid 4000-pixel JPEG crop is stored as a PNG at most 2048 on its long edge, and the stored bytes are not the input bytes. A discarded stage leaves no object. `ingest.File`, thumbnails, and deletes behave as before. A delete releasing a File removes its bytes after commit with no object list in the caller. The purge's doc names `catalogsession.Do` as what keeps it from racing an import. |
 | **Depends on** | S10-55 (its purge removes a discarded stage's object) |
+
+#### S10-56 — Object store stays inside `objects/`; deletes prune empty folders
+
+**Plan:** [`prs/S10-56-object-store-root.md`](prs/S10-56-object-store-root.md) — Planned
+
+| | |
+| --- | --- |
+| **In** | Engine only, from S10-53's security follow-up SEC-1, S10-55's SEC-R2-1, and the user's report of empty folders after deletes (2026-10-17). Every object-store read, write, install, and removal goes through an `os.Root` on the project's `objects/` folder and refuses a symlinked `objects/`, a symlink out of it, and a non-regular object file (a FIFO cannot block a read). `ingest.installObject` moves into `core/objectstore`. A removal also removes the shard folders it leaves empty, never `objects/` itself. |
+| **Out** | Sweeping empty folders already left in existing projects. Swift reading object paths. |
+| **Testable** | A project whose `objects/` or `objects/ab` is a symlink to a folder outside it: import, staging, and thumbnails write nothing outside, and a delete removes nothing outside. A FIFO at an object path is refused without blocking. Deleting the last File in a shard leaves no empty `objects/ab/cd` or `objects/ab`. Imports, thumbnails, and deletes otherwise behave as before. |
+| **Depends on** | S10-53 (`objectstore.WriteIfAbsent`) |
 
 #### S10-32 — Depiction value
 
