@@ -250,14 +250,14 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-03 — Value compare: names
 
-**Ships.** The name comparer on relations and parts detail: folds, particles, aliases (tokens normalized), initials, spelling (`Near` minimum 0.8 for words, 0.75 for names), generation conflict, swapped part types → `Near`. Builds on S11-02's word helpers; adds initials and aliases to word similarity. `AliasTable`, `NameRole` and `NamePattern` move to `valuecompare`; the alias and nickname seeds, `Register`, and `third_party/nicknames/` move to `namealiases`, with `add-seeded-vocabulary` and [`seeded-vocabulary.md`](../../seeded-vocabulary.md) updated. No frequency.
+**Ships.** The name comparer on relations and parts detail: folds, particles, aliases (tokens normalized), initials, spelling (`Near` minimum 0.8 for words, 0.75 for names), generation conflict; a surname or first given name left over on both sides is `Different`, other words left over on both sides `Near`; swapped part types fall under the `Near` minimum and are `Different` (user call 2026-10-17). Builds on S11-02's word helpers; adds initials and aliases to word similarity. `AliasTable`, `NameRole` and `NamePattern` move to `valuecompare`; the alias and nickname seeds, `Register`, and `third_party/nicknames/` move to `namealiases`, with `add-seeded-vocabulary` and [`seeded-vocabulary.md`](../../seeded-vocabulary.md) updated. No frequency.
 **Not this PR.** Callers (S11-05). The reconciler's grouping (S11-06).
 **Check.** Today's `names_test.go` ladders and generated invariants pass on the new relations; the worked name cases in the relations table hold.
 **Context.** [Relations](comparison-layers.md#relations) worked cases; [`matching.md`](../../matching.md) Names.
 
 #### S11-04 — Value compare: dates
 
-**Ships.** The date comparer on range relations; `DateEnds`, windows, `Overlaps`, `Contains`, `Intersect`, `HoldsAt` move in from `core/autoreconcile`; `ABT` read as one unit of its most precise part; tolerance in the registry.
+**Ships.** The date comparer on range relations; `DateEnds` and the window algebra (`Window` with `Overlaps`, `Contains`, `Intersect`, `HoldsAt`) move in from `core/autoreconcile`, and the calendar arithmetic moves to `core/datevalue`; `ABT` read as one unit of its most precise part; tolerance in the registry. `DateBounds`, `WindowOfDate`, `PeriodWindow` and `LinkMembership` stay with the reconciler until S11-06.
 **Not this PR.** Period pooling across `date` / `start_date` / `end_date` (S11-10). Callers (S11-05, S11-06).
 **Check.** `ABT 1817` / `1818` is `Contains`; `BEF 1820` / `BEF 1830` is `Contains`; today's `dates_test.go` cases pass, updated where the ABT rule changes them.
 **Context.** [Relations](comparison-layers.md#relations) and the `ABT` rule; [`matching.md`](../../matching.md) `DateComparer` row.
@@ -271,7 +271,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-06 — Migrate the reconciler onto value compare
 
-**Ships.** `autoreconcile` keys, `Compatible`, `subsumes` / `partFits` and the pipeline's grouping use `valuecompare` relations under a grouping policy the plan decides (recommendation on record: group on `Same` and `Contains`, not `Equivalent`). `conclusionheaders` place chains use day-precision windows. The plan decides whether the reconciler keeps importing `matchregistry` for its spelling rules or its caller passes them in (S11-02 D-8). [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) says what the reconciler now uses.
+**Ships.** `autoreconcile` keys, `Compatible`, `subsumes` / `partFits` and the pipeline's grouping use `valuecompare` relations under a grouping policy the plan decides (recommendation on record: group on `Same` and `Contains`, not `Equivalent`). `conclusionheaders` place chains use day-precision windows; `DateBounds`, `WindowOfDate`, `PeriodWindow` and `LinkMembership` move onto value compare's date ends (S11-04 left them in `autoreconcile`). The plan decides whether the reconciler keeps importing `matchregistry` for its spelling rules or its caller passes them in (S11-02 D-8). [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) says what the reconciler now uses.
 **Not this PR.** Pins (S11-19).
 **Check.** `Sainte-Anne` / `Sainte Anne` group; `J. Robins` folds into `James Robins`; a place chain with two same-year dates folds by day; `Montréal` / `Montreal` follow the chosen policy.
 **Context.** [Reuse inventory](comparison-layers.md#reuse-across-the-app); [decided 2026-10-17](comparison-layers.md#decided-on-2026-10-17) (reconciler grouping); rule "The reconciler keeps its own decisions"; [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md).
