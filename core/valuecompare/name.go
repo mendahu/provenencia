@@ -149,6 +149,10 @@ func (n name) compare(a, b Value, r Rules) (Result, Detail) {
 	if keyA == keyB {
 		return Result{Relation: Same, Similarity: 1}, Detail{Cause: CauseExact, Parts: sameParts(wa, wb, ga, gb, r.Words)}
 	}
+	// The pairing is exponential in the words: bound it.
+	if len(wa)+len(ga) > r.Names.MaxWords || len(wb)+len(gb) > r.Names.MaxWords {
+		return Result{Relation: Unknown}, Detail{Cause: CauseTooLong}
+	}
 	// (3) Generation words that share none.
 	if len(ga) > 0 && len(gb) > 0 && !sharesAny(ga, gb) {
 		return Result{Relation: Different}, Detail{Cause: CauseGenerationConflict}

@@ -252,6 +252,19 @@ var nameCases = []nameCase{
 		rel: valuecompare.Different, why: valuecompare.CauseBelowMinimum},
 }
 
+func TestNameMaxWords(t *testing.T) {
+	rules := matchregistry.Default().Value
+	for n, wantLong := range map[int]bool{rules.Names.MaxWords: false, rules.Names.MaxWords + 1: true} {
+		long := nv("g=" + strings.Repeat("Mary ", n-1) + "John")
+		for _, pair := range [][2]valuecompare.Value{{long, nv("g=John")}, {nv("g=John"), long}} {
+			res, det := valuecompare.Compare(pair[0], pair[1], rules)
+			if got := res.Relation == valuecompare.Unknown && det.Cause == valuecompare.CauseTooLong; got != wantLong {
+				t.Errorf("%d words: %s %s, too long %v, want %v", n, res.Relation, det.Cause, got, wantLong)
+			}
+		}
+	}
+}
+
 func TestNameCompare(t *testing.T) {
 	for _, tc := range nameCases {
 		t.Run(tc.name, func(t *testing.T) {

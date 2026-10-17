@@ -47,6 +47,9 @@ func defaultValue() valuecompare.Rules {
 			UntypedAffinity: 0.8,
 			NickAffinity:    0.9,
 			CrossRole:       0.5,
+			// estimate (S11-03 user call 2026-10-17): far above any real name;
+			// bounds BestAssignment's exact route.
+			MaxWords: 32,
 			// An estimate: a Jr. on one side only says about as much as a
 			// middle name (OtherGiven 0.5).
 			Generation: 0.5,

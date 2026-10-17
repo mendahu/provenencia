@@ -57,6 +57,10 @@ type NameRules struct {
 	NickAffinity float64
 	// CrossRole scores any other role mismatch (surname against given).
 	CrossRole float64
+	// MaxWords is the most words, generation words included, either name may
+	// have for the pairing to run. Beyond it names that are not the same are
+	// Unknown (too_long), so the exact pairing's cost stays bounded.
+	MaxWords int
 	// Generation is the weight of a generation word (Jr., III) on either side.
 	Generation float64
 	// Western is the pattern for a name that names no pattern, or one this

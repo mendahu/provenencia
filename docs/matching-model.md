@@ -129,6 +129,7 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `value.Names.UntypedAffinity` | 0.8 | `DefaultNames.UntypedAffinity` | Typed word against an untyped one |
 | `value.Names.NickAffinity` | 0.9 | `DefaultNames.NickAffinity` | Nickname against a given name |
 | `value.Names.CrossRole` | 0.5 | `DefaultNames.CrossRole` | Any other role mismatch |
+| `value.Names.MaxWords` | 32 | estimate | Most words, generation words included, either name may have for the pairing to run; beyond it `too_long` |
 | `value.Names.Generation` | 0.5 | estimate | Weight of a generation word, Jr. or III, on either side |
 | `value.Names.Western.Weights.Family` | 1.5 | `WesternNamePattern.Weights` | Surname word weight |
 | `value.Names.Western.Weights.FirstGiven` | 1 | `WesternNamePattern.Weights` | First given name weight |
