@@ -703,6 +703,8 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-54 — Depiction values over the FFI
 
+**Plan:** [`prs/S10-54-depiction-ffi.md`](prs/S10-54-depiction-ffi.md) — Blocked — on S10-32
+
 | | |
 | --- | --- |
 | **In** | `engine.proto`: a depiction value input on `ObservationDraft` (region locator and the crop's absolute path) and the saved value on `Observation` (region and the image's object path). Every handler that writes Observations (`citations`, `observations`, `connect`) calls S10-32's core entry point; no handler stages an image itself. Swift store types carry the value; Swift `PropertyValueType.depiction` and its *Depiction* label, with the vocabulary parity test's entry; the source graph's depiction region. No chrome. |
