@@ -751,7 +751,7 @@ S10-33 crop cache — descoped 2026-10-16
 | **In** | Person detail shows every likeness crop for the handle: its cached `likeness` values (the image File column S10-52 adds to `auto_reconciler_values`) with reason `kept` or `weak`, so provisional members and denied crops are already out. That admit rule is one named `autoreconcile.Reason` method beside `Displayed` (`kept` or `weak`: a weak photo does not contradict another photo), which S10-39's thumb fallback reuses; not a `reason IN (…)` literal in a new SQL read. Persons list lead thumb shows the earliest likeness when one exists, and the placeholder when it does not. "Earliest" is defined once, in the Go read that the page lead, the list thumb, and S10-39's fallback all use. Events and Places lists stay on the placeholder. |
 | **Out** | Marking a preferred portrait (S10-39 fills that frame on the same boards). Place and event galleries. |
 | **Testable** | Two faces of one person both appear on the page. The Persons list shows the earliest crop. A person with no likeness keeps the placeholder. |
-| **Depends on** | S10-23, S10-52, S10-D12, S10-D9. Ships after S10-34: its manual check draws faces in the composer (answered 2026-10-17) |
+| **Depends on** | S10-23, S10-52, S10-D12, S10-D9. Its manual check draws faces in the S10-34 composer (landed #442) |
 
 #### S10-39 — Preferred portrait
 
