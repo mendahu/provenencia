@@ -47,7 +47,7 @@ You do not decide product or architecture; the plan did.
    row and the plan **Status** set to `Landed #N`, the plan's **Landed** note
    (only where the code differs from the plan), the brief moved to
    `design/archive/` if gated. One commit, "Record S#-NN as landed in pull
-   request N.", then the gate again, then push.
+   request N.", then the gate again, then push. A spike close (S#-99) skips this step: its plan and completed.md are deleted by the PR ([`archive-docs`](../archive-docs/SKILL.md)).
 9. **Report** (below).
 
 ## Fix round
