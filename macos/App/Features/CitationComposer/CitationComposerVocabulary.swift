@@ -146,9 +146,11 @@ struct CitationComposerVocabulary: Equatable {
     }
 
     /// The Property menu for a field that already holds `propertyID`: the
-    /// subject's list, plus the held Property when no subject is picked yet
-    /// (a run of likenesses keeps Likeness while the person is chosen), so the
-    /// field never reads empty above a value area it still drives.
+    /// subject's list, plus the held Property whenever the list lacks it (no
+    /// subject picked yet, as in a run of likenesses), so the field never reads
+    /// empty above a value area it still drives. `applyObservationSubject`
+    /// drops a held Property the new subject's type cannot take before this
+    /// menu is built.
     func propertyOptions(
         forSubjectID subjectID: String,
         keeping propertyID: String,

@@ -466,7 +466,7 @@ struct CitationPropertyFields: View {
             draftAfterCommit: CitationAuthoringDraftAfterCommit(
                 propertyValueTakesFocus: !(
                     model.vocabulary.isDepiction(propertyID: committed)
-                        && (model.depictionNeedsPage || model.isTranscribing)
+                        && model.depictionDrawBlocked
                 )
             )
         ) else { return false }
@@ -955,7 +955,7 @@ struct CitationDepictionValueArea: View {
                     ) {
                         model.startDepictionDrawing()
                     }
-                    .disabled(model.depictionNeedsPage)
+                    .disabled(!model.canStartDepictionDrawing)
                     .focused(focus, equals: .value)
                     .accessibilityIdentifier("citationComposer.depiction.draw")
                 }

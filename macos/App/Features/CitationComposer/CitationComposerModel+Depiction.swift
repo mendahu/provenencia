@@ -158,8 +158,20 @@ extension CitationComposerModel {
 
     // MARK: - Drawing
 
+    /// What keeps Draw from starting whatever the draft: a transcription in
+    /// flight, or a PDF Citation saved with no page. The Tab order reads this
+    /// alone because the Property may not be committed to the draft yet.
+    var depictionDrawBlocked: Bool { isTranscribing || depictionNeedsPage }
+
+    /// The one rule for starting to draw: the Draw button and
+    /// ``startDepictionDrawing()`` read it, and the Tab order reads
+    /// ``depictionDrawBlocked``.
+    var canStartDepictionDrawing: Bool {
+        currentDepictionDraft != nil && !depictionDrawBlocked
+    }
+
     func startDepictionDrawing() {
-        guard !isTranscribing, !depictionNeedsPage, currentDepictionDraft != nil else { return }
+        guard canStartDepictionDrawing else { return }
         let base = dialogBase()
         guard base == .authoring || base == .edit else { return }
         if depictionCapabilities.supportsPageLocator, let page = depictionPage {

@@ -1,3 +1,4 @@
+import AppKit
 import CoreGraphics
 import Foundation
 import Testing
@@ -183,6 +184,14 @@ struct CitationComposerDepictionTests {
     private func openLikenessDraft(_ model: CitationComposerModel, subjectID: String? = nil) {
         model.beginPropertyDraft(subjectID: subjectID ?? adaID)
         model.mutateProperty { $0.values.propertyID = likenessID }
+    }
+
+    private func solidImage(width: Int, height: Int) -> NSImage? {
+        guard let context = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ), let image = context.makeImage() else { return nil }
+        return NSImage(cgImage: image, size: NSSize(width: width, height: height))
     }
 
     private func draftValues(_ model: CitationComposerModel) -> ObservationRowValues? {
@@ -438,9 +447,32 @@ struct CitationComposerDepictionTests {
     }
 
     @Test func drawingDisablesCitationControlsAndLeaveReturns() async throws {
-        let (model, _) = try await editingSavedLikeness()
+        let (projectDir, store) = try seeded()
+        seedCitation(
+            store,
+            locatorJSON: regionJSON(rect(0.5, 0.5, 0.9, 0.9)),
+            observations: [
+                likenessObservation(region: regionJSON(rect(0.1, 0.1, 0.4, 0.4))),
+            ]
+        )
+        store.artifactsBySource[sourceID]?.append(
+            CatalogArtifact(
+                id: "art-other", ref: "ART-1", sourceID: sourceID, fileID: "file-1", label: "Scan 2",
+                description: "",
+                file: CatalogFileRef(
+                    id: "file-1", relPath: "objects/photo.png", originalFilename: "photo.png",
+                    mediaType: "image/png", byteSize: 10
+                )
+            )
+        )
+        let model = makeModel(store: store, projectDir: projectDir, citationID: "cit-1", observationID: "obs-1")
+        await model.prepare()
         let line = try #require(model.subjectGroups.flatMap(\.lines).first { $0.observationID == "obs-1" })
         model.discardEdit()
+        model.artifactViewer.installImageRasterForTesting(try #require(solidImage(width: 8, height: 8)))
+        model.transcription = "existing"
+        #expect(model.locator.hasRegion)
+        #expect(model.canAutoTranscribe)
         openLikenessDraft(model, subjectID: adaID)
         model.startDepictionDrawing()
         #expect(model.isDrawingDepiction)
@@ -462,17 +494,55 @@ struct CitationComposerDepictionTests {
         let transcriptionBefore = model.transcription
         model.clearRegion()
         model.requestSelectArtifact("art-other")
+        await model.awaitIdentitySwitch()
         model.requestAutoTranscribe()
         model.requestPasteTranscription()
         #expect(model.locator == locatorBefore)
+        #expect(model.locator.hasRegion)
         #expect(model.selectedArtifactID == artifactBefore)
         #expect(model.pendingTranscriptionConfirm == nil)
+        #expect(!model.isTranscribing)
         #expect(model.transcription == transcriptionBefore)
 
         #expect(model.shouldHoldNavigation(.back))
         #expect(model.pendingLeave != nil)
         model.keepEditingAfterLeave()
         #expect(model.presented == .drawingDepiction(over: .authoring))
+    }
+
+    @Test func drawingHoldsPasteTranscription() async throws {
+        // No file on disk: a blank PDF has no text layer, and paste needs one.
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
+        let store = makeStore(projectDir: projectDir)
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "application/pdf", relPath: "objects/news.pdf")
+        let model = makeModel(store: store, projectDir: projectDir)
+        await model.prepare()
+        model.artifactViewer.installUserSelectionForTesting(text: "a line", page: 1)
+        model.transcription = "existing"
+        #expect(model.canPasteTranscription)
+        openLikenessDraft(model, subjectID: adaID)
+        model.startDepictionDrawing()
+        #expect(model.isDrawingDepiction)
+        model.requestPasteTranscription()
+        #expect(model.pendingTranscriptionConfirm == nil)
+        #expect(model.transcription == "existing")
+    }
+
+    @Test func drawCannotStartWhileTranscribing() async throws {
+        let (projectDir, store) = try seeded()
+        let model = makeModel(store: store, projectDir: projectDir)
+        await model.prepare()
+        openLikenessDraft(model)
+        #expect(model.canStartDepictionDrawing)
+        model.transcriptions.isTranscribing = true
+        #expect(!model.canStartDepictionDrawing)
+        #expect(model.depictionDrawBlocked)
+        model.startDepictionDrawing()
+        #expect(!model.isDrawingDepiction)
+        model.transcriptions.isTranscribing = false
+        #expect(model.canStartDepictionDrawing)
+        model.startDepictionDrawing()
+        #expect(model.isDrawingDepiction)
     }
 
     // MARK: - Save (T-13 … T-15)
