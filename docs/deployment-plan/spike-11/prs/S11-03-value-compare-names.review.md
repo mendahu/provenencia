@@ -1,7 +1,7 @@
 # Review — S11-03 Value compare: names
 
-**Verdict:** round 1 — Fits with changes / Not ready → every finding fixed or declined; round 2 pending
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes; every finding fixed or declined, no blocker open
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
@@ -68,3 +68,37 @@
 
 ### X-8 · minor · Checks that need the Mac
 **Answer:** Declined: STEP-8 already says the gate runs on the user's Mac, as `ship-pr` requires.
+
+## Round 2
+
+A fresh reviewer checked each answer: M-1 – M-3, M-5, M-6, M-8, X-1, X-3 – X-8 OK; M-4 / X-2, M-7 and M-9 partly fixed (below).
+
+### X-9 · blocker · STEP-1 moves two tests that need STEP-3 and STEP-4 code
+**Answer:** Fixed. STEP-1 moves them asserting through `match.NameComparer` with `AliasTables()`; STEP-4 rewrites them onto `valuecompare.Compare` (T-8).
+
+### X-10 · major · Two names for the new `Value` field
+**Answer:** Fixed. `NamePattern` everywhere (§6, Next adds).
+
+### X-11 · major · T-10 and T-11 had no working step (M-4, M-9, X-2 follow-up)
+**Answer:** Fixed. STEP-1 only drops the `Key` loop; STEP-2 moves the part-type checks, keeps the `DefaultNames.Pattern` check in `core/match`, and adds T-10 and T-11.
+
+### X-12 · minor · D-7 alias call vs D-8 signature
+**Answer:** Fixed (D-7 calls `Hit`).
+
+### X-13 · minor · Weighted `meanSimilarity` signature
+**Answer:** Fixed (D-11 step 9 states it and both calls).
+
+### X-14 · minor · Similarity 0 on steps 3, 5, 6
+**Answer:** Fixed.
+
+### X-15 · minor · STEP-7's `rg` misses two lines
+**Answer:** Fixed (third `-e`).
+
+### M-10 · minor · `namealiases` package comment
+**Answer:** Fixed in STEP-1.
+
+### M-11 · major · M-7's log not written (M-7 follow-up)
+**Answer:** Fixed. D-15 and STEP-7 add the line to `docs/ideas/international-names.md`.
+
+### M-12 · minor · Skill's Key rule
+**Answer:** Fixed (D-15 amends "Add a comparer" step 5).
