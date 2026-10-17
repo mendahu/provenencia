@@ -122,3 +122,35 @@ Head `e749bb7`. Gate PASS (orchestrator run; 1130 Swift tests). F-8 done. Deviat
 
 ## Result
 Gate PASS · CI see PR · open: none · follow-ups: PRF-1 (box-only PDF render, user 2026-10-17), MNT-7 · to user: PRF-1 box-only render → Follow-up (answered)
+
+## Round 3 — user dogfood (2026-10-17)
+After the PR went ready, the user ran the app and asked for two changes:
+1. On a saved likeness line in the composer's observation list, the Property label and the thumbnail are not vertically aligned. Cause: `lineRow` is an `HStack(alignment: .firstTextBaseline)`, so the 32pt thumbnail sits on the label's baseline.
+2. On an evidence graph subject card, a Likeness row is blank. Cause: `EvidenceCardView.paintRows` draws only `ObservationValueDisplay.string`, which is "" for a depiction. The observation already carries `depiction?.imageRelPath` (`GoStore.swift:2090`).
+
+Item 2 is outside the plan's §4/§6 scope (the plan names no graph change). The user asked for it directly, so it ships in this PR as a user-requested addition and the PR body records it.
+
+### Fix plan 3
+
+**F-9 — Centre the Property label and the thumbnail on a likeness line**
+Files: `macos/App/Features/CitationComposer/CitationComposerSubjectGroups.swift` (`lineRow`).
+Failing test first: none (layout); covered by the manual check.
+Do: when `line.imageRelPath != nil`, lay the row out with `.center` vertical alignment, so the mark, the Property label, the "not", the thumbnail, the Negative badge and the line actions share one vertical centre. Text lines keep `.firstTextBaseline` exactly as today. Keep D-13's padding (`space1` vertical for a likeness line) and the 32pt tile. One `HStack` with the alignment chosen by the line: do not fork `lineRow`.
+Check: build; the manual check (a likeness line's label is centred against its thumbnail; text lines unchanged); scripts/check-pr.sh PASS.
+
+**F-10 — Draw the likeness thumbnail on an evidence graph subject card**
+Files: `macos/App/Features/EvidenceGraph/EvidenceCardView.swift` (`paintRows`, `propertyRowHeight`, measure), `EvidenceCanvasCard.swift` (carry the project dir), `EvidenceGraphModel.swift` / `EvidenceGraphView.swift` (where the card is built), `macos/App/Platform/ThumbnailCache.swift`, `EvidenceBridgeCard.swift` / `EvidenceSubjectCard.swift` if their row geometry assumes a fixed height for these rows, and tests in `macos/ProvenenciaTests` (the existing evidence card/layout tests).
+Failing test first: `<existing EvidenceCardView/layout test suite>/likenessRowIsTallEnoughForItsThumbnail` — a subject card with one observation whose `depiction?.imageRelPath` is set and `valueText` is empty measures a row of at least label + 32pt thumbnail + padding (taller than `EvidenceSubjectCard.propertyRowHeight`), and its row hit rect matches the painted rect. Plus a `ThumbnailCache` test for the new synchronous lookup (miss → nil; after `image(projectDir:relPath:)` loads → the same image).
+Do:
+- A row is a likeness row when `observation.depiction?.imageRelPath` is non-empty. In `propertyRowHeight`, such a row is `lineHeight(mono(9)) + 3 + 32 + 16`: the label line, the gap, a 32pt tile, and the row's padding. Every place that lays out or hit-tests subject or bridge rows uses the measured height; check `EvidenceSubjectCard.swift:~124` and `EvidenceBridgeCard.swift` for fixed `propertyRowHeight` arithmetic over these rows, and route them through the same measure if they apply.
+- In `paintRows`, for a likeness row: keep the label line and the negated prefix as they are, then draw the image in a 32×32 rect at `y: rect.minY + 22` (aspect-fit, rounded 4pt corners, with `PVColor` placeholder fill while not loaded) in place of the value text. Keep the pen symbol.
+- Image source: `ThumbnailCache.shared`. Add `func cachedImage(projectDir:relPath:) -> NSImage?` (a synchronous hit with no disk read; it touches LRU order like `image`). `EvidenceCanvasCard` gains the project dir (a `String`, so it stays `Equatable`), set where the graph builds cards from the model's project key. `EvidenceCardView` paints from `cachedImage`. When a likeness row misses, it starts one `Task { await ThumbnailCache.shared.image(...) ; needsDisplay = true }` per relPath, from `viewDidMoveToWindow`, cancelled when the view leaves the window. Do not use `NSImage(contentsOf:)` on the paint path (D-13's rejected option). The ghost card paints the placeholder only.
+- VoiceOver: the card's accessibility label already lists properties through `card.text.accessibilityLabel`. Where that text uses `ObservationValueDisplay.string` and gets "" for a likeness, read the existing `L10n.CitationComposer.depictionThumbLabel(property, person)`, or the property label alone. No new copy if an existing string fits; if one is needed, add it through `add-localized-string`.
+- Skills: `add-swift-test`, and `add-localized-string` only if a string is added.
+Check: new tests pass; manual check (a Likeness row on a subject card shows the face, and the card grows to fit); scripts/check-pr.sh PASS.
+
+## Round 3 — fix
+Head `68c0163` (commits `8eb02a3` F-9, `68c0163` F-10). Gate PASS (orchestrator run; 1132 Swift tests). Not re-reviewed by lenses (user-requested dogfood changes after the two-round cap; the orchestrator read the F-10 diff). Deviations: tests written with the fix (new API); the fixed-height fallback in `EvidenceSubjectCard` / `EvidenceBridgeCard` (used only when no measured layout exists) is unchanged, as it already under-reports wrapped text rows; card accessibility labels list no property rows, so no VoiceOver change was needed.
+
+## Result (after round 3)
+Gate PASS · CI see PR · open: none · follow-ups: PRF-1 (box-only PDF render), MNT-7, fixed-height row fallback in `EvidenceSubjectCard`/`EvidenceBridgeCard` · manual check: also F-9 alignment and F-10 graph thumbnail
