@@ -1,7 +1,7 @@
 # Ship log — S10-35 Person gallery and Persons list thumb
 
 **Plan:** [`S10-35-person-gallery.md`](S10-35-person-gallery.md) · **Branch:** `s10-35-person-gallery` · **PR:** #446
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `dcaa051b`. Gate PASS (orchestrator run against `79f7f042`). Report: no deviations; open details chosen — `likenesses.ForEntities` orders the gallery in Go, `PVList` gained a private designated init for an optional thumbnail, `CachedThumbnail` folds `fallbackMark` into `taskID`. Not run: §10 manual check.
@@ -63,3 +63,25 @@ Check: scripts/check-pr.sh PASS.
 Files: `docs/deployment-plan/spike-10/prs/S10-35-person-gallery.md`.
 Do: replace "No differences from this plan" with: `taskID` also folds in `fallbackMark` (D-13 said unchanged); T-8's plain thumb has `imageLabel` nil, not "Likeness"; `PVList` has a private `init(optionalThumbnail:)` (D-17 did not name it); the likeness test helpers are shared in `observationstest` rather than package-local (T-2b, T-3); `ThumbnailCache` decodes at ≤ 512 px (review PRF-1/SEC-1).
 Check: `scripts/check-plan-docs.py` 0 errors; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `0b08d414`. Gate PASS (orchestrator run). F-1 to F-7 done. F-1 and F-5 tests ran red first. F-3 was committed inside F-2's commit (`3cf897e7`). Implementer added one line to `completed.md` (512 px decode) and committed this ship log in `0b08d414`, against instructions; content unchanged.
+
+## Round 2 — review
+Scope `dcaa051b...0b08d414`. Lenses: all five (each had a Fix-now finding).
+Verdicts: CON clean, MNT changes needed (MNT-1 remnant), UX clean, SEC clean, PRF clean. No blockers.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| PRF-1, SEC-1 | PRF, SEC | — | Bounded decode | Resolved | `ThumbnailCache.swift:58-67`; `decodesAtABoundedPixelSize` |
+| MNT-1 | MNT | minor (remnant) | One inline `ImageOf` query left in `TestForEntityLikenessNeedsAPNG` | Follow-up | `conclusiondetails_test.go:276-278`; one-line swap; round 2 opens blockers only |
+| MNT-2, MNT-3, MNT-4 | MNT | — | — | Resolved | verified by MNT round 2 |
+| UX-1 | UX | — | — | Resolved | `PersonDetailContent.swift:32-33`, tested both branches |
+| CON-1, CON-2, CON-3, CON-5 | CON | — | — | Resolved | verified by CON round 2 |
+| PRF note | PRF→UX | — | 512 px cap may soften the artifact well | Rejected | the well loads `thumbnailRelPath`, a ≤256 px derivative (`ensure.go:60`); UX and CON round 2 confirm |
+| MNT-7 | MNT | nit | `conclusionheaders_test.go:329-332` closures only forward to shared helpers | Logged | — |
+
+No Fix plan 2.
+
+## Result
+Gate PASS at `0b08d414` · CI pending · open: none · follow-ups: depiction save-time thumbnail derivative (PRF-1), MNT-1 remnant, CON-4, MNT-5 (S10-39) · to user: —
