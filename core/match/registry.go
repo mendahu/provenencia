@@ -55,16 +55,16 @@ var DefaultWordRules = WordRules{
 	Particles:             &SpacedParticles,
 	Folds:                 &LetterFolds,
 	// No alias tables. Scoring reads the catalog; this seed is not a fallback.
-	Aliases: &noAliasTables,
+	Aliases: &noAliases,
 }
 
 // AliasCredit is an abbreviation or nickname table hit. Exact is 1. A
 // fold-only pair is lower (foldOnly).
 var AliasCredit = value.Words.AliasCredit
 
-// noAliasTables is the comparer default: no abbreviation or nickname hits
-// until a catalog load supplies rows.
-var noAliasTables []valuecompare.AliasTable
+// noAliases is the comparer default: no abbreviation or nickname hits until a
+// catalog load supplies an index.
+var noAliases valuecompare.AliasIndex
 
 // MaxExactPairing bounds the exact best-pairing search; longer lists pair
 // greedily. Read from the registry's value section.

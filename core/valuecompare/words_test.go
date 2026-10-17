@@ -118,6 +118,24 @@ func TestAliasIndex(t *testing.T) {
 	if _, ok := idx.Hit("jas", "jim", valuecompare.RoleFamily, given); ok {
 		t.Error("a role the table does not allow hit")
 	}
+	// A token in several sets: Hit finds the set that holds the other token,
+	// and misses when no one set holds both.
+	multi := valuecompare.NewAliasIndex([]valuecompare.AliasTable{{
+		Key: "t", Kind: valuecompare.AliasNickname, Roles: []valuecompare.NameRole{given},
+		Sets: [][]string{{"ben", "benji"}, {"ben", "benedict"}, {"benjamin", "jamie"}},
+	}})
+	if _, ok := multi.Hit("ben", "benedict", given, given); !ok {
+		t.Error("a token in several sets missed the later set")
+	}
+	if _, ok := multi.Hit("benedict", "ben", given, given); !ok {
+		t.Error("the hit is not symmetric")
+	}
+	if _, ok := multi.Hit("benji", "benedict", given, given); ok {
+		t.Error("tokens in different sets hit")
+	}
+	if _, ok := multi.Hit("ben", "jamie", given, given); ok {
+		t.Error("tokens in different sets hit")
+	}
 	if _, ok := (valuecompare.AliasIndex{}).Hit("jas", "jim", given, given); ok {
 		t.Error("the zero index hit")
 	}

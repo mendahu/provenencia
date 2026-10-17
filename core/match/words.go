@@ -29,9 +29,9 @@ type WordRules struct {
 	// Folds replaces letters that do not decompose. Nil uses LetterFolds.
 	// An empty map strips accents and substitutes nothing.
 	Folds *map[rune]string
-	// Aliases are abbreviation and nickname tables loaded from the catalog.
-	// Nil and empty both hit nothing. Every table in the slice is consulted.
-	Aliases *[]valuecompare.AliasTable
+	// Aliases are the catalog's abbreviation and nickname tables, indexed
+	// once per load by the caller. Nil and the zero index both hit nothing.
+	Aliases *valuecompare.AliasIndex
 }
 
 // wordRules are WordRules resolved against the registry.
@@ -57,7 +57,7 @@ func (r WordRules) resolve(initials bool) wordRules {
 		initials:      initials,
 		particles:     particles,
 		folds:         setting(r.Folds, *DefaultWordRules.Folds),
-		aliases:       valuecompare.NewAliasIndex(aliasTablesOf(r.Aliases)),
+		aliases:       setting(r.Aliases, noAliases),
 	}
 }
 
@@ -145,14 +145,4 @@ func wordDice(wa, wb []string, r wordRules) float64 {
 func bestPairing(score [][]float64) float64 {
 	total, _ := valuecompare.BestAssignment(score, MaxExactPairing)
 	return total
-}
-
-// aliasTablesOf is the list on the comparer. Nil and empty both hit nothing.
-func aliasTablesOf(p *[]valuecompare.AliasTable) []valuecompare.AliasTable {
-	if p == nil {
-		return nil
-	}
-	out := make([]valuecompare.AliasTable, len(*p))
-	copy(out, *p)
-	return out
 }

@@ -21,7 +21,8 @@ type AliasTable struct {
 // AliasIndex is a catalog's alias tables, indexed once per load. The zero
 // index hits nothing.
 type AliasIndex struct {
-	sets []aliasSet
+	sets    []aliasSet
+	byToken map[string][]int // token -> indexes into sets that hold it
 }
 
 // aliasSet is one equivalence set, the roles that may use it, and its kind.
@@ -50,6 +51,12 @@ func NewAliasIndex(tables []AliasTable) AliasIndex {
 			if len(tokens) == 0 {
 				continue
 			}
+			if idx.byToken == nil {
+				idx.byToken = map[string][]int{}
+			}
+			for token := range tokens {
+				idx.byToken[token] = append(idx.byToken[token], len(idx.sets))
+			}
 			idx.sets = append(idx.sets, aliasSet{tokens: tokens, roles: roles, kind: table.Kind})
 		}
 	}
@@ -59,7 +66,8 @@ func NewAliasIndex(tables []AliasTable) AliasIndex {
 // Hit reports whether one set holds both tokens and allows both roles, and
 // that set's kind. x and y are comparison tokens.
 func (a AliasIndex) Hit(x, y string, rx, ry NameRole) (AliasKind, bool) {
-	for _, set := range a.sets {
+	for _, i := range a.byToken[x] {
+		set := a.sets[i]
 		if set.tokens[x] && set.tokens[y] && set.roles[rx] && set.roles[ry] {
 			return set.kind, true
 		}

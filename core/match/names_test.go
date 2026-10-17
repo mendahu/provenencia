@@ -282,11 +282,12 @@ func withAliasFixture() NameComparer {
 			},
 		},
 	}
-	return NameComparer{Words: WordRules{Aliases: &tables}}
+	index := valuecompare.NewAliasIndex(tables)
+	return NameComparer{Words: WordRules{Aliases: &index}}
 }
 
 func TestAliasTablesComeFromTheList(t *testing.T) {
-	none := NameComparer{Words: WordRules{Aliases: Set([]valuecompare.AliasTable{})}}
+	none := NameComparer{Words: WordRules{Aliases: Set(valuecompare.NewAliasIndex(nil))}}
 	got, ok := none.Compare(nv("g=Jas."), nv("g=James"))
 	if !ok || math.Abs(got-AliasCredit) < 1e-9 {
 		t.Fatalf("empty list still aliased: %.4f %v", got, ok)
@@ -295,7 +296,8 @@ func TestAliasTablesComeFromTheList(t *testing.T) {
 		Kind: valuecompare.AliasNickname, Roles: testAliasRoles,
 		Sets: [][]string{{"zz", "zzzz"}},
 	}}
-	extra := NameComparer{Words: WordRules{Aliases: &list}}
+	index := valuecompare.NewAliasIndex(list)
+	extra := NameComparer{Words: WordRules{Aliases: &index}}
 	got, ok = extra.Compare(nv("g=Zz"), nv("g=Zzzz"))
 	if !ok || math.Abs(got-AliasCredit) > 1e-9 {
 		t.Fatalf("added set did not score: %.4f %v", got, ok)

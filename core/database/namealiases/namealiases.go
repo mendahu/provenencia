@@ -219,7 +219,7 @@ func Comparer(g *graphcache.Graph, q Querier, base match.NameComparer) (match.Na
 }
 
 func withAliases(base match.NameComparer, tables []valuecompare.AliasTable) match.NameComparer {
-	copied := append([]valuecompare.AliasTable(nil), tables...)
-	base.Words.Aliases = &copied
+	index := valuecompare.NewAliasIndex(tables)
+	base.Words.Aliases = &index
 	return base
 }
