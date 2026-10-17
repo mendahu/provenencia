@@ -1,7 +1,9 @@
 // Package ingest copies opaque local files into a project’s content-addressed
 // object store. Checksum reuse returns the existing File, records a reuse_file
 // audit revision, and surfaces IngestedAs so the UI can offer keep/overwrite
-// when the picked name differs. Ingest does not decode or execute file content.
+// when the picked name differs. File does not decode or execute file content.
+// StageImage decodes an image only through raster.EncodePNG and stores Go’s own
+// re-encode, never the caller’s bytes.
 package ingest
 
 import (
@@ -39,6 +41,7 @@ var (
 	ErrNotAFile              = apperr.New(apperr.CodeIngestNotAFile, apperr.KindUser)
 	ErrSymlink               = apperr.New(apperr.CodeIngestSymlink, apperr.KindUser)
 	ErrMissing               = apperr.New(apperr.CodeIngestMissing, apperr.KindUser)
+	ErrUnsupportedImage      = apperr.New(apperr.CodeIngestUnsupportedImage, apperr.KindUser)
 )
 
 // MaxBytes is the largest source file ingest accepts (512 MiB).
