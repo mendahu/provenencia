@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Loads a project object thumbnail through `ThumbnailCache` and feeds
-/// `PVThumbnail` (empty / loading / image / type icon / MIME glyph).
+/// `PVThumbnail` (empty / loading / image / fallback mark / type icon / MIME glyph).
 /// Features should not call `NSImage(contentsOf:)` on the render path.
 ///
 /// Preference: raster → fallback mark → type icon → MIME glyph → empty.
