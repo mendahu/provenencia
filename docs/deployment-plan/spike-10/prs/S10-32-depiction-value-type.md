@@ -1,6 +1,6 @@
 # S10-32 — Depiction value and `likeness` on Person
 
-**Status:** Planned
+**Status:** Landed in [#430](https://github.com/mendahu/provenencia/pull/430) (2026-10-17)
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-32--depiction-value)
 **Brief:** — (no new chrome: an engine value type, its value table, and a seeded Property)
@@ -14,6 +14,10 @@
 **Context:** [depictions and likenesses](../depictions-and-likenesses.md) ("Shape", "The image", "Settled"), [`docs/interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) (Properties `value_type`, value population), [`docs/seeded-vocabulary.md`](../../../seeded-vocabulary.md) §3.2–3.3, working rules "A depiction's value is its own row: region plus image", "The client renders the image; Go validates it and stores its own copy", "A File is released only when nothing points at it", "Deletes follow the evidence chain", "`likeness` is new catalogs only"; map review [`../deployment-plan.review.md`](../deployment-plan.review.md) K-1, K-4, K-8
 **Planned:** 2026-10-17 against `main` @ `ae26c629` (S10-55, S10-53, and S10-56 landed); first planned 2026-10-16 against `98819f86`
 **Review:** [`S10-32-depiction-value-type.review.md`](S10-32-depiction-value-type.review.md) — Fits with changes, Ready with changes (applied); 2 rounds on this shape, then a refresh round after S10-55 and S10-53 landed: Fits with changes, Ready with changes (applied)
+
+## Landed
+
+Differences from this plan: the depiction case's body is `resolveDepiction` in `core/database/observations/depiction.go`, called from `resolveValue`, rather than inline; `updateOne` calls `releaseReplacedValue` for the three columns from one table loop; the STEP-6 check `go list -deps ./core/database/... | grep -E 'core/(ingest|writes)$'` prints `core/writes` on `main` too (`sources` and `sourcemetadata` import it), so the check that holds is that `observations` has neither dependency (`go list -deps ./core/database/observations` prints neither); STEP-6 and STEP-7 landed together, so the depiction case never returned `ErrInvalid` for an existing Observation; T-6 and T-7 carry a few more rows than listed (a region that is not a locator, a value row that is not the Observation's own), and the test file gained the helpers `saveCitation`, `updateObservation`, `deleteObservation`, `rowCount`, `changeKinds`, and `objectExists` beside the three the plan names. The manual check on a Mac (an older project opens with no Likeness; a new one lists it) was not run.
 
 ### Implementer — read this first
 

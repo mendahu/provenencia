@@ -53,9 +53,9 @@ new Install into **`onboarding.createCatalog` only**.
 Same pattern as Source: edit that package’s `registry.go`, keep
 `origin = provenencia`, no SQL seeds, tests that create installs and open does
 not heal. Subject type keys/prefixes: `docs/seeded-vocabulary.md` §3.1.
-Property value types: `text` \| `integer` \| `date` \| `name` \| `subject` \| **`term`**.
+Property value types: `text` \| `integer` \| `date` \| `name` \| `subject` \| **`term`** \| **`depiction`**.
 Kind/edge Properties (`event_type`, `role`, `relationship_type`) use `term` + `property_terms` (S7-01b) — not free-text Observation strings.
-**`value_type = term` Properties are Install/registry only** (`origin=provenencia` or `plugin:<id>`). Researcher Create Property must refuse `term`.
+**`value_type = term` and `depiction` Properties are Install/registry only** (`origin=provenencia` or `plugin:<id>`). Researcher Create Property must refuse `term` and `depiction`.
 Researchers may still add `origin=user` **term rows** under those Properties via the composer picker.
 Capabilities and presentation tokens stay in the compiled `subjectvocab`
 registry (not SQL columns). Non-bridge locked bindings stay in `seedBindings`.
