@@ -51,13 +51,13 @@ func Unpromote(tx *database.Tx, userID, subjectID []byte) ([]rowchange.Change, e
 	if err != nil {
 		return nil, err
 	}
-	released, err := deleteimpact.ReleaseClaim(q, claim.ID)
+	released, err := deleteimpact.ReleaseClaim(tx, claim.ID)
 	if err != nil {
 		return nil, err
 	}
-	bridges, err := identityclaims.UnfileBridgesTx(q, subject.SourceID, subject.ID)
+	bridges, err := identityclaims.UnfileBridges(tx, subject.SourceID, subject.ID)
 	if err != nil {
 		return nil, err
 	}
-	return append(released.Changes, bridges...), nil
+	return append(released, bridges...), nil
 }

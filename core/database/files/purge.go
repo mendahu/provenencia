@@ -21,8 +21,12 @@ type Object struct {
 // pointer at a missing object. A checksum a files row still carries stays on
 // disk, and a checksum listed twice is removed once.
 //
-// Object bytes are removed only here (S10-53 moves ingest.File's rollback and
-// StagedImage.Discard onto this function).
+// Object bytes are removed only here. Callers run inside catalogsession.Do (an
+// AfterCommit callback runs inside the write that scheduled it), which runs a
+// project's operations one at a time; that is what keeps a purge from falling
+// between another operation's object write and its row's commit. Never call it
+// inside a write function: its lookup waits for the connection the write holds.
+// Inside a write, use PurgeAfterCommit.
 func PurgeUnreferenced(c *database.Catalog, objs []Object) {
 	for _, obj := range objs {
 		if _, err := LookupByChecksum(c, obj.ChecksumSHA256); err == nil {

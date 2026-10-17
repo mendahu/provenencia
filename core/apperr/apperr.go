@@ -97,6 +97,8 @@ const (
 	CodeIngestNotAFile                = "ingest.not_a_file"
 	CodeIngestSymlink                 = "ingest.symlink"
 	CodeIngestMissing                 = "ingest.missing"
+	CodeIngestUnsupportedImage        = "ingest.unsupported_image"
+	CodeIngestUnsafeObjects           = "ingest.unsafe_objects"
 	CodeIdentityNotFound              = "identity.not_found"
 	CodeIdentityInvalidName           = "identity.invalid_name"
 	CodeIdentityInvalidID             = "identity.invalid_id"

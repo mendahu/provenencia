@@ -719,6 +719,55 @@ func TestArtifactDeletePurgesDisk(t *testing.T) {
 			t.Fatalf("derived object %v", err)
 		}
 	})
+
+	t.Run("prunes empty shard folders", func(t *testing.T) {
+		pngPath := filepath.Join(t.TempDir(), "shard.png")
+		img := image.NewRGBA(image.Rect(0, 0, 40, 40))
+		var buf bytes.Buffer
+		if err := png.Encode(&buf, img); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(pngPath, buf.Bytes(), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		ingested, err := ingest.File(c, pngPath, userID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		art, err := runCreate(c, userID, CreateInput{
+			SourceID: src.ID, FileID: ingested.File.ID, Label: "Shard scan",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		thumb, err := derivatives.EnsureThumbnail(c, ingested.File.ID)
+		if err != nil || thumb.Skipped {
+			t.Fatalf("thumb %+v %v", thumb, err)
+		}
+		derived, err := files.Lookup(c, thumb.Link.DerivedFileID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var paths []string
+		for _, f := range []files.File{ingested.File, derived} {
+			path := objectPath(t, f)
+			entries, err := os.ReadDir(filepath.Dir(path))
+			if err != nil || len(entries) != 1 {
+				t.Fatalf("shard folder of %s holds %d entries, %v", filepath.Base(path), len(entries), err)
+			}
+			paths = append(paths, path)
+		}
+		if err := runDelete(c, userID, art.ID); err != nil {
+			t.Fatal(err)
+		}
+		for _, path := range paths {
+			for _, p := range []string{path, filepath.Dir(path), filepath.Dir(filepath.Dir(path))} {
+				if _, err := os.Lstat(p); !os.IsNotExist(err) {
+					t.Fatalf("%s still exists: %v", strings.TrimPrefix(p, c.Dir()), err)
+				}
+			}
+		}
+	})
 }
 
 // TestArtifactDeleteKeepsSharedThumbnail is AC-1.1 and AC-1.2: two Artifacts on

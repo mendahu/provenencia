@@ -113,11 +113,11 @@ const touchesEnd = `EXISTS (
 		      WHERE o.subject_id = s.id AND o.value_subject_id = ?
 		    )`
 
-// UnfileBridgesTx is the inverse of FileBridgesTx: it deletes, audited, the
+// UnfileBridges is the inverse of FileBridgesTx: it deletes, audited, the
 // accepted claim of every bridge on sourceID that has subjectID as an end,
 // pins first, in bridge Subject id order. The bridges' handles (their
 // associations) are left alone. Does not commit.
-func UnfileBridgesTx(tx *sql.Tx, sourceID, subjectID []byte) ([]rowchange.Change, error) {
+func UnfileBridges(tx *database.Tx, sourceID, subjectID []byte) ([]rowchange.Change, error) {
 	keys := connectrules.BridgeTypeKeys()
 	if len(keys) == 0 || len(sourceID) != 16 || len(subjectID) != 16 {
 		return nil, nil
@@ -157,7 +157,7 @@ func UnfileBridgesTx(tx *sql.Tx, sourceID, subjectID []byte) ([]rowchange.Change
 		if err != nil {
 			return nil, err
 		}
-		changes = append(changes, released.Changes...)
+		changes = append(changes, released...)
 	}
 	return changes, nil
 }

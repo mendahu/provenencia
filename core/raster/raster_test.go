@@ -7,9 +7,13 @@ import (
 	"hash/crc32"
 	"image"
 	"image/color"
+	"image/gif"
+	"image/jpeg"
 	"image/png"
 	"io"
 	"testing"
+
+	"golang.org/x/image/tiff"
 )
 
 func init() {
@@ -203,4 +207,105 @@ func TestEncodeJPEGOptionsAndTransform(t *testing.T) {
 	if b.Dx() != 40 || b.Dy() != 20 {
 		t.Fatalf("got %dx%d", b.Dx(), b.Dy())
 	}
+}
+
+func encodeImage(t *testing.T, w, h int, enc func(io.Writer, image.Image) error) []byte {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			img.Set(x, y, color.RGBA{R: uint8(x), G: uint8(y), B: 7, A: 255})
+		}
+	}
+	var buf bytes.Buffer
+	if err := enc(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
+func pngBytes(t *testing.T, w, h int) []byte {
+	return encodeImage(t, w, h, func(wr io.Writer, m image.Image) error { return png.Encode(wr, m) })
+}
+
+func jpegBytes(t *testing.T, w, h int) []byte {
+	return encodeImage(t, w, h, func(wr io.Writer, m image.Image) error { return jpeg.Encode(wr, m, nil) })
+}
+
+func tiffBytes(t *testing.T, w, h int) []byte {
+	return encodeImage(t, w, h, func(wr io.Writer, m image.Image) error { return tiff.Encode(wr, m, nil) })
+}
+
+func TestDecode(t *testing.T) {
+	both := []string{"png", "jpeg"}
+	tests := []struct {
+		name    string
+		src     []byte
+		formats []string
+		want    error
+	}{
+		{"png in list", pngBytes(t, 4, 4), both, nil},
+		{"tiff outside list", tiffBytes(t, 4, 4), both, ErrUnsupportedFormat},
+		{"fake format outside list, no full decode", []byte("FAKEIMG!rest"), both, ErrUnsupportedFormat},
+		{"tiff with nil list", tiffBytes(t, 4, 4), nil, nil},
+		{"bomb header", pngHeaderOnly(t, 100000, 100000), both, ErrTooLarge},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := decode(tt.src, tt.formats)
+			if !errors.Is(err, tt.want) || (tt.want == nil && err != nil) {
+				t.Fatalf("decode err = %v, want %v", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestEncodePNG(t *testing.T) {
+	size := func(t *testing.T, b []byte) (int, int) {
+		t.Helper()
+		img, err := png.Decode(bytes.NewReader(b))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return img.Bounds().Dx(), img.Bounds().Dy()
+	}
+	t.Run("jpeg scaled to max edge", func(t *testing.T) {
+		out, err := EncodePNG(jpegBytes(t, 4000, 1000), Options{MaxEdge: 2048})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if w, h := size(t, out); w != 2048 || h != 512 {
+			t.Fatalf("size = %dx%d, want 2048x512", w, h)
+		}
+	})
+	t.Run("small png keeps its size", func(t *testing.T) {
+		out, err := EncodePNG(pngBytes(t, 300, 200), Options{MaxEdge: 2048})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if w, h := size(t, out); w != 300 || h != 200 {
+			t.Fatalf("size = %dx%d, want 300x200", w, h)
+		}
+	})
+	t.Run("zero max edge", func(t *testing.T) {
+		if _, err := EncodePNG(pngBytes(t, 4, 4), Options{}); err == nil {
+			t.Fatal("want error")
+		}
+	})
+	t.Run("gif outside formats", func(t *testing.T) {
+		var buf bytes.Buffer
+		if err := gif.Encode(&buf, image.NewPaletted(image.Rect(0, 0, 4, 4), color.Palette{color.Black, color.White}), nil); err != nil {
+			t.Fatal(err)
+		}
+		_, err := EncodePNG(buf.Bytes(), Options{MaxEdge: 64, Formats: []string{"png"}})
+		if !errors.Is(err, ErrUnsupportedFormat) {
+			t.Fatalf("err = %v", err)
+		}
+	})
+	t.Run("EncodeJPEG honors formats", func(t *testing.T) {
+		_, err := EncodeJPEG(jpegBytes(t, 8, 8), Options{MaxEdge: 64, Formats: []string{"png"}})
+		if !errors.Is(err, ErrUnsupportedFormat) {
+			t.Fatalf("err = %v", err)
+		}
+	})
 }

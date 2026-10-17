@@ -15,7 +15,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/effects"
-	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/derivatives"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -307,14 +306,13 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	}); err != nil {
 		return nil, err
 	}
-	released, err := deleteimpact.ReleaseFacets(tx.Tx, catalogmodel.KindSource, id)
+	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindSource, id)
 	if err != nil {
 		return nil, err
 	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return nil, err
 	}
-	files.PurgeAfterCommit(tx, released.Objects)
 
 	fields := map[string]rowchange.FieldDiff{
 		"id":             {Old: uuidString(id), New: nil},
@@ -325,7 +323,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if existing.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: existing.Description, New: nil}
 	}
-	return append(released.Changes, rowchange.Change{
+	return append(released, rowchange.Change{
 		EntityType: "source",
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionDelete,

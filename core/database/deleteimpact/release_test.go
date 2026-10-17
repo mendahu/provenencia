@@ -198,7 +198,7 @@ func deleteArtifact(t *testing.T, tx *sql.Tx, artID []byte) []files.Object {
 	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, artID); err != nil {
 		t.Fatal(err)
 	}
-	objs, err := ReleaseSnapshot(tx, snap)
+	objs, err := releaseSnapshot(tx, snap)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -345,7 +345,7 @@ func TestSnapshotOwnedRequiresParent(t *testing.T) {
 	if _, err := SnapshotOwned(tx, catalogmodel.KindArtifact, missing); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("snapshot missing parent %v", err)
 	}
-	if _, err := ReleaseOwned(tx, catalogmodel.KindArtifact, missing); !errors.Is(err, ErrInvalid) {
+	if _, err := releaseOwned(tx, catalogmodel.KindArtifact, missing); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("release missing parent %v", err)
 	}
 }

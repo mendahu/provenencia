@@ -197,3 +197,39 @@ func TestMapConstraint(t *testing.T) {
 		t.Fatalf("plain %v", err)
 	}
 }
+
+func TestLookupByChecksumTx(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+
+	id, err := NewID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	const sum = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	if err := Insert(tx, File{ID: id, ChecksumSHA256: sum, MediaType: "image/png", ByteSize: 3}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := LookupByChecksumTx(tx, sum)
+	if err != nil || string(got.ID) != string(id) || got.MediaType != "image/png" {
+		t.Fatalf("found: %v %+v", err, got)
+	}
+	if _, err := LookupByChecksumTx(tx, "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("unknown: %v", err)
+	}
+	if _, err := LookupByChecksumTx(tx, "xyz"); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("bad hex: %v", err)
+	}
+}

@@ -147,7 +147,7 @@ func TestUnpromote(t *testing.T) {
 		other := make([]byte, 16)
 		other[0] = 0x7f
 		_, err := writes.Call(w.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			ch, err := identityclaims.UnfileBridgesTx(tx.Tx, other, h.james.ID)
+			ch, err := identityclaims.UnfileBridges(tx, other, h.james.ID)
 			if len(ch) != 0 {
 				t.Fatalf("changes %d", len(ch))
 			}

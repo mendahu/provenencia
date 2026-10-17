@@ -7,9 +7,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
-	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/google/uuid"
@@ -19,8 +16,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
-	"github.com/mendahu/provenencia/core/derivatives/raster"
 	"github.com/mendahu/provenencia/core/objectstore"
+	"github.com/mendahu/provenencia/core/raster"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -47,21 +44,6 @@ var ErrCorruptObject = apperr.New(apperr.CodeFileDerivativesCorruptObject, apper
 // decode. Larger Files are valid catalog content but are refused for
 // derivative generation with ErrUnprocessable.
 const maxSourceBytes = 128 << 20 // 128 MiB
-
-// decodeSem bounds concurrent read+decode+encode work so parallel Ensure
-// calls cannot multiply peak image-decode memory.
-var decodeSem = make(chan struct{}, decodeSlots())
-
-func decodeSlots() int {
-	n := runtime.GOMAXPROCS(0)
-	if n > 4 {
-		n = 4
-	}
-	if n < 1 {
-		n = 1
-	}
-	return n
-}
 
 // Spec describes one derivative to ensure. Type is the file_derivatives.derivative_type key
 // (unique per source). Raster holds encode parameters; add Spec helpers (Medium, …) as needed.
@@ -130,8 +112,7 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 	if err != nil {
 		return Result{}, err
 	}
-	objPath := filepath.Join(c.Dir(), filepath.FromSlash(rel))
-	derivedJPEG, err := generate(objPath, src.ChecksumSHA256, spec.Raster)
+	derivedJPEG, err := generate(c.Dir(), rel, src.ChecksumSHA256, spec.Raster)
 	if err != nil {
 		return Result{}, err
 	}
@@ -142,8 +123,7 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 	if err != nil {
 		return Result{}, err
 	}
-	derivedPath := filepath.Join(c.Dir(), filepath.FromSlash(derivedRel))
-	if err := writeObjectIfAbsent(derivedPath, derivedJPEG); err != nil {
+	if _, err := objectstore.WriteIfAbsent(c.Dir(), derivedRel, checksum, derivedJPEG); err != nil {
 		return Result{}, err
 	}
 
@@ -208,13 +188,12 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 }
 
 // generate reads the source object (bounded and checksum-verified) and
-// encodes the derivative JPEG. It holds decodeSem for the whole
+// encodes the derivative JPEG. It holds a raster.Slot for the whole
 // read+decode+encode section to bound peak memory across goroutines.
-func generate(objPath, wantChecksum string, opts raster.Options) ([]byte, error) {
-	decodeSem <- struct{}{}
-	defer func() { <-decodeSem }()
+func generate(projectDir, rel, wantChecksum string, opts raster.Options) ([]byte, error) {
+	defer raster.Slot()()
 
-	raw, err := readSourceObject(objPath, wantChecksum)
+	raw, err := readSourceObject(projectDir, rel, wantChecksum)
 	if err != nil {
 		return nil, err
 	}
@@ -228,11 +207,16 @@ func generate(objPath, wantChecksum string, opts raster.Options) ([]byte, error)
 	return derivedJPEG, nil
 }
 
-// readSourceObject reads at most maxSourceBytes from objPath and verifies
-// the bytes against the catalog checksum before they reach any decoder.
-func readSourceObject(objPath, wantChecksum string) ([]byte, error) {
-	f, err := os.Open(objPath)
+// readSourceObject reads at most maxSourceBytes from the object at rel and
+// verifies the bytes against the catalog checksum before they reach any
+// decoder. An object that is not a regular file, or a symlinked objects
+// folder, is ErrCorruptObject.
+func readSourceObject(projectDir, rel, wantChecksum string) ([]byte, error) {
+	f, err := objectstore.OpenObject(projectDir, rel)
 	if err != nil {
+		if errors.Is(err, objectstore.ErrNotRegular) || errors.Is(err, objectstore.ErrUnsafeObjects) {
+			return nil, ErrCorruptObject
+		}
 		return nil, err
 	}
 	defer f.Close()
@@ -355,50 +339,6 @@ func reprojectSourcesForNewThumbnail(c *database.Catalog, sourceFileID []byte, d
 			return err
 		}
 	}
-	return nil
-}
-
-func writeObjectIfAbsent(objPath string, data []byte) error {
-	if match, err := objectstore.MatchesChecksum(objPath, sha256Hex(data)); err != nil {
-		return err
-	} else if match {
-		return nil
-	}
-	if err := os.MkdirAll(filepath.Dir(objPath), 0o755); err != nil {
-		return err
-	}
-	tmp, err := os.CreateTemp(filepath.Dir(objPath), ".deriv-*")
-	if err != nil {
-		return err
-	}
-	tmpName := tmp.Name()
-	ok := false
-	defer func() {
-		if !ok {
-			_ = os.Remove(tmpName)
-		}
-	}()
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Sync(); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	if err := os.Rename(tmpName, objPath); err != nil {
-		if match, statErr := objectstore.MatchesChecksum(objPath, sha256Hex(data)); statErr == nil && match {
-			_ = os.Remove(tmpName)
-			ok = true
-			return nil
-		}
-		return err
-	}
-	_ = syncDir(filepath.Dir(objPath))
-	ok = true
 	return nil
 }
 

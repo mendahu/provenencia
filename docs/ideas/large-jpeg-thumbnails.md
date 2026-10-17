@@ -4,7 +4,7 @@
 
 ## What happens
 
-Thumbnail generation is in Go, in [`core/derivatives`](../../core/derivatives/). [`EncodeJPEG`](../../core/derivatives/raster/raster.go) reads the header, then returns `ErrTooLarge` when `width * height` is above `maxDecodePixels` (64,000,000) and never decodes pixels. This scan is 198 megapixels. A full RGBA decode would be about 792 MB. The cap was added so decompression bombs never allocate that (`788f14ad`).
+Thumbnail generation is in Go, in [`core/derivatives`](../../core/derivatives/). [`EncodeJPEG`](../../core/raster/raster.go) reads the header, then returns `ErrTooLarge` when `width * height` is above `maxDecodePixels` (64,000,000) and never decodes pixels. This scan is 198 megapixels. A full RGBA decode would be about 792 MB. The cap was added so decompression bombs never allocate that (`788f14ad`).
 
 [`generate`](../../core/derivatives/ensure.go) maps `ErrTooLarge` to `ErrUnprocessable`. [`thumbnailRelPath`](../../api/ffi/handlers/thumbnails.go) treats that as success with an empty path. The file is already stored. The glyph is `file_image_missing`. “Use as thumbnail” stays hidden because it needs a non-empty `thumbnailRelPath`.
 
@@ -14,7 +14,7 @@ PNG, GIF, WebP, TIFF, and BMP over the same budget skip the same way. Those form
 
 ## Suggested fix
 
-Keep the 64-megapixel full decode for every non-JPEG, and for JPEGs that fit. For a JPEG over the budget, downsample on darwin with ImageIO: `CGImageSourceCreateThumbnailAtIndex` and `kCGImageSourceThumbnailMaxPixelSize` set to `MaxEdge` (256 for the default thumbnail). The output buffer is bounded by that edge. Then the existing scale-and-`jpeg.Encode` path stores the usual unaudited `file_derivatives.thumbnail` row.
+Keep the 64-megapixel full decode for every non-JPEG, and for JPEGs that fit. For a JPEG over the budget, downsample on darwin with ImageIO: `CGImageSourceCreateThumbnailAtIndex` and `kCGImageSourceThumbnailMaxPixelSize` set to `MaxEdge` (256 for the default thumbnail). The output buffer is bounded by that edge. Then the existing scale-and-`jpeg.Encode` path stores the usual unaudited `file_derivatives.thumbnail` row. An ImageIO fallback goes in `EncodeJPEG`, not in the shared `decode`, so staged images never take it.
 
 - Do not apply EXIF orientation on this branch. The stdlib JPEG path does not, and only oversized JPEGs would take it.
 - Do not raise `maxDecodePixels` and full-decode. That is the allocation the cap blocks.

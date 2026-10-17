@@ -1,6 +1,11 @@
 package objectstore_test
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -130,4 +135,443 @@ func TestRemoveObject(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRemoveObjectPrunesEmptyShards(t *testing.T) {
+	put := func(t *testing.T, project, rel string) {
+		t.Helper()
+		path := filepath.Join(project, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("bytes"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	exists := func(project, rel string) bool {
+		_, err := os.Lstat(filepath.Join(project, filepath.FromSlash(rel)))
+		return err == nil
+	}
+	tests := []struct {
+		name   string
+		put    []string
+		remove string
+		stay   []string
+		gone   []string
+	}{
+		{
+			name:   "only object in its shard",
+			put:    []string{"objects/ab/cd/one.png"},
+			remove: "objects/ab/cd/one.png",
+			stay:   []string{"objects"},
+			gone:   []string{"objects/ab/cd/one.png", "objects/ab/cd", "objects/ab"},
+		},
+		{
+			name:   "two objects in one shard",
+			put:    []string{"objects/ab/cd/one.png", "objects/ab/cd/two.png"},
+			remove: "objects/ab/cd/one.png",
+			stay:   []string{"objects/ab/cd/two.png", "objects/ab/cd", "objects/ab"},
+			gone:   []string{"objects/ab/cd/one.png"},
+		},
+		{
+			name:   "sibling shard keeps the parent",
+			put:    []string{"objects/ab/cd/one.png", "objects/ab/ef/two.png"},
+			remove: "objects/ab/cd/one.png",
+			stay:   []string{"objects/ab/ef/two.png", "objects/ab"},
+			gone:   []string{"objects/ab/cd/one.png", "objects/ab/cd"},
+		},
+		{
+			name:   "Finder DS_Store files count as empty",
+			put:    []string{"objects/ab/cd/one.png", "objects/ab/cd/.DS_Store", "objects/ab/.DS_Store"},
+			remove: "objects/ab/cd/one.png",
+			stay:   []string{"objects"},
+			gone:   []string{"objects/ab/cd/one.png", "objects/ab/cd/.DS_Store", "objects/ab/cd", "objects/ab/.DS_Store", "objects/ab"},
+		},
+		{
+			name:   "DS_Store beside another file keeps the shard",
+			put:    []string{"objects/ab/cd/one.png", "objects/ab/cd/.DS_Store", "objects/ab/cd/other.txt"},
+			remove: "objects/ab/cd/one.png",
+			stay:   []string{"objects/ab/cd/.DS_Store", "objects/ab/cd/other.txt", "objects/ab/cd", "objects/ab"},
+			gone:   []string{"objects/ab/cd/one.png"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			project := t.TempDir()
+			for _, rel := range tt.put {
+				put(t, project, rel)
+			}
+			if err := objectstore.RemoveObject(project, tt.remove); err != nil {
+				t.Fatal(err)
+			}
+			for _, rel := range tt.stay {
+				if !exists(project, rel) {
+					t.Errorf("%s was removed", rel)
+				}
+			}
+			for _, rel := range tt.gone {
+				if exists(project, rel) {
+					t.Errorf("%s still exists", rel)
+				}
+			}
+		})
+	}
+}
+
+func TestWriteIfAbsent(t *testing.T) {
+	data := []byte("object bytes")
+	sum := sha256.Sum256(data)
+	checksum := hex.EncodeToString(sum[:])
+	const rel = "objects/ab/cd/obj.png"
+
+	noTemps := func(t *testing.T, project string) {
+		t.Helper()
+		entries, err := os.ReadDir(filepath.Join(project, "objects"))
+		if err != nil {
+			return
+		}
+		for _, e := range entries {
+			if strings.HasPrefix(e.Name(), ".write-") {
+				t.Fatalf("temp %s left behind", e.Name())
+			}
+		}
+	}
+
+	t.Run("write, repeat, and replace", func(t *testing.T) {
+		project := t.TempDir()
+		path := filepath.Join(project, filepath.FromSlash(rel))
+
+		wrote, err := objectstore.WriteIfAbsent(project, rel, checksum, data)
+		if err != nil || !wrote {
+			t.Fatalf("absent: wrote=%v err=%v", wrote, err)
+		}
+		if got, _ := os.ReadFile(path); string(got) != string(data) {
+			t.Fatalf("content = %q", got)
+		}
+
+		wrote, err = objectstore.WriteIfAbsent(project, rel, checksum, data)
+		if err != nil || wrote {
+			t.Fatalf("same bytes again: wrote=%v err=%v", wrote, err)
+		}
+
+		if err := os.WriteFile(path, []byte("other"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		wrote, err = objectstore.WriteIfAbsent(project, rel, checksum, data)
+		if err != nil || !wrote {
+			t.Fatalf("different file: wrote=%v err=%v", wrote, err)
+		}
+		if got, _ := os.ReadFile(path); string(got) != string(data) {
+			t.Fatalf("content after replace = %q", got)
+		}
+		noTemps(t, project)
+	})
+
+	t.Run("mismatched checksum writes nothing", func(t *testing.T) {
+		project := t.TempDir()
+		if wrote, err := objectstore.WriteIfAbsent(project, "objects/x.png", strings.Repeat("0", 64), data); err == nil || wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		if _, err := os.Lstat(filepath.Join(project, "objects")); err == nil {
+			t.Fatal("mismatched checksum created objects/")
+		}
+	})
+
+	t.Run("creates objects when absent", func(t *testing.T) {
+		project := t.TempDir()
+		wrote, err := objectstore.WriteIfAbsent(project, rel, checksum, data)
+		if err != nil || !wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		noTemps(t, project)
+	})
+
+	t.Run("objects subfolder symlinked outside", func(t *testing.T) {
+		project, out := t.TempDir(), t.TempDir()
+		if err := os.MkdirAll(filepath.Join(project, "objects"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(out, filepath.Join(project, "objects", "ab")); err != nil {
+			t.Fatal(err)
+		}
+		if wrote, err := objectstore.WriteIfAbsent(project, rel, checksum, data); err == nil || wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		if entries, _ := os.ReadDir(out); len(entries) != 0 {
+			t.Fatalf("outside folder holds %d entries", len(entries))
+		}
+		noTemps(t, project)
+	})
+
+	t.Run("objects folder symlinked outside", func(t *testing.T) {
+		project, out := t.TempDir(), t.TempDir()
+		if err := os.Symlink(out, filepath.Join(project, "objects")); err != nil {
+			t.Fatal(err)
+		}
+		if wrote, err := objectstore.WriteIfAbsent(project, rel, checksum, data); !errors.Is(err, objectstore.ErrUnsafeObjects) || wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		if entries, _ := os.ReadDir(out); len(entries) != 0 {
+			t.Fatalf("outside folder holds %d entries", len(entries))
+		}
+	})
+
+	t.Run("object path symlinked to an outside file", func(t *testing.T) {
+		project, out := t.TempDir(), t.TempDir()
+		outside := filepath.Join(out, "secret.png")
+		if err := os.WriteFile(outside, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		link := filepath.Join(project, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(outside, link); err != nil {
+			t.Fatal(err)
+		}
+		wrote, err := objectstore.WriteIfAbsent(project, rel, checksum, data)
+		if err != nil || !wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		st, err := os.Lstat(link)
+		if err != nil || !st.Mode().IsRegular() {
+			t.Fatalf("object path is not a regular file: %v %v", st, err)
+		}
+		if got, _ := os.ReadFile(link); string(got) != string(data) {
+			t.Fatalf("content = %q", got)
+		}
+		if got, _ := os.ReadFile(outside); string(got) != string(data) {
+			t.Fatalf("outside file changed: %q", got)
+		}
+		noTemps(t, project)
+	})
+}
+
+func TestOpenObject(t *testing.T) {
+	const rel = "objects/ab/cd/abcd.png"
+
+	tests := []struct {
+		name    string
+		setup   func(t *testing.T) string // returns the project folder
+		wantErr error
+	}{
+		{
+			name: "regular file opens",
+			setup: func(t *testing.T) string {
+				p := t.TempDir()
+				path := filepath.Join(p, filepath.FromSlash(rel))
+				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(path, []byte("bytes"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				return p
+			},
+		},
+		{
+			name: "symlink to an outside file",
+			setup: func(t *testing.T) string {
+				p, out := t.TempDir(), t.TempDir()
+				outside := filepath.Join(out, "secret.png")
+				if err := os.WriteFile(outside, []byte("bytes"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				link := filepath.Join(p, filepath.FromSlash(rel))
+				if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(outside, link); err != nil {
+					t.Fatal(err)
+				}
+				return p
+			},
+			wantErr: objectstore.ErrNotRegular,
+		},
+		{
+			name: "missing object",
+			setup: func(t *testing.T) string {
+				p := t.TempDir()
+				if err := os.MkdirAll(filepath.Join(p, "objects"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				return p
+			},
+			wantErr: fs.ErrNotExist,
+		},
+		{
+			name: "object path is a folder",
+			setup: func(t *testing.T) string {
+				p := t.TempDir()
+				if err := os.MkdirAll(filepath.Join(p, filepath.FromSlash(rel)), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				return p
+			},
+			wantErr: objectstore.ErrNotRegular,
+		},
+		{
+			name: "objects folder symlinked outside",
+			setup: func(t *testing.T) string {
+				p, out := t.TempDir(), t.TempDir()
+				if err := os.Symlink(out, filepath.Join(p, "objects")); err != nil {
+					t.Fatal(err)
+				}
+				return p
+			},
+			wantErr: objectstore.ErrUnsafeObjects,
+		},
+		{
+			name: "objects/ab symlinked outside",
+			setup: func(t *testing.T) string {
+				p, out := t.TempDir(), t.TempDir()
+				if err := os.MkdirAll(filepath.Join(p, "objects"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.MkdirAll(filepath.Join(out, "cd"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(out, "cd", "abcd.png"), []byte("bytes"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(out, filepath.Join(p, "objects", "ab")); err != nil {
+					t.Fatal(err)
+				}
+				return p
+			},
+			wantErr: objectstore.ErrNotRegular,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f, err := objectstore.OpenObject(tt.setup(t), rel)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("err %v, want %v", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer f.Close()
+			got, err := io.ReadAll(f)
+			if err != nil || string(got) != "bytes" {
+				t.Fatalf("read %q, %v", got, err)
+			}
+		})
+	}
+}
+
+func TestTemp(t *testing.T) {
+	data := []byte("streamed bytes")
+	sum := sha256.Sum256(data)
+	checksum := hex.EncodeToString(sum[:])
+	const rel = "objects/ab/cd/obj.png"
+
+	newTemp := func(t *testing.T, project string) *objectstore.Temp {
+		t.Helper()
+		tmp, err := objectstore.CreateTemp(project, ".ingest-")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tmp.Write(data); err != nil {
+			t.Fatal(err)
+		}
+		if err := tmp.Close(); err != nil {
+			t.Fatal(err)
+		}
+		return tmp
+	}
+	noTemps := func(t *testing.T, project string) {
+		t.Helper()
+		entries, err := os.ReadDir(filepath.Join(project, "objects"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, e := range entries {
+			if strings.HasPrefix(e.Name(), ".ingest-") {
+				t.Fatalf("temp %s left behind", e.Name())
+			}
+		}
+	}
+	readObject := func(project string) (string, error) {
+		b, err := os.ReadFile(filepath.Join(project, filepath.FromSlash(rel)))
+		return string(b), err
+	}
+
+	t.Run("install at a fresh path", func(t *testing.T) {
+		project := t.TempDir()
+		wrote, err := newTemp(t, project).Install(rel, checksum)
+		if err != nil || !wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		if got, err := readObject(project); err != nil || got != string(data) {
+			t.Fatalf("object = %q, %v", got, err)
+		}
+		noTemps(t, project)
+	})
+
+	t.Run("same bytes already stored", func(t *testing.T) {
+		project := t.TempDir()
+		if _, err := newTemp(t, project).Install(rel, checksum); err != nil {
+			t.Fatal(err)
+		}
+		wrote, err := newTemp(t, project).Install(rel, checksum)
+		if err != nil || wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		noTemps(t, project)
+	})
+
+	t.Run("discard without install", func(t *testing.T) {
+		project := t.TempDir()
+		newTemp(t, project).Discard()
+		noTemps(t, project)
+		if _, err := os.Lstat(filepath.Join(project, filepath.FromSlash(rel))); err == nil {
+			t.Fatal("object exists")
+		}
+	})
+
+	t.Run("discard after install does nothing", func(t *testing.T) {
+		project := t.TempDir()
+		tmp := newTemp(t, project)
+		if _, err := tmp.Install(rel, checksum); err != nil {
+			t.Fatal(err)
+		}
+		tmp.Discard()
+		if got, err := readObject(project); err != nil || got != string(data) {
+			t.Fatalf("object = %q, %v", got, err)
+		}
+	})
+
+	t.Run("objects subfolder symlinked outside", func(t *testing.T) {
+		project, out := t.TempDir(), t.TempDir()
+		if err := os.MkdirAll(filepath.Join(project, "objects"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(out, filepath.Join(project, "objects", "ab")); err != nil {
+			t.Fatal(err)
+		}
+		if wrote, err := newTemp(t, project).Install(rel, checksum); err == nil || wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		noTemps(t, project)
+		if entries, _ := os.ReadDir(out); len(entries) != 0 {
+			t.Fatalf("outside folder holds %d entries", len(entries))
+		}
+	})
+
+	t.Run("objects folder symlinked outside", func(t *testing.T) {
+		project, out := t.TempDir(), t.TempDir()
+		if err := os.Symlink(out, filepath.Join(project, "objects")); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := objectstore.CreateTemp(project, ".ingest-"); !errors.Is(err, objectstore.ErrUnsafeObjects) {
+			t.Fatalf("err %v, want ErrUnsafeObjects", err)
+		}
+		if entries, _ := os.ReadDir(out); len(entries) != 0 {
+			t.Fatalf("outside folder holds %d entries", len(entries))
+		}
+	})
 }

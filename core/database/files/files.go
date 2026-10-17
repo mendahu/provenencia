@@ -100,6 +100,20 @@ func LookupByChecksum(c *database.Catalog, checksumHex string) (File, error) {
 	return scanFile(db.QueryRow(sqlLookupChecksum, checksumHex))
 }
 
+// LookupByChecksumTx is LookupByChecksum on an open transaction, for a write
+// that must decide reuse inside itself. It returns sql.ErrNoRows when no row
+// has the checksum.
+func LookupByChecksumTx(tx *sql.Tx, checksumHex string) (File, error) {
+	if tx == nil {
+		return File{}, ErrInvalid
+	}
+	checksumHex = strings.TrimSpace(checksumHex)
+	if len(checksumHex) != 64 || !isLowerHex(checksumHex) {
+		return File{}, ErrInvalid
+	}
+	return scanFile(tx.QueryRow(sqlLookupChecksum, checksumHex))
+}
+
 // Insert writes a new files row on tx. ID must be 16 bytes; checksum lowercase hex.
 func Insert(tx *sql.Tx, f File) error {
 	if tx == nil {

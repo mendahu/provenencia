@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/files"
 )
@@ -53,32 +54,68 @@ func SnapshotOwned(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (OwnedSnapshot
 }
 
 // ReleaseSnapshot deletes owned-outbound children from a pre-DELETE snapshot
-// and returns the objects of the Files it released, in release order.
-func ReleaseSnapshot(tx *sql.Tx, snap OwnedSnapshot) ([]files.Object, error) {
+// and schedules the purge of the Files it released, after the write commits.
+func ReleaseSnapshot(tx *database.Tx, snap OwnedSnapshot) error {
+	if tx == nil {
+		return ErrInvalid
+	}
+	objs, err := releaseSnapshot(tx.Tx, snap)
+	if err != nil {
+		return err
+	}
+	files.PurgeAfterCommit(tx, objs)
+	return nil
+}
+
+// releaseSnapshot deletes the snapshot's children and returns the objects of
+// the Files it released, in release order.
+func releaseSnapshot(tx *sql.Tx, snap OwnedSnapshot) ([]files.Object, error) {
 	if tx == nil {
 		return nil, ErrInvalid
 	}
 	return releaseOwnedSnap(tx, productionPlan(), snap.root)
 }
 
-// ReleaseOwned snapshots then releases. Call it only while the parent row
-// still exists; after DELETE use a SnapshotOwned taken beforehand.
-func ReleaseOwned(tx *sql.Tx, kind catalogmodel.Kind, id []byte) ([]files.Object, error) {
+// ReleaseOwned snapshots then releases, and schedules the purge. Call it only
+// while the parent row still exists; after DELETE use a SnapshotOwned taken
+// beforehand.
+func ReleaseOwned(tx *database.Tx, kind catalogmodel.Kind, id []byte) error {
+	if tx == nil {
+		return ErrInvalid
+	}
+	objs, err := releaseOwned(tx.Tx, kind, id)
+	if err != nil {
+		return err
+	}
+	files.PurgeAfterCommit(tx, objs)
+	return nil
+}
+
+func releaseOwned(tx *sql.Tx, kind catalogmodel.Kind, id []byte) ([]files.Object, error) {
 	snap, err := SnapshotOwned(tx, kind, id)
 	if err != nil {
 		return nil, err
 	}
-	return ReleaseSnapshot(tx, snap)
+	return releaseSnapshot(tx, snap)
 }
 
 // ReleaseReplaced releases the old child of an owned FK after an update has
 // pointed the parent at a new one. column is "table.column" of a declared
 // owned-outbound FK. The child is a row (deleted by its PK, its own children
 // released after it) or a File (deleted when nothing else points at it). Call
-// it after the parent row already holds the new value. An empty oldID is a
-// no-op; a column that is not an owned FK is ErrInvalid.
-func ReleaseReplaced(tx *sql.Tx, column string, oldID []byte) ([]files.Object, error) {
-	return releaseReplaced(tx, productionPlan(), column, oldID)
+// it after the parent row already holds the new value. It schedules the purge
+// of any File it released. An empty oldID is a no-op; a column that is not an
+// owned FK is ErrInvalid.
+func ReleaseReplaced(tx *database.Tx, column string, oldID []byte) error {
+	if tx == nil {
+		return ErrInvalid
+	}
+	objs, err := releaseReplaced(tx.Tx, productionPlan(), column, oldID)
+	if err != nil {
+		return err
+	}
+	files.PurgeAfterCommit(tx, objs)
+	return nil
 }
 
 func releaseReplaced(tx *sql.Tx, p *ownedPlan, column string, oldID []byte) ([]files.Object, error) {
