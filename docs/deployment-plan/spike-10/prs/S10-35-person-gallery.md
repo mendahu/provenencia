@@ -5,14 +5,14 @@
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-35--person-gallery-and-list-thumb)
 **Brief:** [S10-D12](../design/S10-D12-person-detail.md) (PDP-7 to PDP-9 ship here), board agreed 2026-10-16; [S10-D9](../design/archive/S10-D9-persons-list.md) (PSL-7 ships here), board agreed before S10-22
 **Board:** [Person Detail](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail.dc.html*, turn 2, frames 2j (Gallery) and 2k (Crop states); [Persons list](https://claude.ai/design/p/5c00cb55-8261-4579-b0e6-bc571ab23f78?via=share), file *Persons List.dc.html*, frame 08. Checked against exports the user attached on 2026-10-17: frame 08 matches PSL-7; frames 2j and 2k match PDP-7 to PDP-9, plus layout and copy the brief did not give (a 120pt tile column, gaps, the tile and header-thumb labels), which §6 records. §6 macOS describes every frame this PR ships in words. The implementer does not need the boards.
-**Depends on:** S10-23 (landed [#407](https://github.com/mendahu/provenencia/pull/407)), S10-52 (landed [#437](https://github.com/mendahu/provenencia/pull/437)), S10-54 (landed [#433](https://github.com/mendahu/provenencia/pull/433)), S10-D12, S10-D9. Ships after S10-34 (Planned): no code dependency, but the manual check draws faces in the composer (user, 2026-10-17)
+**Depends on:** S10-23 (landed [#407](https://github.com/mendahu/provenencia/pull/407)), S10-52 (landed [#437](https://github.com/mendahu/provenencia/pull/437)), S10-54 (landed [#433](https://github.com/mendahu/provenencia/pull/433)), S10-34 (landed [#442](https://github.com/mendahu/provenencia/pull/442); no code dependency, the manual check draws faces in its composer), S10-D12, S10-D9
 **Blocks:** S10-39
 **Branch:** `s10-35-person-gallery`
 **Version bump:** none — Spike 10 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-catalog-query`](../../../../.agents/skills/add-catalog-query/SKILL.md), [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md), [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/catalog-queries.mdc`, `.cursor/rules/ffi-handlers.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** working rules "A gallery is the reconciled likeness values", "A preferred portrait is a display pointer, not a claim", "A depiction's value is its own row: region plus image"; [depictions and likenesses](../depictions-and-likenesses.md); [S10-52 plan](S10-52-depiction-reconciler.md) D-3, D-9, Next adds, and its ship log SEC-1 ([`S10-52-depiction-reconciler.ship.md`](S10-52-depiction-reconciler.ship.md)); [S10-23 plan](S10-23-person-gender.md) D-6, D-7, Next adds; [S10-54 plan](S10-54-depiction-ffi.md) D-4 (`files.RelPaths`); [`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md) §10 (cache)
-**Planned:** 2026-10-17 against `main` @ `500396f`
+**Planned:** 2026-10-17 against `main` @ `3ef0553` (S10-34 and S11-02 landed); first planned against `500396f`. The refresh changed no Current state row: S11-02 moved `NormalizeForm` out of `core/autoreconcile/autoreconcile.go` (`Reason` and `Displayed` unchanged), and S10-34 added `ThumbnailCache.cachedImage` and a `CachedThumbnail` call in `CitationComposerSubjectGroups.swift`, which D-13's defaulted parameters leave compiling
 **Review:** [`S10-35-person-gallery.review.md`](S10-35-person-gallery.review.md) — Fits, Ready with changes (applied); 2 rounds
 
 ### Implementer — read this first
@@ -34,7 +34,7 @@
 
 The researcher sees every face found for a person on the Person page, in a Likenesses section under Details, earliest first; each tile opens the Citation that holds it. The Person page header thumb and the Persons list thumb show the earliest likeness instead of the person mark. A person with no likeness looks as it does today. Events and Places are unchanged.
 
-**Why now.** S10-52 caches every likeness value with its image File, and S10-34 (shipping just before this PR) lets the researcher draw them. Nothing shows them: S10-52's D-9 keeps depiction fields off the Person page until this gallery exists.
+**Why now.** S10-52 caches every likeness value with its image File, and S10-34 (landed in #442) lets the researcher draw them. Nothing shows them: S10-52's D-9 keeps depiction fields off the Person page until this gallery exists.
 
 **What stays.** The Details rows (there is still no Likeness row: D-9's skip stays), the gender Badge and tint, the Why disclosures, the Events and Places lists and pages, Promote, search hits, and the reconciler itself. Choosing a portrait is S10-39.
 
@@ -369,7 +369,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `g
 
 ## 10. Manual check
 
-Run on a Mac with S10-34 landed, on a test project. If S10-34 has not merged when the implementer finishes, the implementer reports the manual check as not run, and the PR is not merged until the orchestrator or the user runs it on a build that has S10-34.
+Run on a Mac, on a test project (S10-34's composer draws the faces).
 
 1. Open a Source with a group photo Artifact. In the composer, add a Person Subject *Ann*, draw her face, save a likeness. On a second Source, draw another face for *Ann*'s other member and save. Promote both onto one Person.
 2. Open the Persons list: *Ann*'s thumb is the first face you saved. Another person with no likeness keeps the person mark, with no dash flashing first. Events and Places lists show their marks.
