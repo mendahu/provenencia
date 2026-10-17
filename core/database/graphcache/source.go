@@ -53,6 +53,7 @@ type SourceObservation struct {
 	NameID         []byte
 	ValueSubjectID []byte
 	TermID         []byte
+	DepictionID    []byte
 	Date           []byte
 	Name           []byte
 }

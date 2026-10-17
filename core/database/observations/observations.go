@@ -2,6 +2,7 @@
 package observations
 
 import (
+	"bytes"
 	"database/sql"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/ref"
@@ -33,8 +35,9 @@ const (
 
 	sqlInsert = `INSERT INTO observations (
 		id, ref, citation_id, subject_id, property_id, polarity,
-		value_text, value_integer, value_date_id, value_name_id, value_subject_id, value_term_id
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		value_text, value_integer, value_date_id, value_name_id, value_subject_id, value_term_id,
+		value_depiction_id
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	sqlInsertNote = `INSERT INTO observation_notes (id, observation_id, body) VALUES (?, ?, ?)`
 
@@ -44,7 +47,8 @@ const (
 		JOIN subject_types t ON t.id = s.subject_type_id
 		WHERE s.id = ?`
 	sqlGetRow = `SELECT id, ref, citation_id, subject_id, property_id, polarity,
-		value_text, value_integer, value_date_id, value_name_id, value_subject_id, value_term_id
+		value_text, value_integer, value_date_id, value_name_id, value_subject_id, value_term_id,
+		value_depiction_id
 		FROM observations WHERE id = ?`
 	sqlListNotesByObservation = `SELECT id, body FROM observation_notes WHERE observation_id = ? ORDER BY rowid`
 	sqlDeleteNote             = `DELETE FROM observation_notes WHERE id = ?`
@@ -60,6 +64,7 @@ const (
 	// that only read value_text stay correct for every Property value_type.
 	sqlListSelect = `SELECT o.id, o.ref, o.citation_id, o.subject_id, o.property_id, o.polarity,
 		o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_subject_id, o.value_term_id,
+		o.value_depiction_id,
 		p.key, p.label, p.value_type,
 		COALESCE(pt.label, ''),
 		COALESCE(nv.form, ''),
@@ -69,13 +74,15 @@ const (
 		dv.start_hour, dv.start_minute, dv.start_second, dv.start_millisecond, dv.start_tz,
 		dv.end_year, dv.end_month, dv.end_day,
 		dv.end_hour, dv.end_minute, dv.end_second, dv.end_millisecond, dv.end_tz,
-		dv.phrase
+		dv.phrase,
+		dpv.region_json, dpv.image_file_id
 		FROM observations o
 		JOIN properties p ON p.id = o.property_id
 		LEFT JOIN property_terms pt ON pt.id = o.value_term_id
 		LEFT JOIN name_values nv ON nv.id = o.value_name_id
 		LEFT JOIN subjects vs ON vs.id = o.value_subject_id
-		LEFT JOIN date_values dv ON dv.id = o.value_date_id`
+		LEFT JOIN date_values dv ON dv.id = o.value_date_id
+		LEFT JOIN depiction_values dpv ON dpv.id = o.value_depiction_id`
 
 	sqlListBySubject = sqlListSelect + `
 		WHERE o.subject_id = ?
@@ -107,6 +114,8 @@ type Observation struct {
 	ValueNameID    []byte
 	ValueSubjectID []byte
 	ValueTermID    []byte
+	// ValueDepictionID is depiction_values.id for a depiction Property.
+	ValueDepictionID []byte
 }
 
 // Listed is an Observation plus Property summary for graph / card rows.
@@ -125,6 +134,8 @@ type Listed struct {
 	ValueSubjectLabel string
 	// Date is the joined date_values row when value_date_id is set.
 	Date *datevalues.Value
+	// Depiction is the joined depiction_values row when value_depiction_id is set.
+	Depiction *depictionvalues.Value
 }
 
 // Input is one Observation write. ID empty inserts. ID set updates that row.
@@ -143,7 +154,11 @@ type Input struct {
 	ValueNameID    []byte
 	ValueSubjectID []byte
 	ValueTermID    []byte
-	Notes          []string
+	Depiction      *DepictionInput // staged by ingest.StageDepictions before the write
+	// ValueDepictionID is the Observation's own depiction_values.id, kept on an
+	// update that sets no Depiction. A value row has one owner.
+	ValueDepictionID []byte
+	Notes            []string
 }
 
 // AddToCitation appends ≥1 Observations to an existing Citation on tx.
@@ -190,7 +205,11 @@ type resolvedValue struct {
 	Integer                *int64
 	DateID, NameID         []byte
 	SubjectID, TermID      []byte
+	DepictionID            []byte
 	DateChange, NameChange *rowchange.Change
+	// DepictionChanges are the image file create (when new) and the
+	// depiction_value create, in that order.
+	DepictionChanges []rowchange.Change
 }
 
 // requireSubjectSource rejects an observation whose subject is homed to a
@@ -256,7 +275,7 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 		return Observation{}, nil, ErrEdgeLocked
 	}
 
-	resolved, err := resolveValue(tx, prop.ValueType, in, nil)
+	resolved, err := resolveValue(tx, citationID, prop.ValueType, in, nil)
 	if err != nil {
 		return Observation{}, nil, err
 	}
@@ -287,6 +306,7 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 			nullBlob(resolved.NameID),
 			nullBlob(resolved.SubjectID),
 			nullBlob(resolved.TermID),
+			nullBlob(resolved.DepictionID),
 		)
 		if err == nil {
 			break
@@ -304,18 +324,19 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 		EntityID:   idBytes,
 		Action:     rowchange.ActionCreate,
 		Fields: rowchange.FullRow(map[string]any{
-			"id":               id.String(),
-			"ref":              obsRef,
-			"citation_id":      uuidJSON(citationID),
-			"subject_id":       uuidJSON(in.SubjectID),
-			"property_id":      uuidJSON(in.PropertyID),
-			"polarity":         polarity,
-			"value_text":       emptyAsNil(resolved.Text),
-			"value_integer":    nullInt64(resolved.Integer),
-			"value_date_id":    uuidJSON(resolved.DateID),
-			"value_name_id":    uuidJSON(resolved.NameID),
-			"value_subject_id": uuidJSON(resolved.SubjectID),
-			"value_term_id":    uuidJSON(resolved.TermID),
+			"id":                 id.String(),
+			"ref":                obsRef,
+			"citation_id":        uuidJSON(citationID),
+			"subject_id":         uuidJSON(in.SubjectID),
+			"property_id":        uuidJSON(in.PropertyID),
+			"polarity":           polarity,
+			"value_text":         emptyAsNil(resolved.Text),
+			"value_integer":      nullInt64(resolved.Integer),
+			"value_date_id":      uuidJSON(resolved.DateID),
+			"value_name_id":      uuidJSON(resolved.NameID),
+			"value_subject_id":   uuidJSON(resolved.SubjectID),
+			"value_term_id":      uuidJSON(resolved.TermID),
+			"value_depiction_id": uuidJSON(resolved.DepictionID),
 		}),
 	}}
 	if resolved.DateChange != nil {
@@ -324,6 +345,7 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 	if resolved.NameChange != nil {
 		changes = append(changes, *resolved.NameChange)
 	}
+	changes = append(changes, resolved.DepictionChanges...)
 
 	for _, body := range in.Notes {
 		body = strings.TrimSpace(body)
@@ -369,10 +391,11 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 	obs.ValueNameID = append([]byte(nil), resolved.NameID...)
 	obs.ValueSubjectID = append([]byte(nil), resolved.SubjectID...)
 	obs.ValueTermID = append([]byte(nil), resolved.TermID...)
+	obs.ValueDepictionID = append([]byte(nil), resolved.DepictionID...)
 	return obs, changes, nil
 }
 
-func resolveValue(tx *sql.Tx, valueType string, in Input, existing *Observation) (resolvedValue, error) {
+func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, existing *Observation) (resolvedValue, error) {
 	switch valueType {
 	case properties.ValueTypeText:
 		text := strings.TrimSpace(in.ValueText)
@@ -472,6 +495,18 @@ func resolveValue(tx *sql.Tx, valueType string, in Input, existing *Observation)
 			return resolvedValue{}, err
 		}
 		return resolvedValue{TermID: in.ValueTermID}, nil
+	case properties.ValueTypeDepiction:
+		if hasOtherScalars(in, "depiction") {
+			return resolvedValue{}, ErrInvalid
+		}
+		if in.Depiction != nil {
+			return resolveDepiction(tx, citationID, in.Depiction)
+		}
+		// No new picture: only the Observation's own value row may be kept.
+		if existing != nil && len(existing.ValueDepictionID) == 16 && bytes.Equal(in.ValueDepictionID, existing.ValueDepictionID) {
+			return resolvedValue{DepictionID: append([]byte(nil), existing.ValueDepictionID...)}, nil
+		}
+		return resolvedValue{}, ErrInvalid
 	default:
 		return resolvedValue{}, ErrInvalid
 	}
@@ -494,6 +529,9 @@ func hasOtherScalars(in Input, keep string) bool {
 		return true
 	}
 	if keep != "term" && len(in.ValueTermID) > 0 {
+		return true
+	}
+	if keep != "depiction" && (in.Depiction != nil || len(in.ValueDepictionID) > 0) {
 		return true
 	}
 	return false
@@ -564,7 +602,9 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 			l                                                         Listed
 			valueText                                                 sql.NullString
 			valueInt                                                  sql.NullInt64
-			dateID, nameID, subjectID, termID                         []byte
+			dateID, nameID, subjectID, termID, depictionID            []byte
+			depictionRegion                                           sql.NullString
+			depictionImage                                            []byte
 			termLabel, nameForm, subjectLabel                         string
 			kind, qual, cal, phrase, startTZ, endTZ                   sql.NullString
 			startY, startM, startD, startH, startMin, startS, startMs sql.NullInt64
@@ -573,6 +613,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 		if err := rows.Scan(
 			&l.ID, &l.Ref, &l.CitationID, &l.SubjectID, &l.PropertyID, &l.Polarity,
 			&valueText, &valueInt, &dateID, &nameID, &subjectID, &termID,
+			&depictionID,
 			&l.PropertyKey, &l.PropertyLabel, &l.PropertyValueType,
 			&termLabel, &nameForm, &subjectLabel,
 			&kind, &qual, &cal,
@@ -581,6 +622,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 			&endY, &endM, &endD,
 			&endH, &endMin, &endS, &endMs, &endTZ,
 			&phrase,
+			&depictionRegion, &depictionImage,
 		); err != nil {
 			return nil, err
 		}
@@ -596,6 +638,14 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 		l.ValueNameID = append([]byte(nil), nameID...)
 		l.ValueSubjectID = append([]byte(nil), subjectID...)
 		l.ValueTermID = append([]byte(nil), termID...)
+		l.ValueDepictionID = append([]byte(nil), depictionID...)
+		if len(depictionImage) > 0 {
+			l.Depiction = &depictionvalues.Value{
+				ID:          append([]byte(nil), depictionID...),
+				RegionJSON:  depictionRegion.String,
+				ImageFileID: append([]byte(nil), depictionImage...),
+			}
+		}
 		l.ValueTermLabel = termLabel
 		l.ValueNameForm = nameForm
 		l.ValueSubjectLabel = subjectLabel
