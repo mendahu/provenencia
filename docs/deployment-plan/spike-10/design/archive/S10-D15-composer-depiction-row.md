@@ -6,9 +6,9 @@
 **Implements later as:** PR **S10-34**
 **Depends on:** the agreed S10-D3 board, shipped in S10-16 ([#384](https://github.com/mendahu/provenencia/pull/384)); the engine and FFI for a depiction value (S10-32, S10-54, landed)
 **Board:** agreed 2026-10-17 — Claude Design project *Citation Composer*, file *Citation Composer.dc.html*, section "Depiction row", frames D1a–D10 and D5c (<https://claude.ai/design/p/8b120853-4ba4-4c0d-8492-75e76b9f9b7a?via=share>). The S10-34 plan describes every frame in words and lists where it follows the brief over a frame (D4's empty Property field) or over board copy (no lowercased property label).
-**Related:** [`../deployment-plan.md`](../deployment-plan.md) (S10-34; working rules "A depiction's value is its own row: region plus image", "The client renders the image; Go validates it and stores its own copy", "`likeness` is new catalogs only"). [`../depictions-and-likenesses.md`](../depictions-and-likenesses.md). The Person gallery that shows these crops is S10-D12 (S10-35); it is not this board. The S10-D3 brief is [`archive/S10-D3-citation-composer.md`](archive/S10-D3-citation-composer.md).
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** [`../deployment-plan.md`](../../deployment-plan.md) (S10-34; working rules "A depiction's value is its own row: region plus image", "The client renders the image; Go validates it and stores its own copy", "`likeness` is new catalogs only"). [`../depictions-and-likenesses.md`](../../depictions-and-likenesses.md). The Person gallery that shows these crops is S10-D12 (S10-35); it is not this board. The S10-D3 brief is [`archive/S10-D3-citation-composer.md`](archive/S10-D3-citation-composer.md).
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -185,5 +185,5 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 ## 7. Handoff
 
 1. Archive this brief under `design/archive/` when the board is agreed.
-2. Record it in [`../completed.md`](../completed.md) with S10-34.
-3. Implement **S10-34** against the board and this inventory. The plan is [`../prs/S10-34-composer-depiction-row.md`](../prs/S10-34-composer-depiction-row.md).
+2. Record it in [`../completed.md`](../../completed.md) with S10-34.
+3. Implement **S10-34** against the board and this inventory. The plan is [`../prs/S10-34-composer-depiction-row.md`](../../prs/S10-34-composer-depiction-row.md).

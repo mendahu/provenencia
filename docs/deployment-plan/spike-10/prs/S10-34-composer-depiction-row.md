@@ -1,9 +1,9 @@
 # S10-34 — Composer depiction row: draw a face, save it, see it
 
-**Status:** Planned
+**Status:** Landed in [#442](https://github.com/mendahu/provenencia/pull/442) (2026-10-17)
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-34--composer-depiction-row)
-**Brief:** [S10-D15](../design/S10-D15-composer-depiction-row.md), board agreed 2026-10-17
+**Brief:** [S10-D15](../design/archive/S10-D15-composer-depiction-row.md), board agreed 2026-10-17
 **Board:** Claude Design project *Citation Composer*, file *Citation Composer.dc.html*, section "Depiction row" (Enhancement · S10-D15 → PR S10-34), frames D1a–D10 and D5c: <https://claude.ai/design/p/8b120853-4ba4-4c0d-8492-75e76b9f9b7a?via=share> (the implementer opens it locally). §6 "Frames" describes each frame in words, and the plan was checked against an export of the board
 **Depends on:** S10-16 (landed [#384](https://github.com/mendahu/provenencia/pull/384)), S10-54 (landed [#433](https://github.com/mendahu/provenencia/pull/433)), S10-D15; S10-52 (landed [#437](https://github.com/mendahu/provenencia/pull/437); it changed no file this plan names)
 **Blocks:** —
@@ -11,9 +11,13 @@
 **Version bump:** none — Spike 10 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** —
-**Context:** [S10-D15](../design/S10-D15-composer-depiction-row.md) CDR-1 to CDR-14; [depictions and likenesses](../depictions-and-likenesses.md) ("Shape": rendering hangs off the value type, the key decides where it shows; "The image"); [S10-54 plan](S10-54-depiction-ffi.md) (store types) and its Landed note; [S10-D3](../design/archive/S10-D3-citation-composer.md) CC-3, CC-4, CC-12; working rules "A depiction's value is its own row: region plus image", "The client renders the image; Go validates it and stores its own copy", "`likeness` is new catalogs only"
+**Context:** [S10-D15](../design/archive/S10-D15-composer-depiction-row.md) CDR-1 to CDR-14; [depictions and likenesses](../depictions-and-likenesses.md) ("Shape": rendering hangs off the value type, the key decides where it shows; "The image"); [S10-54 plan](S10-54-depiction-ffi.md) (store types) and its Landed note; [S10-D3](../design/archive/S10-D3-citation-composer.md) CC-3, CC-4, CC-12; working rules "A depiction's value is its own row: region plus image", "The client renders the image; Go validates it and stores its own copy", "`likeness` is new catalogs only"
 **Planned:** 2026-10-17 against `main` @ `cf1f051` (S10-52 and S10-54 landed); first drafted against `ac05ae8`
 **Review:** [`S10-34-composer-depiction-row.review.md`](S10-34-composer-depiction-row.review.md) — round 1: Fits with changes / Not ready; round 2 (after the board): Fits with changes / Ready with changes → changes applied
+
+## Landed
+
+Differences from this plan: Set page is disabled while drawing by a guard in `setPageFromViewer` instead of a greyed button, so `ArtifactViewer`'s API is unchanged. `depictionWrongPage` is computed (drawing, a PDF, a saved or unsaved Citation page, and a different viewer page) instead of a stored flag. A refused wrong-page commit is followed by the overlay's own disarm call, which `ignoreNextDisarm` swallows so drawing continues. `FakeStore.recordedDepictionPaths` was added so tests can assert the temporary file is gone. `ArtifactFileFixtures.writePNG` draws through a bitmap context, not `NSImage.lockFocus`, so a fixture's pixel size does not follow the display's backing scale. The 4096 page cap, `scaledToFit`, and `writeTemporaryPNG` are in `ArtifactRegionCrop` as D-5 and D-6 say; `ArtifactRegionCrop.render` is `@MainActor` because it reads the viewer model. The code and tests are one commit, since the Xcode project lists every new file at once. The manual check in section 10 was not run: it needs a person at the Mac. The Xcode tests pass in `scripts/check-pr.sh`.
 
 ### Implementer — read this first
 
@@ -312,7 +316,7 @@ Do: D-13.
 Check: T-19 passes; manual check step 5.
 
 **STEP-10 — Docs**
-Files: `docs/deployment-plan/spike-10/completed.md`, `docs/deployment-plan/spike-10/deployment-plan.md` (map row, Slice 8 line), this plan (status, Landed note), `docs/deployment-plan/spike-10/design/S10-D15-composer-depiction-row.md` → `design/archive/`, `docs/deployment-plan/spike-10/design/README.md`, `docs/ideas/depictions-and-likenesses.md` (under "Still open", add the bullet "**Every saved face on the photo.** The composer's viewer shows one region at a time; showing every saved depiction on the photo needs a read-only region layer." and change "as a JPEG" to "as a PNG").
+Files: `docs/deployment-plan/spike-10/completed.md`, `docs/deployment-plan/spike-10/deployment-plan.md` (map row, Slice 8 line), this plan (status, Landed note), `docs/deployment-plan/spike-10/design/archive/S10-D15-composer-depiction-row.md` (moved there from `design/`), `docs/deployment-plan/spike-10/design/README.md`, `docs/ideas/depictions-and-likenesses.md` (under "Still open", add the bullet "**Every saved face on the photo.** The composer's viewer shows one region at a time; showing every saved depiction on the photo needs a read-only region layer." and change "as a JPEG" to "as a PNG").
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py` reports no errors; links resolve.
 

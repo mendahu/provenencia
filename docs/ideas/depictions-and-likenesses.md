@@ -6,7 +6,8 @@
 
 - **Other keys of the same value type.** `likeness` is the person key. A photo of a place or an event needs its own key, or one shared `depiction` key. The value type does not decide that.
 - **Signature.** Same question: another key of type `depiction`, or something of its own.
-- **Transparent polygon.** Spike 10 saves the bounding box of the region as a JPEG. A crop that follows the polygon, with transparency outside it, can replace that once the gallery exists.
+- **Transparent polygon.** Spike 10 saves the bounding box of the region as a PNG. A crop that follows the polygon, with transparency outside it, can replace that once the gallery exists.
+- **Every saved face on the photo.** The composer's viewer shows one region at a time; showing every saved depiction on the photo needs a read-only region layer.
 - **Windows.** The cache row is the same. That client draws the PDF locator with its own stack at save time. Spike 10 draws it with PDFKit on the Mac.
 
 ## Still out
