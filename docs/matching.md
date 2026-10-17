@@ -1,6 +1,6 @@
 # Matching
 
-> **Spike 11 replaces this page.** The target model is [matching-model.md](matching-model.md).
+> **Spike 11 replaces this page.** The target model is [matching-model.md](matching-model.md); until then this page describes the running code.
 
 How Provenencia scores how much one thing resembles each canonical handle (a Person, Event or Place), from the thing's own Properties. Promote's target suggestions (Spike 9 R7, **S9-10**) were the first consumer; the one-page Promote (S9-44) replaced them with graph alignment. In Promote graph alignment ([`promote-graph-alignment.md`](promote-graph-alignment.md) §4.1) matching is the **smaller, composable unit**: pairwise evaluation (and `Rank` over many handles) judges sameness from Properties; graph alignment **walks** the Evidence graph and calls that judgment per candidate, adding edge/structure. Matching is also the **property-only fallback** for Subjects no anchor reaches. Merge hints are another consumer: `ForEntity` already exists, but no UI uses it yet.
 

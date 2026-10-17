@@ -1,6 +1,6 @@
 # Provenencia — Promote Graph Alignment
 
-> **Spike 11 replaces this page.** The target model is [matching-model.md](matching-model.md).
+> **Spike 11 replaces §4.1, §5, §6 and §12.** The target model is [matching-model.md](matching-model.md); until then those sections describe the running code.
 
 ## Status
 
