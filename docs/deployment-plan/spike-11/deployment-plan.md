@@ -89,8 +89,8 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-22 | Pure value types | 1 | Date and name value structs, display helpers, part types, value-type and cardinality constants move to pure packages | — | — | [plan](prs/S11-22-pure-value-types.md) | Landed #434 |
 | S11-23 | One home for primary kinds | 1 | `person` / `event` / `place`, the Property keys matching reads by name, and the Origin constants and check in one pure place; the hand-written lists use it | — | S11-22 | [plan](prs/S11-23-primary-kinds.md) | Landed #438 |
 | S11-02 | Value compare core and match registry | 2 | `valuecompare` contract, `Key`, text / term / integer, `matchregistry` skeleton and value section, the guard, the matching skill | — | S11-01, S11-22, S11-23 | [plan](prs/S11-02-value-compare-core.md) | Landed #441 |
-| S11-03 | Value compare: names | 2 | Name comparer on relations; initials and aliases in word similarity; alias seeds to `namealiases` | — | S11-02 | [plan](prs/S11-03-value-compare-names.md) | Planned |
-| S11-04 | Value compare: dates | 2 | Date comparer on relations; date windows move in; `ABT` as a range | — | S11-02 | [plan](prs/S11-04-value-compare-dates.md) | Planned |
+| S11-03 | Value compare: names | 2 | Name comparer on relations; initials and aliases in word similarity; alias seeds to `namealiases` | — | S11-02 | [plan](prs/S11-03-value-compare-names.md) | Landed #447 |
+| S11-04 | Value compare: dates | 2 | Date comparer on relations; date windows move in; `ABT` as a range | — | S11-02 | [plan](prs/S11-04-value-compare-dates.md) | Landed #445 |
 | S11-05 | Migrate matching onto value compare | 2 | `match`, `graphalign`, `promotealign` call `valuecompare`; `match`'s comparers deleted | — | S11-03, S11-04 | — | Scoped |
 | S11-06 | Migrate the reconciler onto value compare | 2 | `Compatible`, keys, grouping policy, place-chain windows | — | S11-05 | — | Scoped |
 | S11-07 | One normalization key across the core | 2 | Search rescoring, search-index dedupe, term dedupe, alias tokens use `Key` | — | S11-05 | — | Scoped |

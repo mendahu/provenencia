@@ -9,10 +9,13 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"math"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 const (
@@ -43,7 +46,7 @@ type Profile struct {
 	Origin      string
 	Label       string
 	Description string
-	Pattern     match.NamePattern
+	Pattern     valuecompare.NamePattern
 	Natural     []PartOrder
 	Sorted      []PartOrder
 }
@@ -183,6 +186,9 @@ func Load(q Querier) (Loaded, error) {
 	}, nil
 }
 
+// maxWeight is far above the built-in 1.5; it refuses weights whose sums overflow.
+const maxWeight = 1000
+
 // LoadID reads one profile. sql.ErrNoRows when the id is absent.
 func LoadID(q Querier, id []byte) (Profile, error) {
 	var p Profile
@@ -193,7 +199,7 @@ func LoadID(q Querier, id []byte) (Profile, error) {
 		return Profile{}, err
 	}
 	p.Description = description.String
-	p.Pattern = match.NamePattern{Key: p.Key, PartRoles: map[string]match.NameRole{}}
+	p.Pattern = valuecompare.NamePattern{PartRoles: map[string]valuecompare.NameRole{}}
 	rows, err := q.Query(`SELECT part_type, role FROM name_format_profile_roles WHERE profile_id = ?`, id)
 	if err != nil {
 		return Profile{}, err
@@ -204,7 +210,7 @@ func LoadID(q Querier, id []byte) (Profile, error) {
 			rows.Close()
 			return Profile{}, err
 		}
-		p.Pattern.PartRoles[partType] = match.NameRole(role)
+		p.Pattern.PartRoles[partType] = valuecompare.NameRole(role)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
@@ -222,6 +228,10 @@ func LoadID(q Querier, id []byte) (Profile, error) {
 		if err := rows.Scan(&slot, &weight); err != nil {
 			rows.Close()
 			return Profile{}, err
+		}
+		if math.IsNaN(weight) || math.IsInf(weight, 0) || weight < 0 || weight > maxWeight {
+			rows.Close()
+			return Profile{}, fmt.Errorf("nameformats: profile %q weight %q is %v; a weight is a finite number from 0 to %v", p.Key, slot, weight, float64(maxWeight))
 		}
 		switch slot {
 		case "family":
@@ -265,5 +275,5 @@ func LoadID(q Querier, id []byte) (Profile, error) {
 }
 
 func builtinLoaded() Loaded {
-	return Loaded{Key: match.WesternPattern, Builtin: true}
+	return Loaded{Key: valuecompare.WesternPattern, Builtin: true}
 }

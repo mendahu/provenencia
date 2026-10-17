@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -18,7 +18,7 @@ type seedPart struct {
 
 type seedRole struct {
 	PartType string
-	Role     match.NameRole
+	Role     valuecompare.NameRole
 }
 
 type seedWeight struct {
@@ -41,7 +41,7 @@ type seedProfile struct {
 // trailing separator in the sorted style.
 var seedProfiles = []seedProfile{
 	{
-		Key:         match.WesternPattern,
+		Key:         valuecompare.WesternPattern,
 		Label:       "Western",
 		Description: "GEDCOM-aligned spoken/display order",
 		Default:     true,
@@ -60,13 +60,13 @@ var seedProfiles = []seedProfile{
 			{StyleSorted, namevalue.PartTypeSuffix, ""},
 		},
 		Roles: []seedRole{
-			{namevalue.PartTypeSurname, match.RoleFamily},
-			{namevalue.PartTypeGiven, match.RoleGiven},
-			{namevalue.PartTypeNick, match.RoleNick},
-			{namevalue.PartTypeSuffix, match.RoleGeneration},
-			{namevalue.PartTypePrefix, match.RoleIgnored},
-			{namevalue.PartTypeSurnamePrefix, match.RoleIgnored},
-			{namevalue.PartTypeUndetermined, match.RoleUntyped},
+			{namevalue.PartTypeSurname, valuecompare.RoleFamily},
+			{namevalue.PartTypeGiven, valuecompare.RoleGiven},
+			{namevalue.PartTypeNick, valuecompare.RoleNick},
+			{namevalue.PartTypeSuffix, valuecompare.RoleGeneration},
+			{namevalue.PartTypePrefix, valuecompare.RoleIgnored},
+			{namevalue.PartTypeSurnamePrefix, valuecompare.RoleIgnored},
+			{namevalue.PartTypeUndetermined, valuecompare.RoleUntyped},
 		},
 		Weights: []seedWeight{
 			{"family", 1.5},

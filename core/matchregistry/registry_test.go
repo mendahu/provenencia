@@ -3,6 +3,9 @@ package matchregistry
 import (
 	"reflect"
 	"testing"
+
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // Default builds a fresh registry each call (D-2): one caller's edits reach no
@@ -12,7 +15,22 @@ func TestDefaultIsFresh(t *testing.T) {
 	want := Default()
 	first.Value.Words.Particles[0] = "changed"
 	first.Value.Words.Folds['x'] = "added"
+	first.Value.Names.Western.PartRoles["x"] = valuecompare.RoleFamily
 	if got := Default(); !reflect.DeepEqual(got, want) {
 		t.Errorf("second Default() = %+v, want %+v", got, want)
+	}
+}
+
+// The Western pattern gives every product part type a role, so a new part
+// type forces a decision here.
+func TestWesternPatternCoversEveryPartType(t *testing.T) {
+	western := Default().Value.Names.Western
+	for _, pt := range namevalue.PartTypes() {
+		if _, ok := western.PartRoles[pt.Key]; !ok {
+			t.Errorf("part type %q has no role in the Western pattern", pt.Key)
+		}
+	}
+	if _, ok := western.PartRoles[""]; !ok {
+		t.Error("untyped parts have no role in the Western pattern")
 	}
 }

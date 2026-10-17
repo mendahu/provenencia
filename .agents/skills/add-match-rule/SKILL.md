@@ -22,7 +22,10 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 - **Types live in the layer, values in the registry.** The layer declares its `Rules` groups (field types and doc comments, no numbers). `core/matchregistry` declares `Registry` and the numbers, with a comment on each saying where it came from. A layer takes its section as an argument.
 - **`matchregistry.Default()` builds fresh slices and maps** on each call. A test overrides a section by editing its own copy.
 - **Numbers only in `matchregistry`.** A layer package marked `numbers` in `layerPackages` may hold no numeric literal other than 0 and 1. A fact that is not a tunable (a calendar fact) goes in its pure value package.
-- **Pure helpers are shared, not copied.** The word helpers live in `core/valuecompare/words.go`.
+- **Pure helpers are shared, not copied.** The word helpers live in `core/valuecompare/words.go`. `wordSimilarity` is the one word table (names add initials and alias tables through `wordOptions`), `BestAssignment` (`pairing.go`) the one pairing search, `AliasIndex` the one alias lookup, and the weighted `meanSimilarity` (`text.go`) the one rule for combining part similarities.
+- **Catalog data comes in through `Rules`.** A name value names its pattern by key (`Value.NamePattern`) and the layer reads it from `Rules.Names.Patterns`; alias tables come as `Rules.Names.Aliases`. Catalog data is not a knob: list its registry path in `catalogData` in `core/matchregistry/inventory_test.go` and name it under "Not knobs" in `docs/matching-model.md`, with no inventory row.
+- **A doubled weight is written `w + w`.** The numbers guard allows no literal 2 in a layer package.
+- **Dates compute similarity through `falloff`.** Calendar facts (days in a month, day numbers, the year line) live in `core/datevalue/calendar.go`, not in the layer. The window algebra is `valuecompare.Window` (`core/valuecompare/datewindow.go`): `Overlaps`, `Contains`, `Intersect` as methods, and `AboutEnds` with `EndsWindow` to read a date as compared.
 
 ## Add a knob
 
@@ -37,7 +40,7 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 2. Add a sample row and a generator to `core/valuecompare/contract_test.go`; `TestComparerContract` fails without them.
 3. Add the type to the expected `ComparerTypes()` list in `TestCompareUnsupported`.
 4. A type with a distance computes its similarity through `falloff`, or the plan records why not.
-5. `Key` must agree with `Compare`: equal at `Same` exactly when the relation is `Same`, equal at `Equivalent` exactly when `Same` or `Equivalent` (`TestKeyContract`).
+5. `Key` must agree with `Compare`: equal at `Same` exactly when the relation is `Same`, equal at `Equivalent` exactly when `Same` or `Equivalent` (`TestKeyContract`). Agreement holds under rules with no alias tables; name keys ignore aliases (S11-03 D-10).
 
 ## Add a relation, cause or unit code
 
@@ -61,4 +64,4 @@ No build tags. Then `scripts/check-pr.sh`.
 - Write a number in a layer package.
 - Read the catalog in a layer.
 - Import `core/autoreconcile` from a layer package.
-- Weaken a guard or add an allow-list to make it pass.
+- Weaken a guard or add an allow-list to make it pass. The one list the inventory guard keeps, `catalogData`, names fields that are catalog data, never tunables; each is named under Not knobs.

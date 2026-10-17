@@ -1,8 +1,8 @@
 package match
 
 import (
-	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // DateComparer compares dates by the days they cover. Settings default to
@@ -65,12 +65,12 @@ func (c DateComparer) resolve() dateRules {
 // day refine the comparison. It has no pointer fields, so == means equal by
 // value.
 type dateSpan struct {
-	first, last   autoreconcile.DateEnd
+	first, last   valuecompare.DateEnd
 	point, approx bool
 }
 
 func spanOf(d *datevalue.Value) (dateSpan, bool) {
-	first, last, ok := autoreconcile.DateEnds(*d)
+	first, last, ok := valuecompare.DateEnds(*d)
 	if !ok {
 		return dateSpan{}, false
 	}
@@ -80,8 +80,6 @@ func spanOf(d *datevalue.Value) (dateSpan, bool) {
 	}
 	return s, true
 }
-
-func centre(e autoreconcile.DateEnd) float64 { return (e.From + e.To) / 2 }
 
 // width is the years a closed span covers; ok is false for an open span.
 func (s dateSpan) width() (float64, bool) {
@@ -118,9 +116,9 @@ func apart(a, b dateSpan) (years int, gap float64) {
 		return 0, 0
 	}
 	if !a.last.Open && !b.first.Open && a.last.Hi < b.first.Lo {
-		return b.first.Year - a.last.Year, centre(b.first) - centre(a.last)
+		return b.first.Year - a.last.Year, b.first.Mid - a.last.Mid
 	}
-	return a.first.Year - b.last.Year, centre(a.first) - centre(b.last)
+	return a.first.Year - b.last.Year, a.first.Mid - b.last.Mid
 }
 
 func (c DateComparer) Compare(a, b Value) (float64, bool) {
@@ -154,7 +152,7 @@ func (c DateComparer) Compare(a, b Value) (float64, bool) {
 		if years > tol {
 			return 0, true
 		}
-		gap := max(centre(ea)-centre(eb), centre(eb)-centre(ea))
+		gap := max(ea.Mid-eb.Mid, eb.Mid-ea.Mid)
 		return r.apartFrom * (1 - gap/float64(tol+1)), true
 	}
 	sameMonth := ea.Month != 0 && ea.Month == eb.Month
