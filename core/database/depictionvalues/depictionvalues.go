@@ -4,7 +4,7 @@
 //
 // A row is replaced, never rewritten: a new region always comes with a new
 // image. The caller checks the region against the Citation
-// (locator.ValidateDepictionRegion); Insert checks only the row's own shape.
+// (locator.ValidateDepictionRegion); InsertTx checks only the row's own shape.
 package depictionvalues
 
 import (
@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
+	"github.com/mendahu/provenencia/core/locator"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeDepictionValuesInvalid, apperr.KindUser)
@@ -58,4 +59,16 @@ func LookupTx(tx *sql.Tx, id []byte) (Value, error) {
 		return Value{}, err
 	}
 	return v, nil
+}
+
+// Readable returns v as it may be shown: unchanged when its stored region
+// passes locator.ValidateRegionDocument, otherwise with RegionJSON emptied.
+// The image id is kept; the image is Go's own stored PNG and is safe to show
+// without the region. Every reader that returns a stored region to the app
+// goes through Readable. LookupTx does not: audit records what is stored.
+func Readable(v Value) Value {
+	if locator.ValidateRegionDocument(v.RegionJSON) != nil {
+		v.RegionJSON = ""
+	}
+	return v
 }

@@ -12,11 +12,8 @@ import "strings"
 // artifact_page (page_label is not compared). The region need not lie inside
 // a region of the Citation's own locator.
 func ValidateDepictionRegion(regionJSON, citationLocatorJSON string) error {
-	region, err := decode(regionJSON)
+	regionPages, err := regionDocPages(regionJSON)
 	if err != nil {
-		return err
-	}
-	if err := validateDoc(region); err != nil {
 		return err
 	}
 	citation, err := decode(citationLocatorJSON)
@@ -25,22 +22,6 @@ func ValidateDepictionRegion(regionJSON, citationLocatorJSON string) error {
 	}
 	if err := validateDoc(citation); err != nil {
 		return err
-	}
-	regions := 0
-	var regionPages []int
-	for _, sel := range region.Selectors {
-		switch strings.TrimSpace(sel.Type) {
-		case TypeArtifact:
-		case TypePage:
-			regionPages = append(regionPages, *sel.ArtifactPage)
-		case TypeRegion:
-			regions++
-		default:
-			return ErrInvalid
-		}
-	}
-	if regions != 1 || len(regionPages) > 1 {
-		return ErrInvalid
 	}
 	var citationPages []int
 	for _, sel := range citation.Selectors {
@@ -55,4 +36,41 @@ func ValidateDepictionRegion(regionJSON, citationLocatorJSON string) error {
 		return ErrInvalid
 	}
 	return nil
+}
+
+// ValidateRegionDocument checks a depiction region document on its own: it
+// passes Validate, has exactly one region selector, at most one page selector,
+// an optional artifact selector, and no other selector.
+func ValidateRegionDocument(regionJSON string) error {
+	_, err := regionDocPages(regionJSON)
+	return err
+}
+
+// regionDocPages validates a region document and returns the artifact_page of
+// its page selector, if any.
+func regionDocPages(regionJSON string) ([]int, error) {
+	region, err := decode(regionJSON)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateDoc(region); err != nil {
+		return nil, err
+	}
+	regions := 0
+	var pages []int
+	for _, sel := range region.Selectors {
+		switch strings.TrimSpace(sel.Type) {
+		case TypeArtifact:
+		case TypePage:
+			pages = append(pages, *sel.ArtifactPage)
+		case TypeRegion:
+			regions++
+		default:
+			return nil, ErrInvalid
+		}
+	}
+	if regions != 1 || len(pages) > 1 {
+		return nil, ErrInvalid
+	}
+	return pages, nil
 }

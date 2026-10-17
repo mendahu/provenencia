@@ -821,6 +821,60 @@ func TestObservations(t *testing.T) {
 			},
 		},
 		{
+			name: "likeness read drops a stored region that is not valid",
+			run: func(t *testing.T) {
+				const pt = `{"type":"region","unit":"normalized","points":`
+				for _, bad := range []struct{ name, region string }{
+					{"not json", `not json`},
+					{"point out of range", `{"version":1,"selectors":[` + pt + `[{"x":5,"y":5},{"x":0.4,"y":0.1},{"x":0.4,"y":0.5}]}]}`},
+					{"self-intersecting", `{"version":1,"selectors":[` + pt + `[{"x":0.1,"y":0.1},{"x":0.5,"y":0.5},{"x":0.5,"y":0.1},{"x":0.1,"y":0.5}]}]}`},
+					{"no region selector", `{"version":1,"selectors":[{"type":"page","artifact_page":3}]}`},
+				} {
+					t.Run(bad.name, func(t *testing.T) {
+						c, s := mustSeed(t)
+						art := fileArtifact(t, c, userID, s.source.ID)
+						res, _, err := saveCitation(c, userID, art, observations.Input{
+							SubjectID: s.person.ID, PropertyID: s.likeness.ID,
+							Depiction: &observations.DepictionInput{RegionJSON: likenessRegion, ImagePath: crop(t, 300, 200, 128)},
+						})
+						if err != nil {
+							t.Fatal(err)
+						}
+						obs := res.Observations[0]
+						db, err := c.DB()
+						if err != nil {
+							t.Fatal(err)
+						}
+						var imageID []byte
+						if err := db.QueryRow(`SELECT image_file_id FROM depiction_values WHERE id = ?`, obs.ValueDepictionID).Scan(&imageID); err != nil {
+							t.Fatal(err)
+						}
+						if _, err := db.Exec(`UPDATE depiction_values SET region_json = ? WHERE id = ?`, bad.region, obs.ValueDepictionID); err != nil {
+							t.Fatal(err)
+						}
+						byCitation, err := observations.ListByCitation(c, res.Citation.ID)
+						if err != nil {
+							t.Fatal(err)
+						}
+						bySubject, err := observations.ListBySubject(c, s.person.ID)
+						if err != nil {
+							t.Fatal(err)
+						}
+						for name, list := range map[string][]observations.Listed{"citation": byCitation, "subject": bySubject} {
+							if len(list) != 1 {
+								t.Fatalf("%s: len=%d", name, len(list))
+							}
+							row := list[0]
+							if string(row.ValueDepictionID) != string(obs.ValueDepictionID) || row.Depiction == nil ||
+								string(row.Depiction.ImageFileID) != string(imageID) || row.Depiction.RegionJSON != "" {
+								t.Fatalf("%s: listed %+v depiction %+v", name, row, row.Depiction)
+							}
+						}
+					})
+				}
+			},
+		},
+		{
 			name: "likeness refuses",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)

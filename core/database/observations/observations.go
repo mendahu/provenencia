@@ -135,6 +135,9 @@ type Listed struct {
 	// Date is the joined date_values row when value_date_id is set.
 	Date *datevalues.Value
 	// Depiction is the joined depiction_values row when value_depiction_id is set.
+	// An empty RegionJSON means the stored region failed validation; the image
+	// id is still set. Every later reader that returns a region (the source
+	// graph's hydration) goes through depictionvalues.Readable.
 	Depiction *depictionvalues.Value
 }
 
@@ -636,11 +639,12 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 		l.ValueTermID = append([]byte(nil), termID...)
 		l.ValueDepictionID = append([]byte(nil), depictionID...)
 		if len(depictionImage) > 0 {
-			l.Depiction = &depictionvalues.Value{
+			dv := depictionvalues.Readable(depictionvalues.Value{
 				ID:          append([]byte(nil), depictionID...),
 				RegionJSON:  depictionRegion.String,
 				ImageFileID: append([]byte(nil), depictionImage...),
-			}
+			})
+			l.Depiction = &dv
 		}
 		l.ValueTermLabel = termLabel
 		l.ValueNameForm = nameForm
