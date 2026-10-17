@@ -1,14 +1,14 @@
 # Review — S10-99 Close Spike 10
 
-**Verdict:** round 1: Fits with changes — Ready with changes (all applied)
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes (all applied) — Ready
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 - None. The user answered the two product calls before review (2026-10-17): the dogfood bar is checked, and the `likeness` Property on existing projects is handled outside the repo.
 
 ## Writer's own calls
 - No Spike 10 file is kept as a live contract; the three design notes are deleted, not moved to `ideas/archive/` (D-1, D-2).
-- The plan, its review log, and its ship log are deleted in the branch's last commit; no Landed note or `completed.md` paragraph (D-5, D-6). Written into `archive-docs` and `implement-pr` so later closes inherit it (S-1, S-2).
+- The plan, its review log, and its ship log are deleted in the branch's last commit; no Landed note or `completed.md` paragraph (D-5, D-6). Written into `archive-docs`, `implement-pr`, and `ship-pr` so later closes inherit it (S-1 to S-3).
 - The two landed Spike 11 plans that name `docs/deployment-plan/spike-10/**` in an `rg --glob` stay (D-7).
 - The archive README text is fixed in the plan (D-3).
 
@@ -75,3 +75,17 @@ The plan links `../deployment-plan.md`, which STEP-4 deletes; `check-plan-docs.p
 **Answer:** Fixed — a Stop condition: the plan is on `main` when the branch is cut.
 
 Executability round 2: **Ready**.
+
+### M-10 · blocker · The close-PR rule skips `ship-pr`, which makes the last commit
+`ship-pr` "Finish" step 2 commits the ship log and deletes nothing; step 1 links three files the close PR deletes. S11-99 is already in the Spike 11 map.
+**Answer:** Fixed — S-3 edits `ship-pr` "Finish" steps 1 and 2; STEP-6 points at it; T-8 and AC-3.3 cover it; `ship-pr` left the Out row.
+
+### M-11 · major · R-1 lists a refused item as "Not yet handled" and points at a not-a-backlog note
+**Answer:** Fixed — R-1 replaces the whole line with the real homes (known-as, calibration, rejected-claim memory, Spike 11) and drops event affinity; R-4 drops "Matcher leftovers".
+
+Maintainability round 2: **Fits with changes**, applied.
+
+### Logged, not fixed (below blocker; Out row in the plan)
+- `.agents/skills/plan-pr/SKILL.md` and `docs/deployment-plan/README.md` "Spike 10 and earlier" In / Out / Testable guidance has no open spike left to apply to. D-9 keeps the README sentence; a later skills tidy can drop both.
+- `docs/ideas/depictions-and-likenesses.md` "can replace that once the gallery exists" is stale present tense.
+- `archive-docs/SKILL.md` still says "(Spikes 1–7)" and "Match `archive/spike-7/README.md`".

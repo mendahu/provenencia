@@ -821,7 +821,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 ### S10-99 — Dogfood close / docs
 
-**Plan:** [`prs/S10-99-dogfood-close.md`](prs/S10-99-dogfood-close.md) — Draft
+**Plan:** [`prs/S10-99-dogfood-close.md`](prs/S10-99-dogfood-close.md) — Planned
 
 | | |
 | --- | --- |
