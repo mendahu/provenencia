@@ -6,7 +6,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 func TestMissingDefaultUsesWestern(t *testing.T) {
@@ -23,7 +25,7 @@ func TestMissingDefaultUsesWestern(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !loaded.Builtin || loaded.Key != match.WesternPattern {
+	if !loaded.Builtin || loaded.Key != valuecompare.WesternPattern {
 		t.Fatalf("got builtin=%v key=%q", loaded.Builtin, loaded.Key)
 	}
 	a := nameValue("Vincent", "van", "Gogh")
@@ -54,7 +56,7 @@ func TestInstallLoadsWesternAndFormats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if loaded.Builtin || loaded.Key != match.WesternPattern {
+	if loaded.Builtin || loaded.Key != valuecompare.WesternPattern {
 		t.Fatalf("got %+v", loaded)
 	}
 	if loaded.Profile.Label != "Western" {
@@ -144,4 +146,45 @@ func nameValue(given, particle, surname string) match.Value {
 		{Idx: 1, Value: particle, Type: namevalue.PartTypeSurnamePrefix},
 		{Idx: 2, Value: surname, Type: namevalue.PartTypeSurname},
 	}}}
+}
+
+// The seeded Western format and the registry's Western pattern are one
+// pattern: same roles per product part type, same weights.
+func TestSeedMatchesRegistryWestern(t *testing.T) {
+	want := matchregistry.Default().Value.Names.Western
+	var seed *seedProfile
+	for i := range seedProfiles {
+		if seedProfiles[i].Key == valuecompare.WesternPattern {
+			seed = &seedProfiles[i]
+		}
+	}
+	if seed == nil {
+		t.Fatal("no western seed profile")
+	}
+	for _, pt := range namevalue.PartTypes() {
+		var got valuecompare.NameRole
+		for _, r := range seed.Roles {
+			if r.PartType == pt.Key {
+				got = r.Role
+			}
+		}
+		if got != want.Role(pt.Key) {
+			t.Errorf("part type %q: seed role %q, registry %q", pt.Key, got, want.Role(pt.Key))
+		}
+	}
+	weights := map[string]float64{
+		"family":      want.Weights.Family,
+		"first_given": want.Weights.FirstGiven,
+		"other_given": want.Weights.OtherGiven,
+		"nick":        want.Weights.Nick,
+		"untyped":     want.Weights.Untyped,
+	}
+	if len(seed.Weights) != len(weights) {
+		t.Errorf("seed has %d weights, registry %d", len(seed.Weights), len(weights))
+	}
+	for _, w := range seed.Weights {
+		if got, ok := weights[w.Slot]; !ok || got != w.Weight {
+			t.Errorf("weight %q: seed %v, registry %v (%v)", w.Slot, w.Weight, got, ok)
+		}
+	}
 }

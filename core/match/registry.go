@@ -2,13 +2,12 @@ package match
 
 import (
 	"github.com/mendahu/provenencia/core/matchregistry"
-	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
-	"github.com/mendahu/provenencia/core/vocabkey"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // The registry: the numbers the matching algorithm uses, every built-in name
-// pattern, and every default profile. The value section (words, text,
+// pattern, and every default profile. The value section (words, names, text,
 // integers) lives in core/matchregistry and is read from here; tune it there.
 // The rest are tuned here until their layer lands.
 //
@@ -49,7 +48,7 @@ var DefaultWordRules = WordRules{
 	// 1 turns fuzzy matching off.
 	FuzzyFloor: Set(value.Words.FuzzyFloor),
 	// An initial against a word it begins: "J." ~ "James".
-	InitialCredit: Set(0.5),
+	InitialCredit: Set(value.Words.InitialCredit),
 	// Words at least this long may differ by one added or dropped letter
 	// below FuzzyFloor (Ann ~ Anne, Jon ~ John).
 	ShortVariantMinLength: Set(value.Words.ShortVariantMinLength),
@@ -61,66 +60,15 @@ var DefaultWordRules = WordRules{
 
 // AliasCredit is an abbreviation or nickname table hit. Exact is 1. A
 // fold-only pair is lower (foldOnly).
-const AliasCredit = 0.98
-
-// AliasKind is abbreviation or nickname. Both score AliasCredit.
-type AliasKind string
-
-const (
-	AliasAbbreviation AliasKind = "abbreviation"
-	AliasNickname     AliasKind = "nickname"
-)
-
-// AliasTable is one contributed list. Origin records who contributed it
-// (provenencia, user, or plugin:<id>) and does not turn the table off.
-// A set is one equivalence group. Roles are the part roles that may use it.
-type AliasTable struct {
-	Key, Origin, Label string
-	Kind               AliasKind
-	Roles              []NameRole
-	Sets               [][]string
-}
-
-func aliasPartRoles() []NameRole {
-	return []NameRole{RoleGiven, RoleNick, RoleUntyped}
-}
+var AliasCredit = value.Words.AliasCredit
 
 // noAliasTables is the comparer default: no abbreviation or nickname hits
 // until a catalog load supplies rows.
-var noAliasTables []AliasTable
+var noAliasTables []valuecompare.AliasTable
 
-// productAliasTables is the create-time seed. Install writes this list.
-// Scoring does not read it. Tokens are normalized comparison forms.
-var productAliasTables = []AliasTable{
-	{
-		Key: "abbreviations", Origin: vocabkey.OriginProvenencia, Label: "Abbreviations",
-		Kind: AliasAbbreviation, Roles: aliasPartRoles(),
-		Sets: [][]string{
-			{"james", "jas"},
-			{"william", "wm"},
-			{"charles", "chas"},
-			{"thomas", "thos"},
-			{"george", "geo"},
-			{"elizabeth", "eliz"},
-			{"john", "jno"},
-			{"robert", "robt"},
-		},
-	},
-	{
-		Key: "nicknames", Origin: vocabkey.OriginProvenencia, Label: "Nicknames",
-		Kind: AliasNickname, Roles: aliasPartRoles(),
-		// Each set is one canonical name and its direct nicknames, from
-		// carltonnorthern/nicknames. A nickname shared by two canonical
-		// names does not join those sets. License and credit:
-		// third_party/nicknames/.
-		Sets: nicknameSets,
-	},
-}
-
-// MaxExactPairing bounds the exact best-pairing search (2^n states over the
-// shorter word list); longer lists pair greedily. A performance limit, not a
-// scoring weight: names never get close.
-const MaxExactPairing = 12
+// MaxExactPairing bounds the exact best-pairing search; longer lists pair
+// greedily. Read from the registry's value section.
+var MaxExactPairing = value.Words.MaxExactPairing
 
 // ---------------------------------------------------------------------------
 // Names
@@ -131,12 +79,12 @@ var DefaultNames = NameComparer{
 	Patterns: BuiltinNamePatterns,
 	// The pattern for names that don't name one (today: every name).
 	// Later: the project default name format.
-	Pattern: Set(WesternPattern),
+	Pattern: Set(valuecompare.WesternPattern),
 
 	// Affinities: how much a pair of words counts when their roles differ.
-	UntypedAffinity: Set(0.8), // a typed word against an untyped one
-	NickAffinity:    Set(0.9), // a nickname against a given name
-	CrossRole:       Set(0.5), // any other mismatch: surname against given
+	UntypedAffinity: Set(value.Names.UntypedAffinity), // a typed word against an untyped one
+	NickAffinity:    Set(value.Names.NickAffinity),    // a nickname against a given name
+	CrossRole:       Set(value.Names.CrossRole),       // any other mismatch: surname against given
 
 	// Both names have family words and none resembles any word of the other.
 	GivenOnlyFactor: Set(0.5),
@@ -155,39 +103,14 @@ var DefaultNames = NameComparer{
 	Words: DefaultWordRules,
 }
 
-// WesternPattern is the key of the built-in Western name pattern.
-const WesternPattern = "western"
-
 // WesternNamePattern: given names then surname, with GEDCOM-style part types.
-// The first given name leads; middle names and initials count less; titles
-// and surname particles are ignored. Every product part type (namevalues
-// registry) must have a role here.
-var WesternNamePattern = NamePattern{
-	Key: WesternPattern,
-	PartRoles: map[string]NameRole{
-		namevalue.PartTypeSurname:       RoleFamily,
-		namevalue.PartTypeGiven:         RoleGiven,
-		namevalue.PartTypeNick:          RoleNick,
-		namevalue.PartTypeSuffix:        RoleGeneration,
-		namevalue.PartTypePrefix:        RoleIgnored,
-		namevalue.PartTypeSurnamePrefix: RoleIgnored,
-		namevalue.PartTypeUndetermined:  RoleUntyped,
-		"":                              RoleUntyped,
-	},
-	// What a matched word of each role earns and an unmatched one costs.
-	Weights: NameWeights{
-		Family:     1.5,
-		FirstGiven: 1,
-		OtherGiven: 0.5, // middle names and initials
-		Nick:       0.3,
-		Untyped:    1,
-	},
-}
+// Read from the registry's value section; tune it there.
+var WesternNamePattern = value.Names.Western
 
 // BuiltinNamePatterns are the patterns that ship in code. A later NamePatterns
 // source reads name_format_profiles instead; nothing else changes.
 var BuiltinNamePatterns = NamePatternSet{
-	WesternPattern: WesternNamePattern,
+	valuecompare.WesternPattern: WesternNamePattern,
 }
 
 // ---------------------------------------------------------------------------

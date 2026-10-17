@@ -129,13 +129,12 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `value.Names.UntypedAffinity` | 0.8 | `DefaultNames.UntypedAffinity` | Typed word against an untyped one |
 | `value.Names.NickAffinity` | 0.9 | `DefaultNames.NickAffinity` | Nickname against a given name |
 | `value.Names.CrossRole` | 0.5 | `DefaultNames.CrossRole` | Any other role mismatch |
-| `value.Names.GivenOnlyFactor` | 0.5 | `DefaultNames.GivenOnlyFactor` | Surnames share nothing |
-| `value.Names.SuffixConflict` | 0.3 | `DefaultNames.SuffixConflict` | Generations differ (Jr. / Sr.) |
-| `value.Names.Western.Family` | 1.5 | `WesternNamePattern.Weights` | Surname word weight |
-| `value.Names.Western.FirstGiven` | 1 | `WesternNamePattern.Weights` | First given name weight |
-| `value.Names.Western.OtherGiven` | 0.5 | `WesternNamePattern.Weights` | Middle names and initials |
-| `value.Names.Western.Nick` | 0.3 | `WesternNamePattern.Weights` | Nickname part weight |
-| `value.Names.Western.Untyped` | 1 | `WesternNamePattern.Weights` | Untyped part weight |
+| `value.Names.Generation` | 0.5 | estimate | Weight of a generation word, Jr. or III, on either side |
+| `value.Names.Western.Weights.Family` | 1.5 | `WesternNamePattern.Weights` | Surname word weight |
+| `value.Names.Western.Weights.FirstGiven` | 1 | `WesternNamePattern.Weights` | First given name weight |
+| `value.Names.Western.Weights.OtherGiven` | 0.5 | `WesternNamePattern.Weights` | Middle names and initials |
+| `value.Names.Western.Weights.Nick` | 0.3 | `WesternNamePattern.Weights` | Nickname part weight |
+| `value.Names.Western.Weights.Untyped` | 1 | `WesternNamePattern.Weights` | Untyped part weight |
 | `value.Names.Western.PartRoles` | today's map | `WesternNamePattern.PartRoles` | Which part type plays which role |
 | `value.Dates.Tolerance` | 2 | `DefaultDates.Tolerance` | Most years apart that can still be `Near` |
 | `value.Dates.NearMinimum` | 0 | `graphalign` `ValueTypeScale["date"].Floor` | Below this a date pair is `Different` |
@@ -196,12 +195,13 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 
 ## Not knobs
 
-These are identifiers or catalog data, not tunables, and have no row: the vocabulary origins and primary kinds (`core/vocabkey`), `AliasAbbreviation`, `AliasNickname`, `WesternPattern` (a key), `BuiltinNamePatterns` (the set holding `WesternNamePattern`), `DefaultNames.Patterns` / `Pattern`, `DefaultWordRules.Aliases` (catalog tables passed in at run time), and `graphalign` `Config.Names` (a test hook).
+These are identifiers or catalog data, not tunables, and have no row: the vocabulary origins and primary kinds (`core/vocabkey`), `AliasAbbreviation`, `AliasNickname`, `valuecompare.WesternPattern` (a key), `BuiltinNamePatterns` (the set holding `WesternNamePattern`), `DefaultNames.Patterns` / `Pattern`, `value.Names.Aliases` and `value.Names.Patterns` (catalog rows, passed in at run time), and `graphalign` `Config.Names` (a test hook).
 
 ## Removed knobs
 
 | Today | Why removed |
 | --- | --- |
+| `DefaultNames.GivenOnlyFactor`, `SuffixConflict` | A surname or first given name left over on both sides, and a generation conflict, are `Different` (S11-03) |
 | `DefaultNames.Frequency`, `FrequencyDiscount`, `FrequencyMinPeople`; `graphalign` `MPrior`, `UPrior`, frequency `ValueTypeScale` entries | Frequency weighting is descoped |
 | `graphalign` `PropertyAgreement` | Frequency weighting is descoped; the toponym bonus is folded into `subject.place.toponym.Agree` |
 | `graphalign` `FanOutLowMax`, `FanOutUnknown` | Replaced by declared cardinality |
