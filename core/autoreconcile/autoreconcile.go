@@ -27,12 +27,12 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // State describes how a Property's candidates reconciled.
@@ -265,7 +265,7 @@ func SortKey(valueType string, v Value) (key string, ok bool) {
 		if v.Name == nil {
 			return "", false
 		}
-		return NormalizeForm(v.Name.Form), true
+		return valuecompare.NormalizeForm(v.Name.Form), true
 	case propertymeta.ValueTypeText:
 		if !v.HasText {
 			return "", false
@@ -288,34 +288,6 @@ func SortKey(valueType string, v Value) (key string, ok bool) {
 		return fmt.Sprintf("%020d", int64(*lo)+dateSortOffset), true
 	}
 	return "", false
-}
-
-// NormalizeForm ignores case, punctuation, and whitespace differences: the
-// name sort key, and the text core/match tokenizes. Dashes
-// and slashes separate words ("Smith-Jones" reads as "smith jones"); other
-// punctuation is dropped, so an apostrophe joins ("O'Brien" reads as
-// "obrien", the same as "OBrien").
-func NormalizeForm(form string) string {
-	var b strings.Builder
-	space := false
-	for _, r := range form {
-		switch {
-		case unicode.Is(unicode.Pd, r) || r == '/':
-			space = b.Len() > 0
-			continue
-		case unicode.IsPunct(r):
-			continue
-		case unicode.IsSpace(r):
-			space = b.Len() > 0
-			continue
-		}
-		if space {
-			b.WriteByte(' ')
-			space = false
-		}
-		b.WriteRune(unicode.ToLower(r))
-	}
-	return b.String()
 }
 
 // dateKey matches on every structured field. Containment and overlap are

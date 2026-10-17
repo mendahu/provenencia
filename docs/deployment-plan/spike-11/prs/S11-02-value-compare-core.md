@@ -1,6 +1,6 @@
 # S11-02 — Value compare core and match registry
 
-**Status:** Planned
+**Status:** Landed in [#441](https://github.com/mendahu/provenencia/pull/441) (2026-10-17)
 **Spike / slice:** Spike 11 · Slice 2 — Value compare, everywhere
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: new Go packages, a guard test and a skill)
@@ -116,7 +116,7 @@ Verified at `cf1f051`.
 
 | Area | Where | Today |
 | --- | --- | --- |
-| Word helpers in the reconciler | `core/autoreconcile/autoreconcile.go` `NormalizeForm` (L298); `core/autoreconcile/names.go` `IsInitial` (L41); `core/autoreconcile/spelling.go` `SpellingFloor` (0.8), `SpellingShortMin` (3), `SpellingSimilarity`, `EditDistance` | Value comparison living in the reconciler. `core/autoreconcile` imports `core/database/depictionvalues`, so a pure layer cannot import it |
+| Word helpers in the reconciler | `core/autoreconcile/autoreconcile.go` `NormalizeForm` (L298); `core/autoreconcile/names.go` `IsInitial` (L41); core/autoreconcile/spelling.go `SpellingFloor` (0.8), `SpellingShortMin` (3), `SpellingSimilarity`, `EditDistance` | Value comparison living in the reconciler. `core/autoreconcile` imports `core/database/depictionvalues`, so a pure layer cannot import it |
 | Reconciler callers | `autoreconcile.go` L268 `SortKey` (`NormalizeForm`); `names.go` L62 `readName` (`NormalizeForm`), L119 `partFits` (`IsInitial`), L133 `outvotes` (`SpellingSimilarity(…, SpellingFloor, SpellingShortMin)`) | Same package today |
 | Matching callers | `core/match/words.go` L110, L116, L151 (`NormalizeForm`), L232 (`IsInitial`), L245 (`SpellingSimilarity`); `core/match/frequency.go` L36, L59 (`IsInitial`); `core/match/registry.go` L52, L57 (`SpellingFloor`, `SpellingShortMin`) | The only callers outside the package |
 | Word tests | `core/autoreconcile/autoreconcile_test.go` `TestNormalizeForm` (L204); `core/autoreconcile/names_test.go` `TestIsInitial` (L526); `core/autoreconcile/modules_test.go` `TestSpellingSimilarity` (L148); `names_test.go` L470, L475 call `NormalizeForm` inside `TestReconcileNamesInvariants` | Test the helpers that move |
@@ -129,7 +129,7 @@ Verified at `cf1f051`.
 | Repo-walking precedent | `core/writes/begin_test.go` `TestBeginOnlyInDatabaseAndWrites` | Walks the repo with `go/parser` and fails with a list of hits |
 | Repo-file precedent | `api/ffi/swift_vocabulary_test.go` `TestSwiftVocabularyMatchesGo` | A Go test reading a non-Go file in the repo by relative path |
 | Skills | `.agents/skills/plan-pr/SKILL.md` "Touches" table (L127); `.cursor/rules/name-values.mdc` (shape of a skill's Cursor rule) | No matching skill |
-| Docs naming the moved helpers | `docs/conclusion-reconciliation.md` L166 (`SpellingSimilarity`); `docs/ideas/daitch-mokotoff.md` L5 (says the code moves in S11-03 / S11-05) and L19 (links `core/autoreconcile/spelling.go`); `docs/deployment-plan/spike-11/comparison-layers.md` L410 (names `core/autoreconcile/spelling.go`) | Will point at a deleted file or the wrong PR |
+| Docs naming the moved helpers | `docs/conclusion-reconciliation.md` L166 (`SpellingSimilarity`); `docs/ideas/daitch-mokotoff.md` L5 (says the code moves in S11-03 / S11-05) and L19 (links core/autoreconcile/spelling.go); `docs/deployment-plan/spike-11/comparison-layers.md` L410 (names core/autoreconcile/spelling.go) | Will point at a deleted file or the wrong PR |
 
 **Precedent.** S11-22 ([plan](S11-22-pure-value-types.md), [#434](https://github.com/mendahu/provenencia/pull/434)) moved code into pure packages with no aliases and repointed every caller in the same commit; copy that for STEP-3. `TestBeginOnlyInDatabaseAndWrites` is the shape of STEP-7's walk. `TestRegistrySetsEverySetting` walks a registry struct with `reflect`; STEP-8 walks `Default()` the same way. `TestSwiftVocabularyMatchesGo` reads a repo file the way STEP-8 reads `matching-model.md`.
 
@@ -179,7 +179,7 @@ Verified at `cf1f051`.
 Searches run for this table: `rg -n 'type Relation|Relation string'` (none outside proto), `rg -n 'func Key\(' core` (none), `rg -n 'Cause' core --type go` (`graphalign` has none), `rg -n 'Default\(\)' core/match core/graphalign` (none).
 
 **Builds on.** S11-22's pure value types and `propertymeta`'s value-type constants (the dispatch keys); S11-23's `vocabkey` (listed in the guard); the inventory S11-01 wrote; the repo-walk test shape of `core/writes`.
-**Deletes.** `core/autoreconcile/spelling.go` (whole file); `NormalizeForm` from `core/autoreconcile/autoreconcile.go`; `IsInitial` from `core/autoreconcile/names.go`; the three moved tests from their `autoreconcile` files; `match`'s literal values for the seven knobs D-10 names; `splitWords`, `rawTokens`, `spacedParticle`, `periodInitial`, `foldWord` from `core/match/words.go`. `core/match/compare.go`'s comparers and `core/match/words.go` become dead once S11-05 moves their callers, and S11-05 deletes them.
+**Deletes.** core/autoreconcile/spelling.go (whole file); `NormalizeForm` from `core/autoreconcile/autoreconcile.go`; `IsInitial` from `core/autoreconcile/names.go`; the three moved tests from their `autoreconcile` files; `match`'s literal values for the seven knobs D-10 names; `splitWords`, `rawTokens`, `spacedParticle`, `periodInitial`, `foldWord` from `core/match/words.go`. `core/match/compare.go`'s comparers and `core/match/words.go` become dead once S11-05 moves their callers, and S11-05 deletes them.
 **Next adds.** S11-03 adds `comparers[propertymeta.ValueTypeName]`, a `Names` group and the three name-only `Words` fields, extends `words.go`'s word similarity with initials and aliases, and deletes its `notYetBuilt` prefixes; catalog data (alias tables, stored patterns) must not become `Rules` fields the inventory guard would demand rows for, and S11-03's plan decides how it is passed. S11-04 adds the date comparer and `value.Dates.`. S11-05 moves `match`'s callers and deletes `compare.go` and `words.go`. S11-06, S11-07 call `Key`. S11-09 adds `core/propertycompare` as a `layerPackages` row with numbers true. S11-10 adds `Registry.Subject` and the typed keys.
 
 ### Schema
@@ -352,7 +352,7 @@ No app change. The reviewer runs, from the repo root:
 
 **Stop and report if:**
 
-- A row in §4 is no longer true at your base (for example `core/autoreconcile/spelling.go` is gone or `match` no longer calls `autoreconcile.SpellingSimilarity`).
+- A row in §4 is no longer true at your base (for example core/autoreconcile/spelling.go is gone or `match` no longer calls `autoreconcile.SpellingSimilarity`).
 - STEP-2 changes any expected value in an existing test, or needs `core/autoreconcile` to import anything new besides `core/valuecompare` and `core/matchregistry`.
 - `matchregistry` importing `valuecompare` (D-1) makes an import cycle.
 - A text case in AC-1.2 – AC-1.8 cannot hold under D-7's rule, or T-7's swap invariant fails on a generated pair that D-7's rule cannot settle without a tie-break the plan does not give.
@@ -367,3 +367,16 @@ None.
 
 **Title:** S11-02 — Value compare core and match registry
 **Body:** objective in one sentence; what shipped against US-1 – US-4; AC evidence (test names, the deliberate guard failures from STEP-6 and STEP-7); deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-02-value-compare-core.md`.
+
+## Landed
+
+Differences from the plan:
+
+- `TestComparerContract` and `TestKeyContract` run the sample table and 500 generated pairs under four seeds (the integer tolerance is the seed index, 0 to 3), not one seed.
+- `ComparerTypes()` is asserted in `TestCompareUnsupported` as T-3 says; `TestCompareEchoesRefs` (new) holds the AC-1.12 ref echo, which T-3 lists under the same test.
+- For `no_match` and `order`, `Detail.OnlyA` / `OnlyB` list the unpaired words (D-7 says only that `Parts` is empty for `no_match`).
+- `core/matchregistry/value.go` names the old sources as "the reconciler's old spelling floor" and "old short-word minimum" instead of the deleted constant names, so STEP-2's `rg SpellingFloor|SpellingShortMin core` check prints nothing.
+- `daitch-mokotoff.md` L5 says "the spelling helpers that lived in `core/autoreconcile`" instead of naming `spelling.go`, so STEP-10's `rg` check prints only the allowed files.
+- The STEP-6 and STEP-7 deliberate failures needed `-tags fts5`: with a `core/database` import in `core/propertymeta`, the test binary panics at init without it, so the `pure` failure shows with the tag.
+- Four current-state and stop-condition lines drop the backticks around the deleted core/autoreconcile/spelling.go so `check-plan-docs` passes, as the S11-22 plan did.
+- SEC-1 (round 1): user amended D-7/D-11 to add `value.Text.MaxWords` and `value.Words.MaxSpellingLength`; see the ship log.

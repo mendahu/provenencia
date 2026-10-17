@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-02 — Value compare core and match registry
+
+**Landed 2026-10-17** in [#441](https://github.com/mendahu/provenencia/pull/441). Two values of one type can now be related without the database. `core/valuecompare` takes text, term and integer values and returns a relation, a similarity and a structured detail (what paired with what, what is on one side only, why), and gives each value a normalized `Key` that agrees with `Compare`. Text compares words in order, so `Upper Canada, York` and `York, Upper Canada` are `Different`. Text longer than `value.Text.MaxWords` words that is not the same or equivalent is `Unknown` (`too_long`), and a word over `value.Words.MaxSpellingLength` runes pairs only when equal or equal after folding, so a long remark cannot exhaust memory. `core/matchregistry` opens with `Default()` and the value section's text, term and integer knobs; `core/match` reads the same numbers from it. The word helpers moved out of `core/autoreconcile` into value compare. `TestLayerPackages` keeps the layer packages free of catalog imports and stray numbers, `TestKnobInventoryMatchesRegistry` keeps the knob inventory in step with the registry, and the `add-match-rule` skill writes down the steps each layer PR repeats. Nothing changes for researchers.
+
 ## S11-23 — One home for primary kinds
 
 **Landed 2026-10-17** in [#438](https://github.com/mendahu/provenencia/pull/438). The primary Subject kinds (`person`, `event`, `place`), the eight seeded Property keys matching reads by name, and the vocabulary origins now live in `core/vocabkey`, which imports only `strings`. The ten per-package `OriginProvenencia` declarations, six `originOK` copies, and the hand-written kind lists in Promote, progress, alignment, search and the Swift fake are gone; `search.KindSpec` gains `Handle` to mark handle kinds. `TestVocabKeysMatchSeed` ties the constants to the seed and `TestSwiftVocabularyMatchesGo/primary_kinds` ties them to `EvidencePrimaryKind`. Nothing changes for researchers.

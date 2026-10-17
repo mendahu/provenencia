@@ -201,23 +201,6 @@ func TestReconcileErrors(t *testing.T) {
 	}
 }
 
-func TestNormalizeForm(t *testing.T) {
-	for in, want := range map[string]string{
-		"  James   Robins ": "james robins",
-		"J. Robins":         "j robins",
-		"O'Brien, Mary":     "obrien mary",
-		"ÉMILE\tZOLA":       "émile zola",
-		"Smith-Jones":       "smith jones",
-		"Mary–Ann / Polly":  "mary ann polly",
-		"-Robins-":          "robins",
-		"":                  "",
-	} {
-		if got := NormalizeForm(in); got != want {
-			t.Errorf("NormalizeForm(%q) = %q, want %q", in, got, want)
-		}
-	}
-}
-
 func TestSortKey(t *testing.T) {
 	k, ok := SortKey(propertymeta.ValueTypeName, Value{Name: &namevalue.Value{Form: "  O'Brien,  Mary "}})
 	if !ok || k != "obrien mary" {

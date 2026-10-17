@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // NameRole is what a name part means for matching. A name pattern maps part
@@ -159,7 +160,7 @@ func nameWords(n *namevalue.Value, p NamePattern, particles map[string]bool) (wo
 	firstGiven := true
 	for _, part := range n.Parts {
 		role := p.role(part.Type)
-		for _, w := range splitWords(part.Value, particles) {
+		for _, w := range valuecompare.SplitWords(part.Value, particles) {
 			switch role {
 			case RoleIgnored:
 			case RoleGeneration:
