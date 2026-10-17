@@ -286,7 +286,7 @@ func TestSpellingVariantIsAWeakerTextMatch(t *testing.T) {
 }
 
 func TestOrphanFallsBackToPropertyOnlyOrSkip(t *testing.T) {
-	// Place orphans use toponym + DefaultText Rank (names need namevalues).
+	// Place orphans use toponym + text value compare in Rank (names need namevalues).
 	orphan := id("s-orphan")
 	known := id("h-known")
 	n, v := textProp("toponym", "UniqueZebraTown")
@@ -521,16 +521,17 @@ func TestUnreachableFallbackScoresOnTheWalkScale(t *testing.T) {
 		handle     match.Values
 		wantTarget graphalign.Target
 		wantAssess graphalign.Assessment
+		wantReason graphalign.Reason
 	}{
 		{
 			name:  "a different first name is no candidate",
 			probe: nameVals("Mary", "Robins"), handle: nameVals("James", "Robins"),
-			wantTarget: graphalign.TargetNew, wantAssess: graphalign.AssessNone,
+			wantTarget: graphalign.TargetNew, wantAssess: graphalign.AssessNone, wantReason: graphalign.ReasonNoMatch,
 		},
 		{
 			name:  "the same name alone is a weak match, never strong",
 			probe: nameVals("Mary", "Robins"), handle: nameVals("Mary", "Robins"),
-			wantTarget: graphalign.TargetHandle, wantAssess: graphalign.AssessWeak,
+			wantTarget: graphalign.TargetHandle, wantAssess: graphalign.AssessWeak, wantReason: graphalign.ReasonAgrees,
 		},
 	}
 	for _, tt := range tests {
@@ -542,8 +543,8 @@ func TestUnreachableFallbackScoresOnTheWalkScale(t *testing.T) {
 			}
 			canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: tt.handle}}}
 			row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil), s)
-			if row.Target != tt.wantTarget || row.Assessment != tt.wantAssess {
-				t.Fatalf("got %s / %s (score %.2f), want %s / %s", row.Target, row.Assessment, row.Score, tt.wantTarget, tt.wantAssess)
+			if row.Target != tt.wantTarget || row.Assessment != tt.wantAssess || row.Reason != tt.wantReason {
+				t.Fatalf("got %s / %s / %s (score %.2f), want %s / %s / %s", row.Target, row.Assessment, row.Reason, row.Score, tt.wantTarget, tt.wantAssess, tt.wantReason)
 			}
 		})
 	}
