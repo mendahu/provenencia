@@ -1,15 +1,23 @@
 package autoreconcile
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 )
 
 func term(n byte, termID, key string) Candidate {
 	return Candidate{ObservationID: id(n), Value: Value{TermID: []byte(termID), TermKey: key}}
+}
+
+// depiction is a likeness holding image; an empty image is one whose File
+// depictionvalues.Readable refused.
+func depiction(n byte, image string) Candidate {
+	return Candidate{ObservationID: id(n), Value: Value{Depiction: &depictionvalues.Value{ImageFileID: []byte(image)}}}
 }
 
 // neutralTerm is a term the catalog flags as no evidence ("unknown").
@@ -57,6 +65,12 @@ func TestModules(t *testing.T) {
 			[]Candidate{term(1, "f", ""), term(2, "m", "")}, [][]byte{{1}, {2}}, StateMixed, ""},
 		{"name", "a name with no parts is no evidence, whatever its form", properties.ValueTypeName,
 			[]Candidate{name(1, "James Robins"), nm(2, "given=James|surname=Robins")}, [][]byte{{2}}, StateSingle, ""},
+		{"depiction", "the same image is one value", properties.ValueTypeDepiction,
+			[]Candidate{depiction(1, "a"), depiction(2, "a")}, [][]byte{{1, 2}}, StateMerged, ""},
+		{"depiction", "two images", properties.ValueTypeDepiction,
+			[]Candidate{depiction(1, "a"), depiction(2, "b")}, [][]byte{{1}, {2}}, StateMixed, ""},
+		{"depiction", "an unreadable image is no evidence", properties.ValueTypeDepiction,
+			[]Candidate{depiction(1, "")}, nil, StateEmpty, ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.module+"/"+tc.name, func(t *testing.T) {
@@ -80,7 +94,7 @@ func TestModules(t *testing.T) {
 // Every value type has a module, and mismatched values are refused.
 func TestModuleFor(t *testing.T) {
 	for _, vt := range []string{properties.ValueTypeText, properties.ValueTypeInteger, properties.ValueTypeTerm,
-		properties.ValueTypeSubject, properties.ValueTypeName, properties.ValueTypeDate} {
+		properties.ValueTypeSubject, properties.ValueTypeName, properties.ValueTypeDate, properties.ValueTypeDepiction} {
 		if moduleFor(vt) == nil {
 			t.Errorf("%s has no module", vt)
 		}
@@ -88,6 +102,45 @@ func TestModuleFor(t *testing.T) {
 	if _, err := Reconcile(properties.ValueTypeName, []Candidate{{ObservationID: id(1), Value: Value{Name: &namevalues.Value{}}}}, nil, properties.CardinalitySingle); err != nil {
 		t.Fatalf("an empty name is no evidence, not an error: %v", err)
 	}
+}
+
+// A person's likenesses are a gallery: every distinct image stays.
+func TestReconcileDepictionMultiple(t *testing.T) {
+	t.Run("distinct images are distinct values", func(t *testing.T) {
+		got, err := Reconcile(properties.ValueTypeDepiction,
+			[]Candidate{depiction(1, "a"), depiction(2, "a"), depiction(3, "b")}, nil, properties.CardinalityMultiple)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if s := shape(got); !reflect.DeepEqual(s, [][]byte{{1, 2}, {3}}) {
+			t.Fatalf("values %v", s)
+		}
+		for _, v := range got.Values {
+			if v.Reason != ReasonKept {
+				t.Fatalf("reason %q, want kept", v.Reason)
+			}
+		}
+		if got.State() != StateMultiple {
+			t.Fatalf("state %q", got.State())
+		}
+	})
+	t.Run("no depiction is a mismatch", func(t *testing.T) {
+		_, err := Reconcile(properties.ValueTypeDepiction,
+			[]Candidate{{ObservationID: id(1)}}, nil, properties.CardinalityMultiple)
+		if !errors.Is(err, ErrValueMismatch) {
+			t.Fatalf("err %v", err)
+		}
+	})
+	t.Run("an unreadable image is no evidence", func(t *testing.T) {
+		got, err := Reconcile(properties.ValueTypeDepiction,
+			[]Candidate{depiction(1, "")}, nil, properties.CardinalityMultiple)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(got.Values) != 0 || got.Outcomes[0].Reason != ReasonNoEvidence {
+			t.Fatalf("values %v, outcomes %+v", got.Values, got.Outcomes)
+		}
+	})
 }
 
 // The spelling-variant rule shared with core/match (SpellingFloor 0.8; one
@@ -153,6 +206,9 @@ func TestCompatible(t *testing.T) {
 		{"name: no shared part", properties.ValueTypeName,
 			nm(1, "given=James"), nm(2, "surname=Robins"), false},
 		{"name: no parts is no evidence", properties.ValueTypeName, name(1, "James Robins"), name(2, "James Robins"), false},
+		{"depiction: the same image", properties.ValueTypeDepiction, depiction(1, "a"), depiction(2, "a"), true},
+		{"depiction: different images", properties.ValueTypeDepiction, depiction(1, "a"), depiction(2, "b"), false},
+		{"depiction: an unreadable image is no evidence", properties.ValueTypeDepiction, depiction(1, ""), depiction(2, ""), false},
 		{"mismatched value", properties.ValueTypeInteger, text(1, "34"), integer(2, 34), false},
 		{"unknown value type", "colour", text(1, "red"), text(2, "red"), false},
 	}

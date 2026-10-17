@@ -55,11 +55,14 @@ func moduleFor(valueType string) module {
 	case properties.ValueTypeSubject:
 		// The accepted handle. The loader fills EntityID; an unpromoted or
 		// missing end has none and is no evidence.
+		return keyModule{keyOf: func(v Value) (string, bool) { return idKey(v.EntityID) }}
+	case properties.ValueTypeDepiction:
+		// The same image File, so the same pixels; no readable image is no evidence.
 		return keyModule{keyOf: func(v Value) (string, bool) {
-			if len(v.EntityID) == 0 {
+			if v.Depiction == nil {
 				return "", false
 			}
-			return string(v.EntityID), true
+			return idKey(v.Depiction.ImageFileID)
 		}}
 	case properties.ValueTypeName:
 		return nameModule{}
@@ -110,6 +113,9 @@ func termKey(v Value) (string, bool) {
 	return string(v.TermID), true
 }
 
+// idKey: an id is its own key; no id is no evidence.
+func idKey(id []byte) (string, bool) { return string(id), len(id) > 0 }
+
 // Compatible reports whether two values of valueType are the same value as
 // the pipeline would see it: every unit both carry is equal, or one folds
 // into the other (J. Robins and James Robins). A unit only one carries does
@@ -117,10 +123,10 @@ func termKey(v Value) (string, bool) {
 // no unit, or where either is no evidence, are not compatible. Promote
 // graph alignment counts a comparison as an agreement by this test (S9-41).
 func Compatible(valueType string, a, b Value) bool {
-	if !knownValueType(valueType) || !carries(valueType, a) || !carries(valueType, b) {
+	m := moduleFor(valueType)
+	if m == nil || !Carries(valueType, a) || !Carries(valueType, b) {
 		return false
 	}
-	m := moduleFor(valueType)
 	ua, ok := m.split(a)
 	if !ok {
 		return false

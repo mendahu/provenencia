@@ -19,7 +19,7 @@
 // or NameValue row (seeded-vocabulary §5.3).
 //
 // Names reconcile by structured parts (names.go). Dates reconcile by window
-// (dates.go). Subjects stay on an exact-key module until S9-28.
+// (dates.go). Subjects reconcile by their accepted handle. Depictions reconcile by image File.
 package autoreconcile
 
 import (
@@ -30,6 +30,7 @@ import (
 	"unicode"
 
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 )
@@ -84,6 +85,9 @@ type Value struct {
 	EntityID   []byte // that subject's accepted handle, when the loader resolved one
 	Date       *datevalues.Value
 	Name       *namevalues.Value
+	// Depiction is the depiction_values row, read through
+	// depictionvalues.Readable; its ImageFileID is empty when the image is refused.
+	Depiction *depictionvalues.Value
 }
 
 // Candidate is one member Observation's value for the Property, with the
@@ -208,7 +212,8 @@ func (r Result) State() State {
 // non-nil concluded value always takes rank 1: it joins the auto-reconciled
 // value it equals, or stands alone with support 0 ahead of the rest.
 func Reconcile(valueType string, candidates []Candidate, concluded *Value, cardinality string) (Result, error) {
-	if !knownValueType(valueType) {
+	m := moduleFor(valueType)
+	if m == nil {
 		return Result{}, fmt.Errorf("%w: %q", ErrUnknownValueType, valueType)
 	}
 	switch cardinality {
@@ -217,30 +222,20 @@ func Reconcile(valueType string, candidates []Candidate, concluded *Value, cardi
 		return Result{}, fmt.Errorf("%w: %q", ErrUnknownValueType, cardinality)
 	}
 	for _, c := range candidates {
-		if !carries(valueType, c.Value) {
+		if !Carries(valueType, c.Value) {
 			return Result{}, ErrValueMismatch
 		}
 	}
-	if concluded != nil && !carries(valueType, *concluded) {
+	if concluded != nil && !Carries(valueType, *concluded) {
 		return Result{}, ErrValueMismatch
 	}
-	return reconcile(moduleFor(valueType), candidates, concluded, cardinality), nil
+	return reconcile(m, candidates, concluded, cardinality), nil
 }
 
-func knownValueType(vt string) bool {
-	switch vt {
-	case properties.ValueTypeText, properties.ValueTypeInteger, properties.ValueTypeDate,
-		properties.ValueTypeName, properties.ValueTypeSubject, properties.ValueTypeTerm:
-		return true
-	default:
-		return false
-	}
-}
-
-// carries reports whether v sets the field its value type needs. An empty
+// Carries reports whether v sets the field its value type needs. An empty
 // value of the right kind (blank text, a name with no parts) is carried and
 // becomes no evidence in the pipeline.
-func carries(valueType string, v Value) bool {
+func Carries(valueType string, v Value) bool {
 	switch valueType {
 	case properties.ValueTypeText:
 		return v.HasText
@@ -254,6 +249,8 @@ func carries(valueType string, v Value) bool {
 		return v.Name != nil
 	case properties.ValueTypeDate:
 		return v.Date != nil
+	case properties.ValueTypeDepiction:
+		return v.Depiction != nil
 	}
 	return false
 }
