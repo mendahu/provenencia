@@ -742,7 +742,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-35 — Person gallery and list thumb
 
-**Plan:** [`prs/S10-35-person-gallery.md`](prs/S10-35-person-gallery.md) — Draft
+**Plan:** [`prs/S10-35-person-gallery.md`](prs/S10-35-person-gallery.md) — Planned
 
 **Briefs:** S10-D12 and S10-D9, already designed before S10-23 and S10-22.
 

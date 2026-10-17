@@ -1,7 +1,7 @@
 # Review — S10-35 Person gallery and Persons list thumb
 
-**Verdict:** round 1 — Fits with changes — Not ready (both answered below); round 2 pending
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits — Ready with changes (applied)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 - None. The four product calls were answered before review (2026-10-17): "earliest" is first recorded; one PR, not split; the agreed gallery frames match PDP-7 to PDP-9 and PSL-7 as the briefs word them; S10-35 ships after S10-34 so its manual check can draw faces.
@@ -11,6 +11,7 @@
 - D-8: the lead likeness is stored with the cached Person header and chosen in `onePerson`. S10-39 changes only that choice.
 - D-17: `PVList` gets a `Thumbnail` view generic so a row can load an image.
 - D-11: each Conclusion kind supplies its whole header thumb (mark, label, image), as S10-23's Next adds said.
+- Header thumb label is "Likeness", by role (round-2 maintainability note), so S10-39's chosen portrait reads the same.
 - D-7: a tile reuses the Why record (`ReconcilerOutcomeDetail`) of the value's earliest Observation, so it opens the composer the way a Why record does.
 
 ## Round 1
@@ -76,3 +77,34 @@ The plan exported `depictionvalues.ImageMediaType` and had `likenesses` compare 
 
 ### X-11 · minor · DoD brief-archive line
 **Answer:** Declined. The DoD line already says S10-D12 stays in `design/` for S10-39.
+
+## Round 2
+
+Maintainability: every round-1 answer holds. No new blocker. **Verdict: Fits.** One note below blocker level: the header label "Earliest likeness" would need rewording in S10-39. **Answer:** Fixed. The copy is "Likeness" (§6 Strings, AC-3.2, §10).
+
+Executability: every round-1 answer holds, and no Current state row is false. **Verdict: Ready with changes.**
+
+### X-12 · major · The plan never says the cache is current when a header is composed inside a save
+**Answer:** Fixed. D-8 states the order in `core/writes/run.go` `Run`: recompute, then the search reprojection (`store=false`), then commit, then `OnCommit` drops the stored rows. Stored rows are composed only from the committed graph. T-5 also checks the lead after the first save.
+
+### X-13 · major · T-2b has no fixture in the new package
+**Answer:** Fixed. T-2b copies `conclusiondetails_test.go` `newFixture`, `source`, `personOn`, and `promote` into a package-local fixture and names the setup calls. T-3's `likenessOn` gets its full signature.
+
+### X-14 · major · Most step checks cannot run on Linux
+**Answer:** Fixed. A **Machines** note under the Implementer block says which steps need protoc or a Mac, and that a check that cannot run is reported as not run.
+
+### X-15 · minor · D-7 leaves tile assembly open
+**Answer:** Fixed. D-7 says:
+- `leads` is built from each likeness's `ObservationIDs[0]`;
+- field outcomes still attach as today;
+- tiles are built in `ForEntities` order.
+Stop condition 2 also covers a lead that has no outcome row.
+
+### X-16 · minor · Empty dash before load when a path is present
+**Answer:** Fixed. D-13 says this is accepted and stays as every `CachedThumbnail` behaves today.
+
+### X-17 · minor · The section's outer layout is open
+**Answer:** Fixed. D-16 gives the `space9` page gap, the `VStack(spacing: 0)`, and where the accessibility modifier goes, following `ConclusionDetailRelationshipSection`.
+
+### X-18 · nit · "aside" in the brief versus the `meta` slot
+**Answer:** Fixed. The §6 macOS row says the brief's "aside" is the kit header's `meta` slot.
