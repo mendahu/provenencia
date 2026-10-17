@@ -88,7 +88,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-01 | One-page matching model | 1 | Diagram, glossary, knob inventory with starting values and estimates | — | — | [plan](prs/S11-01-matching-model.md) | Landed #432 |
 | S11-22 | Pure value types | 1 | Date and name value structs, display helpers, part types, value-type and cardinality constants move to pure packages | — | — | [plan](prs/S11-22-pure-value-types.md) | Landed #434 |
 | S11-23 | One home for primary kinds | 1 | `person` / `event` / `place`, the Property keys matching reads by name, and the Origin constants and check in one pure place; the hand-written lists use it | — | S11-22 | [plan](prs/S11-23-primary-kinds.md) | Landed #438 |
-| S11-02 | Value compare core and match registry | 2 | `valuecompare` contract, `Key`, text / term / integer, `matchregistry` skeleton and value section, the guard, the matching skill | — | S11-01, S11-22, S11-23 | — | Scoped |
+| S11-02 | Value compare core and match registry | 2 | `valuecompare` contract, `Key`, text / term / integer, `matchregistry` skeleton and value section, the guard, the matching skill | — | S11-01, S11-22, S11-23 | [plan](prs/S11-02-value-compare-core.md) | Planned |
 | S11-03 | Value compare: names | 2 | Name comparer on relations; word helpers move in from `autoreconcile`; alias seeds to `namealiases` | — | S11-02 | — | Scoped |
 | S11-04 | Value compare: dates | 2 | Date comparer on relations; date windows move in; `ABT` as a range | — | S11-02 | — | Scoped |
 | S11-05 | Migrate matching onto value compare | 2 | `match`, `graphalign`, `promotealign` call `valuecompare`; `match`'s comparers deleted | — | S11-03, S11-04 | — | Scoped |
@@ -243,14 +243,14 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-02 — Value compare core and match registry
 
-**Ships.** `core/valuecompare`: pure value types, `Result` (relation + similarity), `Detail` (parts, cause codes, value refs), `Key`, and the text, term and integer comparers. `core/matchregistry` with `Default()` and the value section. Registry keys are `core/vocabkey` constants (S11-23) used directly as typed `SubjectType` / `PropertyKey` keys; no re-declared key constants. The purity guard lists `core/vocabkey`. One repo-walking guard (purity and numeric literals over a list of layer packages; the guard also lists `core/datevalue`, `core/namevalue` and `core/propertymeta`), contract tests, and the inventory-drift guard. The matching skill (`add-match-rule`), first version.
+**Ships.** `core/valuecompare`: pure value types, `Result` (relation + similarity), `Detail` (parts, cause codes, value refs), `Key`, and the text, term and integer comparers. `core/matchregistry` with `Default()` and the value section. The word helpers (`NormalizeForm`, `IsInitial`, `EditDistance`, `SpellingSimilarity` from `core/autoreconcile`; the tokenizer and fold from `core/match/words.go`) move in. The purity guard lists `core/vocabkey`. One repo-walking guard (purity and numeric literals over a list of layer packages; the guard also lists `core/datevalue`, `core/namevalue` and `core/propertymeta`), contract tests, and the inventory-drift guard. The matching skill (`add-match-rule`), first version.
 **Not this PR.** Names (S11-03), dates (S11-04), any caller (S11-05).
 **Check.** `go test ./core/valuecompare/... ./core/matchregistry/...` passes with no build tags; the contract tests run against every comparer.
 **Context.** [Layer 1](comparison-layers.md#layer-1-value-comparison), [relations](comparison-layers.md#relations), [detail](comparison-layers.md#detail), [purity](comparison-layers.md#purity-requirements), [match registry](comparison-layers.md#match-registry).
 
 #### S11-03 — Value compare: names
 
-**Ships.** The name comparer on relations and parts detail: folds, particles, aliases (tokens normalized), initials, spelling (`Near` minimum 0.8 for words, 0.75 for names), generation conflict, swapped part types → `Near`. `SpellingSimilarity`, `EditDistance`, `NormalizeForm` and `IsInitial` move in from `core/autoreconcile`. `AliasTable`, `NameRole` and `NamePattern` move to `valuecompare`; the alias and nickname seeds, `Register`, and `third_party/nicknames/` move to `namealiases`, with `add-seeded-vocabulary` and [`seeded-vocabulary.md`](../../seeded-vocabulary.md) updated. No frequency.
+**Ships.** The name comparer on relations and parts detail: folds, particles, aliases (tokens normalized), initials, spelling (`Near` minimum 0.8 for words, 0.75 for names), generation conflict, swapped part types → `Near`. Builds on S11-02's word helpers; adds initials and aliases to word similarity. `AliasTable`, `NameRole` and `NamePattern` move to `valuecompare`; the alias and nickname seeds, `Register`, and `third_party/nicknames/` move to `namealiases`, with `add-seeded-vocabulary` and [`seeded-vocabulary.md`](../../seeded-vocabulary.md) updated. No frequency.
 **Not this PR.** Callers (S11-05). The reconciler's grouping (S11-06).
 **Check.** Today's `names_test.go` ladders and generated invariants pass on the new relations; the worked name cases in the relations table hold.
 **Context.** [Relations](comparison-layers.md#relations) worked cases; [`matching.md`](../../matching.md) Names.
@@ -271,7 +271,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-06 — Migrate the reconciler onto value compare
 
-**Ships.** `autoreconcile` keys, `Compatible`, `subsumes` / `partFits` and the pipeline's grouping use `valuecompare` relations under a grouping policy the plan decides (recommendation on record: group on `Same` and `Contains`, not `Equivalent`). `conclusionheaders` place chains use day-precision windows. [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) says what the reconciler now uses.
+**Ships.** `autoreconcile` keys, `Compatible`, `subsumes` / `partFits` and the pipeline's grouping use `valuecompare` relations under a grouping policy the plan decides (recommendation on record: group on `Same` and `Contains`, not `Equivalent`). `conclusionheaders` place chains use day-precision windows. The plan decides whether the reconciler keeps importing `matchregistry` for its spelling rules or its caller passes them in (S11-02 D-8). [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) says what the reconciler now uses.
 **Not this PR.** Pins (S11-19).
 **Check.** `Sainte-Anne` / `Sainte Anne` group; `J. Robins` folds into `James Robins`; a place chain with two same-year dates folds by day; `Montréal` / `Montreal` follow the chosen policy.
 **Context.** [Reuse inventory](comparison-layers.md#reuse-across-the-app); [decided 2026-10-17](comparison-layers.md#decided-on-2026-10-17) (reconciler grouping); rule "The reconciler keeps its own decisions"; [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md).
@@ -301,7 +301,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-10 — Subject compare
 
-**Ships.** `core/subjectcompare` and the registry's subject section: per Subject type and property, agree weight and conflict penalty (event type: low agree, very large conflict); the pairs (sex with gender; `date` with `start_date` / `end_date`); similarity and evidence.
+**Ships.** `core/subjectcompare` and the registry's subject section, keyed by `core/vocabkey` constants (S11-23) used directly as typed `SubjectType` / `PropertyKey` keys, with no re-declared key constants: per Subject type and property, agree weight and conflict penalty (event type: low agree, very large conflict); the pairs (sex with gender; `date` with `start_date` / `end_date`); similarity and evidence.
 **Not this PR.** Profiles (S11-11), lifespan (S11-12), callers (S11-13).
 **Check.** The layer 3 examples hold (name 1.0 / 2.5; name + gender 1.0 / 3.1; birth vs death with matching dates ≈ 0.09).
 Ports `subjectvocab`'s `TestDefaultProfileCardinality` as "every registry `PropertyKey` is a `vocabkey` constant"; S11-23's `TestVocabKeysMatchSeed` ties those constants to the seed. Extends the matching skill.
