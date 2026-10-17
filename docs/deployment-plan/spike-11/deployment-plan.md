@@ -264,7 +264,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-05 — Migrate matching onto value compare
 
-**Ships.** `core/match` (`Score`, `Evaluate`, `pairValues`, `poolPeriods`), `core/graphalign` and `core/database/promotealign` (`pairExhibits`, stats) call `valuecompare`; `nameformats.Loaded.Comparer` builds its rules. `match`'s comparers, `DiscountComparer` and the name frequency discount (with `Stats.Words` and `countNameWords`, its only inputs) are deleted, and so are Promote's per-type floors, which value compare's `Near` minimum replaces. [`matching.md`](../../matching.md) and `ideas/daitch-mokotoff.md` point at the new code.
+**Ships.** `core/match` (`Score`, `Evaluate`, `pairValues`, `poolPeriods`), `core/graphalign` and `core/database/promotealign` (`pairExhibits`, stats) call `valuecompare`; a catalog's name pattern and alias tables reach its `Rules` through one loader, `valuerules.Load`. `match`'s comparers, `DiscountComparer` and the name frequency discount (with `Stats.Words` and `countNameWords`, its only inputs) are deleted, and so are Promote's per-type floors, which value compare's `Near` minimum replaces. [`matching.md`](../../matching.md) and `ideas/daitch-mokotoff.md` point at the new code.
 **Not this PR.** Layer 2 and up (slice 3). The reconciler (S11-06).
 **Check.** The obituary golden and sparse cases pass (expected values updated where relations change them); `core/match` has no comparer types left.
 **Context.** Rules "Build, then migrate", "High tolerance for churn"; [what moves where](comparison-layers.md#what-moves-where-in-todays-code).
