@@ -1,7 +1,7 @@
 import Foundation
 
 /// Editable draft of a genealogical DateValue for the shared Structure/Edit date modal.
-/// Validation mirrors `core/database/datevalues` (gaps allowed; at least one civil field or a phrase).
+/// Validation mirrors `core/datevalue` (gaps allowed; at least one civil field or a phrase).
 struct DateValueDraft: Equatable, Sendable {
     var kind: String
     var qualifier: String
