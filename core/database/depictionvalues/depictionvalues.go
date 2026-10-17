@@ -71,10 +71,18 @@ func Readable(v Value, citationLocatorJSON, imageMediaType string) Value {
 	if locator.ValidateDepictionRegion(v.RegionJSON, citationLocatorJSON) != nil {
 		v.RegionJSON = ""
 	}
-	if imageMediaType != "image/png" {
-		v.ImageFileID = nil
-	}
+	v.ImageFileID = ReadableImage(v.ImageFileID, imageMediaType)
 	return v
+}
+
+// ReadableImage is the image half of Readable: the File id a reader may hand to
+// the app. It returns imageFileID when it is non-empty and the stored File's
+// media type is image/png, else nil.
+func ReadableImage(imageFileID []byte, mediaType string) []byte {
+	if len(imageFileID) == 0 || mediaType != "image/png" {
+		return nil
+	}
+	return imageFileID
 }
 
 // FromJoin turns the columns of a join into the value to show, or nil when the

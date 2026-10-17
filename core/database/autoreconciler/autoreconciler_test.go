@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
+	"github.com/mendahu/provenencia/core/database/likenesses"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -717,6 +718,12 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		w.f.t.Fatalf("no outcome for %x", id)
 		return outcome{}
 	}
+	gallery := func(w *world) []likenesses.Likeness {
+		t.Helper()
+		g, err := likenesses.ForEntities(w.f.c.Graph(), [][]byte{w.h})
+		must(t, err)
+		return g[string(w.h)]
+	}
 	// finish holds upkeep to a rebuild and the graph cache to the catalog.
 	finish := func(t *testing.T, w *world, name string) {
 		t.Helper()
@@ -757,7 +764,25 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 				t.Fatalf("outcome %+v", o)
 			}
 		}
+		g := gallery(w)
+		if len(g) != 2 || !bytes.Equal(g[0].ImageFileID, w.f.imageOf(w.oa.ID)) ||
+			len(g[0].ObservationIDs) != 1 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) ||
+			!bytes.Equal(g[1].ImageFileID, w.f.imageOf(w.ob.ID)) || !bytes.Equal(g[1].ObservationIDs[0], w.ob.ID) {
+			t.Fatalf("gallery %+v", g)
+		}
 		finish(t, w, "two images")
+	})
+	t.Run("a redrawn face keeps its place", func(t *testing.T) {
+		w := start(t, 200)
+		w.f.join(w.b, w.h)
+		_, err := observationstest.UpdateObservation(w.f.c, userID, observations.Input{
+			ID: w.oa.ID, SubjectID: w.a.ID, PropertyID: w.f.props["likeness"].ID,
+			Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 40, 30, 150)}})
+		must(t, err)
+		g := gallery(w)
+		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) || !bytes.Equal(g[0].ImageFileID, w.f.imageOf(w.oa.ID)) {
+			t.Fatalf("gallery %+v", g)
+		}
 	})
 	t.Run("the same pixels are one value", func(t *testing.T) {
 		w := start(t, 100)
@@ -774,6 +799,10 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 			if o.Reason != "kept" || o.ValueRank == nil || *o.ValueRank != rows[0].Rank {
 				t.Fatalf("outcome %+v", o)
 			}
+		}
+		if g := gallery(w); len(g) != 1 || len(g[0].ObservationIDs) != 2 ||
+			bytes.Compare(g[0].ObservationIDs[0], g[0].ObservationIDs[1]) >= 0 {
+			t.Fatalf("gallery %+v", g)
 		}
 		finish(t, w, "same pixels")
 	})
@@ -795,6 +824,9 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		if o := outcomeOf(w, w.ob.ID); o.Reason != "denied" || !bytes.Equal(o.DeniedBy, oc.ID) {
 			t.Fatalf("outcome %+v", o)
 		}
+		if g := gallery(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, f.imageOf(w.oa.ID)) {
+			t.Fatalf("gallery %+v", g)
+		}
 		finish(t, w, "denied")
 	})
 	t.Run("a provisional member", func(t *testing.T) {
@@ -812,6 +844,9 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		if o := outcomeOf(w, w.ob.ID); o.Reason != "provisional" {
 			t.Fatalf("outcome %+v", o)
 		}
+		if g := gallery(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, w.f.imageOf(w.oa.ID)) {
+			t.Fatalf("gallery %+v", g)
+		}
 		finish(t, w, "provisional")
 	})
 	t.Run("a low-trust Source is weak", func(t *testing.T) {
@@ -823,6 +858,9 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		}
 		if r := byImage(t, w, w.f.imageOf(w.oa.ID)); r.Reason != "kept" {
 			t.Fatalf("shade 100 %+v", r)
+		}
+		if g := gallery(w); len(g) != 2 {
+			t.Fatalf("gallery %+v", g)
 		}
 		finish(t, w, "weak")
 	})
@@ -840,6 +878,9 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		}
 		if o := outcomeOf(w, w.ob.ID); o.Reason != "no_evidence" {
 			t.Fatalf("outcome %+v", o)
+		}
+		if g := gallery(w); len(g) != 1 {
+			t.Fatalf("gallery %+v", g)
 		}
 	})
 	t.Run("Verify sees a stale image", func(t *testing.T) {
