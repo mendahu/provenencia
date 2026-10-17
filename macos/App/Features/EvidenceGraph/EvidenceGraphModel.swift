@@ -28,9 +28,12 @@ final class EvidenceGraphModel {
     var armedKind: EvidencePrimaryKind?
     /// Connect tool armed (mutually exclusive with `armedKind`).
     var armedConnect = false
-    /// Select tool armed: an empty-canvas drag draws a rectangle (exclusive with
-    /// Place and Connect). Shift-drag draws the same rectangle without it.
+    /// Select tool armed from the palette: an empty-canvas drag draws a rectangle,
+    /// and its release disarms it (exclusive with Place and Connect). Holding Shift
+    /// engages the same mode without arming it.
     var armedSelect = false
+    /// Shift is down over the graph. Engages Select without arming it.
+    private(set) var shiftSelectHeld = false
     /// First primary chosen while connecting.
     var connectOriginID: String?
 
@@ -415,6 +418,28 @@ final class EvidenceGraphModel {
         if let activated = activatedSubjectID, !selectedSubjectIDs.contains(activated) {
             activatedSubjectID = nil
         }
+    }
+
+    func setShiftSelectHeld(_ held: Bool) {
+        shiftSelectHeld = held
+    }
+
+    /// Shift-click: adds a card (a bridge is allowed) to the selection, or removes it.
+    func toggleSubjectInSelection(id: String) {
+        var next = selectedSubjectIDs
+        if next.contains(id) {
+            next.remove(id)
+        } else {
+            next.insert(id)
+        }
+        replacePrimarySelection(next)
+    }
+
+    /// A rectangle was released: replaces the selection with its cards, or adds
+    /// them when Shift was down. One rectangle per arm, even one that caught nothing.
+    func finishRectangleSelection(_ ids: Set<String>, additive: Bool) {
+        replacePrimarySelection(additive ? selectedSubjectIDs.union(ids) : ids)
+        armedSelect = false
     }
 
     func activateSubject(id: String) {

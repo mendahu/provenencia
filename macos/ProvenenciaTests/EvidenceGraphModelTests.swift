@@ -2046,6 +2046,44 @@ struct EvidenceGraphModelTests {
         return (store, model)
     }
 
+    @Test func shiftClickTogglesCardsInTheSelection() {
+        let (_, model) = groupModel()
+        model.selectSubject(id: "p1")
+        model.toggleSubjectInSelection(id: "p2")
+        #expect(model.selectedSubjectIDs == ["p1", "p2"])
+        model.toggleSubjectInSelection(id: "b1")
+        #expect(model.selectedSubjectIDs == ["p1", "p2", "b1"])
+        model.toggleSubjectInSelection(id: "p1")
+        #expect(model.selectedSubjectIDs == ["p2", "b1"])
+        model.toggleSubjectInSelection(id: "ghost")
+        #expect(model.selectedSubjectIDs == ["p2", "b1"])
+        model.activateSubject(id: "p3")
+        model.toggleSubjectInSelection(id: "p3")
+        #expect(model.selectedSubjectIDs.isEmpty)
+        #expect(model.activatedSubjectID == nil)
+        model.replacePrimarySelection(["p1", "p2"])
+        #expect(model.beginGroupDrag(anchor: "p1") == ["p1", "p2"])
+    }
+
+    @Test func rectangleReplacesOrAddsAndDisarmsSelect() {
+        let (_, model) = groupModel()
+        model.toggleSelect()
+        model.finishRectangleSelection(["p1", "p2"], additive: false)
+        #expect(model.selectedSubjectIDs == ["p1", "p2"])
+        #expect(model.armedSelect == false)
+        model.selectSubject(id: "p3")
+        model.finishRectangleSelection(["p1"], additive: true)
+        #expect(model.selectedSubjectIDs == ["p1", "p3"])
+        model.toggleSelect()
+        model.finishRectangleSelection([], additive: false)
+        #expect(model.selectedSubjectIDs.isEmpty)
+        #expect(model.armedSelect == false)
+        model.toggleSelect()
+        model.selectSubject(id: "p1")
+        model.selectSubject(id: nil)
+        #expect(model.armedSelect == true)
+    }
+
     @Test func rectangleSelectionKeepsBridges() {
         let (_, model) = groupModel()
         model.replacePrimarySelection(["p1", "b1"])
@@ -2171,6 +2209,33 @@ struct EvidenceGraphModelTests {
         #expect(grouped.armedSelect == false)
         #expect(grouped.selectedSubjectIDs == ["p1", "p2"])
         #expect(L10n.string(L10n.EvidenceGraph.toolSelectHelp) == "Hold Shift to select")
+    }
+
+    @Test func shiftEngagesSelectWithoutArmingIt() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.setShiftSelectHeld(true)
+        #expect(model.inputMode == .selecting)
+        #expect(model.armedSelect == false)
+        model.setShiftSelectHeld(false)
+        #expect(model.inputMode == .idle)
+        model.toggleArm(.person)
+        model.setShiftSelectHeld(true)
+        #expect(model.inputMode == .placing(.person))
+        model.disarm()
+        model.setShiftSelectHeld(false)
+        model.toggleSelect()
+        model.setShiftSelectHeld(true)
+        model.setShiftSelectHeld(false)
+        #expect(model.armedSelect == true)
+        #expect(model.inputMode == .selecting)
+        model.setShiftSelectHeld(true)
+        model.finishRectangleSelection([], additive: false)
+        #expect(model.armedSelect == false)
+        #expect(model.inputMode == .selecting)
+        model.setShiftSelectHeld(false)
+        #expect(model.inputMode == .idle)
     }
 
     @Test func selectAndTheCiteToolsDisarmEachOther() async {
