@@ -512,3 +512,39 @@ func TestNameInvariants(t *testing.T) {
 		}
 	}
 }
+
+// A rule's numbers and tables come from Rules, not from the layer: emptying
+// the particle list, the letter folds or the alias tables changes the answer.
+func TestNameRulesComeFromRules(t *testing.T) {
+	cases := []struct {
+		name  string
+		rules func(*valuecompare.Rules)
+		a, b  valuecompare.Value
+		rel   valuecompare.Relation
+		why   valuecompare.Cause
+	}{
+		{name: "a period initial never rejoins", a: nv("s=O. Brien"), b: nv("s=O'Brien"), rel: valuecompare.Near, why: valuecompare.CauseSpelling},
+		{name: "particles empty", rules: func(r *valuecompare.Rules) { r.Words.Particles = nil },
+			a: nv("s=O Brien"), b: nv("s=O'Brien"), rel: valuecompare.Near, why: valuecompare.CauseSpelling},
+		{name: "default particles rejoin", a: nv("s=O Brien"), b: nv("s=O'Brien"), rel: valuecompare.Same, why: valuecompare.CauseExact},
+		{name: "folds empty keeps accent stripping", rules: func(r *valuecompare.Rules) { r.Words.Folds = nil },
+			a: nv("g=José"), b: nv("g=Jose"), rel: valuecompare.Equivalent, why: valuecompare.CauseFold},
+		{name: "folds empty loses the eszett", rules: func(r *valuecompare.Rules) { r.Words.Folds = nil },
+			a: nv("s=Groß"), b: nv("s=Gross"), rel: valuecompare.Different, why: valuecompare.CauseNoMatch},
+		{name: "unrelated alias set", rules: withTables(nicknameTable),
+			a: nv("g=Xyzzy"), b: nv("g=Plugh"), rel: valuecompare.Different, why: valuecompare.CauseNoMatch},
+		{name: "no alias tables", a: nv("g=Jas."), b: nv("g=James"), rel: valuecompare.Different, why: valuecompare.CauseNoMatch},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rules := matchregistry.Default().Value
+			if tc.rules != nil {
+				tc.rules(&rules)
+			}
+			res, det := valuecompare.Compare(tc.a, tc.b, rules)
+			if res.Relation != tc.rel || det.Cause != tc.why {
+				t.Fatalf("got %s %s, want %s %s", res.Relation, det.Cause, tc.rel, tc.why)
+			}
+		})
+	}
+}
