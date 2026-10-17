@@ -38,14 +38,6 @@ func ValidateDepictionRegion(regionJSON, citationLocatorJSON string) error {
 	return nil
 }
 
-// ValidateRegionDocument checks a depiction region document on its own: it
-// passes Validate, has exactly one region selector, at most one page selector,
-// an optional artifact selector, and no other selector.
-func ValidateRegionDocument(regionJSON string) error {
-	_, err := regionDocPages(regionJSON)
-	return err
-}
-
 // regionDocPages validates a region document and returns the artifact_page of
 // its page selector, if any.
 func regionDocPages(regionJSON string) ([]int, error) {

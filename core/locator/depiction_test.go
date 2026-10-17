@@ -2,7 +2,6 @@ package locator
 
 import (
 	"errors"
-	"strings"
 	"testing"
 )
 
@@ -54,33 +53,6 @@ func TestValidateDepictionRegion(t *testing.T) {
 			}
 			if err != nil {
 				t.Fatal(err)
-			}
-		})
-	}
-}
-
-func TestValidateRegionDocument(t *testing.T) {
-	const tri = `{"type":"region","unit":"normalized","points":[{"x":0.1,"y":0.1},{"x":0.4,"y":0.1},{"x":0.4,"y":0.5}]}`
-	const page = `{"type":"page","artifact_page":1}`
-	doc := func(sels ...string) string {
-		return `{"version":1,"selectors":[` + strings.Join(sels, ",") + `]}`
-	}
-	for _, tc := range []struct {
-		name    string
-		region  string
-		wantErr bool
-	}{
-		{"region only", doc(tri), false},
-		{"page and region", doc(page, tri), false},
-		{"no region selector", doc(page), true},
-		{"two region selectors", doc(tri, tri), true},
-		{"two pages", doc(page, page, tri), true},
-		{"other selector", doc(tri, `{"type":"text_quote","exact":"x"}`), true},
-		{"not json", `not json`, true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			if err := ValidateRegionDocument(tc.region); (err != nil) != tc.wantErr {
-				t.Fatalf("err=%v wantErr=%v", err, tc.wantErr)
 			}
 		})
 	}

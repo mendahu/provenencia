@@ -75,14 +75,16 @@ const (
 		dv.end_year, dv.end_month, dv.end_day,
 		dv.end_hour, dv.end_minute, dv.end_second, dv.end_millisecond, dv.end_tz,
 		dv.phrase,
-		dpv.region_json, dpv.image_file_id
+		dpv.region_json, dpv.image_file_id, dc.locator_json, dpf.media_type
 		FROM observations o
 		JOIN properties p ON p.id = o.property_id
 		LEFT JOIN property_terms pt ON pt.id = o.value_term_id
 		LEFT JOIN name_values nv ON nv.id = o.value_name_id
 		LEFT JOIN subjects vs ON vs.id = o.value_subject_id
 		LEFT JOIN date_values dv ON dv.id = o.value_date_id
-		LEFT JOIN depiction_values dpv ON dpv.id = o.value_depiction_id`
+		LEFT JOIN depiction_values dpv ON dpv.id = o.value_depiction_id
+		LEFT JOIN citations dc ON dc.id = o.citation_id
+		LEFT JOIN files dpf ON dpf.id = dpv.image_file_id`
 
 	sqlListBySubject = sqlListSelect + `
 		WHERE o.subject_id = ?
@@ -135,8 +137,9 @@ type Listed struct {
 	// Date is the joined date_values row when value_date_id is set.
 	Date *datevalues.Value
 	// Depiction is the joined depiction_values row when value_depiction_id is set.
-	// An empty RegionJSON means the stored region failed validation; the image
-	// id is still set. Every later reader that returns a region (the source
+	// An empty RegionJSON means the stored region is not a valid region of the
+	// Citation's page; an empty ImageFileID means the stored image is not a
+	// Go-stored PNG. Every later reader that returns a depiction (the source
 	// graph's hydration) goes through depictionvalues.Readable.
 	Depiction *depictionvalues.Value
 }
@@ -604,6 +607,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 			dateID, nameID, subjectID, termID, depictionID            []byte
 			depictionRegion                                           sql.NullString
 			depictionImage                                            []byte
+			citationLocator, imageMediaType                           sql.NullString
 			termLabel, nameForm, subjectLabel                         string
 			kind, qual, cal, phrase, startTZ, endTZ                   sql.NullString
 			startY, startM, startD, startH, startMin, startS, startMs sql.NullInt64
@@ -621,7 +625,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 			&endY, &endM, &endD,
 			&endH, &endMin, &endS, &endMs, &endTZ,
 			&phrase,
-			&depictionRegion, &depictionImage,
+			&depictionRegion, &depictionImage, &citationLocator, &imageMediaType,
 		); err != nil {
 			return nil, err
 		}
@@ -643,7 +647,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 				ID:          append([]byte(nil), depictionID...),
 				RegionJSON:  depictionRegion.String,
 				ImageFileID: append([]byte(nil), depictionImage...),
-			})
+			}, citationLocator.String, imageMediaType.String)
 			l.Depiction = &dv
 		}
 		l.ValueTermLabel = termLabel

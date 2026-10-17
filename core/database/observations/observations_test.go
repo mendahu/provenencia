@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -824,12 +825,41 @@ func TestObservations(t *testing.T) {
 			name: "likeness read drops a stored region that is not valid",
 			run: func(t *testing.T) {
 				const pt = `{"type":"region","unit":"normalized","points":`
+				type damage struct {
+					name string
+					// update damages the stored row; artFileID is the Artifact's own File.
+					update func(db *sql.DB, depictionID, artFileID []byte) error
+					// keepRegion and keepImage say which half the read must still return.
+					keepRegion, keepImage bool
+				}
+				setRegion := func(region string) func(*sql.DB, []byte, []byte) error {
+					return func(db *sql.DB, depictionID, _ []byte) error {
+						_, err := db.Exec(`UPDATE depiction_values SET region_json = ? WHERE id = ?`, region, depictionID)
+						return err
+					}
+				}
+				var damages []damage
 				for _, bad := range []struct{ name, region string }{
 					{"not json", `not json`},
 					{"point out of range", `{"version":1,"selectors":[` + pt + `[{"x":5,"y":5},{"x":0.4,"y":0.1},{"x":0.4,"y":0.5}]}]}`},
 					{"self-intersecting", `{"version":1,"selectors":[` + pt + `[{"x":0.1,"y":0.1},{"x":0.5,"y":0.5},{"x":0.5,"y":0.1},{"x":0.1,"y":0.5}]}]}`},
 					{"no region selector", `{"version":1,"selectors":[{"type":"page","artifact_page":3}]}`},
+					{"page differs from the Citation's", strings.Replace(likenessRegion, `"artifact_page":1`, `"artifact_page":9`, 1)},
 				} {
+					damages = append(damages, damage{name: bad.name, update: setRegion(bad.region), keepImage: true})
+				}
+				damages = append(damages, damage{
+					name: "image is not a stored PNG",
+					update: func(db *sql.DB, depictionID, artFileID []byte) error {
+						if _, err := db.Exec(`UPDATE files SET media_type = 'application/pdf' WHERE id = ?`, artFileID); err != nil {
+							return err
+						}
+						_, err := db.Exec(`UPDATE depiction_values SET image_file_id = ? WHERE id = ?`, artFileID, depictionID)
+						return err
+					},
+					keepRegion: true,
+				})
+				for _, bad := range damages {
 					t.Run(bad.name, func(t *testing.T) {
 						c, s := mustSeed(t)
 						art := fileArtifact(t, c, userID, s.source.ID)
@@ -849,7 +879,7 @@ func TestObservations(t *testing.T) {
 						if err := db.QueryRow(`SELECT image_file_id FROM depiction_values WHERE id = ?`, obs.ValueDepictionID).Scan(&imageID); err != nil {
 							t.Fatal(err)
 						}
-						if _, err := db.Exec(`UPDATE depiction_values SET region_json = ? WHERE id = ?`, bad.region, obs.ValueDepictionID); err != nil {
+						if err := bad.update(db, obs.ValueDepictionID, art.FileID); err != nil {
 							t.Fatal(err)
 						}
 						byCitation, err := observations.ListByCitation(c, res.Citation.ID)
@@ -865,9 +895,16 @@ func TestObservations(t *testing.T) {
 								t.Fatalf("%s: len=%d", name, len(list))
 							}
 							row := list[0]
-							if string(row.ValueDepictionID) != string(obs.ValueDepictionID) || row.Depiction == nil ||
-								string(row.Depiction.ImageFileID) != string(imageID) || row.Depiction.RegionJSON != "" {
+							if string(row.ValueDepictionID) != string(obs.ValueDepictionID) || row.Depiction == nil {
 								t.Fatalf("%s: listed %+v depiction %+v", name, row, row.Depiction)
+							}
+							if keptImage := string(row.Depiction.ImageFileID) == string(imageID); keptImage != bad.keepImage ||
+								(len(row.Depiction.ImageFileID) > 0) != bad.keepImage {
+								t.Fatalf("%s: image %x, keep=%v", name, row.Depiction.ImageFileID, bad.keepImage)
+							}
+							if kept := row.Depiction.RegionJSON == likenessRegion; kept != bad.keepRegion ||
+								(row.Depiction.RegionJSON != "") != bad.keepRegion {
+								t.Fatalf("%s: region %q, keep=%v", name, row.Depiction.RegionJSON, bad.keepRegion)
 							}
 						}
 					})

@@ -61,14 +61,18 @@ func LookupTx(tx *sql.Tx, id []byte) (Value, error) {
 	return v, nil
 }
 
-// Readable returns v as it may be shown: unchanged when its stored region
-// passes locator.ValidateRegionDocument, otherwise with RegionJSON emptied.
-// The image id is kept; the image is Go's own stored PNG and is safe to show
-// without the region. Every reader that returns a stored region to the app
-// goes through Readable. LookupTx does not: audit records what is stored.
-func Readable(v Value) Value {
-	if locator.ValidateRegionDocument(v.RegionJSON) != nil {
+// Readable returns v as it may be shown. RegionJSON is emptied unless it
+// passes locator.ValidateDepictionRegion against the locator of the Citation
+// that holds the value; ImageFileID is emptied unless the stored File's media
+// type is image/png, which is what ingest.StageImage always stores. Every
+// reader that returns a stored depiction to the app goes through Readable.
+// LookupTx does not: audit records what is stored.
+func Readable(v Value, citationLocatorJSON, imageMediaType string) Value {
+	if locator.ValidateDepictionRegion(v.RegionJSON, citationLocatorJSON) != nil {
 		v.RegionJSON = ""
+	}
+	if imageMediaType != "image/png" {
+		v.ImageFileID = nil
 	}
 	return v
 }
