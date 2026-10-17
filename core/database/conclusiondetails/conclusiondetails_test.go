@@ -235,7 +235,7 @@ func TestForEntityLikenessHasNoField(t *testing.T) {
 	src := f.source("Register")
 	a := f.personOn(src)
 	f.cite(a, f.nameIn(a, "given=James|surname=Robins"))
-	likeness, err := properties.Lookup(f.c, "likeness", properties.OriginProvenencia)
+	likeness, err := properties.Lookup(f.c, "likeness", vocabkey.OriginProvenencia)
 	must(t, err)
 	art := observationstest.FileArtifact(t, f.c, userID, src.ID)
 	_, _, err = observationstest.SaveCitation(f.c, userID, art, observations.Input{
