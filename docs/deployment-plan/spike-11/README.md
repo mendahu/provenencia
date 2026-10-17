@@ -24,6 +24,12 @@ Three generations back, records thin out. Often all there is is a name and a bir
 - **Effort:** the core comparers (names, dates) and the single-link case get the most tests, the most labeler time and the first tuning.
 - **Tests:** the test suite has a **sparse tier**: goldens and simulated cases with only a name and a birth date (or less), reported as their own scoreboard row. Sparsity is a simulator noise setting: drop properties. Invariant: adding an agreeing secondary property never lowers a score, and never turns a core conflict into a match.
 
+## Plan notes (for the PR map)
+
+- **First PR: make the algorithm graspable.** The one-page model with a diagram, the glossary, and the knob inventory, pulled together from the comparison-layers doc. Docs first; it lands before any code moves.
+- **The test suite comes after the model is re-implemented** (scenario files, invariants, simulator, scoreboard, labeler, fitting, dogfood export from [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md)). Re-implementing will teach us things that change it. Each layer's PR still carries its own unit tests and invariants.
+- **Registry starting numbers** are settled with the PR map.
+
 ## Decided so far
 
 - **Matching is a stack of pure layers.** Each takes only what it needs; a rule that needs more moves up a layer.

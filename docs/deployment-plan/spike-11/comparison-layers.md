@@ -445,9 +445,15 @@ Agreed 2026-10-17. Record linkage calls the first step "blocking", which reads a
 
 Flow: shortlist or nominate → score → keep the top K as candidates → accept.
 
+## Decided on 2026-10-17
+
+- **Neighbor credit travels one hop.** Start with one walk and one hop; chains come from the walk. Revisit only if goldens show chains under-rewarded.
+- **Misspellings and shortlisting: start simple.** Accept the gap ("Robnis" vs "Robins" shares no exact key); links catch most of it. A coarse key (surname consonant skeleton) is the fallback if the sparse-data tier shows a problem.
+- **Reconciler grouping rules** are the reconciler's own decision, designed in its PR. Today's disagreements to resolve there: `Montréal` / `Montreal` and `Jim` / `James` agree in matching but don't group or pin; `J. Robins` / `James Robins` groups but only scores partial.
+
 ## Open questions
 
-- **How far neighbor credit travels.** Today credit stops at one hop to avoid circular evidence (A supports B supports A). Start with one hop plus chains from the walk, or allow damped multi-hop credit with cycles blocked? Goldens where a triple chain should win will show whether one hop under-rewards chains.
-- **Bridge cardinality's shape** in the registry (more thoughts to come).
-- **Misspellings and shortlisting.** "Robnis" vs "Robins" is `Near` and shares no exact key, so it's missed unless another key or a link catches it. Start by accepting the gap (links catch most of it) and let the sparse-data tier measure it; a coarse key (surname consonant skeleton, `rbns`) is the fallback.
-- **The reconciler's grouping rules.** Which relations make two values "show once" is the reconciler's call (rule 7), designed with its own PR. Today's disagreements to resolve there: `Montréal` / `Montreal` and `Jim` / `James` agree in matching but don't group or pin; `J. Robins` / `James Robins` groups but only scores partial.
+- **Bands.** How the page's strong / medium / weak come from similarity and evidence, once segment evidence is added. Next to discuss.
+- **Bridge cardinality's shape** in the registry.
+- **The relation table per value type** (§ Relations): every cell is a proposal to confirm.
+- **Starting registry numbers** (weights, penalties, lifespan constants, K, accept bar, settle margin): open until the PR map.
