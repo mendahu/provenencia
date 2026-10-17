@@ -405,6 +405,35 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 So every property weight is a plain registry number. The labeler can fit them later. Remove `Stats.ValueFreq`, the `m` / `u` priors (`MPrior`, `UPrior`), the frequency scales and their lift to the accept bar. The toponym agreement bonus existed to work around the frequency weight; re-set it as a plain weight if still needed.
 
+## Match registry
+
+**Decided (2026-10-17): one registry package, `core/matchregistry`, for every matching tunable.** Today the numbers are spread over `core/match/registry.go`, `core/graphalign/registry.go`, `promotealign/canon.go` (`seedCandidateLimit`), `match/words.go` (`foldOnly`) and `autoreconcile/spelling.go` (`SpellingFloor`, `SpellingShortMin`). Two weight sets exist for the same property (`Rank`'s name 10, Promote's 2.5), and some keys are pipe-joined strings.
+
+**One pure package, one `Default()`, one file per section:**
+
+| File | Holds |
+|---|---|
+| `value.go` | Per value type: `Near` minimum similarity, date tolerance, the `ABT` unit rule, fuzzy floor, initial and alias credit, letter folds, particles, the built-in name pattern |
+| `subject.go` | Per Subject type and property: agree weight, conflict penalty; pairs compared together (sex with gender, `date` with `start_date` / `end_date`); lifespan rules and constants |
+| `segment.go` | Bridge cardinality (birth and death are one), neighbor credit, link support |
+| `alignment.go` | Shortlist keys per kind, K, tie cap, accept bar, band cutoffs, settle margin and round cap |
+| `evidence.go` | Claim evidence policy: which relations start checked or are pinnable, each kind's defining properties (event: `event_type`) |
+
+**Rules:**
+- **Each layer takes its own section as an argument** (rule 5). Tests override it without editing the defaults.
+- **Typed keys,** not pipe-joined strings: `BridgeKey{Kind, Role, NeighborType, End}`, `PropertyKey`, `SubjectType`. A misspelled key fails to compile.
+- **Catalog data is passed in at runtime,** never copied: alias tables, stored name patterns. Their install seeds stay where they are.
+- **Data model facts stay in the catalog and vocabulary** (cardinality, neutral / directed / inverse terms, bridge kinds). The registry refers to them by key.
+- **The reconciler keeps its own numbers** (`MinMajoritySupport`); it imports the spelling floor from value compare.
+- **One weight set.** `Rank`'s separate scale goes away with the layers.
+
+**Guard tests:**
+- **No magic numbers:** a test scans the layer packages for numeric literals other than 0 and 1.
+- **Knob inventory:** the first PR's inventory lists every registry field; a test fails when they drift.
+- **One home for a fit:** the labeler's fit, later, proposes a diff to this package.
+
+**Retires:** `core/match/registry.go`, `core/match/profiles.go`, `core/graphalign/registry.go`, `seedCandidateLimit`, `foldOnly`, the frequency settings.
+
 ## Reuse across the app
 
 A survey of comparison, normalization and dedupe code outside `core/match` (2026-10-16). Each layer has consumers beyond Promote, and several duplicates can retire.

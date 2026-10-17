@@ -29,6 +29,8 @@ Three generations back, records thin out. Often all there is is a name and a bir
 
 - **First PR: make the algorithm graspable.** The one-page model with a diagram, the glossary, and the knob inventory, pulled together from the comparison-layers doc. Docs first; it lands before any code moves.
 - **The test suite comes after the model is re-implemented** (scenario files, invariants, simulator, scoreboard, labeler, fitting, dogfood export from [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md)). Re-implementing will teach us things that change it. Each layer's PR still carries its own unit tests and invariants.
+- **The match registry comes in early,** with the first code PR, and every later layer PR adds its section to it.
+- **Tick-tock PRs.** Build a new piece (a layer and its registry section), then migrate every caller onto it and delete what it replaces, then the next piece. Nothing is moved twice, and the old and new never run side by side for long.
 - **Registry starting numbers** are settled with the PR map.
 - **Claim evidence is the last slice,** after the algorithm is re-implemented. It needs a Claude Design brief.
 
@@ -51,3 +53,4 @@ Three generations back, records thin out. Often all there is is a name and a bir
 - **Lifespan, for people only:** the profile builder derives a person's lifespan from direct neighbors' dates by registry rules, and Subject comparison treats an impossible overlap as a conflict.
 - **Layer 6 procedure:** shortlist by registry keys → score and keep the top K → one queue for every candidate (no separate fallback; the answer doesn't depend on where the walk starts) → segment comparison only around accepted pairs → settle only dirty pairs. Memoizing across re-runs is the plan's last step, built only if a performance test shows the need.
 - **Bands come from evidence** (properties + segments); similarity only gates candidates and gives the first sort, keeping ties. The accept bar is its own setting. A conflicting comparison shows a **contested** marker instead of capping the band.
+- **One matching registry: `core/matchregistry`,** sectioned by layer (value, subject, segment, alignment, evidence), typed keys, passed in per layer. It replaces the four places matching numbers live today.
