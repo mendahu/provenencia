@@ -85,7 +85,7 @@ These are the calls for this spike. PR plans treat them as binding.
 
 | PR | Title | Slice | Scope | Brief | Depends on | Plan | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| S11-01 | One-page matching model | 1 | Diagram, glossary, knob inventory with starting values and estimates | — | — | [plan](prs/S11-01-matching-model.md) | Planned |
+| S11-01 | One-page matching model | 1 | Diagram, glossary, knob inventory with starting values and estimates | — | — | [plan](prs/S11-01-matching-model.md) | Landed #432 |
 | S11-22 | Pure value types | 1 | Date and name value structs, display helpers, part types, value-type and cardinality constants move to pure packages | — | — | [plan](prs/S11-22-pure-value-types.md) | Planned |
 | S11-23 | One home for primary kinds | 1 | `person` / `event` / `place`, their locked property keys, and the Origin constants in one pure place; the hand-written lists use it | — | S11-22 | — | Scoped |
 | S11-02 | Value compare core and match registry | 2 | `valuecompare` contract, `Key`, text / term / integer, `matchregistry` skeleton and value section, the guard, the matching skill | — | S11-01, S11-22, S11-23 | — | Scoped |
@@ -217,6 +217,8 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 ### Slice 1 — Graspable model and pure foundations
 
 #### S11-01 — One-page matching model
+
+**Landed 2026-10-17** in [#432](https://github.com/mendahu/provenencia/pull/432). See [`completed.md`](completed.md).
 
 **Ships.** A domain doc (`docs/matching.md` rewritten, or a new `docs/matching-model.md` that replaces it) with one diagram of the six layers, the glossary (relation, similarity, evidence, segment, shortlist, candidate, band, contested…), and the knob inventory: every registry field, its section, starting value or estimate with reasoning, and what it changes.
 **Not this PR.** Any code. `core/matchregistry` (S11-02).

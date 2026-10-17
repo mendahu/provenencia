@@ -1,6 +1,6 @@
 # S11-01 — One-page matching model
 
-**Status:** Planned
+**Status:** Landed in [#432](https://github.com/mendahu/provenencia/pull/432) (2026-10-17)
 **Spike / slice:** Spike 11 · Slice 1 — Graspable model and pure foundations
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: docs only)
@@ -268,7 +268,7 @@ Check: every layer in the diagram has a table row; package names match the map's
 **STEP-2 — Worked example**
 Files: `docs/matching-model.md` (new).
 Do: write the Gracie trace (§6 outline item 4) using only inventory numbers (AC-1.3).
-Check: each number in the example appears in the inventory table, and the sums are 2.5, 2.75 and 5.25.
+Check: each number in the example appears in the inventory table, and the sums are 2.6, 2.75 and 5.35.
 
 **STEP-3 — Glossary and retired words**
 Files: `docs/matching-model.md` (new).
