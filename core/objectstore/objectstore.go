@@ -1,4 +1,4 @@
-// Package objectstore verifies, writes, and removes content-addressed object files on disk.
+// Package objectstore reads, writes, streams, and removes content-addressed object files, always through an os.Root on the project's objects/ folder.
 package objectstore
 
 import (
@@ -343,18 +343,16 @@ func WriteIfAbsent(projectDir, rel, checksum string, data []byte) (wrote bool, e
 	if err != nil {
 		return false, err
 	}
+	defer func() { _ = root.Remove(name) }()
 	if _, err := tmp.Write(data); err != nil {
 		_ = tmp.Close()
-		_ = root.Remove(name)
 		return false, err
 	}
 	if err := tmp.Sync(); err != nil {
 		_ = tmp.Close()
-		_ = root.Remove(name)
 		return false, err
 	}
 	if err := tmp.Close(); err != nil {
-		_ = root.Remove(name)
 		return false, err
 	}
 	wrote, err = installTemp(root, name, inner, checksum)
