@@ -47,4 +47,4 @@ Lenses: CON, MNT (the two with Fix-now findings). Scope `a3a6cac6...ae089f50`.
 No Fix plan 2.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: CON-2, MNT-2, MNT-3 · logged: MNT-4, CON-3 · to user: —
+Gate PASS · CI green (Go tests, macOS tests) · open: none · follow-ups: CON-2, MNT-2, MNT-3 · logged: MNT-4, CON-3 · to user: —
