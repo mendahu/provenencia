@@ -605,8 +605,6 @@ struct CatalogConclusionField: Sendable, Equatable, Identifiable {
     var displayedValues: [CatalogReconciledValue] { values.filter(\.isDisplayed) }
 }
 
-/// One handle's detail (S9-15), composed by Go from the auto-reconciler cache.
-/// Generic over kind: Person, Event and Place pages all read it.
 /// One likeness a Person page's gallery shows: its image and the record (its
 /// earliest Observation) the tile opens.
 struct CatalogLikeness: Sendable, Equatable, Identifiable {
@@ -616,6 +614,8 @@ struct CatalogLikeness: Sendable, Equatable, Identifiable {
     var id: String { record.observationID }
 }
 
+/// One handle's detail (S9-15), composed by Go from the auto-reconciler cache.
+/// Generic over kind: Person, Event and Place pages all read it.
 struct CatalogConclusionDetail: Sendable, Equatable {
     var entity: CatalogCanonicalEntity
     var fields: [CatalogConclusionField]
