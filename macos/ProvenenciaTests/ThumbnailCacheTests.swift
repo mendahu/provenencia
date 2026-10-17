@@ -66,6 +66,27 @@ struct ThumbnailCacheTests {
         #expect(cache.entryCount == 1)
     }
 
+    @Test func decodesAtABoundedPixelSize() async throws {
+        let cache = ThumbnailCache()
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("thumb-cache-\(UUID().uuidString)", isDirectory: true)
+        let objectDir = dir.appendingPathComponent("objects/aa/bb", isDirectory: true)
+        try FileManager.default.createDirectory(at: objectDir, withIntermediateDirectories: true)
+
+        let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: 2000, pixelsHigh: 1000,
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+        )!
+        let png = try #require(rep.representation(using: .png, properties: [:]))
+        try png.write(to: objectDir.appendingPathComponent("big.png"))
+
+        let image = try #require(await cache.image(
+            projectDir: dir.path, relPath: "objects/aa/bb/big.png"))
+        let cg = try #require(image.cgImage(forProposedRect: nil, context: nil, hints: nil))
+        #expect(max(cg.width, cg.height) <= ThumbnailCache.maxPixelSize)
+    }
+
     @Test func cachedImageIsAMissUntilLoaded() async throws {
         let cache = ThumbnailCache()
         let dir = FileManager.default.temporaryDirectory

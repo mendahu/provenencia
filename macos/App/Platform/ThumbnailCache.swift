@@ -1,11 +1,18 @@
 import AppKit
 import Foundation
+import ImageIO
 
 /// Process-lifetime decoded thumbnail cache. Keys by project dir + relative
 /// object path; loads off the main actor and coalesces in-flight requests.
+/// Images decode eagerly at no more than `maxPixelSize` on the longest edge,
+/// so a full-resolution crop never sits decoded in the cache.
 @MainActor
 final class ThumbnailCache {
     static let shared = ThumbnailCache()
+
+    /// Longest-edge pixel cap for a decoded thumbnail (the 120pt header thumb
+    /// at 2x, with margin).
+    static let maxPixelSize = 512
 
     /// Bound entry count; oldest keys are dropped when exceeded.
     var maxEntries: Int = 100
@@ -49,7 +56,15 @@ final class ThumbnailCache {
                 return nil
             }
             return await Task.detached(priority: .userInitiated) {
-                NSImage(contentsOf: url)
+                guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+                      let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, [
+                          kCGImageSourceCreateThumbnailFromImageAlways: true,
+                          kCGImageSourceCreateThumbnailWithTransform: true,
+                          kCGImageSourceShouldCacheImmediately: true,
+                          kCGImageSourceThumbnailMaxPixelSize: ThumbnailCache.maxPixelSize,
+                      ] as CFDictionary)
+                else { return nil }
+                return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
             }.value
         }
         inflight[key] = task
