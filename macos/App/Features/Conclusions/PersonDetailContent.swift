@@ -33,7 +33,8 @@ struct PersonDetailContent: ConclusionDetailBody {
                 ? L10n.Conclusions.personNoLikeness : L10n.Conclusions.personLikenessThumb,
             imageRelPath: likenessImageRelPath,
             imageLabel: leadLabel,
-            colors: treatment?.thumbnailColors
+            colors: treatment?.thumbnailColors,
+            isPortrait: likenesses.contains(where: \.isPortrait)
         )
     }
     var badge: ConclusionDetailBadge? { treatment?.badge }
@@ -72,7 +73,8 @@ struct PersonDetailContent: ConclusionDetailBody {
                 id: $0.record.observationID,
                 imageRelPath: $0.imageRelPath,
                 sourceTitle: ReconciliationRecord.sourceTitle(for: $0.record),
-                location: ReconciliationRecord.composerLocation(for: $0.record)
+                location: ReconciliationRecord.composerLocation(for: $0.record),
+                isPortrait: $0.preferred
             )
         }
     }

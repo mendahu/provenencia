@@ -753,6 +753,24 @@ struct GoStore: GenealogyStore {
         return Self.mapWriteEffects(resp.effects)
     }
 
+    func setPreferredLikeness(
+        projectDir: String,
+        userID: String,
+        entityID: String,
+        observationID: String
+    ) async throws -> CatalogWriteEffects {
+        var req = Provenencia_Engine_V1_SetPreferredLikenessRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.entityID = entityID
+        req.observationID = observationID
+        let resp: Provenencia_Engine_V1_SetPreferredLikenessResponse = try await provenenciaCall(
+            method: CoreMethod.setPreferredLikeness,
+            request: req
+        )
+        return Self.mapWriteEffects(resp.effects)
+    }
+
     func promoteSubject(
         projectDir: String,
         userID: String,
@@ -1171,7 +1189,11 @@ struct GoStore: GenealogyStore {
             memberCount: Int(resp.memberCount),
             header: Self.mapConclusionHeader(resp.header),
             likenesses: resp.likenesses.map {
-                CatalogLikeness(imageRelPath: $0.imageRelPath, record: Self.mapReconcilerOutcome($0.record))
+                CatalogLikeness(
+                    imageRelPath: $0.imageRelPath,
+                    record: Self.mapReconcilerOutcome($0.record),
+                    preferred: $0.preferred
+                )
             }
         )
     }

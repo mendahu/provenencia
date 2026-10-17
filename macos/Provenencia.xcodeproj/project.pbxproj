@@ -70,6 +70,7 @@
 		A9070000000000000000000E /* PlaceTitleDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9070000000000000000000D /* PlaceTitleDisplayTests.swift */; };
 		A90700000000000000000002 /* PersonHeaderDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90700000000000000000001 /* PersonHeaderDisplay.swift */; };
 		A90A00000000000000000002 /* PersonGenderTreatment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90A00000000000000000001 /* PersonGenderTreatment.swift */; };
+		A90A00000000000000000006 /* ConclusionPortraitModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90A00000000000000000005 /* ConclusionPortraitModel.swift */; };
 		A70D0000000000000000000E /* NameValueDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70D0000000000000000000D /* NameValueDraftTests.swift */; };
 		A70900000000000000000002 /* DateValueDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000001 /* DateValueDisplay.swift */; };
 		A70900000000000000000004 /* DateValueDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000003 /* DateValueDisplayTests.swift */; };
@@ -451,6 +452,7 @@
 		A9070000000000000000000D /* PlaceTitleDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaceTitleDisplayTests.swift; sourceTree = "<group>"; };
 		A90700000000000000000001 /* PersonHeaderDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonHeaderDisplay.swift; sourceTree = "<group>"; };
 		A90A00000000000000000001 /* PersonGenderTreatment.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonGenderTreatment.swift; sourceTree = "<group>"; };
+		A90A00000000000000000005 /* ConclusionPortraitModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConclusionPortraitModel.swift; sourceTree = "<group>"; };
 		A70D0000000000000000000D /* NameValueDraftTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NameValueDraftTests.swift; sourceTree = "<group>"; };
 		A70900000000000000000001 /* DateValueDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDisplay.swift; sourceTree = "<group>"; };
 		A70900000000000000000003 /* DateValueDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDisplayTests.swift; sourceTree = "<group>"; };
@@ -1158,6 +1160,7 @@
 				B066A6D4E7DF393AEE952114 /* ReconciliationRecord.swift */,
 				A90700000000000000000001 /* PersonHeaderDisplay.swift */,
 				A90A00000000000000000001 /* PersonGenderTreatment.swift */,
+				A90A00000000000000000005 /* ConclusionPortraitModel.swift */,
 				B071B391C06B014BFC0BA7F1 /* ConclusionDatePlaceLine.swift */,
 			);
 			path = Conclusions;
@@ -2103,6 +2106,7 @@
 				A70D0000000000000000000C /* NameValueDisplay.swift in Sources */,
 				A90700000000000000000002 /* PersonHeaderDisplay.swift in Sources */,
 				A90A00000000000000000002 /* PersonGenderTreatment.swift in Sources */,
+				A90A00000000000000000006 /* ConclusionPortraitModel.swift in Sources */,
 				A90700000000000000000008 /* EventTitleDisplay.swift in Sources */,
 				A9070000000000000000000C /* PlaceTitleDisplay.swift in Sources */,
 				A70B00000000000000000002 /* ArtifactViewerKind.swift in Sources */,

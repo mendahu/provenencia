@@ -61,6 +61,8 @@ struct ConclusionDetailThumbnail: Equatable {
     /// Spoken label while the image shows.
     var imageLabel: String? = nil
     var colors: PVThumbnail.Colors? = nil
+    /// The thumb shows a chosen portrait, so its menu offers the earliest (S10-39).
+    var isPortrait: Bool = false
 }
 
 /// One likeness tile under Details: the image, its Source's title, and the
@@ -70,6 +72,8 @@ struct ConclusionDetailLikeness: Equatable, Identifiable {
     var imageRelPath: String
     var sourceTitle: String
     var location: WorkspaceLocation
+    /// The Person's chosen portrait (S10-39); at most one tile.
+    var isPortrait: Bool = false
 }
 
 /// The Badge a kind may draw above the title: data, so Event and Place stay
@@ -112,6 +116,8 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
     let errorIdentifier: String
     let make: (CatalogConclusionDetail) -> Content
     let summary: (Content) -> Summary
+    /// Handed only by a kind whose likenesses can be chosen as the portrait (the Person page).
+    var portrait: ConclusionPortraitModel? = nil
 
     private var key: CatalogQueryKey {
         .conclusionDetail(project: session.projectKey, entityId: entityId)
@@ -126,7 +132,8 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
                     pageIdentifier: pageIdentifier,
                     errorIdentifier: errorIdentifier,
                     make: make,
-                    summary: summary
+                    summary: summary,
+                    portrait: portrait
                 )
             } else {
                 Self.page(identifier: pageIdentifier) { Self.loading }
@@ -168,6 +175,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
     let errorIdentifier: String
     let make: (CatalogConclusionDetail) -> Content
     let summary: (Content) -> Summary
+    let portrait: ConclusionPortraitModel?
 
     private var presentation: ConclusionDetailPresentation<Content> {
         ConclusionDetailPresentation(
@@ -191,7 +199,8 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
                 ConclusionDetailHeader(
                     content: content,
                     projectDir: projectDir,
-                    summary: summary
+                    summary: summary,
+                    portrait: portrait
                 )
                 VStack(alignment: .leading, spacing: 0) {
                     PVSectionHeader(title: L10n.Conclusions.detailsSection, aside: {
@@ -204,7 +213,11 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
                     }
                 }
                 if !content.likenesses.isEmpty {
-                    ConclusionDetailLikenessSection(projectDir: projectDir, likenesses: content.likenesses)
+                    ConclusionDetailLikenessSection(
+                        projectDir: projectDir,
+                        likenesses: content.likenesses,
+                        portrait: portrait
+                    )
                 }
                 ForEach(content.sections) { section in
                     ConclusionDetailRelationshipSection(section: section)
@@ -220,6 +233,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
 private struct ConclusionDetailLikenessSection: View {
     let projectDir: String
     let likenesses: [ConclusionDetailLikeness]
+    let portrait: ConclusionPortraitModel?
 
     @Environment(WorkspaceNavigation.self) private var navigation
     @FocusState private var focusedID: String?
@@ -281,6 +295,20 @@ private struct ConclusionDetailLikenessSection: View {
                 .frame(maxWidth: Self.column, alignment: .leading)
                 .help(Text(verbatim: tile.sourceTitle))
                 .accessibilityHidden(true)
+            if let portrait {
+                if tile.isPortrait {
+                    PVBadge(L10n.Conclusions.portraitBadge, tone: .accent, icon: .photo)
+                        .accessibilityIdentifier("persons.detail.likeness.\(tile.id).portraitBadge")
+                } else {
+                    PVButton(L10n.Conclusions.useAsPortrait, variant: .ghost, size: .sm) {
+                        Task { await portrait.choose(tile) }
+                    }
+                    .disabled(portrait.isSaving)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .accessibilityLabel(L10n.Conclusions.useAsPortraitLabel(tile.sourceTitle))
+                    .accessibilityIdentifier("persons.detail.likeness.\(tile.id).usePortrait")
+                }
+            }
         }
         .frame(width: Self.column, alignment: .leading)
     }
@@ -330,18 +358,17 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
     let content: Content
     let projectDir: String
     let summary: (Content) -> Summary
+    let portrait: ConclusionPortraitModel?
+
+    @State private var portraitMenu = PVContextMenuState()
+    @State private var portraitKeyboard = PVContextMenuKeyboard.inactive
+
+    /// PDP-11: the menu exists only while a portrait is chosen.
+    private var showsPortraitMenu: Bool { portrait != nil && content.thumbnail.isPortrait }
 
     var body: some View {
         HStack(alignment: .top, spacing: PVSpacing.space7) {
-            CachedThumbnail(
-                projectDir: projectDir,
-                relPath: content.thumbnail.imageRelPath,
-                size: 120,
-                fallbackMark: content.thumbnail.mark,
-                fallbackLabel: content.thumbnail.label,
-                imageLabel: content.thumbnail.imageLabel,
-                colors: content.thumbnail.colors
-            )
+            thumbnail
             VStack(alignment: .leading, spacing: PVSpacing.space4) {
                 if let badge = content.badge {
                     PVBadge(text: badge.text, tone: .neutral, subtle: false, foreground: badge.ink)
@@ -364,6 +391,51 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
                     .foregroundStyle(PVColor.textMuted)
             }
             .padding(.top, PVSpacing.space6)
+        }
+        // Menu on the row (not the 120pt thumb) so the click origin shares
+        // the panel's coordinate space, as on the Source header.
+        .pvContextMenu(
+            $portraitMenu,
+            keyboard: $portraitKeyboard,
+            keyboardTitles: [L10n.string(L10n.Conclusions.useEarliestLikeness)]
+        ) {
+            PVContextMenuPanel(
+                title: L10n.Conclusions.portraitMenuTitle,
+                accessibilityIdentifier: "persons.detail.portrait.menu"
+            ) {
+                PVContextMenuItem(
+                    L10n.Conclusions.useEarliestLikeness,
+                    index: 0,
+                    accessibilityIdentifier: "persons.detail.portrait.useEarliest"
+                ) {
+                    Task { await portrait?.useEarliest() }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var thumbnail: some View {
+        let thumb = CachedThumbnail(
+            projectDir: projectDir,
+            relPath: content.thumbnail.imageRelPath,
+            size: 120,
+            fallbackMark: content.thumbnail.mark,
+            fallbackLabel: content.thumbnail.label,
+            imageLabel: content.thumbnail.imageLabel,
+            colors: content.thumbnail.colors
+        )
+        if showsPortraitMenu {
+            thumb
+                .pvContextMenuTrigger($portraitMenu)
+                .help(L10n.string(L10n.Conclusions.portraitMenuHint))
+                .accessibilityHint(L10n.string(L10n.Conclusions.portraitMenuHint))
+                .accessibilityAction(named: Text(L10n.Conclusions.useEarliestLikeness)) {
+                    Task { await portrait?.useEarliest() }
+                }
+                .accessibilityIdentifier("persons.detail.portrait")
+        } else {
+            thumb
         }
     }
 
