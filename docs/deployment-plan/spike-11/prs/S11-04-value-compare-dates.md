@@ -1,6 +1,6 @@
 # S11-04 — Value compare: dates
 
-**Status:** Planned
+**Status:** Landed in [#445](https://github.com/mendahu/provenencia/pull/445) (2026-10-17)
 **Spike / slice:** Spike 11 · Slice 2 — Value compare, everywhere
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a Go comparer, moved date helpers, docs)
@@ -333,3 +333,15 @@ None.
 
 **Title:** S11-04 — Value compare: dates
 **Body:** objective in one sentence; what shipped against US-1 – US-4; AC evidence (test names); deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-04-value-compare-dates.md`.
+
+## Landed
+
+Differences from the plan:
+
+- The `dateValue` and `ofDate` builders were added in STEP-4, not STEP-2, so each commit compiles.
+- The tests add the builders `optInt`, `dp` and `dateValue`, beyond the ones D-10 names.
+- `datewindow.go` has an unexported `intPtr` helper.
+- The `AboutEnds` cases live in their own `TestAboutEnds`.
+- One extra subtest, "below the near minimum", was added.
+- `spanOf`'s clock-field counting is a loop instead of repeated branches; the behavior is the same.
+- `match` reads `DateEnd.Mid` instead of its own `centre` helper (ship log F-1); the arithmetic is identical.

@@ -23,6 +23,7 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 - **`matchregistry.Default()` builds fresh slices and maps** on each call. A test overrides a section by editing its own copy.
 - **Numbers only in `matchregistry`.** A layer package marked `numbers` in `layerPackages` may hold no numeric literal other than 0 and 1. A fact that is not a tunable (a calendar fact) goes in its pure value package.
 - **Pure helpers are shared, not copied.** The word helpers live in `core/valuecompare/words.go`.
+- **Dates compute similarity through `falloff`.** Calendar facts (days in a month, day numbers, the year line) live in `core/datevalue/calendar.go`, not in the layer. The window algebra is `valuecompare.Window` (`core/valuecompare/datewindow.go`): `Overlaps`, `Contains`, `Intersect` as methods, and `AboutEnds` with `EndsWindow` to read a date as compared.
 
 ## Add a knob
 

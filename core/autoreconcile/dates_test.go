@@ -5,6 +5,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 func ymd(y int, m, d *int) datevalue.Value {
@@ -331,19 +332,19 @@ func TestPeriodWindowAndLinkMembership(t *testing.T) {
 	pc := PeriodWindow(ptrDate(ymd(1841, nil, nil)), ptrDate(ymd(1867, nil, nil)))
 	ontario := PeriodWindow(ptrDate(ymd(1867, nil, nil)), nil)
 	always := PeriodWindow(nil, nil)
-	if !Overlaps(always, uc) || !HoldsAt(Always(), always) {
+	if !always.Overlaps(uc) || !valuecompare.Always().Overlaps(always) {
 		t.Fatal("undated place always holds")
 	}
-	overlap, ok := Intersect(always, uc)
+	overlap, ok := always.Intersect(uc)
 	if !ok || overlap.Lo == nil || *overlap.Lo != *uc.Lo || overlap.Hi == nil || *overlap.Hi != *uc.Hi {
 		t.Fatalf("always ∩ uc = %+v ok=%v", overlap, ok)
 	}
 	// Undated Toronto→UC holds on UC's period when Toronto has no period.
 	mem, ok := LinkMembership(nil, nil, always, uc)
-	if !ok || !HoldsAt(mustWindow(t, ymd(1820, nil, nil)), mem) {
+	if !ok || !mustWindow(t, ymd(1820, nil, nil)).Overlaps(mem) {
 		t.Fatalf("1820 in undated UC membership %+v ok=%v", mem, ok)
 	}
-	if HoldsAt(mustWindow(t, ymd(1850, nil, nil)), mem) {
+	if mustWindow(t, ymd(1850, nil, nil)).Overlaps(mem) {
 		t.Fatal("1850 should miss UC membership")
 	}
 	// Dated Ireland⊂UK until 1922: both places continue.
@@ -354,156 +355,40 @@ func TestPeriodWindowAndLinkMembership(t *testing.T) {
 	if !ok {
 		t.Fatal("dated membership")
 	}
-	if !HoldsAt(mustWindow(t, ymd(1900, nil, nil)), dated) {
+	if !mustWindow(t, ymd(1900, nil, nil)).Overlaps(dated) {
 		t.Fatal("1900 should hold in Ireland⊂UK until 1922")
 	}
-	if HoldsAt(mustWindow(t, ymd(1923, nil, nil)), dated) {
+	if mustWindow(t, ymd(1923, nil, nil)).Overlaps(dated) {
 		t.Fatal("1923 should miss Ireland⊂UK until 1922")
 	}
 	// About 1841 overlaps both UC and PC undated memberships.
 	abt := mustWindow(t, qualified(datevalue.QualifierABT, 1841, nil, nil))
 	ucMem, _ := LinkMembership(nil, nil, always, uc)
 	pcMem, _ := LinkMembership(nil, nil, always, pc)
-	if !HoldsAt(abt, ucMem) || !HoldsAt(abt, pcMem) {
+	if !abt.Overlaps(ucMem) || !abt.Overlaps(pcMem) {
 		t.Fatalf("about 1841 should hold in both UC and PC")
 	}
 	// Range straddling UC→PC is ambiguous on each.
 	span := mustWindow(t, between(1840, nil, nil, 1842, nil, nil))
-	if Relate(span, ucMem) != HoldAmbiguous {
-		t.Fatalf("1840–1842 vs UC: %v", Relate(span, ucMem))
+	if !(span.Overlaps(ucMem) && !ucMem.Contains(span)) {
+		t.Fatal("1840–1842 vs UC should overlap without being inside")
 	}
-	if Relate(span, pcMem) != HoldAmbiguous {
-		t.Fatalf("1840–1842 vs PC: %v", Relate(span, pcMem))
+	if !(span.Overlaps(pcMem) && !pcMem.Contains(span)) {
+		t.Fatal("1840–1842 vs PC should overlap without being inside")
 	}
 	ontMem, _ := LinkMembership(nil, nil, always, ontario)
-	if !HoldsAt(mustWindow(t, ymd(1950, nil, nil)), ontMem) {
+	if !mustWindow(t, ymd(1950, nil, nil)).Overlaps(ontMem) {
 		t.Fatal("1950 should hold in Ontario")
 	}
 }
 
 func ptrDate(d datevalue.Value) *datevalue.Value { return &d }
 
-func mustWindow(t *testing.T, d datevalue.Value) Window {
+func mustWindow(t *testing.T, d datevalue.Value) valuecompare.Window {
 	t.Helper()
 	w, ok := WindowOfDate(d)
 	if !ok {
 		t.Fatalf("no window for %+v", d)
 	}
 	return w
-}
-
-func TestDateEnds(t *testing.T) {
-	const eps = 1e-12
-	near := func(a, b float64) bool { return a-b < eps && b-a < eps }
-
-	t.Run("year", func(t *testing.T) {
-		first, last, ok := DateEnds(ymd(1817, nil, nil))
-		lo, hi, _ := DateBounds(ymd(1817, nil, nil))
-		if !ok || first != last || first.Open || first.Year != 1817 || first.Month != 0 || first.Day != 0 ||
-			first.From != 1817 || first.To != 1818 || first.Lo != *lo || first.Hi != *hi {
-			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
-		}
-	})
-	t.Run("month", func(t *testing.T) {
-		first, _, ok := DateEnds(ymd(1817, ip(5), nil))
-		// May is days 121 to 151 of 365.
-		if !ok || first.Month != 5 || first.Day != 0 || !near(first.From, 1817+120.0/365) || !near(first.To, 1817+151.0/365) {
-			t.Fatalf("got %+v ok=%v", first, ok)
-		}
-	})
-	t.Run("leap month", func(t *testing.T) {
-		first, _, ok := DateEnds(ymd(1816, ip(2), nil))
-		// February 1816 is days 32 to 60 of 366.
-		if !ok || !near(first.From, 1816+31.0/366) || !near(first.To, 1816+60.0/366) {
-			t.Fatalf("got %+v ok=%v", first, ok)
-		}
-	})
-	t.Run("day", func(t *testing.T) {
-		first, last, ok := DateEnds(ymd(1817, ip(5), ip(14)))
-		if !ok || first != last || first.Month != 5 || first.Day != 14 || first.Lo != first.Hi ||
-			!near(first.From, 1817+133.0/365) || !near(first.To, 1817+134.0/365) {
-			t.Fatalf("got %+v ok=%v", first, ok)
-		}
-	})
-	t.Run("range keeps its months", func(t *testing.T) {
-		first, last, ok := DateEnds(between(1817, ip(3), nil, 1817, ip(6), nil))
-		if !ok || first.Month != 3 || last.Month != 6 || first.Open || last.Open {
-			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
-		}
-	})
-	t.Run("before", func(t *testing.T) {
-		first, last, ok := DateEnds(qualified(datevalue.QualifierBEF, 1820, nil, nil))
-		if !ok || !first.Open || first.Year != 0 || last.Open || last.Year != 1820 {
-			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
-		}
-	})
-	t.Run("after", func(t *testing.T) {
-		first, last, ok := DateEnds(qualified(datevalue.QualifierAFT, 1820, nil, nil))
-		if !ok || first.Open || !last.Open || last.Year != 0 {
-			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
-		}
-	})
-	t.Run("range with no end", func(t *testing.T) {
-		d := datevalue.Value{Kind: datevalue.KindRange, StartYear: ip(1815)}
-		first, last, ok := DateEnds(d)
-		if !ok || first.Open || !last.Open {
-			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
-		}
-	})
-	t.Run("range with no start", func(t *testing.T) {
-		d := datevalue.Value{Kind: datevalue.KindRange, EndYear: ip(1815)}
-		first, last, ok := DateEnds(d)
-		if !ok || !first.Open || last.Open {
-			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
-		}
-	})
-	t.Run("inverted range swaps", func(t *testing.T) {
-		first, last, ok := DateEnds(between(1820, nil, nil, 1815, nil, nil))
-		if !ok || first.Year != 1815 || last.Year != 1820 {
-			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
-		}
-	})
-	t.Run("a month inside the end year does not swap", func(t *testing.T) {
-		first, last, ok := DateEnds(between(1817, ip(3), nil, 1817, nil, nil))
-		if !ok || first.Month != 3 || last.Month != 0 || first.Lo >= last.Hi {
-			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
-		}
-		first, last, ok = DateEnds(between(1817, ip(5), ip(14), 1817, nil, nil))
-		if !ok || first.Month != 5 || first.Day != 14 || last.Month != 0 {
-			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
-		}
-	})
-	t.Run("about is a point", func(t *testing.T) {
-		first, last, ok := DateEnds(qualified(datevalue.QualifierABT, 1817, nil, nil))
-		if !ok || first != last || first.Open {
-			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
-		}
-	})
-	t.Run("empty kind is a point", func(t *testing.T) {
-		d := datevalue.Value{StartYear: ip(1817)}
-		first, last, ok := DateEnds(d)
-		if !ok || first != last {
-			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
-		}
-	})
-	t.Run("point with only end fields", func(t *testing.T) {
-		d := datevalue.Value{Kind: datevalue.KindPoint, EndYear: ip(1817)}
-		first, _, ok := DateEnds(d)
-		if !ok || first.Year != 1817 {
-			t.Fatalf("got %+v ok=%v", first, ok)
-		}
-	})
-	for name, d := range map[string]datevalue.Value{
-		"month 13":        ymd(1817, ip(13), nil),
-		"day 31 in April": ymd(1817, ip(4), ip(31)),
-		"phrase only":     {Kind: datevalue.KindPoint, Phrase: "spring"},
-		"range, no year":  {Kind: datevalue.KindRange},
-		"range, bad end":  between(1815, nil, nil, 1817, ip(13), nil),
-	} {
-		t.Run("not ok: "+name, func(t *testing.T) {
-			if _, _, ok := DateEnds(d); ok {
-				t.Fatal("ok")
-			}
-		})
-	}
 }
