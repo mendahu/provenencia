@@ -222,12 +222,14 @@ SLICE 5 — Artifacts and multi-select
   ✎ S10-D7 ──▶ S10-19  Event mark, then sidebar and toolbar. Does not wait on S10-18 — done, #393
   S10-49  Glyph consolidation: one subject-mark rule, PVGlyph in thumbnails, omnibar, Properties (after S10-19) — done, #394
   ✎ S10-D6 ──▶ S10-20  File select, Open, and box-select (after S10-01 and S10-03) — done, #396
+  S10-56  Hold Shift to select; Shift-click toggles a card; Select disarms after its rectangle (after S10-20) — planned
   Check: drop a file on the page and Add Artifact opens with that file
          chosen. Name it and confirm: the card is there. Cancel: it is not.
          Open the file from the card. On the graph, pick a file and Open
          sends it to the system app. A source with no file shows neither
          control. Draw a box, drag once, the group moves. Sidebar
-         Event matches the card.
+         Event matches the card. Hold Shift: Select lights; let go: drag
+         pans. Shift-click three cards and drag them together.
 
 SLICE 6 — Lists and the Person page
   S10-40  People, Events, Places, and Sources store the list's top row on the history entry — done, #392
@@ -504,6 +506,19 @@ S10-33 crop cache — descoped 2026-10-16
 | **Out** | Unpromote (S10-44). An in-app viewer window. Selecting or moving bridge cards. An undo stack. Shift-click to add one card. |
 | **Testable** | Two files: the select lists both, and Open sends the chosen one to the system app. Changing the selection does not open it. A fileless artifact is not in the list. A Source with no file shows neither control. Box three subject cards with a bridge inside the rectangle: the bridge is not selected. Drag one subject, all three land together and survive reload. Without Select armed, dragging empty canvas still pans. Select works without holding Shift, and its help shows Shift. |
 | **Depends on** | S10-01, S10-03, S10-D6 |
+
+#### S10-56 — Hold Shift to select
+
+**Brief:** — (no new chrome: the S10-D6 Select button, its armed paint, and the rectangle already exist)
+
+**Plan:** [`prs/S10-56-quick-select.md`](prs/S10-56-quick-select.md) — Planned
+
+| | |
+| --- | --- |
+| **In** | Holding Shift engages Select and lights its palette button; releasing Shift returns to pan. Place and Connect win over Shift. Select armed on the palette disarms when its rectangle is released, whatever it caught. A Shift rectangle adds to the selection; a plain one replaces it. Shift-click on a card (bridges included) adds or removes it, and skips the card's nested action. A click on empty canvas still clears the selection, with or without Shift. |
+| **Out** | Cmd-click. A keyboard way to add one card. Shift-drag of an unselected card adding it first. New copy or a Shift banner. |
+| **Testable** | Hold Shift: Select lights, and drag draws a rectangle; release: drag pans. Arm Select, draw one rectangle: it disarms. Shift-click two cards and a bridge, Shift-click one off, drag the rest together. Click empty canvas: the selection clears. |
+| **Depends on** | S10-20 |
 
 ### Slice 6 — Lists and the Person page
 
