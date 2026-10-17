@@ -1,7 +1,7 @@
 # Ship log — S10-39 Preferred portrait
 
 **Plan:** [`S10-39-preferred-portrait.md`](S10-39-preferred-portrait.md) · **Branch:** `s10-39-preferred-portrait` · **PR:** #450
-**State:** ready
+**State:** fixing (user)
 
 Base `a439ae24` (main).
 
@@ -74,3 +74,20 @@ Check: `go test -tags fts5 ./core/database/ ./core/database/canonicalentities/` 
 
 ## User fix — result
 Head `98cbce64`. Gate PASS (orchestrator run). F-2 done: `TestNullBlob` red first (`undefined: NullBlob`), then green. MNT-1 → Fixed for this PR's copy; the remaining copies and `uuidJSON` stay in M-4.
+
+## User finding (manual check, 2026-10-17)
+On the test project, a Person with likenesses and no chosen portrait leads its header with the earliest crop, but that tile still shows "Use as portrait". Clicking it changes nothing in the header and only moves the Badge. This is AC-1.1 as written (no Badge until a portrait is chosen); the user finds it misleading. User's call, chosen from two options: **the tile that leads the header always shows the Badge**. That is the earliest when nothing is chosen, the chosen one otherwise. The header menu appears only while the lead is not the earliest. This replaces AC-1.1, AC-2.3 and §10 step 2 (user, 2026-10-17).
+
+**F-3 — The tile that leads the header always shows the Portrait Badge** (user)
+Files: `core/database/likenesses/likenesses.go` (+ test), `api/proto/engine.proto` + regenerated Go/Swift (`./scripts/generate-proto.sh`), `api/ffi/handlers/conclusion_detail.go` (+ test), `macos/App/Platform/GenealogyStore.swift` (`CatalogLikeness`), `macos/App/Platform/GoStore.swift`, `macos/App/Features/Conclusions/PersonDetailContent.swift`, `macos/App/Features/Conclusions/ConclusionDetailPage.swift`, `macos/ProvenenciaTests/PersonDetailTests.swift`, the plan.
+Failing tests first:
+- `TestForEntitiesPreferred`: every case also asserts a `Leads` flag per likeness. With no pointer it is `[true, false]`. With pointer B it is `[false, true]`. Unpromoted, denied and deleted all fall back to `[true]`. An empty gallery has no flags.
+- `portraitFlagsFollowThePreferredLikeness` (Swift): with neither preferred, `content.likenesses.map(\.isPortrait)` is `[true, false]` and the header menu is not shown. With B preferred it is `[false, true]` and the menu is shown. With A (the earliest) preferred it is `[true, false]` and the menu is not shown.
+Do:
+- Go: add `Leads bool` to `likenesses.Likeness`, documented as "the likeness the handle leads with: the preferred one when it is in the gallery, else the earliest; exactly one in a non-empty gallery". In `ForEntities`, after the sort and the `Preferred` marking, set `Leads` on the preferred index, or on index 0 when nothing is preferred. `Lead` returns the likeness with `Leads` set (the one rule). Keep `Preferred`.
+- Proto: add `bool leads = 4` to the likeness detail message beside `preferred`, with a comment, and set it in the handler.
+- Swift: add `CatalogLikeness.leads` and map it in `GoStore`. The tile's `isPortrait` becomes `$0.leads`.
+- Header menu: replace the header's "any likeness is portrait" flag with `likenesses.first.map { !$0.leads } ?? false`. The gallery is earliest first, so the menu shows only while a chosen portrait is not the earliest. Name the field for what it means, e.g. `ConclusionDetailThumbnail.offersEarliest`, and update `showsPortraitMenu`.
+- Do not add a new string.
+- Plan: rewrite AC-1.1 ("the earliest tile shows the Portrait Badge and no button; the other tiles show the button; the header thumb is A"), AC-2.3 ("No portrait chosen, or the earliest chosen: no menu opens") and §10 step 2 to match, each marked "(user, 2026-10-17)". Add a line to the Landed note.
+Check: the Go tests in `likenesses`, `conclusionheaders`, `conclusiondetails` and `api/ffi/handlers` pass; `xcodebuild` tests pass; scripts/check-pr.sh PASS.
