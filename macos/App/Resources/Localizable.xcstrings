@@ -15620,6 +15620,114 @@
         }
       }
     },
+    "conclusions.person.portraitBadge": {
+      "comment": "Badge on the gallery likeness chosen as the Person's portrait",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portrait"
+          }
+        }
+      }
+    },
+    "conclusions.person.useAsPortrait": {
+      "comment": "Button under a gallery likeness that makes it the Person's portrait",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use as portrait"
+          }
+        }
+      }
+    },
+    "conclusions.person.useAsPortraitLabel": {
+      "comment": "Accessibility label of the button that makes a gallery likeness the Person's portrait; the argument is the Source title (or the Observation ref when the title is empty)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the likeness from %@ as portrait"
+          }
+        }
+      }
+    },
+    "conclusions.person.useEarliestLikeness": {
+      "comment": "Header thumb menu item and accessibility action that clears the Person's portrait",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use earliest likeness"
+          }
+        }
+      }
+    },
+    "conclusions.person.portraitMenuTitle": {
+      "comment": "Title of the Person page header thumb menu",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Person portrait"
+          }
+        }
+      }
+    },
+    "conclusions.person.portraitMenuHint": {
+      "comment": "Help and accessibility hint on the Person page header thumb while a portrait is chosen",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right-click for portrait options"
+          }
+        }
+      }
+    },
+    "conclusions.person.toastPortraitUpdatedTitle": {
+      "comment": "Toast title after choosing or clearing the Person's portrait",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portrait updated"
+          }
+        }
+      }
+    },
+    "conclusions.person.toastPortraitChosenBody": {
+      "comment": "Toast body after choosing a portrait; the argument is the tile's Source title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Using the likeness from %@ as the portrait."
+          }
+        }
+      }
+    },
+    "conclusions.person.toastPortraitEarliestBody": {
+      "comment": "Toast body after clearing the portrait",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Using the earliest likeness as the portrait."
+          }
+        }
+      }
+    },
     "conclusions.event.noImage": {
       "comment": "Thumbnail placeholder on an Event page when no image is recorded",
       "extractionState": "manual",

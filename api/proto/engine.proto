@@ -110,6 +110,7 @@ enum Method {
   METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT = 98;
   METHOD_GET_NAME_FORMAT = 99;
   METHOD_UNPROMOTE_SUBJECT = 100;
+  METHOD_SET_PREFERRED_LIKENESS = 101;
 }
 
 message PingRequest {
@@ -1032,6 +1033,20 @@ message UnpromoteSubjectResponse {
   WriteEffects effects = 1;
 }
 
+// SetPreferredLikeness chooses a Person's portrait (S10-39): observation_id is
+// one of the Person's gallery likenesses' record Observation; empty clears the
+// choice. A display pointer, not evidence. An unchanged choice writes nothing.
+message SetPreferredLikenessRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string entity_id = 3;
+  string observation_id = 4;
+}
+
+message SetPreferredLikenessResponse {
+  WriteEffects effects = 1;
+}
+
 // SubjectMembership is a view of one Subject's accepted Identity Claim: the
 // claim id and the handle it files the Subject onto. kind is the handle's
 // subject type key (person, event, place, …). Not provisional / rejected claims.
@@ -1154,8 +1169,8 @@ message PersonHeader {
   int64 updated_revision = 6;
   string updated_at = 7;
   // likeness_image_rel_path is the objects/… path of the likeness the Person
-  // leads with on its page and in the Persons list (S10-35: the earliest
-  // gallery likeness); empty when none. Filled on ListPersonHeaders and
+  // leads with on its page and in the Persons list (the preferred portrait,
+  // else the earliest gallery likeness); empty when none. Filled on ListPersonHeaders and
   // GetConclusionDetail only.
   string likeness_image_rel_path = 8;
 }
@@ -1345,6 +1360,13 @@ message GetConclusionDetailRequest {
 message LikenessDetail {
   string image_rel_path = 1;
   ReconcilerOutcomeDetail record = 2;
+  // preferred is true for the likeness chosen as the Person's portrait
+  // (S10-39); at most one.
+  bool preferred = 3;
+  // leads is true for the likeness the Person's header leads with: the
+  // preferred one when set, else the earliest; exactly one per gallery. The
+  // tile that leads shows the Portrait Badge (user, 2026-10-17).
+  bool leads = 4;
 }
 
 message ConclusionDetail {

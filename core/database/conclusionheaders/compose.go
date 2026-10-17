@@ -443,8 +443,8 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 	fresh := map[string]PersonHeader{}
 	for _, id := range need {
 		var lead []byte
-		if ls := gallery[string(id)]; len(ls) > 0 {
-			lead = ls[0].ImageFileID
+		if l, ok := likenesses.Lead(gallery[string(id)]); ok {
+			lead = l.ImageFileID
 		}
 		h, err := onePerson(v, byID[string(id)], g, pg, lead)
 		if err != nil {

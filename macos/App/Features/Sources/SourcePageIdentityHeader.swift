@@ -32,7 +32,8 @@ struct SourcePageIdentityHeader: View {
                 // the panel's coordinate space.
                 .pvContextMenu(
                     $coverMenu,
-                    keyboard: coverMenuItemCount > 0 ? $coverKeyboard : nil
+                    keyboard: coverMenuItemCount > 0 ? $coverKeyboard : nil,
+                    keyboardTitles: coverMenuItemCount > 0 ? [L10n.string(L10n.Sources.thumbnailRevertToDefault)] : []
                 ) {
                     coverMenuPanel
                 }
@@ -63,14 +64,6 @@ struct SourcePageIdentityHeader: View {
         .accessibilityHint(L10n.string(L10n.Sources.thumbnailMenuHint))
         .accessibilityIdentifier("sources.page.cover")
         .pvContextMenuTrigger($coverMenu)
-        .onChange(of: coverMenu.isPresented) { _, open in
-            if open {
-                coverKeyboard = PVContextMenuKeyboard(
-                    itemCount: coverMenuItemCount,
-                    activeIndex: -1
-                )
-            }
-        }
         .help(L10n.string(L10n.Sources.thumbnailMenuHint))
     }
 

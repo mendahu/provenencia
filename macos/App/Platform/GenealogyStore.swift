@@ -610,6 +610,11 @@ struct CatalogConclusionField: Sendable, Equatable, Identifiable {
 struct CatalogLikeness: Sendable, Equatable, Identifiable {
     var imageRelPath: String
     var record: CatalogReconcilerOutcome
+    /// True for the likeness chosen as the Person's portrait (S10-39); at most one.
+    var preferred: Bool = false
+    /// True for the likeness the Person's header leads with: the preferred one,
+    /// else the earliest; exactly one in a gallery.
+    var leads: Bool = false
 
     var id: String { record.observationID }
 }
@@ -1176,6 +1181,14 @@ protocol GenealogyStore: Sendable {
     /// claims of the bridges on its Source that have it as an end. No handle is deleted. A Subject with
     /// no accepted claim writes nothing.
     func unpromoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogWriteEffects
+    /// Choose a gallery likeness as the Person's portrait, or clear it with an empty observationID.
+    /// A display choice, not evidence.
+    func setPreferredLikeness(
+        projectDir: String,
+        userID: String,
+        entityID: String,
+        observationID: String
+    ) async throws -> CatalogWriteEffects
     /// Propose a handle, New, or Skip for every primary Subject on one Source (graph alignment).
     func proposePromoteGraphAlignment(
         projectDir: String,

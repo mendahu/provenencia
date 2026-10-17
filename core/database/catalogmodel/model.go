@@ -180,6 +180,7 @@ var FKs = []FK{
 
 	{From: "canonical_entities", Column: "subject_type_id", To: "subject_types", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{From: "canonical_entities", Column: "merged_into_id", To: "canonical_entities", OnDelete: "NO ACTION", Bucket: BucketResource},
+	{From: "canonical_entities", Column: "preferred_likeness_observation_id", To: "observations", OnDelete: "SET NULL", Bucket: BucketOptional},
 	{From: "identity_claims", Column: "subject_id", FromCols: []string{"subject_id", "subject_type_id"}, To: "subjects", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 	{From: "identity_claims", Column: "entity_id", FromCols: []string{"entity_id", "subject_type_id"}, To: "canonical_entities", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 	{From: "identity_claims", Column: "confidence_grade_id", To: "claim_confidence_grades", OnDelete: "NO ACTION", Bucket: BucketResource},

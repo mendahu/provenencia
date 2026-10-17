@@ -38,8 +38,9 @@ type PersonHeader struct {
 	Birth LifeFacts
 	Death LifeFacts
 	// LikenessImageFileID is the image of the likeness the Person leads with
-	// on its page and in the Persons list; nil when none. S10-35: the
-	// earliest gallery likeness.
+	// on its page and in the Persons list; nil when none. The preferred
+	// portrait when its likeness is in the gallery, else the earliest
+	// (likenesses.Lead).
 	LikenessImageFileID []byte
 	// Updated is the handle's latest canonical_entity revision and its time.
 	// Filled by List only; zero means none.

@@ -8275,6 +8275,65 @@ enum L10n {
             comment: "Accessibility label of the empty portrait slot on a Person page"
         )
 
+        static let portraitBadge = LocalizedStringResource(
+            "conclusions.person.portraitBadge",
+            defaultValue: "Portrait",
+            comment: "Badge on the gallery likeness chosen as the Person's portrait"
+        )
+
+        static let useAsPortrait = LocalizedStringResource(
+            "conclusions.person.useAsPortrait",
+            defaultValue: "Use as portrait",
+            comment: "Button under a gallery likeness that makes it the Person's portrait"
+        )
+
+        /// "Use the likeness from {Source title} as portrait" — the button's spoken label.
+        static func useAsPortraitLabel(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.person.useAsPortraitLabel",
+                defaultValue: "Use the likeness from %@ as portrait",
+                comment: "Accessibility label of the button that makes a gallery likeness the Person's portrait; the argument is the Source title (or the Observation ref when the title is empty)"
+            ), source)
+        }
+
+        static let useEarliestLikeness = LocalizedStringResource(
+            "conclusions.person.useEarliestLikeness",
+            defaultValue: "Use earliest likeness",
+            comment: "Header thumb menu item and accessibility action that clears the Person's portrait"
+        )
+
+        static let portraitMenuTitle = LocalizedStringResource(
+            "conclusions.person.portraitMenuTitle",
+            defaultValue: "Person portrait",
+            comment: "Title of the Person page header thumb menu"
+        )
+
+        static let portraitMenuHint = LocalizedStringResource(
+            "conclusions.person.portraitMenuHint",
+            defaultValue: "Right-click for portrait options",
+            comment: "Help and accessibility hint on the Person page header thumb while a portrait is chosen"
+        )
+
+        static let toastPortraitUpdatedTitle = L10n.string(LocalizedStringResource(
+            "conclusions.person.toastPortraitUpdatedTitle",
+            defaultValue: "Portrait updated",
+            comment: "Toast title after choosing or clearing the Person's portrait"
+        ))
+
+        static func toastPortraitChosenBody(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.person.toastPortraitChosenBody",
+                defaultValue: "Using the likeness from %@ as the portrait.",
+                comment: "Toast body after choosing a portrait; the argument is the tile's Source title"
+            ), source)
+        }
+
+        static let toastPortraitEarliestBody = L10n.string(LocalizedStringResource(
+            "conclusions.person.toastPortraitEarliestBody",
+            defaultValue: "Using the earliest likeness as the portrait.",
+            comment: "Toast body after clearing the portrait"
+        ))
+
         static let eventNoImage = LocalizedStringResource(
             "conclusions.event.noImage",
             defaultValue: "No image recorded",

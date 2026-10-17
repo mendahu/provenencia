@@ -38,6 +38,11 @@ struct PVContextMenuKeyboard: Equatable {
 
     static let inactive = PVContextMenuKeyboard(itemCount: 0, activeIndex: -1)
 
+    /// The state of a menu that just opened: nothing highlighted, type-to-select over `titles`.
+    static func opened(titles: [String]) -> PVContextMenuKeyboard {
+        PVContextMenuKeyboard(itemCount: titles.count, activeIndex: -1, itemTitles: titles)
+    }
+
     /// Advances the highlight to the next title matching the type-select buffer.
     /// Returns `true` when the highlight moved.
     mutating func applyTypeSelect(_ character: Character, now: Date = Date()) -> Bool {
@@ -268,9 +273,14 @@ extension View {
     /// Attach this to the view whose local coordinates match `state.origin`
     /// (the trigger for `PVSelect`, or a larger ancestor for right-click menus
     /// so the click point and panel share a coordinate space).
+    ///
+    /// `keyboardTitles` are the row titles of a right-click menu; when set
+    /// (with `keyboard`), the keyboard is reset on each open. Leave nil when the
+    /// caller seeds its own highlight (`PVSelect`).
     func pvContextMenu<Content: View>(
         _ state: Binding<PVContextMenuState>,
         keyboard: Binding<PVContextMenuKeyboard>? = nil,
+        keyboardTitles: [String]? = nil,
         stealKeys: Bool = PVContextMenuInteraction.defaultStealKeys,
         dismissOnMouseUp: Bool = PVContextMenuInteraction.defaultDismissOnMouseUp,
         dismissOnClickAway: Bool = PVContextMenuInteraction.defaultDismissOnClickAway,
@@ -279,6 +289,7 @@ extension View {
         modifier(PVContextMenuPresenter(
             state: state,
             keyboard: keyboard,
+            keyboardTitles: keyboardTitles,
             stealKeys: stealKeys,
             dismissOnMouseUp: dismissOnMouseUp,
             dismissOnClickAway: dismissOnClickAway,
@@ -338,6 +349,7 @@ extension EnvironmentValues {
 private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
     @Binding var state: PVContextMenuState
     var keyboard: Binding<PVContextMenuKeyboard>?
+    var keyboardTitles: [String]?
     var stealKeys: Bool = true
     var dismissOnMouseUp: Bool = true
     var dismissOnClickAway: Bool = false
@@ -358,6 +370,9 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
             )
             .onChange(of: state.isPresented) { _, open in
                 if open {
+                    if let keyboard, let keyboardTitles {
+                        keyboard.wrappedValue = .opened(titles: keyboardTitles)
+                    }
                     // Defer so the opening click does not immediately dismiss.
                     // Do not replace/clear the registry here — items register
                     // during body evaluation; clearing after first paint left

@@ -6,7 +6,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 ## Status
 
-**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, S10-08, S10-12, S10-13, S10-15, S10-42, and S10-43 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), [#370](https://github.com/mendahu/provenencia/pull/370), [#371](https://github.com/mendahu/provenencia/pull/371), [#372](https://github.com/mendahu/provenencia/pull/372), [#375](https://github.com/mendahu/provenencia/pull/375), [#373](https://github.com/mendahu/provenencia/pull/373), and [#374](https://github.com/mendahu/provenencia/pull/374) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. S10-10 was descoped in [#370](https://github.com/mendahu/provenencia/pull/370): a common cluster belongs in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md), which covers more than a default role. S10-11 was already done in [#356](https://github.com/mendahu/provenencia/pull/356): a citation with 70 Observations opens quickly. S10-14 and S10-D1 were descoped in [#370](https://github.com/mendahu/provenencia/pull/370): an adaptive choice field is not a priority for this spike. S10-26 was descoped 2026-10-12: Daitch–Mokotoff is [`ideas/daitch-mokotoff.md`](../../ideas/daitch-mokotoff.md). S10-38 and S10-45 landed together in [#382](https://github.com/mendahu/provenencia/pull/382) (2026-10-12), so Slice 9 is done. S10-31 and S10-37 were descoped 2026-10-16, which closes Slice 7: related events and place chains are in [`ideas/archive/name-matching-enhancements.md`](../../ideas/archive/name-matching-enhancements.md), and the collation locale is in [`ideas/international-names.md`](../../ideas/international-names.md). S10-36 and its brief S10-D13 moved to Spike 11 on 2026-10-17, where the evidence sheet is rebuilt (S11-20, S11-D2). Later landings go in [`completed.md`](completed.md).
+**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, S10-08, S10-12, S10-13, S10-15, S10-42, and S10-43 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), [#370](https://github.com/mendahu/provenencia/pull/370), [#371](https://github.com/mendahu/provenencia/pull/371), [#372](https://github.com/mendahu/provenencia/pull/372), [#375](https://github.com/mendahu/provenencia/pull/375), [#373](https://github.com/mendahu/provenencia/pull/373), and [#374](https://github.com/mendahu/provenencia/pull/374) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. S10-10 was descoped in [#370](https://github.com/mendahu/provenencia/pull/370): a common cluster belongs in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md), which covers more than a default role. S10-11 was already done in [#356](https://github.com/mendahu/provenencia/pull/356): a citation with 70 Observations opens quickly. S10-14 and S10-D1 were descoped in [#370](https://github.com/mendahu/provenencia/pull/370): an adaptive choice field is not a priority for this spike. S10-26 was descoped 2026-10-12: Daitch–Mokotoff is [`ideas/daitch-mokotoff.md`](../../ideas/daitch-mokotoff.md). S10-38 and S10-45 landed together in [#382](https://github.com/mendahu/provenencia/pull/382) (2026-10-12), so Slice 9 is done. S10-31 and S10-37 were descoped 2026-10-16, which closes Slice 7: related events and place chains are in [`ideas/archive/name-matching-enhancements.md`](../../ideas/archive/name-matching-enhancements.md), and the collation locale is in [`ideas/international-names.md`](../../ideas/international-names.md). S10-36 and its brief S10-D13 moved to Spike 11 on 2026-10-17, where the evidence sheet is rebuilt (S11-20, S11-D2). S10-39 landed in [#450](https://github.com/mendahu/provenencia/pull/450) (2026-10-17). Later landings go in [`completed.md`](completed.md).
 
 > **Goal of this spike:** the annoyances logged while entering real research are gone, and the app still behaves the way Spike 8 and Spike 9 decided.
 
@@ -161,7 +161,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | [**S10-D9**](design/archive/S10-D9-persons-list.md) | Persons list | **S10-22** | S10-35 fills the thumb with a likeness. S10-39 makes that thumb the preferred portrait |
 | [**S10-D10**](design/archive/S10-D10-events-list.md) | Events list | **S10-22** | — |
 | [**S10-D11**](design/archive/S10-D11-places-list.md) | Places list | **S10-22** | — |
-| **[S10-D12](design/S10-D12-person-detail.md)** | Person detail | **S10-23** | S10-35 gallery and S10-39 preferred portrait. Design both with the gender treatment, before S10-23 |
+| **[S10-D12](design/archive/S10-D12-person-detail.md)** | Person detail | **S10-23** | S10-35 gallery and S10-39 preferred portrait. Design both with the gender treatment, before S10-23 |
 | ~~S10-D13~~ | Promote page | ~~S10-36~~ | Moved to Spike 11 (S11-D2) with the evidence sheet rebuild, 2026-10-17 |
 | **S10-D14** | Evidence graph — zoomed-out card | **S10-46**, descoped 2026-10-11 | — |
 | **[S10-D15](design/archive/S10-D15-composer-depiction-row.md)** | Citation composer — depiction row | **S10-34** | — |
@@ -272,7 +272,7 @@ SLICE 8 — Likeness
   S10-34  Composer depiction row: draw, render, save (after S10-16) — done, #442
   (S10-36 moved to Spike 11 S11-20, 2026-10-17)
   S10-35  Person gallery + Persons list thumb (S10-D12 and S10-D9 already designed) — done, #446
-  S10-39  Preferred portrait leads the page and the list (same boards)
+  S10-39  Preferred portrait leads the page and the list (same boards) — done, #450
   Check: a group photo yields one crop per face. The Person page shows the
          gallery. Mark one face: it leads the page and the People list, and
          the other faces stay. Promote shows the two pictures. Deleting a
@@ -576,7 +576,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-23 — Sex / gender on the Person page
 
-**Brief:** [S10-D12](design/S10-D12-person-detail.md). **Plan:** [`prs/S10-23-person-gender.md`](prs/S10-23-person-gender.md). **Status:** Landed [#407](https://github.com/mendahu/provenencia/pull/407).
+**Brief:** [S10-D12](design/archive/S10-D12-person-detail.md). **Plan:** [`prs/S10-23-person-gender.md`](prs/S10-23-person-gender.md). **Status:** Landed [#407](https://github.com/mendahu/provenencia/pull/407).
 
 | | |
 | --- | --- |
@@ -755,7 +755,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-39 — Preferred portrait
 
-**Plan:** [`prs/S10-39-preferred-portrait.md`](prs/S10-39-preferred-portrait.md) — Planned
+**Plan:** [`prs/S10-39-preferred-portrait.md`](prs/S10-39-preferred-portrait.md) — Landed #450
 
 **Briefs:** S10-D12 and S10-D9, already designed before S10-23 and S10-22. No second brief.
 
