@@ -589,6 +589,41 @@ func TestObservations(t *testing.T) {
 			},
 		},
 		{
+			name: "date replaced by another Property releases its value",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				year := 1844
+				res, _, err := saveCitation(c, userID, s.artifact, observations.Input{
+					SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
+					Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				oldDateID := res.Observations[0].ValueDateID
+				if len(oldDateID) != 16 {
+					t.Fatalf("date id %x", oldDateID)
+				}
+				eventNameProp, err := properties.Lookup(c, "event_name", properties.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				changes, err := updateObservation(c, userID, observations.Input{
+					ID: res.Observations[0].ID, SubjectID: s.event.ID, PropertyID: eventNameProp.ID,
+					ValueText: "Birth", HasText: true,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if n := rowCount(t, c, `SELECT COUNT(*) FROM date_values WHERE id = ?`, oldDateID); n != 0 {
+					t.Fatalf("replaced date value left behind: %d rows", n)
+				}
+				if got, want := changeKinds(changes, "date_value"), []string{"date_value/delete"}; !sameStrings(got, want) {
+					t.Fatalf("changes %v want %v", got, want)
+				}
+			},
+		},
+		{
 			name: "delete schedules no purge with nothing released",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
