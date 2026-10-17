@@ -331,7 +331,7 @@ func pairValues(rules valuecompare.Rules, valueType, card string, probe, candida
 		leaderComparable, leaderPositive bool
 		leaders                          = &pairSet{probe: probe, cand: candidate, pinfo: s.pinfo, cinfo: s.cinfo}
 		credit                           = &pairSet{probe: probe, cand: candidate, pinfo: s.pinfo, cinfo: s.cinfo}
-		top, topSim                      float64
+		top                              float64
 	)
 	for i := range probe {
 		if !s.pinfo[i].voting {
@@ -358,10 +358,9 @@ func pairValues(rules valuecompare.Rules, valueType, card string, probe, candida
 			switch {
 			case !credit.found || score > top:
 				credit.best, credit.found = pairIdx{i, j}, true
-				top, topSim = score, sim*w
+				top = score
 			case score == top && credit.before(i, j):
 				credit.best = pairIdx{i, j}
-				topSim = sim * w
 			}
 		}
 	}
@@ -372,7 +371,7 @@ func pairValues(rules valuecompare.Rules, valueType, card string, probe, candida
 		return PairResult{}
 	}
 	return PairResult{
-		Similarity: topSim, Comparable: true,
+		Similarity: top, Comparable: true,
 		Probe: probe[credit.best.i].ref(), Candidate: candidate[credit.best.j].ref(),
 	}
 }
