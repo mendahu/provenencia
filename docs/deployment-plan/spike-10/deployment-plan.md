@@ -164,7 +164,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **[S10-D12](design/S10-D12-person-detail.md)** | Person detail | **S10-23** | S10-35 gallery and S10-39 preferred portrait. Design both with the gender treatment, before S10-23 |
 | ~~S10-D13~~ | Promote page | ~~S10-36~~ | Moved to Spike 11 (S11-D2) with the evidence sheet rebuild, 2026-10-17 |
 | **S10-D14** | Evidence graph — zoomed-out card | **S10-46**, descoped 2026-10-11 | — |
-| **S10-D15** | Citation composer — depiction row | **S10-34** | — |
+| **[S10-D15](design/S10-D15-composer-depiction-row.md)** | Citation composer — depiction row | **S10-34** | — |
 
 S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote) and it gates S10-20. S10-18 does not wait on it. S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D1, the adaptive choice field, is descoped with S10-14 and is not drawn. Term fields keep the control they have. S10-D2 is not drawn: name-then-type on Create Source is a field swap, so S10-15 stands on its own. S10-D9…D11 are three briefs for the shared conclusion lists. Events and Places specify the same last-updated cell as Persons so `ConclusionListPage` does not grow three treatments. S10-D8 is the Sources list, a different page, and it gates S10-41. That board draws the same last-updated cell, the evidence-status filter, and text search. Sort, type, status, and query ship from that one board. List scroll is the history-entry anchor in S10-40, including Sources. D9…D11 do not draw those controls. S10-22 changes no Sources-list chrome; it moves that list's cache and engine read onto the shared last-activity patch. Only the Persons list thumb becomes a likeness. S10-D6, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. The depiction row is its own brief, S10-D15, written just before S10-34. S10-D3 does not draw it. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb. Whichever of D8 and D9 is designed first draws the last-updated cell; the other copies it.
 
@@ -729,11 +729,13 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-34 — Composer depiction row
 
-**Brief:** S10-D15, written just before this PR. Not drawn on S10-D3.
+**Plan:** [`prs/S10-34-composer-depiction-row.md`](prs/S10-34-composer-depiction-row.md) — Planned
+
+**Brief:** [S10-D15](design/S10-D15-composer-depiction-row.md), written 2026-10-17. Not drawn on S10-D3.
 
 | | |
 | --- | --- |
-| **In** | Per S10-D15: draw the region on the photo, leave transcription empty, save a likeness (or another depiction property, if the board shows only likeness). The composer renders the crop (pixel crop for an image, PDFKit for a PDF page region), writes a PNG to a temporary file, and saves with its path (working rule "The client renders the image…"). The row shows the saved image. The row uses the authoring place and focus rules from S10-16. |
+| **In** | Per S10-D15: draw the region on the photo, leave transcription empty, save a likeness (any depiction Property bound to the subject's type is offered; `likeness` is the only one seeded). Edit can redraw the face; Duplicate copies its region; on a PDF the face is on the Citation's page, and a new Citation takes the page it was drawn on (answered 2026-10-17). The composer renders the crop (pixel crop for an image, PDFKit for a PDF page region), writes a PNG to a temporary file, and saves with its path (working rule "The client renders the image…"). The row shows the saved image. The row uses the authoring place and focus rules from S10-16. |
 | **Out** | The observation-list rethink (S10-16). Gallery (S10-35). |
 | **Testable** | Draw two faces on one group photo Citation, add a likeness for each, save. Each row shows its image. The same works on a PDF page. Transcription can be empty. |
 | **Depends on** | S10-16, S10-54, S10-D15 |
