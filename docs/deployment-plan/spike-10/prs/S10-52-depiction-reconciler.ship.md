@@ -1,7 +1,7 @@
 # Ship log — S10-52 Depiction auto-reconciler module
 
 **Plan:** [`S10-52-depiction-reconciler.md`](S10-52-depiction-reconciler.md) · **Branch:** `s10-52-depiction-reconciler` · **PR:** #437
-**State:** gate — merge main
+**State:** ready
 
 ## Round 0 — implement
 Head `2df46b5a`. Gate PASS (orchestrator rerun). Report: no deviations from Decisions/Scope; T-3 cases share a `world` struct and `finish` helper (noted in Landed); one earlier xcode-test flake on `WorkspaceSessionTests.invalidateAllMatching()` (no Swift touched; rerun passed); manual check not run.
@@ -31,5 +31,8 @@ Files: the five above, plus anything else that fails to build after the merge.
 Do: merge `origin/main` into the branch (a merge commit, no rebase). Resolve each conflict so both sides survive, with every `properties.ValueType*` / `properties.Cardinality*` from this PR spelled `propertymeta.*` (S11-22 D-6, plan D-11). Update the plan's Landed note, which currently says D-11 does not apply.
 Check: `go build ./...` and the S10-52 tests pass; `scripts/check-pr.sh` PASS; the PR is `MERGEABLE`.
 
+## Gate fix — merge main
+Head `50ff0f1d` (merge commit). F-1 done: D-11 applied (`propertymeta.*`), plus main's move of the date and name value types to `core/datevalue` / `core/namevalue` where the conflicts touched them. Landed note updated. Gate PASS (orchestrator rerun, against `ca2d971d`). PR `MERGEABLE`. Diff against main: 21 files, same scope. No re-review: a mechanical merge-resolution round, not a fix plan.
+
 ## Result
-Gate PASS · CI <pending> · open: none · follow-ups: SEC-1 (S10-35 note), CON-1, CON-2, MNT-1, MNT-2, MNT-3 · to user: —
+Gate PASS · CI green (Go tests, macOS tests, localizable) · open: none · follow-ups: SEC-1 (S10-35 note), CON-1, CON-2, MNT-1, MNT-2, MNT-3 · to user: —
