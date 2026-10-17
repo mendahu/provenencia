@@ -1,7 +1,7 @@
 # Ship log — S10-56 Object store stays inside objects/; deletes prune empty folders
 
 **Plan:** [`S10-56-object-store-root.md`](S10-56-object-store-root.md) · **Branch:** `s10-56-object-store-root` · **PR:** #425
-**State:** review 2
+**State:** ready
 
 ## Round 0 — implement
 Base: branch `s10-56-object-store-root` cut from `s10-53-stage-image` @ `39ee4860` (#424, open); plan committed on it. PR targets `s10-53-stage-image` until #424 merges.
@@ -56,3 +56,13 @@ Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10
 
 ## Round 1 — fix
 Head `c4534caf`. Gate PASS (orchestrator run). F-1 to F-5 done; every named failing test ran red first. Deviations: F-3's callout message is the new `.help` string (as the other ingest callouts do), not a separate full-message key; the banner fallback `L10n.Errors.message(code:)` has no `ingest.unsafe_objects` case (not named in F-3).
+
+## Round 2 — review
+Lenses: CON, MNT, SEC, UX (the lenses with Fix-now findings). Scope `6a7ab5db...c4534caf`. All four clean; SEC-1, CON-1, CON-O1, UX-1, MNT-1, MNT-2 resolved. No new blockers → no Fix plan 2.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-R2-1 | MNT | minor (not raised) | `L10n.Errors.message(code:)` and `ingestCallout(code:)` are two hand-kept ingest code lists; `ingest.unsafe_objects` (and S10-53's `ingest.unsupported_image`) are missing from the banner list | Follow-up | latent: both import catch sites use `ingestCallout` first; `InsertTx` has no production caller yet (S10-54 owns staging's copy, S10-53 UX-1) |
+
+## Result
+Gate PASS · CI see PR #425 · open: none · follow-ups: MNT-3, CON-2, MNT-R2-1 · to user: manual check (§10) · user decisions: `.DS_Store` counts as empty; `ingest.unsafe_objects` copy in this PR
