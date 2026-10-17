@@ -67,15 +67,7 @@ func listedProtosFromSource(c *database.Catalog, sg graphcache.SourceGraph, cita
 		}
 		rows = append(rows, listed)
 	}
-	paths, err := depictionPaths(c, rows)
-	if err != nil {
-		return nil, err
-	}
-	var out []*engine.Observation
-	for _, l := range rows {
-		out = append(out, listedObservationProto(l, paths))
-	}
-	return out, nil
+	return listedProtos(c, rows)
 }
 
 func listedFromSource(o graphcache.SourceObservation, props map[string]propertyInfo, terms map[string]graphcache.VocabTerm, subjectLabels map[string]string) (observations.Listed, error) {
@@ -98,6 +90,7 @@ func listedFromSource(o graphcache.SourceObservation, props map[string]propertyI
 	if label, ok := subjectLabels[string(o.ValueSubjectID)]; ok {
 		l.ValueSubjectLabel = label
 	}
+	// Matches depictionvalues.FromJoin's non-nil result: depiction_values.image_file_id is NOT NULL.
 	if len(o.DepictionID) > 0 {
 		l.Depiction = &depictionvalues.Value{ID: o.DepictionID, RegionJSON: o.DepictionRegion, ImageFileID: o.DepictionImageFileID}
 	}

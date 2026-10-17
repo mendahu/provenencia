@@ -73,12 +73,12 @@ func UpdateObservation(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		paths, err := depictionPaths(c, []observations.Listed{row})
+		protos, err := listedProtos(c, []observations.Listed{row})
 		if err != nil {
 			return err
 		}
 		out = &engine.UpdateObservationResponse{
-			Observation: listedObservationProto(row, paths),
+			Observation: protos[0],
 			Effects:     writeEffectsProto(wrote),
 		}
 		return nil
@@ -340,23 +340,24 @@ func optionalID(s string) ([]byte, error) {
 
 func observationProto(o observations.Observation) *engine.Observation {
 	return &engine.Observation{
-		Id:             uuidString(o.ID),
-		Ref:            o.Ref,
-		CitationId:     uuidString(o.CitationID),
-		SubjectId:      uuidString(o.SubjectID),
-		PropertyId:     uuidString(o.PropertyID),
-		Polarity:       o.Polarity,
-		ValueText:      o.ValueText,
-		ValueInteger:   optionalInt64(o.HasInteger, o.ValueInteger),
-		ValueDateId:    uuidString(o.ValueDateID),
-		ValueNameId:    uuidString(o.ValueNameID),
-		ValueSubjectId: uuidString(o.ValueSubjectID),
-		ValueTermId:    uuidString(o.ValueTermID),
-
+		Id:               uuidString(o.ID),
+		Ref:              o.Ref,
+		CitationId:       uuidString(o.CitationID),
+		SubjectId:        uuidString(o.SubjectID),
+		PropertyId:       uuidString(o.PropertyID),
+		Polarity:         o.Polarity,
+		ValueText:        o.ValueText,
+		ValueInteger:     optionalInt64(o.HasInteger, o.ValueInteger),
+		ValueDateId:      uuidString(o.ValueDateID),
+		ValueNameId:      uuidString(o.ValueNameID),
+		ValueSubjectId:   uuidString(o.ValueSubjectID),
+		ValueTermId:      uuidString(o.ValueTermID),
 		ValueDepictionId: uuidString(o.ValueDepictionID),
 	}
 }
 
+// listedObservationProto projects one listed row; call through listedProtos,
+// which resolves the depiction image paths it needs.
 func listedObservationProto(l observations.Listed, paths map[string]string) *engine.Observation {
 	o := observationProto(l.Observation)
 	o.PropertyKey = l.PropertyKey
@@ -377,6 +378,20 @@ func listedObservationProto(l observations.Listed, paths map[string]string) *eng
 		}
 	}
 	return o
+}
+
+// listedProtos projects listed rows to response protos, in order, resolving
+// every depiction image path in one query.
+func listedProtos(c *database.Catalog, rows []observations.Listed) ([]*engine.Observation, error) {
+	paths, err := depictionPaths(c, rows)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*engine.Observation, 0, len(rows))
+	for _, l := range rows {
+		out = append(out, listedObservationProto(l, paths))
+	}
+	return out, nil
 }
 
 // depictionPaths resolves the objects/… path of each listed row's depiction
@@ -409,15 +424,7 @@ func listedWritten(c *database.Catalog, citationID []byte, written []observation
 			rows = append(rows, l)
 		}
 	}
-	paths, err := depictionPaths(c, rows)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]*engine.Observation, 0, len(rows))
-	for _, l := range rows {
-		out = append(out, listedObservationProto(l, paths))
-	}
-	return out, nil
+	return listedProtos(c, rows)
 }
 
 func optionalInt64(has bool, v int64) *int64 {
