@@ -1,7 +1,7 @@
 package match
 
 import (
-	"github.com/mendahu/provenencia/core/autoreconcile"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -21,6 +21,11 @@ import (
 // score time (nameformats.Load). These values stay the fallback when that
 // row is missing, and for callers with no catalog.
 
+// value is the registry's value section (core/matchregistry). The knobs below
+// that it holds read from it, so a number is written once; the rest stay here
+// until their layer lands.
+var value = matchregistry.Default().Value
+
 // ---------------------------------------------------------------------------
 // Words (names and free text)
 
@@ -28,33 +33,24 @@ import (
 // Add a word here; comparison reads this list. A period initial ("O.") never
 // rejoins. Entries are comparison tokens (lowercase, punctuation already
 // dropped). van and de are not here: a typed surname prefix is a part role.
-var SpacedParticles = []string{"o", "mc", "mac", "st", "d", "fitz"}
+var SpacedParticles = value.Words.Particles
 
 // LetterFolds replaces letters that survive accent stripping. Add a letter
 // here; comparison reads this map. Keys are comparison tokens (lowercase).
 // An empty map still drops combining marks, so José and Jose stay a fold.
-var LetterFolds = map[rune]string{
-	'ß': "ss",
-	'æ': "ae",
-	'œ': "oe",
-	'ø': "o",
-	'ł': "l",
-	'đ': "d",
-	'þ': "th",
-	'ı': "i",
-}
+var LetterFolds = value.Words.Folds
 
 // DefaultWordRules: how two words compare.
 var DefaultWordRules = WordRules{
 	// Least edit-distance ratio (1 − edits / longer length) for a spelling
 	// variant: Robins ~ Robbins (0.86) counts, Mary ~ Mark (0.75) does not.
 	// 1 turns fuzzy matching off.
-	FuzzyFloor: Set(autoreconcile.SpellingFloor),
+	FuzzyFloor: Set(value.Words.FuzzyFloor),
 	// An initial against a word it begins: "J." ~ "James".
 	InitialCredit: Set(0.5),
 	// Words at least this long may differ by one added or dropped letter
 	// below FuzzyFloor (Ann ~ Anne, Jon ~ John).
-	ShortVariantMinLength: Set(autoreconcile.SpellingShortMin),
+	ShortVariantMinLength: Set(value.Words.ShortVariantMinLength),
 	Particles:             &SpacedParticles,
 	Folds:                 &LetterFolds,
 	// No alias tables. Scoring reads the catalog; this seed is not a fallback.
@@ -236,13 +232,13 @@ var DatePeriods = map[Property]PeriodProperties{
 // DefaultText: free text (toponyms, remarks). The same normalized text is 1;
 // otherwise shared words, capped at Partial.
 var DefaultText = TextComparer{
-	Partial: Set(0.7),
+	Partial: Set(value.Text.Partial),
 	Words:   DefaultWordRules,
 }
 
 // DefaultIntegers: equal is 1; Tolerance 0 means any difference disagrees.
 var DefaultIntegers = IntegerComparer{
-	Tolerance: Set(int64(0)),
+	Tolerance: Set(value.Integers.Tolerance),
 }
 
 // ---------------------------------------------------------------------------

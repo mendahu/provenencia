@@ -3,8 +3,8 @@ package match
 import (
 	"math"
 
-	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // WordCounts is how common each name word is among a project's filed people:
@@ -32,11 +32,11 @@ func (c NameComparer) CountWords(people [][]namevalue.Value) WordCounts {
 		seen := map[string]bool{}
 		for i := range handle {
 			for _, part := range handle[i].Parts {
-				for _, w := range splitWords(part.Value, r.particles) {
-					if autoreconcile.IsInitial(w) {
+				for _, w := range valuecompare.SplitWords(part.Value, r.particles) {
+					if valuecompare.IsInitial(w) {
 						continue
 					}
-					seen[foldWord(w, r.folds)] = true
+					seen[valuecompare.FoldWord(w, r.folds)] = true
 				}
 			}
 		}
@@ -56,11 +56,11 @@ func (c NameComparer) CountWords(people [][]namevalue.Value) WordCounts {
 // at pop; pop is the larger of the project's People, FrequencyMinPeople, and
 // 2. An initial and a word on one handle or fewer cost nothing.
 func (c NameComparer) wordDiscount(text string, r wordRules) float64 {
-	if autoreconcile.IsInitial(text) {
+	if valuecompare.IsInitial(text) {
 		return 0
 	}
 	counts := setting(c.Frequency, *DefaultNames.Frequency)
-	df := counts.Words[foldWord(text, r.folds)]
+	df := counts.Words[valuecompare.FoldWord(text, r.folds)]
 	if df <= 1 {
 		return 0
 	}

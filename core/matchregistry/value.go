@@ -6,10 +6,10 @@ import "github.com/mendahu/provenencia/core/valuecompare"
 func defaultValue() valuecompare.Rules {
 	return valuecompare.Rules{
 		Words: valuecompare.WordRules{
-			// autoreconcile.SpellingFloor: Robins ~ Robbins (0.86) counts,
+			// the reconciler's old spelling floor: Robins ~ Robbins (0.86) counts,
 			// Mary ~ Mark (0.75) does not.
 			FuzzyFloor: 0.8,
-			// autoreconcile.SpellingShortMin: Ann ~ Anne, Jon ~ John.
+			// the reconciler's old short-word minimum: Ann ~ Anne, Jon ~ John.
 			ShortVariantMinLength: 3,
 			// match foldOnly: a match that exists only after folding.
 			FoldCredit: 0.95,

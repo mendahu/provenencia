@@ -4,9 +4,10 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"unicode"
 
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // The name module (conclusion-reconciliation.md §7.2). The pipeline does the
@@ -36,12 +37,9 @@ import (
 //     type order of the member with the most types. A member that carries
 //     exactly the result is returned as is.
 
-// IsInitial reports whether a word is an initial: a lone cased letter ("J").
-// A lone character in an uncased script (蒋, 王) is a whole word.
-func IsInitial(word string) bool {
-	r := []rune(word)
-	return len(r) == 1 && unicode.ToUpper(r[0]) != unicode.ToLower(r[0])
-}
+// spelling is the shipped spelling rule, the same one the matching layers use,
+// so reconciling and matching agree on what a misspelling is.
+var spelling = matchregistry.Default().Value.Words
 
 type nameModule struct{}
 
@@ -59,7 +57,7 @@ func readName(n *namevalue.Value) (byType map[string]nameUnit, order []string) {
 	parts := append([]namevalue.Part(nil), n.Parts...)
 	sort.SliceStable(parts, func(i, j int) bool { return parts[i].Idx < parts[j].Idx })
 	for _, p := range parts {
-		words := strings.Fields(NormalizeForm(p.Value))
+		words := strings.Fields(valuecompare.NormalizeForm(p.Value))
 		if len(words) == 0 {
 			continue
 		}
@@ -116,7 +114,7 @@ func partFits(short, long string) bool {
 	if short == long {
 		return true
 	}
-	if !IsInitial(short) || IsInitial(long) {
+	if !valuecompare.IsInitial(short) || valuecompare.IsInitial(long) {
 		return false
 	}
 	return []rune(short)[0] == []rune(long)[0]
@@ -130,7 +128,7 @@ func (nameModule) outvotes(_ string, winner, other unit) bool {
 		return false
 	}
 	for i := range w {
-		if SpellingSimilarity(w[i], o[i], SpellingFloor, SpellingShortMin) == 0 {
+		if valuecompare.SpellingSimilarity(w[i], o[i], spelling.FuzzyFloor, spelling.ShortVariantMinLength) == 0 {
 			return false
 		}
 	}
