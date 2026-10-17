@@ -85,3 +85,23 @@ No Fix plan 2.
 
 ## Result
 Gate PASS at `0b08d414` · CI pending · open: none · follow-ups: depiction save-time thumbnail derivative (PRF-1), MNT-1 remnant, CON-4, MNT-5 (S10-39) · to user: —
+
+## Round 3 — user-found blocker (approved by the user, 2026-10-17)
+The user reported the Persons list shows no likeness thumb. Verified: `thumbnailRelPath(_:)` is declared only in the `extension ConclusionListKind` (`ConclusionListPage.swift:70`), not in the protocol, so `Kind.thumbnailRelPath($0)` inside generic `ConclusionListPage` statically dispatches to the `""` default; `PersonsList`'s implementation is never called. T-11 called `PersonsList.thumbnailRelPath` concretely, so it passed. D-18 says the protocol "gains" it. Missed by all five lenses in both rounds.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| USR-1 | CON | blocker | Persons list thumb never shows a likeness (AC-3.3) | Fix now → F-8 | `ConclusionListPage.swift:70` vs protocol body; generic call site `ConclusionListPage.swift:169` |
+
+### Fix plan 3
+**F-8 — Make `thumbnailRelPath` a protocol requirement** (from USR-1)
+Files: `macos/App/Features/Conclusions/ConclusionListPage.swift`, `macos/ProvenenciaTests/PersonsListTests.swift`. Skill: `add-swift-test`.
+Failing test first: in `PersonsListTests`, add a generic helper `func listThumb<K: ConclusionListKind>(_: K.Type, _ row: K.Row) -> String { K.thumbnailRelPath(row) }` and a test `listThumbDispatchesThroughTheKind`: `listThumb(PersonsList.self, header with path "objects/ab/cd.png")` → that path; `listThumb(EventsList.self, any event)` → "". Run it red first (returns "" today).
+Do: declare `static func thumbnailRelPath(_ row: Row) -> String` in the `ConclusionListKind` protocol body, beside `updatedAt`, with the existing doc line moved onto the requirement. Keep the `""` default in the extension. No other change.
+Check: the new test passes; T-11 still passes; scripts/check-pr.sh PASS.
+
+## Round 3 — fix
+Head `5476b3b0`. Gate PASS (orchestrator run). F-8 done; `listThumbDispatchesThroughTheKind` ran red first ("" instead of the path). No review round on this one-line fix; the user approved the round.
+
+## Result (updated)
+Gate PASS at `5476b3b0` · open: none · follow-ups unchanged · to user: —
