@@ -241,7 +241,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-02 — Value compare core and match registry
 
-**Ships.** `core/valuecompare`: pure value types, `Result` (relation + similarity), `Detail` (parts, cause codes, value refs), `Key`, and the text, term and integer comparers. `core/matchregistry` with `Default()` and the value section. Registry keys use S11-23's kinds and property keys. One repo-walking guard (purity and numeric literals over a list of layer packages), contract tests, and the inventory-drift guard. The matching skill (`add-match-rule`), first version.
+**Ships.** `core/valuecompare`: pure value types, `Result` (relation + similarity), `Detail` (parts, cause codes, value refs), `Key`, and the text, term and integer comparers. `core/matchregistry` with `Default()` and the value section. Registry keys are `core/vocabkey` constants (S11-23) used directly as typed `SubjectType` / `PropertyKey` keys; no re-declared key constants. The purity guard lists `core/vocabkey`. One repo-walking guard (purity and numeric literals over a list of layer packages), contract tests, and the inventory-drift guard. The matching skill (`add-match-rule`), first version.
 **Not this PR.** Names (S11-03), dates (S11-04), any caller (S11-05).
 **Check.** `go test ./core/valuecompare/... ./core/matchregistry/...` passes with no build tags; the contract tests run against every comparer.
 **Context.** [Layer 1](comparison-layers.md#layer-1-value-comparison), [relations](comparison-layers.md#relations), [detail](comparison-layers.md#detail), [purity](comparison-layers.md#purity-requirements), [match registry](comparison-layers.md#match-registry).
@@ -302,7 +302,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 **Ships.** `core/subjectcompare` and the registry's subject section: per Subject type and property, agree weight and conflict penalty (event type: low agree, very large conflict); the pairs (sex with gender; `date` with `start_date` / `end_date`); similarity and evidence.
 **Not this PR.** Profiles (S11-11), lifespan (S11-12), callers (S11-13).
 **Check.** The layer 3 examples hold (name 1.0 / 2.5; name + gender 1.0 / 3.1; birth vs death with matching dates ≈ 0.09).
-Ports `subjectvocab`'s `TestDefaultProfileCardinality` as "every registry `PropertyKey` is a seeded Property". Extends the matching skill.
+Ports `subjectvocab`'s `TestDefaultProfileCardinality` as "every registry `PropertyKey` is a `vocabkey` constant"; S11-23's `TestVocabKeysMatchSeed` ties those constants to the seed. Extends the matching skill.
 **Context.** [Layer 3](comparison-layers.md#layer-3-subject-comparison); rule "Sparse data first".
 
 #### S11-11 — Subject profile and entity compare
