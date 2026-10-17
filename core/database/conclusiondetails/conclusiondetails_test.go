@@ -229,24 +229,70 @@ func TestForEntityFieldsFollowTheRecords(t *testing.T) {
 	}
 }
 
-// The Person page lists no depiction field before the gallery exists (S10-35).
-func TestForEntityLikenessHasNoField(t *testing.T) {
-	f := newFixture(t)
-	src := f.source("Register")
-	a := f.personOn(src)
-	f.cite(a, f.nameIn(a, "given=James|surname=Robins"))
+// likenessOn files a likeness of s on src, saved now: shade picks its crop.
+func (f *fixture) likenessOn(src sources.Source, s subjects.Subject, shade uint8) observations.Observation {
+	f.t.Helper()
 	likeness, err := properties.Lookup(f.c, "likeness", vocabkey.OriginProvenencia)
-	must(t, err)
-	art := observationstest.FileArtifact(t, f.c, userID, src.ID)
-	_, _, err = observationstest.SaveCitation(f.c, userID, art, observations.Input{
-		SubjectID: a.ID, PropertyID: likeness.ID,
-		Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 40, 30, 100)},
+	must(f.t, err)
+	art := observationstest.FileArtifact(f.t, f.c, userID, src.ID)
+	res, _, err := observationstest.SaveCitation(f.c, userID, art, observations.Input{
+		SubjectID: s.ID, PropertyID: likeness.ID,
+		Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(f.t, 40, 30, shade)},
 	})
-	must(t, err)
+	must(f.t, err)
+	return res.Observations[0]
+}
+
+// The Person page lists likenesses apart from its fields, earliest first.
+func TestForEntityLikenesses(t *testing.T) {
+	f := newFixture(t)
+	register, census := f.source("Register"), f.source("Census")
+	a, b := f.personOn(register), f.personOn(census)
+	f.cite(a, f.nameIn(a, "given=James|surname=Robins"))
+	oa := f.likenessOn(register, a, 100)
+	ob := f.likenessOn(census, b, 200)
 	h := f.promote(a, nil)
+	f.promote(b, h)
 	d := f.detail(h)
 	if len(d.Fields) != 1 || d.Fields[0].PropertyKey != "name" {
 		t.Fatalf("fields %+v", d.Fields)
+	}
+	if len(d.Likenesses) != 2 {
+		t.Fatalf("likenesses %+v", d.Likenesses)
+	}
+	first := d.Likenesses[0]
+	if first.Record.SourceTitle != "Register" || !bytes.Equal(first.Record.ObservationID, oa.ID) ||
+		!bytes.Equal(first.Record.CitationID, oa.CitationID) || len(first.ImageFileID) != 16 {
+		t.Fatalf("first %+v", first)
+	}
+	if !bytes.Equal(d.Likenesses[1].Record.ObservationID, ob.ID) || d.Likenesses[1].Record.SourceTitle != "Census" {
+		t.Fatalf("second %+v", d.Likenesses[1])
+	}
+
+	only := newFixture(t)
+	n := only.personOn(only.source("Register"))
+	only.cite(n, only.nameIn(n, "given=Ann"))
+	if got := only.detail(only.promote(n, nil)); len(got.Likenesses) != 0 {
+		t.Fatalf("likenesses %+v", got.Likenesses)
+	}
+}
+
+// A likeness whose image File is not a PNG is neither listed nor the lead.
+func TestForEntityLikenessNeedsAPNG(t *testing.T) {
+	f := newFixture(t)
+	src := f.source("Register")
+	a := f.personOn(src)
+	oa := f.likenessOn(src, a, 100)
+	h := f.promote(a, nil)
+	db, err := f.c.DB()
+	must(t, err)
+	var image []byte
+	must(t, db.QueryRow(`SELECT dv.image_file_id FROM observations o
+		JOIN depiction_values dv ON dv.id = o.value_depiction_id WHERE o.id = ?`, oa.ID).Scan(&image))
+	_, err = db.Exec(`UPDATE files SET media_type = 'image/jpeg' WHERE id = ?`, image)
+	must(t, err)
+	if d := f.detail(h); len(d.Likenesses) != 0 {
+		t.Fatalf("likenesses %+v", d.Likenesses)
 	}
 }
 

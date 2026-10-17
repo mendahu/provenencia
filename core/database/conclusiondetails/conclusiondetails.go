@@ -7,7 +7,8 @@
 // Field values are the node's auto-reconciler ranks. Term labels come from
 // the graph vocabulary. The Why stays a SQL read each time the page opens.
 // A Property no
-// record mentions isn't returned. Which empty fields a page still shows is
+// record mentions isn't returned. Likenesses are listed apart from the
+// fields, earliest first (likenesses.ForEntities). Which empty fields a page still shows is
 // the page's choice. Go returns structures; the app formats text.
 // Reconciliation Claims are never in these tables: when they ship, a
 // composer lays an accepted claim over the auto-reconciled value here.
@@ -23,6 +24,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/likenesses"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue"
@@ -99,11 +101,19 @@ type Field struct {
 	Outcomes    []Outcome         // by value rank (none last), then Observation id
 }
 
+// LikenessTile is one likeness a gallery shows: its image, and the outcome of
+// the earliest Observation that went into it, which the tile opens.
+type LikenessTile struct {
+	ImageFileID []byte
+	Record      Outcome
+}
+
 // Detail is one handle's detail.
 type Detail struct {
 	Entity      canonicalentities.Entity
 	MemberCount int // accepted members
 	Fields      []Field
+	Likenesses  []LikenessTile // earliest recorded first
 }
 
 const (
@@ -163,8 +173,22 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 	if err := attachValues(c.Graph(), n, byProp); err != nil {
 		return Detail{}, err
 	}
-	if err := loadOutcomes(db, entityID, byProp); err != nil {
+	gallery, err := likenesses.ForEntities(db, [][]byte{entityID})
+	if err != nil {
 		return Detail{}, err
+	}
+	leads := map[string]bool{}
+	for _, l := range gallery[string(entityID)] {
+		leads[string(l.ObservationIDs[0])] = true
+	}
+	leadOutcomes, err := loadOutcomes(db, entityID, byProp, leads)
+	if err != nil {
+		return Detail{}, err
+	}
+	for _, l := range gallery[string(entityID)] {
+		if o, ok := leadOutcomes[string(l.ObservationIDs[0])]; ok {
+			d.Likenesses = append(d.Likenesses, LikenessTile{ImageFileID: l.ImageFileID, Record: o})
+		}
 	}
 	for _, f := range fields {
 		f.State = state(f.Values, f.cardinality)
@@ -326,11 +350,15 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 	return nil
 }
 
-func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field) error {
+// loadOutcomes attaches each field's outcomes to it. It also returns the
+// outcomes of the Observations in leads (a gallery's earliest records), which
+// belong to no field; their Recorded value has no Date or Name.
+func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field, leads map[string]bool) (map[string]Outcome, error) {
 	rows, err := q.Query(sqlOutcomes, entityID)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	leadOutcomes := map[string]Outcome{}
 	type pending struct {
 		f              *Field
 		o              Outcome
@@ -353,13 +381,19 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field) error {
 			&o.CredibilityKey, &o.ClaimConfidenceKey,
 			&o.Provenance.Credibility, &o.Provenance.Uncertain, &o.Provenance.ClaimConfidence); err != nil {
 			_ = rows.Close()
-			return err
-		}
-		f, ok := byProp[string(propertyID)]
-		if !ok {
-			continue
+			return nil, err
 		}
 		o.ValueRank = int(rank.Int64)
+		f, ok := byProp[string(propertyID)]
+		if !ok {
+			if leads[string(o.ObservationID)] {
+				o.Recorded.Text, o.Recorded.HasText = text.String, text.Valid
+				o.Recorded.Integer, o.Recorded.HasInteger = integer.Int64, integer.Valid
+				o.Recorded.TermID = termID
+				leadOutcomes[string(o.ObservationID)] = o
+			}
+			continue
+		}
 		o.Recorded.Text, o.Recorded.HasText = text.String, text.Valid
 		o.Recorded.Integer, o.Recorded.HasInteger = integer.Int64, integer.Valid
 		o.Recorded.TermID = termID
@@ -374,15 +408,15 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field) error {
 	err = rows.Err()
 	_ = rows.Close()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	dates, err := datevalues.LookupManyTx(q, dateIDs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	names, err := namevalues.LookupManyTx(q, nameIDs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, p := range all {
 		if d, ok := dates[string(p.dateID)]; ok {
@@ -393,5 +427,5 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field) error {
 		}
 		p.f.Outcomes = append(p.f.Outcomes, p.o)
 	}
-	return nil
+	return leadOutcomes, nil
 }
