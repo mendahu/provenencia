@@ -495,13 +495,7 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 
 Agreed 2026-10-17. Record linkage calls the first step "blocking", which reads as "rejected"; we don't use that word.
 
-| Term | Means |
-|---|---|
-| **Shortlisting** | The cheap index lookup that decides which handles get compared at all |
-| **Shortlist key** | A normalized value used for that lookup: a name word, an event type + year, a toponym |
-| **Shortlisted handle** | A handle the lookup returned. Nothing has been compared yet |
-| **Nominated handle** | A handle reached through a link from an accepted pair; no lookup needed |
-| **Candidate** | A shortlisted or nominated handle that has been scored and kept (top K) |
+The terms are defined in the model's [glossary](../../matching-model.md#glossary): shortlisting, shortlist key, shortlisted handle, nominated handle, candidate.
 
 Flow: shortlist or nominate → score → keep the top K as candidates → accept.
 
