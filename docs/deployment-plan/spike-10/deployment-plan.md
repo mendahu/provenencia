@@ -140,7 +140,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **A File is released only when nothing points at it, and one purge removes its object.** Today `deleteimpact.CountFilePointers` counts only `artifacts.file_id`, owned-file releases are hand-coded per table, and only Artifact delete removes objects from disk (`artifacts.purgeReleasedObjects`). S10-55 counts every `catalogmodel` FK into `files` (except a thumbnail's own source link), derives owned releases from `catalogmodel`, and moves collect-and-purge into one shared after-commit step that Artifact delete also uses. After it, a new owned file pointer is two `catalogmodel` FK declarations, with no `deleteimpact` code.
 - **Deletes follow the evidence chain.** Deleting a depiction Observation releases its value row and the image File when unused, and the shared purge removes the object. A Citation still cannot be deleted while it has Observations, and an Artifact while it has Citations, so when a Citation goes, every image made from it has gone. An image is never an Artifact: it is not listed, opened, or deleted as one.
 - **`likeness` is new catalogs only.** Install seeds it; no migration seeds it and open does not heal. Researchers cannot create a depiction Property (registry-only, like `term`). A later one-off CLI, outside this map, brings the dogfood projects up to date (answered 2026-10-16).
-- **A gallery is the reconciled likeness values.** `depiction` has an auto-reconciler module like every value type (S10-52). The value's key is its image File, so the same pixels drawn twice are one value; a stronger negative Observation denies it, and a provisional member's image does not show. `likeness` is `multiple`, so every distinct image survives. An image carried only by weak evidence is cached as `weak` and still shows in the gallery (answered 2026-10-16). The Person page has no Likeness field row; S10-35 draws the gallery from the cache.
+- **A gallery is the reconciled likeness values.** `depiction` has an auto-reconciler module like every value type (S10-52). The value's key is its image File, so the same pixels drawn twice are one value; a stronger negative Observation denies it, and a provisional member's image does not show. `likeness` is `multiple`, so every distinct image survives. An image carried only by weak evidence is cached as `weak` and still shows in the gallery (answered 2026-10-16). The Person page has no Likeness field row; S10-35 draws the gallery from the cache. **Earliest** is first recorded: a likeness value orders by the smallest Observation id among the records that went into it, so redrawing a face keeps its place (answered 2026-10-17). The gallery, the Person page lead, the Persons list thumb, and S10-39's fallback all read it from one Go read (S10-35).
 - **A preferred portrait is a display pointer, not a claim.** One likeness Observation on that person. The gallery still lists every crop. The Person page lead and the Persons list thumb use the chosen crop. With no choice, both use the earliest likeness. Deleting that likeness clears the pointer and the thumb falls back. The choice is made on the Person page. Promote does not pick a portrait.
 - **`engagement` titles like any other event.** Key `engagement`, label Engagement, next to `marriage` in `subjectvocab` `seedTerms`. New catalogs get it from Install. Existing catalogs are not migrated; the term is added there by hand. Titles follow the subject count for every event type: one subject is *{Type} of {A}*, two are *{Type} of {A} and {B}*, and three or more are *{Type} of {A} et al.* A marriage of two still reads *Marriage of A and B*. An engagement of two reads *Engagement of A and B*.
 
@@ -742,6 +742,8 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-35 — Person gallery and list thumb
 
+**Plan:** [`prs/S10-35-person-gallery.md`](prs/S10-35-person-gallery.md) — Draft
+
 **Briefs:** S10-D12 and S10-D9, already designed before S10-23 and S10-22.
 
 | | |
@@ -749,7 +751,7 @@ S10-33 crop cache — descoped 2026-10-16
 | **In** | Person detail shows every likeness crop for the handle: its cached `likeness` values (the image File column S10-52 adds to `auto_reconciler_values`) with reason `kept` or `weak`, so provisional members and denied crops are already out. That admit rule is one named `autoreconcile.Reason` method beside `Displayed` (`kept` or `weak`: a weak photo does not contradict another photo), which S10-39's thumb fallback reuses; not a `reason IN (…)` literal in a new SQL read. Persons list lead thumb shows the earliest likeness when one exists, and the placeholder when it does not. "Earliest" is defined once, in the Go read that the page lead, the list thumb, and S10-39's fallback all use. Events and Places lists stay on the placeholder. |
 | **Out** | Marking a preferred portrait (S10-39 fills that frame on the same boards). Place and event galleries. |
 | **Testable** | Two faces of one person both appear on the page. The Persons list shows the earliest crop. A person with no likeness keeps the placeholder. |
-| **Depends on** | S10-23, S10-52, S10-D12, S10-D9 |
+| **Depends on** | S10-23, S10-52, S10-D12, S10-D9. Ships after S10-34: its manual check draws faces in the composer (answered 2026-10-17) |
 
 #### S10-39 — Preferred portrait
 
