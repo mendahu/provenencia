@@ -1,5 +1,7 @@
 # Provenencia — Promote Graph Alignment
 
+> **Spike 11 replaces §4.1, §5, §6 and §12.** The target model is [matching-model.md](matching-model.md); until then those sections describe the running code.
+
 ## Status
 
 **Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). Renamed from “Promote alignment” to **Promote graph alignment** (2026-10-07) so the name names the graph-to-graph proposal, not property-only matching. It replaced the per-Property compare checklist and the per-Subject walk; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3–§5.4 now state its model rules. How we got here, and the directions we turned down: [`ideas/archive/promote-matching.md`](ideas/archive/promote-matching.md). Matching today: [`matching.md`](matching.md).
@@ -92,6 +94,8 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg *Config) Pr
 
 ## 4.1 Abstraction, composition, and tunables
 
+> Superseded in Spike 11; see [matching-model.md](matching-model.md).
+
 **Goal:** code that is well abstracted, strongly separated by concern, and highly composable. Graph alignment must not become a monolith that embeds sameness logic, catalog I/O, and UI drafting in one place.
 
 **Compose smaller pure units upward:**
@@ -123,6 +127,8 @@ Defaults ship for the obituary golden and table tests. Real tuning is **empirica
 
 # 5. Walking: best-first propagation
 
+> Superseded in Spike 11; see [matching-model.md](matching-model.md).
+
 This is collective entity resolution: graph alignment by propagation (cf. PARIS, similarity flooding). The walk is **best-first, not recursive**. A depth-first walk commits to whatever it reaches first; a priority queue lets the strongest matches settle first, so the weaker ones are decided with the most context.
 
 1. **Seed.** For each fixed pair (s, H): look at each bridge between `s` and an unmapped neighbor `t` on the layer, from whichever end `s` is on. An undirected signature (spouse) corresponds either way; a directed one (parent of, part of) corresponds only from the same end, so a parent maps to a parent (§ Direction). For each corresponding edge from H to a handle G in `canon`, push the candidate (t, G).
@@ -152,6 +158,8 @@ A layer is **one Source’s Subjects**, not one connected component. *Map the re
 ---
 
 # 6. Scoring
+
+> Superseded in Spike 11; see [matching-model.md](matching-model.md).
 
 Nothing names a Property or a relationship. Every weight comes from metadata or from data.
 
@@ -271,6 +279,8 @@ Spike 9 was replanned around this on 2026-10-06. The close note is [`deployment-
 ---
 
 # 12. Implementation status
+
+> Superseded in Spike 11; see [matching-model.md](matching-model.md).
 
 As built at the end of Spike 9 slice 9 (S9-41 – S9-44 and the review fixes stacked on them). Read this before assuming a section above is in the code.
 

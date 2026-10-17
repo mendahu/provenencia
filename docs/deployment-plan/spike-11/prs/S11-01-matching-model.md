@@ -1,6 +1,6 @@
 # S11-01 — One-page matching model
 
-**Status:** Planned
+**Status:** Landed in [#432](https://github.com/mendahu/provenencia/pull/432) (2026-10-17)
 **Spike / slice:** Spike 11 · Slice 1 — Graspable model and pure foundations
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: docs only)
@@ -13,6 +13,7 @@
 **Rules that bind:** —
 **Context:** [`comparison-layers.md`](../comparison-layers.md) (whole), [`claim-evidence.md`](../claim-evidence.md), working rules "Registry numbers: carry over, then estimate", "One match registry", "Matching is a stack of pure layers"; [`ideas/matching-test-suite.md`](../../../ideas/matching-test-suite.md) "First: make the algorithm graspable"
 **Planned:** 2026-10-17 against `main` @ `af50bd6`
+**Changed in ship (2026-10-17):** lifespan keys under `subject`, `sex_at_birth` keys, key grammar, worked example counts the lifespan agree, narrower banners — user answers Q1–Q3 in the ship log.
 **Review:** [`S11-01-matching-model.review.md`](S11-01-matching-model.review.md) — Fits with changes / Not ready → fixed, 1 round
 
 ### Implementer — read this first
@@ -152,7 +153,7 @@ None — docs only.
    6 graph alignment    layer × canon       → rows: target, band, contested, reasons
    ```
 3. **Layer table:** one row per layer: package, input, output, registry section (AC-1.2).
-4. **Worked example:** Gracie (AC-1.3). Name `Same` → property agree → her own evidence 2.5. Her birth on both sides: event type agrees (0.5) and date `Same` (2), so the birth's own evidence is 2.5. Birth segment: one-cardinality support 1.5 + credit 0.5 × 2.5 = 2.75. Total evidence 2.5 + 2.75 = 5.25 ≥ strong 4 → strong; no conflict → not contested. (With only the birth on one side, there is no lifespan conflict and its 0.1 agree is not counted, since one side has no lifespan.)
+4. **Worked example:** Gracie (AC-1.3). Name `Same` → property agree; both sides derive the lifespan "born 1 May 1901" from their birth, the windows are consistent, and `subject.person.lifespan.Agree` 0.1 counts → her own evidence 2.5 + 0.1 = 2.6. Her birth on both sides: event type agrees (0.5) and date `Same` (2), so the birth's own evidence is 2.5. Birth segment: one-cardinality support 1.5 + credit 0.5 × 2.5 = 2.75. Total evidence 2.6 + 2.75 = 5.35 ≥ strong 4 → strong; no conflict → not contested.
 5. **Glossary** (D-3) and **retired words** (D-4).
 6. **Knob inventory** (D-6, D-7): the table below.
 7. **Not knobs** and **removed knobs** (AC-3.3): the two lists below.
@@ -196,10 +197,15 @@ None — docs only.
 | `value.Integers.Tolerance` | 0 | `DefaultIntegers.Tolerance` | Most an integer pair may differ and be `Near` |
 | `subject.person.name.Agree` | 2.5 | `graphalign` name `PropertyScale.Weight` | Points for a matching name |
 | `subject.person.name.Conflict` | 3 | `graphalign` name `PropertyScale.Contradiction` | Points lost for a different name |
-| `subject.person.sex.Agree` | 0.6 | `graphalign` sex / gender `PropertyScale.Weight` | Points for matching sex or gender (one pair) |
-| `subject.person.sex.Conflict` | 1 | `graphalign` sex / gender `PropertyScale.Contradiction` | Points lost when they differ |
+| `subject.person.sex_at_birth.Agree` | 0.6 | `graphalign` sex / gender `PropertyScale.Weight` | Points for matching sex or gender (the `sex_at_birth` / `gender` pair) |
+| `subject.person.sex_at_birth.Conflict` | 1 | `graphalign` sex / gender `PropertyScale.Contradiction` | Points lost when they differ (the `sex_at_birth` / `gender` pair) |
 | `subject.person.lifespan.Agree` | 0.1 | estimate: near zero, the dates are already counted through their segments | Points for overlapping lifespans |
 | `subject.person.lifespan.Conflict` | 20 | estimate: impossible together, must never recover | Points lost for impossible lifespans |
+| `subject.person.lifespan.MaxYears` | 110 | estimate: longest plausible human life | Born to died, at most |
+| `subject.person.lifespan.ParentMinYears` | 12 | estimate: the design's "about 12–60 years" | Youngest age at a child's birth |
+| `subject.person.lifespan.ParentMaxYears` | 60 | estimate: the design's "about 12–60 years" | Oldest age at a child's birth |
+| `subject.person.lifespan.MotherMaxYears` | 50 | estimate: "narrower for mothers"; used only when the parent's sex is recorded female | Oldest mother at a child's birth |
+| `subject.person.lifespan.MarriageMinYears` | 14 | estimate: the design's "roughly 14 or older" | Youngest age at a marriage |
 | `subject.event.event_type.Agree` | 0.5 | estimate: generic, says little alone (decided low) | Points for the same event type |
 | `subject.event.event_type.Conflict` | 20 | estimate: a birth is never a death | Points lost for different event types |
 | `subject.event.date.Agree` | 2 | estimate: today's cold-start frequency weight ln(0.85 / 0.1) ≈ 2.1, rounded | Points for matching dates (one pair with start / end) |
@@ -207,12 +213,7 @@ None — docs only.
 | `subject.place.toponym.Agree` | 3 | estimate: today's cold-start ln(0.9 / 0.1) + toponym `PropertyAgreement` 1 ≈ 3.2, rounded, so a toponym alone reads medium | A matching toponym alone reads medium |
 | `subject.place.toponym.Conflict` | 3 | `graphalign` `DefaultConfig.ConflictPenalty` | Points lost for different toponyms |
 | `subject.Pairs.event.date` | `date` with `start_date` / `end_date` | `match.DatePeriods` | Compared as one period |
-| `subject.Pairs.person.sex` | `sex_at_birth` with `gender` | decided ([`comparison-layers.md`](../comparison-layers.md#layer-3-subject-comparison)) | Compared as one pair |
-| `lifespan.MaxYears` | 110 | estimate: longest plausible human life | Born to died, at most |
-| `lifespan.ParentMinYears` | 12 | estimate: the design's "about 12–60 years" | Youngest age at a child's birth |
-| `lifespan.ParentMaxYears` | 60 | estimate: the design's "about 12–60 years" | Oldest age at a child's birth |
-| `lifespan.MotherMaxYears` | 50 | estimate: "narrower for mothers"; used only when the parent's sex is recorded female | Oldest mother at a child's birth |
-| `lifespan.MarriageMinYears` | 14 | estimate: the design's "roughly 14 or older" | Youngest age at a marriage |
+| `subject.Pairs.person.sex_at_birth` | `sex_at_birth` with `gender` | decided ([`comparison-layers.md`](../comparison-layers.md#layer-3-subject-comparison)) | Compared as one pair |
 | `segment.OneSupport` | 1.5 | `graphalign` `EdgeSupportLow` | Points for a matching one-cardinality link (birth, death) |
 | `segment.OneCredit` | 0.5 | `graphalign` `NeighborCreditLow` | Share of the neighbor's own evidence passed on, one-cardinality |
 | `segment.OtherSupport` | 0.25 | `graphalign` `EdgeSupportHigh` | Points for any other matching link |
@@ -267,7 +268,7 @@ Check: every layer in the diagram has a table row; package names match the map's
 **STEP-2 — Worked example**
 Files: `docs/matching-model.md` (new).
 Do: write the Gracie trace (§6 outline item 4) using only inventory numbers (AC-1.3).
-Check: each number in the example appears in the inventory table, and the sums are 2.5, 2.75 and 5.25.
+Check: each number in the example appears in the inventory table, and the sums are 2.6, 2.75 and 5.35.
 
 **STEP-3 — Glossary and retired words**
 Files: `docs/matching-model.md` (new).
@@ -286,7 +287,7 @@ Check: every exported var, const and `Config` field in `core/match/registry.go` 
 
 **STEP-6 — Banners and markers**
 Files: `docs/matching.md`, `docs/promote-graph-alignment.md`.
-Do: add one blockquote line directly under each file's `# ` title: `> **Spike 11 replaces this page.** The target model is matching-model.md.`, with matching-model.md written as a relative Markdown link. In `docs/promote-graph-alignment.md`, add one blockquote line directly under each of the `## 4.1`, `# 5`, `# 6` and `# 12` headings: `> Superseded in Spike 11; see matching-model.md.`, with the same link (D-5). Heading text is unchanged.
+Do: add one blockquote line directly under each file's `# ` title: `> **Spike 11 replaces this page.** The target model is matching-model.md; until then this page describes the running code.` in `docs/matching.md`, and `> **Spike 11 replaces §4.1, §5, §6 and §12.** The target model is matching-model.md; until then those sections describe the running code.` in `docs/promote-graph-alignment.md`, each with matching-model.md as a relative Markdown link. In `docs/promote-graph-alignment.md`, add one blockquote line directly under each of the `## 4.1`, `# 5`, `# 6` and `# 12` headings: `> Superseded in Spike 11; see matching-model.md.`, with the same link (D-5). Heading text is unchanged.
 Check: both files link to `matching-model.md`.
 
 **STEP-7 — Wire and docs**
