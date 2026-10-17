@@ -10,7 +10,7 @@ Brief files are written **just before** the PR they gate, not up front. This ind
 
 | Step | View | Gates | Notes |
 | --- | --- | --- | --- |
-| [S10-D12](S10-D12-person-detail.md) | Person detail | **S10-23** | Board agreed 2026-10-16. PDP-1 to PDP-6 shipped in S10-23 ([#407](https://github.com/mendahu/provenencia/pull/407)). Sex / gender Badge as an eyebrow above the name, 120pt header thumb on every Conclusion page, four tints (non-binary is lapis, not the board's copper), sex at birth borrows and says “· at birth”. The likeness gallery **S10-35** fills and the preferred-portrait control **S10-39** fills stay in this brief; **S10-39** archives it |
+| [S10-D12](S10-D12-person-detail.md) | Person detail | **S10-23** | Board agreed 2026-10-16. PDP-1 to PDP-6 shipped in S10-23 ([#407](https://github.com/mendahu/provenencia/pull/407)); PDP-7 to PDP-9 (gallery, tile open, header thumb) shipped in S10-35 ([#446](https://github.com/mendahu/provenencia/pull/446)). Sex / gender Badge as an eyebrow above the name, 120pt header thumb on every Conclusion page, four tints (non-binary is lapis, not the board's copper), sex at birth borrows and says “· at birth”. The preferred-portrait control **S10-39** fills stays in this brief; **S10-39** archives it |
 
 ## Descoped
 

@@ -1,6 +1,6 @@
 # S10-35 — Person gallery and Persons list thumb
 
-**Status:** Planned
+**Status:** Landed in [#446](https://github.com/mendahu/provenencia/pull/446) (2026-10-17)
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-35--person-gallery-and-list-thumb)
 **Brief:** [S10-D12](../design/S10-D12-person-detail.md) (PDP-7 to PDP-9 ship here), board agreed 2026-10-16; [S10-D9](../design/archive/S10-D9-persons-list.md) (PSL-7 ships here), board agreed before S10-22
@@ -29,6 +29,10 @@
 ---
 
 **Machines.** STEP-1 to STEP-3 and STEP-4's Go tests run on Linux. STEP-4's `./scripts/generate-proto.sh` needs `protoc`, `protoc-gen-go`, and `protoc-gen-swift`. STEP-5 to STEP-9, `scripts/check-pr.sh`'s Xcode stage, and §10 need a Mac. On a machine without them, run every check it can, and report each one it could not run as not run.
+
+## Landed
+
+No differences from this plan. The manual check in section 10 (faces drawn in S10-34's composer, VoiceOver, the image-state outline) needs a person at the Mac and was not run by the implementer; the Go and Swift tests in section 8 cover every AC except the pixels of the outline and the unreadable-file mark.
 
 ## 1. Objective
 
