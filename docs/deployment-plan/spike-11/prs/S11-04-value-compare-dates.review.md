@@ -1,7 +1,7 @@
 # Review — S11-04 Value compare: dates
 
-**Verdict:** round 1 — Fits with changes / Not ready → every finding fixed; round 2 pending
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes; every finding fixed, no blocker open
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
@@ -64,3 +64,18 @@
 
 ### X-9 · minor · Smaller choices
 **Answer:** Fixed: the generator's shape, the builders, `Default()` rules in the contract, a day with no month reads as its year, later / earlier windows, the cause when a fails first, `civilFromDays`' algorithm, STEP-4's and STEP-6's checks, the D-8 example (`*..-54422`), AC-1.6's wording, and 2000 pairs per seed in T-7.
+
+## Round 2
+
+Every round-1 answer checked OK by a fresh reviewer (one stale `HoldsAt` mention in §1, now removed).
+
+### X-10 · blocker · STEP-2 needs the builders STEP-4 creates
+**Answer:** Fixed. STEP-2 creates `date_test.go` with D-10's builders only; D-10 says what they return, adds `noYearRange()`, and `ofDate` takes pointers (nil is no date).
+
+### X-11 · blocker · T-7's first invariant untestable
+**Answer:** Fixed. T-7 now reads: a `Contains` at `AboutUnits` 1 whose broader side is `ABT` stays `Contains` with the same `Broader` at `AboutUnits` 2; similarity may drop.
+
+### Non-blocking
+**Answer:** Fixed: STEP-1's `rg` is scoped to `core/autoreconcile` and says what `boundEnd` calls in between; §1 no longer lists `HoldsAt`; D-7 (6) says similarity 0; T-7 points at STEP-4's generator. The contract's `label()` printing nothing for dates is left to the implementer's test output (nit).
+
+**Verdict:** Fits with changes — Ready with changes; every finding fixed, no blocker open.
