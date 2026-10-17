@@ -15,6 +15,10 @@
 **Planned:** 2026-10-17 against `main` @ `1c99ef4`
 **Review:** [`S10-57-quick-select.review.md`](S10-57-quick-select.review.md) — Fits, Ready with changes (applied); 2 rounds
 
+## Landed
+
+Differences from this plan: the plan merged as S10-56 in #426, which reused the object store's number, and was renumbered S10-57 on this branch (user decision, 2026-10-17; files, map row, scope heading, and anchors); while Shift is held, Shift+Return and Shift+Space on a selected card do nothing, because `inputMode` is `.selecting` (follow-up). The implementer did not run section 10, so AC-1.5, AC-1.7, the omnibar half of AC-1.6, and the canvas `flagsChanged` monitor are unchecked and left to the user. Otherwise the code follows section 6.
+
 ### Implementer — read this first
 
 1. **This file is the whole task.** Read it top to bottom before you change code. Then read every file under **Current state** and load every skill under **Skills to load**.
