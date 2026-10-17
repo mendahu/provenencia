@@ -30,3 +30,39 @@ type aliasSet struct {
 	roles  map[NameRole]bool
 	kind   AliasKind
 }
+
+// NewAliasIndex indexes tables once per load. Every token is normalized with
+// NormalizeForm, and empty tokens, and sets left with none, are dropped.
+func NewAliasIndex(tables []AliasTable) AliasIndex {
+	var idx AliasIndex
+	for _, table := range tables {
+		roles := make(map[NameRole]bool, len(table.Roles))
+		for _, role := range table.Roles {
+			roles[role] = true
+		}
+		for _, raw := range table.Sets {
+			tokens := make(map[string]bool, len(raw))
+			for _, token := range raw {
+				if n := NormalizeForm(token); n != "" {
+					tokens[n] = true
+				}
+			}
+			if len(tokens) == 0 {
+				continue
+			}
+			idx.sets = append(idx.sets, aliasSet{tokens: tokens, roles: roles, kind: table.Kind})
+		}
+	}
+	return idx
+}
+
+// Hit reports whether one set holds both tokens and allows both roles, and
+// that set's kind. x and y are comparison tokens.
+func (a AliasIndex) Hit(x, y string, rx, ry NameRole) (AliasKind, bool) {
+	for _, set := range a.sets {
+		if set.tokens[x] && set.tokens[y] && set.roles[rx] && set.roles[ry] {
+			return set.kind, true
+		}
+	}
+	return "", false
+}

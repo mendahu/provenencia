@@ -41,13 +41,7 @@ type wordRules struct {
 	initials             bool // whether lone letters match as initials
 	particles            map[string]bool
 	folds                map[rune]string
-	aliases              []aliasSet
-}
-
-// aliasSet is one equivalence set and the roles that may use it.
-type aliasSet struct {
-	tokens map[string]bool
-	roles  map[valuecompare.NameRole]bool
+	aliases              valuecompare.AliasIndex
 }
 
 func (r WordRules) resolve(initials bool) wordRules {
@@ -63,40 +57,8 @@ func (r WordRules) resolve(initials bool) wordRules {
 		initials:      initials,
 		particles:     particles,
 		folds:         setting(r.Folds, *DefaultWordRules.Folds),
-		aliases:       indexAliases(aliasTablesOf(r.Aliases)),
+		aliases:       valuecompare.NewAliasIndex(aliasTablesOf(r.Aliases)),
 	}
-}
-
-func indexAliases(tables []valuecompare.AliasTable) []aliasSet {
-	var sets []aliasSet
-	for _, table := range tables {
-		roles := make(map[valuecompare.NameRole]bool, len(table.Roles))
-		for _, role := range table.Roles {
-			roles[role] = true
-		}
-		for _, raw := range table.Sets {
-			tokens := make(map[string]bool, len(raw))
-			for _, token := range raw {
-				if token != "" {
-					tokens[token] = true
-				}
-			}
-			if len(tokens) == 0 {
-				continue
-			}
-			sets = append(sets, aliasSet{tokens: tokens, roles: roles})
-		}
-	}
-	return sets
-}
-
-func aliasHit(x, y string, roleX, roleY valuecompare.NameRole, sets []aliasSet) bool {
-	for _, set := range sets {
-		if set.tokens[x] && set.tokens[y] && set.roles[roleX] && set.roles[roleY] {
-			return true
-		}
-	}
-	return false
 }
 
 // TextResemblance is how close two free-text strings are for scoring when
@@ -152,7 +114,7 @@ func wordSimilarity(x, y string, roleX, roleY valuecompare.NameRole, r wordRules
 		}
 		return 0
 	}
-	if aliasHit(x, y, roleX, roleY, r.aliases) {
+	if _, ok := r.aliases.Hit(x, y, roleX, roleY); ok {
 		return AliasCredit
 	}
 	fx, fy := valuecompare.FoldWord(x, r.folds), valuecompare.FoldWord(y, r.folds)
