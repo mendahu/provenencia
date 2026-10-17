@@ -19,7 +19,7 @@ enum ConclusionTitleSource: Equatable {
 /// secondary line is per kind: birth and death for Persons, the date and
 /// place for Events, the parent chain for Places.
 ///
-/// - **thumbnail:** always reserved; the kind's `subject_*` mark, never a photo.
+/// - **thumbnail:** always reserved; the kind's `subject_*` mark, or the likeness a Person leads with.
 /// - **title:** auto-reconciled value → *italic* working label → mono ref.
 /// - **meta:** the ref, always shown — even when it is also the title — so the
 ///   column scans.

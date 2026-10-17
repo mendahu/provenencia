@@ -53,7 +53,23 @@ struct ConclusionDetailSection: Equatable, Identifiable {
 /// What the header thumb takes from a kind. One slot, so a later PR adds to
 /// this struct instead of adding another protocol member (S10-23, S10-35).
 struct ConclusionDetailThumbnail: Equatable {
+    /// The kind's mark and its spoken label, shown when there is no image.
+    var mark: PVMarkKey
+    var label: LocalizedStringResource
+    /// The `objects/…` path of the image to show; "" for none.
+    var imageRelPath: String = ""
+    /// Spoken label while the image shows.
+    var imageLabel: String? = nil
     var colors: PVThumbnail.Colors? = nil
+}
+
+/// One likeness tile under Details: the image, its Source's title, and the
+/// composer location its Citation opens at (S10-35).
+struct ConclusionDetailLikeness: Equatable, Identifiable {
+    var id: String
+    var imageRelPath: String
+    var sourceTitle: String
+    var location: WorkspaceLocation
 }
 
 /// The Badge a kind may draw above the title: data, so Event and Place stay
@@ -77,12 +93,13 @@ protocol ConclusionDetailBody: Equatable {
     var sections: [ConclusionDetailSection] { get }
     var thumbnail: ConclusionDetailThumbnail { get }
     var badge: ConclusionDetailBadge? { get }
+    var likenesses: [ConclusionDetailLikeness] { get }
 }
 
 extension ConclusionDetailBody {
     var sections: [ConclusionDetailSection] { [] }
-    var thumbnail: ConclusionDetailThumbnail { .init() }
     var badge: ConclusionDetailBadge? { nil }
+    var likenesses: [ConclusionDetailLikeness] { [] }
 }
 
 /// Shared Conclusion detail chrome (S9-24). A view, not a place: the caller
@@ -91,8 +108,6 @@ extension ConclusionDetailBody {
 struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View {
     let session: WorkspaceSession
     let entityId: String
-    let mark: PVMarkKey
-    let thumbnailLabel: LocalizedStringResource
     let pageIdentifier: String
     let errorIdentifier: String
     let make: (CatalogConclusionDetail) -> Content
@@ -107,8 +122,7 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
             if let handle: QueryHandle<CatalogConclusionDetail> = session.queryHandle(key) {
                 ConclusionDetailLoaded(
                     handle: handle,
-                    mark: mark,
-                    thumbnailLabel: thumbnailLabel,
+                    projectDir: session.projectKey.projectDir,
                     pageIdentifier: pageIdentifier,
                     errorIdentifier: errorIdentifier,
                     make: make,
@@ -149,8 +163,7 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
 
 private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: View>: View {
     @Bindable var handle: QueryHandle<CatalogConclusionDetail>
-    let mark: PVMarkKey
-    let thumbnailLabel: LocalizedStringResource
+    let projectDir: String
     let pageIdentifier: String
     let errorIdentifier: String
     let make: (CatalogConclusionDetail) -> Content
@@ -177,8 +190,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
             case .content(let content, let refreshing):
                 ConclusionDetailHeader(
                     content: content,
-                    mark: mark,
-                    thumbnailLabel: thumbnailLabel,
+                    projectDir: projectDir,
                     summary: summary
                 )
                 VStack(alignment: .leading, spacing: 0) {
@@ -191,11 +203,86 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
                         ReconciledValueRow(model: row)
                     }
                 }
+                if !content.likenesses.isEmpty {
+                    ConclusionDetailLikenessSection(projectDir: projectDir, likenesses: content.likenesses)
+                }
                 ForEach(content.sections) { section in
                     ConclusionDetailRelationshipSection(section: section)
                 }
             }
         }
+    }
+}
+
+/// The Person page's likenesses: a header with the count, then one 96pt crop
+/// per likeness in a wrapping grid, each captioned with its Source. A tile
+/// opens the Citation that holds it (S10-35, S10-D12 PDP-7, PDP-8).
+private struct ConclusionDetailLikenessSection: View {
+    let projectDir: String
+    let likenesses: [ConclusionDetailLikeness]
+
+    @Environment(WorkspaceNavigation.self) private var navigation
+    @FocusState private var focusedID: String?
+
+    private static let column: CGFloat = 120
+    private static let crop: CGFloat = 96
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            PVSectionHeader(title: L10n.Conclusions.likenessesSection, meta: String(likenesses.count))
+            LazyVGrid(
+                columns: [GridItem(
+                    .adaptive(minimum: Self.column, maximum: Self.column),
+                    spacing: PVSpacing.space6,
+                    alignment: .top
+                )],
+                alignment: .leading,
+                spacing: PVSpacing.space7
+            ) {
+                ForEach(likenesses) { tile in
+                    tileView(tile)
+                }
+            }
+            .padding(.top, PVSpacing.space6)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L10n.string(L10n.Conclusions.likenessesSection))
+    }
+
+    private func tileView(_ tile: ConclusionDetailLikeness) -> some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space3) {
+            CachedThumbnail(
+                projectDir: projectDir,
+                relPath: tile.imageRelPath,
+                size: Self.crop,
+                fallbackMark: .subjectPerson
+            )
+            .accessibilityHidden(true)
+            .overlay {
+                Button {
+                    navigation.go(to: tile.location)
+                } label: {
+                    Color.clear
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .focused($focusedID, equals: tile.id)
+                .pvFocusRing(focusedID == tile.id, cornerRadius: PVRadius.sm)
+                .help(Text(L10n.Conclusions.likenessOpenTip))
+                .accessibilityLabel(L10n.Conclusions.likenessTileLabel(tile.sourceTitle))
+                .accessibilityIdentifier("persons.detail.likeness.\(tile.id)")
+            }
+            Text(verbatim: tile.sourceTitle)
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textMuted)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: Self.column, alignment: .leading)
+                .help(Text(verbatim: tile.sourceTitle))
+                .accessibilityHidden(true)
+        }
+        .frame(width: Self.column, alignment: .leading)
     }
 }
 
@@ -241,15 +328,18 @@ private struct ConclusionDetailRelationshipSection: View {
 /// Thumbnail slot · badge, title and the kind's summary · ref and member count.
 private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: View>: View {
     let content: Content
-    let mark: PVMarkKey
-    let thumbnailLabel: LocalizedStringResource
+    let projectDir: String
     let summary: (Content) -> Summary
 
     var body: some View {
         HStack(alignment: .top, spacing: PVSpacing.space7) {
-            PVThumbnail(
-                .init(glyph: .mark(mark), label: thumbnailLabel),
+            CachedThumbnail(
+                projectDir: projectDir,
+                relPath: content.thumbnail.imageRelPath,
                 size: 120,
+                fallbackMark: content.thumbnail.mark,
+                fallbackLabel: content.thumbnail.label,
+                imageLabel: content.thumbnail.imageLabel,
                 colors: content.thumbnail.colors
             )
             VStack(alignment: .leading, spacing: PVSpacing.space4) {

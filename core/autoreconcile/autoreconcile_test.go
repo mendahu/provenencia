@@ -233,3 +233,15 @@ func TestSortKey(t *testing.T) {
 		}
 	}
 }
+
+func TestReasonInGallery(t *testing.T) {
+	for r, want := range map[Reason]bool{
+		ReasonKept: true, ReasonWeak: true,
+		ReasonFolded: false, ReasonOutvoted: false, ReasonDenied: false,
+		ReasonProvisional: false, ReasonNoEvidence: false, ReasonAgainst: false,
+	} {
+		if got := r.InGallery(); got != want {
+			t.Errorf("%s.InGallery() = %v, want %v", r, got, want)
+		}
+	}
+}

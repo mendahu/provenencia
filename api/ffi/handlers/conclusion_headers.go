@@ -4,6 +4,7 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"google.golang.org/protobuf/proto"
 )
@@ -19,8 +20,20 @@ func ListPersonHeaders(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
+		var imageIDs [][]byte
 		for _, h := range headers {
-			out.Headers = append(out.Headers, personHeaderProto(h))
+			if len(h.LikenessImageFileID) > 0 {
+				imageIDs = append(imageIDs, h.LikenessImageFileID)
+			}
+		}
+		paths, err := files.RelPaths(c, imageIDs)
+		if err != nil {
+			return err
+		}
+		for _, h := range headers {
+			ph := personHeaderProto(h)
+			ph.LikenessImageRelPath = paths[string(h.LikenessImageFileID)]
+			out.Headers = append(out.Headers, ph)
 		}
 		return nil
 	})

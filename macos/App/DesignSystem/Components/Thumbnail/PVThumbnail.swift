@@ -33,8 +33,9 @@ struct PVThumbnail: View {
     }
 
     /// A tint and line a feature lays under a mark or symbol (the Person
-    /// page's gender treatment, S10-23). Framing like `size`, so it is an init
-    /// parameter, not part of `Content`.
+    /// page's gender treatment, S10-23). The line also outlines an image; the
+    /// tint does not fill one. Framing like `size`, so it is an init parameter,
+    /// not part of `Content`.
     struct Colors: Equatable {
         var tint: Color
         var line: Color
@@ -65,14 +66,6 @@ struct PVThumbnail: View {
         self.colors = colors
     }
 
-    /// Colours apply to the mark and symbol states only.
-    private var activeColors: Colors? {
-        switch state {
-        case .mark, .symbol: colors
-        case .image, .empty, .loading: nil
-        }
-    }
-
     private var state: State {
         if content.loading { return .loading }
         if content.image != nil { return .image }
@@ -83,10 +76,20 @@ struct PVThumbnail: View {
         }
     }
 
-    private var isFilled: Bool {
+    /// Mark and symbol take the tint; an image and the empty states keep their own fill.
+    private var fillColor: Color {
         switch state {
-        case .image, .mark, .symbol: true
-        case .empty, .loading: false
+        case .mark, .symbol: colors?.tint ?? PVColor.surfaceInset
+        case .image: PVColor.surfaceInset
+        case .empty, .loading: PVColor.surfaceSunken
+        }
+    }
+
+    /// Mark, symbol, and image take the line; the empty states stay subtle.
+    private var lineColor: Color {
+        switch state {
+        case .mark, .symbol, .image: colors?.line ?? PVColor.borderDefault
+        case .empty, .loading: PVColor.borderSubtle
         }
     }
 
@@ -124,11 +127,11 @@ struct PVThumbnail: View {
             }
         }
         .frame(width: size, height: size)
-        .background(activeColors?.tint ?? (isFilled ? PVColor.surfaceInset : PVColor.surfaceSunken))
+        .background(fillColor)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(activeColors?.line ?? (isFilled ? PVColor.borderDefault : PVColor.borderSubtle), lineWidth: 1)
+                .strokeBorder(lineColor, lineWidth: 1)
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(accessibilityLabel))

@@ -12,6 +12,15 @@ struct PersonsListTests {
         )
     }
 
+    @Test func listThumbIsTheLikenessPath() {
+        var withLikeness = header("PER-1", name: "A")
+        withLikeness.likenessImageRelPath = "objects/ab/cd.png"
+        #expect(PersonsList.thumbnailRelPath(withLikeness) == "objects/ab/cd.png")
+        #expect(PersonsList.thumbnailRelPath(header("PER-2")) == "")
+        let event = CatalogEventHeader(entity: CatalogCanonicalEntity(id: "e", ref: "EVT-1", subjectTypeID: "t", label: ""), title: CatalogEventTitle(rule: .ref, ref: "EVT-1"))
+        #expect(EventsList.thumbnailRelPath(event) == "")
+    }
+
     @Test func titleSourceFallsBackNameThenLabelThenRef() {
         #expect(PersonHeaderDisplay.titleSource(header("PER-1", name: "James Robins", label: "Grandpa")) == .name("James Robins"))
         #expect(PersonHeaderDisplay.titleSource(header("PER-2", label: " Unknown father ")) == .label("Unknown father"))

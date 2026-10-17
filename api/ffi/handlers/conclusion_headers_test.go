@@ -116,9 +116,33 @@ func TestListPersonHeaders(t *testing.T) {
 				if h.GetUpdatedRevision() <= 0 || h.GetUpdatedAt() == "" {
 					t.Fatalf("updated %d %q", h.GetUpdatedRevision(), h.GetUpdatedAt())
 				}
+				if h.GetLikenessImageRelPath() != "" {
+					t.Fatalf("likeness path %q on a person without one", h.GetLikenessImageRelPath())
+				}
 				n := h.GetName()
 				if n.GetForm() != "James Jim Robins" || len(n.GetParts()) != 3 || n.GetParts()[2].GetType() != namevalue.PartTypeSurname {
 					t.Fatalf("name %+v", n)
+				}
+			},
+		},
+		{
+			name: "a Person with a likeness carries its image path",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
+				saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
+				promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: personID})
+				return &engine.ListPersonHeadersRequest{ProjectDir: dir}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.ListPersonHeadersResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if len(resp.Headers) != 1 {
+					t.Fatalf("%+v", resp.Headers)
+				}
+				if p := resp.Headers[0].GetLikenessImageRelPath(); !objectPathPattern.MatchString(p) || !strings.HasSuffix(p, ".png") {
+					t.Fatalf("likeness path %q", p)
 				}
 			},
 		},

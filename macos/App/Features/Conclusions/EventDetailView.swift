@@ -12,8 +12,6 @@ struct EventDetailView: View {
         ConclusionDetailPage<EventDetailContent, EventDetailSummary>(
             session: session,
             entityId: entityId,
-            mark: .subjectEvent,
-            thumbnailLabel: L10n.Conclusions.eventNoImage,
             pageIdentifier: "events.detail",
             errorIdentifier: "events.detail.error",
             make: { EventDetailContent(detail: $0, orders: session.nameFormat) },
