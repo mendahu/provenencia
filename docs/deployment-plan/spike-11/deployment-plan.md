@@ -91,7 +91,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-02 | Value compare core and match registry | 2 | `valuecompare` contract, `Key`, text / term / integer, `matchregistry` skeleton and value section, the guard, the matching skill | — | S11-01, S11-22, S11-23 | [plan](prs/S11-02-value-compare-core.md) | Landed #441 |
 | S11-03 | Value compare: names | 2 | Name comparer on relations; initials and aliases in word similarity; alias seeds to `namealiases` | — | S11-02 | [plan](prs/S11-03-value-compare-names.md) | Landed #447 |
 | S11-04 | Value compare: dates | 2 | Date comparer on relations; date windows move in; `ABT` as a range | — | S11-02 | [plan](prs/S11-04-value-compare-dates.md) | Landed #445 |
-| S11-05 | Migrate matching onto value compare | 2 | `match`, `graphalign`, `promotealign` call `valuecompare`; `match`'s comparers deleted | — | S11-03, S11-04 | — | Scoped |
+| S11-05 | Migrate matching onto value compare | 2 | `match`, `graphalign`, `promotealign` call `valuecompare`; `match`'s comparers deleted | — | S11-03, S11-04 | [plan](prs/S11-05-migrate-matching.md) | Draft |
 | S11-06 | Migrate the reconciler onto value compare | 2 | `Compatible`, keys, grouping policy, place-chain windows | — | S11-05 | — | Scoped |
 | S11-07 | One normalization key across the core | 2 | Search rescoring, search-index dedupe, term dedupe, alias tokens use `Key` | — | S11-05 | — | Scoped |
 | S11-08 | One normalization helper in Swift | 2 | Shared Swift normalize for filters; `FakeStore` groups names by parts | — | S11-06 | — | Scoped |
@@ -99,7 +99,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-10 | Subject compare | 3 | `subjectcompare` + registry subject section; pairs; similarity and evidence | — | S11-09 | — | Scoped |
 | S11-11 | Subject profile and entity compare | 3 | `subjectprofile.Build`: strict profile, denied as negatives, `Excluding` | — | S11-10 | — | Scoped |
 | S11-12 | Lifespan for people | 3 | Profile builder derives a lifespan; subject compare checks it | — | S11-11 | — | Scoped |
-| S11-24 | Delete frequency weighting | 3 | `Stats.ValueFreq`, `Stats.Words`, m / u priors, frequency scales and their benchmark go | — | S11-05 | — | Scoped |
+| S11-24 | Delete frequency weighting | 3 | `Stats.ValueFreq`, m / u priors, frequency scales and their benchmark go | — | S11-05 | — | Scoped |
 | S11-13 | Migrate Promote scoring onto subject compare | 3 | Property scoring, seeding, duplicate rows; values loader moves; delete `core/match`, `core/database/matching` | — | S11-12, S11-24 | — | Scoped |
 | S11-14 | Segment compare | 4 | `segmentcompare`, typed bridge keys, birth / death cardinality, one-hop credit | — | S11-13 | — | Scoped |
 | S11-15 | Shortlist index | 4 | Key → handles per kind on `graphcache`; registry shortlist keys | — | S11-13 | — | Scoped |
@@ -264,7 +264,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-05 — Migrate matching onto value compare
 
-**Ships.** `core/match` (`Score`, `Evaluate`, `pairValues`, `poolPeriods`), `core/graphalign` and `core/database/promotealign` (`pairExhibits`, stats) call `valuecompare`; `nameformats.Loaded.Comparer` builds its rules. `match`'s comparers, `DiscountComparer` and the name frequency discount are deleted. [`matching.md`](../../matching.md) and `ideas/daitch-mokotoff.md` point at the new code.
+**Ships.** `core/match` (`Score`, `Evaluate`, `pairValues`, `poolPeriods`), `core/graphalign` and `core/database/promotealign` (`pairExhibits`, stats) call `valuecompare`; `nameformats.Loaded.Comparer` builds its rules. `match`'s comparers, `DiscountComparer` and the name frequency discount (with `Stats.Words` and `countNameWords`, its only inputs) are deleted, and so are Promote's per-type floors, which value compare's `Near` minimum replaces. [`matching.md`](../../matching.md) and `ideas/daitch-mokotoff.md` point at the new code.
 **Not this PR.** Layer 2 and up (slice 3). The reconciler (S11-06).
 **Check.** The obituary golden and sparse cases pass (expected values updated where relations change them); `core/match` has no comparer types left.
 **Context.** Rules "Build, then migrate", "High tolerance for churn"; [what moves where](comparison-layers.md#what-moves-where-in-todays-code).
@@ -330,7 +330,7 @@ Ports `subjectvocab`'s `TestDefaultProfileCardinality` as "every registry `Prope
 
 #### S11-24 — Delete frequency weighting
 
-**Ships.** Remove `Stats.ValueFreq`, `Stats.Words`, `countNameWords`, the m / u priors (`MPrior`, `UPrior`), the frequency scales and their lift, and `BenchmarkLoadStatsNames`; event type and toponym get plain weights.
+**Ships.** Remove `Stats.ValueFreq`, the m / u priors (`MPrior`, `UPrior`), the frequency scales and their lift, and `BenchmarkLoadStatsNames`; event type and toponym get plain weights.
 **Not this PR.** Fan-out (S11-14).
 **Check.** Golden and sparse cases pass with plain weights; no frequency symbol remains (grep).
 **Context.** Rule "Frequency weighting is gone"; [frequency](comparison-layers.md#frequency).
