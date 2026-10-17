@@ -3,7 +3,7 @@ package match
 import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // Period pooling: an Event's date is compared with another Event's start and
@@ -54,7 +54,7 @@ func hasVoting(vs []Value) bool {
 // firstLeader is the index of the value that speaks for a single-cardinality
 // Property: the first leader in tie order; -1 when none votes.
 func firstLeader(vs []Value) int {
-	info := weigh(vs, properties.CardinalitySingle)
+	info := weigh(vs, propertymeta.CardinalitySingle)
 	best := -1
 	for i := range vs {
 		if info[i].leader && (best < 0 || order(vs, info, i, best) < 0) {

@@ -31,6 +31,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/locator"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -230,7 +231,7 @@ func TestObservations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				unbound, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
-					return properties.Create(tx, userID, "Nickname", properties.ValueTypeText, "", "")
+					return properties.Create(tx, userID, "Nickname", propertymeta.ValueTypeText, "", "")
 				})
 				if err != nil {
 					t.Fatal(err)

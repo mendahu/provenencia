@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/hops"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -165,7 +166,7 @@ func keptDateAt(n *graphcache.Node, propID []byte) (*datevalues.Value, int, stri
 	if err != nil || date == nil {
 		return nil, len(rows), "", false, err
 	}
-	key, ok := autoreconcile.SortKey(properties.ValueTypeDate, autoreconcile.Value{Date: date})
+	key, ok := autoreconcile.SortKey(propertymeta.ValueTypeDate, autoreconcile.Value{Date: date})
 	return date, len(rows), key, ok, nil
 }
 
@@ -722,7 +723,7 @@ func dateSort(v *datevalues.Value) (string, bool) {
 	if v == nil {
 		return "", false
 	}
-	return autoreconcile.SortKey(properties.ValueTypeDate, autoreconcile.Value{Date: v})
+	return autoreconcile.SortKey(propertymeta.ValueTypeDate, autoreconcile.Value{Date: v})
 }
 
 func eventPlaces(g *graphcache.Graph, v vocab, pg *placeGraph, ev *graphcache.Node) ([]HeaderPlace, error) {

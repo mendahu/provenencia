@@ -27,6 +27,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -84,7 +85,7 @@ func TestConclusionHandleSets(t *testing.T) {
 		t.Fatal(err)
 	}
 	seenWith, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
-		return properties.Create(tx, userID, "Seen with", properties.ValueTypeSubject, "", "")
+		return properties.Create(tx, userID, "Seen with", propertymeta.ValueTypeSubject, "", "")
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -435,7 +436,7 @@ func TestConclusionHandleSets(t *testing.T) {
 			EntityID:   append([]byte(nil), nameProp.ID...),
 			Action:     rowchange.ActionUpdate,
 			Fields: map[string]rowchange.FieldDiff{
-				"cardinality": {Old: properties.CardinalitySingle, New: properties.CardinalityMultiple},
+				"cardinality": {Old: propertymeta.CardinalitySingle, New: propertymeta.CardinalityMultiple},
 			},
 		}})
 		if err != nil {
@@ -456,7 +457,7 @@ func TestConclusionHandleSets(t *testing.T) {
 			EntityID:   append([]byte(nil), nameProp.ID...),
 			Action:     rowchange.ActionUpdate,
 			Fields: map[string]rowchange.FieldDiff{
-				"cardinality": {Old: properties.CardinalitySingle, New: properties.CardinalityMultiple},
+				"cardinality": {Old: propertymeta.CardinalitySingle, New: propertymeta.CardinalityMultiple},
 			},
 		})
 		if len(scoped) != 0 {

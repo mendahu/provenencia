@@ -3,7 +3,7 @@ package match
 import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // The registry: every number the matching algorithm uses, every built-in name
@@ -299,7 +299,7 @@ func DefaultProfile(kind string) (Profile, bool) {
 		return Profile{
 			Kind: "place",
 			Features: []Feature{
-				{Property: product("toponym"), Comparer: DefaultText, Weight: 10, Cardinality: properties.CardinalityMultiple},
+				{Property: product("toponym"), Comparer: DefaultText, Weight: 10, Cardinality: propertymeta.CardinalityMultiple},
 			},
 			MinScore: 3,
 		}, true

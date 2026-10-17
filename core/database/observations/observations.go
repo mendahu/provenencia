@@ -4,8 +4,9 @@ package observations
 import (
 	"bytes"
 	"database/sql"
-	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
+
+	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
@@ -15,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -397,19 +399,19 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 
 func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, existing *Observation) (resolvedValue, error) {
 	switch valueType {
-	case properties.ValueTypeText:
+	case propertymeta.ValueTypeText:
 		text := strings.TrimSpace(in.ValueText)
 		if !in.HasText || text == "" || hasOtherScalars(in, "text") {
 			return resolvedValue{}, ErrInvalid
 		}
 		return resolvedValue{Text: text}, nil
-	case properties.ValueTypeInteger:
+	case propertymeta.ValueTypeInteger:
 		if !in.HasInteger || hasOtherScalars(in, "integer") {
 			return resolvedValue{}, ErrInvalid
 		}
 		v := in.ValueInteger
 		return resolvedValue{Integer: &v}, nil
-	case properties.ValueTypeDate:
+	case propertymeta.ValueTypeDate:
 		if hasOtherScalars(in, "date") {
 			return resolvedValue{}, ErrInvalid
 		}
@@ -441,7 +443,7 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 			return resolvedValue{}, ErrInvalid
 		}
 		return resolvedValue{DateID: in.ValueDateID}, nil
-	case properties.ValueTypeName:
+	case propertymeta.ValueTypeName:
 		if hasOtherScalars(in, "name") {
 			return resolvedValue{}, ErrInvalid
 		}
@@ -473,7 +475,7 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 			return resolvedValue{}, ErrInvalid
 		}
 		return resolvedValue{NameID: in.ValueNameID}, nil
-	case properties.ValueTypeSubject:
+	case propertymeta.ValueTypeSubject:
 		if len(in.ValueSubjectID) != 16 || hasOtherScalars(in, "subject") {
 			return resolvedValue{}, ErrInvalid
 		}
@@ -485,7 +487,7 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 			return resolvedValue{}, err
 		}
 		return resolvedValue{SubjectID: in.ValueSubjectID}, nil
-	case properties.ValueTypeTerm:
+	case propertymeta.ValueTypeTerm:
 		if len(in.ValueTermID) != 16 || hasOtherScalars(in, "term") {
 			return resolvedValue{}, ErrInvalid
 		}
@@ -497,7 +499,7 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 			return resolvedValue{}, err
 		}
 		return resolvedValue{TermID: in.ValueTermID}, nil
-	case properties.ValueTypeDepiction:
+	case propertymeta.ValueTypeDepiction:
 		if hasOtherScalars(in, "depiction") {
 			return resolvedValue{}, ErrInvalid
 		}

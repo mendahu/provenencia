@@ -43,9 +43,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -463,17 +463,17 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 
 func hasValue(valueType string, v autoreconcile.Value) bool {
 	switch valueType {
-	case properties.ValueTypeText:
+	case propertymeta.ValueTypeText:
 		return v.HasText
-	case properties.ValueTypeInteger:
+	case propertymeta.ValueTypeInteger:
 		return v.HasInteger
-	case properties.ValueTypeTerm:
+	case propertymeta.ValueTypeTerm:
 		return len(v.TermID) > 0
-	case properties.ValueTypeDate:
+	case propertymeta.ValueTypeDate:
 		return v.Date != nil
-	case properties.ValueTypeName:
+	case propertymeta.ValueTypeName:
 		return v.Name != nil
-	case properties.ValueTypeSubject:
+	case propertymeta.ValueTypeSubject:
 		return len(v.SubjectID) > 0
 	}
 	return false

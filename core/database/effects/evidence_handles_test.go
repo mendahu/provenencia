@@ -22,6 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -78,7 +79,7 @@ func TestEvidenceHandleSets(t *testing.T) {
 		t.Fatal(err)
 	}
 	seenWith, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
-		return properties.Create(tx, userID, "Seen with", properties.ValueTypeSubject, "", "")
+		return properties.Create(tx, userID, "Seen with", propertymeta.ValueTypeSubject, "", "")
 	})
 	if err != nil {
 		t.Fatal(err)

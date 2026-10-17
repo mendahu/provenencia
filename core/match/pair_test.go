@@ -7,15 +7,15 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 func TestEvaluateAgreeConflictUnknown(t *testing.T) {
 	name := match.Property{Key: "toponym", Origin: "provenencia"}
 	meta := []match.PropertyMeta{{
-		Property: name, ValueType: properties.ValueTypeText,
-		Cardinality: properties.CardinalitySingle,
+		Property: name, ValueType: propertymeta.ValueTypeText,
+		Cardinality: propertymeta.CardinalitySingle,
 	}}
 	text := func(s string) match.Values {
 		return match.Values{name: {{Text: s, HasText: true}}}
@@ -37,8 +37,8 @@ func TestEvaluateAgreeConflictUnknown(t *testing.T) {
 func TestEvaluateMultipleCardinalityNeverConflicts(t *testing.T) {
 	res := match.Property{Key: "residence", Origin: "provenencia"}
 	meta := []match.PropertyMeta{{
-		Property: res, ValueType: properties.ValueTypeText,
-		Cardinality: properties.CardinalityMultiple,
+		Property: res, ValueType: propertymeta.ValueTypeText,
+		Cardinality: propertymeta.CardinalityMultiple,
 	}}
 	a := match.Values{res: {
 		{Text: "York", HasText: true},
@@ -59,7 +59,7 @@ func TestEvaluateMultipleCardinalityNeverConflicts(t *testing.T) {
 func TestEvaluateTermByKey(t *testing.T) {
 	sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
 	meta := []match.PropertyMeta{{
-		Property: sex, ValueType: properties.ValueTypeTerm,
+		Property: sex, ValueType: propertymeta.ValueTypeTerm,
 	}}
 	male := match.Values{sex: {{Term: "male"}}}
 	female := match.Values{sex: {{Term: "female"}}}
@@ -76,12 +76,12 @@ func TestEvaluateTermByKey(t *testing.T) {
 func TestEvaluateTextResemblance(t *testing.T) {
 	top := match.Property{Key: "toponym", Origin: "provenencia"}
 	single := []match.PropertyMeta{{
-		Property: top, ValueType: properties.ValueTypeText,
-		Cardinality: properties.CardinalitySingle,
+		Property: top, ValueType: propertymeta.ValueTypeText,
+		Cardinality: propertymeta.CardinalitySingle,
 	}}
 	multi := []match.PropertyMeta{{
-		Property: top, ValueType: properties.ValueTypeText,
-		Cardinality: properties.CardinalityMultiple,
+		Property: top, ValueType: propertymeta.ValueTypeText,
+		Cardinality: propertymeta.CardinalityMultiple,
 	}}
 	text := func(s string) match.Values {
 		return match.Values{top: {{Text: s, HasText: true}}}
@@ -120,7 +120,7 @@ func TestEvaluateTextResemblance(t *testing.T) {
 
 func TestEvaluateStrayName(t *testing.T) {
 	prop := match.Property{Key: "name", Origin: "provenencia"}
-	meta := []match.PropertyMeta{{Property: prop, ValueType: properties.ValueTypeName}}
+	meta := []match.PropertyMeta{{Property: prop, ValueType: propertymeta.ValueTypeName}}
 	named := func(form string, support int) match.Value {
 		v := match.Value{Name: &namevalues.Value{Form: form, Parts: []namevalues.Part{
 			{Idx: 0, Value: strings.Fields(form)[0], Type: namevalues.PartTypeGiven},
@@ -146,9 +146,9 @@ func TestEvaluateDatePeriod(t *testing.T) {
 		return match.Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &y}}
 	}
 	metas := []match.PropertyMeta{
-		{Property: prop("date"), ValueType: properties.ValueTypeDate},
-		{Property: prop("start_date"), ValueType: properties.ValueTypeDate},
-		{Property: prop("end_date"), ValueType: properties.ValueTypeDate},
+		{Property: prop("date"), ValueType: propertymeta.ValueTypeDate},
+		{Property: prop("start_date"), ValueType: propertymeta.ValueTypeDate},
+		{Property: prop("end_date"), ValueType: propertymeta.ValueTypeDate},
 	}
 	probe := match.Values{prop("date"): {year(1817)}}
 	cand := match.Values{prop("start_date"): {year(1815)}, prop("end_date"): {year(1820)}}

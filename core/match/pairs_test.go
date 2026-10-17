@@ -6,7 +6,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // cached is a handle value as the cache loader fills it.
@@ -279,7 +279,7 @@ func TestOrderIgnoresTermLabel(t *testing.T) {
 
 func TestPairValuesRefDate(t *testing.T) {
 	probe, cand := date(1890, nil, nil), date(1890, nil, nil)
-	r := pairValues(ComparerFor(properties.ValueTypeDate), "", []Value{probe}, []Value{cand})
+	r := pairValues(ComparerFor(propertymeta.ValueTypeDate), "", []Value{probe}, []Value{cand})
 	if r.Probe.Date != probe.Date || r.Candidate.Date != cand.Date || r.Probe.Date == nil {
 		t.Errorf("refs = %+v / %+v, want the input date pointers", r.Probe, r.Candidate)
 	}

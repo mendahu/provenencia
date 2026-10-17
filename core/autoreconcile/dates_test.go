@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 func ymd(y int, m, d *int) datevalues.Value {
@@ -264,7 +264,7 @@ func TestDateReconcile(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Reconcile(properties.ValueTypeDate, tc.cands, nil, properties.CardinalitySingle)
+			got, err := Reconcile(propertymeta.ValueTypeDate, tc.cands, nil, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}

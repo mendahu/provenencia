@@ -11,7 +11,7 @@ type Feature struct {
 	// away. 0 for Properties where differing values say little (names vary
 	// across records); high where they rule a match out (sex at birth).
 	Contradiction float64
-	// Cardinality is the Property's cardinality (properties.Cardinality*);
+	// Cardinality is the Property's cardinality (propertymeta.Cardinality*);
 	// empty means single. A multiple Property's displayed values all speak
 	// at full weight, so any one of them can match.
 	Cardinality string

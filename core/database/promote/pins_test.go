@@ -21,6 +21,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -87,7 +88,7 @@ func (f *pinFixture) record(st subjecttypes.Type, prop properties.Property, valu
 	f.must(err)
 	var in []observations.Input
 	for _, v := range values {
-		if prop.ValueType == properties.ValueTypeName {
+		if prop.ValueType == propertymeta.ValueTypeName {
 			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: prop.ID, Name: &namevalues.Value{
 				Form: v, Parts: []namevalues.Part{{Idx: 0, Type: "given", Value: v}},
 			}})

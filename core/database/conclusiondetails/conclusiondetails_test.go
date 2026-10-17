@@ -26,6 +26,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -172,7 +173,7 @@ func TestForEntity(t *testing.T) {
 		t.Fatalf("entity %+v, %d members", d.Entity, d.MemberCount)
 	}
 	name := field(d, "name")
-	if name.State != autoreconcile.StateMerged || name.ValueType != properties.ValueTypeName || name.Label == "" {
+	if name.State != autoreconcile.StateMerged || name.ValueType != propertymeta.ValueTypeName || name.Label == "" {
 		t.Fatalf("name field %+v", name)
 	}
 	if len(name.Values) != 2 || !name.Values[0].Displayed() || name.Values[0].Support != 2 ||

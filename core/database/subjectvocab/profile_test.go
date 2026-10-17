@@ -3,8 +3,8 @@ package subjectvocab
 import (
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // A default matching Feature carries the cardinality the seeded Property
@@ -14,7 +14,7 @@ func TestDefaultProfileCardinality(t *testing.T) {
 	for _, p := range seedProperties {
 		c := p.Cardinality
 		if c == "" {
-			c = properties.CardinalitySingle
+			c = propertymeta.CardinalitySingle
 		}
 		card[p.Key] = c
 	}
@@ -31,7 +31,7 @@ func TestDefaultProfileCardinality(t *testing.T) {
 			}
 			got := f.Cardinality
 			if got == "" {
-				got = properties.CardinalitySingle
+				got = propertymeta.CardinalitySingle
 			}
 			if got != want {
 				t.Errorf("%s.%s: Feature cardinality %q, seeded Property %q", kind, f.Property.Key, got, want)

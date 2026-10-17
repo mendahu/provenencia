@@ -1,7 +1,7 @@
 package match
 
 import (
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // Pairwise evaluation reports how close two value sets are. Each property's
@@ -22,8 +22,8 @@ const (
 // PropertyMeta names a Property and how pairwise evaluation treats it.
 type PropertyMeta struct {
 	Property    Property
-	ValueType   string // properties.ValueType*
-	Cardinality string // properties.Cardinality*; empty means single
+	ValueType   string // propertymeta.ValueType*
+	Cardinality string // propertymeta.Cardinality*; empty means single
 }
 
 // PropertyComparison is one Property's pairwise result.
@@ -73,7 +73,7 @@ func evaluate(probe, candidate Values, metas []PropertyMeta, names *NameComparer
 		}
 		card := m.Cardinality
 		if card == "" {
-			card = properties.CardinalitySingle
+			card = propertymeta.CardinalitySingle
 		}
 		a, b := poolPeriods(m.Property, probe, candidate)
 		pr := compareProperty(m.ValueType, card, a, b, names)
@@ -96,7 +96,7 @@ func evaluate(probe, candidate Values, metas []PropertyMeta, names *NameComparer
 
 func compareProperty(valueType, card string, a, b []Value, names *NameComparer) PairResult {
 	var cmp Comparer
-	if valueType == properties.ValueTypeName && names != nil {
+	if valueType == propertymeta.ValueTypeName && names != nil {
 		cmp = *names
 	} else {
 		cmp = ComparerFor(valueType)
@@ -120,7 +120,7 @@ func outcomeAtFloor(similarity float64, comparable bool, cardinality string, flo
 		}
 		return OutcomePartial
 	}
-	if cardinality == properties.CardinalityMultiple {
+	if cardinality == propertymeta.CardinalityMultiple {
 		return OutcomeUnknown
 	}
 	return OutcomeConflict

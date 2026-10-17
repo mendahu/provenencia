@@ -35,6 +35,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/writes"
@@ -89,9 +90,9 @@ func newFixture(t *testing.T) *fixture {
 		must(t, err)
 		f.props[k] = p
 	}
-	ageID, err := properties.Upsert(c, properties.Property{Key: "age", Origin: properties.OriginUser, Label: "Age", ValueType: properties.ValueTypeInteger})
+	ageID, err := properties.Upsert(c, properties.Property{Key: "age", Origin: properties.OriginUser, Label: "Age", ValueType: propertymeta.ValueTypeInteger})
 	must(t, err)
-	f.props["age"] = properties.Property{ID: ageID, Key: "age", ValueType: properties.ValueTypeInteger}
+	f.props["age"] = properties.Property{ID: ageID, Key: "age", ValueType: propertymeta.ValueTypeInteger}
 	db, err := c.DB()
 	must(t, err)
 	_, err = db.Exec(`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 99)`, f.types["person"].ID, ageID)
@@ -506,10 +507,10 @@ func TestReconciledValues(t *testing.T) {
 func TestReconciledValuesKeepEveryValue(t *testing.T) {
 	f := newFixture(t)
 	aliasID, err := properties.Upsert(f.c, properties.Property{
-		Key: "alias", Origin: properties.OriginUser, Label: "Alias", ValueType: properties.ValueTypeText,
+		Key: "alias", Origin: properties.OriginUser, Label: "Alias", ValueType: propertymeta.ValueTypeText,
 	})
 	must(t, err)
-	alias := properties.Property{ID: aliasID, Key: "alias", ValueType: properties.ValueTypeText, Cardinality: properties.CardinalitySingle}
+	alias := properties.Property{ID: aliasID, Key: "alias", ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalitySingle}
 	f.bind("place", aliasID)
 	a, b, c := f.subject("place"), f.subjectOn(f.other, "place"), f.subjectOn(f.newSource("Gazette"), "place")
 	f.cite(textIn(a, alias, "York"))
@@ -559,10 +560,10 @@ func TestMultipleCardinalityKeepsDistinctValues(t *testing.T) {
 func TestCardinalityChangeRecomputes(t *testing.T) {
 	f := newFixture(t)
 	aliasID, err := properties.Upsert(f.c, properties.Property{
-		Key: "alias", Origin: properties.OriginUser, Label: "Alias", ValueType: properties.ValueTypeText,
+		Key: "alias", Origin: properties.OriginUser, Label: "Alias", ValueType: propertymeta.ValueTypeText,
 	})
 	must(t, err)
-	alias := properties.Property{ID: aliasID, ValueType: properties.ValueTypeText}
+	alias := properties.Property{ID: aliasID, ValueType: propertymeta.ValueTypeText}
 	f.bind("place", aliasID)
 	a, b, c := f.subject("place"), f.subjectOn(f.other, "place"), f.subjectOn(f.newSource("Gazette"), "place")
 	f.cite(textIn(a, alias, "York"))
@@ -576,7 +577,7 @@ func TestCardinalityChangeRecomputes(t *testing.T) {
 		t.Fatalf("single %+v", rows)
 	}
 	_, err = writes.Call(f.c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
-		return properties.Update(tx, userID, alias.ID, "Alias", properties.ValueTypeText, "", properties.CardinalityMultiple)
+		return properties.Update(tx, userID, alias.ID, "Alias", propertymeta.ValueTypeText, "", propertymeta.CardinalityMultiple)
 	})
 
 	must(t, err)
@@ -589,7 +590,7 @@ func TestCardinalityChangeRecomputes(t *testing.T) {
 
 	top := f.props["toponym"]
 	_, err = writes.Call(f.c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
-		return properties.Update(tx, userID, top.ID, top.Label, top.ValueType, top.Description, properties.CardinalitySingle)
+		return properties.Update(tx, userID, top.ID, top.Label, top.ValueType, top.Description, propertymeta.CardinalitySingle)
 	})
 	if !errors.Is(err, properties.ErrLocked) {
 		t.Fatalf("seeded cardinality: %v", err)

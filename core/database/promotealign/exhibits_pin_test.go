@@ -4,19 +4,19 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 func TestOverlappingBoundsAreSimilarAndUnpinned(t *testing.T) {
 	prop := match.Property{Key: "start_date", Origin: "provenencia"}
 	incoming := exhibitObs{
-		id: []byte("in"), prop: prop, valueType: properties.ValueTypeDate,
+		id: []byte("in"), prop: prop, valueType: propertymeta.ValueTypeDate,
 		value: match.Value{Date: befDate(2001, 3, 31)},
 	}
 	member := exhibitObs{
-		id: []byte("mem"), prop: prop, valueType: properties.ValueTypeDate,
+		id: []byte("mem"), prop: prop, valueType: propertymeta.ValueTypeDate,
 		value: match.Value{Date: befDate(1985, 2, 1)},
 	}
 	lines := pairExhibits([]exhibitObs{incoming}, nil, []exhibitObs{member}, graphalign.DefaultConfig(), graphalign.Stats{})
@@ -36,12 +36,12 @@ func TestOverlappingBoundsAreSimilarAndUnpinned(t *testing.T) {
 func TestDisjointDatesConflict(t *testing.T) {
 	prop := match.Property{Key: "start_date", Origin: "provenencia"}
 	incoming := exhibitObs{
-		id: []byte("in"), prop: prop, valueType: properties.ValueTypeDate,
+		id: []byte("in"), prop: prop, valueType: propertymeta.ValueTypeDate,
 		value: match.Value{Date: befDate(1985, 2, 1)},
 	}
 	year := 2001
 	member := exhibitObs{
-		id: []byte("mem"), prop: prop, valueType: properties.ValueTypeDate,
+		id: []byte("mem"), prop: prop, valueType: propertymeta.ValueTypeDate,
 		value: match.Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year}},
 	}
 	lines := pairExhibits([]exhibitObs{incoming}, nil, []exhibitObs{member}, graphalign.DefaultConfig(), graphalign.Stats{})
