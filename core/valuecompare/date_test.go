@@ -1,6 +1,7 @@
 package valuecompare_test
 
 import (
+	"math/rand"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/datevalue"
@@ -195,5 +196,85 @@ func TestDateKey(t *testing.T) {
 	}
 	if k, ok := valuecompare.Key(dateValue(nil), valuecompare.Same, rules); ok || k != "" {
 		t.Errorf("no date key = %q, %v", k, ok)
+	}
+}
+
+func TestDateLadder(t *testing.T) {
+	rules := matchregistry.Default().Value
+	base := dp(ymd(1817, 5, 14))
+	// 14 May 1817 is day 134 of 365; its centre is 133.5 days in.
+	centre := 133.5 / 365
+	ladder := []struct {
+		name string
+		d    *datevalue.Value
+		rel  valuecompare.Relation
+		sim  float64
+	}{
+		{"14 MAY 1817", dp(ymd(1817, 5, 14)), valuecompare.Same, 1},
+		{"MAY 1817", dp(ymd(1817, 5, 0)), valuecompare.Contains, 0.9},
+		{"1817", dp(ymd(1817, 0, 0)), valuecompare.Contains, 0.8},
+		{"20 MAY 1817", dp(ymd(1817, 5, 20)), valuecompare.Near, 0.7},
+		{"SEP 1817", dp(ymd(1817, 9, 0)), valuecompare.Near, 0.6},
+		{"BET 1815 AND 1820", dp(between(1815, 0, 0, 1820, 0, 0)), valuecompare.Contains, 0.8 - 0.05*5},
+		{"1818", dp(ymd(1818, 0, 0)), valuecompare.Near, 0.8 * (1 - (1.5-centre)/3)},
+		{"1819", dp(ymd(1819, 0, 0)), valuecompare.Near, 0.8 * (1 - (2.5-centre)/3)},
+		{"BEF 1820", dp(bound(datevalue.QualifierBEF, 1820)), valuecompare.Contains, 0.2},
+		{"1820", dp(ymd(1820, 0, 0)), valuecompare.Different, 0},
+	}
+	prev := 2.0
+	for _, step := range ladder {
+		res, _ := valuecompare.Compare(dateValue(base), dateValue(step.d), rules)
+		if res.Relation != step.rel || !near(res.Similarity, step.sim) {
+			t.Errorf("%s: %s at %v, want %s at %v", step.name, res.Relation, res.Similarity, step.rel, step.sim)
+		}
+		if res.Similarity >= prev {
+			t.Errorf("%s: %v does not fall below %v", step.name, res.Similarity, prev)
+		}
+		prev = res.Similarity
+	}
+}
+
+func TestDateInvariants(t *testing.T) {
+	for seed := int64(1); seed <= 4; seed++ {
+		rules := matchregistry.Default().Value
+		rules.Dates.Tolerance = int(seed - 1)
+		wider := rules
+		wider.Dates.AboutUnits = rules.Dates.AboutUnits + 1
+		looser := rules
+		looser.Dates.Tolerance = rules.Dates.Tolerance + 1
+		rng := rand.New(rand.NewSource(seed))
+		isAbout := func(d *datevalue.Value) bool {
+			return d != nil && d.Kind != datevalue.KindRange && d.Qualifier == datevalue.QualifierABT
+		}
+		for range 2000 {
+			p := generators[propertymeta.ValueTypeDate](rng)
+			res, det := valuecompare.Compare(p.a, p.b, rules)
+			// Widening ABT keeps what it contained.
+			if res.Relation == valuecompare.Contains &&
+				((det.Broader == valuecompare.SideA && isAbout(p.a.Date)) || (det.Broader == valuecompare.SideB && isAbout(p.b.Date))) {
+				res2, det2 := valuecompare.Compare(p.a, p.b, wider)
+				if res2.Relation != valuecompare.Contains || det2.Broader != det.Broader {
+					t.Fatalf("seed %d: %+v / %+v: %s (broader %q) became %s (broader %q) with wider ABT", seed, *p.a.Date, *p.b.Date, res.Relation, det.Broader, res2.Relation, det2.Broader)
+				}
+			}
+			// More tolerance never turns Near into Different.
+			if res.Relation == valuecompare.Near {
+				if res3, _ := valuecompare.Compare(p.a, p.b, looser); res3.Relation == valuecompare.Different {
+					t.Fatalf("seed %d: %+v / %+v: Near became Different with more tolerance", seed, *p.a.Date, *p.b.Date)
+				}
+			}
+			// A plain point is never broader than the same point under ABT.
+			for _, d := range []*datevalue.Value{p.a.Date, p.b.Date} {
+				if d.Kind == datevalue.KindRange || d.Qualifier != "" || d.StartYear == nil {
+					continue
+				}
+				about := *d
+				about.Qualifier = datevalue.QualifierABT
+				res4, det4 := valuecompare.Compare(dateValue(d), dateValue(&about), rules)
+				if res4.Relation != valuecompare.Contains || det4.Broader != valuecompare.SideB {
+					t.Fatalf("seed %d: %+v against its ABT: %s, broader %q", seed, *d, res4.Relation, det4.Broader)
+				}
+			}
+		}
 	}
 }
