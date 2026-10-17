@@ -13788,18 +13788,6 @@
         }
       }
     },
-    "citationComposer.propertyRequiredAfterSubject": {
-      "comment": "Property field error after an incompatible subject change",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This subject does not allow that property."
-          }
-        }
-      }
-    },
     "citationComposer.newSubjectTitle": {
       "comment": "Dialog title when creating a subject from a row picker",
       "extractionState": "manual",

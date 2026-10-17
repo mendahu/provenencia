@@ -213,7 +213,7 @@ struct CitationComposerObservationsColumn: View {
             hoveredLineID = hovering ? line.id : (hoveredLineID == line.id ? nil : hoveredLineID)
         }
         .accessibilityElement(children: .combine)
-        .depictionLineLabel(line.imageRelPath == nil ? nil : depictionLineLabel(line))
+        .lineReading(depictionReading(line, fresh: fresh))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction(.default) { model.beginEdit(line: line) }
         .accessibilityAction(named: Text(line.bridgeID == nil
@@ -243,9 +243,17 @@ struct CitationComposerObservationsColumn: View {
         depictionPerson(line).map { L10n.CitationComposer.depictionThumbLabel(line.label, $0) }
     }
 
-    /// "Likeness, Ben Ford"; the property alone when the person is unknown.
-    private func depictionLineLabel(_ line: CitationSavedLine) -> String {
-        depictionPerson(line).map { L10n.CitationComposer.depictionLineLabel(line.label, $0) } ?? line.label
+    /// What VoiceOver reads for a saved likeness: "Likeness, Ben Ford" with the
+    /// badges the row shows (Negative, Saved) as its value. Nil for other lines,
+    /// which keep their combined reading.
+    private func depictionReading(_ line: CitationSavedLine, fresh: Bool) -> LineReading? {
+        guard line.imageRelPath != nil else { return nil }
+        let label = depictionPerson(line).map { L10n.CitationComposer.depictionLineLabel(line.label, $0) }
+            ?? line.label
+        var badges: [String] = []
+        if line.negative { badges.append(L10n.string(L10n.CitationComposer.negativeLabel)) }
+        if fresh { badges.append(L10n.string(L10n.CitationComposer.savedBadge)) }
+        return LineReading(label: label, value: badges.joined(separator: ", "))
     }
 
     @ViewBuilder
@@ -348,11 +356,7 @@ struct CitationComposerEditSheet: View {
         guard let session = model.editSession else { return .subject }
         switch session.kind {
         case .property(let values, _, _):
-            return CitationAuthoringNavigation.initialPropertyFocus(
-                subjectID: values.subjectID,
-                propertyID: values.propertyID,
-                isDepiction: model.vocabulary.isDepiction(propertyID: values.propertyID)
-            )
+            return CitationAuthoringNavigation.initialPropertyFocus(values: values, vocabulary: model.vocabulary)
         case .bridge(let endA, let endB, let termID, _, _, _):
             let pair = CitationComposerAuthoring.resolvePair(
                 endA: endA,
@@ -520,12 +524,19 @@ struct CitationComposerEditSheet: View {
     }
 }
 
+/// A line's VoiceOver label and value when the combined reading would drop a badge.
+private struct LineReading {
+    var label: String
+    var value: String
+}
+
 private extension View {
-    /// Names a depiction line for VoiceOver; every other line keeps its combined reading.
+    /// Overrides the combined reading when the line has its own; nil keeps it.
     @ViewBuilder
-    func depictionLineLabel(_ label: String?) -> some View {
-        if let label {
-            accessibilityLabel(Text(verbatim: label))
+    func lineReading(_ reading: LineReading?) -> some View {
+        if let reading {
+            accessibilityLabel(Text(verbatim: reading.label))
+                .accessibilityValue(Text(verbatim: reading.value))
         } else {
             self
         }

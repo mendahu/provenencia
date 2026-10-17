@@ -3304,12 +3304,6 @@ enum L10n {
             comment: "Row error when Save is pressed with no subject"
         )
 
-        static let propertyRequiredAfterSubject = LocalizedStringResource(
-            "citationComposer.propertyRequiredAfterSubject",
-            defaultValue: "This subject does not allow that property.",
-            comment: "Property field error after an incompatible subject change"
-        )
-
         static let newSubjectTitle = LocalizedStringResource(
             "citationComposer.newSubjectTitle",
             defaultValue: "New subject",
