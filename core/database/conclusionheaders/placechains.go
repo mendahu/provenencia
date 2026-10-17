@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/hops"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // placeLink is one filed place_relationship edge with its membership dates.
@@ -28,7 +29,7 @@ type placeGraph struct {
 	partTo   map[string][]placeLink // whole id → parts
 	succFrom map[string][]placeLink // predecessor id → successors
 	succTo   map[string][]placeLink // successor id → predecessors
-	period   map[string]autoreconcile.Window
+	period   map[string]valuecompare.Window
 }
 
 func newPlaceGraph() *placeGraph {
@@ -38,7 +39,7 @@ func newPlaceGraph() *placeGraph {
 		partTo:   map[string][]placeLink{},
 		succFrom: map[string][]placeLink{},
 		succTo:   map[string][]placeLink{},
-		period:   map[string]autoreconcile.Window{},
+		period:   map[string]valuecompare.Window{},
 	}
 }
 
@@ -46,29 +47,29 @@ type assocDates struct {
 	start, end *datevalue.Value
 }
 
-func (g *placeGraph) periodOf(id []byte) autoreconcile.Window {
+func (g *placeGraph) periodOf(id []byte) valuecompare.Window {
 	if w, ok := g.period[string(id)]; ok {
 		return w
 	}
-	return autoreconcile.Always()
+	return valuecompare.Always()
 }
 
-func (g *placeGraph) linkHolds(query autoreconcile.Window, l placeLink) bool {
+func (g *placeGraph) linkHolds(query valuecompare.Window, l placeLink) bool {
 	mem, ok := autoreconcile.LinkMembership(l.start, l.end, g.periodOf(l.from), g.periodOf(l.to))
 	if !ok {
 		return false
 	}
-	return autoreconcile.HoldsAt(query, mem)
+	return query.Overlaps(mem)
 }
 
-func queryWindow(at *datevalue.Value) autoreconcile.Window {
+func queryWindow(at *datevalue.Value) valuecompare.Window {
 	if at == nil {
-		return autoreconcile.Always()
+		return valuecompare.Always()
 	}
 	if w, ok := autoreconcile.WindowOfDate(*at); ok {
 		return w
 	}
-	return autoreconcile.Always()
+	return valuecompare.Always()
 }
 
 // ImmediateParents are the part_of wholes that hold (or are ambiguous) at at.

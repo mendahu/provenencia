@@ -1,6 +1,9 @@
 package autoreconcile
 
-import "github.com/mendahu/provenencia/core/datevalue"
+import (
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
+)
 
 // The date module (conclusion-reconciliation.md §7.1). A date is a window
 // over its civil components. Missing finer fields are unknown, never zero.
@@ -81,117 +84,19 @@ func DateBounds(d datevalue.Value) (lo, hi *int, ok bool) {
 	return lo, hi, true
 }
 
-// DateEnd is one end of a date as written, for comparing dates by the days
-// they cover. Month and Day are 0 when the end does not name them. Lo and Hi
-// are its inclusive proleptic day numbers; From and To place it on a line of
-// years, where a bound on day d of year y covers [y + (d-1)/n, y + d/n) with
-// n the days in y, so a whole year is [y, y+1). An open end has Open set and
-// every other field zero.
-type DateEnd struct {
-	Year, Month, Day int
-	Lo, Hi           int
-	From, To         float64
-	Open             bool
-}
-
-// DateEnds returns the first and last end of d. A point has the same end
-// twice, BEF an open first end, AFT an open last end; a range has its start
-// bound first and its end bound last (swapped when the start begins after the
-// end finishes), and an open end on a side with no year. ok is false when d
-// has no year to place, or a month or day that does not exist. Civil
-// components are read as Gregorian, as DateBounds does.
-func DateEnds(d datevalue.Value) (first, last DateEnd, ok bool) {
-	if d.Kind == datevalue.KindRange {
-		if d.StartYear == nil && d.EndYear == nil {
-			return DateEnd{}, DateEnd{}, false
-		}
-		first, last = DateEnd{Open: true}, DateEnd{Open: true}
-		if d.StartYear != nil {
-			if first, ok = boundEnd(d.StartYear, d.StartMonth, d.StartDay); !ok {
-				return DateEnd{}, DateEnd{}, false
-			}
-		}
-		if d.EndYear != nil {
-			if last, ok = boundEnd(d.EndYear, d.EndMonth, d.EndDay); !ok {
-				return DateEnd{}, DateEnd{}, false
-			}
-		}
-		if !first.Open && !last.Open && first.Lo > last.Hi {
-			first, last = last, first
-		}
-		return first, last, true
-	}
-	y, m, day := d.StartYear, d.StartMonth, d.StartDay
-	if y == nil {
-		y, m, day = d.EndYear, d.EndMonth, d.EndDay
-	}
-	e, ok := boundEnd(y, m, day)
-	if !ok {
-		return DateEnd{}, DateEnd{}, false
-	}
-	first, last = e, e
-	switch d.Qualifier {
-	case datevalue.QualifierBEF:
-		first = DateEnd{Open: true}
-	case datevalue.QualifierAFT:
-		last = DateEnd{Open: true}
-	}
-	return first, last, true
-}
-
-// boundEnd is the end one bound covers at its precision.
-func boundEnd(year, month, day *int) (DateEnd, bool) {
-	lo, hi, ok := datevalue.BoundDays(year, month, day)
-	if !ok {
-		return DateEnd{}, false
-	}
-	y := *year
-	e := DateEnd{Year: y, Lo: lo, Hi: hi}
-	if month != nil {
-		e.Month = *month
-	}
-	if day != nil {
-		e.Day = *day
-	}
-	e.From, e.To, _ = datevalue.YearLine(lo, hi)
-	return e, true
-}
-
-// Window is an inclusive proleptic-day span. A nil bound is open.
-// A fully open window is "always" (no place period, undated place).
-type Window struct {
-	Lo, Hi *int
-}
-
-// HoldKind is how a query date relates to a membership span.
-type HoldKind int
-
-const (
-	// HoldMiss: query and membership are disjoint.
-	HoldMiss HoldKind = iota
-	// HoldYes: query lies entirely inside membership.
-	HoldYes
-	// HoldAmbiguous: they overlap but the query is not fully inside
-	// (approximate or ranged date straddling a change).
-	HoldAmbiguous
-)
-
-// Always is a fully open window (no period).
-func Always() Window { return Window{} }
-
 // WindowOfDate is DateBounds as a Window. ok is false when d has no year.
-func WindowOfDate(d datevalue.Value) (Window, bool) {
+func WindowOfDate(d datevalue.Value) (valuecompare.Window, bool) {
 	lo, hi, ok := DateBounds(d)
 	if !ok {
-		return Window{}, false
+		return valuecompare.Window{}, false
 	}
-	return Window{Lo: lo, Hi: hi}, true
+	return valuecompare.Window{Lo: lo, Hi: hi}, true
 }
 
 // PeriodWindow is a Place's existence span from optional start and end
 // dates. Missing sides are open; both missing is Always.
-func PeriodWindow(start, end *datevalue.Value) Window {
-	w := Always()
+func PeriodWindow(start, end *datevalue.Value) valuecompare.Window {
+	w := valuecompare.Always()
 	if start != nil {
 		if sw, ok := WindowOfDate(*start); ok {
 			w.Lo = sw.Lo
@@ -208,112 +113,16 @@ func PeriodWindow(start, end *datevalue.Value) Window {
 // LinkMembership is when a hierarchical place relationship holds.
 // An undated link (nil start and end) holds on the overlap of the two
 // places' periods. A dated link holds inside its own span and both periods.
-func LinkMembership(linkStart, linkEnd *datevalue.Value, fromPeriod, toPeriod Window) (Window, bool) {
-	base, ok := Intersect(fromPeriod, toPeriod)
+func LinkMembership(linkStart, linkEnd *datevalue.Value, fromPeriod, toPeriod valuecompare.Window) (valuecompare.Window, bool) {
+	base, ok := fromPeriod.Intersect(toPeriod)
 	if !ok {
-		return Window{}, false
+		return valuecompare.Window{}, false
 	}
 	if linkStart == nil && linkEnd == nil {
 		return base, true
 	}
 	link := PeriodWindow(linkStart, linkEnd)
-	return Intersect(base, link)
-}
-
-// Overlaps reports whether a and b share any day (open ends included).
-func Overlaps(a, b Window) bool {
-	if a.Lo != nil && b.Hi != nil && *a.Lo > *b.Hi {
-		return false
-	}
-	if b.Lo != nil && a.Hi != nil && *b.Lo > *a.Hi {
-		return false
-	}
-	return true
-}
-
-// Intersect is the overlap of a and b. ok is false when empty.
-func Intersect(a, b Window) (Window, bool) {
-	if !Overlaps(a, b) {
-		return Window{}, false
-	}
-	out := Window{}
-	out.Lo = laterBound(a.Lo, b.Lo)
-	out.Hi = earlierBound(a.Hi, b.Hi)
-	if out.Lo != nil && out.Hi != nil && *out.Lo > *out.Hi {
-		return Window{}, false
-	}
-	return out, true
-}
-
-// Contains reports whether outer fully covers inner.
-func Contains(outer, inner Window) bool {
-	if inner.Lo == nil {
-		if outer.Lo != nil {
-			return false
-		}
-	} else if outer.Lo != nil && *inner.Lo < *outer.Lo {
-		return false
-	}
-	if inner.Hi == nil {
-		if outer.Hi != nil {
-			return false
-		}
-	} else if outer.Hi != nil && *inner.Hi > *outer.Hi {
-		return false
-	}
-	return true
-}
-
-// Relate says how query sits against membership for chain composition.
-func Relate(query, membership Window) HoldKind {
-	if !Overlaps(query, membership) {
-		return HoldMiss
-	}
-	if Contains(membership, query) {
-		return HoldYes
-	}
-	return HoldAmbiguous
-}
-
-// HoldsAt is true when the link should appear in a chain at query
-// (HoldYes or HoldAmbiguous).
-func HoldsAt(query, membership Window) bool {
-	k := Relate(query, membership)
-	return k == HoldYes || k == HoldAmbiguous
-}
-
-func laterBound(a, b *int) *int {
-	switch {
-	case a == nil:
-		return copyBound(b)
-	case b == nil:
-		return copyBound(a)
-	case *a >= *b:
-		return copyBound(a)
-	default:
-		return copyBound(b)
-	}
-}
-
-func earlierBound(a, b *int) *int {
-	switch {
-	case a == nil:
-		return copyBound(b)
-	case b == nil:
-		return copyBound(a)
-	case *a <= *b:
-		return copyBound(a)
-	default:
-		return copyBound(b)
-	}
-}
-
-func copyBound(v *int) *int {
-	if v == nil {
-		return nil
-	}
-	x := *v
-	return &x
+	return base.Intersect(link)
 }
 
 func (w dateWindow) contains(inner dateWindow) bool {
