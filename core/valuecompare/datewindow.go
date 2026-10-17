@@ -219,3 +219,15 @@ func EndsWindow(first, last DateEnd) Window {
 	}
 	return w
 }
+
+// DateWindow is the days d covers as written: DateEnds as a Window, with an
+// ABT point not widened. ok is false when DateEnds is not ok. Sort keys, stored
+// date bounds and place periods read a date this way; comparing reads
+// AboutEnds.
+func DateWindow(d datevalue.Value) (Window, bool) {
+	first, last, ok := DateEnds(d)
+	if !ok {
+		return Window{}, false
+	}
+	return EndsWindow(first, last), true
+}

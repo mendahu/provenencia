@@ -214,3 +214,34 @@ func TestAboutEnds(t *testing.T) {
 		}
 	})
 }
+
+func TestDateWindow(t *testing.T) {
+	epoch, ok := valuecompare.DateWindow(ymd(1970, 1, 1))
+	if !ok || epoch.Lo == nil || epoch.Hi == nil || *epoch.Lo != 0 || *epoch.Hi != 0 {
+		t.Fatalf("epoch %+v ok=%v", epoch, ok)
+	}
+	year, ok := valuecompare.DateWindow(ymd(1985, 0, 0))
+	if !ok || year.Lo == nil || year.Hi == nil || *year.Lo >= *year.Hi {
+		t.Fatalf("year %+v ok=%v", year, ok)
+	}
+	day, ok := valuecompare.DateWindow(ymd(1985, 5, 14))
+	if !ok || day.Lo == nil || day.Hi == nil || *day.Lo != *day.Hi || !year.Contains(day) {
+		t.Fatalf("day %+v inside year %+v ok=%v", day, year, ok)
+	}
+	before, ok := valuecompare.DateWindow(bound(datevalue.QualifierBEF, 1900))
+	if !ok || before.Lo != nil || before.Hi == nil {
+		t.Fatalf("before %+v ok=%v", before, ok)
+	}
+	after, ok := valuecompare.DateWindow(bound(datevalue.QualifierAFT, 1872))
+	if !ok || after.Lo == nil || after.Hi != nil {
+		t.Fatalf("after %+v ok=%v", after, ok)
+	}
+	plain, _ := valuecompare.DateWindow(ymd(1817, 0, 0))
+	approx, ok := valuecompare.DateWindow(about(1817, 0, 0))
+	if !ok || approx.Lo == nil || approx.Hi == nil || *approx.Lo != *plain.Lo || *approx.Hi != *plain.Hi {
+		t.Fatalf("about %+v want %+v ok=%v", approx, plain, ok)
+	}
+	if _, ok := valuecompare.DateWindow(phrase("Christmas")); ok {
+		t.Fatal("phrase-only has a window")
+	}
+}
