@@ -196,7 +196,7 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 
 ## Not knobs
 
-These are identifiers or catalog data, not tunables, and have no row: the vocabulary origins and primary kinds (`core/vocabkey`), `AliasAbbreviation`, `AliasNickname`, `valuecompare.WesternPattern` (a key), `BuiltinNamePatterns` (the set holding `WesternNamePattern`), `DefaultNames.Patterns` / `Pattern`, `value.Names.Aliases` and `value.Names.Patterns` (catalog rows, passed in at run time), and `graphalign` `Config.Names` (a test hook).
+These are identifiers or catalog data, not tunables, and have no row: the vocabulary origins and primary kinds (`core/vocabkey`), `AliasAbbreviation`, `AliasNickname`, `valuecompare.WesternPattern` (a key), `value.Names.Aliases` and `value.Names.Patterns` (catalog rows, passed in at run time), and `graphalign` `Config.Value` (the value section with catalog data, filled by `valuerules.Load`).
 
 ## Removed knobs
 

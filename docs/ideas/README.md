@@ -32,6 +32,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
 - [`large-jpeg-thumbnails.md`](large-jpeg-thumbnails.md) — JPEGs over the 64-megapixel decode budget save and keep the missing-image glyph
 - [`identity-claim-review.md`](identity-claim-review.md)
+- [`promote-find-another-record.md`](promote-find-another-record.md) — a "find another record…" entry in the Promote target menu, for a record `Rank` did not offer
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
 - [`possible-values.md`](possible-values.md)
 - [`term-management.md`](term-management.md) — one place to manage terms, including relationship direction and inverses

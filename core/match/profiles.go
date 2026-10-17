@@ -5,7 +5,9 @@ import "github.com/mendahu/provenencia/core/vocabkey"
 // Feature is one Property a Profile weighs.
 type Feature struct {
 	Property Property
-	Comparer Comparer
+	// ValueType is the Property's value type (propertymeta.ValueType*), which
+	// picks the value comparison.
+	ValueType string
 	// Weight is the points a perfect resemblance adds; a partial one adds
 	// Weight × similarity.
 	Weight float64
@@ -26,19 +28,6 @@ type Profile struct {
 	Features []Feature
 	// MinScore is the least score a candidate needs to be returned.
 	MinScore float64
-}
-
-// WithNameComparer returns a copy of p whose name features use c. Other
-// features stay as they are.
-func (p Profile) WithNameComparer(c NameComparer) Profile {
-	out := p
-	out.Features = append([]Feature(nil), p.Features...)
-	for i := range out.Features {
-		if _, ok := out.Features[i].Comparer.(NameComparer); ok {
-			out.Features[i].Comparer = c
-		}
-	}
-	return out
 }
 
 // With returns a copy of p with f replacing the Feature for the same

@@ -308,6 +308,7 @@ CREATE TABLE canonical_entities (
     argument                TEXT,
     label                   TEXT,
     merged_into_id          BLOB REFERENCES canonical_entities(id),
+    preferred_likeness_observation_id BLOB REFERENCES observations(id) ON DELETE SET NULL,
 
     UNIQUE (id, subject_type_id)
 ) STRICT;
@@ -316,6 +317,8 @@ CREATE TABLE canonical_entities (
 `subject_type_id` is the same vocabulary as Interpretation Subject types (referenced by id so origin-namespaced keys stay unambiguous). The table is an implementation detail; in the UI a `person` row is a Person (`PER-7KD45`), not a “canonical entity.” The Subject type is immutable after insert.
 
 `ref` is required: `{ref_prefix}-{token}` from the Subject type — `PER-7KD45` for a person. Candidate person Subjects are minted off the same type's `candidate_ref_prefix` (`CPR-…`), so the two layers stay distinct by prefix while sharing one ref format.
+
+`preferred_likeness_observation_id` is a display pointer for a Person: the likeness Observation the Person page and the Persons list lead with. It is not evidence and not a Reconciliation Claim. A reader honours it only when that likeness is in the handle's gallery; otherwise the earliest likeness leads. Deleting the Observation clears it.
 
 There is no identity anchor and no `representative_subject_id`. Membership is not a column on this row. Creating a handle from a record inserts the entity and an accepted Identity Claim for that subject. **Adopt** (first grounding of an inferred handle) is the first accepted Identity Claim on a handle that had none. Dropping the last member does not delete the entity or change its id.
 

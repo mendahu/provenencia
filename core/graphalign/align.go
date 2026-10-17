@@ -283,7 +283,7 @@ func (st *state) supports(subjectID, handleID, neighbor []byte) bool {
 }
 
 func (st *state) evaluate(a, b match.Values) match.Evaluation {
-	return match.EvaluateWithNames(a, b, st.metas, st.cfg.Names)
+	return match.Evaluate(a, b, st.metas, st.cfg.Value)
 }
 
 func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
@@ -415,10 +415,7 @@ func (st *state) fallbackUnreachable() {
 		if !ok {
 			continue
 		}
-		if st.cfg.Names != nil {
-			profile = profile.WithNameComparer(*st.cfg.Names)
-		}
-		for _, m := range match.Rank(profile, s.Values, st.candidatesOfKind(s.Kind), st.cfg.AlternativeLimit) {
+		for _, m := range match.Rank(profile, st.cfg.Value, s.Values, st.candidatesOfKind(s.Kind), st.cfg.AlternativeLimit) {
 			h := st.handles[string(m.EntityID)]
 			sc := st.scoreCandidate(s.ID, h)
 			st.recordBest(sk, sc)
@@ -882,7 +879,7 @@ func strongestAgreement(cs []Comparison) match.Property {
 func comparisonsFrom(ev match.Evaluation, probe match.Values, cfg Config, stats Stats) []Comparison {
 	out := make([]Comparison, 0, len(ev.Comparisons))
 	for _, pc := range ev.Comparisons {
-		outcome, weight := ScoreSimilarity(pc.Similarity, pc.Discount, pc.Comparable, pc.Cardinality, pc.Property, pc.ValueType, probe[pc.Property], cfg, stats)
+		outcome, weight := ScoreSimilarity(pc.Similarity, pc.Comparable, pc.Cardinality, pc.Property, pc.ValueType, probe[pc.Property], cfg, stats)
 		out = append(out, Comparison{
 			Property:  pc.Property,
 			Outcome:   outcome,

@@ -3,7 +3,7 @@
 **Status:** Landed in [#446](https://github.com/mendahu/provenencia/pull/446) (2026-10-17)
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-35--person-gallery-and-list-thumb)
-**Brief:** [S10-D12](../design/S10-D12-person-detail.md) (PDP-7 to PDP-9 ship here), board agreed 2026-10-16; [S10-D9](../design/archive/S10-D9-persons-list.md) (PSL-7 ships here), board agreed before S10-22
+**Brief:** [S10-D12](../design/archive/S10-D12-person-detail.md) (PDP-7 to PDP-9 ship here), board agreed 2026-10-16; [S10-D9](../design/archive/S10-D9-persons-list.md) (PSL-7 ships here), board agreed before S10-22
 **Board:** [Person Detail](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail.dc.html*, turn 2, frames 2j (Gallery) and 2k (Crop states); [Persons list](https://claude.ai/design/p/5c00cb55-8261-4579-b0e6-bc571ab23f78?via=share), file *Persons List.dc.html*, frame 08. Checked against exports the user attached on 2026-10-17: frame 08 matches PSL-7; frames 2j and 2k match PDP-7 to PDP-9, plus layout and copy the brief did not give (a 120pt tile column, gaps, the tile and header-thumb labels), which §6 records. §6 macOS describes every frame this PR ships in words. The implementer does not need the boards.
 **Depends on:** S10-23 (landed [#407](https://github.com/mendahu/provenencia/pull/407)), S10-52 (landed [#437](https://github.com/mendahu/provenencia/pull/437)), S10-54 (landed [#433](https://github.com/mendahu/provenencia/pull/433)), S10-34 (landed [#442](https://github.com/mendahu/provenencia/pull/442); no code dependency, the manual check draws faces in its composer), S10-D12, S10-D9
 **Blocks:** S10-39

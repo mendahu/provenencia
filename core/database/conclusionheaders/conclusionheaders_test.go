@@ -361,6 +361,49 @@ func TestPersonHeaderLeadsWithEarliestLikeness(t *testing.T) {
 	must(t, f.c.Graph().Verify())
 }
 
+func TestPersonHeaderLeadsWithPortrait(t *testing.T) {
+	f := newFixture(t)
+	s, _, h := f.person("Ann Lee")
+	a := observationstest.SaveLikeness(t, f.c, userID, f.source.ID, s.ID, 100)
+	b := observationstest.SaveLikeness(t, f.c, userID, f.source.ID, s.ID, 200)
+	imageOf := func(o observations.Observation) []byte { return observationstest.ImageOf(t, f.c, o.ID) }
+	choose := func(obs []byte) {
+		t.Helper()
+		_, err := writes.Call(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			ch, err := canonicalentities.SetPreferredLikeness(tx, userID, h, obs)
+			return struct{}{}, ch, err
+		})
+		must(t, err)
+	}
+	check := func(want observations.Observation, label string) {
+		t.Helper()
+		for _, rows := range [][]conclusionheaders.PersonHeader{f.list(), func() []conclusionheaders.PersonHeader {
+			r, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{h})
+			must(t, err)
+			return r
+		}()} {
+			found := false
+			for _, r := range rows {
+				if bytes.Equal(r.Entity.ID, h) {
+					found = true
+					if !bytes.Equal(r.LikenessImageFileID, imageOf(want)) {
+						t.Fatalf("%s: lead %x, want %x", label, r.LikenessImageFileID, imageOf(want))
+					}
+				}
+			}
+			if !found {
+				t.Fatalf("%s: no row", label)
+			}
+		}
+		must(t, f.c.Graph().Verify())
+	}
+	check(a, "no choice")
+	choose(b.ID)
+	check(b, "B chosen")
+	choose(nil)
+	check(a, "cleared")
+}
+
 func TestPersonsByIDs(t *testing.T) {
 	f := newFixture(t)
 	_, _, mary := f.person("Mary Smith")

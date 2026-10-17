@@ -208,7 +208,15 @@ struct CitationComposerViewerPane: View {
         }
         .disabled(model.isLocatorArtifactOnly || model.isDrawingDepiction)
         .accessibilityIdentifier("citationComposer.clearMenu")
-        .pvContextMenu($clearMenu, keyboard: $clearKeyboard, dismissOnClickAway: true) {
+        .pvContextMenu(
+            $clearMenu,
+            keyboard: $clearKeyboard,
+            keyboardTitles: [
+                L10n.string(L10n.CitationComposer.clearRegion),
+                L10n.string(L10n.CitationComposer.resetToEntireArtifact),
+            ],
+            dismissOnClickAway: true
+        ) {
             PVContextMenuPanel(
                 accessibilityIdentifier: "citationComposer.clearMenu.menu"
             ) {
@@ -237,14 +245,6 @@ struct CitationComposerViewerPane: View {
             clearMenu.dismiss()
             return
         }
-        clearKeyboard = PVContextMenuKeyboard(
-            itemCount: 2,
-            activeIndex: -1,
-            itemTitles: [
-                L10n.string(L10n.CitationComposer.clearRegion),
-                L10n.string(L10n.CitationComposer.resetToEntireArtifact),
-            ]
-        )
         clearMenu.present(at: CGPoint(x: 0, y: PVSpacing.controlHeightSmall))
     }
 

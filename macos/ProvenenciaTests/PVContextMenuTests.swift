@@ -88,6 +88,20 @@ struct PVContextMenuKeyboardTests {
         #expect(nav.activeIndex == 2)
     }
 
+    @Test func openedHighlightsNothingAndTypeSelectsTitles() {
+        var nav = PVContextMenuKeyboard.opened(titles: ["Clear region", "Reset to entire artifact"])
+        #expect(nav.itemCount == 2)
+        #expect(nav.activeIndex == -1)
+        #expect(nav.itemTitles == ["Clear region", "Reset to entire artifact"])
+        let moved = nav.applyTypeSelect("r")
+        #expect(moved)
+        #expect(nav.activeIndex == 1)
+        var empty = PVContextMenuKeyboard.opened(titles: [])
+        #expect(empty.itemCount == 0)
+        let emptyMoved = empty.applyTypeSelect("r")
+        #expect(!emptyMoved)
+    }
+
     @Test func typeSelectIsANoOpWithoutTitles() {
         var nav = PVContextMenuKeyboard(itemCount: 2, activeIndex: 0)
         let moved = nav.applyTypeSelect("s")

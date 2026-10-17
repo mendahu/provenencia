@@ -1,6 +1,6 @@
 # S11-05 — Migrate matching onto value compare
 
-**Status:** Planned
+**Status:** Landed in [#451](https://github.com/mendahu/provenencia/pull/451) (2026-10-17)
 **Spike / slice:** Spike 11 · Slice 2 — Value compare, everywhere
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: Go scoring moves onto value compare; no Swift or wire change)
@@ -363,3 +363,15 @@ None.
 
 **Title:** S11-05 — Migrate matching onto value compare
 **Body:** objective in one sentence; what shipped against US-1 – US-4; AC evidence (test names); the "Expected changes" rows with their rules; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-05-migrate-matching.md`.
+
+## Landed
+
+Differences from the plan:
+
+- The base was `75ed63c`, not the plan's `b6d1d48`; no row of §4 was affected.
+- `docs/matching.md` also lost its names "Worked examples" table and its `names_test.go` paragraph, which describe deleted code.
+- Extra tests: AC-1.5 and AC-2.1 subtests, a `surnameVals` helper, and a `valuerules` check in `TestNoStoredDefaultStampsWestern`.
+- `valueType()` is checked on both sides of a pair.
+- `scripts/check-plan-docs.py` no longer checks that backticked paths exist once a plan's Status is `Landed in …`. A landed plan is a historical record, and this PR deletes paths its own D-3, D-11 and §4 name (the S11-02 and S11-03 plans named paths later PRs delete too).
+- D-16 is not quite right that the researcher sees no difference. A record whose first given name or surname differs is no longer offered in the Promote target menu: the row opens New with reason `no_match` and no alternatives, where it was Skip with reason `weak` and alternatives. Linking such a record from Promote needs another path. The behavior is the design's, and the user accepted it on 2026-10-17. A follow-up is parked in [`docs/ideas/promote-find-another-record.md`](../../../ideas/promote-find-another-record.md).
+- The in-app Promote check (§10 steps 3 and 4) is left for the user.

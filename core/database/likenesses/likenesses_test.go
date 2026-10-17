@@ -2,9 +2,14 @@ package likenesses_test
 
 import (
 	"bytes"
+	"errors"
+	"slices"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/likenesses"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -12,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/sourcecredibility"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -132,6 +138,247 @@ func TestForEntities(t *testing.T) {
 		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], oa.ID) || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, f.c, oa.ID)) ||
 			!bytes.Equal(g[1].ObservationIDs[0], ob.ID) {
 			t.Fatalf("after redraw %+v", g)
+		}
+	})
+}
+
+// twoLikenesses files likeness A (Register) then B (Census) on two Subjects
+// promoted onto one Person.
+func (f *fixture) twoLikenesses() (h []byte, a, b observations.Observation, subjectB subjects.Subject) {
+	f.t.Helper()
+	reg, cen := f.source("Register"), f.source("Census")
+	sa, sb := f.personOn(reg), f.personOn(cen)
+	a = observationstest.SaveLikeness(f.t, f.c, userID, reg.ID, sa.ID, 100)
+	b = observationstest.SaveLikeness(f.t, f.c, userID, cen.ID, sb.ID, 200)
+	h = f.promote(sa, nil)
+	f.promote(sb, h)
+	return h, a, b, sb
+}
+
+func (f *fixture) setPreferred(h, observationID []byte) {
+	f.t.Helper()
+	_, err := writes.Call(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		ch, err := canonicalentities.SetPreferredLikeness(tx, userID, h, observationID)
+		return struct{}{}, ch, err
+	})
+	must(f.t, err)
+}
+
+func (f *fixture) gallery(h []byte) []likenesses.Likeness {
+	f.t.Helper()
+	got, err := likenesses.ForEntities(f.c.Graph(), [][]byte{h})
+	must(f.t, err)
+	return got[string(h)]
+}
+
+func (f *fixture) pointer(h []byte) []byte {
+	f.t.Helper()
+	db, err := f.c.DB()
+	must(f.t, err)
+	var p []byte
+	must(f.t, db.QueryRow(`SELECT preferred_likeness_observation_id FROM canonical_entities WHERE id = ?`, h).Scan(&p))
+	return p
+}
+
+func preferredFlags(g []likenesses.Likeness) []bool {
+	out := make([]bool, len(g))
+	for i := range g {
+		out[i] = g[i].Preferred
+	}
+	return out
+}
+
+func leadsFlags(g []likenesses.Likeness) []bool {
+	out := make([]bool, len(g))
+	for i := range g {
+		out[i] = g[i].Leads
+	}
+	return out
+}
+
+func TestForEntitiesPreferred(t *testing.T) {
+	t.Run("no pointer leads with the earliest", func(t *testing.T) {
+		f := newFixture(t)
+		h, a, _, _ := f.twoLikenesses()
+		g := f.gallery(h)
+		if !slices.Equal(preferredFlags(g), []bool{false, false}) {
+			t.Fatalf("flags %v", preferredFlags(g))
+		}
+		if !slices.Equal(leadsFlags(g), []bool{true, false}) {
+			t.Fatalf("leads %v", leadsFlags(g))
+		}
+		l, ok := likenesses.Lead(g)
+		if !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) {
+			t.Fatalf("lead %+v", l)
+		}
+	})
+	t.Run("pointer leads and keeps the order", func(t *testing.T) {
+		f := newFixture(t)
+		h, a, b, _ := f.twoLikenesses()
+		f.setPreferred(h, b.ID)
+		g := f.gallery(h)
+		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], a.ID) || !slices.Equal(preferredFlags(g), []bool{false, true}) {
+			t.Fatalf("gallery %+v", g)
+		}
+		if !slices.Equal(leadsFlags(g), []bool{false, true}) {
+			t.Fatalf("leads %v", leadsFlags(g))
+		}
+		l, ok := likenesses.Lead(g)
+		if !ok || !bytes.Equal(l.ObservationIDs[0], b.ID) {
+			t.Fatalf("lead %+v", l)
+		}
+	})
+	t.Run("unpromoted likeness falls back and keeps the pointer row", func(t *testing.T) {
+		f := newFixture(t)
+		h, a, b, sb := f.twoLikenesses()
+		f.setPreferred(h, b.ID)
+		_, err := writes.Call(f.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			ch, err := promote.Unpromote(tx, userID, sb.ID)
+			return struct{}{}, ch, err
+		})
+		must(t, err)
+		g := f.gallery(h)
+		l, ok := likenesses.Lead(g)
+		if len(g) != 1 || !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) || l.Preferred {
+			t.Fatalf("gallery %+v lead %+v", g, l)
+		}
+		if !slices.Equal(leadsFlags(g), []bool{true}) {
+			t.Fatalf("leads %v", leadsFlags(g))
+		}
+		if !bytes.Equal(f.pointer(h), b.ID) {
+			t.Fatalf("pointer row %x", f.pointer(h))
+		}
+	})
+	t.Run("stronger negative denying the pointed image falls back", func(t *testing.T) {
+		f := newFixture(t)
+		h, a, b, _ := f.twoLikenesses()
+		f.setPreferred(h, b.ID)
+		album := f.source("Album")
+		c := f.personOn(album)
+		_, _, err := observationstest.SaveCitation(f.c, userID, observationstest.FileArtifact(t, f.c, userID, album.ID), observations.Input{
+			SubjectID: c.ID, PropertyID: f.likeness.ID, Polarity: observations.PolarityNegative,
+			Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 40, 30, 200)}})
+		must(t, err)
+		grade, err := sourcecredibilitygrades.Lookup(f.c, "high_trust", vocabkey.OriginProvenencia)
+		must(t, err)
+		_, err = writes.Call(f.c, writes.Op{Action: "create_source_credibility_assessment", UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+			return sourcecredibility.Upsert(tx, userID, sourcecredibility.UpsertInput{SourceID: album.ID, CredibilityGradeID: grade.ID})
+		})
+		must(t, err)
+		f.promote(c, h)
+		g := f.gallery(h)
+		l, ok := likenesses.Lead(g)
+		if len(g) != 1 || !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) || !slices.Equal(preferredFlags(g), []bool{false}) {
+			t.Fatalf("gallery %+v lead %+v", g, l)
+		}
+		if !slices.Equal(leadsFlags(g), []bool{true}) {
+			t.Fatalf("leads %v", leadsFlags(g))
+		}
+		if !bytes.Equal(f.pointer(h), b.ID) {
+			t.Fatalf("pointer row %x", f.pointer(h))
+		}
+	})
+	t.Run("deleting the Observation clears the pointer", func(t *testing.T) {
+		f := newFixture(t)
+		h, a, b, _ := f.twoLikenesses()
+		f.setPreferred(h, b.ID)
+		_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			ch, err := observations.Delete(tx, userID, b.ID)
+			return struct{}{}, ch, err
+		})
+		must(t, err)
+		if p := f.pointer(h); p != nil {
+			t.Fatalf("pointer %x", p)
+		}
+		g := f.gallery(h)
+		if !slices.Equal(leadsFlags(g), []bool{true}) {
+			t.Fatalf("leads %v", leadsFlags(g))
+		}
+		l, ok := likenesses.Lead(g)
+		if !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) {
+			t.Fatalf("lead %+v", l)
+		}
+	})
+	t.Run("empty gallery has no lead", func(t *testing.T) {
+		if len(leadsFlags(nil)) != 0 {
+			t.Fatal("flags")
+		}
+		if _, ok := likenesses.Lead(nil); ok {
+			t.Fatal("ok")
+		}
+	})
+}
+
+func TestSetPreferredLikeness(t *testing.T) {
+	set := func(f *fixture, h, obs []byte, user []byte) ([]rowchange.Change, writes.Result, error) {
+		return writes.Run(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) ([]rowchange.Change, []rowchange.Change, error) {
+			ch, err := canonicalentities.SetPreferredLikeness(tx, user, h, obs)
+			return ch, ch, err
+		})
+	}
+	t.Run("choose, repeat, switch, clear", func(t *testing.T) {
+		f := newFixture(t)
+		h, a, b, _ := f.twoLikenesses()
+		ch, res, err := set(f, h, b.ID, userID)
+		must(t, err)
+		if len(ch) != 1 {
+			t.Fatalf("changes %+v", ch)
+		}
+		d := ch[0].Fields["preferred_likeness_observation_id"]
+		if d.Old != nil || d.New != uuid.UUID(b.ID).String() {
+			t.Fatalf("diff %+v", d)
+		}
+		if len(res.Effects.Handles) != 1 || !bytes.Equal(res.Effects.Handles[0], h) ||
+			len(res.Effects.HandleScopes) != 1 || !bytes.Equal(res.Effects.HandleScopes[0], h) {
+			t.Fatalf("effects %+v", res.Effects)
+		}
+		ch, res, err = set(f, h, b.ID, userID)
+		must(t, err)
+		if len(ch) != 0 || res.Revision != 0 {
+			t.Fatalf("repeat wrote %+v rev %d", ch, res.Revision)
+		}
+		_, _, err = set(f, h, a.ID, userID)
+		must(t, err)
+		if !bytes.Equal(f.pointer(h), a.ID) {
+			t.Fatalf("pointer %x", f.pointer(h))
+		}
+		ch, _, err = set(f, h, nil, userID)
+		must(t, err)
+		if f.pointer(h) != nil || len(ch) != 1 || ch[0].Fields["preferred_likeness_observation_id"].New != nil {
+			t.Fatalf("clear %+v pointer %x", ch, f.pointer(h))
+		}
+	})
+	t.Run("refused", func(t *testing.T) {
+		f := newFixture(t)
+		h, _, b, _ := f.twoLikenesses()
+		other := f.source("Diary")
+		so := f.personOn(other)
+		o := observationstest.SaveLikeness(t, f.c, userID, other.ID, so.ID, 150)
+		f.promote(so, nil)
+		fresh, err := uuid.NewV7()
+		must(t, err)
+		unknown, err := uuid.NewV7()
+		must(t, err)
+		f.setPreferred(h, b.ID)
+		cases := []struct {
+			name      string
+			h, obs, u []byte
+		}{
+			{"another Person's likeness", h, o.ID, userID},
+			{"no such Observation", h, fresh[:], userID},
+			{"unknown entity", unknown[:], b.ID, userID},
+			{"nil user", h, b.ID, nil},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				_, _, err := set(f, tc.h, tc.obs, tc.u)
+				if !errors.Is(err, canonicalentities.ErrInvalid) {
+					t.Fatalf("err %v", err)
+				}
+				if !bytes.Equal(f.pointer(h), b.ID) {
+					t.Fatalf("pointer changed %x", f.pointer(h))
+				}
+			})
 		}
 	})
 }

@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-05 — Migrate matching onto value compare
+
+**Landed 2026-10-17** in [#451](https://github.com/mendahu/provenencia/pull/451). Promote and `Rank` now compare values with value compare under the registry's value rules, with the catalog's name pattern and alias tables passed in as `Rules` by one loader, `valuerules.Load`. A name with words on one side only (`Robins` / `James Robins`) is a resemblance below a full match, a different first given name is no match at all, `ABT 1817` reads as 1816 – 1818, toponyms compare in word order, and a common surname costs nothing extra. `match`'s comparers, the name frequency discount (`Stats.Words` included) and Promote's per-type floors are deleted; one outcome rule, `match.OutcomeOf`, serves `Evaluate` and `ApplyScale`. A Subject whose only look-alike has another first name now proposes New (reason `no_match`, no alternatives) where it proposed Skip with alternatives, so such a record is no longer offered in the Promote target menu. The matching skill, `matching.md` and the other docs that named the deleted code are corrected.
+
 ## S11-03 — Value compare: names
 
 **Landed 2026-10-17** in [#447](https://github.com/mendahu/provenencia/pull/447). Value compare now relates two names by their parts: `Same`, `Equivalent`, `Contains`, `Near`, `Different` or `Unknown`, a similarity, and a detail that lists which word paired with which, in which role, and why. Initials and alias tables joined value compare's word similarity, and a name `Key` agrees with `Compare`. The name types moved to `core/valuecompare`, the product alias and nickname seeds with their license to `core/database/namealiases`, and the name knobs into the registry; `core/match` reads them from there and shares the pairing and alias lookup. A name of more than `value.Names.MaxWords` (32) words is `Unknown` (`too_long`), and the alias index is built once per catalog load. No caller uses the new comparer yet; nothing changes for researchers.

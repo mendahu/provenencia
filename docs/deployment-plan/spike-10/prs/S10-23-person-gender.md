@@ -3,7 +3,7 @@
 **Status:** Landed in [#407](https://github.com/mendahu/provenencia/pull/407) (2026-10-16)
 **Spike / slice:** Spike 10 · Slice 6 — Lists and the Person page
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-23--sex--gender-on-the-person-page)
-**Brief:** [S10-D12](../design/S10-D12-person-detail.md) (PDP-1 to PDP-6 and PDP-12 ship here), board agreed 2026-10-16
+**Brief:** [S10-D12](../design/archive/S10-D12-person-detail.md) (PDP-1 to PDP-6 and PDP-12 ship here), board agreed 2026-10-16
 **Board:** Claude Design project *Person Detail*, file *Person Detail.dc.html*, turn 2 (“S10-D12”), frames 2a to 2i for this PR; exported by the user on 2026-10-16. The brief's **Board** line records what the board changed. §6 macOS describes every frame this PR ships in words. The implementer does not need the board.
 **Depends on:** S10-D12 (board agreed 2026-10-16)
 **Blocks:** S10-35 (fills the gallery frames on the same page)

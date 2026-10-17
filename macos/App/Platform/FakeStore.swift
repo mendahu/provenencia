@@ -105,6 +105,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var reorderSourceMetadataError: Error?
     /// When set, `unpromoteSubject` throws (the Unpromote confirm shows the error).
     var unpromoteSubjectError: Error?
+    /// When set, `setPreferredLikeness` throws (the portrait model shows a danger toast).
+    var setPreferredLikenessError: Error?
     /// When set, `setSubjectPosition` throws (Evidence graph drag should revert).
     var setSubjectPositionError: Error?
     /// When true, each `setSubjectPosition` suspends until `releaseSetSubjectPosition()`
@@ -1418,6 +1420,21 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 claimBySubject[id] = nil
             }
             return CatalogWriteEffects(handles: removed, sources: [sourceID], handleScopes: removed)
+        }
+    }
+
+    /// Records the call and reports effects only; Go owns the lead rule, so seeded details do not change.
+    func setPreferredLikeness(
+        projectDir: String,
+        userID _: String,
+        entityID: String,
+        observationID: String
+    ) async throws -> CatalogWriteEffects {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            recordedCalls.append("setPreferredLikeness entity=\(entityID) observation=\(observationID)")
+            if let setPreferredLikenessError { throw setPreferredLikenessError }
+            return CatalogWriteEffects(handles: [entityID], handleScopes: [entityID])
         }
     }
 

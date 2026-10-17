@@ -2,13 +2,14 @@ package nameformats
 
 import (
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
@@ -33,10 +34,15 @@ func TestMissingDefaultUsesWestern(t *testing.T) {
 	b := nameValue("Vincent", "van", "Gogh")
 	a.NamePattern = loaded.Key
 	b.NamePattern = loaded.Key
-	got, ok := loaded.Comparer().Compare(a, b)
-	want, wantOK := match.DefaultNames.Compare(a, b)
-	if ok != wantOK || got != want {
-		t.Fatalf("score %v %v, built-in %v %v", got, ok, want, wantOK)
+	base := matchregistry.Default().Value
+	rules := loaded.Rules(base)
+	if !reflect.DeepEqual(rules, base) {
+		t.Fatalf("builtin rules differ from the registry's value section")
+	}
+	got, _ := valuecompare.Compare(a, b, rules)
+	want, _ := valuecompare.Compare(a, b, base)
+	if got != want {
+		t.Fatalf("score %+v, built-in %+v", got, want)
 	}
 }
 
@@ -62,6 +68,10 @@ func TestInstallLoadsWesternAndFormats(t *testing.T) {
 	}
 	if loaded.Profile.Label != "Western" {
 		t.Fatalf("label %q", loaded.Profile.Label)
+	}
+	rules := loaded.Rules(matchregistry.Default().Value)
+	if !reflect.DeepEqual(rules.Names.Patterns[valuecompare.WesternPattern], loaded.Profile.Pattern) {
+		t.Fatalf("Names.Patterns[western] = %+v, want the stored pattern", rules.Names.Patterns)
 	}
 	roles := map[string]bool{}
 	for _, pt := range namevalue.PartTypes() {
@@ -170,8 +180,8 @@ func TestLoadIDRefusesBadWeight(t *testing.T) {
 	}
 }
 
-func nameValue(given, particle, surname string) match.Value {
-	return match.Value{Name: &namevalue.Value{Parts: []namevalue.Part{
+func nameValue(given, particle, surname string) valuecompare.Value {
+	return valuecompare.Value{Type: propertymeta.ValueTypeName, Name: &namevalue.Value{Parts: []namevalue.Part{
 		{Idx: 0, Value: given, Type: namevalue.PartTypeGiven},
 		{Idx: 1, Value: particle, Type: namevalue.PartTypeSurnamePrefix},
 		{Idx: 2, Value: surname, Type: namevalue.PartTypeSurname},

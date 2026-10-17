@@ -8,7 +8,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/datevalue"
@@ -33,7 +32,7 @@ type exhibitObs struct {
 // members one hop from the chosen handle's members: "her birth date matches"
 // compares this birth with that birth, never with some other event's date.
 // A neighbor Align didn't map (New, Skip, unreachable) contributes nothing.
-func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop *graphalign.Proposal, cfg graphalign.Config, stats graphalign.Stats) error {
+func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop *graphalign.Proposal, cfg graphalign.Config, stats graphalign.Stats, namePattern string) error {
 	if prop == nil || len(prop.Rows) == 0 {
 		return nil
 	}
@@ -138,7 +137,7 @@ func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop
 		}
 	}
 	if len(want) > 0 {
-		obs, err := loadExhibitObservations(q, want)
+		obs, err := loadExhibitObservations(q, want, namePattern)
 		if err != nil {
 			return err
 		}
@@ -228,12 +227,8 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 		if in.valueType == "" || in.valueType == "subject" {
 			continue
 		}
-		cmp := match.ComparerFor(in.valueType)
-		if in.valueType == propertymeta.ValueTypeName && cfg.Names != nil {
-			cmp = *cfg.Names
-		}
 		var chosen *exhibitObs
-		var sim, discount float64
+		var sim float64
 		var comparable bool
 		pinned := false
 		for i := range memberObs {
@@ -244,16 +239,16 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 			if exhibitCompatible(in.valueType, in.value, mem.value) {
 				chosen = mem
 				pinned = true
-				sim, discount, comparable = comparerDiscount(cmp, in.value, mem.value)
+				sim, comparable = match.Compare(cfg.Value, in.valueType, in.value, mem.value)
 				break
 			}
-			s, d, ok := comparerDiscount(cmp, in.value, mem.value)
+			s, ok := match.Compare(cfg.Value, in.valueType, in.value, mem.value)
 			if !ok {
 				continue
 			}
-			if chosen == nil || s*(1-d) > sim*(1-discount) {
+			if chosen == nil || s > sim {
 				chosen = mem
-				sim, discount = s, d
+				sim = s
 				comparable = true
 			}
 		}
@@ -267,7 +262,7 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 		if card == "" {
 			card = propertymeta.CardinalitySingle
 		}
-		outcome, weight := graphalign.ScoreSimilarity(sim, discount, comparable, card, in.prop, in.valueType, []match.Value{in.value}, cfg, stats)
+		outcome, weight := graphalign.ScoreSimilarity(sim, comparable, card, in.prop, in.valueType, []match.Value{in.value}, cfg, stats)
 		if outcome == match.OutcomeUnknown {
 			continue
 		}
@@ -299,15 +294,6 @@ func cloneDate(d *datevalue.Value) *datevalue.Value {
 	}
 	c := *d
 	return &c
-}
-
-// comparerDiscount is the comparer's similarity and the share of points the
-// matched values' frequency costs.
-func comparerDiscount(cmp match.Comparer, a, b match.Value) (similarity, discount float64, comparable bool) {
-	if cmp == nil {
-		return 0, 0, false
-	}
-	return match.CompareDiscount(cmp, a, b)
 }
 
 func exhibitCompatible(valueType string, a, b match.Value) bool {
@@ -391,7 +377,7 @@ func bridgeNeighbors(q Querier, from, toward [][]byte) (map[string][][]byte, err
 	return out, nil
 }
 
-func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, error) {
+func loadExhibitObservations(q Querier, subjectIDs [][]byte, namePattern string) ([]exhibitObs, error) {
 	query := `SELECT o.id, o.subject_id, p.key, p.origin, p.value_type, p.cardinality,
 			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, t.key, t.label, COALESCE(t.neutral, 0), src.title
 		FROM observations o
@@ -446,10 +432,6 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 	if err != nil {
 		return nil, err
 	}
-	loaded, err := nameformats.Load(q)
-	if err != nil {
-		return nil, err
-	}
 	out := make([]exhibitObs, 0, len(all))
 	for _, p := range all {
 		if d, ok := dates[string(p.dateID)]; ok {
@@ -457,7 +439,7 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 		}
 		if n, ok := names[string(p.nameID)]; ok {
 			p.o.value.Name = &n
-			p.o.value.NamePattern = loaded.Key
+			p.o.value.NamePattern = namePattern
 		}
 		out = append(out, p.o)
 	}

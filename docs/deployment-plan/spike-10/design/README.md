@@ -8,9 +8,7 @@ Brief files are written **just before** the PR they gate, not up front. This ind
 
 ## Scheduled
 
-| Step | View | Gates | Notes |
-| --- | --- | --- | --- |
-| [S10-D12](S10-D12-person-detail.md) | Person detail | **S10-23** | Board agreed 2026-10-16. PDP-1 to PDP-6 shipped in S10-23 ([#407](https://github.com/mendahu/provenencia/pull/407)); PDP-7 to PDP-9 (gallery, tile open, header thumb) shipped in S10-35 ([#446](https://github.com/mendahu/provenencia/pull/446)). Sex / gender Badge as an eyebrow above the name, 120pt header thumb on every Conclusion page, four tints (non-binary is lapis, not the board's copper), sex at birth borrows and says “· at birth”. The preferred-portrait control **S10-39** fills stays in this brief; **S10-39** archives it |
+None.
 
 ## Descoped
 
@@ -29,6 +27,7 @@ S10-D14, the zoomed-out card, was descoped 2026-10-11 with S10-46. The full card
 | S10-D5 | Source page — Artifacts | **S10-18** | Done 2026-10-14. [S10-D5-source-artifacts.md](archive/S10-D5-source-artifacts.md) |
 | S10-D16 | Design system — Event mark | **S10-19** | Done 2026-10-14. [S10-D16-event-mark.md](archive/S10-D16-event-mark.md) |
 | S10-D7 | Workspace shell | **S10-19** | Done 2026-10-14. [S10-D7-sidebar-marks.md](archive/S10-D7-sidebar-marks.md) |
+| S10-D12 | Person detail | **S10-23** | Done 2026-10-17. [S10-D12-person-detail.md](archive/S10-D12-person-detail.md). Board agreed 2026-10-16. PDP-1 to PDP-6 shipped in S10-23 ([#407](https://github.com/mendahu/provenencia/pull/407)); PDP-7 to PDP-9 (gallery, tile open, header thumb) in S10-35 ([#446](https://github.com/mendahu/provenencia/pull/446)); PDP-10 and PDP-11 (use as portrait, header thumb menu) in S10-39 ([#450](https://github.com/mendahu/provenencia/pull/450)) |
 | S10-D9 | Persons list | **S10-22** | Done 2026-10-15. [S10-D9-persons-list.md](archive/S10-D9-persons-list.md). The likeness thumb is S10-35, then the preferred portrait in S10-39 |
 | S10-D10 | Events list | **S10-22** | Done 2026-10-15. [S10-D10-events-list.md](archive/S10-D10-events-list.md) |
 | S10-D11 | Places list | **S10-22** | Done 2026-10-15. [S10-D11-places-list.md](archive/S10-D11-places-list.md) |

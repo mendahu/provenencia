@@ -1,9 +1,9 @@
 # S10-39 — Preferred portrait
 
-**Status:** Planned
+**Status:** Landed in [#450](https://github.com/mendahu/provenencia/pull/450) (2026-10-17)
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-39--preferred-portrait)
-**Brief:** [S10-D12](../design/S10-D12-person-detail.md) (PDP-10, PDP-11 ship here), board agreed 2026-10-16; [S10-D9](../design/archive/S10-D9-persons-list.md) (PSL-8 ships here), board agreed before S10-22
+**Brief:** [S10-D12](../design/archive/S10-D12-person-detail.md) (PDP-10, PDP-11 ship here), board agreed 2026-10-16; [S10-D9](../design/archive/S10-D9-persons-list.md) (PSL-8 ships here), board agreed before S10-22
 **Board:** [Person Detail](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail.dc.html*, the Portrait frame (brief §5 frame 10); [Persons list](https://claude.ai/design/p/5c00cb55-8261-4579-b0e6-bc571ab23f78?via=share), file *Persons List.dc.html*, the Preferred portrait frame (brief §5 frame 8). The implementer opens these links (user, 2026-10-17). §6 macOS also describes each frame in words. Where the board and a Decision differ, follow the Decision and report the difference in the PR body.
 **Depends on:** S10-35 (landed [#446](https://github.com/mendahu/provenencia/pull/446); [`S10-35-person-gallery.md`](S10-35-person-gallery.md) and its Landed note), S10-D12, S10-D9
 **Blocks:** —
@@ -30,6 +30,10 @@
 
 **Machines.** STEP-1 to STEP-4 and STEP-5's Go tests run on Linux. STEP-5's `./scripts/generate-proto.sh` needs `protoc`, `protoc-gen-go`, and `protoc-gen-swift`. STEP-6 to STEP-10's Swift checks, `scripts/check-pr.sh`'s Xcode stage, and §10 need a Mac. On a machine without them, run every check it can, and report each one it could not run as not run.
 
+## Landed
+
+Differences from this plan: `WorkspaceDestinationHost` also puts `.id(entityId)` on `PersonDetailView`, so the `@State` portrait model, which holds the entity id, is rebuilt when one Person page replaces another; `ThrowingStore` in `OnboardingModelTests.swift` gained a `setPreferredLikeness` stub (a `GenealogyStore` conformer the file list did not name). The `evaluate-ui-component` verdict (D-15): the tile and the artifact card share only the Badge and ghost-button pairing, so no shell is extracted and none is queued. The manual check in section 10 (VoiceOver, the 120pt column at the default size, the menu keyboard regression) needs a person at the Mac and was not run by the implementer; the Go and Swift tests in section 8 cover every AC except those. The Claude Design boards were not opened. `canonicalentities` binds the preferred id with the shared `database.NullBlob` instead of a private copy (user, 2026-10-17); the other packages' copies move in M-4. The tile that leads the header always shows the Portrait Badge (user, 2026-10-17): `likenesses.Likeness.Leads` (and `LikenessTile.Leads`, `LikenessDetail.leads = 4`, `CatalogLikeness.leads`) marks it, `Lead` reads it, the tile's `isPortrait` is `leads`, and `ConclusionDetailThumbnail.isPortrait` became `offersEarliest`, true only while the lead is not the earliest. `Preferred` stays as the pointer's flag.
+
 ## 1. Objective
 
 The researcher marks one likeness in a Person's gallery as the portrait. That crop then leads the Person page header and is the Persons list thumb; the other likenesses stay in the gallery, in the same order. The header thumb's menu goes back to the earliest likeness. Deleting the chosen likeness, or that likeness leaving the gallery, puts the earliest back.
@@ -46,7 +50,7 @@ The researcher marks one likeness in a Person's gallery as the portrait. That cr
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-1.1 | Person with likeness A (earliest, *Register*) and B (*Census*), no portrait | Each tile shows a ghost “Use as portrait” button under its caption; no tile has a Badge; the header thumb is A |
+| AC-1.1 | Person with likeness A (earliest, *Register*) and B (*Census*), no portrait | The earliest tile (A) shows the Portrait Badge and no button; the other tiles show a ghost “Use as portrait” button under the caption; the header thumb is A (user, 2026-10-17) |
 | AC-1.2 | Click “Use as portrait” under B | `canonical_entities.preferred_likeness_observation_id` is B's record Observation id; B's tile shows the accent “Portrait” Badge with the photo icon and no button; A's tile keeps its button; tile order stays [A, B]; a success toast “Portrait updated” / “Using the likeness from Census as the portrait.” |
 | AC-1.3 | After AC-1.2 | The header thumb shows B, spoken “Likeness from Census”; the Persons list row thumb shows B, with no badge or mark on the row (PSL-8) |
 | AC-1.4 | After AC-1.2, click “Use as portrait” under A | The pointer is A's record; A has the Badge, B the button; one portrait at most |
@@ -57,8 +61,8 @@ The researcher marks one likeness in a Person's gallery as the portrait. That cr
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-2.1 | Portrait B chosen; right-click the header thumb | A menu titled “Person portrait” with one item “Use earliest likeness” |
-| AC-2.2 | Choose “Use earliest likeness” | The pointer is NULL; A leads the header and the list; every tile shows its button; a success toast “Portrait updated” / “Using the earliest likeness as the portrait.” |
-| AC-2.3 | No portrait chosen; right-click the header thumb | No menu opens; the thumb has no menu help or hint |
+| AC-2.2 | Choose “Use earliest likeness” | The pointer is NULL; A leads the header and the list; A shows the Badge and B its button; a success toast “Portrait updated” / “Using the earliest likeness as the portrait.” |
+| AC-2.3 | No portrait chosen; right-click the header thumb | No portrait chosen, or the earliest chosen: no menu opens; the thumb has no menu help or hint (user, 2026-10-17) |
 | AC-2.4 | VoiceOver on the header thumb while a portrait is chosen | The thumb offers the action “Use earliest likeness” |
 
 **US-3.** As a researcher, the portrait never shows a face the gallery does not.
@@ -66,7 +70,7 @@ The researcher marks one likeness in a Person's gallery as the portrait. That cr
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-3.1 | Portrait B; delete B's Observation in the composer | The pointer is NULL (`ON DELETE SET NULL`); A leads; the gallery shows only A |
-| AC-3.2 | Portrait B; B's Subject is unpromoted, or a stronger negative denies B's image | B is not in the gallery; A leads; no tile shows the Badge. The pointer row is unchanged |
+| AC-3.2 | Portrait B; B's Subject is unpromoted, or a stronger negative denies B's image | B is not in the gallery; A leads and shows the Badge. The pointer row is unchanged |
 | AC-3.3 | Set the portrait to an Observation that is not one of this handle's gallery likenesses (another Person's likeness, an id that names no Observation) | Refused with `canonicalentities.invalid`; nothing written |
 | AC-3.4 | Portrait B already chosen; choose B again through the FFI | No revision is written; effects are empty |
 
@@ -340,7 +344,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-3 | Go | `core/database/conclusionheaders/conclusionheaders_test.go` `TestPersonHeaderLeadsWithPortrait` *(new)* | Person with A then B (`observationstest.SaveLikeness`, as `TestPersonHeaderLeadsWithEarliestLikeness`); set pointer B through `writes.Call` + `canonicalentities.SetPreferredLikeness` (the commit drops the stored row; no `Graph().Drop()`) → `ListPersons` and `PersonsByIDs` `LikenessImageFileID` = B's image; `c.Graph().Verify()` → nil; clear → A's image | AC-1.3, AC-2.2, D-5 |
 | T-4 | Go | `core/database/conclusiondetails/conclusiondetails_test.go` `TestForEntityLikenesses` (extended) | After the existing case, set pointer B through `writes.Call` + `canonicalentities.SetPreferredLikeness` → `Likenesses` [A, B], `Likenesses[1].Preferred` true, `[0].Preferred` false | AC-1.2, D-4 |
 | T-5 | Go | `api/ffi/handlers/conclusion_detail_test.go` `TestSetPreferredLikeness` *(new)* | `likenessFixture`, `saveLikeness` A (`writeCrop(t, 300, 200, 100)`) then B (`writeCrop(t, 300, 200, 200)`), `PromoteSubject` on the person (empty `entity_id`); the record ids are the `observations[0].id` of each response. Set B → `effects.handles` and `effects.handle_scopes` contain the entity; `GetConclusionDetail` → `likenesses[1].preferred`, `person.likeness_image_rel_path == likenesses[1].image_rel_path`. Set B again → `effects.revision == 0`. Clear (empty `observation_id`) → lead is `likenesses[0]`. Set to a fresh UUIDv7 string → error code `canonicalentities.invalid`. Set B, `DeleteObservation` B → one likeness, lead A | AC-1.2, AC-1.3, AC-2.2, AC-3.1, AC-3.3, AC-3.4, D-6, D-7 |
-| T-6 | Swift | `macos/ProvenenciaTests/PersonDetailTests.swift` `portraitFlagsFollowThePreferredLikeness` *(new)* | Detail with likenesses [A (*Register*), B (*Census*, `preferred`)] and header path B → `content.likenesses.map(\.isPortrait)` [false, true]; `thumbnail.isPortrait` true; `thumbnail.imageLabel` "Likeness from Census". Neither preferred → both false, `thumbnail.isPortrait` false. `EventDetailContent(...).thumbnail.isPortrait` false | AC-1.1, AC-1.3, AC-2.3, D-11 |
+| T-6 | Swift | `macos/ProvenenciaTests/PersonDetailTests.swift` `portraitFlagsFollowThePreferredLikeness` *(new)* | Detail with likenesses [A (*Register*), B (*Census*, `preferred`)] and header path B → `content.likenesses.map(\.isPortrait)` [false, true] (the tile's flag is the lead, `leads`); `thumbnail.offersEarliest` true; `thumbnail.imageLabel` "Likeness from Census". Neither preferred → `isPortrait` [true, false], `thumbnail.offersEarliest` false; A preferred → the same. `EventDetailContent(...).thumbnail.offersEarliest` false (user, 2026-10-17) | AC-1.1, AC-1.3, AC-2.3, D-11 |
 | T-7 | Swift | `PersonDetailTests.swift` `choosingAPortraitWritesAndToasts`, `useEarliestClearsAndToasts`, `portraitFailureToastsTheError` *(new)* | `FakeStore` + `WorkspaceSession(projectKey:store:)` + `ConclusionPortraitModel(session:userID: "user-1", entityId: "per-1")`. `choose(B)` → last `recordedCalls` "setPreferredLikeness entity=per-1 observation=\(B.id)"; `toast` success, title "Portrait updated", body "Using the likeness from Census as the portrait."; `isSaving` false. `useEarliest()` → "… observation=" and body "Using the earliest likeness as the portrait.". With `setPreferredLikenessError` set → toast tone `.danger`, title `L10n.Errors.message(for:)` of that error, body "" | AC-1.2, AC-1.5, AC-2.2, D-8, D-9 |
 | T-8 | Swift | `macos/ProvenenciaTests/PVContextMenuTests.swift` `openedHighlightsNothingAndTypeSelectsTitles` *(new)* | `PVContextMenuKeyboard.opened(titles: ["Clear region", "Reset to entire artifact"])` → `itemCount` 2, `activeIndex` -1, `itemTitles` those two; `applyTypeSelect("r")` → `activeIndex` 1. `opened(titles: [])` → `itemCount` 0, `applyTypeSelect("r")` false | AC-2.1, D-16 |
 
@@ -368,10 +372,10 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 Run on a Mac, on a test project.
 
 1. In the S10-34 composer, give *Ann* two likenesses on two Sources (*Register* first, then *Census*); promote both onto one Person. Give her gender Woman.
-2. Open *Ann*: the header shows the *Register* crop. Both tiles show “Use as portrait”; right-clicking the header thumb opens nothing (AC-1.1, AC-2.3).
+2. Open *Ann*: the header shows the *Register* crop. *Register* shows the “Portrait” Badge, *Census* shows “Use as portrait”; right-clicking the header thumb opens nothing (AC-1.1, AC-2.3) (user, 2026-10-17).
 3. Click “Use as portrait” under *Census*: the toast reads “Portrait updated” / “Using the likeness from Census as the portrait.”; *Census* shows the “Portrait” Badge and no button; the tiles stay in order; the header shows the *Census* crop with the plum outline. Open the Persons list: *Ann*'s thumb is the *Census* crop and the row shows nothing else new (AC-1.2, AC-1.3).
-4. Back on *Ann*, right-click the header thumb: “Person portrait” / “Use earliest likeness”. Choose it: the *Register* crop leads, both tiles show their buttons, the toast says the earliest is used (AC-2.1, AC-2.2). With VoiceOver, after choosing *Census* again, the header thumb offers “Use earliest likeness” (AC-2.4).
-5. With *Census* chosen, open its Citation from the tile and delete that likeness Observation. Back on *Ann*: one tile, *Register* leads, no Badge, no menu (AC-3.1).
+4. Back on *Ann*, right-click the header thumb: “Person portrait” / “Use earliest likeness”. Choose it: the *Register* crop leads, *Register* shows the Badge and *Census* its button, the toast says the earliest is used (AC-2.1, AC-2.2). With VoiceOver, after choosing *Census* again, the header thumb offers “Use earliest likeness” (AC-2.4).
+5. With *Census* chosen, open its Citation from the tile and delete that likeness Observation. Back on *Ann*: one tile, *Register* leads with the Badge, no menu (AC-3.1).
 6. Regression for D-16: on a Source page with a cover, right-click the cover, press R: “Revert to default” highlights; Enter reverts. In the composer, open the clear-region menu twice: nothing is highlighted on each open; ↓ highlights “Clear region”. On *Ann* with a portrait, right-click the header thumb, press ↓ then Enter: the earliest likeness leads (AC-2.1).
 7. Choose the remaining likeness, then unpromote its Subject on the Evidence graph: *Ann* has no gallery and the person mark (AC-3.2).
 

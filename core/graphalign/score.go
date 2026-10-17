@@ -4,7 +4,6 @@ import (
 	"strconv"
 
 	"github.com/mendahu/provenencia/core/match"
-	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // Scored is the pairwise + edge result ScoreCandidate returns.
@@ -35,7 +34,7 @@ func propertyPoints(ev *match.Evaluation, probe match.Values, cfg Config, stats 
 	var total float64
 	for i := range ev.Comparisons {
 		pc := &ev.Comparisons[i]
-		outcome, points := ScoreSimilarity(pc.Similarity, pc.Discount, pc.Comparable, pc.Cardinality, pc.Property, pc.ValueType, probe[pc.Property], cfg, stats)
+		outcome, points := ScoreSimilarity(pc.Similarity, pc.Comparable, pc.Cardinality, pc.Property, pc.ValueType, probe[pc.Property], cfg, stats)
 		pc.Outcome = outcome
 		total += points
 	}
@@ -81,37 +80,25 @@ func EdgePoints(facts []EdgeFact, nodeScore float64, cfg Config) float64 {
 
 // ScoreSimilarity looks up the scale for a property and applies it. The
 // scale is registry data; this function does not name a property or a value
-// type beyond using them as lookup keys. Positive points are multiplied by
-// 1 − discount, the share the matched values' frequency in the project costs.
-// The outcome never reads the discount, and a conflict is not scaled.
-func ScoreSimilarity(similarity, discount float64, comparable bool, cardinality string, property match.Property, valueType string, vals []match.Value, cfg Config, stats Stats) (match.Outcome, float64) {
-	outcome, points := ApplyScale(similarity, comparable, cardinality, cfg.resolvedScale(property, valueType, vals, stats))
-	if points > 0 {
-		points *= 1 - discount
-	}
-	return outcome, points
+// type beyond using them as lookup keys.
+func ScoreSimilarity(similarity float64, comparable bool, cardinality string, property match.Property, valueType string, vals []match.Value, cfg Config, stats Stats) (match.Outcome, float64) {
+	return ApplyScale(similarity, comparable, cardinality, cfg.resolvedScale(property, valueType, vals, stats))
 }
 
-// ApplyScale turns one similarity into an outcome and points. It has no
-// property names, value types, or catalog lookups.
+// ApplyScale turns one similarity into an outcome and points. The outcome is
+// match.OutcomeOf; an agreement or partial earns Weight × similarity, a
+// conflict costs Contradiction, unknown nothing. It has no property names,
+// value types, or catalog lookups.
 func ApplyScale(similarity float64, comparable bool, cardinality string, scale Scale) (match.Outcome, float64) {
-	if !comparable {
-		return match.OutcomeUnknown, 0
+	similarity = min(similarity, 1)
+	outcome := match.OutcomeOf(similarity, comparable, cardinality)
+	switch outcome {
+	case match.OutcomeAgree, match.OutcomePartial:
+		return outcome, scale.Weight * similarity
+	case match.OutcomeConflict:
+		return outcome, -scale.Contradiction
 	}
-	if similarity > 1 {
-		similarity = 1
-	}
-	if similarity > 0 && similarity >= scale.Floor {
-		points := scale.Weight * similarity
-		if similarity >= 1 {
-			return match.OutcomeAgree, points
-		}
-		return match.OutcomePartial, points
-	}
-	if cardinality == propertymeta.CardinalityMultiple {
-		return match.OutcomeUnknown, 0
-	}
-	return match.OutcomeConflict, -scale.Contradiction
+	return outcome, 0
 }
 
 // resolvedScale is the property's scale, else its value type's, with a

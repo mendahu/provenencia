@@ -13,7 +13,6 @@ import (
 	"math"
 	"strings"
 
-	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
@@ -141,20 +140,18 @@ func joinPartValues(parts []namevalue.Part) string {
 type Loaded struct {
 	Key     string
 	Profile Profile
-	Set     match.NamePatternSet
 	Builtin bool
 }
 
-// Comparer scores names with the loaded patterns. A builtin load is
-// DefaultNames, so a catalog with no default scores as it does today.
-func (l Loaded) Comparer() match.NameComparer {
-	if l.Builtin || l.Set == nil {
-		return match.DefaultNames
+// Rules is base with the loaded pattern in Names.Patterns under its key, so a
+// name value that carries Key reads it. A builtin load returns base unchanged:
+// the western pattern is already Names.Western.
+func (l Loaded) Rules(base valuecompare.Rules) valuecompare.Rules {
+	if l.Builtin {
+		return base
 	}
-	c := match.DefaultNames
-	c.Patterns = l.Set
-	c.Pattern = match.Set(l.Key)
-	return c
+	base.Names.Patterns = map[string]valuecompare.NamePattern{l.Key: l.Profile.Pattern}
+	return base
 }
 
 // Load reads the project default. A missing or empty setting returns the
@@ -182,7 +179,6 @@ func Load(q Querier) (Loaded, error) {
 	return Loaded{
 		Key:     p.Key,
 		Profile: p,
-		Set:     match.NamePatternSet{p.Key: p.Pattern},
 	}, nil
 }
 
