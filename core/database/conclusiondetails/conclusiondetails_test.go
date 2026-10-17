@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
@@ -254,6 +255,18 @@ func TestForEntityLikenesses(t *testing.T) {
 	}
 	if !bytes.Equal(d.Likenesses[1].Record.ObservationID, ob.ID) || d.Likenesses[1].Record.SourceTitle != "Census" {
 		t.Fatalf("second %+v", d.Likenesses[1])
+	}
+	if d.Likenesses[0].Preferred || d.Likenesses[1].Preferred {
+		t.Fatalf("preferred before a choice: %+v", d.Likenesses)
+	}
+	_, err := writes.Call(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		ch, err := canonicalentities.SetPreferredLikeness(tx, userID, h, ob.ID)
+		return struct{}{}, ch, err
+	})
+	must(t, err)
+	d = f.detail(h)
+	if len(d.Likenesses) != 2 || d.Likenesses[0].Preferred || !d.Likenesses[1].Preferred {
+		t.Fatalf("after choosing B: %+v", d.Likenesses)
 	}
 
 	only := newFixture(t)
