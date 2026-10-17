@@ -12,6 +12,9 @@ struct CitationComposerViewerPane: View {
             toolStrip
             locatorStrip
                 .layoutPriority(-1)
+            if model.isDrawingDepiction {
+                drawingBand
+            }
 
             ArtifactViewer(
                 model: model.artifactViewer,
@@ -19,14 +22,46 @@ struct CitationComposerViewerPane: View {
                 locatorPage: model.locator.page,
                 onSetPage: { model.setPageFromViewer() },
                 armedRegionTool: $model.armedRegionTool,
-                committedRegion: model.locator.region,
-                onCommitRegion: { model.setRegion($0) },
+                committedRegion: model.viewerRegion,
+                onCommitRegion: { model.commitViewerRegion($0) },
                 onDisarmRegionTool: { model.disarmRegionTool() },
                 freeformDeleteTooltip: L10n.string(L10n.CitationComposer.freeformDeleteVertex)
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(PVSpacing.space6)
         }
+    }
+
+    /// While a depiction's region is drawn: the hint (or the wrong-page warning)
+    /// and Cancel. Escape cancels too.
+    private var drawingBand: some View {
+        HStack(alignment: .center, spacing: PVSpacing.space5) {
+            if model.depictionWrongPage, let page = model.depictionPage {
+                PVCallout(
+                    tone: .warning,
+                    message: L10n.CitationComposer.depictionWrongPage(page),
+                    compact: true
+                )
+                .frame(maxWidth: .infinity)
+            } else {
+                PVCallout(
+                    tone: .info,
+                    message: L10n.string(L10n.CitationComposer.depictionDrawingHint),
+                    compact: true
+                )
+                .frame(maxWidth: .infinity)
+            }
+            PVButton(L10n.CitationComposer.depictionCancel, variant: .ghost, size: .sm) {
+                model.cancelDepictionDrawing()
+            }
+            .keyboardShortcut(.cancelAction)
+            .accessibilityIdentifier("citationComposer.depiction.cancel")
+        }
+        .padding(.horizontal, PVSpacing.space6)
+        .padding(.vertical, PVSpacing.space4)
+        .background(PVColor.surfaceCard)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("citationComposer.depiction.drawingBand")
     }
 
     /// Capability layout: viewer chrome (page / Set page / zoom / radios) + Clear + Find.
@@ -171,7 +206,7 @@ struct CitationComposerViewerPane: View {
         PVButton(L10n.CitationComposer.clearMenu, variant: .link, size: .sm) {
             toggleClearMenu()
         }
-        .disabled(model.isLocatorArtifactOnly)
+        .disabled(model.isLocatorArtifactOnly || model.isDrawingDepiction)
         .accessibilityIdentifier("citationComposer.clearMenu")
         .pvContextMenu($clearMenu, keyboard: $clearKeyboard, dismissOnClickAway: true) {
             PVContextMenuPanel(

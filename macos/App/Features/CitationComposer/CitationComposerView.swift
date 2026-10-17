@@ -371,7 +371,7 @@ struct CitationComposerView: View {
                 if case .authoring = model.presented { return true }
                 return false
             },
-            set: { if !$0 { model.discardAuthoring() } }
+            set: { if !$0, !model.isDrawingDepiction { model.discardAuthoring() } }
         )
     }
 
@@ -395,7 +395,7 @@ struct CitationComposerView: View {
                 if case .edit = model.presented { return true }
                 return false
             },
-            set: { if !$0 { model.discardEdit() } }
+            set: { if !$0, !model.isDrawingDepiction { model.discardEdit() } }
         )
     }
 
@@ -416,8 +416,11 @@ struct CitationComposerView: View {
     private var editSheetSubtitle: String {
         guard let session = model.editSession else { return "" }
         switch session.kind {
-        case .property(_, let id, let ref):
+        case .property(let values, let id, let ref):
             let shown = ref.isEmpty ? id : ref
+            if model.vocabulary.isDepiction(propertyID: values.propertyID) {
+                return L10n.CitationComposer.editDepictionSubtitle(ref: shown)
+            }
             return L10n.CitationComposer.editObservationSubtitle(ref: shown)
         case .bridge(let endA, let endB, _, _, let bridgeRef, _):
             let opened = model.vocabulary.subjectsByID[session.openedFromSubjectID]?.label

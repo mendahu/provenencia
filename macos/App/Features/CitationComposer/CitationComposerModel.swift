@@ -66,6 +66,8 @@ final class CitationComposerModel {
         indirect case leave(PendingLeave, returnTo: ComposerPresented?)
         indirect case transcription(PendingTranscriptionConfirm, returnTo: ComposerPresented?)
         indirect case deleteImpact(returnTo: ComposerPresented?)
+        /// The dialog steps aside while a region is drawn on the viewer.
+        case drawingDepiction(over: ComposerBase)
     }
 
     enum CatalogWarmError: Error {
@@ -205,6 +207,12 @@ final class CitationComposerModel {
 
     let artifactViewer = ArtifactViewerModel()
     var armedRegionTool: ArtifactRegionTool?
+    @ObservationIgnored
+    var depictionPreviewMemo: DepictionPreviewMemo?
+    /// A commit was refused on the wrong PDF page; the overlay's disarm that
+    /// follows it must not end drawing.
+    @ObservationIgnored
+    var ignoreNextDisarm = false
     var viewerPage: Int { artifactViewer.page }
     var viewerPageCount: Int { artifactViewer.pageCount }
     var locatorCapabilities: ArtifactLocatorCapabilities {
@@ -326,6 +334,19 @@ final class CitationComposerModel {
             let ref = activeCitationRef.isEmpty
                 ? L10n.string(L10n.CitationComposer.newCitation)
                 : activeCitationRef
+            if case .property(let draft) = authoring,
+               draft.values.depictionDraft.hasRegion,
+               let property = vocabulary.property(id: draft.values.propertyID),
+               property.valueType == PropertyValueType.depiction.rawValue,
+               let person = vocabulary.subjectsByID[draft.values.subjectID]?.label,
+               !person.isEmpty
+            {
+                return L10n.CitationComposer.leaveDepictionDraft(
+                    property: property.label,
+                    person: person,
+                    ref: ref
+                )
+            }
             return L10n.CitationComposer.leaveDraft(detail: detail, ref: ref)
         }
         return L10n.CitationComposer.unsavedSummary(
@@ -365,10 +386,6 @@ final class CitationComposerModel {
     var subjectOptions: [PVComboBoxOption] { vocabulary.subjectComboOptions }
 
     func catalogProperty(id: String) -> CatalogProperty? { vocabulary.property(id: id) }
-
-    func propertyOptions(for subjectID: String) -> [PVComboBoxOption] {
-        vocabulary.propertyComboOptions(forSubjectID: subjectID)
-    }
 
     func termOptions(for propertyID: String) -> [PVComboBoxOption] {
         vocabulary.termComboOptionsByPropertyID[propertyID] ?? []
@@ -478,10 +495,12 @@ final class CitationComposerModel {
     }
 
     func requestSelectArtifact(_ id: String) {
+        guard !isDrawingDepiction else { return }
         requestStep { await self.selectArtifactAndLoad(id) }
     }
 
     func selectCitation(_ id: String?) {
+        guard !isDrawingDepiction else { return }
         if preservesAuthoringOnCitationChange {
             if fields.isDirty {
                 guard !isTranscribing else { return }
@@ -681,7 +700,10 @@ final class CitationComposerModel {
     }
 
     @discardableResult
-    func setPageFromViewer() -> Bool { setPage(artifactViewer.page) }
+    func setPageFromViewer() -> Bool {
+        guard !isDrawingDepiction else { return false }
+        return setPage(artifactViewer.page)
+    }
 
     @discardableResult
     func setPage(_ page: Int) -> Bool {
@@ -698,26 +720,36 @@ final class CitationComposerModel {
     }
 
     func clearRegion() {
-        guard !isTranscribing else { return }
+        guard !isTranscribing, !isDrawingDepiction else { return }
         locator.clearRegion()
     }
     func resetToEntireArtifact() {
-        guard !isTranscribing else { return }
+        guard !isTranscribing, !isDrawingDepiction else { return }
         locator.resetToEntireArtifact()
         armedRegionTool = nil
     }
     func removePage() {
-        guard !isTranscribing else { return }
+        guard !isTranscribing, !isDrawingDepiction else { return }
         locator.removePage()
     }
     func removeRegion() {
-        guard !isTranscribing else { return }
+        guard !isTranscribing, !isDrawingDepiction else { return }
         locator.clearRegion()
     }
-    func disarmRegionTool() { armedRegionTool = nil }
+    func disarmRegionTool() {
+        if isDrawingDepiction {
+            if ignoreNextDisarm {
+                ignoreNextDisarm = false
+                return
+            }
+            cancelDepictionDrawing()
+            return
+        }
+        armedRegionTool = nil
+    }
 
     func requestAutoTranscribe() {
-        guard canAutoTranscribe else { return }
+        guard canAutoTranscribe, !isDrawingDepiction else { return }
         if let pending = transcriptions.autoTranscribeConfirmIfNeeded() {
             pendingTranscriptionConfirm = pending
             return
@@ -735,7 +767,7 @@ final class CitationComposerModel {
     }
 
     func requestPasteTranscription() {
-        guard canPasteTranscription else { return }
+        guard canPasteTranscription, !isDrawingDepiction else { return }
         if let pending = transcriptions.pasteConfirmIfNeeded() {
             pendingTranscriptionConfirm = pending
             return
@@ -831,7 +863,7 @@ final class CitationComposerModel {
             return .authoring
         case .edit:
             return .edit
-        case .customTerm(_, let over), .newSubject(_, let over):
+        case .customTerm(_, let over), .newSubject(_, let over), .drawingDepiction(let over):
             return over
         case .leave(_, let returnTo), .transcription(_, let returnTo), .deleteImpact(let returnTo):
             return base(of: returnTo)
@@ -844,7 +876,7 @@ final class CitationComposerModel {
     /// including a child draft that was on screen.
     func suspendedDialog() -> ComposerPresented? {
         switch presented {
-        case .authoring, .edit, .customTerm, .newSubject:
+        case .authoring, .edit, .customTerm, .newSubject, .drawingDepiction:
             return presented
         case .leave(_, let returnTo), .transcription(_, let returnTo), .deleteImpact(let returnTo):
             return returnTo
@@ -870,7 +902,7 @@ final class CitationComposerModel {
             restore(.authoring)
         case .edit:
             restore(.edit)
-        case .customTerm, .newSubject:
+        case .customTerm, .newSubject, .drawingDepiction:
             show(next)
         case .leave, .transcription, .deleteImpact, nil:
             show(nil)

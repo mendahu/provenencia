@@ -9,6 +9,7 @@ enum CitationObservationValue {
         var valueSubjectID: String = ""
         var dateDraft: DateValueDraft = .empty()
         var nameDraft: NameValueDraft = .empty()
+        var depictionDraft: DepictionValueDraft = .empty()
     }
 
     enum Failure: Equatable {
@@ -24,7 +25,8 @@ enum CitationObservationValue {
             valueTermID: row.valueTermID,
             valueSubjectID: row.valueSubjectID,
             dateDraft: row.dateDraft,
-            nameDraft: row.nameDraft
+            nameDraft: row.nameDraft,
+            depictionDraft: row.depictionDraft
         )
     }
 
@@ -45,6 +47,8 @@ enum CitationObservationValue {
             return dateSummary(fields.dateDraft)
         case PropertyValueType.name.rawValue:
             return nameSummary(fields.nameDraft, orders: orders)
+        case PropertyValueType.depiction.rawValue:
+            return ""
         case PropertyValueType.subject.rawValue:
             let trimmed = fields.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
             return trimmed.isEmpty ? fields.valueSubjectID : trimmed
@@ -66,6 +70,8 @@ enum CitationObservationValue {
             return fields.dateDraft.isValid
         case PropertyValueType.name.rawValue:
             return fields.nameDraft.isValid
+        case PropertyValueType.depiction.rawValue:
+            return fields.depictionDraft.hasRegion
         default:
             return false
         }
@@ -96,6 +102,9 @@ enum CitationObservationValue {
         case PropertyValueType.subject.rawValue:
             guard !fields.valueSubjectID.isEmpty else { return .unsupported }
             draft.valueSubjectID = fields.valueSubjectID
+        case PropertyValueType.depiction.rawValue:
+            // The model attaches the rendered image after this (it cannot render here).
+            guard fields.depictionDraft.hasRegion else { return .unsupported }
         default:
             return .unsupported
         }

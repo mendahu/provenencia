@@ -13428,8 +13428,248 @@
         }
       }
     },
+    "citationComposer.depictionDraw": {
+      "comment": "Button that starts drawing a depiction's region on the open file",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw on the file"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionRedraw": {
+      "comment": "Button that redraws a depiction's region on the open file",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw again"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionDrawingHint": {
+      "comment": "Hint above the viewer while a depiction's region is drawn",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw the region with the tools above. Escape goes back to the observation."
+          }
+        }
+      }
+    },
+    "citationComposer.depictionCancel": {
+      "comment": "Button above the viewer that stops drawing a depiction's region",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionPreviewLabel": {
+      "comment": "VoiceOver label of the depiction preview in the observation dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image to save"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionNeedsPage": {
+      "comment": "Warning when an existing PDF citation has no page, so a depiction cannot be drawn",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set this citation's page and save the citation to draw a region."
+          }
+        }
+      }
+    },
+    "citationComposer.observationSaveFailed": {
+      "comment": "Fallback error when an observation save fails with no specific message",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The observation could not be saved. Try again."
+          }
+        }
+      }
+    },
+    "citationComposer.depictionRegionHidden": {
+      "comment": "Warning when a saved depiction's region no longer matches its citation's page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This region no longer matches the citation's page. Draw it again."
+          }
+        }
+      }
+    },
+    "citationComposer.depictionRenderFailed": {
+      "comment": "Error when the app cannot cut the drawn region from the open file",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The region could not be cut from the file. Draw it again."
+          }
+        }
+      }
+    },
+    "citationComposer.depictionCaptionEmpty": {
+      "comment": "Caption beside the depiction preview when no region is drawn",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing drawn yet. Draw the region on the file"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionCaptionBox": {
+      "comment": "Caption beside the depiction preview when a region is drawn",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The rectangle around the region, up to 2,048 px on its long edge"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionCaptionRedrawn": {
+      "comment": "Caption beside the depiction preview after a saved depiction is redrawn",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redrawn. Saving replaces the saved image"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionCaptionNeedsPage": {
+      "comment": "Caption beside the depiction preview when the citation has no page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw is unavailable until the citation has a page"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionCaptionHidden": {
+      "comment": "Caption beside the depiction preview when the saved region is hidden",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save waits for the region to be drawn again"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionWrongPage": {
+      "comment": "Hint while drawing on the wrong PDF page; argument is the citation's page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw on page %lld, this citation's page."
+          }
+        }
+      }
+    },
+    "citationComposer.depictionThumbLabel": {
+      "comment": "VoiceOver label of a saved depiction's thumbnail; arguments are the property label and the person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ of %2$@"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionLineLabel": {
+      "comment": "VoiceOver label of a saved depiction line; arguments are the property label and the person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "citationComposer.editDepictionSubtitle": {
+      "comment": "Depiction edit sheet subtitle; argument is the observation ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · saves on its own. A redraw replaces the image"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionDuplicatedFrom": {
+      "comment": "Note on a duplicated depiction draft; arguments are the person and the property label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicated from %1$@’s %2$@. Saving cuts its own image; the original is unchanged"
+          }
+        }
+      }
+    },
+    "citationComposer.leaveDepictionDraft": {
+      "comment": "Leave confirm for an unsaved depiction; arguments are the property label, the person, and the citation ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The %1$@ of %2$@ you drew is not saved. Everything already saved on %3$@ stays."
+          }
+        }
+      }
+    },
     "citationComposer.rowStateError": {
-      "comment": "Badge when a row-level Save failed",
+      "comment": "Badge when a row-level Save failed; also the title of a save-error Callout",
       "extractionState": "manual",
       "localizations": {
         "en": {

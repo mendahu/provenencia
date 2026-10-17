@@ -3112,10 +3112,142 @@ enum L10n {
             comment: "Badge on an Observation or connection role that differs from its baseline"
         )
 
+        static let depictionDraw = LocalizedStringResource(
+            "citationComposer.depictionDraw",
+            defaultValue: "Draw on the file",
+            comment: "Button that starts drawing a depiction's region on the open file"
+        )
+
+        static let depictionRedraw = LocalizedStringResource(
+            "citationComposer.depictionRedraw",
+            defaultValue: "Draw again",
+            comment: "Button that redraws a depiction's region on the open file"
+        )
+
+        static let depictionDrawingHint = LocalizedStringResource(
+            "citationComposer.depictionDrawingHint",
+            defaultValue: "Draw the region with the tools above. Escape goes back to the observation.",
+            comment: "Hint above the viewer while a depiction's region is drawn"
+        )
+
+        static let depictionCancel = LocalizedStringResource(
+            "citationComposer.depictionCancel",
+            defaultValue: "Cancel",
+            comment: "Button above the viewer that stops drawing a depiction's region"
+        )
+
+        static let depictionPreviewLabel = LocalizedStringResource(
+            "citationComposer.depictionPreviewLabel",
+            defaultValue: "Image to save",
+            comment: "VoiceOver label of the depiction preview in the observation dialog"
+        )
+
+        static let depictionNeedsPage = LocalizedStringResource(
+            "citationComposer.depictionNeedsPage",
+            defaultValue: "Set this citation's page and save the citation to draw a region.",
+            comment: "Warning when an existing PDF citation has no page, so a depiction cannot be drawn"
+        )
+
+        static let observationSaveFailed = LocalizedStringResource(
+            "citationComposer.observationSaveFailed",
+            defaultValue: "The observation could not be saved. Try again.",
+            comment: "Fallback error when an observation save fails with no specific message"
+        )
+
+        static let depictionRegionHidden = LocalizedStringResource(
+            "citationComposer.depictionRegionHidden",
+            defaultValue: "This region no longer matches the citation's page. Draw it again.",
+            comment: "Warning when a saved depiction's region no longer matches its citation's page"
+        )
+
+        static let depictionRenderFailed = LocalizedStringResource(
+            "citationComposer.depictionRenderFailed",
+            defaultValue: "The region could not be cut from the file. Draw it again.",
+            comment: "Error when the app cannot cut the drawn region from the open file"
+        )
+
+        static let depictionCaptionEmpty = LocalizedStringResource(
+            "citationComposer.depictionCaptionEmpty",
+            defaultValue: "Nothing drawn yet. Draw the region on the file",
+            comment: "Caption beside the depiction preview when no region is drawn"
+        )
+
+        static let depictionCaptionBox = LocalizedStringResource(
+            "citationComposer.depictionCaptionBox",
+            defaultValue: "The rectangle around the region, up to 2,048 px on its long edge",
+            comment: "Caption beside the depiction preview when a region is drawn"
+        )
+
+        static let depictionCaptionRedrawn = LocalizedStringResource(
+            "citationComposer.depictionCaptionRedrawn",
+            defaultValue: "Redrawn. Saving replaces the saved image",
+            comment: "Caption beside the depiction preview after a saved depiction is redrawn"
+        )
+
+        static let depictionCaptionNeedsPage = LocalizedStringResource(
+            "citationComposer.depictionCaptionNeedsPage",
+            defaultValue: "Draw is unavailable until the citation has a page",
+            comment: "Caption beside the depiction preview when the citation has no page"
+        )
+
+        static let depictionCaptionHidden = LocalizedStringResource(
+            "citationComposer.depictionCaptionHidden",
+            defaultValue: "Save waits for the region to be drawn again",
+            comment: "Caption beside the depiction preview when the saved region is hidden"
+        )
+
+        static func depictionWrongPage(_ page: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.depictionWrongPage",
+                defaultValue: "Draw on page %lld, this citation's page.",
+                comment: "Hint while drawing on the wrong PDF page; argument is the citation's page"
+            ), page)
+        }
+
+        static func depictionThumbLabel(_ property: String, _ person: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.depictionThumbLabel",
+                defaultValue: "%1$@ of %2$@",
+                comment: "VoiceOver label of a saved depiction's thumbnail; arguments are the property label and the person"
+            ), property, person)
+        }
+
+        static func depictionLineLabel(_ property: String, _ person: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.depictionLineLabel",
+                defaultValue: "%1$@, %2$@",
+                comment: "VoiceOver label of a saved depiction line; arguments are the property label and the person"
+            ), property, person)
+        }
+
+        static func editDepictionSubtitle(ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.editDepictionSubtitle",
+                defaultValue: "%1$@ · saves on its own. A redraw replaces the image",
+                comment: "Depiction edit sheet subtitle; argument is the observation ref"
+            ), ref)
+        }
+
+        static func depictionDuplicatedFrom(_ person: String, _ property: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.depictionDuplicatedFrom",
+                defaultValue: "Duplicated from %1$@’s %2$@. Saving cuts its own image; the original is unchanged",
+                comment: "Note on a duplicated depiction draft; arguments are the person and the property label"
+            ), person, property)
+        }
+
+        static func leaveDepictionDraft(property: String, person: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.leaveDepictionDraft",
+                defaultValue: "The %1$@ of %2$@ you drew is not saved. Everything already saved on %3$@ stays.",
+                comment: "Leave confirm for an unsaved depiction; arguments are the property label, the person, and the citation ref"
+            ), property, person, ref)
+        }
+
         static let rowStateError = LocalizedStringResource(
             "citationComposer.rowStateError",
             defaultValue: "Not saved",
-            comment: "Badge when a row-level Save failed"
+            comment: "Badge when a row-level Save failed; also the title of a save-error Callout"
         )
 
         static let rowStateSaved = LocalizedStringResource(

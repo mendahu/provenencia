@@ -58,10 +58,12 @@ struct CitationComposerObservationsColumn: View {
                     PVButton(L10n.CitationComposer.addObservation, variant: .secondary, size: .sm, icon: .plus) {
                         model.beginAddObservation()
                     }
+                    .disabled(model.isDrawingDepiction)
                     .accessibilityIdentifier("citationComposer.addObservation")
                     PVButton(L10n.CitationComposer.done, variant: .primary, size: .sm) {
                         onDone()
                     }
+                    .disabled(model.isDrawingDepiction)
                     .accessibilityIdentifier("citationComposer.done")
                 }
             }
@@ -115,6 +117,7 @@ struct CitationComposerObservationsColumn: View {
                     ) {
                         model.beginAddObservation(for: group.subjectID)
                     }
+                    .disabled(model.isDrawingDepiction)
                     .accessibilityIdentifier("citationComposer.group.add.\(group.subjectID)")
                 }
                 .padding(.leading, PVSpacing.space5)
@@ -159,11 +162,21 @@ struct CitationComposerObservationsColumn: View {
                         .foregroundStyle(PVColor.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(verbatim: line.valueText.isEmpty ? "—" : line.valueText)
-                    .font(line.mono ? PVFont.mono(size: PVTypeScale.caption) : PVFont.body(size: PVTypeScale.bodySmall))
-                    .foregroundStyle(PVColor.textPrimary)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let relPath = line.imageRelPath {
+                    CachedThumbnail(
+                        projectDir: model.session.projectKey.projectDir,
+                        relPath: relPath,
+                        mediaType: "image/png",
+                        size: 32
+                    )
+                    .accessibilityLabel(Text(verbatim: depictionThumbLabel(line) ?? line.label))
+                } else {
+                    Text(verbatim: line.valueText.isEmpty ? "—" : line.valueText)
+                        .font(line.mono ? PVFont.mono(size: PVTypeScale.caption) : PVFont.body(size: PVTypeScale.bodySmall))
+                        .foregroundStyle(PVColor.textPrimary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if line.negative {
@@ -171,7 +184,7 @@ struct CitationComposerObservationsColumn: View {
             }
             lineActions(line, revealed: revealed, fresh: fresh)
         }
-        .padding(.vertical, PVSpacing.space3)
+        .padding(.vertical, line.imageRelPath == nil ? PVSpacing.space3 : PVSpacing.space1)
         .padding(.leading, PVSpacing.space5)
         .padding(.trailing, PVSpacing.space3)
         .frame(minHeight: 32, alignment: .top)
@@ -182,6 +195,7 @@ struct CitationComposerObservationsColumn: View {
             }
         }
         .contentShape(Rectangle())
+        .disabled(model.isDrawingDepiction)
         .focusable()
         .focused($lineFocus, equals: .row(line.id))
         .onTapGesture { model.beginEdit(line: line) }
@@ -199,6 +213,7 @@ struct CitationComposerObservationsColumn: View {
             hoveredLineID = hovering ? line.id : (hoveredLineID == line.id ? nil : hoveredLineID)
         }
         .accessibilityElement(children: .combine)
+        .depictionLineLabel(line.imageRelPath == nil ? nil : depictionLineLabel(line))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction(.default) { model.beginEdit(line: line) }
         .accessibilityAction(named: Text(line.bridgeID == nil
@@ -217,6 +232,20 @@ struct CitationComposerObservationsColumn: View {
             Task { await model.askDeleteLine(line) }
         }
         .accessibilityIdentifier("citationComposer.line.\(line.id)")
+    }
+
+    private func depictionPerson(_ line: CitationSavedLine) -> String? {
+        model.vocabulary.subjectsByID[line.subjectID]?.label
+    }
+
+    /// "Likeness of Ben Ford"; nil when the person is unknown.
+    private func depictionThumbLabel(_ line: CitationSavedLine) -> String? {
+        depictionPerson(line).map { L10n.CitationComposer.depictionThumbLabel(line.label, $0) }
+    }
+
+    /// "Likeness, Ben Ford"; the property alone when the person is unknown.
+    private func depictionLineLabel(_ line: CitationSavedLine) -> String {
+        depictionPerson(line).map { L10n.CitationComposer.depictionLineLabel(line.label, $0) } ?? line.label
     }
 
     @ViewBuilder
@@ -319,7 +348,11 @@ struct CitationComposerEditSheet: View {
         guard let session = model.editSession else { return .subject }
         switch session.kind {
         case .property(let values, _, _):
-            return CitationAuthoringNavigation.initialPropertyFocus(subjectID: values.subjectID)
+            return CitationAuthoringNavigation.initialPropertyFocus(
+                subjectID: values.subjectID,
+                propertyID: values.propertyID,
+                isDepiction: model.vocabulary.isDepiction(propertyID: values.propertyID)
+            )
         case .bridge(let endA, let endB, let termID, _, _, _):
             let pair = CitationComposerAuthoring.resolvePair(
                 endA: endA,
@@ -413,7 +446,7 @@ struct CitationComposerEditSheet: View {
                 .foregroundStyle(PVColor.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
             if let error {
-                PVCallout(tone: .danger, message: error)
+                PVCallout(tone: .danger, title: L10n.CitationComposer.rowStateError, message: error)
             }
         }
     }
@@ -484,5 +517,17 @@ struct CitationComposerEditSheet: View {
                 }
             }
         )
+    }
+}
+
+private extension View {
+    /// Names a depiction line for VoiceOver; every other line keeps its combined reading.
+    @ViewBuilder
+    func depictionLineLabel(_ label: String?) -> some View {
+        if let label {
+            accessibilityLabel(Text(verbatim: label))
+        } else {
+            self
+        }
     }
 }

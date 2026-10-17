@@ -94,6 +94,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var workspaceNavCountsError: Error?
     /// When set, `updateSource` throws (identity title/type/description saves).
     var updateSourceError: Error?
+    /// When set, `addObservationsToCitation` throws after recording the call.
+    var addObservationsToCitationError: Error?
+    /// When set, `updateObservation` throws after recording the call.
+    var updateObservationError: Error?
+    private var depictionSequence = 0
+    /// The temporary image path of every depiction input seen, in call order.
+    private(set) var recordedDepictionPaths: [String] = []
     /// When set, `reorderSourceMetadata` throws (optimistic move should revert).
     var reorderSourceMetadataError: Error?
     /// When set, `unpromoteSubject` throws (the Unpromote confirm shows the error).
@@ -2406,8 +2413,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         allowEdgeRows: Bool
     ) async throws -> [CatalogObservation] {
         return try withState {
-            recordedCalls.append("addObservationsToCitation citationID=\(citationID) observations=\(drafts.count)")
+            recordedCalls.append(
+                "addObservationsToCitation citationID=\(citationID) observations=\(drafts.count)"
+                    + drafts.compactMap { depictionRecord($0.depiction) }.joined()
+            )
             markCatalogSessionHeld(projectDir)
+            if let addObservationsToCitationError { throw addObservationsToCitationError }
             let written = try appendFakeObservations(
                 projectDir: projectDir,
                 citationID: citationID,
@@ -2453,11 +2464,16 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         projectDir: String,
         userID _: String,
         observation: CatalogObservation,
-        depictionInput _: CatalogDepictionValueInput?
+        depictionInput: CatalogDepictionValueInput?
     ) async throws -> (CatalogObservation, CatalogWriteEffects) {
         return try withState {
-            recordedCalls.append("updateObservation id=\(observation.id)")
+            recordedCalls.append(
+                "updateObservation id=\(observation.id)"
+                    + (observation.valueDepictionID.isEmpty ? "" : " valueDepictionID=\(observation.valueDepictionID)")
+                    + (depictionRecord(depictionInput) ?? "")
+            )
             markCatalogSessionHeld(projectDir)
+            if let updateObservationError { throw updateObservationError }
             let existing = observationsBySource.values.flatMap { $0 }.first(where: { $0.id == observation.id })
             guard let existing else { throw StoreBoom.boom }
             if isEdgeLocked(observation: existing, projectDir: projectDir)
@@ -2465,12 +2481,20 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             {
                 throw edgeLockedError()
             }
-            let next = try fakeObservation(
+            var next = try fakeObservation(
                 citationID: existing.citationID,
                 id: existing.id,
                 ref: existing.ref,
                 row: observation
             )
+            if let depictionInput {
+                let stored = nextFakeDepiction(depictionInput)
+                next.valueDepictionID = stored.0
+                next.depiction = stored.1
+            } else {
+                next.valueDepictionID = existing.valueDepictionID
+                next.depiction = existing.depiction
+            }
             for (sourceID, list) in observationsBySource where list.contains(where: { $0.id == next.id }) {
                 observationsBySource[sourceID] = list.map { $0.id == next.id ? next : $0 }
                 bumpSource(sourceID, evidence: true)
@@ -3135,6 +3159,20 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         )
     }
 
+    /// ` depiction=1 depictionFile=present|missing` for a depiction input, else nil.
+    private func depictionRecord(_ input: CatalogDepictionValueInput?) -> String? {
+        guard let input else { return nil }
+        recordedDepictionPaths.append(input.imagePath)
+        let present = FileManager.default.fileExists(atPath: input.imagePath)
+        return " depiction=1 depictionFile=\(present ? "present" : "missing")"
+    }
+
+    private func nextFakeDepiction(_ input: CatalogDepictionValueInput) -> (String, CatalogDepictionValue) {
+        depictionSequence += 1
+        let id = "dep-\(depictionSequence)"
+        return (id, CatalogDepictionValue(regionJSON: input.regionJSON, imageRelPath: "objects/fake/\(id).png"))
+    }
+
     private func appendFakeObservations(
         projectDir: String,
         citationID: String,
@@ -3168,7 +3206,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     .first(where: { $0.id == draft.valueSubjectID })?
                     .label ?? ""
             }
-            let obs = CatalogObservation(
+            var obs = CatalogObservation(
                 id: UUID().uuidString.lowercased(),
                 ref: "OBS-FAKE1",
                 citationID: citationID,
@@ -3191,6 +3229,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     .first(where: { $0.id == draft.valueTermID })?
                     .key ?? ""
             )
+            if let input = draft.depiction {
+                let stored = nextFakeDepiction(input)
+                obs.valueDepictionID = stored.0
+                obs.depiction = stored.1
+            }
             observationsBySource[subject.sourceID, default: []].append(obs)
             created.append(obs)
         }

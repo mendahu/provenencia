@@ -44,7 +44,7 @@ struct CitationComposerAuthoringBox: View {
         case .rest:
             .subject
         case .property(let draft):
-            CitationAuthoringNavigation.initialPropertyFocus(subjectID: draft.values.subjectID)
+            propertyFocus(for: draft.values)
         case .bridge(let draft):
             CitationAuthoringNavigation.initialBridgeFocus(
                 endA: draft.endA,
@@ -53,6 +53,14 @@ struct CitationComposerAuthoringBox: View {
                 termID: draft.termID
             )
         }
+    }
+
+    private func propertyFocus(for values: ObservationRowValues) -> CitationAuthoringFocus {
+        CitationAuthoringNavigation.initialPropertyFocus(
+            subjectID: values.subjectID,
+            propertyID: values.propertyID,
+            isDepiction: model.vocabulary.isDepiction(propertyID: values.propertyID)
+        )
     }
 
     private func form<Content: View>(
@@ -106,7 +114,8 @@ struct CitationComposerAuthoringBox: View {
         )
         .onChange(of: draft.isSaving) { wasSaving, saving in
             guard wasSaving, !saving, draft.error == nil else { return }
-            DispatchQueue.main.async { focus = .property }
+            let next = propertyFocus(for: draft.values)
+            DispatchQueue.main.async { focus = next }
         }
     }
 
@@ -136,7 +145,7 @@ struct CitationComposerAuthoringBox: View {
             }
             bridgeStatus(pair, draft: draft)
             if let error = draft.error {
-                PVCallout(tone: .danger, message: error)
+                PVCallout(tone: .danger, title: L10n.CitationComposer.rowStateError, message: error)
             }
         }
         .accessibilityIdentifier("citationComposer.authoring.bridge")
@@ -354,14 +363,14 @@ struct CitationPropertyFields: View {
                 .frame(maxWidth: .infinity)
             }
             valueControls
+            if let error {
+                PVCallout(tone: .danger, title: L10n.CitationComposer.rowStateError, message: error)
+            }
             PVCheckbox(
                 L10n.CitationComposer.negativeLabel,
                 description: L10n.CitationComposer.negativeDescription,
                 isChecked: negativeBinding
             )
-            if let error {
-                PVCallout(tone: .danger, message: error)
-            }
         }
         .accessibilityIdentifier("\(identifierPrefix).propertyForm")
     }
@@ -422,6 +431,8 @@ struct CitationPropertyFields: View {
                         yearFocus: PVInputFocus(focus, equals: .value)
                     )
                 }
+            case PropertyValueType.depiction.rawValue:
+                CitationDepictionValueArea(model: model, draft: values.depictionDraft)
             default:
                 PVInput(
                     text: .constant(""),
@@ -473,7 +484,10 @@ struct CitationPropertyFields: View {
     }
 
     private var propertyOptions: [PVComboBoxOption] {
-        model.vocabulary.propertyOptions(forSubjectID: values.subjectID).map {
+        model.vocabulary.propertyOptions(
+            forSubjectID: values.subjectID,
+            capabilities: model.depictionCapabilities
+        ).map {
             PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key)
         }
     }
@@ -893,5 +907,57 @@ private struct FlowLayout: Layout {
     private struct Row {
         var items: [Item]
         var height: CGFloat
+    }
+}
+
+/// The value area of a depiction Property: a preview of the image a save
+/// would send, a caption, and the button that draws the region on the file.
+struct CitationDepictionValueArea: View {
+    @Bindable var model: CitationComposerModel
+    var draft: DepictionValueDraft
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space4) {
+            if model.depictionNeedsPage {
+                PVCallout(
+                    tone: .warning,
+                    message: L10n.string(L10n.CitationComposer.depictionNeedsPage)
+                )
+            } else if draft.regionHidden {
+                PVCallout(
+                    tone: .warning,
+                    message: L10n.string(L10n.CitationComposer.depictionRegionHidden)
+                )
+            }
+            HStack(alignment: .top, spacing: PVSpacing.space5) {
+                PVThumbnail(
+                    PVThumbnail.Content(
+                        image: model.depictionPreview.map { Image(nsImage: $0) },
+                        label: L10n.CitationComposer.depictionPreviewLabel
+                    ),
+                    size: 96
+                )
+                VStack(alignment: .leading, spacing: PVSpacing.space4) {
+                    Text(model.depictionCaption)
+                        .font(PVFont.body(size: 12, italic: true))
+                        .foregroundStyle(PVColor.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                    PVButton(
+                        draft.hasRegion
+                            ? L10n.CitationComposer.depictionRedraw
+                            : L10n.CitationComposer.depictionDraw,
+                        variant: .secondary,
+                        size: .sm,
+                        icon: .crop
+                    ) {
+                        model.startDepictionDrawing()
+                    }
+                    .disabled(model.depictionNeedsPage)
+                    .accessibilityIdentifier("citationComposer.depiction.draw")
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .accessibilityIdentifier("citationComposer.depiction")
     }
 }
