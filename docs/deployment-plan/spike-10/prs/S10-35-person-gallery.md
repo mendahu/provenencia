@@ -62,7 +62,7 @@ The researcher sees every face found for a person on the Person page, in a Liken
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-3.1 | Person with A and B | `PersonHeader.LikenessImageFileID` is A's image; the FFI `PersonHeader.likeness_image_rel_path` on `ListPersonHeaders` and on `GetConclusionDetail` is A's `objects/…` path |
-| AC-3.2 | Same Person, page open | Header thumb (120pt) shows A's image filled to the square, spoken “Earliest likeness”; with gender Woman, its outline is `PVColor.lineMaternal` and the fill is not tinted (PDP-9) |
+| AC-3.2 | Same Person, page open | Header thumb (120pt) shows A's image filled to the square, spoken “Likeness”; with gender Woman, its outline is `PVColor.lineMaternal` and the fill is not tinted (PDP-9) |
 | AC-3.3 | Same Person in the Persons list | The 44pt row thumb shows A's image (PSL-7) |
 | AC-3.4 | Person with no likeness | Header thumb is the person mark spoken “No likeness recorded”, with the gender tint as today; the list row shows the person mark with no flash of the empty dash |
 | AC-3.5 | Path given, file missing or unreadable | Header and list fall back to the person mark (kit Thumbnail fallback); a tile shows the person mark |
@@ -261,14 +261,14 @@ Handlers per D-10, in `api/ffi/handlers/conclusion_headers.go` and `conclusion_d
 
 Frames in words. **Gallery** (Woman, three likenesses): header thumb shows the first crop filling the 120pt square with a plum (`lineMaternal`) 1pt outline, no plum fill; under Details a “Likenesses” header with mono meta “3”, then three 96pt square crops in one row, left aligned, `space6` apart, each with its Source title under it in muted caption, one line. **Dark mode**: the same with the dark plum line; tiles on `surfaceInset`. **Persons list** (frame 08): a person with a likeness shows the crop in the 44pt thumb, filled, thumb radius; the others keep the person mark.
 
-States: no likeness → no section, mark thumbs; loading → the kit's loading bar per thumb; unreadable → person mark; 50 likenesses → `LazyVGrid` lays out visible tiles, `ThumbnailCache` keeps 100 decoded entries. Accessibility: the section is `.accessibilityElement(children: .contain)` with `.accessibilityLabel(L10n.string(L10n.Conclusions.likenessesSection))`; each tile is one button spoken “Likeness from Register”; the header thumb with an image is spoken “Earliest likeness”; list rows keep their combined label (the row ignores children).
+States: no likeness → no section, mark thumbs; loading → the kit's loading bar per thumb; unreadable → person mark; 50 likenesses → `LazyVGrid` lays out visible tiles, `ThumbnailCache` keeps 100 decoded entries. Accessibility: the section is `.accessibilityElement(children: .contain)` with `.accessibilityLabel(L10n.string(L10n.Conclusions.likenessesSection))`; each tile is one button spoken “Likeness from Register”; the header thumb with an image is spoken “Likeness”; list rows keep their combined label (the row ignores children).
 
 ### Strings
 
 L10n keys *(new)* in `L10n.Conclusions`, with `Localizable.xcstrings` entries:
 
 - `likenessesSection` = `conclusions.detail.likenesses` "Likenesses" — section heading over a Person's likeness crops
-- `personLikenessThumb` = `conclusions.person.likeness` "Earliest likeness" — accessibility label of the Person page header thumb when it shows a likeness
+- `personLikenessThumb` = `conclusions.person.likeness` "Likeness" — accessibility label of the Person page header thumb when it shows a likeness (named by role, so S10-39's chosen portrait reads the same)
 - `likenessTileLabel(_ source: String) -> String` = `conclusions.person.likenessTile` "Likeness from %@" — accessibility label of a gallery tile; the argument is the Source title
 - `likenessOpenTip` = `conclusions.person.likenessOpen` "Open the citation that holds this likeness" — help on a gallery tile
 
@@ -373,7 +373,7 @@ Run on a Mac with S10-34 landed, on a test project. If S10-34 has not merged whe
 3. Open *Ann* (give her gender Woman first): the header thumb is the first face with a plum `lineMaternal` outline and no plum fill behind it (AC-3.2). Under Details, “Likenesses 2” and two tiles, first face first, each captioned with its Source title. Details has no Likeness row.
 4. Tab to the second tile; the focus ring shows. Press Space: the composer opens on that Citation with the likeness in focus. Back returns to *Ann*.
 5. Redraw the first face (Edit, redraw, save). Back on *Ann*, it is still first.
-6. VoiceOver: the header thumb reads “Earliest likeness”; a tile reads “Likeness from {Source}”.
+6. VoiceOver: the header thumb reads “Likeness”; a tile reads “Likeness from {Source}”.
 
 ## 11. Risks and stop conditions
 
