@@ -77,6 +77,9 @@ func Extension(mediaType string) string {
 	}
 }
 
+// Dir is the project folder that holds every object file.
+const Dir = "objects"
+
 // Rel returns objects/{hh}/{hh}/{fullhex}{ext} for a 64-char lowercase hex
 // checksum. Unknown media types keep the bare hex basename.
 func Rel(checksumHex, mediaType string) (string, error) {
@@ -84,7 +87,7 @@ func Rel(checksumHex, mediaType string) (string, error) {
 	if len(checksumHex) != 64 || !isLowerHex(checksumHex) {
 		return "", ErrInvalidChecksum
 	}
-	base := "objects/" + checksumHex[0:2] + "/" + checksumHex[2:4] + "/" + checksumHex
+	base := Dir + "/" + checksumHex[0:2] + "/" + checksumHex[2:4] + "/" + checksumHex
 	return base + Extension(mediaType), nil
 }
 

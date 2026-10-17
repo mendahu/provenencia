@@ -3,6 +3,9 @@ package objectstore_test
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -173,5 +176,101 @@ func TestWriteIfAbsent(t *testing.T) {
 	}
 	if _, err := os.Lstat(filepath.Dir(other)); err == nil {
 		t.Fatal("mismatched checksum created the directory")
+	}
+}
+
+func TestOpenObject(t *testing.T) {
+	const rel = "objects/ab/cd/abcd.png"
+
+	tests := []struct {
+		name    string
+		setup   func(t *testing.T) string // returns the project folder
+		wantErr error
+	}{
+		{
+			name: "regular file opens",
+			setup: func(t *testing.T) string {
+				p := t.TempDir()
+				path := filepath.Join(p, filepath.FromSlash(rel))
+				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(path, []byte("bytes"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				return p
+			},
+		},
+		{
+			name: "symlink to an outside file",
+			setup: func(t *testing.T) string {
+				p, out := t.TempDir(), t.TempDir()
+				outside := filepath.Join(out, "secret.png")
+				if err := os.WriteFile(outside, []byte("bytes"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				link := filepath.Join(p, filepath.FromSlash(rel))
+				if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(outside, link); err != nil {
+					t.Fatal(err)
+				}
+				return p
+			},
+			wantErr: objectstore.ErrNotRegular,
+		},
+		{
+			name: "missing object",
+			setup: func(t *testing.T) string {
+				p := t.TempDir()
+				if err := os.MkdirAll(filepath.Join(p, "objects"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				return p
+			},
+			wantErr: fs.ErrNotExist,
+		},
+		{
+			name: "object path is a folder",
+			setup: func(t *testing.T) string {
+				p := t.TempDir()
+				if err := os.MkdirAll(filepath.Join(p, filepath.FromSlash(rel)), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				return p
+			},
+			wantErr: objectstore.ErrNotRegular,
+		},
+		{
+			name: "objects folder symlinked outside",
+			setup: func(t *testing.T) string {
+				p, out := t.TempDir(), t.TempDir()
+				if err := os.Symlink(out, filepath.Join(p, "objects")); err != nil {
+					t.Fatal(err)
+				}
+				return p
+			},
+			wantErr: objectstore.ErrUnsafeObjects,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f, err := objectstore.OpenObject(tt.setup(t), rel)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("err %v, want %v", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer f.Close()
+			got, err := io.ReadAll(f)
+			if err != nil || string(got) != "bytes" {
+				t.Fatalf("read %q, %v", got, err)
+			}
+		})
 	}
 }
