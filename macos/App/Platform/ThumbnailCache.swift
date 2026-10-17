@@ -12,7 +12,7 @@ final class ThumbnailCache {
 
     /// Longest-edge pixel cap for a decoded thumbnail (the 120pt header thumb
     /// at 2x, with margin).
-    static let maxPixelSize = 512
+    nonisolated static let maxPixelSize = 512
 
     /// Bound entry count; oldest keys are dropped when exceeded.
     var maxEntries: Int = 100
