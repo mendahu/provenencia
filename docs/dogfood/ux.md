@@ -21,6 +21,12 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### No keyboard way to add one card to a multi-selection
+
+- **Date:** 2026-10-17
+- **Where:** Evidence graph
+- **Annoyance:** Shift-click adds or removes one card, but keyboard and VoiceOver users have no way to do the same (deferred from S10-57).
+
 ### Dense Evidence graphs (census-scale)
 
 - **Date:** 2026-09-24

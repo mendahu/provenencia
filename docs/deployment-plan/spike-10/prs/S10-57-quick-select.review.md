@@ -1,4 +1,4 @@
-# Review — S10-56 Hold Shift to select; Select disarms after one rectangle
+# Review — S10-57 Hold Shift to select; Select disarms after one rectangle
 
 **Verdict:** Fits — Ready with changes (applied)
 **Rounds:** 2. **Reviewers:** maintainability (claude-opus), executability (claude-sonnet)

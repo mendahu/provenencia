@@ -5,7 +5,7 @@ enum EvidenceCanvasInputMode: Equatable {
     case idle
     case placing(EvidencePrimaryKind)
     case connecting
-    /// Select tool armed: an empty-canvas drag draws a rectangle.
+    /// Select armed or Shift held: an empty-canvas drag draws a rectangle.
     case selecting
 }
 
@@ -15,7 +15,7 @@ extension EvidenceGraphModel {
         guard !isSheetPresented else { return .idle }
         if armedConnect { return .connecting }
         if let kind = armedKind { return .placing(kind) }
-        return armedSelect ? .selecting : .idle
+        return (armedSelect || shiftSelectHeld) ? .selecting : .idle
     }
 }
 

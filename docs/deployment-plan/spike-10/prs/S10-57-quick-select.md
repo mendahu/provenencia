@@ -1,19 +1,23 @@
-# S10-56 — Hold Shift to select; Select disarms after one rectangle
+# S10-57 — Hold Shift to select; Select disarms after one rectangle
 
-**Status:** Planned
+**Status:** Landed in #428 (2026-10-17)
 **Spike / slice:** Spike 10 · Slice 5 — Artifacts and multi-select
-**Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-56--hold-shift-to-select)
+**Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-57--hold-shift-to-select)
 **Brief:** — (no new chrome: the palette Select button, its armed paint, its help, and the rectangle already exist from S10-D6; this PR changes when they show and what a click does)
 **Board:** —
 **Depends on:** S10-20 (landed [#396](https://github.com/mendahu/provenencia/pull/396)), S10-51 (landed [#421](https://github.com/mendahu/provenencia/pull/421))
 **Blocks:** —
-**Branch:** `s10-56-quick-select`
+**Branch:** `s10-57-quick-select`
 **Version bump:** none — Spike 10 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/design-system-layers.mdc`
 **Context:** working rule "Box-select is a marquee of subject cards." in [`../deployment-plan.md`](../deployment-plan.md#working-rules), [S10-20 plan](S10-20-open-file-box-select.md), [`macos/App/Features/GraphCanvas/README.md`](../../../../macos/App/Features/GraphCanvas/README.md) (GraphCanvas stays free of Evidence types)
 **Planned:** 2026-10-17 against `main` @ `1c99ef4`
-**Review:** [`S10-56-quick-select.review.md`](S10-56-quick-select.review.md) — Fits, Ready with changes (applied); 2 rounds
+**Review:** [`S10-57-quick-select.review.md`](S10-57-quick-select.review.md) — Fits, Ready with changes (applied); 2 rounds
+
+## Landed
+
+Differences from this plan: the plan merged as S10-56 in #426, which reused the object store's number, and was renumbered S10-57 on this branch (user decision, 2026-10-17; files, map row, scope heading, and anchors); while Shift is held, Shift+Return and Shift+Space on a selected card do nothing, because `inputMode` is `.selecting` (follow-up). The implementer did not run section 10, so AC-1.5, AC-1.7, the omnibar half of AC-1.6, and the canvas `flagsChanged` monitor are unchecked and left to the user. Otherwise the code follows section 6.
 
 ### Implementer — read this first
 
@@ -252,9 +256,9 @@ Do: `armed: model.inputMode == .selecting`.
 Check: build succeeds; §10 steps 1, 10, and 11 (the Select paint) behave as written.
 
 **STEP-5 — Docs**
-Files: `docs/deployment-plan/spike-10/deployment-plan.md` (working rule "Box-select is a marquee of subject cards.", S10-56 map row and scope entry status), `docs/deployment-plan/spike-10/completed.md`, `macos/App/Features/GraphCanvas/README.md`, this plan (status, Landed note).
-Do: per the Definition of done. Map PR-sequence row: append " — done, #N". Scope entry `**Plan:**` line: "— Landed", and add the same "Landed YYYY-MM-DD in #N, see completed.md" line under the heading that S10-20's entry has (copy its markup). `completed.md`: a section `## S10-56 — Hold Shift to select`, then the landed line in the form the other sections use, then one short paragraph. In the working rule, replace the four sentences from "Hold Shift and drag empty canvas" through "Bridge cards are not selected and do not move with the group." with: "Holding Shift engages Select and lights its palette button; releasing Shift returns to pan. Select armed on the palette (its help is “Hold Shift to select”) disarms when its rectangle is released. Person, event, place, and bridge cards that intersect the rectangle are selected; a Shift rectangle adds to the selection, a plain one replaces it. Shift-click adds or removes one card. Empty-canvas drag pans when Select is disarmed and Shift is up; a click on empty canvas clears the selection." (The bridge sentence is already false at the base: `replacePrimarySelection` keeps bridges, `rectangleSelectionKeepsBridges`.) In the GraphCanvas README: the `GraphCanvasPointerController` row in the type table gains "Shift tracking, Shift-click toggle"; the "Shift-drag on empty document" row says the pointer calls `onMarqueeEnded` with the ids of the hit targets it overlaps and whether Shift was down at press (additive); add a row "Shift-click on a hit target | `onToggleSelect` (no `onSelect`, no card action)" and a row "Shift key | Document view reports it through `onShiftHeldChanged` (local `flagsChanged` monitor; `false` while a text field has focus or the window is not key)". The "Click / drag on hit targets" row stays. In "Reuse contract", the parenthetical in the "Pointer `mode` + callbacks" cell becomes "select / toggle select / drag began / drag end / marquee ended (ids, additive) / Shift held changed / place / connect", and add one sentence under the table: "The document view reports Shift through `onShiftHeldChanged`; the host decides what it engages."
-Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10-56-quick-select.md` reports no errors.
+Files: `docs/deployment-plan/spike-10/deployment-plan.md` (working rule "Box-select is a marquee of subject cards.", S10-57 map row and scope entry status), `docs/deployment-plan/spike-10/completed.md`, `macos/App/Features/GraphCanvas/README.md`, this plan (status, Landed note).
+Do: per the Definition of done. Map PR-sequence row: append " — done, #N". Scope entry `**Plan:**` line: "— Landed", and add the same "Landed YYYY-MM-DD in #N, see completed.md" line under the heading that S10-20's entry has (copy its markup). `completed.md`: a section `## S10-57 — Hold Shift to select`, then the landed line in the form the other sections use, then one short paragraph. In the working rule, replace the four sentences from "Hold Shift and drag empty canvas" through "Bridge cards are not selected and do not move with the group." with: "Holding Shift engages Select and lights its palette button; releasing Shift returns to pan. Select armed on the palette (its help is “Hold Shift to select”) disarms when its rectangle is released. Person, event, place, and bridge cards that intersect the rectangle are selected; a Shift rectangle adds to the selection, a plain one replaces it. Shift-click adds or removes one card. Empty-canvas drag pans when Select is disarmed and Shift is up; a click on empty canvas clears the selection." (The bridge sentence is already false at the base: `replacePrimarySelection` keeps bridges, `rectangleSelectionKeepsBridges`.) In the GraphCanvas README: the `GraphCanvasPointerController` row in the type table gains "Shift tracking, Shift-click toggle"; the "Shift-drag on empty document" row says the pointer calls `onMarqueeEnded` with the ids of the hit targets it overlaps and whether Shift was down at press (additive); add a row "Shift-click on a hit target | `onToggleSelect` (no `onSelect`, no card action)" and a row "Shift key | Document view reports it through `onShiftHeldChanged` (local `flagsChanged` monitor; `false` while a text field has focus or the window is not key)". The "Click / drag on hit targets" row stays. In "Reuse contract", the parenthetical in the "Pointer `mode` + callbacks" cell becomes "select / toggle select / drag began / drag end / marquee ended (ids, additive) / Shift held changed / place / connect", and add one sentence under the table: "The document view reports Shift through `onShiftHeldChanged`; the host decides what it engages."
+Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10-57-quick-select.md` reports no errors.
 
 Host: the Swift checks and §10 need macOS with Xcode (`scripts/check-pr.sh` runs `xcode-test` on macOS only). On a host without `xcodebuild`, report each Swift check and each §10 step as not run, with the reason; never as passed.
 
@@ -331,5 +335,5 @@ None.
 
 ## 13. PR
 
-**Title:** S10-56 — Hold Shift to select; Select disarms after one rectangle
-**Body:** objective in one sentence; what shipped against US-1, US-2, US-3, and US-4; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-10/prs/S10-56-quick-select.md`.
+**Title:** S10-57 — Hold Shift to select; Select disarms after one rectangle
+**Body:** objective in one sentence; what shipped against US-1, US-2, US-3, and US-4; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-10/prs/S10-57-quick-select.md`.

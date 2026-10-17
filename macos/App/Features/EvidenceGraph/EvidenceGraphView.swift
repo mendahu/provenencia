@@ -917,9 +917,16 @@ private struct EvidenceGraphDocumentBody: View {
         pointer.onDragBegan = { id in
             model.beginGroupDrag(anchor: id)
         }
-        pointer.onMarqueeEnded = { ids in
-            model.replacePrimarySelection(ids)
+        pointer.onToggleSelect = { id in
+            model.toggleSubjectInSelection(id: id)
         }
+        pointer.onMarqueeEnded = { ids, additive in
+            model.finishRectangleSelection(ids, additive: additive)
+        }
+        pointer.onShiftHeldChanged = { held in
+            model.setShiftSelectHeld(held)
+        }
+        model.setShiftSelectHeld(pointer.shiftHeld)
         pointer.onDragEnded = { id, delta in
             _ = model.commitGroupDrag(anchor: id, documentDelta: delta)
         }

@@ -4,6 +4,13 @@ import Testing
 
 @Suite
 struct GraphCanvasPointerHitTestingTests {
+    @Test func shiftReportIgnoresTextFocus() {
+        #expect(GraphCanvasDocumentView.reportedShift([.shift], textHasFocus: false))
+        #expect(!GraphCanvasDocumentView.reportedShift([.shift], textHasFocus: true))
+        #expect(!GraphCanvasDocumentView.reportedShift([], textHasFocus: false))
+        #expect(GraphCanvasDocumentView.reportedShift([.shift, .command], textHasFocus: false))
+    }
+
     @Test func topmostTargetPrefersLastMatchingRect() {
         let bottom = GraphCanvasHitTarget(
             id: "bottom",
@@ -215,12 +222,93 @@ struct GraphCanvasPointerPressTests {
             )
         )
         var delivered: Set<String>?
-        pointer.onMarqueeEnded = { delivered = $0 }
+        var deliveredAdditive: Bool?
+        pointer.onMarqueeEnded = { ids, additive in
+            delivered = ids
+            deliveredAdditive = additive
+        }
         pointer.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: true)
         pointer.mouseDragged(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
         pointer.mouseUp(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
         #expect(delivered == ["inside"])
+        #expect(deliveredAdditive == true)
         #expect(pointer.marqueeRect == nil)
+    }
+
+    @Test func marqueeReportsAdditiveFromShift() {
+        var additives: [Bool] = []
+        let shifted = marqueeController()
+        shifted.onMarqueeEnded = { _, additive in additives.append(additive) }
+        shifted.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: true)
+        shifted.mouseDragged(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        shifted.mouseUp(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+
+        let plain = marqueeController(mode: .selecting)
+        plain.onMarqueeEnded = { _, additive in additives.append(additive) }
+        plain.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero)
+        plain.mouseDragged(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        plain.mouseUp(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        #expect(additives == [true, false])
+    }
+
+    @Test func shiftClickOnACardToggles() {
+        for mode in [GraphCanvasPointerToolMode.idle, .selecting] {
+            var toggled: [String] = []
+            var selected: [String] = []
+            let pointer = marqueeController(mode: mode)
+            pointer.onToggleSelect = { toggled.append($0) }
+            pointer.onSelect = { selected.append($0) }
+            pointer.mouseDown(documentPoint: CGPoint(x: 220, y: 220), windowPoint: .zero, shiftDown: true)
+            pointer.mouseUp(documentPoint: CGPoint(x: 220, y: 220), windowPoint: .zero)
+            #expect(toggled == ["card"])
+            #expect(selected.isEmpty)
+        }
+    }
+
+    @Test func shiftClickOnAnActionSkipsTheAction() {
+        var toggled = 0
+        var selected = 0
+        var actions = 0
+        let pointer = controller()
+        pointer.onToggleSelect = { _ in toggled += 1 }
+        pointer.onSelect = { _ in selected += 1 }
+        pointer.onCardAction = { _, _ in actions += 1 }
+        pointer.mouseDown(documentPoint: CGPoint(x: 50, y: 70), windowPoint: .zero, shiftDown: true)
+        pointer.mouseUp(documentPoint: CGPoint(x: 50, y: 70), windowPoint: .zero)
+        #expect(toggled == 1)
+        #expect(selected == 0)
+        #expect(actions == 0)
+
+        pointer.mouseDown(documentPoint: CGPoint(x: 50, y: 70), windowPoint: .zero)
+        pointer.mouseUp(documentPoint: CGPoint(x: 50, y: 70), windowPoint: .zero)
+        #expect(toggled == 1)
+        #expect(selected == 1)
+        #expect(actions == 1)
+    }
+
+    @Test func emptyClickDeselectsWithOrWithoutShift() {
+        var deselects = 0
+        var toggles = 0
+        let pointer = marqueeController()
+        pointer.onDeselect = { deselects += 1 }
+        pointer.onToggleSelect = { _ in toggles += 1 }
+        for shift in [false, true] {
+            pointer.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: shift)
+            pointer.mouseUp(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero)
+        }
+        #expect(deselects == 2)
+        #expect(toggles == 0)
+    }
+
+    @Test func shiftHeldReportsOnlyChanges() {
+        var reported: [Bool] = []
+        let pointer = marqueeController()
+        pointer.onShiftHeldChanged = { reported.append($0) }
+        pointer.setShiftHeld(true)
+        pointer.setShiftHeld(true)
+        pointer.setShiftHeld(false)
+        #expect(reported == [true, false])
+        #expect(pointer.shiftHeld == false)
     }
 
     @Test func marqueeFollowsADocumentOriginShift() {

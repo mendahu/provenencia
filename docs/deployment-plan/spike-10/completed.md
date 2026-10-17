@@ -1,5 +1,9 @@
 # Spike 10 — completed
 
+## S10-57 — Hold Shift to select
+
+**Landed 2026-10-17** in [#428](https://github.com/mendahu/provenencia/pull/428). Holding Shift over the Evidence graph engages Select and lights its palette button; releasing Shift returns to pan, and Place and Connect still win. Shift-click adds a card (a relationship card too) to the selection or takes it out, without running the card's nested action, and a Shift rectangle adds to the selection while a plain one replaces it. Select armed from the palette disarms when its rectangle is released, even one that caught nothing. A click on empty canvas still clears the selection. Shift counts as up while a text field has focus or the window is not key.
+
 ## S10-56 — Object store stays inside objects/
 
 **Landed 2026-10-17** in [#425](https://github.com/mendahu/provenencia/pull/425). A project folder someone else sent cannot make an import, a staged image, or a thumbnail write outside the project through a symlinked `objects/` or `objects/ab`, and a FIFO at an object path cannot block a read. Every object read, write, install, and removal now goes through an `os.Root` on `objects/` in `core/objectstore` (`OpenObject`, `WriteIfAbsent(projectDir, rel, …)`, `CreateTemp` and `Temp`, `RemoveObject`); `ingest.installObject`, `MatchesChecksum`, and `SyncDir` are gone. Deleting the last object in a shard also removes the `objects/ab/cd` and `objects/ab` folders it leaves empty. A folder holding only a Finder `.DS_Store` counts as empty. A project whose `objects/` is a link to another location now gets its own message on import, "This project’s objects folder can’t be used", instead of a generic failure. Shard folders already left empty in existing projects stay until the next removal in each. No schema or FFI change; the only Swift change is that message.

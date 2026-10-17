@@ -17,7 +17,7 @@ catalog types so geometry stays extractable (design note §13).
 | `GraphCanvasScrollView` | AppKit magnification bridge |
 | `GraphCanvasDocumentView` | Scroll document; owns mouse; hosts the base SwiftUI layer and the item layer; canvas accessibility group and rotors |
 | `GraphCanvasItemLayer` / `GraphCanvasItem` | One `NSView` per item, built by the host (`makeView`), positioned by AppKit; rebuilt only when the item's `Equatable` model changes |
-| `GraphCanvasPointerController` | Hit-test, select, drag (one card, or a group of peers that move with the anchor), empty-canvas pan, selection rectangle (marquee), place, connect |
+| `GraphCanvasPointerController` | Hit-test, select, drag (one card, or a group of peers that move with the anchor), empty-canvas pan, selection rectangle (marquee), Shift tracking, Shift-click toggle, place, connect |
 | `GraphCanvasHitTarget` / `GraphCanvasPointerHitTesting` | Document rects + pure helpers |
 | `GraphCanvasViewportController` | Pan deltas + live AppKit `convert` under cursor |
 | `GraphCanvasGridView` | Optional grid underlay: one repeated cell, not a document-sized bitmap |
@@ -30,10 +30,12 @@ Hosts supply product policy; GraphCanvas supplies plumbing.
 | Host must supply | Stays in the product folder |
 | --- | --- |
 | `hitTargets` (string ids + document rects) | Card chrome, palette, create dialogs |
-| Pointer `mode` + callbacks (select / drag began / drag end / marquee ended / place / connect) | Catalog / store / FFI / session queries |
+| Pointer `mode` + callbacks (select / toggle select / drag began / drag end / marquee ended (ids, additive) / Shift held changed / place / connect) | Catalog / store / FFI / session queries |
 | Document `rootView` (paint-only SwiftUI base layer) | Honesty copy and product card content |
 | Items pushed to `graphCanvasItems` (id, origin, model, `makeView`, rotor entry) | Rotor names and labels (localized by the host) |
 | Magnification range + document size (host policy) | Auto-layout, virtualization, position tables |
+
+The document view reports Shift through `onShiftHeldChanged`; the host decides what it engages.
 
 **Transfers to a future tree / workflow host:** scroll shell, pointer controller + hit targets, viewport convert, optional grid and edge helpers.
 
@@ -99,7 +101,9 @@ gesture locations into the hosted document correctly (design note §7.2).
 | Trackpad pinch | Zoom |
 | Mouse wheel | Zoom toward cursor (manual anchor; not `centeredAt:`) |
 | Click-drag on empty document | Pan (idle mode, Shift up) |
-| Shift-drag on empty document, or any empty-document drag in `.selecting` mode | Marquee: a document-space rectangle. On release the pointer calls `onMarqueeEnded` with the ids of the hit targets it overlaps (a shared edge is not a hit). A drag that starts on a hit target never marquees |
+| Shift-drag on empty document, or any empty-document drag in `.selecting` mode | Marquee: a document-space rectangle. On release the pointer calls `onMarqueeEnded` with the ids of the hit targets it overlaps (a shared edge is not a hit) and whether Shift was down at press (additive). A drag that starts on a hit target never marquees |
+| Shift-click on a hit target | `onToggleSelect` (no `onSelect`, no card action) |
+| Shift key | Document view reports it through `onShiftHeldChanged` (local `flagsChanged` monitor; `false` while a text field has focus or the window is not key) |
 | Click / drag on hit targets | Product callbacks (select, move, place, connect) |
 
 Magnification range defaults are **zoom-out oriented** (`0.25` … `1.25`): overview of a
