@@ -92,7 +92,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-03 | Value compare: names | 2 | Name comparer on relations; word helpers move in from `autoreconcile`; alias seeds to `namealiases` | — | S11-02 | — | Scoped |
 | S11-04 | Value compare: dates | 2 | Date comparer on relations; date windows move in; `ABT` as a range | — | S11-02 | — | Scoped |
 | S11-05 | Migrate matching onto value compare | 2 | `match`, `graphalign`, `promotealign` call `valuecompare`; `match`'s comparers deleted | — | S11-03, S11-04 | — | Scoped |
-| S11-06 | Migrate the reconciler onto value compare | 2 | `Compatible`, keys, grouping policy, place-chain windows, `hasValue` copy | — | S11-05 | — | Scoped |
+| S11-06 | Migrate the reconciler onto value compare | 2 | `Compatible`, keys, grouping policy, place-chain windows | — | S11-05 | — | Scoped |
 | S11-07 | One normalization key across the core | 2 | Search rescoring, search-index dedupe, term dedupe, alias tokens use `Key` | — | S11-05 | — | Scoped |
 | S11-08 | One normalization helper in Swift | 2 | Shared Swift normalize for filters; `FakeStore` groups names by parts | — | S11-06 | — | Scoped |
 | S11-09 | Property compare | 3 | `propertycompare`: negatives, neutral terms, cardinality, outcome table | — | S11-05 | — | Scoped |
@@ -271,7 +271,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-06 — Migrate the reconciler onto value compare
 
-**Ships.** `autoreconcile` keys, `Compatible`, `subsumes` / `partFits` and the pipeline's grouping use `valuecompare` relations under a grouping policy the plan decides (recommendation on record: group on `Same` and `Contains`, not `Equivalent`). `conclusionheaders` place chains use day-precision windows. `autoreconciler.hasValue` calls `carries`. [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) says what the reconciler now uses.
+**Ships.** `autoreconcile` keys, `Compatible`, `subsumes` / `partFits` and the pipeline's grouping use `valuecompare` relations under a grouping policy the plan decides (recommendation on record: group on `Same` and `Contains`, not `Equivalent`). `conclusionheaders` place chains use day-precision windows. [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) says what the reconciler now uses.
 **Not this PR.** Pins (S11-19).
 **Check.** `Sainte-Anne` / `Sainte Anne` group; `J. Robins` folds into `James Robins`; a place chain with two same-year dates folds by day; `Montréal` / `Montreal` follow the chosen policy.
 **Context.** [Reuse inventory](comparison-layers.md#reuse-across-the-app); [decided 2026-10-17](comparison-layers.md#decided-on-2026-10-17) (reconciler grouping); rule "The reconciler keeps its own decisions"; [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md).
