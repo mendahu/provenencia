@@ -105,6 +105,10 @@ struct PersonDetailTests {
         #expect(thumb.imageLabel == "Likeness from Register")
         #expect(thumb.colors != nil)
         #expect(thumb.mark == .subjectPerson)
+        #expect(thumb.label == L10n.Conclusions.personLikenessThumb)
+        header.likenessImageRelPath = ""
+        let bare = PersonDetailContent(detail: detail(extra: [gender], header: header)).thumbnail
+        #expect(bare.label == L10n.Conclusions.personNoLikeness)
     }
 
     @Test func likenessesBecomeTilesEarliestFirst() {

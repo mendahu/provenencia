@@ -29,7 +29,8 @@ struct PersonDetailContent: ConclusionDetailBody {
     var thumbnail: ConclusionDetailThumbnail {
         .init(
             mark: .subjectPerson,
-            label: L10n.Conclusions.personNoLikeness,
+            label: likenessImageRelPath.isEmpty
+                ? L10n.Conclusions.personNoLikeness : L10n.Conclusions.personLikenessThumb,
             imageRelPath: likenessImageRelPath,
             imageLabel: leadLabel,
             colors: treatment?.thumbnailColors
