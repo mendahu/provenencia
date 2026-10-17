@@ -137,6 +137,73 @@ func TestRemoveObject(t *testing.T) {
 	}
 }
 
+func TestRemoveObjectPrunesEmptyShards(t *testing.T) {
+	put := func(t *testing.T, project, rel string) {
+		t.Helper()
+		path := filepath.Join(project, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("bytes"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	exists := func(project, rel string) bool {
+		_, err := os.Lstat(filepath.Join(project, filepath.FromSlash(rel)))
+		return err == nil
+	}
+	tests := []struct {
+		name   string
+		put    []string
+		remove string
+		stay   []string
+		gone   []string
+	}{
+		{
+			name:   "only object in its shard",
+			put:    []string{"objects/ab/cd/one.png"},
+			remove: "objects/ab/cd/one.png",
+			stay:   []string{"objects"},
+			gone:   []string{"objects/ab/cd/one.png", "objects/ab/cd", "objects/ab"},
+		},
+		{
+			name:   "two objects in one shard",
+			put:    []string{"objects/ab/cd/one.png", "objects/ab/cd/two.png"},
+			remove: "objects/ab/cd/one.png",
+			stay:   []string{"objects/ab/cd/two.png", "objects/ab/cd", "objects/ab"},
+			gone:   []string{"objects/ab/cd/one.png"},
+		},
+		{
+			name:   "sibling shard keeps the parent",
+			put:    []string{"objects/ab/cd/one.png", "objects/ab/ef/two.png"},
+			remove: "objects/ab/cd/one.png",
+			stay:   []string{"objects/ab/ef/two.png", "objects/ab"},
+			gone:   []string{"objects/ab/cd/one.png", "objects/ab/cd"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			project := t.TempDir()
+			for _, rel := range tt.put {
+				put(t, project, rel)
+			}
+			if err := objectstore.RemoveObject(project, tt.remove); err != nil {
+				t.Fatal(err)
+			}
+			for _, rel := range tt.stay {
+				if !exists(project, rel) {
+					t.Errorf("%s was removed", rel)
+				}
+			}
+			for _, rel := range tt.gone {
+				if exists(project, rel) {
+					t.Errorf("%s still exists", rel)
+				}
+			}
+		})
+	}
+}
+
 func TestWriteIfAbsent(t *testing.T) {
 	data := []byte("object bytes")
 	sum := sha256.Sum256(data)

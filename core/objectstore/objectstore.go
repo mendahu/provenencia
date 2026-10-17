@@ -123,6 +123,8 @@ func matches(root *os.Root, inner, checksum string) (bool, error) {
 // RemoveObject removes one object file under projectDir/objects without
 // following a symlink out of that folder. rel is the slash-separated path from
 // the project folder and must start with objects/. A missing object returns nil.
+// It then removes the shard folders the removal left empty, up to but not
+// including objects/.
 func RemoveObject(projectDir, rel string) error {
 	inner, err := innerPath(rel)
 	if err != nil {
@@ -138,6 +140,12 @@ func RemoveObject(projectDir, rel string) error {
 	defer root.Close()
 	if err := root.Remove(inner); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
+	}
+	// root.Remove refuses a folder that still holds anything, which ends the walk.
+	for dir := filepath.Dir(inner); dir != "."; dir = filepath.Dir(dir) {
+		if root.Remove(dir) != nil {
+			break
+		}
 	}
 	return nil
 }
