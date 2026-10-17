@@ -2826,6 +2826,30 @@
         }
       }
     },
+    "error.ingest.unsafe_objects.help": {
+      "comment": "Callout help for ingest.unsafe_objects",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its objects folder is a link to another location. Provenencia stores files only inside the project folder. Replace the link with a real folder, then try again."
+          }
+        }
+      }
+    },
+    "error.ingest.unsafe_objects.title": {
+      "comment": "Callout title for ingest.unsafe_objects",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This project’s objects folder can’t be used"
+          }
+        }
+      }
+    },
     "error.ingest.unsupported_archive.help": {
       "comment": "Callout help for ingest.unsupported_archive",
       "extractionState": "manual",

@@ -8812,6 +8812,16 @@ enum L10n {
             defaultValue: "Could not ingest that file.",
             comment: "FFI error ingest.invalid"
         )
+        static let ingestUnsafeObjectsTitle = LocalizedStringResource(
+            "error.ingest.unsafe_objects.title",
+            defaultValue: "This project’s objects folder can’t be used",
+            comment: "Callout title for ingest.unsafe_objects"
+        )
+        static let ingestUnsafeObjectsHelp = LocalizedStringResource(
+            "error.ingest.unsafe_objects.help",
+            defaultValue: "Its objects folder is a link to another location. Provenencia stores files only inside the project folder. Replace the link with a real folder, then try again.",
+            comment: "Callout help for ingest.unsafe_objects"
+        )
         static let ingestPermissionDeniedTitle = LocalizedStringResource(
             "error.ingest.permission_denied.title",
             defaultValue: "The file could not be read.",
@@ -9065,6 +9075,11 @@ enum L10n {
                         comment: "Callout title for ingest.invalid"
                     ),
                     message: L10n.string(ingestInvalid)
+                )
+            case "ingest.unsafe_objects":
+                return IngestCallout(
+                    title: ingestUnsafeObjectsTitle,
+                    message: L10n.string(ingestUnsafeObjectsHelp)
                 )
             default:
                 return nil
