@@ -13,6 +13,7 @@ struct EventDetailContent: ConclusionDetailBody {
     /// First place name under the title. Nil when none is recorded.
     var summaryPlace: String?
     var rows: [ReconciledValueRowModel]
+    var thumbnail: ConclusionDetailThumbnail { .init(mark: .subjectEvent, label: L10n.Conclusions.eventNoImage) }
 
     init(
         detail: CatalogConclusionDetail,

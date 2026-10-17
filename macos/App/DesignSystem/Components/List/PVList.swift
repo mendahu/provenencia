@@ -12,9 +12,9 @@ import SwiftUI
 /// are lazy, so hundreds stay cheap. Keyboard: the list is one focus stop;
 /// ↑ / ↓ move the focused row (⌥ jumps to the ends), Home / End, Page Up /
 /// Page Down move by ten, Return / Space activate.
-struct PVList<Item: Identifiable, Primary: View, Secondary: View>: View {
+struct PVList<Item: Identifiable, Thumbnail: View, Primary: View, Secondary: View>: View {
     private let items: [Item]
-    private let thumbnail: ((Item) -> PVThumbnail.Content)?
+    private let thumbnail: ((Item) -> Thumbnail)?
     private let thumbnailSize: CGFloat
     private let primary: (Item) -> Primary
     private let secondary: (Item) -> Secondary
@@ -30,9 +30,11 @@ struct PVList<Item: Identifiable, Primary: View, Secondary: View>: View {
     @FocusState private var isFocused: Bool
     @State private var focusIndex = 0
 
+    /// The thumbnail slot is a view, so a row can load an image; the list frames
+    /// it to `thumbnailSize`.
     init(
         items: [Item],
-        thumbnail: ((Item) -> PVThumbnail.Content)? = nil,
+        @ViewBuilder thumbnail: @escaping (Item) -> Thumbnail,
         thumbnailSize: CGFloat = 44,
         meta: @escaping (Item) -> String? = { _ in nil },
         detail: PVListDetailColumn<Item>? = nil,
@@ -44,6 +46,30 @@ struct PVList<Item: Identifiable, Primary: View, Secondary: View>: View {
         onActivate: @escaping (Item) -> Void,
         @ViewBuilder primary: @escaping (Item) -> Primary,
         @ViewBuilder secondary: @escaping (Item) -> Secondary
+    ) {
+        self.init(
+            items: items, optionalThumbnail: thumbnail, thumbnailSize: thumbnailSize, meta: meta,
+            detail: detail, chevron: chevron, density: density, label: label,
+            itemAccessibilityLabel: itemAccessibilityLabel,
+            itemAccessibilityIdentifier: itemAccessibilityIdentifier,
+            onActivate: onActivate, primary: primary, secondary: secondary
+        )
+    }
+
+    fileprivate init(
+        items: [Item],
+        optionalThumbnail thumbnail: ((Item) -> Thumbnail)?,
+        thumbnailSize: CGFloat,
+        meta: @escaping (Item) -> String?,
+        detail: PVListDetailColumn<Item>?,
+        chevron: Bool,
+        density: PVListDensity,
+        label: LocalizedStringResource,
+        itemAccessibilityLabel: @escaping (Item) -> String,
+        itemAccessibilityIdentifier: ((Item) -> String)?,
+        onActivate: @escaping (Item) -> Void,
+        primary: @escaping (Item) -> Primary,
+        secondary: @escaping (Item) -> Secondary
     ) {
         self.items = items
         self.thumbnail = thumbnail
@@ -111,7 +137,8 @@ struct PVList<Item: Identifiable, Primary: View, Secondary: View>: View {
         } label: {
             HStack(spacing: PVSpacing.space6) {
                 if let thumbnail {
-                    PVThumbnail(thumbnail(item), size: thumbnailSize)
+                    thumbnail(item)
+                        .frame(width: thumbnailSize, height: thumbnailSize)
                 }
                 VStack(alignment: .leading, spacing: 3) {
                     primary(item)
@@ -159,12 +186,35 @@ struct PVList<Item: Identifiable, Primary: View, Secondary: View>: View {
     }
 }
 
-extension PVList where Secondary == EmptyView {
-    /// A list with no secondary line.
+extension PVList where Thumbnail == EmptyView {
+    /// A list with no thumbnail slot.
     init(
         items: [Item],
-        thumbnail: ((Item) -> PVThumbnail.Content)? = nil,
-        thumbnailSize: CGFloat = 44,
+        meta: @escaping (Item) -> String? = { _ in nil },
+        detail: PVListDetailColumn<Item>? = nil,
+        chevron: Bool = true,
+        density: PVListDensity = .comfortable,
+        label: LocalizedStringResource,
+        itemAccessibilityLabel: @escaping (Item) -> String,
+        itemAccessibilityIdentifier: ((Item) -> String)? = nil,
+        onActivate: @escaping (Item) -> Void,
+        @ViewBuilder primary: @escaping (Item) -> Primary,
+        @ViewBuilder secondary: @escaping (Item) -> Secondary
+    ) {
+        self.init(
+            items: items, optionalThumbnail: nil, thumbnailSize: 44, meta: meta,
+            detail: detail, chevron: chevron, density: density, label: label,
+            itemAccessibilityLabel: itemAccessibilityLabel,
+            itemAccessibilityIdentifier: itemAccessibilityIdentifier,
+            onActivate: onActivate, primary: primary, secondary: secondary
+        )
+    }
+}
+
+extension PVList where Thumbnail == EmptyView, Secondary == EmptyView {
+    /// A list with no thumbnail slot and no secondary line.
+    init(
+        items: [Item],
         meta: @escaping (Item) -> String? = { _ in nil },
         detail: PVListDetailColumn<Item>? = nil,
         chevron: Bool = true,
@@ -176,7 +226,7 @@ extension PVList where Secondary == EmptyView {
         @ViewBuilder primary: @escaping (Item) -> Primary
     ) {
         self.init(
-            items: items, thumbnail: thumbnail, thumbnailSize: thumbnailSize, meta: meta,
+            items: items, meta: meta,
             detail: detail, chevron: chevron, density: density, label: label,
             itemAccessibilityLabel: itemAccessibilityLabel,
             itemAccessibilityIdentifier: itemAccessibilityIdentifier,
@@ -372,7 +422,7 @@ private extension View {
     return VStack(spacing: PVSpacing.space8) {
         PVList(
             items: rows,
-            thumbnail: { _ in PVThumbnail.Content(glyph: .mark(.subjectPerson)) },
+            thumbnail: { _ in PVThumbnail(PVThumbnail.Content(glyph: .mark(.subjectPerson))) },
             meta: { $0.id },
             label: "Persons",
             itemAccessibilityLabel: { "\($0.title), \($0.id)" },

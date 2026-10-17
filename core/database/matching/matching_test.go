@@ -28,6 +28,7 @@ import (
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -333,10 +334,10 @@ func TestNoStoredDefaultStampsWestern(t *testing.T) {
 		}
 	}
 	subject := vals[string(probe.ID)][prop][0]
-	if subject.NamePattern != match.WesternPattern || candidate.NamePattern != match.WesternPattern {
+	if subject.NamePattern != valuecompare.WesternPattern || candidate.NamePattern != valuecompare.WesternPattern {
 		t.Fatalf("patterns %q %q", subject.NamePattern, candidate.NamePattern)
 	}
-	got, ok := nameformats.Loaded{Key: match.WesternPattern, Builtin: true}.Comparer().Compare(subject, candidate)
+	got, ok := nameformats.Loaded{Key: valuecompare.WesternPattern, Builtin: true}.Comparer().Compare(subject, candidate)
 	want, wantOK := match.DefaultNames.Compare(subject, candidate)
 	if ok != wantOK || got != want {
 		t.Fatalf("score %v %v, built-in %v %v", got, ok, want, wantOK)

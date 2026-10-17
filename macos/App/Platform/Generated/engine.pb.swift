@@ -3876,6 +3876,15 @@ public nonisolated struct Provenencia_Engine_V1_PersonHeader: @unchecked Sendabl
     set {_uniqueStorage()._updatedAt = newValue}
   }
 
+  /// likeness_image_rel_path is the objects/… path of the likeness the Person
+  /// leads with on its page and in the Persons list (S10-35: the earliest
+  /// gallery likeness); empty when none. Filled on ListPersonHeaders and
+  /// GetConclusionDetail only.
+  public var likenessImageRelPath: String {
+    get {_storage._likenessImageRelPath}
+    set {_uniqueStorage()._likenessImageRelPath = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -4488,6 +4497,33 @@ public nonisolated struct Provenencia_Engine_V1_GetConclusionDetailRequest: Send
   public init() {}
 }
 
+/// LikenessDetail is one likeness a Person page's gallery shows (S10-35),
+/// earliest recorded first. record is its earliest Observation, as the Why
+/// shows it; the tile opens that record's Citation. image_rel_path is empty
+/// when the File's path cannot be derived.
+public nonisolated struct Provenencia_Engine_V1_LikenessDetail: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var imageRelPath: String = String()
+
+  public var record: Provenencia_Engine_V1_ReconcilerOutcomeDetail {
+    get {_record ?? Provenencia_Engine_V1_ReconcilerOutcomeDetail()}
+    set {_record = newValue}
+  }
+  /// Returns true if `record` has been explicitly set.
+  public var hasRecord: Bool {self._record != nil}
+  /// Clears the value of `record`. Subsequent reads from it will return its default value.
+  public mutating func clearRecord() {self._record = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _record: Provenencia_Engine_V1_ReconcilerOutcomeDetail? = nil
+}
+
 public nonisolated struct Provenencia_Engine_V1_ConclusionDetail: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -4543,6 +4579,11 @@ public nonisolated struct Provenencia_Engine_V1_ConclusionDetail: @unchecked Sen
       return Provenencia_Engine_V1_PlaceHeader()
     }
     set {_uniqueStorage()._header = .place(newValue)}
+  }
+
+  public var likenesses: [Provenencia_Engine_V1_LikenessDetail] {
+    get {_storage._likenesses}
+    set {_uniqueStorage()._likenesses = newValue}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -13301,7 +13342,7 @@ nonisolated extension Provenencia_Engine_V1_EventSubject: SwiftProtobuf.Message,
 
 nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PersonHeader"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}name\0\u{3}name_value_count\0\u{1}birth\0\u{1}death\0\u{3}updated_revision\0\u{3}updated_at\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}name\0\u{3}name_value_count\0\u{1}birth\0\u{1}death\0\u{3}updated_revision\0\u{3}updated_at\0\u{3}likeness_image_rel_path\0")
 
   fileprivate class _StorageClass {
     var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
@@ -13311,6 +13352,7 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
     var _death: Provenencia_Engine_V1_LifeFacts? = nil
     var _updatedRevision: Int64 = 0
     var _updatedAt: String = String()
+    var _likenessImageRelPath: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -13328,6 +13370,7 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
       _death = source._death
       _updatedRevision = source._updatedRevision
       _updatedAt = source._updatedAt
+      _likenessImageRelPath = source._likenessImageRelPath
     }
   }
 
@@ -13353,6 +13396,7 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
         case 5: try { try decoder.decodeSingularMessageField(value: &_storage._death) }()
         case 6: try { try decoder.decodeSingularInt64Field(value: &_storage._updatedRevision) }()
         case 7: try { try decoder.decodeSingularStringField(value: &_storage._updatedAt) }()
+        case 8: try { try decoder.decodeSingularStringField(value: &_storage._likenessImageRelPath) }()
         default: break
         }
       }
@@ -13386,6 +13430,9 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
       if !_storage._updatedAt.isEmpty {
         try visitor.visitSingularStringField(value: _storage._updatedAt, fieldNumber: 7)
       }
+      if !_storage._likenessImageRelPath.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._likenessImageRelPath, fieldNumber: 8)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -13402,6 +13449,7 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
         if _storage._death != rhs_storage._death {return false}
         if _storage._updatedRevision != rhs_storage._updatedRevision {return false}
         if _storage._updatedAt != rhs_storage._updatedAt {return false}
+        if _storage._likenessImageRelPath != rhs_storage._likenessImageRelPath {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -14407,15 +14455,55 @@ nonisolated extension Provenencia_Engine_V1_GetConclusionDetailRequest: SwiftPro
   }
 }
 
+nonisolated extension Provenencia_Engine_V1_LikenessDetail: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".LikenessDetail"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}image_rel_path\0\u{1}record\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.imageRelPath) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._record) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.imageRelPath.isEmpty {
+      try visitor.visitSingularStringField(value: self.imageRelPath, fieldNumber: 1)
+    }
+    try { if let v = self._record {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_LikenessDetail, rhs: Provenencia_Engine_V1_LikenessDetail) -> Bool {
+    if lhs.imageRelPath != rhs.imageRelPath {return false}
+    if lhs._record != rhs._record {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 nonisolated extension Provenencia_Engine_V1_ConclusionDetail: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ConclusionDetail"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}fields\0\u{3}member_count\0\u{1}person\0\u{1}event\0\u{1}place\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}fields\0\u{3}member_count\0\u{1}person\0\u{1}event\0\u{1}place\0\u{1}likenesses\0")
 
   fileprivate class _StorageClass {
     var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
     var _fields: [Provenencia_Engine_V1_ConclusionField] = []
     var _memberCount: Int32 = 0
     var _header: Provenencia_Engine_V1_ConclusionDetail.OneOf_Header?
+    var _likenesses: [Provenencia_Engine_V1_LikenessDetail] = []
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -14430,6 +14518,7 @@ nonisolated extension Provenencia_Engine_V1_ConclusionDetail: SwiftProtobuf.Mess
       _fields = source._fields
       _memberCount = source._memberCount
       _header = source._header
+      _likenesses = source._likenesses
     }
   }
 
@@ -14490,6 +14579,7 @@ nonisolated extension Provenencia_Engine_V1_ConclusionDetail: SwiftProtobuf.Mess
             _storage._header = .place(v)
           }
         }()
+        case 7: try { try decoder.decodeRepeatedMessageField(value: &_storage._likenesses) }()
         default: break
         }
       }
@@ -14526,6 +14616,9 @@ nonisolated extension Provenencia_Engine_V1_ConclusionDetail: SwiftProtobuf.Mess
       }()
       case nil: break
       }
+      if !_storage._likenesses.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._likenesses, fieldNumber: 7)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -14539,6 +14632,7 @@ nonisolated extension Provenencia_Engine_V1_ConclusionDetail: SwiftProtobuf.Mess
         if _storage._fields != rhs_storage._fields {return false}
         if _storage._memberCount != rhs_storage._memberCount {return false}
         if _storage._header != rhs_storage._header {return false}
+        if _storage._likenesses != rhs_storage._likenesses {return false}
         return true
       }
       if !storagesAreEqual {return false}

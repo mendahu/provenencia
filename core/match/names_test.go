@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // nv builds a name from "type=value" parts separated by "|", with a form
@@ -40,9 +41,8 @@ var partCodes = map[string]string{
 
 // patterned is a comparer whose pattern is a copy of the Western one,
 // changed by edit.
-func patterned(edit func(*NamePattern)) NameComparer {
+func patterned(edit func(*valuecompare.NamePattern)) NameComparer {
 	p := WesternNamePattern
-	p.Key = "test"
 	p.PartRoles = maps.Clone(p.PartRoles)
 	edit(&p)
 	return NameComparer{Patterns: NamePatternSet{"test": p}, Pattern: Set("test")}
@@ -100,10 +100,10 @@ var nameCases = []nameCase{
 	{"identity", "accented letters match themselves", NameComparer{}, nv("g=José|s=Núñez"), nv("g=josé|s=NÚÑEZ"), 1},
 	{"fold", "accent only", NameComparer{}, nv("g=José"), nv("g=Jose"), foldOnly},
 	{"fold", "eszett", NameComparer{}, nv("s=Groß"), nv("s=Gross"), foldOnly},
-	{"alias", "abbreviation", withAliasSeed(), nv("g=Jas."), nv("g=James"), AliasCredit},
-	{"alias", "nickname", withAliasSeed(), nv("g=Jim"), nv("g=James"), AliasCredit},
-	{"alias", "benjamin", withAliasSeed(), nv("g=Ben"), nv("g=Benjamin"), AliasCredit},
-	{"alias", "douglas", withAliasSeed(), nv("g=Doug"), nv("g=Douglas"), AliasCredit},
+	{"alias", "abbreviation", withAliasFixture(), nv("g=Jas."), nv("g=James"), AliasCredit},
+	{"alias", "nickname", withAliasFixture(), nv("g=Jim"), nv("g=James"), AliasCredit},
+	{"alias", "benjamin", withAliasFixture(), nv("g=Ben"), nv("g=Benjamin"), AliasCredit},
+	{"alias", "douglas", withAliasFixture(), nv("g=Doug"), nv("g=Douglas"), AliasCredit},
 	{"alias", "same word stays exact", NameComparer{}, nv("g=James"), nv("g=James"), 1},
 	{"particle", "spaced O rejoins", NameComparer{}, nv("s=O Brien"), nv("s=O'Brien"), 1},
 
@@ -144,12 +144,12 @@ var nameCases = []nameCase{
 	{"given", "short name, one dropped letter", NameComparer{}, nv("g=John|s=Robins"), nv("g=Jon|s=Robins"), (anne*2*G1 + 2*F) / (2 * (G1 + F))},
 	{"given", "short name, one substituted letter", NameComparer{}, nv("g=Jane|s=Robins"), nv("g=June|s=Robins"), 2 * F / (2 * (G1 + F))},
 	{"given", "two-letter name, one added letter", NameComparer{}, nv("g=Al|s=Robins"), nv("g=Ali|s=Robins"), 2 * F / (2 * (G1 + F))},
-	{"given", "abbreviation", withAliasSeed(), nv("g=Jas.|s=Robins"), nv("g=James|s=Robins"), (AliasCredit*2*G1 + 2*F) / (2 * (G1 + F))},
+	{"given", "abbreviation", withAliasFixture(), nv("g=Jas.|s=Robins"), nv("g=James|s=Robins"), (AliasCredit*2*G1 + 2*F) / (2 * (G1 + F))},
 	{"given", "missing on one side", NameComparer{}, nv("s=Robins"), nv("g=James|s=Robins"), 1},
 	{"given", "given only, initial", NameComparer{}, nv("g=J."), nv("g=James"), 0.5},
 	{"given", "single character is a word, not an initial", NameComparer{}, nv("s=蒋|g=浩"), nv("s=蒋|g=浩然"), 2 * F / (2 * (G1 + F))},
-	{"given", "nickname matches a given name", withAliasSeed(), nv("g=James|n=Jim|s=Robins"), nv("g=Jim|s=Robins"), (AliasCredit*2*G1 + 2*F) / (2 * (G1 + F))},
-	{"given", "nicknames on both sides", withAliasSeed(), nv("g=James|n=Jim|s=Robins"), nv("g=Jacob|n=Jim|s=Robins"), (AliasCredit*0.9*(G1+N) + 2*F) / (2 * (G1 + N + F))},
+	{"given", "nickname matches a given name", withAliasFixture(), nv("g=James|n=Jim|s=Robins"), nv("g=Jim|s=Robins"), (AliasCredit*2*G1 + 2*F) / (2 * (G1 + F))},
+	{"given", "nicknames on both sides", withAliasFixture(), nv("g=James|n=Jim|s=Robins"), nv("g=Jacob|n=Jim|s=Robins"), (AliasCredit*0.9*(G1+N) + 2*F) / (2 * (G1 + N + F))},
 	{"given", "nickname does not fit", NameComparer{}, nv("g=James|n=Jim|s=Robins"), nv("g=Mary|s=Robins"), 2 * F / (G1 + N + F + G1 + F)},
 	{"given", "nickname alone", NameComparer{}, nv("n=Jim"), nv("g=Jim|s=Robins"), 0.9},
 
@@ -158,11 +158,11 @@ var nameCases = []nameCase{
 	{"cross-format", "typed vs untyped parts", NameComparer{}, nv("g=James|s=Robins"), nv("_=James|u=Robins"), (0.8*(G1+U) + 0.8*(F+U)) / (G1 + F + 2*U)},
 	{"cross-format", "an extra untyped word", NameComparer{}, nv("g=James|u=Kendall|s=Robins"), nv("g=James|s=Robins"), 1},
 	{"cross-format", "surname-first entry typed by position", NameComparer{}, nv("g=Wang|s=Fang"), nv("s=Wang|g=Fang"), 0.5},
-	{"cross-format", "a profile's own roles", patterned(func(p *NamePattern) {
-		p.PartRoles = map[string]NameRole{"given": RoleGiven, "undetermined": RoleFamily}
+	{"cross-format", "a profile's own roles", patterned(func(p *valuecompare.NamePattern) {
+		p.PartRoles = map[string]valuecompare.NameRole{"given": valuecompare.RoleGiven, "undetermined": valuecompare.RoleFamily}
 	}), nv("g=Anders|u=Jonsson"), nv("g=Anders|u=Jonsson"), 1},
-	{"cross-format", "a profile's role for an unknown type", patterned(func(p *NamePattern) {
-		p.PartRoles = map[string]NameRole{"given": RoleGiven, "undetermined": RoleFamily}
+	{"cross-format", "a profile's role for an unknown type", patterned(func(p *valuecompare.NamePattern) {
+		p.PartRoles = map[string]valuecompare.NameRole{"given": valuecompare.RoleGiven, "undetermined": valuecompare.RoleFamily}
 	}), nv("g=Anders|u=Jonsson"), nv("g=Anders|s=Jonsson"), (2*G1 + 0.8*(F+U)) / (G1 + F + G1 + U)},
 
 	// A shared given name with unrelated surnames is weak.
@@ -186,7 +186,7 @@ var nameCases = []nameCase{
 	{"ignored", "different titles", NameComparer{}, nv("p=Rev.|g=James|s=Robins"), nv("p=Dr.|g=James|s=Robins"), 1},
 
 	// Tuning knobs.
-	{"tuning", "equal weights", patterned(func(p *NamePattern) { p.Weights.Family = 1 }), nv("g=Mary|s=Robins"), nv("g=James|s=Robins"), 0.5},
+	{"tuning", "equal weights", patterned(func(p *valuecompare.NamePattern) { p.Weights.Family = 1 }), nv("g=Mary|s=Robins"), nv("g=James|s=Robins"), 0.5},
 	{"tuning", "cross-role at full", NameComparer{CrossRole: Set(1.0)}, nv("g=Robins|s=James"), nv("g=James|s=Robins"), 1},
 	{"tuning", "cross-role zero: types are strict", NameComparer{CrossRole: Set(0.0)}, nv("g=Robins|s=James"), nv("g=James|s=Robins"), 0},
 	{"tuning", "fuzzy off also stops short-word variants", NameComparer{Words: WordRules{FuzzyFloor: Set(1.0)}}, nv("g=Ann|s=Robins"), nv("g=Anne|s=Robins"), 2 * F / (2 * (G1 + F))},
@@ -243,36 +243,61 @@ func TestLetterFoldsComeFromTheMap(t *testing.T) {
 	}
 }
 
-// withAliasSeed scores against the product seed. Catalog loads pass the
-// same rows; a bare comparer has none.
-func withAliasSeed() NameComparer {
-	tables := append([]AliasTable(nil), productAliasTables...)
-	return NameComparer{Words: WordRules{Aliases: &tables}}
-}
+// testAliasRoles are the part roles the fixture tables allow.
+var testAliasRoles = []valuecompare.NameRole{valuecompare.RoleGiven, valuecompare.RoleNick, valuecompare.RoleUntyped}
 
-func TestSharedNicknameDoesNotMergeCanonicalNames(t *testing.T) {
-	c := withAliasSeed()
-	got, ok := c.Compare(nv("g=Chris"), nv("g=Christine"))
-	if !ok || math.Abs(got-AliasCredit) > 1e-9 {
-		t.Fatalf("Chris / Christine: %.4f ok=%v", got, ok)
+// withAliasFixture scores against alias tables built here: the abbreviation
+// set for James and the product nickname sets that hold the names the cases
+// use. Catalog loads pass real rows; a bare comparer has none.
+func withAliasFixture() NameComparer {
+	tables := []valuecompare.AliasTable{
+		{
+			Key: "abbreviations", Kind: valuecompare.AliasAbbreviation, Roles: testAliasRoles,
+			Sets: [][]string{{"james", "jas"}},
+		},
+		{
+			Key: "nicknames", Kind: valuecompare.AliasNickname, Roles: testAliasRoles,
+			Sets: [][]string{
+				{"ben", "benji", "bennie", "benny"},
+				{"benedict", "ben", "bennie"},
+				{"benjamin", "ben", "benjy", "bennie", "benny", "jamie"},
+				{"benjy", "benjamin"},
+				{"bennett", "ben", "bennie", "benny"},
+				{"bill", "billy", "fred", "robert", "william", "willie"},
+				{"billy", "fred", "robert", "william"},
+				{"douglas", "doug"},
+				{"jacob", "jaap", "jake", "jay"},
+				{"jacobus", "jacob"},
+				{"james", "jamie", "jem", "jim", "jimmie", "jimmy"},
+				{"jamey", "james", "jamie"},
+				{"jamie", "james"},
+				{"jim", "jimmie"},
+				{"jimmie", "jim", "jimmy"},
+				{"robert", "bill", "billy", "bob", "bobby", "dob", "dobbin", "hob", "hobkin", "rob", "robby", "rupert"},
+				{"will", "bill", "fred", "wilbur", "willie"},
+				{"william", "bela", "bell", "bill", "billy", "wil", "will", "willie", "willy"},
+				{"willie", "fred", "william"},
+				{"willis", "bill", "willy"},
+				{"wilma", "billiewilhelm", "william"},
+			},
+		},
 	}
-	got, ok = c.Compare(nv("g=Tina"), nv("g=Christopher"))
-	if ok && (got == AliasCredit || got > 0) {
-		t.Fatalf("Tina / Christopher scored %.4f", got)
-	}
+	index := valuecompare.NewAliasIndex(tables)
+	return NameComparer{Words: WordRules{Aliases: &index}}
 }
 
 func TestAliasTablesComeFromTheList(t *testing.T) {
-	none := NameComparer{Words: WordRules{Aliases: Set([]AliasTable{})}}
+	none := NameComparer{Words: WordRules{Aliases: Set(valuecompare.NewAliasIndex(nil))}}
 	got, ok := none.Compare(nv("g=Jas."), nv("g=James"))
 	if !ok || math.Abs(got-AliasCredit) < 1e-9 {
 		t.Fatalf("empty list still aliased: %.4f %v", got, ok)
 	}
-	list := []AliasTable{{
-		Kind: AliasNickname, Roles: aliasPartRoles(),
+	list := []valuecompare.AliasTable{{
+		Kind: valuecompare.AliasNickname, Roles: testAliasRoles,
 		Sets: [][]string{{"zz", "zzzz"}},
 	}}
-	extra := NameComparer{Words: WordRules{Aliases: &list}}
+	index := valuecompare.NewAliasIndex(list)
+	extra := NameComparer{Words: WordRules{Aliases: &index}}
 	got, ok = extra.Compare(nv("g=Zz"), nv("g=Zzzz"))
 	if !ok || math.Abs(got-AliasCredit) > 1e-9 {
 		t.Fatalf("added set did not score: %.4f %v", got, ok)
@@ -280,7 +305,7 @@ func TestAliasTablesComeFromTheList(t *testing.T) {
 }
 
 func TestSurnamesDoNotUseGivenAliases(t *testing.T) {
-	got, ok := withAliasSeed().Compare(nv("s=Bill"), nv("s=William"))
+	got, ok := withAliasFixture().Compare(nv("s=Bill"), nv("s=William"))
 	if !ok {
 		t.Fatal("not comparable")
 	}
@@ -290,33 +315,12 @@ func TestSurnamesDoNotUseGivenAliases(t *testing.T) {
 }
 
 func TestUnknownTokenFallsThrough(t *testing.T) {
-	got, ok := withAliasSeed().Compare(nv("g=Xyzzy"), nv("g=Plugh"))
+	got, ok := withAliasFixture().Compare(nv("g=Xyzzy"), nv("g=Plugh"))
 	if !ok {
 		t.Fatal("not comparable")
 	}
 	if math.Abs(got-AliasCredit) < 1e-9 || math.Abs(got-1) < 1e-9 {
 		t.Fatalf("unknown pair scored as an alias or exact: %.4f", got)
-	}
-}
-
-func TestRegisterAddsAnAliasTable(t *testing.T) {
-	t.Cleanup(ResetAliasTablesForTest)
-	Register(AliasTable{
-		Key: "zz", Origin: "plugin:example", Kind: AliasNickname,
-		Roles: aliasPartRoles(), Sets: [][]string{{"zz", "zzzz"}},
-	})
-	var found bool
-	for _, table := range AliasTables() {
-		if table.Key == "zz" {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatal("register did not append to the seed")
-	}
-	got, ok := (NameComparer{}).Compare(nv("g=Zz"), nv("g=Zzzz"))
-	if !ok || math.Abs(got-AliasCredit) < 1e-9 {
-		t.Fatalf("bare comparer used the seed: %.4f %v", got, ok)
 	}
 }
 
@@ -442,7 +446,7 @@ func TestNameComparerInvariants(t *testing.T) {
 	}
 	codes := []string{"g", "g", "g", "n", "s", "s", "sp", "x", "p", "u", "_"}
 	forms := []string{"James Robins", "J. Robins", "Mary Smith", "(as written)", ""}
-	heavy := patterned(func(p *NamePattern) { p.Weights.Family = 3 })
+	heavy := patterned(func(p *valuecompare.NamePattern) { p.Weights.Family = 3 })
 	heavy.CrossRole, heavy.GivenOnlyFactor, heavy.SuffixConflict = Set(0.2), Set(1.0), Set(0.9)
 	cmps := []NameComparer{{}, heavy, {Words: WordRules{FuzzyFloor: Set(1.0)}}}
 
@@ -524,7 +528,7 @@ func untyped(v Value) Value {
 	n := *v.Name
 	n.Parts = nil
 	for _, p := range v.Name.Parts {
-		if r := WesternNamePattern.role(p.Type); r != RoleIgnored && r != RoleGeneration {
+		if r := WesternNamePattern.Role(p.Type); r != valuecompare.RoleIgnored && r != valuecompare.RoleGeneration {
 			p.Type = ""
 		}
 		n.Parts = append(n.Parts, p)
@@ -563,10 +567,9 @@ func addPart(v Value, code, value string) Value {
 // mean the opposite roles.
 func TestNameComparerPatterns(t *testing.T) {
 	flipped := WesternNamePattern
-	flipped.Key = "flipped"
 	flipped.PartRoles = maps.Clone(WesternNamePattern.PartRoles)
-	flipped.PartRoles["given"], flipped.PartRoles["surname"] = RoleFamily, RoleGiven
-	cmp := NameComparer{Patterns: NamePatternSet{WesternPattern: WesternNamePattern, "flipped": flipped}}
+	flipped.PartRoles["given"], flipped.PartRoles["surname"] = valuecompare.RoleFamily, valuecompare.RoleGiven
+	cmp := NameComparer{Patterns: NamePatternSet{valuecompare.WesternPattern: WesternNamePattern, "flipped": flipped}}
 	in := func(pattern string, v Value) Value { v.NamePattern = pattern; return v }
 
 	tests := []struct {
@@ -590,7 +593,7 @@ func TestNameComparerPatterns(t *testing.T) {
 	t.Run("the comparer's pattern applies to unlabelled names", func(t *testing.T) {
 		c := cmp
 		c.Pattern = Set("flipped")
-		if got, _ := c.Compare(nv("g=Robins|s=James"), in(WesternPattern, nv("g=James|s=Robins"))); math.Abs(got-1) > 1e-9 {
+		if got, _ := c.Compare(nv("g=Robins|s=James"), in(valuecompare.WesternPattern, nv("g=James|s=Robins"))); math.Abs(got-1) > 1e-9 {
 			t.Fatalf("got %.4f", got)
 		}
 	})

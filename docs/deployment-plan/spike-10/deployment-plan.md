@@ -271,7 +271,7 @@ SLICE 8 — Likeness
   S10-33  Crop cache — descoped 2026-10-16. The image is the value (S10-32).
   S10-34  Composer depiction row: draw, render, save (after S10-16) — done, #442
   (S10-36 moved to Spike 11 S11-20, 2026-10-17)
-  S10-35  Person gallery + Persons list thumb (S10-D12 and S10-D9 already designed)
+  S10-35  Person gallery + Persons list thumb (S10-D12 and S10-D9 already designed) — done, #446
   S10-39  Preferred portrait leads the page and the list (same boards)
   Check: a group photo yields one crop per face. The Person page shows the
          gallery. Mark one face: it leads the page and the People list, and
@@ -742,7 +742,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-35 — Person gallery and list thumb
 
-**Plan:** [`prs/S10-35-person-gallery.md`](prs/S10-35-person-gallery.md) — Planned
+**Plan:** [`prs/S10-35-person-gallery.md`](prs/S10-35-person-gallery.md) — Landed #446
 
 **Briefs:** S10-D12 and S10-D9, already designed before S10-23 and S10-22.
 

@@ -151,6 +151,11 @@ type ReconciledValue struct {
 // the matcher and the reconciler share.
 func (r Reason) Displayed() bool { return r == ReasonKept }
 
+// InGallery reports whether a gallery lists a value with this reason: displayed,
+// or carried only by weak evidence; a weak photo does not contradict another
+// photo (working rule "A gallery is the reconciled likeness values").
+func (r Reason) InGallery() bool { return r == ReasonKept || r == ReasonWeak }
+
 func (c ReconciledValue) Displayed() bool { return c.Reason.Displayed() }
 
 // Outcome is what happened to one candidate.

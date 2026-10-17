@@ -8233,6 +8233,42 @@ enum L10n {
             comment: "Section heading over a Person's fields"
         )
 
+        static let likenessesSection = LocalizedStringResource(
+            "conclusions.detail.likenesses",
+            defaultValue: "Likenesses",
+            comment: "Section heading over a Person's likeness crops"
+        )
+
+        static let personLikenessThumb = LocalizedStringResource(
+            "conclusions.person.likeness",
+            defaultValue: "Likeness",
+            comment: "Label of the Person page header thumb when it shows a likeness no gallery tile matches"
+        )
+
+        static let likenessOpenTip = LocalizedStringResource(
+            "conclusions.person.likenessOpen",
+            defaultValue: "Open citation",
+            comment: "Help text on a likeness tile in a Person's gallery"
+        )
+
+        /// "Likeness from {Source title}" — the header thumb's spoken label.
+        static func likenessLabel(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.person.likenessFrom",
+                defaultValue: "Likeness from %@",
+                comment: "Accessibility label of the Person page header thumb when it shows a likeness; the argument is that likeness's Source title"
+            ), source)
+        }
+
+        /// "Likeness from {Source title}. Open citation" — a gallery tile's spoken label.
+        static func likenessTileLabel(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.person.likenessTile",
+                defaultValue: "Likeness from %@. Open citation",
+                comment: "Accessibility label of a likeness tile in a Person's gallery; the argument is the Source title"
+            ), source)
+        }
+
         static let personNoLikeness = LocalizedStringResource(
             "conclusions.person.noLikeness",
             defaultValue: "No likeness recorded",

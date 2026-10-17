@@ -66,6 +66,27 @@ struct ThumbnailCacheTests {
         #expect(cache.entryCount == 1)
     }
 
+    @Test func decodesAtABoundedPixelSize() async throws {
+        let cache = ThumbnailCache()
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("thumb-cache-\(UUID().uuidString)", isDirectory: true)
+        let objectDir = dir.appendingPathComponent("objects/aa/bb", isDirectory: true)
+        try FileManager.default.createDirectory(at: objectDir, withIntermediateDirectories: true)
+
+        let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: 2000, pixelsHigh: 1000,
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+        )!
+        let png = try #require(rep.representation(using: .png, properties: [:]))
+        try png.write(to: objectDir.appendingPathComponent("big.png"))
+
+        let image = try #require(await cache.image(
+            projectDir: dir.path, relPath: "objects/aa/bb/big.png"))
+        let cg = try #require(image.cgImage(forProposedRect: nil, context: nil, hints: nil))
+        #expect(max(cg.width, cg.height) <= ThumbnailCache.maxPixelSize)
+    }
+
     @Test func cachedImageIsAMissUntilLoaded() async throws {
         let cache = ThumbnailCache()
         let dir = FileManager.default.temporaryDirectory
@@ -110,5 +131,33 @@ struct ThumbnailCacheTests {
         #expect(imgA != nil)
         #expect(imgB != nil)
         #expect(cache.entryCount == 1)
+    }
+
+    @Test func cachedThumbnailFallsBackToTheGivenMark() {
+        let given = CachedThumbnail.fallbackContent(
+            fallbackMark: .subjectPerson, fallbackLabel: nil,
+            typeIconKey: "type_book", mediaType: "", originalFilename: ""
+        )
+        guard case .mark(let key)? = given.glyph else {
+            Issue.record("expected a mark, got \(String(describing: given.glyph))")
+            return
+        }
+        #expect(key == .subjectPerson)
+
+        let typed = CachedThumbnail.fallbackContent(
+            fallbackMark: nil, fallbackLabel: nil,
+            typeIconKey: "type_book", mediaType: "", originalFilename: ""
+        )
+        guard case .mark(let typeKey)? = typed.glyph else {
+            Issue.record("expected the type mark, got \(String(describing: typed.glyph))")
+            return
+        }
+        #expect(typeKey == PVMarkKey(catalogKey: "type_book"))
+
+        let bare = CachedThumbnail.fallbackContent(
+            fallbackMark: nil, fallbackLabel: nil,
+            typeIconKey: nil, mediaType: "", originalFilename: ""
+        )
+        #expect(bare.glyph == nil && bare.image == nil && !bare.loading)
     }
 }

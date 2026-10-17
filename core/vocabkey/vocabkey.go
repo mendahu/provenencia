@@ -32,6 +32,7 @@ const (
 	PropertyStartDate  = "start_date"
 	PropertyEndDate    = "end_date"
 	PropertyToponym    = "toponym"
+	PropertyLikeness   = "likeness"
 )
 
 // PrimaryKinds returns a new slice of the primary kinds on each call.

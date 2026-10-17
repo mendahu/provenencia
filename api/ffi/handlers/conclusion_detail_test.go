@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
@@ -223,5 +224,35 @@ func TestGetConclusionDetailCarriesItsHeader(t *testing.T) {
 			}
 			tt.check(t, &d, id)
 		})
+	}
+}
+
+func TestGetConclusionDetailListsLikenesses(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
+	saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 100))
+	saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 200))
+	promoted := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: personID})
+	out, err := GetConclusionDetail(marshalProto(t, &engine.GetConclusionDetailRequest{ProjectDir: dir, EntityId: promoted.Entity.GetId()}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var d engine.ConclusionDetail
+	if err := proto.Unmarshal(out, &d); err != nil {
+		t.Fatal(err)
+	}
+	if len(d.GetLikenesses()) != 2 {
+		t.Fatalf("likenesses %+v", d.GetLikenesses())
+	}
+	for _, l := range d.GetLikenesses() {
+		if !strings.HasPrefix(l.GetImageRelPath(), "objects/") || l.GetRecord().GetCitationId() == "" || l.GetRecord().GetSourceTitle() == "" {
+			t.Fatalf("likeness %+v", l)
+		}
+	}
+	if d.GetLikenesses()[0].GetRecord().GetObservationId() >= d.GetLikenesses()[1].GetRecord().GetObservationId() {
+		t.Fatalf("not earliest first: %+v", d.GetLikenesses())
+	}
+	if got := d.GetPerson().GetLikenessImageRelPath(); got == "" || got != d.GetLikenesses()[0].GetImageRelPath() {
+		t.Fatalf("person lead %q, first tile %q", got, d.GetLikenesses()[0].GetImageRelPath())
 	}
 }

@@ -52,6 +52,8 @@ protocol ConclusionListKind {
     static func ref(_ row: Row) -> String
     /// RFC3339 UTC time of the row's last revision; empty when unknown.
     static func updatedAt(_ row: Row) -> String
+    /// The `objects/…` path of the row's thumbnail image; "" shows the kind's mark.
+    static func thumbnailRelPath(_ row: Row) -> String
     static func titleSource(_ row: Row) -> ConclusionTitleSource
     static func titleSource(_ row: Row, orders: NameFormatOrders) -> ConclusionTitleSource
     /// Names beyond the one shown. Zero omits the +N badge.
@@ -65,6 +67,8 @@ protocol ConclusionListKind {
 
 extension ConclusionListKind {
     static func extraCount(_: Row) -> Int { 0 }
+
+    static func thumbnailRelPath(_: Row) -> String { "" }
 
     static func titleSource(_ row: Row, orders: NameFormatOrders) -> ConclusionTitleSource {
         titleSource(row)
@@ -160,7 +164,13 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
                 PVList(
                     // Go owns list order (conclusionheaders.sortByTitle); rows show as given.
                     items: rows,
-                    thumbnail: { _ in ConclusionListRow.thumbnail(mark: Kind.mark) },
+                    thumbnail: {
+                        CachedThumbnail(
+                            projectDir: session.projectKey.projectDir,
+                            relPath: Kind.thumbnailRelPath($0),
+                            fallbackMark: Kind.mark
+                        )
+                    },
                     meta: { Kind.ref($0) },
                     detail: ConclusionListRow.updatedColumn(Kind.self),
                     label: Kind.title,

@@ -16,6 +16,7 @@ enum PersonsList: ConclusionListKind {
 
     static func ref(_ header: CatalogPersonHeader) -> String { header.entity.ref }
     static func updatedAt(_ header: CatalogPersonHeader) -> String { header.updated.at }
+    static func thumbnailRelPath(_ header: CatalogPersonHeader) -> String { header.likenessImageRelPath }
 
     static func titleSource(_ header: CatalogPersonHeader) -> ConclusionTitleSource {
         titleSource(header, orders: NameFormatOrders())

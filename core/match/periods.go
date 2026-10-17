@@ -1,9 +1,9 @@
 package match
 
 import (
-	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // Period pooling: an Event's date is compared with another Event's start and
@@ -69,15 +69,15 @@ func firstLeader(vs []Value) int {
 // (BEF) or end (AFT), a value with no date, and a start after the end count as
 // absent. The qualifiers on the sources are dropped.
 func period(pp PeriodProperties, vs Values) (Value, bool) {
-	var start, end autoreconcile.DateEnd
+	var start, end valuecompare.DateEnd
 	var hasStart, hasEnd bool
 	if i := firstLeader(vs[pp.Start]); i >= 0 && vs[pp.Start][i].Date != nil {
-		if first, _, ok := autoreconcile.DateEnds(*vs[pp.Start][i].Date); ok && !first.Open {
+		if first, _, ok := valuecompare.DateEnds(*vs[pp.Start][i].Date); ok && !first.Open {
 			start, hasStart = first, true
 		}
 	}
 	if i := firstLeader(vs[pp.End]); i >= 0 && vs[pp.End][i].Date != nil {
-		if _, last, ok := autoreconcile.DateEnds(*vs[pp.End][i].Date); ok && !last.Open {
+		if _, last, ok := valuecompare.DateEnds(*vs[pp.End][i].Date); ok && !last.Open {
 			end, hasEnd = last, true
 		}
 	}
@@ -104,7 +104,7 @@ func period(pp PeriodProperties, vs Values) (Value, bool) {
 
 // endFields is a date end as the year, month, and day of a value; a month or
 // day the end does not name is nil.
-func endFields(e autoreconcile.DateEnd) (year, month, day *int) {
+func endFields(e valuecompare.DateEnd) (year, month, day *int) {
 	year = &e.Year
 	if e.Month != 0 {
 		month = &e.Month

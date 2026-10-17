@@ -1,7 +1,6 @@
 package match
 
 import (
-	"sort"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -30,9 +29,9 @@ type WordRules struct {
 	// Folds replaces letters that do not decompose. Nil uses LetterFolds.
 	// An empty map strips accents and substitutes nothing.
 	Folds *map[rune]string
-	// Aliases are abbreviation and nickname tables loaded from the catalog.
-	// Nil and empty both hit nothing. Every table in the slice is consulted.
-	Aliases *[]AliasTable
+	// Aliases are the catalog's abbreviation and nickname tables, indexed
+	// once per load by the caller. Nil and the zero index both hit nothing.
+	Aliases *valuecompare.AliasIndex
 }
 
 // wordRules are WordRules resolved against the registry.
@@ -42,13 +41,7 @@ type wordRules struct {
 	initials             bool // whether lone letters match as initials
 	particles            map[string]bool
 	folds                map[rune]string
-	aliases              []aliasSet
-}
-
-// aliasSet is one equivalence set and the roles that may use it.
-type aliasSet struct {
-	tokens map[string]bool
-	roles  map[NameRole]bool
+	aliases              valuecompare.AliasIndex
 }
 
 func (r WordRules) resolve(initials bool) wordRules {
@@ -64,40 +57,8 @@ func (r WordRules) resolve(initials bool) wordRules {
 		initials:      initials,
 		particles:     particles,
 		folds:         setting(r.Folds, *DefaultWordRules.Folds),
-		aliases:       indexAliases(aliasTablesOf(r.Aliases)),
+		aliases:       setting(r.Aliases, noAliases),
 	}
-}
-
-func indexAliases(tables []AliasTable) []aliasSet {
-	var sets []aliasSet
-	for _, table := range tables {
-		roles := make(map[NameRole]bool, len(table.Roles))
-		for _, role := range table.Roles {
-			roles[role] = true
-		}
-		for _, raw := range table.Sets {
-			tokens := make(map[string]bool, len(raw))
-			for _, token := range raw {
-				if token != "" {
-					tokens[token] = true
-				}
-			}
-			if len(tokens) == 0 {
-				continue
-			}
-			sets = append(sets, aliasSet{tokens: tokens, roles: roles})
-		}
-	}
-	return sets
-}
-
-func aliasHit(x, y string, roleX, roleY NameRole, sets []aliasSet) bool {
-	for _, set := range sets {
-		if set.tokens[x] && set.tokens[y] && set.roles[roleX] && set.roles[roleY] {
-			return true
-		}
-	}
-	return false
 }
 
 // TextResemblance is how close two free-text strings are for scoring when
@@ -143,7 +104,7 @@ func compareForms(a, b string, partial float64, r wordRules) (float64, bool) {
 // different name (Mary ~ Mark). An initial is a lone cased letter ("J"); a
 // lone character in an uncased script (蒋, 王) is a whole word. Empty roles
 // skip the alias tables, so free text does not consult them.
-func wordSimilarity(x, y string, roleX, roleY NameRole, r wordRules) float64 {
+func wordSimilarity(x, y string, roleX, roleY valuecompare.NameRole, r wordRules) float64 {
 	if x == y {
 		return 1
 	}
@@ -153,7 +114,7 @@ func wordSimilarity(x, y string, roleX, roleY NameRole, r wordRules) float64 {
 		}
 		return 0
 	}
-	if aliasHit(x, y, roleX, roleY, r.aliases) {
+	if _, ok := r.aliases.Hit(x, y, roleX, roleY); ok {
 		return AliasCredit
 	}
 	fx, fy := valuecompare.FoldWord(x, r.folds), valuecompare.FoldWord(y, r.folds)
@@ -180,119 +141,8 @@ func wordDice(wa, wb []string, r wordRules) float64 {
 }
 
 // bestPairing is the largest total over one-to-one pairings of rows with
-// columns. Exact, so it does not depend on which side is the row. A pair
-// scores only when it is positive, so a word with nothing in common stays
-// unpaired.
+// columns (valuecompare.BestAssignment).
 func bestPairing(score [][]float64) float64 {
-	total, _, _ := bestAssignment(score)
-	return total
-}
-
-// bestAssignment is bestPairing plus which cells took part. usedRow and
-// usedCol are in the score matrix's own orientation.
-func bestAssignment(score [][]float64) (total float64, usedRow, usedCol []bool) {
-	rows := len(score)
-	if rows == 0 || len(score[0]) == 0 {
-		return 0, make([]bool, rows), nil
-	}
-	cols := len(score[0])
-	usedRow = make([]bool, rows)
-	usedCol = make([]bool, cols)
-	transposed := false
-	at := func(i, j int) float64 { return score[i][j] }
-	if rows < cols {
-		transposed = true
-		rows, cols = cols, rows
-		at = func(i, j int) float64 { return score[j][i] }
-	}
-	rowUsed := make([]bool, rows)
-	colUsed := make([]bool, cols)
-	if cols > MaxExactPairing {
-		total = greedyAssign(rows, cols, at, rowUsed, colUsed)
-	} else {
-		total = exactAssign(rows, cols, at, rowUsed, colUsed)
-	}
-	if transposed {
-		for i := range usedRow {
-			usedRow[i] = colUsed[i]
-		}
-		for j := range usedCol {
-			usedCol[j] = rowUsed[j]
-		}
-		return total, usedRow, usedCol
-	}
-	return total, rowUsed, colUsed
-}
-
-func exactAssign(rows, cols int, at func(i, j int) float64, rowUsed, colUsed []bool) float64 {
-	type step struct {
-		col  int
-		mask int
-	}
-	best := make([]float64, 1<<cols)
-	steps := make([][]step, rows)
-	for i := 0; i < rows; i++ {
-		next := append([]float64(nil), best...)
-		ch := make([]step, 1<<cols)
-		for mask := range ch {
-			ch[mask] = step{col: -1, mask: mask}
-		}
-		for mask, v := range best {
-			for j := 0; j < cols; j++ {
-				s := at(i, j)
-				if mask&(1<<j) != 0 || s <= 0 {
-					continue
-				}
-				nm := mask | (1 << j)
-				if t := v + s; t > next[nm] {
-					next[nm] = t
-					ch[nm] = step{col: j, mask: mask}
-				}
-			}
-		}
-		best = next
-		steps[i] = ch
-	}
-	topMask := 0
-	var top float64
-	for mask, v := range best {
-		if v > top {
-			top = v
-			topMask = mask
-		}
-	}
-	mask := topMask
-	for i := rows - 1; i >= 0; i-- {
-		ch := steps[i][mask]
-		if ch.col >= 0 {
-			rowUsed[i] = true
-			colUsed[ch.col] = true
-		}
-		mask = ch.mask
-	}
-	return top
-}
-
-func greedyAssign(rows, cols int, at func(i, j int) float64, rowUsed, colUsed []bool) float64 {
-	type pair struct {
-		i, j int
-		s    float64
-	}
-	var pairs []pair
-	for i := 0; i < rows; i++ {
-		for j := 0; j < cols; j++ {
-			if s := at(i, j); s > 0 {
-				pairs = append(pairs, pair{i, j, s})
-			}
-		}
-	}
-	sort.SliceStable(pairs, func(a, b int) bool { return pairs[a].s > pairs[b].s })
-	var total float64
-	for _, p := range pairs {
-		if !rowUsed[p.i] && !colUsed[p.j] {
-			rowUsed[p.i], colUsed[p.j] = true, true
-			total += p.s
-		}
-	}
+	total, _ := valuecompare.BestAssignment(score, MaxExactPairing)
 	return total
 }
