@@ -1,7 +1,7 @@
 # Ship log — S11-01 One-page matching model
 
 **Plan:** [`S11-01-matching-model.md`](S11-01-matching-model.md) · **Branch:** `claude/modest-gates-tunm8o` (session-designated; plan header names `s11-01-matching-model`) · **PR:** #432
-**State:** review 2
+**State:** landing
 
 Gate note: this ship runs in a Linux cloud session. `scripts/check-pr.sh` runs every check except `xcode-test` (macOS only); the PR is docs only, and CI runs the Xcode tests on the non-draft PR.
 
@@ -71,3 +71,16 @@ Check for the round: `scripts/check-pr.sh` PASS bar `xcode-test`; every link in 
 
 ## Round 1 — fix
 Head `8fd64d4`. Gate PASS (bar `xcode-test`, not macOS); links in changed docs resolve. F-1 – F-7 done. Deviations: plan STEP-6 writes the banner text without a link (plan-docs cannot resolve it from the plan's folder); worked example step 5 says "birth's own evidence".
+
+## Round 2 — review
+Scope `5408b6b...8fd64d4`. CON clean · MNT clean · UX clean. Every round-1 Fix-now finding resolved; no new blocker.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| CON-R2-a | CON | minor | Plan STEP-2 check still says sums 2.5 / 2.75 / 5.25 | Fix now (rides the landing commit, which edits the plan) | plan line ~271 vs §6 item 4 and the model (2.6 / 2.75 / 5.35) |
+| CON-R2-b | CON → MNT | minor | Key grammar's lowercase list omits `lifespan` | Fix now (rides the landing commit) | `matching-model.md` key description; 7 keys use `lifespan` |
+
+No Fix plan 2 (no round-2 blocker).
+
+## Landing
+Do, in one commit "Record S11-01 as landed in pull request 432.": the plan's Status → Landed 2026-10-17 in #432; the map row and scope entry for S11-01 in `deployment-plan.md` → Landed #432; the `completed.md` paragraph from the implementer's round-0 report (state that the model also fixes lifespan under `subject` and `sex_at_birth` keys); plus the two minors above: plan STEP-2 check → "the sums are 2.6, 2.75 and 5.35"; key grammar → "a Subject kind, a property key, a derived property (`lifespan`), or a bridge or participation key".
