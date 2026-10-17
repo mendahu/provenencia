@@ -80,12 +80,12 @@ New chrome and copy: a Claude Design brief ([`add-design-brief`](../../../.agent
 The researcher wants to say "these are the same person because they have a matching birth event", then check the evidence that the births really match. The plumbing that connects them is handled for them.
 
 - **Use segments.** A relationship section exists only when the Source segment (this Subject – bridge – neighbor) corresponds to a member segment (member – bridge – neighbor's member). Correspondence comes from segment comparison (layer 5): same bridge kind, role or term, and direction, with inverse terms (parent ↔ child). A spouse only meets a spouse. Every corresponding relationship counts, ordered core first (birth, death, parents and children, spouses), then the rest.
-- **The heading says what matched and why it counts:** "They have a matching birth event", "They have a matching spouse: Robert Gates".
+- **The relationship is its own checkable line,** and it says what matched and why it counts: "They have a matching birth event", "They have a matching spouse: Robert Gates". Checking it pins the bundle below. It starts checked when the segment matches, and is pinnable but unchecked when the segment is partial. It works even when there is nothing under it to check: an event's place link, or two births with no dates (decided 2026-10-17).
 - **Abstracted (bundled, not shown):** everything that only connects the two, on both sides:
   - the bridge's two end Observations (who, and which event or person);
   - everything on the bridge itself: its role, its relationship type, any other bridge values;
   - the neighbor's **defining properties**, declared per kind in the registry. For an event that is `event_type`: "birth" is what the heading already says.
-- **Shown as checkable lines:** the neighbor's other properties, exactly like the Subject's own property lines. Under "They have a matching birth event": the birth date lines. Under "They have a matching spouse": Robert's name, sex, and so on. Same rules as property lines: grouped by property, identical member values collapse into one line, matches start checked, partial matches pinnable and unchecked, disagreements shown and not pinnable.
+- **Shown as checkable lines under it,** each with its own checkbox: the neighbor's other properties, exactly like the Subject's own property lines. Under "They have a matching birth event": the birth date lines. Under "They have a matching spouse": Robert's name, sex, and so on. Same rules as property lines: grouped by property, identical member values collapse into one line, matches start checked, partial matches pinnable and unchecked, disagreements shown and not pinnable.
 - **Registry rule, not code:** "a segment's bundle is all of its bridge's Observations plus the neighbor kind's defining properties". Event's defining property is `event_type`; adding one for another kind is one entry.
 
 ## Retires
@@ -95,7 +95,5 @@ The researcher wants to say "these are the same person because they have a match
 
 ## Open questions
 
-- **When the bundle is pinned.** Proposed: whenever at least one line in its section is pinned, since the bundle is what makes those lines evidence for this claim; nothing in the section checked, no bundle.
-- **A matching relationship with nothing else to check** (both have a birth, neither has a date): show one checkable line, "Both records have a birth event", unchecked? Or show nothing?
 - **Where a bundle's pins land.** On the person's claim (with backfill onto each member's claim), as today. The neighbor event gets its own claim and pins from its own row; duplicates across claims are accepted on purpose (§9).
 
