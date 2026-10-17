@@ -2,6 +2,8 @@
 
 **Status:** idea, 2026-10-12. Not scheduled. Descoped from Spike 10 (S10-26).
 
+**Spike 11 moves the code this note names.** `wordSimilarity`, `DefaultWordRules` and `core/autoreconcile/spelling.go` become value compare (`core/valuecompare`) and the match registry (`core/matchregistry`) in S11-03 / S11-05 ([`comparison-layers.md`](../deployment-plan/spike-11/comparison-layers.md)). Read the code paths below as "today's". **One conflict to settle when this is pulled in:** a shared code scores 0.7 below, but a name pair now needs at least 0.75 to be `Near`, so a sound-alike would read `Different`. The likely shape is `Near` with cause `phonetic` and its own minimum in the registry.
+
 A sound-alike tier under near-spelling, for two surnames that are not a one-edit misspelling and still share a code. Beider–Morse is the more precise phonetic algorithm and stays a separate later idea ([`international-names.md`](international-names.md)). This note is the Daitch–Mokotoff design if that is the one pulled back.
 
 Call it Daitch–Mokotoff. Do not call it a Jewish chart, Jewish Soundex, Eastern European Soundex, or a JewishGen chart. The authors discourage those nicknames because the rules are not tied to one community. The letter-to-digit rules are the procedure. Implementing them does not need a citation, a publisher link, or a borrowed copyright header. Do not copy anyone's explanatory prose. A one-line comment that names Daitch–Mokotoff Soundex is enough.

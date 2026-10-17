@@ -19,8 +19,12 @@ All are queries over `identity_claims`, `identity_claim_evidence`, and members �
 - **Badge** on the Person / Event / Place page and its list row when any member's claim is weak.
 - **Member list** on the detail page marks the weak claim and shows what was removed ("lost OBS-… when it was deleted on …").
 - **Review queue** (sidebar or page section): every weak claim across the project, newest first.
-- **Actions** per claim: re-pin against a remaining member (reuses Promote's evidence sheet and graph alignment, S9-44), accept as-is (dismiss until something else changes), or reject the claim. The app never auto-rejects or evicts.
+- **Actions** per claim: re-pin against a remaining member (reuses Spike 11's claim evidence query, S11-19, and `subjectprofile.Build` with `Excluding(member)`, S11-11), accept as-is (dismiss until something else changes), or reject the claim. The app never auto-rejects or evicts.
 - **At delete time** the confirm already names the handles affected (S9-02); a link from that sentence to the review queue would close the loop.
+
+## Remember researcher decisions
+
+A handle the researcher rejected for a Subject is suggested again, and merge hints have no memory of "not the same person". Matching should exclude or flag rejected handles, and merge hints need a stored "distinct" decision. This waits with claim editing. (Moved from the archived name-matching note, 2026-10-17.)
 
 ## Open questions
 

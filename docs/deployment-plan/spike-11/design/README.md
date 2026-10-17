@@ -8,5 +8,5 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 | Step | View | Gates | Notes |
 | --- | --- | --- | --- |
-| S11-D1 | Promote page — row | **S11-18** | Contested marker beside the band |
-| S11-D2 | Promote page — evidence sheet | **S11-20** | Whole sheet: "why suggested" summary, property sections, relationship lines, collapsed members, copy ([`claim-evidence.md`](../claim-evidence.md)) |
+| S11-D1 | Promote page — rows | **S11-18**, **S11-27** | Contested marker beside the band; connections as subrows ([design](../promote-connection-subrows.md)) |
+| S11-D2 | Promote page — evidence sheet | **S11-20** | Whole sheet: "why suggested" summary, property sections, relationship lines, collapsed members, likeness crops (from Spike 10's S10-D13), copy ([`claim-evidence.md`](../claim-evidence.md)) |

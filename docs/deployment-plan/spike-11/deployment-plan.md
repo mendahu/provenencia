@@ -1,6 +1,6 @@
 # Deployment Plan — Spike 11
 
-Promote's matching is rebuilt as a stack of pure, registry-driven layers that the rest of the app borrows from, and the old matching code is deleted as each layer lands. The design is in [`comparison-layers.md`](comparison-layers.md) (layers 1–6, bands, the match registry, the reuse inventory) and [`claim-evidence.md`](claim-evidence.md) (the Promote sheet's pins). It pulls in the "make the algorithm graspable" part of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md). PRs follow a build-then-migrate rhythm: a PR builds a layer, the next moves every caller onto it and deletes what it replaces.
+Promote's matching is rebuilt as a stack of pure, registry-driven layers that the rest of the app borrows from, and the old matching code is deleted as each layer lands. The design is in [`comparison-layers.md`](comparison-layers.md) (layers 1–6, bands, the match registry, the reuse inventory) and [`claim-evidence.md`](claim-evidence.md) (the Promote sheet's pins). It pulls in the "make the algorithm graspable" part of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md), [connection subrows](promote-connection-subrows.md) on the Promote page, and Spike 10's likeness crops on the evidence sheet (S10-36). PRs follow a build-then-migrate rhythm: a PR builds a layer, the next moves every caller onto it and deletes what it replaces.
 
 **A brief covers one view.** A PR that changes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
 
@@ -18,10 +18,11 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 2. **Impossible matches never surface.** A birth is never proposed on a death. A person who died before the Subject was born is never proposed for them.
 3. **Fast, and it explains itself.** A Source with 100 Subjects proposes without a noticeable wait. Deciding one row re-proposes only what moved, each with "updated because…".
 4. **Conflicts are visible.** A row whose comparisons include a conflict shows *contested*, whatever its band.
-5. **The evidence sheet shows all the evidence.** Joining an entity with five named members shows five name matches (identical values collapsed into one line), worded as sentences. A relationship line says what matched ("They have a matching birth event") and checking it pins everything behind it. Pins land on every member.
+5. **The evidence sheet shows all the evidence.** Joining an entity with five named members shows five name matches (identical values collapsed into one line), worded as sentences. A relationship line says what matched ("They have a matching birth event") and checking it pins everything behind it. Pins land on every member. Two people with a likeness show both crops.
 6. **"The same" means the same everywhere.** José and Jose, Montréal and Montreal, compare the same way in Promote, search and the reconciler, under the reconciler's own grouping policy.
 7. **One place for every knob.** Every matching number is in `core/matchregistry` and listed in the knob inventory. A guard test fails on a number anywhere else.
 8. **The old code is gone:** `core/match`, `core/database/matching`, `core/graphalign/registry.go`, the frequency stats, and `pairExhibits`.
+9. **Connections follow their ends.** Each connection shows under a Promote row it joins. Setting John to Skip dims "Mary · parent of · John"; nothing toggles on its own, and there's no switch-off.
 
 ## Where the notes went
 
@@ -32,6 +33,8 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 | Same — known gaps | [`comparison-layers.md`](comparison-layers.md) open questions | — |
 | Claim evidence shows only the first member; "Through <name>" wording | S11-19, S11-25, S11-20 | S11-D2 |
 | [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md) — "Primary Subject kinds", "In-list text matching" | S11-23, S11-08 | — |
+| [Connection subrows](promote-connection-subrows.md) (was `ideas/promote-connection-subrows.md`) | S11-26, S11-27 | S11-D1 |
+| Spike 10 S10-36 — Promote compares two likeness crops (moved 2026-10-17) | S11-20 | S11-D2 |
 | Reuse inventory ([`comparison-layers.md`](comparison-layers.md#reuse-across-the-app)) | S11-05 – S11-08, S11-13, S11-19 | — |
 
 **Stays in the ideas folder** — the rest of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md): scenario files and goldens runner, random-graph invariants, the simulated world, the scoreboard, the labeler, fitting, and dogfood export. Whether they join this spike is decided after the re-implementation.
@@ -67,7 +70,7 @@ These are the calls for this spike. PR plans treat them as binding.
 - **`core/database/matching` is deleted.** `ForSubject` and `ForEntity` have no callers outside tests; merge hints are rebuilt on subject compare over two profiles when their UI exists. Its one live function, `SubjectsValues` (called from `promotealign/layer.go`), moves to the loader that feeds `propertycompare` and `subjectprofile` in S11-13.
 - **The reconciler keeps its own decisions** and builds them on value compare. Its grouping policy is decided in S11-06's plan.
 - **Pure value types and kinds come first.** The date and name value structs, their display helpers, the name part-type registry, and the value-type and cardinality constants move out of `core/database` into pure packages (S11-22), and primary Subject kinds get one home (S11-23), before any layer is built. No layer defines its own copy.
-- **One matching skill, grown with the layers.** S11-02 adds a skill (working name `add-match-rule`) for the steps every change repeats: the knob in its registry section, its inventory row, contract tests, the guard list entry. S11-10, S11-14 and S11-16 extend it. Each migration PR also updates the domain docs and idea files it makes false (`matching.md`, `promote-graph-alignment.md`, `conclusion-reconciliation.md`, `seeded-vocabulary.md`, `ideas/daitch-mokotoff.md`, `ideas/name-matching-enhancements.md`).
+- **One matching skill, grown with the layers.** S11-02 adds a skill (working name `add-match-rule`) for the steps every change repeats: the knob in its registry section, its inventory row, contract tests, the guard list entry. S11-10, S11-14 and S11-16 extend it. Each migration PR also updates the domain docs and idea files it makes false (`matching.md`, `promote-graph-alignment.md`, `conclusion-reconciliation.md`, `seeded-vocabulary.md`, `ideas/daitch-mokotoff.md`, `ideas/archive/name-matching-enhancements.md`).
 - **One guard, not one per package.** The purity and numeric-literal checks are one repo-walking test (like `core/writes/begin_test.go` `TestBeginOnlyInDatabaseAndWrites`) with a list of layer packages; each layer PR adds its line.
 - **One wire vocabulary.** Promote's flags and reason codes extend `graphalign.RowFlags` and `graphalign.Reason`, and Swift parses them in `Platform/ConclusionVocabulary.swift` under `api/ffi/swift_vocabulary_test.go`, along with the relation and cause codes the evidence sheet words.
 - **The pin policy has one owner, in Go.** Default pins come from the registry evidence section, applied in Go at Apply for rows whose sheet was never opened, and by the evidence RPC for rows that were.
@@ -105,16 +108,18 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-18 | Contested marker on Promote rows | 4 | The marker on the page | S11-D1 | S11-17, S11-D1 | — | Scoped |
 | S11-19 | Claim evidence query | 5 | Go query: member lines, collapse, relationship bundles; registry evidence section | — | S11-16 | — | Scoped |
 | S11-25 | Claim evidence RPC and pin policy | 5 | Lazy per-row RPC; Go default pins at Apply; Swift drafting moves onto it; proposal field 9 and `attachExhibits` removed | — | S11-19 | — | Scoped |
-| S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy | S11-D2 | S11-25, S11-D2 | — | Scoped |
-| S11-21 | Large-Source performance check | 6 | 100-Subject benchmark; memoize only if it fails | — | S11-16 | — | Scoped |
+| S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy, with likeness lines as two crops | S11-D2 | S11-25, S11-D2, S10-54 | — | Scoped |
+| S11-26 | Connections file by their ends | 6 | Drop the bridge switch-off: `SkipBridgeIDs`, `skip_bridge_ids`, the `skip` parameters | — | — | — | Scoped |
+| S11-27 | Connection subrows on Promote | 6 | Each connection as a subrow of a row it joins, its state from its ends; the panel and toggles go | S11-D1 | S11-26, S11-D1 | — | Scoped |
+| S11-21 | Large-Source performance check | 7 | 100-Subject benchmark; memoize only if it fails | — | S11-16 | — | Scoped |
 | S11-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
 
 | Brief | View | Gates | Notes |
 | --- | --- | --- | --- |
-| S11-D1 | Promote page — row | **S11-18** | Contested marker beside the band |
-| S11-D2 | Promote page — evidence sheet | **S11-20** | Whole sheet: "why suggested" summary, property sections, relationship lines, collapsed members, copy |
+| S11-D1 | Promote page — rows | **S11-18**, **S11-27** | Contested marker beside the band; connections as subrows of the rows they join, answering the [design questions](promote-connection-subrows.md#open-questions-for-design) |
+| S11-D2 | Promote page — evidence sheet | **S11-20** | Whole sheet: "why suggested" summary, property sections, relationship lines, collapsed members, likeness crops (from Spike 10's S10-D13), copy |
 
 ## Slices
 
@@ -168,7 +173,13 @@ SLICE 5 — Claim evidence
   Check: five named members show as matches with identical values collapsed;
          "They have a matching birth event" pins its bundle; pins land on every member.
 
-SLICE 6 — Performance
+SLICE 6 — Connection subrows
+  S11-26  Connections file by their ends   (any time)
+  ✎ S11-D1 ──▶ S11-27  Connection subrows on Promote
+  Check: setting John to Skip dims "Mary · parent of · John" under its row; nothing
+         toggles by itself; the bottom connections panel is gone.
+
+SLICE 7 — Performance
   S11-21  Large-Source performance check
   Check: a 100-Subject Source proposes within the benchmark; memoization exists
          only if the benchmark needed it.
@@ -176,7 +187,7 @@ SLICE 6 — Performance
 S11-99 — Dogfood close / docs
 ```
 
-Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 6 after S11-16. S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
+Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 7 after S11-16; slice 6 any time (S11-26 has no dependency). S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
 
 ### Dependencies at a glance
 
@@ -191,7 +202,9 @@ S11-13 ──▶ S11-14 ──┐
 S11-13 ──▶ S11-15 ──┴──▶ S11-16 ──▶ S11-17 ──▶ S11-18
                             ├──▶ S11-19 ──▶ S11-25 ──▶ S11-20
                             └──▶ S11-21
-S11-D1 ──▶ S11-18
+S11-D1 ──▶ S11-18, S11-27
+S11-26 ──▶ S11-27
+S10-54 ──▶ S11-20   (Spike 10)
 S11-D2 ──▶ S11-20
 ```
 
@@ -377,10 +390,27 @@ Ports `subjectvocab`'s `TestDefaultProfileCardinality` as "every registry `Prope
 
 **Ships.** The Promote sheet as S11-D2 draws it: "why suggested" summary, then "What's the evidence that this record is <entity>?", property sections, relationship lines with their checkboxes, expandable collapsed lines; all copy through L10n.
 **Not this PR.** Engine (S11-19).
-**Check.** The sheet reads as sentences; no "Through <name>"; checking a relationship line pins it.
-**Context.** S11-D2; [wording](claim-evidence.md#wording).
+Likeness comparisons show the two crops, which S10-36 was to add in Spike 10; pinning one writes the same kind of pin a name pin writes.
+**Check.** The sheet reads as sentences; no "Through <name>"; checking a relationship line pins it; two people with a likeness show both images.
+**Context.** S11-D2; [wording](claim-evidence.md#wording); Spike 10 S10-54 (depiction values over the FFI) lands first.
 
-### Slice 6 — Performance
+### Slice 6 — Connection subrows
+
+#### S11-26 — Connections file by their ends
+
+**Ships.** Remove the switch-off: `promote.Batch.SkipBridgeIDs`, `ApplyPromoteGraphAlignmentRequest.skip_bridge_ids`, and the `skip` parameter of `FileSourceBridgesTx` / `FileBridgesTx`. Swift's `bridgeOff` and `toggleBridge` go with the request field. [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 and §9.1 and [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5.4 lose the "switched off" rule.
+**Not this PR.** Subrows (S11-27).
+**Check.** Done files every connection whose ends are both handles; no request field or parameter can skip one.
+**Context.** [Connection subrows](promote-connection-subrows.md) "The problem" §2.
+
+#### S11-27 — Connection subrows on Promote
+
+**Ships.** Each connection shows as a subrow under a row it joins, as S11-D1 draws it, with its state from `ConnectionState` (files, waits, self-link). `PromoteFlow.connections(hostedBy:)`; the bottom connections panel goes; the footer keeps its count. VoiceOver reads why a connection waits.
+**Not this PR.** Opening the evidence sheet at a relationship line (S11-20 decides).
+**Check.** Setting John to Skip dims his connections; setting him to New turns them on; a self-link warns.
+**Context.** [Connection subrows](promote-connection-subrows.md); S11-D1.
+
+### Slice 7 — Performance
 
 #### S11-21 — Large-Source performance check
 

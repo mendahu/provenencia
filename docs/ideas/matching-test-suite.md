@@ -1,6 +1,6 @@
 # Matching test suite and labelled calibration
 
-**Status:** idea, not scheduled; likely the core of **Spike 11**, a large-scale matching refinement. Captured 2026-10-16 from a design conversation. It expands the **Calibration** bullet and the open question in [`name-matching-enhancements.md`](name-matching-enhancements.md). Model: [`promote-graph-alignment.md`](../promote-graph-alignment.md), [`matching.md`](../matching.md).
+**Status:** idea, not scheduled; likely the core of **Spike 11**, a large-scale matching refinement. Captured 2026-10-16 from a design conversation. It expands the **Calibration** bullet and the open question in [`name-matching-enhancements.md`](archive/name-matching-enhancements.md). Model: [`promote-graph-alignment.md`](../promote-graph-alignment.md), [`matching.md`](../matching.md).
 
 "Make the algorithm graspable" is in Spike 11: the design is [`deployment-plan/spike-11/comparison-layers.md`](../deployment-plan/spike-11/comparison-layers.md), and S11-01 writes the one-page model, glossary and knob inventory. Pieces 1–7 and the labeler wait until the re-implementation lands; whether they join Spike 11 is decided then.
 
@@ -22,7 +22,8 @@ This is a refinement pass. It may be only documentation and renames, or it may n
 - **A shared vocabulary.** One glossary (similarity, points, weight, scale, support, credit, signature, fan-out, band, margin, anchor, …), with code, docs and UI copy renamed to match. Where two names mean one thing, or one name means two, fix it.
 - **A knob inventory.** Every tunable, its default, what it changes, and which tests pin it, across `core/match/registry.go`, `core/match/profiles.go`, `core/graphalign/registry.go` and `core/autoreconcile`. Find magic numbers living outside the registries and move them in.
 - **Are the levers right?** Check that the knobs are independent and cover the behaviors we actually want to tune. The learning step needs each row's score to break down cleanly into parts, each one a weight times an observed feature. If a stage can't be expressed that way, decide whether to restructure it or tune it by search.
-- **Known gaps.** List where the algorithm is "not quite there" today, from dogfood and from [`name-matching-enhancements.md`](name-matching-enhancements.md), so the refinement and the test suite aim at the same problems.
+- **Researcher-defined properties.** Default profiles list product properties only. A user property (occupation, residence text) could join matching at a modest weight, or a project could opt it in. In Spike 11 that would be a subject registry entry, but the registry is checked against seeded properties. (Moved from the archived name-matching note.)
+- **Known gaps.** List where the algorithm is "not quite there" today, from dogfood and from [`name-matching-enhancements.md`](archive/name-matching-enhancements.md), so the refinement and the test suite aim at the same problems.
 
 Pieces 1 and 2 below can start alongside this, since goldens and invariants protect the refactor. Pieces 3–7 wait until the model and the knobs settle.
 

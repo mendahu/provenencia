@@ -22,7 +22,7 @@
 
 ## S10-31 — Related events and place chains
 
-**Descoped 2026-10-16.** Birth~baptism and death~burial term affinity, and crediting a `part_of` place chain as a partial, are in [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md).
+**Descoped 2026-10-16.** Birth~baptism and death~burial term affinity, and crediting a `part_of` place chain as a partial, are in [`ideas/archive/name-matching-enhancements.md`](../../ideas/archive/name-matching-enhancements.md).
 
 ## S10-45 — Seed `interests` on Person
 

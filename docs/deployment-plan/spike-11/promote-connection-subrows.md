@@ -1,8 +1,8 @@
 # Promote: connections as subrows of the subjects they join
 
-**Status:** idea, 2026-10-09. Waiting on design. Not scheduled.
+**Status:** pulled into [Spike 11](deployment-plan.md) on 2026-10-17 (S11-26, S11-27). Its design questions are answered by the Promote rows brief (S11-D1), which it shares with the contested marker. Idea first written 2026-10-09.
 
-Today's page: [`promote-graph-alignment.md`](../promote-graph-alignment.md) §3 (the page) and §9.1 (filing). Bridge filing rules: [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) §5.4.
+Today's page: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 (the page) and §9.1 (filing). Bridge filing rules: [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5.4.
 
 ## The problem
 

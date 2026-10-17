@@ -23,11 +23,10 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`source-provenance-date.md`](source-provenance-date.md)
 - [`text-quote-locators.md`](text-quote-locators.md)
 - [`audio-video-sources.md`](audio-video-sources.md)
-- [`shared-list-helpers.md`](shared-list-helpers.md) — one in-list text match, one home for primary Subject kinds, one list of graph mutations
+- [`shared-list-helpers.md`](shared-list-helpers.md) — one list of graph mutations (the other two items are in Spike 11)
 - [`depictions-and-likenesses.md`](depictions-and-likenesses.md) — leftovers after Spike 10 (other keys, signature, transparent crop, Windows PDF draw)
 - [`international-names.md`](international-names.md) — leftovers after Spike 10 (other name patterns, transliteration, calendars)
 - [`daitch-mokotoff.md`](daitch-mokotoff.md) — phonetic tier descoped from Spike 10 (S10-26)
-- [`name-matching-enhancements.md`](name-matching-enhancements.md) — leftovers after Spike 10 (known-as, concluded values, calibration, blocking)
 - [`matching-test-suite.md`](matching-test-suite.md) — scenario goldens, invariants, a simulated world, a scoreboard, and a labeler that fits the registry numbers. Its "make the algorithm graspable" part is Spike 11 (S11-01); the rest waits on the re-implementation
 - [`share-packages.md`](share-packages.md)
 - [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
@@ -35,8 +34,6 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`identity-claim-review.md`](identity-claim-review.md)
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
 - [`possible-values.md`](possible-values.md)
-- [`promote-matching.md`](promote-matching.md) — what proves a join; the direction is now [`promote-graph-alignment.md`](../promote-graph-alignment.md)
-- [`promote-connection-subrows.md`](promote-connection-subrows.md) — connections as subrows of the subjects they join, with no switch-off
 - [`term-management.md`](term-management.md) — one place to manage terms, including relationship direction and inverses
 
 ## Archived
@@ -49,4 +46,6 @@ Shipped ideas keep **decisions**, not PR order. Closed spikes: [`docs/deployment
 - [`archive/catalog-access-serialization.md`](archive/catalog-access-serialization.md) — held catalog session
 - [`archive/catalog-graph-cache.md`](archive/catalog-graph-cache.md) — one write path and the in-memory catalog graph
 - [`archive/design-system-hardening.md`](archive/design-system-hardening.md) — graduated to [`docs/design-system-layers.md`](../design-system-layers.md)
+- [`archive/promote-matching.md`](archive/promote-matching.md) — what proves a join; answered by graph alignment
+- [`archive/name-matching-enhancements.md`](archive/name-matching-enhancements.md) — Spike 10 matcher leftovers, each closed or re-homed
 - Also archived: nav-count RPC, ingest MIME, thumbnails, image cache (same folder)

@@ -13,6 +13,10 @@
 - New PR IDs are S11-22 – S11-25, numbered in the order they were cut. Their place in the order comes from the slices and dependencies, not the number.
 - The pin-table migration is conditional: S11-19's plan checks the tables, and cuts a migration PR ahead of S11-19 only if they can't hold one incoming Observation against many member Observations.
 
+## After the review (2026-10-17)
+
+The user accepted the preparatory PRs and splits. An ideas-folder pass then added slice 6 (connection subrows, S11-26 and S11-27, sharing brief S11-D1) and moved Spike 10's S10-36 (likeness crops) into S11-20 / S11-D2. These were added after the reviewer ran and were not reviewed.
+
 ## Round 1
 
 ### K-1 · blocker · Pure value types need a preparatory move, not layer-1 copies

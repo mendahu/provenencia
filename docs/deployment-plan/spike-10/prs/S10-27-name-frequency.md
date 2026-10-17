@@ -80,7 +80,7 @@ Counts for AC-1.1 and AC-1.2: People 100; `smith` on 40 handles, `quirk` on 1, `
 
 | Out | Home |
 | --- | --- |
-| A seeded population table | [`docs/ideas/name-matching-enhancements.md`](../../../ideas/name-matching-enhancements.md) |
+| A seeded population table | [`docs/ideas/archive/name-matching-enhancements.md`](../../../ideas/archive/name-matching-enhancements.md) |
 | Counting unfiled Subjects' names or every name Observation | not planned (D-2) |
 | Frequency for place, event, text, or date values | not planned. Promote's `u` frequency scales already cover text and term values |
 | Support-weighted scores and negative evidence | S10-28 |

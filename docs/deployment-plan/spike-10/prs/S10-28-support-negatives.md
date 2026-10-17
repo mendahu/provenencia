@@ -97,7 +97,7 @@ A handle's values count in proportion to how well supported they are, and a nega
 
 | Out | Home |
 | --- | --- |
-| A concluded value dominating the others (Reconciliation Claims) | [`docs/ideas/name-matching-enhancements.md`](../../../ideas/name-matching-enhancements.md) |
+| A concluded value dominating the others (Reconciliation Claims) | [`docs/ideas/archive/name-matching-enhancements.md`](../../../ideas/archive/name-matching-enhancements.md) |
 | Remembering a rejected claim | same idea note |
 | A Promote layout for the reason text, or a sentence built from the pair | S10-36 covers crops only; not planned |
 | Support weights in Promote's exhibit chooser (`exhibits.go` keeps picking members by similarity) | not planned (D-10) |
@@ -267,7 +267,7 @@ The slice has no new chrome, so the check is a catalog run, not a screen.
 | --- | --- |
 | S10-27's re-based test numbers move again when a fixture handle holds values of unequal support | Stop-and-report rule below; no existing expectation is edited in this PR |
 | A mixed handle that was a clean match before drops in Promote | Intended (US-1, AC-1.4). T-4 and T-8 assert it |
-| A name seen on one Source against a different name on five loses its name credit (a married name against a maiden name, probe on the married name) | Intended: R3 judges against the consensus, so that match is a contradiction in Promote's scale and zero in `Rank`. Equal support keeps both names (AC-1.5). Known-as handling is later ([`docs/ideas/name-matching-enhancements.md`](../../../ideas/name-matching-enhancements.md)) |
+| A name seen on one Source against a different name on five loses its name credit (a married name against a maiden name, probe on the married name) | Intended: R3 judges against the consensus, so that match is a contradiction in Promote's scale and zero in `Rank`. Equal support keeps both names (AC-1.5). Known-as handling is later ([`docs/ideas/archive/name-matching-enhancements.md`](../../../ideas/archive/name-matching-enhancements.md)) |
 | A negative-only Subject reaches a reader that treats any value as a value | D-6 names the four readers; T-7 asserts the `ForSubject` case |
 | A Promote row reads conflict while its exhibit lines show an agreeing pair | Accepted (D-10); the conflict line now appears beside the agreeing pair |
 | `pairValues` runs for every candidate and every Feature | D-4's cost bound and T-10; the cold-hub benchmark is reported |

@@ -13,6 +13,7 @@ Spike 9 shipped Promote graph alignment, and Spike 10 tuned its comparers. This 
 | [**Deployment plan**](deployment-plan.md) | Goal, working rules, PR map, order |
 | [**Comparison layers**](comparison-layers.md) | Design for layers 1–6 (value, property, Subject, entity and segment comparison, graph alignment), bands, lifespan, the match registry, and the reuse and retirement inventory |
 | [**Claim evidence**](claim-evidence.md) | Design for the Promote sheet's pins: every member's evidence, grouped by property, lazily queried, in plain language |
+| [**Connection subrows**](promote-connection-subrows.md) | Design for showing connections under the Promote rows they join, with no switch-off |
 | [**Completed**](completed.md) | Finished steps |
 | [Design briefs](design/) | Claude Design, written just before the PR they gate |
 | [PR plans](prs/) | One per PR, written just before the PR |
