@@ -1,6 +1,6 @@
 # S11-23 — One home for primary kinds
 
-**Status:** Planned
+**Status:** Landed in [#438](https://github.com/mendahu/provenencia/pull/438) (2026-10-17)
 **Spike / slice:** Spike 11 · Slice 1 — Graspable model and pure foundations
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: Go constants and the Swift fake)
