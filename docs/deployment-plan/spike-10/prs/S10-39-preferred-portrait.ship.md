@@ -1,7 +1,7 @@
 # Ship log — S10-39 Preferred portrait
 
 **Plan:** [`S10-39-preferred-portrait.md`](S10-39-preferred-portrait.md) · **Branch:** `s10-39-preferred-portrait` · **PR:** #450
-**State:** ready
+**State:** fixing (user)
 
 Base `a439ae24` (main).
 
@@ -62,3 +62,12 @@ No new findings. Both verdicts Clean.
 
 ## Result
 Gate PASS · CI see PR · open blockers/majors: none (CON-1 is the §10 manual check, the user's) · follow-ups: MNT-1 (M-4), MNT-2, MNT-4 (M-3), MNT-5, UX-1, UX-2, UX-3, PRF-1 · to user: CON-1 manual check; MNT-1 pull-forward option
+
+## User fix (after round 2)
+The user, 2026-10-17, on MNT-1: "Pull M-4 forward into this PR: add database.NullBlob and use it in SetPreferredLikeness." This overrides the plan's Codebase fit row for `nullBlob`. It covers only the new copy; moving the existing `artifacts`, `sources` and `observations` copies and `uuidJSON` stays in M-4. No third review round: the gate covers it.
+
+**F-2 — One shared `database.NullBlob` instead of a fifth private copy** (from MNT-1)
+Files: `core/database/nullblob.go` (new, beside `userid.go`), `core/database/canonicalentities/canonicalentities.go`, and a test in `core/database` (the package's existing test style).
+Failing test first: `TestNullBlob` (table): nil → nil, `[]byte{}` → nil, a 16-byte id → the same bytes.
+Do: add `func NullBlob(b []byte) any` with a doc comment in `userid.go`'s style ("binds an empty BLOB as SQL NULL"). In `SetPreferredLikeness`, call `database.NullBlob(observationID)` and delete the private `nullBlob`. Do not touch the other packages' copies. Update the plan's Landed note (or the PR's deviation line) to say `canonicalentities` uses `database.NullBlob` (user, 2026-10-17).
+Check: `go test -tags fts5 ./core/database/ ./core/database/canonicalentities/` passes; scripts/check-pr.sh PASS.
