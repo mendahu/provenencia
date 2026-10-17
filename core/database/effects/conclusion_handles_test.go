@@ -14,7 +14,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -27,6 +26,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
@@ -141,7 +141,7 @@ func TestConclusionHandleSets(t *testing.T) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 				ArtifactID: art.ID, LocatorJSON: evidenceLocator,
 			}, []observations.Input{
-				{SubjectID: ada.ID, PropertyID: nameProp.ID, Name: &namevalues.Value{Form: "Ada"}},
+				{SubjectID: ada.ID, PropertyID: nameProp.ID, Name: &namevalue.Value{Form: "Ada"}},
 				{SubjectID: ada.ID, PropertyID: seenWith.ID, ValueSubjectID: bob.ID},
 			})
 		}); err != nil {

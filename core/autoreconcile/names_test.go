@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
@@ -18,14 +18,14 @@ func nm(n byte, spec string) Candidate {
 	return Candidate{ObservationID: id(n), Value: Value{Name: parse(spec)}}
 }
 
-func parse(spec string) *namevalues.Value {
-	v := &namevalues.Value{Form: "(as written)"}
+func parse(spec string) *namevalue.Value {
+	v := &namevalue.Value{Form: "(as written)"}
 	for i, item := range strings.Split(spec, "|") {
 		typ, val, ok := strings.Cut(item, "=")
 		if !ok {
 			panic("bad part " + item)
 		}
-		v.Parts = append(v.Parts, namevalues.Part{Idx: i, Type: typ, Value: val})
+		v.Parts = append(v.Parts, namevalue.Part{Idx: i, Type: typ, Value: val})
 	}
 	return v
 }
@@ -39,7 +39,7 @@ func withNameForm(c Candidate, form string) Candidate {
 }
 
 // spec renders a name's parts back to "type=value|…".
-func spec(n *namevalues.Value) string {
+func spec(n *namevalue.Value) string {
 	var out []string
 	for _, p := range n.Parts {
 		out = append(out, p.Type+"="+p.Value)
@@ -418,11 +418,11 @@ func TestReconcileNamesInvariants(t *testing.T) {
 	for _, seed := range []int64{1, 2, 3, 4} {
 		rng := rand.New(rand.NewSource(seed))
 		gen := func(n byte) Candidate {
-			v := &namevalues.Value{Form: forms[rng.Intn(len(forms))]}
+			v := &namevalue.Value{Form: forms[rng.Intn(len(forms))]}
 			for i, k := 0, rng.Intn(5); i < k; i++ {
 				typ := types[rng.Intn(len(types))]
 				pool := pools[typ]
-				v.Parts = append(v.Parts, namevalues.Part{Idx: i, Type: typ, Value: pool[rng.Intn(len(pool))]})
+				v.Parts = append(v.Parts, namevalue.Part{Idx: i, Type: typ, Value: pool[rng.Intn(len(pool))]})
 			}
 			return Candidate{ObservationID: id(n), Value: Value{Name: v}, Negative: rng.Intn(8) == 0,
 				Provenance: Provenance{Credibility: rng.Intn(3) - 1, Uncertain: rng.Intn(5) == 0, ClaimConfidence: rng.Intn(3) - 1}}
@@ -492,7 +492,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 			renamed := make([]Candidate, len(in))
 			for i, c := range in {
 				n := *c.Value.Name
-				n.Parts = append([]namevalues.Part(nil), n.Parts...)
+				n.Parts = append([]namevalue.Part(nil), n.Parts...)
 				for j := range n.Parts {
 					n.Parts[j].Type = rename[n.Parts[j].Type]
 				}
@@ -552,7 +552,7 @@ func BenchmarkReconcileNames(b *testing.B) {
 
 // signatureOf is a name's parts by type, as the name module compares them;
 // "" for a name with no parts.
-func signatureOf(n *namevalues.Value) string {
+func signatureOf(n *namevalue.Value) string {
 	units, ok := nameModule{}.split(Value{Name: n})
 	if !ok {
 		return ""

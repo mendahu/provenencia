@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // Every comparer setting has a registry value, so nothing falls back to a
@@ -90,7 +90,7 @@ func TestDefaultProfilesUseRegistryComparers(t *testing.T) {
 // The Western pattern gives every product part type a role, so a new part
 // type forces a decision here.
 func TestWesternPatternCoversEveryPartType(t *testing.T) {
-	for _, pt := range namevalues.PartTypes() {
+	for _, pt := range namevalue.PartTypes() {
 		if _, ok := WesternNamePattern.PartRoles[pt.Key]; !ok {
 			t.Errorf("part type %q has no role in the Western pattern", pt.Key)
 		}

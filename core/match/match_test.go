@@ -7,21 +7,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // name is a structured name. The form is a transcription and is not compared;
 // the words become given names and a surname, the way a researcher files parts.
 func name(form string) Value {
-	n := &namevalues.Value{Form: form}
+	n := &namevalue.Value{Form: form}
 	words := strings.Fields(form)
 	for i, w := range words {
-		typ := namevalues.PartTypeGiven
+		typ := namevalue.PartTypeGiven
 		if i == len(words)-1 {
-			typ = namevalues.PartTypeSurname
+			typ = namevalue.PartTypeSurname
 		}
-		n.Parts = append(n.Parts, namevalues.Part{Idx: i, Value: w, Type: typ})
+		n.Parts = append(n.Parts, namevalue.Part{Idx: i, Value: w, Type: typ})
 	}
 	return Value{Name: n}
 }

@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
@@ -190,7 +190,7 @@ func TestValueLabel(t *testing.T) {
 		{integer(42), "42"},
 		{Value{Date: &d}, "1890"},
 		{name("James Robins"), "James Robins"},
-		{Value{Name: &namevalues.Value{Parts: []namevalues.Part{{Value: "James"}, {Value: "Robins"}}}}, "James Robins"},
+		{Value{Name: &namevalue.Value{Parts: []namevalue.Part{{Value: "James"}, {Value: "Robins"}}}}, "James Robins"},
 	}
 	for _, tt := range tests {
 		if got := tt.v.Label(); got != tt.want {

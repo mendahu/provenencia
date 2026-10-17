@@ -12,10 +12,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/nameformats"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/hops"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
@@ -125,7 +125,7 @@ func follow(g *graphcache.Graph, id []byte, hop hops.Hop) ([]graphcache.Link, er
 	return g.Follow(id, hop)
 }
 
-func keptName(n *graphcache.Node, propID []byte) (*namevalues.Value, int, error) {
+func keptName(n *graphcache.Node, propID []byte) (*namevalue.Value, int, error) {
 	rows := kept(n, propID)
 	row, ok := rank1(rows)
 	if !ok || len(row.Name) == 0 {

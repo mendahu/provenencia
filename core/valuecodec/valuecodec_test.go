@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 func ip(n int) *int { return &n }
@@ -33,9 +33,9 @@ func TestDateRoundTrip(t *testing.T) {
 }
 
 func TestNameRoundTrip(t *testing.T) {
-	v := namevalues.Value{Form: "James Robins", Parts: []namevalues.Part{
-		{Idx: 0, Value: "James", Type: namevalues.PartTypeGiven},
-		{Idx: 1, Value: "Robins", Type: namevalues.PartTypeSurname},
+	v := namevalue.Value{Form: "James Robins", Parts: []namevalue.Part{
+		{Idx: 0, Value: "James", Type: namevalue.PartTypeGiven},
+		{Idx: 1, Value: "Robins", Type: namevalue.PartTypeSurname},
 		{Idx: 2, Value: "Jr", Type: ""},
 	}}
 	b, err := MarshalName(v)

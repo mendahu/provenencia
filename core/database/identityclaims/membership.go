@@ -2,7 +2,7 @@ package identityclaims
 
 import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // Membership is a read-only view of one Subject's accepted Identity Claim:
@@ -17,5 +17,5 @@ type Membership struct {
 	Kind      string
 	// Name is the handle's displayed auto-reconciled name; nil when it has
 	// none (unnamed, or not a person).
-	Name *namevalues.Value
+	Name *namevalue.Value
 }

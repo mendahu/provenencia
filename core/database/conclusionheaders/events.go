@@ -5,9 +5,9 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/effects"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/eventtitle"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -46,7 +46,7 @@ type EventHeader struct {
 // EventSubject is one person on an event through a subject-role participation.
 type EventSubject struct {
 	Entity         canonicalentities.Entity
-	Name           *namevalues.Value
+	Name           *namevalue.Value
 	NameValueCount int
 }
 

@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
@@ -17,7 +17,7 @@ func text(n byte, s string) Candidate {
 }
 
 func name(n byte, form string) Candidate {
-	return Candidate{ObservationID: id(n), Value: Value{Name: &namevalues.Value{Form: form}}}
+	return Candidate{ObservationID: id(n), Value: Value{Name: &namevalue.Value{Form: form}}}
 }
 
 func ip(v int) *int { return &v }
@@ -76,7 +76,7 @@ func TestReconcile(t *testing.T) {
 			&Value{Name: parse("given=J.|surname=Robins")}, [][]byte{nil, {1}}, StateConcluded},
 		{"concluded name with no parts leads alone", propertymeta.ValueTypeName,
 			[]Candidate{nm(1, "given=James|surname=Robins")},
-			&Value{Name: &namevalues.Value{Form: "James Robins"}}, [][]byte{nil, {1}}, StateConcluded},
+			&Value{Name: &namevalue.Value{Form: "James Robins"}}, [][]byte{nil, {1}}, StateConcluded},
 		{"tie broken by lowest id", propertymeta.ValueTypeText,
 			[]Candidate{text(5, "B"), text(2, "A")}, nil, [][]byte{{2}, {5}}, StateMixed},
 		{"support beats id; two of three outvote the third (S9-13)", propertymeta.ValueTypeText,
@@ -219,7 +219,7 @@ func TestNormalizeForm(t *testing.T) {
 }
 
 func TestSortKey(t *testing.T) {
-	k, ok := SortKey(propertymeta.ValueTypeName, Value{Name: &namevalues.Value{Form: "  O'Brien,  Mary "}})
+	k, ok := SortKey(propertymeta.ValueTypeName, Value{Name: &namevalue.Value{Form: "  O'Brien,  Mary "}})
 	if !ok || k != "obrien mary" {
 		t.Fatalf("name %q %v", k, ok)
 	}

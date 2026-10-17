@@ -29,8 +29,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
@@ -83,7 +83,7 @@ type Value struct {
 	SubjectID  []byte // the cited subject
 	EntityID   []byte // that subject's accepted handle, when the loader resolved one
 	Date       *datevalue.Value
-	Name       *namevalues.Value
+	Name       *namevalue.Value
 }
 
 // Candidate is one member Observation's value for the Property, with the

@@ -10,7 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promotealign"
@@ -28,6 +27,7 @@ import (
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/writes"
@@ -132,7 +132,7 @@ func (f *fixture) person(src sources.Source, art artifacts.Artifact, name string
 	f.t.Helper()
 	s := f.bare(src, "person")
 	f.cite(art, s, observations.Input{
-		PropertyID: f.prop("name").ID, Name: namevaluestest.Western(name),
+		PropertyID: f.prop("name").ID, Name: namevaluetest.Western(name),
 	})
 	return s
 }
@@ -492,7 +492,7 @@ func TestStatsCountsNameWords(t *testing.T) {
 	f.promote(f.person(f.source, f.artifact, "José Smith"))
 	merged := f.promote(f.person(f.source, f.artifact, "Jane Smith")).Entity.ID
 	// A second reconciled value on the first handle that also spells Smith.
-	blob, err := valuecodec.MarshalName(*namevaluestest.Western("J. Smith"))
+	blob, err := valuecodec.MarshalName(*namevaluetest.Western("J. Smith"))
 	must(t, err)
 	_, err = db.Exec(`INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_name, support, against, reason)
 		VALUES (?, ?, 2, ?, 1, 0, 'kept')`, both, f.prop("name").ID, blob)
@@ -1089,7 +1089,7 @@ func TestProposeJudgesAgainstTheMajority(t *testing.T) {
 	t.Run("a stray name", func(t *testing.T) {
 		f := newFixture(t)
 		handle := f.promote(f.person(f.source, f.artifact, "Mary Smith")).Entity.ID
-		blob, err := valuecodec.MarshalName(*namevaluestest.Western("James Robins"))
+		blob, err := valuecodec.MarshalName(*namevaluetest.Western("James Robins"))
 		must(t, err)
 		db, err := f.c.DB()
 		must(t, err)

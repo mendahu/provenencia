@@ -8,9 +8,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	_ "github.com/mendahu/provenencia/core/database/sourcefill"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -139,7 +139,7 @@ func membershipsFromSource(g *graphcache.Graph, sg graphcache.SourceGraph, nameP
 	return out, nil
 }
 
-func keptName(n *graphcache.Node, propertyID []byte) *namevalues.Value {
+func keptName(n *graphcache.Node, propertyID []byte) *namevalue.Value {
 	if n == nil || len(propertyID) != 16 {
 		return nil
 	}

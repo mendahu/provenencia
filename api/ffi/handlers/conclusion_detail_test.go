@@ -10,9 +10,9 @@ import (
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -131,12 +131,12 @@ func TestConclusionValueProtoCoversEveryKind(t *testing.T) {
 			tm := v.GetTerm()
 			return tm.GetId() == uuidString(term) && tm.GetKey() == "male" && tm.GetLabel() == "Male"
 		}},
-		{"date", conclusiondetails.Value{Date: &datevalues.Value{Kind: "point", Calendar: "gregorian", StartYear: &year}}, func(v *engine.ConclusionValue) bool {
+		{"date", conclusiondetails.Value{Date: &datevalue.Value{Kind: "point", Calendar: "gregorian", StartYear: &year}}, func(v *engine.ConclusionValue) bool {
 			return v.GetDate().GetStartYear() == 1890
 		}},
-		{"name", conclusiondetails.Value{Name: namevaluestest.Western("Jim Robins")}, func(v *engine.ConclusionValue) bool {
+		{"name", conclusiondetails.Value{Name: namevaluetest.Western("Jim Robins")}, func(v *engine.ConclusionValue) bool {
 			n := v.GetName()
-			return len(n.GetParts()) == 2 && n.GetParts()[1].GetType() == namevalues.PartTypeSurname
+			return len(n.GetParts()) == 2 && n.GetParts()[1].GetType() == namevalue.PartTypeSurname
 		}},
 	}
 	for _, tc := range cases {

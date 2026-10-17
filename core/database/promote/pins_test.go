@@ -10,7 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -21,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
@@ -89,8 +89,8 @@ func (f *pinFixture) record(st subjecttypes.Type, prop properties.Property, valu
 	var in []observations.Input
 	for _, v := range values {
 		if prop.ValueType == propertymeta.ValueTypeName {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: prop.ID, Name: &namevalues.Value{
-				Form: v, Parts: []namevalues.Part{{Idx: 0, Type: "given", Value: v}},
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: prop.ID, Name: &namevalue.Value{
+				Form: v, Parts: []namevalue.Part{{Idx: 0, Type: "given", Value: v}},
 			}})
 		} else {
 			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: prop.ID, ValueText: v, HasText: true})

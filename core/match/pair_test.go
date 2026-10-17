@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
@@ -122,9 +122,9 @@ func TestEvaluateStrayName(t *testing.T) {
 	prop := match.Property{Key: "name", Origin: "provenencia"}
 	meta := []match.PropertyMeta{{Property: prop, ValueType: propertymeta.ValueTypeName}}
 	named := func(form string, support int) match.Value {
-		v := match.Value{Name: &namevalues.Value{Form: form, Parts: []namevalues.Part{
-			{Idx: 0, Value: strings.Fields(form)[0], Type: namevalues.PartTypeGiven},
-			{Idx: 1, Value: strings.Fields(form)[1], Type: namevalues.PartTypeSurname},
+		v := match.Value{Name: &namevalue.Value{Form: form, Parts: []namevalue.Part{
+			{Idx: 0, Value: strings.Fields(form)[0], Type: namevalue.PartTypeGiven},
+			{Idx: 1, Value: strings.Fields(form)[1], Type: namevalue.PartTypeSurname},
 		}}}
 		if support > 0 {
 			v.SetEvidence(support, 0, 1, "kept")

@@ -25,6 +25,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
@@ -47,7 +48,7 @@ type Value struct {
 	TermKey    string
 	TermLabel  string
 	Date       *datevalue.Value
-	Name       *namevalues.Value
+	Name       *namevalue.Value
 }
 
 // ReconciledValue is one auto-reconciled value of a Property.

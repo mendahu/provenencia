@@ -10,7 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/effects"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -22,6 +21,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
@@ -133,7 +133,7 @@ func TestEvidenceHandleSets(t *testing.T) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 				ArtifactID: art.ID, LocatorJSON: evidenceLocator,
 			}, []observations.Input{
-				{SubjectID: person.ID, PropertyID: nameProp.ID, Name: &namevalues.Value{Form: "Ada"}},
+				{SubjectID: person.ID, PropertyID: nameProp.ID, Name: &namevalue.Value{Form: "Ada"}},
 				{SubjectID: place.ID, PropertyID: dateProp.ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year}},
 				{SubjectID: person.ID, PropertyID: seenWith.ID, ValueSubjectID: alice.ID},
 			})
@@ -183,7 +183,7 @@ func TestEvidenceHandleSets(t *testing.T) {
 		defer done()
 		_, changes, err := observations.Update(tx, userID, observations.Input{
 			ID: nameObs.ID, SubjectID: person.ID, PropertyID: nameProp.ID,
-			Name: &namevalues.Value{Form: "Adelaide"},
+			Name: &namevalue.Value{Form: "Adelaide"},
 		})
 		if err != nil {
 			t.Fatal(err)

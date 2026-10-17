@@ -11,8 +11,8 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // DateToProto carries a DateValue's components into its message.
@@ -69,7 +69,7 @@ func DateFromProto(d *engine.DateValueInput) datevalue.Value {
 }
 
 // NameToProto carries a NameValue's form and ordered parts into its message.
-func NameToProto(v namevalues.Value) *engine.NameValueInput {
+func NameToProto(v namevalue.Value) *engine.NameValueInput {
 	out := &engine.NameValueInput{Form: v.Form}
 	for _, p := range v.Parts {
 		out.Parts = append(out.Parts, &engine.NameValuePartInput{Value: p.Value, Type: p.Type})
@@ -79,10 +79,10 @@ func NameToProto(v namevalues.Value) *engine.NameValueInput {
 
 // NameFromProto is the inverse of NameToProto. Text is trimmed and parts are
 // indexed in message order.
-func NameFromProto(n *engine.NameValueInput) namevalues.Value {
-	v := namevalues.Value{Form: strings.TrimSpace(n.GetForm())}
+func NameFromProto(n *engine.NameValueInput) namevalue.Value {
+	v := namevalue.Value{Form: strings.TrimSpace(n.GetForm())}
 	for i, p := range n.GetParts() {
-		v.Parts = append(v.Parts, namevalues.Part{
+		v.Parts = append(v.Parts, namevalue.Part{
 			Idx:   i,
 			Value: strings.TrimSpace(p.GetValue()),
 			Type:  strings.TrimSpace(p.GetType()),
@@ -104,13 +104,13 @@ func UnmarshalDate(b []byte) (datevalue.Value, error) {
 }
 
 // MarshalName encodes a NameValue as its protobuf message bytes.
-func MarshalName(v namevalues.Value) ([]byte, error) { return proto.Marshal(NameToProto(v)) }
+func MarshalName(v namevalue.Value) ([]byte, error) { return proto.Marshal(NameToProto(v)) }
 
 // UnmarshalName decodes MarshalName output.
-func UnmarshalName(b []byte) (namevalues.Value, error) {
+func UnmarshalName(b []byte) (namevalue.Value, error) {
 	var n engine.NameValueInput
 	if err := proto.Unmarshal(b, &n); err != nil {
-		return namevalues.Value{}, err
+		return namevalue.Value{}, err
 	}
 	return NameFromProto(&n), nil
 }

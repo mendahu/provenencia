@@ -19,8 +19,8 @@ import (
 	"sort"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // Property names one Property by its vocabulary identity.
@@ -48,7 +48,7 @@ type Value struct {
 	// comparison with it is not comparable. Loaders copy it from the term.
 	Neutral bool
 	Date    *datevalue.Value
-	Name    *namevalues.Value
+	Name    *namevalue.Value
 	// NamePattern is the name pattern key for Name (its Person's name
 	// format, once loaders supply it); empty uses the comparer's pattern.
 	NamePattern string

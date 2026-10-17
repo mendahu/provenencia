@@ -18,7 +18,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -35,6 +34,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/valuecodec"
@@ -251,15 +251,15 @@ func nameIn(s subjects.Subject, p properties.Property, spec string) observations
 	return observations.Input{SubjectID: s.ID, PropertyID: p.ID, Name: nameValue(spec)}
 }
 
-func nameValue(spec string) *namevalues.Value {
+func nameValue(spec string) *namevalue.Value {
 	if form, ok := strings.CutPrefix(spec, "form:"); ok {
-		return &namevalues.Value{Form: form}
+		return &namevalue.Value{Form: form}
 	}
-	v := &namevalues.Value{}
+	v := &namevalue.Value{}
 	var words []string
 	for i, item := range strings.Split(spec, "|") {
 		typ, val, _ := strings.Cut(item, "=")
-		v.Parts = append(v.Parts, namevalues.Part{Idx: i, Type: typ, Value: val})
+		v.Parts = append(v.Parts, namevalue.Part{Idx: i, Type: typ, Value: val})
 		words = append(words, val)
 	}
 	v.Form = strings.Join(words, " ")

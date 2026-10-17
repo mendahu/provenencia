@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
@@ -85,7 +85,7 @@ func TestModuleFor(t *testing.T) {
 			t.Errorf("%s has no module", vt)
 		}
 	}
-	if _, err := Reconcile(propertymeta.ValueTypeName, []Candidate{{ObservationID: id(1), Value: Value{Name: &namevalues.Value{}}}}, nil, propertymeta.CardinalitySingle); err != nil {
+	if _, err := Reconcile(propertymeta.ValueTypeName, []Candidate{{ObservationID: id(1), Value: Value{Name: &namevalue.Value{}}}}, nil, propertymeta.CardinalitySingle); err != nil {
 		t.Fatalf("an empty name is no evidence, not an error: %v", err)
 	}
 }

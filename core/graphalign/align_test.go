@@ -5,9 +5,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
@@ -490,11 +490,11 @@ func TestGracieObituaryGolden(t *testing.T) {
 
 func nameVals(given, surname string) match.Values {
 	p := match.Property{Key: "name", Origin: "provenencia"}
-	return match.Values{p: {{Name: &namevalues.Value{
+	return match.Values{p: {{Name: &namevalue.Value{
 		Form: given + " " + surname,
-		Parts: []namevalues.Part{
-			{Idx: 0, Type: namevalues.PartTypeGiven, Value: given},
-			{Idx: 1, Type: namevalues.PartTypeSurname, Value: surname},
+		Parts: []namevalue.Part{
+			{Idx: 0, Type: namevalue.PartTypeGiven, Value: given},
+			{Idx: 1, Type: namevalue.PartTypeSurname, Value: surname},
 		},
 	}}}}
 }
@@ -541,15 +541,15 @@ func TestUnreachableFallbackScoresOnTheWalkScale(t *testing.T) {
 }
 
 func TestPartialNamesAreWeak(t *testing.T) {
-	given := func(i int, v string) namevalues.Part {
-		return namevalues.Part{Idx: i, Type: namevalues.PartTypeGiven, Value: v}
+	given := func(i int, v string) namevalue.Part {
+		return namevalue.Part{Idx: i, Type: namevalue.PartTypeGiven, Value: v}
 	}
-	sur := func(i int, v string) namevalues.Part {
-		return namevalues.Part{Idx: i, Type: namevalues.PartTypeSurname, Value: v}
+	sur := func(i int, v string) namevalue.Part {
+		return namevalue.Part{Idx: i, Type: namevalue.PartTypeSurname, Value: v}
 	}
-	full := func(parts ...namevalues.Part) match.Values {
+	full := func(parts ...namevalue.Part) match.Values {
 		p := match.Property{Key: "name", Origin: "provenencia"}
-		return match.Values{p: {{Name: &namevalues.Value{Parts: parts}}}}
+		return match.Values{p: {{Name: &namevalue.Value{Parts: parts}}}}
 	}
 	alignOne := func(probe, handle match.Values) graphalign.Row {
 		s, h := id("s"), id("h")
@@ -622,16 +622,16 @@ func TestPartialNamesAreWeak(t *testing.T) {
 
 func TestMissingGivenOrPrefixIsNotANameConflict(t *testing.T) {
 	name := match.Property{Key: "name", Origin: "provenencia"}
-	parts := func(ps ...namevalues.Part) match.Values {
-		return match.Values{name: {{Name: &namevalues.Value{Parts: ps}}}}
+	parts := func(ps ...namevalue.Part) match.Values {
+		return match.Values{name: {{Name: &namevalue.Value{Parts: ps}}}}
 	}
 	mrs := parts(
-		namevalues.Part{Idx: 0, Type: namevalues.PartTypePrefix, Value: "Mrs."},
-		namevalues.Part{Idx: 1, Type: namevalues.PartTypeSurname, Value: "Robins"},
+		namevalue.Part{Idx: 0, Type: namevalue.PartTypePrefix, Value: "Mrs."},
+		namevalue.Part{Idx: 1, Type: namevalue.PartTypeSurname, Value: "Robins"},
 	)
 	marion := parts(
-		namevalues.Part{Idx: 0, Type: namevalues.PartTypeGiven, Value: "Marion"},
-		namevalues.Part{Idx: 1, Type: namevalues.PartTypeSurname, Value: "Robins"},
+		namevalue.Part{Idx: 0, Type: namevalue.PartTypeGiven, Value: "Marion"},
+		namevalue.Part{Idx: 1, Type: namevalue.PartTypeSurname, Value: "Robins"},
 	)
 	cfg := graphalign.DefaultConfig()
 	ev := match.Evaluate(mrs, marion, nameMetas())

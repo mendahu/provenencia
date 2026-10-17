@@ -14,8 +14,8 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/effects"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // Querier is *sql.Tx or *sql.DB.
@@ -29,7 +29,7 @@ type PersonHeader struct {
 	Entity canonicalentities.Entity
 	// Name is the displayed auto-reconciled name; nil when no member names
 	// the Person.
-	Name *namevalues.Value
+	Name *namevalue.Value
 	// NameValueCount is the number of displayed name values: names are one
 	// structure, so at most 1. More would read as mixed, the extras as +N.
 	NameValueCount int

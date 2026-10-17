@@ -13,7 +13,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -26,6 +25,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
@@ -107,14 +107,14 @@ func (f *fixture) cite(s subjects.Subject, in observations.Input) observations.O
 }
 
 func (f *fixture) nameIn(s subjects.Subject, spec string) observations.Input {
-	v := &namevalues.Value{}
+	v := &namevalue.Value{}
 	if form, ok := strings.CutPrefix(spec, "form:"); ok {
 		v.Form = form
 	} else {
 		var words []string
 		for i, item := range strings.Split(spec, "|") {
 			typ, val, _ := strings.Cut(item, "=")
-			v.Parts = append(v.Parts, namevalues.Part{Idx: i, Type: typ, Value: val})
+			v.Parts = append(v.Parts, namevalue.Part{Idx: i, Type: typ, Value: val})
 			words = append(words, val)
 		}
 		v.Form = strings.Join(words, " ")

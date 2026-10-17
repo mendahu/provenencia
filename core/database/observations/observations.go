@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -134,7 +135,7 @@ type Listed struct {
 	// ValueNameForm is name_values.form for value_name_id (empty when unset).
 	ValueNameForm string
 	// Name is the joined name_values row plus parts when value_name_id is set.
-	Name *namevalues.Value
+	Name *namevalue.Value
 	// ValueSubjectLabel is subjects.label for value_subject_id (empty when unset).
 	ValueSubjectLabel string
 	// Date is the joined date_values row when value_date_id is set.
@@ -159,7 +160,7 @@ type Input struct {
 	HasInteger     bool
 	Date           *datevalue.Value // when set, InsertTx inside the caller's tx
 	ValueDateID    []byte           // existing date_values.id when Date is nil
-	Name           *namevalues.Value
+	Name           *namevalue.Value
 	ValueNameID    []byte
 	ValueSubjectID []byte
 	ValueTermID    []byte
@@ -839,7 +840,7 @@ func dateUpdateChange(prev, next datevalue.Value) *rowchange.Change {
 	}
 }
 
-func nameUpdateChange(prev, next namevalues.Value) *rowchange.Change {
+func nameUpdateChange(prev, next namevalue.Value) *rowchange.Change {
 	fields := map[string]rowchange.FieldDiff{}
 	if prev.Form != next.Form {
 		fields["form"] = rowchange.FieldDiff{Old: prev.Form, New: next.Form}
@@ -862,7 +863,7 @@ func nameUpdateChange(prev, next namevalues.Value) *rowchange.Change {
 	}
 }
 
-func namePartsEqual(a, b []namevalues.Part) bool {
+func namePartsEqual(a, b []namevalue.Part) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -874,7 +875,7 @@ func namePartsEqual(a, b []namevalues.Part) bool {
 	return true
 }
 
-func namePartsJSON(parts []namevalues.Part) []map[string]any {
+func namePartsJSON(parts []namevalue.Part) []map[string]any {
 	out := make([]map[string]any, len(parts))
 	for i, p := range parts {
 		out[i] = map[string]any{
@@ -912,7 +913,7 @@ func dateValueMap(id []byte, v datevalue.Value) map[string]any {
 	}
 }
 
-func nameValueMap(id []byte, v namevalues.Value) map[string]any {
+func nameValueMap(id []byte, v namevalue.Value) map[string]any {
 	return map[string]any{
 		"id":    uuidJSON(id),
 		"form":  v.Form,
@@ -951,7 +952,7 @@ func dateCreateChange(id []byte, v datevalue.Value) rowchange.Change {
 	}
 }
 
-func nameCreateChange(id []byte, v namevalues.Value) rowchange.Change {
+func nameCreateChange(id []byte, v namevalue.Value) rowchange.Change {
 	parts := make([]map[string]any, len(v.Parts))
 	for i, p := range v.Parts {
 		parts[i] = map[string]any{
