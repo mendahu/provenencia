@@ -1,7 +1,7 @@
 # Ship log — S10-39 Preferred portrait
 
 **Plan:** [`S10-39-preferred-portrait.md`](S10-39-preferred-portrait.md) · **Branch:** `s10-39-preferred-portrait` · **PR:** #450
-**State:** fixing (user)
+**State:** ready
 
 Base `a439ae24` (main).
 
@@ -91,3 +91,6 @@ Do:
 - Do not add a new string.
 - Plan: rewrite AC-1.1 ("the earliest tile shows the Portrait Badge and no button; the other tiles show the button; the header thumb is A"), AC-2.3 ("No portrait chosen, or the earliest chosen: no menu opens") and §10 step 2 to match, each marked "(user, 2026-10-17)". Add a line to the Landed note.
 Check: the Go tests in `likenesses`, `conclusionheaders`, `conclusiondetails` and `api/ffi/handlers` pass; `xcodebuild` tests pass; scripts/check-pr.sh PASS.
+
+## User finding — result
+Head `e402e1fe`. Gate PASS (orchestrator run). F-3 done; tests were red first: `TestForEntitiesPreferred` (Leads flags), handler `TestSetPreferredLikeness`, `portraitFlagsFollowThePreferredLikeness`. `likenesses.Lead` now returns the one likeness with `Leads` set; the tile Badge follows `leads`; the header menu shows only while the first (earliest) tile does not lead (`offersEarliest`). The plan's AC-1.1, AC-2.2, AC-2.3, AC-3.2, T-6 and §10 steps 2, 4 and 5 were updated (user, 2026-10-17). D-2, D-11 and PDP-10 still describe the earlier model and were left as written.
