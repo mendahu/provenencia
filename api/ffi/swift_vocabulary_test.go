@@ -24,6 +24,7 @@ const (
 	swiftVocabulary = "../../macos/App/Platform/ConclusionVocabulary.swift"
 	swiftValueKinds = "../../macos/App/Platform/InterpretationValueKinds.swift"
 	swiftMarks      = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
+	swiftGraphKinds = "../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift"
 )
 
 // swiftEnumBody returns the source between `enum <name>` and its closing
@@ -123,6 +124,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			name: "value types", path: swiftValueKinds, enum: "PropertyValueType", re: rawCase,
 			want: sorted(propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeDate,
 				propertymeta.ValueTypeName, propertymeta.ValueTypeSubject, propertymeta.ValueTypeTerm, propertymeta.ValueTypeDepiction),
+		},
+		{
+			name: "primary kinds", path: swiftGraphKinds, enum: "EvidencePrimaryKind", re: rawCase,
+			want: sorted(vocabkey.PrimaryKinds()...),
 		},
 		{
 			name: "subject marks", path: swiftMarks, enum: "PVMarkKey", re: subjectMark,
