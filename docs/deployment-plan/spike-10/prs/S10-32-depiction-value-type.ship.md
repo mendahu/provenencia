@@ -1,7 +1,7 @@
 # Ship log — S10-32 Depiction value and `likeness` on Person
 
 **Plan:** [`S10-32-depiction-value-type.md`](S10-32-depiction-value-type.md) · **Branch:** `s10-32-depiction-value` · **PR:** #430
-**State:** review 2
+**State:** ready
 
 The plan refresh (`36ef0065`) is the branch's first commit, on the user's call (2026-10-17): no separate docs PR. Base `ae26c629`.
 
@@ -43,3 +43,9 @@ Check: `git diff ae26c629 -- core/database/properties/properties.go` shows no wh
 
 ## Round 1 — fix
 Head `b41f9b06`. Gate PASS (orchestrator run). F-1 done (`2728a9b2`): `TestObservations/date_replaced_by_another_Property_releases_its_value` passes and fails with `deleteimpact.invalid` when the `observations.value_date_id` release entry is removed. F-2 not applied: restoring `main`'s indentation (`0968541f`) failed the gofmt gate, and `main`'s file fails `gofmt -l` itself; reverted in `b41f9b06`. Dropped CON-2 / MNT-2 as Rejected.
+
+## Round 2 — review
+CON and MNT (the lenses with Fix-now findings) on `0532a08b...b41f9b06`. Both clean, no new findings. CON-1 resolved: the new test fails (`replaced date value left behind: 1 rows`) when the date release entry is removed. CON-2 / MNT-2 rejection confirmed (`gofmt -l` flags `main`'s `properties.go`).
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: MNT-1 + SEC-1 (locator decode split and point cap, before S10-54), SEC-2 and UX-1 (S10-54), SEC-3 (S10-34, S10-36), MNT-3 (with M-8) · to user: manual check §10.1 (CON-3)
