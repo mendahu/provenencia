@@ -1,7 +1,7 @@
 # Ship log — S10-57 Hold Shift to select; Select disarms after one rectangle
 
 **Plan:** [`S10-57-quick-select.md`](S10-57-quick-select.md) · **Branch:** `s10-57-quick-select` · **PR:** #428
-**State:** fixing 1
+**State:** review 2
 
 ## Round 0 — implement
 Base: branch `s10-57-quick-select` cut from `main` @ `af50bd67`. The plan merged as S10-56 in #426, which reused the object store's number (#425). It is renumbered to S10-57 on this branch: files renamed, map row and scope entry updated (user, 2026-10-17).
@@ -31,3 +31,6 @@ Lenses: all five. SEC, PERF clean; CON one major; MNT, UX minors.
 Files: `docs/deployment-plan/spike-10/prs/S10-57-quick-select.md`, `docs/dogfood/ux.md`.
 Do: add `## Landed` under the plan header, in the shape of S10-56's and S10-20's ("Differences from this plan: …"), listing: the plan merged as S10-56 in #426 and was renumbered S10-57 on this branch (user, 2026-10-17; files, map row, scope heading, anchors); while Shift is held, Shift+Return and Shift+Space on a selected card do nothing, because `inputMode` is `.selecting` (follow-up); the implementer did not run §10, so AC-1.5, AC-1.7, the omnibar half of AC-1.6, and the canvas `flagsChanged` monitor are unchecked and left to the user; otherwise the code follows §6. In `docs/dogfood/ux.md` under **Open**, below the `<!-- add below this line -->` marker, add a stub in the file's shape: title "No keyboard way to add one card to a multi-selection", Date 2026-10-17, Where Evidence graph, Annoyance: Shift-click adds or removes one card, but keyboard and VoiceOver users have no way to do the same (deferred from S10-57).
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10-57-quick-select.md` reports no errors; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `455ab6fd`. Gate PASS (orchestrator run). F-1 done (docs only; no failing test applies). Deviations: none.
