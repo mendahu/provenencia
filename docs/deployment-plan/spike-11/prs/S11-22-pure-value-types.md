@@ -268,4 +268,5 @@ None.
 Differences from the plan:
 
 - Three file paths in §4 Current state (`display.go`, `registry.go`, `namevaluestest.go` under the old packages) are plain text, not code spans, because the plan-docs check rejects paths that no longer exist.
+- A fourth Swift comment, `macos/App/Platform/ConclusionVocabulary.swift`, also named `datevalues.Qualifier*` and now names `datevalue.Qualifier*`; §4 missed it.
 - The code is otherwise as planned; `ValueTypeDepiction` moved with the other value types per the Amended line.
