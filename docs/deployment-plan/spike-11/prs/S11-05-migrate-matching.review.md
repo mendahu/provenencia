@@ -58,3 +58,27 @@ Maintainability: Fits with changes.
 **Answer:** Fixed. STEP-3's check is `rg -n 'valuerules.Load' .agents/skills/add-match-rule/SKILL.md`.
 
 Logged, not raised: `matching.ForEntity` loads the name format before `rank` loads it again through `valuerules.Load` (deleted with the package in S11-13); `core/autoreconcile/names.go` reads registry words without catalog aliases (S11-06).
+
+Executability: Ready with changes.
+
+### X-10 · blocker · STEP-3's check cannot pass
+**Answer:** Fixed with M-6.
+
+### X-11 · major · L175 of `promote-graph-alignment.md` keeps false sentences
+**Answer:** Fixed. D-14 gives L175's whole replacement; STEP-4's `rg` adds `[Ff]loor [01]` and `discount`, with `matching-model.md` "Retired words" among the allowed hits.
+
+### X-12 · minor · Doc wording left open
+**Answer:** Fixed. D-14 gives the `daitch-mokotoff.md` L5 sentence and `matching.md` Scoring step 3 and L52 text; no "discount" may remain in `matching.md`.
+
+### X-13 · minor · `TestRankPersons` strings implied
+**Answer:** Fixed. The expected-changes row writes both strings and moves the neutral-term check to `Score` on the `PER-C` candidate.
+
+### X-14 · minor · T-1 shape and values; T-2 date input; `subject` value type
+**Answer:** Fixed. T-1 names its table shape and exact relations and causes, checked by running `valuecompare` at the base (`O. Brien` Near/spelling, `Groß` Different/no_match, `Jas.` Different/no_match); T-2's `1817` is a date; D-2 states `subject` and `depiction` stay not comparable through `Unknown`.
+
+### X-15 · minor · Loader wording and signatures
+**Answer:** Fixed. D-9 states the empty-patterns case and writes the `attachExhibits` and `loadExhibitObservations` signatures. Line drift (L979 → L1034) fixed.
+
+## Verdict
+
+Planned. No blocker open, no To user item. Round cap reached.
