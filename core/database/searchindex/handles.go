@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // Handle kinds (Conclusion layer). Documents are match text from the header
@@ -91,7 +92,7 @@ func reprojectHandleBatch(q Querier, ids [][]byte) error {
 			_ = rows.Close()
 			return err
 		}
-		if handleKinds[typeKey] && typeOrigin == "provenencia" {
+		if handleKinds[typeKey] && typeOrigin == vocabkey.OriginProvenencia {
 			h.kind = typeKey
 		}
 		h.id = uuidString(id)

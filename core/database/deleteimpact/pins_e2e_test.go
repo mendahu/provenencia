@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
@@ -51,7 +52,7 @@ func newPinnedHandle(t *testing.T) pinnedHandle {
 		}
 	}
 	must(subjectvocab.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(err)
 	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Gazetteer"})
@@ -59,9 +60,9 @@ func newPinnedHandle(t *testing.T) pinnedHandle {
 	must(err)
 	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(err)
-	place, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+	place, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 	must(err)
-	toponym, err := properties.Lookup(c, "toponym", properties.OriginProvenencia)
+	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	must(err)
 	mk := func(label string) subjects.Subject {
 		t.Helper()

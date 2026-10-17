@@ -31,6 +31,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -65,7 +66,7 @@ func newBridgeWorld(t *testing.T) *bridgeWorld {
 	if err := subjectvocab.Install(c); err != nil {
 		t.Fatal(err)
 	}
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +99,7 @@ func newBridgeWorld(t *testing.T) *bridgeWorld {
 
 func (w *bridgeWorld) prop(key string) properties.Property {
 	w.t.Helper()
-	p, err := properties.Lookup(w.c, key, properties.OriginProvenencia)
+	p, err := properties.Lookup(w.c, key, vocabkey.OriginProvenencia)
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -107,7 +108,7 @@ func (w *bridgeWorld) prop(key string) properties.Property {
 
 func (w *bridgeWorld) term(p properties.Property, key string) propertyterms.Term {
 	w.t.Helper()
-	term, err := propertyterms.Lookup(w.c, p.ID, key, propertyterms.OriginProvenencia)
+	term, err := propertyterms.Lookup(w.c, p.ID, key, vocabkey.OriginProvenencia)
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -116,7 +117,7 @@ func (w *bridgeWorld) term(p properties.Property, key string) propertyterms.Term
 
 func (w *bridgeWorld) node(kind, label string, x, y int64) subjects.Subject {
 	w.t.Helper()
-	st, err := subjecttypes.Lookup(w.c, kind, subjecttypes.OriginProvenencia)
+	st, err := subjecttypes.Lookup(w.c, kind, vocabkey.OriginProvenencia)
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -443,7 +444,7 @@ func TestBridgeFiling(t *testing.T) {
 		birth := w.node("event", "Birth", 2, 0)
 		w.participation(james, birth, w.subjectRole)
 		w.promote(james)
-		eventType, err := subjecttypes.Lookup(w.c, "event", subjecttypes.OriginProvenencia)
+		eventType, err := subjecttypes.Lookup(w.c, "event", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}

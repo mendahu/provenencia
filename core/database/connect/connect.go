@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/connectrules"
@@ -134,7 +135,7 @@ func CreateCitedBridge(tx *database.Tx, userID []byte, in CreateInput) (Result, 
 		return Result{}, nil, ErrInvalid
 	}
 
-	bridgeType, err := subjecttypes.LookupTx(q, rule.BridgeTypeKey, subjecttypes.OriginProvenencia)
+	bridgeType, err := subjecttypes.LookupTx(q, rule.BridgeTypeKey, vocabkey.OriginProvenencia)
 	if err != nil {
 		return Result{}, nil, ErrInvalid
 	}

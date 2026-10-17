@@ -24,6 +24,7 @@ import (
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -50,7 +51,7 @@ func TestEvidenceHandleSets(t *testing.T) {
 		t.Fatal(err)
 	}
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -70,11 +71,11 @@ func TestEvidenceHandleSets(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	personType, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	placeType, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+	placeType, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,11 +120,11 @@ func TestEvidenceHandleSets(t *testing.T) {
 		}
 	}
 
-	nameProp, err := properties.Lookup(c, "name", properties.OriginProvenencia)
+	nameProp, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dateProp, err := properties.Lookup(c, "start_date", properties.OriginProvenencia)
+	dateProp, err := properties.Lookup(c, "start_date", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}

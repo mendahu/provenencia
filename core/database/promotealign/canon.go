@@ -3,11 +3,11 @@ package promotealign
 import (
 	"sort"
 
-	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // seedCandidateLimit is the number of property-only candidates kept per
@@ -52,7 +52,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 			return err
 		}
 		kind := typeKey(types, n.SubjectTypeID)
-		if !promotePrimary(kind, "provenencia") {
+		if !promotePrimary(kind, vocabkey.OriginProvenencia) {
 			return nil
 		}
 		vals, err := handleValues(props, terms, n, namePattern)
@@ -162,7 +162,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 					continue
 				}
 				nKind := typeKey(types, neighbor.SubjectTypeID)
-				if !promotePrimary(nKind, "provenencia") {
+				if !promotePrimary(nKind, vocabkey.OriginProvenencia) {
 					continue
 				}
 				from, to, sig := canonSignature(id, selfKind, n, l, neighbor, props, kin)
@@ -304,7 +304,7 @@ func typeByKey(g *graphcache.Graph) (map[string][]byte, error) {
 	}
 	out := map[string][]byte{}
 	for _, t := range v.Types {
-		if t.Origin != connectrules.OriginProvenencia {
+		if t.Origin != vocabkey.OriginProvenencia {
 			continue
 		}
 		out[t.Key] = append([]byte(nil), t.ID...)

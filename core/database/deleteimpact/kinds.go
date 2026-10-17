@@ -29,10 +29,6 @@ const (
 	surfacePage             = "page"
 	surfaceGraph            = "graph"
 	surfaceCitationComposer = "citationComposer"
-
-	originProvenencia = "provenencia"
-	originUser        = "user"
-	originPluginPref  = "plugin:"
 )
 
 // Gate is one Impact outcome.

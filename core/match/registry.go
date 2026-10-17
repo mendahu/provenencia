@@ -4,6 +4,7 @@ import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // The registry: every number the matching algorithm uses, every built-in name
@@ -64,9 +65,6 @@ var DefaultWordRules = WordRules{
 // fold-only pair is lower (foldOnly).
 const AliasCredit = 0.98
 
-// OriginProvenencia is the app's vocabulary origin.
-const OriginProvenencia = "provenencia"
-
 // AliasKind is abbreviation or nickname. Both score AliasCredit.
 type AliasKind string
 
@@ -97,7 +95,7 @@ var noAliasTables []AliasTable
 // Scoring does not read it. Tokens are normalized comparison forms.
 var productAliasTables = []AliasTable{
 	{
-		Key: "abbreviations", Origin: OriginProvenencia, Label: "Abbreviations",
+		Key: "abbreviations", Origin: vocabkey.OriginProvenencia, Label: "Abbreviations",
 		Kind: AliasAbbreviation, Roles: aliasPartRoles(),
 		Sets: [][]string{
 			{"james", "jas"},
@@ -111,7 +109,7 @@ var productAliasTables = []AliasTable{
 		},
 	},
 	{
-		Key: "nicknames", Origin: OriginProvenencia, Label: "Nicknames",
+		Key: "nicknames", Origin: vocabkey.OriginProvenencia, Label: "Nicknames",
 		Kind: AliasNickname, Roles: aliasPartRoles(),
 		// Each set is one canonical name and its direct nicknames, from
 		// carltonnorthern/nicknames. A nickname shared by two canonical

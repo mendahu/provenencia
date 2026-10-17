@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -36,7 +37,7 @@ func TestSubjects(t *testing.T) {
 	mustSource := func(t *testing.T, c *database.Catalog) sources.Source {
 		t.Helper()
 		typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-			Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+			Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -95,7 +96,7 @@ func TestSubjects(t *testing.T) {
 				mustUser(t, c)
 				mustSubjectTypes(t, c)
 				src := mustSource(t, c)
-				person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -117,7 +118,7 @@ func TestSubjects(t *testing.T) {
 				mustUser(t, c)
 				mustSubjectTypes(t, c)
 				src := mustSource(t, c)
-				person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -182,7 +183,7 @@ func TestSubjects(t *testing.T) {
 				mustUser(t, c)
 				mustSubjectTypes(t, c)
 				src := mustSource(t, c)
-				person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -211,7 +212,7 @@ func TestSubjects(t *testing.T) {
 				mustUser(t, c)
 				mustSubjectTypes(t, c)
 				src := mustSource(t, c)
-				event, err := subjecttypes.Lookup(c, "event", subjecttypes.OriginProvenencia)
+				event, err := subjecttypes.Lookup(c, "event", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -235,7 +236,7 @@ func TestSubjects(t *testing.T) {
 				mustUser(t, c)
 				mustSubjectTypes(t, c)
 				src := mustSource(t, c)
-				person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -277,7 +278,7 @@ func TestSubjects(t *testing.T) {
 				mustUser(t, c)
 				mustSubjectTypes(t, c)
 				src := mustSource(t, c)
-				person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -328,7 +329,7 @@ func TestSubjects(t *testing.T) {
 				mustSubjectTypes(t, c)
 				srcA := mustSource(t, c)
 				typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-					Key: "census", Origin: sourcetypes.OriginProvenencia, Label: "Census",
+					Key: "census", Origin: vocabkey.OriginProvenencia, Label: "Census",
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -341,7 +342,7 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}

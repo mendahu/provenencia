@@ -38,6 +38,7 @@ import (
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -73,7 +74,7 @@ func newFixture(t *testing.T) *fixture {
 	must(t, subjectvocab.Install(c))
 	must(t, sourcecredibilitygrades.Install(c))
 	must(t, claimconfidencegrades.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	f := &fixture{t: t, c: c, typeID: typeID, arts: map[string]artifacts.Artifact{},
 		types: map[string]subjecttypes.Type{}, props: map[string]properties.Property{}, terms: map[string]propertyterms.Term{}}
@@ -81,16 +82,16 @@ func newFixture(t *testing.T) *fixture {
 	f.artifact = f.arts[string(f.source.ID)]
 	f.other = f.newSource("Census")
 	for _, k := range []string{"person", "event", "place"} {
-		st, err := subjecttypes.Lookup(c, k, subjecttypes.OriginProvenencia)
+		st, err := subjecttypes.Lookup(c, k, vocabkey.OriginProvenencia)
 		must(t, err)
 		f.types[k] = st
 	}
 	for _, k := range []string{"name", "sex_at_birth", "event_type", "date", "toponym", "likeness"} {
-		p, err := properties.Lookup(c, k, properties.OriginProvenencia)
+		p, err := properties.Lookup(c, k, vocabkey.OriginProvenencia)
 		must(t, err)
 		f.props[k] = p
 	}
-	ageID, err := properties.Upsert(c, properties.Property{Key: "age", Origin: properties.OriginUser, Label: "Age", ValueType: propertymeta.ValueTypeInteger})
+	ageID, err := properties.Upsert(c, properties.Property{Key: "age", Origin: vocabkey.OriginUser, Label: "Age", ValueType: propertymeta.ValueTypeInteger})
 	must(t, err)
 	f.props["age"] = properties.Property{ID: ageID, Key: "age", ValueType: propertymeta.ValueTypeInteger}
 	db, err := c.DB()
@@ -98,12 +99,12 @@ func newFixture(t *testing.T) *fixture {
 	_, err = db.Exec(`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 99)`, f.types["person"].ID, ageID)
 	must(t, err)
 	for _, k := range []string{"female", "male"} {
-		term, err := propertyterms.Lookup(c, f.props["sex_at_birth"].ID, k, propertyterms.OriginProvenencia)
+		term, err := propertyterms.Lookup(c, f.props["sex_at_birth"].ID, k, vocabkey.OriginProvenencia)
 		must(t, err)
 		f.terms[k] = term
 	}
 	for _, k := range []string{"birth", "death"} {
-		term, err := propertyterms.Lookup(c, f.props["event_type"].ID, k, propertyterms.OriginProvenencia)
+		term, err := propertyterms.Lookup(c, f.props["event_type"].ID, k, vocabkey.OriginProvenencia)
 		must(t, err)
 		f.terms[k] = term
 	}
@@ -169,7 +170,7 @@ func (f *fixture) cite(in ...observations.Input) []observations.Observation {
 
 // credibility assesses a Source with a seeded grade key.
 func (f *fixture) credibility(src sources.Source, key string) error {
-	g, err := sourcecredibilitygrades.Lookup(f.c, key, sourcecredibilitygrades.OriginProvenencia)
+	g, err := sourcecredibilitygrades.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	p6in2 := sourcecredibility.UpsertInput{SourceID: src.ID, CredibilityGradeID: g.ID}
 	p6act1 := "create_source_credibility_assessment"
@@ -193,7 +194,7 @@ func (f *fixture) certainty(citationID []byte, uncertain bool) error {
 
 // grade is a seeded claim confidence grade's id.
 func (f *fixture) grade(key string) []byte {
-	g, err := claimconfidencegrades.Lookup(f.c, key, claimconfidencegrades.OriginProvenencia)
+	g, err := claimconfidencegrades.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return g.ID
 }
@@ -212,7 +213,7 @@ func place(f *fixture, s subjects.Subject, x, y int64) error {
 
 func mustProp(f *fixture, key string) properties.Property {
 	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, properties.OriginProvenencia)
+	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return p
 }
@@ -507,7 +508,7 @@ func TestReconciledValues(t *testing.T) {
 func TestReconciledValuesKeepEveryValue(t *testing.T) {
 	f := newFixture(t)
 	aliasID, err := properties.Upsert(f.c, properties.Property{
-		Key: "alias", Origin: properties.OriginUser, Label: "Alias", ValueType: propertymeta.ValueTypeText,
+		Key: "alias", Origin: vocabkey.OriginUser, Label: "Alias", ValueType: propertymeta.ValueTypeText,
 	})
 	must(t, err)
 	alias := properties.Property{ID: aliasID, Key: "alias", ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalitySingle}
@@ -560,7 +561,7 @@ func TestMultipleCardinalityKeepsDistinctValues(t *testing.T) {
 func TestCardinalityChangeRecomputes(t *testing.T) {
 	f := newFixture(t)
 	aliasID, err := properties.Upsert(f.c, properties.Property{
-		Key: "alias", Origin: properties.OriginUser, Label: "Alias", ValueType: propertymeta.ValueTypeText,
+		Key: "alias", Origin: vocabkey.OriginUser, Label: "Alias", ValueType: propertymeta.ValueTypeText,
 	})
 	must(t, err)
 	alias := properties.Property{ID: aliasID, ValueType: propertymeta.ValueTypeText}
@@ -1153,7 +1154,7 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			personProp := mustProp(f, "person")
 			eventProp := mustProp(f, "event")
 			roleProp := mustProp(f, "role")
-			role, err := propertyterms.Lookup(f.c, roleProp.ID, "subject", propertyterms.OriginProvenencia)
+			role, err := propertyterms.Lookup(f.c, roleProp.ID, "subject", vocabkey.OriginProvenencia)
 			must(f.t, err)
 			bridge, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 				return connect.CreateCitedBridge(tx, userID, connect.CreateInput{

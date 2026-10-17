@@ -12,12 +12,12 @@ import (
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/nameformats"
-	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // vocab is the label map a header resolves at read time. Term labels and
@@ -49,7 +49,7 @@ func loadVocab(g *graphcache.Graph) (vocab, error) {
 		termLabel: map[string]string{},
 		typeID:    map[string][]byte{},
 	}
-	if err := scanVocab(g, `SELECT id, key FROM properties WHERE origin = ?`, []any{properties.OriginProvenencia}, func(id []byte, key, _ string) {
+	if err := scanVocab(g, `SELECT id, key FROM properties WHERE origin = ?`, []any{vocabkey.OriginProvenencia}, func(id []byte, key, _ string) {
 		v.propID[key] = append([]byte(nil), id...)
 	}); err != nil {
 		return vocab{}, err
@@ -59,7 +59,7 @@ func loadVocab(g *graphcache.Graph) (vocab, error) {
 	}); err != nil {
 		return vocab{}, err
 	}
-	if err := scanVocab(g, `SELECT id, key FROM subject_types WHERE origin = ?`, []any{properties.OriginProvenencia}, func(id []byte, key, _ string) {
+	if err := scanVocab(g, `SELECT id, key FROM subject_types WHERE origin = ?`, []any{vocabkey.OriginProvenencia}, func(id []byte, key, _ string) {
 		v.typeID[key] = append([]byte(nil), id...)
 	}); err != nil {
 		return vocab{}, err

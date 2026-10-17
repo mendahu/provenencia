@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -34,7 +35,7 @@ func TestSubjectVocab(t *testing.T) {
 				if err != nil || len(props) != len(seedProperties) {
 					t.Fatalf("props %v len=%d want %d", err, len(props), len(seedProperties))
 				}
-				et, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+				et, err := properties.Lookup(c, "event_type", vocabkey.OriginProvenencia)
 				if err != nil || et.ValueType != propertymeta.ValueTypeTerm {
 					t.Fatalf("event_type %+v %v", et, err)
 				}
@@ -42,11 +43,11 @@ func TestSubjectVocab(t *testing.T) {
 				if err != nil || len(terms) == 0 {
 					t.Fatalf("event_type terms %v len=%d", err, len(terms))
 				}
-				birth, err := propertyterms.Lookup(c, et.ID, "birth", propertyterms.OriginProvenencia)
+				birth, err := propertyterms.Lookup(c, et.ID, "birth", vocabkey.OriginProvenencia)
 				if err != nil || birth.Label != "Birth" {
 					t.Fatalf("birth %+v %v", birth, err)
 				}
-				person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -63,7 +64,7 @@ func TestSubjectVocab(t *testing.T) {
 						t.Fatalf("person missing binding %q", key)
 					}
 				}
-				evt, err := subjecttypes.Lookup(c, "event", subjecttypes.OriginProvenencia)
+				evt, err := subjecttypes.Lookup(c, "event", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -71,8 +72,8 @@ func TestSubjectVocab(t *testing.T) {
 				if err != nil || len(eb) != 5 {
 					t.Fatalf("event bindings %v len=%d want 5", err, len(eb))
 				}
-				en, err := properties.Lookup(c, "event_name", properties.OriginProvenencia)
-				if err != nil || en.ValueType != propertymeta.ValueTypeText || en.Origin != properties.OriginProvenencia {
+				en, err := properties.Lookup(c, "event_name", vocabkey.OriginProvenencia)
+				if err != nil || en.ValueType != propertymeta.ValueTypeText || en.Origin != vocabkey.OriginProvenencia {
 					t.Fatalf("event_name %+v %v", en, err)
 				}
 				var nameBinding *Binding
@@ -85,7 +86,7 @@ func TestSubjectVocab(t *testing.T) {
 				if nameBinding == nil || nameBinding.Locked || nameBinding.SortOrder != 1 {
 					t.Fatalf("event_name binding %+v", nameBinding)
 				}
-				participation, err := subjecttypes.Lookup(c, "participation", subjecttypes.OriginProvenencia)
+				participation, err := subjecttypes.Lookup(c, "participation", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -102,19 +103,19 @@ func TestSubjectVocab(t *testing.T) {
 				if locked != 3 {
 					t.Fatalf("participation locked=%d want 3", locked)
 				}
-				prt, err := properties.Lookup(c, "place_relationship_type", properties.OriginProvenencia)
+				prt, err := properties.Lookup(c, "place_relationship_type", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
-				partOf, err := propertyterms.Lookup(c, prt.ID, "part_of", propertyterms.OriginProvenencia)
+				partOf, err := propertyterms.Lookup(c, prt.ID, "part_of", vocabkey.OriginProvenencia)
 				if err != nil || !partOf.Directed {
 					t.Fatalf("part_of %+v %v", partOf, err)
 				}
-				succ, err := propertyterms.Lookup(c, prt.ID, "succeeded_by", propertyterms.OriginProvenencia)
+				succ, err := propertyterms.Lookup(c, prt.ID, "succeeded_by", vocabkey.OriginProvenencia)
 				if err != nil || !succ.Directed {
 					t.Fatalf("succeeded_by %+v %v", succ, err)
 				}
-				placeType, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+				placeType, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -139,12 +140,12 @@ func TestSubjectVocab(t *testing.T) {
 				if err := Install(c); err != nil {
 					t.Fatal(err)
 				}
-				prop, err := properties.Lookup(c, "remark", properties.OriginProvenencia)
+				prop, err := properties.Lookup(c, "remark", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
 				// Unbind source.remark first so the Property can be deleted.
-				srcType, err := subjecttypes.Lookup(c, "source", subjecttypes.OriginProvenencia)
+				srcType, err := subjecttypes.Lookup(c, "source", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -165,7 +166,7 @@ func TestSubjectVocab(t *testing.T) {
 					t.Fatal(err)
 				}
 				defer reopened.Close()
-				_, err = properties.Lookup(reopened, "remark", properties.OriginProvenencia)
+				_, err = properties.Lookup(reopened, "remark", vocabkey.OriginProvenencia)
 				if err == nil {
 					t.Fatal("healed remark on open")
 				}
@@ -177,11 +178,11 @@ func TestSubjectVocab(t *testing.T) {
 				if err := Install(c); err != nil {
 					t.Fatal(err)
 				}
-				ptn, err := subjecttypes.Lookup(c, "participation", subjecttypes.OriginProvenencia)
+				ptn, err := subjecttypes.Lookup(c, "participation", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
-				personProp, err := properties.Lookup(c, "person", properties.OriginProvenencia)
+				personProp, err := properties.Lookup(c, "person", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -334,12 +335,12 @@ func TestInstallStoresInverses(t *testing.T) {
 	if err := Install(c); err != nil {
 		t.Fatal(err)
 	}
-	rt, err := properties.Lookup(c, "relationship_type", properties.OriginProvenencia)
+	rt, err := properties.Lookup(c, "relationship_type", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for key, want := range map[string]string{"parent": "child", "ward": "guardian", "spouse": ""} {
-		term, err := propertyterms.Lookup(c, rt.ID, key, propertyterms.OriginProvenencia)
+		term, err := propertyterms.Lookup(c, rt.ID, key, vocabkey.OriginProvenencia)
 		if err != nil || term.InverseKey != want {
 			t.Fatalf("%s inverse %q (%v), want %q", key, term.InverseKey, err, want)
 		}
@@ -355,12 +356,12 @@ func TestInstallFlagsNeutralTerms(t *testing.T) {
 	if err := Install(c); err != nil {
 		t.Fatal(err)
 	}
-	sex, err := properties.Lookup(c, "sex_at_birth", properties.OriginProvenencia)
+	sex, err := properties.Lookup(c, "sex_at_birth", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for key, want := range map[string]bool{"unknown": true, "indeterminate": true, "male": false, "female": false} {
-		term, err := propertyterms.Lookup(c, sex.ID, key, propertyterms.OriginProvenencia)
+		term, err := propertyterms.Lookup(c, sex.ID, key, vocabkey.OriginProvenencia)
 		if err != nil || term.Neutral != want {
 			t.Fatalf("%s neutral %v (%v), want %v", key, term.Neutral, err, want)
 		}
@@ -377,18 +378,18 @@ func TestInstallSeedsEngagementTravelInterestsAndGender(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	eventType, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+	eventType, err := properties.Lookup(c, "event_type", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for key, label := range map[string]string{"engagement": "Engagement", "travel": "Travel"} {
-		term, err := propertyterms.Lookup(c, eventType.ID, key, propertyterms.OriginProvenencia)
+		term, err := propertyterms.Lookup(c, eventType.ID, key, vocabkey.OriginProvenencia)
 		if err != nil || term.Label != label {
 			t.Fatalf("%s %+v %v", key, term, err)
 		}
 	}
 
-	interests, err := properties.Lookup(c, "interests", properties.OriginProvenencia)
+	interests, err := properties.Lookup(c, "interests", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -399,7 +400,7 @@ func TestInstallSeedsEngagementTravelInterestsAndGender(t *testing.T) {
 		t.Fatal("interests binding is locked")
 	}
 
-	gender, err := properties.Lookup(c, "gender", properties.OriginProvenencia)
+	gender, err := properties.Lookup(c, "gender", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -410,13 +411,13 @@ func TestInstallSeedsEngagementTravelInterestsAndGender(t *testing.T) {
 		t.Fatal("gender binding is locked")
 	}
 	for _, key := range []string{"man", "woman", "non_binary"} {
-		term, err := propertyterms.Lookup(c, gender.ID, key, propertyterms.OriginProvenencia)
+		term, err := propertyterms.Lookup(c, gender.ID, key, vocabkey.OriginProvenencia)
 		if err != nil || term.Neutral {
 			t.Fatalf("%s %+v %v", key, term, err)
 		}
 	}
 
-	person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -447,7 +448,7 @@ func TestInstallSeedsEngagementTravelInterestsAndGender(t *testing.T) {
 		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
 			return propertyterms.Create(tx, userID, gender.ID, "Agender", "")
 		})
-	if err != nil || created.Key != "agender" || created.Origin != propertyterms.OriginUser {
+	if err != nil || created.Key != "agender" || created.Origin != vocabkey.OriginUser {
 		t.Fatalf("create gender term %+v %v", created, err)
 	}
 }
@@ -461,7 +462,7 @@ func TestInstallSeedsLikeness(t *testing.T) {
 	if err := Install(c); err != nil {
 		t.Fatal(err)
 	}
-	likeness, err := properties.Lookup(c, "likeness", properties.OriginProvenencia)
+	likeness, err := properties.Lookup(c, "likeness", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -471,7 +472,7 @@ func TestInstallSeedsLikeness(t *testing.T) {
 	if !LockedBinding("person", "likeness") {
 		t.Fatal("likeness binding is not locked")
 	}
-	person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -500,20 +501,20 @@ func TestInstallSeedsFuneralAndPallbearer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	eventType, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+	eventType, err := properties.Lookup(c, "event_type", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	funeral, err := propertyterms.Lookup(c, eventType.ID, "funeral", propertyterms.OriginProvenencia)
+	funeral, err := propertyterms.Lookup(c, eventType.ID, "funeral", vocabkey.OriginProvenencia)
 	if err != nil || funeral.Label != "Funeral" {
 		t.Fatalf("funeral %+v %v", funeral, err)
 	}
 
-	role, err := properties.Lookup(c, "role", properties.OriginProvenencia)
+	role, err := properties.Lookup(c, "role", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	pallbearer, err := propertyterms.Lookup(c, role.ID, "pallbearer", propertyterms.OriginProvenencia)
+	pallbearer, err := propertyterms.Lookup(c, role.ID, "pallbearer", vocabkey.OriginProvenencia)
 	if err != nil || pallbearer.Label != "Pallbearer" {
 		t.Fatalf("pallbearer %+v %v", pallbearer, err)
 	}

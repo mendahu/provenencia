@@ -20,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // Querier is *sql.Tx or *sql.DB.
@@ -118,7 +119,7 @@ func ForSource(q Querier, sourceID []byte) ([]Title, error) {
 func FromStored(sg graphcache.SourceGraph, propKey map[string]string, terms map[string]struct{ Key, Label string }) []Title {
 	var events []titledEvent
 	for _, s := range sg.Subjects {
-		if s.TypeKey != "event" || s.TypeOrigin != "provenencia" {
+		if s.TypeKey != "event" || s.TypeOrigin != vocabkey.OriginProvenencia {
 			continue
 		}
 		events = append(events, titledEvent{id: s.ID, ref: s.Ref, label: s.Label})

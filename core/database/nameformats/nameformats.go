@@ -16,8 +16,6 @@ import (
 )
 
 const (
-	OriginProvenencia = "provenencia"
-
 	StyleNatural = "natural"
 	StyleSorted  = "sorted"
 

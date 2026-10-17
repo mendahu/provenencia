@@ -20,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -67,7 +68,7 @@ func TestDelete(t *testing.T) {
 					t.Fatal(err)
 				}
 				typeID, err := subjecttypes.Upsert(c, subjecttypes.Type{
-					Key: "person", Origin: subjecttypes.OriginProvenencia, Label: "Person",
+					Key: "person", Origin: vocabkey.OriginProvenencia, Label: "Person",
 					RefPrefix: "PER", CandidateRefPrefix: "CPR",
 				})
 				if err != nil {
@@ -148,7 +149,7 @@ func TestDelete(t *testing.T) {
 			name: "unused terms are in use",
 			run: func(t *testing.T, c *database.Catalog) {
 				id, err := properties.Upsert(c, properties.Property{
-					Key: "residence_status", Origin: properties.OriginUser,
+					Key: "residence_status", Origin: vocabkey.OriginUser,
 					Label: "Residence status", ValueType: propertymeta.ValueTypeTerm,
 				})
 				if err != nil {
@@ -177,7 +178,7 @@ func TestDelete(t *testing.T) {
 			name: "seeded is origin locked",
 			run: func(t *testing.T, c *database.Catalog) {
 				id, err := properties.Upsert(c, properties.Property{
-					Key: "occupation", Origin: properties.OriginProvenencia,
+					Key: "occupation", Origin: vocabkey.OriginProvenencia,
 					Label: "Occupation", ValueType: propertymeta.ValueTypeText,
 				})
 				if err != nil {
@@ -285,7 +286,7 @@ func latestAction(t *testing.T, c *database.Catalog) string {
 func insertObservationOn(t *testing.T, c *database.Catalog, userID, propertyID []byte) []byte {
 	t.Helper()
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -300,7 +301,7 @@ func insertObservationOn(t *testing.T, c *database.Catalog, userID, propertyID [
 	if err != nil {
 		t.Fatal(err)
 	}
-	placeType, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+	placeType, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -359,7 +360,7 @@ func TestUsedByCountsObservationsNotBindings(t *testing.T) {
 		t.Fatal(err)
 	}
 	typeID, err := subjecttypes.Upsert(c, subjecttypes.Type{
-		Key: "person", Origin: subjecttypes.OriginProvenencia, Label: "Person",
+		Key: "person", Origin: vocabkey.OriginProvenencia, Label: "Person",
 		RefPrefix: "PER", CandidateRefPrefix: "CPR",
 	})
 	if err != nil {

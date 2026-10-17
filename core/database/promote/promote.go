@@ -11,6 +11,7 @@ import (
 	"errors"
 
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/connectrules"
@@ -34,7 +35,7 @@ var primaryKinds = map[string]bool{"person": true, "event": true, "place": true}
 
 // PrimaryKind reports whether Promote starts from Subjects of this type.
 func PrimaryKind(key, origin string) bool {
-	return origin == subjecttypes.OriginProvenencia && primaryKinds[key]
+	return origin == vocabkey.OriginProvenencia && primaryKinds[key]
 }
 
 // Input is one Promote step. A nil EntityID mints a new handle; otherwise

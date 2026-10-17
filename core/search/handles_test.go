@@ -23,6 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -63,7 +64,7 @@ func newHandleFixture(t *testing.T) *handleFixture {
 
 func (f *handleFixture) prop(key string) properties.Property {
 	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, properties.OriginProvenencia)
+	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -73,7 +74,7 @@ func (f *handleFixture) prop(key string) properties.Property {
 // subject creates a Subject of kind with the given Observations.
 func (f *handleFixture) subject(kind string, in func(s subjects.Subject) []observations.Input) subjects.Subject {
 	f.t.Helper()
-	st, err := subjecttypes.Lookup(f.c, kind, subjecttypes.OriginProvenencia)
+	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -226,7 +227,7 @@ func TestHandleSearchFollowsEdits(t *testing.T) {
 func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	f := newHandleFixture(t)
 	person := f.person("James Robins", "Jim Robins")
-	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", propertyterms.OriginProvenencia)
+	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,7 +248,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	role, err := propertyterms.Lookup(f.c, f.prop("role").ID, "subject", propertyterms.OriginProvenencia)
+	role, err := propertyterms.Lookup(f.c, f.prop("role").ID, "subject", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -365,7 +366,7 @@ func TestAlternateToponymIsMatchContext(t *testing.T) {
 
 func TestHandleSearchEventsAndPlaces(t *testing.T) {
 	f := newHandleFixture(t)
-	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", propertyterms.OriginProvenencia)
+	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}

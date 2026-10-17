@@ -22,6 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeSubjectVocabInvalid, apperr.KindUser)
@@ -214,7 +215,7 @@ func DeleteBinding(c *database.Catalog, typeID, propertyID []byte) error {
 		}
 		return err
 	}
-	if LockedBinding(st.Key, prop.Key) && prop.Origin == properties.OriginProvenencia {
+	if LockedBinding(st.Key, prop.Key) && prop.Origin == vocabkey.OriginProvenencia {
 		return ErrLocked
 	}
 	_, err = db.Exec(sqlDeleteBinding, typeID, propertyID)
@@ -231,7 +232,7 @@ func Install(c *database.Catalog) error {
 	for _, t := range seedTypes {
 		id, err := subjecttypes.Upsert(c, subjecttypes.Type{
 			Key:                t.Key,
-			Origin:             subjecttypes.OriginProvenencia,
+			Origin:             vocabkey.OriginProvenencia,
 			Label:              t.Label,
 			Description:        t.Description,
 			RefPrefix:          t.RefPrefix,
@@ -246,7 +247,7 @@ func Install(c *database.Catalog) error {
 	for _, p := range seedProperties {
 		id, err := properties.Upsert(c, properties.Property{
 			Key:         p.Key,
-			Origin:      properties.OriginProvenencia,
+			Origin:      vocabkey.OriginProvenencia,
 			Label:       p.Label,
 			Description: p.Description,
 			ValueType:   p.ValueType,
@@ -265,7 +266,7 @@ func Install(c *database.Catalog) error {
 		if _, err := propertyterms.Upsert(c, propertyterms.Term{
 			PropertyID:  propID,
 			Key:         term.Key,
-			Origin:      propertyterms.OriginProvenencia,
+			Origin:      vocabkey.OriginProvenencia,
 			Label:       term.Label,
 			Description: term.Description,
 			Directed:    term.Directed,
@@ -353,7 +354,7 @@ func allBindings() []seedBinding {
 	for _, b := range connectrules.BridgeBindings() {
 		// Create-time Install only materializes product-origin bridges.
 		// Plugin modules will Install their own rows when enabled.
-		if b.Origin != connectrules.OriginProvenencia {
+		if b.Origin != vocabkey.OriginProvenencia {
 			continue
 		}
 		out = append(out, seedBinding{

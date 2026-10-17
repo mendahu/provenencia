@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 
 	// promotableSubject creates a person Subject and returns a promote request for it.
@@ -339,7 +340,7 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		if len(forms) == 0 {
 			return nil
 		}
-		name, err := properties.Lookup(c, "name", properties.OriginProvenencia)
+		name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}

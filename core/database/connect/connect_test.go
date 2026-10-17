@@ -20,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -63,7 +64,7 @@ func TestCreateCitedBridge(t *testing.T) {
 			t.Fatal(err)
 		}
 		typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-			Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+			Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -84,7 +85,7 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		lookupType := func(key string) []byte {
 			t.Helper()
-			typ, err := subjecttypes.Lookup(c, key, subjecttypes.OriginProvenencia)
+			typ, err := subjecttypes.Lookup(c, key, vocabkey.OriginProvenencia)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -92,7 +93,7 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		lookupProp := func(key string) properties.Property {
 			t.Helper()
-			p, err := properties.Lookup(c, key, properties.OriginProvenencia)
+			p, err := properties.Lookup(c, key, vocabkey.OriginProvenencia)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -116,11 +117,11 @@ func TestCreateCitedBridge(t *testing.T) {
 		related := lookupProp("related_to")
 		roleProp := lookupProp("role")
 		relType := lookupProp("relationship_type")
-		roleTerm, err := propertyterms.Lookup(c, roleProp.ID, "witness", propertyterms.OriginProvenencia)
+		roleTerm, err := propertyterms.Lookup(c, roleProp.ID, "witness", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		relTerm, err := propertyterms.Lookup(c, relType.ID, "spouse", propertyterms.OriginProvenencia)
+		relTerm, err := propertyterms.Lookup(c, relType.ID, "spouse", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -138,7 +139,7 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	countBridges := func(t *testing.T, c *database.Catalog, typeKey string) int {
 		t.Helper()
-		typ, err := subjecttypes.Lookup(c, typeKey, subjecttypes.OriginProvenencia)
+		typ, err := subjecttypes.Lookup(c, typeKey, vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}

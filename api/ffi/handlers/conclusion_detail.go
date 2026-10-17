@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -108,7 +109,7 @@ func attachHeader(c *database.Catalog, d conclusiondetails.Detail, out *engine.C
 	if err != nil {
 		return err
 	}
-	if st.Origin != subjecttypes.OriginProvenencia {
+	if st.Origin != vocabkey.OriginProvenencia {
 		return nil
 	}
 	ids := [][]byte{d.Entity.ID}

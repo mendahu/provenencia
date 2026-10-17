@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeSourceVocabInvalid, apperr.KindUser)
@@ -160,7 +161,7 @@ func Install(c *database.Catalog) error {
 	for _, f := range seedFields {
 		id, err := metadatafields.Upsert(c, metadatafields.Field{
 			Key:         f.Key,
-			Origin:      metadatafields.OriginProvenencia,
+			Origin:      vocabkey.OriginProvenencia,
 			Label:       f.Label,
 			DataType:    f.DataType,
 			Description: f.Description,
@@ -174,7 +175,7 @@ func Install(c *database.Catalog) error {
 	for _, t := range seedTypes {
 		id, err := sourcetypes.Upsert(c, sourcetypes.Type{
 			Key:         t.Key,
-			Origin:      sourcetypes.OriginProvenencia,
+			Origin:      vocabkey.OriginProvenencia,
 			Label:       t.Label,
 			Description: t.Description,
 			IconKey:     t.IconKey,

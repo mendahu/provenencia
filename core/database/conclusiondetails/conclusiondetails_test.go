@@ -28,6 +28,7 @@ import (
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -63,14 +64,14 @@ func newFixture(t *testing.T) *fixture {
 	must(t, subjectvocab.Install(c))
 	must(t, sourcecredibilitygrades.Install(c))
 	must(t, claimconfidencegrades.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	f := &fixture{t: t, c: c, typeID: typeID, arts: map[string]artifacts.Artifact{}}
-	f.person, err = subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	f.person, err = subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	must(t, err)
-	f.name, err = properties.Lookup(c, "name", properties.OriginProvenencia)
+	f.name, err = properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 	must(t, err)
-	f.sex, err = properties.Lookup(c, "sex_at_birth", properties.OriginProvenencia)
+	f.sex, err = properties.Lookup(c, "sex_at_birth", vocabkey.OriginProvenencia)
 	must(t, err)
 	return f
 }
@@ -230,7 +231,7 @@ func TestForEntityFieldsFollowTheRecords(t *testing.T) {
 func TestForEntityEvidence(t *testing.T) {
 	f := newFixture(t)
 	register, census, gazette := f.source("Register"), f.source("Census"), f.source("Gazette")
-	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", sourcecredibilitygrades.OriginProvenencia)
+	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", vocabkey.OriginProvenencia)
 	must(t, err)
 	p6in2 := sourcecredibility.UpsertInput{SourceID: register.ID, CredibilityGradeID: g.ID}
 	p6act1 := "create_source_credibility_assessment"
@@ -241,7 +242,7 @@ func TestForEntityEvidence(t *testing.T) {
 		return sourcecredibility.Upsert(tx, userID, p6in2)
 	})
 	must(t, err)
-	hg, err := sourcecredibilitygrades.Lookup(f.c, "high_trust", sourcecredibilitygrades.OriginProvenencia)
+	hg, err := sourcecredibilitygrades.Lookup(f.c, "high_trust", vocabkey.OriginProvenencia)
 	must(t, err)
 	p6in5 := sourcecredibility.UpsertInput{SourceID: gazette.ID, CredibilityGradeID: hg.ID}
 	p6act4 := "create_source_credibility_assessment"

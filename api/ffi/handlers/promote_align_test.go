@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -47,15 +48,15 @@ func personOnNewSource(t *testing.T, dir, userID, typeID, sexKey, polarity strin
 		if err != nil {
 			return err
 		}
-		name, err := properties.Lookup(c, "name", properties.OriginProvenencia)
+		name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
-		sex, err := properties.Lookup(c, "sex_at_birth", properties.OriginProvenencia)
+		sex, err := properties.Lookup(c, "sex_at_birth", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
-		term, err := propertyterms.Lookup(c, sex.ID, sexKey, propertyterms.OriginProvenencia)
+		term, err := propertyterms.Lookup(c, sex.ID, sexKey, vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}

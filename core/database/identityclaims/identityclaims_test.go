@@ -19,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -175,7 +176,7 @@ func TestIdentityClaims(t *testing.T) {
 				if err := claimconfidencegrades.Install(f.c); err != nil {
 					t.Fatal(err)
 				}
-				high, err := claimconfidencegrades.Lookup(f.c, "high_confidence", claimconfidencegrades.OriginProvenencia)
+				high, err := claimconfidencegrades.Lookup(f.c, "high_confidence", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -307,7 +308,7 @@ func newFixture(t *testing.T) fixture {
 		t.Fatal(err)
 	}
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -332,7 +333,7 @@ func newFixture(t *testing.T) fixture {
 
 func lookupType(t *testing.T, c *database.Catalog, key string) subjecttypes.Type {
 	t.Helper()
-	st, err := subjecttypes.Lookup(c, key, subjecttypes.OriginProvenencia)
+	st, err := subjecttypes.Lookup(c, key, vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -26,7 +27,7 @@ func TestOpenCatalogDoesNotHealSourceVocab(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cert, err := sourcetypes.Lookup(c, "birth_certificate", sourcetypes.OriginProvenencia)
+	cert, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +41,7 @@ func TestOpenCatalogDoesNotHealSourceVocab(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer c.Close()
-	_, err = sourcetypes.Lookup(c, "birth_certificate", sourcetypes.OriginProvenencia)
+	_, err = sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
 	if !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("open healed seed: %v", err)
 	}
@@ -58,7 +59,7 @@ func TestOpenCatalogDoesNotHealCredibilityGrades(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	low, err := sourcecredibilitygrades.Lookup(c, "low_trust", sourcecredibilitygrades.OriginProvenencia)
+	low, err := sourcecredibilitygrades.Lookup(c, "low_trust", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +77,7 @@ func TestOpenCatalogDoesNotHealCredibilityGrades(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer c.Close()
-	_, err = sourcecredibilitygrades.Lookup(c, "low_trust", sourcecredibilitygrades.OriginProvenencia)
+	_, err = sourcecredibilitygrades.Lookup(c, "low_trust", vocabkey.OriginProvenencia)
 	if !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("open healed credibility grade: %v", err)
 	}
@@ -129,7 +130,7 @@ func TestCreateCatalogSeedsClaimConfidenceGrades(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer c.Close()
-	_, err = claimconfidencegrades.Lookup(c, list[0].Key, claimconfidencegrades.OriginProvenencia)
+	_, err = claimconfidencegrades.Lookup(c, list[0].Key, vocabkey.OriginProvenencia)
 	if !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("open healed claim confidence grade: %v", err)
 	}
@@ -151,7 +152,7 @@ func TestCreateCatalogSeedsSubjectTypes(t *testing.T) {
 	if err != nil || len(list) != 8 {
 		t.Fatalf("%v len=%d", err, len(list))
 	}
-	person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +173,7 @@ func TestOpenCatalogDoesNotHealSubjectTypes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +191,7 @@ func TestOpenCatalogDoesNotHealSubjectTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer c.Close()
-	_, err = subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	_, err = subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("open healed subject type: %v", err)
 	}

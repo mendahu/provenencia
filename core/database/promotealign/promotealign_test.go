@@ -30,6 +30,7 @@ import (
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -61,7 +62,7 @@ func newFixture(t testing.TB) *fixture {
 	must(t, err)
 	must(t, users.Upsert(c, userID, "Tester", r))
 	must(t, subjectvocab.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
@@ -74,7 +75,7 @@ func newFixture(t testing.TB) *fixture {
 
 func (f *fixture) newSource(title string) (sources.Source, artifacts.Artifact) {
 	f.t.Helper()
-	typeID, err := sourcetypes.Upsert(f.c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(f.c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(f.t, err)
 	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: title})
@@ -87,21 +88,21 @@ func (f *fixture) newSource(title string) (sources.Source, artifacts.Artifact) {
 
 func (f *fixture) prop(key string) properties.Property {
 	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, properties.OriginProvenencia)
+	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return p
 }
 
 func (f *fixture) term(propKey, termKey string) propertyterms.Term {
 	f.t.Helper()
-	t, err := propertyterms.Lookup(f.c, f.prop(propKey).ID, termKey, propertyterms.OriginProvenencia)
+	t, err := propertyterms.Lookup(f.c, f.prop(propKey).ID, termKey, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return t
 }
 
 func (f *fixture) bare(src sources.Source, kind string) subjects.Subject {
 	f.t.Helper()
-	st, err := subjecttypes.Lookup(f.c, kind, subjecttypes.OriginProvenencia)
+	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: st.ID}, nil)

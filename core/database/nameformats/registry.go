@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // seedPart is one display-order row. Idx is the position within Style.
@@ -108,12 +109,12 @@ func Install(c *database.Catalog) error {
 		if _, err := tx.Exec(`INSERT INTO name_format_profiles (id, key, origin, label, description)
 			VALUES (?, ?, ?, ?, ?)
 			ON CONFLICT(key, origin) DO NOTHING`,
-			id[:], profile.Key, OriginProvenencia, profile.Label, profile.Description); err != nil {
+			id[:], profile.Key, vocabkey.OriginProvenencia, profile.Label, profile.Description); err != nil {
 			return err
 		}
 		var stored []byte
 		if err := tx.QueryRow(`SELECT id FROM name_format_profiles WHERE key = ? AND origin = ?`,
-			profile.Key, OriginProvenencia).Scan(&stored); err != nil {
+			profile.Key, vocabkey.OriginProvenencia).Scan(&stored); err != nil {
 			return err
 		}
 		idx := map[string]int{}

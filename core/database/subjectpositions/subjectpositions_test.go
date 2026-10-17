@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -33,7 +34,7 @@ func TestSubjectPositions(t *testing.T) {
 	mustSource := func(t *testing.T, c *database.Catalog, title string) sources.Source {
 		t.Helper()
 		typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-			Key: "book_" + title, Origin: sourcetypes.OriginProvenencia, Label: title,
+			Key: "book_" + title, Origin: vocabkey.OriginProvenencia, Label: title,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -53,7 +54,7 @@ func TestSubjectPositions(t *testing.T) {
 		if err := subjectvocab.Install(c); err != nil {
 			t.Fatal(err)
 		}
-		person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+		person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}

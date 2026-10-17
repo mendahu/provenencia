@@ -21,6 +21,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -56,7 +57,7 @@ func TestCitations(t *testing.T) {
 			t.Fatal(err)
 		}
 		typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-			Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+			Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -77,11 +78,11 @@ func TestCitations(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		personType, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+		personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		placeType, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+		placeType, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -101,15 +102,15 @@ func TestCitations(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		toponymProp, err := properties.Lookup(c, "toponym", properties.OriginProvenencia)
+		toponymProp, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		sexProp, err := properties.Lookup(c, "sex_at_birth", properties.OriginProvenencia)
+		sexProp, err := properties.Lookup(c, "sex_at_birth", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		femaleTerm, err := propertyterms.Lookup(c, sexProp.ID, "female", propertyterms.OriginProvenencia)
+		femaleTerm, err := propertyterms.Lookup(c, sexProp.ID, "female", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}

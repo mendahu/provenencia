@@ -19,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -27,7 +28,7 @@ import (
 func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 	c, userID := testCatalog(t)
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -35,18 +36,18 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 	if err := sourcecredibilitygrades.Install(c); err != nil {
 		t.Fatal(err)
 	}
-	grade, err := sourcecredibilitygrades.Lookup(c, "standard", sourcecredibilitygrades.OriginProvenencia)
+	grade, err := sourcecredibilitygrades.Lookup(c, "standard", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fieldID, err := metadatafields.Upsert(c, metadatafields.Field{
-		Key: "shelfmark", Origin: metadatafields.OriginUser, Label: "Shelfmark", DataType: "text",
+		Key: "shelfmark", Origin: vocabkey.OriginUser, Label: "Shelfmark", DataType: "text",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	other, err := metadatafields.Upsert(c, metadatafields.Field{
-		Key: "box", Origin: metadatafields.OriginUser, Label: "Box", DataType: "text",
+		Key: "box", Origin: vocabkey.OriginUser, Label: "Box", DataType: "text",
 	})
 	if err != nil {
 		t.Fatal(err)
