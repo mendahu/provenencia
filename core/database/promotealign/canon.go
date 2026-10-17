@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -18,7 +19,7 @@ const seedCandidateLimit = 5
 // matches for each unfixed kind, then every link those handles have. Link
 // order is association ref, then the neighbor's ref, which is the order the
 // walk used to break ties.
-func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []graphalign.Fixed, names match.NameComparer, namePattern string) (graphalign.Canon, error) {
+func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []graphalign.Fixed, rules valuecompare.Rules, namePattern string) (graphalign.Canon, error) {
 	props, err := propertyByID(g)
 	if err != nil {
 		return graphalign.Canon{}, err
@@ -85,7 +86,6 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 		if !ok {
 			continue
 		}
-		profile = profile.WithNameComparer(names)
 		cands, ok := ranked[s.Kind]
 		if !ok {
 			typeID := types[s.Kind]
@@ -106,7 +106,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 			}
 			ranked[s.Kind] = cands
 		}
-		for _, m := range match.Rank(profile, s.Values, cands, seedCandidateLimit) {
+		for _, m := range match.Rank(profile, rules, s.Values, cands, seedCandidateLimit) {
 			if err := add(m.EntityID); err != nil {
 				return graphalign.Canon{}, err
 			}

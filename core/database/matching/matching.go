@@ -21,13 +21,12 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/match"
-	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -169,64 +168,23 @@ func rank(q Querier, res Result, typeID []byte, probe match.Values, profile matc
 	if err != nil {
 		return Result{}, err
 	}
-	// Count before the exclude filter: kept reuses candidates' backing array.
-	people, hasName := candidateNames(profile, candidates)
 	kept := candidates[:0]
 	for _, c := range candidates {
 		if !containsID(exclude, c.EntityID) {
 			kept = append(kept, c)
 		}
 	}
-	loaded, err := nameformats.Load(q)
+	// rank has no catalog graph, so the alias read is not the open project's cache.
+	rules, _, err := valuerules.Load(nil, q)
 	if err != nil {
 		return Result{}, err
 	}
-	// rank has no catalog graph, so this read is not the open project's cache.
-	names, err := namealiases.Comparer(nil, q, loaded.Comparer())
-	if err != nil {
-		return Result{}, err
-	}
-	if hasName {
-		counts := names.CountWords(people)
-		names.Frequency = &counts
-	}
-	profile = profile.WithNameComparer(names)
-	res.Matches = match.Rank(profile, probe, kept, opts.Limit)
+	res.Matches = match.Rank(profile, rules, probe, kept, opts.Limit)
 	return res, nil
-}
-
-// candidateNames collects each candidate's names from the Properties of the
-// profile's name Features, found the way Profile.WithNameComparer finds them.
-// hasName is false when the profile has no name Feature.
-func candidateNames(profile match.Profile, candidates []match.Candidate) (people [][]namevalue.Value, hasName bool) {
-	var props []match.Property
-	for _, f := range profile.Features {
-		if _, ok := f.Comparer.(match.NameComparer); ok {
-			props = append(props, f.Property)
-		}
-	}
-	if len(props) == 0 {
-		return nil, false
-	}
-	for _, c := range candidates {
-		var handle []namevalue.Value
-		for _, prop := range props {
-			for _, v := range c.Values[prop] {
-				if v.Name != nil {
-					handle = append(handle, *v.Name)
-				}
-			}
-		}
-		people = append(people, handle)
-	}
-	return people, true
 }
 
 // loadCandidates reads every unmerged handle of the type with a cached value
 // for a profile Property: one query. The blocking seam — narrow it here.
-// rank takes its name-word counts from this set, so blocking must count a
-// separate, unnarrowed population of the type's handles; otherwise a narrowed
-// set would shift every name's frequency and the scores with it.
 func loadCandidates(q Querier, typeID []byte, profile match.Profile) ([]match.Candidate, error) {
 	loaded, err := nameformats.Load(q)
 	if err != nil {

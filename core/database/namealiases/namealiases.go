@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
@@ -200,26 +199,25 @@ func Invalidate(c *database.Catalog) error {
 	return Warm(c)
 }
 
-// Comparer is the name comparer catalog scoring uses. A warmed graph supplies
-// its tables, including none. A nil or cold graph is read from q. The rows
-// replace whatever list the base comparer had.
-func Comparer(g *graphcache.Graph, q Querier, base match.NameComparer) (match.NameComparer, error) {
+// Rules is base with the catalog's alias tables in Names.Aliases. A warmed
+// graph supplies its tables, including none. A nil or cold graph is read from
+// q. The rows replace whatever index base had.
+func Rules(g *graphcache.Graph, q Querier, base valuecompare.Rules) (valuecompare.Rules, error) {
 	if raw, ok := g.AliasTables(); ok {
 		tables, ok := raw.([]valuecompare.AliasTable)
 		if !ok {
-			return match.NameComparer{}, fmt.Errorf("namealiases: alias cache has %T", raw)
+			return valuecompare.Rules{}, fmt.Errorf("namealiases: alias cache has %T", raw)
 		}
 		return withAliases(base, tables), nil
 	}
 	tables, err := Load(q)
 	if err != nil {
-		return match.NameComparer{}, err
+		return valuecompare.Rules{}, err
 	}
 	return withAliases(base, tables), nil
 }
 
-func withAliases(base match.NameComparer, tables []valuecompare.AliasTable) match.NameComparer {
-	index := valuecompare.NewAliasIndex(tables)
-	base.Words.Aliases = &index
+func withAliases(base valuecompare.Rules, tables []valuecompare.AliasTable) valuecompare.Rules {
+	base.Names.Aliases = valuecompare.NewAliasIndex(tables)
 	return base
 }

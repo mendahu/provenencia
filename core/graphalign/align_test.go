@@ -499,6 +499,15 @@ func nameVals(given, surname string) match.Values {
 	}}}}
 }
 
+// surnameVals is a name with a surname part and nothing else.
+func surnameVals(surname string) match.Values {
+	p := match.Property{Key: "name", Origin: "provenencia"}
+	return match.Values{p: {{Name: &namevalue.Value{
+		Form:  surname,
+		Parts: []namevalue.Part{{Idx: 0, Type: namevalue.PartTypeSurname, Value: surname}},
+	}}}}
+}
+
 func nameMetas() []match.PropertyMeta {
 	return []match.PropertyMeta{
 		{Property: match.Property{Key: "name", Origin: "provenencia"}, ValueType: propertymeta.ValueTypeName},
@@ -514,9 +523,9 @@ func TestUnreachableFallbackScoresOnTheWalkScale(t *testing.T) {
 		wantAssess graphalign.Assessment
 	}{
 		{
-			name:  "a shared surname alone is not a match",
+			name:  "a different first name is no candidate",
 			probe: nameVals("Mary", "Robins"), handle: nameVals("James", "Robins"),
-			wantTarget: graphalign.TargetSkip, wantAssess: graphalign.AssessNone,
+			wantTarget: graphalign.TargetNew, wantAssess: graphalign.AssessNone,
 		},
 		{
 			name:  "the same name alone is a weak match, never strong",
@@ -565,6 +574,10 @@ func TestPartialNamesAreWeak(t *testing.T) {
 	)
 	if james.Target != graphalign.TargetHandle || james.Assessment != graphalign.AssessWeak || james.Score >= graphalign.DefaultConfig().MediumScore {
 		t.Fatalf("James / James Kenneth: %+v", james)
+	}
+	// 2·G1 + 2·F of those plus the other given name G: 5 / 5.5 of the name weight.
+	if want := 2.5 * 5 / 5.5; math.Abs(james.Score-want) > 1e-9 {
+		t.Fatalf("James / James Kenneth scored %.4f, want %.4f", james.Score, want)
 	}
 	lee := alignOne(
 		full(given(0, "Lee"), sur(1, "Breakell")),
@@ -634,20 +647,21 @@ func TestMissingGivenOrPrefixIsNotANameConflict(t *testing.T) {
 		namevalue.Part{Idx: 1, Type: namevalue.PartTypeSurname, Value: "Robins"},
 	)
 	cfg := graphalign.DefaultConfig()
-	ev := match.Evaluate(mrs, marion, nameMetas())
+	ev := match.Evaluate(mrs, marion, nameMetas(), cfg.Value)
 	sc := graphalign.ScoreCandidate(ev, mrs, 0, 1, cfg, graphalign.Stats{})
 	c := sc.Eval.Comparisons[0]
-	// The title is ignored. Marion exists only on one side, so it is neutral.
-	// The surnames agree, and that is the whole comparison.
-	if c.Outcome != match.OutcomeAgree || math.Abs(c.Similarity-1) > 1e-9 {
-		t.Fatalf("Mrs. Robins / Marion Robins: outcome %s similarity %.4f", c.Outcome, c.Similarity)
+	// The title is ignored. Marion exists only on one side, so the name is a
+	// resemblance: the surnames earn 2·F of 2·F + G1.
+	want := 2 * 1.5 / (2*1.5 + 1)
+	if c.Outcome != match.OutcomePartial || math.Abs(c.Similarity-want) > 1e-9 {
+		t.Fatalf("Mrs. Robins / Marion Robins: outcome %s similarity %.4f, want partial %.4f", c.Outcome, c.Similarity, want)
 	}
-	if math.Abs(sc.Score-cfg.PropertyScale[name].Weight) > 1e-9 || sc.Score >= cfg.MediumScore {
-		t.Fatalf("surname with a one-sided given name scored %.4f, want the name weight under medium", sc.Score)
+	if math.Abs(sc.Score-cfg.PropertyScale[name].Weight*want) > 1e-9 || sc.Score >= cfg.MediumScore {
+		t.Fatalf("surname with a one-sided given name scored %.4f, want the name weight times %.2f under medium", sc.Score, want)
 	}
 
 	differ := graphalign.ScoreCandidate(
-		match.Evaluate(nameVals("Mary", "Robins"), nameVals("James", "Robins"), nameMetas()),
+		match.Evaluate(nameVals("Mary", "Robins"), nameVals("James", "Robins"), nameMetas(), cfg.Value),
 		nameVals("Mary", "Robins"), 0, 1, cfg, graphalign.Stats{},
 	)
 	if differ.Eval.Comparisons[0].Outcome != match.OutcomeConflict || differ.Score >= 0 {
@@ -659,7 +673,7 @@ func TestSexAgreementAloneStaysUnderWeak(t *testing.T) {
 	sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
 	meta := []match.PropertyMeta{{Property: sex, ValueType: propertymeta.ValueTypeTerm}}
 	male := match.Values{sex: {{Term: "male"}}}
-	ev := match.Evaluate(male, male, meta)
+	ev := match.Evaluate(male, male, meta, graphalign.DefaultConfig().Value)
 	sc := graphalign.ScoreCandidate(ev, male, 0, 1, graphalign.DefaultConfig(), graphalign.Stats{})
 	if sc.Score < 0.59 || sc.Score > 0.61 || sc.Score >= graphalign.DefaultConfig().WeakScore {
 		t.Fatalf("sex alone scored %.3f", sc.Score)
@@ -1222,7 +1236,7 @@ func TestRowReasons(t *testing.T) {
 		{
 			name:    "a candidate below the bar is weak",
 			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
-			handles: []graphalign.Handle{{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: nameVals("Bob", "Ames")}},
+			handles: []graphalign.Handle{{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: surnameVals("Ames")}},
 			subject: "s-a", want: graphalign.ReasonWeak,
 		},
 		{
@@ -1630,29 +1644,6 @@ func TestUnknownSexIsNoEvidence(t *testing.T) {
 	}
 }
 
-func TestScoreSimilarityDiscount(t *testing.T) {
-	cfg := graphalign.DefaultConfig()
-	nameProp := match.Property{Key: "name", Origin: "provenencia"}
-	for _, tt := range []struct {
-		name       string
-		similarity float64
-		discount   float64
-		outcome    match.Outcome
-		points     float64
-	}{
-		{"common name stays agree", 1, 0.136, match.OutcomeAgree, 2.16},
-		{"no discount", 1, 0, match.OutcomeAgree, 2.5},
-		{"a conflict is not scaled", 0, 0.5, match.OutcomeConflict, -3},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			outcome, points := graphalign.ScoreSimilarity(tt.similarity, tt.discount, true, propertymeta.CardinalitySingle, nameProp, propertymeta.ValueTypeName, nil, cfg, graphalign.Stats{})
-			if outcome != tt.outcome || math.Abs(points-tt.points) > 1e-9 {
-				t.Fatalf("got %v %.4f, want %v %.4f", outcome, points, tt.outcome, tt.points)
-			}
-		})
-	}
-}
-
 func TestScoreSimilarityWeightedCredit(t *testing.T) {
 	cfg := graphalign.DefaultConfig()
 	nameProp := match.Property{Key: "name", Origin: "provenencia"}
@@ -1662,12 +1653,12 @@ func TestScoreSimilarityWeightedCredit(t *testing.T) {
 		outcome    match.Outcome
 		points     float64
 	}{
-		{"a minority exact match is a conflict", 0.5, match.OutcomeConflict, -3},
+		{"a weighted minority match is partial", 0.5, match.OutcomePartial, 1.25},
 		{"a heavier minority is partial", 0.8, match.OutcomePartial, 2.0},
 		{"the leader is an agreement", 1, match.OutcomeAgree, 2.5},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			outcome, points := graphalign.ScoreSimilarity(tt.similarity, 0, true, propertymeta.CardinalitySingle, nameProp, propertymeta.ValueTypeName, nil, cfg, graphalign.Stats{})
+			outcome, points := graphalign.ScoreSimilarity(tt.similarity, true, propertymeta.CardinalitySingle, nameProp, propertymeta.ValueTypeName, nil, cfg, graphalign.Stats{})
 			if outcome != tt.outcome || math.Abs(points-tt.points) > 1e-9 {
 				t.Fatalf("got %v %.4f, want %v %.4f", outcome, points, tt.outcome, tt.points)
 			}

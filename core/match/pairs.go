@@ -7,13 +7,14 @@ import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // Pair selection: which one value on each side speaks for a Feature, and how
 // much it counts. A handle's cached values carry the support the
 // auto-reconciler counted for them, so a value seen on five Sources outweighs
 // one seen on one; a negative Observation counts against the value it denies.
-// Score and compareProperty both read their pair through pairValues.
+// Score and Evaluate both read their pair through pairValues.
 
 // ValueRef names one value that took part in a comparison.
 type ValueRef struct {
@@ -32,9 +33,6 @@ type PairResult struct {
 	// Similarity is the resemblance times both values' weights, 0…1; 0 is a
 	// contradiction.
 	Similarity float64
-	// Discount is the share of points the matched values' frequency cost;
-	// 0 when the values contradict.
-	Discount float64
 	// Comparable is false when no pair is comparable (a side is empty or
 	// holds only values that cannot speak).
 	Comparable bool
@@ -290,9 +288,9 @@ func (s *pairSet) before(i, j int) bool {
 // disagree (not on a multiple-cardinality Property, where R3 is skipped), is
 // a contradiction; otherwise the best weighted resemblance
 // among voting pairs speaks, and with none the result is not comparable.
-func pairValues(cmp Comparer, card string, probe, candidate []Value) PairResult {
+func pairValues(rules valuecompare.Rules, valueType, card string, probe, candidate []Value) PairResult {
 	if plainValues(probe) && plainValues(candidate) {
-		return plainPair(cmp, probe, candidate)
+		return plainPair(rules, valueType, probe, candidate)
 	}
 	s := &pairSet{probe: probe, cand: candidate, pinfo: weigh(probe, card), cinfo: weigh(candidate, card)}
 
@@ -333,7 +331,7 @@ func pairValues(cmp Comparer, card string, probe, candidate []Value) PairResult 
 		leaderComparable, leaderPositive bool
 		leaders                          = &pairSet{probe: probe, cand: candidate, pinfo: s.pinfo, cinfo: s.cinfo}
 		credit                           = &pairSet{probe: probe, cand: candidate, pinfo: s.pinfo, cinfo: s.cinfo}
-		top, topSim, topDisc             float64
+		top, topSim                      float64
 	)
 	for i := range probe {
 		if !s.pinfo[i].voting {
@@ -343,7 +341,7 @@ func pairValues(cmp Comparer, card string, probe, candidate []Value) PairResult 
 			if !s.cinfo[j].voting {
 				continue
 			}
-			sim, disc, ok := CompareDiscount(cmp, probe[i], candidate[j])
+			sim, ok := Compare(rules, valueType, probe[i], candidate[j])
 			if !ok {
 				continue
 			}
@@ -356,14 +354,14 @@ func pairValues(cmp Comparer, card string, probe, candidate []Value) PairResult 
 				}
 			}
 			w := s.pinfo[i].weight * s.cinfo[j].weight
-			score := sim * w * (1 - disc)
+			score := sim * w
 			switch {
 			case !credit.found || score > top:
 				credit.best, credit.found = pairIdx{i, j}, true
-				top, topSim, topDisc = score, sim*w, disc
+				top, topSim = score, sim*w
 			case score == top && credit.before(i, j):
 				credit.best = pairIdx{i, j}
-				topSim, topDisc = sim*w, disc
+				topSim = sim * w
 			}
 		}
 	}
@@ -373,11 +371,8 @@ func pairValues(cmp Comparer, card string, probe, candidate []Value) PairResult 
 	if !credit.found {
 		return PairResult{}
 	}
-	if topSim == 0 {
-		topDisc = 0
-	}
 	return PairResult{
-		Similarity: topSim, Discount: topDisc, Comparable: true,
+		Similarity: topSim, Comparable: true,
 		Probe: probe[credit.best.i].ref(), Candidate: candidate[credit.best.j].ref(),
 	}
 }
@@ -416,30 +411,27 @@ func (s *pairSet) contradiction() PairResult {
 
 // plainPair is pairValues for values with no cache evidence and no
 // negatives: every value weighs 1 and every pair is a leader pair, so the
-// best pair is the comparable one with the highest similarity × (1 − discount),
+// best pair is the comparable one with the highest similarity,
 // the first on a tie. No allocation until the reported pair is labeled.
-func plainPair(cmp Comparer, probe, candidate []Value) PairResult {
+func plainPair(rules valuecompare.Rules, valueType string, probe, candidate []Value) PairResult {
 	var (
-		top, sim, disc float64
-		bi, bj         int
-		ok             bool
+		sim    float64
+		bi, bj int
+		ok     bool
 	)
 	for i := range probe {
 		for j := range candidate {
-			s, d, comparable := CompareDiscount(cmp, probe[i], candidate[j])
+			s, comparable := Compare(rules, valueType, probe[i], candidate[j])
 			if !comparable {
 				continue
 			}
-			if p := s * (1 - d); !ok || p > top {
-				top, sim, disc, ok, bi, bj = p, s, d, true, i, j
+			if !ok || s > sim {
+				sim, ok, bi, bj = s, true, i, j
 			}
 		}
 	}
 	if !ok {
 		return PairResult{}
 	}
-	if sim == 0 {
-		disc = 0
-	}
-	return PairResult{Similarity: sim, Discount: disc, Comparable: true, Probe: probe[bi].ref(), Candidate: candidate[bj].ref()}
+	return PairResult{Similarity: sim, Comparable: true, Probe: probe[bi].ref(), Candidate: candidate[bj].ref()}
 }
