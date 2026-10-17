@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/google/uuid"
@@ -19,8 +18,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
-	"github.com/mendahu/provenencia/core/derivatives/raster"
 	"github.com/mendahu/provenencia/core/objectstore"
+	"github.com/mendahu/provenencia/core/raster"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -47,21 +46,6 @@ var ErrCorruptObject = apperr.New(apperr.CodeFileDerivativesCorruptObject, apper
 // decode. Larger Files are valid catalog content but are refused for
 // derivative generation with ErrUnprocessable.
 const maxSourceBytes = 128 << 20 // 128 MiB
-
-// decodeSem bounds concurrent read+decode+encode work so parallel Ensure
-// calls cannot multiply peak image-decode memory.
-var decodeSem = make(chan struct{}, decodeSlots())
-
-func decodeSlots() int {
-	n := runtime.GOMAXPROCS(0)
-	if n > 4 {
-		n = 4
-	}
-	if n < 1 {
-		n = 1
-	}
-	return n
-}
 
 // Spec describes one derivative to ensure. Type is the file_derivatives.derivative_type key
 // (unique per source). Raster holds encode parameters; add Spec helpers (Medium, …) as needed.
@@ -208,11 +192,10 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 }
 
 // generate reads the source object (bounded and checksum-verified) and
-// encodes the derivative JPEG. It holds decodeSem for the whole
+// encodes the derivative JPEG. It holds a raster.Slot for the whole
 // read+decode+encode section to bound peak memory across goroutines.
 func generate(objPath, wantChecksum string, opts raster.Options) ([]byte, error) {
-	decodeSem <- struct{}{}
-	defer func() { <-decodeSem }()
+	defer raster.Slot()()
 
 	raw, err := readSourceObject(objPath, wantChecksum)
 	if err != nil {

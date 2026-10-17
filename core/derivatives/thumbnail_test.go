@@ -18,7 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/searchindex"
-	"github.com/mendahu/provenencia/core/derivatives/raster"
+	"github.com/mendahu/provenencia/core/raster"
 	"github.com/mendahu/provenencia/core/ref"
 )
 

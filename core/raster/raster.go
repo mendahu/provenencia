@@ -1,5 +1,6 @@
-// Package raster turns image bytes into derivative JPEGs.
-// Swap this implementation later without touching Ensure / DB / objects.
+// Package raster is the one bounded image codec: it decodes only allowlisted
+// formats within a pixel budget, and re-encodes. Thumbnails and staged images
+// both use it.
 //
 // Security: golang.org/x/image decoders (bmp, tiff, webp) parse fully
 // untrusted input here and have a history of memory-exhaustion CVEs.
@@ -14,6 +15,8 @@ import (
 	"image/gif"
 	"image/jpeg"
 	"image/png"
+	"runtime"
+	"slices"
 	"strings"
 
 	_ "golang.org/x/image/bmp"  // register bmp decoder
@@ -77,8 +80,11 @@ type Transform func(image.Image) image.Image
 // Options parameterizes raster encoding. Zero Quality means DefaultQuality.
 type Options struct {
 	MaxEdge    int // longest output edge in pixels; must be > 0
-	Quality    int // JPEG quality 1–100; 0 → DefaultQuality
+	Quality    int // JPEG quality 1–100; 0 → DefaultQuality (EncodeJPEG only)
 	Transforms []Transform
+	// Formats limits the image.DecodeConfig format names that may decode
+	// (for example "png", "jpeg"). Nil allows every supported format.
+	Formats []string
 }
 
 // Supported reports whether mediaType is an allowlisted raster format.
@@ -96,11 +102,8 @@ func Supported(mediaType string) bool {
 // (ErrUnsupportedFormat) and the declared pixel count against maxDecodePixels
 // (ErrTooLarge), so header-declared decompression bombs never allocate.
 func EncodeJPEG(src []byte, opts Options) ([]byte, error) {
-	if opts.MaxEdge < 1 {
-		return nil, fmt.Errorf("raster: MaxEdge must be positive")
-	}
-	if opts.MaxEdge > MaxEdgeLimit {
-		return nil, fmt.Errorf("raster: MaxEdge must be at most %d", MaxEdgeLimit)
+	if err := checkMaxEdge(opts); err != nil {
+		return nil, err
 	}
 	quality := opts.Quality
 	if quality == 0 {
@@ -109,6 +112,48 @@ func EncodeJPEG(src []byte, opts Options) ([]byte, error) {
 	if quality < 1 || quality > 100 {
 		return nil, fmt.Errorf("raster: Quality must be 1–100 or 0 for default")
 	}
+	img, err := prepare(src, opts)
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: quality}); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// EncodePNG decodes src with the same format allowlist and pixel budget as
+// EncodeJPEG, scales to MaxEdge, applies Transforms, and encodes PNG. Quality
+// is ignored.
+func EncodePNG(src []byte, opts Options) ([]byte, error) {
+	if err := checkMaxEdge(opts); err != nil {
+		return nil, err
+	}
+	img, err := prepare(src, opts)
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func checkMaxEdge(opts Options) error {
+	if opts.MaxEdge < 1 {
+		return fmt.Errorf("raster: MaxEdge must be positive")
+	}
+	if opts.MaxEdge > MaxEdgeLimit {
+		return fmt.Errorf("raster: MaxEdge must be at most %d", MaxEdgeLimit)
+	}
+	return nil
+}
+
+// decode refuses a format outside formats (or outside supportedFormats) and an
+// image declaring more than maxDecodePixels before any full decode.
+func decode(src []byte, formats []string) (image.Image, error) {
 	cfg, format, err := image.DecodeConfig(bytes.NewReader(src))
 	if err != nil {
 		return nil, err
@@ -116,11 +161,21 @@ func EncodeJPEG(src []byte, opts Options) ([]byte, error) {
 	if _, ok := supportedFormats[format]; !ok {
 		return nil, ErrUnsupportedFormat
 	}
+	if formats != nil && !slices.Contains(formats, format) {
+		return nil, ErrUnsupportedFormat
+	}
 	if cfg.Width < 1 || cfg.Height < 1 ||
 		int64(cfg.Width)*int64(cfg.Height) > maxDecodePixels {
 		return nil, ErrTooLarge
 	}
 	img, _, err := image.Decode(bytes.NewReader(src))
+	return img, err
+}
+
+// prepare decodes src, scales it to MaxEdge, and applies Transforms. It does
+// not check options.
+func prepare(src []byte, opts Options) (image.Image, error) {
+	img, err := decode(src, opts.Formats)
 	if err != nil {
 		return nil, err
 	}
@@ -130,11 +185,29 @@ func EncodeJPEG(src []byte, opts Options) ([]byte, error) {
 			img = t(img)
 		}
 	}
-	var buf bytes.Buffer
-	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: quality}); err != nil {
-		return nil, err
+	return img, nil
+}
+
+// decodeSem bounds concurrent read+decode+encode work so parallel callers
+// cannot multiply peak image-decode memory.
+var decodeSem = make(chan struct{}, decodeSlots())
+
+func decodeSlots() int {
+	n := runtime.GOMAXPROCS(0)
+	if n > 4 {
+		n = 4
 	}
-	return buf.Bytes(), nil
+	if n < 1 {
+		n = 1
+	}
+	return n
+}
+
+// Slot waits for a decode slot and returns the function that frees it. Hold it
+// across the raw read, decode, and encode.
+func Slot() (release func()) {
+	decodeSem <- struct{}{}
+	return func() { <-decodeSem }
 }
 
 func scaleToMaxEdge(src image.Image, maxEdge int) image.Image {
