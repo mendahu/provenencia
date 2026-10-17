@@ -104,7 +104,7 @@ Layer 1 of the matching stack gets its package and its contract: `core/valuecomp
 | The date comparer and `Dates` knobs | S11-04 |
 | Moving any caller onto `valuecompare.Compare` or `Key`; deleting `match.TextComparer`, `TermComparer`, `IntegerComparer` and `core/match/words.go` | S11-05 (comparers), S11-06 (reconciler), S11-07 (`Key` callers) |
 | A term's neutral flag, polarity, cardinality | S11-09 (layer 2) |
-| Typed registry keys (`SubjectType`, `PropertyKey`, `BridgeKey`) | S11-10, the first keyed section (D-14; scope entry moved in STEP-10) |
+| Typed registry keys (`SubjectType`, `PropertyKey`, `BridgeKey`) | S11-10, the first keyed section (D-14; the S11-10 scope entry says so) |
 | The subject, segment, alignment and evidence sections | S11-10, S11-14, S11-16, S11-19 |
 | Swift parsing of relation and cause codes | S11-17, S11-25 (working rule "One wire vocabulary") |
 | A minimum similarity for text or integer `Near` | not planned: the spelling rule and the tolerance already decide `Near` (D-6) |
