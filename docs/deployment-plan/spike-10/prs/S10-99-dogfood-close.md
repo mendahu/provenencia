@@ -117,7 +117,7 @@ Verified at `bdce4cd`.
 | D-7 | The two landed Spike 11 plans that name `docs/deployment-plan/spike-10/**` in an `rg --glob` are left as they are. | They are landed history, not links; an exclude glob for a missing folder is harmless. | Editing landed Spike 11 plans |
 | D-8 | `S10-…` ids in code comments, `.agents/skills/`, and review lenses stay. | `archive-docs` "Retarget": ids are fine when they do not link to a deleted file. T-1 proves none link. | A sweep of ids |
 | D-9 | `docs/deployment-plan/README.md` changes only the **Current** paragraph and adds one **Completed** row. | The rest of that file is still true. | Rewriting "How a spike is planned" |
-| D-10 | Gate: `scripts/check-pr.sh`. On macOS it passes. Elsewhere the one accepted failure is `xcode-test (needs macOS)`, because this PR changes no Swift or Xcode file; CI runs Xcode on the PR. | The gate's other checks answer for docs. | Skipping the gate |
+| D-10 | Gate: `scripts/check-pr.sh`, run twice. STEP-3 runs it before any deletion: it passes. STEP-6 runs it at the PR head, after this plan is gone: `plan-docs` prints "no plans or briefs changed" and passes. Between STEP-4 and STEP-6 the gate is not run, because this plan links `../deployment-plan.md`, which STEP-4 deletes, and `plan-docs` would fail on that. Off macOS, `xcode-test (needs macOS)` is the one accepted failure, because this PR changes no Swift or Xcode file; CI runs Xcode on the PR. | The gate answers for docs at both ends, and no run needs a judgment about an expected failure. | Running the gate after STEP-4 and accepting a `plan-docs` failure — because the implementer would have to judge which errors are expected |
 
 ## 6. Design
 
@@ -258,12 +258,11 @@ OLD: Raised in the S10-19 plan review ([`S10-19-event-mark-sidebar.review.md`](.
 NEW: Raised in the S10-19 plan review (M-3 and M-4).
 ```
 
-**R-9** — `docs/deployment-plan/README.md`, under `## Current`. OLD is two paragraphs separated by one blank line; the second is indented below only to line up, and has no indent in the file. NEW is one paragraph.
+**R-9** — `docs/deployment-plan/README.md`, under `## Current`. OLD is two paragraphs (OLD-A, a blank line, OLD-B), with no indent in the file. Replace OLD-A, the blank line, and OLD-B with NEW, a single paragraph.
 
 ```text
-OLD: [Spike 10 — Dogfood UX](spike-10/) is open. Plan: [`spike-10/deployment-plan.md`](spike-10/deployment-plan.md). Briefs are authored just before the PR they gate.
-
-     [Spike 11 — Promote matching refinement](spike-11/) is open alongside it. Plan: [`spike-11/deployment-plan.md`](spike-11/deployment-plan.md).
+OLD-A: [Spike 10 — Dogfood UX](spike-10/) is open. Plan: [`spike-10/deployment-plan.md`](spike-10/deployment-plan.md). Briefs are authored just before the PR they gate.
+OLD-B: [Spike 11 — Promote matching refinement](spike-11/) is open alongside it. Plan: [`spike-11/deployment-plan.md`](spike-11/deployment-plan.md).
 NEW: [Spike 11 — Promote matching refinement](spike-11/) is open. Plan: [`spike-11/deployment-plan.md`](spike-11/deployment-plan.md). Briefs are authored just before the PR they gate.
 ```
 
@@ -283,40 +282,64 @@ Check: `wc -l docs/deployment-plan/archive/spike-10/README.md` prints at most 80
 **STEP-2 — Retarget inbound links**
 Files: `docs/matching.md`, `docs/dogfood/ux.md`, `docs/ideas/source-structure.md`, `docs/ideas/international-names.md`, `docs/ideas/depictions-and-likenesses.md`, `docs/ideas/archive/name-matching-enhancements.md`, `docs/ideas/archive/glyph-consolidation.md`.
 Do: apply R-1 to R-8.
-Check: `rg -n 'spike-10/' docs/matching.md docs/dogfood/ux.md docs/ideas` prints only lines containing `archive/spike-10/`.
+Check: `rg -n 'spike-10/' docs/matching.md docs/dogfood/ux.md docs/ideas` prints only lines containing `archive/spike-10/`; T-6 prints nothing; `rg -c 'archive/spike-10/' docs/ideas/international-names.md docs/ideas/archive/name-matching-enhancements.md` prints 1 for each; `rg -c 'review.md' docs/ideas/archive/glyph-consolidation.md` prints nothing.
 
 **STEP-3 — Update the deployment-plan index**
 Files: `docs/deployment-plan/README.md`.
 Do: apply R-9 and R-10.
-Check: `rg -n 'spike-10' docs/deployment-plan/README.md` prints only the new Completed row.
+Check: `rg -n 'spike-10' docs/deployment-plan/README.md` prints only the new Completed row; T-1 and T-2 print what §8 says; `scripts/check-pr.sh` passes (D-10).
 
 **STEP-4 — Delete the spike folder**
 Files: `docs/deployment-plan/spike-10/`.
 Do: `git rm -r` every file in `docs/deployment-plan/spike-10/` except `prs/S10-99-dogfood-close.md`, `prs/S10-99-dogfood-close.review.md`, and `prs/S10-99-dogfood-close.ship.md` (D-5).
 Check: `git ls-files docs/deployment-plan/spike-10` prints only `S10-99-dogfood-close*` files under `prs/`.
 
-**STEP-5 — Prove the links**
+**STEP-5 — Prove nothing linked the deleted files**
 Files: none changed.
-Do: run T-1 and T-2.
-Check: both print what §8 says; `scripts/check-pr.sh` passes per D-10.
+Do: run T-1 and T-2 again.
+Check: both print what §8 says. Do not run `scripts/check-pr.sh` here (D-10).
 
 **STEP-6 — Remove this plan with the ship log**
 Files: `docs/deployment-plan/spike-10/prs/S10-99-dogfood-close.md`, `.review.md`, `.ship.md`.
-Do: after the ship log is final, `git rm -r docs/deployment-plan/spike-10` in the commit that records it. This is the branch's last commit. Without `ship-pr`, the implementer makes this commit before marking the PR ready.
-Check: `ls docs/deployment-plan` prints `README.md`, `archive`, `spike-11`.
+Do: `git rm -r` whatever remains under `docs/deployment-plan/spike-10/` (a missing `.review.md` or `.ship.md` is fine). Under `ship-pr`, the orchestrator does this in the commit that records the final ship log, subject "Record the S10-99 ship log and remove the Spike 10 folder." Without `ship-pr`, the implementer does it before marking the PR ready, subject "Remove the S10-99 plan now that Spike 10 is closed." Either way it is the branch's last commit.
+Check: `ls docs/deployment-plan` prints `README.md`, `archive`, `spike-11`; T-1 and T-2 print what §8 says; `scripts/check-pr.sh` passes (D-10).
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
+
+Branch `s10-99-dogfood-close` from `main`. Four commits, then STEP-6's:
+
+1. STEP-1: "Distill Spike 10 into a decisions note."
+2. STEP-2: "Point the Spike 10 links in docs and ideas at the decisions note."
+3. STEP-3: "List Spike 11 as the only open spike."
+4. STEP-4: "Delete the Spike 10 working folder."
 
 ## 8. Tests
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Docs (shell) | `rg -n 'deployment-plan/spike-10\|\.\./spike-10/\|\(spike-10/' docs .agents .cursor --glob '!docs/deployment-plan/spike-10/**'` | Prints exactly two lines: `docs/deployment-plan/spike-11/prs/S11-02-value-compare-core.md:292` and `docs/deployment-plan/spike-11/prs/S11-03-value-compare-names.md:264` | AC-2.1, D-7 |
-| T-2 | Docs (shell) | `python3 -c 'import re,sys,pathlib as P;b=[f"{f}: {m[0]}" for f in sys.argv[1:] for m in re.findall(r"\]\(([^)#\s]+)(#[^)]*)?\)",P.Path(f).read_text()) if not m[0].startswith(("http:","https:","mailto:")) and not (P.Path(f).parent/m[0]).exists()];print(*b,sep="\n");sys.exit(bool(b))' docs/deployment-plan/archive/spike-10/README.md docs/deployment-plan/README.md docs/matching.md docs/dogfood/ux.md docs/ideas/*.md docs/ideas/archive/*.md` | Exit 0, no output | AC-2.2, AC-3.1 |
-| T-3 | Docs (shell) | `wc -l docs/deployment-plan/archive/spike-10/README.md`; `grep '^## ' docs/deployment-plan/archive/spike-10/README.md` | ≤ 80 lines; `## Decisions`, `## Refused`, `## Leftovers` | AC-1.2, D-3 |
-| T-4 | Docs (shell) | `ls docs/deployment-plan` at the PR head | `README.md`, `archive`, `spike-11` | AC-1.1, D-5 |
-| T-5 | Docs (shell) | `rg -n 'Spike 1[01]' docs/deployment-plan/README.md` | The Spike 11 Current line and the Spike 10 Completed row, Spike 10 above Spike 9 | AC-1.3, D-9 |
-| T-6 | Docs (shell) | `rg -n 'crop cache\|side-by-side\|cache row' docs/ideas/depictions-and-likenesses.md` | No output | AC-3.2 |
+| T-1 | Docs (shell) | Command T-1 below | Prints exactly two lines: `docs/deployment-plan/spike-11/prs/S11-02-value-compare-core.md:292` and `docs/deployment-plan/spike-11/prs/S11-03-value-compare-names.md:264` | AC-2.1, D-7 |
+| T-2 | Docs (shell) | Command T-2 below | Exit 0, no output | AC-2.2, AC-3.1 |
+| T-3 | Docs (shell) | Command T-3 below | ≤ 80 lines; `## Decisions`, `## Refused`, `## Leftovers` | AC-1.2, D-3 |
+| T-4 | Docs (shell) | Command T-4 below, at the PR head | `README.md`, `archive`, `spike-11` | AC-1.1, D-5 |
+| T-5 | Docs (shell) | Command T-5 below | The Spike 11 Current line and the Spike 10 Completed row, Spike 10 above Spike 9 | AC-1.3, D-9 |
+| T-6 | Docs (shell) | Command T-6 below | No output | AC-3.2 |
+
+Commands, copied as written (plain `|` is regex alternation):
+
+```sh
+# T-1
+rg -n 'deployment-plan/spike-10|\.\./spike-10|\(\.?/?spike-10' docs .agents .cursor --glob '!docs/deployment-plan/spike-10/**'
+# T-2
+python3 -c 'import re,sys,pathlib as P;b=[f"{f}: {m[0]}" for f in sys.argv[1:] for m in re.findall(r"\]\(([^)#\s]+)(#[^)]*)?\)",P.Path(f).read_text()) if not m[0].startswith(("http:","https:","mailto:")) and not (P.Path(f).parent/m[0]).exists()];print(*b,sep="\n");sys.exit(bool(b))' docs/deployment-plan/archive/spike-10/README.md docs/deployment-plan/README.md docs/matching.md docs/dogfood/ux.md docs/ideas/*.md docs/ideas/archive/*.md
+# T-3
+wc -l docs/deployment-plan/archive/spike-10/README.md; grep '^## ' docs/deployment-plan/archive/spike-10/README.md
+# T-4
+ls docs/deployment-plan
+# T-5
+rg -n 'Spike 1[01]' docs/deployment-plan/README.md
+# T-6
+rg -n 'crop cache|side-by-side|cache row' docs/ideas/depictions-and-likenesses.md
+```
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `plan-docs` if a Spike 11 plan or brief links a deleted file (T-1 catches it first).
 
@@ -325,7 +348,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `p
 ```
 - [ ] Every AC in §2 is true: test name or manual check line for each
 - [ ] Every T-# in §8 exists and passes
-- [ ] scripts/check-pr.sh prints check-pr: PASS, or on non-macOS fails only xcode-test (needs macOS) (D-10)
+- [ ] scripts/check-pr.sh at STEP-3 and at the PR head prints check-pr: PASS, or on non-macOS fails only xcode-test (needs macOS) (D-10)
 - [ ] No Out line was implemented; nothing outside §4 / §6 was edited
 - [ ] No user-facing copy changed
 - [ ] No VERSION bump
