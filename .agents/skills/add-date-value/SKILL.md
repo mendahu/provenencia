@@ -28,6 +28,8 @@ core/database/datevalues/    # queries
 
 Types and checks: `datevalue.Value`, `datevalue.Validate(v)`, `datevalue.CompactDisplay(v)`. Call sites for storage: `datevalues.Insert(c, v)` / `datevalues.Lookup(c, id)`. Minted id is UUIDv7 BLOB. Domain errors: `datevalue.ErrInvalid` (`datevalues.invalid`). Matching layers import `core/datevalue`, never `core/database/datevalues`.
 
+`TestLayerPackages` in `core/matchregistry/guard_test.go` keeps this package pure; a new pure value package adds a row.
+
 ## Model (authoritative)
 
 Every DateValue is **one** genealogical date.

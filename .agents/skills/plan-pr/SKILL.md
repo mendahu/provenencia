@@ -131,6 +131,7 @@ This is most of the work. A plan built from the docs alone is a guess.
 | Delete of a resource | `add-catalog-delete` |
 | Seeded terms, properties, types | `add-seeded-vocabulary` |
 | Dates, names | `add-date-value`, `add-name-value` |
+| Matching layer, registry knob, relation or cause code | `add-match-rule` |
 | Short refs (`SRC-…`) | `add-catalog-ref` |
 | Omnibar hit kind | `add-searchable-kind` |
 | FFI method | `add-ffi-handler`, `use-catalog-session` |
