@@ -755,6 +755,8 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-39 — Preferred portrait
 
+**Plan:** [`prs/S10-39-preferred-portrait.md`](prs/S10-39-preferred-portrait.md) — Blocked — on S10-35 landing
+
 **Briefs:** S10-D12 and S10-D9, already designed before S10-23 and S10-22. No second brief.
 
 | | |
