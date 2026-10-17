@@ -97,3 +97,6 @@ Head `3fd1a822`. Gate PASS; orchestrator also ran the changed Go packages uncach
 
 ## Result
 Gate PASS · CI see PR #447 · open blockers/majors: none · follow-ups: none · logged nits: MNT-4 (nested `switch role`), `sortedBy` single-caller helper · to user: CON-1, PRF-1/PRF-2, SEC-1 — answered 2026-10-17 (canonical-side cause order; build-once alias index + token map; `Names.MaxWords` 32).
+
+## Merge with main
+S11-04 (#445, dates) landed first. Merged `origin/main` @ `b736f9bb` (`6be49975`): conflicts in `core/valuecompare` (`valuecompare.go`, `contract_test.go`, `valuecompare_test.go`), `matchregistry/inventory_test.go`, `match/registry.go`, `add-match-rule`, and the spike docs. Each kept both sides (names and dates); `notYetBuilt` drops both `value.Dates.` and the name prefixes; the duplicate `CauseBelowMinimum` both PRs added was kept once. Gate PASS against `b736f9bb` (full run: go-test 69s, xcode-test 50s).
