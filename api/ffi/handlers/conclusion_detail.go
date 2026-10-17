@@ -5,6 +5,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -27,7 +28,11 @@ func GetConclusionDetail(in []byte) ([]byte, error) {
 			return err
 		}
 		out = conclusionDetailProto(d)
-		return attachHeader(c, d, out)
+		lead, err := attachHeader(c, d, out)
+		if err != nil {
+			return err
+		}
+		return attachLikenesses(c, d, lead, out)
 	})
 	if err != nil {
 		return nil, err
@@ -55,34 +60,38 @@ func conclusionDetailProto(d conclusiondetails.Detail) *engine.ConclusionDetail 
 			})
 		}
 		for _, o := range f.Outcomes {
-			po := &engine.ReconcilerOutcomeDetail{
-				ObservationId:          uuidString(o.ObservationID),
-				ObservationRef:         o.ObservationRef,
-				Reason:                 o.Reason,
-				ValueRank:              int32(o.ValueRank),
-				Recorded:               conclusionValueProto(o.Recorded),
-				SubjectId:              uuidString(o.SubjectID),
-				SubjectRef:             o.SubjectRef,
-				CitationId:             uuidString(o.CitationID),
-				ArtifactId:             uuidString(o.ArtifactID),
-				VoteSupport:            int32(o.Vote.Support),
-				VoteTotal:              int32(o.Vote.Of),
-				SourceId:               uuidString(o.SourceID),
-				SourceTitle:            o.SourceTitle,
-				CredibilityKey:         o.CredibilityKey,
-				TranscriptionUncertain: o.Provenance.Uncertain,
-				ClaimConfidenceKey:     o.ClaimConfidenceKey,
-				CredibilityOffset:      int32(o.Provenance.Credibility),
-				ClaimConfidenceOffset:  int32(o.Provenance.ClaimConfidence),
-			}
-			if len(o.DeniedBy) > 0 {
-				po.DeniedByObservationId = uuidString(o.DeniedBy)
-			}
-			pf.Outcomes = append(pf.Outcomes, po)
+			pf.Outcomes = append(pf.Outcomes, reconcilerOutcomeProto(o))
 		}
 		out.Fields = append(out.Fields, pf)
 	}
 	return out
+}
+
+func reconcilerOutcomeProto(o conclusiondetails.Outcome) *engine.ReconcilerOutcomeDetail {
+	po := &engine.ReconcilerOutcomeDetail{
+		ObservationId:          uuidString(o.ObservationID),
+		ObservationRef:         o.ObservationRef,
+		Reason:                 o.Reason,
+		ValueRank:              int32(o.ValueRank),
+		Recorded:               conclusionValueProto(o.Recorded),
+		SubjectId:              uuidString(o.SubjectID),
+		SubjectRef:             o.SubjectRef,
+		CitationId:             uuidString(o.CitationID),
+		ArtifactId:             uuidString(o.ArtifactID),
+		VoteSupport:            int32(o.Vote.Support),
+		VoteTotal:              int32(o.Vote.Of),
+		SourceId:               uuidString(o.SourceID),
+		SourceTitle:            o.SourceTitle,
+		CredibilityKey:         o.CredibilityKey,
+		TranscriptionUncertain: o.Provenance.Uncertain,
+		ClaimConfidenceKey:     o.ClaimConfidenceKey,
+		CredibilityOffset:      int32(o.Provenance.Credibility),
+		ClaimConfidenceOffset:  int32(o.Provenance.ClaimConfidence),
+	}
+	if len(o.DeniedBy) > 0 {
+		po.DeniedByObservationId = uuidString(o.DeniedBy)
+	}
+	return po
 }
 
 func conclusionValueProto(v conclusiondetails.Value) *engine.ConclusionValue {
@@ -103,38 +112,67 @@ func conclusionValueProto(v conclusiondetails.Value) *engine.ConclusionValue {
 	return &engine.ConclusionValue{}
 }
 
-// attachHeader reads the handle's header for its kind beside the detail.
-func attachHeader(c *database.Catalog, d conclusiondetails.Detail, out *engine.ConclusionDetail) error {
+// attachHeader reads the handle's header for its kind beside the detail. It
+// returns the Person header's likeness lead (nil for other kinds).
+func attachHeader(c *database.Catalog, d conclusiondetails.Detail, out *engine.ConclusionDetail) ([]byte, error) {
 	st, err := subjecttypes.GetByID(c, d.Entity.SubjectTypeID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if st.Origin != vocabkey.OriginProvenencia {
-		return nil
+		return nil, nil
 	}
 	ids := [][]byte{d.Entity.ID}
 	switch st.Key {
 	case vocabkey.Person:
 		h, err := conclusionheaders.PersonsByIDs(c, ids)
 		if err != nil || len(h) != 1 {
-			return err
+			return nil, err
 		}
 		out.Header = &engine.ConclusionDetail_Person{Person: personHeaderProto(h[0])}
+		return h[0].LikenessImageFileID, nil
 	case vocabkey.Event:
 		h, err := conclusionheaders.EventsByIDs(c, ids)
 		if err != nil || len(h) != 1 {
-			return err
+			return nil, err
 		}
 		out.Header = &engine.ConclusionDetail_Event{Event: eventHeaderProto(h[0])}
 	case vocabkey.Place:
 		h, err := conclusionheaders.PlacesByIDs(c, ids)
 		if err != nil || len(h) != 1 {
-			return err
+			return nil, err
 		}
 		if err := conclusionheaders.AttachPlaceRelationships(c, &h[0]); err != nil {
-			return err
+			return nil, err
 		}
 		out.Header = &engine.ConclusionDetail_Place{Place: placeHeaderProto(h[0])}
+	}
+	return nil, nil
+}
+
+// attachLikenesses lists the detail's likenesses with their image paths, and
+// sets the Person header's lead path, in one RelPaths call. A likeness whose
+// path cannot be derived is still listed, with an empty path.
+func attachLikenesses(c *database.Catalog, d conclusiondetails.Detail, lead []byte, out *engine.ConclusionDetail) error {
+	var imageIDs [][]byte
+	if len(lead) > 0 {
+		imageIDs = append(imageIDs, lead)
+	}
+	for _, l := range d.Likenesses {
+		imageIDs = append(imageIDs, l.ImageFileID)
+	}
+	paths, err := files.RelPaths(c, imageIDs)
+	if err != nil {
+		return err
+	}
+	if person := out.GetPerson(); person != nil {
+		person.LikenessImageRelPath = paths[string(lead)]
+	}
+	for _, l := range d.Likenesses {
+		out.Likenesses = append(out.Likenesses, &engine.LikenessDetail{
+			ImageRelPath: paths[string(l.ImageFileID)],
+			Record:       reconcilerOutcomeProto(l.Record),
+		})
 	}
 	return nil
 }
