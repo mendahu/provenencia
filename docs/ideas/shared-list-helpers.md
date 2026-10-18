@@ -8,7 +8,7 @@
 
 ## Go reads every Swift mirror
 
-`FieldSlug.fixtures` and `ProjectSlug.fixtures` are kept in sync with Go by hand. `swiftFixturePairs` in `api/ffi/swift_vocabulary_test.go` can check them as it checks `TextMatch`; `FieldSlug` has a `\u{2019}` fixture the reader would need to decode.
+`FieldSlug.fixtures` and `ProjectSlug.folderNameFixtures` are kept in sync with Go by hand. `swiftFixturePairs` in `api/ffi/swift_vocabulary_test.go` can check them as it checks `TextMatch`; `FieldSlug` has a `\u{2019}` fixture, and `ProjectSlug` has `"Robins\\Family"` / `"Robins\"Family"` rows, which are escapes the reader refuses and would need to decode.
 
 ## Fake store keys
 
