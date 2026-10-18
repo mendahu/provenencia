@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-24 — Delete frequency weighting
+
+**Landed YYYY-MM-DD** in [#N](https://github.com/mendahu/provenencia/pull/N). Promote no longer weighs a value by how common it is in the catalog. Every property scores a plain weight from the walk's registry: 2 for each value type and 3 for a toponym, so an exact toponym alone is still medium and a sparse name and birth date still files strong. `Stats.ValueFreq`, the priors, the lift to the accept bar and the value-frequency scan are gone; the fan-out scan stays until S11-14.
+
 ## S11-12 — Lifespan for people
 
 **Landed 2026-10-18** in [#480](https://github.com/mendahu/provenencia/pull/480). People now have a lifespan. The profile builder lays every dated event a person takes part in on one timeline; birth starts it, death or burial ends it, and an open end is padded by 110 years. Subject compare checks each side's dated events against the other side's window, so a person who died before a Subject was born, a 140-year life, or a residence after a death is a large conflict. The four age-rule knobs were dropped. No caller yet; nothing changes for researchers.

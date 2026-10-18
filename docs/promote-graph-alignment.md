@@ -80,7 +80,7 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg *Config) Pr
 | --- | --- |
 | `layer` | One Evidence graph: Subjects, bridges, Observations with values and provenance |
 | `canon` | The part of the canonical graph reachable from the seed handles: handles, their links, and their auto-reconciled values (every rank) |
-| `stats` | Catalog statistics for weighting: value frequencies, edge fan-outs (§6) |
+| `stats` | Catalog statistics: edge fan-outs (§6) |
 | `fixed` | Decided rows, plus every already-promoted Subject on the layer, whose existing claim is a free anchor |
 
 `Proposal` is one row per Subject:
@@ -113,7 +113,7 @@ Alignment **orchestrates**; matching / pairwise evaluation **judges a pair**. Al
 **Package boundary:** graph alignment is **its own module**, not folded into Promote UI or FFI handlers. Config for the walk and scorer lives in **one registry file** in that pure package (same idea as matching’s `registry.go`): every tunable dogfood will tweak —
 
 - accept / strong / weak / Skip score bands and the conflict penalty;
-- cold-start priors for `m` (and fallbacks when `u` or fan-out is missing);
+- fallbacks when fan-out is missing;
 - propagation knobs (queue behaviour, how neighbor support accumulates, one-to-one refusal margins);
 - any other weights that decide “is this the best candidate to promote?”
 
@@ -170,7 +170,7 @@ Nothing names a Property or a relationship. Every weight comes from metadata or 
 
 The scale is looked up by property, then by value type. A property added later is another entry.
 
-- **Frequency scales** (text, terms, dates, integers, unless a property replaces them) derive the weight from catalog frequency: `u` is how often unrelated handles share the value, `m` is the prior that the same entity's records agree. A lone exact agreement is lifted to the accept bar (2, also the weak bar), and any agreement bonus is kept. A toponym's bonus makes an exact toponym medium and leaves it short of strong until an edge adds support. A partial is that lifted weight times the similarity, so a one-letter toponym typo is weak.
+- **Plain scales** (text, terms, dates, integers, unless a property replaces them): weight 2, contradiction 3. A lone exact agreement is 2, the accept bar and the weak bar. Toponym has its own scale, weight 3, so an exact toponym alone is medium and short of strong until an edge adds support. A partial is the weight times the similarity, so a one-letter toponym typo is weak.
 - **Fixed scales** are not lifted. Name: weight 2.5, contradiction 3. An identical name is 2.5, still under medium. A name with words on one side only is a partial (`Jake Robins` against `James Kenneth Jake Robins` is 2.5 × 0.75); a different first given name or surname on each side conflicts (value compare's `Different`). Sex at birth and gender: weight 0.6, contradiction 1. Agreement is a small nudge. A mismatch subtracts 1. A neutral term (`property_terms.neutral`, seeded on unknown and indeterminate) is not comparable, so it neither agrees nor conflicts; matching, Rank and the reconciler read the same flag.
 
 `autoreconcile.Compatible` is sameness for reconciliation and for pins. A partial name can make the row weak without being pinned. A line is pinned only when the values are the same.
@@ -197,7 +197,7 @@ There are no database calls during the walk. Everything it reads is loaded first
    - the handles of already-promoted Subjects;
    - the top 5 (`seedCandidateLimit`) property-only candidates of each unpromoted Subject, ranked over the kind's handles from the graph (`g.Kind`).
 3. **Walk the in-memory catalog graph** from the seeds through every link to a person, event or place, with no hop limit. A node not yet in memory loads in one batched read per wave of the walk; a warm one costs nothing. Handles carry their cached auto-reconciled values.
-4. **`stats`:** value frequencies and signature fan-outs, computed once and kept on the graph (§8).
+4. **`stats`:** signature fan-outs, computed once and kept on the graph (§8).
 
 Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count follows the waves of the walk, not the size of the layer or the catalog.
 
@@ -269,7 +269,7 @@ Spike 9 was replanned around this on 2026-10-06. The close note is [`deployment-
 
 # 11. Open questions
 
-- **Thresholds and bands / cold-start priors:** all live in the graph-alignment config registry (§4.1). The walk has no depth limit; the only size knob is the seed count (`seedCandidateLimit` in promotealign). Initial values from the obituary golden; refine by dogfooding whole Sources, not by guessing in isolation.
+- **Thresholds and bands:** all live in the graph-alignment config registry (§4.1). The walk has no depth limit; the only size knob is the seed count (`seedCandidateLimit` in promotealign). Initial values from the obituary golden; refine by dogfooding whole Sources, not by guessing in isolation.
 - ~~**Places at several grains:**~~ **Decided 2026-10-07:** fold Locations that share a `part_of` graph into one chain; unrealted Places stay competing values and reconcile ([`conclusion-reconciliation.md`](conclusion-reconciliation.md) §11.1). No place-nature Property this spike.
 - **Typed name parts:** a name entered as one form ("Gracie Gray Gates (Frickleton)") weakens name comparison. Is that a composer nudge, or a parsing step?
 - **Naming:** what is the "map the rest of this graph" action called?
@@ -296,7 +296,7 @@ As built at the end of Spike 9 slice 9 (S9-41 – S9-44 and the review fixes sta
 **Differs from the text above**
 
 - **Query count (§7):** every read is batched (`sqlbatch`), and the canon comes from the in-memory graph, so a warm proposal reads only the layer, the fixed rows, stats if a commit dropped them, and exhibits. Cold, the graph loads one batch per wave of the walk.
-- **Properties compared (§6):** only the Properties in each kind's `core/match` default profile (name and sex; event type and dates; toponym), not every Property both sides carry. Value frequencies (`u`) are read for every profile Property, but only text and term values have a key, so `u` is used for event type and toponym; name and sex use fixed scales.
+- **Properties compared (§6):** only the Properties in each kind's `core/match` default profile (name and sex; event type and dates; toponym), not every Property both sides carry.
 - **Provenance (§6):** not applied. Every Subject's provenance is 1; credibility, transcription certainty, and member claim confidence don't scale comparisons yet.
 - **Bridge kinds in the loaders:** the layer loader lists its hops (participation, location, relationship, part of, succeeded by) in code. The canon follows every link the graph holds for a `connectrules` bridge, as pins and filing do.
 - **Fallback islands:** an accepted property match seeds the same walk as a fixed anchor. A `Rank` loser does not. One-hop refinement still does not add handles; it only rescores candidates the walk or `Rank` already recorded.

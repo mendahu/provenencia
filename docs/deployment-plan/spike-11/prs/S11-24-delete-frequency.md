@@ -1,6 +1,7 @@
 # S11-24 — Delete frequency weighting
 
-**Status:** Planned
+**Status:** Landed in [#N](https://github.com/mendahu/provenencia/pull/N) (YYYY-MM-DD)
+**Landed:** None.
 **Spike / slice:** Spike 11 · Slice 3 — Property, Subject and entity compare
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: Promote's scores move by a fraction of a point and no view, copy or wire field changes)
