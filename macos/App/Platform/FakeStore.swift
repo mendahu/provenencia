@@ -1065,8 +1065,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     /// Call inside `withState`.
     private func handleSearchHits(query: String, kinds: Set<String>) -> [(hit: CatalogSearchHit, score: Double)] {
-        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !needle.isEmpty else { return [] }
+        let q = TextMatch.Query(query, locale: TextMatch.posix)
+        guard !q.isEmpty else { return [] }
         let names = Dictionary(personHeaders().map { ($0.entity.id, $0.name?.form ?? "") }, uniquingKeysWith: { a, _ in a })
         var seen = Set<String>()
         var out: [(hit: CatalogSearchHit, score: Double)] = []
@@ -1076,10 +1076,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             let header = handleSearchHeader(kind: membership.kind, id: entity.id)
             let name = names[entity.id] ?? ""
             let title = !name.isEmpty ? name : (!entity.label.isEmpty ? entity.label : entity.ref)
-            let haystack = [title, entity.ref, entity.label, handleSearchMatchText(header)]
-            guard haystack.contains(where: { $0.lowercased().contains(needle) }) else { continue }
+            guard q.matches(title, entity.ref, entity.label, handleSearchMatchText(header)) else { continue }
             let section: WorkspaceSection = membership.kind == "person" ? .persons : (membership.kind == "event" ? .events : .places)
-            let refMatch = entity.ref.lowercased().contains(needle)
+            let refMatch = q.matches(entity.ref)
             out.append((
                 CatalogSearchHit(
                     kind: membership.kind, id: entity.id, ref: entity.ref, title: title, subtitle: "",
@@ -3344,14 +3343,19 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         values: [String: String],
         tokens: [String]
     ) -> (score: Double, reason: String) {
+        let tokenKeys = tokens.map { TextMatch.key($0, locale: TextMatch.posix) }.filter { !$0.isEmpty }
+        guard !tokenKeys.isEmpty else { return (0, "") }
+        let valueKeys = Dictionary(fields.map {
+            ($0.name, TextMatch.key(values[$0.name] ?? "", locale: TextMatch.posix))
+        }, uniquingKeysWith: { first, _ in first })
         var score = 0.0
         var bestField = ""
         var bestWeight = 0.0
         var matchedTokens = 0
-        for tok in tokens {
+        for tok in tokenKeys {
             var tokHit = false
             for field in fields {
-                let value = (values[field.name] ?? "").lowercased()
+                let value = valueKeys[field.name] ?? ""
                 guard !value.isEmpty, value.contains(tok) else { continue }
                 tokHit = true
                 score += field.weight
@@ -3363,7 +3367,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if tokHit { matchedTokens += 1 }
         }
         guard matchedTokens > 0 else { return (0, "") }
-        score *= Double(matchedTokens) / Double(tokens.count)
+        score *= Double(matchedTokens) / Double(tokenKeys.count)
         return (score, bestField)
     }
 

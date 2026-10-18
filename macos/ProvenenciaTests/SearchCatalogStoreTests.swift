@@ -20,6 +20,18 @@ struct SearchCatalogStoreTests {
         #expect(store.heldCatalogProjectDir == projectDir)
     }
 
+    @Test func fakeSearchFoldsLikeGo() async throws {
+        let store = FakeStore()
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(id: "src-1", ref: "SRC-1", sourceTypeID: "", title: "Montréal register", description: ""),
+        ]
+        let hits = try await store.searchCatalog(
+            projectDir: projectDir, query: "Montreal", location: .sectionRoot(.sources)
+        )
+        #expect(hits.first?.id == "src-1")
+        #expect(hits.first?.matchReason == "title")
+    }
+
     @Test func findsSourceByTitleAndMapsLocation() async throws {
         let store = FakeStore()
         store.sourcesByProject[projectDir] = [
