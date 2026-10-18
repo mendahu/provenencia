@@ -1,7 +1,7 @@
 # Review — S10-66 Pure depiction value package
 
-**Verdict:** Fits with changes — Ready with changes
-**Rounds:** 1. **Reviewers:** maintainability (opus, pr-reviewer), executability (sonnet, Explore)
+**Verdict:** Fits — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (opus, pr-reviewer), executability (sonnet, Explore)
 
 ## To user
 - None.
@@ -76,3 +76,24 @@ At the base it lists `core/database/sourcecredibility/assessments.go` and `core/
 
 ### M-7 · nit · Test file name differs from the siblings
 **Answer:** Fixed — D-1 and T-1/T-2 name `validate_test.go` and `readable_test.go`.
+
+## Round 2
+
+Maintainability: every round-1 answer holds (M-1 – M-7 resolved; M-6 decline sound). No new blocker. Verdict: Fits.
+Executability: round-1 answers reflected; no false Current state row. Verdict: Ready with changes.
+
+### X-12 · minor · T-4 says three `TestFromJoin` rows remain; D-9 leaves two
+**Answer:** Fixed — T-4 says "two rows plus \"does not alias inputs\"".
+
+### X-13 · minor · The STEP-2 gofmt check misses STEP-1's untracked new files
+**Answer:** Fixed — the STEP-2 check runs after `git add -A`.
+
+### X-14 · nit · Local `main` in a sandbox can be stale
+**Answer:** Logged — the Implementer block is copied verbatim from the template; `implement-pr` fetches `origin/main` before comparing.
+
+### Outside lens (maintainability) · D-10's quoted replacement stops before L40's last sentence
+**Answer:** Fixed — D-10 says the "Do **not** add them to `core/database/errors.go` …" sentence stays.
+
+### Outside lens (maintainability) · `graphcache.SourceObservation` stores a depiction as three flat fields
+**Answer:** Logged — pre-dates this PR and matches dates and names (`DateID`, `NameID`); this PR only rewrites the L58 comment.
+
