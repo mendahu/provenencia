@@ -256,9 +256,10 @@ func AboutEnds(d datevalue.Value, units int) (first, last DateEnd, ok bool) {
 	y, m, day := first.Year, first.Month, first.Day
 	switch {
 	case m == 0:
-		first, ok = boundEnd(intPtr(y-units), nil, nil)
+		lo, hi := first, last
+		first, ok = ShiftYears(lo, -units)
 		if ok {
-			last, ok = boundEnd(intPtr(y+units), nil, nil)
+			last, ok = ShiftYears(hi, units)
 		}
 	case day == 0:
 		y1, m1 := datevalue.AddMonths(y, m, -units)
