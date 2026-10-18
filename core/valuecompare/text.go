@@ -151,7 +151,7 @@ func joinedKey(s string, fold bool, w WordRules) (string, bool) {
 			dec = utf8.AppendRune(rbuf[:0], r)
 		}
 		for _, d := range string(dec) {
-			if d >= 0x300 && unicode.Is(unicode.Mn, d) {
+			if d >= utf8.RuneSelf && unicode.Is(unicode.Mn, d) {
 				continue
 			}
 			if repl, ok := w.Folds[d]; ok {
