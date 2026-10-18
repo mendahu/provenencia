@@ -2,7 +2,7 @@
 
 **Status:** idea only — not roadmapped. Parked from Spike 12 ([source structure](../deployment-plan/spike-12/source-structure.md)), 2026-10-18.
 
-Multiple graphs per Source let a researcher split a big Source by hand. A single graph can still be large: one obituary produced over 100 Subjects and over 200 Observations.
+Multiple graphs per Source let a researcher split a big Source by hand. This also holds the "layers or filters" half of the dogfood note "Dense Evidence graphs (census-scale)" (2026-09-24, descoped from Spike 10), whose splitting half Spike 12 covers. A single graph can still be large: one obituary produced over 100 Subjects and over 200 Observations.
 
 Ideas, no schema change needed:
 
