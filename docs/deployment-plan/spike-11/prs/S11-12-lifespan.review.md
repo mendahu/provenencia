@@ -1,7 +1,7 @@
 # Review — S11-12 Lifespan for people
 
-**Verdict:** Fits with changes — Not ready → all findings fixed
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits — Ready (round 2 findings fixed)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
@@ -74,3 +74,32 @@ A side such as birth 1900 with residence 1850 built a window that did not contai
 
 ### M-10 · nit · `yr` forwards to an existing helper
 **Answer:** Fixed. `ev(…)` is called with `datevaluetest.YMD(y, 0, 0)` directly.
+
+## Round 2
+
+Maintainability: Fits, no new blockers. Executability: Ready with changes.
+
+### X-8 · blocker · D-8's unkeyed `EventRole` literals fail `go vet`
+**Answer:** Fixed. D-8's literals are keyed, and every `EventRole` literal must be keyed.
+
+### X-9 · blocker · AC-2.14 needs a `TestBuild` input the plan does not define
+**Answer:** Fixed. AC-2.14 is split into AC-2.14 and AC-2.19 (Excluding). D-13 adds a `lifespans` field to `TestBuild`'s row struct.
+
+### X-10 · major · AC IDs collide with existing test names
+**Answer:** Fixed. D-13 now says rows added to an existing function continue its numbers, new functions may reuse numbers, and AC-1.10's evidence is the row "AC-1.12 both sides empty", which keeps its name.
+
+### X-11 · major · How `groups` reaches the invariants
+**Answer:** Fixed. D-10 builds `byKind` once in `TestInvariants` and passes `gs []group` to `invariant`, `draw` and `properties`.
+
+### X-12 · minor · AC-4.7 leaves choices open
+**Answer:** Fixed. D-13 now fixes the call (`ForSubject`), one date per event, the draw order and `r.Shuffle`. Skipped cases count toward the 500, and the subtest fails when fewer than 100 build a lifespan.
+
+### X-13 · minor · US-3 `check` has no named helper
+**Answer:** Fixed. STEP-5 names `lifespanResult(outcome)`, a closure beside `sexResult` that checks the outcome only.
+
+### X-14 · nit · Small gaps
+**Answer:** Fixed. STEP-2 rewords the `subject.Weights.person.lifespan.Agree` Changes cell to "consistent". D-6 names `boundEnd(&y, endPart(m), endPart(d))`.
+
+### Maintainability, below the bar
+- `AboutEnds`' year branch could call `ShiftYears`. **Declined:** it would change a working comparer path for two lines; it is logged here for the next PR that touches `AboutEnds`.
+- Next adds overpromised `vocabkey.Role` for S11-14's `BridgeKey`. **Fixed:** the line now says `BridgeKey` needs a role-or-term key built beside it.
