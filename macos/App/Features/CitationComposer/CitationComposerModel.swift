@@ -207,7 +207,6 @@ final class CitationComposerModel {
 
     let artifactViewer = ArtifactViewerModel()
     var armedRegionTool: ArtifactRegionTool?
-    @ObservationIgnored
     var depictionPreviewMemo: DepictionPreviewMemo?
     var viewerPage: Int { artifactViewer.page }
     var viewerPageCount: Int { artifactViewer.pageCount }

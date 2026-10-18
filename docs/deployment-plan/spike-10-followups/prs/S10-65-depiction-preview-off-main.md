@@ -1,6 +1,6 @@
 # S10-65 — Render the likeness preview off the main thread
 
-**Status:** Planned
+**Status:** Landed in [#472](https://github.com/mendahu/provenencia/pull/472) (2026-10-18)
 **Spike / slice:** Spike 10 follow-ups · likeness hardening
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the preview keeps its 96pt `PVThumbnail`, which already has a loading state, and an unchanged edit shows the saved image through the existing `CachedThumbnail`)
@@ -271,3 +271,14 @@ None.
 
 **Title:** S10-65 — Render the likeness preview off the main thread
 **Body:** objective in one sentence; what shipped against US-1, US-2, US-3; AC evidence (test names); deviations from the plan; manual check results; `Plan: docs/deployment-plan/spike-10-followups/prs/S10-65-depiction-preview-off-main.md`.
+
+## Landed
+
+Differences from the plan:
+
+- The cut key is a typed `Equatable` value (`DepictionCutKey`: artifact id, viewer kind, loading flag, page and region draft), not `locator.encodeJSON()` as D-6 says: `encodeJSON()` has unstable key order (no `.sortedKeys`), so a string key never matched itself. Approved by the user against D-6's text.
+- `main` had moved since the plan: S10-63 (`useDepictionRegion`; `commitViewerRegion` now returns `Bool`) and S10-62 (the `fileExists` guard in `ArtifactViewerModel.load` is gone) had landed. Both were kept and no Current state row was invalidated.
+- The PDF cut draws through `PDFPage.draw(with:to:)` on a task-owned `PDFDocument`, not `CGContext.drawPDFPage`, so annotations the viewer shows are in the likeness (CON-1; user's call against D-3/D-4's text).
+- D-12's `SendableImage` was not needed: the build has no new Sendable or isolation warnings.
+- The manual check (section 10) is left for the user.
+- STEP-3's idea-doc edit ("Core Graphics" in the Windows bullet) was undone by F-4, since the cut draws with PDFKit. The idea doc has no net change.
