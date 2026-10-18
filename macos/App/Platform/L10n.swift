@@ -9387,11 +9387,11 @@ enum L10n {
             defaultValue: "Invalid property term.",
             comment: "FFI error propertyterms.invalid"
         )
-        static func propertyTermsDuplicateKey(key: String) -> String {
+        static func propertyTermsDuplicateKey(label: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "error.propertyterms.duplicate_key",
-                defaultValue: "You already have a term with the key %@. Give this one a different label.",
-                comment: "FFI error propertyterms.duplicate_key; argument is the colliding key"
+                defaultValue: "This property already has the term “%@”. Use that one, or give this one a different label.",
+                comment: "FFI error propertyterms.duplicate_key; argument is the existing term's label"
             ), key)
         }
         static let propertyTermsLocked = LocalizedStringResource(
@@ -9657,7 +9657,7 @@ enum L10n {
             case "propertyterms.invalid":
                 return L10n.string(propertyTermsInvalid)
             case "propertyterms.duplicate_key":
-                return propertyTermsDuplicateKey(key: params.first ?? "?")
+                return propertyTermsDuplicateKey(label: params.first ?? "?")
             case "propertyterms.locked":
                 return L10n.string(propertyTermsLocked)
             case "propertyterms.in_use":

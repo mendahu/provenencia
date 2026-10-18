@@ -3175,13 +3175,13 @@
       }
     },
     "error.propertyterms.duplicate_key": {
-      "comment": "FFI error propertyterms.duplicate_key; argument is the colliding key",
+      "comment": "FFI error propertyterms.duplicate_key; argument is the existing term's label",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You already have a term with the key %@. Give this one a different label."
+            "value": "This property already has the term “%@”. Use that one, or give this one a different label."
           }
         }
       }
