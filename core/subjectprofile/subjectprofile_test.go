@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/subjectcompare"
@@ -32,13 +33,14 @@ func TestBuild(t *testing.T) {
 		return o
 	}
 	tests := []struct {
-		name    string
-		entity  func(t *testing.T) subjectprofile.Entity
-		metas   subjectcompare.Metas
-		opts    subjectprofile.Options
-		want    string
-		wantErr error
-		check   func(t *testing.T, p subjectcompare.Values)
+		name      string
+		entity    func(t *testing.T) subjectprofile.Entity
+		metas     subjectcompare.Metas
+		opts      subjectprofile.Options
+		lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan
+		want      string
+		wantErr   error
+		check     func(t *testing.T, p subjectcompare.Values)
 	}{
 		{name: "AC-1.1 outvoted value is left out", entity: maleFemale, want: "sex_at_birth={male}"},
 		{name: "AC-1.2 denied value is a negative", entity: denied, want: "sex_at_birth={¬female}"},
@@ -152,6 +154,18 @@ func TestBuild(t *testing.T) {
 		{name: "AC-2.10 empty cardinality reads as single", entity: maleFemale,
 			metas: subjectcompare.Metas{sex: {ValueType: propertymeta.ValueTypeTerm}}, opts: ex(1),
 			want: "sex_at_birth={male, female}"},
+		{name: "AC-2.14 life events add the lifespan beside the Properties", entity: func(t *testing.T) subjectprofile.Entity {
+			e := maleFemale(t)
+			e.Life = []subjectprofile.LifeEvent{ev(vocabkey.EventBirth, vocabkey.RoleSubject, datevaluetest.YMD(1850, 0, 0))}
+			return e
+		}, lifespans: matchregistry.Default().Subject.Lifespans[vocabkey.Person],
+			want: "lifespan={Between 1850 and 1960}; lifespan_span={Between 1850 and 1850}; sex_at_birth={male}"},
+		{name: "AC-2.19 leaving a member out leaves the lifespan", entity: func(t *testing.T) subjectprofile.Entity {
+			e := maleFemale(t)
+			e.Life = []subjectprofile.LifeEvent{ev(vocabkey.EventBirth, vocabkey.RoleSubject, datevaluetest.YMD(1850, 0, 0))}
+			return e
+		}, lifespans: matchregistry.Default().Subject.Lifespans[vocabkey.Person], opts: ex(1),
+			want: "lifespan={Between 1850 and 1960}; lifespan_span={Between 1850 and 1850}; sex_at_birth={male, female}"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -159,7 +173,7 @@ func TestBuild(t *testing.T) {
 			if metas == nil {
 				metas = subjectcomparetest.Metas()
 			}
-			got, err := subjectprofile.Build(tc.entity(t), metas, matchregistry.Default().Value, tc.opts)
+			got, err := subjectprofile.Build(tc.entity(t), metas, matchregistry.Default().Value, tc.lifespans, tc.opts)
 			if tc.wantErr != nil {
 				if !errors.Is(err, tc.wantErr) {
 					t.Fatalf("err = %v, want %v", err, tc.wantErr)
@@ -209,14 +223,14 @@ func TestForSubject(t *testing.T) {
 				if p == nil || len(p) != 0 {
 					t.Errorf("want non-nil empty profile, got %v", p)
 				}
-				if n := subjectprofile.ForSubject(nil, ""); n == nil || len(n) != 0 {
+				if n := subjectprofile.ForSubject(subjectprofile.Subject{}, nil); n == nil || len(n) != 0 {
 					t.Errorf("nil map: want non-nil empty profile, got %v", n)
 				}
 			}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := subjectprofile.ForSubject(tc.values, tc.namePattern)
+			got := subjectprofile.ForSubject(subjectprofile.Subject{Values: tc.values, NamePattern: tc.namePattern}, nil)
 			if tc.check != nil {
 				tc.check(t, got)
 				return

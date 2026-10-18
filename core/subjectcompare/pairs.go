@@ -30,32 +30,25 @@ func side(kind vocabkey.SubjectType, lead vocabkey.PropertyKey, values Values, r
 // of the values never matters. A missing start or end is open. ok is false
 // when neither is recorded or the span would end before it begins.
 func period(starts, ends []propertycompare.Value) (propertycompare.Value, bool) {
-	var first, last valuecompare.DateEnd
-	var hasFirst, hasLast bool
+	var firsts, lasts []valuecompare.DateEnd
 	for _, v := range starts {
 		if !v.Positive() || v.Date == nil {
 			continue
 		}
-		e, _, ok := valuecompare.DateEnds(*v.Date)
-		if !ok || e.Open {
-			continue
-		}
-		if !hasFirst || e.Lo < first.Lo || (e.Lo == first.Lo && e.Hi < first.Hi) {
-			first, hasFirst = e, true
+		if e, _, ok := valuecompare.DateEnds(*v.Date); ok {
+			firsts = append(firsts, e)
 		}
 	}
 	for _, v := range ends {
 		if !v.Positive() || v.Date == nil {
 			continue
 		}
-		_, e, ok := valuecompare.DateEnds(*v.Date)
-		if !ok || e.Open {
-			continue
-		}
-		if !hasLast || e.Hi > last.Hi || (e.Hi == last.Hi && e.Lo > last.Lo) {
-			last, hasLast = e, true
+		if _, e, ok := valuecompare.DateEnds(*v.Date); ok {
+			lasts = append(lasts, e)
 		}
 	}
+	first, hasFirst := valuecompare.Earliest(firsts)
+	last, hasLast := valuecompare.Latest(lasts)
 	if !hasFirst && !hasLast {
 		return propertycompare.Value{}, false
 	}

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
@@ -38,14 +39,39 @@ func TestEntityCompare(t *testing.T) {
 			t.Error("no sex_at_birth result")
 		}
 	}
+	lifespanResult := func(outcome propertycompare.Outcome) func(*testing.T, subjectcompare.Result) {
+		return func(t *testing.T, r subjectcompare.Result) {
+			t.Helper()
+			for _, p := range r.Properties {
+				if p.Key == vocabkey.PropertyLifespan {
+					if p.Result.Outcome != outcome {
+						t.Errorf("lifespan: got %s, want %s", p.Result.Outcome, outcome)
+					}
+					return
+				}
+			}
+			t.Error("no lifespan result")
+		}
+	}
+	james := func(t *testing.T) subjectprofile.Entity {
+		return subjectprofile.Entity{Properties: props{
+			nameProp: property(t, nameProp, cand(1, 1, 1, name("James Robins"))),
+		}}
+	}
+	jamesSubject := observed{nameProp: pos(name("James Robins"))}
+	subjectRole, birth, death, residence := vocabkey.RoleSubject, vocabkey.EventBirth, vocabkey.EventDeath, vocabkey.EventType("residence")
+	life := func(eventType vocabkey.EventType, y int) []subjectprofile.LifeEvent {
+		return []subjectprofile.LifeEvent{ev(eventType, subjectRole, datevaluetest.YMD(y, 0, 0))}
+	}
 	tests := []struct {
-		name    string
-		kind    vocabkey.SubjectType
-		entity  func(t *testing.T) subjectprofile.Entity
-		opts    subjectprofile.Options
-		subject observed
-		sim, ev float64
-		check   func(t *testing.T, r subjectcompare.Result)
+		name              string
+		kind              vocabkey.SubjectType
+		entity            func(t *testing.T) subjectprofile.Entity
+		opts              subjectprofile.Options
+		subject           observed
+		life, subjectLife []subjectprofile.LifeEvent
+		sim, ev           float64
+		check             func(t *testing.T, r subjectcompare.Result)
 	}{
 		{name: "AC-3.1 a Subject recording the outvoted value conflicts", kind: vocabkey.Person, entity: maleFemale,
 			subject: observed{sex: pos(term("female"))}, sim: 0, ev: -1,
@@ -80,6 +106,22 @@ func TestEntityCompare(t *testing.T) {
 			return subjectprofile.Entity{Properties: props{toponym: property(t, toponym,
 				cand(1, 1, 1, text("York")), cand(2, 2, 2, text("York")), cand(3, 3, 3, text("London")))}}
 		}, subject: observed{toponym: pos(text("London"))}, sim: 1, ev: 3},
+		{name: "AC-3.10 an entity that died before the Subject was born", kind: vocabkey.Person, entity: james,
+			life: life(death, 1840), subject: jamesSubject, subjectLife: life(birth, 1850), sim: 2.5 / 22.5, ev: -17.5,
+			check: lifespanResult(propertycompare.OutcomeConflict)},
+		{name: "AC-3.11 an entity born before the Subject's span ended", kind: vocabkey.Person, entity: james,
+			life: life(birth, 1850), subject: jamesSubject, subjectLife: life(death, 1990), sim: 2.5 / 22.5, ev: -17.5,
+			check: lifespanResult(propertycompare.OutcomeConflict)},
+		{name: "AC-3.12 consistent lifespans agree", kind: vocabkey.Person, entity: james,
+			life: life(birth, 1850), subject: jamesSubject, subjectLife: life(death, 1920), sim: 1, ev: 2.6,
+			check: lifespanResult(propertycompare.OutcomeAgree)},
+		{name: "AC-3.13 the Subject resided after the entity died", kind: vocabkey.Person, entity: james,
+			life: life(death, 1900), subject: jamesSubject, subjectLife: life(residence, 1950), sim: 2.5 / 22.5, ev: -17.5,
+			check: lifespanResult(propertycompare.OutcomeConflict)},
+		{name: "AC-3.14 two births on one day agree", kind: vocabkey.Person, entity: james,
+			life:    []subjectprofile.LifeEvent{ev(birth, subjectRole, datevaluetest.YMD(1901, 5, 1))},
+			subject: jamesSubject, subjectLife: []subjectprofile.LifeEvent{ev(birth, subjectRole, datevaluetest.YMD(1901, 5, 1))}, sim: 1, ev: 2.6,
+			check: lifespanResult(propertycompare.OutcomeAgree)},
 		{name: "AC-5.5 two negatives never meet", kind: vocabkey.Person, entity: denied,
 			subject: observed{sex: {vcand(term("female"), true)}}, sim: 0, ev: 0,
 			check: sexResult(propertycompare.OutcomeUnknown, propertycompare.CauseNoValues)},
@@ -88,11 +130,14 @@ func TestEntityCompare(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			reg := matchregistry.Default()
 			metas := subjectcomparetest.Metas()
-			a, err := subjectprofile.Build(tc.entity(t), metas, reg.Value, tc.opts)
+			e := tc.entity(t)
+			e.Life = tc.life
+			lifespans := reg.Subject.Lifespans[vocabkey.Person]
+			a, err := subjectprofile.Build(e, metas, reg.Value, lifespans, tc.opts)
 			if err != nil {
 				t.Fatal(err)
 			}
-			b := subjectprofile.ForSubject(tc.subject, "")
+			b := subjectprofile.ForSubject(subjectprofile.Subject{Values: tc.subject, Life: tc.subjectLife}, lifespans)
 			r := subjectcompare.Compare(tc.kind, a, b, metas, reg.Subject, reg.Value)
 			if math.Abs(r.Similarity-tc.sim) > 0.0001 || math.Abs(r.Evidence-tc.ev) > 0.0001 {
 				t.Errorf("sim %.4f ev %.4f, want sim %.4f ev %.4f (a=%s b=%s)", r.Similarity, r.Evidence, tc.sim, tc.ev,

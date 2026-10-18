@@ -34,7 +34,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 
 1. **Value compare.** The two names are `Same`; the two dates are `Same`; the two event types are `Same`.
 2. **Property compare.** Name: relation `Same` on a single-value property, so the outcome is agree.
-3. **Subject compare, Gracie.** `subject.Weights.person.name.Agree` is 2.5. Both sides also derive a lifespan, "born 1 May 1901", from their birth; the windows are consistent, so `subject.Weights.person.lifespan.Agree` 0.1 counts. Her own evidence is 2.5 + 0.1 = 2.6.
+3. **Subject compare, Gracie.** `subject.Weights.person.name.Agree` is 2.5. Both sides also derive a lifespan from their birth: window 1 May 1901 to 1 May 2011, span 1 May 1901; each span lies in the other's window, so `subject.Weights.person.lifespan.Agree` 0.1 counts. Her own evidence is 2.5 + 0.1 = 2.6.
 4. **Subject compare, the birth.** Event type agrees: `subject.Weights.event.event_type.Agree` 0.5. The date agrees: `subject.Weights.event.date.Agree` 2. The birth's own evidence is 0.5 + 2 = 2.5.
 5. **Segment compare.** Gracie is the subject of the birth, and `segment.Cardinality.birth` is `one`, so a matching neighbor earns `segment.OneSupport` 1.5 plus `segment.OneCredit` 0.5 of the birth's own evidence: 1.5 + 0.5 × 2.5 = 2.75.
 6. **Graph alignment.** Total evidence is 2.6 + 2.75 = 5.35. That clears `alignment.AcceptBar` (2), so the walk places the pair, and it is at least `alignment.Bands.Strong` (4), so the band is strong. Nothing conflicted, so the row is not contested.
@@ -70,7 +70,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **pair (compared together)** | Two or more properties compared as one, keyed by the lead: a pool adds properties' values to the lead's on each side (sex at birth with gender); a period reads `start_date` and `end_date` as one range for `date` on a side with no date |
 | **profile** | A Subject-shaped set of values built from an entity's reconciled conclusion: displayed values positive, denied values negative, nothing else |
 | **entity comparison** | Layer 4: a Subject against an entity's profile |
-| **lifespan** | A derived window for a person, built from the dates of direct neighbors, compared as a registry-declared special case |
+| **lifespan** | A person's derived window and span, built from the dates of every event they take part in; each side's span is checked against the other's window |
 | **segment** | Two primary Subjects joined by a bridge: primary, bridge, primary |
 | **bridge** | The Subject that joins the two primary Subjects of a segment (a birth, a relationship) |
 | **cardinality** | How many a Subject can have through one bridge; only birth and death are declared `one` |
@@ -112,7 +112,7 @@ Both vocabularies are in the code for several PRs. These old words go.
 
 ## Knob inventory
 
-Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Field`. A Capitalized part is a registry field. A lowercase part is a typed map key: a Subject kind, a property key, a derived property (`lifespan`), or a bridge or participation key; a pair compared together is keyed by its lead property (`sex_at_birth` covers `gender`). The subject section's weights are `subject.Weights.<kind>.<property>`, a derived property's (`lifespan`) included; a pool is keyed by its lead in `subject.Pools`, a period by its lead in `subject.Periods`. The `evidence` section is the claim evidence sheet's line policy ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md)), not evidence points; the Promote evidence sheet reads it, no comparison layer does. The Go registry is the only source of a current value. Start is the value a knob started with. The registry's drift guard compares keys only: every registry field has a row, and every row is a field. `TestKnobInventoryMatchesRegistry` enforces it; rows whose layer has not landed are listed in its `notYetBuilt`. Tuning a knob is one edit, in the registry.
+Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Field`. A Capitalized part is a registry field. A lowercase part is a typed map key: a Subject kind, a property key, a derived property (`lifespan`), or a bridge or participation key; a pair compared together is keyed by its lead property (`sex_at_birth` covers `gender`). The subject section's weights are `subject.Weights.<kind>.<property>`, a derived property's (`lifespan`) included; a pool is keyed by its lead in `subject.Pools`, a period by its lead in `subject.Periods`, a lifespan by its lead (the window) in `subject.Lifespans`. The `evidence` section is the claim evidence sheet's line policy ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md)), not evidence points; the Promote evidence sheet reads it, no comparison layer does. The Go registry is the only source of a current value. Start is the value a knob started with. The registry's drift guard compares keys only: every registry field has a row, and every row is a field. `TestKnobInventoryMatchesRegistry` enforces it; rows whose layer has not landed are listed in its `notYetBuilt`. Tuning a knob is one edit, in the registry.
 
 | Key | Start | Source | Changes |
 | --- | --- | --- | --- |
@@ -155,13 +155,12 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `subject.Weights.person.name.Conflict` | 3 | `graphalign` name `PropertyScale.Contradiction` | Points lost for a different name |
 | `subject.Weights.person.sex_at_birth.Agree` | 0.6 | `graphalign` sex / gender `PropertyScale.Weight` | Points for matching sex or gender (the `sex_at_birth` / `gender` pair) |
 | `subject.Weights.person.sex_at_birth.Conflict` | 1 | `graphalign` sex / gender `PropertyScale.Contradiction` | Points lost when they differ (the `sex_at_birth` / `gender` pair) |
-| `subject.Weights.person.lifespan.Agree` | 0.1 | estimate: near zero, the dates are already counted through their segments | Points for overlapping lifespans |
+| `subject.Weights.person.lifespan.Agree` | 0.1 | estimate: near zero, the dates are already counted through their segments | Points for consistent lifespans |
 | `subject.Weights.person.lifespan.Conflict` | 20 | estimate: impossible together, must never recover | Points lost for impossible lifespans |
-| `subject.person.lifespan.MaxYears` | 110 | estimate: longest plausible human life | Born to died, at most |
-| `subject.person.lifespan.ParentMinYears` | 12 | estimate: the design's "about 12–60 years" | Youngest age at a child's birth |
-| `subject.person.lifespan.ParentMaxYears` | 60 | estimate: the design's "about 12–60 years" | Oldest age at a child's birth |
-| `subject.person.lifespan.MotherMaxYears` | 50 | estimate: "narrower for mothers"; used only when the parent's sex is recorded female | Oldest mother at a child's birth |
-| `subject.person.lifespan.MarriageMinYears` | 14 | estimate: the design's "roughly 14 or older" | Youngest age at a marriage |
+| `subject.Lifespans.person.lifespan.Span` | `lifespan_span` | derived (decided 2026-10-18) | The value holding a life's first to last dated event; the lead `lifespan` holds its window |
+| `subject.Lifespans.person.lifespan.MaxYears` | 110 | estimate: longest plausible human life | Years an unfixed start or end is padded from the first or last dated event |
+| `subject.Lifespans.person.lifespan.Starts` | `birth` · `subject` | decided 2026-10-18 | Events that fix the start of a life |
+| `subject.Lifespans.person.lifespan.Ends` | `death` · `subject`, `burial` · `subject` | decided 2026-10-18 | Events that fix the end of a life |
 | `subject.Weights.event.event_type.Agree` | 0.5 | estimate: generic, says little alone (decided low) | Points for the same event type |
 | `subject.Weights.event.event_type.Conflict` | 20 | estimate: a birth is never a death | Points lost for different event types |
 | `subject.Weights.event.date.Agree` | 2 | estimate: today's cold-start frequency weight ln(0.85 / 0.1) ≈ 2.1, rounded | Points for matching dates (one pair with start / end) |

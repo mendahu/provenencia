@@ -98,7 +98,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-09 | Property compare | 3 | `propertycompare`: negatives, neutral terms, cardinality, outcome table | — | S11-05 | [plan](prs/S11-09-property-compare.md) | Landed #468 |
 | S11-10 | Subject compare | 3 | `subjectcompare` + registry subject section; pairs; similarity and evidence | — | S11-09 | [plan](prs/S11-10-subject-compare.md) | Landed #471 |
 | S11-11 | Subject profile and entity compare | 3 | `subjectprofile.Build`: strict profile, denied as negatives, `Excluding` | — | S11-10, S10-66 | [plan](prs/S11-11-subject-profile.md) | Landed #476 |
-| S11-12 | Lifespan for people | 3 | Profile builder derives a lifespan; subject compare checks it | — | S11-11 | [plan](prs/S11-12-lifespan.md) | Planned |
+| S11-12 | Lifespan for people | 3 | Profile builder derives a lifespan; subject compare checks it | — | S11-11 | [plan](prs/S11-12-lifespan.md) | Landed #480 |
 | S11-24 | Delete frequency weighting | 3 | `Stats.ValueFreq`, m / u priors, frequency scales and their benchmark go | — | S11-05 | — | Scoped |
 | S11-13 | Migrate Promote scoring onto subject compare | 3 | Property scoring, seeding, duplicate rows; values loader moves; delete `core/match`, `core/database/matching` | — | S11-12, S11-24 | — | Scoped |
 | S11-14 | Segment compare | 4 | `segmentcompare`, typed bridge keys, birth / death cardinality, one-hop credit | — | S11-13 | — | Scoped |
@@ -327,6 +327,7 @@ Also builds `core/subjectcompare`'s `invariants_test.go` lead groups (`kindGroup
 **Ships.** `graphalign` scores candidates' properties with entity compare; `promotealign` seeds with it instead of `match.Rank`; duplicate-row checks (`alikeNew`, `pairNode`) use subject compare. `matching.SubjectsValues` moves to the loader that feeds `propertycompare` and `subjectprofile`. Delete `core/match` and `core/database/matching`.
 **Not this PR.** Segments and the walk (slice 4): the old walk stays until S11-16, calling the new scoring.
 **Check.** Golden and sparse cases pass; a birth is never proposed on a death; the packages are gone and `go build ./...` passes.
+**Also (from S11-12 review).** A person whose own dated events contradict each other (born after they died, an event outside their window) gets no lifespan by design (S11-12 D-12). Where this PR first shows a lifespan or a lifespan outcome to the researcher, say why it is missing instead of leaving it out silently. If nothing here shows lifespans yet, carry this line to the PR that first does.
 **Context.** Rule "`core/database/matching` is deleted".
 
 #### S11-24 — Delete frequency weighting

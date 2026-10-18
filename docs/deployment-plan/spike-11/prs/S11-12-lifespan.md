@@ -1,6 +1,7 @@
 # S11-12 — Lifespan for people
 
-**Status:** Planned
+**Status:** Landed in [#480](https://github.com/mendahu/provenencia/pull/480) (2026-10-18)
+**Landed:** `TestAddYears`'s leap-day row uses an offset of 110 (the plan's step text said 10, which cannot give 2014). STEP-4 and STEP-5 are one commit, because the new `Build` and `ForSubject` signatures touch the entity compare and invariant tests. `TestLifespanFromEvents` AC-2.11 is one row holding both undated events. Otherwise none.
 **Spike / slice:** Spike 11 · Slice 3 — Property, Subject and entity compare
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: pure Go layers with no caller yet; nothing reaches the app)

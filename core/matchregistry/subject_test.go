@@ -51,4 +51,28 @@ func TestSubjectSection(t *testing.T) {
 			}
 		}
 	}
+	for kind, lifespans := range s.Lifespans {
+		for lead, l := range lifespans {
+			if _, ok := s.Weights[kind][lead]; !ok {
+				t.Errorf("lifespan lead %s.%s has no Weights entry", kind, lead)
+			}
+			if _, ok := s.Pools[kind][lead]; ok {
+				t.Errorf("%s.%s has both a pool and a lifespan", kind, lead)
+			}
+			if _, ok := s.Periods[kind][lead]; ok {
+				t.Errorf("%s.%s has both a period and a lifespan", kind, lead)
+			}
+			claim(kind, lead, "lifespan lead")
+			if _, ok := s.Weights[kind][l.Span]; ok {
+				t.Errorf("lifespan span %s.%s has a Weights entry of its own", kind, l.Span)
+			}
+			claim(kind, l.Span, "lifespan span")
+			if l.MaxYears <= 0 {
+				t.Errorf("lifespan %s.%s has MaxYears %d", kind, lead, l.MaxYears)
+			}
+			if len(l.Starts) == 0 || len(l.Ends) == 0 {
+				t.Errorf("lifespan %s.%s has no Starts or no Ends", kind, lead)
+			}
+		}
+	}
 }

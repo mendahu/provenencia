@@ -377,6 +377,8 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 - **Weighted as a conflict detector:** large conflict penalty, near-zero agree weight, because the dates it reads are already counted through their own segments.
 - **Bounded by construction:** the builder reads only the person's own events, so nothing recurses across the tree. Both sides' lifespans can be built before alignment, once each.
 
+**Built in S11-12.** `subjectprofile.Build` and `ForSubject` take the person's life events (event type, role, dates) and the registry's `subject.Lifespans` for the kind, and add two derived values, `lifespan` (the window) and `lifespan_span`. `subjectcompare.Compare` scores the `lifespan` lead from both directions: a conflict loses `subject.Weights.person.lifespan.Conflict`, consistent lifespans earn its `Agree`.
+
 ## Entities: compare against the conclusion
 
 **Decided (2026-10-16):** a Subject is compared with an entity's **reconciled values**, not with each member.

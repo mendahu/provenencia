@@ -2,6 +2,7 @@ package subjectcompare_test
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"math/rand"
 	"slices"
@@ -20,25 +21,40 @@ const (
 	invariantCases = 500
 )
 
-// group is a lead property and every property whose values reach it.
+// group is a lead property and every property whose values reach it. pinned
+// is the lead and its lifespan's span, the properties AC-3.5 fills.
 type group struct {
-	lead  vocabkey.PropertyKey
-	props []vocabkey.PropertyKey
-	same  V // the value both sides get in AC-3.5
+	lead   vocabkey.PropertyKey
+	props  []vocabkey.PropertyKey
+	pinned []vocabkey.PropertyKey
 }
 
-var kindGroups = map[vocabkey.SubjectType][]group{
-	vocabkey.Person: {
-		{name, []vocabkey.PropertyKey{name}, pt.Name("James Robins")},
-		{sex, []vocabkey.PropertyKey{sex, gender}, pt.Term("male")},
-	},
-	vocabkey.Event: {
-		{etype, []vocabkey.PropertyKey{etype}, pt.Term("birth")},
-		{date, []vocabkey.PropertyKey{date, start, end}, year(1817)},
-	},
-	vocabkey.Place: {
-		{topo, []vocabkey.PropertyKey{topo}, pt.Text("York")},
-	},
+// groups builds the lead groups of a kind from the registry: each lead of
+// Weights[kind] in key order with the lead, then its pool, its period and its
+// lifespan's span, and the pinned lead and span. A lead or property with no propertyPools entry fails.
+func groups(t *testing.T, kind vocabkey.SubjectType) []group {
+	t.Helper()
+	s := matchregistry.Default().Subject
+	var out []group
+	for _, lead := range slices.Sorted(maps.Keys(s.Weights[kind])) {
+		props := []vocabkey.PropertyKey{lead}
+		pinned := []vocabkey.PropertyKey{lead}
+		props = append(props, s.Pools[kind][lead].With...)
+		if p, ok := s.Periods[kind][lead]; ok {
+			props = append(props, p.Start, p.End)
+		}
+		if l, ok := s.Lifespans[kind][lead]; ok {
+			props = append(props, l.Span)
+			pinned = append(pinned, l.Span)
+		}
+		for _, p := range props {
+			if len(propertyPools[p]) == 0 {
+				t.Fatalf("%s.%s has no propertyPools entry", kind, p)
+			}
+		}
+		out = append(out, group{lead: lead, props: props, pinned: pinned})
+	}
+	return out
 }
 
 var propertyPools = map[vocabkey.PropertyKey][]V{
@@ -50,11 +66,15 @@ var propertyPools = map[vocabkey.PropertyKey][]V{
 	start:  {year(1815), year(1816)},
 	end:    {year(1820)},
 	topo:   {pt.Text("York"), pt.Text("york"), pt.Text("Montréal"), pt.Text("Montreal"), pt.Text("London")},
+	lifeWindow: {pt.Date(datevaluetest.Between(1850, 0, 0, 1960, 0, 0)), pt.Date(datevaluetest.Between(1730, 0, 0, 1840, 0, 0)),
+		pt.Date(datevaluetest.Between(1790, 0, 0, 1900, 0, 0))},
+	lifeSpan: {pt.Date(datevaluetest.Between(1850, 0, 0, 1850, 0, 0)), pt.Date(datevaluetest.Between(1840, 0, 0, 1840, 0, 0)),
+		pt.Date(datevaluetest.Between(1950, 0, 0, 1950, 0, 0))},
 }
 
-func properties(kind vocabkey.SubjectType) []vocabkey.PropertyKey {
+func properties(gs []group) []vocabkey.PropertyKey {
 	var out []vocabkey.PropertyKey
-	for _, g := range kindGroups[kind] {
+	for _, g := range gs {
 		out = append(out, g.props...)
 	}
 	return out
@@ -62,9 +82,9 @@ func properties(kind vocabkey.SubjectType) []vocabkey.PropertyKey {
 
 // draw gives each property of the kind 0 to 2 pool values, each negative one
 // time in four.
-func draw(r *rand.Rand, kind vocabkey.SubjectType) Vals {
+func draw(r *rand.Rand, gs []group) Vals {
 	vals := Vals{}
-	for _, p := range properties(kind) {
+	for _, p := range properties(gs) {
 		var vs []V
 		for range r.Intn(3) {
 			v := propertyPools[p][r.Intn(len(propertyPools[p]))]
@@ -126,34 +146,38 @@ func same(x, y subjectcompare.Result) string {
 
 // invariant builds a case and returns what it found wrong, or "". ok is false
 // when the case does not apply and must be drawn again.
-type invariant func(r *rand.Rand, kind vocabkey.SubjectType) (a, b Vals, msg string, ok bool)
+type invariant func(r *rand.Rand, kind vocabkey.SubjectType, gs []group) (a, b Vals, msg string, ok bool)
 
 func TestInvariants(t *testing.T) {
 	kinds := []vocabkey.SubjectType{vocabkey.Person, vocabkey.Event, vocabkey.Place}
+	byKind := map[vocabkey.SubjectType][]group{}
+	for _, kind := range kinds {
+		byKind[kind] = groups(t, kind)
+	}
 	invariants := []struct {
 		id    string
 		kinds []vocabkey.SubjectType
 		run   invariant
 	}{
-		{"AC-3.1", kinds, func(r *rand.Rand, kind vocabkey.SubjectType) (Vals, Vals, string, bool) {
-			a, b := draw(r, kind), draw(r, kind)
+		{"AC-3.1", kinds, func(r *rand.Rand, kind vocabkey.SubjectType, gs []group) (Vals, Vals, string, bool) {
+			a, b := draw(r, gs), draw(r, gs)
 			return a, b, same(compare(kind, a, b), compare(kind, b, a)), true
 		}},
-		{"AC-3.2", kinds, func(r *rand.Rand, kind vocabkey.SubjectType) (Vals, Vals, string, bool) {
-			a, b := draw(r, kind), draw(r, kind)
+		{"AC-3.2", kinds, func(r *rand.Rand, kind vocabkey.SubjectType, gs []group) (Vals, Vals, string, bool) {
+			a, b := draw(r, gs), draw(r, gs)
 			return a, b, same(compare(kind, a, b), compare(kind, shuffled(r, a), shuffled(r, b))), true
 		}},
-		{"AC-3.3", kinds, func(r *rand.Rand, kind vocabkey.SubjectType) (Vals, Vals, string, bool) {
-			a, b := draw(r, kind), draw(r, kind)
+		{"AC-3.3", kinds, func(r *rand.Rand, kind vocabkey.SubjectType, gs []group) (Vals, Vals, string, bool) {
+			a, b := draw(r, gs), draw(r, gs)
 			if s := compare(kind, a, b).Similarity; s < 0 || s > 1 {
 				return a, b, fmt.Sprintf("similarity %v", s), true
 			}
 			return a, b, "", true
 		}},
-		{"AC-3.4", kinds, func(r *rand.Rand, kind vocabkey.SubjectType) (Vals, Vals, string, bool) {
-			a, b := draw(r, kind), draw(r, kind)
+		{"AC-3.4", kinds, func(r *rand.Rand, kind vocabkey.SubjectType, gs []group) (Vals, Vals, string, bool) {
+			a, b := draw(r, gs), draw(r, gs)
 			var open []group
-			for _, g := range kindGroups[kind] {
+			for _, g := range gs {
 				if empty(g, b) {
 					open = append(open, g)
 				}
@@ -174,10 +198,10 @@ func TestInvariants(t *testing.T) {
 			with[p] = append(with[p], v)
 			return a, b, same(compare(kind, a, b), compare(kind, with, b)), true
 		}},
-		{"AC-3.5", kinds, func(r *rand.Rand, kind vocabkey.SubjectType) (Vals, Vals, string, bool) {
-			a, b := draw(r, kind), draw(r, kind)
+		{"AC-3.5", kinds, func(r *rand.Rand, kind vocabkey.SubjectType, gs []group) (Vals, Vals, string, bool) {
+			a, b := draw(r, gs), draw(r, gs)
 			var open []group
-			for _, g := range kindGroups[kind] {
+			for _, g := range gs {
 				if empty(g, a) && empty(g, b) {
 					open = append(open, g)
 				}
@@ -187,7 +211,9 @@ func TestInvariants(t *testing.T) {
 			}
 			g := open[r.Intn(len(open))]
 			wa, wb := clone(a), clone(b)
-			wa[g.lead], wb[g.lead] = []V{g.same}, []V{g.same}
+			for _, p := range g.pinned {
+				wa[p], wb[p] = []V{propertyPools[p][0]}, []V{propertyPools[p][0]}
+			}
 			before, after := compare(kind, a, b), compare(kind, wa, wb)
 			switch {
 			case after.Evidence < before.Evidence-1e-9:
@@ -197,8 +223,8 @@ func TestInvariants(t *testing.T) {
 			}
 			return a, b, "", true
 		}},
-		{"AC-3.6", []vocabkey.SubjectType{vocabkey.Person, vocabkey.Event}, func(r *rand.Rand, kind vocabkey.SubjectType) (Vals, Vals, string, bool) {
-			a, b := draw(r, kind), draw(r, kind)
+		{"AC-3.6", []vocabkey.SubjectType{vocabkey.Person, vocabkey.Event}, func(r *rand.Rand, kind vocabkey.SubjectType, gs []group) (Vals, Vals, string, bool) {
+			a, b := draw(r, gs), draw(r, gs)
 			if kind == vocabkey.Person {
 				a[name], b[name] = []V{pt.Name("James Robins")}, []V{pt.Name("Mary Robins")}
 			} else {
@@ -219,7 +245,7 @@ func TestInvariants(t *testing.T) {
 					if i > invariantCases*1000 {
 						t.Fatalf("only %d applicable cases in %d draws", counted, i)
 					}
-					a, b, msg, ok := inv.run(r, kind)
+					a, b, msg, ok := inv.run(r, kind, byKind[kind])
 					if !ok {
 						continue
 					}

@@ -1,6 +1,7 @@
 // Package vocabkey holds the product vocabulary keys code reads by name:
-// vocabulary origins, the primary Subject kinds, and the seeded Property keys
-// on them. Pure: the seed and the queries live under core/database.
+// vocabulary origins, the primary Subject kinds, the seeded Property keys on
+// them, the seeded term keys it reads, and the derived Property keys matching
+// builds. Pure: the seed and the queries live under core/database.
 //
 // A kind is the key of a primary Subject type. IsPrimaryKind takes a key
 // alone; IsPrimaryType takes a catalog type's key and origin.
@@ -39,6 +40,26 @@ const (
 	PropertyEndDate    = "end_date"
 	PropertyToponym    = "toponym"
 	PropertyLikeness   = "likeness"
+)
+
+// EventType is an event_type term key, typed for registry rules.
+type EventType string
+
+// Role is a participation role term key, typed for registry rules.
+type Role string
+
+// Seeded term keys matching reads by name.
+const (
+	EventBirth  EventType = "birth"
+	EventDeath  EventType = "death"
+	EventBurial EventType = "burial"
+	RoleSubject Role      = "subject"
+)
+
+// Derived Property keys the profile builder adds (never seeded).
+const (
+	PropertyLifespan     = "lifespan"
+	PropertyLifespanSpan = "lifespan_span"
 )
 
 // PrimaryKinds returns a new slice of the primary kinds on each call.

@@ -21,6 +21,7 @@ func TestDefaultIsFresh(t *testing.T) {
 	first.Subject.Weights[vocabkey.Person][vocabkey.PropertyName] = subjectcompare.Weights{}
 	first.Subject.Pools[vocabkey.Person][vocabkey.PropertySexAtBirth].With[0] = "changed"
 	first.Subject.Periods[vocabkey.Event][vocabkey.PropertyDate] = subjectcompare.Period{}
+	first.Subject.Lifespans[vocabkey.Person][vocabkey.PropertyLifespan].Starts[0] = subjectcompare.EventRole{}
 	if got := Default(); !reflect.DeepEqual(got, want) {
 		t.Errorf("second Default() = %+v, want %+v", got, want)
 	}
