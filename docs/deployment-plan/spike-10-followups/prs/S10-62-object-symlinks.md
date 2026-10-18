@@ -1,6 +1,6 @@
 # S10-62 — Refuse symlinked objects in the app
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 10 follow-ups · likeness hardening
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a refused object shows the missing state each reader already has)
