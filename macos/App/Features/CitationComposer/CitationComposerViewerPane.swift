@@ -6,6 +6,8 @@ struct CitationComposerViewerPane: View {
     @State private var clearMenu = PVContextMenuState()
     @State private var clearKeyboard = PVContextMenuKeyboard.inactive
     @FocusState private var findFieldFocused: Bool
+    /// Set when the drawing band appears so Cancel holds keyboard focus.
+    @FocusState private var drawingCancelFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -55,6 +57,7 @@ struct CitationComposerViewerPane: View {
                 model.cancelDepictionDrawing()
             }
             .keyboardShortcut(.cancelAction)
+            .focused($drawingCancelFocused)
             .accessibilityIdentifier("citationComposer.depiction.cancel")
         }
         .padding(.horizontal, PVSpacing.space6)
@@ -62,6 +65,21 @@ struct CitationComposerViewerPane: View {
         .background(PVColor.surfaceCard)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("citationComposer.depiction.drawingBand")
+        .onAppear { claimDrawingFocus() }
+        .onDisappear { drawingCancelFocused = false }
+    }
+
+    /// Moves focus to Cancel and announces drawing mode. The sheet is still
+    /// dismissing when the band appears, so the focus is written twice, a turn
+    /// apart, as the authoring box's Tab claim does.
+    private func claimDrawingFocus() {
+        DispatchQueue.main.async {
+            drawingCancelFocused = true
+            AccessibilityAnnouncement.post(L10n.string(L10n.CitationComposer.depictionDrawingHint))
+            DispatchQueue.main.async {
+                if !drawingCancelFocused { drawingCancelFocused = true }
+            }
+        }
     }
 
     /// Capability layout: viewer chrome (page / Set page / zoom / radios) + Clear + Find.
