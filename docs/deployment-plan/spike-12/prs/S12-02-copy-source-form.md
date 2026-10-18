@@ -1,18 +1,18 @@
 # S12-02 — Copy Source form
 
-**Status:** Blocked — on board S12-D1, and on S12-01 merging ([#478](https://github.com/mendahu/provenencia/pull/478) open)
+**Status:** Blocked — on board S12-D1
 **Spike / slice:** Spike 12 · Slice 1 — Copy Source
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S12-D1](../design/S12-D1-copy-source-form.md), board not agreed yet
 **Board:** — (to be set when the board is agreed: exported frames in the repo, or the frames described in words in §6 macOS)
-**Depends on:** S12-01 ([#478](https://github.com/mendahu/provenencia/pull/478), open), S12-D1
+**Depends on:** S12-01 (landed [#478](https://github.com/mendahu/provenencia/pull/478)), S12-D1
 **Blocks:** S12-12, S12-16
 **Branch:** `s12-02-copy-source-form`
 **Version bump:** none — Spike 11 and 12 PRs leave `VERSION` at 0.2.0 until a release is cut, as S12-01 did ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-workspace-place`](../../../../.agents/skills/add-workspace-place/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** —
 **Context:** [Copy Source](../source-structure.md#copy-source), working rules: "The form", "Entry points", "One title and type form, one Artifact checklist", "Two tools, one rule for choosing"; S12-01 ship log follow-up UX-1 ([`S12-01-copy-source-engine.ship.md`](S12-01-copy-source-engine.ship.md))
-**Planned:** 2026-10-18 against `s12-01-copy-source-engine` @ `77724d8` (= `main` @ `c01c4e0` + S12-01, not merged yet). Branch from `main` after #478 merges and recheck §4 against it
+**Planned:** 2026-10-18 against `main` @ `817bad1` (S12-01 merged in #478; §4 rechecked: no file under §4 changed between the S12-01 branch head `77724d8` and `817bad1`)
 **Review:** [`S12-02-copy-source-form.review.md`](S12-02-copy-source-form.review.md) — Fits with changes / Not ready → fixed, 1 round; plan stays Blocked on the board
 
 ### Implementer — read this first
@@ -332,7 +332,7 @@ This makes the slice 1 Check true: the new Source has "Copy of …", the same ty
 
 **Stop and report if:**
 
-- S12-01 lands with a `copySource` signature or effects different from §4 (check its **Landed** note).
+- `GenealogyStore.copySource` or `FakeStore.copySource` on `main` no longer matches §4.
 - The agreed S12-D1 board differs from D-13 – D-17 or §6 Strings (another layout, a toast, more menu items). The plan is updated before code.
 - `.createdSource` no longer invalidates `.sourcesList` in `CatalogQueryRegistry.swift`, so T-9 cannot pass without a write-through.
 - `SourceTitleTypeFields` cannot keep `sources.add.title` / `sources.add.type` without changing `SourcesListContent` beyond `addForm`.

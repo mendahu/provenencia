@@ -1,6 +1,6 @@
 # Review — S12-02 Copy Source form
 
-**Verdict:** Fits with changes — Not ready → fixed (round 1). The plan stays `Blocked` on board S12-D1 and on S12-01 merging, so round 2 runs when the board is agreed and the plan is refreshed.
+**Verdict:** Fits with changes — Not ready → fixed (round 1). The plan stays `Blocked` on board S12-D1, so round 2 runs when the board is agreed and the plan is refreshed.
 **Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet). The maintainability reviewer also read brief S12-D1.
 
 ## To user
@@ -14,7 +14,7 @@
 - The Copy action on the Source page is an icon button before Delete; the list row's menu has only Copy (D-17).
 - The title prefill is focused, not selected (D-15).
 - The label rule moves to the trimmed form, so a whitespace-only label shows the ref everywhere (D-1).
-- The plan is written against the S12-01 branch head, before #478 merges; the implementer rechecks §4 on `main`.
+- The plan was written against the S12-01 branch head, then refreshed on `main` @ `817bad1` once #478 merged; no §4 file changed.
 
 ## Round 1
 
@@ -59,7 +59,7 @@ Three copies exist (`SourcePageArtifactsView` L243, `SourcePageModel.askDeleteAr
 **Answer:** Fixed — D-22 and a Stop condition: the Xcode build, tests and manual check run on the macOS dev machine, as for S12-01 (D-16 there; its ship log worktree is on macOS).
 
 ### X-3 · major · Current state rows not exactly true
-**Answer:** Fixed — line numbers corrected (`create()` L368, `copySource` from L988), `Draft` and the stored errors described as they are, `sourceTypeComboRow` noted as reading `model.types`, the base line says to branch from `main` after #478 merges.
+**Answer:** Fixed — line numbers corrected (`create()` L368, `copySource` from L988), `Draft` and the stored errors described as they are, `sourceTypeComboRow` noted as reading `model.types`, the base line is now `main` @ `817bad1` after #478 merged.
 
 ### X-4 · blocker · Undefined members and names
 **Answer:** Fixed — D-3 (validation shape, `description` default), D-6 (every `SourceCopyModel` member), D-6 / D-4 (types handle in the model), D-13 (who clears `copying`, cancel while saving), D-15 (title focus), Out line for the sidebar count.
