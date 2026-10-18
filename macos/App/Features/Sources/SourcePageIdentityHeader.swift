@@ -24,8 +24,9 @@ struct SourcePageIdentityHeader: View {
                     titleCluster
                         .frame(maxWidth: .infinity, alignment: .leading)
                     HStack(alignment: .top, spacing: PVSpacing.space4) {
-                        deleteSourceButton
                         evidenceGraphJump
+                        copySourceButton
+                        deleteSourceButton
                     }
                 }
                 // Menu on the row (not the 72pt thumb) so click origin shares
@@ -171,6 +172,18 @@ struct SourcePageIdentityHeader: View {
 
             metaRow
         }
+    }
+
+    private var copySourceButton: some View {
+        PVIconButton(
+            .duplicate,
+            label: L10n.Sources.copySourceEntry,
+            size: .sm
+        ) {
+            model.openCopy()
+        }
+        .disabled(model.source == nil)
+        .accessibilityIdentifier("sources.page.copySource")
     }
 
     private var deleteSourceButton: some View {

@@ -69,6 +69,9 @@ final class SourceCopyModel {
 
     var workspace: CatalogSourceWorkspace? { workspaceHandle.value }
 
+    /// Project folder for resolving `objects/…` thumbnail paths.
+    var projectDir: String { session.projectKey.projectDir }
+
     var types: [CatalogSourceType] { typesHandle.value ?? [] }
 
     /// The original's type icon, for Artifact thumbnails that have no file.
