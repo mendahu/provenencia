@@ -2,9 +2,11 @@
 name: ship-pr
 description: >-
   Orchestrates one Provenencia PR from a Planned plan to a ready-for-review PR:
-  dispatches the implementer, runs scripts/check-pr.sh itself, fans out five
-  fresh reviewers (conformance and regression, maintainability, user
-  experience, security, performance), dedupes and verifies their findings,
+  dispatches the implementer, runs scripts/check-pr.sh itself, fans out fresh
+  reviewers routed by the diff's paths (conformance and regression and
+  maintainability always; user experience, and one combined security and
+  performance reviewer, when their paths are touched), dedupes and verifies
+  their findings,
   writes one fix plan, and loops at most two review rounds before handing the
   PR to the user. Keeps the ship log. Use when the user asks to ship,
   implement, build, or run the implementation workflow for a planned PR
@@ -22,7 +24,7 @@ decides what happens to each finding.
 orchestrator ──plan──▶ implementer ──report──▶ orchestrator ── runs scripts/check-pr.sh
      ▲                                              │
      │                                              ▼
-     └── fix plan ◀── triage ◀── 5 reviewers in parallel (fresh context, read-only)
+     └── fix plan ◀── triage ◀── 2–4 reviewers in parallel, routed by path (fresh, read-only)
 ```
 
 Skills the other roles load: [`implement-pr`](../implement-pr/SKILL.md),
@@ -56,7 +58,7 @@ reviewer into round 2; a reviewer that saw round 1 defends it.
 - [ ] 0. Ship log: create prs/S#-NN-<slug>.ship.md from the template below
 - [ ] 1. Implement: dispatch pr-implementer with the plan (round 0)
 - [ ] 2. Gate: read the report; run scripts/check-pr.sh yourself
-- [ ] 3. Review round 1: five pr-reviewers in parallel, full diff
+- [ ] 3. Review round 1: route by path; pr-reviewers in parallel, full diff
 - [ ] 4. Triage: dedupe, verify, decide each finding; write Fix plan 1
 - [ ] 5. Implement Fix plan 1; gate
 - [ ] 6. Review round 2: lenses with Fix-now findings, fix commits only
@@ -89,18 +91,28 @@ report's word for it.
 
 ### 3. Review
 
-Lenses: **all five on every PR** (the user's call, 2026-10-14; revisit for cost
-with the routing table below).
+Five lenses, up to four reviewers. Conformance and maintainability run on every
+PR. User experience runs when the diff touches its paths. Security and
+performance share **one** reviewer, which runs when the diff touches either
+lens's paths. Both lenses look for the same thing: an input or a count with no
+bound. That reviewer reads both rubrics, and its findings keep their own `SEC-`
+and `PRF-` IDs.
 
-| Lens | Rubric | Route by paths, if routing is turned on |
+| Reviewer | Rubric | Runs when the diff touches |
 | --- | --- | --- |
 | Conformance and regression | `review-pr/lenses/conformance.md` | Always |
 | Maintainability | `review-pr/lenses/maintainability.md` | Always |
 | User experience | `review-pr/lenses/ux.md` | `macos/App/**`, `Localizable.xcstrings`, `core/apperr`, new error codes |
-| Security | `review-pr/lenses/security.md` | `core/ingest`, `core/objectpath`, `core/objectstore`, `core/derivatives`, `core/raster`, `core/identity`, `core/catalogsession`, `api/ffi/**`, `macos/App/Platform/ProjectFiles.swift`, `macos/App/Platform/ThumbnailCache.swift`, migrations, `*.entitlements`, URL or locator code |
-| Performance | `review-pr/lenses/performance.md` | `core/database/**`, `core/search`, `core/derivatives`, `core/raster`, graph, list, and cache code, `macos/App/Features/**` models |
+| Security and performance | `review-pr/lenses/security.md` and `review-pr/lenses/performance.md` | **Security:** `core/ingest`, `core/objectpath`, `core/objectstore`, `core/derivatives`, `core/raster`, `core/identity`, `core/catalogsession`, `api/ffi/**`, `macos/App/Platform/ProjectFiles.swift`, `macos/App/Platform/ThumbnailCache.swift`, migrations, `*.entitlements`, URL or locator code, the matching layers (`core/matchregistry`, `core/valuecompare`, `core/propertycompare`, `core/subjectcompare`, `core/subjectprofile`, `core/autoreconcile`, `core/database/namealiases`), and any code that loads a stored number, weight, or list from the catalog and trusts its size or range. **Performance:** `core/database/**`, `core/search`, `core/derivatives`, `core/raster`, graph, list, and cache code, `macos/App/Features/**` models |
 
-Dispatch one `pr-reviewer` per lens, **in parallel**:
+Route from `git diff --name-only <base>...<head>`, and read the diff too: a
+path list cannot see "loads a stored weight". When you are unsure whether a
+path matches, dispatch the reviewer. A skipped reviewer is cheap to add
+and a missed blocker is not. Write the reviewers you dispatched in the ship
+log, and say why each one you skipped did not match. The user can ask for every
+reviewer on a PR.
+
+Dispatch one `pr-reviewer` per routed reviewer, **in parallel**:
 
 ```text
 Review a Provenencia PR through the <Lens> lens. Follow
@@ -109,8 +121,16 @@ Plan: <plan path>. Base: <base sha>. Head: <head sha>. Round: 1.
 Read-only. Return findings in the review-pr format, then the verdict.
 ```
 
+The combined reviewer's first two lines are:
+
+```text
+Review a Provenencia PR through the Security and Performance lenses together.
+Follow .agents/skills/review-pr/SKILL.md and both rubrics.
+```
+
 Round 2 adds: `Round: 2. Ship log: <path>. Scope: <round-1 head>...<head>.`
-Round 2 goes only to lenses that had a Fix-now finding.
+Round 2 goes only to reviewers that had a Fix-now finding. The combined reviewer
+goes when either lens did.
 
 ### 4. Triage
 
@@ -208,6 +228,8 @@ reads when something went wrong.
 Head `<sha>`. Gate PASS. Report: <deviations, or "none">.
 
 ## Round 1 — review
+Reviewers: CON, MNT, SEC+PRF. Skipped: UX (no `macos/App/**`, strings, or error codes).
+
 | ID | Lens | Severity | Title | Decision | Evidence / reason |
 | --- | --- | --- | --- | --- | --- |
 | CON-1 | CON | blocker | … | Fix now → F-1 | verified: <how> |

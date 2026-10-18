@@ -34,7 +34,11 @@ the gate already ran it and parallel builds collide.
 
 ## Inputs (from the orchestrator)
 
-- **Lens**: one of the five.
+- **Lens**: one of the five, or **Security and performance** together. In
+  that case one reviewer reads both rubrics, works each one's **How to work**,
+  and numbers findings `SEC-` or `PRF-` by the rubric they come from. A finding
+  that is both (an unbounded decode, an unbounded list loaded from the catalog)
+  is written once, under the lens with the higher severity, and names the other.
 - **Plan**: `docs/deployment-plan/<spike>/prs/S#-NN-<slug>.md`.
 - **Base** and **head**: commits. The change is `git diff <base>...<head>`.
 - **Round**: 1, or 2 with the **ship log** (`S#-NN-<slug>.ship.md`) holding the

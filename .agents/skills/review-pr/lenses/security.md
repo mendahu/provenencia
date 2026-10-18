@@ -6,7 +6,8 @@ local-first: there is no server and no login. The attack surface is what comes
 in from disk and from other people's projects, and what crosses the FFI.
 
 Runs when the diff touches file I/O, ingest, derivatives, the object store,
-identity, project open, FFI, SQL, URLs, locators, or entitlements. Describe the
+identity, project open, FFI, SQL, URLs, locators, entitlements, or stored
+numbers, weights, and lists the code trusts (the matching layers). Describe the
 risk and the fix. Do not write exploits.
 
 ## Read first
@@ -25,6 +26,7 @@ risk and the fix. Do not write exploits.
 | Identity | `core/identity`, `identity.json`, `active-project.json` | Files under Documents another app or user can edit |
 | FFI | `api/ffi`, `api/ffi/handlers`, `macos/App/Platform/GoStore.swift`, `CoreInvoke.swift` | Bytes from Swift; errors going back |
 | Catalog values | `core/urlshape`, `core/locator`, `valuecodec` | URLs, locator JSON, text that later renders |
+| Stored numbers and lists | `core/matchregistry`, `core/valuecompare`, `core/propertycompare`, `core/subjectcompare`, `core/subjectprofile`, `core/autoreconcile`, `core/database/namealiases` | Weights, counts, and lists read back from a catalog another tool may have written: `NaN`, `+Inf`, `1e308`, a negative weight, a 10,000-word name |
 
 ## How to work
 
