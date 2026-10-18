@@ -945,23 +945,48 @@ struct CitationDepictionValueArea: View {
                         .font(PVFont.body(size: 12, italic: true))
                         .foregroundStyle(PVColor.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
-                    PVButton(
-                        draft.hasRegion || !draft.valueDepictionID.isEmpty
-                            ? L10n.CitationComposer.depictionRedraw
-                            : L10n.CitationComposer.depictionDraw,
-                        variant: .secondary,
-                        size: .sm,
-                        icon: .crop
-                    ) {
-                        model.startDepictionDrawing()
+                    FlowLayout(spacing: PVSpacing.space4, lineSpacing: PVSpacing.space3) {
+                        PVButton(
+                            draft.hasRegion || !draft.valueDepictionID.isEmpty
+                                ? L10n.CitationComposer.depictionRedraw
+                                : L10n.CitationComposer.depictionDraw,
+                            variant: .secondary,
+                            size: .sm,
+                            icon: .crop
+                        ) {
+                            model.startDepictionDrawing()
+                        }
+                        .disabled(!model.canStartDepictionDrawing)
+                        .focused(focus, equals: .value)
+                        .accessibilityIdentifier("citationComposer.depiction.draw")
+                        PVButton(model.depictionWholeFileTitle, variant: .secondary, size: .sm) {
+                            useRegion(.whole)
+                        }
+                        .disabled(!model.canStartDepictionDrawing)
+                        .accessibilityIdentifier("citationComposer.depiction.useWhole")
+                        if let region = model.depictionCitationRegion {
+                            PVButton(
+                                L10n.CitationComposer.depictionUseCitationRegion,
+                                variant: .secondary,
+                                size: .sm
+                            ) {
+                                useRegion(region)
+                            }
+                            .disabled(!model.canStartDepictionDrawing)
+                            .accessibilityIdentifier("citationComposer.depiction.useCitationRegion")
+                        }
                     }
-                    .disabled(!model.canStartDepictionDrawing)
-                    .focused(focus, equals: .value)
-                    .accessibilityIdentifier("citationComposer.depiction.draw")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .accessibilityIdentifier("citationComposer.depiction")
+    }
+
+    /// Sets the region without drawing and announces the caption it produced.
+    private func useRegion(_ region: ArtifactRegionDraft) {
+        if model.useDepictionRegion(region) {
+            AccessibilityAnnouncement.post(L10n.string(model.depictionCaption))
+        }
     }
 }
