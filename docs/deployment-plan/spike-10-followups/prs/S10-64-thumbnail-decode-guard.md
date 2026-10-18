@@ -317,3 +317,4 @@ Differences from the plan:
 - User-approved amendment to D-5 (2026-10-18): `ProjectFiles.objectURL` now runs inside the decode slot, right before the file opens, so the slot wait no longer sits between the object-path check and the open.
 - User-approved amendment to D-7 (2026-10-18): a queued decode whose callers have all gone is dropped without decoding and is not stored as missing; a cancelled caller returns nil at once. This pulls part of PRF-2 forward. New test: `ThumbnailCacheTests/dropsAQueuedDecodeWhoseCallersHaveGone`.
 - Fix round 2: `ThumbnailCache.clear()` had no caller and could split one load's state, so it was removed along with `clearGeneration`; `finish` now always clears `inflight[key]`.
+- `CachedThumbnail.load()` ignores a cancelled load's result (user-requested, review follow-up).
