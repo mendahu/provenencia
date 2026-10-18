@@ -20,7 +20,7 @@ matchregistry ──────────────────────
 | --- | --- | --- | --- | --- | --- |
 | 1 | Value compare | `core/valuecompare` | Two values of one value type | A relation, a similarity from 0 to 1, and a detail saying which parts paired | `value` |
 | 2 | Property compare | `core/propertycompare` | Every value two Subjects hold for one property, with the property's value type and cardinality | An outcome (agree, partial, conflict, unknown) and the speaking pair | `value` (passed through to layer 1) |
-| 3 | Subject compare | `core/subjectcompare` | Two Subjects of one type, with every property each holds | A similarity and evidence in points | `subject` |
+| 3 | Subject compare | `core/subjectcompare` | Two Subjects of one type, with every property each holds | A similarity and evidence in points | `subject`, and `value` passed through to layer 2 |
 | 4 | Entity compare | `core/subjectprofile` (`Build`) with `core/subjectcompare` | A Subject and an entity's reconciled conclusion, built into a Subject-shaped profile | A similarity and evidence in points | `subject` |
 | 5 | Segment compare | `core/segmentcompare` | A segment on the layer and a segment in the research graph | An outcome, a similarity, evidence, and a detail | `segment`, `subject` |
 | 6 | Graph alignment | `core/graphalign` | The layer's Subjects and the research graph's handles | Rows: target, band, contested mark, reasons, alternatives | `alignment`, `segment`, `subject` |
@@ -34,8 +34,8 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 
 1. **Value compare.** The two names are `Same`; the two dates are `Same`; the two event types are `Same`.
 2. **Property compare.** Name: relation `Same` on a single-value property, so the outcome is agree.
-3. **Subject compare, Gracie.** `subject.person.name.Agree` is 2.5. Both sides also derive a lifespan, "born 1 May 1901", from their birth; the windows are consistent, so `subject.person.lifespan.Agree` 0.1 counts. Her own evidence is 2.5 + 0.1 = 2.6.
-4. **Subject compare, the birth.** Event type agrees: `subject.event.event_type.Agree` 0.5. The date agrees: `subject.event.date.Agree` 2. The birth's own evidence is 0.5 + 2 = 2.5.
+3. **Subject compare, Gracie.** `subject.Weights.person.name.Agree` is 2.5. Both sides also derive a lifespan, "born 1 May 1901", from their birth; the windows are consistent, so `subject.Weights.person.lifespan.Agree` 0.1 counts. Her own evidence is 2.5 + 0.1 = 2.6.
+4. **Subject compare, the birth.** Event type agrees: `subject.Weights.event.event_type.Agree` 0.5. The date agrees: `subject.Weights.event.date.Agree` 2. The birth's own evidence is 0.5 + 2 = 2.5.
 5. **Segment compare.** Gracie is the subject of the birth, and `segment.Cardinality.birth` is `one`, so a matching neighbor earns `segment.OneSupport` 1.5 plus `segment.OneCredit` 0.5 of the birth's own evidence: 1.5 + 0.5 × 2.5 = 2.75.
 6. **Graph alignment.** Total evidence is 2.6 + 2.75 = 5.35. That clears `alignment.AcceptBar` (2), so the walk places the pair, and it is at least `alignment.Bands.Strong` (4), so the band is strong. Nothing conflicted, so the row is not contested.
 
@@ -67,7 +67,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **evidence** | Points of connection: agree weights minus conflict penalties, plus segment support; the main currency from layer 3 up |
 | **agree weight** | Points a property earns when it agrees |
 | **conflict penalty** | Points a property costs when it conflicts; also counts as 0 in similarity |
-| **pair (compared together)** | Two properties compared as one: sex with gender, `date` with `start_date` and `end_date` |
+| **pair (compared together)** | Two or more properties compared as one, keyed by the lead: a pool adds properties' values to the lead's on each side (sex at birth with gender); a period reads `start_date` and `end_date` as one range for `date` on a side with no date |
 | **profile** | A Subject-shaped set of values built from an entity's reconciled conclusion |
 | **entity comparison** | Layer 4: a Subject against an entity's profile |
 | **lifespan** | A derived window for a person, built from the dates of direct neighbors, compared as a registry-declared special case |
@@ -112,7 +112,7 @@ Both vocabularies are in the code for several PRs. These old words go.
 
 ## Knob inventory
 
-Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Field`. A Capitalized part is a registry field. A lowercase part is a typed map key: a Subject kind, a property key, a derived property (`lifespan`), or a bridge or participation key; a pair compared together is keyed by its lead property (`sex_at_birth` covers `gender`). The `evidence` section is the claim evidence sheet's line policy ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md)), not evidence points; the Promote evidence sheet reads it, no comparison layer does. The Go registry is the only source of a current value. Start is the value a knob started with. The registry's drift guard compares keys only: every registry field has a row, and every row is a field. `TestKnobInventoryMatchesRegistry` enforces it; rows whose layer has not landed are listed in its `notYetBuilt`. Tuning a knob is one edit, in the registry.
+Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Field`. A Capitalized part is a registry field. A lowercase part is a typed map key: a Subject kind, a property key, a derived property (`lifespan`), or a bridge or participation key; a pair compared together is keyed by its lead property (`sex_at_birth` covers `gender`). The subject section's weights are `subject.Weights.<kind>.<property>`, a derived property's (`lifespan`) included; a pool is keyed by its lead in `subject.Pools`, a period by its lead in `subject.Periods`. The `evidence` section is the claim evidence sheet's line policy ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md)), not evidence points; the Promote evidence sheet reads it, no comparison layer does. The Go registry is the only source of a current value. Start is the value a knob started with. The registry's drift guard compares keys only: every registry field has a row, and every row is a field. `TestKnobInventoryMatchesRegistry` enforces it; rows whose layer has not landed are listed in its `notYetBuilt`. Tuning a knob is one edit, in the registry.
 
 | Key | Start | Source | Changes |
 | --- | --- | --- | --- |
@@ -151,25 +151,26 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `value.Dates.SpanFloor` | 0.2 | `DefaultDates.SpanFloor` | Lowest span similarity; open bounds |
 | `value.Dates.AboutUnits` | 1 | estimate: the design's `ABT` rule, one unit of the most precise part each side | Width of an `ABT` range |
 | `value.Integers.Tolerance` | 0 | `DefaultIntegers.Tolerance` | Most an integer pair may differ and be `Near` |
-| `subject.person.name.Agree` | 2.5 | `graphalign` name `PropertyScale.Weight` | Points for a matching name |
-| `subject.person.name.Conflict` | 3 | `graphalign` name `PropertyScale.Contradiction` | Points lost for a different name |
-| `subject.person.sex_at_birth.Agree` | 0.6 | `graphalign` sex / gender `PropertyScale.Weight` | Points for matching sex or gender (the `sex_at_birth` / `gender` pair) |
-| `subject.person.sex_at_birth.Conflict` | 1 | `graphalign` sex / gender `PropertyScale.Contradiction` | Points lost when they differ (the `sex_at_birth` / `gender` pair) |
-| `subject.person.lifespan.Agree` | 0.1 | estimate: near zero, the dates are already counted through their segments | Points for overlapping lifespans |
-| `subject.person.lifespan.Conflict` | 20 | estimate: impossible together, must never recover | Points lost for impossible lifespans |
+| `subject.Weights.person.name.Agree` | 2.5 | `graphalign` name `PropertyScale.Weight` | Points for a matching name |
+| `subject.Weights.person.name.Conflict` | 3 | `graphalign` name `PropertyScale.Contradiction` | Points lost for a different name |
+| `subject.Weights.person.sex_at_birth.Agree` | 0.6 | `graphalign` sex / gender `PropertyScale.Weight` | Points for matching sex or gender (the `sex_at_birth` / `gender` pair) |
+| `subject.Weights.person.sex_at_birth.Conflict` | 1 | `graphalign` sex / gender `PropertyScale.Contradiction` | Points lost when they differ (the `sex_at_birth` / `gender` pair) |
+| `subject.Weights.person.lifespan.Agree` | 0.1 | estimate: near zero, the dates are already counted through their segments | Points for overlapping lifespans |
+| `subject.Weights.person.lifespan.Conflict` | 20 | estimate: impossible together, must never recover | Points lost for impossible lifespans |
 | `subject.person.lifespan.MaxYears` | 110 | estimate: longest plausible human life | Born to died, at most |
 | `subject.person.lifespan.ParentMinYears` | 12 | estimate: the design's "about 12–60 years" | Youngest age at a child's birth |
 | `subject.person.lifespan.ParentMaxYears` | 60 | estimate: the design's "about 12–60 years" | Oldest age at a child's birth |
 | `subject.person.lifespan.MotherMaxYears` | 50 | estimate: "narrower for mothers"; used only when the parent's sex is recorded female | Oldest mother at a child's birth |
 | `subject.person.lifespan.MarriageMinYears` | 14 | estimate: the design's "roughly 14 or older" | Youngest age at a marriage |
-| `subject.event.event_type.Agree` | 0.5 | estimate: generic, says little alone (decided low) | Points for the same event type |
-| `subject.event.event_type.Conflict` | 20 | estimate: a birth is never a death | Points lost for different event types |
-| `subject.event.date.Agree` | 2 | estimate: today's cold-start frequency weight ln(0.85 / 0.1) ≈ 2.1, rounded | Points for matching dates (one pair with start / end) |
-| `subject.event.date.Conflict` | 3 | `graphalign` `DefaultConfig.ConflictPenalty` | Points lost for different dates |
-| `subject.place.toponym.Agree` | 3 | estimate: today's cold-start ln(0.9 / 0.1) + toponym `PropertyAgreement` 1 ≈ 3.2, rounded, so a toponym alone reads medium | A matching toponym alone reads medium |
-| `subject.place.toponym.Conflict` | 3 | `graphalign` `DefaultConfig.ConflictPenalty` | Points lost for different toponyms |
-| `subject.Pairs.event.date` | `date` with `start_date` / `end_date` | `match.DatePeriods` | Compared as one period |
-| `subject.Pairs.person.sex_at_birth` | `sex_at_birth` with `gender` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-3-subject-comparison)) | Compared as one pair |
+| `subject.Weights.event.event_type.Agree` | 0.5 | estimate: generic, says little alone (decided low) | Points for the same event type |
+| `subject.Weights.event.event_type.Conflict` | 20 | estimate: a birth is never a death | Points lost for different event types |
+| `subject.Weights.event.date.Agree` | 2 | estimate: today's cold-start frequency weight ln(0.85 / 0.1) ≈ 2.1, rounded | Points for matching dates (one pair with start / end) |
+| `subject.Weights.event.date.Conflict` | 3 | `graphalign` `DefaultConfig.ConflictPenalty` | Points lost for different dates |
+| `subject.Weights.place.toponym.Agree` | 3 | estimate: today's cold-start ln(0.9 / 0.1) + toponym `PropertyAgreement` 1 ≈ 3.2, rounded, so a toponym alone reads medium | A matching toponym alone reads medium |
+| `subject.Weights.place.toponym.Conflict` | 3 | `graphalign` `DefaultConfig.ConflictPenalty` | Points lost for different toponyms |
+| `subject.Periods.event.date.Start` | `start_date` | `match.DatePeriods` | Start of the period that stands for `date` on a side with no date |
+| `subject.Periods.event.date.End` | `end_date` | `match.DatePeriods` | End of that period |
+| `subject.Pools.person.sex_at_birth.With` | `gender` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-3-subject-comparison)) | Properties whose values join `sex_at_birth`'s on each side |
 | `segment.OneSupport` | 1.5 | `graphalign` `EdgeSupportLow` | Points for a matching one-cardinality link (birth, death) |
 | `segment.OneCredit` | 0.5 | `graphalign` `NeighborCreditLow` | Share of the neighbor's own evidence passed on, one-cardinality |
 | `segment.OtherSupport` | 0.25 | `graphalign` `EdgeSupportHigh` | Points for any other matching link |
@@ -206,11 +207,11 @@ These are identifiers or catalog data, not tunables, and have no row: the vocabu
 | --- | --- |
 | `DefaultNames.GivenOnlyFactor`, `SuffixConflict` | A surname or first given name left over on both sides, and a generation conflict, are `Different` (S11-03) |
 | `DefaultNames.Frequency`, `FrequencyDiscount`, `FrequencyMinPeople`; `graphalign` `MPrior`, `UPrior`, frequency `ValueTypeScale` entries | Frequency weighting is descoped |
-| `graphalign` `PropertyAgreement` | Frequency weighting is descoped; the toponym bonus is folded into `subject.place.toponym.Agree` |
+| `graphalign` `PropertyAgreement` | Frequency weighting is descoped; the toponym bonus is folded into `subject.Weights.place.toponym.Agree` |
 | `graphalign` `FanOutLowMax`, `FanOutUnknown` | Replaced by declared cardinality |
 | `graphalign` `ValueTypeScale` floors other than date, `PropertyScale` sex / gender `Floor` 1 | Replaced by relation outcomes and the `Near` minimum |
-| `graphalign` `DefaultConfig.ConflictPenalty` | Value carried into `subject.event.date.Conflict` and `subject.place.toponym.Conflict`; its second role, the conflict-with-decision margin, is replaced by the contested marker and the settle margin |
+| `graphalign` `DefaultConfig.ConflictPenalty` | Value carried into `subject.Weights.event.date.Conflict` and `subject.Weights.place.toponym.Conflict`; its second role, the conflict-with-decision margin, is replaced by the contested marker and the settle margin |
 | `graphalign` `mFor` fallback 0.85, `uOr` fallback 0.1 | Frequency weighting is descoped |
-| `DefaultProfile` `start_date` / `end_date` features | Replaced by the `date` pair in `subject.Pairs.event.date` |
+| `DefaultProfile` `start_date` / `end_date` features | Replaced by the `date` period in `subject.Periods.event.date` |
 | `DefaultDates.ApproxToleranceFactor` | Replaced by `ABT` as a range |
 | `DefaultProfile` weights and `MinScore` (`Rank`'s 10-point scale), `DefaultSuggestionLimit` | `Rank` is replaced by shortlisting and entity comparison; one weight set |

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -12,51 +13,17 @@ import (
 
 // Date builders shared by the date tests. A month or day of 0 is not named.
 
-func optInt(n int) *int {
-	if n == 0 {
-		return nil
-	}
-	return &n
-}
-
-func ymd(y, m, d int) datevalue.Value {
-	return datevalue.Value{
-		Kind: datevalue.KindPoint, Calendar: "gregorian",
-		StartYear: optInt(y), StartMonth: optInt(m), StartDay: optInt(d),
-	}
-}
-
-func about(y, m, d int) datevalue.Value {
-	v := ymd(y, m, d)
-	v.Qualifier = datevalue.QualifierABT
-	return v
-}
-
 // bound is a year with a qualifier: datevalue.QualifierBEF or QualifierAFT.
-func bound(qualifier string, y int) datevalue.Value {
-	v := ymd(y, 0, 0)
+func bound(qualifier string, y int) *datevalue.Value {
+	v := datevaluetest.YMD(y, 0, 0)
 	v.Qualifier = qualifier
 	return v
 }
 
-func between(y1, m1, d1, y2, m2, d2 int) datevalue.Value {
-	return datevalue.Value{
-		Kind: datevalue.KindRange, Calendar: "gregorian",
-		StartYear: optInt(y1), StartMonth: optInt(m1), StartDay: optInt(d1),
-		EndYear: optInt(y2), EndMonth: optInt(m2), EndDay: optInt(d2),
-	}
-}
-
-func phrase(s string) datevalue.Value {
-	return datevalue.Value{Kind: datevalue.KindPoint, Phrase: s}
-}
-
 // noYearRange is a range with no year on either side.
-func noYearRange() datevalue.Value {
-	return datevalue.Value{Kind: datevalue.KindRange, StartMonth: optInt(3), EndMonth: optInt(6)}
+func noYearRange() *datevalue.Value {
+	return &datevalue.Value{Kind: datevalue.KindRange, StartMonth: datevaluetest.Part(3), EndMonth: datevaluetest.Part(6)}
 }
-
-func dp(v datevalue.Value) *datevalue.Value { return &v }
 
 // dateValue wraps a date for Compare; nil is no date.
 func dateValue(d *datevalue.Value) valuecompare.Value {
@@ -83,38 +50,38 @@ func TestDateCompare(t *testing.T) {
 	a, b, none := valuecompare.SideA, valuecompare.SideB, valuecompare.SideNone
 	exact, precision, overlap, gap, beyond := valuecompare.CauseExact, valuecompare.CausePrecision, valuecompare.CauseOverlap, valuecompare.CauseGap, valuecompare.CauseBeyondTolerance
 	cases := []dateCase{
-		{"AC-1.1 year", dp(ymd(1817, 0, 0)), dp(ymd(1817, 0, 0)), same, 1, exact, none, 0},
-		{"AC-1.1 before", dp(bound(bef, 1820)), dp(bound(bef, 1820)), same, 1, exact, none, 0},
-		{"AC-1.1 about", dp(about(1817, 0, 0)), dp(about(1817, 0, 0)), same, 1, exact, none, 0},
-		{"AC-1.1 range of one year", dp(between(1817, 0, 0, 1817, 0, 0)), dp(ymd(1817, 0, 0)), same, 1, exact, none, 0},
-		{"AC-1.1 inverted range", dp(between(1820, 0, 0, 1815, 0, 0)), dp(between(1815, 0, 0, 1820, 0, 0)), same, 1, exact, none, 0},
-		{"AC-1.2 missing day", dp(ymd(1817, 5, 0)), dp(ymd(1817, 5, 14)), contains, 0.9, precision, a, 0},
-		{"AC-1.2 missing month", dp(ymd(1817, 0, 0)), dp(ymd(1817, 9, 0)), contains, 0.8, precision, a, 0},
-		{"AC-1.3 about next year", dp(about(1817, 0, 0)), dp(ymd(1818, 0, 0)), contains, span(3), precision, a, 0},
-		{"AC-1.3 about same year", dp(about(1817, 0, 0)), dp(ymd(1817, 0, 0)), contains, span(3), precision, a, 0},
-		{"AC-1.4 before a wider before", dp(bound(bef, 1820)), dp(bound(bef, 1830)), contains, 0.2, precision, b, 0},
-		{"AC-1.4 before a point", dp(bound(bef, 1820)), dp(ymd(1815, 0, 0)), contains, 0.2, precision, a, 0},
-		{"AC-1.5 range holds a year", dp(between(1815, 0, 0, 1820, 0, 0)), dp(ymd(1818, 0, 0)), contains, span(6), precision, a, 0},
-		{"AC-1.6 about month", dp(about(1817, 3, 0)), dp(ymd(1817, 4, 0)), contains, 0.8, precision, a, 0},
-		{"AC-1.6 about day", dp(about(1817, 3, 3)), dp(ymd(1817, 3, 4)), contains, 0.8, precision, a, 0},
-		{"AC-1.6 about month over a year end", dp(about(1817, 1, 0)), dp(ymd(1816, 12, 15)), contains, 0.8, precision, a, 0},
-		{"AC-1.6 about day over a year end", dp(about(1817, 1, 1)), dp(ymd(1816, 12, 31)), contains, 0.8, precision, a, 0},
-		{"AC-1.7 overlapping ranges", dp(between(1815, 0, 0, 1820, 0, 0)), dp(between(1819, 0, 0, 1825, 0, 0)), overlaps, span(7), overlap, none, 0},
-		{"AC-1.8 other day", dp(ymd(1817, 5, 14)), dp(ymd(1817, 5, 20)), nearRel, 0.7, gap, none, 6},
-		{"AC-1.8 other month", dp(ymd(1817, 5, 0)), dp(ymd(1817, 9, 0)), nearRel, 0.6, gap, none, 93},
-		{"AC-1.9 next year", dp(ymd(1817, 0, 0)), dp(ymd(1818, 0, 0)), nearRel, 0.8 * (1 - 1.0/3), gap, none, 1},
-		{"AC-1.9 across a year end", dp(ymd(1817, 12, 0)), dp(ymd(1818, 1, 0)), nearRel, 0.8 * (1 - (31.0/365)/3), gap, none, 1},
-		{"AC-1.10 after a point", dp(bound(aft, 1820)), dp(ymd(1819, 0, 0)), nearRel, 0.2 * (1 - 1.0/3), gap, none, 1},
-		{"AC-1.10 range and a point", dp(between(1815, 0, 0, 1820, 0, 0)), dp(ymd(1822, 0, 0)), nearRel, span(6) * (1 - 2.0/3), gap, none, 366},
-		{"AC-1.10 two abouts", dp(about(1817, 0, 0)), dp(about(1820, 0, 0)), nearRel, span(3) * (1 - 1.0/3), gap, none, 1},
-		{"AC-1.11 three years", dp(ymd(1817, 0, 0)), dp(ymd(1820, 0, 0)), different, 0, beyond, none, 731},
-		{"AC-1.11 before and three years", dp(bound(bef, 1820)), dp(ymd(1823, 0, 0)), different, 0, beyond, none, 731},
-		{"AC-1.11 before and after", dp(bound(bef, 1800)), dp(bound(aft, 1810)), different, 0, beyond, none, 3288},
-		{"AC-1.12 phrase", dp(phrase("spring")), dp(ymd(1817, 0, 0)), unknown, 0, valuecompare.CausePhraseOnly, none, 0},
-		{"AC-1.12 range with no year", dp(noYearRange()), dp(ymd(1817, 0, 0)), unknown, 0, valuecompare.CauseEmpty, none, 0},
-		{"AC-1.12 no date", nil, dp(ymd(1817, 0, 0)), unknown, 0, valuecompare.CauseEmpty, none, 0},
-		{"AC-1.13 day with no month", dp(datevalue.Value{Kind: datevalue.KindPoint, StartYear: optInt(1817), StartDay: optInt(14)}),
-			dp(datevalue.Value{Kind: datevalue.KindPoint, StartYear: optInt(1817), StartDay: optInt(20)}), same, 1, exact, none, 0},
+		{"AC-1.1 year", datevaluetest.YMD(1817, 0, 0), datevaluetest.YMD(1817, 0, 0), same, 1, exact, none, 0},
+		{"AC-1.1 before", bound(bef, 1820), bound(bef, 1820), same, 1, exact, none, 0},
+		{"AC-1.1 about", datevaluetest.About(1817, 0, 0), datevaluetest.About(1817, 0, 0), same, 1, exact, none, 0},
+		{"AC-1.1 range of one year", datevaluetest.Between(1817, 0, 0, 1817, 0, 0), datevaluetest.YMD(1817, 0, 0), same, 1, exact, none, 0},
+		{"AC-1.1 inverted range", datevaluetest.Between(1820, 0, 0, 1815, 0, 0), datevaluetest.Between(1815, 0, 0, 1820, 0, 0), same, 1, exact, none, 0},
+		{"AC-1.2 missing day", datevaluetest.YMD(1817, 5, 0), datevaluetest.YMD(1817, 5, 14), contains, 0.9, precision, a, 0},
+		{"AC-1.2 missing month", datevaluetest.YMD(1817, 0, 0), datevaluetest.YMD(1817, 9, 0), contains, 0.8, precision, a, 0},
+		{"AC-1.3 about next year", datevaluetest.About(1817, 0, 0), datevaluetest.YMD(1818, 0, 0), contains, span(3), precision, a, 0},
+		{"AC-1.3 about same year", datevaluetest.About(1817, 0, 0), datevaluetest.YMD(1817, 0, 0), contains, span(3), precision, a, 0},
+		{"AC-1.4 before a wider before", bound(bef, 1820), bound(bef, 1830), contains, 0.2, precision, b, 0},
+		{"AC-1.4 before a point", bound(bef, 1820), datevaluetest.YMD(1815, 0, 0), contains, 0.2, precision, a, 0},
+		{"AC-1.5 range holds a year", datevaluetest.Between(1815, 0, 0, 1820, 0, 0), datevaluetest.YMD(1818, 0, 0), contains, span(6), precision, a, 0},
+		{"AC-1.6 about month", datevaluetest.About(1817, 3, 0), datevaluetest.YMD(1817, 4, 0), contains, 0.8, precision, a, 0},
+		{"AC-1.6 about day", datevaluetest.About(1817, 3, 3), datevaluetest.YMD(1817, 3, 4), contains, 0.8, precision, a, 0},
+		{"AC-1.6 about month over a year end", datevaluetest.About(1817, 1, 0), datevaluetest.YMD(1816, 12, 15), contains, 0.8, precision, a, 0},
+		{"AC-1.6 about day over a year end", datevaluetest.About(1817, 1, 1), datevaluetest.YMD(1816, 12, 31), contains, 0.8, precision, a, 0},
+		{"AC-1.7 overlapping ranges", datevaluetest.Between(1815, 0, 0, 1820, 0, 0), datevaluetest.Between(1819, 0, 0, 1825, 0, 0), overlaps, span(7), overlap, none, 0},
+		{"AC-1.8 other day", datevaluetest.YMD(1817, 5, 14), datevaluetest.YMD(1817, 5, 20), nearRel, 0.7, gap, none, 6},
+		{"AC-1.8 other month", datevaluetest.YMD(1817, 5, 0), datevaluetest.YMD(1817, 9, 0), nearRel, 0.6, gap, none, 93},
+		{"AC-1.9 next year", datevaluetest.YMD(1817, 0, 0), datevaluetest.YMD(1818, 0, 0), nearRel, 0.8 * (1 - 1.0/3), gap, none, 1},
+		{"AC-1.9 across a year end", datevaluetest.YMD(1817, 12, 0), datevaluetest.YMD(1818, 1, 0), nearRel, 0.8 * (1 - (31.0/365)/3), gap, none, 1},
+		{"AC-1.10 after a point", bound(aft, 1820), datevaluetest.YMD(1819, 0, 0), nearRel, 0.2 * (1 - 1.0/3), gap, none, 1},
+		{"AC-1.10 range and a point", datevaluetest.Between(1815, 0, 0, 1820, 0, 0), datevaluetest.YMD(1822, 0, 0), nearRel, span(6) * (1 - 2.0/3), gap, none, 366},
+		{"AC-1.10 two abouts", datevaluetest.About(1817, 0, 0), datevaluetest.About(1820, 0, 0), nearRel, span(3) * (1 - 1.0/3), gap, none, 1},
+		{"AC-1.11 three years", datevaluetest.YMD(1817, 0, 0), datevaluetest.YMD(1820, 0, 0), different, 0, beyond, none, 731},
+		{"AC-1.11 before and three years", bound(bef, 1820), datevaluetest.YMD(1823, 0, 0), different, 0, beyond, none, 731},
+		{"AC-1.11 before and after", bound(bef, 1800), bound(aft, 1810), different, 0, beyond, none, 3288},
+		{"AC-1.12 phrase", datevaluetest.Phrase("spring"), datevaluetest.YMD(1817, 0, 0), unknown, 0, valuecompare.CausePhraseOnly, none, 0},
+		{"AC-1.12 range with no year", noYearRange(), datevaluetest.YMD(1817, 0, 0), unknown, 0, valuecompare.CauseEmpty, none, 0},
+		{"AC-1.12 no date", nil, datevaluetest.YMD(1817, 0, 0), unknown, 0, valuecompare.CauseEmpty, none, 0},
+		{"AC-1.13 day with no month", &datevalue.Value{Kind: datevalue.KindPoint, StartYear: datevaluetest.Part(1817), StartDay: datevaluetest.Part(14)},
+			&datevalue.Value{Kind: datevalue.KindPoint, StartYear: datevaluetest.Part(1817), StartDay: datevaluetest.Part(20)}, same, 1, exact, none, 0},
 	}
 	rules := matchregistry.Default().Value
 	for _, tc := range cases {
@@ -156,7 +123,7 @@ func TestDateCompare(t *testing.T) {
 	t.Run("AC-1.14 tolerance 0", func(t *testing.T) {
 		r := matchregistry.Default().Value
 		r.Dates.Tolerance = 0
-		res, det := valuecompare.Compare(dateValue(dp(ymd(1817, 0, 0))), dateValue(dp(ymd(1818, 0, 0))), r)
+		res, det := valuecompare.Compare(dateValue(datevaluetest.YMD(1817, 0, 0)), dateValue(datevaluetest.YMD(1818, 0, 0)), r)
 		if res.Relation != different || det.Cause != beyond {
 			t.Fatalf("%+v %+v", res, det)
 		}
@@ -164,7 +131,7 @@ func TestDateCompare(t *testing.T) {
 	t.Run("below the near minimum", func(t *testing.T) {
 		r := matchregistry.Default().Value
 		r.Dates.NearMinimum = 0.6
-		res, det := valuecompare.Compare(dateValue(dp(ymd(1817, 0, 0))), dateValue(dp(ymd(1818, 0, 0))), r)
+		res, det := valuecompare.Compare(dateValue(datevaluetest.YMD(1817, 0, 0)), dateValue(datevaluetest.YMD(1818, 0, 0)), r)
 		if res.Relation != different || res.Similarity != 0 || det.Cause != valuecompare.CauseBelowMinimum || det.Distance != 1 {
 			t.Fatalf("%+v %+v", res, det)
 		}
@@ -177,21 +144,21 @@ func TestDateKey(t *testing.T) {
 		return valuecompare.Key(dateValue(&d), level, rules)
 	}
 	// AC-2.3
-	k1, ok1 := key(ymd(1817, 0, 0), valuecompare.Same)
-	k2, ok2 := key(between(1817, 1, 0, 1817, 12, 0), valuecompare.Same)
+	k1, ok1 := key(*datevaluetest.YMD(1817, 0, 0), valuecompare.Same)
+	k2, ok2 := key(*datevaluetest.Between(1817, 1, 0, 1817, 12, 0), valuecompare.Same)
 	if !ok1 || !ok2 || k1 != k2 {
 		t.Errorf("1817 keys %q (%v) and %q (%v)", k1, ok1, k2, ok2)
 	}
-	if k, ok := key(ymd(1817, 0, 0), valuecompare.Equivalent); !ok || k != k1 {
+	if k, ok := key(*datevaluetest.YMD(1817, 0, 0), valuecompare.Equivalent); !ok || k != k1 {
 		t.Errorf("Equivalent key = %q, %v", k, ok)
 	}
-	if k, ok := key(bound(datevalue.QualifierBEF, 1820), valuecompare.Same); !ok || k != "*..-54422" {
+	if k, ok := key(*bound(datevalue.QualifierBEF, 1820), valuecompare.Same); !ok || k != "*..-54422" {
 		t.Errorf("BEF 1820 key = %q, %v", k, ok)
 	}
-	if k, ok := key(phrase("spring"), valuecompare.Same); ok || k != "" {
+	if k, ok := key(*datevaluetest.Phrase("spring"), valuecompare.Same); ok || k != "" {
 		t.Errorf("phrase key = %q, %v", k, ok)
 	}
-	if k, ok := key(ymd(1817, 0, 0), valuecompare.Near); ok || k != "" {
+	if k, ok := key(*datevaluetest.YMD(1817, 0, 0), valuecompare.Near); ok || k != "" {
 		t.Errorf("Near key = %q, %v", k, ok)
 	}
 	if k, ok := valuecompare.Key(dateValue(nil), valuecompare.Same, rules); ok || k != "" {
@@ -201,7 +168,7 @@ func TestDateKey(t *testing.T) {
 
 func TestDateLadder(t *testing.T) {
 	rules := matchregistry.Default().Value
-	base := dp(ymd(1817, 5, 14))
+	base := datevaluetest.YMD(1817, 5, 14)
 	// 14 May 1817 is day 134 of 365; its centre is 133.5 days in.
 	centre := 133.5 / 365
 	ladder := []struct {
@@ -210,16 +177,16 @@ func TestDateLadder(t *testing.T) {
 		rel  valuecompare.Relation
 		sim  float64
 	}{
-		{"14 MAY 1817", dp(ymd(1817, 5, 14)), valuecompare.Same, 1},
-		{"MAY 1817", dp(ymd(1817, 5, 0)), valuecompare.Contains, 0.9},
-		{"1817", dp(ymd(1817, 0, 0)), valuecompare.Contains, 0.8},
-		{"20 MAY 1817", dp(ymd(1817, 5, 20)), valuecompare.Near, 0.7},
-		{"SEP 1817", dp(ymd(1817, 9, 0)), valuecompare.Near, 0.6},
-		{"BET 1815 AND 1820", dp(between(1815, 0, 0, 1820, 0, 0)), valuecompare.Contains, 0.8 - 0.05*5},
-		{"1818", dp(ymd(1818, 0, 0)), valuecompare.Near, 0.8 * (1 - (1.5-centre)/3)},
-		{"1819", dp(ymd(1819, 0, 0)), valuecompare.Near, 0.8 * (1 - (2.5-centre)/3)},
-		{"BEF 1820", dp(bound(datevalue.QualifierBEF, 1820)), valuecompare.Contains, 0.2},
-		{"1820", dp(ymd(1820, 0, 0)), valuecompare.Different, 0},
+		{"14 MAY 1817", datevaluetest.YMD(1817, 5, 14), valuecompare.Same, 1},
+		{"MAY 1817", datevaluetest.YMD(1817, 5, 0), valuecompare.Contains, 0.9},
+		{"1817", datevaluetest.YMD(1817, 0, 0), valuecompare.Contains, 0.8},
+		{"20 MAY 1817", datevaluetest.YMD(1817, 5, 20), valuecompare.Near, 0.7},
+		{"SEP 1817", datevaluetest.YMD(1817, 9, 0), valuecompare.Near, 0.6},
+		{"BET 1815 AND 1820", datevaluetest.Between(1815, 0, 0, 1820, 0, 0), valuecompare.Contains, 0.8 - 0.05*5},
+		{"1818", datevaluetest.YMD(1818, 0, 0), valuecompare.Near, 0.8 * (1 - (1.5-centre)/3)},
+		{"1819", datevaluetest.YMD(1819, 0, 0), valuecompare.Near, 0.8 * (1 - (2.5-centre)/3)},
+		{"BEF 1820", bound(datevalue.QualifierBEF, 1820), valuecompare.Contains, 0.2},
+		{"1820", datevaluetest.YMD(1820, 0, 0), valuecompare.Different, 0},
 	}
 	prev := 2.0
 	for _, step := range ladder {
