@@ -37,6 +37,12 @@ struct PVComboBoxTests {
         #expect(PVComboBoxMatch.filter(accented, query: "SMITH").map(\.value) == ["p2"])
     }
 
+    @Test func filterIgnoresWordBreaksAndPunctuation() {
+        let rows = [option("a", "Godfather"), option("b", "Godmother")]
+        #expect(PVComboBoxMatch.filter(rows, query: "god-f").map(\.value) == ["a"])
+        #expect(PVComboBoxMatch.filter(rows, query: "-").map(\.value) == ["a", "b"])
+    }
+
     @Test func filterWithNoHitsReturnsNothing() {
         #expect(PVComboBoxMatch.filter(pool, query: "nomatch").isEmpty)
     }
@@ -192,6 +198,17 @@ struct PVComboBoxTests {
         #expect(runs.map(\.0) == ["Publication ", "date"])
         #expect(runs[0].1 == nil)
         #expect(runs[1].1 == PVColor.markBackground)
+    }
+
+    @Test func highlightMarksTheKeyedSpan() {
+        let marked = PVComboBoxHighlight.attributed("God-father", query: "godf")
+        let runs = marked.runs.map { run in
+            (
+                String(marked[run.range].characters),
+                run[AttributeScopes.SwiftUIAttributes.BackgroundColorAttribute.self]
+            )
+        }
+        #expect(runs.filter { $0.1 != nil }.map(\.0) == ["God-f"])
     }
 
     @Test func highlightMatchesCaseInsensitively() {
