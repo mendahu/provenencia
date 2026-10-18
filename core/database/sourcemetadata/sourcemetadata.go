@@ -6,6 +6,7 @@
 package sourcemetadata
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"sort"
@@ -54,6 +55,10 @@ const (
 	sqlLayoutOrder = `INSERT INTO source_metadata_layout (source_id, field_id, sort_order)
 		VALUES (?, ?, ?)
 		ON CONFLICT(source_id, field_id) DO UPDATE SET sort_order = excluded.sort_order`
+	sqlHasAny = `SELECT EXISTS (SELECT 1 FROM source_metadata WHERE source_id = ?)
+		OR EXISTS (SELECT 1 FROM source_metadata_layout WHERE source_id = ?)`
+	sqlLayoutInsert = `INSERT INTO source_metadata_layout (source_id, field_id, sort_order, dismissed)
+		VALUES (?, ?, ?, ?)`
 	sqlLayoutGet  = `SELECT field_id, sort_order, dismissed FROM source_metadata_layout WHERE source_id = ? AND field_id = ?`
 	sqlLayoutList = `SELECT field_id, sort_order, dismissed FROM source_metadata_layout WHERE source_id = ?
 		ORDER BY sort_order, field_id`
@@ -123,60 +128,152 @@ func Set(tx *database.Tx, userID []byte, in Input) (Row, []rowchange.Change, err
 	}
 	in.ValueText = normalized
 
-	var row Row
-	var action string
-	fields := map[string]rowchange.FieldDiff{}
-
 	if creating {
-		id, err := uuid.NewV7()
+		row, change, err := insertValueTx(tx.Tx, in.SourceID, field, in.ValueText)
 		if err != nil {
 			return Row{}, nil, err
-		}
-		idBytes := id[:]
-		if _, err := tx.Exec(sqlInsert, idBytes, in.SourceID, in.FieldID, nullStr(in.ValueText)); err != nil {
-			return Row{}, nil, mapConstraint(err)
 		}
 		// A field the researcher just filled needs a place in the Source's
 		// order; appending keeps an existing hand-sorted layout intact.
 		if _, err := tx.Exec(sqlLayoutAppend, in.SourceID, in.FieldID, in.SourceID); err != nil {
 			return Row{}, nil, mapConstraint(err)
 		}
-		row = Row{
-			ID:        append([]byte(nil), idBytes...),
-			SourceID:  append([]byte(nil), in.SourceID...),
-			FieldID:   append([]byte(nil), in.FieldID...),
-			ValueText: in.ValueText,
-		}
-		action = rowchange.ActionCreate
-		fields["id"] = rowchange.FieldDiff{Old: nil, New: id.String()}
-		fields["source_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.SourceID)}
-		fields["field_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.FieldID)}
-		if in.ValueText != "" {
-			fields["value_text"] = rowchange.FieldDiff{Old: nil, New: in.ValueText}
-		}
-	} else {
-		if prev.ValueText == in.ValueText {
-			return prev, nil, nil
-		}
-		if _, err := tx.Exec(sqlUpdate, nullStr(in.ValueText), prev.ID); err != nil {
-			return Row{}, nil, mapConstraint(err)
-		}
-		row = Row{
-			ID:        append([]byte(nil), prev.ID...),
-			SourceID:  append([]byte(nil), in.SourceID...),
-			FieldID:   append([]byte(nil), in.FieldID...),
-			ValueText: in.ValueText,
-		}
-		action = rowchange.ActionUpdate
-		fields["value_text"] = rowchange.FieldDiff{Old: nullJSON(prev.ValueText), New: nullJSON(in.ValueText)}
+		return row, []rowchange.Change{change}, nil
 	}
 
+	if prev.ValueText == in.ValueText {
+		return prev, nil, nil
+	}
+	if _, err := tx.Exec(sqlUpdate, nullStr(in.ValueText), prev.ID); err != nil {
+		return Row{}, nil, mapConstraint(err)
+	}
+	row := Row{
+		ID:        append([]byte(nil), prev.ID...),
+		SourceID:  append([]byte(nil), in.SourceID...),
+		FieldID:   append([]byte(nil), in.FieldID...),
+		ValueText: in.ValueText,
+	}
 	return row, []rowchange.Change{{
 		EntityType: "source_metadata",
 		EntityID:   row.ID,
-		Action:     action,
-		Fields:     fields,
+		Action:     rowchange.ActionUpdate,
+		Fields: map[string]rowchange.FieldDiff{
+			"value_text": {Old: nullJSON(prev.ValueText), New: nullJSON(in.ValueText)},
+		},
 	}}, nil
+}
+
+// insertValueTx trims and normalizes valueText for the field's data type, inserts
+// the source_metadata row, and returns it with its create change. It writes no
+// layout row; Set appends one and CreateAll writes the caller's.
+func insertValueTx(tx *sql.Tx, sourceID []byte, field metadatafields.Field, valueText string) (Row, rowchange.Change, error) {
+	normalized, err := normalizeValue(field.DataType, strings.TrimSpace(valueText))
+	if err != nil {
+		return Row{}, rowchange.Change{}, err
+	}
+	id, err := uuid.NewV7()
+	if err != nil {
+		return Row{}, rowchange.Change{}, err
+	}
+	idBytes := id[:]
+	if _, err := tx.Exec(sqlInsert, idBytes, sourceID, field.ID, nullStr(normalized)); err != nil {
+		return Row{}, rowchange.Change{}, mapConstraint(err)
+	}
+	row := Row{
+		ID:        append([]byte(nil), idBytes...),
+		SourceID:  append([]byte(nil), sourceID...),
+		FieldID:   append([]byte(nil), field.ID...),
+		ValueText: normalized,
+	}
+	fields := map[string]rowchange.FieldDiff{
+		"id":        {Old: nil, New: id.String()},
+		"source_id": {Old: nil, New: uuidString(sourceID)},
+		"field_id":  {Old: nil, New: uuidString(field.ID)},
+	}
+	if normalized != "" {
+		fields["value_text"] = rowchange.FieldDiff{Old: nil, New: normalized}
+	}
+	return row, rowchange.Change{
+		EntityType: "source_metadata",
+		EntityID:   row.ID,
+		Action:     rowchange.ActionCreate,
+		Fields:     fields,
+	}, nil
+}
+
+// CreateAll writes values and layout rows verbatim onto a Source that has
+// neither, so a copy reads back in the original's order with the original's
+// dismissed flags. Unlike Set it appends no layout row of its own. Changes are
+// the value changes in input order, then the layout changes in input order.
+// The caller records them.
+func CreateAll(tx *database.Tx, userID, sourceID []byte, values []Input, layout []LayoutRow) ([]rowchange.Change, error) {
+	if tx == nil || len(sourceID) != 16 {
+		return nil, ErrInvalid
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return nil, err
+	}
+	if len(values) == 0 && len(layout) == 0 {
+		return nil, nil
+	}
+	if err := requireSource(tx.Tx, sourceID); err != nil {
+		return nil, err
+	}
+	var has bool
+	if err := tx.QueryRow(sqlHasAny, sourceID, sourceID).Scan(&has); err != nil {
+		return nil, err
+	}
+	if has {
+		return nil, ErrInvalid
+	}
+	for _, in := range values {
+		if !bytes.Equal(in.SourceID, sourceID) {
+			return nil, ErrInvalid
+		}
+	}
+
+	changes := make([]rowchange.Change, 0, len(values)+len(layout))
+	for _, in := range values {
+		if len(in.FieldID) != 16 {
+			return nil, ErrInvalid
+		}
+		field, err := getField(tx.Tx, in.FieldID)
+		if err != nil {
+			return nil, err
+		}
+		_, change, err := insertValueTx(tx.Tx, sourceID, field, in.ValueText)
+		if err != nil {
+			return nil, err
+		}
+		changes = append(changes, change)
+	}
+	for _, l := range layout {
+		if len(l.FieldID) != 16 {
+			return nil, ErrInvalid
+		}
+		if _, err := getField(tx.Tx, l.FieldID); err != nil {
+			return nil, err
+		}
+		dismissed := 0
+		if l.Dismissed {
+			dismissed = 1
+		}
+		if _, err := tx.Exec(sqlLayoutInsert, sourceID, l.FieldID, l.SortOrder, dismissed); err != nil {
+			return nil, mapConstraint(err)
+		}
+		changes = append(changes, rowchange.Change{
+			EntityType: "source_metadata_layout",
+			EntityID:   append([]byte(nil), l.FieldID...),
+			Action:     rowchange.ActionCreate,
+			Fields: map[string]rowchange.FieldDiff{
+				"source_id":  {Old: nil, New: uuidString(sourceID)},
+				"field_id":   {Old: nil, New: uuidString(l.FieldID)},
+				"sort_order": {Old: nil, New: l.SortOrder},
+				"dismissed":  {Old: nil, New: l.Dismissed},
+			},
+		})
+	}
+	return changes, nil
 }
 
 // Clear deletes the metadata row for (source_id, field_id) when one exists.

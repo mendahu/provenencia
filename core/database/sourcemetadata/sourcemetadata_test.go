@@ -1,6 +1,7 @@
 package sourcemetadata
 
 import (
+	"bytes"
 	"errors"
 	"testing"
 
@@ -642,4 +643,228 @@ func runFieldCreate(c *database.Catalog, label, dataType, description string) (m
 			return metadatafields.Create(tx, label, dataType, description)
 		})
 	return got, err
+}
+
+func runCreateAll(c *database.Catalog, userID, sourceID []byte, values []Input, layout []LayoutRow) ([]rowchange.Change, error) {
+	var changes []rowchange.Change
+	_, _, err := writes.Run(c, writes.Op{Action: "copy_source", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			var err error
+			changes, err = CreateAll(tx, userID, sourceID, values, layout)
+			return struct{}{}, changes, err
+		})
+	return changes, err
+}
+
+func TestCreateAll(t *testing.T) {
+	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+
+	// seed returns a catalog with a Source, a text field and a URL field.
+	seed := func(t *testing.T) (c *database.Catalog, src sources.Source, text, link metadatafields.Field) {
+		t.Helper()
+		c, err := database.Create(t.TempDir(), "t.provenencia")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { c.Close() })
+		r, err := ref.Mint(ref.PrefixUser)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := users.Upsert(c, userID, "Jake", r); err != nil {
+			t.Fatal(err)
+		}
+		if err := sourcevocab.Install(c); err != nil {
+			t.Fatal(err)
+		}
+		st, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		src, _, err = writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: st.ID, Title: "Birth of Alice"})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		text, err = metadatafields.Lookup(c, "document_number", vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		link, err = runFieldCreate(c, "Web page", metadatafields.DataTypeURL, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return c, src, text, link
+	}
+	count := func(t *testing.T, c *database.Catalog, table string) int {
+		t.Helper()
+		db, err := c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var n int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM ` + table).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+
+	tests := []struct {
+		name string
+		run  func(t *testing.T)
+	}{
+		{
+			name: "values with no layout rows write no layout",
+			run: func(t *testing.T) {
+				c, src, text, _ := seed(t)
+				changes, err := runCreateAll(c, userID, src.ID, []Input{{SourceID: src.ID, FieldID: text.ID, ValueText: "No. 7"}}, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(changes) != 1 || changes[0].EntityType != "source_metadata" {
+					t.Fatalf("changes %+v", changes)
+				}
+				rows, err := ListBySource(c, src.ID)
+				if err != nil || len(rows) != 1 || rows[0].ValueText != "No. 7" {
+					t.Fatalf("rows %+v err %v", rows, err)
+				}
+				if n := count(t, c, "source_metadata_layout"); n != 0 {
+					t.Fatalf("layout rows %d", n)
+				}
+			},
+		},
+		{
+			name: "dismissed layout row on a valued field stays dismissed",
+			run: func(t *testing.T) {
+				c, src, text, link := seed(t)
+				changes, err := runCreateAll(c, userID, src.ID,
+					[]Input{{SourceID: src.ID, FieldID: text.ID, ValueText: "No. 7"}},
+					[]LayoutRow{{FieldID: link.ID, SortOrder: 0}, {FieldID: text.ID, SortOrder: 1, Dismissed: true}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(changes) != 3 || changes[0].EntityType != "source_metadata" ||
+					changes[1].EntityType != "source_metadata_layout" || changes[2].EntityType != "source_metadata_layout" {
+					t.Fatalf("changes %+v", changes)
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				var dismissed int
+				if err := db.QueryRow(`SELECT dismissed FROM source_metadata_layout WHERE source_id = ? AND field_id = ?`, src.ID, text.ID).Scan(&dismissed); err != nil || dismissed != 1 {
+					t.Fatalf("dismissed %d err %v", dismissed, err)
+				}
+				// A layout row for a field with no value is allowed.
+				if n := count(t, c, "source_metadata_layout"); n != 2 {
+					t.Fatalf("layout rows %d", n)
+				}
+			},
+		},
+		{
+			name: "URL value takes the form Set stores",
+			run: func(t *testing.T) {
+				c, src, _, link := seed(t)
+				if _, err := runCreateAll(c, userID, src.ID, []Input{{SourceID: src.ID, FieldID: link.ID, ValueText: "HTTPS://Example.org/a"}}, nil); err != nil {
+					t.Fatal(err)
+				}
+				rows, err := ListBySource(c, src.ID)
+				if err != nil || len(rows) != 1 {
+					t.Fatalf("rows %+v err %v", rows, err)
+				}
+				if rows[0].ValueText != "https://example.org/a" {
+					t.Fatalf("stored %q", rows[0].ValueText)
+				}
+			},
+		},
+		{
+			name: "source that already has a value is refused",
+			run: func(t *testing.T) {
+				c, src, text, link := seed(t)
+				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: text.ID, ValueText: "x"}); err != nil {
+					t.Fatal(err)
+				}
+				_, err := runCreateAll(c, userID, src.ID, []Input{{SourceID: src.ID, FieldID: link.ID, ValueText: "https://example.org"}}, nil)
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "input for another source is refused",
+			run: func(t *testing.T) {
+				c, src, text, _ := seed(t)
+				other := make([]byte, 16)
+				other[15] = 9
+				_, err := runCreateAll(c, userID, src.ID, []Input{{SourceID: other, FieldID: text.ID, ValueText: "x"}}, nil)
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
+				}
+				if n := count(t, c, "source_metadata"); n != 0 {
+					t.Fatalf("rows %d", n)
+				}
+			},
+		},
+		{
+			name: "unknown field and empty text are refused",
+			run: func(t *testing.T) {
+				c, src, text, _ := seed(t)
+				missing := make([]byte, 16)
+				missing[15] = 9
+				if _, err := runCreateAll(c, userID, src.ID, []Input{{SourceID: src.ID, FieldID: missing, ValueText: "x"}}, nil); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("value field: %v", err)
+				}
+				if _, err := runCreateAll(c, userID, src.ID, nil, []LayoutRow{{FieldID: missing}}); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("layout field: %v", err)
+				}
+				if _, err := runCreateAll(c, userID, src.ID, []Input{{SourceID: src.ID, FieldID: text.ID}}, nil); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("empty text: %v", err)
+				}
+				if n := count(t, c, "source_metadata") + count(t, c, "source_metadata_layout"); n != 0 {
+					t.Fatalf("rows %d", n)
+				}
+			},
+		},
+		{
+			name: "empty inputs write nothing",
+			run: func(t *testing.T) {
+				c, src, _, _ := seed(t)
+				changes, err := runCreateAll(c, userID, src.ID, nil, nil)
+				if err != nil || len(changes) != 0 {
+					t.Fatalf("changes %+v err %v", changes, err)
+				}
+			},
+		},
+		{
+			name: "ListLayoutTx returns rows by sort order",
+			run: func(t *testing.T) {
+				c, src, text, link := seed(t)
+				if _, err := runCreateAll(c, userID, src.ID, nil,
+					[]LayoutRow{{FieldID: text.ID, SortOrder: 1}, {FieldID: link.ID, SortOrder: 0, Dismissed: true}}); err != nil {
+					t.Fatal(err)
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				tx, err := db.Begin()
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer tx.Rollback()
+				got, err := ListLayoutTx(tx, src.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(got) != 2 || !bytes.Equal(got[0].FieldID, link.ID) || !got[0].Dismissed ||
+					!bytes.Equal(got[1].FieldID, text.ID) || got[1].Dismissed {
+					t.Fatalf("layout %+v", got)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, tt.run)
+	}
 }
