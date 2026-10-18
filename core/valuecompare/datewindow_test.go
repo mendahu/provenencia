@@ -127,6 +127,43 @@ func TestDateEnds(t *testing.T) {
 
 func win(lo, hi *int) valuecompare.Window { return valuecompare.Window{Lo: lo, Hi: hi} }
 
+func TestEndsDate(t *testing.T) {
+	for name, d := range map[string]*datevalue.Value{
+		"year":   datevaluetest.YMD(1817, 0, 0),
+		"day":    datevaluetest.YMD(1817, 3, 3),
+		"before": bound(datevalue.QualifierBEF, 1820),
+		"after":  bound(datevalue.QualifierAFT, 1815),
+		"range":  datevaluetest.Between(1815, 0, 0, 1820, 0, 0),
+	} {
+		t.Run("round trip "+name, func(t *testing.T) {
+			first, last, ok := valuecompare.DateEnds(*d)
+			if !ok {
+				t.Fatalf("no ends for %s", name)
+			}
+			got, ok := valuecompare.EndsDate(first, last)
+			if !ok {
+				t.Fatalf("EndsDate(%+v, %+v) not ok", first, last)
+			}
+			f2, l2, ok := valuecompare.DateEnds(got)
+			if !ok || f2 != first || l2 != last {
+				t.Fatalf("ends %+v %+v, want %+v %+v", f2, l2, first, last)
+			}
+		})
+	}
+	t.Run("both open", func(t *testing.T) {
+		if _, ok := valuecompare.EndsDate(valuecompare.DateEnd{Open: true}, valuecompare.DateEnd{Open: true}); ok {
+			t.Fatal("both open is ok")
+		}
+	})
+	t.Run("first after last", func(t *testing.T) {
+		first, _, _ := valuecompare.DateEnds(*datevaluetest.YMD(1821, 0, 0))
+		_, last, _ := valuecompare.DateEnds(*datevaluetest.YMD(1820, 0, 0))
+		if _, ok := valuecompare.EndsDate(first, last); ok {
+			t.Fatal("first after last is ok")
+		}
+	})
+}
+
 func TestWindow(t *testing.T) {
 	d := func(n int) *int { return &n }
 	a, b, c := win(d(1), d(10)), win(d(5), d(20)), win(d(30), d(40))
