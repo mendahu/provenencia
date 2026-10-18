@@ -50,6 +50,7 @@ enum CoreMethod {
     static let listSources = Int32(Provenencia_Engine_V1_Method.listSources.rawValue)
     static let getSourceWorkspace = Int32(Provenencia_Engine_V1_Method.getSourceWorkspace.rawValue)
     static let createSource = Int32(Provenencia_Engine_V1_Method.createSource.rawValue)
+    static let copySource = Int32(Provenencia_Engine_V1_Method.copySource.rawValue)
     static let updateSource = Int32(Provenencia_Engine_V1_Method.updateSource.rawValue)
     static let addSourceNote = Int32(Provenencia_Engine_V1_Method.addSourceNote.rawValue)
     static let updateSourceNote = Int32(Provenencia_Engine_V1_Method.updateSourceNote.rawValue)

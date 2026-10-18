@@ -100,6 +100,7 @@ const (
 	MethodGetNameFormat                     = int32(engine.Method_METHOD_GET_NAME_FORMAT)
 	MethodUnpromoteSubject                  = int32(engine.Method_METHOD_UNPROMOTE_SUBJECT)
 	MethodSetPreferredLikeness              = int32(engine.Method_METHOD_SET_PREFERRED_LIKENESS)
+	MethodCopySource                        = int32(engine.Method_METHOD_COPY_SOURCE)
 	MethodListClaimConfidenceGrades         = int32(engine.Method_METHOD_LIST_CLAIM_CONFIDENCE_GRADES)
 	MethodGetConclusionDetail               = int32(engine.Method_METHOD_GET_CONCLUSION_DETAIL)
 	MethodListEventHeaders                  = int32(engine.Method_METHOD_LIST_EVENT_HEADERS)
@@ -280,6 +281,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.UnpromoteSubject(in)
 	case MethodSetPreferredLikeness:
 		return handlers.SetPreferredLikeness(in)
+	case MethodCopySource:
+		return handlers.CopySource(in)
 	case MethodListSubjectMemberships:
 		return handlers.ListSubjectMemberships(in)
 	case MethodListPersonHeaders:

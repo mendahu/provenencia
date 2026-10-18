@@ -364,6 +364,57 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
+    func copySource(
+        projectDir: String,
+        userID _: String,
+        sourceID: String,
+        title: String,
+        sourceTypeID: String,
+        copyDescription: Bool,
+        copyMetadata: Bool,
+        copyCredibility: Bool,
+        artifactIDs: [String]
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
+        return try withState {
+            guard let original = sourcesByProject[projectDir]?.first(where: { $0.id == sourceID }) else {
+                throw StoreBoom.boom
+            }
+            let copyID = UUID().uuidString.lowercased()
+            var copy = CatalogSource(
+                id: copyID,
+                ref: "SRC-FAKE1",
+                sourceTypeID: sourceTypeID,
+                title: title,
+                description: copyDescription ? original.description : ""
+            )
+            if copyMetadata {
+                // Entries copy as they are; a `suggested` flag can be stale under
+                // another type in the fake.
+                metadataBySource[copyID] = metadataBySource[sourceID]
+            }
+            if copyCredibility, var assessment = credibilityBySource[sourceID] {
+                assessment.id = UUID().uuidString.lowercased()
+                assessment.sourceID = copyID
+                credibilityBySource[copyID] = assessment
+            }
+            let chosen = (artifactsBySource[sourceID] ?? []).filter { artifactIDs.contains($0.id) }
+            if !chosen.isEmpty {
+                artifactsBySource[copyID] = chosen.map { art in
+                    var copied = art
+                    copied.id = UUID().uuidString.lowercased()
+                    copied.ref = "ART-FAKE1"
+                    copied.sourceID = copyID
+                    return copied
+                }
+                copy.hasArtifact = true
+            }
+            sourcesByProject[projectDir, default: []].append(copy)
+            let effects = bumpSource(copyID, evidence: !chosen.isEmpty)
+            let stored = sourcesByProject[projectDir]?.first(where: { $0.id == copyID }) ?? copy
+            return (stored, effects)
+        }
+    }
+
     func updateSource(
         projectDir: String,
         userID _: String,

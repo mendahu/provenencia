@@ -111,6 +111,7 @@ enum Method {
   METHOD_GET_NAME_FORMAT = 99;
   METHOD_UNPROMOTE_SUBJECT = 100;
   METHOD_SET_PREFERRED_LIKENESS = 101;
+  METHOD_COPY_SOURCE = 102;
 }
 
 message PingRequest {
@@ -416,6 +417,26 @@ message CreateSourceRequest {
 
 message CreateSourceResponse {
   Source source = 1;
+}
+
+// CopySource creates a new Source from an existing one in one audited write.
+// Notes, Subjects, Citations, Observations, graphs and the cover are never
+// copied.
+message CopySourceRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string source_id = 3; // the Source to copy
+  string title = 4; // required (non-empty after trim)
+  string source_type_id = 5;
+  bool copy_description = 6;
+  bool copy_metadata = 7; // values and their layout
+  bool copy_credibility = 8;
+  repeated string artifact_ids = 9; // the original's Artifacts to copy
+}
+
+message CopySourceResponse {
+  Source source = 1;
+  WriteEffects effects = 2;
 }
 
 message UpdateSourceRequest {

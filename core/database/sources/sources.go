@@ -449,6 +449,14 @@ func scanSourceList(row rowScanner) (Source, error) {
 	return s, nil
 }
 
+// GetTx returns a Source by id on an open transaction, or sql.ErrNoRows.
+func GetTx(tx *sql.Tx, id []byte) (Source, error) {
+	if len(id) != 16 {
+		return Source{}, ErrInvalid
+	}
+	return getTx(tx, id)
+}
+
 func getTx(tx *sql.Tx, id []byte) (Source, error) {
 	return scanSource(tx.QueryRow(sqlGet, id))
 }

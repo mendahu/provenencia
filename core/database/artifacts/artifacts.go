@@ -333,7 +333,19 @@ func ListBySource(c *database.Catalog, sourceID []byte) ([]Artifact, error) {
 	if len(sourceID) != 16 {
 		return nil, ErrInvalid
 	}
-	rows, err := db.Query(sqlListBySource, sourceID)
+	return listBySource(db, sourceID)
+}
+
+// ListBySourceTx is ListBySource on an open transaction.
+func ListBySourceTx(tx *sql.Tx, sourceID []byte) ([]Artifact, error) {
+	if len(sourceID) != 16 {
+		return nil, ErrInvalid
+	}
+	return listBySource(tx, sourceID)
+}
+
+func listBySource(q database.Querier, sourceID []byte) ([]Artifact, error) {
+	rows, err := q.Query(sqlListBySource, sourceID)
 	if err != nil {
 		return nil, err
 	}

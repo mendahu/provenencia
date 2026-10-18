@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/sourcecopy"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -130,6 +131,62 @@ func CreateSource(in []byte) ([]byte, error) {
 			return err
 		}
 		out = &engine.CreateSourceResponse{Source: sp}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
+func CopySource(in []byte) ([]byte, error) {
+	var req engine.CopySourceRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("copy_source", err)
+	}
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	sourceID, err := parseID(req.GetSourceId())
+	if err != nil {
+		return nil, err
+	}
+	typeID, err := parseID(req.GetSourceTypeId())
+	if err != nil {
+		return nil, err
+	}
+	artifactIDs := make([][]byte, 0, len(req.GetArtifactIds()))
+	for _, raw := range req.GetArtifactIds() {
+		id, err := parseID(raw)
+		if err != nil {
+			return nil, err
+		}
+		artifactIDs = append(artifactIDs, id)
+	}
+	var out *engine.CopySourceResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		s, res, err := writes.Run(c, writes.Op{Action: "copy_source", UserID: userID},
+			func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+				return sourcecopy.Copy(tx, userID, sourcecopy.CopyInput{
+					SourceID:     sourceID,
+					Title:        req.GetTitle(),
+					SourceTypeID: typeID,
+					Description:  req.GetCopyDescription(),
+					Metadata:     req.GetCopyMetadata(),
+					Credibility:  req.GetCopyCredibility(),
+					ArtifactIDs:  artifactIDs,
+				})
+			})
+		if err != nil {
+			return err
+		}
+		s.Updated = res.Activity
+		sp, err := enrichSourceProto(c, s)
+		if err != nil {
+			return err
+		}
+		out = &engine.CopySourceResponse{Source: sp, Effects: writeEffectsProto(res)}
 		return nil
 	})
 	if err != nil {

@@ -171,6 +171,34 @@ struct GoStore: GenealogyStore {
         return Self.mapSource(resp.source)
     }
 
+    func copySource(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        title: String,
+        sourceTypeID: String,
+        copyDescription: Bool,
+        copyMetadata: Bool,
+        copyCredibility: Bool,
+        artifactIDs: [String]
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
+        var req = Provenencia_Engine_V1_CopySourceRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.sourceID = sourceID
+        req.title = title
+        req.sourceTypeID = sourceTypeID
+        req.copyDescription = copyDescription
+        req.copyMetadata = copyMetadata
+        req.copyCredibility = copyCredibility
+        req.artifactIds = artifactIDs
+        let resp: Provenencia_Engine_V1_CopySourceResponse = try await provenenciaCall(
+            method: CoreMethod.copySource,
+            request: req
+        )
+        return (Self.mapSource(resp.source), Self.mapWriteEffects(resp.effects))
+    }
+
     func updateSource(
         projectDir: String,
         userID: String,

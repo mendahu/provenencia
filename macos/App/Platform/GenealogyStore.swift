@@ -981,6 +981,21 @@ protocol GenealogyStore: Sendable {
         title: String,
         description: String
     ) async throws -> CatalogSource
+    /// Copies a Source in one audited write: a new Source with `title` and
+    /// `sourceTypeID`, plus, each only when chosen, the original's description,
+    /// metadata with its layout, credibility, and the listed Artifacts. Notes,
+    /// Subjects, Citations, Observations, graphs and the cover are never copied.
+    func copySource(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        title: String,
+        sourceTypeID: String,
+        copyDescription: Bool,
+        copyMetadata: Bool,
+        copyCredibility: Bool,
+        artifactIDs: [String]
+    ) async throws -> (CatalogSource, CatalogWriteEffects)
     func deleteSource(projectDir: String, userID: String, sourceID: String) async throws
     func updateSource(
         projectDir: String,

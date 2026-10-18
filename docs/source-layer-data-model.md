@@ -149,6 +149,23 @@ CREATE TABLE source_notes (
 
 Notes use a typed table with a real foreign key rather than a polymorphic notes table. Creation, edit, and deletion attribution belong to audit history.
 
+## 4.2 Copy Source
+
+Copy Source makes a new Source from an existing one so a researcher starts from a sibling's publication, issue, page and URL instead of retyping them. The copy has its own `SRC-` ref, and the researcher chooses its title and Source type.
+
+**Copied, each only when chosen:**
+
+- the description;
+- the metadata values and their layout rows, verbatim (order and dismissed suggestions included), whatever type the copy has;
+- the credibility assessment (grade and argument);
+- each chosen Artifact, as a new row with its own `ART-` ref and the same label, description and File.
+
+**Never copied:** notes, Subjects, Citations, Observations and graphs. Those are the researcher's work on the original, not facts about the document.
+
+**Cover.** The copy's cover is reset to the Source type icon (`primary_artifact_id` is empty), even when the original's cover was one of the Artifacts the copy carries.
+
+The copy is one audited write, action `copy_source`, built by `core/database/sourcecopy` from the owner packages' own writes. It is the engine under the Copy form; it is not a way to link two Sources. How to relate Sources that belong together is a separate decision, in [the two tools](deployment-plan/spike-12/source-structure.md#the-two-tools).
+
 ---
 
 # 5. Source metadata
