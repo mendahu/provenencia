@@ -47,6 +47,11 @@ func TestTextCompare(t *testing.T) {
 		{name: "case", a: "York", b: "york", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseCase, parts: []valuecompare.PartMatch{pm("york", "york", valuecompare.Same, 1, valuecompare.CauseExact)}},
 		{name: "particle", a: "O Brien", b: "O'Brien", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseCase, parts: []valuecompare.PartMatch{pm("obrien", "obrien", valuecompare.Same, 1, valuecompare.CauseExact)}},
 		{name: "dash", a: "Sainte-Anne", b: "Sainte Anne", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseCase, parts: []valuecompare.PartMatch{pm("sainte", "sainte", valuecompare.Same, 1, valuecompare.CauseExact), pm("anne", "anne", valuecompare.Same, 1, valuecompare.CauseExact)}},
+		{name: "word break dash", a: "god-father", b: "godfather", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseCase, parts: []valuecompare.PartMatch{pm("god father", "godfather", valuecompare.Same, 1, valuecompare.CauseCase)}},
+		{name: "word break space", a: "York Town", b: "Yorktown", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseCase, parts: []valuecompare.PartMatch{pm("york town", "yorktown", valuecompare.Same, 1, valuecompare.CauseCase)}},
+		{name: "word break and fold", a: "Mont-réal", b: "Montreal", want: valuecompare.Equivalent, sim: 0.95, cause: valuecompare.CauseFold, parts: []valuecompare.PartMatch{pm("mont réal", "montreal", valuecompare.Equivalent, 0.95, valuecompare.CauseFold)}},
+		{name: "word break same accents", a: "Mont-réal", b: "montréal", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseCase, parts: []valuecompare.PartMatch{pm("mont réal", "montréal", valuecompare.Same, 1, valuecompare.CauseCase)}},
+		{name: "word break equal counts", a: "ab c", b: "a bc", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseCase, parts: []valuecompare.PartMatch{pm("ab c", "a bc", valuecompare.Same, 1, valuecompare.CauseCase)}},
 		{name: "fold", a: "Montréal", b: "Montreal", want: valuecompare.Equivalent, sim: 0.95, cause: valuecompare.CauseFold, parts: []valuecompare.PartMatch{pm("montréal", "montreal", valuecompare.Equivalent, 0.95, valuecompare.CauseFold)}},
 		{
 			name: "contains", a: "York", b: "York, Upper Canada",
@@ -115,6 +120,16 @@ func TestTextKey(t *testing.T) {
 	rules := matchregistry.Default().Value
 	key := func(s string, level valuecompare.Relation) (string, bool) {
 		return valuecompare.Key(textValue(s), level, rules)
+	}
+	for _, in := range []string{"god-father", "God Father", "godfather"} {
+		if k, _ := valuecompare.TextKey(in, valuecompare.Same, rules.Words); k != "godfather" {
+			t.Errorf("Same TextKey(%q) = %q, want godfather", in, k)
+		}
+	}
+	for _, in := range []string{"Mont-réal", "Montreal", "Montréal"} {
+		if k, _ := valuecompare.TextKey(in, valuecompare.Equivalent, rules.Words); k != "montreal" {
+			t.Errorf("Equivalent TextKey(%q) = %q, want montreal", in, k)
+		}
 	}
 	a, _ := key("Montréal", valuecompare.Same)
 	b, _ := key("Montreal", valuecompare.Same)
