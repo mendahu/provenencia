@@ -1,6 +1,6 @@
 # S10-61 — Cap region size
 
-**Status:** Planned
+**Status:** Landed in [#462](https://github.com/mendahu/provenencia/pull/462) (2026-10-18)
 **Spike / slice:** Spike 10 follow-ups · likeness hardening
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the freeform tool ignores a click past the cap with the system beep; no control, copy, or layout changes)
