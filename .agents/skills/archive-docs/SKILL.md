@@ -48,6 +48,7 @@ Do **not** run this on an **open** spike (Spike 8 while it still has a plan).
 - [ ] Grep inbound links; retarget to the README or the live domain doc
 - [ ] Slim docs/deployment-plan/README.md completed row (one line, no file list)
 - [ ] Update docs/ideas/README.md if an idea moved
+- [ ] The close PR (S#-99) deletes its own plan, review log, and ship log in its last commit, the one that records the ship log. It writes no Landed note and no completed.md paragraph; the PR body carries any deviation
 ```
 
 ### Keep (live contract)

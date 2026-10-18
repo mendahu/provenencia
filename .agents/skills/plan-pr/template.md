@@ -157,6 +157,7 @@ Do: ….
 Check: ….
 
 **STEP-N — Docs**
+<!-- A spike close (S#-99) drops this step and the DoD lines for this plan's status and completed.md: archive-docs "Spike close — checklist". -->
 Files: `completed.md`, `deployment-plan.md` (map row), this plan (status), `design/` (brief → `design/archive/`), `docs/*.md` if a domain rule changed.
 Do: per the Definition of done.
 Check: links resolve.

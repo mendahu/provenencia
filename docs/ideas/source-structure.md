@@ -55,4 +55,4 @@ The two problems may connect: the Evidence graph might belong to the child Sourc
 
 - [`source-to-source-relationships.md`](source-to-source-relationships.md): how one Source talks about another, via `mentions` / `remark`. That is commentary, not containment; this note is about containment.
 - [`archive/evidence-graph-drag-performance.md`](archive/evidence-graph-drag-performance.md): drag and first paint of a large graph.
-- Canvas growth landed in [Spike 10](../deployment-plan/spike-10/) (S10-03). Box-select is still S10-20.
+- Canvas growth and box-select landed in [Spike 10](../deployment-plan/archive/spike-10/).

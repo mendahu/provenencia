@@ -1,6 +1,6 @@
 # Glyph consolidation (archived)
 
-**Status:** **Done** in S10-49. The leftovers below are not scheduled. Raised in the S10-19 plan review ([`S10-19-event-mark-sidebar.review.md`](../../deployment-plan/spike-10/prs/S10-19-event-mark-sidebar.review.md), M-3 and M-4).
+**Status:** **Done** in S10-49. The leftovers below are not scheduled. Raised in the S10-19 plan review (M-3 and M-4).
 
 S10-19 added `PVGlyph` (an SF Symbol or a mark) and `PVGlyphView` in `macos/App/DesignSystem/Recipes/Marks/PVMark.swift`. The sidebar, the history menus, and `PVEmptyState` used it. Two clean-ups were left, and S10-49 did them.
 
