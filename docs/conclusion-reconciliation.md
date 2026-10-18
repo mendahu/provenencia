@@ -163,7 +163,7 @@ From [`structured-name-model.md`](structured-name-model.md). Built in S9-13b (se
 
 - **Parts only.** `form` is a transcription and is never compared. A name with no parts is `no_evidence`.
 - **Format-agnostic.** A part type is only an identifier: parts are compared only with parts of the same type, and no type behaves differently from another. A prefix, a surname and a given name are all just types. Culture lives in name format profiles, not here.
-- **The comparable unit is the part type.** A candidate's value for a type is its ordered list of **words** of that type: each part normalized (value compare's words: case, punctuation and whitespace ignored, particles rejoined so *Mc Donald* = *McDonald*; accents are not folded; word order inside a type does not matter) and split into words. A hyphen or a space inside a part is the same as separate parts: *Smith-Jones* = *Smith Jones* = *Smith* + *Jones*. Words are compared; the best-ranked record's recorded parts are displayed.
+- **The comparable unit is the part type.** A candidate's value for a type is its **words** of that type: each part normalized (value compare's words: case, punctuation and whitespace ignored, particles rejoined so *Mc Donald* = *McDonald*; accents are not folded; word order inside a type does not matter) and split into words. A hyphen or a space inside a part is the same as separate parts: *Smith-Jones* = *Smith Jones* = *Smith* + *Jones*. Words are compared; the best-ranked record's recorded parts are displayed.
 - **Fold:** a type's words fold into a fuller list when value compare finds the list contains them and every word they pair is the same word or an initial of it: `[J]` → `[James]`, `[James]` → `[James, Kenneth]`, `[J, K]` → `[James, Kenneth]`. An accent fold or an alias never folds (`[Jose]` stays beside `[José, Kenneth]`). The `initial` part type is retired; an initial is the part it stands for.
 - **Deny** compares whole names: a negative denies positives with the same parts by type.
 - **Majority only outvotes misspellings** (decided 2026-10-05). Within a type, a majority winner outvotes a minority value only when it is a **spelling variant** of the winner: the same number of parts, each equal or similar (`valuecompare.SpellingSimilarity`, shared with matching: at least 0.8 similarity by edit distance with adjacent swaps, or one added or dropped letter from 3 letters up). *Robbins* beside *Robins* is outvoted. *Jake* beside *James*, or a married *Smith* beside *Robins*, never is: sources often record a nickname as a given name and seldom say so.
@@ -276,7 +276,7 @@ The auto-reconciler, its cache, the pages that read it, place chains, Promote, a
 | Piece | Where |
 | --- | --- |
 | Shared pipeline and simple modules (text, integer, term); every value cached with its reason | `core/autoreconcile` |
-| Names: parts by type, subsumption, one name per Person, majority outvotes misspellings only | `core/autoreconcile` |
+| Names: parts by type, containment per part type, one name per Person, majority outvotes misspellings only | `core/autoreconcile` |
 | Dates: value compare's span keys and containment fold, ABT as a range; `date_lo` / `date_hi` and `sort_key` as written | `core/autoreconcile` |
 | Per-Property cardinality on that same pipeline | `core/autoreconcile` |
 | Depictions by image File, cached as `value_image_file_id` | `core/autoreconcile`, `core/database/autoreconciler` |
