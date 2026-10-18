@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-10 — Subject compare
+
+**Landed 2026-10-18** in [#471](https://github.com/mendahu/provenencia/pull/471). Layer 3 of matching exists: `subjectcompare.Compare` says how alike two Subjects of one type are as a similarity (0 to 1) and evidence (points), from layer 2's outcome on each property the registry's new `subject` section lists. Sex at birth and gender are pooled, and an event with no date compares its start and end as one period. The section keys by the new `vocabkey.SubjectType` and `PropertyKey`, and a seed test ties it to the product vocabulary. `valuecompare.EndsDate` turns date ends back into a date, and `propertycomparetest` and `subjectcomparetest` hold the layers' test builders. No caller yet; nothing changes for researchers.
+
 ## S11-09 — Property compare
 
 **Landed 2026-10-18** in [#468](https://github.com/mendahu/provenencia/pull/468). Layer 2 of matching exists as `core/propertycompare`: given every value two Subjects record for one property, it drops neutral values, lets a negative value contradict a value it matches (`Same`, `Equivalent`, `Contains`), compares every pair of positive values with value compare, picks the pair that speaks (outcome, then similarity, then the stronger relation, then each side's `Same` key; a tie keeps side A's input order, contradictions included), treats a difference on a multiple-value property as no conflict, and returns agree, partial, conflict or unknown with a cause, the speaking pair and the excluded values. It holds no number and reads no refs, support or standing. `valuecompare.Stronger` is now the one relation order (`valuecompare.Relations()` lists it, and a test fails until a new relation has an outcome), `propertymeta.Meta` carries a property's value type and cardinality, and `datevaluetest` builds date fixtures. No caller uses the layer yet; nothing changes for researchers.
