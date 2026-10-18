@@ -1,7 +1,7 @@
 # Ship log — S10-66 Pure depiction value package
 
 **Plan:** [`S10-66-pure-depiction-value.md`](S10-66-pure-depiction-value.md) · **Branch:** `s10-66-pure-depiction-value` · **PR:** #473
-**State:** fixing 1
+**State:** ready
 
 Worktree `/Users/jakerobins/Repos/provenencia-s10-66`, cut from `origin/main` @ `ab70bd69`.
 
@@ -24,3 +24,12 @@ Files: `core/database/depictionvalues/depictionvalues_test.go`. Skill: —
 Failing test first: none. The test passes before and after; this is a naming and fixture fix, so the check is that the test still passes.
 Do: change line 39 `const region = depictionvaluetest.Locator` to `const region = depictionvaluetest.Region`. Change nothing else. Do not edit the plan's Landed note; the orchestrator records the outcome here.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/depictionvalues/` passes; scripts/check-pr.sh PASS. Commit: "Use the depiction region fixture as the region in TestDepictionValues."
+
+## Round 1 — fix
+Head `277c5825`. Gate PASS (run by the orchestrator; `go test -count=1 ./core/database/depictionvalues/` ok). F-1 done: one line, `const region = depictionvaluetest.Region`. Plan Landed note updated to match.
+
+## Round 2 — review
+MNT, CON on `0a2427eb...277c5825`. MNT-1/CON-1 resolved; no new findings from either lens.
+
+## Result
+Gate PASS · CI see PR · open: none · follow-ups: MNT-2 (one trim on the depiction write path) · to user: —

@@ -314,4 +314,4 @@ None.
 Differences from the plan:
 
 - `main` had moved from `e97cf54` to `ab70bd69` (S10-60, S10-61, S10-64, S10-65 and Spike 11 work had landed). No Current state row was invalidated and no file outside section 4 imported `depictionvalues`; the docs lines the plan cites by number had shifted and were found by text.
-- `TestDepictionValues` now takes its page-only locator from `depictionvaluetest.Locator` in place of its inline copy.
+- `TestDepictionValues` now takes its region from `depictionvaluetest.Region` in place of its inline page-only document (review fix F-1; round 0 had used `depictionvaluetest.Locator`).
