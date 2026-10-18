@@ -276,7 +276,7 @@ None.
 
 Differences from the plan:
 
-- The cut key (`depictionCutKey(for:)`) is built from the artifact id, viewer kind, loading flag, page and the region's points, not `locator.encodeJSON()` as D-6 says: `encodeJSON()` orders its JSON keys differently on each call, so the key never matched itself and the stored cut was never reused. The old memo never hit either.
+- The cut key is a typed `Equatable` value (`DepictionCutKey`: artifact id, viewer kind, loading flag, page and region draft), not `locator.encodeJSON()` as D-6 says: `encodeJSON()` has unstable key order (no `.sortedKeys`), so a string key never matched itself. Approved by the user against D-6's text.
 - `main` had moved since the plan: S10-63 (`useDepictionRegion`; `commitViewerRegion` now returns `Bool`) and S10-62 (the `fileExists` guard in `ArtifactViewerModel.load` is gone) had landed. Both were kept and no Current state row was invalidated.
 - D-12's `SendableImage` was not needed: the build has no new Sendable or isolation warnings.
 - The manual check (section 10) is left for the user.

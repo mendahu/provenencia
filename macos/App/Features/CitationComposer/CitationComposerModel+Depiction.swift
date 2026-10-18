@@ -4,8 +4,17 @@ import Foundation
 /// One rendered cut, keyed by what it was cut from. Save reuses the bitmap
 /// the preview already drew. `cut` is nil when the cut failed for that key.
 struct DepictionPreviewMemo {
-    var key: String
+    var key: DepictionCutKey
     var cut: (cgImage: CGImage, image: NSImage)?
+}
+
+/// What a cut depends on: the file, how the viewer holds it, the page and the region.
+struct DepictionCutKey: Equatable, Sendable {
+    let artifactID: String?
+    let kind: ArtifactViewerKind
+    let isLoading: Bool
+    let page: Int?
+    let region: ArtifactRegionDraft
 }
 
 /// What the depiction preview shows, read from stored values only.
@@ -168,21 +177,19 @@ extension CitationComposerModel {
     }
 
     /// What a cut of this draft depends on; nil when the draft has no region.
-    /// Built from the page and the region's points, not `encodeJSON()`, whose
-    /// key order changes between calls.
-    private func depictionCutKey(for draft: DepictionValueDraft) -> String? {
+    private func depictionCutKey(for draft: DepictionValueDraft) -> DepictionCutKey? {
         guard draft.hasRegion, let region = draft.locator.region else { return nil }
-        return [
-            selectedArtifact?.id ?? "",
-            artifactViewer.kind.rawValue,
-            String(artifactViewer.isLoading),
-            draft.locator.page.map(String.init) ?? "",
-            region.points.map { "\($0.x),\($0.y)" }.joined(separator: ";"),
-        ].joined(separator: "|")
+        return DepictionCutKey(
+            artifactID: selectedArtifact?.id,
+            kind: artifactViewer.kind,
+            isLoading: artifactViewer.isLoading,
+            page: draft.locator.page,
+            region: region
+        )
     }
 
     /// The key of the cut the preview needs now; nil when it needs none.
-    var depictionPreviewKey: String? {
+    var depictionPreviewKey: DepictionCutKey? {
         guard let draft = currentDepictionDraft, unchangedDepictionImagePath == nil else { return nil }
         return depictionCutKey(for: draft)
     }
