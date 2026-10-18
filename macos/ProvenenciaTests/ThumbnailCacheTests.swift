@@ -37,6 +37,21 @@ struct ThumbnailCacheTests {
         #expect(cache.entryCount == 1)
     }
 
+    @Test func symlinkedObjectCachesSentinel() async throws {
+        let fm = FileManager.default
+        let cache = ThumbnailCache()
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        let rel = "objects/ab/cd/x.png"
+        let outside = try ArtifactFileFixtures.linkToOutsidePNG(at: project + "/" + rel)
+        defer {
+            try? fm.removeItem(atPath: project)
+            try? fm.removeItem(atPath: outside)
+        }
+        let image = await cache.image(projectDir: project, relPath: rel)
+        #expect(image == nil)
+        #expect(cache.entryCount == 1)
+    }
+
     @Test func loadsAndHitsCache() async throws {
         let cache = ThumbnailCache()
         let dir = FileManager.default.temporaryDirectory

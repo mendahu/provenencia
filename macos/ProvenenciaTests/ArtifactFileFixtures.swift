@@ -85,6 +85,23 @@ enum ArtifactFileFixtures {
         try write(rotated, projectDir: projectDir, relPath: relPath)
     }
 
+    /// Makes a symlink at `linkPath` to a PNG in a fresh outside folder, creating
+    /// the link's parent folders. Returns the outside folder; the caller removes it.
+    static func linkToOutsidePNG(at linkPath: String) throws -> String {
+        let outside = uniqueProjectDir()
+        try writePNG(projectDir: outside, relPath: "outside.png")
+        let link = URL(fileURLWithPath: linkPath)
+        try FileManager.default.createDirectory(
+            at: link.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createSymbolicLink(
+            atPath: linkPath,
+            withDestinationPath: outside + "/outside.png"
+        )
+        return outside
+    }
+
     static func seedArtifact(_ store: FakeStore, sourceID: String = "src-1", mediaType: String, relPath: String) {
         store.artifactsBySource[sourceID] = [
             CatalogArtifact(

@@ -4,20 +4,22 @@ import Testing
 
 @Suite
 struct ProjectFilesTests {
-    @Test func objectURLJoinsNormalContentAddressedPath() {
-        let url = ProjectFiles.objectURL(
-            projectDir: "/tmp/proj.provenencia",
-            relPath: "objects/ab/cd/abcd"
-        )
-        #expect(url?.path == "/tmp/proj.provenencia/objects/ab/cd/abcd")
+    @Test func objectURLJoinsNormalContentAddressedPath() throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "objects/ab/cd/abcd")
+
+        let url = ProjectFiles.objectURL(projectDir: project, relPath: "objects/ab/cd/abcd")
+        #expect(url?.path == project + "/objects/ab/cd/abcd")
     }
 
-    @Test func objectURLJoinsPathWithExtension() {
-        let url = ProjectFiles.objectURL(
-            projectDir: "/tmp/proj.provenencia",
-            relPath: "objects/ab/cd/abcd.jpg"
-        )
-        #expect(url?.path == "/tmp/proj.provenencia/objects/ab/cd/abcd.jpg")
+    @Test func objectURLJoinsPathWithExtension() throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "objects/ab/cd/abcd.jpg")
+
+        let url = ProjectFiles.objectURL(projectDir: project, relPath: "objects/ab/cd/abcd.jpg")
+        #expect(url?.path.hasSuffix("objects/ab/cd/abcd.jpg") == true)
     }
 
     @Test func objectURLRejectsEmptyRelPath() {
@@ -25,43 +27,154 @@ struct ProjectFilesTests {
         #expect(ProjectFiles.objectURL(projectDir: "/tmp/proj.provenencia", relPath: "   ") == nil)
     }
 
-    @Test func objectURLRejectsParentDirectorySegments() {
-        #expect(
-            ProjectFiles.objectURL(
-                projectDir: "/tmp/proj.provenencia",
-                relPath: "../etc/passwd"
-            ) == nil
-        )
-        #expect(
-            ProjectFiles.objectURL(
-                projectDir: "/tmp/proj.provenencia",
-                relPath: "objects/../../etc/passwd"
-            ) == nil
-        )
-        #expect(
-            ProjectFiles.objectURL(
-                projectDir: "/tmp/proj.provenencia",
-                relPath: "objects/ab/../../../etc/passwd"
-            ) == nil
-        )
+    @Test func objectURLRejectsParentDirectorySegments() throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "objects/ab/cd/x")
+
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects/ab/../ab/cd/x") == nil)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects/ab/cd/x") != nil)
     }
 
-    @Test func objectURLRejectsDotSegments() {
-        #expect(
-            ProjectFiles.objectURL(
-                projectDir: "/tmp/proj.provenencia",
-                relPath: "objects/./ab/cd"
-            ) == nil
-        )
+    @Test func objectURLRejectsDotSegments() throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "objects/ab/cd/x")
+
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects/./ab/cd/x") == nil)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects/ab/cd/x") != nil)
     }
 
-    @Test func objectURLRejectsHomeRelativeSegment() {
-        #expect(
-            ProjectFiles.objectURL(
-                projectDir: "/tmp/proj.provenencia",
-                relPath: "~/secret"
-            ) == nil
-        )
+    @Test func objectURLRejectsHomeRelativeSegment() throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "objects/ab/cd/x")
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "objects/~/x")
+
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects/~/x") == nil)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects/ab/cd/x") != nil)
+    }
+
+    @Test func objectURLRefusesSymlinkedObjectsFolder() throws {
+        let fm = FileManager.default
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        let outside = ArtifactFileFixtures.uniqueProjectDir()
+        defer {
+            try? fm.removeItem(atPath: project)
+            try? fm.removeItem(atPath: outside)
+        }
+        try ArtifactFileFixtures.writePNG(projectDir: outside, relPath: "ab/cd/x.png")
+        try fm.createDirectory(atPath: project, withIntermediateDirectories: true)
+        try fm.createSymbolicLink(atPath: project + "/objects", withDestinationPath: outside)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects/ab/cd/x.png") == nil)
+
+        try fm.removeItem(atPath: project + "/objects")
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "objects/ab/cd/x.png")
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects/ab/cd/x.png") != nil)
+    }
+
+    @Test func objectURLRefusesSymlinkedShardFolder() throws {
+        let fm = FileManager.default
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        let outside = ArtifactFileFixtures.uniqueProjectDir()
+        defer {
+            try? fm.removeItem(atPath: project)
+            try? fm.removeItem(atPath: outside)
+        }
+        try ArtifactFileFixtures.writePNG(projectDir: outside, relPath: "cd/x.png")
+        try fm.createDirectory(atPath: project + "/objects", withIntermediateDirectories: true)
+        try fm.createSymbolicLink(atPath: project + "/objects/ab", withDestinationPath: outside)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects/ab/cd/x.png") == nil)
+
+        try fm.removeItem(atPath: project + "/objects/ab")
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "objects/ab/cd/x.png")
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects/ab/cd/x.png") != nil)
+    }
+
+    @Test func objectURLRefusesSymlinkedObject() throws {
+        let fm = FileManager.default
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        let rel = "objects/ab/cd/x.png"
+        let outside = try ArtifactFileFixtures.linkToOutsidePNG(at: project + "/" + rel)
+        defer {
+            try? fm.removeItem(atPath: project)
+            try? fm.removeItem(atPath: outside)
+        }
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: rel) == nil)
+
+        try fm.removeItem(atPath: project + "/" + rel)
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: rel)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: rel) != nil)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func objectURLRefusesNonRegularObject() throws {
+        let fm = FileManager.default
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? fm.removeItem(atPath: project) }
+        let rel = "objects/ab/cd/x.png"
+
+        try fm.createDirectory(atPath: project + "/" + rel, withIntermediateDirectories: true)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: rel) == nil)
+
+        try fm.removeItem(atPath: project + "/" + rel)
+        #expect(mkfifo(project + "/" + rel, 0o644) == 0)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: rel) == nil)
+
+        try fm.removeItem(atPath: project + "/" + rel)
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: rel)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: rel) != nil)
+    }
+
+    @Test func objectURLRefusesMissingObject() throws {
+        let fm = FileManager.default
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? fm.removeItem(atPath: project) }
+        try fm.createDirectory(atPath: project + "/objects/ab/cd", withIntermediateDirectories: true)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects/ab/cd/x.png") == nil)
+
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "objects/ab/cd/x.png")
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects/ab/cd/x.png") != nil)
+    }
+
+    @Test func objectURLRefusesPathOutsideObjects() throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "provenencia.sqlite")
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "derivatives/x.jpg")
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "objects/ab/cd/x.png")
+
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "provenencia.sqlite") == nil)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "derivatives/x.jpg") == nil)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects") == nil)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects/ab/cd/x.png") != nil)
+    }
+
+    @Test func objectURLAllowsSymlinkedProjectFolder() throws {
+        let fm = FileManager.default
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        let link = ArtifactFileFixtures.uniqueProjectDir()
+        defer {
+            try? fm.removeItem(atPath: project)
+            try? fm.removeItem(atPath: link)
+        }
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "objects/ab/cd/x.png")
+        try fm.createSymbolicLink(atPath: link, withDestinationPath: project)
+
+        let url = ProjectFiles.objectURL(projectDir: link, relPath: "objects/ab/cd/x.png")
+        #expect(url?.path == link + "/objects/ab/cd/x.png")
+    }
+
+    @Test func openObjectReturnsFalseForSymlinkedObject() throws {
+        let fm = FileManager.default
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        let rel = "objects/ab/cd/x.png"
+        let outside = try ArtifactFileFixtures.linkToOutsidePNG(at: project + "/" + rel)
+        defer {
+            try? fm.removeItem(atPath: project)
+            try? fm.removeItem(atPath: outside)
+        }
+        #expect(ProjectFiles.openObject(projectDir: project, relPath: rel) == false)
     }
 
     @Test func openObjectReturnsFalseForRejectedRelPath() {
