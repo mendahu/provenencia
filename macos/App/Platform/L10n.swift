@@ -5144,6 +5144,14 @@ enum L10n {
             ), title)
         }
 
+        static func copySourceTitlePrefill(_ title: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.copy.titlePrefill",
+                defaultValue: "Copy of %@",
+                comment: "Prefilled title of a copied Source; argument is the original title"
+            ), title)
+        }
+
         // MARK: Source page (S2-18)
 
         static let pageTitleRequired = LocalizedStringResource(

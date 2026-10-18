@@ -5258,6 +5258,18 @@
         }
       }
     },
+    "sources.copy.titlePrefill": {
+      "comment": "Prefilled title of a copied Source; argument is the original title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy of %@"
+          }
+        }
+      }
+    },
     "sourceTypes.delete.action": {
       "comment": "Tooltip on the Source types inspector trash",
       "extractionState": "manual",

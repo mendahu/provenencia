@@ -45,6 +45,7 @@
 		AA0000000000000000000361 /* SourcePageChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000360 /* SourcePageChrome.swift */; };
 		AA0000000000000000000363 /* SourcePageIdentityHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000362 /* SourcePageIdentityHeader.swift */; };
 		AA00000000000000000C1207 /* SourceTitleTypeFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1206 /* SourceTitleTypeFields.swift */; };
+		AA00000000000000000C1209 /* SourceCopyModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1208 /* SourceCopyModel.swift */; };
 		AA00000000000000000C1205 /* SourceTypeComboRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1204 /* SourceTypeComboRow.swift */; };
 		AA0000000000000000000365 /* SourcePageDescriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000364 /* SourcePageDescriptionView.swift */; };
 		AA0000000000000000000367 /* SourcePageCredibilityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000366 /* SourcePageCredibilityView.swift */; };
@@ -121,6 +122,8 @@
 		AA000000000000000000031D /* SourcePageModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000031E /* SourcePageModelTests.swift */; };
 		AA0000000000000000000333 /* DateValueDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000332 /* DateValueDraftTests.swift */; };
 		AA0000000000000000000313 /* SourcesModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000312 /* SourcesModelTests.swift */; };
+		AA00000000000000000C120D /* SourceCopyModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C120C /* SourceCopyModelTests.swift */; };
+		AA00000000000000000C120B /* QueryHandleWaiting.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C120A /* QueryHandleWaiting.swift */; };
 		AA00000000000000000C1203 /* CatalogArtifactTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1202 /* CatalogArtifactTests.swift */; };
 		AA1041000000000000000004 /* SourcesListSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1041000000000000000003 /* SourcesListSettingsTests.swift */; };
 		AA000000000000000000046B /* SourcesListNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000046A /* SourcesListNavigationTests.swift */; };
@@ -435,6 +438,7 @@
 		AA0000000000000000000360 /* SourcePageChrome.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageChrome.swift; sourceTree = "<group>"; };
 		AA0000000000000000000362 /* SourcePageIdentityHeader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageIdentityHeader.swift; sourceTree = "<group>"; };
 		AA00000000000000000C1206 /* SourceTitleTypeFields.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTitleTypeFields.swift; sourceTree = "<group>"; };
+		AA00000000000000000C1208 /* SourceCopyModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceCopyModel.swift; sourceTree = "<group>"; };
 		AA00000000000000000C1204 /* SourceTypeComboRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypeComboRow.swift; sourceTree = "<group>"; };
 		AA0000000000000000000364 /* SourcePageDescriptionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageDescriptionView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000366 /* SourcePageCredibilityView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageCredibilityView.swift; sourceTree = "<group>"; };
@@ -511,6 +515,8 @@
 		AA000000000000000000031E /* SourcePageModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageModelTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000332 /* DateValueDraftTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDraftTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000312 /* SourcesModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesModelTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000C120C /* SourceCopyModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceCopyModelTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000C120A /* QueryHandleWaiting.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QueryHandleWaiting.swift; sourceTree = "<group>"; };
 		AA00000000000000000C1202 /* CatalogArtifactTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogArtifactTests.swift; sourceTree = "<group>"; };
 		AA1041000000000000000003 /* SourcesListSettingsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListSettingsTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000046A /* SourcesListNavigationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListNavigationTests.swift; sourceTree = "<group>"; };
@@ -855,6 +861,7 @@
 				AA0000000000000000000360 /* SourcePageChrome.swift */,
 				AA0000000000000000000362 /* SourcePageIdentityHeader.swift */,
 				AA00000000000000000C1206 /* SourceTitleTypeFields.swift */,
+				AA00000000000000000C1208 /* SourceCopyModel.swift */,
 				AA00000000000000000C1204 /* SourceTypeComboRow.swift */,
 				AA0000000000000000000364 /* SourcePageDescriptionView.swift */,
 				AA0000000000000000000366 /* SourcePageCredibilityView.swift */,
@@ -1307,6 +1314,8 @@
 				A70500000000000000000004 /* PropertiesModelTests.swift */,
 				AA0000000000000000000206 /* SourceTypesModelTests.swift */,
 				AA0000000000000000000312 /* SourcesModelTests.swift */,
+				AA00000000000000000C120C /* SourceCopyModelTests.swift */,
+				AA00000000000000000C120A /* QueryHandleWaiting.swift */,
 				AA00000000000000000C1202 /* CatalogArtifactTests.swift */,
 				AA1041000000000000000003 /* SourcesListSettingsTests.swift */,
 				AA000000000000000000046A /* SourcesListNavigationTests.swift */,
@@ -2114,6 +2123,7 @@
 				AA0000000000000000000361 /* SourcePageChrome.swift in Sources */,
 				AA0000000000000000000363 /* SourcePageIdentityHeader.swift in Sources */,
 				AA00000000000000000C1207 /* SourceTitleTypeFields.swift in Sources */,
+				AA00000000000000000C1209 /* SourceCopyModel.swift in Sources */,
 				AA00000000000000000C1205 /* SourceTypeComboRow.swift in Sources */,
 				AA0000000000000000000365 /* SourcePageDescriptionView.swift in Sources */,
 				AA0000000000000000000367 /* SourcePageCredibilityView.swift in Sources */,
@@ -2221,6 +2231,8 @@
 				AA0000000000000000000216 /* SourceTypesModelTests.swift in Sources */,
 				AA0000000000000000000242 /* PVComboBoxTests.swift in Sources */,
 				AA0000000000000000000313 /* SourcesModelTests.swift in Sources */,
+				AA00000000000000000C120D /* SourceCopyModelTests.swift in Sources */,
+				AA00000000000000000C120B /* QueryHandleWaiting.swift in Sources */,
 				AA00000000000000000C1203 /* CatalogArtifactTests.swift in Sources */,
 				AA1041000000000000000004 /* SourcesListSettingsTests.swift in Sources */,
 				AA000000000000000000046B /* SourcesListNavigationTests.swift in Sources */,

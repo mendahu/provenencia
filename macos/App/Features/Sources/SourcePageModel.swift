@@ -15,6 +15,9 @@ final class SourcePageModel {
     var notes: SourceNotesSection
     var artifacts: SourceArtifactsSection
 
+    /// The Copy Source form while it is open.
+    var copying: SourceCopyModel?
+
     private(set) var isLoading = false
     var loadError: Error?
     let deleteImpact = DeleteImpactFlow()
@@ -159,6 +162,17 @@ final class SourcePageModel {
             artifacts.seedDrafts()
         }
         appliedWorkspace = workspace
+    }
+
+    /// Opens the Copy Source form for this page's Source.
+    func openCopy() {
+        guard let source else { return }
+        copying = SourceCopyModel(
+            original: source,
+            session: context.session,
+            userID: context.userID,
+            store: context.store
+        )
     }
 
     func askDeleteSource() async {
