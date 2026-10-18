@@ -17,7 +17,8 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 ## Current ideas
 
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)
-- [`source-structure.md`](source-structure.md) — several Evidence graphs per Source, and nested Sources (publication → issue → item)
+- [`source-structure-later.md`](source-structure-later.md) — what Spike 12 parked: nested Sources, derivation links, named templates, per-graph credibility, layered citations
+- [`graph-focus-views.md`](graph-focus-views.md) — focus views inside one large Evidence graph
 - [`evidence-graph-structure-shortcuts.md`](evidence-graph-structure-shortcuts.md) — place a common cluster (wedding, birth, residence) in one action, or paste a cluster already on the canvas
 - [`registry-source-import.md`](registry-source-import.md) — paste a record URL from Ancestry, FamilySearch and similar to create a Source; access (logins, OAuth) is unproven
 - [`source-provenance-date.md`](source-provenance-date.md)

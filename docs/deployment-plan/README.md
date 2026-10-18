@@ -45,7 +45,9 @@ Spike 10 and earlier cut each PR as an In / Out / Testable table inside `deploym
 
 ## Current
 
-[Spike 11 — Promote matching refinement](spike-11/) is open. Plan: [`spike-11/deployment-plan.md`](spike-11/deployment-plan.md). Briefs are authored just before the PR they gate.
+[Spike 11 — Promote matching refinement](spike-11/) is open. Plan: [`spike-11/deployment-plan.md`](spike-11/deployment-plan.md).
+
+[Spike 12 — Source structure](spike-12/) is open alongside it. Plan: [`spike-12/deployment-plan.md`](spike-12/deployment-plan.md). Briefs are authored just before the PR they gate.
 
 Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.agents/skills/add-design-brief/SKILL.md).
 
