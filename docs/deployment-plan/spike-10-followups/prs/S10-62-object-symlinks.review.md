@@ -1,7 +1,7 @@
 # Review — S10-62 Refuse symlinked objects in the app
 
 **Verdict:** Fits with changes — Ready with changes
-**Rounds:** 1. **Reviewers:** maintainability (opus, pr-reviewer), executability (sonnet, Explore)
+**Rounds:** 2. **Reviewers:** maintainability (opus, pr-reviewer), executability (sonnet, Explore)
 
 ## To user
 - None.
@@ -72,3 +72,33 @@ FIFO hang guard; T-11 spans two files; wrong-reason pass; `openObject` doc comme
 
 ### M-6 · nit · Two ways to detect a symlink in `Platform/`
 **Answer:** Logged — no ideas file fits (`ls docs/ideas` has no ingest or security file); recorded here and as an Out line ("not planned").
+
+
+## Round 2
+
+Fresh reviewers read the plan and this log: maintainability (opus, pr-reviewer), executability (sonnet, Explore). Both confirmed every round-1 answer (M-1–M-6, X-1–X-10).
+
+### M-7 · blocker · T-13 adds a second mirror-test shape that the S10-61 review already rejected
+T-13 was a separate `TestSwiftObjectsDirMatchesGo`; S10-61 D-9 (after its round 1) makes its mirror a row in `TestSwiftVocabularyMatchesGo`, so the §4 row citing `TestSwiftRegionCapMatchesGo` is false. Make T-13 a table row and name `ProjectFiles.objectsDir` on the `macos-client.mdc` mirror line.
+**Answer:** Fixed — D-10 now specifies the `swiftProjectFiles` constant, the "objects folder" row (`enum: "ProjectFiles"`, `static let objectsDir = "(\w+)"`, `want: []string{objectpath.Dir}`), and the `core/objectpath` import; §4 row, Codebase fit, STEP-1 check (`-run TestSwiftVocabularyMatchesGo`), T-13 and Scope updated; STEP-4 adds `ProjectFiles.objectsDir` to the mirror line; D-10 states the landing-order rule with S10-61.
+
+### X-11 · blocker · §4 row is false: S10-61 does not add `TestSwiftRegionCapMatchesGo`
+Same root as M-7; D-10 also cited S10-61 "D-8" (it is D-9).
+**Answer:** Fixed — with M-7; D-10 cites S10-61 D-9.
+
+### X-12 · major · T-13's Go shape left open (constant name, helpers, import, no-match behavior)
+**Answer:** Fixed — D-10 names the constant, the existing `swiftEnumBody` and `matches` helpers, the import, and says a no-match yields an empty list that differs from `want` (the table compares `strings.Join(matches(re, body), ",")`), so the row fails.
+
+### X-13 · major · `linkToOutsidePNG(at:)` and the control recipe under-specified
+**Answer:** Fixed — D-9 gives `static func linkToOutsidePNG(at linkPath: String) throws -> String`, says it creates the link's parent folders and points at `<outside>/outside.png`; §8 gives one control recipe for object links (T-5, T-10, T-11) and one for folder links (T-3, T-4).
+
+### X-14 · minor · T-12 does not say which old inputs survive
+**Answer:** Fixed — T-12 says the new inputs replace `../etc/passwd`, `objects/../../etc/passwd`, `objects/ab/../../../etc/passwd` and `~/secret`, which D-2 now refuses first.
+
+### X-15 · minor · STEP-3 check omits suites that run the changed code
+**Answer:** Fixed — STEP-3 runs `ArtifactRegionCropTests`, `CitationAutoTranscribeTests` and `CitationComposerModelTests` too; `TestSwiftVocabularyMatchesGo` joins "Most likely to break". Xcode commands carry `CODE_SIGNING_ALLOWED=NO`, as `scripts/check-pr.sh` does.
+
+### X-16 · minor · Manual check step 2 cannot work as written
+**Answer:** Fixed — "Quit and relaunch the app" (the `ThumbnailCache` keeps a refused object as `.missing` for the process; `clear()` has no app caller).
+
+**Round 2 result:** no blocker open. Status → Planned.
