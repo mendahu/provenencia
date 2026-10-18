@@ -1,13 +1,16 @@
 # Review — S12-02 Copy Source form
 
-**Verdict:** Fits with changes — Not ready → fixed (round 1). The plan stays `Blocked` on board S12-D1, so round 2 runs when the board is agreed and the plan is refreshed.
+**Verdict:** Fits with changes — Not ready → fixed (round 1); round 2 after the board (below).
 **Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet). The maintainability reviewer also read brief S12-D1.
 
 ## To user
-- **Board delivery (plan Open question 1).** How does the agreed S12-D1 board reach the implementer? Recommendation: exported PNG frames in `docs/deployment-plan/spike-12/design/S12-D1/`, linked on the plan's **Board** line.
-- **Sidebar count after a copy from the Source page.** The page host does not publish the sidebar Sources count; it catches up when the Sources list next loads. Recommendation: accept it until S12-16, which puts both creates on one path (Out line).
+None open.
 
 ## Answered by the user
+- **Board delivery (2026-10-18).** The board is the Claude Design link on the plan's **Board** line; §6 macOS describes every frame in words for an implementer who cannot open it.
+- **Sidebar count after a copy from the Source page.** Out line to S12-16 stands; S12-17's list host republishes it through its existing status hook.
+- **Cancel on a changed form (2026-10-18).** Match the kit: Cancel closes; an outside click asks the kit's "Discard changes?". The board's "Discard this copy?" is not built; brief CS-10 corrected (it wrongly said Add Source asks on Cancel).
+- **Title error wording (2026-10-18).** Keep Add Source's strings (one validation, working rule). The board's "Enter a title for the source" is not used. Copy is disabled while the title is empty, as the board shows.
 - **One brief per view, one view per PR (2026-10-18).** The user pointed out that the form touched two views (Source page, Sources list), so it needs two briefs. Asked whether the PR should split too (the `plan-pr` size rule), the user chose to split. S12-02 keeps the form and the Source page entry (brief S12-D1). The Sources list row menu moves to the new S12-17 (brief S12-D6), which depends on S12-02. The form's loading and load-error states stay in S12-D1 / S12-02 because they belong to the dialog. Review findings M-9 and the row-menu parts of D-17 / X-6 now land in S12-17's plan.
 
 ## Writer's own calls

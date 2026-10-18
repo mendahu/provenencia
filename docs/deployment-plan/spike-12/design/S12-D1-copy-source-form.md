@@ -4,6 +4,7 @@
 **Spike:** Provenencia Spike 12 (Source structure)
 **View:** Source page — the Copy action and the Copy Source form it opens
 **Implements later as:** PR **S12-02**
+**Board:** agreed 2026-10-18 — [Claude Design](https://claude.ai/design/p/de1e1ccc-aa35-455f-9b9c-3ae269593dc7?via=share)
 **Depends on:** S12-01 (Copy Source engine)
 **Related:** [`../source-structure.md`](../source-structure.md#copy-source) (the design), [`../deployment-plan.md`](../deployment-plan.md) working rules "Copy Source". S12-D6 (Sources list) opens this same form from a row's right-click menu and does not redraw it. S12-D3 (Graph form) reuses the Artifact checklist drawn here.
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
@@ -109,7 +110,7 @@ A researcher with twelve obituaries from one newspaper retypes the publication, 
 | CS-7 | With many Artifacts, the Artifact rows scroll inside the dialog; the title, type, parts and the dialog buttons stay visible. |
 | CS-8 | Loading (the form opened before the parts are loaded, as from the Sources list): title and type are shown and editable; the parts and Artifacts area shows a small loading state; Copy is disabled. A load failure shows a danger callout in that area. |
 | CS-9 | Copy writes and opens the new Source's page. A failure shows a danger callout at the top of the form and keeps every choice. |
-| CS-10 | Cancel with changed choices asks to discard, as Add Source does today. Cancel with the prefill untouched closes at once. |
+| CS-10 | Discard follows the kit's form dialog: Cancel closes at once; a click outside a changed form asks "Discard changes?". (Corrected 2026-10-18: this line first said Cancel asks, as Add Source does; Add Source does not. The board's "Discard this copy?" on Cancel is not built.) |
 
 ---
 
