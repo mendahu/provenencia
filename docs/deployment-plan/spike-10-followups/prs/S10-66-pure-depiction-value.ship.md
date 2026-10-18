@@ -1,7 +1,7 @@
 # Ship log — S10-66 Pure depiction value package
 
 **Plan:** [`S10-66-pure-depiction-value.md`](S10-66-pure-depiction-value.md) · **Branch:** `s10-66-pure-depiction-value` · **PR:** #473
-**State:** fixing 2
+**State:** ready
 
 Worktree `/Users/jakerobins/Repos/provenencia-s10-66`, cut from `origin/main` @ `ab70bd69`.
 
@@ -39,3 +39,12 @@ Files: `core/database/observations/depiction.go`. Skill: `add-depiction-value`.
 Failing test first: none (no behavior change). Run the existing depiction and likeness tests before and after.
 Do: in `resolveDepiction`, set `d.RegionJSON = strings.TrimSpace(d.RegionJSON)` once, before `locator.ValidateDepictionRegion`. Then the Citation check, the stored row and the audit change all see the same string. Delete the `v.RegionJSON = strings.TrimSpace(v.RegionJSON)` line after `depictionvalues.InsertTx`. Leave the trim in `depictionvalues.InsertTx` alone (D-5, sibling contract). If `strings` is no longer imported anywhere else in the file, drop the import. Change nothing else.
 Check: `CGO_ENABLED=1 go test -count=1 -tags fts5 ./core/database/observations/... ./core/database/depictionvalues/ ./core/database/likenesses/ ./api/...` passes; scripts/check-pr.sh PASS. Commit: "Trim the depiction region once, before the Citation check."
+
+## Round 2 — fix (user-directed)
+Head `2b6329fe`. Gate PASS (orchestrator run). F-2 done: `resolveDepiction` trims `d.RegionJSON` once, before `locator.ValidateDepictionRegion`; the trim after `InsertTx` is gone; `InsertTx` keeps its own (D-5). Not re-reviewed: a two-line move that the user asked for after round 2.
+
+## Spike 10 follow-ups archive (user-directed)
+Following `archive-docs`. `archive/spike-10/README.md` gains the follow-ups' decisions: the gallery's own-outcome rule, the pure depiction value, untrusted project folders (region caps, object symlinks and aliases, thumbnail decode limits), and the off-main likeness cut. `docs/ideas/depictions-and-likenesses.md` takes the audit items no PR took, plus the one stage-then-write entry point that S10-66's Out table homed there. No inbound links to the folder outside it. The next commit removes `docs/deployment-plan/spike-10-followups/`, this log included; history keeps it.
+
+## Result
+Gate PASS · CI see PR · open: none · follow-ups: none (MNT-2 fixed as F-2) · to user: —
