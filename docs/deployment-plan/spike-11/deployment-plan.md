@@ -96,7 +96,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-07 | One normalization key across the core | 2 | Search rescoring, search-index dedupe, term dedupe, alias tokens use `Key`; text ignores word breaks | — | S11-05 | [plan](prs/S11-07-normalization-key.md) | Landed #460 |
 | S11-08 | One normalization helper in Swift | 2 | Shared Swift normalize for filters; `FakeStore` groups names by parts | — | S11-06, S11-07 | [plan](prs/S11-08-swift-normalization.md) | Landed #466 |
 | S11-09 | Property compare | 3 | `propertycompare`: negatives, neutral terms, cardinality, outcome table | — | S11-05 | [plan](prs/S11-09-property-compare.md) | Landed #468 |
-| S11-10 | Subject compare | 3 | `subjectcompare` + registry subject section; pairs; similarity and evidence | — | S11-09 | — | Scoped |
+| S11-10 | Subject compare | 3 | `subjectcompare` + registry subject section; pairs; similarity and evidence | — | S11-09 | [plan](prs/S11-10-subject-compare.md) | Planned |
 | S11-11 | Subject profile and entity compare | 3 | `subjectprofile.Build`: strict profile, denied as negatives, `Excluding` | — | S11-10 | — | Scoped |
 | S11-12 | Lifespan for people | 3 | Profile builder derives a lifespan; subject compare checks it | — | S11-11 | — | Scoped |
 | S11-24 | Delete frequency weighting | 3 | `Stats.ValueFreq`, m / u priors, frequency scales and their benchmark go | — | S11-05 | — | Scoped |
@@ -304,7 +304,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 **Ships.** `core/subjectcompare` and the registry's subject section, keyed by `core/vocabkey` constants (S11-23) used directly as typed `SubjectType` / `PropertyKey` keys, with no re-declared key constants: per Subject type and property, agree weight and conflict penalty (event type: low agree, very large conflict); the pairs (sex with gender; `date` with `start_date` / `end_date`); similarity and evidence.
 **Not this PR.** Profiles (S11-11), lifespan (S11-12), callers (S11-13).
 **Check.** The layer 3 examples hold (name 1.0 / 2.5; name + gender 1.0 / 3.1; birth vs death with matching dates ≈ 0.09).
-Ports `subjectvocab`'s `TestDefaultProfileCardinality` as "every registry `PropertyKey` is a `vocabkey` constant"; S11-23's `TestVocabKeysMatchSeed` ties those constants to the seed. Extends the matching skill.
+Ports `subjectvocab`'s `TestDefaultProfileCardinality` as a seed check of the subject section (every kind a seeded type, every key bound to it, pooled and period properties of the right value type); the registry writes the `vocabkey` constants. Extends the matching skill. Also moves `core/valuecompare`'s private date builders (`optInt`, `ymd`, `about`, `phrase`, `between`, `dp`) onto `core/datevalue/datevaluetest` (S11-09 review finding MNT-3).
 **Context.** [Layer 3](comparison-layers.md#layer-3-subject-comparison); rule "Sparse data first".
 
 #### S11-11 — Subject profile and entity compare
