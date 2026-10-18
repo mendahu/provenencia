@@ -3,7 +3,7 @@ name: add-match-rule
 description: >-
   Adds or changes a Provenencia matching layer rule: a registry knob, a value
   comparer, a relation, cause or unit code, or a new layer package
-  (core/valuecompare, core/matchregistry). Use when adding a number the
+  (core/valuecompare, core/propertycompare, core/matchregistry). Use when adding a number the
   matching algorithm tunes, a comparer for a value type, a Relation or Cause
   code, a layer package, or a row in the matching-model.md knob inventory.
 ---
@@ -24,6 +24,7 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 - **Numbers only in `matchregistry`.** A layer package marked `numbers` in `layerPackages` may hold no numeric literal other than 0 and 1. A fact that is not a tunable (a calendar fact) goes in its pure value package.
 - **Pure helpers are shared, not copied.** The word helpers live in `core/valuecompare/words.go`. `wordSimilarity` is the one word table (names add initials and alias tables through `wordOptions`), `BestAssignment` (`pairing.go`) the one pairing search, `AliasIndex` the one alias lookup, and the weighted `meanSimilarity` (`text.go`) the one rule for combining part similarities.
 - **Catalog data comes in through `Rules`.** A name value names its pattern by key (`Value.NamePattern`) and the layer reads it from `Rules.Names.Patterns`; alias tables come as `Rules.Names.Aliases`. Catalog data is not a knob: list its registry path in `catalogData` in `core/matchregistry/inventory_test.go` and name it under "Not knobs" in `docs/matching-model.md`, with no inventory row. A caller gets a catalog's rules from `valuerules.Load` (`core/database/valuerules`): the stored default name pattern under its key and the alias index, on a copy of `matchregistry.Default().Value`. New catalog data for `Rules` is loaded there.
+- **Layer 2 (`core/propertycompare`) reads relations, never numbers.** `Compare` takes the `value` section and has no section of its own; the outcome comes from the speaking pair's relation through `outcomeOf`, and relations rank with `valuecompare.Stronger`, the one relation order. A value carries only `Negative` and `Neutral` beside its layer 1 value: support, standing and denied are turned into positives and negatives by the profile builder before they reach it.
 - **A doubled weight is written `w + w`.** The numbers guard allows no literal 2 in a layer package.
 - **Dates compute similarity through `falloff`.** Calendar facts (days in a month, day numbers, the year line) live in `core/datevalue/calendar.go`, not in the layer. The window algebra is `valuecompare.Window` (`core/valuecompare/datewindow.go`): `Overlaps`, `Contains`, `Intersect` as methods, and `AboutEnds` with `EndsWindow` to read a date as compared.
 - **The reconciler composes value compare under its own policy.** `autoreconcile.Reconcile` and `Compatible` take `valuecompare.Rules`; values group on `Key` at `Same` and fold on `Contains`. The cache passes `matchregistry.Default().Value`, never catalog data, so a rule change is a `CacheVersion` bump. `valuecompare.DateWindow` reads a date as written (sort keys, stored bounds, place periods).
@@ -46,16 +47,16 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 
 ## Add a relation, cause or unit code
 
-Add the constant in `core/valuecompare/valuecompare.go` and, for a cause, to the cause list in `comparison-layers.md` §Detail. Codes are strings; they reach the wire and UI copy later.
+A relation, a relation cause or a unit is layer 1's: add the constant in `core/valuecompare/valuecompare.go`, a new relation also in `relationOrder` at its strength, and a cause to the cause list in `comparison-layers.md` §Detail. An outcome cause or an exclude reason is layer 2's: add it in `core/propertycompare/propertycompare.go` and to `comparison-layers.md` §Layer 2 Output. Codes are strings; they reach the wire and UI copy later.
 
 ## Add a layer package
 
-Add a row to `layerPackages` in `core/matchregistry/guard_test.go`, with `numbers` true for a layer and false for a pure value package.
+Add a row to `layerPackages` in `core/matchregistry/guard_test.go`, with `numbers` true for a layer and false for a pure value or fixture package. Add the package's glob to `.cursor/rules/match-rules.mdc` and its path to the Check commands there and below. Give it a package doc naming its layer and saying it is pure. Test it from an external `_test` package with an exact table and a fixed-seed invariants test, building fixtures with `namevaluetest` and `datevaluetest` (`core/propertycompare` is the model).
 
 ## Check
 
 ```
-go test ./core/valuecompare/... ./core/matchregistry/...
+go test ./core/valuecompare/... ./core/propertycompare/... ./core/matchregistry/...
 ```
 
 No build tags. Then `scripts/check-pr.sh`.

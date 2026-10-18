@@ -206,22 +206,22 @@ type PartMatch struct {
 ```go
 // Compare judges whether two Subjects agree on one property,
 // from every value each one holds for it.
-func Compare(a, b Side, meta PropertyMeta, rules Rules) PropertyResult // propertycompare.Compare
+func Compare(a, b []Value, meta propertymeta.Meta, rules valuecompare.Rules) Result // propertycompare.Compare
 ```
 
-- **`Side`** is one Subject's values for the property. Each value carries only what a Subject can say about itself:
+- **Each side** is one Subject's values for the property (`[]propertycompare.Value`). Each value carries only what a Subject can say about itself:
   - polarity (positive or negative);
   - for a term, its neutral flag.
 - **No reconciler context.** Support counts and standing (kept, outvoted, denied…) describe an entity's group, not a Subject. They never reach layer 2. Layer 4 translates them before comparing (§ Entities).
-- **`PropertyMeta`:** value type and cardinality (`propertymeta.Meta`, in `core/propertymeta`).
+- **`propertymeta.Meta`:** value type and cardinality. The property sets each value's type.
 - **No points, no catalog statistics.** Layer 2 says *whether* the sides agree and *which values spoke*, not how much it's worth.
 
 ### What it does, in order
 
 1. **Drop non-evidence.** Remove neutral values, and record each one with its reason.
-2. **Compare pairs.** Run layer 1 on every pair of positive values.
-3. **Choose the pair that speaks:** the best pair.
-4. **Apply negatives.** A negative value whose relation to a positive value on the other side is `Same`, `Equivalent` or `Contains` contradicts it.
+2. **Apply negatives.** A negative value whose relation to a positive value on the other side is `Same`, `Equivalent` or `Contains` contradicts it: the outcome is conflict, whatever the positive values say.
+3. **Compare pairs.** Run layer 1 on every pair of positive values.
+4. **Choose the pair that speaks:** by outcome (agree, partial, conflict, unknown), then similarity, then the stronger relation, then each side's `Same` key. Step 2 picks among contradicting pairs the same way.
 5. **Apply cardinality.** On a multiple-value property, a difference is not a conflict.
 6. **Decide the outcome** from the relation (below).
 
@@ -240,13 +240,27 @@ This replaces Promote's per-type floors (`core/graphalign/registry.go`). A spell
 ### Output
 
 ```go
-type PropertyResult struct {
-    Outcome  Outcome          // agree, partial, conflict, unknown
-    Cause    OutcomeCause     // relation, negative, no_values, …
-    Pair     *SpokenPair      // the two values that spoke, their layer-1 Result and Detail
-    Excluded []ExcludedValue  // values dropped in step 1, with the reason
+type Result struct {
+    Outcome  Outcome        // agree, partial, conflict, unknown
+    Cause    Cause          // relation, negative, no_values, cardinality
+    Speaking *SpeakingPair  // the pair that spoke; nil when a side has no positive value
+    Excluded []Excluded     // values dropped as non-evidence, side A's then side B's
+}
+
+type SpeakingPair struct {
+    A, B   Value                // side A's and side B's value; one may be negative
+    Result valuecompare.Result
+    Detail valuecompare.Detail
+}
+
+type Excluded struct {
+    Side   valuecompare.Side
+    Value  Value
+    Reason ExcludeReason        // neutral
 }
 ```
+
+Built in S11-09. Outcome causes: `relation`, `negative`, `no_values`, `cardinality` (a `Different` pair on a multiple-value property). Refs are never read.
 
 This is the feature vector the matching test suite's fit needs: one outcome, relation and similarity per property. Layer 3 turns it into points.
 
