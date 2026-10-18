@@ -1,7 +1,7 @@
 # Ship log — S11-07 One normalization key across the core
 
 **Plan:** [`S11-07-normalization-key.md`](S11-07-normalization-key.md) · **Branch:** `s11-07-normalization-key` · **PR:** #460
-**State:** fixing 2
+**State:** ready
 
 ## Round 0 — implement
 Base `e97cf54d`. Head `789ec019`. Gate PASS (orchestrator run, cold test cache: go-test 128s, xcode-test 15s). Report deviations: `addProductNicknames` counts tokens `insertSet` wrote; the label check reuses `distinctAlternates`; two extra `TestPropertyTerms` rows; alias test scores through word similarity; a follow-up commit fixed gofmt and the Swift `key` reference. The implementer committed this ship log in `0b284fa6` (asked to leave it untracked; harmless).
@@ -60,3 +60,9 @@ Files: `core/valuecompare/words.go`, `core/valuecompare/text.go`, `core/valuecom
 Failing tests first: in `TestTextKeyMatchesWords` add `"서울 한국"` and `norm.NFD.String("서울 한국")` (Equivalent key must equal the joined `FoldWord` words: fails today); add a `TestTextCompare` row `서울 한국` / NFD `서울 한국` → `Equivalent`, 0.95, cause `fold` (fails today: `Near`/`spelling`). Add `TestTextKeyMatchesWordsEveryRune` *(new)*: for every rune U+0000–U+10FFFF that `utf8.ValidRune` accepts, the strings `r`, `"a"+r` and `r+"\u0301"` give the same `TextKey` at both levels as `strings.Join` of the `SplitWords` words (folded per word with `FoldWord` at `Equivalent`).
 Do: in `words.go` add two unexported helpers that become the only home of the per-rune rules: `wordRune(r rune) (keep rune, brk bool, ok bool)` (or an equivalent classifier: a dash or `/` breaks a word, other punctuation is dropped, whitespace breaks, anything else is kept lowercased), used by `NormalizeForm` and `joinedKey`; and `appendFolded(b *strings.Builder, r rune, folds map[rune]string)`, the accent strip and `folds` for one rune with an ASCII fast path, which decomposes with `norm.NFD.Properties(…).Decomposition()` and falls back to the full NFD of that rune (`norm.NFD.AppendString`) when that is nil (Hangul), used by `FoldWord` and `joinedKey`. `rawTokens` keeps its own split (it must keep punctuation for period initials). `joinedKey` becomes a loop over those two helpers. Nothing else changes.
 Check: `go test ./core/valuecompare/...` passes with no tags, including `TestKeyContract`, `TestComparerContract` and the new tests; `go test -tags fts5 -run '^$' -bench ScoreFieldsSource -benchmem -count 3 ./core/search` reported and within 2.5x of base (18–21 µs); scripts/check-pr.sh PASS.
+
+## Round 2 — fix
+Head `40ee8c27`. Gate PASS (orchestrator, cold cache: go-test 118s, xcode-test 37s). F-5 done: `wordRune` and `appendFolded` in `words.go` are the one per-rune rule, used by `NormalizeForm`, `FoldWord` and `joinedKey`; Hangul falls back to the rune's full NFD; failing tests first (`TestTextCompare/hangul_composed_against_decomposed`, Hangul in `TestTextKeyMatchesWords`, new `TestTextKeyMatchesWordsEveryRune`). Deviation: an ASCII fast path in `wordRune`, guarded by the every-rune test. Orchestrator benchmark, same machine, `-count 3`: base `e97cf54d` 28–34 µs / 8 allocs, head 67–79 µs / 10 allocs (about 2.3x; within the 2.5x bound).
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: MNT-3 (label check in `matchText` re-keys via `distinctAlternates` length), UX-2 (offer "Use “Godfather”" from the duplicate error; idea for `docs/ideas/term-management.md`), stored search keys if rescoring cost shows in dogfood · to user: —
