@@ -119,6 +119,7 @@
 		AA000000000000000000031D /* SourcePageModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000031E /* SourcePageModelTests.swift */; };
 		AA0000000000000000000333 /* DateValueDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000332 /* DateValueDraftTests.swift */; };
 		AA0000000000000000000313 /* SourcesModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000312 /* SourcesModelTests.swift */; };
+		AA00000000000000000C1203 /* CatalogArtifactTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1202 /* CatalogArtifactTests.swift */; };
 		AA1041000000000000000004 /* SourcesListSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1041000000000000000003 /* SourcesListSettingsTests.swift */; };
 		AA000000000000000000046B /* SourcesListNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000046A /* SourcesListNavigationTests.swift */; };
 		AA000000000000000000046F /* PVFloatingMenuSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000046E /* PVFloatingMenuSelectionTests.swift */; };
@@ -506,6 +507,7 @@
 		AA000000000000000000031E /* SourcePageModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageModelTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000332 /* DateValueDraftTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDraftTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000312 /* SourcesModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesModelTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000C1202 /* CatalogArtifactTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogArtifactTests.swift; sourceTree = "<group>"; };
 		AA1041000000000000000003 /* SourcesListSettingsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListSettingsTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000046A /* SourcesListNavigationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListNavigationTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000046E /* PVFloatingMenuSelectionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFloatingMenuSelectionTests.swift; sourceTree = "<group>"; };
@@ -1299,6 +1301,7 @@
 				A70500000000000000000004 /* PropertiesModelTests.swift */,
 				AA0000000000000000000206 /* SourceTypesModelTests.swift */,
 				AA0000000000000000000312 /* SourcesModelTests.swift */,
+				AA00000000000000000C1202 /* CatalogArtifactTests.swift */,
 				AA1041000000000000000003 /* SourcesListSettingsTests.swift */,
 				AA000000000000000000046A /* SourcesListNavigationTests.swift */,
 				AA000000000000000000046E /* PVFloatingMenuSelectionTests.swift */,
@@ -2210,6 +2213,7 @@
 				AA0000000000000000000216 /* SourceTypesModelTests.swift in Sources */,
 				AA0000000000000000000242 /* PVComboBoxTests.swift in Sources */,
 				AA0000000000000000000313 /* SourcesModelTests.swift in Sources */,
+				AA00000000000000000C1203 /* CatalogArtifactTests.swift in Sources */,
 				AA1041000000000000000004 /* SourcesListSettingsTests.swift in Sources */,
 				AA000000000000000000046B /* SourcesListNavigationTests.swift in Sources */,
 				AA000000000000000000046F /* PVFloatingMenuSelectionTests.swift in Sources */,

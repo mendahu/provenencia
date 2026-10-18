@@ -88,6 +88,29 @@ struct CatalogArtifact: Sendable, Equatable {
     }
 }
 
+extension CatalogArtifact {
+    /// The trimmed label, else the ref: the one name every list and dialog shows.
+    var displayTitle: String {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? ref : trimmed
+    }
+
+    /// True when the label is non-empty after trimming (`displayTitle` is the label, not the ref).
+    var hasDisplayLabel: Bool {
+        !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// True when the Artifact has a file row and a file id.
+    var hasFile: Bool {
+        file != nil && !fileID.isEmpty
+    }
+
+    /// The Source type icon to show in place of a thumbnail: nil when the Artifact has a file.
+    func thumbnailTypeIconKey(sourceTypeIconKey: String?) -> String? {
+        hasFile ? nil : sourceTypeIconKey
+    }
+}
+
 extension CatalogSource {
     /// The cover Artifact's id when the cover is a pinned Artifact. Nil otherwise.
     var coverArtifactID: String? {

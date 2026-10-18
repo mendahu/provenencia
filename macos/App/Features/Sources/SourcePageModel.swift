@@ -168,8 +168,7 @@ final class SourcePageModel {
 
     func askDeleteArtifact(id: String) async {
         guard let art = artifacts.items.first(where: { $0.id == id }) else { return }
-        let title = art.label.isEmpty ? art.ref : art.label
-        await presentImpact(kind: "artifact", id: art.id, ref: art.ref, title: title)
+        await presentImpact(kind: "artifact", id: art.id, ref: art.ref, title: art.displayTitle)
     }
 
     /// Returns true when the Source itself was erased (leave the page).
