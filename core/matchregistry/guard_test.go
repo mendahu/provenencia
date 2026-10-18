@@ -26,6 +26,7 @@ var layerPackages = []struct {
 	numbers bool
 }{
 	{"core/valuecompare", true},
+	{"core/propertycompare", true},
 	{"core/matchregistry", false},
 	{"core/datevalue", false},
 	{"core/datevalue/datevaluetest", false},
