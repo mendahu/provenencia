@@ -24,3 +24,15 @@ Maintainability: **Fits with changes**. Executability: **Ready with changes**.
 No blocker open; no To user item. Round 2 skipped: the round 1 blockers were mechanical (a shared order, fixture builders, a dependency rule) and every fix is checked by the lint and the plan's own tests.
 
 **Verdict:** Fits with changes / Ready with changes → fixed, 1 round.
+
+## Refresh (2026-10-18, `main` @ `95d1f344`)
+
+S11-08 landed in #466. `core/` changed only in `core/objectstore` since `d49fde7`, so every Current state row and every §2 similarity still holds; no Decision changed. Lint clean after the fixes below.
+
+| ID | Severity | Finding | Answer |
+| --- | --- | --- | --- |
+| R-1 | major | The D-12 and D-16 rows carried stray copies of other rows' Why / Rejected cells (seven columns in a four-column table), so D-16's Rejected read as D-15's | **Fixed.** Stray cells removed |
+| R-2 | minor | T-7 sat after a blank line, outside the Tests table | **Fixed.** Joined to the table |
+| R-3 | minor | Header **Depends on** and the S11-08 merge stop condition (X-1) described an S11-08 that had not landed | **Fixed.** Header names #466 and what it touched; stop condition removed; **Planned** names the refresh base |
+
+Fresh-context reviewers not rerun: the refresh changes no Decision, Step, test or scope line.
