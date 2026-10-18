@@ -107,6 +107,27 @@ struct GraphCanvasItemLayerTests {
         #expect(container.subviews.last === layer.view(for: "a"))
     }
 
+    @Test func rotorFilterIgnoresCaseAndAccents() throws {
+        let container = flippedContainer()
+        let layer = GraphCanvasItemLayer(container: container)
+        layer.update([
+            item("José", at: .zero, rotor: "Subjects"),
+            item("Smith", at: .zero, rotor: "Subjects"),
+        ])
+        let search = GraphCanvasRotorSearch(name: "Subjects", layer: layer)
+
+        let jose = NSAccessibilityCustomRotor.SearchParameters()
+        jose.searchDirection = .next
+        jose.filterString = "jose"
+        let hit = try #require(search.result(for: jose))
+        #expect(hit.targetElement as? NSView === layer.view(for: "José"))
+
+        let none = NSAccessibilityCustomRotor.SearchParameters()
+        none.searchDirection = .next
+        none.filterString = "x"
+        #expect(search.result(for: none) == nil)
+    }
+
     @Test func rotorsListItemsInHostOrderAndSelectOnMove() throws {
         let container = flippedContainer()
         let layer = GraphCanvasItemLayer(container: container)

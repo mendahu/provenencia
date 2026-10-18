@@ -423,9 +423,16 @@ struct SourcesModelTests {
         #expect(model.visibleSources.map(\.id) == ["s3"])
         model.settings.query = "src-4f"
         #expect(model.visibleSources.map(\.id) == ["s2"])
+        model.settings.query = "smith-family"
+        #expect(model.visibleSources.map(\.id) == ["s1"])
+        model.settings.query = "1851census"
+        #expect(model.visibleSources.map(\.id) == ["s2"])
         model.settings.query = "  "
         #expect(model.visibleSources.count == 3)
         #expect(!model.isFiltering)
+        model.settings.query = "-"
+        #expect(model.visibleSources.count == 3)
+        #expect(model.isFiltering)
     }
 
     @Test func filtersCombineAndClear() async {

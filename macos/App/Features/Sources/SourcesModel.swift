@@ -219,11 +219,9 @@ final class SourcesModel {
             let progress = progressHandle?.value
             rows = rows.filter { EvidenceStatus(progress?[$0.id]) == status }
         }
-        let query = trimmedQuery
+        let query = TextMatch.Query(trimmedQuery)
         if !query.isEmpty {
-            rows = rows.filter {
-                $0.title.localizedStandardContains(query) || $0.ref.localizedStandardContains(query)
-            }
+            rows = rows.filter { query.matches($0.title, $0.ref) }
         }
         switch settings.sort {
         case .added:
