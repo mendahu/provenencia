@@ -45,14 +45,6 @@ func writeTinyPNG(t *testing.T, path string) {
 	}
 }
 
-// must unwraps a fixture or read result; an error fails the test with its trace.
-func must[T any](v T, err error) T {
-	if err != nil {
-		panic(err)
-	}
-	return v
-}
-
 func runCopy(c *database.Catalog, userID []byte, in CopyInput) (sources.Source, error) {
 	src, _, err := writes.Run(c, writes.Op{Action: "copy_source", UserID: userID},
 		func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
@@ -81,10 +73,19 @@ func seedObituary(t *testing.T) (c *database.Catalog, userID []byte, orig source
 		t.Fatal(err)
 	}
 
-	obit := must(sourcetypes.Upsert(c, sourcetypes.Type{Key: "obituary", Origin: vocabkey.OriginUser, Label: "Obituary"}))
-	must(sourcetypes.Upsert(c, sourcetypes.Type{Key: "newspaper", Origin: vocabkey.OriginUser, Label: "Newspaper"}))
+	obit, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "obituary", Origin: vocabkey.OriginUser, Label: "Obituary"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "newspaper", Origin: vocabkey.OriginUser, Label: "Newspaper"}); err != nil {
+		t.Fatal(err)
+	}
 	field := func(key string, dataType string) []byte {
-		return must(metadatafields.Upsert(c, metadatafields.Field{Key: key, Origin: vocabkey.OriginUser, Label: key, DataType: dataType}))
+		id, err := metadatafields.Upsert(c, metadatafields.Field{Key: key, Origin: vocabkey.OriginUser, Label: key, DataType: dataType})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return id
 	}
 	publication := field("publication", metadatafields.DataTypeText)
 	link := field("url", metadatafields.DataTypeURL)
@@ -97,13 +98,20 @@ func seedObituary(t *testing.T) (c *database.Catalog, userID []byte, orig source
 	if err := sourcecredibilitygrades.Install(c); err != nil {
 		t.Fatal(err)
 	}
-	grade := must(sourcecredibilitygrades.List(c))[0]
+	grades, err := sourcecredibilitygrades.List(c)
+	if err != nil || len(grades) == 0 {
+		t.Fatalf("grades %v err %v", grades, err)
+	}
+	grade := grades[0]
 
-	orig = must(writeOne(c, userID, "create_source", func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+	orig, err = writeOne(c, userID, "create_source", func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 		return sources.Create(tx, userID, sources.CreateInput{
 			SourceTypeID: obit, Title: "Obituary of Ann Smith", Description: originalDescription,
 		})
-	}))
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	steps := []func(tx *database.Tx) ([]rowchange.Change, error){
 		func(tx *database.Tx) ([]rowchange.Change, error) {
 			_, ch, err := sourcemetadata.Set(tx, userID, sourcemetadata.Input{SourceID: orig.ID, FieldID: publication, ValueText: "Medicine Hat News"})
@@ -145,17 +153,22 @@ func seedObituary(t *testing.T) (c *database.Catalog, userID []byte, orig source
 	if err := os.WriteFile(otherPath, []byte("page two bytes"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	for i, spec := range []struct{ path, label, desc string }{
+	for _, spec := range []struct{ path, label, desc string }{
 		{pngPath, "Page 1", "Front page"},
 		{otherPath, "Page 2", "Obituary column"},
 	} {
-		res := must(ingest.File(c, spec.path, userID))
-		art := must(writeOne(c, userID, "create_artifact", func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+		res, err := ingest.File(c, spec.path, userID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		art, err := writeOne(c, userID, "create_artifact", func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
 			return artifacts.Create(tx, userID, artifacts.CreateInput{
 				SourceID: orig.ID, FileID: res.File.ID, Label: spec.label, Description: spec.desc,
 			})
-		}))
-		_ = i
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 		arts = append(arts, art)
 	}
 	mode, artID, err := sources.NormalizeCover(c, orig.ID, sources.CoverModeArtifact, arts[0].ID)
@@ -181,7 +194,10 @@ func seedObituary(t *testing.T) (c *database.Catalog, userID []byte, orig source
 	}); err != nil {
 		t.Fatal(err)
 	}
-	orig = must(sources.Get(c, orig.ID))
+	orig, err = sources.Get(c, orig.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
 	return c, userID, orig, arts
 }
 
@@ -200,7 +216,10 @@ type wsKey struct {
 
 func workspaceKeys(t *testing.T, c *database.Catalog, sourceID []byte) []wsKey {
 	t.Helper()
-	ws := must(sourcemetadata.ListWorkspace(c, sourceID))
+	ws, err := sourcemetadata.ListWorkspace(c, sourceID)
+	if err != nil {
+		t.Fatal(err)
+	}
 	out := make([]wsKey, 0, len(ws))
 	for _, e := range ws {
 		k := wsKey{FieldID: string(e.Field.ID), SortOrder: e.SortOrder, Suggested: e.Suggested}
@@ -217,7 +236,10 @@ type artKey struct{ Label, Description, FileID string }
 
 func artifactKeys(t *testing.T, c *database.Catalog, sourceID []byte) []artKey {
 	t.Helper()
-	list := must(artifacts.ListBySource(c, sourceID))
+	list, err := artifacts.ListBySource(c, sourceID)
+	if err != nil {
+		t.Fatal(err)
+	}
 	out := make([]artKey, 0, len(list))
 	for _, a := range list {
 		out = append(out, artKey{a.Label, a.Description, string(a.FileID)})
@@ -228,7 +250,10 @@ func artifactKeys(t *testing.T, c *database.Catalog, sourceID []byte) []artKey {
 
 func countFor(t *testing.T, c *database.Catalog, query string, sourceID []byte) int {
 	t.Helper()
-	db := must(c.DB())
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
 	var n int
 	if err := db.QueryRow(query, sourceID).Scan(&n); err != nil {
 		t.Fatal(err)
@@ -238,13 +263,20 @@ func countFor(t *testing.T, c *database.Catalog, query string, sourceID []byte) 
 
 func layoutOf(t *testing.T, c *database.Catalog, sourceID []byte) []sourcemetadata.LayoutRow {
 	t.Helper()
-	db := must(c.DB())
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer tx.Rollback()
-	return must(sourcemetadata.ListLayoutTx(tx, sourceID))
+	rows, err := sourcemetadata.ListLayoutTx(tx, sourceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rows
 }
 
 type snapshot struct {
@@ -258,13 +290,29 @@ type snapshot struct {
 
 func snap(t *testing.T, c *database.Catalog, id []byte) snapshot {
 	t.Helper()
+	src, err := sources.Get(c, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	notes, err := sources.ListNotes(c, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cred, err := sourcecredibility.GetBySource(c, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	arts, err := artifacts.ListBySource(c, id)
+	if err != nil {
+		t.Fatal(err)
+	}
 	return snapshot{
-		Source:      must(sources.Get(c, id)),
-		Notes:       must(sources.ListNotes(c, id)),
+		Source:      src,
+		Notes:       notes,
 		Workspace:   workspaceKeys(t, c, id),
 		Layout:      layoutOf(t, c, id),
-		Credibility: must(sourcecredibility.GetBySource(c, id)),
-		Artifacts:   must(artifacts.ListBySource(c, id)),
+		Credibility: cred,
+		Artifacts:   arts,
 	}
 }
 
@@ -291,7 +339,10 @@ func TestCopy(t *testing.T) {
 				if cp.Ref == orig.Ref || cp.Ref == "" || bytes.Equal(cp.ID, orig.ID) {
 					t.Fatalf("ref/id %q %q", cp.Ref, orig.Ref)
 				}
-				got := must(sources.Get(c, cp.ID))
+				got, err := sources.Get(c, cp.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
 				if got.Title != "Copy of Obituary of Ann Smith" || !bytes.Equal(got.SourceTypeID, orig.SourceTypeID) ||
 					got.Description != originalDescription {
 					t.Fatalf("copy %+v", got)
@@ -307,8 +358,14 @@ func TestCopy(t *testing.T) {
 				if want, have := layoutOf(t, c, orig.ID), layoutOf(t, c, cp.ID); len(want) != 3 || !reflect.DeepEqual(want, have) {
 					t.Fatalf("layout\nwant %+v\nhave %+v", want, have)
 				}
-				origCred := must(sourcecredibility.GetBySource(c, orig.ID))
-				cred := must(sourcecredibility.GetBySource(c, cp.ID))
+				origCred, err := sourcecredibility.GetBySource(c, orig.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				cred, err := sourcecredibility.GetBySource(c, cp.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
 				if !bytes.Equal(cred.CredibilityGradeID, origCred.CredibilityGradeID) || cred.Argument != "Family-placed notice" ||
 					bytes.Equal(cred.ID, origCred.ID) {
 					t.Fatalf("credibility %+v", cred)
@@ -317,10 +374,18 @@ func TestCopy(t *testing.T) {
 					t.Fatalf("artifacts\nwant %+v\nhave %+v", want, have)
 				}
 				origRefs := map[string]bool{}
-				for _, a := range must(artifacts.ListBySource(c, orig.ID)) {
+				origList, err := artifacts.ListBySource(c, orig.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, a := range origList {
 					origRefs[a.Ref] = true
 				}
-				for _, a := range must(artifacts.ListBySource(c, cp.ID)) {
+				copyList, err := artifacts.ListBySource(c, cp.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, a := range copyList {
 					if origRefs[a.Ref] || a.Ref == "" {
 						t.Fatalf("artifact ref %q reused", a.Ref)
 					}
@@ -352,7 +417,10 @@ func TestCopy(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				got := must(sources.Get(c, cp.ID))
+				got, err := sources.Get(c, cp.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
 				if got.Description != "" {
 					t.Fatalf("description %q", got.Description)
 				}
@@ -403,23 +471,41 @@ func TestCopy(t *testing.T) {
 			name: "other type",
 			run: func(t *testing.T) {
 				c, userID, orig, arts := seedObituary(t)
-				newspaper := must(sourcetypes.Lookup(c, "newspaper", vocabkey.OriginUser))
+				newspaper, err := sourcetypes.Lookup(c, "newspaper", vocabkey.OriginUser)
+				if err != nil {
+					t.Fatal(err)
+				}
 				in := allParts(orig, arts)
 				in.SourceTypeID = newspaper.ID
 				cp, err := runCopy(c, userID, in)
 				if err != nil {
 					t.Fatal(err)
 				}
-				got := must(sources.Get(c, cp.ID))
+				got, err := sources.Get(c, cp.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
 				if !bytes.Equal(got.SourceTypeID, newspaper.ID) {
 					t.Fatalf("type %x", got.SourceTypeID)
 				}
 				if want, have := layoutOf(t, c, orig.ID), layoutOf(t, c, cp.ID); len(want) != 3 || !reflect.DeepEqual(want, have) {
 					t.Fatalf("layout\nwant %+v\nhave %+v", want, have)
 				}
-				values := must(sourcemetadata.ListBySource(c, cp.ID))
-				if len(values) != 2 {
-					t.Fatalf("values %+v", values)
+				type valueKey struct{ FieldID, ValueText string }
+				valueKeys := func(id []byte) []valueKey {
+					rows, err := sourcemetadata.ListBySource(c, id)
+					if err != nil {
+						t.Fatal(err)
+					}
+					out := make([]valueKey, 0, len(rows))
+					for _, r := range rows {
+						out = append(out, valueKey{string(r.FieldID), r.ValueText})
+					}
+					sort.Slice(out, func(i, j int) bool { return out[i].FieldID < out[j].FieldID })
+					return out
+				}
+				if want, have := valueKeys(orig.ID), valueKeys(cp.ID); len(want) != 2 || !reflect.DeepEqual(want, have) {
+					t.Fatalf("values\nwant %+v\nhave %+v", want, have)
 				}
 			},
 		},
@@ -427,12 +513,18 @@ func TestCopy(t *testing.T) {
 			name: "invalid input writes nothing",
 			run: func(t *testing.T) {
 				c, userID, orig, arts := seedObituary(t)
-				otherSrc := must(writeOne(c, userID, "create_source", func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+				otherSrc, err := writeOne(c, userID, "create_source", func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 					return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: orig.SourceTypeID, Title: "Other"})
-				}))
-				foreign := must(writeOne(c, userID, "create_artifact", func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				foreign, err := writeOne(c, userID, "create_artifact", func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
 					return artifacts.Create(tx, userID, artifacts.CreateInput{SourceID: otherSrc.ID, Label: "Scan"})
-				}))
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
 				missing := make([]byte, 16)
 				missing[15] = 9
 
@@ -448,13 +540,20 @@ func TestCopy(t *testing.T) {
 				}
 				for _, tc := range cases {
 					t.Run(tc.name, func(t *testing.T) {
-						before := must(sources.Count(c))
+						before, err := sources.Count(c)
+						if err != nil {
+							t.Fatal(err)
+						}
 						in := allParts(orig, arts)
 						tc.mutate(&in)
 						if _, err := runCopy(c, userID, in); !errors.Is(err, sources.ErrInvalid) {
 							t.Fatalf("got %v", err)
 						}
-						if after := must(sources.Count(c)); after != before {
+						after, err := sources.Count(c)
+						if err != nil {
+							t.Fatal(err)
+						}
+						if after != before {
 							t.Fatalf("sources %d -> %d", before, after)
 						}
 					})
