@@ -2,7 +2,7 @@
 
 Plan: [`S11-10-subject-compare.md`](S11-10-subject-compare.md). Lint (`scripts/check-plan-docs.py`) clean before round 1, except the review log link.
 
-**Verdict:** round 1 Fits with changes / Not ready → fixed. Round 2 below.
+**Verdict:** Fits with changes — Ready with changes (round 2), all fixed; no open blocker.
 **Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
@@ -79,3 +79,29 @@ Logged for S11-11's planner (plan §3 Out).
 - §4's layer 2 row cites S11-09 D-4, D-8 and D-11 for the zero-`Meta` and speaking-value behavior.
 - A stop condition covers the zero `Meta` (AC-1.14) and the eight helpers STEP-3 moves.
 - AC-2.5's speaking value is the only one on its side, so pair identity is not at stake.
+
+## Round 2
+
+Maintainability: Fits with changes. Executability: Ready with changes. The round-1 answers were checked and hold.
+
+### M-9 · blocker · The seed check reads `seedBindings`, which leaves out the bridge bindings S11-14 will weigh
+**Answer:** Fixed. D-14, AC-4.1, T-7 and §4 now check against `subjectvocab.allBindings()`, which is `seedBindings` plus the product `connectrules.BridgeBindings()`, the set Install materializes. Verified at `core/database/subjectvocab/subjectvocab.go` `allBindings`.
+
+### M-10 · blocker · `subjectcompare` re-derives layer 2's "positive value" rule
+**Answer:** Fixed. D-18 adds `propertycompare.Value.Positive()`. Layer 2's checks call it with no change in behavior, and so do D-7 and D-8. It is in STEP-3 and has a stop condition.
+
+### Minor (noted by maintainability) · the recipe's "`TestVocabKeysMatchSeed` ties it to the seed"
+**Answer:** Fixed. STEP-8's recipe says to add the key to that test's list.
+
+### X-9 · minor · STEP-3's PASS-count baseline
+**Answer:** Fixed. STEP-3's Do now records the count first.
+
+### X-10 · minor · Generator choices
+**Answer:** Fixed. D-15 now settles four things:
+- draws are with replacement;
+- the label format is fixed;
+- AC-3.4 adds a value that is neither negative nor neutral;
+- AC-3.5 compares with a 1e-9 slack.
+
+### X-11 · nit · The header Review line was stale
+**Answer:** Fixed.
