@@ -2,6 +2,7 @@ package ffi
 
 import (
 	"os"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -15,13 +16,15 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/locator"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// The app reads Go's wire vocabulary, and mirrors some of Go's limits, through
-// Swift files this test reads, so a rename or a changed number on either side
-// fails here, not as a silently missing badge or a region Go refuses.
+// The app reads Go's wire vocabulary, and mirrors a few Go rules, in Swift.
+// This test reads those Swift files so a rename or a rule change on either
+// side fails here, not as a silently missing badge, row or match.
 const (
 	swiftVocabulary = "../../macos/App/Platform/ConclusionVocabulary.swift"
 	swiftValueKinds = "../../macos/App/Platform/InterpretationValueKinds.swift"
@@ -29,6 +32,7 @@ const (
 	swiftGraphKinds = "../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift"
 
 	swiftRegionGeometry = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
+	swiftTextMatch      = "../../macos/App/Platform/TextMatch.swift"
 )
 
 // swiftEnumBody returns the source between `enum <name>` and its closing
@@ -49,6 +53,32 @@ func swiftEnumBody(t *testing.T, path, name string) string {
 		t.Fatalf("%s: enum %s does not close", path, name)
 	}
 	return src[start : start+end]
+}
+
+var (
+	swiftFixturePair = regexp.MustCompile(`\("([^"\\]*)", "([^"\\]*)"\)`)
+	swiftFoldEntry   = regexp.MustCompile(`"(.)": "([^"\\]+)"`)
+)
+
+// swiftFixturePairs returns the ("a", "b") literal pairs in the body of
+// `enum <enum>`. A fixture line with a backslash is refused: the reader does
+// not decode escapes.
+func swiftFixturePairs(t *testing.T, path, enum string) [][2]string {
+	t.Helper()
+	body := swiftEnumBody(t, path, enum)
+	for _, line := range strings.Split(body, "\n") {
+		if strings.Contains(line, `\`) && swiftFixturePair.MatchString(line) {
+			t.Fatalf("%s: fixture line has a backslash escape: %s", path, line)
+		}
+	}
+	var out [][2]string
+	for _, m := range swiftFixturePair.FindAllStringSubmatch(body, -1) {
+		out = append(out, [2]string{m[1], m[2]})
+	}
+	if len(out) == 0 {
+		t.Fatalf("%s: enum %s has no fixture pairs", path, enum)
+	}
+	return out
 }
 
 // installedCatalog is a fresh catalog with the seeded vocabulary installed,
@@ -191,4 +221,24 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestSwiftTextMatchMirrorsTextKey(t *testing.T) {
+	words := matchregistry.Default().Value.Words
+	for _, p := range swiftFixturePairs(t, swiftTextMatch, "TextMatch") {
+		want, ok := valuecompare.TextKey(p[0], valuecompare.Equivalent, words)
+		if !ok {
+			want = ""
+		}
+		if want != p[1] {
+			t.Errorf("TextMatch.fixtures %q: Swift says %q, Go TextKey says %q", p[0], p[1], want)
+		}
+	}
+	folds := map[rune]string{}
+	for _, m := range swiftFoldEntry.FindAllStringSubmatch(swiftEnumBody(t, swiftTextMatch, "TextMatch"), -1) {
+		folds[[]rune(m[1])[0]] = m[2]
+	}
+	if !reflect.DeepEqual(folds, words.Folds) {
+		t.Errorf("TextMatch.letterFolds %v, Go Words.Folds %v", folds, words.Folds)
+	}
 }
