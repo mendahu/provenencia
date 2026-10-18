@@ -110,3 +110,13 @@ func AddMonths(year, month, n int) (int, int) {
 func AddDays(year, month, day, n int) (int, int, int) {
 	return civilFromDays(DaysFromCivil(year, month, day) + n)
 }
+
+// AddYears moves a date by n civil years. A month or day of 0 (not given)
+// stays 0; 29 February in a common year becomes 28 February.
+func AddYears(year, month, day, n int) (int, int, int) {
+	y := year + n
+	if month != 0 && day != 0 {
+		day = min(day, DaysInMonth(y, month))
+	}
+	return y, month, day
+}

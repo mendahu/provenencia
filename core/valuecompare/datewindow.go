@@ -119,6 +119,44 @@ func boundEnd(year, month, day *int) (DateEnd, bool) {
 	return e, true
 }
 
+// ShiftYears moves a closed end by whole civil years (datevalue.AddYears). An
+// open end is returned as is. ok is false when the moved end cannot be placed.
+func ShiftYears(e DateEnd, years int) (DateEnd, bool) {
+	if e.Open {
+		return e, true
+	}
+	y, m, d := datevalue.AddYears(e.Year, e.Month, e.Day, years)
+	return boundEnd(&y, endPart(m), endPart(d))
+}
+
+// Earliest is the closed end that starts first: lowest Lo, then lowest Hi.
+// Open ends are skipped; ok is false when none is closed.
+func Earliest(ends []DateEnd) (best DateEnd, ok bool) {
+	for _, e := range ends {
+		if e.Open {
+			continue
+		}
+		if !ok || e.Lo < best.Lo || (e.Lo == best.Lo && e.Hi < best.Hi) {
+			best, ok = e, true
+		}
+	}
+	return best, ok
+}
+
+// Latest is the closed end that finishes last: highest Hi, then highest Lo.
+// Open ends are skipped; ok is false when none is closed.
+func Latest(ends []DateEnd) (best DateEnd, ok bool) {
+	for _, e := range ends {
+		if e.Open {
+			continue
+		}
+		if !ok || e.Hi > best.Hi || (e.Hi == best.Hi && e.Lo > best.Lo) {
+			best, ok = e, true
+		}
+	}
+	return best, ok
+}
+
 // Window is an inclusive proleptic-day span. A nil bound is open.
 // A fully open window is "always" (no place period, undated place).
 type Window struct {

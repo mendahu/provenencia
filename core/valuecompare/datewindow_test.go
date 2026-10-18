@@ -313,3 +313,84 @@ func yearZero(end *int) *datevalue.Value {
 	}
 	return &v
 }
+
+func endOf(t *testing.T, y, m, d int) valuecompare.DateEnd {
+	t.Helper()
+	e, _, ok := valuecompare.DateEnds(*datevaluetest.YMD(y, m, d))
+	if !ok {
+		t.Fatalf("no ends for %d-%d-%d", y, m, d)
+	}
+	return e
+}
+
+func TestShiftYears(t *testing.T) {
+	t.Run("year precision", func(t *testing.T) {
+		got, ok := valuecompare.ShiftYears(endOf(t, 1850, 0, 0), 110)
+		if !ok || got.Year != 1960 || got.Lo != datevalue.DaysFromCivil(1960, 1, 1) {
+			t.Errorf("got %+v ok=%v", got, ok)
+		}
+	})
+	t.Run("day precision", func(t *testing.T) {
+		got, ok := valuecompare.ShiftYears(endOf(t, 1901, 5, 1), 110)
+		want := datevalue.DaysFromCivil(2011, 5, 1)
+		if !ok || got.Lo != want || got.Hi != want {
+			t.Errorf("got %+v ok=%v", got, ok)
+		}
+	})
+	t.Run("open end", func(t *testing.T) {
+		open := valuecompare.DateEnd{Open: true}
+		got, ok := valuecompare.ShiftYears(open, 5)
+		if !ok || got != open {
+			t.Errorf("got %+v ok=%v", got, ok)
+		}
+	})
+}
+
+func TestEarliestLatest(t *testing.T) {
+	y1850, y1850d := endOf(t, 1850, 0, 0), endOf(t, 1850, 1, 1)
+	y1900 := endOf(t, 1900, 0, 0)
+	open := valuecompare.DateEnd{Open: true}
+	t.Run("earliest lower Lo", func(t *testing.T) {
+		got, ok := valuecompare.Earliest([]valuecompare.DateEnd{y1900, y1850})
+		if !ok || got != y1850 {
+			t.Errorf("got %+v ok=%v", got, ok)
+		}
+	})
+	t.Run("earliest equal Lo lower Hi", func(t *testing.T) {
+		got, ok := valuecompare.Earliest([]valuecompare.DateEnd{y1850, y1850d})
+		if !ok || got != y1850d {
+			t.Errorf("got %+v ok=%v", got, ok)
+		}
+	})
+	t.Run("latest higher Hi", func(t *testing.T) {
+		got, ok := valuecompare.Latest([]valuecompare.DateEnd{y1850, y1900})
+		if !ok || got != y1900 {
+			t.Errorf("got %+v ok=%v", got, ok)
+		}
+	})
+	t.Run("latest equal Hi higher Lo", func(t *testing.T) {
+		dec31 := endOf(t, 1850, 12, 31)
+		got, ok := valuecompare.Latest([]valuecompare.DateEnd{y1850, dec31})
+		if !ok || got != dec31 {
+			t.Errorf("got %+v ok=%v", got, ok)
+		}
+	})
+	t.Run("open ends skipped", func(t *testing.T) {
+		got, ok := valuecompare.Earliest([]valuecompare.DateEnd{open, y1900})
+		if !ok || got != y1900 {
+			t.Errorf("earliest got %+v ok=%v", got, ok)
+		}
+		got, ok = valuecompare.Latest([]valuecompare.DateEnd{y1900, open})
+		if !ok || got != y1900 {
+			t.Errorf("latest got %+v ok=%v", got, ok)
+		}
+	})
+	t.Run("none closed", func(t *testing.T) {
+		if _, ok := valuecompare.Earliest([]valuecompare.DateEnd{open}); ok {
+			t.Error("Earliest of open ends ok")
+		}
+		if _, ok := valuecompare.Latest(nil); ok {
+			t.Error("Latest of nothing ok")
+		}
+	})
+}
