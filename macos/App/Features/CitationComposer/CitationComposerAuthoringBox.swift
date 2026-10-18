@@ -971,6 +971,7 @@ struct CitationDepictionValueArea: View {
                 PVThumbnail.Content(loading: true, label: L10n.CitationComposer.depictionPreviewLabel),
                 size: 96
             )
+            .accessibilityValue(Text(L10n.DesignSystem.thumbnailLoading))
         case .cut(let image):
             PVThumbnail(
                 PVThumbnail.Content(
