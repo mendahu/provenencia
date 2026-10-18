@@ -60,7 +60,7 @@ These are the calls for this spike. PR plans treat them as binding.
 - **A normalized `Key` per value type** sits beside `Compare`: same key exactly when `Compare` says `Same` (or `Equivalent`, by level). Shortlisting, the reconciler, search and term dedupe use it.
 - **Property compare holds only what a Subject says about itself** ([layer 2](comparison-layers.md#layer-2-property-comparison)): negatives, neutral terms, cardinality, missing values. No support or standing; no points.
 - **Subject compare returns similarity (0–1) and evidence (points)** ([layer 3](comparison-layers.md#layer-3-subject-comparison)). Similarity weighs a conflict by its penalty. No knockout flag: a decisive conflict (event type) is a large penalty. Pairs compared together: sex at birth with gender; `date` with `start_date` / `end_date`.
-- **Entity compare is against the reconciled conclusion** ([entities](comparison-layers.md#entities-compare-against-the-conclusion)). The profile is strict: concluded values positive, researcher-denied values negative, nothing else. `subjectprofile.Build` also takes an `Excluding(member)` option.
+- **Entity compare is against the reconciled conclusion** ([entities](comparison-layers.md#entities-compare-against-the-conclusion)). The profile is strict: displayed values positive, denied values negative, nothing else. `subjectprofile.Build` also takes `Options.Excluding`, a list of members to leave out.
 - **Lifespan is for people only** ([lifespan](comparison-layers.md#lifespan-a-derived-property-for-people)): derived from direct neighbors' dates by registry rules; an impossible overlap is a large conflict, agreement weighs almost nothing.
 - **Segment compare is one hop and pure** ([segments](comparison-layers.md#segments-layer-5-and-graph-alignment-layer-6)). Only subject-of-birth and subject-of-death are declared one-cardinality; a differing neighbor there subtracts. Neighbor credit travels one hop; chains come from the walk.
 - **Graph alignment follows the layer 6 procedure** ([procedure](comparison-layers.md#layer-6-procedure)): shortlist → score, keep top K with ties → one queue → segments around accepted pairs → settle dirty pairs. The answer doesn't depend on where the walk starts.
@@ -97,7 +97,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-08 | One normalization helper in Swift | 2 | Shared Swift normalize for filters; `FakeStore` groups names by parts | — | S11-06, S11-07 | [plan](prs/S11-08-swift-normalization.md) | Landed #466 |
 | S11-09 | Property compare | 3 | `propertycompare`: negatives, neutral terms, cardinality, outcome table | — | S11-05 | [plan](prs/S11-09-property-compare.md) | Landed #468 |
 | S11-10 | Subject compare | 3 | `subjectcompare` + registry subject section; pairs; similarity and evidence | — | S11-09 | [plan](prs/S11-10-subject-compare.md) | Landed #471 |
-| S11-11 | Subject profile and entity compare | 3 | `subjectprofile.Build`: strict profile, denied as negatives, `Excluding` | — | S11-10, S10-66 | [plan](prs/S11-11-subject-profile.md) | Planned |
+| S11-11 | Subject profile and entity compare | 3 | `subjectprofile.Build`: strict profile, denied as negatives, `Excluding` | — | S11-10, S10-66 | [plan](prs/S11-11-subject-profile.md) | Landed #476 |
 | S11-12 | Lifespan for people | 3 | Profile builder derives a lifespan; subject compare checks it | — | S11-11 | — | Scoped |
 | S11-24 | Delete frequency weighting | 3 | `Stats.ValueFreq`, m / u priors, frequency scales and their benchmark go | — | S11-05 | — | Scoped |
 | S11-13 | Migrate Promote scoring onto subject compare | 3 | Property scoring, seeding, duplicate rows; values loader moves; delete `core/match`, `core/database/matching` | — | S11-12, S11-24 | — | Scoped |
@@ -309,7 +309,7 @@ Ports `subjectvocab`'s `TestDefaultProfileCardinality` as a seed check of the su
 
 #### S11-11 — Subject profile and entity compare
 
-**Ships.** `core/subjectprofile.Build` from reconciler output: concluded values positive (tied leaders and multi-valued properties included), denied values negative, others left out; `Excluding(member)`. Entity compare is `Build` then `subjectcompare.Compare`.
+**Ships.** `core/subjectprofile.Build` from reconciler output: displayed values positive (tied leaders and multi-valued properties included), denied values negative, others left out; `Options.Excluding`; `ForSubject` for a plain Subject's side. Entity compare is `Build` then `subjectcompare.Compare`.
 **Not this PR.** Lifespan (S11-12), callers (S11-13).
 **Check.** A Subject recording an outvoted value conflicts; one recording a denied value conflicts via negative; leave-one-out drops that member's support.
 **Context.** [Entities](comparison-layers.md#entities-compare-against-the-conclusion).

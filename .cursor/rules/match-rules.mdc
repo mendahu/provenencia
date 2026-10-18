@@ -1,6 +1,6 @@
 ---
 description: Matching layers and the match registry: comparers, knobs, relation and cause codes
-globs: core/valuecompare/**,core/propertycompare/**,core/subjectcompare/**,core/matchregistry/**,docs/matching-model.md
+globs: core/valuecompare/**,core/propertycompare/**,core/subjectcompare/**,core/subjectprofile/**,core/matchregistry/**,docs/matching-model.md
 alwaysApply: false
 ---
 
@@ -8,8 +8,8 @@ alwaysApply: false
 
 Follow the project skill `.agents/skills/add-match-rule/SKILL.md`. Design notes: `docs/deployment-plan/spike-11/comparison-layers.md`, `docs/matching-model.md`.
 
-- Layer packages are pure: no `core/database`, no build tags; non-test files import no `core/matchregistry` or `core/autoreconcile`.
+- Layer packages are pure: no `core/database`, no build tags; non-test files import no `core/matchregistry`, and only `core/subjectprofile` imports `core/autoreconcile`, to turn its output into a profile.
 - Numbers live only in `core/matchregistry`; a layer holds no numeric literal other than 0 and 1.
 - A new knob is a `Rules` field, a registry value with its source, and a row in the knob inventory.
 - A new comparer needs a sample row and a generator in `contract_test.go`.
-- Check: `go test ./core/valuecompare/... ./core/propertycompare/... ./core/subjectcompare/... ./core/matchregistry/...` with no tags.
+- Check: the commands in the skill's Check section.

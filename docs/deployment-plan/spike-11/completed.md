@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-11 — Subject profile and entity compare
+
+**Landed 2026-10-18** in [#476](https://github.com/mendahu/provenencia/pull/476). The profile builder exists: `subjectprofile.Build` turns an entity's reconciled values into a Subject-shaped profile, with displayed values as positives, denied values as negatives and nothing else, so entity compare is `Build` then `subjectcompare.Compare`. `Options.Excluding` reconciles again without some members' Observations, for leave-one-out checks, and `ForSubject` builds a plain Subject's side. No caller yet; nothing changes for researchers.
+
 ## S11-10 — Subject compare
 
 **Landed 2026-10-18** in [#471](https://github.com/mendahu/provenencia/pull/471). Layer 3 of matching exists: `subjectcompare.Compare` says how alike two Subjects of one type are as a similarity (0 to 1) and evidence (points), from layer 2's outcome on each property the registry's new `subject` section lists. Sex at birth and gender are pooled, and an event with no date compares its start and end as one period. The section keys by the new `vocabkey.SubjectType` and `PropertyKey`, and a seed test ties it to the product vocabulary. `valuecompare.EndsDate` turns date ends back into a date, and `propertycomparetest` and `subjectcomparetest` hold the layers' test builders. No caller yet; nothing changes for researchers.

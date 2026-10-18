@@ -22,7 +22,7 @@ Spike 9 shipped Promote graph alignment, and Spike 10 tuned its comparers. This 
 ## Not this spike
 
 - **The rest of the matching test suite** (scenario goldens runner, random-graph invariants, simulated world, scoreboard, labeler, fitting, dogfood export) stays in [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md). Whether it joins this spike is decided after the re-implementation.
-- **Merge-hint UI and the weak-claim review UI.** The layers make both cheap (subject compare on two profiles; `subjectprofile.Build` with `Excluding`), but the views stay in [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md).
+- **Merge-hint UI and the weak-claim review UI.** The layers make both cheap (subject compare on two profiles; `subjectprofile.Build` with `Options.Excluding`), but the views stay in [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md).
 - **Term affinity** (birth / baptism, son / child), **Daitch–Mokotoff** ([`ideas/daitch-mokotoff.md`](../../ideas/daitch-mokotoff.md)), the **place gazetteer** ([`ideas/place-gazetteer-service.md`](../../ideas/place-gazetteer-service.md)), and **maiden names in the conclusion**.
 - **Cardinality beyond birth and death**, two-hop lifespan rules, damped multi-hop credit, and a coarse misspelling shortlist key: start simple, revisit with evidence.
 - **Per-project registry overrides** and researcher-facing tuning.

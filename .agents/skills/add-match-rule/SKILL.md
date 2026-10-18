@@ -4,10 +4,10 @@ description: >-
   Adds or changes a Provenencia matching layer rule: a registry knob, a value
   comparer, a relation, cause or unit code, or a new layer package
   (core/valuecompare, core/propertycompare, core/subjectcompare,
-  core/matchregistry). Use when adding a number the matching algorithm tunes, a
-  comparer for a value type, a Relation or Cause code, a Subject property
-  weight, pool or period, a layer package, or a row in the matching-model.md
-  knob inventory.
+  core/subjectprofile, core/matchregistry). Use when adding a number the
+  matching algorithm tunes, a comparer for a value type, a Relation or Cause
+  code, a Subject property weight, pool or period, an entity profile rule, a
+  layer package, or a row in the matching-model.md knob inventory.
 ---
 
 # Add or change a matching rule
@@ -20,7 +20,7 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 
 ## Rules that hold everywhere
 
-- **Layers are pure.** No catalog, no I/O, no build tags. A layer package never imports `core/database`, directly or through another package, and never imports `core/matchregistry` or `core/autoreconcile`.
+- **Layers are pure.** No catalog, no I/O, no build tags. A layer package never imports `core/database`, directly or through another package, and never imports `core/matchregistry`; only `core/subjectprofile` imports `core/autoreconcile`, to turn its output into a profile.
 - **Types live in the layer, values in the registry.** The layer declares its `Rules` groups (field types and doc comments, no numbers). `core/matchregistry` declares `Registry` and the numbers, with a comment on each saying where it came from. A layer takes its section as an argument.
 - **`matchregistry.Default()` builds fresh slices and maps** on each call. A test overrides a section by editing its own copy.
 - **Numbers only in `matchregistry`.** A layer package marked `numbers` in `layerPackages` may hold no numeric literal other than 0 and 1. A fact that is not a tunable (a calendar fact) goes in its pure value package.
@@ -28,6 +28,7 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 - **Catalog data comes in through `Rules`.** A name value names its pattern by key (`Value.NamePattern`) and the layer reads it from `Rules.Names.Patterns`; alias tables come as `Rules.Names.Aliases`. Catalog data is not a knob: list its registry path in `catalogData` in `core/matchregistry/inventory_test.go` and name it under "Not knobs" in `docs/matching-model.md`, with no inventory row. A caller gets a catalog's rules from `valuerules.Load` (`core/database/valuerules`): the stored default name pattern under its key and the alias index, on a copy of `matchregistry.Default().Value`. New catalog data for `Rules` is loaded there.
 - **Layer 2 (`core/propertycompare`) reads relations, never numbers.** `Compare` takes the `value` section and has no section of its own; the outcome comes from the speaking pair's relation through `outcomeOf`, and relations rank with `valuecompare.Stronger`, the one relation order. A value carries only `Negative` and `Neutral` beside its layer 1 value: support, standing and denied are turned into positives and negatives by the profile builder before they reach it.
 - **Layer 3 (`core/subjectcompare`) turns outcomes into points.** It reads only the lead properties in `subject.Weights` for the kind; agree earns the agree weight, partial agree weight × similarity, conflict loses the penalty and weighs it in similarity. Registry maps are keyed by `vocabkey.SubjectType` and `vocabkey.PropertyKey`, written as `vocabkey` constants, never as string literals; no other package declares a key type. Value type and cardinality come from the catalog as `Metas`, never from the registry. Tests build values with `propertycomparetest` and metas with `subjectcomparetest.Metas`.
+- **The profile builder (`core/subjectprofile`) turns the reconciler's output into a Subject.** `Build` keeps a Property's displayed values (`ReconciledValue.Displayed`) as positives and its denied values as negatives, and leaves everything else out; `ForSubject` turns a Subject's own Observations into positives and negatives through the same conversion. Layer 3 compares either like any Subject, so entity compare is `Build` then `subjectcompare.Compare`. `Options.Excluding` reconciles each Property those members recorded again without their candidates. Callers pass `Build` `matchregistry.Default().Value`, the rules the cache was built with. The builder has no registry section.
 - **A doubled weight is written `w + w`.** The numbers guard allows no literal 2 in a layer package.
 - **Dates compute similarity through `falloff`.** Calendar facts (days in a month, day numbers, the year line) live in `core/datevalue/calendar.go`, not in the layer. The window algebra is `valuecompare.Window` (`core/valuecompare/datewindow.go`): `Overlaps`, `Contains`, `Intersect` as methods, and `AboutEnds` with `EndsWindow` to read a date as compared.
 - **The reconciler composes value compare under its own policy.** `autoreconcile.Reconcile` and `Compatible` take `valuecompare.Rules`; values group on `Key` at `Same` and fold on `Contains`. The cache passes `matchregistry.Default().Value`, never catalog data, so a rule change is a `CacheVersion` bump. `valuecompare.DateWindow` reads a date as written (sort keys, stored bounds, place periods).
@@ -62,12 +63,12 @@ A relation, a relation cause or a unit is layer 1's: add the constant in `core/v
 
 ## Add a layer package
 
-Add a row to `layerPackages` in `core/matchregistry/guard_test.go`, with `numbers` true for a layer and false for a pure value or fixture package. Add the package's glob to `.cursor/rules/match-rules.mdc` and its path to the Check commands there and below. Give it a package doc naming its layer and saying it is pure. Test it from an external `_test` package with an exact table and a fixed-seed invariants test, building fixtures with `namevaluetest` and `datevaluetest` (`core/propertycompare` is the model).
+Add a row to `layerPackages` in `core/matchregistry/guard_test.go`, with `numbers` true for a layer and false for a pure value or fixture package. Add the package's glob to `.cursor/rules/match-rules.mdc` and its path to the Check command below. Give it a package doc naming its layer and saying it is pure. Test it from an external `_test` package with an exact table and a fixed-seed invariants test, building fixtures with `namevaluetest` and `datevaluetest` (`core/propertycompare` is the model).
 
 ## Check
 
 ```
-go test ./core/valuecompare/... ./core/propertycompare/... ./core/subjectcompare/... ./core/matchregistry/...
+go test ./core/valuecompare/... ./core/propertycompare/... ./core/subjectcompare/... ./core/subjectprofile/... ./core/matchregistry/...
 ```
 
 and `CGO_ENABLED=1 go test -tags fts5 ./core/database/subjectvocab/` after a subject section change.
@@ -79,5 +80,5 @@ No build tags. Then `scripts/check-pr.sh`.
 - Keep a second copy of a word helper (`NormalizeForm`, `SplitWords`, `SpellingSimilarity`).
 - Write a number in a layer package.
 - Read the catalog in a layer.
-- Import `core/autoreconcile` from a layer package.
+- Import `core/autoreconcile` from a layer package other than `core/subjectprofile`.
 - Weaken a guard or add an allow-list to make it pass. The one list the inventory guard keeps, `catalogData`, names fields that are catalog data, never tunables; each is named under Not knobs.
