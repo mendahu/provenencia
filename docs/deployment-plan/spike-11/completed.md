@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-09 — Property compare
+
+**Landed 2026-10-18** in [#468](https://github.com/mendahu/provenencia/pull/468). Layer 2 of matching exists as `core/propertycompare`: given every value two Subjects record for one property, it drops neutral values, lets a negative value contradict a value it matches (`Same`, `Equivalent`, `Contains`), compares every pair of positive values with value compare, picks the pair that speaks (outcome, then similarity, then the stronger relation, then each side's `Same` key), treats a difference on a multiple-value property as no conflict, and returns agree, partial, conflict or unknown with a cause, the speaking pair and the excluded values. It holds no number and reads no refs, support or standing. `valuecompare.Stronger` is now the one relation order, `propertymeta.Meta` carries a property's value type and cardinality, and `datevaluetest` builds date fixtures. No caller uses the layer yet; nothing changes for researchers.
+
 ## S11-08 — One normalization helper in Swift
 
 **Landed 2026-10-18** in [#466](https://github.com/mendahu/provenencia/pull/466). Every filter-as-you-type list ignores case, accents, punctuation and word breaks, the way search does: `jose` finds `José` in the Sources list, Properties, a combo box, a table's type-select and the graph canvas rotor, and `godfather` finds `God-father`. The combo box marks the span that matched, and the name splitter peels a title however it is punctuated (`Dr.`, `Jr.,`), while dotted initials such as `S.R.` stay names. `TextMatch` (`macos/App/Platform/TextMatch.swift`) is the one Swift rule, a mirror of `valuecompare.TextKey`; `TestSwiftTextMatchMirrorsTextKey` reads its fixtures and fold table so a change on either side fails in Go. `FakeStore` groups a Person's names by parts at `Same`, as the reconciler does, and searches like Go's rescoring.

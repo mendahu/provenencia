@@ -1,6 +1,6 @@
 # S11-09 — Property compare
 
-**Status:** Planned
+**Status:** Landed in [#468](https://github.com/mendahu/provenencia/pull/468) (2026-10-18)
 **Spike / slice:** Spike 11 · Slice 3 — Property, Subject and entity compare
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a new pure Go package with no caller yet; nothing reaches the app)
