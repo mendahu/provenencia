@@ -86,3 +86,7 @@ Executability: every Current state row true; the fifteen fixtures give the liste
 
 ### X-11 · nit · T-10 setup; T-13 already passes today
 **Answer:** Fixed — T-10 names `makeModel` and `warm`; T-13 is marked a regression test.
+
+## Refresh — 2026-10-18, after #460 merged
+
+`main` @ `028a190`. S11-07 landed with one change after the plan was read (`40ee8c2`): the text key's per-rune rules moved to `wordRune` / `appendFolded` in `words.go`, shared with `SplitWords`, and Hangul syllables now decompose at `Equivalent`. The rule the plan mirrors is the same (punctuation and spaces dropped, per-rune lowercase, NFD, `Mn` dropped, folds), and Swift's `decomposedStringWithCanonicalMapping` already decomposes Hangul. All fifteen AC-3.1 fixtures give the same keys under `TextKey` on `main`. No Swift file in §4 changed. Plan edits: header (S11-07 landed, start condition removed, refresh base), the §4 Go text key row, the first Stop condition, and the STEP-9 skill edit (S11-07 added a `TextKey` bullet to `add-match-rule`; the Swift-mirror sentence joins it). No Decision changed.

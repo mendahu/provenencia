@@ -26,7 +26,7 @@ The composer dialog stays as it is, the quick path while transcribing. Terms mad
 
 1. **Placement:** a terms panel inside a term-valued Property on the Properties page, or a first-class Terms page that lists every term-valued Property.
 2. **Which Properties offer direction and inverse:** only `relationship_type`, or any term Property (a later "contains" could be `part_of`'s inverse if place relationships ever open up).
-3. **Merging terms:** two researcher terms that mean the same ("godfather", "god-father"). Spike 11 (S11-07) catches the duplicate when the second is created. Existing duplicates: rename-only, or a merge that repoints Observations.
+3. **Merging terms:** two researcher terms that mean the same ("godfather", "god-father"). Spike 11 (S11-07) catches the duplicate when the second is created or a term is renamed, against every term of the Property. Existing duplicates: rename-only, or a merge that repoints Observations.
 4. **Seeded vocabulary changes** stay in `subjectvocab` (create-time Install); this view never edits product terms.
 
 ## What it would touch

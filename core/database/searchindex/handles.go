@@ -11,7 +11,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/eventtitle"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -249,7 +251,7 @@ func handleDocument(h handleHead, v handleValues, headers handleHeaders) Documen
 
 func matchText(h handleHead, v handleValues, headers handleHeaders) (string, []string) {
 	var title string
-	var secondary []string
+	var secondary, alts, names, parents []string
 	switch h.kind {
 	case vocabkey.Person:
 		if p, ok := headers.persons[h.id]; ok {
@@ -258,7 +260,8 @@ func matchText(h handleHead, v handleValues, headers handleHeaders) (string, []s
 			}
 			secondary = append(secondary, personLifeMatch(p)...)
 		}
-		secondary = append(secondary, tagged(extraValues(v, vocabkey.PropertyName, title), "name")...)
+		alts = distinctAlternates(title, v[vocabkey.PropertyName])
+		secondary = append(secondary, tagged(alts, "name")...)
 	case vocabkey.Event:
 		if e, ok := headers.events[h.id]; ok {
 			title = eventMatchTitle(e)
@@ -270,16 +273,18 @@ func matchText(h handleHead, v handleValues, headers handleHeaders) (string, []s
 				title = p.Names[0]
 			}
 			if len(p.Names) > 1 {
-				secondary = append(secondary, tagged(p.Names[1:], "toponym")...)
+				names = p.Names[1:]
 			}
-			secondary = append(secondary, p.Parents...)
+			parents = p.Parents
 		}
-		secondary = append(secondary, tagged(extraValues(v, vocabkey.PropertyToponym, title), "toponym")...)
+		alts = distinctAlternates(title, names, v[vocabkey.PropertyToponym])
+		secondary = append(secondary, tagged(alts, "toponym")...)
+		secondary = append(secondary, parents...)
 	}
 	if h.label != "" {
 		if title == "" {
 			title = h.label
-		} else if h.label != title {
+		} else if len(distinctAlternates(title, alts, []string{h.label})) > len(alts) {
 			secondary = append(secondary, h.label)
 		}
 	}
@@ -297,13 +302,28 @@ func tagged(vals []string, tag string) []string {
 	return out
 }
 
-func extraValues(v handleValues, key, title string) []string {
+// valueWords are the shipped registry's word rules, never catalog data: a text
+// key reads nothing else.
+var valueWords = matchregistry.Default().Value.Words
+
+// distinctAlternates walks the lists in order and keeps a value whose text key
+// at Equivalent is neither the title's nor an earlier kept value's. A value
+// with no key is dropped; a title with no key excludes nothing.
+func distinctAlternates(title string, lists ...[]string) []string {
+	seen := map[string]bool{}
+	if k, ok := valuecompare.TextKey(title, valuecompare.Equivalent, valueWords); ok {
+		seen[k] = true
+	}
 	var out []string
-	for _, val := range v[key] {
-		if val == title {
-			continue
+	for _, list := range lists {
+		for _, val := range list {
+			k, ok := valuecompare.TextKey(val, valuecompare.Equivalent, valueWords)
+			if !ok || seen[k] {
+				continue
+			}
+			seen[k] = true
+			out = append(out, val)
 		}
-		out = append(out, val)
 	}
 	return out
 }

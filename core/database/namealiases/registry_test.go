@@ -20,7 +20,7 @@ func givenName(text string) valuecompare.Value {
 // seedRules are the registry's rules with the seed read as the catalog would.
 func seedRules() valuecompare.Rules {
 	rules := matchregistry.Default().Value
-	rules.Names.Aliases = valuecompare.NewAliasIndex(AliasTables())
+	rules.Names.Aliases = valuecompare.NewAliasIndex(AliasTables(), rules.Words)
 	return rules
 }
 

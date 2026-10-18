@@ -3,8 +3,10 @@ package propertyterms
 import (
 	"database/sql"
 	"errors"
+	"reflect"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -162,8 +164,80 @@ func TestPropertyTerms(t *testing.T) {
 					t.Fatal(err)
 				}
 				_, err := runCreate(c, userID, propID, "Dup", "")
-				if !errors.Is(err, ErrDuplicateKey) {
-					t.Fatalf("got %v", err)
+				wantDuplicate(t, err, "Dup")
+			},
+		},
+		{
+			name: "create refuses a term that reads like an existing one",
+			run: func(t *testing.T, c *database.Catalog, userID, propID []byte) {
+				if _, err := runCreate(c, userID, propID, "Godfather", ""); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := Upsert(c, Term{PropertyID: propID, Key: "godparent", Origin: vocabkey.OriginProvenencia, Label: "Godparent"}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := runCreate(c, userID, propID, "Café", ""); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := runCreate(c, userID, propID, "A+B", ""); err != nil {
+					t.Fatal(err)
+				}
+				for _, tc := range []struct{ label, want string }{
+					{"god-father", "Godfather"},
+					{"God Parent", "Godparent"},
+					{"Cafe", "Café"},
+					{"A B", "A+B"},
+				} {
+					_, err := runCreate(c, userID, propID, tc.label, "")
+					wantDuplicate(t, err, tc.want)
+				}
+				list, err := ListByProperty(c, propID)
+				if err != nil || len(list) != 4 {
+					t.Fatalf("no row written for a refused term: %v len=%d", err, len(list))
+				}
+				if _, err := runCreate(c, userID, propID, "Godmother", ""); err != nil {
+					t.Fatalf("a different term is created: %v", err)
+				}
+			},
+		},
+		{
+			name: "a label with no letters or digits is invalid",
+			run: func(t *testing.T, c *database.Catalog, userID, propID []byte) {
+				if _, err := runCreate(c, userID, propID, "!!!", ""); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("create !!!: want ErrInvalid, got %v", err)
+				}
+				term, err := runCreate(c, userID, propID, "Godfather", "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := runUpdate(c, userID, term.ID, "!!!", ""); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("update to !!!: want ErrInvalid, got %v", err)
+				}
+				got, err := GetByID(c, term.ID)
+				if err != nil || got.Label != "Godfather" {
+					t.Fatalf("label changed: %v %+v", err, got)
+				}
+			},
+		},
+		{
+			name: "update refuses a rename onto another term and allows a restyle",
+			run: func(t *testing.T, c *database.Catalog, userID, propID []byte) {
+				father, err := runCreate(c, userID, propID, "Godfather", "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				mother, err := runCreate(c, userID, propID, "Godmother", "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, err = runUpdate(c, userID, mother.ID, "GODFATHER", "")
+				wantDuplicate(t, err, "Godfather")
+				got, err := GetByID(c, mother.ID)
+				if err != nil || got.Label != "Godmother" {
+					t.Fatalf("label changed: %v %+v", err, got)
+				}
+				if _, err := runUpdate(c, userID, father.ID, "God-Father", ""); err != nil {
+					t.Fatalf("a term is never its own duplicate: %v", err)
 				}
 			},
 		},
@@ -192,5 +266,14 @@ func TestPropertyTerms(t *testing.T) {
 			}
 			tt.run(t, c, userID, propID)
 		})
+	}
+}
+
+// wantDuplicate fails unless err is ErrDuplicateKey naming the existing term's label.
+func wantDuplicate(t *testing.T, err error, label string) {
+	t.Helper()
+	var ae *apperr.Error
+	if !errors.Is(err, ErrDuplicateKey) || !errors.As(err, &ae) || !reflect.DeepEqual(ae.Params(), []string{label}) {
+		t.Fatalf("want ErrDuplicateKey [%s], got %v", label, err)
 	}
 }

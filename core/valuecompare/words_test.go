@@ -71,7 +71,7 @@ func TestSpellingSimilarity(t *testing.T) {
 var nameRoles = []valuecompare.NameRole{valuecompare.RoleGiven, valuecompare.RoleNick, valuecompare.RoleUntyped}
 
 func aliasIndexOf(kind valuecompare.AliasKind, sets ...[]string) valuecompare.AliasIndex {
-	return valuecompare.NewAliasIndex([]valuecompare.AliasTable{{Key: "t", Kind: kind, Roles: nameRoles, Sets: sets}})
+	return valuecompare.NewAliasIndex([]valuecompare.AliasTable{{Key: "t", Kind: kind, Roles: nameRoles, Sets: sets}}, matchregistry.Default().Value.Words)
 }
 
 // Names add initials and alias tables to the word table; text adds neither.
@@ -123,7 +123,7 @@ func TestAliasIndex(t *testing.T) {
 	multi := valuecompare.NewAliasIndex([]valuecompare.AliasTable{{
 		Key: "t", Kind: valuecompare.AliasNickname, Roles: []valuecompare.NameRole{given},
 		Sets: [][]string{{"ben", "benji"}, {"ben", "benedict"}, {"benjamin", "jamie"}},
-	}})
+	}}, matchregistry.Default().Value.Words)
 	if _, ok := multi.Hit("ben", "benedict", given, given); !ok {
 		t.Error("a token in several sets missed the later set")
 	}
@@ -138,5 +138,30 @@ func TestAliasIndex(t *testing.T) {
 	}
 	if _, ok := (valuecompare.AliasIndex{}).Hit("jas", "jim", given, given); ok {
 		t.Error("the zero index hit")
+	}
+}
+
+// TestAliasIndexKeysTokens: the index keys a token as a name part produces it,
+// so a dash or a particle space in the table meets the joined comparison token.
+func TestAliasIndexKeysTokens(t *testing.T) {
+	words := matchregistry.Default().Value.Words
+	for _, tc := range []struct {
+		name string
+		role valuecompare.NameRole
+		set  []string
+		x, y string
+	}{
+		{"dash", valuecompare.RoleGiven, []string{"Mary-Ann", "Polly"}, "maryann", "polly"},
+		{"particle", valuecompare.RoleUntyped, []string{"Mc Donald", "MacDonald"}, "mcdonald", "macdonald"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			idx := valuecompare.NewAliasIndex([]valuecompare.AliasTable{{
+				Key: "t", Kind: valuecompare.AliasNickname, Roles: []valuecompare.NameRole{tc.role}, Sets: [][]string{tc.set},
+			}}, words)
+			sim, _, _ := valuecompare.WordSimilarity(tc.x, tc.y, words, valuecompare.WordOptions(true, idx, tc.role, tc.role))
+			if math.Abs(sim-words.AliasCredit) > 1e-9 {
+				t.Errorf("%s ~ %s scored %v, want AliasCredit %v", tc.x, tc.y, sim, words.AliasCredit)
+			}
+		})
 	}
 }

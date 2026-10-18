@@ -32,9 +32,16 @@ type aliasSet struct {
 	kind   AliasKind
 }
 
-// NewAliasIndex indexes tables once per load. Every token is normalized with
-// NormalizeForm, and empty tokens, and sets left with none, are dropped.
-func NewAliasIndex(tables []AliasTable) AliasIndex {
+// AliasToken is the one rule for what an alias token is: the comparison token
+// a name part produces, the text key of the token at Same. Storage and the
+// index both use it. It is empty (false) for a token with no letters.
+func AliasToken(token string, w WordRules) (string, bool) {
+	return TextKey(token, Same, w)
+}
+
+// NewAliasIndex indexes tables once per load. Every token is keyed with
+// AliasToken, and empty keys, and sets left with none, are dropped.
+func NewAliasIndex(tables []AliasTable, w WordRules) AliasIndex {
 	var idx AliasIndex
 	for _, table := range tables {
 		roles := make(map[NameRole]bool, len(table.Roles))
@@ -44,8 +51,8 @@ func NewAliasIndex(tables []AliasTable) AliasIndex {
 		for _, raw := range table.Sets {
 			tokens := make(map[string]bool, len(raw))
 			for _, token := range raw {
-				if n := NormalizeForm(token); n != "" {
-					tokens[n] = true
+				if k, ok := AliasToken(token, w); ok {
+					tokens[k] = true
 				}
 			}
 			if len(tokens) == 0 {

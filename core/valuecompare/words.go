@@ -23,23 +23,41 @@ func NormalizeForm(form string) string {
 	var b strings.Builder
 	space := false
 	for _, r := range form {
+		keep, brk, ok := wordRune(r)
 		switch {
-		case unicode.Is(unicode.Pd, r) || r == '/':
+		case brk:
 			space = b.Len() > 0
-			continue
-		case unicode.IsPunct(r):
-			continue
-		case unicode.IsSpace(r):
-			space = b.Len() > 0
-			continue
+		case ok:
+			if space {
+				b.WriteByte(' ')
+				space = false
+			}
+			b.WriteRune(keep)
 		}
-		if space {
-			b.WriteByte(' ')
-			space = false
-		}
-		b.WriteRune(unicode.ToLower(r))
 	}
 	return b.String()
+}
+
+// wordRune is the one per-rune rule for what a word is: a dash or slash or
+// whitespace breaks a word (brk), other punctuation is dropped (neither brk
+// nor ok), and any other rune is kept, lowercased (ok). NormalizeForm and the
+// one-pass key read it, so they cannot disagree.
+func wordRune(r rune) (keep rune, brk, ok bool) {
+	if r < utf8.RuneSelf {
+		switch {
+		case r == '/' || r == '-' || r == ' ' || (r >= '\t' && r <= '\r'):
+			return 0, true, false
+		case 'a' <= r && r <= 'z' || '0' <= r && r <= '9':
+			return r, false, true
+		}
+	}
+	switch {
+	case unicode.Is(unicode.Pd, r) || r == '/' || unicode.IsSpace(r):
+		return 0, true, false
+	case unicode.IsPunct(r):
+		return 0, false, false
+	}
+	return unicode.ToLower(r), false, true
 }
 
 // IsInitial reports whether a word is an initial: a lone cased letter ("J").
@@ -121,17 +139,42 @@ func periodInitial(raw string) bool {
 // normalized comparison token. A nil or empty map still strips accents.
 func FoldWord(s string, folds map[rune]string) string {
 	var b strings.Builder
-	for _, r := range norm.NFD.String(s) {
-		if unicode.Is(unicode.Mn, r) {
+	b.Grow(len(s))
+	for _, r := range s {
+		appendFolded(&b, r, folds)
+	}
+	return b.String()
+}
+
+// appendFolded writes r as FoldWord folds it: its full decomposition (the
+// whole NFD of the rune where the decomposition is algorithmic, as for Hangul)
+// without the accents, each remaining rune replaced by its fold. It is the one
+// per-rune fold rule, shared by FoldWord and the one-pass key.
+func appendFolded(b *strings.Builder, r rune, folds map[rune]string) {
+	if r < utf8.RuneSelf {
+		if repl, ok := folds[r]; ok {
+			b.WriteString(repl)
+			return
+		}
+		b.WriteByte(byte(r))
+		return
+	}
+	var rbuf [utf8.UTFMax]byte
+	enc := utf8.AppendRune(rbuf[:0], r)
+	dec := norm.NFD.Properties(enc).Decomposition()
+	if dec == nil {
+		dec = norm.NFD.AppendString(nil, string(r))
+	}
+	for _, d := range string(dec) {
+		if d >= utf8.RuneSelf && unicode.Is(unicode.Mn, d) {
 			continue
 		}
-		if repl, ok := folds[r]; ok {
+		if repl, ok := folds[d]; ok {
 			b.WriteString(repl)
 			continue
 		}
-		b.WriteRune(r)
+		b.WriteRune(d)
 	}
-	return b.String()
 }
 
 // SpellingSimilarity is x and y's similarity when they are spelling variants
