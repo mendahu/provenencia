@@ -280,7 +280,8 @@ For version 1:
 - every point must lie within the normalized media bounds;
 - points are interpreted in array order as the polygon boundary;
 - the polygon must not self-intersect;
-- degenerate polygons with zero area are invalid.
+- degenerate polygons with zero area are invalid;
+- a locator document holds at most 256 region points in total, counted across its region selectors (`locator.MaxRegionPoints`), and is at most 64 KiB (`locator.MaxDocumentBytes`); the app's freeform tool and polygon check cap each polygon at the same number, which equals Go's per-document count because the app writes one region per locator.
 
 Normalized coordinates keep Citations stable across rendering resolutions and generated previews.
 
@@ -495,7 +496,7 @@ For locator version 1:
 6. Unknown selector types are preserved losslessly for forward compatibility.
 7. A Citation must be independently resolvable from `artifact_id` plus `locator_json`; it never depends on another Citation.
 8. Region vertices use normalized coordinates relative to the selected media context, not a particular UI rendering.
-9. Region polygons contain at least three distinct points, are non-self-intersecting, and have non-zero area.
+9. Region polygons contain at least three distinct points, are non-self-intersecting, and have non-zero area, and the document holds at most 256 region points.
 10. For paginated digital Artifacts, the Artifact page position is authoritative for navigation.
 11. Printed or marked source pagination is supplementary descriptive data and does not replace the Artifact page position.
 12. Locator JSON identifies where the evidence is; transcription, label, and interpretation remain separate concerns.

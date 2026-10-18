@@ -129,6 +129,17 @@ struct ArtifactRegionGeometryTests {
         #expect(ArtifactRegionGeometry.resizeCursorKind(handle: CGPoint(x: 0.8, y: 0.2), centroid: center) == .northEast)
     }
 
+    @Test func polygonOverPointCapIsInvalid() {
+        #expect(ArtifactRegionGeometry.isValidPolygon(RegionFixtures.ring(count: 256)))
+        #expect(!ArtifactRegionGeometry.isValidPolygon(RegionFixtures.ring(count: 257)))
+    }
+
+    @Test func freeformStopsAtPointCap() {
+        let next = CGPoint(x: 0.5, y: 0.5)
+        #expect(ArtifactRegionGeometry.appendFreeformVertex(points: RegionFixtures.ring(count: 255), next)?.count == 256)
+        #expect(ArtifactRegionGeometry.appendFreeformVertex(points: RegionFixtures.ring(count: 256), next) == nil)
+    }
+
     @Test func freeformKeepsAtLeastThreeVertices() {
         let points = [
             CGPoint(x: 0.1, y: 0.1),

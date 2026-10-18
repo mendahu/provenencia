@@ -39,6 +39,9 @@ func TestValidateDepictionRegion(t *testing.T) {
 		{"no region selector", doc(page("1")), doc(page("1")), true},
 		{"two region selectors", doc(page("1"), tri, tri), doc(page("1")), true},
 		{"text_quote on region", doc(page("1"), tri, `{"type":"text_quote","exact":"x"}`), doc(page("1")), true},
+		{"region over the point cap", doc(page("1"), ringRegion(MaxRegionPoints+1)), doc(page("1")), true},
+		{"citation locator over the point cap", doc(page("1"), tri), doc(page("1"), ringRegion(MaxRegionPoints+1)), true},
+		{"citation locator points over the cap across selectors", doc(page("1"), tri), doc(page("1"), ringRegion(129), ringRegion(128)), true},
 		{"invalid region json", `{`, doc(page("1")), true},
 		{"invalid citation json", doc(page("1"), tri), `{`, true},
 	}
