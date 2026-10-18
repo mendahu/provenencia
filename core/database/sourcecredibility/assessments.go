@@ -150,16 +150,16 @@ func Upsert(tx *database.Tx, userID []byte, in UpsertInput) (Assessment, []rowch
 	}
 
 	return Assessment{
-		ID:                 append([]byte(nil), id...),
-		SourceID:           append([]byte(nil), in.SourceID...),
-		CredibilityGradeID: append([]byte(nil), in.CredibilityGradeID...),
-		Argument:           in.Argument,
-	}, []rowchange.Change{{
-		EntityType: "source_credibility_assessment",
-		EntityID:   append([]byte(nil), id...),
-		Action:     action,
-		Fields:     fields,
-	}}, nil
+			ID:                 append([]byte(nil), id...),
+			SourceID:           append([]byte(nil), in.SourceID...),
+			CredibilityGradeID: append([]byte(nil), in.CredibilityGradeID...),
+			Argument:           in.Argument,
+		}, []rowchange.Change{{
+			EntityType: "source_credibility_assessment",
+			EntityID:   append([]byte(nil), id...),
+			Action:     action,
+			Fields:     fields,
+		}}, nil
 }
 
 type rowScanner interface {
