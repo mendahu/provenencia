@@ -1,6 +1,6 @@
 # S10-64 — Check a thumbnail before decoding it
 
-**Status:** Planned
+**Status:** Landed in [#469](https://github.com/mendahu/provenencia/pull/469) (2026-10-18)
 **Spike / slice:** Spike 10 follow-ups · likeness hardening
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a refused image shows the missing state each reader already has)
@@ -306,3 +306,11 @@ None.
 
 **Title:** S10-64 — Check a thumbnail before decoding it
 **Body:** objective in one sentence; what shipped against US-1 – US-3; AC evidence (test names); deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-10-followups/prs/S10-64-thumbnail-decode-guard.md`.
+
+## Landed
+
+Differences from the plan:
+
+- STEP-1, STEP-2, STEP-3 and STEP-4 are one commit, not two, because the policy, the cache check and the decode slot all edit `ThumbnailCache.swift` and its tests together.
+- `macos-client.mdc` and the `swift_vocabulary_test.go` header already carried S10-61 and S10-62 text on `main`; this PR only added `ThumbnailDecodePolicy.maxDeclaredEdge` to the rule's list and kept the existing header (a superset of the D-10 wording).
+- The manual check (section 10) is left for the user.
