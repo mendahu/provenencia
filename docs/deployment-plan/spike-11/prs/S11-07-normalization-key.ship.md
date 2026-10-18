@@ -1,7 +1,7 @@
 # Ship log — S11-07 One normalization key across the core
 
 **Plan:** [`S11-07-normalization-key.md`](S11-07-normalization-key.md) · **Branch:** `s11-07-normalization-key` · **PR:** #460
-**State:** fixing 1
+**State:** fixing 2
 
 ## Round 0 — implement
 Base `e97cf54d`. Head `789ec019`. Gate PASS (orchestrator run, cold test cache: go-test 128s, xcode-test 15s). Report deviations: `addProductNicknames` counts tokens `insertSet` wrote; the label check reuses `distinctAlternates`; two extra `TestPropertyTerms` rows; alias test scores through word similarity; a follow-up commit fixed gofmt and the Swift `key` reference. The implementer committed this ship log in `0b284fa6` (asked to leave it untracked; harmless).
@@ -42,3 +42,21 @@ Check: both packages pass under `-tags fts5`; the new alias assertion fails if t
 Files: `docs/deployment-plan/spike-11/prs/S11-07-normalization-key.md` (§10 step 2 and the Landed note only; no AC, Decision or Scope line changes).
 Do: §10 step 2 becomes: open a Source's citation composer, choose a term Property's value (Role), choose Add custom term, enter `Godfather` and confirm, then Add custom term `god-father`: the sheet shows the D-8 message under the Label field. Renaming has no macOS UI yet; AC-4.5 and AC-4.6 are covered by `TestPropertyTerms`. Add a Landed-note line: AC-4.8's "term editor" is the citation composer's Add custom term sheet; F-1 rewrote `text.key` as one pass; the Risks row's "bounded by FTS candidates" was wrong (`mergeFTS` has no LIMIT).
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-11/prs/S11-07-normalization-key.md` reports no errors.
+
+## Round 1 — fix
+Head `9487d47d`. Gate PASS (orchestrator, cold cache: go-test 94s, xcode-test 24s). F-1 – F-4 done. F-1 `BenchmarkScoreFieldsSource`: base 18–21 µs / 8 allocs, head 30–40 µs / 10 allocs (about 1.5–2x base, was ~20x), so the stored-keys fallback is not needed. Deviations: `d >= utf8.RuneSelf` replaced a numeric literal the purity guard rejects; benchmark lives in `core/search/search_test.go`; `completed.md` unchanged (what shipped did not change). Orchestrator note for round 2: `joinedKey` uses `norm.NFD.Properties(…).Decomposition()`, which is nil for Hangul syllables (algorithmic decomposition), where `FoldWord`'s `norm.NFD.String` yields jamo.
+
+## Round 2 — review
+Lenses with Fix-now findings: PRF Clean (PRF-1 resolved: 43 µs vs ~20 µs base per candidate), UX Clean (UX-1 resolved), MNT Changes needed (MNT-2 resolved; 1 blocker), CON Changes needed (CON-1, CON-2 and the keyless-label row resolved; 1 blocker).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| CON-3, MNT-4 | CON, MNT | blocker | `joinedKey` copies the normalize and fold rules and skips Hangul decomposition: NFC vs NFD Korean text goes from `Equivalent` to `Near`; Equivalent keys differ | Fix now → F-5 | Both reviewers reproduced it against base `e97cf54d` (Equivalent/fold) and head `9487d47d` (Near/spelling); CON swept every rune: 33,516 mismatches, all Hangul. Orchestrator flagged the same nil `Decomposition()` before round 2. A regression F-1 said must not happen |
+
+### Fix plan 2
+
+**F-5 — One per-rune rule for normalizing and folding** (from CON-3, MNT-4)
+Files: `core/valuecompare/words.go`, `core/valuecompare/text.go`, `core/valuecompare/text_test.go`. Skill: `add-match-rule`.
+Failing tests first: in `TestTextKeyMatchesWords` add `"서울 한국"` and `norm.NFD.String("서울 한국")` (Equivalent key must equal the joined `FoldWord` words: fails today); add a `TestTextCompare` row `서울 한국` / NFD `서울 한국` → `Equivalent`, 0.95, cause `fold` (fails today: `Near`/`spelling`). Add `TestTextKeyMatchesWordsEveryRune` *(new)*: for every rune U+0000–U+10FFFF that `utf8.ValidRune` accepts, the strings `r`, `"a"+r` and `r+"\u0301"` give the same `TextKey` at both levels as `strings.Join` of the `SplitWords` words (folded per word with `FoldWord` at `Equivalent`).
+Do: in `words.go` add two unexported helpers that become the only home of the per-rune rules: `wordRune(r rune) (keep rune, brk bool, ok bool)` (or an equivalent classifier: a dash or `/` breaks a word, other punctuation is dropped, whitespace breaks, anything else is kept lowercased), used by `NormalizeForm` and `joinedKey`; and `appendFolded(b *strings.Builder, r rune, folds map[rune]string)`, the accent strip and `folds` for one rune with an ASCII fast path, which decomposes with `norm.NFD.Properties(…).Decomposition()` and falls back to the full NFD of that rune (`norm.NFD.AppendString`) when that is nil (Hangul), used by `FoldWord` and `joinedKey`. `rawTokens` keeps its own split (it must keep punctuation for period initials). `joinedKey` becomes a loop over those two helpers. Nothing else changes.
+Check: `go test ./core/valuecompare/...` passes with no tags, including `TestKeyContract`, `TestComparerContract` and the new tests; `go test -tags fts5 -run '^$' -bench ScoreFieldsSource -benchmem -count 3 ./core/search` reported and within 2.5x of base (18–21 µs); scripts/check-pr.sh PASS.
