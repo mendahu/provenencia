@@ -418,6 +418,8 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 So every property weight is a plain registry number. The labeler can fit them later. Remove `Stats.ValueFreq`, the `m` / `u` priors (`MPrior`, `UPrior`), the frequency scales and their lift to the accept bar. The toponym agreement bonus existed to work around the frequency weight; re-set it as a plain weight if still needed.
 
+**Built in S11-24.** Promote's walk scores every property on a plain weight: 2 per value type, and name, sex, gender and toponym on their `subject.Weights`. `Stats.ValueFreq`, the priors and the lift are gone.
+
 ## Match registry
 
 **Decided (2026-10-17): one registry package, `core/matchregistry`, for every matching tunable.** Today the numbers are spread over `core/match/registry.go`, `core/graphalign/registry.go`, `promotealign/canon.go` (`seedCandidateLimit`), `match/words.go` (`foldOnly`) and `autoreconcile/spelling.go` (`SpellingFloor`, `SpellingShortMin`; moved to `core/valuecompare` and `core/matchregistry` in S11-02). Two weight sets exist for the same property (`Rank`'s name 10, Promote's 2.5), and some keys are pipe-joined strings.

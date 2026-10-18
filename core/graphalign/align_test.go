@@ -5,6 +5,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/namevalue"
@@ -173,14 +174,11 @@ func TestBothUnpromotedOnceOneFixed(t *testing.T) {
 }
 
 func TestOneAgreeingPropertyStaysAWeakMatch(t *testing.T) {
-	// York is one of two toponyms, so its frequency is 0.5 and the raw
-	// log-odds sits under the accept bar. The agreement is still a weak match.
+	// An exact toponym alone is its scale's 3 points: medium, short of strong.
 	orphan := id("s-orphan")
 	known := id("h-known")
 	n, v := textProp("toponym", "York")
-	stats := graphalign.Stats{ValueFreq: map[string]map[string]float64{
-		"toponym": {"York": 0.5},
-	}}
+	stats := graphalign.Stats{}
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: orphan, Ref: "PLC-O", Kind: "place", Values: vals(n, v)},
@@ -195,16 +193,16 @@ func TestOneAgreeingPropertyStaysAWeakMatch(t *testing.T) {
 	row := rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), orphan)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known) ||
 		row.Assessment != graphalign.AssessMedium || row.Reason != graphalign.ReasonAgrees ||
-		row.ReasonProperty.Key != "toponym" {
+		row.ReasonProperty.Key != "toponym" || math.Abs(row.Score-3) > 1e-9 {
 		t.Fatalf("same toponym: %+v", row)
 	}
 	if row.Score >= graphalign.DefaultConfig().StrongScore {
 		t.Fatalf("toponym alone is not strong: score %.2f", row.Score)
 	}
 
-	// Without the registry weight, the same common toponym stays weak.
+	// Without the toponym scale, the text weight (2) is a weak match.
 	cfg := graphalign.DefaultConfig()
-	cfg.PropertyAgreement = nil
+	delete(cfg.PropertyScale, match.Property{Key: "toponym", Origin: "provenencia"})
 	row = rowBySubject(graphalign.Align(layer, canon, stats, nil, &cfg), orphan)
 	if row.Assessment != graphalign.AssessWeak {
 		t.Fatalf("toponym without the registry weight: %+v", row)
@@ -219,16 +217,12 @@ func TestOneAgreeingPropertyStaysAWeakMatch(t *testing.T) {
 }
 
 func TestSpellingVariantIsAWeakerTextMatch(t *testing.T) {
-	// One added letter on a toponym is a match, weaker than the exact spelling.
-	// The frequency is the incoming spelling, so the small-catalog floor applies
-	// and the resemblance scales it: about 0.91 × 3, which is weak, not medium.
+	// One added letter on a toponym is a match, weaker than the exact spelling: about 0.91 × 3, which is weak, not medium.
 	orphan := id("s-orphan")
 	known := id("h-known")
 	probe, pv := textProp("toponym", "Provenance")
 	canonProp, cv := textProp("toponym", "Provenanced")
-	stats := graphalign.Stats{ValueFreq: map[string]map[string]float64{
-		"toponym": {"Provenance": 0.5},
-	}}
+	stats := graphalign.Stats{}
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: orphan, Ref: "PLC-O", Kind: "place", Values: vals(probe, pv)},
@@ -262,11 +256,9 @@ func TestSpellingVariantIsAWeakerTextMatch(t *testing.T) {
 		t.Fatal("missing toponym comparison")
 	}
 
-	// Without the toponym bonus the scaled floor (accept bar × resemblance)
-	// stays under weak. The resemblance itself is any text property; the
-	// bonus is what makes a toponym clear the bar.
+	// Without the toponym scale, the text weight × the resemblance stays under weak. The toponym scale is what makes a spelling variant clear the bar.
 	bare := graphalign.DefaultConfig()
-	bare.PropertyAgreement = nil
+	delete(bare.PropertyScale, match.Property{Key: "toponym", Origin: "provenencia"})
 	row = rowBySubject(graphalign.Align(layer, canon, stats, nil, &bare), orphan)
 	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
 		t.Fatalf("spelling variant without the registry weight: %+v", row)
@@ -278,7 +270,6 @@ func TestSpellingVariantIsAWeakerTextMatch(t *testing.T) {
 	layer.Metas = placeMetas()
 	layer.Subjects[0].Values = vals(york, yv)
 	canon.Handles[0].Values = vals(longer, lv)
-	stats.ValueFreq = map[string]map[string]float64{"toponym": {"York": 0.5}}
 	row = rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), orphan)
 	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
 		t.Fatalf("shared word should stay under the bar: %+v", row)
@@ -649,7 +640,7 @@ func TestMissingGivenOrPrefixIsNotANameConflict(t *testing.T) {
 	)
 	cfg := graphalign.DefaultConfig()
 	ev := match.Evaluate(mrs, marion, nameMetas(), cfg.Value)
-	sc := graphalign.ScoreCandidate(ev, mrs, 0, 1, cfg, graphalign.Stats{})
+	sc := graphalign.ScoreCandidate(ev, 0, 1, cfg)
 	c := sc.Eval.Comparisons[0]
 	// The title is ignored. Marion exists only on one side, so the name is a
 	// resemblance: the surnames earn 2·F of 2·F + G1.
@@ -663,7 +654,7 @@ func TestMissingGivenOrPrefixIsNotANameConflict(t *testing.T) {
 
 	differ := graphalign.ScoreCandidate(
 		match.Evaluate(nameVals("Mary", "Robins"), nameVals("James", "Robins"), nameMetas(), cfg.Value),
-		nameVals("Mary", "Robins"), 0, 1, cfg, graphalign.Stats{},
+		0, 1, cfg,
 	)
 	if differ.Eval.Comparisons[0].Outcome != match.OutcomeConflict || differ.Score >= 0 {
 		t.Fatalf("different given names: outcome %s score %.3f", differ.Eval.Comparisons[0].Outcome, differ.Score)
@@ -675,7 +666,7 @@ func TestSexAgreementAloneStaysUnderWeak(t *testing.T) {
 	meta := []match.PropertyMeta{{Property: sex, ValueType: propertymeta.ValueTypeTerm}}
 	male := match.Values{sex: {{Term: "male"}}}
 	ev := match.Evaluate(male, male, meta, graphalign.DefaultConfig().Value)
-	sc := graphalign.ScoreCandidate(ev, male, 0, 1, graphalign.DefaultConfig(), graphalign.Stats{})
+	sc := graphalign.ScoreCandidate(ev, 0, 1, graphalign.DefaultConfig())
 	if sc.Score < 0.59 || sc.Score > 0.61 || sc.Score >= graphalign.DefaultConfig().WeakScore {
 		t.Fatalf("sex alone scored %.3f", sc.Score)
 	}
@@ -903,7 +894,7 @@ func TestAcceptedPropertyMatchNominatesItsNeighbor(t *testing.T) {
 	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1, other.Key(): 1}}
 	row := rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), mid)
 	cfg := graphalign.DefaultConfig()
-	term := math.Log(cfg.MPrior["term"] / cfg.UPrior)
+	term := cfg.ValueTypeScale["term"].Weight
 	name := cfg.PropertyScale[match.Property{Key: "name", Origin: "provenencia"}].Weight
 	want := term + 2*(cfg.EdgeSupportLow+cfg.NeighborCreditLow*name)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, hMid) ||
@@ -1659,9 +1650,66 @@ func TestScoreSimilarityWeightedCredit(t *testing.T) {
 		{"the leader is an agreement", 1, match.OutcomeAgree, 2.5},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			outcome, points := graphalign.ScoreSimilarity(tt.similarity, true, propertymeta.CardinalitySingle, nameProp, propertymeta.ValueTypeName, nil, cfg, graphalign.Stats{})
+			outcome, points := graphalign.ScoreSimilarity(tt.similarity, true, propertymeta.CardinalitySingle, nameProp, propertymeta.ValueTypeName, cfg)
 			if outcome != tt.outcome || math.Abs(points-tt.points) > 1e-9 {
 				t.Fatalf("got %v %.4f, want %v %.4f", outcome, points, tt.outcome, tt.points)
+			}
+		})
+	}
+}
+
+func TestSparseNameAndBirthDate(t *testing.T) {
+	// A person with only a name and a birth date files on the person whose
+	// name and birth match, not on a look-alike born in another year.
+	date := match.Property{Key: "date", Origin: "provenencia"}
+	year := func(y int) match.Value { return match.Value{Date: datevaluetest.YMD(y, 0, 0)} }
+	et, birth := termProp("event_type", "birth")
+	metas := append(nameMetas(), eventMetas()...)
+	metas = append(metas, match.PropertyMeta{Property: date, ValueType: propertymeta.ValueTypeDate})
+	sig := partSig("subject", "event", "birth")
+	per, ev := id("s-person"), id("s-event")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: per, Ref: "PER-S", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: ev, Ref: "EVT-S", Kind: "event", Values: vals(et, birth, date, year(1817))},
+		},
+		Bridges: []graphalign.Bridge{{A: per, B: ev, Signature: sig}},
+		Metas:   metas,
+	}
+	p1, e1, p2, e2 := id("h-person-1"), id("h-event-1"), id("h-person-2"), id("h-event-2")
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: p1, Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: e1, Ref: "EVT-1", Kind: "event", Values: vals(et, birth, date, year(1817))},
+			{ID: p2, Ref: "PER-2", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: e2, Ref: "EVT-2", Kind: "event", Values: vals(et, birth, date, year(1830))},
+		},
+		Edges: []graphalign.CanonEdge{
+			{From: p1, To: e1, Signature: sig},
+			{From: p2, To: e2, Signature: sig},
+		},
+	}
+	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
+	p := graphalign.Align(layer, canon, stats, nil, nil)
+
+	cfg := graphalign.DefaultConfig()
+	name := cfg.PropertyScale[match.Property{Key: "name", Origin: "provenencia"}].Weight
+	event := cfg.ValueTypeScale["term"].Weight + cfg.ValueTypeScale["date"].Weight
+	tests := []struct {
+		name    string
+		subject []byte
+		handle  []byte
+		score   float64
+	}{
+		{"person", per, p1, name + cfg.EdgeSupportLow + cfg.NeighborCreditLow*event},
+		{"birth", ev, e1, event + cfg.EdgeSupportLow + cfg.NeighborCreditLow*name},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			row := rowBySubject(p, tt.subject)
+			if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, tt.handle) ||
+				row.Assessment != graphalign.AssessStrong || math.Abs(row.Score-tt.score) > 1e-9 {
+				t.Fatalf("row %+v, want %s strong at %.2f", row, tt.handle, tt.score)
 			}
 		})
 	}

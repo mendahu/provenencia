@@ -289,9 +289,9 @@ func (st *state) evaluate(a, b match.Values) match.Evaluation {
 func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
 	s := st.subjects[string(subjectID)]
 	ev := st.evaluate(s.Values, h.Values)
-	node := propertyPoints(&ev, s.Values, st.cfg, st.stats)
+	node := propertyPoints(&ev, st.cfg)
 	edge := EdgePoints(st.edgeFacts(subjectID, h.ID), node, st.cfg)
-	sc := ScoreCandidate(ev, s.Values, edge, s.Provenance, st.cfg, st.stats)
+	sc := ScoreCandidate(ev, edge, s.Provenance, st.cfg)
 	return scoredCand{
 		handleID: append([]byte(nil), h.ID...),
 		ref:      h.Ref,
@@ -360,7 +360,7 @@ func (st *state) nodeScore(subjectID, handleID []byte) float64 {
 		return 0
 	}
 	ev := st.evaluate(s.Values, h.Values)
-	return propertyPoints(&ev, s.Values, st.cfg, st.stats)
+	return propertyPoints(&ev, st.cfg)
 }
 
 func (st *state) walk() {
@@ -653,7 +653,7 @@ func (st *state) proposal() Proposal {
 				}
 			}
 			row.Score = sc.score
-			row.Comparisons = comparisonsFrom(sc.eval, s.Values, st.cfg, st.stats)
+			row.Comparisons = comparisonsFrom(sc.eval, st.cfg)
 			switch {
 			case st.fixedSet[sk]:
 				row.Reason = ReasonDecided
@@ -769,8 +769,8 @@ func (st *state) alikeNew(a, b *Subject) bool {
 		return false
 	}
 	ev := st.evaluate(a.Values, b.Values)
-	node := propertyPoints(&ev, a.Values, st.cfg, st.stats)
-	return ScoreCandidate(ev, a.Values, EdgePoints(facts, node, st.cfg), 1, st.cfg, st.stats).Score >= st.cfg.AcceptScore
+	node := propertyPoints(&ev, st.cfg)
+	return ScoreCandidate(ev, EdgePoints(facts, node, st.cfg), 1, st.cfg).Score >= st.cfg.AcceptScore
 }
 
 // newPairFacts compares the layer neighbors of two subjects. A signature only
@@ -849,7 +849,7 @@ func (st *state) neighborsMatch(a, b []byte) bool {
 		return false
 	}
 	ev := st.evaluate(sa.Values, sb.Values)
-	return ScoreCandidate(ev, sa.Values, 0, 1, st.cfg, st.stats).Score >= st.cfg.AcceptScore
+	return ScoreCandidate(ev, 0, 1, st.cfg).Score >= st.cfg.AcceptScore
 }
 
 // pairNode is the property total for two subjects, one of them compared with
@@ -860,7 +860,7 @@ func (st *state) pairNode(a, b []byte) float64 {
 		return 0
 	}
 	ev := st.evaluate(sa.Values, sb.Values)
-	return propertyPoints(&ev, sa.Values, st.cfg, st.stats)
+	return propertyPoints(&ev, st.cfg)
 }
 
 // strongestAgreement is the agreeing or resembling Property that added the
@@ -876,10 +876,10 @@ func strongestAgreement(cs []Comparison) match.Property {
 	return top
 }
 
-func comparisonsFrom(ev match.Evaluation, probe match.Values, cfg Config, stats Stats) []Comparison {
+func comparisonsFrom(ev match.Evaluation, cfg Config) []Comparison {
 	out := make([]Comparison, 0, len(ev.Comparisons))
 	for _, pc := range ev.Comparisons {
-		outcome, weight := ScoreSimilarity(pc.Similarity, pc.Comparable, pc.Cardinality, pc.Property, pc.ValueType, probe[pc.Property], cfg, stats)
+		outcome, weight := ScoreSimilarity(pc.Similarity, pc.Comparable, pc.Cardinality, pc.Property, pc.ValueType, cfg)
 		out = append(out, Comparison{
 			Property:  pc.Property,
 			Outcome:   outcome,
@@ -922,16 +922,12 @@ func (st *state) alts(sk string, except []byte) []Alternative {
 	if limit <= 0 {
 		limit = 3
 	}
-	var probe match.Values
-	if s := st.subjects[sk]; s != nil {
-		probe = s.Values
-	}
 	var out []Alternative
 	for _, sc := range st.best[sk] {
 		if except != nil && bytes.Equal(sc.handleID, except) {
 			continue
 		}
-		out = append(out, st.alternative(sc, probe))
+		out = append(out, st.alternative(sc))
 		if len(out) >= limit {
 			break
 		}
@@ -942,7 +938,7 @@ func (st *state) alts(sk string, except []byte) []Alternative {
 // alternative is one selectable record: its band, and the sentence that
 // explains that band. A via walk wins; otherwise the strongest agreeing
 // property; otherwise there was too little to name.
-func (st *state) alternative(sc scoredCand, probe match.Values) Alternative {
+func (st *state) alternative(sc scoredCand) Alternative {
 	alt := Alternative{
 		HandleID:   append([]byte(nil), sc.handleID...),
 		Ref:        sc.ref,
@@ -959,7 +955,7 @@ func (st *state) alternative(sc scoredCand, probe match.Values) Alternative {
 	if alt.Assessment == AssessNone {
 		return alt
 	}
-	prop := strongestAgreement(comparisonsFrom(sc.eval, probe, st.cfg, st.stats))
+	prop := strongestAgreement(comparisonsFrom(sc.eval, st.cfg))
 	if prop.Key != "" {
 		alt.Reason = ReasonAgrees
 		alt.ReasonProperty = prop

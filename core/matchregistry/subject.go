@@ -11,16 +11,16 @@ func defaultSubject() subjectcompare.Rules {
 	return subjectcompare.Rules{
 		Weights: map[vocabkey.SubjectType]map[vocabkey.PropertyKey]subjectcompare.Weights{
 			vocabkey.Person: {
-				vocabkey.PropertyName:       {Agree: 2.5, Conflict: 3},  // graphalign name PropertyScale
-				vocabkey.PropertySexAtBirth: {Agree: 0.6, Conflict: 1},  // graphalign sex / gender PropertyScale; pools gender
+				vocabkey.PropertyName:       {Agree: 2.5, Conflict: 3},  // graphalign's name scale; the walk reads it until S11-13
+				vocabkey.PropertySexAtBirth: {Agree: 0.6, Conflict: 1},  // graphalign's sex / gender scale; pools gender; the walk reads it until S11-13
 				vocabkey.PropertyLifespan:   {Agree: 0.1, Conflict: 20}, // estimate: near zero, the dates count through their segments; impossible together never recovers
 			},
 			vocabkey.Event: {
 				vocabkey.PropertyEventType: {Agree: 0.5, Conflict: 20}, // estimate: generic alone; a birth is never a death
-				vocabkey.PropertyDate:      {Agree: 2, Conflict: 3},    // estimate: cold-start ln(0.85 / 0.1) rounded; ConflictPenalty
+				vocabkey.PropertyDate:      {Agree: 2, Conflict: 3},    // estimate: the cold-start ln(0.85 / 0.1) S11-24 removed, rounded; ConflictPenalty
 			},
 			vocabkey.Place: {
-				vocabkey.PropertyToponym: {Agree: 3, Conflict: 3}, // estimate: cold-start + toponym bonus, rounded; ConflictPenalty
+				vocabkey.PropertyToponym: {Agree: 3, Conflict: 3}, // estimate: the cold-start + toponym bonus S11-24 removed, rounded; ConflictPenalty
 			},
 		},
 		Pools: map[vocabkey.SubjectType]map[vocabkey.PropertyKey]subjectcompare.Pool{

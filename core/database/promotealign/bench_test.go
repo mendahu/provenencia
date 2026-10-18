@@ -8,8 +8,6 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/promotealign"
-	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
-	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
 const (
@@ -178,42 +176,4 @@ func bulkCanon(db *sql.DB, hub []byte) error {
 		}
 	}
 	return tx.Commit()
-}
-
-// BenchmarkLoadStatsNames times a cold stats read over 20k Person handles
-// that each carry one reconciled name, the case the name-word count costs most.
-func BenchmarkLoadStatsNames(b *testing.B) {
-	f := newFixture(b)
-	db, err := f.c.DB()
-	must(b, err)
-	var personT, nameP []byte
-	must(b, db.QueryRow(`SELECT id FROM subject_types WHERE key = 'person' AND origin = 'provenencia'`).Scan(&personT))
-	must(b, db.QueryRow(`SELECT id FROM properties WHERE key = 'name' AND origin = 'provenencia'`).Scan(&nameP))
-	tx, err := db.Begin()
-	must(b, err)
-	ent, err := tx.Prepare(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, ?)`)
-	must(b, err)
-	val, err := tx.Prepare(`INSERT INTO auto_reconciler_values
-		(entity_id, property_id, rank, value_name, support, against, reason)
-		VALUES (?, ?, 1, ?, 1, 0, 'kept')`)
-	must(b, err)
-	for i := 0; i < benchPersons; i++ {
-		id := benchID(100 + i)
-		_, err := ent.Exec(id, personT, fmt.Sprintf("PER-%05d", i))
-		must(b, err)
-		blob, err := valuecodec.MarshalName(*namevaluetest.Western(fmt.Sprintf("Given%d Surname%d", i%500, i%2000)))
-		must(b, err)
-		_, err = val.Exec(id, nameP, blob)
-		must(b, err)
-	}
-	must(b, ent.Close())
-	must(b, val.Close())
-	must(b, tx.Commit())
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		f.c.Graph().Drop()
-		_, err := promotealign.LoadStatsForTest(f.c)
-		must(b, err)
-	}
 }

@@ -33,7 +33,7 @@ type exhibitObs struct {
 // members one hop from the chosen handle's members: "her birth date matches"
 // compares this birth with that birth, never with some other event's date.
 // A neighbor Align didn't map (New, Skip, unreachable) contributes nothing.
-func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop *graphalign.Proposal, cfg graphalign.Config, stats graphalign.Stats, namePattern string) error {
+func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop *graphalign.Proposal, cfg graphalign.Config, namePattern string) error {
 	if prop == nil || len(prop.Rows) == 0 {
 		return nil
 	}
@@ -156,9 +156,9 @@ func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop
 
 		for _, plan := range plans {
 			r := &prop.Rows[plan.idx]
-			exhibits := pairExhibits(bySubject[string(r.SubjectID)], nil, collect(plan.own), cfg, stats)
+			exhibits := pairExhibits(bySubject[string(r.SubjectID)], nil, collect(plan.own), cfg)
 			for _, np := range plan.neighbors {
-				exhibits = append(exhibits, pairExhibits(bySubject[string(np.neighbor)], np.neighbor, collect(np.sides), cfg, stats)...)
+				exhibits = append(exhibits, pairExhibits(bySubject[string(np.neighbor)], np.neighbor, collect(np.sides), cfg)...)
 			}
 			r.Exhibits = exhibits
 		}
@@ -222,7 +222,7 @@ func refLine(c graphalign.Comparison) graphalign.Exhibit {
 // The line's outcome and weight come from the promote scale. neighbor is
 // nil for the Subject's own records and names the layer neighbor for a
 // one-hop group.
-func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs, cfg graphalign.Config, stats graphalign.Stats) []graphalign.Exhibit {
+func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs, cfg graphalign.Config) []graphalign.Exhibit {
 	var out []graphalign.Exhibit
 	for _, in := range incoming {
 		if in.valueType == "" || in.valueType == "subject" {
@@ -263,7 +263,7 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 		if card == "" {
 			card = propertymeta.CardinalitySingle
 		}
-		outcome, weight := graphalign.ScoreSimilarity(sim, comparable, card, in.prop, in.valueType, []match.Value{in.value}, cfg, stats)
+		outcome, weight := graphalign.ScoreSimilarity(sim, comparable, card, in.prop, in.valueType, cfg)
 		if outcome == match.OutcomeUnknown {
 			continue
 		}

@@ -5,13 +5,10 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
-	"github.com/mendahu/provenencia/core/match"
-	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // loadStats returns this catalog's scan. A commit that names handles drops it.
-// A vocabulary-only write does not. The property list is the match profiles,
-// not a fixed key list.
+// A vocabulary-only write does not.
 func loadStats(c *database.Catalog) (graphalign.Stats, error) {
 	db, err := c.DB()
 	if err != nil {
@@ -29,17 +26,7 @@ func loadStats(c *database.Catalog) (graphalign.Stats, error) {
 }
 
 func cloneStats(s graphalign.Stats) graphalign.Stats {
-	out := graphalign.Stats{
-		ValueFreq: map[string]map[string]float64{},
-		FanOut:    map[string]float64{},
-	}
-	for k, m := range s.ValueFreq {
-		cp := map[string]float64{}
-		for vk, v := range m {
-			cp[vk] = v
-		}
-		out.ValueFreq[k] = cp
-	}
+	out := graphalign.Stats{FanOut: map[string]float64{}}
 	for k, v := range s.FanOut {
 		out.FanOut[k] = v
 	}
@@ -47,70 +34,7 @@ func cloneStats(s graphalign.Stats) graphalign.Stats {
 }
 
 func computeStats(g *graphcache.Graph, q Querier) (graphalign.Stats, error) {
-	st := graphalign.Stats{
-		ValueFreq: map[string]map[string]float64{},
-		FanOut:    map[string]float64{},
-	}
-
-	// Value frequencies: fraction of unmerged handles carrying each text/term
-	// value for profile Properties. Approximates u among unrelated handles.
-	keys := profilePropertyKeys()
-	args := make([]any, len(keys))
-	for i, k := range keys {
-		args[i] = k
-	}
-	rows, err := q.Query(`SELECT p.key,
-			COALESCE(r.value_text, ''),
-			COALESCE(t.key, ''),
-			COUNT(DISTINCT r.entity_id)
-		FROM auto_reconciler_values r
-		JOIN properties p ON p.id = r.property_id AND p.origin = 'provenencia'
-		JOIN canonical_entities e ON e.id = r.entity_id AND e.merged_into_id IS NULL
-		LEFT JOIN property_terms t ON t.id = r.value_term_id
-		WHERE r.rank = 1 AND r.reason = 'kept'
-			AND p.key IN (`+database.SQLInPlaceholders(len(keys))+`)
-		GROUP BY p.key, r.value_text, t.key`, args...)
-	if err != nil {
-		return graphalign.Stats{}, err
-	}
-	defer rows.Close()
-
-	totals := map[string]float64{}
-	type cell struct {
-		prop, key string
-		n         float64
-	}
-	var cells []cell
-	for rows.Next() {
-		var prop, text, term string
-		var n float64
-		if err := rows.Scan(&prop, &text, &term, &n); err != nil {
-			return graphalign.Stats{}, err
-		}
-		k := text
-		if k == "" {
-			k = term
-		}
-		if k == "" {
-			continue
-		}
-		cells = append(cells, cell{prop: prop, key: k, n: n})
-		totals[prop] += n
-	}
-	if err := rows.Err(); err != nil {
-		return graphalign.Stats{}, err
-	}
-	_ = rows.Close()
-	for _, c := range cells {
-		den := totals[c.prop]
-		if den <= 0 {
-			continue
-		}
-		if st.ValueFreq[c.prop] == nil {
-			st.ValueFreq[c.prop] = map[string]float64{}
-		}
-		st.ValueFreq[c.prop][c.key] = c.n / den
-	}
+	st := graphalign.Stats{FanOut: map[string]float64{}}
 
 	kin, err := loadKinship(g)
 	if err != nil {
@@ -199,23 +123,4 @@ func addFanOut(q Querier, b connectrules.Bridge, kin kinship, sums map[string]fa
 		sums[sig.Key()] = sum
 	}
 	return rows.Err()
-}
-
-func profilePropertyKeys() []string {
-	seen := map[string]bool{}
-	var keys []string
-	for _, kind := range vocabkey.PrimaryKinds() {
-		profile, ok := match.DefaultProfile(kind)
-		if !ok {
-			continue
-		}
-		for _, prop := range profile.Properties() {
-			if prop.Origin != vocabkey.OriginProvenencia || seen[prop.Key] {
-				continue
-			}
-			seen[prop.Key] = true
-			keys = append(keys, prop.Key)
-		}
-	}
-	return keys
 }

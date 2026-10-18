@@ -163,9 +163,9 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `subject.Lifespans.person.lifespan.Ends` | `death` · `subject`, `burial` · `subject` | decided 2026-10-18 | Events that fix the end of a life |
 | `subject.Weights.event.event_type.Agree` | 0.5 | estimate: generic, says little alone (decided low) | Points for the same event type |
 | `subject.Weights.event.event_type.Conflict` | 20 | estimate: a birth is never a death | Points lost for different event types |
-| `subject.Weights.event.date.Agree` | 2 | estimate: today's cold-start frequency weight ln(0.85 / 0.1) ≈ 2.1, rounded | Points for matching dates (one pair with start / end) |
+| `subject.Weights.event.date.Agree` | 2 | estimate: the cold-start frequency weight ln(0.85 / 0.1) ≈ 2.1 that S11-24 removed, rounded | Points for matching dates (one pair with start / end) |
 | `subject.Weights.event.date.Conflict` | 3 | `graphalign` `DefaultConfig.ConflictPenalty` | Points lost for different dates |
-| `subject.Weights.place.toponym.Agree` | 3 | estimate: today's cold-start ln(0.9 / 0.1) + toponym `PropertyAgreement` 1 ≈ 3.2, rounded, so a toponym alone reads medium | A matching toponym alone reads medium |
+| `subject.Weights.place.toponym.Agree` | 3 | estimate: the cold-start ln(0.9 / 0.1) + toponym `PropertyAgreement` 1 ≈ 3.2 that S11-24 removed, rounded, so a toponym alone reads medium | A matching toponym alone reads medium |
 | `subject.Weights.place.toponym.Conflict` | 3 | `graphalign` `DefaultConfig.ConflictPenalty` | Points lost for different toponyms |
 | `subject.Periods.event.date.Start` | `start_date` | `match.DatePeriods` | Start of the period that stands for `date` on a side with no date |
 | `subject.Periods.event.date.End` | `end_date` | `match.DatePeriods` | End of that period |
