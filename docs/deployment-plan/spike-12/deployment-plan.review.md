@@ -1,7 +1,7 @@
 # Review — Spike 12 PR map
 
-**Verdict:** Fits with changes (round 1)
-**Rounds:** 1. **Reviewers:** maintainability (map review)
+**Verdict:** Fits with changes
+**Rounds:** 2. **Reviewers:** maintainability (map review), fresh agent each round
 
 ## To user
 - None. Every finding was answered from the code or the skills; no product call was needed.
@@ -13,6 +13,7 @@
 - **Audit scope stays `source`**; no `graph` scope type.
 - **Graphs cascade with their Source**; a Source can only be deleted with no Artifacts and no Subjects already.
 - **S12-12 depends on S12-02** for the shared Artifact checklist.
+- **K-14 option (a):** effects stay per Source through S12-07 and switch to graph ids in one PR (S12-08), instead of a reverse graph → Source bridge.
 
 ## Round 1
 
@@ -58,3 +59,19 @@ Verified: `add-catalog-ref` Don't column, "Mint in SQL migrations"; `users.Ensur
 
 ### K-13 · minor · S12-03's `NOT NULL` column breaks raw test inserts the row does not mention
 **Answer:** Fixed — the S12-03 scope and the backfill working rule name the fixtures and move them onto the create functions.
+
+## Round 2
+
+Every round-1 answer holds. K-11 note: `SourcesListView.addForm` is private, so S12-02 makes it reusable — added to its scope.
+
+### K-14 · blocker · From S12-07 to S12-08 the wire `sources` field would carry graph ids that Swift reads as Source ids
+`writeEffectsProto` copies `set.Sources` unchanged; `CatalogQueryRegistry.invalidations(for:)` reads them as Source ids. Hidden on backfilled Sources by `id = source_id`, broken on new ones.
+**Answer:** Fixed — option (a): working rule "Effects are graph-keyed, in one step"; S12-07 keeps `Set` per Source and drops every graph of a changed Source; S12-08 re-keys `Set`, `Effect`, the wire and Swift together.
+
+### K-15 · blocker · No mechanism keeps the project-wide graph list fresh
+**Answer:** Fixed — working rule "The graph list has its own effect": `Set.EvidenceGraphs` from S12-03, wire flag and one invalidation line in S12-05.
+
+### K-16 · blocker · Two reads of the same graph rows
+**Answer:** Fixed — S12-04 ships one `evidencegraphs.List` (full rows with linked Artifact ids, by name, optional Source filter); S12-05's RPC wraps it; no `ListBySource`.
+
+Round 2 is the last round; no blocker is open.
