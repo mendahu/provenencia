@@ -409,7 +409,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 copy.hasArtifact = true
             }
             sourcesByProject[projectDir, default: []].append(copy)
-            let effects = bumpSource(copyID, evidence: false)
+            let effects = bumpSource(copyID, evidence: !chosen.isEmpty)
             let stored = sourcesByProject[projectDir]?.first(where: { $0.id == copyID }) ?? copy
             return (stored, effects)
         }
