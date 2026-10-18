@@ -345,6 +345,11 @@ func TestShiftYears(t *testing.T) {
 			t.Errorf("got %+v ok=%v", got, ok)
 		}
 	})
+	t.Run("cannot be placed", func(t *testing.T) {
+		if _, ok := valuecompare.ShiftYears(valuecompare.DateEnd{Year: 1850, Month: 13}, 5); ok {
+			t.Error("ok")
+		}
+	})
 	t.Run("open end", func(t *testing.T) {
 		open := valuecompare.DateEnd{Open: true}
 		got, ok := valuecompare.ShiftYears(open, 5)
