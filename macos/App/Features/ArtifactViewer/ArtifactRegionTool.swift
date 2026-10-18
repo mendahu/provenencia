@@ -79,4 +79,13 @@ struct ArtifactRegionDraft: Equatable, Sendable {
     var isValid: Bool {
         ArtifactRegionGeometry.isValidPolygon(points)
     }
+
+    /// The whole file: the rectangle over the unit square the coordinates are defined on.
+    static let whole = ArtifactRegionDraft(
+        kind: .rectangle,
+        points: ArtifactRegionGeometry.rectanglePoints(
+            from: CGPoint(x: CGRect.unitSquare.minX, y: CGRect.unitSquare.minY),
+            to: CGPoint(x: CGRect.unitSquare.maxX, y: CGRect.unitSquare.maxY)
+        )
+    )
 }

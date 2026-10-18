@@ -13452,6 +13452,42 @@
         }
       }
     },
+    "citationComposer.depictionUseWholePhoto": {
+      "comment": "Button that sets a depiction's region to the whole photo",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the whole photo"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionUseWholePage": {
+      "comment": "Button that sets a depiction's region to the whole PDF page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the whole page"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionUseCitationRegion": {
+      "comment": "Button that sets a depiction's region to the citation's own region",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the citation's region"
+          }
+        }
+      }
+    },
     "citationComposer.depictionDrawingHint": {
       "comment": "Hint above the viewer while a depiction's region is drawn",
       "extractionState": "manual",

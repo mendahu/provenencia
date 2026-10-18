@@ -373,11 +373,7 @@ struct NameValueEditorForm: View {
         let dest = index + delta
         guard draft.parts.indices.contains(dest) else { return }
         let message = L10n.NameValue.partMoved(position: dest + 1, of: draft.parts.count)
-        NSAccessibility.post(
-            element: NSApp as Any,
-            notification: .announcementRequested,
-            userInfo: [.announcement: message, .priority: NSAccessibilityPriorityLevel.medium]
-        )
+        AccessibilityAnnouncement.post(message)
     }
 }
 
