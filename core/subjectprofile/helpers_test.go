@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
@@ -96,4 +97,9 @@ func maleFemale(t *testing.T) subjectprofile.Entity {
 func denied(t *testing.T) subjectprofile.Entity {
 	return subjectprofile.Entity{Properties: props{sex: property(t, sex,
 		weak(cand(1, 1, 1, term("female"))), negative(cand(2, 2, 2, term("female"))))}}
+}
+
+// ev is a life event of the given type and role on one date.
+func ev(eventType vocabkey.EventType, role vocabkey.Role, d *datevalue.Value) subjectprofile.LifeEvent {
+	return subjectprofile.LifeEvent{EventType: eventType, Role: role, Dates: []datevalue.Value{*d}}
 }

@@ -11,6 +11,7 @@ import (
 	"slices"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -21,6 +22,23 @@ import (
 type Entity struct {
 	Properties  map[vocabkey.PropertyKey]Property
 	NamePattern string // the catalog's name format key, set on every name value
+	Life        []LifeEvent
+}
+
+// LifeEvent is one event a person takes part in: its type, the person's role
+// in it, and every date the event records.
+type LifeEvent struct {
+	EventType vocabkey.EventType
+	Role      vocabkey.Role
+	Dates     []datevalue.Value
+}
+
+// Subject is a plain Subject's own Observations by property and its life
+// events.
+type Subject struct {
+	Values      map[vocabkey.PropertyKey][]autoreconcile.Candidate
+	NamePattern string // the catalog's name format key, set on every name value
+	Life        []LifeEvent
 }
 
 // Property is the reconciler's output for one Property and, for leave-one-out,
@@ -50,8 +68,10 @@ type Options struct {
 // nothing left is absent. reconcile is the rules the reconciler runs under:
 // pass matchregistry.Default().Value, as the cache does, not a catalog's
 // valuerules. metas give each Property's value type and cardinality for
-// Options.Excluding. The error is Reconcile's, and only Excluding runs it.
-func Build(e Entity, metas subjectcompare.Metas, reconcile valuecompare.Rules, opts Options) (subjectcompare.Values, error) {
+// Options.Excluding. lifespans is the registry's Subject.Lifespans for the
+// side's kind; for each, a window and a span are added when the life events
+// give them. The error is Reconcile's, and only Excluding runs it.
+func Build(e Entity, metas subjectcompare.Metas, reconcile valuecompare.Rules, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan, opts Options) (subjectcompare.Values, error) {
 	out := subjectcompare.Values{}
 	for _, key := range slices.Sorted(maps.Keys(e.Properties)) {
 		p := e.Properties[key]
@@ -77,6 +97,7 @@ func Build(e Entity, metas subjectcompare.Metas, reconcile valuecompare.Rules, o
 			out[key] = profile
 		}
 	}
+	addLifespans(out, e.Life, lifespans)
 	return out, nil
 }
 
@@ -99,15 +120,96 @@ func without(cs []Candidate, excluding [][]byte) ([]autoreconcile.Candidate, boo
 }
 
 // ForSubject returns a Subject's own values: each candidate positive or
-// negative as recorded, in order. Only Value and Negative are read.
-func ForSubject(values map[vocabkey.PropertyKey][]autoreconcile.Candidate, namePattern string) subjectcompare.Values {
+// negative as recorded, in order. Only Value and Negative are read. lifespans
+// is the registry's Subject.Lifespans for the side's kind; for each, a window
+// and a span are added when the life events give them.
+func ForSubject(s Subject, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan) subjectcompare.Values {
 	out := subjectcompare.Values{}
-	for key, cs := range values {
+	for key, cs := range s.Values {
 		for _, c := range cs {
-			out[key] = append(out[key], value(c.Value, c.Negative, namePattern))
+			out[key] = append(out[key], value(c.Value, c.Negative, s.NamePattern))
 		}
 	}
+	addLifespans(out, s.Life, lifespans)
 	return out
+}
+
+// addLifespans sets, for each lifespan in key order, the window under its lead
+// and the span under its Span, one value each, when the events give them.
+func addLifespans(out subjectcompare.Values, events []LifeEvent, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan) {
+	for _, lead := range slices.Sorted(maps.Keys(lifespans)) {
+		l := lifespans[lead]
+		if window, span, ok := lifespan(events, l); ok {
+			out[lead] = []propertycompare.Value{window}
+			out[l.Span] = []propertycompare.Value{span}
+		}
+	}
+}
+
+// lifespan lays the dated events on one timeline. The span is the first to the
+// last date. The window starts at the earliest Starts event, or MaxYears
+// before the first date, and ends at the latest Ends event, or MaxYears after
+// the last date. ok is false when no event is dated, when a shifted end
+// cannot be placed, when the window or span would end before it begins, or
+// when a date lies wholly outside the window: a side that contradicts itself
+// has no lifespan.
+func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span propertycompare.Value, ok bool) {
+	// early and late are each date's first and last closed end; startEarly
+	// and endLate are those of the events that fix the start and the end.
+	var early, late, startEarly, endLate []valuecompare.DateEnd
+	for _, ev := range events {
+		er := subjectcompare.EventRole{EventType: ev.EventType, Role: ev.Role}
+		for _, d := range ev.Dates {
+			first, last, ok := valuecompare.DateEnds(d)
+			if !ok {
+				continue
+			}
+			if first.Open {
+				first = last
+			}
+			if last.Open {
+				last = first
+			}
+			early, late = append(early, first), append(late, last)
+			if slices.Contains(l.Starts, er) {
+				startEarly = append(startEarly, first)
+			}
+			if slices.Contains(l.Ends, er) {
+				endLate = append(endLate, last)
+			}
+		}
+	}
+	spanFirst, ok := valuecompare.Earliest(early)
+	if !ok {
+		return window, span, false
+	}
+	spanLast, _ := valuecompare.Latest(late)
+	start, ok := valuecompare.Earliest(startEarly)
+	if !ok {
+		if start, ok = valuecompare.ShiftYears(spanFirst, -l.MaxYears); !ok {
+			return window, span, false
+		}
+	}
+	end, ok := valuecompare.Latest(endLate)
+	if !ok {
+		if end, ok = valuecompare.ShiftYears(spanLast, l.MaxYears); !ok {
+			return window, span, false
+		}
+	}
+	for i := range early {
+		if late[i].Hi < start.Lo || early[i].Lo > end.Hi {
+			return window, span, false
+		}
+	}
+	w, ok := valuecompare.EndsDate(start, end)
+	if !ok {
+		return window, span, false
+	}
+	sp, ok := valuecompare.EndsDate(spanFirst, spanLast)
+	if !ok {
+		return window, span, false
+	}
+	return propertycompare.Value{Value: valuecompare.Value{Date: &w}}, propertycompare.Value{Value: valuecompare.Value{Date: &sp}}, true
 }
 
 // value is the one conversion from the reconciler's value to layer 2's. Type

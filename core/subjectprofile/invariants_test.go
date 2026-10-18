@@ -2,6 +2,7 @@ package subjectprofile_test
 
 import (
 	"math/rand"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
@@ -10,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare/subjectcomparetest"
 	"github.com/mendahu/provenencia/core/subjectprofile"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -69,7 +71,7 @@ func TestInvariants(t *testing.T) {
 	rules := matchregistry.Default().Value
 	build := func(t *testing.T, e subjectprofile.Entity, ex ...[]byte) subjectcompare.Values {
 		t.Helper()
-		p, err := subjectprofile.Build(e, metas, rules, subjectprofile.Options{Excluding: ex})
+		p, err := subjectprofile.Build(e, metas, rules, nil, subjectprofile.Options{Excluding: ex})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -141,6 +143,42 @@ func TestInvariants(t *testing.T) {
 			if gotPos != wantPos || gotNeg != wantNeg {
 				t.Errorf("case %d: %s: got %d positive %d negative, want %d and %d", i, key, gotPos, gotNeg, wantPos, wantNeg)
 			}
+		}
+	})
+
+	t.Run("AC-4.7", func(t *testing.T) {
+		r := rand.New(rand.NewSource(invariantSeed))
+		lifespans := matchregistry.Default().Subject.Lifespans[vocabkey.Person]
+		types := []vocabkey.EventType{vocabkey.EventBirth, vocabkey.EventDeath, vocabkey.EventBurial, "residence", "marriage"}
+		roles := []vocabkey.Role{vocabkey.RoleSubject, "spouse", "father"}
+		built := 0
+		for i := 0; i < invariantCases; i++ {
+			var events []subjectprofile.LifeEvent
+			for n := 1 + r.Intn(4); n > 0; n-- {
+				events = append(events, ev(types[r.Intn(len(types))], roles[r.Intn(len(roles))], datevaluetest.YMD(1800+r.Intn(200), 0, 0)))
+			}
+			got := subjectprofile.ForSubject(subjectprofile.Subject{Life: events}, lifespans)
+			shuffled := slices.Clone(events)
+			r.Shuffle(len(shuffled), func(a, b int) { shuffled[a], shuffled[b] = shuffled[b], shuffled[a] })
+			same(t, i, "event order", subjectprofile.ForSubject(subjectprofile.Subject{Life: shuffled}, lifespans), got)
+			window := got[vocabkey.PropertyLifespan]
+			if len(window) == 0 {
+				continue
+			}
+			built++
+			w, ok := valuecompare.DateWindow(*window[0].Date)
+			if !ok {
+				t.Fatalf("case %d: window %s has no days", i, subjectcomparetest.Labels(got))
+			}
+			for _, e := range events {
+				d, _ := valuecompare.DateWindow(e.Dates[0])
+				if !w.Overlaps(d) {
+					t.Errorf("case %d: window %s misses an event date", i, subjectcomparetest.Labels(got))
+				}
+			}
+		}
+		if built < 100 {
+			t.Errorf("only %d of %d cases built a lifespan", built, invariantCases)
 		}
 	})
 }
