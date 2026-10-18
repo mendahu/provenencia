@@ -23,7 +23,7 @@ Packages: layer 1 is **value compare** (`core/valuecompare`), and layer 2 is **p
 | 1 | **Value comparison** | How do these two values relate? | This doc |
 | 2 | **Property comparison** | Do these two Subjects agree on one property? | This doc |
 | 3 | **Subject comparison** | How alike are these two Subjects on their own values? | Decided in shape (§ Layer 3) |
-| 4 | **Entity comparison** | Does this Subject belong with this entity? | Decided in shape (§ Entities): subject comparison against the entity's reconciled conclusion |
+| 4 | **Entity comparison** | Does this Subject belong with this entity? | Built in S11-11 (§ Entities): subject comparison against the entity's reconciled conclusion |
 | 5 | **Segment comparison** | Does this neighbor, through this bridge, line up? | Decided in shape (§ Segments) |
 | 6 | **Graph alignment** | Which handle is each Subject on the layer? | Decided in shape (§ Layer 6 procedure) |
 
@@ -407,6 +407,8 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 **The profile builder is its own package:** `core/subjectprofile`, with `subjectprofile.Build`. It turns reconciler output into a Subject-shaped profile and compares nothing.
 
+**Built in S11-11.** `subjectprofile.Build(entity, metas, rules, opts)` reads each Property's auto-reconciled values: values the reconciler displays become positives, values with reason `denied` negatives, and the rest are left out. A Property with nothing left is absent. The output is `subjectcompare.Values`, so entity compare is `Build` then `subjectcompare.Compare`, and entity against entity is `Compare` on two profiles. `Options.Excluding` runs `autoreconcile.Reconcile` again on each Property those members recorded, without their candidates. `subjectprofile.ForSubject` builds a plain Subject's side from its own Observations through the same conversion. A negative Observation that denies no positive value leaves no reconciled value, so it is not in the profile. Reconciliation Claims, when they ship, are laid over the profile as a replacing list.
+
 ## Frequency
 
 **Decided:** frequency is not a comparison. Layers 1 and 2 never read catalog statistics.
@@ -465,7 +467,7 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 
 **Small changes that widen reach:**
 - **A normalized key per value type** beside `Compare`: `valuecompare.Key(v, level)`, where `level` is `Same` or `Equivalent`. Two values have the same key exactly when `Compare` says that relation. One function then serves reconciler grouping, search index dedupe, term dedupe and sort-independent equality, instead of the six text rules there are today.
-- **Leave-one-out profiles:** `subjectprofile.Build(entity, Excluding(member))`. "Does this member still fit the rest?" is the weak-claim review, and costs one option.
+- **Leave-one-out profiles:** `subjectprofile.Build(entity, metas, rules, Options{Excluding: members})`. "Does this member still fit the rest?" is the weak-claim review, and costs one option.
 - **Profiles on both sides:** because a profile is Subject-shaped, entity-vs-entity (merge hints) is layer 3 on two profiles, with no new code.
 - **The date window primitives** (`Window` with `Overlaps`, `Contains`, `Intersect`) moved into value compare in S11-04, with `AboutEnds` and `EndsWindow`; `DateBounds` and `WindowOfDate` became `valuecompare.DateWindow`, and `PeriodWindow` and `LinkMembership` moved to `conclusionheaders` on it, in S11-06, so place chains and reconciliation use the same day-precision rules as matching.
 

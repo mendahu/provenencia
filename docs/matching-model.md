@@ -25,7 +25,7 @@ matchregistry ──────────────────────
 | 5 | Segment compare | `core/segmentcompare` | A segment on the layer and a segment in the research graph | An outcome, a similarity, evidence, and a detail | `segment`, `subject` |
 | 6 | Graph alignment | `core/graphalign` | The layer's Subjects and the research graph's handles | Rows: target, band, contested mark, reasons, alternatives | `alignment`, `segment`, `subject` |
 
-The subject profile builder sits beside layer 4. It turns the reconciler's conclusion into a Subject-shaped profile and compares nothing.
+The subject profile builder sits beside layer 4. It turns the reconciler's conclusion into a Subject-shaped profile and compares nothing: displayed values are positive, denied values negative, and outvoted, weak and provisional values are left out. It also builds a plain Subject's side from its own Observations.
 Layer 6 decides what to compare (shortlisting), in what order (one best-first queue), and what to place (the accept bar); a row's band comes from its evidence. See the reasoning in [`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure).
 
 ## Worked example
@@ -68,7 +68,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **agree weight** | Points a property earns when it agrees |
 | **conflict penalty** | Points a property costs when it conflicts; also counts as 0 in similarity |
 | **pair (compared together)** | Two or more properties compared as one, keyed by the lead: a pool adds properties' values to the lead's on each side (sex at birth with gender); a period reads `start_date` and `end_date` as one range for `date` on a side with no date |
-| **profile** | A Subject-shaped set of values built from an entity's reconciled conclusion |
+| **profile** | A Subject-shaped set of values built from an entity's reconciled conclusion: displayed values positive, denied values negative, nothing else |
 | **entity comparison** | Layer 4: a Subject against an entity's profile |
 | **lifespan** | A derived window for a person, built from the dates of direct neighbors, compared as a registry-declared special case |
 | **segment** | Two primary Subjects joined by a bridge: primary, bridge, primary |
