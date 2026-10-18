@@ -1,6 +1,7 @@
 # S11-11 — Subject profile and entity compare
 
-**Status:** Planned
+**Status:** Landed in [#476](https://github.com/mendahu/provenencia/pull/476) (2026-10-18)
+**Landed:** One difference: STEP-2 and STEP-3 are one commit, because `Build` was written with `Options.Excluding` from the start. Expected strings in the tests use `Labels`' `key={a, b}` form.
 **Spike / slice:** Spike 11 · Slice 3 — Property, Subject and entity compare
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a new pure Go package with no caller yet; nothing reaches the app)
