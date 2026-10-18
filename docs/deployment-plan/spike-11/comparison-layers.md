@@ -304,13 +304,15 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 |---|---|---|
 | Name agrees | 1.0 | 2.5 |
 | Name + gender agree | 1.0 | 3.1 |
-| Name agrees, sex conflicts | 0.81 | 1.5 |
+| Name agrees, sex conflicts | 0.71 | 1.5 |
 | Event types agree, nothing else | 1.0 | 0.5 |
 | Birth vs death, nothing else | 0 | −20 (effectively never recovers) |
 
 **Decided (2026-10-16): a conflict weighs its penalty in similarity.** A property counts with its agree weight when it agrees and its conflict penalty when it conflicts. Otherwise a birth vs death with matching dates would read as very similar (event type's agree weight is only 0.5) while evidence reads −20. With penalties, that pair reads about 0.09, and the two axes agree.
 
 **Registry shape,** per Subject type and property: agree weight and conflict penalty. They are separate on purpose: event type has a low agree weight and a very large conflict penalty. Comparisons that span properties are entries too, with their own weights. Numbers above are today's where they exist and placeholders otherwise.
+
+**Built in S11-10.** `subjectcompare.Compare(kind, a, b, metas, rules, value)` runs layer 2 once per lead property in `subject.Weights[kind]`, in key order. Agree earns the agree weight, partial the agree weight × the speaking pair's similarity, conflict loses the conflict penalty, unknown counts for nothing. Similarity is the weighted mean over counted properties: agree 1 and partial its similarity, each at the agree weight; conflict 0 at the penalty. `subject.Pools` adds properties' values to the lead's on each side (sex with gender). `subject.Periods` builds, on a side with no positive `date`, one range from its earliest start and latest end, or `AFT` the start or `BEF` the end when it has only one (`valuecompare.EndsDate`). Value types and cardinalities come from the catalog as `Metas`. A derived property (lifespan) is a lead in `subject.Weights` like any other.
 
 ## Segments (layer 5) and graph alignment (layer 6)
 

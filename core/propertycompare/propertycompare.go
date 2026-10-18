@@ -22,6 +22,10 @@ type Value struct {
 	Neutral  bool // a term that is no evidence (sex "unknown")
 }
 
+// Positive reports whether v speaks for the property: neither negative nor
+// neutral.
+func (v Value) Positive() bool { return !v.Negative && !v.Neutral }
+
 // Outcome is how two Subjects stand on a property.
 type Outcome string
 
@@ -166,7 +170,7 @@ func split(values []Value, side valuecompare.Side, meta propertymeta.Meta, rules
 		}
 		k, ok := valuecompare.Key(v.Value, valuecompare.Same, rules)
 		kept = append(kept, keyed{v: v, key: k, hasKey: ok})
-		if !v.Negative {
+		if v.Positive() {
 			positives++
 		}
 	}

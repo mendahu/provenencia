@@ -5,7 +5,9 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // Default builds a fresh registry each call (D-2): one caller's edits reach no
@@ -16,6 +18,9 @@ func TestDefaultIsFresh(t *testing.T) {
 	first.Value.Words.Particles[0] = "changed"
 	first.Value.Words.Folds['x'] = "added"
 	first.Value.Names.Western.PartRoles["x"] = valuecompare.RoleFamily
+	first.Subject.Weights[vocabkey.Person][vocabkey.PropertyName] = subjectcompare.Weights{}
+	first.Subject.Pools[vocabkey.Person][vocabkey.PropertySexAtBirth].With[0] = "changed"
+	first.Subject.Periods[vocabkey.Event][vocabkey.PropertyDate] = subjectcompare.Period{}
 	if got := Default(); !reflect.DeepEqual(got, want) {
 		t.Errorf("second Default() = %+v, want %+v", got, want)
 	}

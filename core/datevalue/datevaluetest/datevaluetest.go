@@ -3,7 +3,8 @@ package datevaluetest
 
 import "github.com/mendahu/provenencia/core/datevalue"
 
-func optInt(n int) *int {
+// Part is a date part for a datevalue.Value literal: nil for 0.
+func Part(n int) *int {
 	if n == 0 {
 		return nil
 	}
@@ -15,7 +16,7 @@ func optInt(n int) *int {
 func YMD(y, m, d int) *datevalue.Value {
 	return &datevalue.Value{
 		Kind: datevalue.KindPoint, Calendar: "gregorian",
-		StartYear: optInt(y), StartMonth: optInt(m), StartDay: optInt(d),
+		StartYear: Part(y), StartMonth: Part(m), StartDay: Part(d),
 	}
 }
 
@@ -29,4 +30,13 @@ func About(y, m, d int) *datevalue.Value {
 // Phrase is a point date that carries only a phrase.
 func Phrase(s string) *datevalue.Value {
 	return &datevalue.Value{Kind: datevalue.KindPoint, Phrase: s}
+}
+
+// Between is a Gregorian range date. A 0 month or day is left unset.
+func Between(y1, m1, d1, y2, m2, d2 int) *datevalue.Value {
+	return &datevalue.Value{
+		Kind: datevalue.KindRange, Calendar: "gregorian",
+		StartYear: Part(y1), StartMonth: Part(m1), StartDay: Part(d1),
+		EndYear: Part(y2), EndMonth: Part(m2), EndDay: Part(d2),
+	}
 }

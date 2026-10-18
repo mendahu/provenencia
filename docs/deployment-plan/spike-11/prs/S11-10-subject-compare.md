@@ -1,6 +1,6 @@
 # S11-10 — Subject compare
 
-**Status:** Planned
+**Status:** Landed in [#471](https://github.com/mendahu/provenencia/pull/471) (2026-10-18)
 **Spike / slice:** Spike 11 · Slice 3 — Property, Subject and entity compare
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a new pure Go package and a registry section with no caller yet; nothing reaches the app)
@@ -14,6 +14,8 @@
 **Context:** [Layer 3](../comparison-layers.md#layer-3-subject-comparison) (requirements, the two axes, conflict weighs its penalty, registry shape); [lifespan](../comparison-layers.md#lifespan-a-derived-property-for-people); [match registry](../comparison-layers.md#match-registry) (typed keys, data-model facts stay in the catalog); [`docs/matching-model.md`](../../../matching-model.md) stack table, glossary, worked example, knob inventory (`subject.` rows) and removed knobs; working rules "Sparse data first", "Registry numbers: carry over, then estimate", "Subject compare returns similarity (0–1) and evidence (points)", "One match registry", "One matching skill, grown with the layers", "Build, then migrate", "One guard, not one per package"
 **Planned:** 2026-10-18 against `main` @ `95d1f34`; refreshed 2026-10-18 against `main` @ `847b5f0` (S11-09 landed; layer 1 changed only by `Stronger`, the relation order and `Relations()`, so §2's values hold)
 **Review:** [`S11-10-subject-compare.review.md`](S11-10-subject-compare.review.md) — Fits with changes / Ready with changes → fixed, 2 rounds
+
+**Landed:** Two differences from the plan. STEP-3 to STEP-5 landed in one commit (`234e74f0`) with the full `Compare` instead of STEP-3's D-4-only skeleton. The AC-1.14 row asserts cause `relation`, which the AC does not name.
 
 ### Implementer — read this first
 

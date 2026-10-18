@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -60,24 +61,24 @@ var samples = map[string][]samplePair{
 	},
 	propertymeta.ValueTypeDate: {
 		// AC-1.x pairs, one family per row.
-		ofDate(dp(ymd(1817, 0, 0)), dp(ymd(1817, 0, 0))), ofDate(dp(bound(datevalue.QualifierBEF, 1820)), dp(bound(datevalue.QualifierBEF, 1820))),
-		ofDate(dp(about(1817, 0, 0)), dp(about(1817, 0, 0))), ofDate(dp(between(1817, 0, 0, 1817, 0, 0)), dp(ymd(1817, 0, 0))),
-		ofDate(dp(between(1820, 0, 0, 1815, 0, 0)), dp(between(1815, 0, 0, 1820, 0, 0))),
-		ofDate(dp(ymd(1817, 5, 0)), dp(ymd(1817, 5, 14))), ofDate(dp(ymd(1817, 0, 0)), dp(ymd(1817, 9, 0))),
-		ofDate(dp(about(1817, 0, 0)), dp(ymd(1818, 0, 0))), ofDate(dp(about(1817, 0, 0)), dp(ymd(1817, 0, 0))),
-		ofDate(dp(bound(datevalue.QualifierBEF, 1820)), dp(bound(datevalue.QualifierBEF, 1830))), ofDate(dp(bound(datevalue.QualifierBEF, 1820)), dp(ymd(1815, 0, 0))),
-		ofDate(dp(between(1815, 0, 0, 1820, 0, 0)), dp(ymd(1818, 0, 0))),
-		ofDate(dp(about(1817, 3, 0)), dp(ymd(1817, 4, 0))), ofDate(dp(about(1817, 3, 3)), dp(ymd(1817, 3, 4))),
-		ofDate(dp(about(1817, 1, 0)), dp(ymd(1816, 12, 15))), ofDate(dp(about(1817, 1, 1)), dp(ymd(1816, 12, 31))),
-		ofDate(dp(between(1815, 0, 0, 1820, 0, 0)), dp(between(1819, 0, 0, 1825, 0, 0))),
-		ofDate(dp(ymd(1817, 5, 14)), dp(ymd(1817, 5, 20))), ofDate(dp(ymd(1817, 5, 0)), dp(ymd(1817, 9, 0))),
-		ofDate(dp(ymd(1817, 0, 0)), dp(ymd(1818, 0, 0))), ofDate(dp(ymd(1817, 12, 0)), dp(ymd(1818, 1, 0))),
-		ofDate(dp(bound(datevalue.QualifierAFT, 1820)), dp(ymd(1819, 0, 0))), ofDate(dp(between(1815, 0, 0, 1820, 0, 0)), dp(ymd(1822, 0, 0))),
-		ofDate(dp(about(1817, 0, 0)), dp(about(1820, 0, 0))),
-		ofDate(dp(ymd(1817, 0, 0)), dp(ymd(1820, 0, 0))), ofDate(dp(bound(datevalue.QualifierBEF, 1820)), dp(ymd(1823, 0, 0))),
-		ofDate(dp(bound(datevalue.QualifierBEF, 1800)), dp(bound(datevalue.QualifierAFT, 1810))),
-		ofDate(dp(phrase("spring")), dp(ymd(1817, 0, 0))), ofDate(dp(phrase("spring")), dp(phrase("spring"))),
-		ofDate(dp(noYearRange()), dp(ymd(1817, 0, 0))), ofDate(nil, dp(ymd(1817, 0, 0))), ofDate(nil, nil),
+		ofDate(datevaluetest.YMD(1817, 0, 0), datevaluetest.YMD(1817, 0, 0)), ofDate(bound(datevalue.QualifierBEF, 1820), bound(datevalue.QualifierBEF, 1820)),
+		ofDate(datevaluetest.About(1817, 0, 0), datevaluetest.About(1817, 0, 0)), ofDate(datevaluetest.Between(1817, 0, 0, 1817, 0, 0), datevaluetest.YMD(1817, 0, 0)),
+		ofDate(datevaluetest.Between(1820, 0, 0, 1815, 0, 0), datevaluetest.Between(1815, 0, 0, 1820, 0, 0)),
+		ofDate(datevaluetest.YMD(1817, 5, 0), datevaluetest.YMD(1817, 5, 14)), ofDate(datevaluetest.YMD(1817, 0, 0), datevaluetest.YMD(1817, 9, 0)),
+		ofDate(datevaluetest.About(1817, 0, 0), datevaluetest.YMD(1818, 0, 0)), ofDate(datevaluetest.About(1817, 0, 0), datevaluetest.YMD(1817, 0, 0)),
+		ofDate(bound(datevalue.QualifierBEF, 1820), bound(datevalue.QualifierBEF, 1830)), ofDate(bound(datevalue.QualifierBEF, 1820), datevaluetest.YMD(1815, 0, 0)),
+		ofDate(datevaluetest.Between(1815, 0, 0, 1820, 0, 0), datevaluetest.YMD(1818, 0, 0)),
+		ofDate(datevaluetest.About(1817, 3, 0), datevaluetest.YMD(1817, 4, 0)), ofDate(datevaluetest.About(1817, 3, 3), datevaluetest.YMD(1817, 3, 4)),
+		ofDate(datevaluetest.About(1817, 1, 0), datevaluetest.YMD(1816, 12, 15)), ofDate(datevaluetest.About(1817, 1, 1), datevaluetest.YMD(1816, 12, 31)),
+		ofDate(datevaluetest.Between(1815, 0, 0, 1820, 0, 0), datevaluetest.Between(1819, 0, 0, 1825, 0, 0)),
+		ofDate(datevaluetest.YMD(1817, 5, 14), datevaluetest.YMD(1817, 5, 20)), ofDate(datevaluetest.YMD(1817, 5, 0), datevaluetest.YMD(1817, 9, 0)),
+		ofDate(datevaluetest.YMD(1817, 0, 0), datevaluetest.YMD(1818, 0, 0)), ofDate(datevaluetest.YMD(1817, 12, 0), datevaluetest.YMD(1818, 1, 0)),
+		ofDate(bound(datevalue.QualifierAFT, 1820), datevaluetest.YMD(1819, 0, 0)), ofDate(datevaluetest.Between(1815, 0, 0, 1820, 0, 0), datevaluetest.YMD(1822, 0, 0)),
+		ofDate(datevaluetest.About(1817, 0, 0), datevaluetest.About(1820, 0, 0)),
+		ofDate(datevaluetest.YMD(1817, 0, 0), datevaluetest.YMD(1820, 0, 0)), ofDate(bound(datevalue.QualifierBEF, 1820), datevaluetest.YMD(1823, 0, 0)),
+		ofDate(bound(datevalue.QualifierBEF, 1800), bound(datevalue.QualifierAFT, 1810)),
+		ofDate(datevaluetest.Phrase("spring"), datevaluetest.YMD(1817, 0, 0)), ofDate(datevaluetest.Phrase("spring"), datevaluetest.Phrase("spring")),
+		ofDate(noYearRange(), datevaluetest.YMD(1817, 0, 0)), ofDate(nil, datevaluetest.YMD(1817, 0, 0)), ofDate(nil, nil),
 	},
 	propertymeta.ValueTypeInteger: {
 		ofInt(3, 3), ofInt(3, 4), ofInt(3, 6), ofInt(0, 0), ofInt(-2, 2),
@@ -246,17 +247,17 @@ func randomDate(rng *rand.Rand) datevalue.Value {
 	}
 	switch n := rng.Intn(10); {
 	case n < 4:
-		return ymd(draw())
+		return *datevaluetest.YMD(draw())
 	case n == 4:
-		return about(draw())
+		return *datevaluetest.About(draw())
 	case n == 5:
 		y, m, d := draw()
-		v := ymd(y, m, d)
+		v := *datevaluetest.YMD(y, m, d)
 		v.Qualifier = datevalue.QualifierBEF
 		return v
 	case n == 6:
 		y, m, d := draw()
-		v := ymd(y, m, d)
+		v := *datevaluetest.YMD(y, m, d)
 		v.Qualifier = datevalue.QualifierAFT
 		return v
 	case n < 9:
@@ -265,9 +266,9 @@ func randomDate(rng *rand.Rand) datevalue.Value {
 		if datevalue.DaysFromCivil(y1, max(m1, 1), max(d1, 1)) > datevalue.DaysFromCivil(y2, max(m2, 1), max(d2, 1)) {
 			y1, m1, d1, y2, m2, d2 = y2, m2, d2, y1, m1, d1
 		}
-		return between(y1, m1, d1, y2, m2, d2)
+		return *datevaluetest.Between(y1, m1, d1, y2, m2, d2)
 	}
-	return phrase("spring")
+	return *datevaluetest.Phrase("spring")
 }
 
 // contractPairs are a type's sample rows, then its generated pairs.

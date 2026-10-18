@@ -63,6 +63,44 @@ func DateEnds(d datevalue.Value) (first, last DateEnd, ok bool) {
 	return first, last, true
 }
 
+// EndsDate is the date whose DateEnds are first and last: a range when both
+// are closed, BEF last when first is open, AFT first when last is open. ok is
+// false when both are open or first begins after last ends.
+func EndsDate(first, last DateEnd) (datevalue.Value, bool) {
+	switch {
+	case first.Open && last.Open:
+		return datevalue.Value{}, false
+	case first.Open:
+		return endsPoint(last, datevalue.QualifierBEF), true
+	case last.Open:
+		return endsPoint(first, datevalue.QualifierAFT), true
+	case first.Lo > last.Hi:
+		return datevalue.Value{}, false
+	}
+	return datevalue.Value{
+		Kind: datevalue.KindRange, Calendar: "gregorian",
+		StartYear: &first.Year, StartMonth: endPart(first.Month), StartDay: endPart(first.Day),
+		EndYear: &last.Year, EndMonth: endPart(last.Month), EndDay: endPart(last.Day),
+	}, true
+}
+
+// endsPoint is the point date at e with a BEF or AFT qualifier.
+func endsPoint(e DateEnd, qualifier string) datevalue.Value {
+	return datevalue.Value{
+		Kind: datevalue.KindPoint, Calendar: "gregorian", Qualifier: qualifier,
+		StartYear: &e.Year, StartMonth: endPart(e.Month), StartDay: endPart(e.Day),
+	}
+}
+
+// endPart is a month or day for a datevalue.Value: nil for 0. A closed end
+// always has a year, so the year never goes through it.
+func endPart(n int) *int {
+	if n == 0 {
+		return nil
+	}
+	return &n
+}
+
 // boundEnd is the end one bound covers at its precision.
 func boundEnd(year, month, day *int) (DateEnd, bool) {
 	lo, hi, ok := datevalue.BoundDays(year, month, day)

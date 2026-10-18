@@ -15,6 +15,12 @@ const (
 	originPluginPrefix = "plugin:"
 )
 
+// SubjectType is a Subject type key, typed for registry maps.
+type SubjectType string
+
+// PropertyKey is a Property key, typed for registry maps.
+type PropertyKey string
+
 // Primary Subject kinds.
 const (
 	Person = "person"
