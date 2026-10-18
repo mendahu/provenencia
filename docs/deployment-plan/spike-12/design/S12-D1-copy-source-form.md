@@ -66,7 +66,7 @@ A researcher with twelve obituaries from one newspaper retypes the publication, 
 | --- | --- |
 | A copy is a new, ordinary Source | It gets its own `SRC-` ref and its own Evidence graph. It is not linked to the original afterwards. Editing one never changes the other. |
 | Title and type come from Add Source | Add Source is a form dialog at 480pt: **Title** (required, a single-line input) and **Source type** (required, a searchable combo box with each type's icon), then an optional description. The Copy form reuses Title and Source type exactly, with the same required marks and the same inline errors under each field. |
-| The title is prefilled | `Copy of <original title>`, selected so typing replaces it. |
+| The title is prefilled | `Copy of <original title>`. The field is focused when the form opens. |
 | The type is preselected | The original's type. The researcher can pick another. Metadata values are still copied as they are when the type changes. |
 | Description is a checkbox, not a field | The Copy form copies the original's description or leaves it empty. It does not show an editable description. |
 | Parts are checkboxes, all on | Description; Metadata (values and field layout); Credibility (grade and argument); one checkbox per Artifact. |
@@ -138,11 +138,12 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | --- | --- | --- | --- | --- |
 | Form dialog shell | Component | Ship | `DesignSystem/Components/FormDialog/PVFormDialog.swift` | The Copy Source dialog, 520pt. Same shell as Add Source. |
 | Title and type fields | Snowflake | **Extend** | `Features/Sources/SourcesListView.swift` `addForm` (to become a shared Sources view) | One title-and-type block for Add Source and Copy Source. Not a second form. |
+| Source type combo row | Snowflake | **Extend** | `SourcesListView.swift` `sourceTypeComboRow` and the inline row in `Features/Sources/SourcePageIdentityHeader.swift` | One row (type icon + label) for every Source type picker, including the Source page's type editor. |
 | Title input | Component | Ship | `PVField` + `PVInput` | Prefilled, required. |
 | Source type pick | Component | Ship | `PVComboBox` with the type-icon row | Same rows as Add Source. Not a Select. |
 | Part checkbox | Component | Ship | `DesignSystem/Components/Checkbox/PVCheckbox.swift` | Label + description (the hint). Disabled when the part is absent. |
 | Artifact checklist | Snowflake | **New** | `Features/Sources/` | All Artifacts (PVCheckbox, mixed state) + one row per Artifact: Thumbnail + PVCheckbox. Built once here; its second call site is the Graph form (S12-D3 / S12-12), which promotes it per `add-ui-component`. Not a kit primitive yet. |
-| Artifact thumbnail | Component | Ship | `CachedThumbnail` / `PVThumbnail` | Small, as in list rows. Fileless Artifacts show the Source type icon, as on the Source page. |
+| Artifact thumbnail | Component | Ship | `Platform/CachedThumbnail.swift` `CachedThumbnail` (32pt) | Its `typeIconKey` fallback already shows the Source type icon for a fileless Artifact, as on the Source page. Not a raw `PVThumbnail`. |
 | Error and load-error notice | Component | Ship | `PVCallout` (danger) | Top of the form for a save failure; in the parts area for a load failure. |
 | Page Copy… button | Component | Ship | `PVIconButton` (`duplicate`) in `Features/Sources/SourcePageIdentityHeader.swift` | Beside Delete. |
 | List row menu | Component | Ship | `PVContextMenu` (`pvContextMenuTrigger`, `PVContextMenuPanel`, `PVContextMenuItem`) on `Features/Sources/SourcesSplitRow.swift` | One item. Same pattern as the Source page cover menu. |
