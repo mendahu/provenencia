@@ -1,8 +1,10 @@
 import SwiftUI
 
 /// The Title and Source type fields shared by Add Source and Copy Source. It
-/// owns the one display rule: nothing shows on open; after the first edit to
-/// either field, both errors follow `draft.validation`.
+/// owns the one display rule: nothing shows on open; after the first edit by
+/// the researcher to either field, both errors follow `draft.validation`. The
+/// app's own changes to the draft (a sole type filled in, the Copy prefill)
+/// change no error.
 struct SourceTitleTypeFields: View {
     @Binding var draft: SourcesModel.Draft
     @Binding var titleError: String?
@@ -19,14 +21,18 @@ struct SourceTitleTypeFields: View {
                 required: true
             ) {
                 PVInput(
-                    text: $draft.title,
+                    text: Binding(
+                        get: { draft.title },
+                        set: { new in
+                            guard new != draft.title else { return }
+                            draft.title = new
+                            showErrors()
+                        }
+                    ),
                     isInvalid: titleError != nil,
                     activateOnAppear: true
                 )
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).title")
-                .onChange(of: draft.title) { _, _ in
-                    showErrors()
-                }
             }
             PVField(
                 label: L10n.Sources.formType,
@@ -34,7 +40,14 @@ struct SourceTitleTypeFields: View {
                 required: true
             ) {
                 PVComboBox(
-                    selection: $draft.sourceTypeID,
+                    selection: Binding(
+                        get: { draft.sourceTypeID },
+                        set: { new in
+                            guard new != draft.sourceTypeID else { return }
+                            draft.sourceTypeID = new
+                            showErrors()
+                        }
+                    ),
                     options: options,
                     placeholder: L10n.Sources.typePlaceholder,
                     emptyLabel: options.isEmpty
@@ -49,9 +62,6 @@ struct SourceTitleTypeFields: View {
                         option: option,
                         query: query
                     )
-                }
-                .onChange(of: draft.sourceTypeID) { _, _ in
-                    showErrors()
                 }
             }
         }
