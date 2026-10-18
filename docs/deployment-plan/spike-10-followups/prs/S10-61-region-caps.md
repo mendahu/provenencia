@@ -268,3 +268,13 @@ None.
 
 **Title:** S10-61 — Cap region size
 **Body:** objective in one sentence; what shipped against US-1 and US-2; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-10-followups/prs/S10-61-region-caps.md`.
+
+## Landed
+
+Differences from the plan:
+
+- `core/locator/validate_test.go` has a test-only helper, `paddedArtifactDoc`, used by the T-3 byte-cap rows; D-11 does not name it.
+- The T-5 rows are built with the existing `doc(...)` builder rather than `fmt.Sprintf`.
+- `RegionFixtures.swift` is wired into `project.pbxproj` by hand.
+- The §3.3 bullet in `docs/interpretation-layer-data-model.md` says the one-region-per-locator clause once.
+- The manual check (§10) is left for the user.
