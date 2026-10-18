@@ -207,9 +207,18 @@ struct NameFormSplitTests {
     @Test func registryIgnoresCaseAndPunctuation() {
         #expect(NameTitleRegistry.isPrefix("Dr."))
         #expect(NameTitleRegistry.isPrefix("dr"))
-        #expect(NameTitleRegistry.isPrefix("D.r."))
         #expect(NameTitleRegistry.isSuffix("JR."))
         #expect(NameTitleRegistry.isSuffix("Jr.,"))
+        #expect(!NameTitleRegistry.isPrefix("D.r."))
+        #expect(!NameTitleRegistry.isPrefix("S.R."))
+        #expect(!NameTitleRegistry.isPrefix("M.S."))
+        #expect(!NameTitleRegistry.isPrefix("D.R."))
+        #expect(!NameTitleRegistry.isSuffix("I.I."))
+        #expect(!NameTitleRegistry.isSuffix("V.I."))
+        #expect(split("S.R. Ranganathan") == [
+            Piece(value: "S.R.", type: "given"),
+            Piece(value: "Ranganathan", type: "surname"),
+        ])
         #expect(!NameTitleRegistry.isPrefix("van"))
         #expect(!NameTitleRegistry.isSuffix("Smith"))
     }
