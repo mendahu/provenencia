@@ -201,6 +201,17 @@ func TestCompare(t *testing.T) {
 					t.Errorf("relation %s", rl)
 				}
 			}},
+		{name: "AC-2.7 a recorded date keeps its period out", kind: vocabkey.Event,
+			a: Vals{date: {year(1817)}, start: {year(1815)}, end: {year(1820)}}, b: Vals{date: {pt.Neg(year(1818))}}, sim: 0, ev: 0,
+			check: is(date, unknown, noVals, 0)},
+		{name: "AC-2.8 a denied start is skipped", kind: vocabkey.Event,
+			a: Vals{start: {pt.Neg(year(1815))}, end: {year(1820)}}, b: Vals{date: {year(1817)}}, sim: 0.2, ev: 0.4,
+			check: func(t *testing.T, r subjectcompare.Result) {
+				is(date, partial, rel, 0.4)(t, r)
+				if got := datevalue.CompactDisplay(*prop(t, r, date).Result.Speaking.A.Date); got != "Before 1820" {
+					t.Errorf("speaking A %q", got)
+				}
+			}},
 		{name: "AC-2.8 a start alone reads as after", kind: vocabkey.Event,
 			a: Vals{start: {year(1815)}}, b: Vals{date: {year(1817)}}, sim: 0.2, ev: 0.4,
 			check: func(t *testing.T, r subjectcompare.Result) {
