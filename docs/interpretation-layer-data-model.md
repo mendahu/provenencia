@@ -281,7 +281,7 @@ For version 1:
 - points are interpreted in array order as the polygon boundary;
 - the polygon must not self-intersect;
 - degenerate polygons with zero area are invalid;
-- a locator document holds at most 256 region points in total, counted across its region selectors (`locator.MaxRegionPoints`), and is at most 64 KiB (`locator.MaxDocumentBytes`); the app writes one region per locator, and its freeform tool stops at the cap. Swift's `maxRegionPoints` matches `locator.MaxRegionPoints`, which Go counts across a whole locator; the app writes one region per locator, so a per-polygon cap equals Go's for anything the app writes.
+- a locator document holds at most 256 region points in total, counted across its region selectors (`locator.MaxRegionPoints`), and is at most 64 KiB (`locator.MaxDocumentBytes`); the app's freeform tool and polygon check cap each polygon at the same number, which equals Go's per-document count because the app writes one region per locator.
 
 Normalized coordinates keep Citations stable across rendering resolutions and generated previews.
 
