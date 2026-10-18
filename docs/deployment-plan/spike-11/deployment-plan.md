@@ -319,6 +319,7 @@ Ports `subjectvocab`'s `TestDefaultProfileCardinality` as a seed check of the su
 **Ships.** The profile builder derives a person's lifespan from direct neighbors' dates by registry rules (birth, death, marriage, parent of, residence); subject compare checks it as a people-only pair with a large conflict penalty and near-zero agree weight.
 **Not this PR.** Events and places. Two-hop rules.
 **Check.** An entity who died in 1840 against a Subject born in 1850 conflicts; born 1850 / died 1990 conflicts; born 1850 / died 1920 is consistent.
+Also builds `core/subjectcompare`'s `invariants_test.go` lead groups (`kindGroups`) from `matchregistry.Default().Subject` (its `Weights` leads, `Pools` and `Periods`), keeping only each lead's test value by hand, so the lifespan lead cannot be silently skipped by AC-3.4 / AC-3.5 (S11-10 review finding MNT-2). And folds `subjectcompare`'s `period` start and end selection loops into one helper, keeping the earliest-start and latest-end tie rules (S11-10 review finding MNT-3).
 **Context.** [Lifespan](comparison-layers.md#lifespan-a-derived-property-for-people).
 
 #### S11-13 — Migrate Promote scoring onto subject compare

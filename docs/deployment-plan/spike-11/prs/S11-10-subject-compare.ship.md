@@ -56,4 +56,4 @@ Head `441297a2`. Gate PASS (orchestrator run). F-1 done (`23baca48`; both rows f
 CON only (the one lens with Fix-now findings), scope `326dbbab...441297a2`: clean. Each round-1 fix re-checked by mutation in a scratch export: CON-1, CON-3 and CON-4 rows fail with the code they cover broken; CON-2 Landed note lists both differences. No new blockers.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: MNT-2, MNT-3 (S11-12) · to user: —
+Gate PASS · CI green · open: none · follow-ups: MNT-2, MNT-3 (in S11-12's map scope) · to user: —
