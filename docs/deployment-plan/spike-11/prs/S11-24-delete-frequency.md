@@ -1,6 +1,6 @@
 # S11-24 — Delete frequency weighting
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 11 · Slice 3 — Property, Subject and entity compare
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: Promote's scores move by a fraction of a point and no view, copy or wire field changes)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`
 **Context:** [Frequency](../comparison-layers.md#frequency) (both decisions of 2026-10-16); [`docs/matching-model.md`](../../../matching-model.md) "Removed knobs" (rows for `MPrior`, `UPrior`, frequency `ValueTypeScale` entries, `PropertyAgreement`, `mFor` / `uOr`) and the knob rows `subject.Weights.event.date.Agree` and `subject.Weights.place.toponym.Agree`; [`docs/promote-graph-alignment.md`](../../../promote-graph-alignment.md) §4, §4.1, §6, §11 and "Differs from the text above"; [S11-05 plan](S11-05-migrate-matching.md) D-4, D-14 and its Out table; working rules "Frequency weighting is gone", "High tolerance for churn", "Registry numbers: carry over, then estimate", "Sparse data first", "Build, then migrate"
 **Planned:** 2026-10-18 against `main` @ `801131a` (S11-12 merged)
-**Review:** [`S11-24-delete-frequency.review.md`](S11-24-delete-frequency.review.md) — round 1 fixed, round 2 pending
+**Review:** [`S11-24-delete-frequency.review.md`](S11-24-delete-frequency.review.md) — Fits / Ready, 2 rounds (findings fixed)
 
 ### Implementer — read this first
 
@@ -272,6 +272,11 @@ Comments to write, word for word:
 | `Scale.Contradiction` | `// Contradiction is the penalty when value compare finds the values different (similarity 0).` |
 | `resolvedScale` | `// resolvedScale is the property's scale, else its value type's, else the zero scale.` |
 | `Stats` | `// Stats supplies catalog edge fan-outs.` |
+| `gender` `PropertyScale` entry (end of line) | `// pooled with sex_at_birth (matchregistry subject.Pools)` |
+| `TestOneAgreeingPropertyStaysAWeakMatch`, L176 – L177 | `// An exact toponym alone is its scale's 3 points: medium, short of strong.` |
+| Same test, L205 | `// Without the toponym scale, the text weight (2) is a weak match.` |
+| `TestSpellingVariantIsAWeakerTextMatch`, L222 – L224 | `// One added letter on a toponym is a match, weaker than the exact spelling: about 0.91 × 3, which is weak, not medium.` |
+| Same test, L265 – L267 | `// Without the toponym scale, the text weight × the resemblance stays under weak. The toponym scale is what makes a spelling variant clear the bar.` |
 
 Errors: none added or removed.
 
@@ -302,13 +307,13 @@ Commit (STEP-1 and STEP-2): "Weigh every Promote property with a plain registry 
 
 **STEP-3 — Toponym tests and the sparse case**
 Files: `core/graphalign/align_test.go`.
-Do: D-8: rewrite the comments of `TestOneAgreeingPropertyStaysAWeakMatch` and `TestSpellingVariantIsAWeakerTextMatch` for plain weights (exact toponym 3, medium; without its scale the text weight 2, weak; a spelling variant 3 × similarity, weak; without its scale 2 × similarity, no match); add an exact-score assertion `row.Score == 3` to the first test's first case (AC-1.1). Add `TestSparseNameAndBirthDate` as written in §6 "Go core".
+Do: D-8: replace the four comments of `TestOneAgreeingPropertyStaysAWeakMatch` and `TestSpellingVariantIsAWeakerTextMatch` with §6's text; add `math.Abs(row.Score-3) > 1e-9` to the first test's first assertion (AC-1.1), the tolerance style of the file. Add `TestSparseNameAndBirthDate` as written in §6 "Go core".
 Check: `CGO_ENABLED=1 go test -tags fts5 -run 'TestOneAgreeingPropertyStaysAWeakMatch|TestSpellingVariantIsAWeakerTextMatch|TestSparseNameAndBirthDate|TestGracieObituaryGolden' -v ./core/graphalign/` passes; AC-3.2's `rg` prints nothing.
 Commit: "Test that a sparse name and birth date match the right person on plain weights."
 
 **STEP-4 — Docs**
 Files: `docs/promote-graph-alignment.md`, `docs/deployment-plan/spike-11/comparison-layers.md`, `docs/matching-model.md`, `core/matchregistry/subject.go` (comments only), `docs/deployment-plan/spike-11/completed.md`, `docs/deployment-plan/spike-11/deployment-plan.md` (map row), this plan (status).
-Do: D-9's edits. Map row S11-24 Status reads `Landed #N` and its Plan column keeps the link. `completed.md` gets, above S11-12: "## S11-24 — Delete frequency weighting" and "**Landed YYYY-MM-DD** in [#N](https://github.com/mendahu/provenencia/pull/N). Promote no longer weighs a value by how common it is in the catalog. Every property scores a plain weight from the walk's registry: 2 for each value type and 3 for a toponym, so an exact toponym alone is still medium and a sparse name and birth date still files strong. `Stats.ValueFreq`, the priors, the lift to the accept bar and the value-frequency scan are gone; the fan-out scan stays until S11-14." This plan: Status `Landed in [#N](…) (date)` and a **Landed** note. Fill N and the date once the PR is open.
+Do: D-9's edits. Map row S11-24 Status reads `Landed #N`; its Plan column already links this plan (set at planning). `completed.md` gets, above S11-12: "## S11-24 — Delete frequency weighting" and "**Landed YYYY-MM-DD** in [#N](https://github.com/mendahu/provenencia/pull/N). Promote no longer weighs a value by how common it is in the catalog. Every property scores a plain weight from the walk's registry: 2 for each value type and 3 for a toponym, so an exact toponym alone is still medium and a sparse name and birth date still files strong. `Stats.ValueFreq`, the priors, the lift to the accept bar and the value-frequency scan are gone; the fan-out scan stays until S11-14." This plan: Status `Landed in [#N](https://github.com/mendahu/provenencia/pull/N) (YYYY-MM-DD)` and a **Landed** note. The STEP-4 commit writes these with the literal placeholders `#N` and `YYYY-MM-DD`; after the PR is opened, one more commit, "Record S11-24's PR number in the plan, map and completed log.", fills them in.
 Check: AC-3.3's `rg` prints nothing; `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-11/prs/S11-24-delete-frequency.md` reports no errors; links resolve.
 Commit: "Document that Promote no longer weighs values by catalog frequency."
 

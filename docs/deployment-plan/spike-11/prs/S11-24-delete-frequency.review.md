@@ -1,7 +1,7 @@
 # Review — S11-24 Delete frequency weighting
 
-**Verdict:** Fits with changes — Ready with changes (round 1 findings fixed; round 2 pending)
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits — Ready (round 2 findings fixed)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
@@ -61,3 +61,23 @@ Copied out of the table, `\|` is a literal pipe in ripgrep, so the checks prove 
 
 ### M-5 · nit · `plain` matching `AcceptScore` is only a comment
 **Answer:** Fixed. D-1 writes `accept := 2.0`, `plain := accept`, `AcceptScore: accept`.
+
+## Round 2
+
+Maintainability: Fits, no findings. It checked every round-1 answer against the code. Its one note, below the bar: D-2 maps `gender` onto the sex_at_birth weights by hand, a second copy of `subject.Pools`' pairing until S11-13.
+**Answer:** Fixed. §6's comment table adds an end-of-line comment on the `gender` entry that names `matchregistry subject.Pools`.
+
+### X-9 · major · The map row has no Plan link for STEP-4 to keep
+**Answer:** Fixed. The map row links the plan and reads `Planned` (wired at planning). STEP-4 says the link is already there.
+
+### X-10 · minor · No text for the test comments; a third stale comment at L265 – L267
+**Answer:** Fixed. §6's comment table gives all four test comments word for word, the one at L265 – L267 included. STEP-3 points at it.
+
+### X-11 · minor · The Landed fill-in has no commit
+**Answer:** Fixed. STEP-4 writes literal `#N` / `YYYY-MM-DD` placeholders and names the follow-up commit that fills them in once the PR is open.
+
+### X-12 · nit · Header still says Draft
+**Answer:** Fixed. Status is `Planned`.
+
+### X-13 · nit · Which assertion style for the exact score
+**Answer:** Fixed. STEP-3 uses `math.Abs(row.Score-3) > 1e-9`, the file's style.
