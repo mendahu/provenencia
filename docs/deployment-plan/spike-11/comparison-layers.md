@@ -370,19 +370,12 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 ### Lifespan: a derived property for people
 
-**Decided (2026-10-16): lifespan applies to people only.** Person matching is the chief job, and events and places differ enough that a lifespan wouldn't help them. Dates on a person's neighbors constrain each other. An entity that died before the Subject was born is not that Subject, even when neither side has the other's event.
+**Decided (2026-10-16): lifespan applies to people only.** Person matching is the chief job, and events and places differ enough that a lifespan wouldn't help them. The dates of the events a person takes part in constrain each other. An entity that died before the Subject was born is not that Subject, even when neither side has the other's event.
 
-- **The subject profile builder derives a lifespan** for a person Subject or person entity from its **direct** neighbors' dates, by registry rules keyed on bridge type. For example:
-  - subject of a birth at D: born at D;
-  - subject of a death at D: died by D;
-  - subject of a marriage at D: alive, roughly 14 or older;
-  - parent of someone born at D: born about 12–60 years earlier (narrower for mothers);
-  - residence at D: alive at D.
-
-  Maximum lifespan, minimum and maximum parent ages are registry numbers.
-- **Subject comparison compares the lifespans** as a registry-declared special case for people, using value compare's date relations. `Different` (impossible together: died before born, or a 140-year span) is a conflict. `Overlaps` or `Contains` is consistent.
+- **Decided (2026-10-18): a timeline, not per-bridge rules.** The profile builder lays every dated event a person takes part in on one line, any event type and any role. Its **span** runs from the first dated event to the last. Its **window** starts at the person's own birth or, with none, `MaxYears` before the first dated event, and ends at the person's own death or burial or, with none, `MaxYears` after the last. A side whose own events fall outside its own window has no lifespan. Age rules (marriage, parents) are dropped: the lifespan guides matching and is not an authority.
+- **Subject comparison checks each side's span against the other side's window** as a registry-declared special case for people, using value compare's date relations. `Different` either way is a conflict (died 1840 against born 1850; born 1850 against died 1990; resided 1950 against died 1900). Anything else, `Near` included, is consistent.
 - **Weighted as a conflict detector:** large conflict penalty, near-zero agree weight, because the dates it reads are already counted through their own segments.
-- **Bounded by construction:** rules read direct neighbors only, so nothing recurses across the tree. Both sides' windows can be built before alignment, once each. Two-hop rules (a grandchild's birth) would be explicit registry entries, later if ever.
+- **Bounded by construction:** the builder reads only the person's own events, so nothing recurses across the tree. Both sides' lifespans can be built before alignment, once each.
 
 ## Entities: compare against the conclusion
 
