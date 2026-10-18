@@ -47,7 +47,7 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 
 ## Add a relation, cause or unit code
 
-A relation, a relation cause or a unit is layer 1's: add the constant in `core/valuecompare/valuecompare.go`, a new relation also in `relationOrder` at its strength, and a cause to the cause list in `comparison-layers.md` §Detail. An outcome cause or an exclude reason is layer 2's: add it in `core/propertycompare/propertycompare.go` and to `comparison-layers.md` §Layer 2 Output. Codes are strings; they reach the wire and UI copy later.
+A relation, a relation cause or a unit is layer 1's: add the constant in `core/valuecompare/valuecompare.go`, a new relation also in `relationOrder` at its strength, its outcome in `propertycompare.outcomeOf` and whether a negative contradicts it in `contradicts` (`TestEveryRelationHasAnOutcome` fails until both are decided), and a cause to the cause list in `comparison-layers.md` §Detail. An outcome cause or an exclude reason is layer 2's: add it in `core/propertycompare/propertycompare.go` and to `comparison-layers.md` §Layer 2 Output. Codes are strings; they reach the wire and UI copy later.
 
 ## Add a layer package
 

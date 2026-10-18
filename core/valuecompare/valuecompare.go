@@ -39,6 +39,9 @@ const (
 // relationOrder is the one order of relations, strongest first.
 var relationOrder = []Relation{Same, Equivalent, Contains, Overlaps, Near, Different, Unknown}
 
+// Relations returns every relation, strongest first.
+func Relations() []Relation { return slices.Clone(relationOrder) }
+
 // Stronger reports whether a is a stronger relation than b: Same is the
 // strongest and Unknown the weakest.
 func Stronger(a, b Relation) bool {
