@@ -3,6 +3,10 @@ package valuecompare
 import (
 	"slices"
 	"strings"
+	"unicode"
+	"unicode/utf8"
+
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
@@ -16,7 +20,7 @@ func (text) compare(a, b Value, r Rules) (Result, Detail) {
 		return Result{Relation: Unknown}, Detail{Cause: CauseEmpty}
 	}
 	// The same letters in the same order, wherever the words break.
-	if ja, jb := strings.Join(wa, ""), strings.Join(wb, ""); ja == jb {
+	if ja, _ := joinedKey(a.Text, false, r.Words); ja == mustKey(b.Text, false, r.Words) {
 		det := Detail{Cause: CauseCase}
 		if a.Text == b.Text {
 			det.Cause = CauseExact
@@ -30,7 +34,7 @@ func (text) compare(a, b Value, r Rules) (Result, Detail) {
 	}
 	// The same letters once accents and letters are folded.
 	fa, fb := foldWords(wa, r.Words), foldWords(wb, r.Words)
-	if strings.Join(fa, "") == strings.Join(fb, "") {
+	if ka, _ := joinedKey(a.Text, true, r.Words); ka == mustKey(b.Text, true, r.Words) {
 		det := Detail{Cause: CauseFold}
 		if slices.Equal(fa, fb) {
 			det.Parts = positionalParts(wa, wb, nil, nil, r.Words)
@@ -96,14 +100,68 @@ func TextKey(s string, level Relation, w WordRules) (string, bool) {
 // key: the words joined with no separator, folded at the Equivalent level. They
 // are the letters compare tests for Same and Equivalent.
 func (text) key(v Value, level Relation, r Rules) (string, bool) {
-	words := SplitWords(v.Text, r.Words)
-	if len(words) == 0 {
-		return "", false
+	return joinedKey(v.Text, level == Equivalent, r.Words)
+}
+
+func mustKey(s string, fold bool, w WordRules) string {
+	k, _ := joinedKey(s, fold, w)
+	return k
+}
+
+// joinedKey is the letters of s with no separator, in one pass: what
+// strings.Join(SplitWords(s, w), "") is, and at fold what joining the
+// FoldWord of each word is. The join has no separator, so where the words
+// break and which particles rejoin cannot change it. The bool is false when s
+// has no word.
+func joinedKey(s string, fold bool, w WordRules) (string, bool) {
+	var b strings.Builder
+	b.Grow(len(s))
+	has := false
+	asciiFolds := false
+	if fold {
+		for r := range w.Folds {
+			asciiFolds = asciiFolds || r < utf8.RuneSelf
+		}
 	}
-	if level == Equivalent {
-		words = foldWords(words, r.Words)
+	var rbuf [utf8.UTFMax]byte
+	for _, r := range s {
+		// Dashes (Pd) and the slash are punctuation: NormalizeForm drops them with the rest.
+		if unicode.IsPunct(r) || unicode.IsSpace(r) {
+			continue
+		}
+		r = unicode.ToLower(r)
+		has = true
+		if !fold {
+			b.WriteRune(r)
+			continue
+		}
+		if r < utf8.RuneSelf {
+			if asciiFolds {
+				if repl, ok := w.Folds[r]; ok {
+					b.WriteString(repl)
+					continue
+				}
+			}
+			b.WriteByte(byte(r))
+			continue
+		}
+		// The rune's full decomposition, without normalizing a string for it.
+		dec := norm.NFD.Properties(utf8.AppendRune(rbuf[:0], r)).Decomposition()
+		if dec == nil {
+			dec = utf8.AppendRune(rbuf[:0], r)
+		}
+		for _, d := range string(dec) {
+			if d >= 0x300 && unicode.Is(unicode.Mn, d) {
+				continue
+			}
+			if repl, ok := w.Folds[d]; ok {
+				b.WriteString(repl)
+				continue
+			}
+			b.WriteRune(d)
+		}
 	}
-	return strings.Join(words, ""), true
+	return b.String(), has
 }
 
 func foldWords(words []string, w WordRules) []string {

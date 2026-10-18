@@ -693,6 +693,26 @@ func TestScoreFieldsJoinsWordBreaks(t *testing.T) {
 	}
 }
 
+// BenchmarkScoreFieldsSource is the per-candidate cost of rescoring one Source
+// with long notes, the work done for every FTS candidate per query.
+func BenchmarkScoreFieldsSource(b *testing.B) {
+	spec, _ := kindSpec(KindSource)
+	para := "Le père Noël a mangé des crêpes à l'église de Saint-Étienne, puis la famille Robins est partie. "
+	values := map[string]string{
+		"title":       "Parish register of Sainte-Anne, Montréal",
+		"ref":         "SRC-F4N2P",
+		"description": strings.Repeat("Baptisms and burials. ", 14),
+		"notes":       strings.Repeat(para, 21),
+		"metadata":    strings.Repeat("Repository: Archives nationales du Québec. ", 9),
+		"filename":    "sainte-anne-register-1790.pdf",
+	}
+	q := newQueryTokens([]string{"robins"})
+	b.ReportAllocs()
+	for b.Loop() {
+		scoreFields(spec, values, q)
+	}
+}
+
 func TestEnsureCatalogRebuildsAfterWipe(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {

@@ -3,6 +3,7 @@ package valuecompare_test
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"slices"
 	"strings"
 	"testing"
@@ -198,4 +199,38 @@ func TestTextBounds(t *testing.T) {
 			t.Errorf("over the limit = %+v %+v", res, det)
 		}
 	})
+}
+
+// TestTextKeyMatchesWords: the one-pass key is the words joined with no
+// separator, folded word by word at Equivalent.
+func TestTextKeyMatchesWords(t *testing.T) {
+	rules := matchregistry.Default().Value
+	texts := []string{
+		"Mc Donald", "O. Brien", "god-father", "Mont-réal", "Sainte-Anne register",
+		"Straße ß", "!!!", "", "Upper Canada, York", "van der Berg", "e\u0301cole", "Ｆull ŁÓDŹ",
+		strings.Repeat("Le père Noël a mangé des crêpes à l'église de Saint-Étienne. ", 35),
+	}
+	for _, p := range samples[propertymeta.ValueTypeText] {
+		texts = append(texts, p.a.Text, p.b.Text)
+	}
+	rng := rand.New(rand.NewSource(1))
+	for range 200 {
+		p := generators[propertymeta.ValueTypeText](rng)
+		texts = append(texts, p.a.Text, p.b.Text)
+	}
+	for _, in := range texts {
+		words := valuecompare.SplitWords(in, rules.Words)
+		for _, level := range []valuecompare.Relation{valuecompare.Same, valuecompare.Equivalent} {
+			want := slices.Clone(words)
+			if level == valuecompare.Equivalent {
+				for i, w := range want {
+					want[i] = valuecompare.FoldWord(w, rules.Words.Folds)
+				}
+			}
+			got, ok := valuecompare.TextKey(in, level, rules.Words)
+			if ok != (len(words) > 0) || got != strings.Join(want, "") {
+				t.Errorf("%s TextKey(%.40q) = %q, %v; want %q", level, in, got, ok, strings.Join(want, ""))
+			}
+		}
+	}
 }
