@@ -43,8 +43,6 @@ final class ThumbnailCache {
     private var inflight: [Key: Task<Void, Never>] = [:]
     /// Callers awaiting each inflight key; a load with none left is dropped.
     private var waiters: [Key: [UUID: CheckedContinuation<NSImage?, Never>]] = [:]
-    /// Bumped by `clear()` so a cancelled load stores nothing.
-    private var clearGeneration = 0
 
     private enum DecodeOutcome: Sendable {
         case image(NSImage)
@@ -69,7 +67,6 @@ final class ThumbnailCache {
         }
 
         if inflight[key] == nil {
-            let generation = clearGeneration
             // Each caller registers in `waiters` before this task first runs.
             inflight[key] = Task { @MainActor in
                 let outcome: DecodeOutcome = await self.withDecodeSlot {
@@ -92,7 +89,7 @@ final class ThumbnailCache {
                     }.value
                     return image.map(DecodeOutcome.image) ?? .refused
                 }
-                self.finish(key, outcome, generation: generation)
+                self.finish(key, outcome)
             }
         }
         return await awaitLoad(key)
@@ -118,17 +115,15 @@ final class ThumbnailCache {
     }
 
     /// Stores a real result and hands it to the callers still waiting. An
-    /// abandoned load, or one `clear()` cancelled, stores nothing.
-    private func finish(_ key: Key, _ outcome: DecodeOutcome, generation: Int) {
+    /// abandoned load stores nothing.
+    private func finish(_ key: Key, _ outcome: DecodeOutcome) {
         let image: NSImage?
         switch outcome {
         case .image(let img): image = img
         case .refused, .abandoned: image = nil
         }
-        if generation == clearGeneration {
-            inflight[key] = nil
-            if case .abandoned = outcome {} else { insert(key, image.map(Entry.image) ?? .missing) }
-        }
+        inflight[key] = nil
+        if case .abandoned = outcome {} else { insert(key, image.map(Entry.image) ?? .missing) }
         for (_, cont) in waiters.removeValue(forKey: key) ?? [:] {
             cont.resume(returning: image)
         }
@@ -143,16 +138,6 @@ final class ThumbnailCache {
         guard case .image(let img) = store[key] else { return nil }
         touch(key)
         return img
-    }
-
-    func clear() {
-        store.removeAll()
-        order.removeAll()
-        for (_, task) in inflight {
-            task.cancel()
-        }
-        inflight.removeAll()
-        clearGeneration += 1
     }
 
     /// Test helper: seeded entry count after loads.

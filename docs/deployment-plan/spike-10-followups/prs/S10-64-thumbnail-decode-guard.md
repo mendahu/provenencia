@@ -76,7 +76,7 @@ Every thumbnail, likeness tile, portrait, and evidence-card face in the app deco
 | Out | Home |
 | --- | --- |
 | Refusing a symlinked `objects/`, shard folder, or object | S10-62 |
-| Cancelling a decode when every waiter has gone, decoding at the drawn size, bounding the cache by bytes, the evidence card keeping its own loaded image (audit PRF-2) | not planned (audit 2026-10-18 Medium items 6 and 13, not mapped) |
+| Cancelling a decode that is already running, decoding at the drawn size, bounding the cache by bytes, the evidence card keeping its own loaded image (audit PRF-2) | not planned (audit 2026-10-18 Medium items 6 and 13, not mapped) |
 | A byte-based decode limit in Go `raster` (audit SEC-3) | not planned (audit 2026-10-18 Low item) |
 | The Artifact viewer's full-resolution decode (`ArtifactViewerModel.load`) | not planned |
 | New copy or a distinct "unreadable" glyph for a refused image | not planned (audit UX-11 covers the graph tile, not mapped) |
@@ -316,3 +316,4 @@ Differences from the plan:
 - The manual check (section 10) is left for the user.
 - User-approved amendment to D-5 (2026-10-18): `ProjectFiles.objectURL` now runs inside the decode slot, right before the file opens, so the slot wait no longer sits between the object-path check and the open.
 - User-approved amendment to D-7 (2026-10-18): a queued decode whose callers have all gone is dropped without decoding and is not stored as missing; a cancelled caller returns nil at once. This pulls part of PRF-2 forward. New test: `ThumbnailCacheTests/dropsAQueuedDecodeWhoseCallersHaveGone`.
+- Fix round 2: `ThumbnailCache.clear()` had no caller and could split one load's state, so it was removed along with `clearGeneration`; `finish` now always clears `inflight[key]`.
