@@ -14,6 +14,12 @@ struct SourceArtifactChecklist: View {
     private static let thumbnailSize: CGFloat = 32
     private static let maxRowsHeight: CGFloat = 264
 
+    /// The unchecked ids that are still on the list; a deleted Artifact's id may
+    /// linger in `excluded` and must not change the count or the All state.
+    private var liveExcluded: Set<String> {
+        excluded.intersection(artifacts.map(\.id))
+    }
+
     var body: some View {
         if artifacts.isEmpty {
             Text(L10n.Sources.copySourceNoArtifacts)
@@ -51,7 +57,7 @@ struct SourceArtifactChecklist: View {
                 .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
                 .foregroundStyle(PVColor.textPrimary)
             Spacer(minLength: 0)
-            Text(verbatim: L10n.Sources.copySourceArtifactCount(artifacts.count - excluded.count, artifacts.count))
+            Text(verbatim: L10n.Sources.copySourceArtifactCount(artifacts.count - liveExcluded.count, artifacts.count))
                 .font(PVFont.mono(size: PVTypeScale.micro))
                 .foregroundStyle(PVColor.textMuted)
         }
@@ -61,10 +67,10 @@ struct SourceArtifactChecklist: View {
         PVCheckbox(
             L10n.Sources.copySourceAllArtifacts,
             isChecked: Binding(
-                get: { excluded.isEmpty },
+                get: { liveExcluded.isEmpty },
                 set: { on in excluded = on ? [] : Set(artifacts.map(\.id)) }
             ),
-            isIndeterminate: !excluded.isEmpty && excluded.count < artifacts.count,
+            isIndeterminate: !liveExcluded.isEmpty && liveExcluded.count < artifacts.count,
             isDisabled: isDisabled
         )
         .accessibilityIdentifier("sources.copy.artifacts.all")
@@ -86,24 +92,36 @@ struct SourceArtifactChecklist: View {
                 typeIconKey: artifact.thumbnailTypeIconKey(sourceTypeIconKey: sourceTypeIconKey),
                 size: Self.thumbnailSize
             )
-            PVCheckbox(
-                verbatim: artifact.hasDisplayLabel ? artifact.displayTitle : "",
-                isChecked: Binding(
-                    get: { !excluded.contains(artifact.id) },
-                    set: { on in
-                        if on { excluded.remove(artifact.id) } else { excluded.insert(artifact.id) }
-                    }
-                ),
-                isDisabled: isDisabled
-            )
-            .accessibilityLabel(Text(verbatim: artifact.displayTitle))
-            .accessibilityIdentifier("sources.copy.artifacts.\(artifact.id)")
+            .accessibilityHidden(true)
+            rowCheckbox(artifact)
+                .accessibilityValue(Text(verbatim: artifact.ref))
+                .accessibilityIdentifier("sources.copy.artifacts.\(artifact.id)")
             Spacer(minLength: 0)
             Text(verbatim: artifact.ref)
                 .font(PVFont.mono(size: PVTypeScale.micro))
                 .foregroundStyle(PVColor.textMuted)
+                .accessibilityHidden(true)
         }
         .padding(.vertical, PVSpacing.space2)
         .padding(.horizontal, PVSpacing.space5)
+    }
+
+    @ViewBuilder
+    private func rowCheckbox(_ artifact: CatalogArtifact) -> some View {
+        let isChecked = Binding(
+            get: { !excluded.contains(artifact.id) },
+            set: { on in
+                if on { excluded.remove(artifact.id) } else { excluded.insert(artifact.id) }
+            }
+        )
+        if artifact.hasDisplayLabel {
+            PVCheckbox(verbatim: artifact.displayTitle, isChecked: isChecked, isDisabled: isDisabled)
+        } else {
+            PVCheckbox(
+                isChecked: isChecked,
+                isDisabled: isDisabled,
+                accessibilitySpokenLabel: artifact.displayTitle
+            )
+        }
     }
 }
