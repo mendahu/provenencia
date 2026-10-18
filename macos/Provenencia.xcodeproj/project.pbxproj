@@ -315,7 +315,9 @@
 		AA00000000000000000000E4 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000E1 /* InfoPlist.xcstrings */; };
 		AA00000000000000000000E5 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000E2 /* L10n.swift */; };
 		AA00000000000000000000F1 /* ProjectSlug.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000F0 /* ProjectSlug.swift */; };
+		AA0000000000000000000022 /* TextMatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000021 /* TextMatch.swift */; };
 		AA00000000000000000000F3 /* ProjectSlugTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000F2 /* ProjectSlugTests.swift */; };
+		AA0000000000000000000024 /* TextMatchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000023 /* TextMatchTests.swift */; };
 		AA00000000000000000000F5 /* OnboardingPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000F4 /* OnboardingPage.swift */; };
 		AA0000000000000000000101 /* OnboardingOpenPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000100 /* OnboardingOpenPicker.swift */; };
 		AA0000000000000000000103 /* OnboardingProjectMetaLines.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000102 /* OnboardingProjectMetaLines.swift */; };
@@ -683,7 +685,9 @@
 		AA00000000000000000000E1 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		AA00000000000000000000E2 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		AA00000000000000000000F0 /* ProjectSlug.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectSlug.swift; sourceTree = "<group>"; };
+		AA0000000000000000000021 /* TextMatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextMatch.swift; sourceTree = "<group>"; };
 		AA00000000000000000000F2 /* ProjectSlugTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectSlugTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000023 /* TextMatchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextMatchTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000000F4 /* OnboardingPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPage.swift; sourceTree = "<group>"; };
 		AA0000000000000000000100 /* OnboardingOpenPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingOpenPicker.swift; sourceTree = "<group>"; };
 		AA0000000000000000000102 /* OnboardingProjectMetaLines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingProjectMetaLines.swift; sourceTree = "<group>"; };
@@ -1031,6 +1035,7 @@
 				AA0000000000000000000350 /* TimestampFormat.swift */,
 				AA000000000000000000001D /* InstallPaths.swift */,
 				AA00000000000000000000F0 /* ProjectSlug.swift */,
+				AA0000000000000000000021 /* TextMatch.swift */,
 				A71000000000000000000001 /* PropertyTermDisplay.swift */,
 				A71100000000000000000001 /* InterpretationValueKinds.swift */,
 				AA00000000000000000000E2 /* L10n.swift */,
@@ -1262,6 +1267,7 @@
 				AA00000000000000000000B1 /* InstallPathsTests.swift */,
 				AA0000000000000000000352 /* TimestampFormatTests.swift */,
 				AA00000000000000000000F2 /* ProjectSlugTests.swift */,
+				AA0000000000000000000023 /* TextMatchTests.swift */,
 				AA0000000000000000000400 /* ProjectFilesTests.swift */,
 				164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */,
 				F203948576A1B2C3D4E5F605 /* WorkspaceNavigationTests.swift */,
@@ -1912,6 +1918,7 @@
 				AA000000000000000000000C /* OnboardingModel.swift in Sources */,
 				AA000000000000000000000D /* InstallPaths.swift in Sources */,
 				AA00000000000000000000F1 /* ProjectSlug.swift in Sources */,
+				AA0000000000000000000022 /* TextMatch.swift in Sources */,
 				AA00000000000000000000E5 /* L10n.swift in Sources */,
 				A71000000000000000000002 /* PropertyTermDisplay.swift in Sources */,
 				A71100000000000000000002 /* InterpretationValueKinds.swift in Sources */,
@@ -2168,6 +2175,7 @@
 				AA00000000000000000000B4 /* InstallPathsTests.swift in Sources */,
 				AA0000000000000000000353 /* TimestampFormatTests.swift in Sources */,
 				AA00000000000000000000F3 /* ProjectSlugTests.swift in Sources */,
+				AA0000000000000000000024 /* TextMatchTests.swift in Sources */,
 				AA0000000000000000000401 /* ProjectFilesTests.swift in Sources */,
 				826574F8CA8D24BE551A88BF /* WorkspaceModelTests.swift in Sources */,
 				F203948576A1B2C3D4E5F607 /* WorkspaceNavigationTests.swift in Sources */,
