@@ -8,7 +8,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 | Step | View | Gates | Notes |
 | --- | --- | --- | --- |
-| S12-D1 | Copy Source form | **S12-02** | Title, type dropdown, part checkboxes (one per Artifact); entry points on the Source page and Sources list context menu ([design](../source-structure.md#copy-source)) |
+| [S12-D1](S12-D1-copy-source-form.md) | Copy Source form | **S12-02** | Title, type dropdown, part checkboxes (one per Artifact); entry points on the Source page and Sources list context menu ([design](../source-structure.md#copy-source)) |
 | S12-D2 | Source page — Graphs section | **S12-11** | One row per graph with Open and delete; replaces the header jump |
 | S12-D3 | Graph form | **S12-12** | Create and edit: name, description, Artifact checkboxes |
 | S12-D4 | Source page — Artifacts section graph links | **S12-13** | Checkboxes in the add dialog and card edit |
