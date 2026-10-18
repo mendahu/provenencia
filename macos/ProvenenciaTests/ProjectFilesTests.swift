@@ -58,14 +58,14 @@ struct ProjectFilesTests {
     @Test func objectURLRefusesSymlinkedObjectsFolder() throws {
         let fm = FileManager.default
         let project = ArtifactFileFixtures.uniqueProjectDir()
-        let outside = ArtifactFileFixtures.uniqueProjectDir()
+        let outside = try ArtifactFileFixtures.linkToOutsideFolder(
+            at: project + "/objects",
+            holding: "ab/cd/x.png"
+        )
         defer {
             try? fm.removeItem(atPath: project)
             try? fm.removeItem(atPath: outside)
         }
-        try ArtifactFileFixtures.writePNG(projectDir: outside, relPath: "ab/cd/x.png")
-        try fm.createDirectory(atPath: project, withIntermediateDirectories: true)
-        try fm.createSymbolicLink(atPath: project + "/objects", withDestinationPath: outside)
         #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects/ab/cd/x.png") == nil)
 
         try fm.removeItem(atPath: project + "/objects")
@@ -76,14 +76,14 @@ struct ProjectFilesTests {
     @Test func objectURLRefusesSymlinkedShardFolder() throws {
         let fm = FileManager.default
         let project = ArtifactFileFixtures.uniqueProjectDir()
-        let outside = ArtifactFileFixtures.uniqueProjectDir()
+        let outside = try ArtifactFileFixtures.linkToOutsideFolder(
+            at: project + "/objects/ab",
+            holding: "cd/x.png"
+        )
         defer {
             try? fm.removeItem(atPath: project)
             try? fm.removeItem(atPath: outside)
         }
-        try ArtifactFileFixtures.writePNG(projectDir: outside, relPath: "cd/x.png")
-        try fm.createDirectory(atPath: project + "/objects", withIntermediateDirectories: true)
-        try fm.createSymbolicLink(atPath: project + "/objects/ab", withDestinationPath: outside)
         #expect(ProjectFiles.objectURL(projectDir: project, relPath: "objects/ab/cd/x.png") == nil)
 
         try fm.removeItem(atPath: project + "/objects/ab")
