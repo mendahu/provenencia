@@ -115,3 +115,45 @@ func TestMembershipDatesByDay(t *testing.T) {
 		})
 	}
 }
+
+func TestMembershipDatesByDayBranches(t *testing.T) {
+	sept := ptrDate(ymd(1850, ip(9), ip(1)))
+	spring := ptrDate(datevalue.Value{Kind: datevalue.KindPoint, Phrase: "spring"})
+	before1850 := ptrDate(qualified(datevalue.QualifierBEF, 1850, nil, nil))
+	y1840 := ptrDate(ymd(1840, nil, nil))
+	after1867 := ptrDate(qualified(datevalue.QualifierAFT, 1867, nil, nil))
+	jul1 := ptrDate(ymd(1867, ip(7), ip(1)))
+	for _, c := range []struct {
+		name       string
+		a, b, want *datevalue.Value
+		start      bool
+	}{
+		{"a phrase-only start never beats a readable one", spring, sept, sept, true},
+		{"an open start loses to a set one", before1850, y1840, y1840, true},
+		{"an open end loses to a set one", after1867, jul1, jul1, false},
+	} {
+		for _, swap := range []bool{false, true} {
+			a, b := c.a, c.b
+			if swap {
+				a, b = b, a
+			}
+			t.Run(c.name, func(t *testing.T) {
+				start, end := membershipDates(placeLink{}, PlaceHeader{StartDate: a, EndDate: a}, PlaceHeader{StartDate: b, EndDate: b})
+				got := end
+				if c.start {
+					got = start
+				}
+				if got != c.want {
+					t.Fatalf("swap=%v got %+v want %+v", swap, got, c.want)
+				}
+			})
+		}
+	}
+	t.Run("a tie keeps the first", func(t *testing.T) {
+		a, b := ptrDate(ymd(1850, nil, nil)), ptrDate(ymd(1850, nil, nil))
+		start, end := membershipDates(placeLink{}, PlaceHeader{StartDate: a, EndDate: a}, PlaceHeader{StartDate: b, EndDate: b})
+		if start != a || end != a {
+			t.Fatalf("got %p %p want %p", start, end, a)
+		}
+	})
+}
