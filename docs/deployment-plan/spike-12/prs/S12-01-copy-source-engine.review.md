@@ -1,7 +1,7 @@
 # Review — S12-01 Copy Source engine
 
-**Verdict:** Fits with changes — Ready with changes (round 1)
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
@@ -91,3 +91,13 @@
 
 ### X-15 · minor · Test and doc details
 **Answer:** Fixed — `runCreateAll` and `runCopy` wrappers named (STEP-2, STEP-3); the skill section goes between `## Functions` and `## Tests` (STEP-6). Status flips to Planned at the end of the review.
+
+### M-10 · blocker · The skill update makes a per-package querier the rule; nine copies exist
+**Answer:** Fixed — D-2: one exported `database.Querier` in `core/database/tx.go`; the three packages and the STEP-6 skill section name it. Moving the nine existing copies is logged in `docs/ideas/shared-list-helpers.md` § One catalog querier and an Out row.
+
+### M-11 · blocker · M-1's answer keeps two scans of `source_metadata_layout`
+**Answer:** Fixed — D-5: `sqlLayoutGet` selects `field_id` too, and `getLayoutTx` and `listLayoutRows` both scan through one `scanLayoutRow`.
+
+## Verdict
+
+Round 2 blockers X-11, M-10 and M-11 are fixed; nothing is open but the M-9 question to the user, which does not block this PR. Plan status: Planned. The M-9 question stays open with the user.
