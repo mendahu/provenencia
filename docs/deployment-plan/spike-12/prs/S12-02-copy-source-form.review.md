@@ -1,7 +1,7 @@
 # Review — S12-02 Copy Source form
 
-**Verdict:** Fits with changes — Not ready → fixed (round 1); round 2 after the board (below).
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet). The maintainability reviewer also read brief S12-D1.
+**Verdict:** Fits with changes — Ready with changes → fixed. 2 rounds (round 2 after the board).
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet). The maintainability reviewer also read brief S12-D1.
 
 ## To user
 None open.
@@ -10,6 +10,7 @@ None open.
 - **Board delivery (2026-10-18).** The board is the Claude Design link on the plan's **Board** line; §6 macOS describes every frame in words for an implementer who cannot open it.
 - **Sidebar count after a copy from the Source page.** Out line to S12-16 stands; S12-17's list host republishes it through its existing status hook.
 - **Cancel on a changed form (2026-10-18).** Match the kit: Cancel closes; an outside click asks the kit's "Discard changes?". The board's "Discard this copy?" is not built; brief CS-10 corrected (it wrongly said Add Source asks on Cancel).
+- **One validation rule for both forms (2026-10-18, round 2 M-12).** The shared fields show errors as you edit, and both Create and Copy are disabled while the form is invalid. Add Source changes accordingly (§1 What stays, D-3, D-5, AC-1.9).
 - **Title error wording (2026-10-18).** Keep Add Source's strings (one validation, working rule). The board's "Enter a title for the source" is not used. Copy is disabled while the title is empty, as the board shows.
 - **One brief per view, one view per PR (2026-10-18).** The user pointed out that the form touched two views (Source page, Sources list), so it needs two briefs. Asked whether the PR should split too (the `plan-pr` size rule), the user chose to split. S12-02 keeps the form and the Source page entry (brief S12-D1). The Sources list row menu moves to the new S12-17 (brief S12-D6), which depends on S12-02. The form's loading and load-error states stay in S12-D1 / S12-02 because they belong to the dialog. Review findings M-9 and the row-menu parts of D-17 / X-6 now land in S12-17's plan.
 
@@ -38,7 +39,7 @@ Three copies exist (`SourcePageArtifactsView` L243, `SourcePageModel.askDeleteAr
 **Answer:** Fixed — D-7 / D-9 store `excludedArtifactIDs`; `artifactIDsToCopy` is the live Artifacts minus exclusions. No seeding hook.
 
 ### M-5 · major · An eighth copy of the query-wait helper
-**Answer:** Fixed — D-19 adds `macos/ProvenenciaTests/QueryHandleWaiting.swift`; `SourcesModelTests` and `SourceCopyModelTests` use it; the other five suites are logged in `docs/ideas/shared-list-helpers.md` (STEP-8).
+**Answer:** Fixed — D-19 adds `macos/ProvenenciaTests/QueryHandleWaiting.swift`; `SourcesModelTests` and `SourceCopyModelTests` use it; the other five suites are logged in `docs/ideas/shared-list-helpers.md` (STEP-7).
 
 ### M-6 · minor · Validation named after the field it fills
 **Answer:** Fixed — D-3 `Draft.validation: SourceDraftValidation` and `trimmedTitle`; `description` gets a default.
@@ -50,7 +51,7 @@ Three copies exist (`SourcePageArtifactsView` L243, `SourcePageModel.askDeleteAr
 **Answer:** Fixed — D-13 reads `WorkspaceNavigation` from the environment and owns close + open; D-20 moves Add Source onto `pageLocation(for:)`.
 
 ### M-9 · minor · Fourth hand-wired right-click menu
-**Answer:** Partly fixed — D-17 puts the trigger on `pageZone` so S12-14's graph sub-rows do not inherit it; the `pvActionMenu(items:)` recipe is logged (Out, STEP-8). Declined: a shared row-actions builder for the two call sites — each `onCopy` is one line, and `SourcesSplitRowProgress` already duplicates `onOpenPage` / `onOpenGraph` outside this PR's scope.
+**Answer:** Partly fixed — D-17 puts the trigger on `pageZone` so S12-14's graph sub-rows do not inherit it; the `pvActionMenu(items:)` recipe is logged (Out, STEP-7). Declined: a shared row-actions builder for the two call sites — each `onCopy` is one line, and `SourcesSplitRowProgress` already duplicates `onOpenPage` / `onOpenGraph` outside this PR's scope.
 
 ### M-10 · minor · Brief names two thumbnail pieces
 **Answer:** Fixed — brief inventory names only `CachedThumbnail` at 32pt.
@@ -77,4 +78,45 @@ Three copies exist (`SourcePageArtifactsView` L243, `SourcePageModel.askDeleteAr
 **Answer:** Fixed — D-14 (checkbox init, hints, absent wording, `PVField` group headings), D-16 (`CachedThumbnail` arguments, `displayTitle`), D-2 (icon key at the page call site), D-17 (menu item action, modifier on `pageZone`, accessibility action on the page zone button).
 
 ### X-7 · minor · Smaller gaps
-**Answer:** Fixed — dirty uses `choices != prefill` (an excluded id that is later deleted still counts as a change, which is acceptable); `openCopy()` uses `context`; STEP-8 says how the README lists the archived brief; the manual check's cover line relies on the engine (S12-01 D-10), not the fake.
+**Answer:** Fixed — dirty uses `choices != prefill` (an excluded id that is later deleted still counts as a change, which is acceptable); `openCopy()` uses `context`; STEP-7 says how the README lists the archived brief; the manual check's cover line relies on the engine (S12-01 D-10), not the fake.
+
+## Round 2
+
+Inputs: the plan with the agreed board folded in. Reviewers checked round-1 answers (all hold) and the new material.
+
+### M-12 · blocker · Two error rules in the shared title-and-type fields
+Live type clearing lived in the shared view, live title validation only in the Copy host; Add Source enabled with errors on submit, Copy disabled; `canSubmitAdd` had no caller.
+**Answer:** Fixed after a user answer (one rule for both) — D-5 makes `SourceTitleTypeFields` own both `onChange` rules from `draft.validation`; `validateTitle()` and the dialog's `onChange` are gone; D-3 wires `canSubmitAdd` into the Add Source dialog; AC-1.9, T-14.
+
+### M-13 · major · Heading restates `pvMicroCaps()`
+**Answer:** Fixed — D-14 (3) uses `.pvMicroCaps()`.
+
+### M-14 · major · Loading bars restate the list skeleton
+**Answer:** Fixed — D-23 lifts `PVSkeletonBar` out of `PVListSkeleton`; the copy form is its second caller.
+
+### X-R2-1 · blocker · Header order contradicts the board
+**Answer:** Fixed — D-17 sets Jump to graph, Copy, Delete; §1 and manual check step 1 say so.
+
+### X-R2-2 · blocker · The shared wait returns before a refetch
+**Answer:** Fixed — D-19's helper also waits for `!isFetching`; T-13 waits through it. `reloadWorkspace()` keeps the invalidate so Read again reloads in every state (the reviewer's "redundant" note holds only after a failure).
+
+### X-R2-3 · major · Load state precedence
+**Answer:** Fixed — D-6 `loadState` (`.loading`, `.failed`, `.ready`) with a stated precedence; D-14 switches on it; T-15.
+
+### X-R2-4 · major · Strings claimed as the board's
+**Answer:** Fixed — §6 lists the board's error hints and boxed detail as not built; the Strings note no longer says "the agreed board's strings".
+
+### X-R2-5 · major · Frame details to guess
+**Answer:** Fixed — D-14 body spacing; D-16 stack spacing, All-row inset, row HStack spacing, set-backed bindings, empty state without header; AC-1.7 type placeholder until types load; unlabeled rows marked as this plan's rule; loading bars gap stated as a gap.
+
+### X-R2-6 · major · 240 vs 264
+**Answer:** Fixed — §11 says 264pt.
+
+### X-R2-7 · minor · Stale review header and step names
+**Answer:** Fixed — plan **Review** line and this log's STEP references.
+
+### X-R2-8 · minor · "Seven suites"
+**Answer:** Fixed — four named suites in §4, D-19, Out and STEP-7.
+
+### X-R2-9 · minor · STEP-3 files, T-5 wording
+**Answer:** Fixed — `SourcesModel.swift` moved to STEP-2 only; T-5's `copying` clause removed. pbxproj is in §7's preamble.
