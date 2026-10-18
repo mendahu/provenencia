@@ -105,3 +105,9 @@ Maintainability: Fits with changes. Executability: Ready with changes. The round
 
 ### X-11 · nit · The header Review line was stale
 **Answer:** Fixed.
+
+## After review
+
+- **Refreshed against `main` @ `847b5f0` (S11-09 landed in #468).** Its code matches the plan's assumptions. `helpers_test.go` has ten helpers (`labels`, `dates` added), so `propertycomparetest` exports ten. The fixture `var` block stays in a new `fixtures_test.go`.
+- **Scope added at the user's request (2026-10-18):** `core/valuecompare`'s private date builders move onto `datevaluetest`. This was S11-09 review finding MNT-3, logged only in its ship log. It is new STEP-1, D-19 and T-9; the later steps are renumbered (the round-1 and round-2 answers above use the old numbers).
+- **Writer's call on `optInt`:** it is called directly in about ten inline date literals, not only by the builders. Deleting it would mean keeping a private copy, so `datevaluetest` exports it as `Part` and gains `Between`. `bound` and `noYearRange` stay private.

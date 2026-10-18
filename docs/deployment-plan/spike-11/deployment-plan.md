@@ -304,7 +304,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 **Ships.** `core/subjectcompare` and the registry's subject section, keyed by `core/vocabkey` constants (S11-23) used directly as typed `SubjectType` / `PropertyKey` keys, with no re-declared key constants: per Subject type and property, agree weight and conflict penalty (event type: low agree, very large conflict); the pairs (sex with gender; `date` with `start_date` / `end_date`); similarity and evidence.
 **Not this PR.** Profiles (S11-11), lifespan (S11-12), callers (S11-13).
 **Check.** The layer 3 examples hold (name 1.0 / 2.5; name + gender 1.0 / 3.1; birth vs death with matching dates ≈ 0.09).
-Ports `subjectvocab`'s `TestDefaultProfileCardinality` as a seed check of the subject section (every kind a seeded type, every key bound to it, pooled and period properties of the right value type); the registry writes the `vocabkey` constants. Extends the matching skill.
+Ports `subjectvocab`'s `TestDefaultProfileCardinality` as a seed check of the subject section (every kind a seeded type, every key bound to it, pooled and period properties of the right value type); the registry writes the `vocabkey` constants. Extends the matching skill. Also moves `core/valuecompare`'s private date builders (`optInt`, `ymd`, `about`, `phrase`, `between`, `dp`) onto `core/datevalue/datevaluetest` (S11-09 review finding MNT-3).
 **Context.** [Layer 3](comparison-layers.md#layer-3-subject-comparison); rule "Sparse data first".
 
 #### S11-11 — Subject profile and entity compare
