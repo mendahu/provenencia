@@ -61,12 +61,8 @@ func Install(c *database.Catalog) error {
 			return err
 		}
 		for i, set := range table.Sets {
-			for _, token := range aliasTokens(set) {
-				if _, err := tx.Exec(`INSERT INTO name_alias_members (table_id, set_idx, token)
-					VALUES (?, ?, ?)`,
-					stored, i, token); err != nil {
-					return err
-				}
+			if _, err := insertSet(tx, stored, i, set); err != nil {
+				return err
 			}
 		}
 		for _, role := range table.Roles {
