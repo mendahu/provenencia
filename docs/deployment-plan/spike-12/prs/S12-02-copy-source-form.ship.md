@@ -1,7 +1,7 @@
 # Ship log — S12-02 Copy Source form
 
 **Plan:** [`S12-02-copy-source-form.md`](S12-02-copy-source-form.md) · **Branch:** `s12-02-copy-source-form` · **PR:** #485
-**State:** fixing 1
+**State:** review 2
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s12-02`, branched from `origin/main` @ `97eea0b3`.
 
@@ -53,3 +53,10 @@ Check: build; scripts/check-pr.sh PASS.
 Files: `macos/App/Features/Sources/SourceTitleTypeFields.swift`.
 Do: in both `onChange` handlers (title and type), set `titleError = draft.validation.titleError` and `typeError = draft.validation.typeError`, so after the first edit to any field both errors show. Update the type's doc comment to say so. Nothing is shown on open. This applies to Add Source and Copy Source alike. Record the change in the plan's Landed note (D-5 said each field's error follows its own edit).
 Check: build; scripts/check-pr.sh PASS. Manual: Add Source, type a title → "Choose a Source type" appears.
+
+## Round 1 — fix
+Head `86a47614`. Gate PASS (orchestrator run, 1213 Swift tests). F-1 to F-5 done. F-2 took the in-checklist option (`liveExcluded`), so it has no automated test (view-only). Implementer's first gate failed on a pbxproj group-id collision it introduced; fixed in `86a47614`. F-5 manual check not run.
+UX-2 (minor, F-3): Resolved — orchestrator read `SourceArtifactChecklist.swift`: thumbnail and ref hidden, box-only `PVCheckbox` with a spoken label for unlabeled rows, ref as `accessibilityValue`.
+
+## Round 2 — review
+Reviewers: MNT (MNT-1, MNT-2 majors), UX (UX-1 raised to major). Scope `56be66b5...86a47614`. Not sent: CON, SEC+PRF (no Fix-now blocker or major).
