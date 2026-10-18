@@ -115,6 +115,8 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 		scoreTokens = tokenize(strings.ToLower(raw))
 	}
 
+	qtoks := newQueryTokens(scoreTokens)
+
 	var hits []Hit
 	for _, d := range byKey {
 		if err := errIfCancelled(ctx); err != nil {
@@ -125,14 +127,14 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			continue
 		}
 		values := fieldValuesForKind(d.kind, d.title, d.ref, d.secondary, d.body)
-		score, reason, snippet := scoreFields(spec, values, scoreTokens)
+		score, reason, snippet := scoreFields(spec, values, qtoks)
 		if d.refMatch == refMatchExact || d.refMatch == refMatchPrefix {
 			reason = "ref"
 			snippet = ""
 			if score <= 0 {
 				score = 12 // ref field weight floor
 			}
-		} else if field, line := alternateMatch(d.secondary, scoreTokens); reason == "other" && field != "" {
+		} else if field, line := alternateMatch(d.secondary, qtoks); reason == "other" && field != "" {
 			reason = field
 			snippet = line
 		} else if score <= 0 && d.fromFuzzy && d.fuzzySim >= FuzzyWeights.JaroWinklerMin {

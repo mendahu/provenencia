@@ -1,6 +1,6 @@
 # S11-07 — One normalization key across the core
 
-**Status:** Planned
+**Status:** Landed in [#460](https://github.com/mendahu/provenencia/pull/460) (2026-10-18)
 **Spike / slice:** Spike 11 · Slice 2 — Value compare, everywhere
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: search ranking, the search index, the term duplicate check and alias storage change in Go; the one visible change is the wording of an existing error)
@@ -279,7 +279,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 ## 10. Manual check
 
 1. Open a project with a Source titled `Montréal parish register`. Type `Montreal` in the omnibar. The Source is the first hit and reads as a title match.
-2. Open Properties, pick the Role Property (a term Property researchers may extend), add the term `Godfather`, then add `god-father`. The editor refuses with "This property already has the term “Godfather”. Use that one, or give this one a different label." (AC-4.8). Add `Godmother`, then rename it to `GODFATHER`: the same message. Rename `Godfather` to `God-Father`: it saves.
+2. Open a Source's citation composer, choose a term Property's value (Role), choose Add custom term, enter `Godfather` and confirm, then Add custom term `god-father`: the sheet shows "This property already has the term “Godfather”. Use that one, or give this one a different label." under the Label field (AC-4.8). Renaming has no macOS UI yet; AC-4.5 and AC-4.6 are covered by `TestPropertyTerms`.
 3. Open a project whose Place has the toponyms `Montréal` and `Montreal` on two Sources. Search `Montreal`: one Place hit, titled `Montréal`.
 
 ## 11. Risks and stop conditions
@@ -308,3 +308,15 @@ None.
 
 **Title:** S11-07 — One normalization key across the core
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-07-normalization-key.md`.
+
+## Landed
+
+Differences from the plan:
+
+- `TestAliasIndexKeysTokens` scores through `WordSimilarity` with the alias index, as AC-5.3 and AC-5.4 say, rather than calling `Hit`.
+- `addProductNicknames` counts the tokens `insertSet` wrote (keyed, distinct) instead of `len(want)`.
+- The `MatchText` label check reuses `distinctAlternates` with the title and the kept alternates, so a label with no text key adds no line.
+- Extra tests: `TestPropertyTerms` gained two rows (create refusals, rename refusal and restyle) beside the changed "duplicate user key" row.
+- The in-app check (section 10) is left for the user.
+- AC-4.8's "term editor" is the citation composer's Add custom term sheet.
+- `text.key` is one pass over the string (`joinedKey`) after review: rescoring keys every field of every candidate per query, and the first version split and folded word by word. The Risks row's "bounded by FTS candidates" was wrong: `mergeFTS` has no LIMIT.

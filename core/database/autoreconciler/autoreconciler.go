@@ -74,7 +74,8 @@ import (
 //	16: values group by value compare's Same and fold by its Contains: text
 //	    ignores punctuation and spacing, ABT is a range, name parts compare as
 //	    words with particles (S11-06).
-const CacheVersion = 16
+//	17: text ignores word breaks: god-father is godfather (S11-07).
+const CacheVersion = 17
 
 // valueRules are the value compare rules reconciling reads: the shipped
 // registry, never a catalog's alias tables or name formats, so the cache

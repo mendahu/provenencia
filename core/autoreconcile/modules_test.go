@@ -51,6 +51,8 @@ func TestModules(t *testing.T) {
 			[]Candidate{text(1, "Upper Canada"), text(2, "Upper  Canada"), text(3, "U.C.")}, [][]byte{{1, 2}, {3}}, StateMerged, ""},
 		{"text", "punctuation and spacing between words are ignored", propertymeta.ValueTypeText,
 			[]Candidate{text(1, "Sainte-Anne"), text(2, "Sainte Anne")}, [][]byte{{1, 2}}, StateMerged, "Sainte-Anne"},
+		{"text", "word breaks are ignored", propertymeta.ValueTypeText,
+			[]Candidate{text(1, "Yorktown"), text(2, "York Town")}, [][]byte{{1, 2}}, StateMerged, "Yorktown"},
 		{"text", "an accent fold is a different value", propertymeta.ValueTypeText,
 			[]Candidate{text(1, "Montréal"), text(2, "Montreal")}, [][]byte{{1}, {2}}, StateMixed, ""},
 		{"text", "text never folds", propertymeta.ValueTypeText,
@@ -162,6 +164,7 @@ func TestCompatible(t *testing.T) {
 		{"text: trimmed and case-insensitive", propertymeta.ValueTypeText, text(1, " York"), text(2, "york"), true},
 		{"text: different", propertymeta.ValueTypeText, text(1, "York"), text(2, "Toronto"), false},
 		{"text: punctuation and spacing are ignored", propertymeta.ValueTypeText, text(1, "Sainte-Anne"), text(2, "Sainte Anne"), true},
+		{"text: word breaks are ignored", propertymeta.ValueTypeText, text(1, "Yorktown"), text(2, "York Town"), true},
 		{"text: an accent fold is a different value", propertymeta.ValueTypeText, text(1, "Montréal"), text(2, "Montreal"), false},
 		{"text: never folds", propertymeta.ValueTypeText, text(1, "York"), text(2, "York, Upper Canada"), false},
 		{"text: blank is no evidence", propertymeta.ValueTypeText, text(1, ""), text(2, ""), false},
@@ -206,7 +209,7 @@ func TestCompatibleIgnoresAliases(t *testing.T) {
 		Key: "t", Kind: valuecompare.AliasNickname,
 		Roles: []valuecompare.NameRole{valuecompare.RoleGiven, valuecompare.RoleNick, valuecompare.RoleUntyped},
 		Sets:  [][]string{{"jim", "james"}},
-	}})
+	}}, rules.Words)
 	a := nm(1, "given=Jim|surname=Robins").Value
 	b := nm(2, "given=James|given=Kenneth|surname=Robins").Value
 	if Compatible(rules, propertymeta.ValueTypeName, a, b) {

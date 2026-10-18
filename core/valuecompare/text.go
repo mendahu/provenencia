@@ -3,6 +3,8 @@ package valuecompare
 import (
 	"slices"
 	"strings"
+
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // text compares free text (toponyms, remarks) word by word, in order.
@@ -13,20 +15,29 @@ func (text) compare(a, b Value, r Rules) (Result, Detail) {
 	if len(wa) == 0 || len(wb) == 0 {
 		return Result{Relation: Unknown}, Detail{Cause: CauseEmpty}
 	}
-	// The same words in the same order.
-	if slices.Equal(wa, wb) {
+	// The same letters in the same order, wherever the words break.
+	if ja, _ := joinedKey(a.Text, false, r.Words); ja == mustKey(b.Text, false, r.Words) {
 		det := Detail{Cause: CauseCase}
 		if a.Text == b.Text {
 			det.Cause = CauseExact
 		}
-		det.Parts = positionalParts(wa, wb, nil, nil, r.Words)
+		if slices.Equal(wa, wb) {
+			det.Parts = positionalParts(wa, wb, nil, nil, r.Words)
+		} else {
+			det.Parts = []PartMatch{joinedPart(wa, wb, Same, 1, CauseCase)}
+		}
 		return Result{Relation: Same, Similarity: 1}, det
 	}
-	// The same words in the same order once accents and letters are folded.
+	// The same letters once accents and letters are folded.
 	fa, fb := foldWords(wa, r.Words), foldWords(wb, r.Words)
-	if slices.Equal(fa, fb) {
-		det := Detail{Cause: CauseFold, Parts: positionalParts(wa, wb, nil, nil, r.Words)}
-		return Result{Relation: Equivalent, Similarity: meanSimilarity(det.Parts, textPairWeights(len(det.Parts)), float64(len(wa)+len(wb)))}, det
+	if ka, _ := joinedKey(a.Text, true, r.Words); ka == mustKey(b.Text, true, r.Words) {
+		det := Detail{Cause: CauseFold}
+		if slices.Equal(fa, fb) {
+			det.Parts = positionalParts(wa, wb, nil, nil, r.Words)
+			return Result{Relation: Equivalent, Similarity: meanSimilarity(det.Parts, textPairWeights(len(det.Parts)), float64(len(wa)+len(wb)))}, det
+		}
+		det.Parts = []PartMatch{joinedPart(wa, wb, Equivalent, r.Words.FoldCredit, CauseFold)}
+		return Result{Relation: Equivalent, Similarity: r.Words.FoldCredit}, det
 	}
 	// The alignment is quadratic in the words: bound it.
 	if len(wa) > r.Text.MaxWords || len(wb) > r.Text.MaxWords {
@@ -66,17 +77,55 @@ func (text) compare(a, b Value, r Rules) (Result, Detail) {
 	return Result{Relation: Near, Similarity: mean}, det
 }
 
-// key: the words joined by one space, folded at the Equivalent level. They are
-// the sequences compare tests for Same and Equivalent.
+// joinedPart is the one part for two texts whose words break in different
+// places: each side's words joined by one space.
+func joinedPart(wa, wb []string, rel Relation, sim float64, cause Cause) PartMatch {
+	return PartMatch{
+		A: Part{Kind: PartWord, Text: strings.Join(wa, " ")}, B: Part{Kind: PartWord, Text: strings.Join(wb, " ")},
+		Relation: rel, Similarity: sim, Cause: cause,
+	}
+}
+
+// TextKey is the key of free text at Same or Equivalent. A text key reads only
+// the word rules, never catalog data, so callers outside matching use this
+// with the shipped word rules.
+func TextKey(s string, level Relation, w WordRules) (string, bool) {
+	return Key(Value{Type: propertymeta.ValueTypeText, Text: s}, level, Rules{Words: w})
+}
+
+// key: the words joined with no separator, folded at the Equivalent level. They
+// are the letters compare tests for Same and Equivalent.
 func (text) key(v Value, level Relation, r Rules) (string, bool) {
-	words := SplitWords(v.Text, r.Words)
-	if len(words) == 0 {
-		return "", false
+	return joinedKey(v.Text, level == Equivalent, r.Words)
+}
+
+func mustKey(s string, fold bool, w WordRules) string {
+	k, _ := joinedKey(s, fold, w)
+	return k
+}
+
+// joinedKey is the letters of s with no separator, in one pass: what
+// strings.Join(SplitWords(s, w), "") is, and at fold what joining the
+// FoldWord of each word is. The join has no separator, so where the words
+// break and which particles rejoin cannot change it. The bool is false when s
+// has no word.
+func joinedKey(s string, fold bool, w WordRules) (string, bool) {
+	var b strings.Builder
+	b.Grow(len(s))
+	has := false
+	for _, r := range s {
+		keep, _, ok := wordRune(r)
+		if !ok {
+			continue
+		}
+		has = true
+		if fold {
+			appendFolded(&b, keep, w.Folds)
+		} else {
+			b.WriteRune(keep)
+		}
 	}
-	if level == Equivalent {
-		words = foldWords(words, r.Words)
-	}
-	return strings.Join(words, " "), true
+	return b.String(), has
 }
 
 func foldWords(words []string, w WordRules) []string {

@@ -35,6 +35,7 @@ var samples = map[string][]samplePair{
 		ofText("Upper Canada, York", "York, Upper Canada"), ofText("Upper Canada", "Upper Kanada"),
 		ofText("Ann", "Anne"), ofText("Mary", "Mark"), ofText("!!!", "York"), ofText("", ""),
 		ofText("É", "E"), ofText("J. Smith", "J Smith"),
+		ofText("god-father", "godfather"), ofText("ab c", "a bc"), ofText("Mont-réal", "Montreal"),
 	},
 	propertymeta.ValueTypeTerm: {
 		ofTerm("male", "male"), ofTerm("male", "female"), ofTerm("", "male"), ofTerm("", ""),

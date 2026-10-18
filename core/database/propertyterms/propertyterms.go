@@ -4,12 +4,15 @@
 package propertyterms
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/google/uuid"
@@ -21,8 +24,8 @@ import (
 
 var ErrInvalid = apperr.New(apperr.CodePropertyTermsInvalid, apperr.KindUser)
 
-// ErrDuplicateKey is returned by Create when the label-derived key already
-// names a user-origin term under the same Property.
+// ErrDuplicateKey is returned by Create and Update when a term of the Property
+// already reads the same as the label. Its param is that term's label.
 var ErrDuplicateKey = apperr.New(apperr.CodePropertyTermsDuplicateKey, apperr.KindConflict)
 
 // ErrLocked is returned when mutating a proveniencia or plugin-origin term.
@@ -143,10 +146,10 @@ func Create(tx *database.Tx, userID, propertyID []byte, label, description strin
 	if key == "" {
 		return Term{}, nil, ErrInvalid
 	}
-	if _, err := scanTerm(tx.QueryRow(sqlLookup, propertyID, key, vocabkey.OriginUser)); err == nil {
-		return Term{}, nil, ErrDuplicateKey.WithParams(key)
-	} else if !errors.Is(err, sql.ErrNoRows) {
+	if dup, found, err := conflictingTerm(tx, propertyID, nil, label, key); err != nil {
 		return Term{}, nil, err
+	} else if found {
+		return Term{}, nil, ErrDuplicateKey.WithParams(dup.Label)
 	}
 
 	uid, err := uuid.NewV7()
@@ -213,6 +216,14 @@ func Update(tx *database.Tx, userID, id []byte, label, description string) (Term
 		return Term{}, nil, ErrLocked
 	}
 
+	if existing.Label != label {
+		if dup, found, err := conflictingTerm(tx, existing.PropertyID, id, label, ""); err != nil {
+			return Term{}, nil, err
+		} else if found {
+			return Term{}, nil, ErrDuplicateKey.WithParams(dup.Label)
+		}
+	}
+
 	fields := map[string]rowchange.FieldDiff{}
 	if existing.Label != label {
 		fields["label"] = rowchange.FieldDiff{Old: nullJSON(existing.Label), New: nullJSON(label)}
@@ -242,6 +253,40 @@ func Update(tx *database.Tx, userID, id []byte, label, description string) (Term
 		Action:     rowchange.ActionUpdate,
 		Fields:     fields,
 	}}, nil
+}
+
+// valueWords are the shipped registry's word rules, never catalog data: a text
+// key reads nothing else.
+var valueWords = matchregistry.Default().Value.Words
+
+// conflictingTerm is the first term of the Property, other than selfID, that
+// reads the same as label (the same text key at Equivalent, any origin) or,
+// when slugKey is set, is a user term with that key: the upsert would
+// overwrite it. A label with no text key is ErrInvalid.
+func conflictingTerm(tx *database.Tx, propertyID, selfID []byte, label, slugKey string) (Term, bool, error) {
+	want, ok := valuecompare.TextKey(label, valuecompare.Equivalent, valueWords)
+	if !ok {
+		return Term{}, false, ErrInvalid
+	}
+	rows, err := tx.Query(sqlListByProperty, propertyID)
+	if err != nil {
+		return Term{}, false, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		t, err := scanTermRows(rows)
+		if err != nil {
+			return Term{}, false, err
+		}
+		if bytes.Equal(t.ID, selfID) {
+			continue
+		}
+		if k, ok := valuecompare.TextKey(t.Label, valuecompare.Equivalent, valueWords); (ok && k == want) ||
+			(slugKey != "" && t.Origin == vocabkey.OriginUser && t.Key == slugKey) {
+			return t, true, nil
+		}
+	}
+	return Term{}, false, rows.Err()
 }
 
 // Delete removes a user-origin term when unused. Product/plugin terms are locked.

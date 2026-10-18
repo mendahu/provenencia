@@ -359,7 +359,22 @@ func TestAlternateToponymIsMatchContext(t *testing.T) {
 	if len(hits) != 1 || hits[0].Ref != place.Entity.Ref || hits[0].Title != "Montréal" {
 		t.Fatalf("title %+v", hits)
 	}
-	if hits[0].MatchReason != "place" || hits[0].MatchSnippet != "Montreal" {
+	if hits[0].MatchReason != "title" || hits[0].MatchSnippet != "" {
+		t.Fatalf("a toponym that reads like the title is a title hit: %+v", hits[0])
+	}
+
+	g := newHandleFixture(t)
+	other := g.promote(g.subject("place", func(s subjects.Subject) []observations.Input {
+		return []observations.Input{
+			{SubjectID: s.ID, PropertyID: g.prop("toponym").ID, ValueText: "Montréal", HasText: true},
+			{SubjectID: s.ID, PropertyID: g.prop("toponym").ID, ValueText: "Ville-Marie", HasText: true},
+		}
+	}), nil)
+	hits = g.search("Ville Marie", KindPlace)
+	if len(hits) != 1 || hits[0].Ref != other.Entity.Ref || hits[0].Title != "Montréal" {
+		t.Fatalf("title %+v", hits)
+	}
+	if hits[0].MatchReason != "place" || hits[0].MatchSnippet != "Ville-Marie" {
 		t.Fatalf("context %+v", hits[0])
 	}
 }

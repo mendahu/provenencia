@@ -118,7 +118,7 @@ Relation per value type (confirmed 2026-10-17; worked examples below the table):
 |---|---|---|---|---|---|---|
 | name | all shared parts same | fold, alias, abbreviation | parts on one side only (`Robins` / `James Robins`), initial / word | — | spelling variant; different middle or untyped words | a surname or first given name on each side that the other lacks (`Mary Robins` / `James Robins`), generation conflict, under the Near minimum |
 | date | same span | — | one span inside the other | spans overlap | apart, within tolerance | beyond tolerance |
-| text | same words | folded words | all of one side's words in the other | some words shared | one-word spelling variant | nothing shared |
+| text | same letters, word breaks ignored | folded letters | all of one side's words in the other | some words shared | one-word spelling variant | nothing shared |
 | term | same key | — | — | — | — | different key (birth / baptism, son / child) |
 | integer | equal | — | — | — | within tolerance | beyond tolerance |
 
@@ -473,7 +473,7 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 
 **Found in passing (fixed in this spike):**
 - `match.indexAliases` doesn't normalize alias tokens. That's latent: only the lowercase product seed writes tables today. It matters once user or plugin tables exist; `Key` fixes it.
-- Text equality disagrees across six places (reconciler, match, search scoring, FTS, header sort, frequency stats). `Sainte-Anne` and `Sainte Anne` are equal in matching and distinct in reconciliation.
+- Text equality disagreed across six places (reconciler, match, search scoring, FTS, header sort, frequency stats). After S11-07 the reconciler, search scoring and the term duplicate check share `Key` (`valuecompare.TextKey`), and `core/match` goes in S11-13. FTS and the header sort (`SortKey`, ordering only) keep their own rules on purpose.
 
 ## What moves where in today's code
 
