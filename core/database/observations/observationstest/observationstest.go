@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/depictionvalue/depictionvaluetest"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -25,8 +26,8 @@ import (
 
 // A depiction's region sits on the page its Citation cites.
 const (
-	LikenessLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
-	LikenessRegion  = `{"version":1,"selectors":[{"type":"page","artifact_page":1},{"type":"region","unit":"normalized","points":[{"x":0.1,"y":0.1},{"x":0.4,"y":0.1},{"x":0.4,"y":0.5}]}]}`
+	LikenessLocator = depictionvaluetest.Locator
+	LikenessRegion  = depictionvaluetest.Region
 )
 
 func writePNG(t testing.TB, path string, w, h int, c color.Color) {

@@ -55,7 +55,7 @@ type SourceObservation struct {
 	TermID         []byte
 	DepictionID    []byte
 	// DepictionRegion and DepictionImageFileID are the depiction as
-	// depictionvalues.Readable returns it: empty when the stored half is not
+	// depictionvalue.Readable returns it: empty when the stored half is not
 	// one to show.
 	DepictionRegion      string
 	DepictionImageFileID []byte

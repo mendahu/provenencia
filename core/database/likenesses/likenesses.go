@@ -11,8 +11,8 @@ import (
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/depictionvalue"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -68,7 +68,7 @@ func ForEntities(q sqlbatch.Querier, entityIDs [][]byte) (map[string][]Likeness,
 		if !autoreconcile.Reason(reason).InGallery() {
 			return nil
 		}
-		image = depictionvalues.ReadableImage(image, mediaType)
+		image = depictionvalue.ReadableImage(image, mediaType)
 		if image == nil {
 			return nil
 		}
