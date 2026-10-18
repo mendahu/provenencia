@@ -50,6 +50,12 @@ struct ThumbnailCacheTests {
         let image = await cache.image(projectDir: project, relPath: rel)
         #expect(image == nil)
         #expect(cache.entryCount == 1)
+
+        // Control: a real file at the same path loads (a fresh cache, since the
+        // old one keeps its sentinel).
+        try fm.removeItem(atPath: project + "/" + rel)
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: rel)
+        #expect(await ThumbnailCache().image(projectDir: project, relPath: rel) != nil)
     }
 
     @Test func loadsAndHitsCache() async throws {
