@@ -286,16 +286,7 @@ struct CitationComposerAuthoringBox: View {
             via: via,
             draftAfterCommit: CitationAuthoringDraftAfterCommit(bridgeHasTerm: bridgeHasTerm)
         ) else { return false }
-        // The next field may be inserted by this same commit. A name or date
-        // editor is not in the hierarchy until the following turn, and a deep
-        // form can miss the first write.
-        let nextField = next
-        DispatchQueue.main.async {
-            focus = nextField
-            DispatchQueue.main.async {
-                if focus != nextField { focus = nextField }
-            }
-        }
+        FocusClaim.claim($focus, next)
         return true
     }
 
@@ -470,17 +461,7 @@ struct CitationPropertyFields: View {
                 )
             )
         ) else { return false }
-        // The next field may be inserted by this same commit. A name or date
-        // editor is not in the hierarchy until the following turn, and a deep
-        // form can miss the first write.
-        let binding = focus
-        let nextField = next
-        DispatchQueue.main.async {
-            binding.wrappedValue = nextField
-            DispatchQueue.main.async {
-                if binding.wrappedValue != nextField { binding.wrappedValue = nextField }
-            }
-        }
+        FocusClaim.claim(focus, next)
         return true
     }
 
@@ -913,7 +894,7 @@ private struct FlowLayout: Layout {
 }
 
 /// The value area of a depiction Property: a preview of the image a save
-/// would send, a caption, and the button that draws the region on the file.
+/// would send, a caption, and the Draw, whole-file and citation's-region buttons.
 struct CitationDepictionValueArea: View {
     @Bindable var model: CitationComposerModel
     var draft: DepictionValueDraft
@@ -945,23 +926,48 @@ struct CitationDepictionValueArea: View {
                         .font(PVFont.body(size: 12, italic: true))
                         .foregroundStyle(PVColor.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
-                    PVButton(
-                        draft.hasRegion || !draft.valueDepictionID.isEmpty
-                            ? L10n.CitationComposer.depictionRedraw
-                            : L10n.CitationComposer.depictionDraw,
-                        variant: .secondary,
-                        size: .sm,
-                        icon: .crop
-                    ) {
-                        model.startDepictionDrawing()
+                    FlowLayout(spacing: PVSpacing.space4, lineSpacing: PVSpacing.space3) {
+                        PVButton(
+                            draft.hasRegion || !draft.valueDepictionID.isEmpty
+                                ? L10n.CitationComposer.depictionRedraw
+                                : L10n.CitationComposer.depictionDraw,
+                            variant: .secondary,
+                            size: .sm,
+                            icon: .crop
+                        ) {
+                            model.startDepictionDrawing()
+                        }
+                        .disabled(!model.canStartDepictionDrawing)
+                        .focused(focus, equals: .value)
+                        .accessibilityIdentifier("citationComposer.depiction.draw")
+                        PVButton(model.depictionWholeFileTitle, variant: .secondary, size: .sm) {
+                            useRegion(.whole)
+                        }
+                        .disabled(!model.canStartDepictionDrawing)
+                        .accessibilityIdentifier("citationComposer.depiction.useWhole")
+                        if let region = model.depictionCitationRegion {
+                            PVButton(
+                                L10n.CitationComposer.depictionUseCitationRegion,
+                                variant: .secondary,
+                                size: .sm
+                            ) {
+                                useRegion(region)
+                            }
+                            .disabled(!model.canStartDepictionDrawing)
+                            .accessibilityIdentifier("citationComposer.depiction.useCitationRegion")
+                        }
                     }
-                    .disabled(!model.canStartDepictionDrawing)
-                    .focused(focus, equals: .value)
-                    .accessibilityIdentifier("citationComposer.depiction.draw")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .accessibilityIdentifier("citationComposer.depiction")
+    }
+
+    /// Sets the region without drawing and announces the caption it produced.
+    private func useRegion(_ region: ArtifactRegionDraft) {
+        if model.useDepictionRegion(region) {
+            AccessibilityAnnouncement.post(L10n.string(model.depictionCaption))
+        }
     }
 }

@@ -66,10 +66,31 @@ extension CitationComposerModel {
         context.citationID?.isEmpty == false
     }
 
+    /// The Citation locator a depiction is checked against: the saved one on an
+    /// existing Citation (the save checks the saved locator), else the unsaved one.
+    private var depictionCitationLocator: CitationLocatorDraft {
+        isExistingCitation ? fields.baseline.locator : fields.values.locator
+    }
+
     /// The page a depiction must be drawn on: the saved Citation's page, or
     /// the unsaved Citation's page when it already has one.
     var depictionPage: Int? {
-        isExistingCitation ? fields.baseline.locator.page : fields.values.locator.page
+        depictionCitationLocator.page
+    }
+
+    /// The Citation's own region, when it has a valid one, from the same locator
+    /// as ``depictionPage`` so the two cannot disagree.
+    var depictionCitationRegion: ArtifactRegionDraft? {
+        guard let region = depictionCitationLocator.region, region.isValid else { return nil }
+        return region
+    }
+
+    /// The title of the button that sets the region to the whole file: a page
+    /// on a PDF, a photo otherwise.
+    var depictionWholeFileTitle: LocalizedStringResource {
+        depictionCapabilities.supportsPageLocator
+            ? L10n.CitationComposer.depictionUseWholePage
+            : L10n.CitationComposer.depictionUseWholePhoto
     }
 
     /// How the PDF page rule treats a depiction region drawn now.
@@ -163,20 +184,35 @@ extension CitationComposerModel {
     /// alone because the Property may not be committed to the draft yet.
     var depictionDrawBlocked: Bool { isTranscribing || depictionNeedsPage }
 
-    /// The one rule for starting to draw: the Draw button and
-    /// ``startDepictionDrawing()`` read it, and the Tab order reads
-    /// ``depictionDrawBlocked``.
+    /// The one rule for setting a depiction region: Draw, the two region
+    /// buttons, and ``prepareDepictionRegion()`` read it, and the Tab order
+    /// reads ``depictionDrawBlocked``.
     var canStartDepictionDrawing: Bool {
         currentDepictionDraft != nil && !depictionDrawBlocked
     }
 
-    func startDepictionDrawing() {
-        guard canStartDepictionDrawing else { return }
+    /// What Draw and the region buttons share: nil unless a region may be set
+    /// now; otherwise the viewer is on the Citation's page (on a PDF with one)
+    /// and the dialog base is returned.
+    private func prepareDepictionRegion() -> ComposerBase? {
+        guard canStartDepictionDrawing else { return nil }
         let base = dialogBase()
-        guard base == .authoring || base == .edit else { return }
+        guard base == .authoring || base == .edit else { return nil }
         if depictionCapabilities.supportsPageLocator, let page = depictionPage {
             artifactViewer.setPage(page)
         }
+        return base
+    }
+
+    /// Sets the open depiction draft's region without drawing it, through the
+    /// same page rule as a drawn region. False when Draw could not start.
+    @discardableResult
+    func useDepictionRegion(_ region: ArtifactRegionDraft) -> Bool {
+        prepareDepictionRegion() != nil && commitViewerRegion(region)
+    }
+
+    func startDepictionDrawing() {
+        guard let base = prepareDepictionRegion() else { return }
         artifactViewer.closeFind()
         if armedRegionTool == nil { armedRegionTool = .rectangle }
         show(.drawingDepiction(over: base))
