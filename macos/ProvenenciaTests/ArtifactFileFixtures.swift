@@ -85,6 +85,57 @@ enum ArtifactFileFixtures {
         try write(rotated, projectDir: projectDir, relPath: relPath)
     }
 
+    /// Makes a symlink at `linkPath` to a PNG in a fresh outside folder, creating
+    /// the link's parent folders. Returns the outside folder; the caller removes it.
+    static func linkToOutsidePNG(at linkPath: String) throws -> String {
+        let outside = uniqueProjectDir()
+        try writePNG(projectDir: outside, relPath: "outside.png")
+        let link = URL(fileURLWithPath: linkPath)
+        try FileManager.default.createDirectory(
+            at: link.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createSymbolicLink(
+            atPath: linkPath,
+            withDestinationPath: outside + "/outside.png"
+        )
+        return outside
+    }
+
+    /// Writes a Finder alias (bookmark file) at `aliasPath` to a PNG in a fresh
+    /// outside folder, creating the alias's parent folders. Returns the outside
+    /// folder; the caller removes it.
+    static func aliasToOutsidePNG(at aliasPath: String) throws -> String {
+        let outside = uniqueProjectDir()
+        try writePNG(projectDir: outside, relPath: "outside.png")
+        let alias = URL(fileURLWithPath: aliasPath)
+        try FileManager.default.createDirectory(
+            at: alias.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        let data = try URL(fileURLWithPath: outside + "/outside.png").bookmarkData(
+            options: .suitableForBookmarkFile,
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        )
+        try URL.writeBookmarkData(data, to: alias)
+        return outside
+    }
+
+    /// Makes a symlink at `linkPath` to a fresh outside folder holding a PNG at
+    /// `relPath`, creating the link's parent folders. Returns the outside folder;
+    /// the caller removes it.
+    static func linkToOutsideFolder(at linkPath: String, holding relPath: String) throws -> String {
+        let outside = uniqueProjectDir()
+        try writePNG(projectDir: outside, relPath: relPath)
+        try FileManager.default.createDirectory(
+            at: URL(fileURLWithPath: linkPath).deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createSymbolicLink(atPath: linkPath, withDestinationPath: outside)
+        return outside
+    }
+
     static func seedArtifact(_ store: FakeStore, sourceID: String = "src-1", mediaType: String, relPath: String) {
         store.artifactsBySource[sourceID] = [
             CatalogArtifact(

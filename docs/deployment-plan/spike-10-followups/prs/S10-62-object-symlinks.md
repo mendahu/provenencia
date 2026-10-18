@@ -1,6 +1,6 @@
 # S10-62 — Refuse symlinked objects in the app
 
-**Status:** Planned
+**Status:** Landed in [#464](https://github.com/mendahu/provenencia/pull/464) (2026-10-18)
 **Spike / slice:** Spike 10 follow-ups · likeness hardening
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a refused object shows the missing state each reader already has)
@@ -282,3 +282,12 @@ None.
 
 **Title:** S10-62 — Refuse symlinked objects in the app
 **Body:** objective in one sentence; what shipped against US-1; AC evidence (test names); deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-10-followups/prs/S10-62-object-symlinks.md`.
+
+## Landed
+
+Differences from the plan:
+
+- `ArtifactViewerModel.emptyReason` is non-optional, so the control assertion in `symlinkedObjectSetsMissingFile` is `== .idle` plus `displayImage != nil`.
+- The `macos-client.mdc` mirror line and the `swift_vocabulary_test.go` header use S10-64 D-10's wording, naming `ArtifactRegionGeometry.maxRegionPoints` and `ProjectFiles.objectsDir`.
+- The manual check (§10) is left for the user.
+- Alias refusal added in fix round 1 from SEC-1: `isSafeObject` also refuses a Finder alias at the object path (`isAliasFileKey` on a freshly built URL), because Launch Services resolves aliases on open.

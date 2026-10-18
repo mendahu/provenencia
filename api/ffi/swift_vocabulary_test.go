@@ -19,14 +19,16 @@ import (
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/objectpath"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// The app reads Go's wire vocabulary, and mirrors a few Go rules, in Swift.
-// This test reads those Swift files so a rename or a rule change on either
-// side fails here, not as a silently missing badge, row or match.
+// The app reads Go's wire vocabulary, and mirrors some of Go's rules and
+// limits, through Swift files this test reads. A rename or a changed rule or
+// limit on either side fails here, not as a silently missing badge, row or
+// match, or a wrongly refused input.
 const (
 	swiftVocabulary = "../../macos/App/Platform/ConclusionVocabulary.swift"
 	swiftValueKinds = "../../macos/App/Platform/InterpretationValueKinds.swift"
@@ -34,6 +36,7 @@ const (
 	swiftGraphKinds = "../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift"
 
 	swiftRegionGeometry = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
+	swiftProjectFiles   = "../../macos/App/Platform/ProjectFiles.swift"
 	swiftTextMatch      = "../../macos/App/Platform/TextMatch.swift"
 )
 
@@ -249,6 +252,11 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			name: "region point cap", path: swiftRegionGeometry, enum: "ArtifactRegionGeometry",
 			re:   regexp.MustCompile(`static let maxRegionPoints = (\d+)`),
 			want: []string{strconv.Itoa(locator.MaxRegionPoints)},
+		},
+		{
+			name: "objects folder", path: swiftProjectFiles, enum: "ProjectFiles",
+			re:   regexp.MustCompile(`static let objectsDir = "(\w+)"`),
+			want: []string{objectpath.Dir},
 		},
 	}
 	for _, tt := range tests {
