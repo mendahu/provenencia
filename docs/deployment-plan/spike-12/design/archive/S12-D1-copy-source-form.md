@@ -6,9 +6,9 @@
 **Implements later as:** PR **S12-02**
 **Board:** agreed 2026-10-18 — [Claude Design](https://claude.ai/design/p/de1e1ccc-aa35-455f-9b9c-3ae269593dc7?via=share)
 **Depends on:** S12-01 (Copy Source engine)
-**Related:** [`../source-structure.md`](../source-structure.md#copy-source) (the design), [`../deployment-plan.md`](../deployment-plan.md) working rules "Copy Source". S12-D6 (Sources list) opens this same form from a row's right-click menu and does not redraw it. S12-D3 (Graph form) reuses the Artifact checklist drawn here.
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** [`../source-structure.md`](../../source-structure.md#copy-source) (the design), [`../deployment-plan.md`](../../deployment-plan.md) working rules "Copy Source". S12-D6 (Sources list) opens this same form from a row's right-click menu and does not redraw it. S12-D3 (Graph form) reuses the Artifact checklist drawn here.
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
