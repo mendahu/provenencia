@@ -22,6 +22,17 @@ const (
 	TypeTextQuote = "text_quote"
 )
 
+const (
+	// MaxRegionPoints is the most region points one locator document holds,
+	// counted per document across all its region selectors. The crossing test
+	// grows with the square of the point count, and a stored document is checked
+	// on every read, so the cap keeps one check near 0.3 ms.
+	MaxRegionPoints = 256
+	// MaxDocumentBytes is the longest locator document, after trimming, that
+	// decode will unmarshal.
+	MaxDocumentBytes = 65536
+)
+
 type document struct {
 	Version   int           `json:"version"`
 	Selectors []selectorRaw `json:"selectors"`
@@ -62,6 +73,9 @@ func decode(locatorJSON string) (document, error) {
 	if locatorJSON == "" {
 		return document{}, ErrInvalid
 	}
+	if len(locatorJSON) > MaxDocumentBytes {
+		return document{}, ErrInvalid
+	}
 	var doc document
 	if err := json.Unmarshal([]byte(locatorJSON), &doc); err != nil {
 		return document{}, ErrInvalid
@@ -74,6 +88,15 @@ func decode(locatorJSON string) (document, error) {
 
 // validateDoc checks each selector of a decoded document.
 func validateDoc(doc document) error {
+	regionPoints := 0
+	for _, sel := range doc.Selectors {
+		if strings.TrimSpace(sel.Type) == TypeRegion {
+			regionPoints += len(sel.Points)
+		}
+	}
+	if regionPoints > MaxRegionPoints {
+		return ErrInvalid
+	}
 	for i, sel := range doc.Selectors {
 		switch strings.TrimSpace(sel.Type) {
 		case TypeArtifact:
