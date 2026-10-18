@@ -59,12 +59,12 @@ struct ArtifactRegionCropTests {
         let viewer = ArtifactViewerModel()
         await viewer.load(source(projectDir, "objects/a.png", "image/png"))
         let middle = try #require(
-            ArtifactRegionCrop.render(viewer, page: nil, region: rectangle(0.25, 0.25, 0.75, 0.75))
+            await ArtifactRegionCrop.render(viewer, page: nil, region: rectangle(0.25, 0.25, 0.75, 0.75))
         )
         #expect(middle.width == 4)
         #expect(middle.height == 4)
         let top = try #require(
-            ArtifactRegionCrop.render(viewer, page: nil, region: rectangle(0, 0, 1, 0.25))
+            await ArtifactRegionCrop.render(viewer, page: nil, region: rectangle(0, 0, 1, 0.25))
         )
         let pixel = try #require(firstPixel(top))
         #expect(pixel.0 > 200 && pixel.1 < 40 && pixel.2 < 40)
@@ -75,7 +75,7 @@ struct ArtifactRegionCropTests {
         try ArtifactFileFixtures.writePNG(projectDir: projectDir, relPath: "objects/wide.png", width: 4096, height: 1024)
         let viewer = ArtifactViewerModel()
         await viewer.load(source(projectDir, "objects/wide.png", "image/png"))
-        let image = try #require(ArtifactRegionCrop.render(viewer, page: nil, region: rectangle(0, 0, 1, 1)))
+        let image = try #require(await ArtifactRegionCrop.render(viewer, page: nil, region: rectangle(0, 0, 1, 1)))
         #expect(image.width == 2048)
         #expect(image.height == 512)
     }
@@ -87,15 +87,73 @@ struct ArtifactRegionCropTests {
         await viewer.load(source(projectDir, "objects/m.pdf", "application/pdf"))
         // Rotated 90 degrees the unrotated top-left square sits at the displayed top-right.
         let topRight = try #require(
-            ArtifactRegionCrop.render(viewer, page: 1, region: rectangle(0.5, 0, 1, 0.5))
+            await ArtifactRegionCrop.render(viewer, page: 1, region: rectangle(0.5, 0, 1, 0.5))
         )
         let topLeft = try #require(
-            ArtifactRegionCrop.render(viewer, page: 1, region: rectangle(0, 0, 0.5, 0.5))
+            await ArtifactRegionCrop.render(viewer, page: 1, region: rectangle(0, 0, 0.5, 0.5))
         )
         #expect(containsBlack(topRight))
         #expect(!containsBlack(topLeft))
         #expect(topRight.width == 2 * topRight.height)
         #expect(topLeft.width == 2 * topLeft.height)
+    }
+
+    @Test func pdfCutDrawsOnlyTheBox() async throws {
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
+        try ArtifactFileFixtures.writeMarkedPDF(projectDir: projectDir, relPath: "objects/m.pdf", rotation: 0)
+        let viewer = ArtifactViewerModel()
+        await viewer.load(source(projectDir, "objects/m.pdf", "application/pdf"))
+        // 5 x 20 pt at 4 px/pt; the black square covers the top-left corner of the page.
+        let cut = try #require(
+            await ArtifactRegionCrop.render(viewer, page: 1, region: rectangle(0, 0, 0.05, 0.1))
+        )
+        #expect(cut.width == 20)
+        #expect(cut.height == 80)
+        let bytes = ArtifactFileFixtures.rgbaBytes(cut)
+        let first = Array(bytes.prefix(3))
+        let last = Array(bytes.suffix(4).prefix(3))
+        #expect(first.allSatisfy { $0 < 60 })
+        #expect(last.allSatisfy { $0 > 200 })
+    }
+
+    @Test func pdfCutKeepsAnnotations() async throws {
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
+        try ArtifactFileFixtures.writeMarkedPDF(projectDir: projectDir, relPath: "objects/m.pdf", rotation: 0)
+        let url = URL(fileURLWithPath: projectDir).appendingPathComponent("objects/m.pdf")
+        let document = try #require(PDFDocument(url: url))
+        let annotation = PDFAnnotation(
+            bounds: CGRect(x: 0, y: 0, width: 100, height: 20),
+            forType: .square,
+            withProperties: nil
+        )
+        annotation.color = .black
+        annotation.interiorColor = .black
+        try #require(document.page(at: 0)).addAnnotation(annotation)
+        #expect(document.write(to: url))
+        let viewer = ArtifactViewerModel()
+        await viewer.load(source(projectDir, "objects/m.pdf", "application/pdf"))
+        // The annotation covers the bottom 20 pt of the page; the page itself is white there.
+        let cut = try #require(
+            await ArtifactRegionCrop.render(viewer, page: 1, region: rectangle(0, 0.9, 1, 1))
+        )
+        #expect(containsBlack(cut))
+    }
+
+    @Test func pdfSnapshotNeedsTheLoadedDocument() async throws {
+        let viewer = ArtifactViewerModel()
+        #expect(ArtifactRegionCrop.snapshot(viewer, page: 1) == nil)
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
+        try ArtifactFileFixtures.writeMarkedPDF(projectDir: projectDir, relPath: "objects/m.pdf", rotation: 0)
+        await viewer.load(source(projectDir, "objects/m.pdf", "application/pdf"))
+        guard case .pdf(let url, let pageIndex) = ArtifactRegionCrop.snapshot(viewer, page: 1) else {
+            Issue.record("a loaded PDF should snapshot")
+            return
+        }
+        #expect(pageIndex == 0)
+        #expect(url == viewer.pdfDocument?.documentURL)
+        #expect(ArtifactRegionCrop.snapshot(viewer, page: 0) == nil)
+        viewer.unload()
+        #expect(ArtifactRegionCrop.snapshot(viewer, page: 1) == nil)
     }
 
     @Test func temporaryPNGIsAPNG() throws {
@@ -154,25 +212,9 @@ struct ArtifactRegionCropTests {
         pixels(image).contains { $0.0 < 60 && $0.1 < 60 && $0.2 < 60 }
     }
 
-    /// RGB triples read through an RGBA bitmap redraw, so any source layout works.
+    /// RGB triples read through ``ArtifactFileFixtures/rgbaBytes(_:)``.
     private func pixels(_ image: CGImage) -> [(UInt8, UInt8, UInt8)] {
-        let width = image.width
-        let height = image.height
-        var data = [UInt8](repeating: 0, count: width * height * 4)
-        let drawn = data.withUnsafeMutableBytes { buffer -> Bool in
-            guard let context = CGContext(
-                data: buffer.baseAddress,
-                width: width,
-                height: height,
-                bitsPerComponent: 8,
-                bytesPerRow: width * 4,
-                space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            ) else { return false }
-            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-            return true
-        }
-        guard drawn else { return [] }
+        let data = ArtifactFileFixtures.rgbaBytes(image)
         return stride(from: 0, to: data.count, by: 4).map { (data[$0], data[$0 + 1], data[$0 + 2]) }
     }
 }

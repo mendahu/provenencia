@@ -41,7 +41,7 @@ An entity whose effect is `None` (`subject_position`, `file_derivative`) is not 
 An all-`None` list commits without a revision. In a mixed list, `Run` drops the `None`
 rows before `Record`, so they are stored with the revision and are not recorded.
 
-An owned value row (`date_value`, `name_value`, `depiction_value`) uses `effects.ownedValue`. A depiction's image `file` row is audited; thumbnails (`file_derivative`) stay `None`.
+An owned value row (`date_value`, `name_value`, `depiction_value`) uses `effects.ownedValue`. A depiction's image `file` row is audited; thumbnails (`file_derivative`) stay `None`. See `add-depiction-value`.
 
 Source scopes come from the effect's `SourceScope` path, not a hand resolver. Set `Source` too only when a Source-graph, progress, or citation read loads the table.
 

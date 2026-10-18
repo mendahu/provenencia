@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/depictionvalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
@@ -144,8 +145,8 @@ type Listed struct {
 	// An empty RegionJSON means the stored region is not a valid region of the
 	// Citation's page; an empty ImageFileID means the stored image is not a
 	// Go-stored PNG. Every later reader that returns a depiction (the source
-	// graph's hydration) goes through depictionvalues.Readable.
-	Depiction *depictionvalues.Value
+	// graph's hydration) goes through depictionvalue.Readable.
+	Depiction *depictionvalue.Value
 }
 
 // Input is one Observation write. ID empty inserts. ID set updates that row.

@@ -27,8 +27,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/depictionvalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -85,8 +85,8 @@ type Value struct {
 	Date       *datevalue.Value
 	Name       *namevalue.Value
 	// Depiction is the depiction_values row, read through
-	// depictionvalues.Readable; its ImageFileID is empty when the image is refused.
-	Depiction *depictionvalues.Value
+	// depictionvalue.Readable; its ImageFileID is empty when the image is refused.
+	Depiction *depictionvalue.Value
 }
 
 // Candidate is one member Observation's value for the Property, with the
