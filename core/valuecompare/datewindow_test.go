@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
@@ -12,8 +13,8 @@ func TestDateEnds(t *testing.T) {
 	near := func(a, b float64) bool { return a-b < eps && b-a < eps }
 
 	t.Run("year", func(t *testing.T) {
-		first, last, ok := valuecompare.DateEnds(ymd(1817, 0, 0))
-		lo, hi, _ := datevalue.BoundDays(optInt(1817), nil, nil)
+		first, last, ok := valuecompare.DateEnds(*datevaluetest.YMD(1817, 0, 0))
+		lo, hi, _ := datevalue.BoundDays(datevaluetest.Part(1817), nil, nil)
 		if !ok || first != last || first.Open || first.Year != 1817 || first.Month != 0 || first.Day != 0 ||
 			first.From != 1817 || first.To != 1818 || first.Lo != lo || first.Hi != hi ||
 			!near(first.Mid, (first.From+first.To)/2) {
@@ -21,100 +22,100 @@ func TestDateEnds(t *testing.T) {
 		}
 	})
 	t.Run("month", func(t *testing.T) {
-		first, _, ok := valuecompare.DateEnds(ymd(1817, 5, 0))
+		first, _, ok := valuecompare.DateEnds(*datevaluetest.YMD(1817, 5, 0))
 		// May is days 121 to 151 of 365.
 		if !ok || first.Month != 5 || first.Day != 0 || !near(first.From, 1817+120.0/365) || !near(first.To, 1817+151.0/365) {
 			t.Fatalf("got %+v ok=%v", first, ok)
 		}
 	})
 	t.Run("leap month", func(t *testing.T) {
-		first, _, ok := valuecompare.DateEnds(ymd(1816, 2, 0))
+		first, _, ok := valuecompare.DateEnds(*datevaluetest.YMD(1816, 2, 0))
 		// February 1816 is days 32 to 60 of 366.
 		if !ok || !near(first.From, 1816+31.0/366) || !near(first.To, 1816+60.0/366) {
 			t.Fatalf("got %+v ok=%v", first, ok)
 		}
 	})
 	t.Run("day", func(t *testing.T) {
-		first, last, ok := valuecompare.DateEnds(ymd(1817, 5, 14))
+		first, last, ok := valuecompare.DateEnds(*datevaluetest.YMD(1817, 5, 14))
 		if !ok || first != last || first.Month != 5 || first.Day != 14 || first.Lo != first.Hi ||
 			!near(first.From, 1817+133.0/365) || !near(first.To, 1817+134.0/365) {
 			t.Fatalf("got %+v ok=%v", first, ok)
 		}
 	})
 	t.Run("range keeps its months", func(t *testing.T) {
-		first, last, ok := valuecompare.DateEnds(between(1817, 3, 0, 1817, 6, 0))
+		first, last, ok := valuecompare.DateEnds(*datevaluetest.Between(1817, 3, 0, 1817, 6, 0))
 		if !ok || first.Month != 3 || last.Month != 6 || first.Open || last.Open {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
 	t.Run("before", func(t *testing.T) {
-		first, last, ok := valuecompare.DateEnds(bound(datevalue.QualifierBEF, 1820))
+		first, last, ok := valuecompare.DateEnds(*bound(datevalue.QualifierBEF, 1820))
 		if !ok || !first.Open || first.Year != 0 || last.Open || last.Year != 1820 {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
 	t.Run("after", func(t *testing.T) {
-		first, last, ok := valuecompare.DateEnds(bound(datevalue.QualifierAFT, 1820))
+		first, last, ok := valuecompare.DateEnds(*bound(datevalue.QualifierAFT, 1820))
 		if !ok || first.Open || !last.Open || last.Year != 0 {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
 	t.Run("range with no end", func(t *testing.T) {
-		d := datevalue.Value{Kind: datevalue.KindRange, StartYear: optInt(1815)}
+		d := datevalue.Value{Kind: datevalue.KindRange, StartYear: datevaluetest.Part(1815)}
 		first, last, ok := valuecompare.DateEnds(d)
 		if !ok || first.Open || !last.Open {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
 	t.Run("range with no start", func(t *testing.T) {
-		d := datevalue.Value{Kind: datevalue.KindRange, EndYear: optInt(1815)}
+		d := datevalue.Value{Kind: datevalue.KindRange, EndYear: datevaluetest.Part(1815)}
 		first, last, ok := valuecompare.DateEnds(d)
 		if !ok || !first.Open || last.Open {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
 	t.Run("inverted range swaps", func(t *testing.T) {
-		first, last, ok := valuecompare.DateEnds(between(1820, 0, 0, 1815, 0, 0))
+		first, last, ok := valuecompare.DateEnds(*datevaluetest.Between(1820, 0, 0, 1815, 0, 0))
 		if !ok || first.Year != 1815 || last.Year != 1820 {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
 	t.Run("a month inside the end year does not swap", func(t *testing.T) {
-		first, last, ok := valuecompare.DateEnds(between(1817, 3, 0, 1817, 0, 0))
+		first, last, ok := valuecompare.DateEnds(*datevaluetest.Between(1817, 3, 0, 1817, 0, 0))
 		if !ok || first.Month != 3 || last.Month != 0 || first.Lo >= last.Hi {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
-		first, last, ok = valuecompare.DateEnds(between(1817, 5, 14, 1817, 0, 0))
+		first, last, ok = valuecompare.DateEnds(*datevaluetest.Between(1817, 5, 14, 1817, 0, 0))
 		if !ok || first.Month != 5 || first.Day != 14 || last.Month != 0 {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
 	t.Run("about is a point", func(t *testing.T) {
-		first, last, ok := valuecompare.DateEnds(about(1817, 0, 0))
+		first, last, ok := valuecompare.DateEnds(*datevaluetest.About(1817, 0, 0))
 		if !ok || first != last || first.Open {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
 	t.Run("empty kind is a point", func(t *testing.T) {
-		d := datevalue.Value{StartYear: optInt(1817)}
+		d := datevalue.Value{StartYear: datevaluetest.Part(1817)}
 		first, last, ok := valuecompare.DateEnds(d)
 		if !ok || first != last {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
 	t.Run("point with only end fields", func(t *testing.T) {
-		d := datevalue.Value{Kind: datevalue.KindPoint, EndYear: optInt(1817)}
+		d := datevalue.Value{Kind: datevalue.KindPoint, EndYear: datevaluetest.Part(1817)}
 		first, _, ok := valuecompare.DateEnds(d)
 		if !ok || first.Year != 1817 {
 			t.Fatalf("got %+v ok=%v", first, ok)
 		}
 	})
 	for name, d := range map[string]datevalue.Value{
-		"month 13":        ymd(1817, 13, 0),
-		"day 31 in April": ymd(1817, 4, 31),
-		"phrase only":     phrase("spring"),
+		"month 13":        *datevaluetest.YMD(1817, 13, 0),
+		"day 31 in April": *datevaluetest.YMD(1817, 4, 31),
+		"phrase only":     *datevaluetest.Phrase("spring"),
 		"range, no year":  {Kind: datevalue.KindRange},
-		"range, bad end":  between(1815, 0, 0, 1817, 13, 0),
+		"range, bad end":  *datevaluetest.Between(1815, 0, 0, 1817, 13, 0),
 	} {
 		t.Run("not ok: "+name, func(t *testing.T) {
 			if _, _, ok := valuecompare.DateEnds(d); ok {
@@ -172,12 +173,12 @@ func TestAboutEnds(t *testing.T) {
 		d      datevalue.Value
 		lo, hi int
 	}{
-		{"about a year", about(1817, 0, 0), day(1816, 1, 1), day(1818, 12, 31)},
-		{"about a month", about(1817, 3, 0), day(1817, 2, 1), day(1817, 4, 30)},
-		{"about January", about(1817, 1, 0), day(1816, 12, 1), day(1817, 2, 28)},
-		{"about a day", about(1817, 1, 1), day(1816, 12, 31), day(1817, 1, 2)},
-		{"a plain year", ymd(1817, 0, 0), day(1817, 1, 1), day(1817, 12, 31)},
-		{"a range is not widened", between(1815, 0, 0, 1820, 0, 0), day(1815, 1, 1), day(1820, 12, 31)},
+		{"about a year", *datevaluetest.About(1817, 0, 0), day(1816, 1, 1), day(1818, 12, 31)},
+		{"about a month", *datevaluetest.About(1817, 3, 0), day(1817, 2, 1), day(1817, 4, 30)},
+		{"about January", *datevaluetest.About(1817, 1, 0), day(1816, 12, 1), day(1817, 2, 28)},
+		{"about a day", *datevaluetest.About(1817, 1, 1), day(1816, 12, 31), day(1817, 1, 2)},
+		{"a plain year", *datevaluetest.YMD(1817, 0, 0), day(1817, 1, 1), day(1817, 12, 31)},
+		{"a range is not widened", *datevaluetest.Between(1815, 0, 0, 1820, 0, 0), day(1815, 1, 1), day(1820, 12, 31)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			first, last, ok := valuecompare.AboutEnds(tc.d, 1)
@@ -191,23 +192,23 @@ func TestAboutEnds(t *testing.T) {
 		})
 	}
 	t.Run("two units", func(t *testing.T) {
-		first, last, ok := valuecompare.AboutEnds(about(1817, 0, 0), 2)
+		first, last, ok := valuecompare.AboutEnds(*datevaluetest.About(1817, 0, 0), 2)
 		if !ok || first.Year != 1815 || last.Year != 1819 {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
 	t.Run("a phrase has no ends", func(t *testing.T) {
-		if _, _, ok := valuecompare.AboutEnds(phrase("spring"), 1); ok {
+		if _, _, ok := valuecompare.AboutEnds(*datevaluetest.Phrase("spring"), 1); ok {
 			t.Fatal("ok")
 		}
 	})
 	t.Run("open ends", func(t *testing.T) {
-		first, last, _ := valuecompare.AboutEnds(bound(datevalue.QualifierBEF, 1820), 1)
+		first, last, _ := valuecompare.AboutEnds(*bound(datevalue.QualifierBEF, 1820), 1)
 		w := valuecompare.EndsWindow(first, last)
 		if w.Lo != nil || w.Hi == nil || *w.Hi != datevalue.DaysFromCivil(1820, 12, 31) {
 			t.Fatalf("BEF window %+v", w)
 		}
-		first, last, _ = valuecompare.AboutEnds(bound(datevalue.QualifierAFT, 1820), 1)
+		first, last, _ = valuecompare.AboutEnds(*bound(datevalue.QualifierAFT, 1820), 1)
 		w = valuecompare.EndsWindow(first, last)
 		if w.Hi != nil || w.Lo == nil || *w.Lo != datevalue.DaysFromCivil(1820, 1, 1) {
 			t.Fatalf("AFT window %+v", w)
@@ -216,8 +217,8 @@ func TestAboutEnds(t *testing.T) {
 }
 
 func TestDateWindow(t *testing.T) {
-	year, _ := valuecompare.DateWindow(ymd(1985, 0, 0))
-	plain, _ := valuecompare.DateWindow(ymd(1817, 0, 0))
+	year, _ := valuecompare.DateWindow(*datevaluetest.YMD(1985, 0, 0))
+	plain, _ := valuecompare.DateWindow(*datevaluetest.YMD(1817, 0, 0))
 	closed := func(w valuecompare.Window) bool { return w.Lo != nil && w.Hi != nil }
 	for _, tc := range []struct {
 		name  string
@@ -225,31 +226,31 @@ func TestDateWindow(t *testing.T) {
 		ok    bool
 		check func(w valuecompare.Window) bool
 	}{
-		{"epoch", ymd(1970, 1, 1), true, func(w valuecompare.Window) bool {
+		{"epoch", *datevaluetest.YMD(1970, 1, 1), true, func(w valuecompare.Window) bool {
 			return closed(w) && *w.Lo == 0 && *w.Hi == 0
 		}},
-		{"year", ymd(1985, 0, 0), true, func(w valuecompare.Window) bool {
+		{"year", *datevaluetest.YMD(1985, 0, 0), true, func(w valuecompare.Window) bool {
 			return closed(w) && *w.Lo < *w.Hi
 		}},
-		{"day inside the year", ymd(1985, 5, 14), true, func(w valuecompare.Window) bool {
+		{"day inside the year", *datevaluetest.YMD(1985, 5, 14), true, func(w valuecompare.Window) bool {
 			return closed(w) && *w.Lo == *w.Hi && year.Contains(w)
 		}},
-		{"before", bound(datevalue.QualifierBEF, 1900), true, func(w valuecompare.Window) bool {
+		{"before", *bound(datevalue.QualifierBEF, 1900), true, func(w valuecompare.Window) bool {
 			return w.Lo == nil && w.Hi != nil
 		}},
-		{"after", bound(datevalue.QualifierAFT, 1872), true, func(w valuecompare.Window) bool {
+		{"after", *bound(datevalue.QualifierAFT, 1872), true, func(w valuecompare.Window) bool {
 			return w.Lo != nil && w.Hi == nil
 		}},
-		{"range with only an end", datevalue.Value{Kind: datevalue.KindRange, EndYear: optInt(1900)}, true, func(w valuecompare.Window) bool {
+		{"range with only an end", datevalue.Value{Kind: datevalue.KindRange, EndYear: datevaluetest.Part(1900)}, true, func(w valuecompare.Window) bool {
 			return w.Lo == nil && w.Hi != nil
 		}},
-		{"range with only a start", datevalue.Value{Kind: datevalue.KindRange, StartYear: optInt(1885)}, true, func(w valuecompare.Window) bool {
+		{"range with only a start", datevalue.Value{Kind: datevalue.KindRange, StartYear: datevaluetest.Part(1885)}, true, func(w valuecompare.Window) bool {
 			return w.Lo != nil && w.Hi == nil
 		}},
-		{"about is the plain year", about(1817, 0, 0), true, func(w valuecompare.Window) bool {
+		{"about is the plain year", *datevaluetest.About(1817, 0, 0), true, func(w valuecompare.Window) bool {
 			return closed(w) && *w.Lo == *plain.Lo && *w.Hi == *plain.Hi
 		}},
-		{"phrase-only has no window", phrase("Christmas"), false, nil},
+		{"phrase-only has no window", *datevaluetest.Phrase("Christmas"), false, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			w, ok := valuecompare.DateWindow(tc.d)
