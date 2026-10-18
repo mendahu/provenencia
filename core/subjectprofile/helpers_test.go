@@ -80,3 +80,20 @@ func property(t testing.TB, key vocabkey.PropertyKey, cs ...subjectprofile.Candi
 	t.Helper()
 	return subjectprofile.Property{Values: reconcile(t, key, cs), Candidates: cs}
 }
+
+// vcand is a bare Subject-side candidate for v, negative when neg.
+func vcand(v autoreconcile.Value, neg bool) autoreconcile.Candidate {
+	return autoreconcile.Candidate{Value: v, Negative: neg}
+}
+
+// maleFemale is an entity whose members 1 and 2 say male and 3 says female.
+func maleFemale(t *testing.T) subjectprofile.Entity {
+	return subjectprofile.Entity{Properties: props{sex: property(t, sex,
+		cand(1, 1, 1, term("male")), cand(2, 2, 2, term("male")), cand(3, 3, 3, term("female")))}}
+}
+
+// denied is an entity whose weak female is denied by member 2's negative.
+func denied(t *testing.T) subjectprofile.Entity {
+	return subjectprofile.Entity{Properties: props{sex: property(t, sex,
+		weak(cand(1, 1, 1, term("female"))), negative(cand(2, 2, 2, term("female"))))}}
+}

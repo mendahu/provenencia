@@ -24,14 +24,6 @@ type props = map[vocabkey.PropertyKey]subjectprofile.Property
 
 func TestBuild(t *testing.T) {
 	var named subjectprofile.Entity // the entity AC-1.9 built, for its check
-	maleFemale := func(t *testing.T) subjectprofile.Entity {
-		return subjectprofile.Entity{Properties: props{sex: property(t, sex,
-			cand(1, 1, 1, term("male")), cand(2, 2, 2, term("male")), cand(3, 3, 3, term("female")))}}
-	}
-	denied := func(t *testing.T) subjectprofile.Entity {
-		return subjectprofile.Entity{Properties: props{sex: property(t, sex,
-			weak(cand(1, 1, 1, term("female"))), negative(cand(2, 2, 2, term("female"))))}}
-	}
 	ex := func(ms ...byte) subjectprofile.Options {
 		var o subjectprofile.Options
 		for _, m := range ms {
@@ -187,10 +179,6 @@ func TestBuild(t *testing.T) {
 }
 
 func TestForSubject(t *testing.T) {
-	c := func(v autoreconcile.Value) autoreconcile.Candidate { return autoreconcile.Candidate{Value: v} }
-	neg := func(v autoreconcile.Value) autoreconcile.Candidate {
-		return autoreconcile.Candidate{Value: v, Negative: true}
-	}
 	james := name("James Robins")
 	tests := []struct {
 		name        string
@@ -200,10 +188,10 @@ func TestForSubject(t *testing.T) {
 		check       func(t *testing.T, p subjectcompare.Values)
 	}{
 		{name: "AC-5.1 positives and negatives in input order",
-			values: map[vocabkey.PropertyKey][]autoreconcile.Candidate{sex: {c(term("male")), neg(term("female"))}},
+			values: map[vocabkey.PropertyKey][]autoreconcile.Candidate{sex: {vcand(term("male"), false), vcand(term("female"), true)}},
 			want:   "sex_at_birth={male, ¬female}"},
 		{name: "AC-5.2 a name carries the pattern",
-			values:      map[vocabkey.PropertyKey][]autoreconcile.Candidate{nameProp: {c(james)}},
+			values:      map[vocabkey.PropertyKey][]autoreconcile.Candidate{nameProp: {vcand(james, false)}},
 			namePattern: "pattern-1",
 			check: func(t *testing.T, p subjectcompare.Values) {
 				if len(p[nameProp]) != 1 || p[nameProp][0].NamePattern != "pattern-1" || p[nameProp][0].Name != james.Name {

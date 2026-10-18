@@ -18,20 +18,12 @@ type observed = map[vocabkey.PropertyKey][]autoreconcile.Candidate
 func pos(vs ...autoreconcile.Value) []autoreconcile.Candidate {
 	var out []autoreconcile.Candidate
 	for _, v := range vs {
-		out = append(out, autoreconcile.Candidate{Value: v})
+		out = append(out, vcand(v, false))
 	}
 	return out
 }
 
 func TestEntityCompare(t *testing.T) {
-	maleFemale := func(t *testing.T) subjectprofile.Entity {
-		return subjectprofile.Entity{Properties: props{sex: property(t, sex,
-			cand(1, 1, 1, term("male")), cand(2, 2, 2, term("male")), cand(3, 3, 3, term("female")))}}
-	}
-	denied := func(t *testing.T) subjectprofile.Entity {
-		return subjectprofile.Entity{Properties: props{sex: property(t, sex,
-			weak(cand(1, 1, 1, term("female"))), negative(cand(2, 2, 2, term("female"))))}}
-	}
 	sexResult := func(outcome propertycompare.Outcome, cause propertycompare.Cause) func(*testing.T, subjectcompare.Result) {
 		return func(t *testing.T, r subjectcompare.Result) {
 			t.Helper()
@@ -89,7 +81,7 @@ func TestEntityCompare(t *testing.T) {
 				cand(1, 1, 1, text("York")), cand(2, 2, 2, text("York")), cand(3, 3, 3, text("London")))}}
 		}, subject: observed{toponym: pos(text("London"))}, sim: 1, ev: 3},
 		{name: "AC-5.5 two negatives never meet", kind: vocabkey.Person, entity: denied,
-			subject: observed{sex: {{Value: term("female"), Negative: true}}}, sim: 0, ev: 0,
+			subject: observed{sex: {vcand(term("female"), true)}}, sim: 0, ev: 0,
 			check: sexResult(propertycompare.OutcomeUnknown, propertycompare.CauseNoValues)},
 	}
 	for _, tc := range tests {
