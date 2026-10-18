@@ -1,7 +1,7 @@
 // Package likenesses reads the likenesses a handle's gallery shows: its
-// cached likeness values whose reason a gallery lists
-// (autoreconcile.Reason.InGallery), earliest recorded first. Lead picks the
-// likeness a handle leads with.
+// cached likeness values with their gallery records, each record whose own
+// outcome reason a gallery lists (autoreconcile.Reason.InGallery), earliest
+// recorded first. Lead picks the likeness a handle leads with.
 package likenesses
 
 import (
@@ -20,7 +20,7 @@ import (
 type Likeness struct {
 	Rank           int // the value's rank in auto_reconciler_values
 	ImageFileID    []byte
-	ObservationIDs [][]byte // the records that went into it, ascending; [0] is the first recorded
+	ObservationIDs [][]byte // the value's gallery records, ascending; [0] is the first recorded; a negative, denied, or provisional record of the same picture is not one
 	// Preferred is true for the likeness the handle's preferred_likeness_observation_id
 	// names (S10-39); at most one.
 	Preferred bool
@@ -29,7 +29,7 @@ type Likeness struct {
 	Leads bool
 }
 
-const sqlGallery = `SELECT v.entity_id, v.rank, v.reason, v.value_image_file_id,
+const sqlGallery = `SELECT v.entity_id, v.rank, ao.reason, v.value_image_file_id,
 		COALESCE(f.media_type, ''), ao.observation_id, e.preferred_likeness_observation_id
 	FROM auto_reconciler_values v
 	JOIN canonical_entities e ON e.id = v.entity_id

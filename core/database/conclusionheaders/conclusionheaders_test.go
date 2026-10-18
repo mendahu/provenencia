@@ -361,6 +361,24 @@ func TestPersonHeaderLeadsWithEarliestLikeness(t *testing.T) {
 	must(t, f.c.Graph().Verify())
 }
 
+func TestPersonHeaderSkipsNegativeLikeness(t *testing.T) {
+	f := newFixture(t)
+	s, _, h := f.person("Ann Lee")
+	observationstest.SaveNegativeLikeness(t, f.c, userID, f.source.ID, s.ID, 100)
+	b := observationstest.SaveLikeness(t, f.c, userID, f.source.ID, s.ID, 200)
+	observationstest.SaveLikeness(t, f.c, userID, f.source.ID, s.ID, 100)
+	var got []byte
+	for _, r := range f.list() {
+		if bytes.Equal(r.Entity.ID, h) {
+			got = r.LikenessImageFileID
+		}
+	}
+	if want := observationstest.ImageOf(t, f.c, b.ID); !bytes.Equal(got, want) {
+		t.Fatalf("lead %x, want %x", got, want)
+	}
+	must(t, f.c.Graph().Verify())
+}
+
 func TestPersonHeaderLeadsWithPortrait(t *testing.T) {
 	f := newFixture(t)
 	s, _, h := f.person("Ann Lee")
