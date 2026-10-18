@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-07 — One normalization key across the core
+
+**Landed 2026-10-18** in [#460](https://github.com/mendahu/provenencia/pull/460). Search, the search index, the term duplicate check and the alias tables use value compare's text key. Text ignores where words break, so `god-father` and `godfather`, and `York Town` and `Yorktown`, are the same text (the reconciler groups them; `CacheVersion` 17). Searching `Montreal` ranks `Montréal` like an exact hit, and a Person or Place search document lists each alternate name once (`ProjectionVersion` 8). Creating or renaming a term to one the Property already has, of any origin, is refused with the existing term's label. Alias tokens are stored and indexed as the comparison tokens names produce, through `valuecompare.AliasToken`.
+
 ## S11-06 — Migrate the reconciler onto value compare
 
 **Landed 2026-10-17** in [#456](https://github.com/mendahu/provenencia/pull/456). The reconciler decides "the same value" with value compare: values group when it says `Same` and fold when it says `Contains`, and `Equivalent` (an accent fold, an alias) never groups. Text that differs only by case, punctuation or spacing is one value (`Sainte-Anne` / `Sainte Anne`) while `Montréal` and `Montreal` stay two, `Mc Donald` and `McDonald` are one surname, word order inside a name part type no longer splits a value, and `ABT 1985` reads as 1984 – 1986 and folds into `1986`. Place membership picks the later start and earlier end by day. `Reconcile` and `Compatible` take `valuecompare.Rules`, Promote passes the rules it holds, the cache reads the shipped registry (`CacheVersion` 16), and `valuecompare.DateWindow` replaces `DateBounds` and `WindowOfDate`; `PeriodWindow` and `LinkMembership` moved to `conclusionheaders`. The reconciler's own key and fold code is deleted.

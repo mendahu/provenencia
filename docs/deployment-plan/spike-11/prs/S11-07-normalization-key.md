@@ -1,6 +1,6 @@
 # S11-07 — One normalization key across the core
 
-**Status:** Planned
+**Status:** Landed in [#460](https://github.com/mendahu/provenencia/pull/460) (2026-10-18)
 **Spike / slice:** Spike 11 · Slice 2 — Value compare, everywhere
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: search ranking, the search index, the term duplicate check and alias storage change in Go; the one visible change is the wording of an existing error)
@@ -308,3 +308,13 @@ None.
 
 **Title:** S11-07 — One normalization key across the core
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-07-normalization-key.md`.
+
+## Landed
+
+Differences from the plan:
+
+- `TestAliasIndexKeysTokens` scores through `WordSimilarity` with the alias index, as AC-5.3 and AC-5.4 say, rather than calling `Hit`.
+- `addProductNicknames` counts the tokens `insertSet` wrote (keyed, distinct) instead of `len(want)`.
+- The `MatchText` label check reuses `distinctAlternates` with the title and the kept alternates, so a label with no text key adds no line.
+- Extra tests: `TestPropertyTerms` gained two rows (create refusals, rename refusal and restyle) beside the changed "duplicate user key" row.
+- The in-app check (section 10) is left for the user.
