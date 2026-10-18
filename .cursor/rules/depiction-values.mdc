@@ -1,0 +1,13 @@
+---
+description: Depiction values: pure type in core/depictionvalue, queries in core/database/depictionvalues
+globs: core/depictionvalue/**,core/database/depictionvalues/**,core/database/likenesses/**,core/ingest/depictions.go,core/locator/depiction.go
+alwaysApply: false
+---
+
+# Depiction values
+
+Follow the project skill `.agents/skills/add-depiction-value/SKILL.md`.
+
+- Types, `Validate` and the read rules (`Readable`, `ReadableImage`) live in `core/depictionvalue`; storage goes through `depictionvalues.InsertTx` / `LookupTx` / `FromJoin`.
+- Every reader that returns a depiction to the app goes through `Readable`.
+- Schema changes go through catalog migrations.
