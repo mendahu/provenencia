@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-12 — Lifespan for people
+
+**Landed 2026-10-18** in [#480](https://github.com/mendahu/provenencia/pull/480). People now have a lifespan. The profile builder lays every dated event a person takes part in on one timeline; birth starts it, death or burial ends it, and an open end is padded by 110 years. Subject compare checks each side's dated events against the other side's window, so a person who died before a Subject was born, a 140-year life, or a residence after a death is a large conflict. The four age-rule knobs were dropped. No caller yet; nothing changes for researchers.
+
 ## S11-11 — Subject profile and entity compare
 
 **Landed 2026-10-18** in [#476](https://github.com/mendahu/provenencia/pull/476). The profile builder exists: `subjectprofile.Build` turns an entity's reconciled values into a Subject-shaped profile, with displayed values as positives, denied values as negatives and nothing else, so entity compare is `Build` then `subjectcompare.Compare`. `Options.Excluding` reconciles again without some members' Observations, for leave-one-out checks, and `ForSubject` builds a plain Subject's side. No caller yet; nothing changes for researchers.
