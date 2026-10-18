@@ -4,6 +4,11 @@ import Testing
 
 @Suite
 struct CitationLocatorDraftTests {
+    @Test func decodeDropsRegionOverPointCap() {
+        #expect(CitationLocatorDraft.decode(RegionFixtures.locatorJSON(ringCount: 257)).region == nil)
+        #expect(CitationLocatorDraft.decode(RegionFixtures.locatorJSON(ringCount: 256)).region != nil)
+    }
+
     @Test func pdfRegionStampsPageWhenMissing() {
         var draft = CitationLocatorDraft.artifactOnly()
         let stamped = draft.setRegion(Self.rectangle, capabilities: Self.pdf, viewerPage: 3)
