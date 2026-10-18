@@ -1,7 +1,7 @@
 # Review — S10-65 Render the likeness preview off the main thread
 
-**Verdict:** Fits with changes — Not ready (round 1); fixes applied, round 2 to run
-**Rounds:** 1. **Reviewers:** maintainability (opus, pr-reviewer), executability (sonnet, Explore)
+**Verdict:** Fits — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (opus, pr-reviewer), executability (sonnet, Explore)
 
 ## To user
 - None.
@@ -82,3 +82,33 @@ Checked `saveEdit` (`CitationComposerModel+Authoring.swift`): with `isDepictionR
 
 ### X-temptations
 **Answer:** Fixed — Out lines for the OCR crop, clearing the memo on close or Citation switch, and locked or encrypted PDFs (accepted as `.failed`); the failed-cut message stays with UX-6. The double key computation is a Decision (D-13: not cached).
+
+## Round 2
+
+Maintainability: every round-1 answer holds (M-1 – M-7 and both outside-lens notes resolved). No new blocker. Verdict: Fits. Two non-blocking notes, answered below.
+Executability: every round-1 answer holds; every Current state row true at `e97cf54`. Verdict: Ready with changes.
+
+### Maintainability note · `docs/ideas/depictions-and-likenesses.md` line 11 says the Mac draws the PDF region with PDFKit
+**Answer:** Fixed — same as X-4.
+
+### Maintainability note · The accessibility label is added by hand on `CachedThumbnail` at two call sites
+**Answer:** Logged — Out line "not planned — move the label into `CachedThumbnail` when a third caller adds one".
+
+### X-1 · blocker (environment) · Every Swift check needs a Mac
+**Answer:** Declined — host-only; Stop condition 1 already stops without a macOS host with Xcode. Not a plan defect.
+
+### X-2 · minor · D-12 does not say where `SendableImage` goes
+**Answer:** Fixed — D-12: `case image(SendableImage)`, a `SendableImage?` task result, `render` unwraps it; `cut` still takes a `Snapshot`; T-3 unchanged.
+
+### X-3 · minor · D-8 does not say what `depictionImage(for:)` returns when the memo write is skipped
+**Answer:** Fixed — D-8: it returns the cut either way.
+
+### X-4 · minor · STEP-3 says no doc changes, but the ideas file's Windows bullet becomes false
+**Answer:** Fixed — STEP-3 edits the bullet to "Spike 10 draws it with Core Graphics on the Mac."
+
+### X-5 · minor · The saved-tile loading wording in §6 States and manual check 4
+**Answer:** Fixed — §6 States: first frame is the empty dash, a hit shows the image at once, a miss shows the loading bar until the decode ends; manual check 4: no cut loading bar, the saved face shows when the cache returns it.
+
+### X-6 · nit · "Draws only the face box" may not avoid decoding the whole scan
+**Answer:** Logged — the cut is off the main thread either way; the PR body makes no promise about decode cost.
+
