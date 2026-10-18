@@ -209,6 +209,41 @@ final class SourcesModel {
         types.first { $0.id == source.sourceTypeID }?.iconKey
     }
 
+    /// A Source's title and ref keyed once. Two keys, so a match cannot cross fields.
+    private struct SearchKey {
+        let revision: Int64
+        let title: String
+        let ref: String
+    }
+
+    /// Keyed Sources by id, reused while a Source's revision and the locale hold.
+    /// Not observed: filling it while the view reads `visibleSources` must not
+    /// invalidate that view.
+    @ObservationIgnored private var searchKeyCache: [String: SearchKey] = [:]
+    @ObservationIgnored private var searchKeyLocale: String?
+
+    private func searchKeys(for rows: [CatalogSource], locale: Locale) -> [String: SearchKey] {
+        if searchKeyLocale != locale.identifier {
+            searchKeyCache = [:]
+            searchKeyLocale = locale.identifier
+        }
+        var next: [String: SearchKey] = [:]
+        next.reserveCapacity(rows.count)
+        for row in rows {
+            if let hit = searchKeyCache[row.id], hit.revision == row.updated.revision {
+                next[row.id] = hit
+            } else {
+                next[row.id] = SearchKey(
+                    revision: row.updated.revision,
+                    title: TextMatch.key(row.title, locale: locale),
+                    ref: TextMatch.key(row.ref, locale: locale)
+                )
+            }
+        }
+        searchKeyCache = next
+        return next
+    }
+
     var visibleSources: [CatalogSource] {
         var rows = sources
         let typeID = effectiveTypeFilterID
@@ -221,7 +256,11 @@ final class SourcesModel {
         }
         let query = TextMatch.Query(trimmedQuery)
         if !query.isEmpty {
-            rows = rows.filter { query.matches($0.title, $0.ref) }
+            let keys = searchKeys(for: sources, locale: query.locale)
+            rows = rows.filter { row in
+                guard let key = keys[row.id] else { return false }
+                return query.matchesKey(key.title) || query.matchesKey(key.ref)
+            }
         }
         switch settings.sort {
         case .added:

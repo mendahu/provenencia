@@ -51,7 +51,7 @@ enum TextMatch {
     static func key(_ text: String, at level: Level = .equivalent, locale: Locale = .autoupdatingCurrent) -> String {
         var out = String.UnicodeScalarView()
         for ch in text {
-            out.append(contentsOf: characterKey(ch, level: level, locale: locale))
+            appendKey(of: ch, level: level, locale: locale, to: &out)
         }
         return String(out)
     }
@@ -101,10 +101,9 @@ enum TextMatch {
         var keyed: [Unicode.Scalar] = []
         var owner: [String.Index] = []
         for idx in text.indices {
-            for scalar in characterKey(text[idx], level: .equivalent, locale: query.locale) {
-                keyed.append(scalar)
-                owner.append(idx)
-            }
+            let before = keyed.count
+            appendKey(of: text[idx], level: .equivalent, locale: query.locale, to: &keyed)
+            for _ in before..<keyed.count { owner.append(idx) }
         }
         let needle = Array(query.key.unicodeScalars)
         let n = needle.count
@@ -115,30 +114,49 @@ enum TextMatch {
         return nil
     }
 
-    private static func characterKey(_ ch: Character, level: Level, locale: Locale) -> [Unicode.Scalar] {
+    /// Appends the key of one character. A lone ASCII scalar skips Foundation:
+    /// every ASCII letter lowercases by itself except `I`, which Turkish and
+    /// Azeri lower to `ı`; NUL goes through Foundation, which drops it.
+    private static func appendKey<C: RangeReplaceableCollection>(
+        of ch: Character, level: Level, locale: Locale, to out: inout C
+    ) where C.Element == Unicode.Scalar {
+        var only: Unicode.Scalar?
+        var count = 0
+        for scalar in ch.unicodeScalars {
+            only = scalar
+            count += 1
+            if count > 1 { break }
+        }
+        if count == 1, let ascii = only, ascii.isASCII, ascii != "I", ascii.value != 0 {
+            let lowered = ("A"..."Z").contains(ascii) ? Unicode.Scalar(ascii.value + 32)! : ascii
+            if keeps(lowered, level: level) { out.append(lowered) }
+            return
+        }
         var lowered = String(ch).lowercased(with: locale)
         if level == .equivalent {
             lowered = lowered.decomposedStringWithCanonicalMapping
         }
-        var out: [Unicode.Scalar] = []
-        for scalar in lowered.unicodeScalars {
-            let props = scalar.properties
-            if props.isWhitespace { continue }
-            switch props.generalCategory {
-            case .connectorPunctuation, .dashPunctuation, .openPunctuation, .closePunctuation,
-                 .initialPunctuation, .finalPunctuation, .otherPunctuation:
-                continue
-            case .nonspacingMark where level == .equivalent:
-                continue
-            default:
-                break
-            }
+        for scalar in lowered.unicodeScalars where keeps(scalar, level: level) {
             if level == .equivalent, let fold = letterFolds[scalar] {
                 out.append(contentsOf: fold.unicodeScalars)
             } else {
                 out.append(scalar)
             }
         }
-        return out
+    }
+
+    /// False for whitespace, punctuation and (at `equivalent`) accents.
+    private static func keeps(_ scalar: Unicode.Scalar, level: Level) -> Bool {
+        let props = scalar.properties
+        if props.isWhitespace { return false }
+        switch props.generalCategory {
+        case .connectorPunctuation, .dashPunctuation, .openPunctuation, .closePunctuation,
+             .initialPunctuation, .finalPunctuation, .otherPunctuation:
+            return false
+        case .nonspacingMark where level == .equivalent:
+            return false
+        default:
+            return true
+        }
     }
 }

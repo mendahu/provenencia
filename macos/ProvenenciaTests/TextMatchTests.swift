@@ -43,4 +43,50 @@ struct TextMatchTests {
         #expect(span("jose", "Mr José Ruiz") == "José")
         #expect(span("xyz", "José") == nil)
     }
+
+    /// D-2's formula, inline: lower each character with the locale, decompose,
+    /// drop whitespace, punctuation and (at equivalent) accents, then fold.
+    private func d2Key(_ text: String, level: TextMatch.Level, locale: Locale) -> String {
+        var out = String.UnicodeScalarView()
+        for ch in text {
+            var lowered = String(ch).lowercased(with: locale)
+            if level == .equivalent { lowered = lowered.decomposedStringWithCanonicalMapping }
+            for scalar in lowered.unicodeScalars {
+                let props = scalar.properties
+                if props.isWhitespace { continue }
+                switch props.generalCategory {
+                case .connectorPunctuation, .dashPunctuation, .openPunctuation, .closePunctuation,
+                     .initialPunctuation, .finalPunctuation, .otherPunctuation:
+                    continue
+                case .nonspacingMark where level == .equivalent:
+                    continue
+                default:
+                    break
+                }
+                if level == .equivalent, let fold = TextMatch.letterFolds[scalar] {
+                    out.append(contentsOf: fold.unicodeScalars)
+                } else {
+                    out.append(scalar)
+                }
+            }
+        }
+        return String(out)
+    }
+
+    @Test func asciiFastPathKeysLikeFoundation() {
+        let locales = [enUS, Locale(identifier: "tr_TR"), TextMatch.posix]
+        for value in 0...0x7F {
+            let ch = String(Character(Unicode.Scalar(UInt8(value))))
+            for text in [ch, "a\(ch)b"] {
+                for level in [TextMatch.Level.same, .equivalent] {
+                    for locale in locales {
+                        #expect(
+                            TextMatch.key(text, at: level, locale: locale) == d2Key(text, level: level, locale: locale),
+                            "U+\(String(value, radix: 16)) \(level) \(locale.identifier)"
+                        )
+                    }
+                }
+            }
+        }
+    }
 }

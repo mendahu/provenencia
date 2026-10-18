@@ -435,6 +435,21 @@ struct SourcesModelTests {
         #expect(model.isFiltering)
     }
 
+    @Test func searchSeesAnEditedTitle() async {
+        let (model, session) = makeModel(
+            sources: [source(id: "s1", title: "Smith family Bible", typeID: "t1", updatedRevision: 1)],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+        model.settings.query = "smith"
+        #expect(model.visibleSources.map(\.id) == ["s1"])
+
+        session.apply(.updatedSource(source(id: "s1", title: "Jones diary", typeID: "t1", updatedRevision: 2)))
+        #expect(model.visibleSources.map(\.id) == [])
+        model.settings.query = "jones"
+        #expect(model.visibleSources.map(\.id) == ["s1"])
+    }
+
     @Test func filtersCombineAndClear() async {
         let store = FakeStore()
         var sources: [CatalogSource] = []
