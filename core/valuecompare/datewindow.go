@@ -79,8 +79,8 @@ func EndsDate(first, last DateEnd) (datevalue.Value, bool) {
 	}
 	return datevalue.Value{
 		Kind: datevalue.KindRange, Calendar: "gregorian",
-		StartYear: endPart(first.Year), StartMonth: endPart(first.Month), StartDay: endPart(first.Day),
-		EndYear: endPart(last.Year), EndMonth: endPart(last.Month), EndDay: endPart(last.Day),
+		StartYear: &first.Year, StartMonth: endPart(first.Month), StartDay: endPart(first.Day),
+		EndYear: &last.Year, EndMonth: endPart(last.Month), EndDay: endPart(last.Day),
 	}, true
 }
 
@@ -88,11 +88,12 @@ func EndsDate(first, last DateEnd) (datevalue.Value, bool) {
 func endsPoint(e DateEnd, qualifier string) datevalue.Value {
 	return datevalue.Value{
 		Kind: datevalue.KindPoint, Calendar: "gregorian", Qualifier: qualifier,
-		StartYear: endPart(e.Year), StartMonth: endPart(e.Month), StartDay: endPart(e.Day),
+		StartYear: &e.Year, StartMonth: endPart(e.Month), StartDay: endPart(e.Day),
 	}
 }
 
-// endPart is a date part for a datevalue.Value: nil for 0.
+// endPart is a month or day for a datevalue.Value: nil for 0. A closed end
+// always has a year, so the year never goes through it.
 func endPart(n int) *int {
 	if n == 0 {
 		return nil

@@ -129,11 +129,13 @@ func win(lo, hi *int) valuecompare.Window { return valuecompare.Window{Lo: lo, H
 
 func TestEndsDate(t *testing.T) {
 	for name, d := range map[string]*datevalue.Value{
-		"year":   datevaluetest.YMD(1817, 0, 0),
-		"day":    datevaluetest.YMD(1817, 3, 3),
-		"before": bound(datevalue.QualifierBEF, 1820),
-		"after":  bound(datevalue.QualifierAFT, 1815),
-		"range":  datevaluetest.Between(1815, 0, 0, 1820, 0, 0),
+		"year":            datevaluetest.YMD(1817, 0, 0),
+		"day":             datevaluetest.YMD(1817, 3, 3),
+		"before":          bound(datevalue.QualifierBEF, 1820),
+		"after":           bound(datevalue.QualifierAFT, 1815),
+		"range":           datevaluetest.Between(1815, 0, 0, 1820, 0, 0),
+		"year zero":       yearZero(nil),
+		"range from zero": yearZero(datevaluetest.Part(5)),
 	} {
 		t.Run("round trip "+name, func(t *testing.T) {
 			first, last, ok := valuecompare.DateEnds(*d)
@@ -299,4 +301,15 @@ func TestDateWindow(t *testing.T) {
 			}
 		})
 	}
+}
+
+// yearZero is a point at year 0, or a range from year 0 to end when end is
+// set; datevaluetest.Part reads 0 as unset, so the zero is built here.
+func yearZero(end *int) *datevalue.Value {
+	zero := 0
+	v := datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &zero}
+	if end != nil {
+		v.Kind, v.EndYear = datevalue.KindRange, end
+	}
+	return &v
 }
