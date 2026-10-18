@@ -1,7 +1,13 @@
-// Package propertymeta holds the property value-type and cardinality
-// constants. It is a pure value package: queries live in
-// core/database/properties.
+// Package propertymeta holds what matching and the catalog share about a
+// property: the value-type and cardinality constants and Meta. It is a pure
+// value package: queries live in core/database/properties.
 package propertymeta
+
+// Meta is what matching reads about a property.
+type Meta struct {
+	ValueType   string // a ValueType* constant
+	Cardinality string // a Cardinality* constant; empty reads as single
+}
 
 const (
 	ValueTypeText    = "text"

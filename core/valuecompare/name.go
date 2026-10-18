@@ -25,10 +25,6 @@ func (w nameWord) part() Part { return Part{Kind: PartKind(w.role), Text: w.text
 // roleOrder is the order words are sorted by, and keys list roles in.
 var roleOrder = []NameRole{RoleFamily, RoleGiven, RoleNick, RoleUntyped}
 
-// relationOrder runs from the strongest relation a name can take to the
-// weakest.
-var relationOrder = []Relation{Same, Equivalent, Contains, Near}
-
 // nameWords reads a name's words under its pattern, sorted by role (family,
 // given, nick, untyped) and token, so the order the parts were entered in
 // never changes a result. Generation words come back separately, in part
