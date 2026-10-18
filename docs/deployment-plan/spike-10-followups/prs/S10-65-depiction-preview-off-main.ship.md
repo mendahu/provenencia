@@ -1,7 +1,7 @@
 # Ship log — S10-65 Render the likeness preview off the main thread
 
 **Plan:** [`S10-65-depiction-preview-off-main.md`](S10-65-depiction-preview-off-main.md) · **Branch:** `s10-65-depiction-preview-off-main` · **PR:** #472
-**State:** fixing 2
+**State:** ready
 
 Base: `main` @ `dc67a099` (worktree `.claude/worktrees/s10-65`).
 
@@ -83,3 +83,9 @@ Files: `docs/ideas/depictions-and-likenesses.md`, the plan's Landed note.
 Failing test first: none (docs).
 Do: in the "Windows" bullet, change "Spike 10 draws it with Core Graphics on the Mac." back to "Spike 10 draws it with PDFKit on the Mac." so the file has no net diff against `dc67a099`. Add to the Landed note: STEP-3's idea-doc edit was undone by F-4, since the cut draws with PDFKit. Do not edit the plan's STEP-3 or D-10 text.
 Check: `git diff dc67a099 -- docs/ideas/depictions-and-likenesses.md` is empty; scripts/check-pr.sh PASS.
+
+## Round 2 — fix
+Head `60d150a9`. Gate PASS (orchestrator run). F-5 done; `git diff dc67a099 -- docs/ideas/depictions-and-likenesses.md` empty.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: SEC-1, UX-2, `encodeJSON()` key order · to user: D-6 key (typed struct, approved), CON-1 draw (PDFKit in task, approved), CON-3/MNT-4 fix after round 2 (approved)
