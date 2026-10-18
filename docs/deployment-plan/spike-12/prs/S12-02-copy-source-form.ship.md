@@ -1,7 +1,7 @@
 # Ship log — S12-02 Copy Source form
 
 **Plan:** [`S12-02-copy-source-form.md`](S12-02-copy-source-form.md) · **Branch:** `s12-02-copy-source-form` · **PR:** #485
-**State:** fixing 3 (user-requested)
+**State:** ready
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s12-02`, branched from `origin/main` @ `97eea0b3`.
 
@@ -79,3 +79,6 @@ The user asked to fix UX-6 in this PR. This is outside the two-round cap: one it
 Files: `macos/App/Features/Sources/SourceTitleTypeFields.swift`.
 Do: remove the two `.onChange(of: draft.title)` / `.onChange(of: draft.sourceTypeID)` handlers. Pass `PVInput` and `PVComboBox` wrapping bindings instead: `Binding(get: { draft.title }, set: { new in guard new != draft.title else { return }; draft.title = new; showErrors() })`, and the same for `sourceTypeID`. Edits the app makes to `draft` directly (`SourcesModel.selectSoleTypeIfNeeded()`, `openAdd()`, the Copy prefill) then change no error. Keep `showErrors()` setting both errors (F-5). Update the type's doc comment to say errors follow a researcher's edit, not the app's own changes to the draft. Do not change `SourcesModel` or `SourceCopyModel`.
 Check: build; scripts/check-pr.sh PASS. Manual: in a project with one Source type, open Add Source before the type list has loaded. The type fills in and no error shows. Type a title, then clear it: "Title required" shows.
+
+## Round 3 — fix (user-requested)
+Head `389b5770`. Gate PASS (orchestrator run, 1213 Swift tests). F-6 done: the field bindings' setters call `showErrors()` only when the researcher changes a value; the `onChange` handlers are gone. Orchestrator read the diff: `SourcesModel` and `SourceCopyModel` are unchanged. UX-6 resolved. Manual check not run. No review round, as the user asked for this one item after round 2.
