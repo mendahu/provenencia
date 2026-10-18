@@ -66,7 +66,7 @@ The app reads object files (likeness images, Source thumbnails, Artifact files) 
 
 | Out | Home |
 | --- | --- |
-| `ThumbnailCache` refuses a type other than PNG or JPEG and a declared pixel size over 4096 before decoding, and limits how many decodes run at once (audit SEC-2, second half) | audit 2026-10-18 Medium item 5, not yet mapped |
+| `ThumbnailCache` refuses a type other than PNG or JPEG and a declared pixel size over 4096 before decoding, and limits how many decodes run at once (audit SEC-2, second half) | S10-64 |
 | Reading object bytes through a no-follow file descriptor instead of a URL (TOCTOU) | not planned (D-4) |
 | A symlink or FIFO check on `derivatives/` or on the catalog file | not planned: no Swift reader opens them by catalog path |
 | App Sandbox | not planned ([`application-stack.md`](../../../application-stack.md) read path) |
