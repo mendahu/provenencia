@@ -1,6 +1,6 @@
 # S10-65 — Render the likeness preview off the main thread
 
-**Status:** Planned
+**Status:** Landed in [#472](https://github.com/mendahu/provenencia/pull/472) (2026-10-18)
 **Spike / slice:** Spike 10 follow-ups · likeness hardening
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the preview keeps its 96pt `PVThumbnail`, which already has a loading state, and an unchanged edit shows the saved image through the existing `CachedThumbnail`)
@@ -271,3 +271,12 @@ None.
 
 **Title:** S10-65 — Render the likeness preview off the main thread
 **Body:** objective in one sentence; what shipped against US-1, US-2, US-3; AC evidence (test names); deviations from the plan; manual check results; `Plan: docs/deployment-plan/spike-10-followups/prs/S10-65-depiction-preview-off-main.md`.
+
+## Landed
+
+Differences from the plan:
+
+- The cut key (`depictionCutKey(for:)`) is built from the artifact id, viewer kind, loading flag, page and the region's points, not `locator.encodeJSON()` as D-6 says: `encodeJSON()` orders its JSON keys differently on each call, so the key never matched itself and the stored cut was never reused. The old memo never hit either.
+- `main` had moved since the plan: S10-63 (`useDepictionRegion`; `commitViewerRegion` now returns `Bool`) and S10-62 (the `fileExists` guard in `ArtifactViewerModel.load` is gone) had landed. Both were kept and no Current state row was invalidated.
+- D-12's `SendableImage` was not needed: the build has no new Sendable or isolation warnings.
+- The manual check (section 10) is left for the user.
