@@ -1,7 +1,7 @@
 # Ship log — S12-02 Copy Source form
 
 **Plan:** [`S12-02-copy-source-form.md`](S12-02-copy-source-form.md) · **Branch:** `s12-02-copy-source-form` · **PR:** #485
-**State:** review 2
+**State:** ready
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s12-02`, branched from `origin/main` @ `97eea0b3`.
 
@@ -60,3 +60,13 @@ UX-2 (minor, F-3): Resolved — orchestrator read `SourceArtifactChecklist.swift
 
 ## Round 2 — review
 Reviewers: MNT (MNT-1, MNT-2 majors), UX (UX-1 raised to major). Scope `56be66b5...86a47614`. Not sent: CON, SEC+PRF (no Fix-now blocker or major).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-1 | MNT | major | (round 1) leftover type options path | Resolved | `typeComboOptions` gone except `SourceIdentitySection`'s, as planned |
+| MNT-2 | MNT | major | (round 1) `PVSkeletonBar` folder | Resolved | moved unchanged; pbxproj group and README row added |
+| UX-1 | UX | major | (round 1) checklist count and All state | Resolved | `liveExcluded` used in count, All getter, `isIndeterminate` |
+| UX-6 | UX | minor | F-5 shows "Title required" on open when `selectSoleTypeIfNeeded()` sets the sole type after a late types load | Follow-up | below blocker, so no round-2 fix (cap). `SourcesModel.swift:363` sets `sourceTypeID` while Add Source is open; `showErrors()` fires on any change. Fix: gate on a user-touched flag |
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: UX-6, UX-3, MNT-3, MNT-4, UX-5 · to user: MNT-2 (moved, user), UX-4 (show both errors, user) · CON miss: none
