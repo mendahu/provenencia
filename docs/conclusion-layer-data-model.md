@@ -320,6 +320,8 @@ CREATE TABLE canonical_entities (
 
 `preferred_likeness_observation_id` is a display pointer for a Person: the likeness Observation the Person page and the Persons list lead with. It is not evidence and not a Reconciliation Claim. A reader honours it only when that likeness is in the handle's gallery; otherwise the earliest likeness leads. Deleting the Observation clears it.
 
+A Person's **gallery** is its likeness values with their gallery records: each record whose own outcome is `kept` or `weak`. A negative, denied, or provisional record of the same picture is not a gallery record. The gallery is ordered by each likeness's first recorded gallery record (the smallest Observation id), then by value rank; a redraw keeps its Observation, so it keeps its place. The earliest likeness is the first in that order.
+
 There is no identity anchor and no `representative_subject_id`. Membership is not a column on this row. Creating a handle from a record inserts the entity and an accepted Identity Claim for that subject. **Adopt** (first grounding of an inferred handle) is the first accepted Identity Claim on a handle that had none. Dropping the last member does not delete the entity or change its id.
 
 ```text

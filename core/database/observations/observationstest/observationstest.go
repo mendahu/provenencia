@@ -111,13 +111,24 @@ func UpdateObservation(c *database.Catalog, userID []byte, in observations.Input
 // Source, through the real save path: shade picks its 40 x 30 crop.
 func SaveLikeness(t testing.TB, c *database.Catalog, userID, sourceID, subjectID []byte, shade uint8) observations.Observation {
 	t.Helper()
+	return saveLikeness(t, c, userID, sourceID, subjectID, shade, observations.PolarityPositive)
+}
+
+// SaveNegativeLikeness is SaveLikeness for a negative: the photo is not the Subject.
+func SaveNegativeLikeness(t testing.TB, c *database.Catalog, userID, sourceID, subjectID []byte, shade uint8) observations.Observation {
+	t.Helper()
+	return saveLikeness(t, c, userID, sourceID, subjectID, shade, observations.PolarityNegative)
+}
+
+func saveLikeness(t testing.TB, c *database.Catalog, userID, sourceID, subjectID []byte, shade uint8, polarity string) observations.Observation {
+	t.Helper()
 	likeness, err := properties.Lookup(c, "likeness", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
 	art := FileArtifact(t, c, userID, sourceID)
 	res, _, err := SaveCitation(c, userID, art, observations.Input{
-		SubjectID: subjectID, PropertyID: likeness.ID,
+		SubjectID: subjectID, PropertyID: likeness.ID, Polarity: polarity,
 		Depiction: &observations.DepictionInput{RegionJSON: LikenessRegion, ImagePath: Crop(t, 40, 30, shade)},
 	})
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
+	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/likenesses"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
@@ -95,6 +96,43 @@ func (f *fixture) promote(s subjects.Subject, onto []byte) []byte {
 	return res.Entity.ID
 }
 
+// credibility grades a Source with a seeded credibility grade.
+func (f *fixture) credibility(src sources.Source, key string) {
+	f.t.Helper()
+	g, err := sourcecredibilitygrades.Lookup(f.c, key, vocabkey.OriginProvenencia)
+	must(f.t, err)
+	_, err = writes.Call(f.c, writes.Op{Action: "create_source_credibility_assessment", UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+		return sourcecredibility.Upsert(tx, userID, sourcecredibility.UpsertInput{SourceID: src.ID, CredibilityGradeID: g.ID})
+	})
+	must(f.t, err)
+}
+
+// provisional links the Subject to the handle by a provisional Identity Claim;
+// the Subject is never promoted.
+func (f *fixture) provisional(s subjects.Subject, onto []byte) {
+	f.t.Helper()
+	_, err := writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+		return identityclaims.Create(tx, userID, identityclaims.CreateInput{SubjectID: s.ID, EntityID: onto, Status: identityclaims.StatusProvisional})
+	})
+	must(f.t, err)
+}
+
+// negativeTwin files a negative N (Album, shade 100), then B (Census, shade
+// 200), then A (Register, shade 100: N's pixels), and promotes all three
+// Subjects onto one Person.
+func (f *fixture) negativeTwin() (h []byte, n, a, b observations.Observation) {
+	f.t.Helper()
+	alb, cen, reg := f.source("Album"), f.source("Census"), f.source("Register")
+	sn, sb, sa := f.personOn(alb), f.personOn(cen), f.personOn(reg)
+	n = observationstest.SaveNegativeLikeness(f.t, f.c, userID, alb.ID, sn.ID, 100)
+	b = observationstest.SaveLikeness(f.t, f.c, userID, cen.ID, sb.ID, 200)
+	a = observationstest.SaveLikeness(f.t, f.c, userID, reg.ID, sa.ID, 100)
+	h = f.promote(sa, nil)
+	f.promote(sb, h)
+	f.promote(sn, h)
+	return h, n, a, b
+}
+
 func TestForEntities(t *testing.T) {
 	t.Run("no ids", func(t *testing.T) {
 		f := newFixture(t)
@@ -138,6 +176,53 @@ func TestForEntities(t *testing.T) {
 		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], oa.ID) || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, f.c, oa.ID)) ||
 			!bytes.Equal(g[1].ObservationIDs[0], ob.ID) {
 			t.Fatalf("after redraw %+v", g)
+		}
+	})
+	t.Run("a negative of the same picture is not one of its records", func(t *testing.T) {
+		f := newFixture(t)
+		h, n, a, b := f.negativeTwin()
+		g := f.gallery(h)
+		if len(g) != 2 || len(g[0].ObservationIDs) != 1 || !bytes.Equal(g[0].ObservationIDs[0], b.ID) ||
+			len(g[1].ObservationIDs) != 1 || !bytes.Equal(g[1].ObservationIDs[0], a.ID) || !g[0].Leads {
+			t.Fatalf("gallery %+v", g)
+		}
+		if _, ok := likenesses.ByObservation(g, n.ID); ok {
+			t.Fatalf("negative is in the gallery %+v", g)
+		}
+	})
+	t.Run("a provisional record of the same picture is not one of its records", func(t *testing.T) {
+		f := newFixture(t)
+		reg, diary := f.source("Register"), f.source("Diary")
+		sa, sp := f.personOn(reg), f.personOn(diary)
+		p := observationstest.SaveLikeness(t, f.c, userID, diary.ID, sp.ID, 100)
+		a := observationstest.SaveLikeness(t, f.c, userID, reg.ID, sa.ID, 100)
+		h := f.promote(sa, nil)
+		f.provisional(sp, h)
+		g := f.gallery(h)
+		if len(g) != 1 || len(g[0].ObservationIDs) != 1 || !bytes.Equal(g[0].ObservationIDs[0], a.ID) {
+			t.Fatalf("gallery %+v", g)
+		}
+		if _, ok := likenesses.ByObservation(g, p.ID); ok {
+			t.Fatalf("provisional record is in the gallery %+v", g)
+		}
+	})
+	t.Run("a provisional record does not hide a weak likeness", func(t *testing.T) {
+		f := newFixture(t)
+		reg, gossip, diary := f.source("Register"), f.source("Gossip"), f.source("Diary")
+		sa, sw, sp := f.personOn(reg), f.personOn(gossip), f.personOn(diary)
+		observationstest.SaveLikeness(t, f.c, userID, reg.ID, sa.ID, 100)
+		w := observationstest.SaveLikeness(t, f.c, userID, gossip.ID, sw.ID, 200)
+		p := observationstest.SaveLikeness(t, f.c, userID, diary.ID, sp.ID, 200)
+		f.credibility(gossip, "low_trust")
+		h := f.promote(sa, nil)
+		f.promote(sw, h)
+		f.provisional(sp, h)
+		g := f.gallery(h)
+		if len(g) != 2 || len(g[1].ObservationIDs) != 1 || !bytes.Equal(g[1].ObservationIDs[0], w.ID) {
+			t.Fatalf("gallery %+v", g)
+		}
+		if _, ok := likenesses.ByObservation(g, p.ID); ok {
+			t.Fatalf("provisional record is in the gallery %+v", g)
 		}
 	})
 }
@@ -255,16 +340,8 @@ func TestForEntitiesPreferred(t *testing.T) {
 		f.setPreferred(h, b.ID)
 		album := f.source("Album")
 		c := f.personOn(album)
-		_, _, err := observationstest.SaveCitation(f.c, userID, observationstest.FileArtifact(t, f.c, userID, album.ID), observations.Input{
-			SubjectID: c.ID, PropertyID: f.likeness.ID, Polarity: observations.PolarityNegative,
-			Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 40, 30, 200)}})
-		must(t, err)
-		grade, err := sourcecredibilitygrades.Lookup(f.c, "high_trust", vocabkey.OriginProvenencia)
-		must(t, err)
-		_, err = writes.Call(f.c, writes.Op{Action: "create_source_credibility_assessment", UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
-			return sourcecredibility.Upsert(tx, userID, sourcecredibility.UpsertInput{SourceID: album.ID, CredibilityGradeID: grade.ID})
-		})
-		must(t, err)
+		observationstest.SaveNegativeLikeness(t, f.c, userID, album.ID, c.ID, 200)
+		f.credibility(album, "high_trust")
 		f.promote(c, h)
 		g := f.gallery(h)
 		l, ok := likenesses.Lead(g)
@@ -275,6 +352,25 @@ func TestForEntitiesPreferred(t *testing.T) {
 			t.Fatalf("leads %v", leadsFlags(g))
 		}
 		if !bytes.Equal(f.pointer(h), b.ID) {
+			t.Fatalf("pointer row %x", f.pointer(h))
+		}
+	})
+	t.Run("a stored pointer at a negative falls back to the earliest", func(t *testing.T) {
+		f := newFixture(t)
+		h, n, _, b := f.negativeTwin()
+		db, err := f.c.DB()
+		must(t, err)
+		_, err = db.Exec(`UPDATE canonical_entities SET preferred_likeness_observation_id = ? WHERE id = ?`, n.ID, h)
+		must(t, err)
+		g := f.gallery(h)
+		l, ok := likenesses.Lead(g)
+		if !ok || !bytes.Equal(l.ObservationIDs[0], b.ID) {
+			t.Fatalf("gallery %+v lead %+v", g, l)
+		}
+		if slices.Contains(preferredFlags(g), true) {
+			t.Fatalf("preferred %v", preferredFlags(g))
+		}
+		if !bytes.Equal(f.pointer(h), n.ID) {
 			t.Fatalf("pointer row %x", f.pointer(h))
 		}
 	})
@@ -355,6 +451,10 @@ func TestSetPreferredLikeness(t *testing.T) {
 		so := f.personOn(other)
 		o := observationstest.SaveLikeness(t, f.c, userID, other.ID, so.ID, 150)
 		f.promote(so, nil)
+		album := f.source("Album")
+		sn := f.personOn(album)
+		n := observationstest.SaveNegativeLikeness(t, f.c, userID, album.ID, sn.ID, 100)
+		f.promote(sn, h)
 		fresh, err := uuid.NewV7()
 		must(t, err)
 		unknown, err := uuid.NewV7()
@@ -365,6 +465,7 @@ func TestSetPreferredLikeness(t *testing.T) {
 			h, obs, u []byte
 		}{
 			{"another Person's likeness", h, o.ID, userID},
+			{"a negative of the same picture", h, n.ID, userID},
 			{"no such Observation", h, fresh[:], userID},
 			{"unknown entity", unknown[:], b.ID, userID},
 			{"nil user", h, b.ID, nil},

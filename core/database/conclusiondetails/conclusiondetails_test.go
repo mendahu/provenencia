@@ -283,6 +283,31 @@ func TestForEntityLikenesses(t *testing.T) {
 	}
 }
 
+// A negative of the same picture is not a gallery record, so no tile opens it.
+func TestForEntityLikenessesSkipNegatives(t *testing.T) {
+	f := newFixture(t)
+	album, census, register := f.source("Album"), f.source("Census"), f.source("Register")
+	sn, sb, sa := f.personOn(album), f.personOn(census), f.personOn(register)
+	n := observationstest.SaveNegativeLikeness(t, f.c, userID, album.ID, sn.ID, 100)
+	b := observationstest.SaveLikeness(t, f.c, userID, census.ID, sb.ID, 200)
+	observationstest.SaveLikeness(t, f.c, userID, register.ID, sa.ID, 100)
+	h := f.promote(sa, nil)
+	f.promote(sb, h)
+	f.promote(sn, h)
+	d := f.detail(h)
+	if len(d.Likenesses) != 2 {
+		t.Fatalf("likenesses %+v", d.Likenesses)
+	}
+	if first := d.Likenesses[0]; !bytes.Equal(first.Record.ObservationID, b.ID) || first.Record.Reason != "kept" {
+		t.Fatalf("first %+v", first)
+	}
+	for _, l := range d.Likenesses {
+		if bytes.Equal(l.Record.ObservationID, n.ID) {
+			t.Fatalf("negative opens from a tile: %+v", l)
+		}
+	}
+}
+
 // A likeness whose image File is not a PNG is neither listed nor the lead.
 func TestForEntityLikenessNeedsAPNG(t *testing.T) {
 	f := newFixture(t)

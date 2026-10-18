@@ -102,7 +102,7 @@ type Field struct {
 }
 
 // LikenessTile is one likeness a gallery shows: its image, and the outcome of
-// the earliest Observation that went into it, which the tile opens.
+// its earliest gallery record, which the tile opens.
 type LikenessTile struct {
 	ImageFileID []byte
 	Record      Outcome

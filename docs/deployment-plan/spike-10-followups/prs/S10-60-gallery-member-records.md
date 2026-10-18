@@ -1,6 +1,6 @@
 # S10-60 — The gallery reads only gallery records
 
-**Status:** Planned
+**Status:** Landed in [#459](https://github.com/mendahu/provenencia/pull/459) (2026-10-18)
 **Spike / slice:** Spike 10 follow-ups · likeness hardening
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: engine read only)
