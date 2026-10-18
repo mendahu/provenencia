@@ -1,7 +1,7 @@
 # Ship log — S12-02 Copy Source form
 
 **Plan:** [`S12-02-copy-source-form.md`](S12-02-copy-source-form.md) · **Branch:** `s12-02-copy-source-form` · **PR:** #485
-**State:** ready
+**State:** fixing 3 (user-requested)
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s12-02`, branched from `origin/main` @ `97eea0b3`.
 
@@ -66,7 +66,16 @@ Reviewers: MNT (MNT-1, MNT-2 majors), UX (UX-1 raised to major). Scope `56be66b5
 | MNT-1 | MNT | major | (round 1) leftover type options path | Resolved | `typeComboOptions` gone except `SourceIdentitySection`'s, as planned |
 | MNT-2 | MNT | major | (round 1) `PVSkeletonBar` folder | Resolved | moved unchanged; pbxproj group and README row added |
 | UX-1 | UX | major | (round 1) checklist count and All state | Resolved | `liveExcluded` used in count, All getter, `isIndeterminate` |
-| UX-6 | UX | minor | F-5 shows "Title required" on open when `selectSoleTypeIfNeeded()` sets the sole type after a late types load | Follow-up | below blocker, so no round-2 fix (cap). `SourcesModel.swift:363` sets `sourceTypeID` while Add Source is open; `showErrors()` fires on any change. Fix: gate on a user-touched flag |
+| UX-6 | UX | minor | F-5 shows "Title required" on open when `selectSoleTypeIfNeeded()` sets the sole type after a late types load | Follow-up → user 2026-10-18: fix in this PR → F-6 | below blocker, so no round-2 fix (cap). `SourcesModel.swift:363` sets `sourceTypeID` while Add Source is open; `showErrors()` fires on any change. Fix: gate on a user-touched flag |
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: UX-6, UX-3, MNT-3, MNT-4, UX-5 · to user: MNT-2 (moved, user), UX-4 (show both errors, user) · CON miss: none
+Gate PASS · CI pending · open: none · follow-ups: UX-3, MNT-3, MNT-4, UX-5 · to user: MNT-2 (moved, user), UX-4 (show both errors, user) · CON miss: none
+
+### Fix plan 3 (user-requested, 2026-10-18)
+
+The user asked to fix UX-6 in this PR. This is outside the two-round cap: one item, with no further review round. The orchestrator reads the diff and runs the gate.
+
+**F-6 — Only a researcher's own edit shows the Source field errors** (from UX-6)
+Files: `macos/App/Features/Sources/SourceTitleTypeFields.swift`.
+Do: remove the two `.onChange(of: draft.title)` / `.onChange(of: draft.sourceTypeID)` handlers. Pass `PVInput` and `PVComboBox` wrapping bindings instead: `Binding(get: { draft.title }, set: { new in guard new != draft.title else { return }; draft.title = new; showErrors() })`, and the same for `sourceTypeID`. Edits the app makes to `draft` directly (`SourcesModel.selectSoleTypeIfNeeded()`, `openAdd()`, the Copy prefill) then change no error. Keep `showErrors()` setting both errors (F-5). Update the type's doc comment to say errors follow a researcher's edit, not the app's own changes to the draft. Do not change `SourcesModel` or `SourceCopyModel`.
+Check: build; scripts/check-pr.sh PASS. Manual: in a project with one Source type, open Add Source before the type list has loaded. The type fills in and no error shows. Type a title, then clear it: "Title required" shows.
