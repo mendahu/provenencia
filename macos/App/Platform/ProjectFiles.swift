@@ -37,8 +37,8 @@ enum ProjectFiles {
         let resolved = url.standardizedFileURL
         let projectPath = projectURL.path
         let resolvedPath = resolved.path
-        // Require a real child of the project directory (not the dir itself,
-        // and not a sibling that only shares a path prefix).
+        // The segment rules above already guarantee a real child of the project
+        // directory; this stays as defence in depth in case they change.
         guard resolvedPath.hasPrefix(projectPath + "/") else {
             return nil
         }
