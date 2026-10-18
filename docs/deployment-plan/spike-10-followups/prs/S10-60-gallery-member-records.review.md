@@ -1,7 +1,7 @@
 # Review — S10-60 The gallery reads only gallery records
 
-**Verdict:** Fits with changes — Ready with changes (both reviewers' round-1 findings answered; the executability blockers X-1 and X-2 were wording and test scaffolding, not a reshape)
-**Rounds:** 1. **Reviewers:** maintainability (opus, pr-reviewer), executability (sonnet, Explore)
+**Verdict:** Fits — Ready with changes (round 2: no new maintainability finding; the one executability blocker, X-15, was a stop-condition command and is fixed)
+**Rounds:** 2. **Reviewers:** maintainability (opus, pr-reviewer), executability (sonnet, Explore)
 
 ## To user
 - None.
@@ -77,3 +77,39 @@ The reconciler's members (`ReconciledValue.ObservationIDs`, `row.members`, which
 
 ### X-14 · nit · The map links a plan that did not exist yet
 **Answer:** Declined — all four plans now exist on the branch.
+
+## Round 2
+
+Fresh reviewers got the plan and this log. Maintainability: Fits, every round-1 answer holds, no new blocker. Executability: Not ready on X-15 only.
+
+### Maintainability leftover · note · §1's one-line definition of "member" is too narrow
+"Member" is used for provisional members too (`autoreconcile.Candidate.Provisional`, conclusion-reconciliation.md "Provisional members").
+**Answer:** Fixed — §1 now defines a member as a Subject linked to the handle by an Identity Claim, accepted or provisional.
+
+### X-15 · blocker · Stop condition 2's command cannot detect what it names
+`CREATE TABLE auto_reconciler_outcomes` (000040.sql:21) and `reason` (:25) are on different lines, so the single-line pipe prints nothing on a true base.
+**Answer:** Fixed — §11 uses `rg -n -A8 'CREATE TABLE auto_reconciler_outcomes' core/database/migrations/*.sql | rg reason` and quotes the line it prints at the base (verified: `000040.sql-25-`).
+
+### X-16 · major · Stop condition 1's `rg` hits unrelated name tests
+**Answer:** Fixed — §11 says the condition fires only on a hit in `core/database/likenesses` or `TestDepictionsReconcileByImage`, and names the three expected name-property hits (lines 527, 579, 1018).
+
+### X-17 · major · T-2 and T-3 both need a provisional claim, and no helper is named
+**Answer:** Fixed — `fixture.provisional(s subjects.Subject, onto []byte)` is a Codebase fit row, added in STEP-1, used by T-2 and T-3; it adds the `identityclaims` import.
+
+### X-18 · minor · `credibility` return shape and the `ObservationIDs` comment placement
+**Answer:** Fixed — `credibility` calls `must(f.t, err)` and returns nothing; the `ObservationIDs` comment stays trailing and keeps "[0] is the first recorded".
+
+### X-19 · minor · STEP-4's Files line contradicts its Do line
+**Answer:** Fixed — STEP-4 Files lists the three docs only.
+
+### X-20 · minor · Commit grouping for STEP-3 and STEP-4
+**Answer:** Fixed — STEP-1 – STEP-3 are one commit ("Leave a negative or provisional record of a picture out of the Person's gallery."), STEP-4 is "Document which records make a Person's likeness gallery.", then the post-PR commit.
+
+### X-21 · minor · Manual check cannot be followed as written
+**Answer:** Fixed — step 1 puts the same photo file on Album and Register; step 3 names the Promote flow (new Person from Register, then onto that Person).
+
+### Nit · D-7 omits T-4
+**Answer:** Fixed — D-7 lists T-4.
+
+### Nit · Status Draft and "1 round"
+**Answer:** Fixed — Status `Planned`, Review line "2 rounds".
