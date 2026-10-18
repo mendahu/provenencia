@@ -9,6 +9,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertycompare"
+	"github.com/mendahu/provenencia/core/propertycompare/propertycomparetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
@@ -21,16 +22,16 @@ const (
 // invariantPools are the values each type draws from. Together they cover
 // every relation the type's comparer returns.
 var invariantPools = map[string][]V{
-	propertymeta.ValueTypeTerm: {term("male"), term("female"), term("intersex")},
+	propertymeta.ValueTypeTerm: {propertycomparetest.Term("male"), propertycomparetest.Term("female"), propertycomparetest.Term("intersex")},
 	propertymeta.ValueTypeName: {
-		name("James Robins"), name("James Robbins"), name("J. Robins"),
-		name("Mary Robins"), name("Robins"), name("Mary Smith"),
+		propertycomparetest.Name("James Robins"), propertycomparetest.Name("James Robbins"), propertycomparetest.Name("J. Robins"),
+		propertycomparetest.Name("Mary Robins"), propertycomparetest.Name("Robins"), propertycomparetest.Name("Mary Smith"),
 	},
 	propertymeta.ValueTypeText: {
-		text("York"), text("york"), text("Montréal"), text("Montreal"),
-		text("York, Upper Canada"), text("London"),
+		propertycomparetest.Text("York"), propertycomparetest.Text("york"), propertycomparetest.Text("Montréal"), propertycomparetest.Text("Montreal"),
+		propertycomparetest.Text("York, Upper Canada"), propertycomparetest.Text("London"),
 	},
-	propertymeta.ValueTypeDate: dates(y1817, y1818, y1830, about1817, spring),
+	propertymeta.ValueTypeDate: propertycomparetest.Dates(y1817, y1818, y1830, about1817, spring),
 }
 
 // favor ranks outcomes from least to most favorable.
@@ -81,7 +82,7 @@ func TestInvariants(t *testing.T) {
 						meta: propertymeta.Meta{ValueType: typ, Cardinality: cardinality},
 					}
 					if msg := inv.check(t, r, c, pool, rules); msg != "" {
-						t.Errorf("case %d: a=%s b=%s: %s", i, labels(c.a), labels(c.b), msg)
+						t.Errorf("case %d: a=%s b=%s: %s", i, propertycomparetest.Labels(c.a), propertycomparetest.Labels(c.b), msg)
 					}
 				}
 			})
@@ -135,7 +136,7 @@ func sameKey(v propertycompare.Value, rules valuecompare.Rules) string {
 func neutralValue(r *rand.Rand, pool []V) V {
 	v := pool[r.Intn(len(pool))]
 	if v.Term != "" {
-		v = term("unknown") // a term is neutral as "unknown", never as a pool term
+		v = propertycomparetest.Term("unknown") // a term is neutral as "unknown", never as a pool term
 	}
 	v.Neutral = true
 	v.Ref = []byte{0xff}
@@ -152,7 +153,7 @@ func neutralChangesNothing(_ *testing.T, r *rand.Rand, c invariantCase, pool []V
 		b = append(slices.Clone(b), extra)
 	}
 	if msg := sameSpeaker(base, propertycompare.Compare(a, b, c.meta, rules), rules, true); msg != "" {
-		return "adding " + labels([]V{extra}) + ": " + msg
+		return "adding " + propertycomparetest.Labels([]V{extra}) + ": " + msg
 	}
 	return ""
 }
@@ -169,7 +170,7 @@ func negativeNeverHelps(_ *testing.T, r *rand.Rand, c invariantCase, pool []V, r
 	}
 	got := propertycompare.Compare(a, b, c.meta, rules)
 	if slices.Index(favor, got.Outcome) > slices.Index(favor, base.Outcome) {
-		return fmt.Sprintf("adding %s: outcome %s became %s", labels([]V{extra}), base.Outcome, got.Outcome)
+		return fmt.Sprintf("adding %s: outcome %s became %s", propertycomparetest.Labels([]V{extra}), base.Outcome, got.Outcome)
 	}
 	return ""
 }
@@ -180,7 +181,7 @@ func shuffleChangesNothing(_ *testing.T, r *rand.Rand, c invariantCase, _ []V, r
 	r.Shuffle(len(a), func(i, j int) { a[i], a[j] = a[j], a[i] })
 	r.Shuffle(len(b), func(i, j int) { b[i], b[j] = b[j], b[i] })
 	if msg := sameSpeaker(base, propertycompare.Compare(a, b, c.meta, rules), rules, true); msg != "" {
-		return "shuffled to a=" + labels(a) + " b=" + labels(b) + ": " + msg
+		return "shuffled to a=" + propertycomparetest.Labels(a) + " b=" + propertycomparetest.Labels(b) + ": " + msg
 	}
 	return ""
 }
@@ -205,7 +206,7 @@ func multipleNeverConflicts(_ *testing.T, r *rand.Rand, c invariantCase, pool []
 		b = append(slices.Clone(b), extra)
 	}
 	if got := propertycompare.Compare(a, b, c.meta, rules); got.Outcome == propertycompare.OutcomeConflict {
-		return "conflict after adding " + labels([]V{extra})
+		return "conflict after adding " + propertycomparetest.Labels([]V{extra})
 	}
 	return ""
 }
