@@ -1,7 +1,7 @@
 # Ship log — S12-01 Copy Source engine
 
 **Plan:** [`S12-01-copy-source-engine.md`](S12-01-copy-source-engine.md) · **Branch:** `s12-01-copy-source-engine` · **PR:** #478
-**State:** fixing 2
+**State:** ready
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s12-01`, from `main` @ `998306f9`.
 
@@ -62,5 +62,8 @@ Failing test first: none (FakeStore unit tests are out of scope for this PR per 
 Do: in `FakeStore.copySource`, `bumpSource(copyID, evidence: false)` → `bumpSource(copyID, evidence: !chosen.isEmpty)`, the same rule `createArtifact` uses. In the plan's D-15 row, replace "returns `bumpSource(copyID, evidence: false)`" with "returns `bumpSource(copyID, evidence: !chosen.isEmpty)` (the engine's `artifacts` effects entry reports `sources` and `citation_sources`; changed after review, CON-1)". Add one line to the plan's Landed note naming this change.
 Check: scripts/check-pr.sh PASS.
 
+## Round 2 — fix
+Head `7566b700`. Gate PASS (orchestrator run). F-3 done; D-15 row and Landed note updated.
+
 ## Result
-Gate PASS · CI pending · open: none blocker/major · follow-ups: MNT-2, MNT-5, UX-1 · to user: CON-1 (fake evidence effect vs D-15) · logged: MNT-6, UX-note
+Gate PASS · CI green · open: none blocker/major · follow-ups: MNT-2, MNT-5, UX-1 · to user: CON-1 answered → fixed (F-3) · logged: MNT-6, UX-note
