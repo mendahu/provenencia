@@ -74,3 +74,20 @@
 
 ### X-10 · minor · Test helpers not pinned
 **Answer:** Fixed — STEP-3 names `users.Upsert`, `sources.Count`, `sources.ListNotes`, `c.DB()` reads outside the write; T-1 names the `workspaceKeys` helper.
+
+## Round 2
+
+### X-11 · blocker · A third `GenealogyStore` conformer, `ThrowingStore`, is not in STEP-5
+**Answer:** Fixed — verified `macos/ProvenenciaTests/OnboardingModelTests.swift:342`. Scope In, §4 Test store row, D-14, STEP-5 Files and §8 "Most likely to break" now name it; its body is `throw StoreBoom.boom`.
+
+### X-12 · major · T-9 does not say it needs two Sources
+**Answer:** Fixed — STEP-4: Sources A and B, one fileless Artifact each; the foreign case copies A with B's Artifact.
+
+### X-13 · minor · T-1 and the cover case
+**Answer:** Fixed — STEP-3: Artifact 1's File is the PNG and is the original's cover in every case.
+
+### X-14 · minor · `getLayoutTx` and `FieldID`
+**Answer:** Fixed — D-5: `FieldID` set from the argument.
+
+### X-15 · minor · Test and doc details
+**Answer:** Fixed — `runCreateAll` and `runCopy` wrappers named (STEP-2, STEP-3); the skill section goes between `## Functions` and `## Tests` (STEP-6). Status flips to Planned at the end of the review.
