@@ -399,8 +399,8 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 | Reconciled value | In the profile |
 |---|---|
-| The concluded value (several when tied leaders show together, or when the property is multi-valued) | positive |
-| A value the researcher denied | negative |
+| A displayed value (several when tied leaders show together, or when the property is multi-valued) | positive |
+| A value a stronger negative Observation denied (reason `denied`) | negative |
 | Outvoted, weak, provisional | left out |
 
 **The profile is strict (decided 2026-10-16).** Only the conclusion goes in. An outvoted value is, by the group's own judgment, not true. A real alternate, such as a maiden name, belongs in the conclusion: the auto-reconciler flags it, or the researcher records a Reconciliation Claim. Maiden names are not built yet, but that is the intended path. If a true value is missing from the conclusion, that is a reconciliation fix, not a matching rule. A single name mismatch is also weighed alongside sex, dates, relationships and the rest of the graph above this layer, so it doesn't decide a match alone.
