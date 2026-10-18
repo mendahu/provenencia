@@ -28,6 +28,7 @@ var layerPackages = []struct {
 	{"core/valuecompare", true},
 	{"core/matchregistry", false},
 	{"core/datevalue", false},
+	{"core/datevalue/datevaluetest", false},
 	{"core/namevalue", false},
 	{"core/namevalue/namevaluetest", false},
 	{"core/propertymeta", false},
