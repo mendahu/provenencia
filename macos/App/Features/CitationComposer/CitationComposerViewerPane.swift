@@ -69,16 +69,10 @@ struct CitationComposerViewerPane: View {
         .onDisappear { drawingCancelFocused = false }
     }
 
-    /// Moves focus to Cancel and announces drawing mode. The sheet is still
-    /// dismissing when the band appears, so the focus is written twice, a turn
-    /// apart, as the authoring box's Tab claim does.
+    /// Moves focus to Cancel and announces drawing mode.
     private func claimDrawingFocus() {
-        DispatchQueue.main.async {
-            drawingCancelFocused = true
+        FocusClaim.claim($drawingCancelFocused, true) {
             AccessibilityAnnouncement.post(L10n.string(L10n.CitationComposer.depictionDrawingHint))
-            DispatchQueue.main.async {
-                if !drawingCancelFocused { drawingCancelFocused = true }
-            }
         }
     }
 
