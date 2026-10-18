@@ -3,7 +3,9 @@
 **Verdict:** Fits with changes — Ready with changes → fixed
 **Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
 
-Round 1 raised two blockers (M-1, M-2), both fixed. Round 2 was skipped: neither fix reshapes the plan (M-1 adds one small entry point beside `Build`, M-2 changes a wording to call an existing method), and the plan stays Blocked on S10-66, so it is re-checked when S10-66 lands.
+Round 1 raised two blockers (M-1, M-2), both fixed. Round 2 was skipped: neither fix reshapes the plan (M-1 adds one small entry point beside `Build`, M-2 changes a wording to call an existing method), and the plan stayed Blocked on S10-66 until it landed.
+
+**Refresh (2026-10-18, `main` @ `f6d3ac4`).** S10-66 landed as its plan said: `autoreconcile.Value.Depiction` is `*depictionvalue.Value`, `go list -deps -test ./core/autoreconcile` reaches nothing under `core/database`, and `layerPackages` gained the two `core/depictionvalue` rows. No reconciler logic changed, so every §2 value holds. The S10-66 plan went with the Spike 10 follow-ups folder, so its link and STEP-6's edit of its header were removed. Status → Planned.
 
 ## To user
 
@@ -11,7 +13,7 @@ Round 1 raised two blockers (M-1, M-2), both fixed. Round 2 was skipped: neither
 
 ## Writer's own calls
 
-- **S10-66 is a dependency.** `core/autoreconcile` reaches `core/database` through `depictionvalues.Value` today. The builder must import the reconciler (to translate its output, and to re-run it for leave-one-out), so S11-11 waits for S10-66 instead of moving the type itself. Map row: Depends on S11-10, S10-66; status Blocked — on S10-66.
+- **S10-66 is a dependency.** `core/autoreconcile` reaches `core/database` through `depictionvalues.Value` today. The builder must import the reconciler (to translate its output, and to re-run it for leave-one-out), so S11-11 waits for S10-66 instead of moving the type itself. Map row: Depends on S11-10, S10-66.
 - **`core/subjectprofile` is the one layer package that imports `core/autoreconcile`.** The skill and `match-rules.mdc` gain that exception (D-2).
 - **No concluded-value rule** (after M-3): the builder reads auto-reconciled values only; Reconciliation Claims are laid over them by the PR that ships claims.
 - **Leave-one-out re-runs `Reconcile` only on properties a left-out member recorded**, with a nil concluded value (D-6).
