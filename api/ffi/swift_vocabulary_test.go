@@ -4,6 +4,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -13,18 +14,21 @@ import (
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// The app reads Go's wire vocabulary through one Swift file. This test reads
-// that file so a rename on either side fails here, not as a silently missing
-// badge or row.
+// The app reads Go's wire vocabulary, and mirrors some of Go's limits, through
+// Swift files this test reads, so a rename or a changed number on either side
+// fails here, not as a silently missing badge or a region Go refuses.
 const (
 	swiftVocabulary = "../../macos/App/Platform/ConclusionVocabulary.swift"
 	swiftValueKinds = "../../macos/App/Platform/InterpretationValueKinds.swift"
 	swiftMarks      = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
 	swiftGraphKinds = "../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift"
+
+	swiftRegionGeometry = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
 )
 
 // swiftEnumBody returns the source between `enum <name>` and its closing
@@ -132,6 +136,11 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		{
 			name: "subject marks", path: swiftMarks, enum: "PVMarkKey", re: subjectMark,
 			want: subjectMarkSymbols(),
+		},
+		{
+			name: "region point cap", path: swiftRegionGeometry, enum: "ArtifactRegionGeometry",
+			re:   regexp.MustCompile(`static let maxRegionPoints = (\d+)`),
+			want: []string{strconv.Itoa(locator.MaxRegionPoints)},
 		},
 	}
 	for _, tt := range tests {
