@@ -286,16 +286,7 @@ struct CitationComposerAuthoringBox: View {
             via: via,
             draftAfterCommit: CitationAuthoringDraftAfterCommit(bridgeHasTerm: bridgeHasTerm)
         ) else { return false }
-        // The next field may be inserted by this same commit. A name or date
-        // editor is not in the hierarchy until the following turn, and a deep
-        // form can miss the first write.
-        let nextField = next
-        DispatchQueue.main.async {
-            focus = nextField
-            DispatchQueue.main.async {
-                if focus != nextField { focus = nextField }
-            }
-        }
+        FocusClaim.claim($focus, next)
         return true
     }
 
@@ -470,17 +461,7 @@ struct CitationPropertyFields: View {
                 )
             )
         ) else { return false }
-        // The next field may be inserted by this same commit. A name or date
-        // editor is not in the hierarchy until the following turn, and a deep
-        // form can miss the first write.
-        let binding = focus
-        let nextField = next
-        DispatchQueue.main.async {
-            binding.wrappedValue = nextField
-            DispatchQueue.main.async {
-                if binding.wrappedValue != nextField { binding.wrappedValue = nextField }
-            }
-        }
+        FocusClaim.claim(focus, next)
         return true
     }
 
@@ -913,7 +894,7 @@ private struct FlowLayout: Layout {
 }
 
 /// The value area of a depiction Property: a preview of the image a save
-/// would send, a caption, and the button that draws the region on the file.
+/// would send, a caption, and the Draw, whole-file and citation's-region buttons.
 struct CitationDepictionValueArea: View {
     @Bindable var model: CitationComposerModel
     var draft: DepictionValueDraft

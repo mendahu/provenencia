@@ -336,3 +336,5 @@ Differences from the plan:
 
 - The three L10n keys and their String Catalog entries are in the STEP-2 commit, not the STEP-3 one, so that commit builds (the model's `depictionWholeFileTitle` returns them).
 - The manual check (section 10) and AC-1.9, AC-3.1 to AC-3.4 are left for the user.
+- The focus double hop is one shared helper, `FocusClaim.claim` in `macos/App/Platform/FocusClaim.swift`, not the per-site copy D-11 and its Precedent line set, because review finding MNT-1 found it hand-written three times and the user chose to extract it (2026-10-18). The three call sites (both `claimTab` bodies and `claimDrawingFocus`) use it; the focus write, then the announcement, in the first turn is unchanged.
+- `editingSavedLikeness` in `CitationComposerDepictionTests` takes `region: String? = nil` and falls back to today's region in its body, because a default argument cannot call the instance helper `regionJSON`.
