@@ -1468,11 +1468,19 @@
 			path = Divider;
 			sourceTree = "<group>";
 		};
+		AA00000000000000000C1212 /* SkeletonBar */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000C120E /* PVSkeletonBar.swift */,
+			);
+			name = SkeletonBar;
+			path = SkeletonBar;
+			sourceTree = "<group>";
+		};
 		A90900000000000000000010 /* List */ = {
 			isa = PBXGroup;
 			children = (
 				A90900000000000000000001 /* PVList.swift */,
-				AA00000000000000000C120E /* PVSkeletonBar.swift */,
 			);
 			name = List;
 			path = List;
@@ -1729,6 +1737,7 @@
 				D5C00000000000000000000C /* Divider */,
 				D5C00000000000000000001A /* Thumbnail */,
 				A90900000000000000000010 /* List */,
+				AA00000000000000000C1212 /* SkeletonBar */,
 				D5C000000000000000000007 /* Card */,
 				A91600000000000000000010 /* Disclosure */,
 				D5C00000000000000000000D /* SectionHeader */,
