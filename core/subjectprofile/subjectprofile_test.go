@@ -23,6 +23,7 @@ const (
 type props = map[vocabkey.PropertyKey]subjectprofile.Property
 
 func TestBuild(t *testing.T) {
+	var named subjectprofile.Entity // the entity AC-1.9 built, for its check
 	maleFemale := func(t *testing.T) subjectprofile.Entity {
 		return subjectprofile.Entity{Properties: props{sex: property(t, sex,
 			cand(1, 1, 1, term("male")), cand(2, 2, 2, term("male")), cand(3, 3, 3, term("female")))}}
@@ -80,8 +81,9 @@ func TestBuild(t *testing.T) {
 			}
 		}},
 		{name: "AC-1.9 a name carries the entity's pattern", entity: func(t *testing.T) subjectprofile.Entity {
-			return subjectprofile.Entity{NamePattern: "pattern-1", Properties: props{nameProp: property(t, nameProp,
+			named = subjectprofile.Entity{NamePattern: "pattern-1", Properties: props{nameProp: property(t, nameProp,
 				cand(1, 1, 1, name("James Robins")))}}
+			return named
 		}, check: func(t *testing.T, p subjectcompare.Values) {
 			if len(p[nameProp]) != 1 {
 				t.Fatalf("want one name value, got %v", p[nameProp])
@@ -90,6 +92,9 @@ func TestBuild(t *testing.T) {
 			if v.Name == nil || v.Name.Form != "James Robins" || v.NamePattern != "pattern-1" ||
 				v.Type != "" || v.Ref != nil || v.Negative || v.Neutral {
 				t.Errorf("got %+v", v)
+			}
+			if v.Name != named.Properties[nameProp].Values[0].Value.Name {
+				t.Error("the profile's Name is not the entity's own pointer")
 			}
 		}},
 		{name: "AC-1.10 a term carries only its key", entity: func(t *testing.T) subjectprofile.Entity {
