@@ -281,3 +281,4 @@ Differences from the plan:
 - The PDF cut draws through `PDFPage.draw(with:to:)` on a task-owned `PDFDocument`, not `CGContext.drawPDFPage`, so annotations the viewer shows are in the likeness (CON-1; user's call against D-3/D-4's text).
 - D-12's `SendableImage` was not needed: the build has no new Sendable or isolation warnings.
 - The manual check (section 10) is left for the user.
+- STEP-3's idea-doc edit ("Core Graphics" in the Windows bullet) was undone by F-4, since the cut draws with PDFKit. The idea doc has no net change.
