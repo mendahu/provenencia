@@ -4,7 +4,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 
 ## S11-24 — Delete frequency weighting
 
-**Landed YYYY-MM-DD** in [#N](https://github.com/mendahu/provenencia/pull/N). Promote no longer weighs a value by how common it is in the catalog. Every property scores a plain weight from the walk's registry: 2 for each value type and 3 for a toponym, so an exact toponym alone is still medium and a sparse name and birth date still files strong. `Stats.ValueFreq`, the priors, the lift to the accept bar and the value-frequency scan are gone; the fan-out scan stays until S11-14.
+**Landed 2026-10-18** in [#483](https://github.com/mendahu/provenencia/pull/483). Promote no longer weighs a value by how common it is in the catalog. Every property scores a plain weight from the walk's registry: 2 for each value type and 3 for a toponym, so an exact toponym alone is still medium and a sparse name and birth date still files strong. `Stats.ValueFreq`, the priors, the lift to the accept bar and the value-frequency scan are gone; the fan-out scan stays until S11-14.
 
 ## S11-12 — Lifespan for people
 

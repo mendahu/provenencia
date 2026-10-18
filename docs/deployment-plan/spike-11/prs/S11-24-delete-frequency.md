@@ -1,6 +1,6 @@
 # S11-24 — Delete frequency weighting
 
-**Status:** Landed in [#N](https://github.com/mendahu/provenencia/pull/N) (YYYY-MM-DD)
+**Status:** Landed in [#483](https://github.com/mendahu/provenencia/pull/483) (2026-10-18)
 **Landed:** None.
 **Spike / slice:** Spike 11 · Slice 3 — Property, Subject and entity compare
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
