@@ -278,5 +278,6 @@ Differences from the plan:
 
 - The cut key is a typed `Equatable` value (`DepictionCutKey`: artifact id, viewer kind, loading flag, page and region draft), not `locator.encodeJSON()` as D-6 says: `encodeJSON()` has unstable key order (no `.sortedKeys`), so a string key never matched itself. Approved by the user against D-6's text.
 - `main` had moved since the plan: S10-63 (`useDepictionRegion`; `commitViewerRegion` now returns `Bool`) and S10-62 (the `fileExists` guard in `ArtifactViewerModel.load` is gone) had landed. Both were kept and no Current state row was invalidated.
+- The PDF cut draws through `PDFPage.draw(with:to:)` on a task-owned `PDFDocument`, not `CGContext.drawPDFPage`, so annotations the viewer shows are in the likeness (CON-1; user's call against D-3/D-4's text).
 - D-12's `SendableImage` was not needed: the build has no new Sendable or isolation warnings.
 - The manual check (section 10) is left for the user.

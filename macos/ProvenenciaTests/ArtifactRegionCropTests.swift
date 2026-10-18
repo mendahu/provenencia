@@ -116,6 +116,29 @@ struct ArtifactRegionCropTests {
         #expect(last.allSatisfy { $0 > 200 })
     }
 
+    @Test func pdfCutKeepsAnnotations() async throws {
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
+        try ArtifactFileFixtures.writeMarkedPDF(projectDir: projectDir, relPath: "objects/m.pdf", rotation: 0)
+        let url = URL(fileURLWithPath: projectDir).appendingPathComponent("objects/m.pdf")
+        let document = try #require(PDFDocument(url: url))
+        let annotation = PDFAnnotation(
+            bounds: CGRect(x: 0, y: 0, width: 100, height: 20),
+            forType: .square,
+            withProperties: nil
+        )
+        annotation.color = .black
+        annotation.interiorColor = .black
+        try #require(document.page(at: 0)).addAnnotation(annotation)
+        #expect(document.write(to: url))
+        let viewer = ArtifactViewerModel()
+        await viewer.load(source(projectDir, "objects/m.pdf", "application/pdf"))
+        // The annotation covers the bottom 20 pt of the page; the page itself is white there.
+        let cut = try #require(
+            await ArtifactRegionCrop.render(viewer, page: 1, region: rectangle(0, 0.9, 1, 1))
+        )
+        #expect(containsBlack(cut))
+    }
+
     @Test func pdfSnapshotNeedsTheLoadedDocument() async throws {
         let viewer = ArtifactViewerModel()
         #expect(ArtifactRegionCrop.snapshot(viewer, page: 1) == nil)

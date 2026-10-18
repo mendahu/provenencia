@@ -9,8 +9,8 @@ enum ArtifactRegionCropError: Error {
     case encodeFailed
 }
 
-/// Cuts a region out of viewer content: a pixel crop of an image, or a Core
-/// Graphics draw of only the region's box on a PDF page, off the main actor. Stateless. Normalized rects are **y-down** (unit
+/// Cuts a region out of viewer content: a pixel crop of an image, or a PDFKit
+/// draw of only the region's box on a PDF page, off the main actor. Stateless. Normalized rects are **y-down** (unit
 /// square, origin top-left), matching Artifact locators.
 enum ArtifactRegionCrop {
     /// Longest edge of an image the app sends. Go stores at most this edge
@@ -110,11 +110,12 @@ enum ArtifactRegionCrop {
     /// Draws only the region's box of the page as displayed (rotation applied),
     /// at the scale that brings the box to `maxLongEdge` where `maxPageScale` allows.
     private nonisolated static func pageBox(url: URL, pageIndex: Int, region: ArtifactRegionDraft) -> CGImage? {
-        guard let document = CGPDFDocument(url as CFURL),
-              let page = document.page(at: pageIndex + 1)
+        // Task-owned: PDFKit draws the annotations the viewer shows; nothing from the viewer's document crosses.
+        guard let document = PDFDocument(url: url),
+              let page = document.page(at: pageIndex)
         else { return nil }
-        let media = page.getBoxRect(.mediaBox)
-        let rotated = abs(Int(page.rotationAngle)) % 180 == 90
+        let media = page.bounds(for: .mediaBox)
+        let rotated = abs(page.rotation) % 180 == 90
         let visual = rotated ? CGSize(width: media.height, height: media.width) : media.size
         guard visual.width > 0, visual.height > 0 else { return nil }
         let n = ArtifactRegionGeometry.boundingRect(of: region.points)
@@ -133,15 +134,7 @@ enum ArtifactRegionCrop {
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
         context.scaleBy(x: scale, y: scale)
         context.translateBy(x: -box.minX, y: -(visual.height - box.maxY))
-        context.concatenate(
-            page.getDrawingTransform(
-                .mediaBox,
-                rect: CGRect(origin: .zero, size: visual),
-                rotate: 0,
-                preserveAspectRatio: true
-            )
-        )
-        context.drawPDFPage(page)
+        page.draw(with: .mediaBox, to: context)
         guard let image = context.makeImage() else { return nil }
         return scaledToFit(image, maxLongEdge: maxLongEdge)
     }
