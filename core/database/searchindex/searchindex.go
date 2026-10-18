@@ -29,7 +29,9 @@ const (
 //	6: Person, Event and Place handles (S9-34a).
 //	7: those documents are composed from list headers, and a write reprojects
 //	   the handles whose headers read the one that changed (S9-34).
-const ProjectionVersion = 7
+//	8: a Person or Place document lists each alternate name once, by text key
+//	   (S11-07).
+const ProjectionVersion = 8
 
 // Tagged body line prefixes for Source rollups (parsed by core/search for
 // match field codes + snippets).
