@@ -201,6 +201,25 @@ func TestPropertyTerms(t *testing.T) {
 			},
 		},
 		{
+			name: "a label with no letters or digits is invalid",
+			run: func(t *testing.T, c *database.Catalog, userID, propID []byte) {
+				if _, err := runCreate(c, userID, propID, "!!!", ""); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("create !!!: want ErrInvalid, got %v", err)
+				}
+				term, err := runCreate(c, userID, propID, "Godfather", "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := runUpdate(c, userID, term.ID, "!!!", ""); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("update to !!!: want ErrInvalid, got %v", err)
+				}
+				got, err := GetByID(c, term.ID)
+				if err != nil || got.Label != "Godfather" {
+					t.Fatalf("label changed: %v %+v", err, got)
+				}
+			},
+		},
+		{
 			name: "update refuses a rename onto another term and allows a restyle",
 			run: func(t *testing.T, c *database.Catalog, userID, propID []byte) {
 				father, err := runCreate(c, userID, propID, "Godfather", "")

@@ -150,7 +150,7 @@ func TestInstallStoresComparisonTokens(t *testing.T) {
 	Register(valuecompare.AliasTable{
 		Key: "test-nicks", Origin: vocabkey.OriginUser, Label: "Test", Kind: valuecompare.AliasNickname,
 		Roles: aliasPartRoles(),
-		Sets:  [][]string{{"Jim", "JAMES"}, {"Jim", "jim", "James"}},
+		Sets:  [][]string{{"Jim", "JAMES"}, {"Jim", "jim", "James"}, {"Mary-Ann", "Polly"}},
 	})
 	c := newCatalog(t)
 	if err := Install(c); err != nil {
@@ -162,7 +162,7 @@ func TestInstallStoresComparisonTokens(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := tableByKey(t, tables, "test-nicks")
-	want := [][]string{{"james", "jim"}, {"james", "jim"}}
+	want := [][]string{{"james", "jim"}, {"james", "jim"}, {"maryann", "polly"}}
 	if !reflect.DeepEqual(got.Sets, want) {
 		t.Fatalf("stored sets %v, want %v", got.Sets, want)
 	}
@@ -171,6 +171,8 @@ func TestInstallStoresComparisonTokens(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertScore(t, rules, "Jim", "James", matchregistry.Default().Value.Words.AliasCredit)
+	// No seed set holds maryann: only the registered set scores this.
+	assertScore(t, rules, "Maryann", "Polly", matchregistry.Default().Value.Words.AliasCredit)
 }
 
 func newCatalog(t *testing.T) *database.Catalog {
