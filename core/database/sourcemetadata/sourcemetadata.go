@@ -122,12 +122,6 @@ func Set(tx *database.Tx, userID []byte, in Input) (Row, []rowchange.Change, err
 		return Row{}, nil, err
 	}
 
-	normalized, err := normalizeValue(field.DataType, in.ValueText)
-	if err != nil {
-		return Row{}, nil, err
-	}
-	in.ValueText = normalized
-
 	if creating {
 		row, change, err := insertValueTx(tx.Tx, in.SourceID, field, in.ValueText)
 		if err != nil {
@@ -141,6 +135,11 @@ func Set(tx *database.Tx, userID []byte, in Input) (Row, []rowchange.Change, err
 		return row, []rowchange.Change{change}, nil
 	}
 
+	normalized, err := normalizeValue(field.DataType, in.ValueText)
+	if err != nil {
+		return Row{}, nil, err
+	}
+	in.ValueText = normalized
 	if prev.ValueText == in.ValueText {
 		return prev, nil, nil
 	}

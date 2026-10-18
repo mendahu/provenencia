@@ -792,6 +792,19 @@ func TestCreateAll(t *testing.T) {
 			},
 		},
 		{
+			name: "source that already has a layout row is refused",
+			run: func(t *testing.T) {
+				c, src, text, link := seed(t)
+				if err := runDismissSuggestion(c, userID, src.ID, text.ID); err != nil {
+					t.Fatal(err)
+				}
+				_, err := runCreateAll(c, userID, src.ID, []Input{{SourceID: src.ID, FieldID: link.ID, ValueText: "https://example.org"}}, nil)
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
 			name: "input for another source is refused",
 			run: func(t *testing.T) {
 				c, src, text, _ := seed(t)
