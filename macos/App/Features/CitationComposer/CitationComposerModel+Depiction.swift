@@ -2,11 +2,19 @@ import AppKit
 import Foundation
 
 /// One rendered cut, keyed by what it was cut from. Save reuses the bitmap
-/// the preview already drew.
+/// the preview already drew. `cut` is nil when the cut failed for that key.
 struct DepictionPreviewMemo {
     var key: String
-    var cgImage: CGImage
-    var image: NSImage
+    var cut: (cgImage: CGImage, image: NSImage)?
+}
+
+/// What the depiction preview shows, read from stored values only.
+enum DepictionPreviewState: Equatable {
+    case none
+    case cutting
+    case cut(NSImage)
+    case failed
+    case saved(relPath: String)
 }
 
 /// The region could not be cut from the open file, or its image could not be written.
@@ -149,32 +157,66 @@ extension CitationComposerModel {
         return L10n.CitationComposer.depictionCaptionBox
     }
 
-    /// The image a save would send, derived so it always matches the draft.
-    var depictionPreview: NSImage? {
-        guard let draft = currentDepictionDraft else { return nil }
-        return renderedDepiction(for: draft)?.image
+    /// The saved image path of an edit whose region is unchanged (empty when Go
+    /// hid an unreadable image); nil otherwise. An unchanged edit sends no new
+    /// image, so it never cuts.
+    private var unchangedDepictionImagePath: String? {
+        guard dialogBase() == .edit, !isDepictionRedrawn,
+              let draft = currentDepictionDraft, draft.hasRegion
+        else { return nil }
+        return draft.imageRelPath
     }
 
-    /// The cut of a draft's region from the open file, reused while the file
-    /// and region are unchanged.
-    private func renderedDepiction(for draft: DepictionValueDraft) -> DepictionPreviewMemo? {
+    /// What a cut of this draft depends on; nil when the draft has no region.
+    /// Built from the page and the region's points, not `encodeJSON()`, whose
+    /// key order changes between calls.
+    private func depictionCutKey(for draft: DepictionValueDraft) -> String? {
         guard draft.hasRegion, let region = draft.locator.region else { return nil }
-        let key = [
+        return [
             selectedArtifact?.id ?? "",
             artifactViewer.kind.rawValue,
             String(artifactViewer.isLoading),
-            draft.locator.encodeJSON(),
+            draft.locator.page.map(String.init) ?? "",
+            region.points.map { "\($0.x),\($0.y)" }.joined(separator: ";"),
         ].joined(separator: "|")
-        if let memo = depictionPreviewMemo, memo.key == key { return memo }
-        guard let rendered = ArtifactRegionCrop.render(artifactViewer, page: draft.locator.page, region: region)
-        else { return nil }
-        let memo = DepictionPreviewMemo(
-            key: key,
-            cgImage: rendered,
-            image: NSImage(cgImage: rendered, size: .zero)
-        )
-        depictionPreviewMemo = memo
-        return memo
+    }
+
+    /// The key of the cut the preview needs now; nil when it needs none.
+    var depictionPreviewKey: String? {
+        guard let draft = currentDepictionDraft, unchangedDepictionImagePath == nil else { return nil }
+        return depictionCutKey(for: draft)
+    }
+
+    /// What the preview shows, derived from stored values so `body` never cuts.
+    var depictionPreviewState: DepictionPreviewState {
+        if let path = unchangedDepictionImagePath {
+            return path.isEmpty ? .none : .saved(relPath: path)
+        }
+        guard let key = depictionPreviewKey else { return .none }
+        guard let memo = depictionPreviewMemo, memo.key == key else { return .cutting }
+        if let cut = memo.cut { return .cut(cut.image) }
+        return .failed
+    }
+
+    /// The cut of a draft's region from the open file, shared by the preview and
+    /// Save. The result is stored only while the draft is still the one on screen.
+    func depictionImage(for draft: DepictionValueDraft) async -> CGImage? {
+        guard let key = depictionCutKey(for: draft), let region = draft.locator.region else { return nil }
+        if let memo = depictionPreviewMemo, memo.key == key { return memo.cut?.cgImage }
+        let rendered = await ArtifactRegionCrop.render(artifactViewer, page: draft.locator.page, region: region)
+        if depictionPreviewKey == key {
+            depictionPreviewMemo = DepictionPreviewMemo(
+                key: key,
+                cut: rendered.map { ($0, NSImage(cgImage: $0, size: .zero)) }
+            )
+        }
+        return rendered
+    }
+
+    /// Cuts the preview for the current draft when it needs one.
+    func renderDepictionPreview() async {
+        guard depictionPreviewKey != nil, let draft = currentDepictionDraft else { return }
+        _ = await depictionImage(for: draft)
     }
 
     // MARK: - Drawing
@@ -276,7 +318,7 @@ extension CitationComposerModel {
         for values: ObservationRowValues,
         perform: (CatalogDepictionValueInput) async throws -> T
     ) async throws -> T {
-        guard let rendered = renderedDepiction(for: values.depictionDraft)?.cgImage
+        guard let rendered = await depictionImage(for: values.depictionDraft)
         else { throw DepictionRenderFailed() }
         let url: URL
         do {
