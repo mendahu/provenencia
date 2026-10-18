@@ -45,6 +45,14 @@ struct PVTableTypeSelectMatcherTests {
         #expect(PVTableTypeSelectMatcher.index(in: labels, prefix: "AUTH") == 0)
     }
 
+    @Test func matchesThroughAccentsAndPunctuation() {
+        let rows = ["José", "O'Brien", "Publication date"]
+        #expect(PVTableTypeSelectMatcher.index(in: rows, prefix: "jose") == 0)
+        #expect(PVTableTypeSelectMatcher.index(in: rows, prefix: "ob") == 1)
+        #expect(PVTableTypeSelectMatcher.index(in: rows, prefix: "date") == -1)
+        #expect(PVTableTypeSelectMatcher.index(in: rows, prefix: "-") == -1)
+    }
+
     @Test func matchesOnlyThePrefixNotAnySubstring() {
         #expect(PVTableTypeSelectMatcher.index(in: labels, prefix: "date") == -1)
     }
