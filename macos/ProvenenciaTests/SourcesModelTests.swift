@@ -272,7 +272,7 @@ struct SourcesModelTests {
             await waitForQuery(typesHandle)
         }
         #expect(model.types.map(\.id) == ["t1", "t2"])
-        #expect(model.typeComboOptions.count == 2)
+        #expect(model.types.count == 2)
     }
 
     @Test func typesHandleLoadsWhenSourcesListFails() async {

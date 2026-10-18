@@ -327,10 +327,6 @@ final class SourcesModel {
         return L10n.Sources.countLineFiltered(visible: visible, total: sources.count)
     }
 
-    var typeComboOptions: [PVComboBoxOption] {
-        SourceTypeComboRow.options(for: types)
-    }
-
     var canSubmitAdd: Bool {
         !isSaving && draft.validation.isValid
     }

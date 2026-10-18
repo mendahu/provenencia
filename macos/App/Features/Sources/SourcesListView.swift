@@ -105,7 +105,7 @@ private struct SourcesListContent: View {
                 }
             }
         ) {
-            addForm(typeOptions: model.typeComboOptions)
+            addForm
         }
         .task(id: model.isAdding) {
             guard model.isAdding else { return }
@@ -382,12 +382,12 @@ private struct SourcesListContent: View {
         .accessibilityIdentifier("sources.empty")
     }
 
-    private func addForm(typeOptions: [PVComboBoxOption]) -> some View {
+    private var addForm: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
             if let createError = model.createError {
                 PVCallout(tone: .danger, message: createError)
                     .accessibilityIdentifier("sources.add.error")
-            } else if let loadError = model.loadError, typeOptions.isEmpty {
+            } else if let loadError = model.loadError, model.types.isEmpty {
                 PVCallout(
                     tone: .danger,
                     message: L10n.Errors.message(for: loadError)
