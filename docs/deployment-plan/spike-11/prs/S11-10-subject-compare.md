@@ -15,7 +15,7 @@
 **Planned:** 2026-10-18 against `main` @ `95d1f34`; refreshed 2026-10-18 against `main` @ `847b5f0` (S11-09 landed; layer 1 changed only by `Stronger`, the relation order and `Relations()`, so §2's values hold)
 **Review:** [`S11-10-subject-compare.review.md`](S11-10-subject-compare.review.md) — Fits with changes / Ready with changes → fixed, 2 rounds
 
-**Landed:** None — the code is as planned.
+**Landed:** Two differences from the plan. STEP-3 to STEP-5 landed in one commit (`234e74f0`) with the full `Compare` instead of STEP-3's D-4-only skeleton. The AC-1.14 row asserts cause `relation`, which the AC does not name.
 
 ### Implementer — read this first
 
