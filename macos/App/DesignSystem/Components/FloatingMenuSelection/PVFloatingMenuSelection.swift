@@ -44,11 +44,11 @@ struct PVTypeSelectMatcher: Equatable {
     /// `fromIndex` and wrapping, so repeated single keystrokes cycle matches.
     /// Case, accents and punctuation do not count (`TextMatch`).
     static func index(in values: [String], prefix: String, fromIndex: Int = 0) -> Int {
-        let query = TextMatch.key(prefix)
+        let query = TextMatch.Query(prefix)
         guard !query.isEmpty, !values.isEmpty else { return -1 }
         for offset in 0..<values.count {
             let idx = (max(0, fromIndex) + offset) % values.count
-            if TextMatch.key(values[idx]).hasPrefix(query) { return idx }
+            if query.isPrefix(ofKey: TextMatch.key(values[idx])) { return idx }
         }
         return -1
     }

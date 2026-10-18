@@ -44,6 +44,17 @@ struct TextMatchTests {
         #expect(span("xyz", "José") == nil)
     }
 
+    @Test func queryMatchesInsideAGraphemeLikeGo() {
+        #expect(TextMatch.Query("가", locale: enUS).matches("간장"))
+        #expect(TextMatch.Query("क", locale: enUS).matches("किताब"))
+        #expect(PVTypeSelectMatcher.index(in: ["간장"], prefix: "가") == 0)
+        let options = [
+            PVComboBoxOption(value: "late", label: "나가", subtext: "", isDisabled: false),
+            PVComboBoxOption(value: "first", label: "간장", subtext: "", isDisabled: false),
+        ]
+        #expect(PVComboBoxMatch.filter(options, query: "가").map(\.value) == ["first", "late"])
+    }
+
     /// D-2's formula, inline: lower each character with the locale, decompose,
     /// drop whitespace, punctuation and (at equivalent) accents, then fold.
     private func d2Key(_ text: String, level: TextMatch.Level, locale: Locale) -> String {

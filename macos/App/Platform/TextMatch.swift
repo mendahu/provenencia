@@ -86,12 +86,17 @@ enum TextMatch {
 
         /// True for an empty query, or when any text's key contains the query.
         func matches(_ texts: String...) -> Bool {
-            isEmpty || texts.contains { TextMatch.key($0, locale: locale).contains(key) }
+            isEmpty || texts.contains { TextMatch.scalarsContain(TextMatch.key($0, locale: locale), key) }
         }
 
         /// `matches` for a text that is already keyed.
         func matchesKey(_ textKey: String) -> Bool {
-            isEmpty || textKey.contains(key)
+            isEmpty || TextMatch.scalarsContain(textKey, key)
+        }
+
+        /// True for an empty query, or when the key starts with the query.
+        func isPrefix(ofKey textKey: String) -> Bool {
+            isEmpty || TextMatch.scalarsHavePrefix(textKey, key)
         }
     }
 
@@ -105,11 +110,30 @@ enum TextMatch {
             appendKey(of: text[idx], level: .equivalent, locale: query.locale, to: &keyed)
             for _ in before..<keyed.count { owner.append(idx) }
         }
-        let needle = Array(query.key.unicodeScalars)
+        guard let start = firstWindow(of: query.key.unicodeScalars, in: keyed) else { return nil }
+        return owner[start]..<text.index(after: owner[start + query.key.unicodeScalars.count - 1])
+    }
+
+    /// Compares by Unicode scalar, like Go's byte-wise `strings.Contains`: a
+    /// query that is the first scalars of a grapheme still matches it.
+    fileprivate static func scalarsContain(_ haystack: String, _ needle: String) -> Bool {
+        firstWindow(of: needle.unicodeScalars, in: haystack.unicodeScalars) != nil
+    }
+
+    fileprivate static func scalarsHavePrefix(_ haystack: String, _ prefix: String) -> Bool {
+        haystack.unicodeScalars.starts(with: prefix.unicodeScalars)
+    }
+
+    /// Offset of the first window of `haystack` equal to `needle`, compared in place.
+    private static func firstWindow<N: Collection, H: Collection>(of needle: N, in haystack: H) -> Int?
+    where N.Element == Unicode.Scalar, H.Element == Unicode.Scalar {
         let n = needle.count
-        guard keyed.count >= n else { return nil }
-        for i in 0...(keyed.count - n) where Array(keyed[i..<i + n]) == needle {
-            return owner[i]..<text.index(after: owner[i + n - 1])
+        let h = haystack.count
+        guard n <= h else { return nil }
+        var start = haystack.startIndex
+        for offset in 0...(h - n) {
+            if haystack[start...].starts(with: needle) { return offset }
+            start = haystack.index(after: start)
         }
         return nil
     }

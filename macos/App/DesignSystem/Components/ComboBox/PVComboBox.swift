@@ -47,8 +47,8 @@ enum PVComboBoxMatch {
 
     /// 0 label prefix, 1 a later word prefix, 2 any other contains match.
     private static func band(for option: PVComboBoxOption, labelKey: String, query: TextMatch.Query) -> Int {
-        if labelKey.hasPrefix(query.key) { return 0 }
-        if TextMatch.words(option.label).dropFirst().contains(where: { $0.hasPrefix(query.key) }) { return 1 }
+        if query.isPrefix(ofKey: labelKey) { return 0 }
+        if TextMatch.words(option.label).dropFirst().contains(where: { query.isPrefix(ofKey: $0) }) { return 1 }
         return 2
     }
 
