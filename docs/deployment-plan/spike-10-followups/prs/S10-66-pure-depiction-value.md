@@ -1,6 +1,6 @@
 # S10-66 — Pure depiction value package
 
-**Status:** Planned
+**Status:** Landed in [#473](https://github.com/mendahu/provenencia/pull/473) (2026-10-18)
 **Spike / slice:** Spike 10 follow-ups · likeness hardening
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: engine refactor)
@@ -308,3 +308,10 @@ None.
 
 **Title:** S10-66 — Pure depiction value package
 **Body:** objective in one sentence; what shipped against each US; AC evidence (the `go list -deps` outputs before and after); deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-10-followups/prs/S10-66-pure-depiction-value.md`.
+
+## Landed
+
+Differences from the plan:
+
+- `main` had moved from `e97cf54` to `ab70bd69` (S10-60, S10-61, S10-64, S10-65 and Spike 11 work had landed). No Current state row was invalidated and no file outside section 4 imported `depictionvalues`; the docs lines the plan cites by number had shifted and were found by text.
+- `TestDepictionValues` now takes its page-only locator from `depictionvaluetest.Locator` in place of its inline copy.
