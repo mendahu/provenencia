@@ -35,6 +35,8 @@ var layerPackages = []struct {
 	{"core/datevalue/datevaluetest", false},
 	{"core/namevalue", false},
 	{"core/namevalue/namevaluetest", false},
+	{"core/depictionvalue", false},
+	{"core/depictionvalue/depictionvaluetest", false},
 	{"core/propertymeta", false},
 	{"core/vocabkey", false},
 }

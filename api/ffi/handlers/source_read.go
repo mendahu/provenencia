@@ -6,11 +6,11 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	_ "github.com/mendahu/provenencia/core/database/sourcefill"
+	"github.com/mendahu/provenencia/core/depictionvalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -93,7 +93,7 @@ func listedFromSource(o graphcache.SourceObservation, props map[string]propertyI
 	}
 	// Matches depictionvalues.FromJoin's non-nil result: depiction_values.image_file_id is NOT NULL.
 	if len(o.DepictionID) > 0 {
-		l.Depiction = &depictionvalues.Value{ID: o.DepictionID, RegionJSON: o.DepictionRegion, ImageFileID: o.DepictionImageFileID}
+		l.Depiction = &depictionvalue.Value{ID: o.DepictionID, RegionJSON: o.DepictionRegion, ImageFileID: o.DepictionImageFileID}
 	}
 	if len(o.Date) > 0 {
 		d, err := valuecodec.UnmarshalDate(o.Date)

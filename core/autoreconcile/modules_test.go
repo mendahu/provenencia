@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/depictionvalues"
+	"github.com/mendahu/provenencia/core/depictionvalue"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -17,9 +17,9 @@ func term(n byte, termID, key string) Candidate {
 }
 
 // depiction is a likeness holding image; an empty image is one whose File
-// depictionvalues.Readable refused.
+// depictionvalue.Readable refused.
 func depiction(n byte, image string) Candidate {
-	return Candidate{ObservationID: id(n), Value: Value{Depiction: &depictionvalues.Value{ImageFileID: []byte(image)}}}
+	return Candidate{ObservationID: id(n), Value: Value{Depiction: &depictionvalue.Value{ImageFileID: []byte(image)}}}
 }
 
 // neutralTerm is a term the catalog flags as no evidence ("unknown").
