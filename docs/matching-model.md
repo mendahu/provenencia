@@ -34,7 +34,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 
 1. **Value compare.** The two names are `Same`; the two dates are `Same`; the two event types are `Same`.
 2. **Property compare.** Name: relation `Same` on a single-value property, so the outcome is agree.
-3. **Subject compare, Gracie.** `subject.Weights.person.name.Agree` is 2.5. Both sides also derive a lifespan, "born 1 May 1901", from their birth; the windows are consistent, so `subject.Weights.person.lifespan.Agree` 0.1 counts. Her own evidence is 2.5 + 0.1 = 2.6.
+3. **Subject compare, Gracie.** `subject.Weights.person.name.Agree` is 2.5. Both sides also derive a lifespan from their birth: window 1 May 1901 to 1 May 2011, span 1 May 1901; each span lies in the other's window, so `subject.Weights.person.lifespan.Agree` 0.1 counts. Her own evidence is 2.5 + 0.1 = 2.6.
 4. **Subject compare, the birth.** Event type agrees: `subject.Weights.event.event_type.Agree` 0.5. The date agrees: `subject.Weights.event.date.Agree` 2. The birth's own evidence is 0.5 + 2 = 2.5.
 5. **Segment compare.** Gracie is the subject of the birth, and `segment.Cardinality.birth` is `one`, so a matching neighbor earns `segment.OneSupport` 1.5 plus `segment.OneCredit` 0.5 of the birth's own evidence: 1.5 + 0.5 × 2.5 = 2.75.
 6. **Graph alignment.** Total evidence is 2.6 + 2.75 = 5.35. That clears `alignment.AcceptBar` (2), so the walk places the pair, and it is at least `alignment.Bands.Strong` (4), so the band is strong. Nothing conflicted, so the row is not contested.
@@ -70,7 +70,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **pair (compared together)** | Two or more properties compared as one, keyed by the lead: a pool adds properties' values to the lead's on each side (sex at birth with gender); a period reads `start_date` and `end_date` as one range for `date` on a side with no date |
 | **profile** | A Subject-shaped set of values built from an entity's reconciled conclusion: displayed values positive, denied values negative, nothing else |
 | **entity comparison** | Layer 4: a Subject against an entity's profile |
-| **lifespan** | A derived window for a person, built from the dates of direct neighbors, compared as a registry-declared special case |
+| **lifespan** | A person's derived window and span, built from the dates of every event they take part in; each side's span is checked against the other's window |
 | **segment** | Two primary Subjects joined by a bridge: primary, bridge, primary |
 | **bridge** | The Subject that joins the two primary Subjects of a segment (a birth, a relationship) |
 | **cardinality** | How many a Subject can have through one bridge; only birth and death are declared `one` |
