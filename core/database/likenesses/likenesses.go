@@ -110,8 +110,9 @@ func ForEntities(q sqlbatch.Querier, entityIDs [][]byte) (map[string][]Likeness,
 	return out, nil
 }
 
-// ByObservation returns the index of the gallery likeness an Observation went
-// into: the one rule for which likeness a record names. -1, false when none.
+// ByObservation returns the index of the gallery likeness whose gallery records
+// include the Observation: the one rule for which likeness a record names. -1,
+// false when none.
 func ByObservation(gallery []Likeness, observationID []byte) (i int, ok bool) {
 	for i := range gallery {
 		for _, id := range gallery[i].ObservationIDs {
