@@ -1,6 +1,7 @@
 # S12-01 — Copy Source engine
 
-**Status:** Planned
+**Status:** Landed in [#478](https://github.com/mendahu/provenencia/pull/478) (2026-10-18)
+**Landed:** Two differences. `api/libprovenencia/call_test.go` probed method `102` as its unknown method, so the probe is `103` now that `102` is `METHOD_COPY_SOURCE`. `core/database/sourcecredibility/assessments.go` was not gofmt-clean on `main`, so it is formatted in its own commit because `check-pr.sh` formats every touched file. STEP-1 to STEP-6 otherwise shipped as planned.
 **Spike / slice:** Spike 12 · Slice 1 — Copy Source
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: engine, FFI and store method only; the form is S12-02 behind S12-D1)
