@@ -383,3 +383,14 @@ None.
 
 **Title:** S11-09 — Property compare
 **Body:** objective in one sentence; what shipped against each US; AC evidence (test names); deviations from the plan; manual check (the two `go test` runs of §10); `Plan: docs/deployment-plan/spike-11/prs/S11-09-property-compare.md`.
+
+## Landed
+
+Differences from the plan:
+
+- STEPs 3 to 7 are one commit, `b72f822b`, with the `propertycompare` guard row in it.
+- AC-2.6 is checked in its own `TestCompareRefs`, not a `TestCompare` row.
+- No similarity is checked where §2 gives none (AC-1.6, AC-2.5, AC-3.3, AC-3.4).
+- The AC-5.1 neutral extra uses ref `0xff`.
+- The pairs are found in one pass with running bests (no pair slice), offered in D-6 order: side A's values in input order and, for each, side B's.
+- `valuecompare.Relations()` and `TestEveryRelationHasAnOutcome` were added in review, so a new relation must decide its outcome and whether a negative contradicts it.
