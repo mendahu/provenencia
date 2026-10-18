@@ -1,11 +1,100 @@
 import AppKit
 import Foundation
+import ImageIO
 import Testing
 @testable import Provenencia
+
+fileprivate struct DecodePolicyCase: Sendable {
+    let label: String
+    let fileType: NSBitmapImageRep.FileType?
+    let width: Int
+    let height: Int
+    let expected: Bool
+}
+
+fileprivate let decodePolicyCases: [DecodePolicyCase] = [
+    DecodePolicyCase(label: "png 8x8", fileType: .png, width: 8, height: 8, expected: true),
+    DecodePolicyCase(label: "jpeg 8x8", fileType: .jpeg, width: 8, height: 8, expected: true),
+    DecodePolicyCase(label: "tiff 8x8", fileType: .tiff, width: 8, height: 8, expected: false),
+    DecodePolicyCase(label: "png 4096x8", fileType: .png, width: 4096, height: 8, expected: true),
+    DecodePolicyCase(label: "png 4097x8", fileType: .png, width: 4097, height: 8, expected: false),
+    DecodePolicyCase(label: "png 8x4097", fileType: .png, width: 8, height: 4097, expected: false),
+    DecodePolicyCase(label: "random bytes", fileType: nil, width: 0, height: 0, expected: false),
+]
 
 @Suite
 @MainActor
 struct ThumbnailCacheTests {
+    @Test(arguments: decodePolicyCases)
+    fileprivate func decodePolicyAcceptsOnlyGoImages(_ c: DecodePolicyCase) throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let rel = "objects/aa/bb/x.png"
+        if let fileType = c.fileType {
+            try ArtifactFileFixtures.writeImage(
+                projectDir: project, relPath: rel, width: c.width, height: c.height, fileType: fileType)
+        } else {
+            let bytes = Data((0..<64).map { UInt8(truncatingIfNeeded: $0 &* 37) })
+            try ArtifactFileFixtures.write(bytes, projectDir: project, relPath: rel)
+        }
+        let url = URL(fileURLWithPath: project).appendingPathComponent(rel)
+        let accepted = CGImageSourceCreateWithURL(url as CFURL, nil).map(ThumbnailDecodePolicy.accepts) ?? false
+        #expect(accepted == c.expected)
+    }
+
+    @Test func loadsAGoJPEG() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let rel = "objects/aa/bb/x.jpg"
+        try ArtifactFileFixtures.writeImage(projectDir: project, relPath: rel, fileType: .jpeg)
+        #expect(await ThumbnailCache().image(projectDir: project, relPath: rel) != nil)
+    }
+
+    @Test func refusesAnotherFormat() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let cache = ThumbnailCache()
+        try ArtifactFileFixtures.writeImage(projectDir: project, relPath: "objects/aa/bb/x.png", fileType: .tiff)
+        #expect(await cache.image(projectDir: project, relPath: "objects/aa/bb/x.png") == nil)
+        #expect(cache.entryCount == 1)
+        #expect(cache.cachedImage(projectDir: project, relPath: "objects/aa/bb/x.png") == nil)
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "objects/aa/bb/y.png")
+        #expect(await cache.image(projectDir: project, relPath: "objects/aa/bb/y.png") != nil)
+    }
+
+    @Test func refusesAnOversizedDeclaredEdge() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let cache = ThumbnailCache()
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "objects/aa/bb/big.png", width: 4097, height: 8)
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: "objects/aa/bb/edge.png", width: 4096, height: 8)
+        #expect(await cache.image(projectDir: project, relPath: "objects/aa/bb/big.png") == nil)
+        #expect(await cache.image(projectDir: project, relPath: "objects/aa/bb/edge.png") != nil)
+    }
+
+    @Test(.timeLimit(.minutes(1))) func runsAtMostTheCappedDecodes() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let cache = ThumbnailCache()
+        cache.maxConcurrentDecodes = 2
+        for i in 0..<8 {
+            try ArtifactFileFixtures.writePNG(
+                projectDir: project, relPath: "objects/aa/bb/k\(i).png", width: 64, height: 64)
+        }
+        let results = await withTaskGroup(of: Bool.self) { group in
+            for i in 0..<8 {
+                group.addTask { @MainActor in
+                    await cache.image(projectDir: project, relPath: "objects/aa/bb/k\(i).png") != nil
+                }
+            }
+            var all: [Bool] = []
+            for await r in group { all.append(r) }
+            return all
+        }
+        #expect(results.count == 8 && results.allSatisfy { $0 })
+        #expect((1...2).contains(cache.peakConcurrentDecodes))
+    }
+
     @Test func emptyRelPathReturnsNilWithoutCaching() async {
         let cache = ThumbnailCache()
         let image = await cache.image(

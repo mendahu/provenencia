@@ -21,6 +21,7 @@ import (
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/objectpath"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/raster"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -38,6 +39,7 @@ const (
 	swiftRegionGeometry = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
 	swiftProjectFiles   = "../../macos/App/Platform/ProjectFiles.swift"
 	swiftTextMatch      = "../../macos/App/Platform/TextMatch.swift"
+	swiftThumbnailCache = "../../macos/App/Platform/ThumbnailCache.swift"
 )
 
 // swiftEnumBody returns the source between `enum <name>` and its closing
@@ -257,6 +259,11 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			name: "objects folder", path: swiftProjectFiles, enum: "ProjectFiles",
 			re:   regexp.MustCompile(`static let objectsDir = "(\w+)"`),
 			want: []string{objectpath.Dir},
+		},
+		{
+			name: "thumbnail decode edge", path: swiftThumbnailCache, enum: "ThumbnailDecodePolicy",
+			re:   regexp.MustCompile(`static let maxDeclaredEdge = (\d+)`),
+			want: []string{strconv.Itoa(raster.MaxEdgeLimit)},
 		},
 	}
 	for _, tt := range tests {
