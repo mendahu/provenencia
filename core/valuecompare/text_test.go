@@ -7,6 +7,10 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"unicode"
+	"unicode/utf8"
+
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -53,6 +57,7 @@ func TestTextCompare(t *testing.T) {
 		{name: "word break and fold", a: "Mont-réal", b: "Montreal", want: valuecompare.Equivalent, sim: 0.95, cause: valuecompare.CauseFold, parts: []valuecompare.PartMatch{pm("mont réal", "montreal", valuecompare.Equivalent, 0.95, valuecompare.CauseFold)}},
 		{name: "word break same accents", a: "Mont-réal", b: "montréal", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseCase, parts: []valuecompare.PartMatch{pm("mont réal", "montréal", valuecompare.Same, 1, valuecompare.CauseCase)}},
 		{name: "word break equal counts", a: "ab c", b: "a bc", want: valuecompare.Same, sim: 1, cause: valuecompare.CauseCase, parts: []valuecompare.PartMatch{pm("ab c", "a bc", valuecompare.Same, 1, valuecompare.CauseCase)}},
+		{name: "hangul composed against decomposed", a: "서울 한국", b: norm.NFD.String("서울 한국"), want: valuecompare.Equivalent, sim: 0.95, cause: valuecompare.CauseFold, parts: []valuecompare.PartMatch{pm("서울", norm.NFD.String("서울"), valuecompare.Equivalent, 0.95, valuecompare.CauseFold), pm("한국", norm.NFD.String("한국"), valuecompare.Equivalent, 0.95, valuecompare.CauseFold)}},
 		{name: "fold", a: "Montréal", b: "Montreal", want: valuecompare.Equivalent, sim: 0.95, cause: valuecompare.CauseFold, parts: []valuecompare.PartMatch{pm("montréal", "montreal", valuecompare.Equivalent, 0.95, valuecompare.CauseFold)}},
 		{
 			name: "contains", a: "York", b: "York, Upper Canada",
@@ -208,6 +213,7 @@ func TestTextKeyMatchesWords(t *testing.T) {
 	texts := []string{
 		"Mc Donald", "O. Brien", "god-father", "Mont-réal", "Sainte-Anne register",
 		"Straße ß", "!!!", "", "Upper Canada, York", "van der Berg", "e\u0301cole", "Ｆull ŁÓDŹ",
+		"서울 한국", norm.NFD.String("서울 한국"),
 		strings.Repeat("Le père Noël a mangé des crêpes à l'église de Saint-Étienne. ", 35),
 	}
 	for _, p := range samples[propertymeta.ValueTypeText] {
@@ -230,6 +236,34 @@ func TestTextKeyMatchesWords(t *testing.T) {
 			got, ok := valuecompare.TextKey(in, level, rules.Words)
 			if ok != (len(words) > 0) || got != strings.Join(want, "") {
 				t.Errorf("%s TextKey(%.40q) = %q, %v; want %q", level, in, got, ok, strings.Join(want, ""))
+			}
+		}
+	}
+}
+
+// TestTextKeyMatchesWordsEveryRune: for every valid rune, alone, after a
+// letter and before a combining mark, the key is the words joined, folded word
+// by word at Equivalent. The per-rune rules in the key and in the word helpers
+// cannot drift apart.
+func TestTextKeyMatchesWordsEveryRune(t *testing.T) {
+	rules := matchregistry.Default().Value
+	for r := rune(0); r <= unicode.MaxRune; r++ {
+		if !utf8.ValidRune(r) {
+			continue
+		}
+		for _, in := range []string{string(r), "a" + string(r), string(r) + "\u0301"} {
+			words := valuecompare.SplitWords(in, rules.Words)
+			for _, level := range []valuecompare.Relation{valuecompare.Same, valuecompare.Equivalent} {
+				want := slices.Clone(words)
+				if level == valuecompare.Equivalent {
+					for i, w := range want {
+						want[i] = valuecompare.FoldWord(w, rules.Words.Folds)
+					}
+				}
+				got, ok := valuecompare.TextKey(in, level, rules.Words)
+				if ok != (len(words) > 0) || got != strings.Join(want, "") {
+					t.Fatalf("%s TextKey(%+q) = %q, %v; want %q", level, in, got, ok, strings.Join(want, ""))
+				}
 			}
 		}
 	}

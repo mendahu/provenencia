@@ -3,10 +3,6 @@ package valuecompare
 import (
 	"slices"
 	"strings"
-	"unicode"
-	"unicode/utf8"
-
-	"golang.org/x/text/unicode/norm"
 
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
@@ -117,48 +113,16 @@ func joinedKey(s string, fold bool, w WordRules) (string, bool) {
 	var b strings.Builder
 	b.Grow(len(s))
 	has := false
-	asciiFolds := false
-	if fold {
-		for r := range w.Folds {
-			asciiFolds = asciiFolds || r < utf8.RuneSelf
-		}
-	}
-	var rbuf [utf8.UTFMax]byte
 	for _, r := range s {
-		// Dashes (Pd) and the slash are punctuation: NormalizeForm drops them with the rest.
-		if unicode.IsPunct(r) || unicode.IsSpace(r) {
+		keep, _, ok := wordRune(r)
+		if !ok {
 			continue
 		}
-		r = unicode.ToLower(r)
 		has = true
-		if !fold {
-			b.WriteRune(r)
-			continue
-		}
-		if r < utf8.RuneSelf {
-			if asciiFolds {
-				if repl, ok := w.Folds[r]; ok {
-					b.WriteString(repl)
-					continue
-				}
-			}
-			b.WriteByte(byte(r))
-			continue
-		}
-		// The rune's full decomposition, without normalizing a string for it.
-		dec := norm.NFD.Properties(utf8.AppendRune(rbuf[:0], r)).Decomposition()
-		if dec == nil {
-			dec = utf8.AppendRune(rbuf[:0], r)
-		}
-		for _, d := range string(dec) {
-			if d >= utf8.RuneSelf && unicode.Is(unicode.Mn, d) {
-				continue
-			}
-			if repl, ok := w.Folds[d]; ok {
-				b.WriteString(repl)
-				continue
-			}
-			b.WriteRune(d)
+		if fold {
+			appendFolded(&b, keep, w.Folds)
+		} else {
+			b.WriteRune(keep)
 		}
 	}
 	return b.String(), has
