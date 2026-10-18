@@ -107,6 +107,22 @@ struct ProjectFilesTests {
         #expect(ProjectFiles.objectURL(projectDir: project, relPath: rel) != nil)
     }
 
+    @Test func objectURLRefusesAliasObject() throws {
+        let fm = FileManager.default
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        let rel = "objects/ab/cd/" + String(repeating: "a", count: 64) + ".png"
+        let outside = try ArtifactFileFixtures.aliasToOutsidePNG(at: project + "/" + rel)
+        defer {
+            try? fm.removeItem(atPath: project)
+            try? fm.removeItem(atPath: outside)
+        }
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: rel) == nil)
+
+        try fm.removeItem(atPath: project + "/" + rel)
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: rel)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: rel) != nil)
+    }
+
     @Test(.timeLimit(.minutes(1)))
     func objectURLRefusesNonRegularObject() throws {
         let fm = FileManager.default

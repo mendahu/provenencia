@@ -102,6 +102,26 @@ enum ArtifactFileFixtures {
         return outside
     }
 
+    /// Writes a Finder alias (bookmark file) at `aliasPath` to a PNG in a fresh
+    /// outside folder, creating the alias's parent folders. Returns the outside
+    /// folder; the caller removes it.
+    static func aliasToOutsidePNG(at aliasPath: String) throws -> String {
+        let outside = uniqueProjectDir()
+        try writePNG(projectDir: outside, relPath: "outside.png")
+        let alias = URL(fileURLWithPath: aliasPath)
+        try FileManager.default.createDirectory(
+            at: alias.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        let data = try URL(fileURLWithPath: outside + "/outside.png").bookmarkData(
+            options: .suitableForBookmarkFile,
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        )
+        try URL.writeBookmarkData(data, to: alias)
+        return outside
+    }
+
     static func seedArtifact(_ store: FakeStore, sourceID: String = "src-1", mediaType: String, relPath: String) {
         store.artifactsBySource[sourceID] = [
             CatalogArtifact(

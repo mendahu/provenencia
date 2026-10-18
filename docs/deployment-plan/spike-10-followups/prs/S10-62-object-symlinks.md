@@ -290,3 +290,4 @@ Differences from the plan:
 - `ArtifactViewerModel.emptyReason` is non-optional, so the control assertion in `symlinkedObjectSetsMissingFile` is `== .idle` plus `displayImage != nil`.
 - The `macos-client.mdc` mirror line and the `swift_vocabulary_test.go` header use S10-64 D-10's wording, naming `ArtifactRegionGeometry.maxRegionPoints` and `ProjectFiles.objectsDir`.
 - The manual check (§10) is left for the user.
+- Alias refusal added in fix round 1 from SEC-1: `isSafeObject` also refuses a Finder alias at the object path (`isAliasFileKey` on a freshly built URL), because Launch Services resolves aliases on open.

@@ -12,7 +12,7 @@ enum ProjectFiles {
     /// (e.g. `objects/ab/cd/abcd…`). Returns `nil` when `relPath` is empty,
     /// is not under `objects/`, contains `..` / absolute-ish segments, resolves
     /// outside `projectDir`, names a missing file, passes through a symlink at
-    /// or under `objects/`, or is not a regular file.
+    /// or under `objects/`, is a Finder alias, or is not a regular file.
     static func objectURL(projectDir: String, relPath: String) -> URL? {
         let trimmed = relPath.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -48,7 +48,8 @@ enum ProjectFiles {
 
     /// Mirrors core/objectstore openObjectsRoot + openRegular: every folder from
     /// objects/ down is a real folder and the object is a regular file (lstat,
-    /// never followed). The project folder path itself may be a symlink.
+    /// never followed) and not a Finder alias. The project folder path itself
+    /// may be a symlink.
     private static func isSafeObject(segments: [String], projectURL: URL) -> Bool {
         var url = projectURL
         for (i, segment) in segments.enumerated() {
@@ -56,7 +57,18 @@ enum ProjectFiles {
             var st = stat()
             guard lstat(url.path, &st) == 0 else { return false }
             let kind = st.st_mode & S_IFMT
-            guard kind == (i == segments.count - 1 ? S_IFREG : S_IFDIR) else { return false }
+            let isObject = i == segments.count - 1
+            guard kind == (isObject ? S_IFREG : S_IFDIR) else { return false }
+            if isObject {
+                // A Finder alias is a regular file to lstat, but Launch Services
+                // resolves it when the object is opened. Read the key from a
+                // freshly built URL so no cached value is trusted; an error
+                // refuses the object.
+                let fresh = URL(fileURLWithPath: url.path)
+                guard let isAlias = try? fresh.resourceValues(forKeys: [.isAliasFileKey]).isAliasFile,
+                      !isAlias
+                else { return false }
+            }
         }
         return true
     }
