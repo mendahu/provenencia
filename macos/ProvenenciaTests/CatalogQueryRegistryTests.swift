@@ -351,9 +351,12 @@ struct CatalogQueryRegistryTests {
             CatalogSubject(id: "sub-2", ref: "CPR-2", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
         ]
         store.observationsBySource["s1"] = [
-            nameObservation(id: "o1", subjectID: "sub-1", form: "James Robins"),
-            nameObservation(id: "o2", subjectID: "sub-1", form: "Jim Robins"),
-            nameObservation(id: "o3", subjectID: "sub-1", form: "james robins"),
+            nameObservation(id: "o1", subjectID: "sub-1", form: "James Robins",
+                            parts: [part("James", "given"), part("Robins", "surname")]),
+            nameObservation(id: "o2", subjectID: "sub-1", form: "Jim Robins",
+                            parts: [part("Jim", "given"), part("Robins", "surname")]),
+            nameObservation(id: "o3", subjectID: "sub-1", form: "ROBINS, James",
+                            parts: [part("ROBINS", "surname"), part("James", "given")]),
         ]
         let james = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
         let bare = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-2")
@@ -366,10 +369,41 @@ struct CatalogQueryRegistryTests {
 
         let headers = try #require(handle.value)
         #expect(headers.map(\.entity.ref) == [james.entity.ref, bare.entity.ref])
-        #expect(headers[0].name?.form == "James Robins")
+        #expect(headers[0].name == CatalogNameValue(
+            form: "James Robins", parts: [part("James", "given"), part("Robins", "surname")]
+        ))
         #expect(headers[0].nameValueCount == 2)
         #expect(headers[1].name == nil && PersonHeaderDisplay.title(headers[1]) == bare.entity.ref)
         #expect(store.heldCatalogProjectDir == projectDir)
+    }
+
+    @Test func personsListKeepsAccentVariantsApart() async throws {
+        let store = FakeStore()
+        seedStore(store)
+        store.subjectTypesByProject[projectDir] = [
+            CatalogSubjectType(
+                id: "type-person", key: "person", origin: "provenencia", label: "Person",
+                description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
+            ),
+        ]
+        store.subjectsBySource["s1"] = [
+            CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
+        ]
+        store.observationsBySource["s1"] = [
+            nameObservation(id: "o1", subjectID: "sub-1", form: "José Robins",
+                            parts: [part("José", "given"), part("Robins", "surname")]),
+            nameObservation(id: "o2", subjectID: "sub-1", form: "Jose Robins",
+                            parts: [part("Jose", "given"), part("Robins", "surname")]),
+        ]
+        _ = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
+
+        let session = makeSession(store: store)
+        let handle: QueryHandle<[CatalogPersonHeader]> = session.query(
+            CatalogQueryKey.personsList(project: session.projectKey)
+        )
+        await waitForFetchComplete(handle)
+
+        #expect(try #require(handle.value)[0].nameValueCount == 2)
     }
 
     @Test func conclusionDetailLoadsAPersonsNameValuesAndOutcomes() async throws {
@@ -385,9 +419,13 @@ struct CatalogQueryRegistryTests {
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
         ]
         store.observationsBySource["s1"] = [
-            nameObservation(id: "o1", subjectID: "sub-1", form: "James Robins"),
-            nameObservation(id: "o2", subjectID: "sub-1", form: "Jim Robins"),
-            nameObservation(id: "o3", subjectID: "sub-1", form: "james robins"),
+            nameObservation(id: "o1", subjectID: "sub-1", form: "James Robins",
+                            parts: [part("James", "given"), part("Robins", "surname")]),
+            nameObservation(id: "o2", subjectID: "sub-1", form: "Jim Robins",
+                            parts: [part("Jim", "given"), part("Robins", "surname")]),
+            nameObservation(id: "o3", subjectID: "sub-1", form: "ROBINS, James",
+                            parts: [part("ROBINS", "surname"), part("James", "given")]),
+            nameObservation(id: "o4", subjectID: "sub-1", form: "J. Robins", parts: []),
         ]
         let james = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
 
@@ -400,16 +438,18 @@ struct CatalogQueryRegistryTests {
         let detail = try #require(handle.value)
         #expect(detail.entity == james.entity)
         let name = try #require(detail.fields.first { $0.propertyKey == "name" })
-        // One Source: its two James Robins records are one value, single.
+        // One Source: o1 and o3 are one value by parts, o2 another; o4 has no parts.
         #expect(name.state == .single)
         #expect(name.values.map(\.reason) == [.kept, .outvoted])
-        #expect(name.displayedValues.map(\.value) == [.name(CatalogNameValue(form: "James Robins"))])
-        #expect(name.outcomes.map(\.observationRef) == ["OBS-o1", "OBS-o3", "OBS-o2"])
-        #expect(name.outcomes.map(\.valueRank) == [1, 1, 2])
+        let james1 = CatalogNameValue(form: "James Robins", parts: [part("James", "given"), part("Robins", "surname")])
+        #expect(name.displayedValues.map(\.value) == [.name(james1)])
+        #expect(name.outcomes.map(\.observationRef) == ["OBS-o1", "OBS-o3", "OBS-o2", "OBS-o4"])
+        #expect(name.outcomes.map(\.valueRank) == [1, 1, 2, nil])
+        #expect(name.outcomes.map(\.reason) == [.kept, .kept, .outvoted, .noEvidence])
         #expect(name.outcomes.allSatisfy { $0.subjectRef == "CPR-1" && $0.sourceID == "s1" })
         // One Source voted, so the outvoted Jim lost 1 of 1.
-        #expect(name.outcomes.map(\.voteSupport) == [0, 0, 1])
-        #expect(name.outcomes.map(\.voteTotal) == [0, 0, 1])
+        #expect(name.outcomes.map(\.voteSupport) == [0, 0, 1, 0])
+        #expect(name.outcomes.map(\.voteTotal) == [0, 0, 1, 0])
         #expect(detail.memberCount == 1)
         #expect(store.heldCatalogProjectDir == projectDir)
     }
@@ -481,13 +521,21 @@ struct CatalogQueryRegistryTests {
         #expect(page.value?.eventHeader == early)
     }
 
-    private func nameObservation(id: String, subjectID: String, form: String) -> CatalogObservation {
-        CatalogObservation(
+    private func part(_ value: String, _ type: String) -> CatalogNameValuePart {
+        CatalogNameValuePart(value: value, type: type)
+    }
+
+    private func nameObservation(
+        id: String, subjectID: String, form: String, parts: [CatalogNameValuePart]
+    ) -> CatalogObservation {
+        var observation = CatalogObservation(
             id: id, ref: "OBS-\(id)", citationID: "c1", subjectID: subjectID, propertyID: "p-name",
             polarity: "positive", valueText: form, valueInteger: nil, valueDateID: "",
             valueNameID: "n-\(id)", nameForm: form, valueSubjectID: "", valueTermID: "",
             propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
         )
+        observation.nameParts = parts
+        return observation
     }
 
     @Test func registryBackedQueryDoesNotRecallLoader() async {

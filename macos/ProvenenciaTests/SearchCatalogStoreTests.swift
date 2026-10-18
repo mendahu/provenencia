@@ -148,7 +148,12 @@ struct SearchCatalogStoreTests {
             CatalogObservation(
                 id: "o1", ref: "OBS-1", citationID: "c1", subjectID: "sub-1", propertyID: "p-name",
                 polarity: "positive", valueText: "James Robins", valueInteger: nil, valueDateID: "",
-                valueNameID: "n-1", nameForm: "James Robins", valueSubjectID: "", valueTermID: "",
+                valueNameID: "n-1", nameForm: "James Robins",
+                nameParts: [
+                    CatalogNameValuePart(value: "James", type: "given"),
+                    CatalogNameValuePart(value: "Robins", type: "surname"),
+                ],
+                valueSubjectID: "", valueTermID: "",
                 propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
             ),
         ]
