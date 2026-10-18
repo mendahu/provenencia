@@ -13,7 +13,8 @@ import (
 // notYetBuilt are the prefixes of inventory rows whose registry fields land
 // with their layer. The layer's PR deletes its prefixes.
 var notYetBuilt = []string{
-	"subject.",
+	"subject.Weights.person.lifespan.",
+	"subject.person.lifespan.",
 	"segment.",
 	"alignment.",
 	"evidence.",
