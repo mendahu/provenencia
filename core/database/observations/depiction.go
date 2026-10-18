@@ -52,6 +52,7 @@ func resolveDepiction(tx *sql.Tx, citationID []byte, d *DepictionInput) (resolve
 	if len(fileID) != 16 {
 		return resolvedValue{}, ErrInvalid
 	}
+	d.RegionJSON = strings.TrimSpace(d.RegionJSON)
 	if err := locator.ValidateDepictionRegion(d.RegionJSON, locatorJSON); err != nil {
 		return resolvedValue{}, err
 	}
@@ -64,7 +65,6 @@ func resolveDepiction(tx *sql.Tx, citationID []byte, d *DepictionInput) (resolve
 	if err != nil {
 		return resolvedValue{}, err
 	}
-	v.RegionJSON = strings.TrimSpace(v.RegionJSON)
 	changes := append(fileChanges, depictionCreateChange(id, v))
 	return resolvedValue{DepictionID: id, ValueChanges: changes}, nil
 }
