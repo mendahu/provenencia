@@ -167,13 +167,17 @@ struct CitationComposerDepictionTests {
 
     /// A model on a photo with a saved likeness of Ben, its edit dialog open.
     private func editingSavedLikeness(
-        polarity: String = ObservationPolarity.positive.rawValue
+        polarity: String = ObservationPolarity.positive.rawValue,
+        region: String? = nil
     ) async throws -> (CitationComposerModel, FakeStore) {
         let (projectDir, store) = try seeded()
         seedCitation(
             store,
             observations: [
-                likenessObservation(polarity: polarity, region: regionJSON(rect(0.1, 0.1, 0.4, 0.4))),
+                likenessObservation(
+                    polarity: polarity,
+                    region: region ?? regionJSON(rect(0.1, 0.1, 0.4, 0.4))
+                ),
             ]
         )
         let model = makeModel(store: store, projectDir: projectDir, citationID: "cit-1", observationID: "obs-1")
@@ -757,6 +761,161 @@ struct CitationComposerDepictionTests {
             return
         }
         #expect(draft.note == L10n.CitationComposer.depictionDuplicatedFrom("Ben Ford", "Likeness"))
+    }
+
+    // MARK: - Region buttons
+
+    @Test func wholePhotoSetsTheRegionAndSaves() async throws {
+        let (projectDir, store) = try seeded()
+        let model = makeModel(store: store, projectDir: projectDir)
+        await model.prepare()
+        openLikenessDraft(model)
+        #expect(model.useDepictionRegion(.whole))
+        let draft = try #require(draftValues(model)?.depictionDraft)
+        #expect(draft.locator.region?.points == rect(0, 0, 1, 1).points)
+        #expect(draft.locator.region?.kind == .rectangle)
+        #expect(draft.hasRegion)
+        #expect(model.presented == .authoring)
+        #expect(model.authoringCanConfirm)
+        await model.saveAuthoring()
+
+        let call = try #require(store.recordedCalls.last { $0.hasPrefix("addObservationsToCitation") })
+        #expect(call.hasSuffix(" depiction=1 depictionFile=present"))
+        let saved = try #require(store.observationsBySource[sourceID]?.last?.depiction)
+        let selectors = try JSONSerialization.jsonObject(with: Data(saved.regionJSON.utf8)) as? [String: Any]
+        let types = (selectors?["selectors"] as? [[String: Any]])?.compactMap { $0["type"] as? String }
+        #expect(types?.filter { $0 == "region" }.count == 1)
+        #expect(types?.contains("page") == false)
+        #expect(isMissing(store.recordedDepictionPaths))
+    }
+
+    @Test func wholePageMovesToTheCitationsPage() async throws {
+        let (projectDir, store) = try seeded(.pdf)
+        seedCitation(
+            store,
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"},{"type":"page","artifact_page":2}]}"#
+        )
+        let model = makeModel(store: store, projectDir: projectDir, citationID: "cit-1")
+        await model.prepare()
+        model.artifactViewer.setPage(1)
+        openLikenessDraft(model)
+        #expect(model.useDepictionRegion(.whole))
+        #expect(model.artifactViewer.page == 2)
+        let locator = try #require(draftValues(model)?.depictionDraft.locator)
+        #expect(locator.page == 2)
+        #expect(locator.region == rect(0, 0, 1, 1))
+    }
+
+    @Test func wholePageStampsANewCitationsPage() async throws {
+        let (projectDir, store) = try seeded(.pdf)
+        let model = makeModel(store: store, projectDir: projectDir)
+        await model.prepare()
+        model.artifactViewer.setPage(2)
+        openLikenessDraft(model)
+        #expect(model.useDepictionRegion(.whole))
+        #expect(model.locator.page == 2)
+        #expect(draftValues(model)?.depictionDraft.locator.page == 2)
+    }
+
+    @Test func regionButtonsFollowDraw() async throws {
+        let (pdfDir, pdfStore) = try seeded(.pdf)
+        seedCitation(pdfStore)
+        let pdf = makeModel(store: pdfStore, projectDir: pdfDir, citationID: "cit-1")
+        await pdf.prepare()
+        openLikenessDraft(pdf)
+        #expect(pdf.depictionNeedsPage)
+        #expect(!pdf.useDepictionRegion(.whole))
+        #expect(draftValues(pdf)?.depictionDraft.hasRegion == false)
+
+        let (projectDir, store) = try seeded()
+        let model = makeModel(store: store, projectDir: projectDir)
+        await model.prepare()
+        openLikenessDraft(model)
+        model.transcriptions.isTranscribing = true
+        #expect(!model.useDepictionRegion(.whole))
+        #expect(draftValues(model)?.depictionDraft.hasRegion == false)
+    }
+
+    @Test func citationRegionIsCopied() async throws {
+        let (projectDir, store) = try seeded()
+        let saved = rect(0.2, 0.2, 0.6, 0.7)
+        seedCitation(store, locatorJSON: regionJSON(saved))
+        let model = makeModel(store: store, projectDir: projectDir, citationID: "cit-1")
+        await model.prepare()
+        openLikenessDraft(model)
+        #expect(model.depictionCitationRegion == saved)
+        #expect(model.useDepictionRegion(saved))
+        #expect(draftValues(model)?.depictionDraft.locator.region == saved)
+        #expect(model.authoringCanConfirm)
+        model.discardAuthoring()
+
+        #expect(model.setRegion(rect(0.5, 0.5, 0.9, 0.9)))
+        openLikenessDraft(model)
+        #expect(model.depictionCitationRegion == saved)
+    }
+
+    @Test func citationRegionOnItsPage() async throws {
+        let (projectDir, store) = try seeded(.pdf)
+        let region = rect(0.2, 0.2, 0.6, 0.7)
+        seedCitation(store, locatorJSON: regionJSON(region, page: 1))
+        let model = makeModel(store: store, projectDir: projectDir, citationID: "cit-1")
+        await model.prepare()
+        model.artifactViewer.setPage(2)
+        openLikenessDraft(model)
+        let citationRegion = try #require(model.depictionCitationRegion)
+        #expect(model.useDepictionRegion(citationRegion))
+        #expect(model.artifactViewer.page == 1)
+        let locator = try #require(draftValues(model)?.depictionDraft.locator)
+        #expect(locator.page == 1)
+        #expect(locator.region == region)
+    }
+
+    @Test func noCitationRegionMeansNone() async throws {
+        let (projectDir, store) = try seeded()
+        seedCitation(store)
+        let artifactOnly = makeModel(store: store, projectDir: projectDir, citationID: "cit-1")
+        await artifactOnly.prepare()
+        openLikenessDraft(artifactOnly)
+        #expect(artifactOnly.depictionCitationRegion == nil)
+
+        let (newDir, newStore) = try seeded()
+        let model = makeModel(store: newStore, projectDir: newDir)
+        await model.prepare()
+        let drawn = rect(0.1, 0.1, 0.5, 0.5)
+        #expect(model.setRegion(drawn))
+        openLikenessDraft(model)
+        #expect(model.depictionCitationRegion == drawn)
+    }
+
+    @Test func regionButtonOnAnEditIsARedraw() async throws {
+        let (model, store) = try await editingSavedLikeness()
+        #expect(!model.isDepictionRedrawn)
+        #expect(model.useDepictionRegion(rect(0.5, 0.5, 0.9, 0.9)))
+        #expect(model.isDepictionRedrawn)
+        #expect(caption(model) == L10n.string(L10n.CitationComposer.depictionCaptionRedrawn))
+        store.recordedCalls = []
+        await model.saveEdit()
+        let call = try #require(store.recordedCalls.first { $0.hasPrefix("updateObservation") })
+        #expect(call.hasSuffix(" depiction=1 depictionFile=present"))
+
+        let (whole, _) = try await editingSavedLikeness(region: regionJSON(rect(0, 0, 1, 1)))
+        #expect(whole.useDepictionRegion(.whole))
+        #expect(!whole.isDepictionRedrawn)
+    }
+
+    @Test func wholeFileTitleFollowsTheFile() async throws {
+        let (pdfDir, pdfStore) = try seeded(.pdf)
+        let pdf = makeModel(store: pdfStore, projectDir: pdfDir)
+        await pdf.prepare()
+        #expect(
+            L10n.string(pdf.depictionWholeFileTitle) == L10n.string(L10n.CitationComposer.depictionUseWholePage)
+        )
+        let (imageDir, imageStore) = try seeded()
+        let image = makeModel(store: imageStore, projectDir: imageDir)
+        await image.prepare()
+        #expect(
+            L10n.string(image.depictionWholeFileTitle) == L10n.string(L10n.CitationComposer.depictionUseWholePhoto)
+        )
     }
 
     private func caption(_ model: CitationComposerModel) -> String {

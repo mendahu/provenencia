@@ -7,6 +7,7 @@ import (
 
 func TestValidateDepictionRegion(t *testing.T) {
 	const tri = `{"type":"region","unit":"normalized","points":[{"x":0.1,"y":0.1},{"x":0.4,"y":0.1},{"x":0.4,"y":0.5}]}`
+	const whole = `{"type":"region","unit":"normalized","points":[{"x":0,"y":0},{"x":1,"y":0},{"x":1,"y":1},{"x":0,"y":1}]}`
 	doc := func(sels ...string) string {
 		out := `{"version":1,"selectors":[`
 		for i, s := range sels {
@@ -26,6 +27,8 @@ func TestValidateDepictionRegion(t *testing.T) {
 		wantErr  bool
 	}{
 		{"page 1 both", doc(page("1"), tri), doc(page("1")), false},
+		{"whole file, page 1 both", doc(page("1"), whole), doc(page("1")), false},
+		{"whole file, no page", doc(whole), doc(art), false},
 		{"unknown selector type on region", doc(page("1"), tri, `{"type":"mystery"}`), doc(page("1")), true},
 		{"page_label not compared", doc(`{"type":"page","artifact_page":1,"page_label":"iv"}`, tri), doc(page("1")), false},
 		{"artifact first on both", doc(art, page("1"), tri), doc(art, page("1")), false},

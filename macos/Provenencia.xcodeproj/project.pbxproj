@@ -103,6 +103,8 @@
 		A71E0000000000000000000A /* CitationComposerSubjectGroups.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71E00000000000000000009 /* CitationComposerSubjectGroups.swift */; };
 		A70800000000000000000006 /* CitationComposerModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000005 /* CitationComposerModelTests.swift */; };
 		AA000000000000000000031B /* ProjectFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000031C /* ProjectFiles.swift */; };
+		AA00000000000000000009A1 /* AccessibilityAnnouncement.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000009A2 /* AccessibilityAnnouncement.swift */; };
+		AA00000000000000000009F1 /* FocusClaim.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000009F2 /* FocusClaim.swift */; };
 		AA00000000000000000003D1 /* IngestMediaPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D0 /* IngestMediaPolicy.swift */; };
 		AA00000000000000000003D3 /* IngestFileDropRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D2 /* IngestFileDropRow.swift */; };
 		AA00000000000000000003D5 /* IngestMediaPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D4 /* IngestMediaPolicyTests.swift */; };
@@ -488,6 +490,8 @@
 		A71E00000000000000000009 /* CitationComposerSubjectGroups.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerSubjectGroups.swift; sourceTree = "<group>"; };
 		A70800000000000000000005 /* CitationComposerModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerModelTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000031C /* ProjectFiles.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProjectFiles.swift; sourceTree = "<group>"; };
+		AA00000000000000000009A2 /* AccessibilityAnnouncement.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AccessibilityAnnouncement.swift; sourceTree = "<group>"; };
+		AA00000000000000000009F2 /* FocusClaim.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FocusClaim.swift; sourceTree = "<group>"; };
 		AA00000000000000000003D0 /* IngestMediaPolicy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestMediaPolicy.swift; sourceTree = "<group>"; };
 		AA00000000000000000003D2 /* IngestFileDropRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestFileDropRow.swift; sourceTree = "<group>"; };
 		AA00000000000000000003D4 /* IngestMediaPolicyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestMediaPolicyTests.swift; sourceTree = "<group>"; };
@@ -1029,6 +1033,8 @@
 				AA0000000000000000000016 /* GoStore.swift */,
 				AA0000000000000000000017 /* CoreInvoke.swift */,
 				AA000000000000000000031C /* ProjectFiles.swift */,
+				AA00000000000000000009A2 /* AccessibilityAnnouncement.swift */,
+				AA00000000000000000009F2 /* FocusClaim.swift */,
 				AA00000000000000000003D0 /* IngestMediaPolicy.swift */,
 				AA0000000000000000000390 /* ThumbnailCache.swift */,
 				AA0000000000000000000392 /* CachedThumbnail.swift */,
@@ -2141,6 +2147,8 @@
 				A71E00000000000000000008 /* CitationComposerAuthoringBox.swift in Sources */,
 				A71E0000000000000000000A /* CitationComposerSubjectGroups.swift in Sources */,
 				AA000000000000000000031B /* ProjectFiles.swift in Sources */,
+				AA00000000000000000009A1 /* AccessibilityAnnouncement.swift in Sources */,
+				AA00000000000000000009F1 /* FocusClaim.swift in Sources */,
 				AA00000000000000000003D1 /* IngestMediaPolicy.swift in Sources */,
 				AA00000000000000000003D3 /* IngestFileDropRow.swift in Sources */,
 				AA0000000000000000000391 /* ThumbnailCache.swift in Sources */,

@@ -6,6 +6,8 @@ struct CitationComposerViewerPane: View {
     @State private var clearMenu = PVContextMenuState()
     @State private var clearKeyboard = PVContextMenuKeyboard.inactive
     @FocusState private var findFieldFocused: Bool
+    /// Set when the drawing band appears so Cancel holds keyboard focus.
+    @FocusState private var drawingCancelFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -55,6 +57,7 @@ struct CitationComposerViewerPane: View {
                 model.cancelDepictionDrawing()
             }
             .keyboardShortcut(.cancelAction)
+            .focused($drawingCancelFocused)
             .accessibilityIdentifier("citationComposer.depiction.cancel")
         }
         .padding(.horizontal, PVSpacing.space6)
@@ -62,6 +65,15 @@ struct CitationComposerViewerPane: View {
         .background(PVColor.surfaceCard)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("citationComposer.depiction.drawingBand")
+        .onAppear { claimDrawingFocus() }
+        .onDisappear { drawingCancelFocused = false }
+    }
+
+    /// Moves focus to Cancel and announces drawing mode.
+    private func claimDrawingFocus() {
+        FocusClaim.claim($drawingCancelFocused, true) {
+            AccessibilityAnnouncement.post(L10n.string(L10n.CitationComposer.depictionDrawingHint))
+        }
     }
 
     /// Capability layout: viewer chrome (page / Set page / zoom / radios) + Clear + Find.

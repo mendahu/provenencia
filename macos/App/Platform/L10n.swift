@@ -3124,6 +3124,24 @@ enum L10n {
             comment: "Button that redraws a depiction's region on the open file"
         )
 
+        static let depictionUseWholePhoto = LocalizedStringResource(
+            "citationComposer.depictionUseWholePhoto",
+            defaultValue: "Use the whole photo",
+            comment: "Button that sets a depiction's region to the whole photo"
+        )
+
+        static let depictionUseWholePage = LocalizedStringResource(
+            "citationComposer.depictionUseWholePage",
+            defaultValue: "Use the whole page",
+            comment: "Button that sets a depiction's region to the whole PDF page"
+        )
+
+        static let depictionUseCitationRegion = LocalizedStringResource(
+            "citationComposer.depictionUseCitationRegion",
+            defaultValue: "Use the citation's region",
+            comment: "Button that sets a depiction's region to the citation's own region"
+        )
+
         static let depictionDrawingHint = LocalizedStringResource(
             "citationComposer.depictionDrawingHint",
             defaultValue: "Draw the region with the tools above. Escape goes back to the observation.",

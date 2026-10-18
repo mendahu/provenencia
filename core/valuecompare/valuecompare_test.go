@@ -55,3 +55,32 @@ func TestCompareEchoesRefs(t *testing.T) {
 		}
 	}
 }
+
+func TestStronger(t *testing.T) {
+	// Every Relation constant, once: a new constant missing from relationOrder fails here.
+	all := []valuecompare.Relation{
+		valuecompare.Same, valuecompare.Equivalent, valuecompare.Contains, valuecompare.Overlaps,
+		valuecompare.Near, valuecompare.Different, valuecompare.Unknown,
+	}
+	order := valuecompare.Relations()
+	if len(order) != len(all) {
+		t.Fatalf("Relations() has %d relations, want %d", len(order), len(all))
+	}
+	for _, r := range all {
+		if !slices.Contains(order, r) {
+			t.Errorf("Relations() lacks %s", r)
+		}
+	}
+	for i := 0; i+1 < len(order); i++ {
+		x, y := order[i], order[i+1]
+		if !valuecompare.Stronger(x, y) {
+			t.Errorf("Stronger(%s, %s) = false, want true", x, y)
+		}
+		if valuecompare.Stronger(y, x) {
+			t.Errorf("Stronger(%s, %s) = true, want false", y, x)
+		}
+	}
+	if valuecompare.Stronger(valuecompare.Same, valuecompare.Same) {
+		t.Error("Stronger(Same, Same) = true, want false")
+	}
+}
