@@ -84,6 +84,9 @@ func TestCompare(t *testing.T) {
 			outcome: conflict, cause: rel, pair: &wantPair{a: "male", b: "female", rel: different, sim: 0}},
 		{name: "AC-1.12 the property sets the type", valType: tText, card: single, a: []V{text("York")}, b: []V{text("york")},
 			outcome: agree, cause: rel, pair: &wantPair{a: "York", b: "york", rel: same, sim: 1}},
+		{name: "D-4 a caller's type is overwritten", valType: tText, card: single,
+			a: []V{{Value: valuecompare.Value{Text: "York", Type: propertymeta.ValueTypeName}}}, b: []V{text("york")},
+			outcome: agree, cause: rel, pair: &wantPair{a: "York", b: "york", rel: same, sim: 1}},
 
 		// US-2
 		{name: "AC-2.1 a matching value speaks", valType: tName, card: single, a: []V{name("Mary Smith"), name("James Robins")}, b: []V{name("James Robins")},
@@ -114,6 +117,9 @@ func TestCompare(t *testing.T) {
 			outcome: conflict, cause: negative, pair: &wantPair{a: "male", b: "male", bNeg: true, rel: same, sim: 1}},
 		{name: "AC-3.9 negative on a multiple-value property", valType: tText, card: multiple, a: []V{neg(text("Eboracum"))}, b: []V{text("York"), text("Eboracum")},
 			outcome: conflict, cause: negative, pair: &wantPair{a: "Eboracum", b: "Eboracum", aNeg: true, rel: same, sim: 1}},
+
+		{name: "D-6 tie on contradicting pairs keeps A's input order", valType: tTerm, card: single, a: []V{neg(term("male")), term("male")}, b: []V{term("male"), neg(term("male"))},
+			outcome: conflict, cause: negative, pair: &wantPair{a: "male", b: "male", aNeg: true, rel: same, sim: 1}},
 
 		// US-4
 		{name: "AC-4.1 a neutral value is no evidence", valType: tTerm, card: single, a: []V{neutral(term("unknown"))}, b: []V{term("male")},

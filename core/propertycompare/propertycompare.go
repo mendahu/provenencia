@@ -109,24 +109,46 @@ type pair struct {
 }
 
 // Compare decides whether the Subjects whose values are a and b agree on a
-// property of the given meta. Each pair is compared with layer 1 under rules.
+// property of the given meta. Each pair is compared with layer 1 under rules,
+// once, in one pass that keeps the best contradiction and the best positive
+// pair so far.
 func Compare(a, b []Value, meta propertymeta.Meta, rules valuecompare.Rules) Result {
 	var out Result
-	posA, negA := split(a, valuecompare.SideA, meta, rules, &out)
-	posB, negB := split(b, valuecompare.SideB, meta, rules, &out)
+	va, posA := split(a, valuecompare.SideA, meta, rules, &out)
+	vb, posB := split(b, valuecompare.SideB, meta, rules, &out)
 
-	if best := bestPair(compareAll(posA, negB, rules), compareAll(negA, posB, rules), contradicts); best != nil {
-		out.Outcome, out.Cause, out.Speaking = OutcomeConflict, CauseNegative, best.speaking()
+	// Side A's values in input order and, for each, side B's: the first pair
+	// offered wins a tie.
+	var contra, positive *pair
+	for _, x := range va {
+		for _, y := range vb {
+			if x.v.Negative && y.v.Negative {
+				continue
+			}
+			res, det := valuecompare.Compare(x.v.Value, y.v.Value, rules)
+			p := pair{a: x, b: y, res: res, det: det}
+			switch {
+			case x.v.Negative || y.v.Negative:
+				if contradicts(p) && (contra == nil || better(p, *contra)) {
+					contra = &p
+				}
+			case positive == nil || better(p, *positive):
+				positive = &p
+			}
+		}
+	}
+
+	if contra != nil {
+		out.Outcome, out.Cause, out.Speaking = OutcomeConflict, CauseNegative, contra.speaking()
 		return out
 	}
 
-	if len(posA) == 0 || len(posB) == 0 {
+	if posA == 0 || posB == 0 {
 		out.Outcome, out.Cause = OutcomeUnknown, CauseNoValues
 		return out
 	}
-	best := bestPair(compareAll(posA, posB, rules), nil, nil)
-	out.Speaking = best.speaking()
-	out.Outcome, out.Cause = outcomeOf(best.res.Relation), CauseRelation
+	out.Speaking = positive.speaking()
+	out.Outcome, out.Cause = outcomeOf(positive.res.Relation), CauseRelation
 	if out.Outcome == OutcomeConflict && meta.Cardinality == propertymeta.CardinalityMultiple {
 		out.Outcome, out.Cause = OutcomeUnknown, CauseCardinality
 	}
@@ -134,8 +156,8 @@ func Compare(a, b []Value, meta propertymeta.Meta, rules valuecompare.Rules) Res
 }
 
 // split sets each value's type, drops neutral values into out.Excluded and
-// returns the rest as positive and negative values, in input order.
-func split(values []Value, side valuecompare.Side, meta propertymeta.Meta, rules valuecompare.Rules, out *Result) (pos, neg []keyed) {
+// returns the rest in input order with the count of positive ones.
+func split(values []Value, side valuecompare.Side, meta propertymeta.Meta, rules valuecompare.Rules, out *Result) (kept []keyed, positives int) {
 	for _, v := range values {
 		v.Type = meta.ValueType
 		if v.Neutral {
@@ -143,27 +165,12 @@ func split(values []Value, side valuecompare.Side, meta propertymeta.Meta, rules
 			continue
 		}
 		k, ok := valuecompare.Key(v.Value, valuecompare.Same, rules)
-		kv := keyed{v: v, key: k, hasKey: ok}
-		if v.Negative {
-			neg = append(neg, kv)
-		} else {
-			pos = append(pos, kv)
+		kept = append(kept, keyed{v: v, key: k, hasKey: ok})
+		if !v.Negative {
+			positives++
 		}
 	}
-	return pos, neg
-}
-
-// compareAll compares every x (side A) with every y (side B), side A's value
-// first, offering A's values in order and, for each, B's in order.
-func compareAll(xs, ys []keyed, rules valuecompare.Rules) []pair {
-	var pairs []pair
-	for _, x := range xs {
-		for _, y := range ys {
-			res, det := valuecompare.Compare(x.v.Value, y.v.Value, rules)
-			pairs = append(pairs, pair{a: x, b: y, res: res, det: det})
-		}
-	}
-	return pairs
+	return kept, positives
 }
 
 // contradicts reports whether a negative value matches the value it denies.
@@ -173,23 +180,6 @@ func contradicts(p pair) bool {
 		return true
 	}
 	return false
-}
-
-// bestPair is the pair that speaks first among the pairs of both lists that
-// pass keep (all of them when keep is nil), or nil.
-func bestPair(first, second []pair, keep func(pair) bool) *pair {
-	var best *pair
-	for _, list := range [][]pair{first, second} {
-		for i := range list {
-			if keep != nil && !keep(list[i]) {
-				continue
-			}
-			if best == nil || better(list[i], *best) {
-				best = &list[i]
-			}
-		}
-	}
-	return best
 }
 
 func (p *pair) speaking() *SpeakingPair {
