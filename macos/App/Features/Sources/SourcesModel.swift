@@ -54,7 +54,24 @@ final class SourcesModel {
     struct Draft: Equatable {
         var sourceTypeID: String
         var title: String
-        var description: String
+        var description: String = ""
+
+        var trimmedTitle: String { title.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+        /// The shared title and type rule for Add Source and Copy Source.
+        var validation: SourceDraftValidation {
+            SourceDraftValidation(
+                titleError: trimmedTitle.isEmpty ? L10n.string(L10n.Sources.titleRequired) : nil,
+                typeError: sourceTypeID.isEmpty ? L10n.string(L10n.Sources.typeRequired) : nil
+            )
+        }
+    }
+
+    struct SourceDraftValidation: Equatable {
+        var titleError: String?
+        var typeError: String?
+
+        var isValid: Bool { titleError == nil && typeError == nil }
     }
 
     /// Sort, type (`source_types.id`, empty for all), evidence status, and
@@ -66,7 +83,7 @@ final class SourcesModel {
     }
 
     var isAdding = false
-    var draft = Draft(sourceTypeID: "", title: "", description: "")
+    var draft = Draft(sourceTypeID: "", title: "")
     var typeError: String?
     var titleError: String?
     /// FFI / store failure on Create Source (not field validation).
@@ -311,13 +328,11 @@ final class SourcesModel {
     }
 
     var typeComboOptions: [PVComboBoxOption] {
-        types.map { PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key) }
+        SourceTypeComboRow.options(for: types)
     }
 
     var canSubmitAdd: Bool {
-        !isSaving
-            && !draft.sourceTypeID.isEmpty
-            && !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !isSaving && draft.validation.isValid
     }
 
     /// The sole auto-selected type is a seed, not an edit. A typed name,
@@ -343,8 +358,7 @@ final class SourcesModel {
         createError = nil
         draft = Draft(
             sourceTypeID: types.count == 1 ? (types.first?.id ?? "") : "",
-            title: "",
-            description: ""
+            title: ""
         )
         isAdding = true
     }
@@ -367,19 +381,11 @@ final class SourcesModel {
     @discardableResult
     func create() async -> CatalogSource? {
         guard !isSaving else { return nil }
-        let trimmedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        var typeErr: String?
-        var titleErr: String?
-        if draft.sourceTypeID.isEmpty {
-            typeErr = L10n.string(L10n.Sources.typeRequired)
-        }
-        if trimmedTitle.isEmpty {
-            titleErr = L10n.string(L10n.Sources.titleRequired)
-        }
-        typeError = typeErr
-        titleError = titleErr
+        let validation = draft.validation
+        typeError = validation.typeError
+        titleError = validation.titleError
         createError = nil
-        guard typeErr == nil, titleErr == nil else { return nil }
+        guard validation.isValid else { return nil }
 
         isSaving = true
         defer { isSaving = false }
@@ -388,7 +394,7 @@ final class SourcesModel {
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 sourceTypeID: draft.sourceTypeID,
-                title: trimmedTitle,
+                title: draft.trimmedTitle,
                 description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
             )
             session.apply(.createdSource)

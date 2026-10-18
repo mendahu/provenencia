@@ -231,16 +231,11 @@ struct SourcePageIdentityHeader: View {
                             accessibilityIdentifierPrefix: "sources.page.type",
                             focus: PVComboFocus($typeFieldFocused, equals: .combo)
                         ) { option, query in
-                            HStack(spacing: PVSpacing.space3) {
-                                if let type = model.identity.types.first(where: { $0.id == option.value }) {
-                                    PVMark(
-                                        PVMarkKey(catalogKey: type.iconKey),
-                                        size: .row,
-                                        decorative: true
-                                    )
-                                }
-                                PVComboBoxPlainRow(option: option, query: query)
-                            }
+                            SourceTypeComboRow(
+                                type: model.identity.types.first { $0.id == option.value },
+                                option: option,
+                                query: query
+                            )
                         }
                         .frame(width: 210)
                         .disabled(model.identity.isSaving)

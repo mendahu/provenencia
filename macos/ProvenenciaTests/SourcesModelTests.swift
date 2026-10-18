@@ -211,6 +211,31 @@ struct SourcesModelTests {
         #expect(model.isAdding)
     }
 
+    @Test func draftValidation() {
+        let empty = SourcesModel.Draft(sourceTypeID: "", title: "  ").validation
+        #expect(empty.typeError == L10n.string(L10n.Sources.typeRequired))
+        #expect(empty.titleError == L10n.string(L10n.Sources.titleRequired))
+        #expect(!empty.isValid)
+
+        let draft = SourcesModel.Draft(sourceTypeID: "t1", title: " Album ")
+        #expect(draft.validation.typeError == nil)
+        #expect(draft.validation.titleError == nil)
+        #expect(draft.validation.isValid)
+        #expect(draft.trimmedTitle == "Album")
+    }
+
+    @Test func canSubmitAddFollowsValidation() async {
+        let (model, session) = makeModel(types: [photoType(), bookType()])
+        await warmLists(model, session: session)
+        model.openAdd()
+        #expect(!model.canSubmitAdd)
+        model.draft.sourceTypeID = "t1"
+        model.draft.title = "Album"
+        #expect(model.canSubmitAdd)
+        model.draft.title = " "
+        #expect(!model.canSubmitAdd)
+    }
+
     @Test func createReturnsSourceAndPublishesCount() async {
         let store = FakeStore()
         let counts = CatalogCounts(projectDir: projectDir, store: store)

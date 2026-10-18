@@ -43,7 +43,7 @@ final class SourceIdentitySection {
     }
 
     var typeComboOptions: [PVComboBoxOption] {
-        types.map { PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key) }
+        SourceTypeComboRow.options(for: types)
     }
 
     /// Discards all edit sessions after a workspace (re)load.
