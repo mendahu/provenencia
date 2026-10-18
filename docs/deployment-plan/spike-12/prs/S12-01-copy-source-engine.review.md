@@ -5,7 +5,7 @@
 
 ## To user
 
-- **M-9.** After this PR, Add Source (`CreateSourceResponse`, no `WriteEffects`, `SourcesModel.create()` patches the list by hand) and Copy Source (effects on the response) report a new Source two ways. Recommendation: add a small PR to the Spike 12 map after S12-02 that gives `CreateSourceResponse` `WriteEffects` and moves `create()` onto the same path, so both creates use one cache-update mechanism.
+- **M-9.** Answered 2026-10-18: yes. Added to the map as S12-16 (Add Source reports its effects), after S12-02. Original question: after this PR, Add Source (`CreateSourceResponse`, no `WriteEffects`, `SourcesModel.create()` patches the list by hand) and Copy Source (effects on the response) report a new Source two ways. Recommendation: add a small PR to the Spike 12 map after S12-02 that gives `CreateSourceResponse` `WriteEffects` and moves `create()` onto the same path, so both creates use one cache-update mechanism.
 
 ## Writer's own calls
 
@@ -43,7 +43,7 @@
 **Answer:** Fixed — D-2: folded into `getField(q querier, …)` in STEP-1.
 
 ### M-9 · minor · Create and Copy report writes differently
-**Answer:** To user (above). Out row added.
+**Answer:** To user (above) — answered: S12-16. Out row points there.
 
 ### X-1 · blocker · Proto generation and Xcode cannot run on Linux
 **Answer:** Fixed — D-16, §4 Toolchain row, and a Stop condition: STEP-4 / STEP-5 need the macOS toolchain; never hand-edit generated files.
@@ -100,4 +100,4 @@
 
 ## Verdict
 
-Round 2 blockers X-11, M-10 and M-11 are fixed; nothing is open but the M-9 question to the user, which does not block this PR. Plan status: Planned. The M-9 question stays open with the user.
+Round 2 blockers X-11, M-10 and M-11 are fixed; nothing is open but the M-9 question to the user, which does not block this PR. Plan status: Planned. The M-9 question is answered (S12-16).

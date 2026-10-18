@@ -34,6 +34,7 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 | [`source-structure.md`](source-structure.md) (was `ideas/source-structure.md`) — Problem 2, nested Sources and the "obituary or newspaper?" confusion | S12-01, S12-02 (Copy Source) | S12-D1 |
 | Same — Problem 1, several Evidence graphs per Source | S12-03 – S12-15 | S12-D2 – S12-D5 |
 | Same — graph ↔ Artifact association | S12-03, S12-04, S12-05, S12-10, S12-12, S12-13 | S12-D3, S12-D4 |
+| [S12-01 plan review](prs/S12-01-copy-source-engine.review.md) M-9 — Add Source and Copy Source refresh the Sources list two ways | S12-16 | — |
 | [`dogfood/ux.md`](../../dogfood/ux.md) — "Dense Evidence graphs (census-scale)" (2026-09-24, descoped from Spike 10): split a census so the household you care about is on its own graph | S12-03 – S12-15 | S12-D2 – S12-D5 |
 
 **Back in the ideas folder** — [`ideas/source-structure-later.md`](../../ideas/source-structure-later.md): nested Sources, derivation links, named templates, per-graph credibility, layered citation output. [`ideas/graph-focus-views.md`](../../ideas/graph-focus-views.md): focus views for one large graph, including the "layers or filters" half of the dense-graphs dogfood note.
@@ -109,6 +110,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | S12-01 | Copy Source engine | 1 | `core/database/sourcecopy` (draft read, create from draft) and FFI `CopySource` | — | — | [Plan](prs/S12-01-copy-source-engine.md) | Planned |
 | S12-02 | Copy Source form | 1 | The Copy… form, reusing Add Source's title and type fields; Source page and Sources list context menu | S12-D1 | S12-01, S12-D1 | — | Scoped |
+| S12-16 | Add Source reports its effects | 1 | `CreateSourceResponse` gains `WriteEffects`; Add Source applies them with `.createdSource` and drops its Sources list write-through, as Copy Source does | — | S12-02 | — | Scoped |
 | S12-03 | Evidence graphs in the catalog | 2 | Tables, `subjects.graph_id`, `GPH` refs (`EnsureRefs`), Default backfill; `evidencegraphs` reads, link writer and `SoleGraphTx`; Source create mints Default; Artifact create links | — | — | — | Scoped |
 | S12-04 | Graph lifecycle | 2 | `evidencegraphs` `List` (the one read), create, update, delete with their refusals | — | S12-03 | — | Scoped |
 | S12-05 | Graph RPCs and graph list | 2 | FFI and store methods for graphs and links; `CreateArtifactRequest.graph_ids`; one project-wide graph list key | — | S12-04 | — | Scoped |
@@ -142,6 +144,7 @@ These are the calls for this spike. PR plans treat them as binding.
 SLICE 1 — Copy Source
   S12-01  Copy Source engine
   ✎ S12-D1 ──▶ S12-02  Copy Source form
+  S12-16  Add Source reports its effects
   Check: Copy an obituary; the new Source has "Copy of …", the same type,
          description, metadata in the same layout, credibility and the checked
          Artifacts, and no cover; unchecked parts are absent.
@@ -180,6 +183,7 @@ Which PRs can run in parallel: slice 1 is independent of slices 2 and 3 and can 
 
 ```text
 S12-01 ──▶ S12-02 ──▶ S12-12
+S12-02 ──▶ S12-16
 S12-D1 ──▶ S12-02
 
 S12-03 ──▶ S12-04 ──▶ S12-05
@@ -217,6 +221,13 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Not this PR.** Graph choices in the form (a copy always starts with one Default graph).
 **Check.** The bar's Copy Source outcome.
 **Context.** Working rules "Entry points", "One title and type form, one Artifact checklist"; brief S12-D1; `add-localized-string`, `add-ui-component`.
+
+#### S12-16 — Add Source reports its effects
+
+**Ships.** `CreateSourceResponse` carries `WriteEffects` (`writeEffectsProto` in `handlers.CreateSource`); `GenealogyStore.createSource` returns `(CatalogSource, CatalogWriteEffects)`; `SourcesModel.create()` calls `session.apply(effects, .createdSource)` and drops its `session.setQueryValue` insert into the Sources list, so Add Source and Copy Source refresh the list one way.
+**Not this PR.** Any change to the Add Source form or toast.
+**Check.** Adding a Source still shows it in the Sources list and updates its type's `usedBy`; a handler test asserts `effects.revision` > 0 and the new id in `source_scopes`; a Swift model test asserts the list is refreshed through the session, not written by hand.
+**Context.** Raised by the S12-01 plan review (M-9, [`prs/S12-01-copy-source-engine.review.md`](prs/S12-01-copy-source-engine.review.md)); working rule "One title and type form, one Artifact checklist"; `add-ffi-handler`, `add-workspace-place`, `add-swift-test`. After S12-02 so the two PRs do not both edit `SourcesModel` at once.
 
 ### Slice 2 — Graphs in the catalog
 

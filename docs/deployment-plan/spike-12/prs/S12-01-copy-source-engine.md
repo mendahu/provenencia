@@ -84,7 +84,7 @@ The engine can copy a Source in one audited write: a new Source with a chosen ti
 | A new error code or `L10n.Errors` entry for copy | not planned (D-8) |
 | Importing a Source from a registry through `CreateFromDraft` | [registry source import](../../../ideas/registry-source-import.md) |
 | Swift unit tests of `FakeStore.copySource` | S12-02 (its model tests drive it) |
-| `CreateSourceResponse` gains `WriteEffects` and Add Source drops its write-through | not planned in this spike; raised to the user in the review log (M-9) |
+| `CreateSourceResponse` gains `WriteEffects` and Add Source drops its write-through | S12-16 |
 | Other duplicate Catalog/Tx pairs outside the four packages STEP-1 names; moving the nine existing querier copies onto `database.Querier` | [shared list helpers](../../../ideas/shared-list-helpers.md#one-catalog-querier) |
 
 ## 4. Current state
