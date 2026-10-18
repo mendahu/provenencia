@@ -82,7 +82,9 @@ var (
 
 // withTables reads the alias tables.
 func withTables(tables ...valuecompare.AliasTable) func(*valuecompare.Rules) {
-	return func(r *valuecompare.Rules) { r.Names.Aliases = valuecompare.NewAliasIndex(tables, matchregistry.Default().Value.Words) }
+	return func(r *valuecompare.Rules) {
+		r.Names.Aliases = valuecompare.NewAliasIndex(tables, matchregistry.Default().Value.Words)
+	}
 }
 
 // flipped is the Western pattern with given and surname trading roles.

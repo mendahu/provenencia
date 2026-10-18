@@ -9392,7 +9392,7 @@ enum L10n {
                 "error.propertyterms.duplicate_key",
                 defaultValue: "This property already has the term “%@”. Use that one, or give this one a different label.",
                 comment: "FFI error propertyterms.duplicate_key; argument is the existing term's label"
-            ), key)
+            ), label)
         }
         static let propertyTermsLocked = LocalizedStringResource(
             "error.propertyterms.locked",
