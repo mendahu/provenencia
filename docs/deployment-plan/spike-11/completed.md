@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-08 — One normalization helper in Swift
+
+**Landed 2026-10-18** in [#466](https://github.com/mendahu/provenencia/pull/466). Every filter-as-you-type list ignores case, accents, punctuation and word breaks, the way search does: `jose` finds `José` in the Sources list, Properties, a combo box, a table's type-select and the graph canvas rotor, and `godfather` finds `God-father`. The combo box marks the span that matched, and the name splitter peels a title however it is punctuated (`D.r.`, `Jr.,`). `TextMatch` (`macos/App/Platform/TextMatch.swift`) is the one Swift rule, a mirror of `valuecompare.TextKey`; `TestSwiftTextMatchMirrorsTextKey` reads its fixtures and fold table so a change on either side fails in Go. `FakeStore` groups a Person's names by parts at `Same`, as the reconciler does, and searches like Go's rescoring.
+
 ## S11-07 — One normalization key across the core
 
 **Landed 2026-10-18** in [#460](https://github.com/mendahu/provenencia/pull/460). Search, the search index, the term duplicate check and the alias tables use value compare's text key. Text ignores where words break, so `god-father` and `godfather`, and `York Town` and `Yorktown`, are the same text (the reconciler groups them; `CacheVersion` 17). Searching `Montreal` ranks `Montréal` like an exact hit, and a Person or Place search document lists each alternate name once (`ProjectionVersion` 8). Creating or renaming a term to one the Property already has, of any origin, is refused with the existing term's label. Alias tokens are stored and indexed as the comparison tokens names produce, through `valuecompare.AliasToken`.

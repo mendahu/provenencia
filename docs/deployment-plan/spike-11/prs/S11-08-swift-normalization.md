@@ -1,6 +1,6 @@
 # S11-08 — One normalization helper in Swift
 
-**Status:** Planned
+**Status:** Landed in [#466](https://github.com/mendahu/provenencia/pull/466) (2026-10-18)
 **Spike / slice:** Spike 11 · Slice 2 — Value compare, everywhere
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: list filters, type-select, the combo highlight and the fake store change which rows match, which span is marked, or how names group; no view, layout or copy changes)
@@ -339,3 +339,13 @@ None.
 
 **Title:** S11-08 — One normalization helper in Swift
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-08-swift-normalization.md`.
+
+## Landed
+
+Differences from the plan:
+
+- `TextMatch.range(of:in:)` matches on Unicode scalars (not `Character`s) so a key that ends in a combining scalar cannot merge with its neighbor; results are the same on every fixture.
+- A form-only name Observation also got `nameParts` in `EvidenceGraphModelTests` (`promotedPersonOpensItsPageAndShowsItsName`), assertions unchanged, as the stop conditions allow.
+- `scoreSearchFields` keys values per field name with `uniquingKeysWith`, so a duplicate field name cannot crash.
+- The in-app check (section 10) is left for the user.
+- Disk was full during the build; stale `DerivedData` folders for landed worktrees were removed to continue.
