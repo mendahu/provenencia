@@ -150,7 +150,7 @@ None — no message or handler changes.
 | Polygon check | `ArtifactRegionGeometry.isValidPolygon` | same file | `guard points.count >= 3, points.count <= maxRegionPoints else { return false }` before the closing-point check |
 | Freeform stop | `ArtifactRegionOverlay.handleFreeformClick` | `macos/App/Features/ArtifactViewer/ArtifactRegionOverlay.swift` | D-7 |
 
-States: a stored region over the cap reads as no region (composer: no region chip; likeness line: "region hidden" caption, as today for an off-page region). Accessibility: no change.
+States: a stored region over the cap reads as no region (composer: no region chip; the likeness edit dialog shows `L10n.CitationComposer.depictionCaptionHidden`, as today for an off-page region). Accessibility: no change.
 
 ### Strings
 
@@ -176,12 +176,12 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/depictionvalues/... ./c
 **STEP-4 — Swift cap in `isValidPolygon`**
 Files: `macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift`, `macos/ProvenenciaTests/ArtifactRegionGeometryTests.swift`, `macos/ProvenenciaTests/CitationLocatorDraftTests.swift`. Skill: `add-swift-test`.
 Do: add `maxRegionPoints` and the guard (D-6). Add T-7 and T-8.
-Check: `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/ArtifactRegionGeometryTests -only-testing:ProvenenciaTests/CitationLocatorDraftTests` passes.
+Check: `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/ArtifactRegionGeometryTests -only-testing:ProvenenciaTests/CitationLocatorDraftTests CODE_SIGNING_ALLOWED=NO` passes.
 
 **STEP-5 — Freeform stops at the cap**
 Files: `macos/App/Features/ArtifactViewer/ArtifactRegionOverlay.swift`.
 Do: D-7, in `handleFreeformClick` after the close branch.
-Check: the app builds (`xcodebuild build -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS'`); manual check step 2.
+Check: the app builds (`xcodebuild -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' build`); manual check step 2.
 
 **STEP-6 — Swift and Go caps stay equal**
 Files: `api/ffi/swift_vocabulary_test.go`.
@@ -231,8 +231,8 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 ## 10. Manual check
 
 1. Open a project, cite a photo, and draw a circle region on the Citation. Save. The region chip shows and the Citation saves (the 32-point circle is under the cap).
-2. Arm the freeform tool and click points; close the polygon on the first point. It commits. Then arm it again and, using a test build with `maxRegionPoints` set to 5, click six points away from the first: the sixth click beeps and adds nothing; clicking the first point closes the 5-point polygon. Restore the value to 256.
-3. In a copy of that project, edit the Citation's `locator_json` with `sqlite3` so its region holds 300 points (a ring), and add a likeness on that Citation first. Open the project: it opens without a stall, the composer shows the Citation with no region chip, and the likeness line says its region is hidden.
+2. (AC-2.3) Arm the freeform tool and click points; close the polygon on the first point. It commits. Then arm it again and, using a test build with `maxRegionPoints` set to 5, click six points away from the first: the sixth click beeps and adds nothing; clicking the first point closes the 5-point polygon. Restore the value to 256.
+3. (AC-1.5, AC-1.6, AC-2.5) In a copy of that project, edit the Citation's `locator_json` with `sqlite3` so its region holds 300 points (a ring), and add a likeness on that Citation first. Open the project: it opens without a stall, the composer shows the Citation with no region chip, and opening the likeness for edit shows the hidden-region caption (`L10n.CitationComposer.depictionCaptionHidden`).
 
 ## 11. Risks and stop conditions
 
