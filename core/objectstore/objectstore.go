@@ -60,7 +60,9 @@ func openObjectsRoot(projectDir string, create bool) (*os.Root, error) {
 
 // openRegular opens inner under root for reading. Anything but a regular file,
 // or a shard folder that is not a real folder, is ErrNotRegular. The checks
-// come before the open so a FIFO cannot block it.
+// come before the open so a FIFO cannot block it. The app mirrors these rules in
+// ProjectFiles.objectURL (macos/App/Platform/ProjectFiles.swift), which changes
+// with them.
 func openRegular(root *os.Root, inner string) (*os.File, error) {
 	// Each shard folder must be a real folder: a symlink there is refused like
 	// a symlinked object. The folders are checked top-down, so a missing one
