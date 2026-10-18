@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// The Title and Source type fields shared by Add Source and Copy Source. It
-/// owns the one display rule: a field's error follows `draft.validation` once
-/// that field is edited, so errors show after an edit, not on open.
+/// owns the one display rule: nothing shows on open; after the first edit to
+/// either field, both errors follow `draft.validation`.
 struct SourceTitleTypeFields: View {
     @Binding var draft: SourcesModel.Draft
     @Binding var titleError: String?
@@ -25,7 +25,7 @@ struct SourceTitleTypeFields: View {
                 )
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).title")
                 .onChange(of: draft.title) { _, _ in
-                    titleError = draft.validation.titleError
+                    showErrors()
                 }
             }
             PVField(
@@ -51,9 +51,14 @@ struct SourceTitleTypeFields: View {
                     )
                 }
                 .onChange(of: draft.sourceTypeID) { _, _ in
-                    typeError = draft.validation.typeError
+                    showErrors()
                 }
             }
         }
+    }
+
+    private func showErrors() {
+        titleError = draft.validation.titleError
+        typeError = draft.validation.typeError
     }
 }
