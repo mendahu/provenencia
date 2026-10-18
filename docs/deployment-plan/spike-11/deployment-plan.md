@@ -285,7 +285,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-08 — One normalization helper in Swift
 
-**Ships.** `PVComboBoxMatch.normalize` becomes the shared Swift normalize helper (case and diacritic fold, a locale parameter defaulting to the current one), used by `PVComboBox`, the list filters (`PropertiesModel`, `SourcesModel`, `GraphCanvasItemLayer`, `PVFloatingMenuSelection`) and `DateValueTranscriptionMatch`; `FakeStore` groups names by parts, not by lowercase form. Closes "In-list text matching" in [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md).
+**Ships.** `PVComboBoxMatch.normalize` becomes the shared Swift normalize helper (case and diacritic fold, a locale parameter defaulting to the current one; text ignores word breaks, S11-07 D-1), used by `PVComboBox`, the list filters (`PropertiesModel`, `SourcesModel`, `GraphCanvasItemLayer`, `PVFloatingMenuSelection`) and `DateValueTranscriptionMatch`; `FakeStore` groups names by parts, not by lowercase form. Closes "In-list text matching" in [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md).
 **Not this PR.** Go changes.
 **Check.** Filtering `jose` finds `José` in every list; `FakeStore`-backed tests group names like Go does.
 **Context.** [Reuse inventory](comparison-layers.md#reuse-across-the-app) "Lighter touch"; [`add-swift-test`](../../../.agents/skills/add-swift-test/SKILL.md).

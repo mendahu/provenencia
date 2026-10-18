@@ -133,7 +133,7 @@ Each module answers three questions:
 
 | Value type | Same value | Fold | Merge | No evidence |
 | --- | --- | --- | --- | --- |
-| **text** | the same words, ignoring case, punctuation and spacing (value compare's `Same`; *Sainte-Anne* = *Sainte Anne*); accents count (*Montréal*, *Montreal* are two) | none | the best-ranked member's text | empty |
+| **text** | the same words, ignoring case, punctuation and spacing (value compare's `Same`; *Sainte-Anne* = *Sainte Anne*; *god-father* = *godfather*); accents count (*Montréal*, *Montreal* are two) | none | the best-ranked member's text | empty |
 | **integer** | equal (value compare's `Same`) | none | the value | — |
 | **term** | same term | none | the term | terms flagged `property_terms.neutral` (seeded on *unknown*, *indeterminate*) |
 | **subject** | candidate Subjects map to the **same handle**; unpromoted Subjects drop out | none | the handle (an edge of the canonical graph) | unpromoted |

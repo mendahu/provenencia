@@ -47,7 +47,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **value type** | The kind of a value; each has its own value comparison |
 | **speaking pair** | The one pair of values, one from each side, that decides a property comparison |
 | **relation** | What kind of match two values are: `Same`, `Equivalent`, `Contains`, `Overlaps`, `Near`, `Different` or `Unknown` |
-| **`Same`** | Identical after the normalization every comparer does (case, whitespace, punctuation) |
+| **`Same`** | Identical after the normalization every comparer does (case, whitespace, punctuation, and where words break, for text) |
 | **`Equivalent`** | The same value written another way: accent fold, alias or nickname, abbreviation |
 | **`Contains`** | One side is more specific and fits inside the other (`1817` and `3 Mar 1817`, `Robins` and `James Robins`); the detail says which side is broader |
 | **`Overlaps`** | Each side has something the other lacks, but they share some |
