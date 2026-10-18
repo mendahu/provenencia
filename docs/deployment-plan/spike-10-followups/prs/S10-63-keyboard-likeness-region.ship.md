@@ -1,7 +1,7 @@
 # Ship log — S10-63 Keyboard region for a likeness
 
 **Plan:** [`S10-63-keyboard-likeness-region.md`](S10-63-keyboard-likeness-region.md) · **Branch:** `s10-63-keyboard-likeness-region` · **PR:** #467
-**State:** fixing 1
+**State:** ready
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s10-63`, from `origin/main` @ `90c8d083`.
 
@@ -39,3 +39,16 @@ Check: `scripts/check-plan-docs.py` 0 errors.
 Files: `macos/App/Features/CitationComposer/CitationComposerAuthoringBox.swift` (~914).
 Do: reword the `CitationDepictionValueArea` doc comment so it lists the preview, the caption, and the Draw, whole-file and citation's-region buttons.
 Check: scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `a36fcf9e`. Gate PASS (orchestrator run). F-1 done: `macos/App/Platform/FocusClaim.swift`, with both `claimTab` bodies and `claimDrawingFocus` moved onto it. F-2 and F-3 done. Deviation: F-1 is spread across `23debc85` and `a36fcf9e` (the second commit also holds F-3 and the Landed note); nothing was amended.
+
+## Round 2 — review
+Lenses: CON, MNT (each had a Fix-now finding). Scope `883220c5...a36fcf9e`.
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| — | CON | — | No new findings; F-1, F-2, F-3 resolved, no regression at the three `FocusClaim` call sites | — | |
+| — | MNT | — | No new findings; MNT-1, MNT-4, UX-3 resolved | — | |
+
+## Result
+Gate PASS · CI see PR · open: none · follow-ups: UX-1 (confirm in manual check step 7), UX-2 (copy, joins the UX-12/UX-13 audit item) · to user: MNT-1 answered (extract; D-11's copy overridden, 2026-10-18)
