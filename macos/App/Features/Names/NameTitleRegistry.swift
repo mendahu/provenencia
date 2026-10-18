@@ -4,21 +4,13 @@ import Foundation
 /// does not read it, and researchers cannot add to it. A token is a title only
 /// when another word remains; the splitter decides which end.
 enum NameTitleRegistry {
-    /// Case-insensitive, and one trailing period does not count (`Dr` and `Dr.`).
-    static func lookupKey(_ token: String) -> String {
-        var key = token.trimmingCharacters(in: .whitespacesAndNewlines)
-        if key.hasSuffix(".") {
-            key.removeLast()
-        }
-        return key.lowercased()
-    }
-
+    /// Case and punctuation do not count (`Dr`, `Dr.`, `D.r.`).
     static func isPrefix(_ token: String) -> Bool {
-        prefixes.contains(lookupKey(token))
+        prefixes.contains(TextMatch.key(token, at: .same, locale: TextMatch.posix))
     }
 
     static func isSuffix(_ token: String) -> Bool {
-        suffixes.contains(lookupKey(token))
+        suffixes.contains(TextMatch.key(token, at: .same, locale: TextMatch.posix))
     }
 
     /// Leading titles. `sr` here is Sister; a trailing `Sr` is Senior.

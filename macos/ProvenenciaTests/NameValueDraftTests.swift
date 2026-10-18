@@ -204,10 +204,12 @@ struct NameFormSplitTests {
         ])
     }
 
-    @Test func registryIgnoresCaseAndATrailingPeriod() {
+    @Test func registryIgnoresCaseAndPunctuation() {
         #expect(NameTitleRegistry.isPrefix("Dr."))
         #expect(NameTitleRegistry.isPrefix("dr"))
+        #expect(NameTitleRegistry.isPrefix("D.r."))
         #expect(NameTitleRegistry.isSuffix("JR."))
+        #expect(NameTitleRegistry.isSuffix("Jr.,"))
         #expect(!NameTitleRegistry.isPrefix("van"))
         #expect(!NameTitleRegistry.isSuffix("Smith"))
     }
