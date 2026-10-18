@@ -1,7 +1,7 @@
 # Ship log — S11-06 Migrate the reconciler onto value compare
 
 **Plan:** [`S11-06-migrate-reconciler.md`](S11-06-migrate-reconciler.md) · **Branch:** `s11-06-migrate-reconciler` · **PR:** #456
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `f6ea8808`. Gate PASS (orchestrator run). Report: no deviations from Decisions or Scope; extra test rows beyond T-1–T-7 (listed in the Landed note); manual check §10 steps 3–4 not run by hand.
@@ -52,3 +52,18 @@ Check: `go test ./core/valuecompare/...`.
 Files: `docs/conclusion-reconciliation.md` (§7.2 unit bullet; §12 row ~L279), `core/autoreconcile/names_test.go` (group labels).
 Do: "its ordered list of **words**" → "its **words**"; §12 "subsumption" → "containment per part type"; rename the `"subsumption"` test group labels in `TestReconcileNames` to `"fold"`.
 Check: `rg -n 'subsumption' --glob '!docs/deployment-plan/**' .` prints nothing; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `d8e0213a`. Gate PASS (orchestrator run; touched packages also run with `-count=1`). F-1 to F-5 done. Deviation: `outvotes` also returns false when `Compare` pairs no words (unrelated names come back `Different` with no parts); `nameUnit.parts` stays for `assemble`.
+
+## Round 2 — review
+Lenses: CON, MNT (the two with Fix-now findings). Scope `f6ea8808...d8e0213a`.
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| — | CON | — | CON-1, CON-2, CON-3 resolved; F-1/F-2 regress nothing | — | targeted packages pass `-count=1` |
+| — | MNT | — | MNT-1, MNT-2, MNT-4 resolved | — | leftover `// Subsumption` comment at `names_test.go:88` → Logged |
+
+No round-2 blockers; no Fix plan 2.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: MNT-3, UX-1 · to user: MNT-1, MNT-2 (answered: Fix now)
