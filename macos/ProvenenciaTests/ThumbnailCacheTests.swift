@@ -95,6 +95,32 @@ struct ThumbnailCacheTests {
         #expect((1...2).contains(cache.peakConcurrentDecodes))
     }
 
+    @Test(.timeLimit(.minutes(1))) func dropsAQueuedDecodeWhoseCallersHaveGone() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let cache = ThumbnailCache()
+        cache.maxConcurrentDecodes = 1
+        for i in 0..<3 {
+            try ArtifactFileFixtures.writePNG(
+                projectDir: project, relPath: "objects/aa/bb/k\(i).png", width: 64, height: 64)
+        }
+        let tasks = (0..<3).map { i in
+            Task { @MainActor in
+                await cache.image(projectDir: project, relPath: "objects/aa/bb/k\(i).png")
+            }
+        }
+        tasks[1].cancel()
+        let first = await tasks[0].value
+        let second = await tasks[1].value
+        let third = await tasks[2].value
+        #expect(first != nil)
+        #expect(second == nil)
+        #expect(third != nil)
+        // The dropped key is not stored as missing, so a fresh request decodes it.
+        #expect(cache.entryCount == 2)
+        #expect(await cache.image(projectDir: project, relPath: "objects/aa/bb/k1.png") != nil)
+    }
+
     @Test func emptyRelPathReturnsNilWithoutCaching() async {
         let cache = ThumbnailCache()
         let image = await cache.image(

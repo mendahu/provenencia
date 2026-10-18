@@ -7,7 +7,8 @@ import UniformTypeIdentifiers
 /// object path; loads off the main actor and coalesces in-flight requests.
 /// Images decode eagerly at no more than `maxPixelSize` on the longest edge,
 /// so a full-resolution crop never sits decoded in the cache. Decodes only what
-/// `ThumbnailDecodePolicy` accepts, at most `maxConcurrentDecodes` at a time.
+/// `ThumbnailDecodePolicy` accepts, at most `maxConcurrentDecodes` at a time, and checks the object path inside the
+/// slot, right before it opens the file. A queued decode with no caller left is dropped.
 @MainActor
 final class ThumbnailCache {
     static let shared = ThumbnailCache()
@@ -39,7 +40,17 @@ final class ThumbnailCache {
 
     private var store: [Key: Entry] = [:]
     private var order: [Key] = []
-    private var inflight: [Key: Task<NSImage?, Never>] = [:]
+    private var inflight: [Key: Task<Void, Never>] = [:]
+    /// Callers awaiting each inflight key; a load with none left is dropped.
+    private var waiters: [Key: [UUID: CheckedContinuation<NSImage?, Never>]] = [:]
+    /// Bumped by `clear()` so a cancelled load stores nothing.
+    private var clearGeneration = 0
+
+    private enum DecodeOutcome: Sendable {
+        case image(NSImage)
+        case refused
+        case abandoned
+    }
 
     init() {}
 
@@ -57,39 +68,70 @@ final class ThumbnailCache {
             }
         }
 
-        if let existing = inflight[key] {
-            return await existing.value
-        }
-
-        let task = Task<NSImage?, Never> {
-            guard let url = ProjectFiles.objectURL(projectDir: projectDir, relPath: trimmed) else {
-                return nil
+        if inflight[key] == nil {
+            let generation = clearGeneration
+            // Each caller registers in `waiters` before this task first runs.
+            inflight[key] = Task { @MainActor in
+                let outcome: DecodeOutcome = await self.withDecodeSlot {
+                    // A queued decode nobody still wants costs nothing.
+                    if Task.isCancelled || self.waiters[key]?.isEmpty ?? true { return .abandoned }
+                    guard let url = ProjectFiles.objectURL(projectDir: projectDir, relPath: trimmed) else {
+                        return .refused
+                    }
+                    let image = await Task.detached(priority: .userInitiated) {
+                        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+                              ThumbnailDecodePolicy.accepts(src),
+                              let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, [
+                                  kCGImageSourceCreateThumbnailFromImageAlways: true,
+                                  kCGImageSourceCreateThumbnailWithTransform: true,
+                                  kCGImageSourceShouldCacheImmediately: true,
+                                  kCGImageSourceThumbnailMaxPixelSize: ThumbnailCache.maxPixelSize,
+                              ] as CFDictionary)
+                        else { return nil as NSImage? }
+                        return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
+                    }.value
+                    return image.map(DecodeOutcome.image) ?? .refused
+                }
+                self.finish(key, outcome, generation: generation)
             }
-            return await self.withDecodeSlot {
-                await Task.detached(priority: .userInitiated) {
-                guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
-                      ThumbnailDecodePolicy.accepts(src),
-                      let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, [
-                          kCGImageSourceCreateThumbnailFromImageAlways: true,
-                          kCGImageSourceCreateThumbnailWithTransform: true,
-                          kCGImageSourceShouldCacheImmediately: true,
-                          kCGImageSourceThumbnailMaxPixelSize: ThumbnailCache.maxPixelSize,
-                      ] as CFDictionary)
-                else { return nil }
-                return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
-                }.value
+        }
+        return await awaitLoad(key)
+    }
+
+    /// Waits for the inflight load of `key`. A cancelled caller leaves the wait
+    /// at once with nil, and the load drops if no caller is left.
+    private func awaitLoad(_ key: Key) async -> NSImage? {
+        let id = UUID()
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { (cont: CheckedContinuation<NSImage?, Never>) in
+                if Task.isCancelled {
+                    cont.resume(returning: nil)
+                } else {
+                    waiters[key, default: [:]][id] = cont
+                }
+            }
+        } onCancel: {
+            Task { @MainActor in
+                if let cont = self.waiters[key]?.removeValue(forKey: id) { cont.resume(returning: nil) }
             }
         }
-        inflight[key] = task
-        let image = await task.value
-        inflight[key] = nil
+    }
 
-        if let image {
-            insert(key, .image(image))
-        } else {
-            insert(key, .missing)
+    /// Stores a real result and hands it to the callers still waiting. An
+    /// abandoned load, or one `clear()` cancelled, stores nothing.
+    private func finish(_ key: Key, _ outcome: DecodeOutcome, generation: Int) {
+        let image: NSImage?
+        switch outcome {
+        case .image(let img): image = img
+        case .refused, .abandoned: image = nil
         }
-        return image
+        if generation == clearGeneration {
+            inflight[key] = nil
+            if case .abandoned = outcome {} else { insert(key, image.map(Entry.image) ?? .missing) }
+        }
+        for (_, cont) in waiters.removeValue(forKey: key) ?? [:] {
+            cont.resume(returning: image)
+        }
     }
 
     /// A synchronous hit: the decoded image when it is already cached, else
@@ -110,6 +152,7 @@ final class ThumbnailCache {
             task.cancel()
         }
         inflight.removeAll()
+        clearGeneration += 1
     }
 
     /// Test helper: seeded entry count after loads.
