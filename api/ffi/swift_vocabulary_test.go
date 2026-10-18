@@ -1,7 +1,9 @@
 package ffi
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
@@ -56,29 +58,105 @@ func swiftEnumBody(t *testing.T, path, name string) string {
 }
 
 var (
-	swiftFixturePair = regexp.MustCompile(`\("([^"\\]*)", "([^"\\]*)"\)`)
+	swiftFixturePair = regexp.MustCompile(`\("((?:[^"\\]|\\.)*)", "((?:[^"\\]|\\.)*)"\)`)
 	swiftFoldEntry   = regexp.MustCompile(`"(.)": "([^"\\]+)"`)
 )
 
-// swiftFixturePairs returns the ("a", "b") literal pairs in the body of
-// `enum <enum>`. A fixture line with a backslash is refused: the reader does
-// not decode escapes.
-func swiftFixturePairs(t *testing.T, path, enum string) [][2]string {
+// swiftArrayLiteral returns the array literal assigned to `static let <name>`
+// inside an enum body: from its `= [` to the `]` alone on an indented line.
+func swiftArrayLiteral(t *testing.T, body, name string) string {
 	t.Helper()
-	body := swiftEnumBody(t, path, enum)
-	for _, line := range strings.Split(body, "\n") {
-		if strings.Contains(line, `\`) && swiftFixturePair.MatchString(line) {
-			t.Fatalf("%s: fixture line has a backslash escape: %s", path, line)
-		}
+	start := strings.Index(body, "static let "+name)
+	if start < 0 {
+		t.Fatalf("no static let %s", name)
 	}
+	open := strings.Index(body[start:], "= [")
+	if open < 0 {
+		t.Fatalf("static let %s is not an array literal", name)
+	}
+	rest := body[start+open:]
+	end := strings.Index(rest, "\n    ]")
+	if end < 0 {
+		t.Fatalf("static let %s does not close", name)
+	}
+	return rest[:end]
+}
+
+// readSwiftFixturePairs returns the ("a", "b") literal pairs of the array
+// `static let <decl>` in `enum <enum>`. A pair with a backslash is an error:
+// the reader does not decode escapes, and a skipped row would be an
+// unchecked mirror.
+func readSwiftFixturePairs(t *testing.T, path, enum, decl string) ([][2]string, error) {
+	t.Helper()
+	literal := swiftArrayLiteral(t, swiftEnumBody(t, path, enum), decl)
 	var out [][2]string
-	for _, m := range swiftFixturePair.FindAllStringSubmatch(body, -1) {
+	for _, m := range swiftFixturePair.FindAllStringSubmatch(literal, -1) {
+		if strings.Contains(m[1], `\`) || strings.Contains(m[2], `\`) {
+			return nil, fmt.Errorf("%s: fixture has a backslash escape: %s", path, m[0])
+		}
 		out = append(out, [2]string{m[1], m[2]})
 	}
 	if len(out) == 0 {
-		t.Fatalf("%s: enum %s has no fixture pairs", path, enum)
+		return nil, fmt.Errorf("%s: %s.%s has no fixture pairs", path, enum, decl)
+	}
+	return out, nil
+}
+
+func swiftFixturePairs(t *testing.T, path, enum, decl string) [][2]string {
+	t.Helper()
+	out, err := readSwiftFixturePairs(t, path, enum, decl)
+	if err != nil {
+		t.Fatal(err)
 	}
 	return out
+}
+
+func TestSwiftFixturePairsRefusesEscapes(t *testing.T) {
+	tests := []struct {
+		name    string
+		array   string
+		want    [][2]string
+		wantErr string
+	}{
+		{
+			name:    "escape in a text",
+			array:   `("God\u{2010}father", "godfather"), ("a", "b")`,
+			wantErr: "backslash",
+		},
+		{
+			name:    "escape in a key",
+			array:   `("a", "b\\c")`,
+			wantErr: "backslash",
+		},
+		{
+			name:  "plain pairs",
+			array: `("a", "b"), ("C d", "cd")`,
+			want:  [][2]string{{"a", "b"}, {"C d", "cd"}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "E.swift")
+			src := "enum E {\n    static let fixtures: [(a: String, b: String)] = [\n        " +
+				tt.array + ",\n    ]\n}\n"
+			if err := os.WriteFile(path, []byte(src), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			got, err := readSwiftFixturePairs(t, path, "E", "fixtures")
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("got %v, %v; want an error containing %q", got, err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("got %v want %v", got, tt.want)
+			}
+		})
+	}
 }
 
 // installedCatalog is a fresh catalog with the seeded vocabulary installed,
@@ -225,7 +303,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 
 func TestSwiftTextMatchMirrorsTextKey(t *testing.T) {
 	words := matchregistry.Default().Value.Words
-	for _, p := range swiftFixturePairs(t, swiftTextMatch, "TextMatch") {
+	for _, p := range swiftFixturePairs(t, swiftTextMatch, "TextMatch", "fixtures") {
 		want, ok := valuecompare.TextKey(p[0], valuecompare.Equivalent, words)
 		if !ok {
 			want = ""
@@ -235,7 +313,7 @@ func TestSwiftTextMatchMirrorsTextKey(t *testing.T) {
 		}
 	}
 	folds := map[rune]string{}
-	for _, m := range swiftFoldEntry.FindAllStringSubmatch(swiftEnumBody(t, swiftTextMatch, "TextMatch"), -1) {
+	for _, m := range swiftFoldEntry.FindAllStringSubmatch(swiftArrayLiteral(t, swiftEnumBody(t, swiftTextMatch, "TextMatch"), "letterFolds"), -1) {
 		folds[[]rune(m[1])[0]] = m[2]
 	}
 	if !reflect.DeepEqual(folds, words.Folds) {
