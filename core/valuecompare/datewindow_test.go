@@ -236,6 +236,14 @@ func TestAboutEnds(t *testing.T) {
 			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
 		}
 	})
+	t.Run("about a year keeps a day with no month", func(t *testing.T) {
+		day := datevalue.DaysFromCivil
+		first, last, ok := valuecompare.AboutEnds(*datevaluetest.About(1817, 0, 5), 1)
+		if !ok || first.Year != 1816 || first.Month != 0 || first.Day != 5 || last.Year != 1818 || last.Day != 5 ||
+			first.Lo != day(1816, 1, 1) || last.Hi != day(1818, 12, 31) {
+			t.Fatalf("got %+v %+v ok=%v", first, last, ok)
+		}
+	})
 	t.Run("a phrase has no ends", func(t *testing.T) {
 		if _, _, ok := valuecompare.AboutEnds(*datevaluetest.Phrase("spring"), 1); ok {
 			t.Fatal("ok")
