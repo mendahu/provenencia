@@ -51,7 +51,19 @@ func GetBySource(c *database.Catalog, sourceID []byte) (Assessment, error) {
 	if len(sourceID) != 16 {
 		return Assessment{}, ErrInvalid
 	}
-	return scanAssessment(db.QueryRow(sqlGetBySource, sourceID))
+	return getBySource(db, sourceID)
+}
+
+// GetBySourceTx is GetBySource on an open transaction.
+func GetBySourceTx(tx *sql.Tx, sourceID []byte) (Assessment, error) {
+	if len(sourceID) != 16 {
+		return Assessment{}, ErrInvalid
+	}
+	return getBySource(tx, sourceID)
+}
+
+func getBySource(q database.Querier, sourceID []byte) (Assessment, error) {
+	return scanAssessment(q.QueryRow(sqlGetBySource, sourceID))
 }
 
 // Upsert inserts or updates the single assessment row for a Source. The caller

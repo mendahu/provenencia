@@ -54,8 +54,9 @@ const (
 	sqlLayoutOrder = `INSERT INTO source_metadata_layout (source_id, field_id, sort_order)
 		VALUES (?, ?, ?)
 		ON CONFLICT(source_id, field_id) DO UPDATE SET sort_order = excluded.sort_order`
-	sqlLayoutGet  = `SELECT sort_order, dismissed FROM source_metadata_layout WHERE source_id = ? AND field_id = ?`
-	sqlLayoutList = `SELECT field_id, sort_order, dismissed FROM source_metadata_layout WHERE source_id = ?`
+	sqlLayoutGet  = `SELECT field_id, sort_order, dismissed FROM source_metadata_layout WHERE source_id = ? AND field_id = ?`
+	sqlLayoutList = `SELECT field_id, sort_order, dismissed FROM source_metadata_layout WHERE source_id = ?
+		ORDER BY sort_order, field_id`
 )
 
 // Row is one source_metadata value.
@@ -84,8 +85,9 @@ type WorkspaceEntry struct {
 	SortOrder int
 }
 
-// layout is one source_metadata_layout row for a field.
-type layout struct {
+// LayoutRow is one source_metadata_layout row for a field.
+type LayoutRow struct {
+	FieldID   []byte
 	SortOrder int
 	Dismissed bool
 }
@@ -104,7 +106,7 @@ func Set(tx *database.Tx, userID []byte, in Input) (Row, []rowchange.Change, err
 	if err := requireSource(tx.Tx, in.SourceID); err != nil {
 		return Row{}, nil, err
 	}
-	field, err := getFieldTx(tx.Tx, in.FieldID)
+	field, err := getField(tx.Tx, in.FieldID)
 	if err != nil {
 		return Row{}, nil, err
 	}
@@ -232,7 +234,7 @@ func DismissSuggestion(tx *database.Tx, userID, sourceID, fieldID []byte) ([]row
 	if err := requireSource(tx.Tx, sourceID); err != nil {
 		return nil, err
 	}
-	if _, err := getFieldTx(tx.Tx, fieldID); err != nil {
+	if _, err := getField(tx.Tx, fieldID); err != nil {
 		return nil, err
 	}
 
@@ -304,7 +306,7 @@ func Reorder(tx *database.Tx, userID, sourceID []byte, fieldIDs [][]byte) ([]row
 
 	var changes []rowchange.Change
 	for i, fieldID := range fieldIDs {
-		if _, err := getFieldTx(tx.Tx, fieldID); err != nil {
+		if _, err := getField(tx.Tx, fieldID); err != nil {
 			return nil, err
 		}
 		prev, err := getLayoutTx(tx.Tx, sourceID, fieldID)
@@ -349,7 +351,19 @@ func ListBySource(c *database.Catalog, sourceID []byte) ([]Row, error) {
 	if len(sourceID) != 16 {
 		return nil, ErrInvalid
 	}
-	rows, err := db.Query(sqlListBySource, sourceID)
+	return listBySource(db, sourceID)
+}
+
+// ListBySourceTx is ListBySource on an open transaction.
+func ListBySourceTx(tx *sql.Tx, sourceID []byte) ([]Row, error) {
+	if len(sourceID) != 16 {
+		return nil, ErrInvalid
+	}
+	return listBySource(tx, sourceID)
+}
+
+func listBySource(q database.Querier, sourceID []byte) ([]Row, error) {
+	rows, err := q.Query(sqlListBySource, sourceID)
 	if err != nil {
 		return nil, err
 	}
@@ -381,6 +395,10 @@ func ListWorkspace(c *database.Catalog, sourceID []byte) ([]WorkspaceEntry, erro
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrInvalid
 		}
+		return nil, err
+	}
+	db, err := c.DB()
+	if err != nil {
 		return nil, err
 	}
 	suggestions, err := sourcevocab.ListSuggestions(c, src.SourceTypeID)
@@ -420,7 +438,7 @@ func ListWorkspace(c *database.Catalog, sourceID []byte) ([]WorkspaceEntry, erro
 		if _, ok := seen[key]; ok {
 			continue
 		}
-		field, err := lookupField(c, v.FieldID)
+		field, err := getField(db, v.FieldID)
 		if err != nil {
 			return nil, err
 		}
@@ -448,32 +466,52 @@ func ListWorkspace(c *database.Catalog, sourceID []byte) ([]WorkspaceEntry, erro
 	return out, nil
 }
 
+// ListLayoutTx returns the Source's layout rows on an open transaction, ordered
+// by sort_order then field id.
+func ListLayoutTx(tx *sql.Tx, sourceID []byte) ([]LayoutRow, error) {
+	if len(sourceID) != 16 {
+		return nil, ErrInvalid
+	}
+	return listLayoutRows(tx, sourceID)
+}
+
 // listLayout reads the Source's layout rows keyed by field id, with the highest
 // sort_order in use (-1 when the Source has no layout).
-func listLayout(c *database.Catalog, sourceID []byte) (map[string]layout, int, error) {
+func listLayout(c *database.Catalog, sourceID []byte) (map[string]LayoutRow, int, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, 0, err
 	}
-	rows, err := db.Query(sqlLayoutList, sourceID)
+	rows, err := listLayoutRows(db, sourceID)
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
-	out := map[string]layout{}
+	out := make(map[string]LayoutRow, len(rows))
 	maxOrder := -1
-	for rows.Next() {
-		var fieldID []byte
-		var sortOrder, dismissed int
-		if err := rows.Scan(&fieldID, &sortOrder, &dismissed); err != nil {
-			return nil, 0, err
-		}
-		out[string(fieldID)] = layout{SortOrder: sortOrder, Dismissed: dismissed == 1}
-		if sortOrder > maxOrder {
-			maxOrder = sortOrder
+	for _, l := range rows {
+		out[string(l.FieldID)] = l
+		if l.SortOrder > maxOrder {
+			maxOrder = l.SortOrder
 		}
 	}
-	return out, maxOrder, rows.Err()
+	return out, maxOrder, nil
+}
+
+func listLayoutRows(q database.Querier, sourceID []byte) ([]LayoutRow, error) {
+	rows, err := q.Query(sqlLayoutList, sourceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []LayoutRow
+	for rows.Next() {
+		l, err := scanLayoutRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, l)
+	}
+	return out, rows.Err()
 }
 
 func normalizeValue(dataType, valueText string) (string, error) {
@@ -510,34 +548,24 @@ func getPairTx(tx *sql.Tx, sourceID, fieldID []byte) (Row, error) {
 	return scanRow(tx.QueryRow(sqlGetPair, sourceID, fieldID))
 }
 
-func getLayoutTx(tx *sql.Tx, sourceID, fieldID []byte) (layout, error) {
-	var l layout
+func scanLayoutRow(row rowScanner) (LayoutRow, error) {
+	var l LayoutRow
 	var dismissed int
-	if err := tx.QueryRow(sqlLayoutGet, sourceID, fieldID).Scan(&l.SortOrder, &dismissed); err != nil {
-		return layout{}, err
+	if err := row.Scan(&l.FieldID, &l.SortOrder, &dismissed); err != nil {
+		return LayoutRow{}, err
 	}
 	l.Dismissed = dismissed == 1
 	return l, nil
 }
 
-func getFieldTx(tx *sql.Tx, fieldID []byte) (metadatafields.Field, error) {
-	var f metadatafields.Field
-	err := tx.QueryRow(sqlFieldGet, fieldID).Scan(
-		&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description,
-	)
-	if errors.Is(err, sql.ErrNoRows) {
-		return metadatafields.Field{}, ErrInvalid
-	}
-	return f, err
+func getLayoutTx(tx *sql.Tx, sourceID, fieldID []byte) (LayoutRow, error) {
+	return scanLayoutRow(tx.QueryRow(sqlLayoutGet, sourceID, fieldID))
 }
 
-func lookupField(c *database.Catalog, fieldID []byte) (metadatafields.Field, error) {
-	db, err := c.DB()
-	if err != nil {
-		return metadatafields.Field{}, err
-	}
+// getField reads one metadata field; an unknown id is ErrInvalid.
+func getField(q database.Querier, fieldID []byte) (metadatafields.Field, error) {
 	var f metadatafields.Field
-	err = db.QueryRow(sqlFieldGet, fieldID).Scan(
+	err := q.QueryRow(sqlFieldGet, fieldID).Scan(
 		&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
