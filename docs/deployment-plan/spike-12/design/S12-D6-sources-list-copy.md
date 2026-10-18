@@ -66,7 +66,7 @@ Copying a Source should not require opening its page first. From the Sources lis
 | --- | --- |
 | A row has two zones | Left: thumbnail, title, type, which opens the Source page. Right: the Evidence graph progress, which opens the graph. Left-click behavior does not change. |
 | The menu is on the page zone | Right-click on the left zone opens the menu. Right-click on the graph zone does nothing new. S12-14 later adds graph sub-rows under each row (S12-D5); they do not get this menu. |
-| Kit right-click menus exist | The Source page cover thumbnail has one: a small panel at the pointer, a muted caps title row optional, keyboard-highlightable items. Use the same ContextMenu. |
+| Kit right-click menus exist | The person page portrait has one, with a VoiceOver action for its item: a small panel at the pointer, a muted caps title row optional, keyboard-highlightable items. Use the same ContextMenu. |
 | One item | **Copy…**. No Delete, Open graph or other items on this board. |
 | The form loads from here | A list row carries only the Source's title, type and cover. The form (S12-D1) opens with title and type at once, and shows its loading state (S12-D1 CS-8) while the description, metadata, credibility and Artifacts load. |
 | Saving opens the copy | As from the Source page. Returning to the list shows the copy as a new row. |
@@ -84,7 +84,7 @@ Copying a Source should not require opening its page first. From the Sources lis
 
 | Ships in **S12-17** | Stays out |
 | --- | --- |
-| A right-click menu with Copy… on a Sources list row's page zone, the row's accessibility action, opening the S12-D1 form from the list. | Any other menu item. A hover or overflow control. A kit action-menu recipe (logged in `docs/ideas/shared-list-helpers.md`). Any change to the Copy form. |
+| A right-click menu with Copy… on a Sources list row's page zone, the row's accessibility action, opening the S12-D1 form from the list. | Any other menu item. A hover or overflow control. A shared kit menu modifier (logged in `docs/ideas/shared-list-helpers.md`). Any change to the Copy form. |
 
 ---
 
@@ -115,7 +115,7 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
 | Sources list row | Snowflake | **Extend** | `Features/Sources/SourcesSplitRow.swift` | The page zone gains the menu trigger. Nothing else changes. |
-| Row menu | Component | Ship | `DesignSystem/Components/ContextMenu/PVContextMenu.swift` (`pvContextMenuTrigger`, `PVContextMenuPanel`, `PVContextMenuItem`) | One item. Same pattern as the Source page cover menu (`Features/Sources/SourcePageIdentityHeader.swift`). |
+| Row menu | Component | Ship | `DesignSystem/Components/ContextMenu/PVContextMenu.swift` (`pvContextMenuTrigger`, `PVContextMenuPanel`, `PVContextMenuItem`) | One item. Same pattern as the person page portrait menu (`Features/Conclusions/ConclusionDetailPage.swift`), including its VoiceOver action. |
 | Copy Source form | Snowflake | Ship | S12-D1, `Features/Sources/` (from S12-02) | Opened as is. Not redrawn. |
 
 **Non-goals.** No new kit primitive. No local menu. No hover or overflow button.
