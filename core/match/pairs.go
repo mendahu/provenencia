@@ -132,9 +132,9 @@ func (v Value) ref() ValueRef {
 	return ValueRef{Label: v.Label(), ObservationID: v.ObservationID, Negative: v.Negative, Date: v.Date}
 }
 
-func compatible(a, b Value) bool {
+func compatible(rules valuecompare.Rules, a, b Value) bool {
 	t := a.valueType()
-	return t != "" && t == b.valueType() && autoreconcile.Compatible(t, a.Auto(), b.Auto())
+	return t != "" && t == b.valueType() && autoreconcile.Compatible(rules, t, a.Auto(), b.Auto())
 }
 
 // effective is the support a value has left after the negatives against it.
@@ -298,7 +298,7 @@ func pairValues(rules valuecompare.Rules, valueType, card string, probe, candida
 	for i := range probe {
 		for j := range candidate {
 			if (probe[i].Negative && s.cinfo[j].leader || candidate[j].Negative && s.pinfo[i].leader) &&
-				compatible(probe[i], candidate[j]) {
+				compatible(rules, probe[i], candidate[j]) {
 				s.offer(i, j)
 			}
 		}
@@ -310,14 +310,14 @@ func pairValues(rules valuecompare.Rules, valueType, card string, probe, candida
 	// R2: a value the other side's evidence refutes and nothing there backs.
 	for i := range probe {
 		if !probe[i].Negative {
-			for _, j := range refutedBy(probe[i], candidate, s.cinfo) {
+			for _, j := range refutedBy(rules, probe[i], candidate, s.cinfo) {
 				s.offer(i, j)
 			}
 		}
 	}
 	for j := range candidate {
 		if !candidate[j].Negative {
-			for _, i := range refutedBy(candidate[j], probe, s.pinfo) {
+			for _, i := range refutedBy(rules, candidate[j], probe, s.pinfo) {
 				s.offer(i, j)
 			}
 		}
@@ -378,7 +378,7 @@ func pairValues(rules valuecompare.Rules, valueType, card string, probe, candida
 
 // refutedBy lists the denied values of a side that v is compatible with,
 // or nothing when a voting value of that side is compatible with v too.
-func refutedBy(v Value, others []Value, info []voteInfo) []int {
+func refutedBy(rules valuecompare.Rules, v Value, others []Value, info []voteInfo) []int {
 	var hits []int
 	denied := false
 	for k := range others {
@@ -388,7 +388,7 @@ func refutedBy(v Value, others []Value, info []voteInfo) []int {
 		return nil
 	}
 	for k := range others {
-		if !compatible(v, others[k]) {
+		if !compatible(rules, v, others[k]) {
 			continue
 		}
 		if info[k].voting {

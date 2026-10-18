@@ -6,8 +6,10 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 func term(n byte, termID, key string) Candidate {
@@ -45,8 +47,14 @@ func TestModules(t *testing.T) {
 			[]Candidate{text(1, "  York "), text(2, "YORK"), text(3, "york")}, [][]byte{{1, 2, 3}}, StateMerged, "  York "},
 		{"text", "non-ASCII case folds", propertymeta.ValueTypeText,
 			[]Candidate{text(1, "ÉMILE"), text(2, "émile")}, [][]byte{{1, 2}}, StateMerged, "ÉMILE"},
-		{"text", "inner spacing and punctuation still matter", propertymeta.ValueTypeText,
-			[]Candidate{text(1, "Upper Canada"), text(2, "Upper  Canada"), text(3, "U.C.")}, [][]byte{{1}, {2}, {3}}, StateMixed, ""},
+		{"text", "inner spacing is ignored; U.C. is the word uc", propertymeta.ValueTypeText,
+			[]Candidate{text(1, "Upper Canada"), text(2, "Upper  Canada"), text(3, "U.C.")}, [][]byte{{1, 2}, {3}}, StateMerged, ""},
+		{"text", "punctuation and spacing between words are ignored", propertymeta.ValueTypeText,
+			[]Candidate{text(1, "Sainte-Anne"), text(2, "Sainte Anne")}, [][]byte{{1, 2}}, StateMerged, "Sainte-Anne"},
+		{"text", "an accent fold is a different value", propertymeta.ValueTypeText,
+			[]Candidate{text(1, "Montréal"), text(2, "Montreal")}, [][]byte{{1}, {2}}, StateMixed, ""},
+		{"text", "text never folds", propertymeta.ValueTypeText,
+			[]Candidate{text(1, "York"), text(2, "York, Upper Canada")}, [][]byte{{1}, {2}}, StateMixed, ""},
 		{"text", "the best-ranked member's spelling is displayed", propertymeta.ValueTypeText,
 			[]Candidate{text(1, "york"), highTrust(text(2, "York"))}, [][]byte{{1, 2}}, StateMerged, "York"},
 		{"text", "blank is no evidence", propertymeta.ValueTypeText,
@@ -74,7 +82,7 @@ func TestModules(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.module+"/"+tc.name, func(t *testing.T) {
-			got, err := Reconcile(tc.valueType, tc.in, nil, propertymeta.CardinalitySingle)
+			got, err := Reconcile(testRules, tc.valueType, tc.in, nil, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -95,11 +103,11 @@ func TestModules(t *testing.T) {
 func TestModuleFor(t *testing.T) {
 	for _, vt := range []string{propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeTerm,
 		propertymeta.ValueTypeSubject, propertymeta.ValueTypeName, propertymeta.ValueTypeDate, propertymeta.ValueTypeDepiction} {
-		if moduleFor(vt) == nil {
+		if moduleFor(testRules, vt) == nil {
 			t.Errorf("%s has no module", vt)
 		}
 	}
-	if _, err := Reconcile(propertymeta.ValueTypeName, []Candidate{{ObservationID: id(1), Value: Value{Name: &namevalue.Value{}}}}, nil, propertymeta.CardinalitySingle); err != nil {
+	if _, err := Reconcile(testRules, propertymeta.ValueTypeName, []Candidate{{ObservationID: id(1), Value: Value{Name: &namevalue.Value{}}}}, nil, propertymeta.CardinalitySingle); err != nil {
 		t.Fatalf("an empty name is no evidence, not an error: %v", err)
 	}
 }
@@ -107,7 +115,7 @@ func TestModuleFor(t *testing.T) {
 // A person's likenesses are a gallery: every distinct image stays.
 func TestReconcileDepictionMultiple(t *testing.T) {
 	t.Run("distinct images are distinct values", func(t *testing.T) {
-		got, err := Reconcile(propertymeta.ValueTypeDepiction,
+		got, err := Reconcile(testRules, propertymeta.ValueTypeDepiction,
 			[]Candidate{depiction(1, "a"), depiction(2, "a"), depiction(3, "b")}, nil, propertymeta.CardinalityMultiple)
 		if err != nil {
 			t.Fatal(err)
@@ -125,14 +133,14 @@ func TestReconcileDepictionMultiple(t *testing.T) {
 		}
 	})
 	t.Run("no depiction is a mismatch", func(t *testing.T) {
-		_, err := Reconcile(propertymeta.ValueTypeDepiction,
+		_, err := Reconcile(testRules, propertymeta.ValueTypeDepiction,
 			[]Candidate{{ObservationID: id(1)}}, nil, propertymeta.CardinalityMultiple)
 		if !errors.Is(err, ErrValueMismatch) {
 			t.Fatalf("err %v", err)
 		}
 	})
 	t.Run("an unreadable image is no evidence", func(t *testing.T) {
-		got, err := Reconcile(propertymeta.ValueTypeDepiction,
+		got, err := Reconcile(testRules, propertymeta.ValueTypeDepiction,
 			[]Candidate{depiction(1, "")}, nil, propertymeta.CardinalityMultiple)
 		if err != nil {
 			t.Fatal(err)
@@ -153,6 +161,9 @@ func TestCompatible(t *testing.T) {
 	}{
 		{"text: trimmed and case-insensitive", propertymeta.ValueTypeText, text(1, " York"), text(2, "york"), true},
 		{"text: different", propertymeta.ValueTypeText, text(1, "York"), text(2, "Toronto"), false},
+		{"text: punctuation and spacing are ignored", propertymeta.ValueTypeText, text(1, "Sainte-Anne"), text(2, "Sainte Anne"), true},
+		{"text: an accent fold is a different value", propertymeta.ValueTypeText, text(1, "Montréal"), text(2, "Montreal"), false},
+		{"text: never folds", propertymeta.ValueTypeText, text(1, "York"), text(2, "York, Upper Canada"), false},
 		{"text: blank is no evidence", propertymeta.ValueTypeText, text(1, ""), text(2, ""), false},
 		{"integer: equal", propertymeta.ValueTypeInteger, integer(1, 34), integer(2, 34), true},
 		{"integer: different", propertymeta.ValueTypeInteger, integer(1, 34), integer(2, 35), false},
@@ -180,9 +191,31 @@ func TestCompatible(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := Compatible(tc.valueType, tc.a.Value, tc.b.Value); got != tc.want {
+			if got := Compatible(testRules, tc.valueType, tc.a.Value, tc.b.Value); got != tc.want {
 				t.Fatalf("Compatible = %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+// An alias never makes two names compatible: value compare finds the longer
+// name contains the shorter, but only as an alias, which does not fold.
+func TestCompatibleIgnoresAliases(t *testing.T) {
+	rules := matchregistry.Default().Value
+	rules.Names.Aliases = valuecompare.NewAliasIndex([]valuecompare.AliasTable{{
+		Key: "t", Kind: valuecompare.AliasNickname,
+		Roles: []valuecompare.NameRole{valuecompare.RoleGiven, valuecompare.RoleNick, valuecompare.RoleUntyped},
+		Sets:  [][]string{{"jim", "james"}},
+	}})
+	a := nm(1, "given=Jim|surname=Robins").Value
+	b := nm(2, "given=James|given=Kenneth|surname=Robins").Value
+	if Compatible(rules, propertymeta.ValueTypeName, a, b) {
+		t.Fatal("Jim Robins is compatible with James Kenneth Robins through an alias")
+	}
+	res, _ := valuecompare.Compare(
+		valuecompare.Value{Type: propertymeta.ValueTypeName, Name: a.Name},
+		valuecompare.Value{Type: propertymeta.ValueTypeName, Name: b.Name}, rules)
+	if res.Relation != valuecompare.Contains {
+		t.Fatalf("whole names relate as %q, want contains", res.Relation)
 	}
 }

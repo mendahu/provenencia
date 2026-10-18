@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
@@ -19,14 +19,17 @@ import (
 //   - Format-agnostic. A part type is only an identifier: a name splits into
 //     one unit per part type, and units are compared only with units of the
 //     same type. No type behaves differently from another.
-//   - A unit is the type's words in idx order: each part normalized (case,
-//     punctuation and whitespace ignored; accents are not folded) and split
-//     into words, so a hyphen or a space inside a part is the same as two
-//     parts. Smith-Jones = "Smith Jones" = Smith + Jones. Words are compared;
-//     the recorded parts are what's displayed.
-//   - Fold (subsumption): a unit folds into a fuller one when its parts map,
-//     in order, onto a subsequence of the fuller one's, each equal or an
-//     initial of it. [J] → [James], [James] → [James, Kenneth].
+//   - A unit is the type's words, read as value compare reads them: each part
+//     normalized (case, punctuation and whitespace ignored; accents are not
+//     folded), split into words, and a particle rejoined with the word after
+//     it, so Mc Donald = McDonald and a hyphen or a space inside a part is the
+//     same as two parts. Two units are one value when value compare keys them
+//     the same (word order within a type does not matter). The recorded
+//     parts are what's displayed.
+//   - Fold: a unit folds into a fuller one when value compare finds the fuller
+//     one contains it and every word they pair is the same word or an initial
+//     of it. [J] → [James], [James] → [James, Kenneth]. An accent fold or an
+//     alias never folds.
 //   - Majority only outvotes spelling variants of the winner (Robbins beside
 //     Robins). A different name (Jake beside James, a married surname) is
 //     never outvoted: sources often record a nickname as a given name.
@@ -37,27 +40,38 @@ import (
 //     type order of the member with the most types. A member that carries
 //     exactly the result is returned as is.
 
-// spelling is the shipped spelling rule, the same one the matching layers use,
-// so reconciling and matching agree on what a misspelling is.
-var spelling = matchregistry.Default().Value.Words
-
-type nameModule struct{}
+// nameModule reads names under rules.
+type nameModule struct {
+	rules valuecompare.Rules
+}
 
 // nameUnit is one part type's parts of one name.
 type nameUnit struct {
-	parts []string         // normalized words, in idx order
+	parts []string         // comparison words, in idx order
 	raw   []namevalue.Part // the parts as recorded
-	words [][]string       // each raw part's normalized words
+	words [][]string       // each raw part's comparison words
+	cmp   valuecompare.Value
+}
+
+// compareValue is the unit as a name for value compare: its raw parts with no
+// type, renumbered from 0, and no name pattern, so every word is untyped and
+// no part type weighs more than another (S11-06 D-4).
+func (u nameUnit) compareValue() valuecompare.Value {
+	parts := make([]namevalue.Part, len(u.raw))
+	for i, p := range u.raw {
+		parts[i] = namevalue.Part{Idx: i, Value: p.Value}
+	}
+	return valuecompare.Value{Type: propertymeta.ValueTypeName, Name: &namevalue.Value{Parts: parts}}
 }
 
 // readName is a name's non-empty parts by type, and the types in the order
 // they first appear.
-func readName(n *namevalue.Value) (byType map[string]nameUnit, order []string) {
+func (m nameModule) readName(n *namevalue.Value) (byType map[string]nameUnit, order []string) {
 	byType = map[string]nameUnit{}
 	parts := append([]namevalue.Part(nil), n.Parts...)
 	sort.SliceStable(parts, func(i, j int) bool { return parts[i].Idx < parts[j].Idx })
 	for _, p := range parts {
-		words := strings.Fields(valuecompare.NormalizeForm(p.Value))
+		words := valuecompare.SplitWords(p.Value, m.rules.Words)
 		if len(words) == 0 {
 			continue
 		}
@@ -74,61 +88,50 @@ func readName(n *namevalue.Value) (byType map[string]nameUnit, order []string) {
 	return byType, order
 }
 
-func (nameModule) split(v Value) (map[string]unit, bool) {
-	byType, order := readName(v.Name)
-	if len(order) == 0 {
-		return nil, false
-	}
+func (m nameModule) split(v Value) (map[string]unit, bool) {
+	byType, _ := m.readName(v.Name)
 	units := make(map[string]unit, len(byType))
 	for typ, u := range byType {
-		units[typ] = unit{key: strings.Join(u.parts, "\x01"), data: u}
+		u.cmp = u.compareValue()
+		key, ok := valuecompare.Key(u.cmp, valuecompare.Same, m.rules)
+		if !ok {
+			continue
+		}
+		units[typ] = unit{key: key, data: u}
+	}
+	if len(units) == 0 {
+		return nil, false
 	}
 	return units, true
 }
 
-func (nameModule) fold(_ string, from, into unit) bool {
-	return subsumes(into.data.(nameUnit).parts, from.data.(nameUnit).parts)
-}
-
-// subsumes reports whether short maps, in order, onto a subsequence of long,
-// each part equal to or an initial of its match, and the two differ.
-func subsumes(long, short []string) bool {
-	if slices.Equal(long, short) || len(short) > len(long) {
+// fold: value compare finds into contains from, and every word they pair is
+// the same word or an initial of it.
+func (m nameModule) fold(_ string, from, into unit) bool {
+	res, det := valuecompare.Compare(from.data.(nameUnit).cmp, into.data.(nameUnit).cmp, m.rules)
+	if res.Relation != valuecompare.Contains || det.Broader != valuecompare.SideA {
 		return false
 	}
-	j := 0
-	for _, s := range short {
-		for j < len(long) && !partFits(s, long[j]) {
-			j++
-		}
-		if j == len(long) {
+	for _, p := range det.Parts {
+		if p.Relation != valuecompare.Same && p.Cause != valuecompare.CauseInitial {
 			return false
 		}
-		j++
 	}
 	return true
 }
 
-// partFits: the same part, or an initial of it.
-func partFits(short, long string) bool {
-	if short == long {
-		return true
-	}
-	if !valuecompare.IsInitial(short) || valuecompare.IsInitial(long) {
+// outvotes: only a spelling variant of the winner — value compare pairs the
+// words and leaves none unpaired, and each pair is the same word or a
+// spelling variant (SpellingSimilarity).
+func (m nameModule) outvotes(_ string, winner, other unit) bool {
+	_, det := valuecompare.Compare(other.data.(nameUnit).cmp, winner.data.(nameUnit).cmp, m.rules)
+	// No pairs means value compare found no match at all.
+	if len(det.Parts) == 0 || len(det.OnlyA) != 0 || len(det.OnlyB) != 0 {
 		return false
 	}
-	return []rune(short)[0] == []rune(long)[0]
-}
-
-// outvotes: only a spelling variant of the winner — the same number of
-// words, each equal or a spelling variant (SpellingSimilarity).
-func (nameModule) outvotes(_ string, winner, other unit) bool {
-	w, o := winner.data.(nameUnit).parts, other.data.(nameUnit).parts
-	if len(w) != len(o) {
-		return false
-	}
-	for i := range w {
-		if valuecompare.SpellingSimilarity(w[i], o[i], spelling.FuzzyFloor, spelling.ShortVariantMinLength) == 0 {
+	for _, p := range det.Parts {
+		if p.A.Text != p.B.Text &&
+			valuecompare.SpellingSimilarity(p.A.Text, p.B.Text, m.rules.Words.FuzzyFloor, m.rules.Words.ShortVariantMinLength) == 0 {
 			return false
 		}
 	}
@@ -146,11 +149,11 @@ func containsAll(have, words []string) bool {
 	return true
 }
 
-func (nameModule) assemble(members []Candidate, settled map[string][]unit) Value {
+func (m nameModule) assemble(members []Candidate, settled map[string][]unit) Value {
 	orders := make([][]string, len(members))
 	base := 0
-	for i, m := range members {
-		_, orders[i] = readName(m.Value.Name)
+	for i, member := range members {
+		_, orders[i] = m.readName(member.Value.Name)
 		if len(orders[i]) > len(orders[base]) {
 			base = i
 		}
@@ -191,11 +194,11 @@ func (nameModule) assemble(members []Candidate, settled map[string][]unit) Value
 	}
 
 	// A member carrying exactly these parts, in this type order, is the value.
-	for i, m := range members {
+	for i, member := range members {
 		if !slices.Equal(orders[i], order) {
 			continue
 		}
-		byType, _ := readName(m.Value.Name)
+		byType, _ := m.readName(member.Value.Name)
 		same := true
 		for _, typ := range order {
 			if !slices.Equal(byType[typ].parts, parts[typ]) {
@@ -204,7 +207,7 @@ func (nameModule) assemble(members []Candidate, settled map[string][]unit) Value
 			}
 		}
 		if same {
-			return m.Value
+			return member.Value
 		}
 	}
 

@@ -5,7 +5,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/datevalue"
@@ -55,7 +54,7 @@ func (g *placeGraph) periodOf(id []byte) valuecompare.Window {
 }
 
 func (g *placeGraph) linkHolds(query valuecompare.Window, l placeLink) bool {
-	mem, ok := autoreconcile.LinkMembership(l.start, l.end, g.periodOf(l.from), g.periodOf(l.to))
+	mem, ok := linkMembership(l.start, l.end, g.periodOf(l.from), g.periodOf(l.to))
 	if !ok {
 		return false
 	}
@@ -66,7 +65,7 @@ func queryWindow(at *datevalue.Value) valuecompare.Window {
 	if at == nil {
 		return valuecompare.Always()
 	}
-	if w, ok := autoreconcile.WindowOfDate(*at); ok {
+	if w, ok := valuecompare.DateWindow(*at); ok {
 		return w
 	}
 	return valuecompare.Always()
@@ -271,8 +270,8 @@ func chainQueryDate(h PlaceHeader, today datevalue.Value) datevalue.Value {
 	if h.EndDate == nil {
 		return today
 	}
-	tw, tok := autoreconcile.WindowOfDate(today)
-	ew, eok := autoreconcile.WindowOfDate(*h.EndDate)
+	tw, tok := valuecompare.DateWindow(today)
+	ew, eok := valuecompare.DateWindow(*h.EndDate)
 	if !tok || !eok || tw.Lo == nil || ew.Hi == nil {
 		return today
 	}
@@ -308,12 +307,12 @@ func AttachPlaceRelationships(c *database.Catalog, h *PlaceHeader) error {
 		return err
 	}
 	g.byID[string(h.Entity.ID)] = *h
-	g.period[string(h.Entity.ID)] = autoreconcile.PeriodWindow(h.StartDate, h.EndDate)
+	g.period[string(h.Entity.ID)] = periodWindow(h.StartDate, h.EndDate)
 	today := TodayDate()
 
 	seenPart := map[string]bool{}
 	for _, l := range g.partFrom[string(h.Entity.ID)] {
-		if _, ok := autoreconcile.LinkMembership(l.start, l.end, g.periodOf(l.from), g.periodOf(l.to)); !ok {
+		if _, ok := linkMembership(l.start, l.end, g.periodOf(l.from), g.periodOf(l.to)); !ok {
 			continue
 		}
 		key := string(l.to)
@@ -377,39 +376,82 @@ func membershipDates(l placeLink, from, to PlaceHeader) (start, end *datevalue.V
 	return laterStart(from.StartDate, to.StartDate), earlierEnd(from.EndDate, to.EndDate)
 }
 
-func yearOf(d *datevalue.Value) *int {
-	if d == nil || d.StartYear == nil {
-		return nil
-	}
-	return d.StartYear
-}
-
+// laterStart is the later of two starts by day. A nil side yields the other;
+// an unreadable date (phrase-only) never beats a readable one, and an open
+// start (BEF) loses to a set one. A tie keeps a.
 func laterStart(a, b *datevalue.Value) *datevalue.Value {
-	ya, yb := yearOf(a), yearOf(b)
 	switch {
 	case a == nil:
 		return b
 	case b == nil:
 		return a
-	case ya != nil && yb != nil && *yb > *ya:
+	}
+	wa, okA := valuecompare.DateWindow(*a)
+	wb, okB := valuecompare.DateWindow(*b)
+	switch {
+	case !okB:
+		return a
+	case !okA:
+		return b
+	case wb.Lo != nil && (wa.Lo == nil || *wb.Lo > *wa.Lo):
 		return b
 	default:
 		return a
 	}
 }
 
+// earlierEnd is the earlier of two ends by day, mirroring laterStart on the
+// last day.
 func earlierEnd(a, b *datevalue.Value) *datevalue.Value {
-	ya, yb := yearOf(a), yearOf(b)
 	switch {
 	case a == nil:
 		return b
 	case b == nil:
 		return a
-	case ya != nil && yb != nil && *yb < *ya:
+	}
+	wa, okA := valuecompare.DateWindow(*a)
+	wb, okB := valuecompare.DateWindow(*b)
+	switch {
+	case !okB:
+		return a
+	case !okA:
+		return b
+	case wb.Hi != nil && (wa.Hi == nil || *wb.Hi < *wa.Hi):
 		return b
 	default:
 		return a
 	}
+}
+
+// periodWindow is a Place's existence span from optional start and end
+// dates. Missing sides are open; both missing is Always.
+func periodWindow(start, end *datevalue.Value) valuecompare.Window {
+	w := valuecompare.Always()
+	if start != nil {
+		if sw, ok := valuecompare.DateWindow(*start); ok {
+			w.Lo = sw.Lo
+		}
+	}
+	if end != nil {
+		if ew, ok := valuecompare.DateWindow(*end); ok {
+			w.Hi = ew.Hi
+		}
+	}
+	return w
+}
+
+// linkMembership is when a hierarchical place relationship holds.
+// An undated link (nil start and end) holds on the overlap of the two
+// places' periods. A dated link holds inside its own span and both periods.
+func linkMembership(linkStart, linkEnd *datevalue.Value, fromPeriod, toPeriod valuecompare.Window) (valuecompare.Window, bool) {
+	base, ok := fromPeriod.Intersect(toPeriod)
+	if !ok {
+		return valuecompare.Window{}, false
+	}
+	if linkStart == nil && linkEnd == nil {
+		return base, true
+	}
+	return base.Intersect(periodWindow(linkStart, linkEnd))
 }
 
 // ParentsAtDate is the hierarchical parent display names for placeID at at

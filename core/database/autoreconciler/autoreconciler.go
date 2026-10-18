@@ -46,7 +46,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // CacheVersion is bumped whenever resolution changes what the table would
@@ -69,7 +71,15 @@ import (
 //	14: a term is neutral by its catalog flag (property_terms.neutral), not
 //	    by key.
 //	15: depiction values reconcile by image File (S10-52).
-const CacheVersion = 15
+//	16: values group by value compare's Same and fold by its Contains: text
+//	    ignores punctuation and spacing, ABT is a range, name parts compare as
+//	    words with particles (S11-06).
+const CacheVersion = 16
+
+// valueRules are the value compare rules reconciling reads: the shipped
+// registry, never a catalog's alias tables or name formats, so the cache
+// changes only when CacheVersion does.
+var valueRules = matchregistry.Default().Value
 
 // Querier is *sql.Tx or *sql.DB.
 type Querier interface {
@@ -312,7 +322,7 @@ func recomputeBatch(q Querier, ids [][]byte) error {
 		return err
 	}
 	for _, g := range groups {
-		res, err := autoreconcile.Reconcile(g.valueType, g.candidates, nil, g.cardinality)
+		res, err := autoreconcile.Reconcile(valueRules, g.valueType, g.candidates, nil, g.cardinality)
 		if err != nil {
 			return err
 		}
@@ -516,12 +526,12 @@ func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) 
 			return err
 		}
 		dateBlob = b
-		if lo, hi, ok := autoreconcile.DateBounds(*v.Date); ok {
-			if lo != nil {
-				dateLo = *lo
+		if w, ok := valuecompare.DateWindow(*v.Date); ok {
+			if w.Lo != nil {
+				dateLo = *w.Lo
 			}
-			if hi != nil {
-				dateHi = *hi
+			if w.Hi != nil {
+				dateHi = *w.Hi
 			}
 		}
 	}

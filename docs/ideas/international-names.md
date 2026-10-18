@@ -34,6 +34,6 @@ A `generation` weight slot, and one declared slot list read by both `nameformats
 ## Format and sort, beyond the project default
 
 - **Per-person name format.** A Reconciliation Claim on `name_format`. Until that exists, every name uses the project default profile. Each name already may carry its own pattern once a loader sets `Value.NamePattern`.
-- **Accent merging on the Person page** is decided with the reconciler's grouping policy in Spike 11 (S11-06).
+- **Accent merging on the Person page** — decided 2026-10-17 (S11-06): an accent fold is value compare's `Equivalent`, which never groups or folds, so *José* and *Jose* show as two values.
 - **Collation locale.** A project setting (default `en`) whose locale orders name lists through `golang.org/x/text/collate`, so accented and unaccented names sort in that locale's order. Comparison fold is not the sort, and the match score does not change. Descoped from S10-37 (2026-10-16); nothing stores a locale today.
 - **Collation picker.** A control for that setting. A viewer who wants a locale other than the project's (a shared tree read abroad) is the same gap.

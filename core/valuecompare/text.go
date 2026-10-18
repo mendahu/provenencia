@@ -8,12 +8,8 @@ import (
 // text compares free text (toponyms, remarks) word by word, in order.
 type text struct{}
 
-func splitText(s string, w WordRules) []string {
-	return splitWords(s, func(token string) bool { return slices.Contains(w.Particles, token) })
-}
-
 func (text) compare(a, b Value, r Rules) (Result, Detail) {
-	wa, wb := splitText(a.Text, r.Words), splitText(b.Text, r.Words)
+	wa, wb := SplitWords(a.Text, r.Words), SplitWords(b.Text, r.Words)
 	if len(wa) == 0 || len(wb) == 0 {
 		return Result{Relation: Unknown}, Detail{Cause: CauseEmpty}
 	}
@@ -73,7 +69,7 @@ func (text) compare(a, b Value, r Rules) (Result, Detail) {
 // key: the words joined by one space, folded at the Equivalent level. They are
 // the sequences compare tests for Same and Equivalent.
 func (text) key(v Value, level Relation, r Rules) (string, bool) {
-	words := splitText(v.Text, r.Words)
+	words := SplitWords(v.Text, r.Words)
 	if len(words) == 0 {
 		return "", false
 	}

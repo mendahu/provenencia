@@ -214,3 +214,51 @@ func TestAboutEnds(t *testing.T) {
 		}
 	})
 }
+
+func TestDateWindow(t *testing.T) {
+	year, _ := valuecompare.DateWindow(ymd(1985, 0, 0))
+	plain, _ := valuecompare.DateWindow(ymd(1817, 0, 0))
+	closed := func(w valuecompare.Window) bool { return w.Lo != nil && w.Hi != nil }
+	for _, tc := range []struct {
+		name  string
+		d     datevalue.Value
+		ok    bool
+		check func(w valuecompare.Window) bool
+	}{
+		{"epoch", ymd(1970, 1, 1), true, func(w valuecompare.Window) bool {
+			return closed(w) && *w.Lo == 0 && *w.Hi == 0
+		}},
+		{"year", ymd(1985, 0, 0), true, func(w valuecompare.Window) bool {
+			return closed(w) && *w.Lo < *w.Hi
+		}},
+		{"day inside the year", ymd(1985, 5, 14), true, func(w valuecompare.Window) bool {
+			return closed(w) && *w.Lo == *w.Hi && year.Contains(w)
+		}},
+		{"before", bound(datevalue.QualifierBEF, 1900), true, func(w valuecompare.Window) bool {
+			return w.Lo == nil && w.Hi != nil
+		}},
+		{"after", bound(datevalue.QualifierAFT, 1872), true, func(w valuecompare.Window) bool {
+			return w.Lo != nil && w.Hi == nil
+		}},
+		{"range with only an end", datevalue.Value{Kind: datevalue.KindRange, EndYear: optInt(1900)}, true, func(w valuecompare.Window) bool {
+			return w.Lo == nil && w.Hi != nil
+		}},
+		{"range with only a start", datevalue.Value{Kind: datevalue.KindRange, StartYear: optInt(1885)}, true, func(w valuecompare.Window) bool {
+			return w.Lo != nil && w.Hi == nil
+		}},
+		{"about is the plain year", about(1817, 0, 0), true, func(w valuecompare.Window) bool {
+			return closed(w) && *w.Lo == *plain.Lo && *w.Hi == *plain.Hi
+		}},
+		{"phrase-only has no window", phrase("Christmas"), false, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w, ok := valuecompare.DateWindow(tc.d)
+			if ok != tc.ok {
+				t.Fatalf("ok=%v want %v (%+v)", ok, tc.ok, w)
+			}
+			if ok && !tc.check(w) {
+				t.Fatalf("got %+v", w)
+			}
+		})
+	}
+}

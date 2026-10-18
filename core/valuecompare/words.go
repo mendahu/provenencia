@@ -10,8 +10,9 @@ import (
 )
 
 // Word helpers: normalizing, splitting, folding and spelling variants. Shared
-// by the text comparer and, until the callers move, by core/match and the
-// reconciler's name module, so each agrees on what a word and a misspelling is.
+// by the text and name comparers and by the reconciler's name module
+// (`SplitWords`, `SpellingSimilarity`), so each agrees on what a word and a
+// misspelling is.
 
 // NormalizeForm ignores case, punctuation, and whitespace differences: the
 // name sort key, and the text core/match tokenizes. Dashes
@@ -49,14 +50,11 @@ func IsInitial(word string) bool {
 }
 
 // SplitWords is s as comparison tokens: split on whitespace, dashes and
-// slashes, each token normalized, and a particle rejoined with the word that
-// follows it. particles is the set of particle tokens.
-func SplitWords(s string, particles map[string]bool) []string {
-	return splitWords(s, func(token string) bool { return particles[token] })
-}
-
-// splitWords is SplitWords with the particle test as a function.
-func splitWords(s string, isParticle func(token string) bool) []string {
+// slashes, each token normalized, and a particle (w.Particles) rejoined with
+// the word that follows it. It is the one split every comparer and the
+// reconciler share.
+func SplitWords(s string, w WordRules) []string {
+	isParticle := func(token string) bool { return slices.Contains(w.Particles, token) }
 	raw := rawTokens(s)
 	var out []string
 	for i := 0; i < len(raw); i++ {

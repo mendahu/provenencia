@@ -840,7 +840,7 @@ func finishPlaces(g *graphcache.Graph, v vocab, headers []PlaceHeader) ([]PlaceH
 	today := TodayDate()
 	for i := range headers {
 		pg.byID[string(headers[i].Entity.ID)] = headers[i]
-		pg.period[string(headers[i].Entity.ID)] = autoreconcile.PeriodWindow(headers[i].StartDate, headers[i].EndDate)
+		pg.period[string(headers[i].Entity.ID)] = periodWindow(headers[i].StartDate, headers[i].EndDate)
 		at := chainQueryDate(headers[i], today)
 		headers[i].Parents, headers[i].ParentsAreCandidates = pg.ParentChain(headers[i].Entity.ID, &at)
 	}
@@ -877,7 +877,7 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph,
 				return nil, err
 			}
 			pg.byID[string(id)] = shell
-			pg.period[string(id)] = autoreconcile.PeriodWindow(shell.StartDate, shell.EndDate)
+			pg.period[string(id)] = periodWindow(shell.StartDate, shell.EndDate)
 			links, err := follow(g, id, hops.ParentsOfPlace)
 			if err != nil {
 				return nil, err
@@ -984,7 +984,7 @@ func rememberShell(pg *placeGraph, g *graphcache.Graph, v vocab, id []byte) erro
 		return err
 	}
 	pg.byID[string(id)] = shell
-	pg.period[string(id)] = autoreconcile.PeriodWindow(shell.StartDate, shell.EndDate)
+	pg.period[string(id)] = periodWindow(shell.StartDate, shell.EndDate)
 	return nil
 }
 

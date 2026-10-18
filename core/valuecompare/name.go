@@ -44,7 +44,7 @@ func nameWords(v Value, r Rules) (words []nameWord, generation []string) {
 	firstGiven := true
 	for _, part := range v.Name.Parts {
 		role := pattern.Role(part.Type)
-		for _, token := range splitText(part.Value, r.Words) {
+		for _, token := range SplitWords(part.Value, r.Words) {
 			switch role {
 			case RoleIgnored:
 			case RoleGeneration:
