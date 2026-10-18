@@ -1,7 +1,7 @@
 # Review — S11-08 One normalization helper in Swift
 
-**Verdict:** round 1: Fits with changes — Not ready → all blockers fixed; round 2 pending
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits — Ready with changes (all fixed)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 - None. No product call was open: word breaks never matter (S11-07 D-1, user call 2026-10-17) and the reconciler's grouping policy (S11-06) decide the behavior; the map's S11-08 scope entry (as S11-07 rewrote it) names the callers.
@@ -65,3 +65,24 @@
 
 ### X-6 · minor · Unmade choices and a stale line range
 **Answer:** Fixed — STEP-1 names the four pbxproj entries and four free IDs with a check; `conclusionDetail` is L1764–L1845; D-14 pins tests to `en_US`; D-2 keys per character, so Greek final sigma matches Go (AC-3.3); AC-1.7 states `isFiltering` for `-`; T-10 gives the full `CatalogProperty`; D-11's doc comment says "simplified".
+
+## Round 2
+
+Maintainability: no new blockers; every round-1 answer checked against the code. **Fits.** One taste point (key each fake search field once, not per token) — Fixed in D-13.
+
+Executability: every Current state row true; the fifteen fixtures give the listed keys under Go's `TextKey`; pbxproj IDs free. **Ready with changes.**
+
+### X-7 · major · Locale unspecified for titles and the fake
+**Answer:** Fixed — D-2 adds `TextMatch.posix`; D-10 (titles), D-11 and D-13 (`FakeStore`) pass it, so `III` is a suffix and fake tests pass on any machine locale.
+
+### X-8 · minor · Empty form with parts
+**Answer:** Fixed — D-11 keeps the `!o.nameForm.isEmpty` filter; Go refuses an empty form.
+
+### X-9 · minor · More fake-backed fixtures may need parts
+**Answer:** Fixed — the Stop condition allows adding parts in any test file with assertions unchanged, named in the Landed note; only an assertion change outside `CatalogQueryRegistryTests` stops.
+
+### X-10 · minor · Scope entry's "Not this PR. Go changes." goes false
+**Answer:** Fixed — STEP-9 rewrites that line too.
+
+### X-11 · nit · T-10 setup; T-13 already passes today
+**Answer:** Fixed — T-10 names `makeModel` and `warm`; T-13 is marked a regression test.
