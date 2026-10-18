@@ -1,7 +1,7 @@
 # Ship log — S10-64 Check a thumbnail before decoding it
 
 **Plan:** [`S10-64-thumbnail-decode-guard.md`](S10-64-thumbnail-decode-guard.md) · **Branch:** `s10-64-thumbnail-decode-guard` · **PR:** #469
-**State:** fixing 2
+**State:** ready
 
 Base: `main` @ `4f15ba70` (plan written against `e97cf54`). Worktree: `.claude/worktrees/s10-64-thumbnail-decode-guard`.
 
@@ -77,3 +77,11 @@ Files: `macos/App/Platform/ThumbnailCache.swift`; `docs/deployment-plan/spike-10
 Failing test first: none. The failure is reachable only through `clear()`, which this fix deletes. Confirm with `grep -rn "clear()" macos` that nothing calls `ThumbnailCache.clear()` before deleting it. If something does, stop and report.
 Do: Delete `clear()`, `clearGeneration`, and its doc comment. Drop the `generation` parameter from `finish` and the capture in `image(projectDir:relPath:)`. `finish` always sets `inflight[key] = nil` and inserts any outcome other than `.abandoned`; fix its doc comment to match. Change nothing else in the cancellation design. In the plan: add a sentence to the Landed note that `clear()` (no caller) was removed in fix round 2. Amend the Out row "Cancelling a decode when every waiter has gone" so it reads as the part still left: cancelling a decode that is already running.
 Check: all `ThumbnailCacheTests` pass, `dropsAQueuedDecodeWhoseCallersHaveGone` and `coalescesInflightLoads` included; scripts/check-pr.sh PASS.
+
+## Round 2 — fix
+Head `eac05756`. Gate PASS (orchestrator run). F-4 done: `clear()`, `clearGeneration` and the `generation` parameter deleted (grep confirmed no caller); the plan's Landed note and Out row are updated. No deviations. Per the caps there is no round 3.
+
+Orchestrator note, not reviewed: an abandoned load resumes any caller that registered between the slot check and `finish` with nil and stores nothing, so that caller shows the fallback until the view reloads. It needs a re-request in the same main-actor gap; folded into the PRF-2 follow-up.
+
+## Result
+Gate PASS · CI see PR #469 · open: none · follow-ups: UX-R2-a (`CachedThumbnail.load()` stale write on cancel), PRF-2 remainder (cancel a running decode; the abandoned-load race above), CON-1/CON-2 nits · to user: SEC-1, PRF-1 (both answered "Fix in this PR", 2026-10-18)
