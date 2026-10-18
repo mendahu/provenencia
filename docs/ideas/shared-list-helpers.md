@@ -17,3 +17,7 @@
 ## Properties empty search state
 
 Properties draws its own "no results" state instead of `PVEmptyState`.
+
+## One catalog querier
+
+S12-01 adds `database.Querier` (`Query` + `QueryRow`, in `core/database/tx.go`) for reads that run over a `*sql.DB` or a write's `*sql.Tx`. Nine packages still declare their own copy: `sqlbatch`, `sourceeventtitles`, `conclusiondetails`, `graphcache`, `matching`, `namealiases`, `promotealign`, `autoreconciler` (adds `Exec`) and `effects` (`querier`), plus inline interfaces in `datevalues`, `namevalues` and `canonicalentities`. Move each onto `database.Querier` (or a `database` type that adds `Exec`) when its package is next touched.
