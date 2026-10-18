@@ -279,7 +279,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 ## 10. Manual check
 
 1. Open a project with a Source titled `Montréal parish register`. Type `Montreal` in the omnibar. The Source is the first hit and reads as a title match.
-2. Open Properties, pick the Role Property (a term Property researchers may extend), add the term `Godfather`, then add `god-father`. The editor refuses with "This property already has the term “Godfather”. Use that one, or give this one a different label." (AC-4.8). Add `Godmother`, then rename it to `GODFATHER`: the same message. Rename `Godfather` to `God-Father`: it saves.
+2. Open a Source's citation composer, choose a term Property's value (Role), choose Add custom term, enter `Godfather` and confirm, then Add custom term `god-father`: the sheet shows "This property already has the term “Godfather”. Use that one, or give this one a different label." under the Label field (AC-4.8). Renaming has no macOS UI yet; AC-4.5 and AC-4.6 are covered by `TestPropertyTerms`.
 3. Open a project whose Place has the toponyms `Montréal` and `Montreal` on two Sources. Search `Montreal`: one Place hit, titled `Montréal`.
 
 ## 11. Risks and stop conditions
@@ -318,3 +318,5 @@ Differences from the plan:
 - The `MatchText` label check reuses `distinctAlternates` with the title and the kept alternates, so a label with no text key adds no line.
 - Extra tests: `TestPropertyTerms` gained two rows (create refusals, rename refusal and restyle) beside the changed "duplicate user key" row.
 - The in-app check (section 10) is left for the user.
+- AC-4.8's "term editor" is the citation composer's Add custom term sheet.
+- `text.key` is one pass over the string (`joinedKey`) after review: rescoring keys every field of every candidate per query, and the first version split and folded word by word. The Risks row's "bounded by FTS candidates" was wrong: `mergeFTS` has no LIMIT.
