@@ -9,6 +9,14 @@ type Meta struct {
 	Cardinality string // a Cardinality* constant; empty reads as single
 }
 
+// CardinalityOrSingle is m's cardinality, with empty read as single.
+func (m Meta) CardinalityOrSingle() string {
+	if m.Cardinality == "" {
+		return CardinalitySingle
+	}
+	return m.Cardinality
+}
+
 const (
 	ValueTypeText    = "text"
 	ValueTypeInteger = "integer"

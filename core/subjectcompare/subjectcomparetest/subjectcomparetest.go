@@ -2,6 +2,11 @@
 package subjectcomparetest
 
 import (
+	"maps"
+	"slices"
+	"strings"
+
+	pt "github.com/mendahu/provenencia/core/propertycompare/propertycomparetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -23,4 +28,15 @@ func Metas() subjectcompare.Metas {
 		vocabkey.PropertyToponym:    {ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalityMultiple},
 		"event_name":                {ValueType: propertymeta.ValueTypeText, Cardinality: single},
 	}
+}
+
+// Labels names a Subject's values for a failure message and an expected value:
+// each property in ascending key order as `key=` and its values'
+// propertycomparetest.Labels, joined with `; `.
+func Labels(v subjectcompare.Values) string {
+	var out []string
+	for _, p := range slices.Sorted(maps.Keys(v)) {
+		out = append(out, string(p)+"="+pt.Labels(v[p]))
+	}
+	return strings.Join(out, "; ")
 }

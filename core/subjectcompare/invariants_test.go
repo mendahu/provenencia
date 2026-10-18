@@ -2,11 +2,9 @@ package subjectcompare_test
 
 import (
 	"fmt"
-	"maps"
 	"math"
 	"math/rand"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
@@ -78,15 +76,6 @@ func draw(r *rand.Rand, kind vocabkey.SubjectType) Vals {
 		}
 	}
 	return vals
-}
-
-// labels names a side: property=values, joined in ascending key order.
-func labels(vals Vals) string {
-	var out []string
-	for _, p := range slices.Sorted(maps.Keys(vals)) {
-		out = append(out, string(p)+"="+pt.Labels(vals[p]))
-	}
-	return strings.Join(out, "; ")
 }
 
 func clone(vals Vals) Vals {
@@ -236,7 +225,7 @@ func TestInvariants(t *testing.T) {
 					}
 					counted++
 					if msg != "" {
-						t.Errorf("case %d: a=%s b=%s: %s", i, labels(a), labels(b), msg)
+						t.Errorf("case %d: a=%s b=%s: %s", i, subjectcomparetest.Labels(a), subjectcomparetest.Labels(b), msg)
 					}
 				}
 			})
