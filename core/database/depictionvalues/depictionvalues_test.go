@@ -36,7 +36,7 @@ func TestDepictionValues(t *testing.T) {
 	if err := files.Insert(tx, files.File{ID: fileID, ChecksumSHA256: strings.Repeat("a", 64), MediaType: "image/png", ByteSize: 1}); err != nil {
 		t.Fatal(err)
 	}
-	const region = depictionvaluetest.Locator
+	const region = depictionvaluetest.Region
 
 	t.Run("insert and lookup", func(t *testing.T) {
 		id, err := InsertTx(tx, depictionvalue.Value{RegionJSON: region, ImageFileID: fileID})
