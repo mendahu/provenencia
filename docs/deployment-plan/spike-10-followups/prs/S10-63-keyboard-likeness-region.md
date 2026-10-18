@@ -161,15 +161,19 @@ A researcher who works from the keyboard or with VoiceOver can save a likeness. 
 
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
-| `CitationComposerModel.useDepictionRegion(_:)` *(new)* | func | `commitViewerRegion(_:)`, `startDepictionDrawing()` in `CitationComposerModel+Depiction.swift` | It calls `commitViewerRegion`; it only adds the page move `startDepictionDrawing` does and the enable guard |
-| `CitationComposerModel.depictionWholeFileRegion` *(new)* | static let | `ArtifactRegionGeometry.rectanglePoints(from:to:)`, `ArtifactRegionGeometry.unitSquare` | Built from `rectanglePoints`; searched `unitSquare`, `wholePage`, `x: 1, y: 1` in `Features/ArtifactViewer` and `Features/CitationComposer` and found no region constant |
-| `CitationComposerModel.depictionCitationRegion` *(new)* | var | `depictionPage` (same file), `viewerRegion` | `viewerRegion` returns the depiction draft's region while the dialog is open; this reads the Citation's region the way `depictionPage` reads its page |
+| `CitationComposerModel.prepareDepictionRegion()` *(new, private)* | func | `startDepictionDrawing()` (same file) | It is `startDepictionDrawing`'s existing guard, base check, and page move, pulled out so the buttons share it (D-4) |
+| `CitationComposerModel.useDepictionRegion(_:)` *(new)* | func | `commitViewerRegion(_:)` | `prepareDepictionRegion()` then `commitViewerRegion`; no rule of its own |
+| `ArtifactRegionDraft.whole` *(new)* | static let | `CGRect.unitSquare`, `ArtifactRegionGeometry.rectanglePoints(from:to:)` | `CGRect.unitSquare` is a rectangle, not a region draft; searched `whole`, `wholePage`, `x: 1, y: 1` in `Features/ArtifactViewer` and `Features/CitationComposer` and found no region constant (only test builders) |
+| `CitationComposerModel.depictionCitationLocator` *(new, private)* | var | `depictionPage` (same file) | `depictionPage` is rewritten onto it (D-6) |
+| `CitationComposerModel.depictionCitationRegion` *(new)* | var | `viewerRegion` | `viewerRegion` returns the depiction draft's region while the dialog is open; this reads the Citation's |
+| `CitationComposerModel.depictionWholeFileTitle` *(new)* | var | `depictionCaption` (same file) | Same shape: a resource the view reads and a test checks (D-3) |
+| `AccessibilityAnnouncement.post(_:priority:)` *(new)* in `macos/App/Platform/AccessibilityAnnouncement.swift` *(new)* | func / file | `NameValueEditorForm.moveAndAnnounce` (the one `.announcementRequested` post); `CitationComposerModel.identityAnnouncement` (a hint, not a post) | `moveAndAnnounce` moves onto it; no kit or Platform helper posts announcements today (`rg announcementRequested macos/App`) |
 | `CitationComposerViewerPane.drawingCancelFocused` *(new)* | `@FocusState` | `findFieldFocused` in the same view | A second field of the same kind for a different control |
 | `L10n.CitationComposer.depictionUseWholePhoto`, `depictionUseWholePage`, `depictionUseCitationRegion` *(new)* | key | `depictionDraw`, `depictionRedraw` | New actions need new words |
 | Tests in `CitationComposerDepictionTests` *(new cases)* | test | the file's helpers | Same suite and helpers |
 
-**Builds on.** `commitViewerRegion` and `depictionPageCheck` (the one region rule), `FlowLayout`, `PVButton`, the `NameValueEditorForm` announcement call, the `add-localized-string` key pattern.
-**Deletes.** None — nothing becomes dead.
+**Builds on.** `commitViewerRegion` and `depictionPageCheck` (the one region rule), `FlowLayout`, `PVButton`, `claimTab`'s focus double hop, the `add-localized-string` key pattern.
+**Deletes.** The inline `NSAccessibility.post` call in `NameValueEditorForm.moveAndAnnounce` (replaced by the helper) and the ternary in `depictionPage` (now read from `depictionCitationLocator`).
 **Next adds.** The audit's UX-6 (block Draw on files that cannot be cut) changes `canStartDepictionDrawing` once and the two buttons follow it. A second depiction key (signature, a place photo) uses the same value area and gets both buttons for free.
 
 ### Schema
@@ -190,14 +194,14 @@ None — the region goes over the existing observation save calls as region JSON
 
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
-| Whole-file button | `PVButton` (`.secondary`, `.sm`) | `CitationComposerAuthoringBox.swift` `CitationDepictionValueArea` | Title `depictionUseWholePage` when `model.depictionCapabilities.supportsPageLocator`, else `depictionUseWholePhoto`. Action `model.useDepictionRegion(CitationComposerModel.depictionWholeFileRegion)`. `.disabled(!model.canStartDepictionDrawing)`. Identifier `citationComposer.depiction.useWhole` |
-| Citation-region button | `PVButton` (`.secondary`, `.sm`) | same | Shown only when `model.depictionCitationRegion != nil`. Action `model.useDepictionRegion(region)`. Same disabled rule. Identifier `citationComposer.depiction.useCitationRegion` |
+| Whole-file button | `PVButton` (`.secondary`, `.sm`) | `CitationComposerAuthoringBox.swift` `CitationDepictionValueArea` | Title `model.depictionWholeFileTitle`. Action: `if model.useDepictionRegion(.whole) { AccessibilityAnnouncement.post(L10n.string(model.depictionCaption)) }` (D-15). `.disabled(!model.canStartDepictionDrawing)`. Identifier `citationComposer.depiction.useWhole` |
+| Citation-region button | `PVButton` (`.secondary`, `.sm`) | same | Shown only when `model.depictionCitationRegion != nil`. Action: the same announce-on-true call with `model.useDepictionRegion(region)`. Same disabled rule. Identifier `citationComposer.depiction.useCitationRegion` |
 | Button row | `FlowLayout` | same file | Replaces the single Draw button in the caption `VStack`: Draw, whole file, citation's region, in that order |
-| Drawing band Cancel | `PVButton` (existing) | `CitationComposerViewerPane.swift` `drawingBand` | `.focused($drawingCancelFocused)`; `.onAppear` of the band sets `drawingCancelFocused = true` on the next main-queue turn and posts the announcement |
+| Drawing band Cancel | `PVButton` (existing) | `CitationComposerViewerPane.swift` `drawingBand` | `.focused($drawingCancelFocused)`; `.onAppear` of the band runs D-11's double hop and posts the announcement; `.onDisappear` clears the focus flag |
 
-Frame in words (no board): the Likeness value area keeps its 96pt preview on the left. On the right, the italic caption, then a row of three small secondary buttons: **Draw on the file** (crop icon), **Use the whole photo** (or **Use the whole page** on a PDF), **Use the citation's region** (only when the Citation has a region). When the row is too narrow the third, then the second, button wraps to a new line under Draw, with `space4` between lines.
+Frame in words (no board): the Likeness value area keeps its 96pt preview on the left. On the right, the italic caption, then a row of three small secondary buttons: **Draw on the file** (crop icon), **Use the whole photo** (or **Use the whole page** on a PDF), **Use the citation's region** (only when the Citation has a region). When the row is too narrow the third, then the second, button wraps to a new line under Draw, with `space3` between lines.
 
-States: no region → the empty caption (`depictionCaptionEmpty`), all buttons enabled; region set → the preview shows the cut, the caption reads the box caption, Draw reads **Draw again**; needs page → the warning Callout shows and all three buttons are disabled; transcribing → all three disabled. Large file: the preview render is unchanged (audit PRF-1 is Out). Accessibility: each button reads its title; Tab moves Draw → whole file → citation's region; drawing mode moves focus to Cancel and is announced.
+States: no region → the empty caption (`depictionCaptionEmpty`), all buttons enabled; region set → the preview shows the cut, the caption reads the box caption, Draw reads **Draw again**; needs page → the warning Callout shows and all three buttons are disabled; transcribing → all three disabled. Large file: the preview render is unchanged (audit PRF-1 is Out). Accessibility: each button reads its title; Tab moves Draw → whole file → citation's region; a press that sets the region announces the new caption; drawing mode moves focus to Cancel and is announced.
 
 ### Strings
 
@@ -216,30 +220,38 @@ Files: `core/locator/depiction_test.go`. Rule: `.cursor/rules/go-tests.mdc`.
 Do: add a `whole` constant beside `tri`: `{"type":"region","unit":"normalized","points":[{"x":0,"y":0},{"x":1,"y":0},{"x":1,"y":1},{"x":0,"y":1}]}`. Add two rows to `TestValidateDepictionRegion`: `"whole file, page 1 both"` → `doc(page("1"), whole)` with `doc(page("1"))`, no error; `"whole file, no page"` → `doc(whole)` with `doc(art)`, no error.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/locator/` passes.
 
-**STEP-2 — Model: one entry for a region the dialog sets**
-Files: `macos/App/Features/CitationComposer/CitationComposerModel+Depiction.swift`.
-Do: add `static let depictionWholeFileRegion` (D-5), `var depictionCitationRegion: ArtifactRegionDraft?` (D-6), and `@discardableResult func useDepictionRegion(_ region: ArtifactRegionDraft) -> Bool` (D-4): return false unless `canStartDepictionDrawing`; when `depictionCapabilities.supportsPageLocator` and `depictionPage` is set, call `artifactViewer.setPage(page)`; return `commitViewerRegion(region)`. Doc comments in the file's style.
-Check: the app target builds (`xcodebuild build -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS'`).
+**STEP-2 — Model and Platform: one preamble, one locator, one announcement helper**
+Files: `macos/App/Features/CitationComposer/CitationComposerModel+Depiction.swift`, `macos/App/Features/ArtifactViewer/ArtifactRegionTool.swift`, `macos/App/Platform/AccessibilityAnnouncement.swift` *(new)*, `macos/App/Features/Names/NameValueEditorForm.swift`, `macos/Provenencia.xcodeproj/project.pbxproj`. Skill: `add-ui-component` (pbxproj line of its checklist).
+Do:
+- `ArtifactRegionTool.swift`: add `static let whole` on `ArtifactRegionDraft` (D-5).
+- Model: add `private var depictionCitationLocator` and rewrite `depictionPage` onto it; add `var depictionCitationRegion: ArtifactRegionDraft?` (D-6); add `var depictionWholeFileTitle: LocalizedStringResource` (D-3); add `private func prepareDepictionRegion() -> ComposerBase?` and rewrite `startDepictionDrawing()` onto it; add `@discardableResult func useDepictionRegion(_ region: ArtifactRegionDraft) -> Bool` (D-4); rewrite the `canStartDepictionDrawing` doc comment (D-14). Doc comments in the file's style.
+- Platform: add `AccessibilityAnnouncement.swift` (`import AppKit`) with D-16's `post`; register it in `project.pbxproj` with four new objects copied from `ProjectFiles.swift`'s (PBXBuildFile, PBXFileReference, Platform group child, app Sources phase), using unused `AA00000000000000000000xx` IDs.
+- `NameValueEditorForm.moveAndAnnounce`: replace its `NSAccessibility.post` call with `AccessibilityAnnouncement.post(message)`.
+Check: the app target builds (`xcodebuild build -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`); the existing `CitationComposerDepictionTests` pass (`xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/CitationComposerDepictionTests CODE_SIGNING_ALLOWED=NO`), proving Draw is unchanged.
 
 **STEP-3 — View: the two buttons and their copy**
 Files: `macos/App/Features/CitationComposer/CitationComposerAuthoringBox.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`. Skills: `add-localized-string`, `add-ui-component`.
-Do: add the three keys (§6 Strings). In `CitationDepictionValueArea`, replace the lone Draw button with the `FlowLayout` row of §6 macOS (D-9, D-7, D-13). Draw keeps its modifiers.
+Do: add the three keys (§6 Strings) and return them from `depictionWholeFileTitle`. In `CitationDepictionValueArea`, replace the lone Draw button with the `FlowLayout` row of §6 macOS (D-9, D-7, D-13, D-15). Draw keeps its modifiers.
 Check: `python3 scripts/check-localizable-xcstrings.py` prints OK; the app target builds.
 
 **STEP-4 — Drawing band: focus Cancel and announce**
 Files: `macos/App/Features/CitationComposer/CitationComposerViewerPane.swift`.
-Do: per D-11, add `@FocusState private var drawingCancelFocused: Bool`, put `.focused($drawingCancelFocused)` on the band's Cancel, and on the band's `.onAppear` run `DispatchQueue.main.async { drawingCancelFocused = true }` and the `NSAccessibility.post` call copied from `NameValueEditorForm.moveAndAnnounce` with `L10n.string(L10n.CitationComposer.depictionDrawingHint)`. Add `import AppKit` only if the file does not compile without it.
+Do: per D-11, add `@FocusState private var drawingCancelFocused: Bool`, put `.focused($drawingCancelFocused)` on the band's Cancel, run the double hop and `AccessibilityAnnouncement.post(L10n.string(L10n.CitationComposer.depictionDrawingHint))` from the band's `.onAppear`, and clear the flag in `.onDisappear`. The file needs no new import: the AppKit call lives in the helper.
 Check: the app target builds; manual check step 6.
 
 **STEP-5 — Swift tests**
 Files: `macos/ProvenenciaTests/CitationComposerDepictionTests.swift`. Skill: `add-swift-test`.
-Do: add T-2 to T-9 (§8) with the file's existing helpers. Give `editingSavedLikeness` a `region: String` parameter whose default is today's `regionJSON(rect(0.1, 0.1, 0.4, 0.4))`, so existing callers are unchanged. Compare copy through `L10n.string(…)`, not raw English.
-Check: `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/CitationComposerDepictionTests` passes.
+Do: add T-2 to T-10 (§8) with the file's existing helpers. Give `editingSavedLikeness` a `region: String` parameter whose default is today's `regionJSON(rect(0.1, 0.1, 0.4, 0.4))`, so existing callers are unchanged. Build a Citation locator with `regionJSON(_:page:)` (nil rect for page only) and pass it to `seedCitation(locatorJSON:)`; an "edit entry" is `makeModel(citationID: "cit-1")` with no `observationID`, as `existingPDFCitationKeepsItsPage` does; move the viewer with `artifactViewer.setPage(_:)` after `prepare()`. Compare copy through `L10n.string(…)`, not raw English.
+Check: `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/CitationComposerDepictionTests CODE_SIGNING_ALLOWED=NO` passes.
 
 **STEP-6 — Docs**
-Files: `docs/deployment-plan/spike-10-followups/deployment-plan.md` (map row), this plan (status and Landed note), `docs/deployment-plan/archive/spike-10/README.md`.
-Do: per the Definition of done. In the Spike 10 decisions note, add one bullet after the depiction bullet: "**A likeness takes its region from the keyboard too.** Drawing stays a pointer action; **Use the whole photo** (or page) and **Use the citation's region** set the region without drawing, and Draw moves focus to Cancel and announces drawing mode."
+Files: `docs/deployment-plan/archive/spike-10/README.md`.
+Do: in the Spike 10 decisions note, add one bullet after the depiction bullet: "**A likeness takes its region from the keyboard too.** Drawing stays a pointer action; **Use the whole photo** (or page) and **Use the citation's region** set the region without drawing, and Draw moves focus to Cancel and announces drawing mode."
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10-followups/prs/S10-63-keyboard-likeness-region.md` reports no errors; the links in the edited files resolve.
+
+The map row (`docs/deployment-plan/spike-10-followups/deployment-plan.md`, S10-63 → `Landed #N`), this plan's Status (`Landed in #N (date)`), and its Landed note go in `implement-pr` step 8's commit "Record S10-63 as landed in pull request N." after the draft PR has a number; this folder has no `completed.md`.
+
+Commits, in order: STEP-1 ("Prove a whole-photo rectangle passes the likeness region check."); STEP-2 ("Share one announcement helper and one depiction region preamble."); STEP-4, its one file staged alone ("Move focus to Cancel and announce when likeness drawing starts."); STEP-3 and STEP-5 together, staged once T-2 to T-10 pass ("Let a keyboard user give a likeness the whole photo or the citation's region."); STEP-6 ("Record that a likeness takes its region from the keyboard too."). Then the step-8 commit.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
 
@@ -248,18 +260,19 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
 | T-1 | Go | `core/locator/depiction_test.go` `TestValidateDepictionRegion` (two new rows) | whole rectangle on page 1 with Citation page 1 → nil; whole rectangle, no page, artifact-only Citation → nil | AC-1.7, D-5 |
-| T-2 | Swift | `CitationComposerDepictionTests` `wholePhotoSetsTheRegionAndSaves` *(new)* | `seeded()`, new Likeness draft, `useDepictionRegion(CitationComposerModel.depictionWholeFileRegion)` → true; `draftValues` region points equal `rect(0, 0, 1, 1).points`, kind `.rectangle`, `presented == .authoring`; `saveAuthoring()` → last `addObservationsToCitation` call ends with ` depiction=1 depictionFile=present`, saved region JSON has no `page` selector, `isMissing(store.recordedDepictionPaths)` | AC-1.1, AC-1.2 |
+| T-2 | Swift | `CitationComposerDepictionTests` `wholePhotoSetsTheRegionAndSaves` *(new)* | `seeded()`, new Likeness draft, `useDepictionRegion(.whole)` → true; `draftValues` region points equal `rect(0, 0, 1, 1).points`, kind `.rectangle`, `presented == .authoring`; `saveAuthoring()` → last `addObservationsToCitation` call ends with ` depiction=1 depictionFile=present`, saved region JSON has no `page` selector, `isMissing(store.recordedDepictionPaths)` | AC-1.1, AC-1.2, D-5 |
 | T-3 | Swift | `CitationComposerDepictionTests` `wholePageMovesToTheCitationsPage` *(new)* | `seeded(.pdf)`, `seedCitation` with page 2, edit entry, viewer on page 1, new Likeness draft, whole region → viewer page 2, draft page 2, region whole | AC-1.3, D-4 |
 | T-4 | Swift | `CitationComposerDepictionTests` `wholePageStampsANewCitationsPage` *(new)* | `seeded(.pdf)`, add entry, `artifactViewer.setPage(2)`, whole region → `model.locator.page == 2`, draft page 2 | AC-1.4 |
 | T-5 | Swift | `CitationComposerDepictionTests` `regionButtonsFollowDraw` *(new)* | existing PDF Citation with no page → `useDepictionRegion` returns false and the draft has no region; image Citation with `model.transcriptions.isTranscribing = true` (as `drawCannotStartWhileTranscribing` sets it) → returns false | AC-1.5, AC-1.6, D-7 |
-| T-6 | Swift | `CitationComposerDepictionTests` `citationRegionIsCopied` *(new)* | `seedCitation` with `regionJSON(rect(0.2, 0.2, 0.6, 0.7))`, edit entry, new Likeness draft → `depictionCitationRegion` equals that region; `useDepictionRegion` with it → draft region equals it | AC-2.1, D-6 |
+| T-6 | Swift | `CitationComposerDepictionTests` `citationRegionIsCopied` *(new)* | `seedCitation(locatorJSON: regionJSON(rect(0.2, 0.2, 0.6, 0.7)))`, edit entry, new Likeness draft → `depictionCitationRegion` equals that region; `useDepictionRegion` with it → draft region equals it. Then, on the same model before the draft: `setRegion(rect(0.5, 0.5, 0.9, 0.9))` on the Citation without saving, open a Likeness draft → `depictionCitationRegion` is still `rect(0.2, 0.2, 0.6, 0.7)` | AC-2.1, AC-2.7, D-6 |
 | T-7 | Swift | `CitationComposerDepictionTests` `citationRegionOnItsPage` *(new)* | `seeded(.pdf)`, Citation page 1 with a region, viewer page 2 → after the call, viewer page 1 and draft region on page 1 | AC-2.2 |
 | T-8 | Swift | `CitationComposerDepictionTests` `noCitationRegionMeansNone` *(new)* | artifact-only Citation → `depictionCitationRegion == nil`; new Citation after `setRegion(rect(0.1, 0.1, 0.5, 0.5))` then a Likeness draft → equals that region | AC-2.3, AC-2.4 |
 | T-9 | Swift | `CitationComposerDepictionTests` `regionButtonOnAnEditIsARedraw` *(new)* | `editingSavedLikeness()`, `useDepictionRegion(rect(0.5, 0.5, 0.9, 0.9))` → `isDepictionRedrawn`, the file's `caption(model)` helper returns `L10n.string(L10n.CitationComposer.depictionCaptionRedrawn)`, `saveEdit()` sends an `updateObservation` call ending ` depiction=1 depictionFile=present`; `editingSavedLikeness(region: regionJSON(rect(0, 0, 1, 1)))` then the whole region again → `isDepictionRedrawn == false`. STEP-5 adds the `region:` parameter to `editingSavedLikeness`, defaulting to today's `regionJSON(rect(0.1, 0.1, 0.4, 0.4))` | AC-2.5, AC-2.6, D-8 |
+| T-10 | Swift | `CitationComposerDepictionTests` `wholeFileTitleFollowsTheFile` *(new)* | `seeded(.pdf)` → `L10n.string(model.depictionWholeFileTitle) == L10n.string(L10n.CitationComposer.depictionUseWholePage)`; `seeded()` (image) → `depictionUseWholePhoto` | AC-1.8, D-3 |
 
-AC-3.1, AC-3.2 and AC-3.3 are view-level focus and VoiceOver behavior: manual check steps 6 and 7.
+AC-1.9, AC-3.1, AC-3.2, AC-3.3 and AC-3.4 are view-level focus and VoiceOver behavior: manual check steps 6, 7 and 8. T-3, T-4 and T-7 also prove the shared preamble (`prepareDepictionRegion`) moves the page for the buttons; the existing Draw tests prove it still does for Draw.
 
-Must stay green: everything `scripts/check-pr.sh` runs. The suite most likely to break: `CitationComposerDepictionTests` (`tabFromPropertySkipsADisabledDraw`, `drawingDisablesCitationControlsAndLeaveReturns`).
+Must stay green: everything `scripts/check-pr.sh` runs. The suites most likely to break: `CitationComposerDepictionTests` (`tabFromPropertySkipsADisabledDraw`, `drawingDisablesCitationControlsAndLeaveReturns`, the PDF page tests that now run through `prepareDepictionRegion`), and `NameValueDraftTests` (part moves; the draft logic is untouched, only the announcement call moves).
 
 ## 9. Definition of done
 
@@ -271,8 +284,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. The suite most likely to
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left
 - [ ] UI matches §6 macOS (brief waived); no new kit primitive
 - [ ] Version bump: none
-- [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
-- [ ] spike-10-followups/deployment-plan.md: S10-63 row status → Landed #N
+- [ ] After the draft PR has a number, implement-pr step 8's commit "Record S10-63 as landed in pull request N.": this plan's Status → Landed in #N (date) with a Landed note listing every difference from the plan, and the S10-63 row in spike-10-followups/deployment-plan.md → Landed #N (this folder has no completed.md)
 - [ ] Brief: none (waived)
 - [ ] Domain doc: archive/spike-10/README.md gains the CDR-13 amendment bullet (STEP-6)
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
@@ -288,13 +300,14 @@ On a Mac, with System Settings → Keyboard → Keyboard navigation on.
 4. Edit the second likeness; press **Use the whole photo**. The caption reads "Redrawn. Saving replaces the saved image". Save; the thumbnail shows the whole photo.
 5. Open the PDF on page 2, save the Citation with page 2, move the viewer to page 1. Add a Likeness: the button reads **Use the whole page**; press it. The viewer moves to page 2 and the preview shows page 2.
 6. In a Likeness dialog press **Draw on the file** with Space. The drawing band appears and the focus ring is on **Cancel**. Press Space: drawing ends and the dialog returns. Press Draw again, then Escape: the same.
-7. Turn on VoiceOver. Press **Draw on the file**. VoiceOver says "Draw the region with the tools above. Escape goes back to the observation." Press Escape.
+7. Turn on VoiceOver. Press **Draw on the file**. VoiceOver says "Draw the region with the tools above. Escape goes back to the observation." Press Escape. Then press **Use the whole photo**: VoiceOver reads the new caption.
+8. With VoiceOver on, open a person's name editor and move a name part with its move button: the part-moved announcement still plays.
 
 ## 11. Risks and stop conditions
 
 | Risk | Mitigation |
 | --- | --- |
-| Focus does not land on Cancel because the sheet is still dismissing when the band appears | D-11 sets focus on the next main-queue turn, as `placeOpeningFocusIfNeeded` does |
+| Focus does not land on Cancel because the sheet is still dismissing when the band appears | D-11 writes the focus twice, a turn apart, as `claimTab` does |
 | Three buttons overflow the dialog width | `FlowLayout` wraps them (D-9) |
 | The whole-page preview of a large PDF page renders slowly on the main thread | Same cost as drawing a page-sized box today; audit PRF-1 is Out |
 
@@ -304,6 +317,8 @@ On a Mac, with System Settings → Keyboard → Keyboard navigation on.
 - A whole-file rectangle fails `ArtifactRegionGeometry.isValidPolygon` or `locator.ValidateDepictionRegion` (T-1 fails without a code change in `core/locator`).
 - `CitationDepictionValueArea` is no longer the value area for both the add dialog and `CitationComposerEditSheet`.
 - Focus on Cancel needs a change to `PVButton` or another kit component.
+- Manual check step 6 shows focus is not on Cancel after D-11's double hop.
+- Moving `NameValueEditorForm.moveAndAnnounce` onto the helper changes when or what it announces (manual check step 8).
 - The save of a button-set region on an existing Citation is refused by Go with `locator.invalid` (the saved Citation locator and `depictionCitationRegion` disagree).
 
 ## 12. Open questions
