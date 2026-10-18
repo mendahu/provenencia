@@ -61,7 +61,7 @@ These are the calls for this spike. PR plans treat them as binding.
 - **Property compare holds only what a Subject says about itself** ([layer 2](comparison-layers.md#layer-2-property-comparison)): negatives, neutral terms, cardinality, missing values. No support or standing; no points.
 - **Subject compare returns similarity (0–1) and evidence (points)** ([layer 3](comparison-layers.md#layer-3-subject-comparison)). Similarity weighs a conflict by its penalty. No knockout flag: a decisive conflict (event type) is a large penalty. Pairs compared together: sex at birth with gender; `date` with `start_date` / `end_date`.
 - **Entity compare is against the reconciled conclusion** ([entities](comparison-layers.md#entities-compare-against-the-conclusion)). The profile is strict: displayed values positive, denied values negative, nothing else. `subjectprofile.Build` also takes `Options.Excluding`, a list of members to leave out.
-- **Lifespan is for people only** ([lifespan](comparison-layers.md#lifespan-a-derived-property-for-people)): derived from direct neighbors' dates by registry rules; an impossible overlap is a large conflict, agreement weighs almost nothing.
+- **Lifespan is for people only** ([lifespan](comparison-layers.md#lifespan-a-derived-property-for-people)): a window and a span from every dated event the person takes part in (user, 2026-10-18); a span outside the other side's window is a large conflict, agreement weighs almost nothing.
 - **Segment compare is one hop and pure** ([segments](comparison-layers.md#segments-layer-5-and-graph-alignment-layer-6)). Only subject-of-birth and subject-of-death are declared one-cardinality; a differing neighbor there subtracts. Neighbor credit travels one hop; chains come from the walk.
 - **Graph alignment follows the layer 6 procedure** ([procedure](comparison-layers.md#layer-6-procedure)): shortlist → score, keep top K with ties → one queue → segments around accepted pairs → settle dirty pairs. The answer doesn't depend on where the walk starts.
 - **Bands come from evidence** ([bands](comparison-layers.md#bands)): similarity only gates candidates and gives the first sort. The accept bar is its own setting. A conflict shows a contested marker; it never caps the band.
@@ -316,9 +316,9 @@ Ports `subjectvocab`'s `TestDefaultProfileCardinality` as a seed check of the su
 
 #### S11-12 — Lifespan for people
 
-**Ships.** The profile builder derives a person's lifespan from direct neighbors' dates by registry rules (birth, death, marriage, parent of, residence); subject compare checks it as a people-only pair with a large conflict penalty and near-zero agree weight.
-**Not this PR.** Events and places. Two-hop rules.
-**Check.** An entity who died in 1840 against a Subject born in 1850 conflicts; born 1850 / died 1990 conflicts; born 1850 / died 1920 is consistent.
+**Ships.** The profile builder derives a person's lifespan from every dated event they take part in: birth starts it, death or burial ends it, `MaxYears` pads an open end; subject compare checks each side's span against the other's window, with a large conflict penalty and near-zero agree weight (user, 2026-10-18).
+**Not this PR.** Events and places. Age rules and two-hop rules. Loading life events (S11-13).
+**Check.** An entity who died in 1840 against a Subject born in 1850 conflicts; born 1850 / died 1990 conflicts; died 1900 / resided 1950 conflicts; born 1850 / died 1920 is consistent.
 Also builds `core/subjectcompare`'s `invariants_test.go` lead groups (`kindGroups`) from `matchregistry.Default().Subject` (its `Weights` leads, `Pools` and `Periods`), keeping only each lead's test value by hand, so the lifespan lead cannot be silently skipped by AC-3.4 / AC-3.5 (S11-10 review finding MNT-2). And folds `subjectcompare`'s `period` start and end selection loops into one helper, keeping the earliest-start and latest-end tie rules (S11-10 review finding MNT-3).
 **Context.** [Lifespan](comparison-layers.md#lifespan-a-derived-property-for-people).
 
