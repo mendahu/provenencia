@@ -653,6 +653,46 @@ func TestSearchAccentedPlaceTypo(t *testing.T) {
 	}
 }
 
+func TestFoldedQueryScoresLikeExact(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	typeID := seedType(t, c, "Book", "")
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Montréal parish register"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scores []float64
+	for _, text := range []string{"Montreal", "Montréal"} {
+		hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: text})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(hits) == 0 || hits[0].ID != uuidString(src.ID) || hits[0].MatchReason != "title" {
+			t.Fatalf("%q: want the Source first as a title hit, got %+v", text, hits)
+		}
+		scores = append(scores, hits[0].Score)
+	}
+	if scores[0] != scores[1] {
+		t.Fatalf("scores differ: Montreal %v, Montréal %v", scores[0], scores[1])
+	}
+}
+
+// TestScoreFieldsJoinsWordBreaks: rescoring keys fields, so a token matches
+// across a word break. Retrieval is not involved.
+func TestScoreFieldsJoinsWordBreaks(t *testing.T) {
+	spec, _ := kindSpec(KindSource)
+	score, field, _ := scoreFields(spec, map[string]string{"title": "Sainte-Anne register"}, newQueryTokens([]string{"sainteanne"}))
+	if score <= 0 || field != "title" {
+		t.Fatalf("score %v field %q", score, field)
+	}
+}
+
 func TestEnsureCatalogRebuildsAfterWipe(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
