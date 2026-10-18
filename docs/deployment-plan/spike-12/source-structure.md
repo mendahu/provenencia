@@ -36,7 +36,7 @@ Saving creates an ordinary new Source (new `SRC-` ref, audited create) and opens
 ```sql
 CREATE TABLE evidence_graphs (
 	id          BLOB PRIMARY KEY,
-	ref         TEXT UNIQUE NOT NULL,          -- GPH-XXXXX
+	ref         TEXT UNIQUE,                   -- GPH-XXXXX, minted in Go (EnsureRefs for backfilled rows)
 	source_id   BLOB NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
 	name        TEXT NOT NULL,                 -- "Default" when minted with the Source
 	description TEXT,
@@ -87,7 +87,7 @@ The exact `ON DELETE` classes and `catalogmodel` buckets are set by the schema P
 
 ### Migration
 
-One `Default` graph per existing Source. Every Subject moves into its Source's Default graph, and every Artifact is linked to it. Positions are keyed by Subject, so the canvas looks the same. Existing projects look unchanged.
+One `Default` graph per existing Source, with the Source's id as its id; its `GPH-` ref is minted in Go when the project next opens. Every Subject moves into its Source's Default graph, and every Artifact is linked to it. Positions are keyed by Subject, so the canvas looks the same. Existing projects look unchanged.
 
 ## Not this spike
 
