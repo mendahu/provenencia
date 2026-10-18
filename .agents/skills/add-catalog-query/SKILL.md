@@ -42,6 +42,12 @@ Official **resource / vocab `Delete`**: follow `.agents/skills/add-catalog-delet
 - `Delete` for a resource or vocab row calls `deleteimpact.Impact` in the same tx, then deletes the parent, then owned-outbound release. Facet/field deletes (notes, metadata clear) stay ordinary writes.
 - Research writes call `audit.Record` in the same tx. A new audited `EntityType` needs a non-`None` effect, and delete changes carry the parent FK — follow `.agents/skills/add-audit-scope/SKILL.md`. "Last activity" reads (`Updated`) come from the display cache, `Graph.Activity`, which loads `audit_transaction_scopes` once and follows commits.
 
+## Reads inside a write
+
+The catalog has one connection, so a read through `c.DB()` inside `writes.Run` waits on the transaction that is already open. A read a write needs takes the `*sql.Tx` through an exported `…Tx` twin (`sources.GetTx`, `artifacts.ListBySourceTx`, `sourcemetadata.ListLayoutTx`). Write the SQL and scan once in an unexported function over `database.Querier`; the Catalog read and its Tx twin both call it.
+
+A write across several tables lives in a composing package (`core/database/connect`, `core/database/sourcecopy`). It takes the `*database.Tx`, calls each owner package's write, returns the changes, and never calls `writes.Run`; the handler does.
+
 ## Tests
 
 Table-driven, in the same folder. `database.Create` a temp `*.provenencia`, `defer Close()`, cover happy path, validation, and closed catalog.
