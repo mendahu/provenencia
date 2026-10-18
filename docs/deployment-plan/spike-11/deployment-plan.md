@@ -327,6 +327,7 @@ Also builds `core/subjectcompare`'s `invariants_test.go` lead groups (`kindGroup
 **Ships.** `graphalign` scores candidates' properties with entity compare; `promotealign` seeds with it instead of `match.Rank`; duplicate-row checks (`alikeNew`, `pairNode`) use subject compare. `matching.SubjectsValues` moves to the loader that feeds `propertycompare` and `subjectprofile`. Delete `core/match` and `core/database/matching`.
 **Not this PR.** Segments and the walk (slice 4): the old walk stays until S11-16, calling the new scoring.
 **Check.** Golden and sparse cases pass; a birth is never proposed on a death; the packages are gone and `go build ./...` passes.
+**Also (from S11-12 review).** A person whose own dated events contradict each other (born after they died, an event outside their window) gets no lifespan by design (S11-12 D-12). Where this PR first shows a lifespan or a lifespan outcome to the researcher, say why it is missing instead of leaving it out silently. If nothing here shows lifespans yet, carry this line to the PR that first does.
 **Context.** Rule "`core/database/matching` is deleted".
 
 #### S11-24 — Delete frequency weighting

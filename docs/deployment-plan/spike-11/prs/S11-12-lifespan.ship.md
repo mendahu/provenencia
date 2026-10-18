@@ -47,3 +47,30 @@ MNT only (the one lens with Fix-now findings), scope `73faf105...a72660b0`. MNT-
 
 ## Result
 Gate PASS · CI pending · open: none · follow-ups: MNT-R2-1, MNT-4, CON-1, UX note (S11-13) · to user: MNT-3
+
+## User follow-up — fixing 2
+The user asked (2026-10-18) for the first three follow-ups to be done on this PR: MNT-R2-1, CON-1, MNT-4. They are not round-2 blockers; Fix plan 2 exists because the user asked. The UX note goes to the S11-13 scope entry in the map. No third review round.
+
+### Fix plan 2
+
+**F-3 — Pin that an ABT year point keeps its day-without-month after widening** (from MNT-R2-1)
+Files: `core/valuecompare/datewindow_test.go`.
+Failing test first: none expected to fail — this pins the behaviour F-2 introduced. The kept day is the intended behaviour: it matches what `DateEnds` returns for the same value unqualified.
+Do: in `TestAboutEnds`, add a subtest "about a year keeps a day with no month": `valuecompare.AboutEnds(*datevaluetest.About(1817, 0, 5), 1)` gives ok, `first.Year == 1816`, `first.Month == 0`, `first.Day == 5`, `last.Year == 1818`, `last.Day == 5`, and `first.Lo == day(1816, 1, 1)`, `last.Hi == day(1818, 12, 31)` (year bounds unchanged). If `DateEnds` rejects that value, stop and report.
+Check: `go test ./core/valuecompare/...` passes.
+
+**F-4 — `TestShiftYears` covers the end that cannot be placed** (from CON-1)
+Files: `core/valuecompare/datewindow_test.go`.
+Do: add a subtest "cannot be placed": `valuecompare.ShiftYears(valuecompare.DateEnd{Year: 1850, Month: 13}, 5)` returns `ok == false` (`boundEnd` → `datevalue.BoundDays` rejects month 13).
+Check: `go test ./core/valuecompare/...` passes.
+
+**F-5 — AC-3.5 reads the properties to pin from the group** (from MNT-4)
+Files: `core/subjectcompare/invariants_test.go`.
+Do: add `pinned []vocabkey.PropertyKey` to `group` — the lead, then its lifespan's `Span` when `s.Lifespans[kind][lead]` exists — built in `groups` beside `props`; update `groups`' doc comment. In the AC-3.5 closure replace the `set` built from `matchregistry.Default().Subject.Lifespans` with `g.pinned`. Drop the `matchregistry` import from the file only if nothing else uses it.
+Check: `go test ./core/subjectcompare/... -run TestInvariants` passes; scripts/check-pr.sh PASS.
+
+## User follow-up — fix
+Head `585097fa`. F-3 (`8cbe635b`), F-4 (`a977fb68`), F-5 (`585097fa`) done, all test-only. UX note added to the S11-13 scope entry in `deployment-plan.md` ("Also (from S11-12 review)").
+
+## Result (after user follow-up)
+Gate PASS · CI see PR · open: none · follow-ups: none left on this PR (UX note carried to S11-13) · to user: MNT-3
