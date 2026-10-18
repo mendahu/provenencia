@@ -8,8 +8,8 @@ enum ArtifactFileFixtureError: Error {
     case failed
 }
 
-/// Artifact files on disk for tests that load a viewer: a PNG, a PDF, and the
-/// catalog row that points at them.
+/// Artifact files on disk for tests: an image (PNG, JPEG, TIFF), a PDF, raw
+/// bytes, and the catalog row that points at them.
 enum ArtifactFileFixtures {
     static func uniqueProjectDir() -> String {
         FileManager.default.temporaryDirectory
@@ -23,6 +23,21 @@ enum ArtifactFileFixtures {
         relPath: String,
         width: Int = 8,
         height: Int = 8,
+        topHalfRed: Bool = false
+    ) throws {
+        try writeImage(
+            projectDir: projectDir, relPath: relPath,
+            width: width, height: height, fileType: .png, topHalfRed: topHalfRed
+        )
+    }
+
+    /// An all-red image of `fileType`, or with `topHalfRed` a red top half over a blue bottom half.
+    static func writeImage(
+        projectDir: String,
+        relPath: String,
+        width: Int = 8,
+        height: Int = 8,
+        fileType: NSBitmapImageRep.FileType = .png,
         topHalfRed: Bool = false
     ) throws {
         // A bitmap context, not NSImage.lockFocus: that draws at the display's
@@ -44,7 +59,7 @@ enum ArtifactFileFixtures {
             context.fill(CGRect(x: 0, y: 0, width: width, height: height / 2))
         }
         guard let cgImage = context.makeImage(),
-              let data = NSBitmapImageRep(cgImage: cgImage).representation(using: .png, properties: [:])
+              let data = NSBitmapImageRep(cgImage: cgImage).representation(using: fileType, properties: [:])
         else {
             throw ArtifactFileFixtureError.failed
         }
@@ -156,7 +171,7 @@ enum ArtifactFileFixtures {
         ]
     }
 
-    private static func write(_ data: Data, projectDir: String, relPath: String) throws {
+    static func write(_ data: Data, projectDir: String, relPath: String) throws {
         let url = URL(fileURLWithPath: projectDir).appendingPathComponent(relPath)
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),

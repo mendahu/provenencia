@@ -1,6 +1,6 @@
 # S10-64 — Check a thumbnail before decoding it
 
-**Status:** Planned
+**Status:** Landed in [#469](https://github.com/mendahu/provenencia/pull/469) (2026-10-18)
 **Spike / slice:** Spike 10 follow-ups · likeness hardening
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a refused image shows the missing state each reader already has)
@@ -76,7 +76,7 @@ Every thumbnail, likeness tile, portrait, and evidence-card face in the app deco
 | Out | Home |
 | --- | --- |
 | Refusing a symlinked `objects/`, shard folder, or object | S10-62 |
-| Cancelling a decode when every waiter has gone, decoding at the drawn size, bounding the cache by bytes, the evidence card keeping its own loaded image (audit PRF-2) | not planned (audit 2026-10-18 Medium items 6 and 13, not mapped) |
+| Cancelling a decode that is already running, decoding at the drawn size, bounding the cache by bytes, the evidence card keeping its own loaded image (audit PRF-2) | not planned (audit 2026-10-18 Medium items 6 and 13, not mapped) |
 | A byte-based decode limit in Go `raster` (audit SEC-3) | not planned (audit 2026-10-18 Low item) |
 | The Artifact viewer's full-resolution decode (`ArtifactViewerModel.load`) | not planned |
 | New copy or a distinct "unreadable" glyph for a refused image | not planned (audit UX-11 covers the graph tile, not mapped) |
@@ -306,3 +306,15 @@ None.
 
 **Title:** S10-64 — Check a thumbnail before decoding it
 **Body:** objective in one sentence; what shipped against US-1 – US-3; AC evidence (test names); deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-10-followups/prs/S10-64-thumbnail-decode-guard.md`.
+
+## Landed
+
+Differences from the plan:
+
+- STEP-1, STEP-2, STEP-3 and STEP-4 are one commit, not two, because the policy, the cache check and the decode slot all edit `ThumbnailCache.swift` and its tests together.
+- `macos-client.mdc` and the `swift_vocabulary_test.go` header already carried S10-61 and S10-62 text on `main`; this PR only added `ThumbnailDecodePolicy.maxDeclaredEdge` to the rule's list and kept the existing header (a superset of the D-10 wording).
+- The manual check (section 10) is left for the user.
+- User-approved amendment to D-5 (2026-10-18): `ProjectFiles.objectURL` now runs inside the decode slot, right before the file opens, so the slot wait no longer sits between the object-path check and the open.
+- User-approved amendment to D-7 (2026-10-18): a queued decode whose callers have all gone is dropped without decoding and is not stored as missing; a cancelled caller returns nil at once. This pulls part of PRF-2 forward. New test: `ThumbnailCacheTests/dropsAQueuedDecodeWhoseCallersHaveGone`.
+- Fix round 2: `ThumbnailCache.clear()` had no caller and could split one load's state, so it was removed along with `clearGeneration`; `finish` now always clears `inflight[key]`.
+- `CachedThumbnail.load()` ignores a cancelled load's result (user-requested, review follow-up).

@@ -138,10 +138,12 @@ struct CachedThumbnail: View {
             return
         }
         content = PVThumbnail.Content(loading: true)
-        if let nsImage = await ThumbnailCache.shared.image(
+        let nsImage = await ThumbnailCache.shared.image(
             projectDir: projectDir,
             relPath: trimmed
-        ) {
+        )
+        guard !Task.isCancelled else { return }
+        if let nsImage {
             content = PVThumbnail.Content(image: Image(nsImage: nsImage))
         } else {
             content = fallbackContent()
