@@ -21,34 +21,38 @@ const (
 	invariantCases = 500
 )
 
-// group is a lead property and every property whose values reach it.
+// group is a lead property and every property whose values reach it. pinned
+// is the lead and its lifespan's span, the properties AC-3.5 fills.
 type group struct {
-	lead  vocabkey.PropertyKey
-	props []vocabkey.PropertyKey
+	lead   vocabkey.PropertyKey
+	props  []vocabkey.PropertyKey
+	pinned []vocabkey.PropertyKey
 }
 
 // groups builds the lead groups of a kind from the registry: each lead of
 // Weights[kind] in key order with the lead, then its pool, its period and its
-// lifespan's span. A lead or property with no propertyPools entry fails.
+// lifespan's span, and the pinned lead and span. A lead or property with no propertyPools entry fails.
 func groups(t *testing.T, kind vocabkey.SubjectType) []group {
 	t.Helper()
 	s := matchregistry.Default().Subject
 	var out []group
 	for _, lead := range slices.Sorted(maps.Keys(s.Weights[kind])) {
 		props := []vocabkey.PropertyKey{lead}
+		pinned := []vocabkey.PropertyKey{lead}
 		props = append(props, s.Pools[kind][lead].With...)
 		if p, ok := s.Periods[kind][lead]; ok {
 			props = append(props, p.Start, p.End)
 		}
 		if l, ok := s.Lifespans[kind][lead]; ok {
 			props = append(props, l.Span)
+			pinned = append(pinned, l.Span)
 		}
 		for _, p := range props {
 			if len(propertyPools[p]) == 0 {
 				t.Fatalf("%s.%s has no propertyPools entry", kind, p)
 			}
 		}
-		out = append(out, group{lead: lead, props: props})
+		out = append(out, group{lead: lead, props: props, pinned: pinned})
 	}
 	return out
 }
@@ -207,11 +211,7 @@ func TestInvariants(t *testing.T) {
 			}
 			g := open[r.Intn(len(open))]
 			wa, wb := clone(a), clone(b)
-			set := []vocabkey.PropertyKey{g.lead}
-			if l, ok := matchregistry.Default().Subject.Lifespans[kind][g.lead]; ok {
-				set = append(set, l.Span)
-			}
-			for _, p := range set {
+			for _, p := range g.pinned {
 				wa[p], wb[p] = []V{propertyPools[p][0]}, []V{propertyPools[p][0]}
 			}
 			before, after := compare(kind, a, b), compare(kind, wa, wb)
