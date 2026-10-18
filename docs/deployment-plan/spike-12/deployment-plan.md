@@ -31,7 +31,7 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 
 | Idea or note | PR | Brief |
 | --- | --- | --- |
-| [`source-structure.md`](source-structure.md) (was `ideas/source-structure.md`) — Problem 2, nested Sources and the "obituary or newspaper?" confusion | S12-01, S12-02 (Copy Source) | S12-D1 |
+| [`source-structure.md`](source-structure.md) (was `ideas/source-structure.md`) — Problem 2, nested Sources and the "obituary or newspaper?" confusion | S12-01, S12-02, S12-17 (Copy Source) | S12-D1, S12-D6 |
 | Same — Problem 1, several Evidence graphs per Source | S12-03 – S12-15 | S12-D2 – S12-D5 |
 | Same — graph ↔ Artifact association | S12-03, S12-04, S12-05, S12-10, S12-12, S12-13 | S12-D3, S12-D4 |
 | [S12-01 plan review](prs/S12-01-copy-source-engine.review.md) M-9 — Add Source and Copy Source refresh the Sources list two ways | S12-16 | — |
@@ -60,7 +60,7 @@ These are the calls for this spike. PR plans treat them as binding.
 
 - **The form** ([design](source-structure.md#copy-source)): title field prefilled `Copy of <title>`; required type dropdown preselected to the original's; checkboxes all on for description, metadata (values and layout), credibility (grade and argument), and one per Artifact. Notes are not offered. Graphs, Subjects, Citations and Observations are never copied. The copy's cover is reset (`primary_artifact_id` empty). Binds S12-01, S12-02.
 - **Copy lives in its own composing package, `core/database/sourcecopy`.** `sources` can't import `sourcemetadata` (which imports `sources`), so, like `connect.CreateCitedBridge`, a composing package owns the write. It has two steps: read a **draft** from an existing Source (type, title, description, metadata rows and order, credibility, Artifacts), and **create a Source from a draft** through `sources.Create` (so the copy gets its Default graph from S12-03 onward) and `artifacts.Create` (same label, description and `file_id`). Copy is read-draft, apply the form's choices, create. One `writes.Run` transaction, action `copy_source`. The create-from-draft step is the slot [`ideas/registry-source-import.md`](../../ideas/registry-source-import.md) will reuse. Binds S12-01.
-- **Entry points:** the Source page and a Sources list row's context menu. Binds S12-02.
+- **Entry points:** the Source page (S12-02) and a Sources list row's context menu (S12-17). One brief per view: S12-D1 (Source page and the form), S12-D6 (Sources list). Binds S12-02, S12-17.
 - **One title and type form, one Artifact checklist.** S12-02 reuses the Add Source form's title and type fields and validation (`SourcesListView.addForm`, `SourcesModel.Draft`) instead of building a second form, and does not copy `create()`'s `session.setQueryValue` write-through. The per-Artifact checklist is built once in S12-02 and reused by S12-12 (promoted per [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) when it gets its second caller). Briefs S12-D1 and S12-D3 name it. Binds S12-02, S12-12.
 
 ### Graph data model
@@ -109,7 +109,8 @@ These are the calls for this spike. PR plans treat them as binding.
 | PR | Title | Slice | Scope | Brief | Depends on | Plan | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | S12-01 | Copy Source engine | 1 | `core/database/sourcecopy` (draft read, create from draft) and FFI `CopySource` | — | — | [Plan](prs/S12-01-copy-source-engine.md) | Landed #478 |
-| S12-02 | Copy Source form | 1 | The Copy… form, reusing Add Source's title and type fields; Source page and Sources list context menu | S12-D1 | S12-01, S12-D1 | [Plan](prs/S12-02-copy-source-form.md) | Blocked — on board S12-D1 |
+| S12-02 | Copy Source form | 1 | The Copy… form, reusing Add Source's title and type fields; Copy… on the Source page | S12-D1 | S12-01, S12-D1 | [Plan](prs/S12-02-copy-source-form.md) | Blocked — on board S12-D1 |
+| S12-17 | Copy Source from the Sources list | 1 | Copy… in a Sources list row's context menu opens the S12-02 form | S12-D6 | S12-02, S12-D6 | — | Scoped |
 | S12-16 | Add Source reports its effects | 1 | `CreateSourceResponse` gains `WriteEffects`; Add Source applies them with `.createdSource` and drops its Sources list write-through, as Copy Source does | — | S12-02 | — | Scoped |
 | S12-03 | Evidence graphs in the catalog | 2 | Tables, `subjects.graph_id`, `GPH` refs (`EnsureRefs`), Default backfill; `evidencegraphs` reads, link writer and `SoleGraphTx`; Source create mints Default; Artifact create links | — | — | — | Scoped |
 | S12-04 | Graph lifecycle | 2 | `evidencegraphs` `List` (the one read), create, update, delete with their refusals | — | S12-03 | — | Scoped |
@@ -130,7 +131,8 @@ These are the calls for this spike. PR plans treat them as binding.
 
 | Brief | View | Gates | Notes |
 | --- | --- | --- | --- |
-| S12-D1 | Copy Source form | **S12-02** | Sheet: Add Source's title and type fields, part checkboxes, the Artifact checklist. Entry points on the Source page and Sources list context menu |
+| S12-D1 | Copy Source form (Source page) | **S12-02** | Sheet: Add Source's title and type fields, part checkboxes, the Artifact checklist. Copy… on the Source page header |
+| S12-D6 | Sources list — Copy… row menu | **S12-17** | A row's right-click menu with Copy…, opening the S12-D1 form |
 | S12-D2 | Source page — Graphs section | **S12-11** | One row per graph (name, ref, description, Open, delete); replaces the header jump |
 | S12-D3 | Graph form | **S12-12** | Create and edit: name, description, the Artifact checklist from S12-D1 all on; refusals worded |
 | S12-D4 | Source page — Artifacts section graph links | **S12-13** | Checkboxes in the add dialog and card edit; refusal wording for unlink |
@@ -144,6 +146,7 @@ These are the calls for this spike. PR plans treat them as binding.
 SLICE 1 — Copy Source
   S12-01  Copy Source engine
   ✎ S12-D1 ──▶ S12-02  Copy Source form
+  ✎ S12-D6 ──▶ S12-17  Copy Source from the Sources list
   S12-16  Add Source reports its effects
   Check: Copy an obituary; the new Source has "Copy of …", the same type,
          description, metadata in the same layout, credibility and the checked
@@ -184,7 +187,8 @@ Which PRs can run in parallel: slice 1 is independent of slices 2 and 3 and can 
 ```text
 S12-01 ──▶ S12-02 ──▶ S12-12
 S12-02 ──▶ S12-16
-S12-D1 ──▶ S12-02
+S12-02 ──▶ S12-17
+S12-D1 ──▶ S12-02   S12-D6 ──▶ S12-17
 
 S12-03 ──▶ S12-04 ──▶ S12-05
 S12-03 ──▶ S12-06
@@ -217,10 +221,17 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-02 — Copy Source form
 
-**Ships.** The Copy… form from the Source page and a Sources list row's context menu, built on Add Source's title and type fields (`SourcesListView.addForm` is private today and is made reusable here), with the per-Artifact checklist; saving opens the copy's Source page.
-**Not this PR.** Graph choices in the form (a copy always starts with one Default graph).
-**Check.** The bar's Copy Source outcome.
+**Ships.** The Copy… form from the Source page header, built on Add Source's title and type fields (`SourcesListView.addForm` is private today and is made reusable here), with the per-Artifact checklist; saving opens the copy's Source page. The form's model and presenter take any host, so S12-17 adds the list entry without changing them.
+**Not this PR.** Graph choices in the form (a copy always starts with one Default graph). The Sources list entry point (S12-17).
+**Check.** The bar's Copy Source outcome from the Source page.
 **Context.** Working rules "Entry points", "One title and type form, one Artifact checklist"; brief S12-D1; `add-localized-string`, `add-ui-component`.
+
+#### S12-17 — Copy Source from the Sources list
+
+**Ships.** A right-click menu with Copy… on a Sources list row's page zone and the row's accessibility action, opening the S12-02 form for that Source (`SourcesModel.copying` / `openCopy`, one `.sourceCopyDialog` line).
+**Not this PR.** Other row menu items; any change to the form.
+**Check.** The bar's Copy Source outcome from a Sources list row's context menu.
+**Context.** Working rule "Entry points"; brief S12-D6; `add-ui-component`, `add-localized-string`. After S12-02, which builds the form.
 
 #### S12-16 — Add Source reports its effects
 

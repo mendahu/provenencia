@@ -6,7 +6,7 @@
 **Brief:** [S12-D1](../design/S12-D1-copy-source-form.md), board not agreed yet
 **Board:** — (to be set when the board is agreed: exported frames in the repo, or the frames described in words in §6 macOS)
 **Depends on:** S12-01 (landed [#478](https://github.com/mendahu/provenencia/pull/478)), S12-D1
-**Blocks:** S12-12, S12-16
+**Blocks:** S12-12, S12-16, S12-17
 **Branch:** `s12-02-copy-source-form`
 **Version bump:** none — Spike 11 and 12 PRs leave `VERSION` at 0.2.0 until a release is cut, as S12-01 did ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-workspace-place`](../../../../.agents/skills/add-workspace-place/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
@@ -30,11 +30,11 @@
 
 ## 1. Objective
 
-A researcher can copy a Source from its page or from a Sources list row's right-click menu. A form with the Add Source title and type fields, prefilled `Copy of <title>` and the original's type, lets them keep or drop the description, metadata, credibility and each Artifact. Saving creates the copy through S12-01's `copySource` and opens its page. This is the dogfood bar's Copy Source outcome: an obituary starts from a sibling's publication, issue, page and URL instead of retyping them.
+A researcher can copy a Source from its page. A form with the Add Source title and type fields, prefilled `Copy of <title>` and the original's type, lets them keep or drop the description, metadata, credibility and each Artifact. Saving creates the copy through S12-01's `copySource` and opens its page. With S12-17 (the same form from a Sources list row's right-click menu) this is the dogfood bar's Copy Source outcome: an obituary starts from a sibling's publication, issue, page and URL instead of retyping them.
 
 **Why now.** S12-01 put the engine and the store method in place so this PR is Swift only. S12-12 (Graph form) reuses the Artifact checklist built here, and S12-16 moves Add Source onto the effects path this PR uses.
 
-**What stays.** Add Source looks and behaves as it does today (same fields, ids, validation copy, toast, write-through). The Source page header keeps its cover menu, Delete and Evidence graph jump. A Sources list row keeps its page and graph click zones.
+**What stays.** Add Source looks and behaves as it does today (same fields, ids, validation copy, toast, write-through). The Source page header keeps its cover menu, Delete and Evidence graph jump. The Sources list does not change (S12-17).
 
 ## 2. User stories
 
@@ -48,14 +48,8 @@ A researcher can copy a Source from its page or from a Sources list row's right-
 | AC-1.4 | An original with an empty description and no credibility | Description and Credibility are disabled and unchecked with the hint "None on this Source"; the copy has an empty description and no credibility |
 | AC-1.5 | An original with no Artifacts | The Artifacts group is replaced by "This Source has no Artifacts."; Copy sends no Artifact ids |
 | AC-1.6 | Title cleared, or type cleared; Copy | No write; the Add Source title or type error shows under that field |
-
-**US-2.** As a researcher on the Sources list, when I right-click a row and choose Copy…, I get the same form for that Source.
-
-| AC | Given / when | Then |
-| --- | --- | --- |
-| AC-2.1 | Right-click a row | A menu with one item, Copy…, opens at the click point; left-click on the row still opens the page or the graph as today |
-| AC-2.2 | Choose Copy… on a Source whose workspace is not cached | Title and type show at once; the parts area shows a loading state and Copy is disabled; once loaded, the parts and Artifacts show as in AC-1.1 |
-| AC-2.3 | Copy | The new Source's page opens; going back to the Sources list shows the copy as a row without a manual refresh |
+| AC-1.7 | The form opens before the original's workspace is loaded (S12-17's list host; on the page it is cached) | Title and type show at once; the parts area shows a loading state and Copy is disabled; once loaded, the parts and Artifacts show as in AC-1.1 |
+| AC-1.8 | After a copy, open the Sources list | The copy is a row without a manual refresh |
 
 **US-3.** As a researcher, when the copy fails, I keep my choices so that I can retry.
 
@@ -71,11 +65,10 @@ A researcher can copy a Source from its page or from a Sources list row's right-
 | --- | --- |
 | One Artifact display title and one fileless-icon rule on `CatalogArtifact`, used by every caller | STEP-1, D-1, D-2 |
 | Shared title-and-type fields, one type combo row and one validation for Add Source, Copy Source and the Source page type editor (working rule "One title and type form"; S12-D1 inventory "Title and type fields") | STEP-2, AC-1.6 |
-| `SourceCopyModel`: prefill, part availability, Artifact exclusions, dirty tracking, submit through `store.copySource` + `session.apply(effects, .createdSource)` (CS-4, CS-5, CS-9, CS-10) | STEP-3, AC-1.1 – AC-1.5, AC-2.3, AC-3.1 – AC-3.3 |
+| `SourceCopyModel`: prefill, part availability, Artifact exclusions, dirty tracking, submit through `store.copySource` + `session.apply(effects, .createdSource)` (CS-4, CS-5, CS-9, CS-10) | STEP-3, AC-1.1 – AC-1.5, AC-1.7, AC-1.8, AC-3.1 – AC-3.3 |
 | `SourceArtifactChecklist` snowflake with All Artifacts (CS-6, CS-7) | STEP-4, AC-1.1, AC-1.3, AC-1.5 |
-| The Copy Source form dialog, its loading and error states, strings (CS-3, CS-8, CS-10) | STEP-5, AC-2.2, AC-3.1, AC-3.3 |
+| The Copy Source form dialog, its loading and error states, strings (CS-3, CS-8, CS-10) | STEP-5, AC-1.7, AC-3.1, AC-3.3 |
 | The Copy action on the Source page header (CS-1) | STEP-6, AC-1.2 |
-| The Copy action in a Sources list row's context menu, with an accessibility action (CS-2) | STEP-7, AC-2.1, AC-2.3 |
 | One shared query-wait test helper for the two Sources suites | STEP-3, D-19 |
 
 | Out | Home |
@@ -84,9 +77,8 @@ A researcher can copy a Source from its page or from a Sources list row's right-
 | Add Source returning effects and dropping its write-through | S12-16 |
 | Publishing the sidebar Sources count from the Source page host after a copy (the count catches up when the Sources list next loads) | S12-16 (one create path for both forms) |
 | Promoting the Artifact checklist to a kit component | S12-12 (its second caller) |
-| A `pvActionMenu(items:)` recipe for the four hand-wired right-click menus | [`docs/ideas/shared-list-helpers.md`](../../../ideas/shared-list-helpers.md) (STEP-8 adds the line) |
-| Moving the other five test suites onto the shared query-wait helper | [`docs/ideas/shared-list-helpers.md`](../../../ideas/shared-list-helpers.md) (STEP-8 adds the line) |
-| Any other Sources list row menu item (Delete, Open graph) | not planned |
+| Moving the other five test suites onto the shared query-wait helper | [`docs/ideas/shared-list-helpers.md`](../../../ideas/shared-list-helpers.md) (STEP-7 adds the line) |
+| The Copy action in a Sources list row's right-click menu, `SourcesModel.copying` / `openCopy` | S12-17 (brief S12-D6) |
 | A toast after Copy | not planned (D-11) |
 | Copying notes, Subjects, Citations, Observations, the cover | not planned (working rule "The form") |
 | Editing the description, metadata, credibility or an Artifact inside the form | not planned (S12-D1 §2.1) |
@@ -105,7 +97,6 @@ Line numbers are at the planning base.
 | Add Source dialog | same file, L88–124, `addPresented` binding L136–147 | `.pvFormDialog(...accessibilityIdentifierPrefix: "sources.add"...)`; confirm runs `model.create()` then `navigation.go(to: WorkspaceLocation(section: .sources, sourceId:, ref:, title:))` built by hand (L100–106) |
 | Add Source model | `macos/App/Features/Sources/SourcesModel.swift` `Draft` (L54–58: `sourceTypeID`, `title`, `description`, memberwise init), stored `typeError` / `titleError` / `createError` (L69–72), `typeComboOptions` (L313), `canSubmitAdd` (L317), `addSheetIsDirty` (L325), `openAdd()`, `cancelAdd()`, `create()` (L368–416) | Validation is inline in `create()` on a local trimmed title, writing `L10n.string(L10n.Sources.typeRequired)` / `titleRequired` into the stored errors. After the write: `session.apply(.createdSource)`, a `session.setQueryValue` insert into `.sourcesList`, `syncCatalogCounts()`, toast |
 | Source page type editor | `macos/App/Features/Sources/SourcePageIdentityHeader.swift` `metaRow` type combo (around L227–243, inline `PVMark` + `PVComboBoxPlainRow`); `SourceIdentitySection.typeComboOptions` (`SourceIdentitySection.swift` L45) | Second copy of the type combo row and of the options mapping |
-| Sources list rows | `macos/App/Features/Sources/SourcesSplitRow.swift` `SourcesSplitRow` (L29), `pageZone` `Button(action: onOpenPage)` (L55); call sites `SourcesListView.swift` L313–334 and `SourcesSplitRowProgress` (L460–484) | Two zones (`onOpenPage`, `onOpenGraph`); `.accessibilityElement(children: .contain)` on the row. No context menu. Row data is `CatalogSource` only |
 | Source page header | `SourcePageIdentityHeader.swift` actions `HStack` (L26–29), `deleteSourceButton` (L176–187), `coverMenu` / `coverKeyboard` / `coverMenuPanel` (L10–11, L33–39, L64–90) | `deleteSourceButton`, `evidenceGraphJump`. The cover menu is the right-click precedent |
 | Source page shell | `macos/App/Features/Sources/SourcePageView.swift` `SourcePageContent` (L76), dialog chain from L142 | Toast overlay, three `.pvFormDialog`s, `.pvConfirm`s, `.pvDeleteImpact` |
 | Source page model | `macos/App/Features/Sources/SourcePageModel.swift` `source`, `workspace`, `askDeleteSource()` (L164), `askDeleteArtifact` (L169–172, `art.label.isEmpty ? art.ref : art.label`); private `context: SourcePageContext` with `session`, `store`, `userID`, `projectDir`, `types` | No copy state |
@@ -135,12 +126,12 @@ Line numbers are at the planning base.
 | D-9 | `artifactIDsToCopy` = `workspace.artifacts` ids in workspace order, minus `excludedArtifactIDs`. No seeding: a deleted Artifact drops out and a new one starts on (AC-3.2) | Exclusions need no view hook (review M-4); the live handle keeps the form current (S12-01 UX-1) | A seeded selection set |
 | D-10 | `func copy() async -> CatalogSource?`: copy `choices.draft.validation` into `titleError` / `typeError`; return nil if invalid. Set `isSaving` (cleared by `defer`), clear `copyError`, call `store.copySource(projectDir: session.projectKey.projectDir, userID:, sourceID: original.id, title: choices.draft.trimmedTitle, sourceTypeID: choices.draft.sourceTypeID, copyDescription:, copyMetadata:, copyCredibility:, artifactIDs: artifactIDsToCopy)`, then `session.apply(effects, .createdSource)`, return the copy. No `setQueryValue`, no `syncCatalogCounts`. On throw: `copyError = L10n.Errors.message(for: error)`, return nil, `choices` untouched | Working rule forbids the write-through | Copying `create()`'s write-through |
 | D-11 | No toast. Opening the copy is the confirmation | CS-9 | A toast as Add Source shows |
-| D-12 | Hosts: `SourcesModel.copying: SourceCopyModel?` + `func openCopy(_ source: CatalogSource)` *(new)*; `SourcePageModel.copying: SourceCopyModel?` + `func openCopy()` *(new)* (no-op when `source` is nil; passes `context.session`, `context.userID`, `context.store`) | Testable presentation state, as `isAdding` | `@State` in the views |
+| D-12 | Host: `SourcePageModel.copying: SourceCopyModel?` + `func openCopy()` *(new)* (no-op when `source` is nil; passes `context.session`, `context.userID`, `context.store`). S12-17 adds the same pair to `SourcesModel` | Testable presentation state, as `isAdding` | `@State` in the view |
 | D-13 | `View.sourceCopyDialog(_ model: Binding<SourceCopyModel?>)` *(new)* in `macos/App/Features/Sources/SourceCopyDialog.swift`, a `ViewModifier` that reads `@Environment(WorkspaceNavigation.self)`. `isPresented` getter = `model != nil`; setter `false` sets `model = nil` unless `isSaving`. `.pvFormDialog(isPresented:, copy: PVFormDialogCopy(title: copySourceDialogTitle, subtitle: copySourceDialogSubtitle(original.title), confirm: copySourceConfirm, cancel: L10n.Sources.cancelAction), width: 520, isRunning: isSaving, isDirty: isDirty, confirmDisabled: !isReady, accessibilityIdentifierPrefix: "sources.copy")`. Confirm: `Task { if let copy = await m.copy() { model = nil; navigation.go(to: SourcesListNavigation.pageLocation(for: copy)) } }` | One post-copy path for both hosts (review M-8) | An `onCopied` closure per host |
 | D-14 | Form body, top to bottom: `PVCallout(tone: .danger, message: copyError)` (`sources.copy.error`); `SourceTitleTypeFields` (prefix `sources.copy`); `PVField(label: copySourcePartsHeading)` holding three `PVCheckbox(_:description:isChecked:isDisabled:)` (L10n init; ids `sources.copy.description` / `.metadata` / `.credibility`; Description has no hint, Metadata `copySourceMetadataHint`, Credibility `copySourceCredibilityHint`); `PVField(label: copySourceArtifactsHeading)` holding the checklist (`sources.copy.artifacts`). While `workspace == nil && loadError == nil`: `ProgressView().controlSize(.small)` in place of both groups. On `loadError`: `PVCallout(tone: .danger, message: loadError)` (`sources.copy.loadError`) in place of both groups | CS-3 – CS-8; `PVSectionHeader` is a page-level h3, too large for a dialog | `PVSectionHeader` |
 | D-15 | Title focus: `activateOnAppear: true` (as Add Source); the prefill is not selected | `PVInput` has no select-all | A new `PVInput` option |
 | D-16 | `SourceArtifactChecklist` *(new)*, `macos/App/Features/Sources/SourceArtifactChecklist.swift`: `artifacts: [CatalogArtifact]`, `@Binding excluded: Set<String>`, `projectDir: String`, `sourceTypeIconKey: String?`. An All Artifacts `PVCheckbox(copySourceAllArtifacts, isChecked:, isIndeterminate:)` (checked when nothing excluded; indeterminate when some; setting it true clears `excluded`, false sets every id), then per Artifact an `HStack`: `CachedThumbnail(projectDir:, relPath: art.thumbnailRelPath, mediaType: art.file?.mediaType ?? "", originalFilename: art.file?.originalFilename ?? "", typeIconKey: art.thumbnailTypeIconKey(sourceTypeIconKey:), size: 32)` (default `.tile` layout) + `PVCheckbox(verbatim: art.displayTitle, isChecked:)` (binding inserts / removes the id in `excluded`). Rows in a `ScrollView` with `.frame(maxHeight: 240)`. Empty `artifacts` → `Text(copySourceNoArtifacts)` in `PVColor.textMuted`, `PVFont.body(size: PVTypeScale.bodySmall)` | Brief inventory "Artifact checklist" (snowflake, New; S12-12 promotes it) | A kit component now |
-| D-17 | Page entry: `copySourceButton` *(new)* in `SourcePageIdentityHeader`, `PVIconButton(.duplicate, label: L10n.Sources.copySourceEntry, size: .sm) { model.openCopy() }`, placed before `deleteSourceButton`, disabled when `model.source == nil`, id `sources.page.copySource`. `SourcePageContent` adds `.sourceCopyDialog($model.copying)` to its dialog chain. List entry: `SourcesSplitRow` gains `var onCopy: () -> Void`, `@State rowMenu = PVContextMenuState()`, `@State rowKeyboard = PVContextMenuKeyboard.inactive`; on `pageZone` (not the whole row, so S12-14's graph sub-rows do not inherit it): `.pvContextMenuTrigger($rowMenu)`, `.pvContextMenu($rowMenu, keyboard: $rowKeyboard, keyboardTitles: [L10n.string(L10n.Sources.copySourceEntry)]) { PVContextMenuPanel(accessibilityIdentifier: "sources.row.menu") { PVContextMenuItem(L10n.Sources.copySourceEntry, index: 0, accessibilityIdentifier: "sources.row.copy") { onCopy() } } }`, and `.accessibilityAction(named: Text(L10n.Sources.copySourceEntry), onCopy)` on the `pageZone` button. Both call sites pass `onCopy: { model.openCopy(source) }`; `SourcesListContent` adds `.sourceCopyDialog($model.copying)` | CS-1, CS-2; the cover menu pattern | A native `.contextMenu`; a shared row builder for two one-line closures (review M-9, declined) |
+| D-17 | Page entry: `copySourceButton` *(new)* in `SourcePageIdentityHeader`, `PVIconButton(.duplicate, label: L10n.Sources.copySourceEntry, size: .sm) { model.openCopy() }`, placed before `deleteSourceButton`, disabled when `model.source == nil`, id `sources.page.copySource`. `SourcePageContent` adds `.sourceCopyDialog($model.copying)` to its dialog chain. The modifier takes only a `Binding<SourceCopyModel?>`, so S12-17's list host adds one line | CS-1; one presenter for both hosts | A text button; a toolbar |
 | D-18 | Copy tests are Swift Testing model tests over `FakeStore` in `macos/ProvenenciaTests/SourceCopyModelTests.swift` *(new)*. The failure case copies an original that is not in `sourcesByProject` (the fake throws `StoreBoom.boom`). No UI tests | The model holds every rule | A throw hook in `FakeStore` |
 | D-19 | `macos/ProvenenciaTests/QueryHandleWaiting.swift` *(new)*: `@MainActor func waitForQuery<Value>(_ handle: QueryHandle<Value>) async` with the body of `SourcesModelTests`' private `waitForQuery`. `SourcesModelTests` drops its private copy; `SourceCopyModelTests` uses it. The other five suites are logged in `docs/ideas/shared-list-helpers.md` | Stops the eighth copy (review M-5) | Copying the helper again |
 | D-20 | Add Source's confirm builds its location with `SourcesListNavigation.pageLocation(for: created)` instead of the hand-built `WorkspaceLocation` | One way to open a Source's page (review M-8); same file as D-5 | Leaving two |
@@ -160,15 +151,14 @@ Line numbers are at the planning base.
 | `SourceCopyModel`, `SourceCopyChoices` *(new)* | types | `SourcesModel` add state | Searched `Draft`, `isAdding`, `create(`: the add state lives on the list model, which the page lacks (D-6, D-7) |
 | `SourceArtifactChecklist` *(new)* | view | none — searched `PVCheckbox` callers (`PromoteView`, `CitationComposerEvidenceColumn`) and Artifact lists (`SourcePageArtifactsView`) | Snowflake per brief (D-16) |
 | `View.sourceCopyDialog` *(new)* | modifier | `NameValueFormDialogModifier` | Same shape, one presenter for two hosts (D-13) |
-| `copying` / `openCopy` on two models *(new)* | members | `isAdding` / `openAdd()` | Same shape (D-12) |
-| `SourcesSplitRow.onCopy` + row menu *(new)* | member | `SourcePageIdentityHeader.coverMenu` | Same kit menu (D-17) |
+| `SourcePageModel.copying` / `openCopy` *(new)* | members | `SourcesModel.isAdding` / `openAdd()` | Same shape (D-12) |
 | `L10n.Sources.copySource*` *(new)* | keys | `sources.add.*` | New copy |
 | `waitForQuery` *(new, shared)* | helper | seven private copies | Shared (D-19) |
 | `SourceCopyModelTests` *(new)* | test file | `SourcesModelTests` | New model |
 
 **Builds on.** `GenealogyStore.copySource` (S12-01), `session.apply(_:_:)` with `.createdSource`, `PVFormDialog`, `PVCheckbox`, `PVContextMenu`, `CachedThumbnail`, `SourcesListNavigation.pageLocation(for:)`.
 **Deletes.** Inline validation in `SourcesModel.create()`; `sourceTypeComboRow` and the title/type block in `SourcesListView.swift`; the inline type row in `SourcePageIdentityHeader`; the two `typeComboOptions` mapping bodies; the three label-else-ref expressions; private `hasFile(_:)` and `artifactTypeIconKey(for:)`; the hand-built Add Source `WorkspaceLocation`; `SourcesModelTests`' private `waitForQuery`.
-**Next adds.** S12-12 promotes `SourceArtifactChecklist` with its exclusion binding. S12-16 moves Add Source onto `apply(effects, .createdSource)`, as `SourceCopyModel.copy()` does, and decides the sidebar count for both. S12-14 puts its accordion under the row's page zone, which keeps the menu. More row menu items go in the `SourcesSplitRow` panel.
+**Next adds.** S12-12 promotes `SourceArtifactChecklist` with its exclusion binding. S12-16 moves Add Source onto `apply(effects, .createdSource)`, as `SourceCopyModel.copy()` does, and decides the sidebar count for both. S12-17 adds `SourcesModel.copying` / `openCopy`, the row menu and one `.sourceCopyDialog` line; the model, dialog, fields and checklist are reused unchanged.
 
 ### Schema
 
@@ -192,7 +182,6 @@ None — `CopySource` and `GenealogyStore.copySource` exist (S12-01).
 | Artifact checklist | `PVCheckbox` + `CachedThumbnail` | `Features/Sources/SourceArtifactChecklist.swift` *(new)* | D-16 |
 | Save / load errors | `PVCallout` danger | `SourceCopyDialog.swift` | D-10, D-14 |
 | Page Copy action | `PVIconButton(.duplicate)` | `SourcePageIdentityHeader.swift` | D-17 |
-| Row Copy action | `PVContextMenu` on `pageZone` | `SourcesSplitRow.swift` | D-17 |
 
 States: loading (list host) → spinner in the parts area, Copy disabled; load error → callout, Copy disabled; no Artifacts → one muted line; 40 Artifacts → rows scroll in 240pt; save error → callout, choices kept. Accessibility: every control has the id above; the page zone has a named accessibility action; checkboxes carry their labels.
 
@@ -253,16 +242,11 @@ Check: `python3 scripts/check-localizable-xcstrings.py` passes; build passes.
 
 **STEP-6 — Source page entry**
 Files: `SourcePageIdentityHeader.swift`, `SourcePageView.swift`.
-Do: D-17 (page half).
+Do: D-17.
 Check: manual check steps 1–4.
 
-**STEP-7 — Sources list entry**
-Files: `SourcesSplitRow.swift`, `SourcesListView.swift`.
-Do: D-17 (list half).
-Check: manual check steps 5–7.
-
-**STEP-8 — Docs**
-Files: `docs/deployment-plan/spike-12/completed.md`, `docs/deployment-plan/spike-12/deployment-plan.md` (map row), this plan (status), `docs/deployment-plan/spike-12/design/` (S12-D1 → `docs/deployment-plan/spike-12/design/archive/` *(new)*; the README's Scheduled row moves to an Archived line linking it), `docs/ideas/shared-list-helpers.md` (two lines: the `pvActionMenu(items:)` recipe over the four right-click menus; the five suites left on private query-wait helpers).
+**STEP-7 — Docs**
+Files: `docs/deployment-plan/spike-12/completed.md`, `docs/deployment-plan/spike-12/deployment-plan.md` (map row), this plan (status), `docs/deployment-plan/spike-12/design/` (S12-D1 → `docs/deployment-plan/spike-12/design/archive/` *(new)*; the README's Scheduled row moves to an Archived line linking it), `docs/ideas/shared-list-helpers.md` (one line: the five suites left on private query-wait helpers).
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-12/prs/S12-02-copy-source-form.md` reports no errors; links resolve.
 
@@ -276,16 +260,16 @@ Fixture for T-4 – T-11 (`SourceCopyModelTests`): project `projectDir`; type `t
 | --- | --- | --- | --- | --- |
 | T-1 | Swift | `macos/ProvenenciaTests/CatalogArtifactTests.swift` *(new)* `displayTitleAndIcon` | label " Scan " → `displayTitle == "Scan"`, `hasDisplayLabel`; label "  " → `displayTitle == ref`, `!hasDisplayLabel`; fileless → `thumbnailTypeIconKey(sourceTypeIconKey: "k") == "k"`; with file + fileID → nil | D-1, D-2 |
 | T-2 | Swift | `SourcesModelTests` `draftValidation` *(new)* | `Draft(sourceTypeID: "", title: "  ")` → `validation.typeError` / `titleError` equal `L10n.string(L10n.Sources.typeRequired)` / `titleRequired`, `!isValid`; `Draft(sourceTypeID: "t1", title: " Album ")` → both nil, `isValid`, `trimmedTitle == "Album"` | AC-1.6, D-3 |
-| T-3 | Swift | `SourceCopyModelTests` `prefillsTitleAndType` *(new)* | fixture, before load → `choices.draft.title == "Copy of Obit"`, `sourceTypeID == "t1"`, `!isReady`, `!isDirty` | AC-1.1, AC-2.2, D-6, D-7 |
+| T-3 | Swift | `SourceCopyModelTests` `prefillsTitleAndType` *(new)* | fixture, before load → `choices.draft.title == "Copy of Obit"`, `sourceTypeID == "t1"`, `!isReady`, `!isDirty` | AC-1.1, AC-1.7, D-6, D-7 |
 | T-4 | Swift | `allPartsOnWhenLoaded` *(new)* | after load → three parts available and included, `artifactIDsToCopy == ["a1", "a2"]`, `isReady` | AC-1.1, D-8, D-9 |
 | T-5 | Swift | `copyAllCreatesCopyAndReturnsIt` *(new)* | `copy()` → a Source titled "Copy of Obit", type `t1`; `store.sourcesByProject` count 2; the copy's metadata count 2, credibility set, Artifact labels ["Front page", ""]; `s1`'s entries unchanged; `copying` untouched by the model | AC-1.2, D-10 |
 | T-6 | Swift | `uncheckedPartsAreNotCopied` *(new)* | `includeCredibility = false`, `excludedArtifactIDs = ["a2"]` → copy has no credibility and one Artifact "Front page" | AC-1.3 |
 | T-7 | Swift | `copyFailureKeepsChoices` *(new)* | original `s9` not seeded → `copy()` returns nil, `copyError != nil`, `choices` equal to before | AC-3.1, D-10, D-18 |
 | T-8 | Swift | `absentPartsAreUnavailableAndNotSent` *(new)* | `s1` with description "", no credibility, no Artifacts → `!descriptionAvailable`, `!credibilityAvailable`, `artifactIDsToCopy == []`; copy has description "", no credibility, no Artifacts | AC-1.4, AC-1.5, D-8 |
-| T-9 | Swift | `copyRefreshesSourcesList` *(new)* | `let list: QueryHandle<[CatalogSource]> = session.query(.sourcesList(project:))`, wait; `copy()`; wait → `list.value` contains the copy's id | AC-2.3, D-10 |
+| T-9 | Swift | `copyRefreshesSourcesList` *(new)* | `let list: QueryHandle<[CatalogSource]> = session.query(.sourcesList(project:))`, wait; `copy()`; wait → `list.value` contains the copy's id | AC-1.8, D-10 |
 | T-10 | Swift | `validationBlocksCopy`, `isDirtyTracksChanges` *(new)* | title " " → nil, `titleError` set, store count 1; `includeMetadata = false` → `isDirty`; back to `true` → `!isDirty` | AC-1.6, AC-3.3, D-7 |
 | T-11 | Swift | `artifactDeletedElsewhereIsDropped` *(new)* | after load, remove `a2` from `store.artifactsBySource["s1"]`, `session.invalidate(.sourceWorkspace(project: session.projectKey, sourceId: "s1"))`, re-query and wait → `artifactIDsToCopy == ["a1"]` | AC-3.2, D-9 |
-| T-12 | Swift | `SourcesModelTests` `openCopySetsCopying` *(new)*; `SourcePageModelTests` `openCopyUsesThePageSource` *(new)* | `openCopy(source)` → `copying?.original.id == source.id`; page model after `sync` with a loaded workspace (the suite's existing setup) → `openCopy()` sets `copying`; with `source == nil` → stays nil | D-12 |
+| T-12 | Swift | `SourcePageModelTests` `openCopyUsesThePageSource` *(new)* | page model after `sync` with a loaded workspace (the suite's existing setup) → `openCopy()` sets `copying`; with `source == nil` → stays nil | D-12 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `SourcesModelTests` (validation and helper moved), `SourcePageModelTests`, Evidence graph file menu tests that read `EvidenceGraphFiles.fileBearing` titles.
 
@@ -314,18 +298,17 @@ Use a project with an Obituary Source "Obituary — Mary Alderwick" that has a d
 2. Uncheck Credibility and the second Artifact; All Artifacts shows mixed. Copy. The new Source's page opens: same type, description, Publication and Page values, one Artifact, no credibility, the type icon as cover. The original's page is unchanged. (AC-1.2, AC-1.3)
 3. Copy the obituary again, clear the title, Copy: Add Source's title error shows; nothing is created. Cancel: the discard confirm shows. (AC-1.6, AC-3.3)
 4. Copy the second Source: Description and Credibility are disabled with "None on this Source"; the Artifacts line reads "This Source has no Artifacts." (AC-1.4, AC-1.5)
-5. On the Sources list, left-click a row: its page opens as before. Right-click a row: a menu with Copy… opens at the pointer. (AC-2.1)
-6. Restart the app, open the Sources list, right-click the obituary, Copy…: the parts area loads, then fills. Copy. The copy's page opens; Back to the list shows the copy as a row. (AC-2.2, AC-2.3)
-7. With VoiceOver, the row's actions rotor offers Copy…. (CS-2)
+5. From the copy's page, open the Sources list: the copy is a row. (AC-1.8)
 
-This makes the slice 1 Check true: the new Source has "Copy of …", the same type, description, metadata in the same layout, credibility and the checked Artifacts, and no cover; unchecked parts are absent.
+AC-1.7 (the loading state) is covered by T-3; on the page the workspace is already cached. S12-17's manual check exercises it from the list.
+
+With S12-17, this makes the slice 1 Check true: the new Source has "Copy of …", the same type, description, metadata in the same layout, credibility and the checked Artifacts, and no cover; unchecked parts are absent.
 
 ## 11. Risks and stop conditions
 
 | Risk | Mitigation |
 | --- | --- |
 | Extracting the fields changes Add Source's ids or behavior | D-5 keeps the `sources.add` prefix; `SourcesModelTests` must stay green unchanged |
-| The row context menu catches left clicks | `pvContextMenuTrigger` only catches right / Ctrl-click (the cover menu works this way); manual check step 5 |
 | A 40-Artifact Source makes the dialog taller than the window | D-16 caps the rows at 240pt |
 | The fake drops unknown Artifact ids, so a test cannot prove an id is not sent | T-11 asserts `artifactIDsToCopy`, not the fake's result |
 | Moving the label rule changes Evidence graph file-menu titles for whitespace-only labels | Intended (the trimmed rule wins); `EvidenceGraphModelTests` `fileBearingListKeepsCoverAndDropsFileless` must stay green |
@@ -333,11 +316,10 @@ This makes the slice 1 Check true: the new Source has "Copy of …", the same ty
 **Stop and report if:**
 
 - `GenealogyStore.copySource` or `FakeStore.copySource` on `main` no longer matches §4.
-- The agreed S12-D1 board differs from D-13 – D-17 or §6 Strings (another layout, a toast, more menu items). The plan is updated before code.
+- The agreed S12-D1 board differs from D-13 – D-17 or §6 Strings (another layout, a toast). The plan is updated before code.
 - `.createdSource` no longer invalidates `.sourcesList` in `CatalogQueryRegistry.swift`, so T-9 cannot pass without a write-through.
 - `SourceTitleTypeFields` cannot keep `sources.add.title` / `sources.add.type` without changing `SourcesListContent` beyond `addForm`.
 - You are on a machine without Xcode (D-22): write the code, run the Python checks, and report that XT, `check-pr.sh` and the manual check are not run.
-- `pvContextMenuTrigger` on `pageZone` swallows the page or graph button's left click.
 
 ## 12. Open questions
 

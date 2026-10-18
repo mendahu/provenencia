@@ -7,6 +7,9 @@
 - **Board delivery (plan Open question 1).** How does the agreed S12-D1 board reach the implementer? Recommendation: exported PNG frames in `docs/deployment-plan/spike-12/design/S12-D1/`, linked on the plan's **Board** line.
 - **Sidebar count after a copy from the Source page.** The page host does not publish the sidebar Sources count; it catches up when the Sources list next loads. Recommendation: accept it until S12-16, which puts both creates on one path (Out line).
 
+## Answered by the user
+- **One brief per view, one view per PR (2026-10-18).** The user pointed out that the form touched two views (Source page, Sources list), so it needs two briefs. Asked whether the PR should split too (the `plan-pr` size rule), the user chose to split. S12-02 keeps the form and the Source page entry (brief S12-D1). The Sources list row menu moves to the new S12-17 (brief S12-D6), which depends on S12-02. The form's loading and load-error states stay in S12-D1 / S12-02 because they belong to the dialog. Review findings M-9 and the row-menu parts of D-17 / X-6 now land in S12-17's plan.
+
 ## Writer's own calls
 - No toast after Copy; opening the copy is the confirmation (D-11).
 - Absent parts (no description, metadata or credibility) show disabled with "None on this Source" rather than hidden (D-8, brief CS-5).

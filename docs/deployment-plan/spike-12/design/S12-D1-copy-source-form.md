@@ -1,11 +1,11 @@
-# S12-D1 — Copy Source form
+# S12-D1 — Copy Source form (Source page)
 
-**Kind:** Claude Design board (**enhancement** of the Add Source form, the Source page header and the Sources list row)
+**Kind:** Claude Design board (**enhancement** of the Add Source form and the Source page header)
 **Spike:** Provenencia Spike 12 (Source structure)
-**View:** Copy Source form, with its two entry points
+**View:** Source page — the Copy action and the Copy Source form it opens
 **Implements later as:** PR **S12-02**
 **Depends on:** S12-01 (Copy Source engine)
-**Related:** [`../source-structure.md`](../source-structure.md#copy-source) (the design), [`../deployment-plan.md`](../deployment-plan.md) working rules "Copy Source". S12-D3 (Graph form) reuses the Artifact checklist drawn here.
+**Related:** [`../source-structure.md`](../source-structure.md#copy-source) (the design), [`../deployment-plan.md`](../deployment-plan.md) working rules "Copy Source". S12-D6 (Sources list) opens this same form from a row's right-click menu and does not redraw it. S12-D3 (Graph form) reuses the Artifact checklist drawn here.
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
 **Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
 
@@ -46,7 +46,7 @@ Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 
 ### This brief is an enhancement
 
-The Copy form is the Add Source form's title and type fields with a "what to copy" section under them. Do not draw a second title field, a second type picker or a new dialog shell. The Source page header gains one icon button beside Delete. A Sources list row gains a right-click menu with one item. Nothing else on those surfaces moves.
+The Copy form is the Add Source form's title and type fields with a "what to copy" section under them. Do not draw a second title field, a second type picker or a new dialog shell. The Source page header gains one icon button beside Delete. Nothing else on the page moves. The Sources list entry point is its own board, S12-D6.
 
 ---
 
@@ -54,9 +54,9 @@ The Copy form is the Add Source form's title and type fields with a "what to cop
 
 A researcher with twelve obituaries from one newspaper retypes the publication, issue, page and URL each time. Copy Source starts the next obituary from the last one in one step: same type, same metadata and layout, same credibility, a chosen subset of the Artifacts, and a new title.
 
-**What changes.** A **Copy…** action on the Source page and on a Sources list row. A Copy Source form dialog. Saving opens the new Source's page.
+**What changes.** A **Copy…** action on the Source page. A Copy Source form dialog, which S12-D6 also opens from the Sources list. Saving opens the new Source's page.
 
-**What stays.** The Add Source form looks and behaves as it does today. The Source page header keeps its cover, title, type, Delete and Evidence graph controls. The Sources list row keeps its two click zones (page, graph).
+**What stays.** The Add Source form looks and behaves as it does today. The Source page header keeps its cover, title, type, Delete and Evidence graph controls.
 
 ---
 
@@ -74,9 +74,8 @@ A researcher with twelve obituaries from one newspaper retypes the publication, 
 | Artifacts can be many | A census Source can hold 40 page scans. Each row is a small thumbnail, the Artifact's label (or its `ART-` ref when it has no label) and a checkbox. The list scrolls inside the dialog. An **All Artifacts** checkbox above the rows is checked, unchecked or mixed. |
 | An Artifact copy shares the file | The copy gets a new Artifact row pointing at the same file. Nothing is stored twice. The board does not need to say so. |
 | Never copied | Notes, Subjects, Citations, Observations, the Evidence graph's content and the cover. The copy shows its type icon until a cover is chosen. The dialog subtitle says notes and the Evidence graph are not copied; it does not list every table. |
-| The list row has no Artifacts loaded | From the Sources list, the form loads the original's Artifacts and parts when it opens. Title and type show at once; the parts section shows a small loading state; Copy is disabled until it loads. |
+| The form can open before the parts are loaded | On the Source page they are already loaded. From the Sources list (S12-D6) the form loads the original's Artifacts and parts when it opens. Title and type show at once; the parts section shows a small loading state; Copy is disabled until it loads. |
 | Saving is one write | Copy creates the Source and its parts together, then opens the new Source's page. There is no toast. A failure keeps the dialog open with a danger callout at the top. |
-| Right-click menus are kit context menus | The cover thumbnail on the Source page already has one. A list row has none today. |
 
 ### 2.1 What this board is not
 
@@ -84,7 +83,7 @@ A researcher with twelve obituaries from one newspaper retypes the publication, 
 - Editing the description, metadata, credibility or an Artifact inside the Copy form.
 - A bulk copy of several Sources, or "copy as template".
 - A new toolbar or overflow menu on the Source page.
-- More items in the list row's menu than Copy… (Delete, Open graph and others stay where they are).
+- The Sources list row and its right-click menu (S12-D6).
 - A redraw of Add Source.
 
 ---
@@ -93,7 +92,7 @@ A researcher with twelve obituaries from one newspaper retypes the publication, 
 
 | Ships in **S12-02** | Stays out |
 | --- | --- |
-| The Copy Source form dialog with the Add Source title and type fields, the part checkboxes and the Artifact checklist. Copy… on the Source page header and a Sources list row's right-click menu. Saving opens the copy. | Graph choices (a copy always starts with one Evidence graph). Any other list row menu item. A toast after copy. A kit Checklist primitive (it is promoted when the Graph form, S12-12, becomes its second caller). |
+| The Copy Source form dialog with the Add Source title and type fields, the part checkboxes and the Artifact checklist. Copy… on the Source page header. Saving opens the copy. | Graph choices (a copy always starts with one Evidence graph). The Sources list entry point (S12-17, board S12-D6). A toast after copy. A kit Checklist primitive (it is promoted when the Graph form, S12-12, becomes its second caller). |
 
 ---
 
@@ -102,13 +101,13 @@ A researcher with twelve obituaries from one newspaper retypes the publication, 
 | ID | Requirement |
 | --- | --- |
 | CS-1 | **Copy…** on the Source page is an icon button (duplicate icon) in the header's action row, before Delete, same size as Delete, neutral tone. Its tooltip and accessibility label are "Copy…". |
-| CS-2 | A Sources list row's right-click menu has one item, **Copy…**. The menu opens at the click point. The row's click zones do not change. VoiceOver reaches the same action from the row's actions rotor. |
+| CS-2 | The same form opens from a Sources list row (board S12-D6). This board draws it once, opened from the Source page; it does not depend on where it was opened, except for CS-8. |
 | CS-3 | The form is a form dialog titled **Copy Source**, subtitle "Start a new Source from <original title>. Notes and the Evidence graph are not copied." Confirm **Copy**, Cancel **Cancel**. |
 | CS-4 | Title and Source type are the Add Source fields, same order, same required marks, same errors, same combo rows with type icons. Title is prefilled `Copy of <title>`; type is preselected to the original's. |
 | CS-5 | Under them, a **Copy from the original** section: Description, Metadata (hint "Values and field layout"), Credibility (hint "Grade and argument"), each a labelled checkbox, all on. A part the original lacks is disabled and unchecked with the hint "None on this Source". |
 | CS-6 | An **Artifacts** group under the parts: an All Artifacts checkbox (checked / unchecked / mixed), then one row per Artifact in the Source page's order: thumbnail, label (or ref), checkbox; all on. With no Artifacts, one muted line, "This Source has no Artifacts.", in place of the group. |
 | CS-7 | With many Artifacts, the Artifact rows scroll inside the dialog; the title, type, parts and the dialog buttons stay visible. |
-| CS-8 | Loading (opened from the list): title and type are shown and editable; the parts and Artifacts area shows a small loading state; Copy is disabled. A load failure shows a danger callout in that area. |
+| CS-8 | Loading (the form opened before the parts are loaded, as from the Sources list): title and type are shown and editable; the parts and Artifacts area shows a small loading state; Copy is disabled. A load failure shows a danger callout in that area. |
 | CS-9 | Copy writes and opens the new Source's page. A failure shows a danger callout at the top of the form and keeps every choice. |
 | CS-10 | Cancel with changed choices asks to discard, as Add Source does today. Cancel with the prefill untouched closes at once. |
 
@@ -119,14 +118,13 @@ A researcher with twelve obituaries from one newspaper retypes the publication, 
 Draw the dialog at 520pt.
 
 1. **Source page header** with Copy… beside Delete (CS-1). Draw only the header.
-2. **Sources list row, right-click** with the one-item menu open (CS-2).
-3. **Copy form, an obituary**: title "Copy of Obituary — Mary Alderwick", type Obituary, all three parts on, two Artifacts on (CS-3 – CS-6).
-4. **Some unchecked**: Credibility off, one Artifact off, All Artifacts mixed.
-5. **Parts absent**: an original with no description and no credibility, both disabled with "None on this Source"; no Artifacts line (CS-5, CS-6).
-6. **Census, 40 Artifacts**: the Artifact rows scroll; the buttons stay visible (CS-7).
-7. **Loading from the list**, then **load error** (CS-8).
-8. **Validation**: title cleared, Add Source's title error under it; Copy disabled or showing the error as Add Source does (CS-4).
-9. **Save failed**: danger callout at the top, choices kept (CS-9).
+2. **Copy form, an obituary**: title "Copy of Obituary — Mary Alderwick", type Obituary, all three parts on, two Artifacts on (CS-3 – CS-6).
+3. **Some unchecked**: Credibility off, one Artifact off, All Artifacts mixed.
+4. **Parts absent**: an original with no description and no credibility, both disabled with "None on this Source"; no Artifacts line (CS-5, CS-6).
+5. **Census, 40 Artifacts**: the Artifact rows scroll; the buttons stay visible (CS-7).
+6. **Loading**, then **load error** (CS-8).
+7. **Validation**: title cleared, Add Source's title error under it; Copy disabled or showing the error as Add Source does (CS-4).
+8. **Save failed**: danger callout at the top, choices kept (CS-9).
 
 ---
 
@@ -146,10 +144,9 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Artifact thumbnail | Component | Ship | `Platform/CachedThumbnail.swift` `CachedThumbnail` (32pt) | Its `typeIconKey` fallback already shows the Source type icon for a fileless Artifact, as on the Source page. Not a raw `PVThumbnail`. |
 | Error and load-error notice | Component | Ship | `PVCallout` (danger) | Top of the form for a save failure; in the parts area for a load failure. |
 | Page Copy… button | Component | Ship | `PVIconButton` (`duplicate`) in `Features/Sources/SourcePageIdentityHeader.swift` | Beside Delete. |
-| List row menu | Component | Ship | `PVContextMenu` (`pvContextMenuTrigger`, `PVContextMenuPanel`, `PVContextMenuItem`) on `Features/Sources/SourcesSplitRow.swift` | One item. Same pattern as the Source page cover menu. |
 | Discard-changes confirm | Component | Ship | `PVFormDialog` `isDirty` | As Add Source. |
 
-**Non-goals.** No new kit primitive: the Artifact checklist stays a Sources snowflake until its second caller. No local checkbox, menu or dialog. No "copied" badge or link between the copy and the original.
+**Non-goals.** No new kit primitive: the Artifact checklist stays a Sources snowflake until its second caller. No local checkbox or dialog. No "copied" badge or link between the copy and the original.
 
 ---
 
