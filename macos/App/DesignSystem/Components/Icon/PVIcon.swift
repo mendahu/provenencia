@@ -84,6 +84,8 @@ enum PVSymbol: String {
     case layers = "square.3.layers.3d.down.right"
     /// Lucide `refresh-cw` — a suggested Promote row that moved.
     case refresh = "arrow.clockwise"
+    /// Lucide `history` — last updated on a list row.
+    case history = "clock.arrow.circlepath"
     case shieldCheck = "checkmark.shield.fill"
     case calendar = "calendar"
     case textType = "textformat"
@@ -91,6 +93,10 @@ enum PVSymbol: String {
     case trash = "trash"
     case plug = "powerplug.fill"
     case externalLink = "arrow.up.right.square"
+    /// Promote: file a Subject on a handle.
+    case promote = "arrow.turn.right.up"
+    /// Unpromote: take a filing back (S10-44).
+    case unpromote = "arrow.uturn.down"
     /// Lucide `arrow-up-right` — jump out of a blocker row.
     case arrowUpRight = "arrow.up.right"
     case fileUp = "doc.badge.plus"

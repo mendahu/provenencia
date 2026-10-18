@@ -7,8 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // nm builds a name candidate from "type=value" parts separated by "|", with a
@@ -18,14 +19,14 @@ func nm(n byte, spec string) Candidate {
 	return Candidate{ObservationID: id(n), Value: Value{Name: parse(spec)}}
 }
 
-func parse(spec string) *namevalues.Value {
-	v := &namevalues.Value{Form: "(as written)"}
+func parse(spec string) *namevalue.Value {
+	v := &namevalue.Value{Form: "(as written)"}
 	for i, item := range strings.Split(spec, "|") {
 		typ, val, ok := strings.Cut(item, "=")
 		if !ok {
 			panic("bad part " + item)
 		}
-		v.Parts = append(v.Parts, namevalues.Part{Idx: i, Type: typ, Value: val})
+		v.Parts = append(v.Parts, namevalue.Part{Idx: i, Type: typ, Value: val})
 	}
 	return v
 }
@@ -39,7 +40,7 @@ func withNameForm(c Candidate, form string) Candidate {
 }
 
 // spec renders a name's parts back to "type=value|…".
-func spec(n *namevalues.Value) string {
+func spec(n *namevalue.Value) string {
 	var out []string
 	for _, p := range n.Parts {
 		out = append(out, p.Type+"="+p.Value)
@@ -77,7 +78,7 @@ func TestReconcileNames(t *testing.T) {
 		{"exact", "one hyphenated part equals two parts (words are compared)",
 			[]Candidate{nm(1, "given=Ann|surname=Smith-Jones"), nm(2, "given=Ann|surname=Smith|surname=Jones")},
 			[]cl{{[]byte{1, 2}, "given=Ann|surname=Smith-Jones"}}, StateMerged, "kept"},
-		{"exact", "parts of one type compare in idx order, wherever they sit",
+		{"exact", "parts of one type compare as words, wherever they sit",
 			[]Candidate{nm(1, "given=James|surname=Robins|given=Kenneth"), nm(2, "given=James|given=Kenneth|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|surname=Robins|given=Kenneth"}}, StateMerged, "kept"},
 		{"exact", "an initial with and without its period",
@@ -85,49 +86,49 @@ func TestReconcileNames(t *testing.T) {
 			[]cl{{[]byte{1, 2}, "given=J.|surname=Robins"}}, StateMerged, "kept"},
 
 		// Subsumption
-		{"subsumption", "an initial expands: [J] into [James]",
+		{"fold", "an initial expands: [J] into [James]",
 			[]Candidate{nm(1, "given=J.|surname=Robins"), nm(2, "given=James|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|surname=Robins"}}, StateMerged, "kept"},
-		{"subsumption", "the expansion does not depend on rank",
+		{"fold", "the expansion does not depend on rank",
 			[]Candidate{nm(1, "given=James|surname=Robins"), nm(2, "given=J.|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|surname=Robins"}}, StateMerged, "kept"},
-		{"subsumption", "[James] into [James, Kenneth]",
+		{"fold", "[James] into [James, Kenneth]",
 			[]Candidate{nm(1, "given=James|surname=Robins"), nm(2, "given=James|given=Kenneth|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|given=Kenneth|surname=Robins"}}, StateMerged, "kept"},
-		{"subsumption", "[J, K] into [James, Kenneth]",
+		{"fold", "[J, K] into [James, Kenneth]",
 			[]Candidate{nm(1, "given=J|given=K|surname=Robins"), nm(2, "given=James|given=Kenneth|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|given=Kenneth|surname=Robins"}}, StateMerged, "kept"},
-		{"subsumption", "[James, K] into [James, Kenneth]",
+		{"fold", "[James, K] into [James, Kenneth]",
 			[]Candidate{nm(1, "given=James|given=K.|surname=Robins"), nm(2, "given=James|given=Kenneth|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|given=Kenneth|surname=Robins"}}, StateMerged, "kept"},
-		{"subsumption", "a later part alone: [Kenneth] into [James, Kenneth]",
+		{"fold", "a later part alone: [Kenneth] into [James, Kenneth]",
 			[]Candidate{nm(1, "given=Kenneth|surname=Robins"), nm(2, "given=James|given=Kenneth|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|given=Kenneth|surname=Robins"}}, StateMerged, "kept"},
-		{"subsumption", "a chain folds to the fullest: [J], [James], [James, Kenneth]",
+		{"fold", "a chain folds to the fullest: [J], [James], [James, Kenneth]",
 			[]Candidate{nm(1, "given=J.|surname=Robins"), nm(2, "given=James|surname=Robins"), nm(3, "given=James|given=Kenneth|surname=Robins")},
 			[]cl{{[]byte{1, 2, 3}, "given=James|given=Kenneth|surname=Robins"}}, StateMerged, "kept"},
-		{"subsumption", "order matters: [Kenneth, James] does not fold into [James, Kenneth]; each part appears once",
+		{"fold", "[Kenneth, James] and [James, Kenneth] are one value; each part appears once",
 			[]Candidate{nm(1, "given=Kenneth|given=James|surname=Robins"), nm(2, "given=James|given=Kenneth|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=Kenneth|given=James|surname=Robins"}}, StateMerged, "kept"},
-		{"subsumption", "different middle names do not fold; both stay, each part once",
+		{"fold", "different middle names do not fold; both stay, each part once",
 			[]Candidate{nm(1, "given=James|given=Kevin|surname=Robins"), nm(2, "given=James|given=Kenneth|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|given=Kevin|given=Kenneth|surname=Robins"}}, StateMerged, "kept"},
-		{"subsumption", "an initial of another letter does not fold",
+		{"fold", "an initial of another letter does not fold",
 			[]Candidate{nm(1, "given=W.|surname=Robins"), nm(2, "given=James|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=W.|given=James|surname=Robins"}}, StateMerged, "kept"},
-		{"subsumption", "two initials of different letters both stay",
+		{"fold", "two initials of different letters both stay",
 			[]Candidate{nm(1, "given=J.|surname=Robins"), nm(2, "given=K.|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=J.|given=K.|surname=Robins"}}, StateMerged, "kept"},
-		{"subsumption", "a lone uncased character is a whole name, not an initial",
+		{"fold", "a lone uncased character is a whole name, not an initial",
 			[]Candidate{nm(1, "surname=蒋|given=浩"), nm(2, "surname=蒋|given=浩然")},
 			[]cl{{[]byte{1, 2}, "surname=蒋|given=浩|given=浩然"}}, StateMerged, "kept"},
-		{"subsumption", "an ambiguous initial folds into the best ranked of equal support",
+		{"fold", "an ambiguous initial folds into the best ranked of equal support",
 			[]Candidate{nm(1, "given=James|surname=Robins"), nm(2, "given=John|surname=Robins"), nm(3, "given=J.|surname=Robins")},
 			[]cl{{[]byte{1, 2, 3}, "given=James|given=John|surname=Robins"}}, StateMerged, "kept"},
-		{"subsumption", "an ambiguous initial folds into the best supported",
+		{"fold", "an ambiguous initial folds into the best supported",
 			[]Candidate{nm(1, "given=James|surname=Robins"), nm(2, "given=John|surname=Robins"), nm(3, "given=John|surname=Robins"), nm(4, "given=J.|surname=Robins")},
 			[]cl{{[]byte{1, 2, 3, 4}, "given=John|given=James|surname=Robins"}}, StateMerged, "kept"},
-		{"subsumption", "an initial never folds across types",
+		{"fold", "an initial never folds across types",
 			[]Candidate{nm(1, "nick=J|surname=Robins"), nm(2, "given=James|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|nick=J|surname=Robins"}}, StateMerged, "kept"},
 
@@ -242,7 +243,7 @@ func TestReconcileNames(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.group+"/"+tc.name, func(t *testing.T) {
-			got, err := Reconcile(properties.ValueTypeName, tc.in, nil, properties.CardinalitySingle)
+			got, err := Reconcile(testRules, propertymeta.ValueTypeName, tc.in, nil, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -349,7 +350,7 @@ func TestReconcileNamesProvenance(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.group+"/"+tc.name, func(t *testing.T) {
-			got, err := Reconcile(properties.ValueTypeName, tc.in, nil, properties.CardinalitySingle)
+			got, err := Reconcile(testRules, propertymeta.ValueTypeName, tc.in, nil, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -375,7 +376,7 @@ func TestReconcileNamesProvenance(t *testing.T) {
 func TestReconcileNamesValue(t *testing.T) {
 	a := withNameForm(nm(1, "given=J.|surname=Robins"), "J. Robins")
 	b := withNameForm(nm(2, "given=James|surname=Robins"), "Robins, James")
-	got, err := Reconcile(properties.ValueTypeName, []Candidate{a, b}, nil, properties.CardinalitySingle)
+	got, err := Reconcile(testRules, propertymeta.ValueTypeName, []Candidate{a, b}, nil, propertymeta.CardinalitySingle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -385,7 +386,7 @@ func TestReconcileNamesValue(t *testing.T) {
 
 	c := withNameForm(nm(3, "given=James|surname=Robins|suffix=Jr."), "x")
 	d := withNameForm(nm(4, "given=James|nick=Jim|surname=Robins"), "y")
-	got, err = Reconcile(properties.ValueTypeName, []Candidate{c, d}, nil, properties.CardinalitySingle)
+	got, err = Reconcile(testRules, propertymeta.ValueTypeName, []Candidate{c, d}, nil, propertymeta.CardinalitySingle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -418,11 +419,11 @@ func TestReconcileNamesInvariants(t *testing.T) {
 	for _, seed := range []int64{1, 2, 3, 4} {
 		rng := rand.New(rand.NewSource(seed))
 		gen := func(n byte) Candidate {
-			v := &namevalues.Value{Form: forms[rng.Intn(len(forms))]}
+			v := &namevalue.Value{Form: forms[rng.Intn(len(forms))]}
 			for i, k := 0, rng.Intn(5); i < k; i++ {
 				typ := types[rng.Intn(len(types))]
 				pool := pools[typ]
-				v.Parts = append(v.Parts, namevalues.Part{Idx: i, Type: typ, Value: pool[rng.Intn(len(pool))]})
+				v.Parts = append(v.Parts, namevalue.Part{Idx: i, Type: typ, Value: pool[rng.Intn(len(pool))]})
 			}
 			return Candidate{ObservationID: id(n), Value: Value{Name: v}, Negative: rng.Intn(8) == 0,
 				Provenance: Provenance{Credibility: rng.Intn(3) - 1, Uncertain: rng.Intn(5) == 0, ClaimConfidence: rng.Intn(3) - 1}}
@@ -433,7 +434,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 				in = append(in, gen(byte(i+1)))
 			}
 			where := fmt.Sprintf("seed %d list %d: %s", seed, list, describe(in))
-			got, err := Reconcile(properties.ValueTypeName, in, nil, properties.CardinalitySingle)
+			got, err := Reconcile(testRules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatalf("%s: %v", where, err)
 			}
@@ -441,7 +442,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 			// Order independent.
 			shuffled := append([]Candidate(nil), in...)
 			rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
-			if again, _ := Reconcile(properties.ValueTypeName, shuffled, nil, properties.CardinalitySingle); !reflect.DeepEqual(again, got) {
+			if again, _ := Reconcile(testRules, propertymeta.ValueTypeName, shuffled, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(again, got) {
 				t.Fatalf("%s: input order changed the result", where)
 			}
 
@@ -467,12 +468,12 @@ func TestReconcileNamesInvariants(t *testing.T) {
 			had := map[string]bool{}
 			for _, c := range in {
 				for _, p := range c.Value.Name.Parts {
-					had[p.Type+"="+NormalizeForm(p.Value)] = true
+					had[p.Type+"="+valuecompare.NormalizeForm(p.Value)] = true
 				}
 			}
 			for _, c := range got.Values {
 				for _, p := range c.Value.Name.Parts {
-					if !had[p.Type+"="+NormalizeForm(p.Value)] {
+					if !had[p.Type+"="+valuecompare.NormalizeForm(p.Value)] {
 						t.Fatalf("%s: invented part %s=%s", where, p.Type, p.Value)
 					}
 				}
@@ -483,7 +484,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 			for i, c := range in {
 				reformed[i] = withNameForm(c, "anything "+strings.Repeat("x", i))
 			}
-			if again, _ := Reconcile(properties.ValueTypeName, reformed, nil, properties.CardinalitySingle); !reflect.DeepEqual(specs(again), specs(got)) {
+			if again, _ := Reconcile(testRules, propertymeta.ValueTypeName, reformed, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(specs(again), specs(got)) {
 				t.Fatalf("%s: forms changed the result", where)
 			}
 
@@ -492,14 +493,14 @@ func TestReconcileNamesInvariants(t *testing.T) {
 			renamed := make([]Candidate, len(in))
 			for i, c := range in {
 				n := *c.Value.Name
-				n.Parts = append([]namevalues.Part(nil), n.Parts...)
+				n.Parts = append([]namevalue.Part(nil), n.Parts...)
 				for j := range n.Parts {
 					n.Parts[j].Type = rename[n.Parts[j].Type]
 				}
 				renamed[i] = c
 				renamed[i].Value = Value{Name: &n}
 			}
-			if again, _ := Reconcile(properties.ValueTypeName, renamed, nil, properties.CardinalitySingle); !reflect.DeepEqual(shape(again), shape(got)) {
+			if again, _ := Reconcile(testRules, propertymeta.ValueTypeName, renamed, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(shape(again), shape(got)) {
 				t.Fatalf("%s: renaming types changed the values", where)
 			}
 		}
@@ -523,14 +524,6 @@ func specs(r Result) []string {
 	return out
 }
 
-func TestIsInitial(t *testing.T) {
-	for w, want := range map[string]bool{"j": true, "J": true, "é": true, "jo": false, "蒋": false, "": false, "1": false} {
-		if IsInitial(w) != want {
-			t.Errorf("IsInitial(%q) = %v", w, !want)
-		}
-	}
-}
-
 // BenchmarkReconcileNames: one handle with 200 name candidates, the shape a
 // heavily researched Person reaches (performance-ledger.md).
 func BenchmarkReconcileNames(b *testing.B) {
@@ -544,7 +537,7 @@ func BenchmarkReconcileNames(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := Reconcile(properties.ValueTypeName, in, nil, properties.CardinalitySingle); err != nil {
+		if _, err := Reconcile(testRules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -552,8 +545,8 @@ func BenchmarkReconcileNames(b *testing.B) {
 
 // signatureOf is a name's parts by type, as the name module compares them;
 // "" for a name with no parts.
-func signatureOf(n *namevalues.Value) string {
-	units, ok := nameModule{}.split(Value{Name: n})
+func signatureOf(n *namevalue.Value) string {
+	units, ok := moduleFor(testRules, propertymeta.ValueTypeName).split(Value{Name: n})
 	if !ok {
 		return ""
 	}
@@ -603,7 +596,7 @@ func TestReconcileNamesCombine(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Reconcile(properties.ValueTypeName, tc.in, nil, properties.CardinalitySingle)
+			got, err := Reconcile(testRules, propertymeta.ValueTypeName, tc.in, nil, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -649,13 +642,28 @@ func TestReconcileNamesWords(t *testing.T) {
 		{"a misspelt word in a hyphenated surname is outvoted",
 			[]Candidate{nm(1, "given=Mary|surname=Smith-Jones"), nm(2, "given=Mary|surname=Smith-Jones"), nm(3, "given=Mary|surname=Smyth-Jones")},
 			[]cl{{[]byte{1, 2}, "given=Mary|surname=Smith-Jones"}, {[]byte{3}, "given=Mary|surname=Smyth-Jones"}}, StateMerged, "kept outvoted"},
+		{"a particle rejoins: Mc Donald and McDonald are one surname",
+			[]Candidate{nm(1, "given=James|surname=Mc Donald"), nm(2, "given=James|surname=McDonald")},
+			[]cl{{[]byte{1, 2}, "given=James|surname=Mc Donald"}}, StateMerged, "kept"},
+		{"an accent-folded pair never folds",
+			[]Candidate{nm(1, "given=Jose|surname=Robins"), nm(2, "given=José|given=Kenneth|surname=Robins")},
+			[]cl{{[]byte{1, 2}, "given=Jose|given=José|given=Kenneth|surname=Robins"}}, StateMerged, "kept"},
+		{"word order inside a part type does not split a value",
+			[]Candidate{nm(1, "given=Kenneth James|surname=Robins"), nm(2, "given=James|given=Kenneth|surname=Robins")},
+			[]cl{{[]byte{1, 2}, "given=Kenneth James|surname=Robins"}}, StateMerged, "kept"},
+		{"a misspelling is outvoted whatever its spacing",
+			[]Candidate{nm(1, "given=James|surname=McDonald"), nm(2, "given=James|surname=McDonald"), nm(3, "given=James|surname=Mc Donnald")},
+			[]cl{{[]byte{1, 2}, "given=James|surname=McDonald"}, {[]byte{3}, "given=James|surname=Mc Donnald"}}, StateMerged, "kept outvoted"},
+		{"a misspelt word is outvoted whatever its order in the part",
+			[]Candidate{nm(1, "given=James Kenneth|surname=Robins"), nm(2, "given=James Kenneth|surname=Robins"), nm(3, "given=Kenneth Jmaes|surname=Robins")},
+			[]cl{{[]byte{1, 2}, "given=James Kenneth|surname=Robins"}, {[]byte{3}, "given=Kenneth Jmaes|surname=Robins"}}, StateMerged, "kept outvoted"},
 		{"a different second surname stays",
 			[]Candidate{nm(1, "given=Mary|surname=Smith-Jones"), nm(2, "given=Mary|surname=Smith-Jones"), nm(3, "given=Mary|surname=Smith-Brown")},
 			[]cl{{[]byte{1, 2, 3}, "given=Mary|surname=Smith-Jones|surname=Smith-Brown"}}, StateMerged, "kept"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Reconcile(properties.ValueTypeName, tc.in, nil, properties.CardinalitySingle)
+			got, err := Reconcile(testRules, propertymeta.ValueTypeName, tc.in, nil, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}

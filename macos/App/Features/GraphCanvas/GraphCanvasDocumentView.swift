@@ -7,13 +7,16 @@ import SwiftUI
 /// steal pointer events. Empty-canvas drag pans via ``GraphCanvasPointerController``.
 ///
 /// Two layers of content: the host's base SwiftUI view (grid, edges, overlays)
-/// at the bottom, and ``items`` — one hosting view per card — above it. A card
+/// at the bottom, and ``items`` — one view per card — above it. A card
 /// drag moves its item view directly; no SwiftUI runs per pointer event.
 final class GraphCanvasDocumentView: NSView {
     let pointer: GraphCanvasPointerController
     private(set) lazy var items = GraphCanvasItemLayer(container: self)
     private var hostingView: NSHostingView<AnyView>?
     private var trackingArea: NSTrackingArea?
+    // `deinit` removes these, so they cannot be main-actor isolated.
+    nonisolated(unsafe) private var flagsMonitor: Any?
+    nonisolated(unsafe) private var resignKeyObserver: Any?
 
     override var isFlipped: Bool { true }
 
@@ -51,6 +54,57 @@ final class GraphCanvasDocumentView: NSView {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         updateTrackingAreas()
+        if window != nil {
+            installShiftTracking()
+        } else {
+            removeShiftTracking()
+        }
+    }
+
+    deinit {
+        if let flagsMonitor { NSEvent.removeMonitor(flagsMonitor) }
+        if let resignKeyObserver { NotificationCenter.default.removeObserver(resignKeyObserver) }
+    }
+
+    /// Shift as the canvas should see it: not while a text field is being edited.
+    static func reportedShift(_ flags: NSEvent.ModifierFlags, textHasFocus: Bool) -> Bool {
+        !textHasFocus && flags.contains(.shift)
+    }
+
+    /// The view refuses first responder, so `flagsChanged` never reaches it;
+    /// a local monitor sees the modifier keys instead.
+    private func installShiftTracking() {
+        removeShiftTracking()
+        pointer.setShiftHeld(
+            Self.reportedShift(NSEvent.modifierFlags, textHasFocus: window?.firstResponder is NSText)
+        )
+        flagsMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged]) { [weak self] event in
+            MainActor.assumeIsolated {
+                guard let self, event.window === self.window else { return }
+                self.pointer.setShiftHeld(
+                    Self.reportedShift(
+                        event.modifierFlags,
+                        textHasFocus: self.window?.firstResponder is NSText
+                    )
+                )
+            }
+            return event
+        }
+        resignKeyObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.pointer.setShiftHeld(false) }
+        }
+    }
+
+    private func removeShiftTracking() {
+        if let flagsMonitor { NSEvent.removeMonitor(flagsMonitor) }
+        if let resignKeyObserver { NotificationCenter.default.removeObserver(resignKeyObserver) }
+        flagsMonitor = nil
+        resignKeyObserver = nil
+        pointer.setShiftHeld(false)
     }
 
     override func updateTrackingAreas() {
@@ -77,10 +131,13 @@ final class GraphCanvasDocumentView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let doc = convert(event.locationInWindow, from: nil)
+        let shiftDown = event.modifierFlags.contains(.shift)
+        // A Shift press is canvas intent even when a text field kept focus.
+        pointer.setShiftHeld(shiftDown)
         pointer.mouseDown(
             documentPoint: doc,
             windowPoint: event.locationInWindow,
-            shiftDown: event.modifierFlags.contains(.shift)
+            shiftDown: shiftDown
         )
     }
 
@@ -101,6 +158,7 @@ final class GraphCanvasDocumentView: NSView {
     override func mouseMoved(with event: NSEvent) {
         let doc = convert(event.locationInWindow, from: nil)
         pointer.mouseMoved(documentPoint: doc)
+        syncToolTip()
     }
 
     override func mouseEntered(with event: NSEvent) {
@@ -109,6 +167,14 @@ final class GraphCanvasDocumentView: NSView {
 
     override func mouseExited(with event: NSEvent) {
         pointer.mouseExited()
+        syncToolTip()
+    }
+
+    /// The view owns the mouse (`hitTest` returns self), so the hovered
+    /// action's help is this view's tool tip; set only when it changes.
+    private func syncToolTip() {
+        let help = pointer.hoveredHelp
+        if toolTip != help { toolTip = help }
     }
 
     // MARK: - Accessibility

@@ -34,6 +34,13 @@ struct WorkspaceView: View {
             store: model.store
         )
         let navigation = WorkspaceNavigation()
+        // Attach before the commit hook is wired and before the first body
+        // evaluation, so the Sources list reads `navigation.projectUuid` and
+        // the restored location on its first build, and this attach loads
+        // nothing into the session.
+        if let uuid = model.project?.uuid, !uuid.isEmpty {
+            navigation.attachProject(uuid: uuid)
+        }
         navigation.onLocationCommit = { location in
             session.apply(location: location)
         }
@@ -81,9 +88,7 @@ struct WorkspaceView: View {
             }
         }
         .onAppear {
-            if let uuid = model.project?.uuid, !uuid.isEmpty {
-                navigation.attachProject(uuid: uuid)
-            }
+            session.apply(location: navigation.currentLocation)
             presentHistoryIssueIfNeeded()
             signOutCoordinator.isAvailable = true
             signOutCoordinator.action = { [model] in

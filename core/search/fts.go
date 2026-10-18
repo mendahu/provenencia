@@ -115,6 +115,8 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 		scoreTokens = tokenize(strings.ToLower(raw))
 	}
 
+	qtoks := newQueryTokens(scoreTokens)
+
 	var hits []Hit
 	for _, d := range byKey {
 		if err := errIfCancelled(ctx); err != nil {
@@ -125,14 +127,14 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			continue
 		}
 		values := fieldValuesForKind(d.kind, d.title, d.ref, d.secondary, d.body)
-		score, reason, snippet := scoreFields(spec, values, scoreTokens)
+		score, reason, snippet := scoreFields(spec, values, qtoks)
 		if d.refMatch == refMatchExact || d.refMatch == refMatchPrefix {
 			reason = "ref"
 			snippet = ""
 			if score <= 0 {
 				score = 12 // ref field weight floor
 			}
-		} else if field, line := alternateMatch(d.secondary, scoreTokens); reason == "other" && field != "" {
+		} else if field, line := alternateMatch(d.secondary, qtoks); reason == "other" && field != "" {
 			reason = field
 			snippet = line
 		} else if score <= 0 && d.fromFuzzy && d.fuzzySim >= FuzzyWeights.JaroWinklerMin {
@@ -241,7 +243,8 @@ func containsKind(kinds []string, kind string) bool {
 }
 
 func isHandleKind(kind string) bool {
-	return kind == KindPerson || kind == KindEvent || kind == KindPlace
+	spec, ok := kindSpec(kind)
+	return ok && spec.Handle
 }
 
 // fillMemberCounts sets MemberCount on handle hits: one query for the page.
@@ -412,6 +415,13 @@ func mergeTrigramCandidates(ctx context.Context, db *sql.DB, byKey map[string]do
 }
 
 func fieldValuesForKind(kind, title, refCol, secondary, body string) map[string]string {
+	if isHandleKind(kind) {
+		return map[string]string{
+			"title": title,
+			"ref":   refCol,
+			"other": secondary,
+		}
+	}
 	switch kind {
 	case KindSource:
 		notes, metadata, filename := splitTaggedBody(body)
@@ -428,12 +438,6 @@ func fieldValuesForKind(kind, title, refCol, secondary, body string) map[string]
 			"label":       title,
 			"key":         secondary,
 			"description": secondary,
-		}
-	case KindPerson, KindEvent, KindPlace:
-		return map[string]string{
-			"title": title,
-			"ref":   refCol,
-			"other": secondary,
 		}
 	default:
 		return map[string]string{

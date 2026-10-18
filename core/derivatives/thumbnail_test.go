@@ -11,6 +11,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -18,7 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/searchindex"
-	"github.com/mendahu/provenencia/core/derivatives/raster"
+	"github.com/mendahu/provenencia/core/raster"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -279,6 +280,53 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 				}
 				objPath := filepath.Join(c.Dir(), filepath.FromSlash(rel))
 				if err := os.WriteFile(objPath, []byte("tampered bytes"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				return id
+			},
+			wantIs: ErrCorruptObject,
+		},
+		{
+			name: "object is a symlink to an outside file with the same bytes",
+			srcID: func(t *testing.T) []byte {
+				data := bombPNG(t, 5, 5)
+				id := installSourceFile(t, c, data, "image/png", "link.png")
+				sum := sha256.Sum256(data)
+				rel, err := files.StorageRelPath(hex.EncodeToString(sum[:]), "image/png")
+				if err != nil {
+					t.Fatal(err)
+				}
+				objPath := filepath.Join(c.Dir(), filepath.FromSlash(rel))
+				outside := filepath.Join(t.TempDir(), "outside.png")
+				if err := os.WriteFile(outside, data, 0o644); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Remove(objPath); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(outside, objPath); err != nil {
+					t.Fatal(err)
+				}
+				return id
+			},
+			wantIs: ErrCorruptObject,
+		},
+		{
+			name: "source's shard folder is a symlink",
+			srcID: func(t *testing.T) []byte {
+				data := bombPNG(t, 6, 6)
+				id := installSourceFile(t, c, data, "image/png", "shard.png")
+				sum := sha256.Sum256(data)
+				rel, err := files.StorageRelPath(hex.EncodeToString(sum[:]), "image/png")
+				if err != nil {
+					t.Fatal(err)
+				}
+				shard := filepath.Join(c.Dir(), filepath.FromSlash(strings.Join(strings.Split(rel, "/")[:2], "/")))
+				moved := filepath.Join(t.TempDir(), "moved")
+				if err := os.Rename(shard, moved); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(moved, shard); err != nil {
 					t.Fatal(err)
 				}
 				return id

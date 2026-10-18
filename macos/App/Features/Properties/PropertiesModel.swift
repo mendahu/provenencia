@@ -2,20 +2,12 @@ import Foundation
 import Observation
 
 /// Researcher-creatable Property value types (S7-05). Schema also has `term`
-/// (registry-only) — never offered here.
+/// and `depiction` (registry-only) — never offered here.
 enum SubjectPropertyValueType {
     static let researcherCreatable = ["text", "integer", "date", "name", "subject"]
 
     static func label(_ valueType: String) -> LocalizedStringResource {
-        switch valueType {
-        case "text": return L10n.Properties.valueTypeText
-        case "integer": return L10n.Properties.valueTypeInteger
-        case "date": return L10n.Properties.valueTypeDate
-        case "name": return L10n.Properties.valueTypeName
-        case "subject": return L10n.Properties.valueTypeSubject
-        case "term": return L10n.Properties.valueTypeTerm
-        default: return L10n.Properties.valueTypeText
-        }
+        PropertyValueType(rawValue: valueType)?.label ?? L10n.Properties.valueTypeText
     }
 }
 
@@ -105,7 +97,7 @@ final class PropertiesModel {
 
     /// Board: type filter + keyword search only (no origin / value-type filters).
     var visibleProperties: [CatalogProperty] {
-        let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let q = TextMatch.Query(searchQuery)
         return snapshot.properties
             .filter { property in
                 if let selectedTypeKey,
@@ -113,11 +105,7 @@ final class PropertiesModel {
                     let bound = snapshot.propertiesByTypeID[type.id]?.contains { $0.property.id == property.id } == true
                     if !bound { return false }
                 }
-                if !q.isEmpty {
-                    let hay = (property.label + " " + property.key).lowercased()
-                    if !hay.contains(q) { return false }
-                }
-                return true
+                return q.matches(property.label, property.key)
             }
             .sorted { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
     }

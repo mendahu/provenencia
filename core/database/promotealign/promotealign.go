@@ -9,9 +9,8 @@ import (
 	"sort"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/namealiases"
-	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
 )
 
@@ -60,28 +59,23 @@ func Propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 		return graphalign.Proposal{}, 0, err
 	}
 
-	loaded, err := nameformats.Load(q)
+	rules, namePattern, err := valuerules.Load(c.Graph(), q)
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
-	names, err := namealiases.Comparer(c.Graph(), q, loaded.Comparer())
-	if err != nil {
-		return graphalign.Proposal{}, 0, err
-	}
-	canon, err := loadCanon(c.Graph(), q, layer, anchors, names, loaded.Key)
-	if err != nil {
-		return graphalign.Proposal{}, 0, err
-	}
-
 	stats, err := loadStats(c)
+	if err != nil {
+		return graphalign.Proposal{}, 0, err
+	}
+	canon, err := loadCanon(c.Graph(), q, layer, anchors, rules, namePattern)
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
 
 	cfg := graphalign.DefaultConfig()
-	cfg.Names = &names
+	cfg.Value = rules
 	prop := graphalign.Align(layer, canon, stats, anchors, &cfg)
-	if err := attachExhibits(q, c.Graph(), layer, &prop, cfg, stats); err != nil {
+	if err := attachExhibits(q, c.Graph(), layer, &prop, cfg, stats, namePattern); err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
 	return prop, rev, nil

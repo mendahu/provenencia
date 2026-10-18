@@ -10,8 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -23,6 +21,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -63,7 +64,7 @@ func newHandleFixture(t *testing.T) *handleFixture {
 
 func (f *handleFixture) prop(key string) properties.Property {
 	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, properties.OriginProvenencia)
+	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -73,7 +74,7 @@ func (f *handleFixture) prop(key string) properties.Property {
 // subject creates a Subject of kind with the given Observations.
 func (f *handleFixture) subject(kind string, in func(s subjects.Subject) []observations.Input) subjects.Subject {
 	f.t.Helper()
-	st, err := subjecttypes.Lookup(f.c, kind, subjecttypes.OriginProvenencia)
+	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -98,7 +99,7 @@ func (f *handleFixture) person(forms ...string) subjects.Subject {
 	return f.subject("person", func(s subjects.Subject) []observations.Input {
 		var in []observations.Input
 		for _, form := range forms {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: namevaluestest.Western(form)})
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: namevaluetest.Western(form)})
 		}
 		return in
 	})
@@ -200,7 +201,7 @@ func TestHandleSearchFindsOutvotedNames(t *testing.T) {
 func TestHandleSearchFollowsEdits(t *testing.T) {
 	f := newHandleFixture(t)
 	s := f.subject("person", func(s subjects.Subject) []observations.Input {
-		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: namevaluestest.Western("Ada Byron")}}
+		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: namevaluetest.Western("Ada Byron")}}
 	})
 	ada := f.promote(s, nil)
 	obs, err := observations.ListBySubject(f.c, s.ID)
@@ -210,7 +211,7 @@ func TestHandleSearchFollowsEdits(t *testing.T) {
 	nameID := f.prop("name").ID
 	if _, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: f.user}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 		return observations.Update(tx, f.user, observations.Input{
-			ID: obs[0].ID, SubjectID: s.ID, PropertyID: nameID, Name: namevaluestest.Western("Ada Lovelace"),
+			ID: obs[0].ID, SubjectID: s.ID, PropertyID: nameID, Name: namevaluetest.Western("Ada Lovelace"),
 		})
 	}); err != nil {
 		t.Fatal(err)
@@ -226,7 +227,7 @@ func TestHandleSearchFollowsEdits(t *testing.T) {
 func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	f := newHandleFixture(t)
 	person := f.person("James Robins", "Jim Robins")
-	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", propertyterms.OriginProvenencia)
+	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,7 +235,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	event := f.subject("event", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{
 			{SubjectID: s.ID, PropertyID: f.prop("event_type").ID, ValueTermID: birth.ID},
-			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &y}},
+			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}},
 		}
 	})
 	place := f.subject("place", func(s subjects.Subject) []observations.Input {
@@ -247,7 +248,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	role, err := propertyterms.Lookup(f.c, f.prop("role").ID, "subject", propertyterms.OriginProvenencia)
+	role, err := propertyterms.Lookup(f.c, f.prop("role").ID, "subject", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,7 +317,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	if _, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: f.user}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 		return observations.Update(tx, f.user, observations.Input{
 			ID: jamesObs.ID, SubjectID: person.ID, PropertyID: nameID,
-			Name: namevaluestest.Western("John Robins"),
+			Name: namevaluetest.Western("John Robins"),
 		})
 	}); err != nil {
 		t.Fatal(err)
@@ -358,14 +359,29 @@ func TestAlternateToponymIsMatchContext(t *testing.T) {
 	if len(hits) != 1 || hits[0].Ref != place.Entity.Ref || hits[0].Title != "Montréal" {
 		t.Fatalf("title %+v", hits)
 	}
-	if hits[0].MatchReason != "place" || hits[0].MatchSnippet != "Montreal" {
+	if hits[0].MatchReason != "title" || hits[0].MatchSnippet != "" {
+		t.Fatalf("a toponym that reads like the title is a title hit: %+v", hits[0])
+	}
+
+	g := newHandleFixture(t)
+	other := g.promote(g.subject("place", func(s subjects.Subject) []observations.Input {
+		return []observations.Input{
+			{SubjectID: s.ID, PropertyID: g.prop("toponym").ID, ValueText: "Montréal", HasText: true},
+			{SubjectID: s.ID, PropertyID: g.prop("toponym").ID, ValueText: "Ville-Marie", HasText: true},
+		}
+	}), nil)
+	hits = g.search("Ville Marie", KindPlace)
+	if len(hits) != 1 || hits[0].Ref != other.Entity.Ref || hits[0].Title != "Montréal" {
+		t.Fatalf("title %+v", hits)
+	}
+	if hits[0].MatchReason != "place" || hits[0].MatchSnippet != "Ville-Marie" {
 		t.Fatalf("context %+v", hits[0])
 	}
 }
 
 func TestHandleSearchEventsAndPlaces(t *testing.T) {
 	f := newHandleFixture(t)
-	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", propertyterms.OriginProvenencia)
+	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -373,7 +389,7 @@ func TestHandleSearchEventsAndPlaces(t *testing.T) {
 	event := f.promote(f.subject("event", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{
 			{SubjectID: s.ID, PropertyID: f.prop("event_type").ID, ValueTermID: birth.ID},
-			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &y, StartMonth: &m}},
+			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y, StartMonth: &m}},
 		}
 	}), nil)
 	place := f.promote(f.subject("place", func(s subjects.Subject) []observations.Input {
@@ -527,4 +543,21 @@ func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateIn
 			return artifacts.Create(tx, userID, in)
 		})
 	return a, err
+}
+
+// TestHandleKindsArePrimaryKinds keeps the registry's Handle flags in step with
+// the primary kinds in vocabkey, the one list the rest of the app reads.
+func TestHandleKindsArePrimaryKinds(t *testing.T) {
+	var got []string
+	for _, s := range Registry {
+		if s.Handle {
+			got = append(got, s.Kind)
+		}
+	}
+	want := vocabkey.PrimaryKinds()
+	sort.Strings(got)
+	sort.Strings(want)
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("Handle kinds = %v, want vocabkey.PrimaryKinds() = %v", got, want)
+	}
 }

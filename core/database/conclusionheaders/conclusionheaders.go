@@ -12,10 +12,10 @@ package conclusionheaders
 import (
 	"database/sql"
 
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // Querier is *sql.Tx or *sql.DB.
@@ -29,7 +29,7 @@ type PersonHeader struct {
 	Entity canonicalentities.Entity
 	// Name is the displayed auto-reconciled name; nil when no member names
 	// the Person.
-	Name *namevalues.Value
+	Name *namevalue.Value
 	// NameValueCount is the number of displayed name values: names are one
 	// structure, so at most 1. More would read as mixed, the extras as +N.
 	NameValueCount int
@@ -37,9 +37,14 @@ type PersonHeader struct {
 	// death event. Places are folded location chains at the event's date.
 	Birth LifeFacts
 	Death LifeFacts
+	// LikenessImageFileID is the image of the likeness the Person leads with
+	// on its page and in the Persons list; nil when none. The preferred
+	// portrait when its likeness is in the gallery, else the earliest
+	// (likenesses.Lead).
+	LikenessImageFileID []byte
 	// Updated is the handle's latest canonical_entity revision and its time.
 	// Filled by List only; zero means none.
-	Updated audit.Latest
+	Updated effects.Activity
 }
 
 // LifeFacts is a birth or a death composed from the canonical graph.
@@ -50,7 +55,7 @@ type LifeFacts struct {
 	Event      *canonicalentities.Entity
 	EventCount int
 	// Date is the event's date, else its start date.
-	Date      *datevalues.Value
+	Date      *datevalue.Value
 	DateCount int
 	Places    []HeaderPlace
 }

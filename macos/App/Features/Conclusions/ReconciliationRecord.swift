@@ -24,10 +24,15 @@ struct ReconciliationRecord: Equatable, Identifiable {
         readAs = ReconciledValueDisplay.readAs(outcome, locale: locale, orders: orders)
         readAsIsPhrase = ReconciledValueDisplay.readAsIsPhrase(outcome)
         counted = ReconciledValueDisplay.counted(outcome, in: field)
-        sourceTitle = outcome.sourceTitle.isEmpty ? outcome.observationRef : outcome.sourceTitle
+        sourceTitle = Self.sourceTitle(for: outcome)
         phrase = ReconciledValueDisplay.outcomePhrase(outcome, in: field, locale: locale)
         mark = ReconciledValueDisplay.outcomeMark(outcome, in: field)
         location = Self.composerLocation(for: outcome)
+    }
+
+    /// The Source's title, else the Observation ref when the Source has none.
+    static func sourceTitle(for outcome: CatalogReconcilerOutcome) -> String {
+        outcome.sourceTitle.isEmpty ? outcome.observationRef : outcome.sourceTitle
     }
 
     /// The citation composer on the record's Citation, its Observation in

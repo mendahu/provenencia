@@ -168,12 +168,6 @@ final class ArtifactViewerModel {
             return
         }
 
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            emptyReason = .missingFile
-            isLoading = false
-            return
-        }
-
         let loaded: Result<ArtifactViewerContent, Error> = await Task.detached(priority: .userInitiated) {
             switch kind {
             case .image:

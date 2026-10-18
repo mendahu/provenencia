@@ -58,10 +58,12 @@ struct CitationComposerObservationsColumn: View {
                     PVButton(L10n.CitationComposer.addObservation, variant: .secondary, size: .sm, icon: .plus) {
                         model.beginAddObservation()
                     }
+                    .disabled(model.isDrawingDepiction)
                     .accessibilityIdentifier("citationComposer.addObservation")
                     PVButton(L10n.CitationComposer.done, variant: .primary, size: .sm) {
                         onDone()
                     }
+                    .disabled(model.isDrawingDepiction)
                     .accessibilityIdentifier("citationComposer.done")
                 }
             }
@@ -115,6 +117,7 @@ struct CitationComposerObservationsColumn: View {
                     ) {
                         model.beginAddObservation(for: group.subjectID)
                     }
+                    .disabled(model.isDrawingDepiction)
                     .accessibilityIdentifier("citationComposer.group.add.\(group.subjectID)")
                 }
                 .padding(.leading, PVSpacing.space5)
@@ -136,7 +139,9 @@ struct CitationComposerObservationsColumn: View {
             hoveredLineID?.contains("bridge:\(bridgeID):") == true && hoveredLineID != line.id
         } ?? false
         let fresh = isFresh(line)
-        return HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
+        // A likeness line centres its label against the thumbnail; text lines share a baseline.
+        let rowAlignment: VerticalAlignment = line.imageRelPath == nil ? .firstTextBaseline : .center
+        return HStack(alignment: rowAlignment, spacing: PVSpacing.space4) {
             Group {
                 if let markKey = line.markKey {
                     PVMark(markKey, size: 14, decorative: true)
@@ -152,18 +157,28 @@ struct CitationComposerObservationsColumn: View {
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(minWidth: 92, maxWidth: 124, alignment: .leading)
-            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space2) {
+            HStack(alignment: rowAlignment, spacing: PVSpacing.space2) {
                 if line.negative {
                     Text(L10n.CitationComposer.notWord)
                         .italic()
                         .foregroundStyle(PVColor.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(verbatim: line.valueText.isEmpty ? "—" : line.valueText)
-                    .font(line.mono ? PVFont.mono(size: PVTypeScale.caption) : PVFont.body(size: PVTypeScale.bodySmall))
-                    .foregroundStyle(PVColor.textPrimary)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let relPath = line.imageRelPath {
+                    CachedThumbnail(
+                        projectDir: model.session.projectKey.projectDir,
+                        relPath: relPath,
+                        mediaType: "image/png",
+                        size: 32
+                    )
+                    .accessibilityLabel(Text(verbatim: depictionThumbLabel(line) ?? line.label))
+                } else {
+                    Text(verbatim: line.valueText.isEmpty ? "—" : line.valueText)
+                        .font(line.mono ? PVFont.mono(size: PVTypeScale.caption) : PVFont.body(size: PVTypeScale.bodySmall))
+                        .foregroundStyle(PVColor.textPrimary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if line.negative {
@@ -171,7 +186,7 @@ struct CitationComposerObservationsColumn: View {
             }
             lineActions(line, revealed: revealed, fresh: fresh)
         }
-        .padding(.vertical, PVSpacing.space3)
+        .padding(.vertical, line.imageRelPath == nil ? PVSpacing.space3 : PVSpacing.space1)
         .padding(.leading, PVSpacing.space5)
         .padding(.trailing, PVSpacing.space3)
         .frame(minHeight: 32, alignment: .top)
@@ -182,6 +197,7 @@ struct CitationComposerObservationsColumn: View {
             }
         }
         .contentShape(Rectangle())
+        .disabled(model.isDrawingDepiction)
         .focusable()
         .focused($lineFocus, equals: .row(line.id))
         .onTapGesture { model.beginEdit(line: line) }
@@ -199,6 +215,7 @@ struct CitationComposerObservationsColumn: View {
             hoveredLineID = hovering ? line.id : (hoveredLineID == line.id ? nil : hoveredLineID)
         }
         .accessibilityElement(children: .combine)
+        .lineReading(depictionReading(line, fresh: fresh))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction(.default) { model.beginEdit(line: line) }
         .accessibilityAction(named: Text(line.bridgeID == nil
@@ -217,6 +234,28 @@ struct CitationComposerObservationsColumn: View {
             Task { await model.askDeleteLine(line) }
         }
         .accessibilityIdentifier("citationComposer.line.\(line.id)")
+    }
+
+    private func depictionPerson(_ line: CitationSavedLine) -> String? {
+        model.vocabulary.subjectsByID[line.subjectID]?.label
+    }
+
+    /// "Likeness of Ben Ford"; nil when the person is unknown.
+    private func depictionThumbLabel(_ line: CitationSavedLine) -> String? {
+        depictionPerson(line).map { L10n.CitationComposer.depictionThumbLabel(line.label, $0) }
+    }
+
+    /// What VoiceOver reads for a saved likeness: "Likeness, Ben Ford" with the
+    /// badges the row shows (Negative, Saved) as its value. Nil for other lines,
+    /// which keep their combined reading.
+    private func depictionReading(_ line: CitationSavedLine, fresh: Bool) -> LineReading? {
+        guard line.imageRelPath != nil else { return nil }
+        let label = depictionPerson(line).map { L10n.CitationComposer.depictionLineLabel(line.label, $0) }
+            ?? line.label
+        var badges: [String] = []
+        if line.negative { badges.append(L10n.string(L10n.CitationComposer.negativeLabel)) }
+        if fresh { badges.append(L10n.string(L10n.CitationComposer.savedBadge)) }
+        return LineReading(label: label, value: badges.joined(separator: ", "))
     }
 
     @ViewBuilder
@@ -319,7 +358,7 @@ struct CitationComposerEditSheet: View {
         guard let session = model.editSession else { return .subject }
         switch session.kind {
         case .property(let values, _, _):
-            return CitationAuthoringNavigation.initialPropertyFocus(subjectID: values.subjectID)
+            return CitationAuthoringNavigation.initialPropertyFocus(values: values, vocabulary: model.vocabulary)
         case .bridge(let endA, let endB, let termID, _, _, _):
             let pair = CitationComposerAuthoring.resolvePair(
                 endA: endA,
@@ -413,7 +452,7 @@ struct CitationComposerEditSheet: View {
                 .foregroundStyle(PVColor.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
             if let error {
-                PVCallout(tone: .danger, message: error)
+                PVCallout(tone: .danger, title: L10n.CitationComposer.rowStateError, message: error)
             }
         }
     }
@@ -484,5 +523,24 @@ struct CitationComposerEditSheet: View {
                 }
             }
         )
+    }
+}
+
+/// A line's VoiceOver label and value when the combined reading would drop a badge.
+private struct LineReading {
+    var label: String
+    var value: String
+}
+
+private extension View {
+    /// Overrides the combined reading when the line has its own; nil keeps it.
+    @ViewBuilder
+    func lineReading(_ reading: LineReading?) -> some View {
+        if let reading {
+            accessibilityLabel(Text(verbatim: reading.label))
+                .accessibilityValue(Text(verbatim: reading.value))
+        } else {
+            self
+        }
     }
 }

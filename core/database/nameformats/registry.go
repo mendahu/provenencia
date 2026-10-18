@@ -6,8 +6,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // seedPart is one display-order row. Idx is the position within Style.
@@ -17,7 +18,7 @@ type seedPart struct {
 
 type seedRole struct {
 	PartType string
-	Role     match.NameRole
+	Role     valuecompare.NameRole
 }
 
 type seedWeight struct {
@@ -40,32 +41,32 @@ type seedProfile struct {
 // trailing separator in the sorted style.
 var seedProfiles = []seedProfile{
 	{
-		Key:         match.WesternPattern,
+		Key:         valuecompare.WesternPattern,
 		Label:       "Western",
 		Description: "GEDCOM-aligned spoken/display order",
 		Default:     true,
 		Parts: []seedPart{
-			{StyleNatural, namevalues.PartTypePrefix, ""},
-			{StyleNatural, namevalues.PartTypeGiven, ""},
-			{StyleNatural, namevalues.PartTypeNick, ""},
-			{StyleNatural, namevalues.PartTypeSurnamePrefix, ""},
-			{StyleNatural, namevalues.PartTypeSurname, ""},
-			{StyleNatural, namevalues.PartTypeSuffix, ""},
-			{StyleSorted, namevalues.PartTypeSurnamePrefix, ""},
-			{StyleSorted, namevalues.PartTypeSurname, ", "},
-			{StyleSorted, namevalues.PartTypePrefix, ""},
-			{StyleSorted, namevalues.PartTypeGiven, ""},
-			{StyleSorted, namevalues.PartTypeNick, ""},
-			{StyleSorted, namevalues.PartTypeSuffix, ""},
+			{StyleNatural, namevalue.PartTypePrefix, ""},
+			{StyleNatural, namevalue.PartTypeGiven, ""},
+			{StyleNatural, namevalue.PartTypeNick, ""},
+			{StyleNatural, namevalue.PartTypeSurnamePrefix, ""},
+			{StyleNatural, namevalue.PartTypeSurname, ""},
+			{StyleNatural, namevalue.PartTypeSuffix, ""},
+			{StyleSorted, namevalue.PartTypeSurnamePrefix, ""},
+			{StyleSorted, namevalue.PartTypeSurname, ", "},
+			{StyleSorted, namevalue.PartTypePrefix, ""},
+			{StyleSorted, namevalue.PartTypeGiven, ""},
+			{StyleSorted, namevalue.PartTypeNick, ""},
+			{StyleSorted, namevalue.PartTypeSuffix, ""},
 		},
 		Roles: []seedRole{
-			{namevalues.PartTypeSurname, match.RoleFamily},
-			{namevalues.PartTypeGiven, match.RoleGiven},
-			{namevalues.PartTypeNick, match.RoleNick},
-			{namevalues.PartTypeSuffix, match.RoleGeneration},
-			{namevalues.PartTypePrefix, match.RoleIgnored},
-			{namevalues.PartTypeSurnamePrefix, match.RoleIgnored},
-			{namevalues.PartTypeUndetermined, match.RoleUntyped},
+			{namevalue.PartTypeSurname, valuecompare.RoleFamily},
+			{namevalue.PartTypeGiven, valuecompare.RoleGiven},
+			{namevalue.PartTypeNick, valuecompare.RoleNick},
+			{namevalue.PartTypeSuffix, valuecompare.RoleGeneration},
+			{namevalue.PartTypePrefix, valuecompare.RoleIgnored},
+			{namevalue.PartTypeSurnamePrefix, valuecompare.RoleIgnored},
+			{namevalue.PartTypeUndetermined, valuecompare.RoleUntyped},
 		},
 		Weights: []seedWeight{
 			{"family", 1.5},
@@ -95,7 +96,7 @@ func Install(c *database.Catalog) error {
 	defaults := 0
 	for _, profile := range seedProfiles {
 		if profile.Default {
-			for _, pt := range namevalues.PartTypes() {
+			for _, pt := range namevalue.PartTypes() {
 				if !profile.hasRole(pt.Key) {
 					return errors.New("nameformats: default profile has no role for " + pt.Key)
 				}
@@ -108,12 +109,12 @@ func Install(c *database.Catalog) error {
 		if _, err := tx.Exec(`INSERT INTO name_format_profiles (id, key, origin, label, description)
 			VALUES (?, ?, ?, ?, ?)
 			ON CONFLICT(key, origin) DO NOTHING`,
-			id[:], profile.Key, OriginProvenencia, profile.Label, profile.Description); err != nil {
+			id[:], profile.Key, vocabkey.OriginProvenencia, profile.Label, profile.Description); err != nil {
 			return err
 		}
 		var stored []byte
 		if err := tx.QueryRow(`SELECT id FROM name_format_profiles WHERE key = ? AND origin = ?`,
-			profile.Key, OriginProvenencia).Scan(&stored); err != nil {
+			profile.Key, vocabkey.OriginProvenencia).Scan(&stored); err != nil {
 			return err
 		}
 		idx := map[string]int{}

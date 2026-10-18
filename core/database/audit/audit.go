@@ -32,14 +32,16 @@ type Revision struct {
 }
 
 // Record allocates the next revision and inserts the transaction + changes on tx,
-// plus one scope row per id each scopeResolvers entry resolves (source and
-// canonical_entity). Every entity type in the change list
+// plus one scope row per id each effects.Scopes entry names in set. Record does
+// not resolve: the caller passes the resolved Set of the same changes, so each
+// scope path is walked once per write, and an empty Set stores no scope rows.
+// Every entity type in the change list
 // must name a non-None effect; an unknown type or a None row is invalid. Run
 // drops None rows from a mixed list before Record, so they commit with the
 // revision and are not recorded.
 // The caller owns BEGIN/COMMIT; Record must run inside that transaction.
 // An empty Changes slice is invalid — callers must skip Record when nothing changed.
-func Record(tx *sql.Tx, rev Revision) (int64, error) {
+func Record(tx *sql.Tx, rev Revision, set effects.Set) (int64, error) {
 	if tx == nil {
 		return 0, ErrInvalid
 	}
@@ -108,13 +110,9 @@ func Record(tx *sql.Tx, rev Revision) (int64, error) {
 		}
 	}
 
-	for _, r := range scopeResolvers {
-		ids, err := r.Resolve(tx, rev.Changes)
-		if err != nil {
-			return 0, err
-		}
-		for _, id := range ids {
-			if _, err := tx.Exec(sqlInsertScope, txID[:], r.Type, id); err != nil {
+	for _, sc := range effects.Scopes {
+		for _, id := range sc.IDs(set) {
+			if _, err := tx.Exec(sqlInsertScope, txID[:], sc.Type, id); err != nil {
 				return 0, err
 			}
 		}

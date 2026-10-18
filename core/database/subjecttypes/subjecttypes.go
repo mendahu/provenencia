@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeSubjectTypesInvalid, apperr.KindUser)
@@ -23,8 +24,6 @@ var ErrInvalid = apperr.New(apperr.CodeSubjectTypesInvalid, apperr.KindUser)
 var ErrDuplicatePrefix = apperr.New(apperr.CodeSubjectTypesDuplicatePrefix, apperr.KindConflict)
 
 const (
-	OriginProvenencia = "provenencia"
-
 	sqlUpsert = `INSERT INTO subject_types (
 			id, key, origin, label, description, ref_prefix, candidate_ref_prefix
 		) VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -212,9 +211,5 @@ func scanType(row rowScanner) (Type, error) {
 }
 
 func originOK(origin string) bool {
-	if origin == OriginProvenencia {
-		return true
-	}
-	// Future plugin:<id> Install modules use the same Upsert path.
-	return strings.HasPrefix(origin, "plugin:") && len(origin) > len("plugin:")
+	return origin == vocabkey.OriginProvenencia || vocabkey.IsPluginOrigin(origin)
 }

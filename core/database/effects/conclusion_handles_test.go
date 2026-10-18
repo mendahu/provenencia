@@ -14,7 +14,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -27,7 +26,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -56,7 +58,7 @@ func TestConclusionHandleSets(t *testing.T) {
 		t.Fatal(err)
 	}
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -75,16 +77,16 @@ func TestConclusionHandleSets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	personType, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	eventType, err := subjecttypes.Lookup(c, "event", subjecttypes.OriginProvenencia)
+	eventType, err := subjecttypes.Lookup(c, "event", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
 	seenWith, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
-		return properties.Create(tx, userID, "Seen with", properties.ValueTypeSubject, "", "")
+		return properties.Create(tx, userID, "Seen with", propertymeta.ValueTypeSubject, "", "")
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -115,23 +117,23 @@ func TestConclusionHandleSets(t *testing.T) {
 	ada := mk(personType.ID, "Ada", 0)
 	bob := mk(personType.ID, "Bob", 8)
 	birth := mk(eventType.ID, "Birth", 16)
-	nameProp, err := properties.Lookup(c, "name", properties.OriginProvenencia)
+	nameProp, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	personProp, err := properties.Lookup(c, "person", properties.OriginProvenencia)
+	personProp, err := properties.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	eventProp, err := properties.Lookup(c, "event", properties.OriginProvenencia)
+	eventProp, err := properties.Lookup(c, "event", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	roleProp, err := properties.Lookup(c, "role", properties.OriginProvenencia)
+	roleProp, err := properties.Lookup(c, "role", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	role, err := propertyterms.Lookup(c, roleProp.ID, "subject", propertyterms.OriginProvenencia)
+	role, err := propertyterms.Lookup(c, roleProp.ID, "subject", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +142,7 @@ func TestConclusionHandleSets(t *testing.T) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 				ArtifactID: art.ID, LocatorJSON: evidenceLocator,
 			}, []observations.Input{
-				{SubjectID: ada.ID, PropertyID: nameProp.ID, Name: &namevalues.Value{Form: "Ada"}},
+				{SubjectID: ada.ID, PropertyID: nameProp.ID, Name: &namevalue.Value{Form: "Ada"}},
 				{SubjectID: ada.ID, PropertyID: seenWith.ID, ValueSubjectID: bob.ID},
 			})
 		}); err != nil {
@@ -435,7 +437,7 @@ func TestConclusionHandleSets(t *testing.T) {
 			EntityID:   append([]byte(nil), nameProp.ID...),
 			Action:     rowchange.ActionUpdate,
 			Fields: map[string]rowchange.FieldDiff{
-				"cardinality": {Old: properties.CardinalitySingle, New: properties.CardinalityMultiple},
+				"cardinality": {Old: propertymeta.CardinalitySingle, New: propertymeta.CardinalityMultiple},
 			},
 		}})
 		if err != nil {
@@ -456,7 +458,7 @@ func TestConclusionHandleSets(t *testing.T) {
 			EntityID:   append([]byte(nil), nameProp.ID...),
 			Action:     rowchange.ActionUpdate,
 			Fields: map[string]rowchange.FieldDiff{
-				"cardinality": {Old: properties.CardinalitySingle, New: properties.CardinalityMultiple},
+				"cardinality": {Old: propertymeta.CardinalitySingle, New: propertymeta.CardinalityMultiple},
 			},
 		})
 		if len(scoped) != 0 {

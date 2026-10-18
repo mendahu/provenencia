@@ -99,9 +99,10 @@ enum OmnibarHitPresentation {
     /// The lead thumbnail for every kind but `source`, which the host draws
     /// from the Source's own image.
     static func leadThumbnail(for hit: CatalogSearchHit) -> PVThumbnail.Content {
-        switch hit.kind {
-        case "person", "event", "place":
+        if EvidencePrimaryKind(rawValue: hit.kind) != nil {
             return ConclusionListRow.thumbnail(mark: PVMarkKey(subjectTypeKey: hit.kind) ?? .fallback)
+        }
+        switch hit.kind {
         case "source_type":
             if hit.iconKey.isEmpty { return PVThumbnail.Content(glyph: WorkspaceSection.sourceTypes.glyph) }
             return PVThumbnail.Content(

@@ -1,10 +1,10 @@
 import SwiftUI
 
 /// Loads a project object thumbnail through `ThumbnailCache` and feeds
-/// `PVThumbnail` (empty / loading / image / type icon / MIME glyph).
+/// `PVThumbnail` (empty / loading / image / fallback mark / type icon / MIME glyph).
 /// Features should not call `NSImage(contentsOf:)` on the render path.
 ///
-/// Preference: raster → type icon → MIME glyph → empty.
+/// Preference: raster → fallback mark → type icon → MIME glyph → empty.
 struct CachedThumbnail: View {
     /// Square list tile, or a frame-filling well whose raster covers and whose glyph stays 56pt.
     enum Layout {
@@ -24,6 +24,15 @@ struct CachedThumbnail: View {
     var size: CGFloat = 44
     var cornerRadius: CGFloat = PVRadius.sm
     var layout: Layout = .tile
+    /// A mark the caller holds (a Person's `subject_*` mark) to show when there is
+    /// no raster; it wins over the type icon and the MIME glyph.
+    var fallbackMark: PVMarkKey? = nil
+    /// Spoken label of `fallbackMark`.
+    var fallbackLabel: LocalizedStringResource? = nil
+    /// Spoken label while a raster shows (`.tile` layout); a formatted string, not a resource.
+    var imageLabel: String? = nil
+    /// Tint and line for the `.tile` thumb (a Person's gender treatment).
+    var colors: PVThumbnail.Colors? = nil
 
     @State private var content: PVThumbnail.Content = .empty
 
@@ -31,13 +40,27 @@ struct CachedThumbnail: View {
         Group {
             switch layout {
             case .tile:
-                PVThumbnail(content, size: size, cornerRadius: cornerRadius)
+                tileBody
             case .well:
                 wellBody
             }
         }
         .task(id: taskID) {
             await load()
+        }
+    }
+
+    private var tileBody: some View {
+        // A row with no path draws its fallback at once, not the empty dash first.
+        let hasPath = !relPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let shown = hasPath ? content : fallbackContent()
+        return Group {
+            if let imageLabel, shown.image != nil {
+                PVThumbnail(shown, size: size, cornerRadius: cornerRadius, colors: colors)
+                    .accessibilityLabel(Text(verbatim: imageLabel))
+            } else {
+                PVThumbnail(shown, size: size, cornerRadius: cornerRadius, colors: colors)
+            }
         }
     }
 
@@ -65,43 +88,47 @@ struct CachedThumbnail: View {
     }
 
     private var taskID: String {
-        "\(projectDir)\0\(relPath)\0\(mediaType)\0\(originalFilename)\0\(typeIconKey ?? "")"
+        "\(projectDir)\0\(relPath)\0\(mediaType)\0\(originalFilename)\0\(typeIconKey ?? "")\0\(fallbackMark?.rawValue ?? "")"
     }
 
-    private var hasFileMetadata: Bool {
-        !mediaType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || !originalFilename.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var resolvedTypeIcon: PVMarkKey? {
-        guard let raw = typeIconKey?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
-            return nil
+    /// The fallback when there is no raster: `fallbackMark`, then the type icon,
+    /// then the MIME glyph, then empty.
+    static func fallbackContent(
+        fallbackMark: PVMarkKey?,
+        fallbackLabel: LocalizedStringResource?,
+        typeIconKey: String?,
+        mediaType: String,
+        originalFilename: String
+    ) -> PVThumbnail.Content {
+        if let fallbackMark {
+            return PVThumbnail.Content(glyph: .mark(fallbackMark), label: fallbackLabel)
         }
-        let key = PVMarkKey(catalogKey: raw)
-        guard key.family == .type else { return nil }
-        return key
-    }
-
-    private func mimeGlyphContent() -> PVThumbnail.Content {
-        let key = PVFileTypeGlyph.key(
-            mediaType: mediaType.isEmpty ? nil : mediaType,
-            originalFilename: originalFilename.isEmpty ? nil : originalFilename
-        )
-        return PVThumbnail.Content(glyph: .mark(key), label: key.accessibilityName)
-    }
-
-    private func typeGlyphContent(_ key: PVMarkKey) -> PVThumbnail.Content {
-        PVThumbnail.Content(glyph: .mark(key), label: key.accessibilityName)
+        if let raw = typeIconKey?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty {
+            let key = PVMarkKey(catalogKey: raw)
+            if key.family == .type {
+                return PVThumbnail.Content(glyph: .mark(key), label: key.accessibilityName)
+            }
+        }
+        let hasFileMetadata = !mediaType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !originalFilename.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if hasFileMetadata {
+            let key = PVFileTypeGlyph.key(
+                mediaType: mediaType.isEmpty ? nil : mediaType,
+                originalFilename: originalFilename.isEmpty ? nil : originalFilename
+            )
+            return PVThumbnail.Content(glyph: .mark(key), label: key.accessibilityName)
+        }
+        return .empty
     }
 
     private func fallbackContent() -> PVThumbnail.Content {
-        if let typeKey = resolvedTypeIcon {
-            return typeGlyphContent(typeKey)
-        }
-        if hasFileMetadata {
-            return mimeGlyphContent()
-        }
-        return .empty
+        Self.fallbackContent(
+            fallbackMark: fallbackMark,
+            fallbackLabel: fallbackLabel,
+            typeIconKey: typeIconKey,
+            mediaType: mediaType,
+            originalFilename: originalFilename
+        )
     }
 
     private func load() async {
@@ -111,10 +138,12 @@ struct CachedThumbnail: View {
             return
         }
         content = PVThumbnail.Content(loading: true)
-        if let nsImage = await ThumbnailCache.shared.image(
+        let nsImage = await ThumbnailCache.shared.image(
             projectDir: projectDir,
             relPath: trimmed
-        ) {
+        )
+        guard !Task.isCancelled else { return }
+        if let nsImage {
             content = PVThumbnail.Content(image: Image(nsImage: nsImage))
         } else {
             content = fallbackContent()

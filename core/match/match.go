@@ -4,7 +4,7 @@
 // Candidates are handles of the same Subject type.
 //
 // The algorithm is data. A Profile lists, for one Subject type, the Features
-// that count: which Property, how its values are compared (a Comparer), how
+// that count: which Property, how its values are compared (its value type), how
 // much a resemblance adds (Weight), and how much a clear disagreement takes
 // away (Contradiction). Scores are additive, so the weights read as points:
 // "a matching name is worth 10, a different sex at birth costs 2". Default
@@ -18,8 +18,10 @@ import (
 	"bytes"
 	"sort"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/autoreconcile"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // Property names one Property by its vocabulary identity.
@@ -28,7 +30,7 @@ type Property struct {
 	Origin string
 }
 
-// Value is one value of a Property, in the shape comparers read. Terms are
+// Value is one value of a Property, in the shape value compare reads. Terms are
 // carried by key (sex_at_birth "male"), so profiles can name them.
 type Value struct {
 	Text       string
@@ -36,18 +38,37 @@ type Value struct {
 	Integer    int64
 	HasInteger bool
 	Term       string
-	// TermID is the catalog term id when known. Comparers compare terms by
+	// TermLabel is the term's catalog label, for showing the value; empty
+	// when the loader had none. Value compare never reads it.
+	TermLabel string
+	// TermID is the catalog term id when known. Value compare reads terms by
 	// key; Promote's exhibits pass the id to autoreconcile.Compatible, which
 	// falls back to the key when it is empty.
 	TermID []byte
 	// Neutral is the term's catalog flag: no evidence either way, so a
 	// comparison with it is not comparable. Loaders copy it from the term.
 	Neutral bool
-	Date    *datevalues.Value
-	Name    *namevalues.Value
+	Date    *datevalue.Value
+	Name    *namevalue.Value
 	// NamePattern is the name pattern key for Name (its Person's name
-	// format, once loaders supply it); empty uses the comparer's pattern.
+	// format, once loaders supply it); empty reads Rules.Names.Western.
 	NamePattern string
+
+	// Counted is true on values a cache loader filled with the evidence
+	// below; every other value weighs 1.
+	Counted bool
+	// Support is the distinct Sources behind a cached value; Against the
+	// negative Observations that counted against it; Rank its order on the
+	// handle; Reason the auto-reconciler's verdict (kept, outvoted, weak,
+	// denied, provisional), not a match.Reason. Denied is Reason == denied. Set with SetEvidence.
+	Support, Against, Rank int
+	Reason                 autoreconcile.Reason
+	Denied                 bool
+	// Negative marks a negative Observation: it never speaks for a match, it
+	// counts against a value it is compatible with. ObservationID is the
+	// Observation a probe value was loaded from.
+	Negative      bool
+	ObservationID []byte
 }
 
 // Values are a thing's values, every Property it has, each possibly several
@@ -65,9 +86,13 @@ type Candidate struct {
 // name, born the same year") and for tuning.
 type Reason struct {
 	Property Property
-	// Similarity is the best resemblance between any probe value and any
-	// candidate value, 0…1.
+	// Similarity is the best resemblance between a probe value and a
+	// candidate value, times both values' weights (a value is weighed by its
+	// support against the leading value), 0…1; 0 is a contradiction.
 	Similarity float64
+	// Probe and Candidate are the two values that produced the Similarity,
+	// or the contradiction.
+	Probe, Candidate ValueRef
 	// Contribution is what the Feature added to the score: Weight ×
 	// Similarity, or −Contradiction when the values clearly disagree.
 	Contribution float64
@@ -83,10 +108,10 @@ type Match struct {
 
 // Rank scores every candidate against the probe and returns those reaching
 // p.MinScore, best first (score, then ref). limit <= 0 returns them all.
-func Rank(p Profile, probe Values, candidates []Candidate, limit int) []Match {
+func Rank(p Profile, rules valuecompare.Rules, probe Values, candidates []Candidate, limit int) []Match {
 	var out []Match
 	for _, c := range candidates {
-		m := Score(p, probe, c)
+		m := Score(p, rules, probe, c)
 		if m.Score >= p.MinScore && len(m.Reasons) > 0 {
 			out = append(out, m)
 		}
@@ -107,15 +132,17 @@ func Rank(p Profile, probe Values, candidates []Candidate, limit int) []Match {
 }
 
 // Score is one candidate's score and its reasons, whatever the threshold.
-// A Feature counts only when both sides have a value the comparer can judge.
-func Score(p Profile, probe Values, c Candidate) Match {
+// A Feature counts only when both sides have a value value compare can judge.
+func Score(p Profile, rules valuecompare.Rules, probe Values, c Candidate) Match {
 	m := Match{EntityID: c.EntityID, Ref: c.Ref}
 	for _, f := range p.Features {
-		sim, ok := best(f.Comparer, probe[f.Property], c.Values[f.Property])
-		if !ok {
+		a, b := poolPeriods(f.Property, probe, c.Values)
+		pr := pairValues(rules, f.ValueType, f.Cardinality, a, b)
+		if !pr.Comparable {
 			continue
 		}
-		r := Reason{Property: f.Property, Similarity: sim, Contribution: f.Weight * sim}
+		sim := pr.Similarity
+		r := Reason{Property: f.Property, Similarity: sim, Probe: pr.Probe, Candidate: pr.Candidate, Contribution: f.Weight * sim}
 		if sim == 0 {
 			r.Contribution = -f.Contradiction
 		}
@@ -123,25 +150,4 @@ func Score(p Profile, probe Values, c Candidate) Match {
 		m.Reasons = append(m.Reasons, r)
 	}
 	return m
-}
-
-// best is the highest similarity over every comparable pair; ok is false
-// when no pair is comparable (a side is empty, or only neutral values).
-func best(cmp Comparer, a, b []Value) (float64, bool) {
-	var (
-		top float64
-		ok  bool
-	)
-	for _, x := range a {
-		for _, y := range b {
-			s, comparable := cmp.Compare(x, y)
-			if !comparable {
-				continue
-			}
-			if !ok || s > top {
-				top, ok = s, true
-			}
-		}
-	}
-	return top, ok
 }

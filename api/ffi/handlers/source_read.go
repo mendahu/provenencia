@@ -6,12 +6,14 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	_ "github.com/mendahu/provenencia/core/database/sourcefill"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 type propertyInfo struct {
@@ -19,11 +21,6 @@ type propertyInfo struct {
 	Label     string
 	ValueType string
 	Origin    string
-}
-
-type termInfo struct {
-	Key   string
-	Label string
 }
 
 func loadPropertyInfo(c *database.Catalog) (map[string]propertyInfo, error) {
@@ -41,21 +38,6 @@ func loadPropertyInfo(c *database.Catalog) (map[string]propertyInfo, error) {
 	return out, nil
 }
 
-func loadTermInfo(c *database.Catalog) (map[string]termInfo, error) {
-	if c == nil || c.Graph() == nil {
-		return map[string]termInfo{}, nil
-	}
-	v, err := c.Graph().Vocabulary()
-	if err != nil {
-		return nil, err
-	}
-	out := map[string]termInfo{}
-	for _, t := range v.Terms {
-		out[string(t.ID)] = termInfo{Key: t.Key, Label: t.Label}
-	}
-	return out, nil
-}
-
 // listedProtosFromSource projects stored observations. A citation id keeps
 // that citation's rows, in the Source's ref order. Nil keeps every row.
 func listedProtosFromSource(c *database.Catalog, sg graphcache.SourceGraph, citationID []byte) ([]*engine.Observation, error) {
@@ -63,15 +45,19 @@ func listedProtosFromSource(c *database.Catalog, sg graphcache.SourceGraph, cita
 	if err != nil {
 		return nil, err
 	}
-	terms, err := loadTermInfo(c)
-	if err != nil {
-		return nil, err
+	terms := map[string]graphcache.VocabTerm{}
+	if c != nil && c.Graph() != nil {
+		v, err := c.Graph().Vocabulary()
+		if err != nil {
+			return nil, err
+		}
+		terms = v.TermsByID()
 	}
 	subjectLabels := map[string]string{}
 	for _, s := range sg.Subjects {
 		subjectLabels[string(s.ID)] = s.Label
 	}
-	var out []*engine.Observation
+	var rows []observations.Listed
 	for _, o := range sg.Observations {
 		if citationID != nil && !bytes.Equal(o.CitationID, citationID) {
 			continue
@@ -80,12 +66,12 @@ func listedProtosFromSource(c *database.Catalog, sg graphcache.SourceGraph, cita
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, listedObservationProto(listed))
+		rows = append(rows, listed)
 	}
-	return out, nil
+	return listedProtos(c, rows)
 }
 
-func listedFromSource(o graphcache.SourceObservation, props map[string]propertyInfo, terms map[string]termInfo, subjectLabels map[string]string) (observations.Listed, error) {
+func listedFromSource(o graphcache.SourceObservation, props map[string]propertyInfo, terms map[string]graphcache.VocabTerm, subjectLabels map[string]string) (observations.Listed, error) {
 	info := props[string(o.PropertyID)]
 	l := observations.Listed{
 		Observation: observations.Observation{
@@ -95,6 +81,7 @@ func listedFromSource(o graphcache.SourceObservation, props map[string]propertyI
 			ValueInteger: o.Integer, HasInteger: o.HasInteger,
 			ValueDateID: o.DateID, ValueNameID: o.NameID,
 			ValueSubjectID: o.ValueSubjectID, ValueTermID: o.TermID,
+			ValueDepictionID: o.DepictionID,
 		},
 		PropertyKey: info.Key, PropertyLabel: info.Label, PropertyValueType: info.ValueType,
 	}
@@ -103,6 +90,10 @@ func listedFromSource(o graphcache.SourceObservation, props map[string]propertyI
 	}
 	if label, ok := subjectLabels[string(o.ValueSubjectID)]; ok {
 		l.ValueSubjectLabel = label
+	}
+	// Matches depictionvalues.FromJoin's non-nil result: depiction_values.image_file_id is NOT NULL.
+	if len(o.DepictionID) > 0 {
+		l.Depiction = &depictionvalues.Value{ID: o.DepictionID, RegionJSON: o.DepictionRegion, ImageFileID: o.DepictionImageFileID}
 	}
 	if len(o.Date) > 0 {
 		d, err := valuecodec.UnmarshalDate(o.Date)
@@ -154,7 +145,7 @@ func membershipsFromSource(g *graphcache.Graph, sg graphcache.SourceGraph, nameP
 	return out, nil
 }
 
-func keptName(n *graphcache.Node, propertyID []byte) *namevalues.Value {
+func keptName(n *graphcache.Node, propertyID []byte) *namevalue.Value {
 	if n == nil || len(propertyID) != 16 {
 		return nil
 	}
@@ -172,7 +163,7 @@ func keptName(n *graphcache.Node, propertyID []byte) *namevalues.Value {
 
 func namePropertyID(props map[string]propertyInfo) []byte {
 	for id, info := range props {
-		if info.Key == "name" && info.Origin == "provenencia" {
+		if info.Key == vocabkey.PropertyName && info.Origin == vocabkey.OriginProvenencia {
 			return []byte(id)
 		}
 	}

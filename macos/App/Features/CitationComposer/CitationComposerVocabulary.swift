@@ -8,7 +8,18 @@ struct CitationComposerVocabulary: Equatable {
         PropertyValueType.date.rawValue,
         PropertyValueType.term.rawValue,
         PropertyValueType.name.rawValue,
+        PropertyValueType.depiction.rawValue,
     ]
+
+    /// Whether a value type can be authored against an Artifact with these
+    /// capabilities. A depiction is a region on the file, so the file must take one.
+    static func isOffered(valueType: String, capabilities: ArtifactLocatorCapabilities) -> Bool {
+        guard supportedValueTypes.contains(valueType) else { return false }
+        if valueType == PropertyValueType.depiction.rawValue {
+            return capabilities.supportsRegionLocator
+        }
+        return true
+    }
 
     var propertiesByID: [String: CatalogProperty]
     var propertiesByTypeID: [String: [CatalogProperty]]
@@ -19,8 +30,6 @@ struct CitationComposerVocabulary: Equatable {
     var typesByID: [String: CatalogSubjectType]
     /// One subject menu for every observation row, including "new subject".
     var subjectComboOptions: [PVComboBoxOption]
-    /// Property menus shared by every subject of a type.
-    var propertyComboOptionsByTypeID: [String: [PVComboBoxOption]]
     /// Term menus shared by every observation of a property.
     var termComboOptionsByPropertyID: [String: [PVComboBoxOption]]
 
@@ -33,7 +42,6 @@ struct CitationComposerVocabulary: Equatable {
         connectRules: [],
         typesByID: [:],
         subjectComboOptions: [],
-        propertyComboOptionsByTypeID: [:],
         termComboOptionsByPropertyID: [:]
     )
 
@@ -78,25 +86,8 @@ struct CitationComposerVocabulary: Equatable {
         }
         var subjectsByID: [String: CitationComposerModel.GraphSubjectOption] = [:]
         subjectsByID.reserveCapacity(graphSubjects.count)
-        var typeKeyByTypeID: [String: String] = [:]
-        for subject in graphSubjects {
-            if subjectsByID[subject.id] == nil {
-                subjectsByID[subject.id] = subject
-            }
-            if typeKeyByTypeID[subject.typeID] == nil {
-                typeKeyByTypeID[subject.typeID] = subject.typeKey
-            }
-        }
-        for (typeID, type) in typesByID {
-            typeKeyByTypeID[typeID] = type.key
-        }
-        var propertyComboOptionsByTypeID: [String: [PVComboBoxOption]] = [:]
-        for (typeID, properties) in propertiesByTypeID {
-            propertyComboOptionsByTypeID[typeID] = Self.listedProperties(
-                typeKey: typeKeyByTypeID[typeID] ?? "",
-                properties: properties,
-                rules: rules
-            ).map { PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key) }
+        for subject in graphSubjects where subjectsByID[subject.id] == nil {
+            subjectsByID[subject.id] = subject
         }
         var termComboOptionsByPropertyID: [String: [PVComboBoxOption]] = [:]
         for (propertyID, terms) in termsByPropertyID {
@@ -127,7 +118,6 @@ struct CitationComposerVocabulary: Equatable {
             connectRules: rules,
             typesByID: typesByID,
             subjectComboOptions: subjectComboOptions,
-            propertyComboOptionsByTypeID: propertyComboOptionsByTypeID,
             termComboOptionsByPropertyID: termComboOptionsByPropertyID
         )
     }
@@ -142,24 +132,49 @@ struct CitationComposerVocabulary: Equatable {
         }
     }
 
-    func propertyOptions(forSubjectID subjectID: String) -> [CatalogProperty] {
+    func propertyOptions(
+        forSubjectID subjectID: String,
+        capabilities: ArtifactLocatorCapabilities
+    ) -> [CatalogProperty] {
         guard let subject = subjectsByID[subjectID] else { return [] }
         return Self.listedProperties(
             typeKey: subject.typeKey,
             properties: propertiesByTypeID[subject.typeID] ?? [],
-            rules: connectRules
+            rules: connectRules,
+            capabilities: capabilities
         )
     }
 
-    func propertyComboOptions(forSubjectID subjectID: String) -> [PVComboBoxOption] {
-        guard let subject = subjectsByID[subjectID] else { return [] }
-        return propertyComboOptionsByTypeID[subject.typeID] ?? []
+    /// The Property menu for a field that already holds `propertyID`: the
+    /// subject's list, plus the held Property whenever the list lacks it (no
+    /// subject picked yet, as in a run of likenesses), so the field never reads
+    /// empty above a value area it still drives. `applyObservationSubject`
+    /// drops a held Property the new subject's type cannot take before this
+    /// menu is built.
+    func propertyOptions(
+        forSubjectID subjectID: String,
+        keeping propertyID: String,
+        capabilities: ArtifactLocatorCapabilities
+    ) -> [CatalogProperty] {
+        var options = propertyOptions(forSubjectID: subjectID, capabilities: capabilities)
+        if !propertyID.isEmpty,
+           !options.contains(where: { $0.id == propertyID }),
+           let held = property(id: propertyID)
+        {
+            options.append(held)
+        }
+        return options
+    }
+
+    func isDepiction(propertyID: String) -> Bool {
+        property(id: propertyID)?.valueType == PropertyValueType.depiction.rawValue
     }
 
     private static func listedProperties(
         typeKey: String,
         properties: [CatalogProperty],
-        rules: [CatalogConnectRule]
+        rules: [CatalogConnectRule],
+        capabilities: ArtifactLocatorCapabilities
     ) -> [CatalogProperty] {
         let excluded = Set(
             rules
@@ -168,7 +183,8 @@ struct CitationComposerVocabulary: Equatable {
         )
         return properties
             .filter {
-                supportedValueTypes.contains($0.valueType) && !excluded.contains($0.key)
+                isOffered(valueType: $0.valueType, capabilities: capabilities)
+                    && !excluded.contains($0.key)
             }
             .sorted { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
     }

@@ -6,18 +6,27 @@ import SwiftUI
 struct PersonDetailView: View {
     let session: WorkspaceSession
     let entityId: String
+    @State private var portrait: ConclusionPortraitModel
+
+    init(session: WorkspaceSession, entityId: String, userID: String) {
+        self.session = session
+        self.entityId = entityId
+        _portrait = State(
+            initialValue: ConclusionPortraitModel(session: session, userID: userID, entityId: entityId)
+        )
+    }
 
     var body: some View {
         ConclusionDetailPage<PersonDetailContent, PersonDetailVitals>(
             session: session,
             entityId: entityId,
-            mark: .subjectPerson,
-            thumbnailLabel: L10n.Conclusions.personNoLikeness,
             pageIdentifier: "persons.detail",
             errorIdentifier: "persons.detail.error",
             make: { PersonDetailContent(detail: $0, orders: session.nameFormat) },
-            summary: { PersonDetailVitals(vitals: $0.vitals) }
+            summary: { PersonDetailVitals(vitals: $0.vitals) },
+            portrait: portrait
         )
+        .vocabularyToastOverlay($portrait.toast, identifier: "persons.detail.toast")
     }
 }
 

@@ -285,7 +285,9 @@ storage: objects/8f/ce/8fce3b....jpg
 
 The basename is the full lowercase hex checksum plus an optional MIME-derived extension (`.jpg`, `.pdf`, …) from `media_type`. Unknown or empty media types keep the bare hex name. The exact sharding convention (`objects/{first two hex}/{next two}/{full hex}{ext}`) is fixed as above unless a migration notes otherwise.
 
-The stored object is the **original file bytes** (JPEG, PNG, PDF, …). Hash names do not encrypt or wrap the payload. A user who opens the object in a normal viewer sees the picture or document. The ingest filename is `files.original_filename`, not the path on disk.
+The stored object is the **original file bytes** of an import (JPEG, PNG, PDF, …). Hash names do not encrypt or wrap the payload. A user who opens the object in a normal viewer sees the picture or document. The ingest filename is `files.original_filename`, not the path on disk.
+
+A File can also hold an image the app rendered (a depiction, S10-32). Go checks its path as for an import, decodes only PNG or JPEG within the pixel budget (`core/raster`), and stores its own PNG, never the app's bytes (`ingest.StageImage`). A staged image's object is written inside the write that commits its `files` row. An object is removed only by `files.PurgeUnreferenced`, when no row names its checksum; every object write and purge runs inside `catalogsession.Do`, which runs a project's operations one at a time, so a delete and an import of the same bytes cannot interleave. Go reads, writes, and removes object files only through `core/objectstore`, inside the project's objects/ folder; a symlinked objects/ or a symlink out of it is refused, and a removal also removes the shard folders it leaves empty. The app reads an object by its relative path only through `ProjectFiles.objectURL`, which refuses the same things: a path not under objects/, a symlinked objects/, shard folder, or object, a Finder alias at the object path, and anything that is not a regular file. A depiction value points at such a File (`depiction_values.image_file_id`); it is released when no row points at it.
 
 This keeps projects relocatable and prevents `storage_path` and checksum from becoming competing sources of truth.
 
@@ -403,6 +405,8 @@ A historical Artifact view can therefore resolve the correct derivative from the
 Derivative Files use the same content-addressed `files` store, but unlike primary Files they are reproducible and disposable. They may be regenerated or purged without changing research history.
 
 Derivative generation and cache eviction do not need to create research audit events.
+
+Releasing a File removes only its own derivative links (`source_file_id`). A derived File is deleted when nothing points at it, so two Files that share a deduplicated thumbnail keep it until both are released.
 
 ---
 

@@ -7,8 +7,6 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -16,7 +14,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/ref"
@@ -135,18 +132,18 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Artifact, []rowchan
 		fields["description"] = rowchange.FieldDiff{Old: nil, New: in.Description}
 	}
 	return Artifact{
-		ID:          append([]byte(nil), idBytes...),
-		Ref:         artRef,
-		SourceID:    append([]byte(nil), in.SourceID...),
-		FileID:      copyBlob(in.FileID),
-		Label:       in.Label,
-		Description: in.Description,
-	}, []rowchange.Change{{
-		EntityType: "artifact",
-		EntityID:   append([]byte(nil), idBytes...),
-		Action:     rowchange.ActionCreate,
-		Fields:     fields,
-	}}, nil
+			ID:          append([]byte(nil), idBytes...),
+			Ref:         artRef,
+			SourceID:    append([]byte(nil), in.SourceID...),
+			FileID:      copyBlob(in.FileID),
+			Label:       in.Label,
+			Description: in.Description,
+		}, []rowchange.Change{{
+			EntityType: "artifact",
+			EntityID:   append([]byte(nil), idBytes...),
+			Action:     rowchange.ActionCreate,
+			Fields:     fields,
+		}}, nil
 }
 
 // Update patches label, description, and/or first-attach file_id. The caller
@@ -220,8 +217,8 @@ func Update(tx *database.Tx, userID []byte, a Artifact) ([]rowchange.Change, err
 // ifUnused (snapshot file_id before DELETE). Orphan object bytes are unlinked
 // from AfterCommit, after Run commits, so a rollback leaves the files in place.
 // Cover SET NULL is SQLite's job. The caller records the returned changes.
-func Delete(tx *database.Tx, c *database.Catalog, userID, id []byte) ([]rowchange.Change, error) {
-	if tx == nil || c == nil || len(id) != 16 {
+func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
+	if tx == nil || len(id) != 16 {
 		return nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
@@ -249,14 +246,11 @@ func Delete(tx *database.Tx, c *database.Catalog, userID, id []byte) ([]rowchang
 	if err != nil {
 		return nil, err
 	}
-	objects, err := deleteimpact.CollectFileObjects(tx.Tx, snap)
-	if err != nil {
-		return nil, err
-	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return nil, err
 	}
-	if err := deleteimpact.ReleaseSnapshot(tx.Tx, snap); err != nil {
+	err = deleteimpact.ReleaseSnapshot(tx, snap)
+	if err != nil {
 		return nil, err
 	}
 
@@ -272,31 +266,12 @@ func Delete(tx *database.Tx, c *database.Catalog, userID, id []byte) ([]rowchang
 	if existing.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: existing.Description, New: nil}
 	}
-	tx.AfterCommit(func() { purgeReleasedObjects(c, objects) })
 	return []rowchange.Change{{
 		EntityType: "artifact",
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionDelete,
 		Fields:     fields,
 	}}, nil
-}
-
-// purgeReleasedObjects unlinks objects/ for collected files whose catalog row
-// is gone. Best-effort after COMMIT: a crash leaves orphan bytes, not a live
-// pointer at a missing object. Shared checksums stay on disk.
-func purgeReleasedObjects(c *database.Catalog, objects []deleteimpact.FileObject) {
-	for _, obj := range objects {
-		if _, err := files.LookupByChecksum(c, obj.ChecksumSHA256); err == nil {
-			continue
-		} else if !errors.Is(err, sql.ErrNoRows) {
-			continue
-		}
-		rel, err := files.StorageRelPath(obj.ChecksumSHA256, obj.MediaType)
-		if err != nil {
-			continue
-		}
-		_ = os.Remove(filepath.Join(c.Dir(), filepath.FromSlash(rel)))
-	}
 }
 
 // Get returns an Artifact by id, or sql.ErrNoRows.

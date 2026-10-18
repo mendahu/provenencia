@@ -1,10 +1,8 @@
 package autoreconcile
 
 import (
-	"strconv"
-	"strings"
-
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // A module is what one value type supplies to the shared pipeline
@@ -44,29 +42,41 @@ type module interface {
 // wholeValue is the unit name of a module with one unit per value.
 const wholeValue = ""
 
-func moduleFor(valueType string) module {
+// moduleFor is valueType's module under rules, nil for an unknown type.
+// Values are the same, and fold, by value compare's relations: Same groups,
+// Contains folds, and no other relation does (D-2 of S11-06).
+func moduleFor(rules valuecompare.Rules, valueType string) module {
 	switch valueType {
-	case properties.ValueTypeText:
-		return keyModule{keyOf: textKey}
-	case properties.ValueTypeInteger:
-		return keyModule{keyOf: func(v Value) (string, bool) { return strconv.FormatInt(v.Integer, 10), true }}
-	case properties.ValueTypeTerm:
+	case propertymeta.ValueTypeText, propertymeta.ValueTypeInteger:
+		return keyModule{keyOf: func(v Value) (string, bool) {
+			return valuecompare.Key(v.compareValue(valueType), valuecompare.Same, rules)
+		}}
+	case propertymeta.ValueTypeTerm:
 		return keyModule{keyOf: termKey}
-	case properties.ValueTypeSubject:
+	case propertymeta.ValueTypeSubject:
 		// The accepted handle. The loader fills EntityID; an unpromoted or
 		// missing end has none and is no evidence.
+		return keyModule{keyOf: func(v Value) (string, bool) { return idKey(v.EntityID) }}
+	case propertymeta.ValueTypeDepiction:
+		// The same image File, so the same pixels; no readable image is no evidence.
 		return keyModule{keyOf: func(v Value) (string, bool) {
-			if len(v.EntityID) == 0 {
+			if v.Depiction == nil {
 				return "", false
 			}
-			return string(v.EntityID), true
+			return idKey(v.Depiction.ImageFileID)
 		}}
-	case properties.ValueTypeName:
-		return nameModule{}
-	case properties.ValueTypeDate:
-		return dateModule{}
+	case propertymeta.ValueTypeName:
+		return nameModule{rules: rules}
+	case propertymeta.ValueTypeDate:
+		return dateModule{rules: rules}
 	}
 	return nil
+}
+
+// compareValue is v in the shape value compare reads: the text, integer or
+// date of a value of valueType. Names go through nameUnit.compareValue.
+func (v Value) compareValue(valueType string) valuecompare.Value {
+	return valuecompare.Value{Type: valueType, Text: v.Text, Integer: v.Integer, Date: v.Date}
 }
 
 // keyModule is a value type whose values are the same exactly when their
@@ -94,13 +104,6 @@ func (keyModule) assemble(members []Candidate, _ map[string][]unit) Value {
 	return members[0].Value
 }
 
-// textKey: trimmed and case-insensitive (York = york). Blank text is no
-// evidence.
-func textKey(v Value) (string, bool) {
-	k := strings.ToLower(strings.TrimSpace(v.Text))
-	return k, k != ""
-}
-
 // termKey: the same term. A neutral term is no evidence: an "unknown" sex at
 // birth never wins or outvotes a recorded one.
 func termKey(v Value) (string, bool) {
@@ -110,17 +113,20 @@ func termKey(v Value) (string, bool) {
 	return string(v.TermID), true
 }
 
+// idKey: an id is its own key; no id is no evidence.
+func idKey(id []byte) (string, bool) { return string(id), len(id) > 0 }
+
 // Compatible reports whether two values of valueType are the same value as
 // the pipeline would see it: every unit both carry is equal, or one folds
 // into the other (J. Robins and James Robins). A unit only one carries does
 // not count against them, as in the pipeline's grouping; values that share
 // no unit, or where either is no evidence, are not compatible. Promote
 // graph alignment counts a comparison as an agreement by this test (S9-41).
-func Compatible(valueType string, a, b Value) bool {
-	if !knownValueType(valueType) || !carries(valueType, a) || !carries(valueType, b) {
+func Compatible(rules valuecompare.Rules, valueType string, a, b Value) bool {
+	m := moduleFor(rules, valueType)
+	if m == nil || !Carries(valueType, a) || !Carries(valueType, b) {
 		return false
 	}
-	m := moduleFor(valueType)
 	ua, ok := m.split(a)
 	if !ok {
 		return false

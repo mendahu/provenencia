@@ -10,7 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -21,7 +20,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -51,7 +53,7 @@ func newPinFixture(t *testing.T) *pinFixture {
 	f.must(err)
 	f.must(users.Upsert(c, userID, "Tester", r))
 	f.must(subjectvocab.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	f.must(err)
 	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
@@ -59,13 +61,13 @@ func newPinFixture(t *testing.T) *pinFixture {
 	f.must(err)
 	f.artifact, err = runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	f.must(err)
-	f.person, err = subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	f.person, err = subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	f.must(err)
-	f.place, err = subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+	f.place, err = subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 	f.must(err)
-	f.name, err = properties.Lookup(c, "name", properties.OriginProvenencia)
+	f.name, err = properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 	f.must(err)
-	f.toponym, err = properties.Lookup(c, "toponym", properties.OriginProvenencia)
+	f.toponym, err = properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	f.must(err)
 	return f
 }
@@ -87,9 +89,9 @@ func (f *pinFixture) record(st subjecttypes.Type, prop properties.Property, valu
 	f.must(err)
 	var in []observations.Input
 	for _, v := range values {
-		if prop.ValueType == properties.ValueTypeName {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: prop.ID, Name: &namevalues.Value{
-				Form: v, Parts: []namevalues.Part{{Idx: 0, Type: "given", Value: v}},
+		if prop.ValueType == propertymeta.ValueTypeName {
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: prop.ID, Name: &namevalue.Value{
+				Form: v, Parts: []namevalue.Part{{Idx: 0, Type: "given", Value: v}},
 			}})
 		} else {
 			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: prop.ID, ValueText: v, HasText: true})

@@ -1,6 +1,11 @@
 package search
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/valuecompare"
+)
 
 // FieldWeight relative importance for FTS / registry scoring.
 type FieldWeight struct {
@@ -77,6 +82,9 @@ type KindSpec struct {
 	ContextSections []string
 	ContextBoost    float64
 	Fields          []FieldWeight
+	// Handle marks a Conclusion handle kind (person, event, place): its hits
+	// carry member counts and read the handle field map.
+	Handle bool
 }
 
 // Registry is the declarative searchable-kind table for Spike 3+.
@@ -129,6 +137,7 @@ func init() {
 			Kind:                kind,
 			DefaultInEverything: true,
 			Priority:            priority,
+			Handle:              true,
 			Fields: []FieldWeight{
 				{Name: "title", Weight: 10},
 				{Name: "ref", Weight: 12},
@@ -194,23 +203,50 @@ func contextMultiplier(spec KindSpec, section string) float64 {
 	return 1
 }
 
+// valueWords are the shipped registry's word rules, never catalog data: a text
+// key reads nothing else.
+var valueWords = matchregistry.Default().Value.Words
+
+// queryTokens are a query's tokens twice: raw for snippets, and keys for
+// matching a field once accents and punctuation are folded.
+type queryTokens struct {
+	raw, keys []string
+}
+
+// newQueryTokens keys each token at Equivalent, the level FTS retrieves at,
+// and drops a token with no key.
+func newQueryTokens(raw []string) queryTokens {
+	q := queryTokens{raw: raw}
+	for _, tok := range raw {
+		if k, ok := valuecompare.TextKey(tok, valuecompare.Equivalent, valueWords); ok {
+			q.keys = append(q.keys, k)
+		}
+	}
+	return q
+}
+
 // scoreFields returns a weighted score, the best-matching field code, and an
 // optional raw snippet for body/rollup fields (notes/metadata/filename).
-func scoreFields(spec KindSpec, values map[string]string, tokens []string) (score float64, field, snippet string) {
-	if len(tokens) == 0 {
+func scoreFields(spec KindSpec, values map[string]string, q queryTokens) (score float64, field, snippet string) {
+	if len(q.keys) == 0 {
 		return 0, "", ""
+	}
+	fieldKeys := make([]string, len(spec.Fields))
+	for i, f := range spec.Fields {
+		if values[f.Name] != "" {
+			fieldKeys[i], _ = valuecompare.TextKey(values[f.Name], valuecompare.Equivalent, valueWords)
+		}
 	}
 	var bestField string
 	var bestWeight float64
 	matchedTokens := 0
-	for _, tok := range tokens {
+	for _, key := range q.keys {
 		tokHit := false
-		for _, f := range spec.Fields {
-			v := strings.ToLower(values[f.Name])
-			if v == "" {
+		for i, f := range spec.Fields {
+			if fieldKeys[i] == "" {
 				continue
 			}
-			if strings.Contains(v, tok) {
+			if strings.Contains(fieldKeys[i], key) {
 				tokHit = true
 				score += f.Weight
 				if f.Weight > bestWeight || (f.Weight == bestWeight && bestField == "") {
@@ -227,34 +263,35 @@ func scoreFields(spec KindSpec, values map[string]string, tokens []string) (scor
 		return 0, "", ""
 	}
 	// Prefer fuller term coverage.
-	score *= float64(matchedTokens) / float64(len(tokens))
+	score *= float64(matchedTokens) / float64(len(q.keys))
 	if bestField != "" {
 		field = bestField
-		snippet = matchSnippetForField(bestField, values[bestField], tokens)
+		snippet = matchSnippetForField(bestField, values[bestField], q.raw)
 	}
 	return score, field, snippet
 }
 
 // alternateMatch is the name or toponym line that matched when the title did not.
 // Those lines are tagged in the secondary field (name: / toponym:).
-func alternateMatch(secondary string, tokens []string) (field, snippet string) {
+func alternateMatch(secondary string, q queryTokens) (field, snippet string) {
 	for _, line := range strings.Split(secondary, "\n") {
-		lower := strings.ToLower(line)
-		hit := false
-		for _, tok := range tokens {
-			if tok != "" && strings.Contains(lower, tok) {
-				hit = true
-				break
-			}
-		}
-		if !hit {
-			continue
-		}
+		var kind, text string
 		switch {
 		case strings.HasPrefix(line, "name:\t"):
-			return "name", strings.TrimPrefix(line, "name:\t")
+			kind, text = "name", strings.TrimPrefix(line, "name:\t")
 		case strings.HasPrefix(line, "toponym:\t"):
-			return "place", strings.TrimPrefix(line, "toponym:\t")
+			kind, text = "place", strings.TrimPrefix(line, "toponym:\t")
+		default:
+			continue
+		}
+		key, ok := valuecompare.TextKey(text, valuecompare.Equivalent, valueWords)
+		if !ok {
+			continue
+		}
+		for _, tok := range q.keys {
+			if strings.Contains(key, tok) {
+				return kind, text
+			}
 		}
 	}
 	return "", ""

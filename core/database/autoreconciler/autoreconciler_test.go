@@ -16,10 +16,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/likenesses"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -34,8 +34,12 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -71,37 +75,37 @@ func newFixture(t *testing.T) *fixture {
 	must(t, subjectvocab.Install(c))
 	must(t, sourcecredibilitygrades.Install(c))
 	must(t, claimconfidencegrades.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	f := &fixture{t: t, c: c, typeID: typeID, arts: map[string]artifacts.Artifact{},
 		types: map[string]subjecttypes.Type{}, props: map[string]properties.Property{}, terms: map[string]propertyterms.Term{}}
 	f.source = f.newSource("Register")
 	f.artifact = f.arts[string(f.source.ID)]
 	f.other = f.newSource("Census")
-	for _, k := range []string{"person", "event", "place"} {
-		st, err := subjecttypes.Lookup(c, k, subjecttypes.OriginProvenencia)
+	for _, k := range vocabkey.PrimaryKinds() {
+		st, err := subjecttypes.Lookup(c, k, vocabkey.OriginProvenencia)
 		must(t, err)
 		f.types[k] = st
 	}
-	for _, k := range []string{"name", "sex_at_birth", "event_type", "date", "toponym"} {
-		p, err := properties.Lookup(c, k, properties.OriginProvenencia)
+	for _, k := range []string{"name", "sex_at_birth", "event_type", "date", "toponym", "likeness"} {
+		p, err := properties.Lookup(c, k, vocabkey.OriginProvenencia)
 		must(t, err)
 		f.props[k] = p
 	}
-	ageID, err := properties.Upsert(c, properties.Property{Key: "age", Origin: properties.OriginUser, Label: "Age", ValueType: properties.ValueTypeInteger})
+	ageID, err := properties.Upsert(c, properties.Property{Key: "age", Origin: vocabkey.OriginUser, Label: "Age", ValueType: propertymeta.ValueTypeInteger})
 	must(t, err)
-	f.props["age"] = properties.Property{ID: ageID, Key: "age", ValueType: properties.ValueTypeInteger}
+	f.props["age"] = properties.Property{ID: ageID, Key: "age", ValueType: propertymeta.ValueTypeInteger}
 	db, err := c.DB()
 	must(t, err)
 	_, err = db.Exec(`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 99)`, f.types["person"].ID, ageID)
 	must(t, err)
 	for _, k := range []string{"female", "male"} {
-		term, err := propertyterms.Lookup(c, f.props["sex_at_birth"].ID, k, propertyterms.OriginProvenencia)
+		term, err := propertyterms.Lookup(c, f.props["sex_at_birth"].ID, k, vocabkey.OriginProvenencia)
 		must(t, err)
 		f.terms[k] = term
 	}
 	for _, k := range []string{"birth", "death"} {
-		term, err := propertyterms.Lookup(c, f.props["event_type"].ID, k, propertyterms.OriginProvenencia)
+		term, err := propertyterms.Lookup(c, f.props["event_type"].ID, k, vocabkey.OriginProvenencia)
 		must(t, err)
 		f.terms[k] = term
 	}
@@ -167,7 +171,7 @@ func (f *fixture) cite(in ...observations.Input) []observations.Observation {
 
 // credibility assesses a Source with a seeded grade key.
 func (f *fixture) credibility(src sources.Source, key string) error {
-	g, err := sourcecredibilitygrades.Lookup(f.c, key, sourcecredibilitygrades.OriginProvenencia)
+	g, err := sourcecredibilitygrades.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	p6in2 := sourcecredibility.UpsertInput{SourceID: src.ID, CredibilityGradeID: g.ID}
 	p6act1 := "create_source_credibility_assessment"
@@ -191,7 +195,7 @@ func (f *fixture) certainty(citationID []byte, uncertain bool) error {
 
 // grade is a seeded claim confidence grade's id.
 func (f *fixture) grade(key string) []byte {
-	g, err := claimconfidencegrades.Lookup(f.c, key, claimconfidencegrades.OriginProvenencia)
+	g, err := claimconfidencegrades.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return g.ID
 }
@@ -210,7 +214,7 @@ func place(f *fixture, s subjects.Subject, x, y int64) error {
 
 func mustProp(f *fixture, key string) properties.Property {
 	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, properties.OriginProvenencia)
+	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return p
 }
@@ -249,15 +253,15 @@ func nameIn(s subjects.Subject, p properties.Property, spec string) observations
 	return observations.Input{SubjectID: s.ID, PropertyID: p.ID, Name: nameValue(spec)}
 }
 
-func nameValue(spec string) *namevalues.Value {
+func nameValue(spec string) *namevalue.Value {
 	if form, ok := strings.CutPrefix(spec, "form:"); ok {
-		return &namevalues.Value{Form: form}
+		return &namevalue.Value{Form: form}
 	}
-	v := &namevalues.Value{}
+	v := &namevalue.Value{}
 	var words []string
 	for i, item := range strings.Split(spec, "|") {
 		typ, val, _ := strings.Cut(item, "=")
-		v.Parts = append(v.Parts, namevalues.Part{Idx: i, Type: typ, Value: val})
+		v.Parts = append(v.Parts, namevalue.Part{Idx: i, Type: typ, Value: val})
 		words = append(words, val)
 	}
 	v.Form = strings.Join(words, " ")
@@ -279,8 +283,8 @@ func intIn(s subjects.Subject, p properties.Property, n int64) observations.Inpu
 func ip(n int) *int { return &n }
 
 func dateIn(s subjects.Subject, p properties.Property, y int, m, d *int) observations.Input {
-	return observations.Input{SubjectID: s.ID, PropertyID: p.ID, Date: &datevalues.Value{
-		Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: ip(y), StartMonth: m, StartDay: d,
+	return observations.Input{SubjectID: s.ID, PropertyID: p.ID, Date: &datevalue.Value{
+		Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: ip(y), StartMonth: m, StartDay: d,
 	}}
 }
 
@@ -297,12 +301,13 @@ type row struct {
 	Support, Against     int
 	Reason               string
 	ValueEntityID        []byte
+	ImageFileID          []byte
 }
 
 func snapshot(t *testing.T, q autoreconciler.Querier) []row {
 	t.Helper()
 	rows, err := q.Query(`SELECT entity_id, property_id, rank, value_text, value_integer, value_term_id,
-		value_date, value_name, date_lo, date_hi, sort_key, support, against, reason, value_entity_id
+		value_date, value_name, date_lo, date_hi, sort_key, support, against, reason, value_entity_id, value_image_file_id
 		FROM auto_reconciler_values
 		ORDER BY entity_id, property_id, rank`)
 	must(t, err)
@@ -310,7 +315,7 @@ func snapshot(t *testing.T, q autoreconciler.Querier) []row {
 	var out []row
 	for rows.Next() {
 		var r row
-		must(t, rows.Scan(&r.EntityID, &r.PropertyID, &r.Rank, &r.Text, &r.Integer, &r.TermID, &r.Date, &r.Name, &r.DateLo, &r.DateHi, &r.SortKey, &r.Support, &r.Against, &r.Reason, &r.ValueEntityID))
+		must(t, rows.Scan(&r.EntityID, &r.PropertyID, &r.Rank, &r.Text, &r.Integer, &r.TermID, &r.Date, &r.Name, &r.DateLo, &r.DateHi, &r.SortKey, &r.Support, &r.Against, &r.Reason, &r.ValueEntityID, &r.ImageFileID))
 		out = append(out, r)
 	}
 	must(t, rows.Err())
@@ -505,10 +510,10 @@ func TestReconciledValues(t *testing.T) {
 func TestReconciledValuesKeepEveryValue(t *testing.T) {
 	f := newFixture(t)
 	aliasID, err := properties.Upsert(f.c, properties.Property{
-		Key: "alias", Origin: properties.OriginUser, Label: "Alias", ValueType: properties.ValueTypeText,
+		Key: "alias", Origin: vocabkey.OriginUser, Label: "Alias", ValueType: propertymeta.ValueTypeText,
 	})
 	must(t, err)
-	alias := properties.Property{ID: aliasID, Key: "alias", ValueType: properties.ValueTypeText, Cardinality: properties.CardinalitySingle}
+	alias := properties.Property{ID: aliasID, Key: "alias", ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalitySingle}
 	f.bind("place", aliasID)
 	a, b, c := f.subject("place"), f.subjectOn(f.other, "place"), f.subjectOn(f.newSource("Gazette"), "place")
 	f.cite(textIn(a, alias, "York"))
@@ -558,10 +563,10 @@ func TestMultipleCardinalityKeepsDistinctValues(t *testing.T) {
 func TestCardinalityChangeRecomputes(t *testing.T) {
 	f := newFixture(t)
 	aliasID, err := properties.Upsert(f.c, properties.Property{
-		Key: "alias", Origin: properties.OriginUser, Label: "Alias", ValueType: properties.ValueTypeText,
+		Key: "alias", Origin: vocabkey.OriginUser, Label: "Alias", ValueType: propertymeta.ValueTypeText,
 	})
 	must(t, err)
-	alias := properties.Property{ID: aliasID, ValueType: properties.ValueTypeText}
+	alias := properties.Property{ID: aliasID, ValueType: propertymeta.ValueTypeText}
 	f.bind("place", aliasID)
 	a, b, c := f.subject("place"), f.subjectOn(f.other, "place"), f.subjectOn(f.newSource("Gazette"), "place")
 	f.cite(textIn(a, alias, "York"))
@@ -575,7 +580,7 @@ func TestCardinalityChangeRecomputes(t *testing.T) {
 		t.Fatalf("single %+v", rows)
 	}
 	_, err = writes.Call(f.c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
-		return properties.Update(tx, userID, alias.ID, "Alias", properties.ValueTypeText, "", properties.CardinalityMultiple)
+		return properties.Update(tx, userID, alias.ID, "Alias", propertymeta.ValueTypeText, "", propertymeta.CardinalityMultiple)
 	})
 
 	must(t, err)
@@ -588,7 +593,7 @@ func TestCardinalityChangeRecomputes(t *testing.T) {
 
 	top := f.props["toponym"]
 	_, err = writes.Call(f.c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
-		return properties.Update(tx, userID, top.ID, top.Label, top.ValueType, top.Description, properties.CardinalitySingle)
+		return properties.Update(tx, userID, top.ID, top.Label, top.ValueType, top.Description, propertymeta.CardinalitySingle)
 	})
 	if !errors.Is(err, properties.ErrLocked) {
 		t.Fatalf("seeded cardinality: %v", err)
@@ -638,6 +643,252 @@ func TestReconciledNames(t *testing.T) {
 	})
 
 	f.assertUpkeepEqualsRebuild("TestAutoReconciledNames")
+}
+
+// photo is an Artifact on a PNG File under src. Every photo shares one File.
+func (f *fixture) photo(src sources.Source) artifacts.Artifact {
+	f.t.Helper()
+	return observationstest.FileArtifact(f.t, f.c, userID, src.ID)
+}
+
+// likenessIn is a likeness whose crop is a 40 x 30 PNG of one gray shade.
+func (f *fixture) likenessIn(s subjects.Subject, shade uint8) observations.Input {
+	return observations.Input{SubjectID: s.ID, PropertyID: f.props["likeness"].ID,
+		Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(f.t, 40, 30, shade)}}
+}
+
+// citeOn files the Observations on a Citation of art, through the real
+// likeness save path.
+func (f *fixture) citeOn(art artifacts.Artifact, in ...observations.Input) []observations.Observation {
+	f.t.Helper()
+	res, _, err := observationstest.SaveCitation(f.c, userID, art, in...)
+	must(f.t, err)
+	return res.Observations
+}
+
+// Two likenesses are the same value exactly when they hold the same image.
+func TestDepictionsReconcileByImage(t *testing.T) {
+	type world struct {
+		f      *fixture
+		a, b   subjects.Subject
+		oa, ob observations.Observation
+		h      []byte
+	}
+	start := func(t *testing.T, shadeB uint8) *world {
+		f := newFixture(t)
+		pr, pc := f.photo(f.source), f.photo(f.other)
+		a, b := f.subject("person"), f.subjectOn(f.other, "person")
+		oa := f.citeOn(pr, f.likenessIn(a, 100))[0]
+		ob := f.citeOn(pc, f.likenessIn(b, shadeB))[0]
+		h := f.promote(a)
+		_, err := f.c.Graph().Node(h)
+		must(t, err)
+		return &world{f: f, a: a, b: b, oa: oa, ob: ob, h: h}
+	}
+	likenessRows := func(w *world) []row {
+		return rowsFor(w.f.rows(), w.h, w.f.props["likeness"].ID)
+	}
+	byImage := func(t *testing.T, w *world, image []byte) row {
+		t.Helper()
+		for _, r := range likenessRows(w) {
+			if bytes.Equal(r.ImageFileID, image) {
+				return r
+			}
+		}
+		t.Fatalf("no likeness row for image %x in %+v", image, likenessRows(w))
+		return row{}
+	}
+	outcomeOf := func(w *world, id []byte) outcome {
+		for _, o := range w.f.outcomes() {
+			if bytes.Equal(o.ObservationID, id) {
+				return o
+			}
+		}
+		w.f.t.Fatalf("no outcome for %x", id)
+		return outcome{}
+	}
+	gallery := func(w *world) []likenesses.Likeness {
+		t.Helper()
+		g, err := likenesses.ForEntities(w.f.c.Graph(), [][]byte{w.h})
+		must(t, err)
+		return g[string(w.h)]
+	}
+	// finish holds upkeep to a rebuild and the graph cache to the catalog.
+	finish := func(t *testing.T, w *world, name string) {
+		t.Helper()
+		w.f.assertUpkeepEqualsRebuild(name)
+		n, err := w.f.c.Graph().Node(w.h)
+		must(t, err)
+		cached := n.Values[string(w.f.props["likeness"].ID)]
+		rows := likenessRows(w)
+		if len(cached) != len(rows) {
+			t.Fatalf("node has %d likeness values, table %d", len(cached), len(rows))
+		}
+		for i := range rows {
+			if !bytes.Equal(cached[i].ImageFileID, rows[i].ImageFileID) {
+				t.Fatalf("node value %d image %x, table %x", i, cached[i].ImageFileID, rows[i].ImageFileID)
+			}
+		}
+		must(t, w.f.c.Graph().Verify())
+	}
+
+	t.Run("two images are two values", func(t *testing.T) {
+		w := start(t, 200)
+		w.f.join(w.b, w.h)
+		rows := likenessRows(w)
+		if len(rows) != 2 {
+			t.Fatalf("rows %+v", rows)
+		}
+		for _, img := range [][]byte{observationstest.ImageOf(t, w.f.c, w.oa.ID), observationstest.ImageOf(t, w.f.c, w.ob.ID)} {
+			r := byImage(t, w, img)
+			if r.Reason != "kept" || r.Support != 1 {
+				t.Fatalf("row %+v", r)
+			}
+			if r.Text != nil || r.Integer != nil || r.TermID != nil || r.Date != nil || r.Name != nil || r.ValueEntityID != nil {
+				t.Fatalf("other value columns set: %+v", r)
+			}
+		}
+		for _, id := range [][]byte{w.oa.ID, w.ob.ID} {
+			if o := outcomeOf(w, id); o.Reason != "kept" {
+				t.Fatalf("outcome %+v", o)
+			}
+		}
+		g := gallery(w)
+		if len(g) != 2 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.c, w.oa.ID)) ||
+			len(g[0].ObservationIDs) != 1 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) ||
+			!bytes.Equal(g[1].ImageFileID, observationstest.ImageOf(t, w.f.c, w.ob.ID)) || !bytes.Equal(g[1].ObservationIDs[0], w.ob.ID) {
+			t.Fatalf("gallery %+v", g)
+		}
+		finish(t, w, "two images")
+	})
+	t.Run("a redrawn face keeps its place", func(t *testing.T) {
+		w := start(t, 200)
+		w.f.join(w.b, w.h)
+		_, err := observationstest.UpdateObservation(w.f.c, userID, observations.Input{
+			ID: w.oa.ID, SubjectID: w.a.ID, PropertyID: w.f.props["likeness"].ID,
+			Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 40, 30, 150)}})
+		must(t, err)
+		g := gallery(w)
+		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.c, w.oa.ID)) {
+			t.Fatalf("gallery %+v", g)
+		}
+		finish(t, w, "redraw")
+	})
+	t.Run("the same pixels are one value", func(t *testing.T) {
+		w := start(t, 100)
+		w.f.join(w.b, w.h)
+		if !bytes.Equal(observationstest.ImageOf(t, w.f.c, w.oa.ID), observationstest.ImageOf(t, w.f.c, w.ob.ID)) {
+			t.Fatal("two shade-100 crops are two Files")
+		}
+		rows := likenessRows(w)
+		if len(rows) != 1 || rows[0].Reason != "kept" || rows[0].Support != 2 {
+			t.Fatalf("rows %+v", rows)
+		}
+		for _, id := range [][]byte{w.oa.ID, w.ob.ID} {
+			o := outcomeOf(w, id)
+			if o.Reason != "kept" || o.ValueRank == nil || *o.ValueRank != rows[0].Rank {
+				t.Fatalf("outcome %+v", o)
+			}
+		}
+		if g := gallery(w); len(g) != 1 || len(g[0].ObservationIDs) != 2 ||
+			bytes.Compare(g[0].ObservationIDs[0], g[0].ObservationIDs[1]) >= 0 {
+			t.Fatalf("gallery %+v", g)
+		}
+		finish(t, w, "same pixels")
+	})
+	t.Run("a stronger negative denies", func(t *testing.T) {
+		w := start(t, 200)
+		f := w.f
+		album := f.newSource("Album")
+		c := f.subjectOn(album, "person")
+		oc := f.citeOn(f.photo(album), negative(f.likenessIn(c, 200)))[0]
+		must(t, f.credibility(album, "high_trust"))
+		f.join(w.b, w.h)
+		f.join(c, w.h)
+		if r := byImage(t, w, observationstest.ImageOf(t, f.c, w.ob.ID)); r.Reason != "denied" {
+			t.Fatalf("shade 200 %+v", r)
+		}
+		if r := byImage(t, w, observationstest.ImageOf(t, f.c, w.oa.ID)); r.Reason != "kept" {
+			t.Fatalf("shade 100 %+v", r)
+		}
+		if o := outcomeOf(w, w.ob.ID); o.Reason != "denied" || !bytes.Equal(o.DeniedBy, oc.ID) {
+			t.Fatalf("outcome %+v", o)
+		}
+		if g := gallery(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, f.c, w.oa.ID)) {
+			t.Fatalf("gallery %+v", g)
+		}
+		finish(t, w, "denied")
+	})
+	t.Run("a provisional member", func(t *testing.T) {
+		w := start(t, 200)
+		_, err := writes.Call(w.f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+			return identityclaims.Create(tx, userID, identityclaims.CreateInput{SubjectID: w.b.ID, EntityID: w.h, Status: identityclaims.StatusProvisional})
+		})
+		must(t, err)
+		if r := byImage(t, w, observationstest.ImageOf(t, w.f.c, w.ob.ID)); r.Reason != "provisional" {
+			t.Fatalf("shade 200 %+v", r)
+		}
+		if r := byImage(t, w, observationstest.ImageOf(t, w.f.c, w.oa.ID)); r.Reason != "kept" {
+			t.Fatalf("shade 100 %+v", r)
+		}
+		if o := outcomeOf(w, w.ob.ID); o.Reason != "provisional" {
+			t.Fatalf("outcome %+v", o)
+		}
+		if g := gallery(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.c, w.oa.ID)) {
+			t.Fatalf("gallery %+v", g)
+		}
+		finish(t, w, "provisional")
+	})
+	t.Run("a low-trust Source is weak", func(t *testing.T) {
+		w := start(t, 200)
+		must(t, w.f.credibility(w.f.other, "low_trust"))
+		w.f.join(w.b, w.h)
+		if r := byImage(t, w, observationstest.ImageOf(t, w.f.c, w.ob.ID)); r.Reason != "weak" {
+			t.Fatalf("shade 200 %+v", r)
+		}
+		if r := byImage(t, w, observationstest.ImageOf(t, w.f.c, w.oa.ID)); r.Reason != "kept" {
+			t.Fatalf("shade 100 %+v", r)
+		}
+		if g := gallery(w); len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) || !bytes.Equal(g[1].ObservationIDs[0], w.ob.ID) {
+			t.Fatalf("gallery %+v", g)
+		}
+		finish(t, w, "weak")
+	})
+	t.Run("an unreadable image is no evidence", func(t *testing.T) {
+		w := start(t, 200)
+		w.f.join(w.b, w.h)
+		db, err := w.f.c.DB()
+		must(t, err)
+		_, err = db.Exec(`UPDATE files SET media_type = 'image/jpeg' WHERE id = ?`, observationstest.ImageOf(t, w.f.c, w.ob.ID))
+		must(t, err)
+		must(t, autoreconciler.Rebuild(db))
+		w.f.c.Graph().Drop()
+		if rows := likenessRows(w); len(rows) != 1 {
+			t.Fatalf("rows %+v", rows)
+		}
+		if o := outcomeOf(w, w.ob.ID); o.Reason != "no_evidence" {
+			t.Fatalf("outcome %+v", o)
+		}
+		if g := gallery(w); len(g) != 1 {
+			t.Fatalf("gallery %+v", g)
+		}
+	})
+	t.Run("Verify sees a stale image", func(t *testing.T) {
+		w := start(t, 200)
+		w.f.join(w.b, w.h)
+		w.f.c.Graph().Drop()
+		db, err := w.f.c.DB()
+		must(t, err)
+		_, err = db.Exec(`UPDATE auto_reconciler_values SET value_image_file_id = ?
+			WHERE entity_id = ? AND property_id = ? AND value_image_file_id = ?`,
+			bytes.Repeat([]byte{1}, 16), w.h, w.f.props["likeness"].ID, observationstest.ImageOf(t, w.f.c, w.oa.ID))
+		must(t, err)
+		_, err = w.f.c.Graph().Node(w.h)
+		must(t, err)
+		if err := w.f.c.Graph().Verify(); err == nil {
+			t.Fatal("Verify passed with a stale image id")
+		}
+	})
 }
 
 // A stale cache rebuilds on open: old versions, and the 3 and 4 stamped by
@@ -839,7 +1090,7 @@ func TestReconciledEvidence(t *testing.T) {
 }
 
 func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
-	for _, stale := range []int{0, 2, 3, 4, 5, 6, 7} {
+	for _, stale := range []int{0, 2, 3, 4, 5, 6, 7, 14} {
 		t.Run(fmt.Sprint("version ", stale), func(t *testing.T) {
 			f := newFixture(t)
 			p := f.subject("person")
@@ -990,6 +1241,38 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 				must(f.t, err)
 			}
 		}},
+		{"a likeness region edit replaces its image value", func(f *fixture) {
+			const region50 = `{"version":1,"selectors":[{"type":"page","artifact_page":1},{"type":"region","unit":"normalized","points":[{"x":0.5,"y":0.5},{"x":0.9,"y":0.5},{"x":0.9,"y":0.9}]}]}`
+			pr, pc := f.photo(f.source), f.photo(f.other)
+			a, b := f.subject("person"), f.subjectOn(f.other, "person")
+			oa := f.citeOn(pr, f.likenessIn(a, 100))[0]
+			f.citeOn(pc, f.likenessIn(b, 200))
+			h := f.promote(a)
+			f.join(b, h)
+			old := observationstest.ImageOf(t, f.c, oa.ID)
+			_, err := observationstest.UpdateObservation(f.c, userID, observations.Input{
+				ID: oa.ID, SubjectID: a.ID, PropertyID: f.props["likeness"].ID,
+				Depiction: &observations.DepictionInput{RegionJSON: region50, ImagePath: observationstest.Crop(f.t, 40, 30, 50)}})
+			must(f.t, err)
+			now := observationstest.ImageOf(t, f.c, oa.ID)
+			if bytes.Equal(old, now) {
+				f.t.Fatal("the edit kept the old image")
+			}
+			rows := rowsFor(f.rows(), h, f.props["likeness"].ID)
+			if len(rows) != 2 {
+				f.t.Fatalf("rows %+v", rows)
+			}
+			seen := false
+			for _, r := range rows {
+				if bytes.Equal(r.ImageFileID, old) {
+					f.t.Fatalf("old image still cached: %+v", r)
+				}
+				seen = seen || bytes.Equal(r.ImageFileID, now)
+			}
+			if !seen {
+				f.t.Fatalf("new image not cached: %+v", rows)
+			}
+		}},
 		{"observations added before and after promote on two members", func(f *fixture) {
 			a, b := f.subject("place"), f.subject("place")
 			f.cite(textIn(a, f.props["toponym"], "York"))
@@ -1102,7 +1385,7 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			personProp := mustProp(f, "person")
 			eventProp := mustProp(f, "event")
 			roleProp := mustProp(f, "role")
-			role, err := propertyterms.Lookup(f.c, roleProp.ID, "subject", propertyterms.OriginProvenencia)
+			role, err := propertyterms.Lookup(f.c, roleProp.ID, "subject", vocabkey.OriginProvenencia)
 			must(f.t, err)
 			bridge, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 				return connect.CreateCitedBridge(tx, userID, connect.CreateInput{

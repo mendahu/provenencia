@@ -164,6 +164,25 @@ struct PropertiesModelTests {
         #expect(model.visibleProperties.map(\.key) == ["name"])
     }
 
+    @Test func searchMatchesLabelOrKeyIgnoringAccentsAndWordBreaks() async {
+        let deathPlace = CatalogProperty(
+            id: "prop-death-place", key: "death_place", origin: "user",
+            label: "Lieu de décès", description: "", valueType: "subject"
+        )
+        let (model, session, _) = makeModel(
+            properties: [nameProperty(), eventTypeProperty(), deathPlace],
+            types: [personType(), eventType()]
+        )
+        await warm(model, session: session)
+        for (query, keys) in [
+            ("deces", ["death_place"]), ("eventtype", ["event_type"]),
+            ("EVENT-T", ["event_type"]), ("birth", []),
+        ] as [(String, [String])] {
+            model.searchQuery = query
+            #expect(model.visibleProperties.map(\.key) == keys, "\(query)")
+        }
+    }
+
     @Test func createPropertyUsesResearcherValueTypesOnly() async {
         let person = personType()
         let (model, session, store) = makeModel(types: [person])
@@ -645,5 +664,13 @@ struct PropertiesModelTests {
         model.beginEdit()
         #expect(model.isEditingIdentity == false)
         #expect(!model.canSubmitEdit(label: "Plugin fact", description: ""))
+    }
+
+    @Test func depictionIsRegistryOnlyAndLabelled() {
+        #expect(L10n.string(SubjectPropertyValueType.label("depiction")) == "Depiction")
+        #expect(L10n.string(PropertyValueType.depiction.label) == "Depiction")
+        #expect(L10n.string(SubjectPropertyValueType.label("nope")) == "Text")
+        #expect(!SubjectPropertyValueType.researcherCreatable.contains("depiction"))
+        #expect(PropertyValueType(rawValue: "depiction") == .depiction)
     }
 }

@@ -12,9 +12,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -22,6 +19,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -40,7 +41,7 @@ func namedPerson(t *testing.T) (dir, handleRef string) {
 		t.Fatal(err)
 	}
 	if err := withProjectCatalog(req.ProjectDir, func(c *database.Catalog) error {
-		name, err := properties.Lookup(c, "name", properties.OriginProvenencia)
+		name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
@@ -60,10 +61,10 @@ func namedPerson(t *testing.T) (dir, handleRef string) {
 			return citations.CreateWithObservations(tx, userID[:], citations.CreateInput{
 				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
 			}, []observations.Input{
-				{SubjectID: subjectID[:], PropertyID: name.ID, Name: &namevalues.Value{Form: "James Robins", Parts: []namevalues.Part{
-					{Idx: 0, Value: "James", Type: namevalues.PartTypeGiven}, {Idx: 1, Value: "Robins", Type: namevalues.PartTypeSurname},
+				{SubjectID: subjectID[:], PropertyID: name.ID, Name: &namevalue.Value{Form: "James Robins", Parts: []namevalue.Part{
+					{Idx: 0, Value: "James", Type: namevalue.PartTypeGiven}, {Idx: 1, Value: "Robins", Type: namevalue.PartTypeSurname},
 				}}},
-				{SubjectID: subjectID[:], PropertyID: name.ID, Name: namevaluestest.Western("Jim Robins")},
+				{SubjectID: subjectID[:], PropertyID: name.ID, Name: namevaluetest.Western("Jim Robins")},
 			})
 		})
 		return err
@@ -115,9 +116,33 @@ func TestListPersonHeaders(t *testing.T) {
 				if h.GetUpdatedRevision() <= 0 || h.GetUpdatedAt() == "" {
 					t.Fatalf("updated %d %q", h.GetUpdatedRevision(), h.GetUpdatedAt())
 				}
+				if h.GetLikenessImageRelPath() != "" {
+					t.Fatalf("likeness path %q on a person without one", h.GetLikenessImageRelPath())
+				}
 				n := h.GetName()
-				if n.GetForm() != "James Jim Robins" || len(n.GetParts()) != 3 || n.GetParts()[2].GetType() != namevalues.PartTypeSurname {
+				if n.GetForm() != "James Jim Robins" || len(n.GetParts()) != 3 || n.GetParts()[2].GetType() != namevalue.PartTypeSurname {
 					t.Fatalf("name %+v", n)
+				}
+			},
+		},
+		{
+			name: "a Person with a likeness carries its image path",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
+				saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
+				promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: personID})
+				return &engine.ListPersonHeadersRequest{ProjectDir: dir}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.ListPersonHeadersResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if len(resp.Headers) != 1 {
+					t.Fatalf("%+v", resp.Headers)
+				}
+				if p := resp.Headers[0].GetLikenessImageRelPath(); !objectPathPattern.MatchString(p) || !strings.HasSuffix(p, ".png") {
+					t.Fatalf("likeness path %q", p)
 				}
 			},
 		},
@@ -199,7 +224,7 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 	}
 	var subjectID []byte
 	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
-		st, err := subjecttypes.Lookup(c, "event", subjecttypes.OriginProvenencia)
+		st, err := subjecttypes.Lookup(c, "event", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
@@ -210,19 +235,19 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 			return err
 		}
 		subjectID = s.ID
-		name, err := properties.Lookup(c, "event_name", properties.OriginProvenencia)
+		name, err := properties.Lookup(c, "event_name", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
-		eventType, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+		eventType, err := properties.Lookup(c, "event_type", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
-		term, err := propertyterms.Lookup(c, eventType.ID, "birth", propertyterms.OriginProvenencia)
+		term, err := propertyterms.Lookup(c, eventType.ID, "birth", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
-		dateProp, err := properties.Lookup(c, "date", properties.OriginProvenencia)
+		dateProp, err := properties.Lookup(c, "date", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
@@ -237,7 +262,7 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 			}, []observations.Input{
 				{SubjectID: s.ID, PropertyID: name.ID, ValueText: "The Great Fire", HasText: true},
 				{SubjectID: s.ID, PropertyID: eventType.ID, ValueTermID: term.ID},
-				{SubjectID: s.ID, PropertyID: dateProp.ID, Date: &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &year}},
+				{SubjectID: s.ID, PropertyID: dateProp.ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &year}},
 			})
 		})
 		if err != nil {
@@ -307,7 +332,7 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		t.Fatal(err)
 	}
 	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
-		st, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+		st, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
@@ -317,7 +342,7 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		toponym, err := properties.Lookup(c, "toponym", properties.OriginProvenencia)
+		toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
@@ -365,7 +390,7 @@ func TestWorkspaceNavCountsConclusionHandles(t *testing.T) {
 			return err
 		}
 		for _, key := range []string{"event", "place", "place"} {
-			st, err := subjecttypes.Lookup(c, key, subjecttypes.OriginProvenencia)
+			st, err := subjecttypes.Lookup(c, key, vocabkey.OriginProvenencia)
 			if err != nil {
 				return err
 			}

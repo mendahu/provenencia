@@ -2,6 +2,7 @@ package sourcecredibilitygrades
 
 import (
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 type seedGrade struct {
@@ -25,7 +26,7 @@ func Install(c *database.Catalog) error {
 	for _, g := range seedGrades {
 		if _, err := Upsert(c, Grade{
 			Key:       g.Key,
-			Origin:    OriginProvenencia,
+			Origin:    vocabkey.OriginProvenencia,
 			Label:     g.Label,
 			SortOrder: g.SortOrder,
 		}); err != nil {

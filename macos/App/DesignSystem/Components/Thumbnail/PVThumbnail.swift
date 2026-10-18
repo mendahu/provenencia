@@ -32,6 +32,15 @@ struct PVThumbnail: View {
         static let empty = Content()
     }
 
+    /// A tint and line a feature lays under a mark or symbol (the Person
+    /// page's gender treatment, S10-23). The line also outlines an image; the
+    /// tint does not fill one. Framing like `size`, so it is an init parameter,
+    /// not part of `Content`.
+    struct Colors: Equatable {
+        var tint: Color
+        var line: Color
+    }
+
     private enum State {
         case image
         case mark(PVMarkKey)
@@ -43,15 +52,18 @@ struct PVThumbnail: View {
     private let content: Content
     private let size: CGFloat
     private let cornerRadius: CGFloat
+    private let colors: Colors?
 
     init(
         _ content: Content = .empty,
         size: CGFloat = 44,
-        cornerRadius: CGFloat = PVRadius.sm
+        cornerRadius: CGFloat = PVRadius.sm,
+        colors: Colors? = nil
     ) {
         self.content = content
         self.size = size
         self.cornerRadius = cornerRadius
+        self.colors = colors
     }
 
     private var state: State {
@@ -64,10 +76,20 @@ struct PVThumbnail: View {
         }
     }
 
-    private var isFilled: Bool {
+    /// Mark and symbol take the tint; an image and the empty states keep their own fill.
+    private var fillColor: Color {
         switch state {
-        case .image, .mark, .symbol: true
-        case .empty, .loading: false
+        case .mark, .symbol: colors?.tint ?? PVColor.surfaceInset
+        case .image: PVColor.surfaceInset
+        case .empty, .loading: PVColor.surfaceSunken
+        }
+    }
+
+    /// Mark, symbol, and image take the line; the empty states stay subtle.
+    private var lineColor: Color {
+        switch state {
+        case .mark, .symbol, .image: colors?.line ?? PVColor.borderDefault
+        case .empty, .loading: PVColor.borderSubtle
         }
     }
 
@@ -105,11 +127,11 @@ struct PVThumbnail: View {
             }
         }
         .frame(width: size, height: size)
-        .background(isFilled ? PVColor.surfaceInset : PVColor.surfaceSunken)
+        .background(fillColor)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(isFilled ? PVColor.borderDefault : PVColor.borderSubtle, lineWidth: 1)
+                .strokeBorder(lineColor, lineWidth: 1)
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(accessibilityLabel))
@@ -130,6 +152,10 @@ struct PVThumbnail: View {
         PVThumbnail(.empty)
         PVThumbnail(PVThumbnail.Content(glyph: .symbol(.photo)))
         PVThumbnail(PVThumbnail.Content(glyph: .mark(.filePDF)))
+        PVThumbnail(
+            PVThumbnail.Content(glyph: .mark(.filePDF)),
+            colors: .init(tint: PVColor.personWomanTint, line: PVColor.lineMaternal)
+        )
         PVThumbnail(PVThumbnail.Content(loading: true))
     }
     .padding(PVSpacing.space9)

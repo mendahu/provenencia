@@ -2454,6 +2454,18 @@
         }
       }
     },
+    "error.depictionvalues.invalid": {
+      "comment": "FFI error depictionvalues.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid depiction value."
+          }
+        }
+      }
+    },
     "error.file.not_found": {
       "comment": "FFI error file.not_found",
       "extractionState": "manual",
@@ -2826,6 +2838,30 @@
         }
       }
     },
+    "error.ingest.unsafe_objects.help": {
+      "comment": "Callout help for ingest.unsafe_objects",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its objects folder is a link to another location. Provenencia stores files only inside the project folder. Replace the link with a real folder, then try again."
+          }
+        }
+      }
+    },
+    "error.ingest.unsafe_objects.title": {
+      "comment": "Callout title for ingest.unsafe_objects",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This project’s objects folder can’t be used"
+          }
+        }
+      }
+    },
     "error.ingest.unsupported_archive.help": {
       "comment": "Callout help for ingest.unsupported_archive",
       "extractionState": "manual",
@@ -2870,6 +2906,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Programs and installers can’t be attached"
+          }
+        }
+      }
+    },
+    "error.ingest.unsupported_image": {
+      "comment": "FFI error ingest.unsupported_image (a depiction crop Go could not decode)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The picture of that region couldn’t be read. Draw the region again, or try a smaller one."
           }
         }
       }
@@ -3127,13 +3175,13 @@
       }
     },
     "error.propertyterms.duplicate_key": {
-      "comment": "FFI error propertyterms.duplicate_key; argument is the colliding key",
+      "comment": "FFI error propertyterms.duplicate_key; argument is the existing term's label",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You already have a term with the key %@. Give this one a different label."
+            "value": "This property already has the term “%@”. Use that one, or give this one a different label."
           }
         }
       }
@@ -6559,25 +6607,25 @@
       }
     },
     "sources.list.noFilterMatchesMessage": {
-      "comment": "Empty-state body when the Sources type filter matches nothing",
+      "comment": "Empty-state body when the Sources type, status, and search filters match nothing",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Try another type, or choose All types."
+            "value": "Try another filter, or clear them to see every source."
           }
         }
       }
     },
     "sources.list.noFilterMatchesTitle": {
-      "comment": "Empty-state title when the Sources type filter matches nothing",
+      "comment": "Empty-state title when the Sources type, status, and search filters match nothing",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No sources for this type"
+            "value": "No matching sources"
           }
         }
       }
@@ -6655,7 +6703,7 @@
       }
     },
     "sources.list.sort.updated": {
-      "comment": "Sources sort option: reverse catalog order (stand-in until audit timestamps surface)",
+      "comment": "Sources sort option: most recent work first (audit revision)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -9534,6 +9582,18 @@
         }
       }
     },
+    "properties.valueType.depiction": {
+      "comment": "Property value type label: depiction (registry-only)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Depiction"
+          }
+        }
+      }
+    },
     "properties.valueType.integer": {
       "comment": "Property value type label: integer",
       "extractionState": "manual",
@@ -10774,18 +10834,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add property"
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.citedValueUnavailable": {
-      "comment": "Placeholder when a cited Observation has no displayable value summary yet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "—"
           }
         }
       }
@@ -13380,8 +13428,284 @@
         }
       }
     },
+    "citationComposer.depictionDraw": {
+      "comment": "Button that starts drawing a depiction's region on the open file",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw on the file"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionRedraw": {
+      "comment": "Button that redraws a depiction's region on the open file",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw again"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionUseWholePhoto": {
+      "comment": "Button that sets a depiction's region to the whole photo",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the whole photo"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionUseWholePage": {
+      "comment": "Button that sets a depiction's region to the whole PDF page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the whole page"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionUseCitationRegion": {
+      "comment": "Button that sets a depiction's region to the citation's own region",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the citation's region"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionDrawingHint": {
+      "comment": "Hint above the viewer while a depiction's region is drawn",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw the region with the tools above. Escape goes back to the observation."
+          }
+        }
+      }
+    },
+    "citationComposer.depictionCancel": {
+      "comment": "Button above the viewer that stops drawing a depiction's region",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionPreviewLabel": {
+      "comment": "VoiceOver label of the depiction preview in the observation dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image to save"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionNeedsPage": {
+      "comment": "Warning when an existing PDF citation has no page, so a depiction cannot be drawn",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set this citation's page and save the citation to draw a region."
+          }
+        }
+      }
+    },
+    "citationComposer.observationSaveFailed": {
+      "comment": "Fallback error when an observation save fails with no specific message",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The observation could not be saved. Try again."
+          }
+        }
+      }
+    },
+    "citationComposer.depictionRegionHidden": {
+      "comment": "Warning when a saved depiction's region no longer matches its citation's page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This region no longer matches the citation's page. Draw it again."
+          }
+        }
+      }
+    },
+    "citationComposer.depictionRenderFailed": {
+      "comment": "Error when the app cannot cut the drawn region from the open file",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The region could not be cut from the file. Draw it again."
+          }
+        }
+      }
+    },
+    "citationComposer.depictionCaptionEmpty": {
+      "comment": "Caption beside the depiction preview when no region is drawn",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing drawn yet. Draw the region on the file"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionCaptionBox": {
+      "comment": "Caption beside the depiction preview when a region is drawn",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The rectangle around the region, up to 2,048 px on its long edge"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionCaptionRedrawn": {
+      "comment": "Caption beside the depiction preview after a saved depiction is redrawn",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redrawn. Saving replaces the saved image"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionCaptionNeedsPage": {
+      "comment": "Caption beside the depiction preview when the citation has no page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw is unavailable until the citation has a page"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionCaptionHidden": {
+      "comment": "Caption beside the depiction preview when the saved region is hidden",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save waits for the region to be drawn again"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionWrongPage": {
+      "comment": "Hint while drawing on the wrong PDF page; argument is the citation's page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw on page %lld, this citation's page."
+          }
+        }
+      }
+    },
+    "citationComposer.depictionThumbLabel": {
+      "comment": "VoiceOver label of a saved depiction's thumbnail; arguments are the property label and the person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ of %2$@"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionLineLabel": {
+      "comment": "VoiceOver label of a saved depiction line; arguments are the property label and the person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "citationComposer.editDepictionSubtitle": {
+      "comment": "Depiction edit sheet subtitle; argument is the observation ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · saves on its own. A redraw replaces the image"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionDuplicatedFrom": {
+      "comment": "Note on a duplicated depiction draft; arguments are the person and the property label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicated from %1$@’s %2$@. Saving cuts its own image; the original is unchanged"
+          }
+        }
+      }
+    },
+    "citationComposer.leaveDepictionDraft": {
+      "comment": "Leave confirm for an unsaved depiction; arguments are the property label, the person, and the citation ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The %1$@ of %2$@ you drew is not saved. Everything already saved on %3$@ stays."
+          }
+        }
+      }
+    },
     "citationComposer.rowStateError": {
-      "comment": "Badge when a row-level Save failed",
+      "comment": "Badge when a row-level Save failed; also the title of a save-error Callout",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -13496,18 +13820,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choose a subject."
-          }
-        }
-      }
-    },
-    "citationComposer.propertyRequiredAfterSubject": {
-      "comment": "Property field error after an incompatible subject change",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This subject does not allow that property."
           }
         }
       }
@@ -14516,6 +14828,78 @@
         }
       }
     },
+    "evidenceGraph.subject.unpromote": {
+      "comment": "Footer icon button's tooltip and VoiceOver action on a promoted card, and the confirm button, that takes its filing back",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unpromote"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteKeep": {
+      "comment": "Cancel button of the Unpromote confirm",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep filing"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteConfirmTitle": {
+      "comment": "Title of the Unpromote confirm; argument is the subject's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unpromote %1$@?"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteConfirmMessage": {
+      "comment": "Message of the Unpromote confirm",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This filing is removed. The cards stay on the graph, and the handle stays."
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteConfirmBridgesHeader": {
+      "comment": "Header over the relationships, participations, and locations the Unpromote confirm lists",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also unfiled"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteConfirmBridgesNote": {
+      "comment": "Note under the list in the Unpromote confirm",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The other end of each stays filed."
+          }
+        }
+      }
+    },
     "evidenceGraph.subject.promoteAccessibility": {
       "comment": "VoiceOver for the Promote footer; arguments are the subject label and its candidate ref",
       "extractionState": "manual",
@@ -14524,42 +14908,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Promote %1$@, %2$@"
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.promoteHelp.person": {
-      "comment": "Tooltip on the Promote footer button",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Promote to a person"
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.promoteHelp.event": {
-      "comment": "Tooltip on the Promote footer button",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Promote to an event"
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.promoteHelp.place": {
-      "comment": "Tooltip on the Promote footer button",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Promote to a place"
           }
         }
       }
@@ -15236,6 +15584,66 @@
         }
       }
     },
+    "conclusions.detail.likenesses": {
+      "comment": "Section heading over a Person's likeness crops",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Likenesses"
+          }
+        }
+      }
+    },
+    "conclusions.person.likeness": {
+      "comment": "Label of the Person page header thumb when it shows a likeness no gallery tile matches",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Likeness"
+          }
+        }
+      }
+    },
+    "conclusions.person.likenessOpen": {
+      "comment": "Help text on a likeness tile in a Person's gallery",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open citation"
+          }
+        }
+      }
+    },
+    "conclusions.person.likenessFrom": {
+      "comment": "Accessibility label of the Person page header thumb when it shows a likeness; the argument is that likeness's Source title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Likeness from %@"
+          }
+        }
+      }
+    },
+    "conclusions.person.likenessTile": {
+      "comment": "Accessibility label of a likeness tile in a Person's gallery; the argument is the Source title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Likeness from %@. Open citation"
+          }
+        }
+      }
+    },
     "conclusions.person.noLikeness": {
       "comment": "Accessibility label of the empty portrait slot on a Person page",
       "extractionState": "manual",
@@ -15244,6 +15652,114 @@
           "stringUnit": {
             "state": "translated",
             "value": "No likeness recorded"
+          }
+        }
+      }
+    },
+    "conclusions.person.portraitBadge": {
+      "comment": "Badge on the gallery likeness chosen as the Person's portrait",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portrait"
+          }
+        }
+      }
+    },
+    "conclusions.person.useAsPortrait": {
+      "comment": "Button under a gallery likeness that makes it the Person's portrait",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use as portrait"
+          }
+        }
+      }
+    },
+    "conclusions.person.useAsPortraitLabel": {
+      "comment": "Accessibility label of the button that makes a gallery likeness the Person's portrait; the argument is the Source title (or the Observation ref when the title is empty)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the likeness from %@ as portrait"
+          }
+        }
+      }
+    },
+    "conclusions.person.useEarliestLikeness": {
+      "comment": "Header thumb menu item and accessibility action that clears the Person's portrait",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use earliest likeness"
+          }
+        }
+      }
+    },
+    "conclusions.person.portraitMenuTitle": {
+      "comment": "Title of the Person page header thumb menu",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Person portrait"
+          }
+        }
+      }
+    },
+    "conclusions.person.portraitMenuHint": {
+      "comment": "Help and accessibility hint on the Person page header thumb while a portrait is chosen",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right-click for portrait options"
+          }
+        }
+      }
+    },
+    "conclusions.person.toastPortraitUpdatedTitle": {
+      "comment": "Toast title after choosing or clearing the Person's portrait",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portrait updated"
+          }
+        }
+      }
+    },
+    "conclusions.person.toastPortraitChosenBody": {
+      "comment": "Toast body after choosing a portrait; the argument is the tile's Source title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Using the likeness from %@ as the portrait."
+          }
+        }
+      }
+    },
+    "conclusions.person.toastPortraitEarliestBody": {
+      "comment": "Toast body after clearing the portrait",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Using the earliest likeness as the portrait."
           }
         }
       }
@@ -15990,6 +16506,90 @@
         }
       }
     },
+    "lastUpdated.a11y.updated": {
+      "comment": "VoiceOver suffix of a list row; argument is the spoken time (Today at 3:15 PM, Yesterday, October 12, 2026)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "updated %@"
+          }
+        }
+      }
+    },
+    "lastUpdated.a11y.unknown": {
+      "comment": "VoiceOver suffix of a list row with no recorded last-updated time",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "last updated unknown"
+          }
+        }
+      }
+    },
+    "lastUpdated.help": {
+      "comment": "Hover help of the last-updated cell; argument is the full date and time",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last updated %@"
+          }
+        }
+      }
+    },
+    "timestamp.today": {
+      "comment": "Relative timestamp for a time today; argument is the time of day",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today, %@"
+          }
+        }
+      }
+    },
+    "timestamp.todayAt": {
+      "comment": "Spoken timestamp for a time today; argument is the time of day",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today at %@"
+          }
+        }
+      }
+    },
+    "timestamp.yesterday": {
+      "comment": "Relative and spoken timestamp for a time yesterday",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yesterday"
+          }
+        }
+      }
+    },
+    "timestamp.stamp": {
+      "comment": "Full timestamp: date, then time with zone, joined by a middle dot",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
     "conclusions.a11y.vital": {
       "comment": "VoiceOver for a Person header line; arguments are Born/Died, the date, and the place",
       "extractionState": "manual",
@@ -16010,6 +16610,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reference %@"
+          }
+        }
+      }
+    },
+    "conclusions.sexAtBirthBadge": {
+      "comment": "Person page badge when only sex at birth is recorded; argument is the term label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · at birth"
           }
         }
       }
@@ -16613,6 +17225,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Argument"
+          }
+        }
+      }
+    },
+    "promote.sheet.negatedValue": {
+      "comment": "An incoming value a record denies, on the evidence sheet; %@ = the value it says the subject is not",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "not %@"
           }
         }
       }
@@ -18785,6 +19409,102 @@
           "stringUnit": {
             "state": "translated",
             "value": "region"
+          }
+        }
+      }
+    },
+    "sources.list.status.empty": {
+      "comment": "Sources evidence-status filter option: the Source's graph has no person, event, or place subjects",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty"
+          }
+        }
+      }
+    },
+    "sources.list.status.inProgress": {
+      "comment": "Sources evidence-status filter option: at least one person, event, or place on the graph is not promoted yet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In progress"
+          }
+        }
+      }
+    },
+    "sources.list.status.fullyPromoted": {
+      "comment": "Sources evidence-status filter option: every person, event, and place on the graph is promoted",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fully promoted"
+          }
+        }
+      }
+    },
+    "lastUpdated.a11y.join": {
+      "comment": "Joins a list row's spoken label and its last-updated phrase",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "sources.list.searchPrompt": {
+      "comment": "Placeholder of the Sources list search field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search title or ref"
+          }
+        }
+      }
+    },
+    "sources.list.statusMenu": {
+      "comment": "Accessibility label for the Sources evidence-status filter control",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence status"
+          }
+        }
+      }
+    },
+    "sources.list.status.all": {
+      "comment": "Sources evidence-status filter menu: show every status",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All statuses"
+          }
+        }
+      }
+    },
+    "sources.list.clearFilters": {
+      "comment": "Button on the Sources empty filter result: reset type, status, and search",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear filters"
           }
         }
       }

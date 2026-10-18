@@ -161,13 +161,11 @@ private struct DateValueTranscriptionScanner {
     private func monthNumber(_ name: String) -> Int? {
         var calendar = Calendar(identifier: .gregorian)
         calendar.locale = locale
-        let folded = name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: locale)
-            .trimmingCharacters(in: CharacterSet(charactersIn: "."))
+        let folded = TextMatch.key(name, locale: locale)
         let lists = [calendar.monthSymbols, calendar.shortMonthSymbols]
         for symbols in lists {
             if let index = symbols.firstIndex(where: { symbol in
-                symbol.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: locale)
-                    .trimmingCharacters(in: CharacterSet(charactersIn: ".")) == folded
+                TextMatch.key(symbol, locale: locale) == folded
             }) {
                 return index + 1
             }

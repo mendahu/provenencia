@@ -3,6 +3,9 @@ package handlers
 import (
 	"bytes"
 	"image"
+	"image/color"
+	"image/draw"
+	"image/jpeg"
 	"image/png"
 	"os"
 	"path/filepath"
@@ -24,6 +27,24 @@ func writePNG(t *testing.T, path string) {
 	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// writeCrop writes a w x h JPEG filled with opaque gray shade to a temp folder
+// as crop.jpg and returns its absolute path. A JPEG, so the PNG Go stores
+// cannot be the crop's own bytes.
+func writeCrop(t *testing.T, w, h int, shade uint8) string {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	draw.Draw(img, img.Bounds(), image.NewUniform(color.Gray{Y: shade}), image.Point{}, draw.Src)
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 90}); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "crop.jpg")
+	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
 }
 
 func writePDF(t *testing.T, path string) {

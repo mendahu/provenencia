@@ -3,11 +3,12 @@ package promotealign
 import (
 	"sort"
 
-	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // seedCandidateLimit is the number of property-only candidates kept per
@@ -18,15 +19,16 @@ const seedCandidateLimit = 5
 // matches for each unfixed kind, then every link those handles have. Link
 // order is association ref, then the neighbor's ref, which is the order the
 // walk used to break ties.
-func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []graphalign.Fixed, names match.NameComparer, namePattern string) (graphalign.Canon, error) {
+func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []graphalign.Fixed, rules valuecompare.Rules, namePattern string) (graphalign.Canon, error) {
 	props, err := propertyByID(g)
 	if err != nil {
 		return graphalign.Canon{}, err
 	}
-	neutral, err := neutralTerms(g)
+	vocab, err := g.Vocabulary()
 	if err != nil {
 		return graphalign.Canon{}, err
 	}
+	terms := vocab.TermsByID()
 	types, err := typeByKey(g)
 	if err != nil {
 		return graphalign.Canon{}, err
@@ -51,10 +53,10 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 			return err
 		}
 		kind := typeKey(types, n.SubjectTypeID)
-		if !promotePrimary(kind, "provenencia") {
+		if !vocabkey.IsPrimaryKind(kind) {
 			return nil
 		}
-		vals, err := handleValues(props, neutral, n, namePattern)
+		vals, err := handleValues(props, terms, n, namePattern)
 		if err != nil {
 			return err
 		}
@@ -77,14 +79,13 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 	}
 	ranked := map[string][]match.Candidate{}
 	for _, s := range layer.Subjects {
-		if fixedSubjects[string(s.ID)] || len(s.Values) == 0 {
+		if fixedSubjects[string(s.ID)] || !s.Values.HasPositive() {
 			continue
 		}
 		profile, ok := match.DefaultProfile(s.Kind)
 		if !ok {
 			continue
 		}
-		profile = profile.WithNameComparer(names)
 		cands, ok := ranked[s.Kind]
 		if !ok {
 			typeID := types[s.Kind]
@@ -97,7 +98,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 				return graphalign.Canon{}, err
 			}
 			for _, n := range nodes {
-				vals, err := handleValues(props, neutral, n, namePattern)
+				vals, err := handleValues(props, terms, n, namePattern)
 				if err != nil {
 					return graphalign.Canon{}, err
 				}
@@ -105,7 +106,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 			}
 			ranked[s.Kind] = cands
 		}
-		for _, m := range match.Rank(profile, s.Values, cands, seedCandidateLimit) {
+		for _, m := range match.Rank(profile, rules, s.Values, cands, seedCandidateLimit) {
 			if err := add(m.EntityID); err != nil {
 				return graphalign.Canon{}, err
 			}
@@ -161,7 +162,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 					continue
 				}
 				nKind := typeKey(types, neighbor.SubjectTypeID)
-				if !promotePrimary(nKind, "provenencia") {
+				if !vocabkey.IsPrimaryKind(nKind) {
 					continue
 				}
 				from, to, sig := canonSignature(id, selfKind, n, l, neighbor, props, kin)
@@ -173,7 +174,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 					})
 				}
 				if _, ok := handles[string(neighbor.ID)]; !ok {
-					vals, err := handleValues(props, neutral, neighbor, namePattern)
+					vals, err := handleValues(props, terms, neighbor, namePattern)
 					if err != nil {
 						return graphalign.Canon{}, err
 					}
@@ -193,10 +194,6 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 	return out, nil
 }
 
-func promotePrimary(kind, origin string) bool {
-	return origin == "provenencia" && (kind == "person" || kind == "event" || kind == "place")
-}
-
 func canonSignature(self []byte, selfKind string, n *graphcache.Node, l graphcache.Link, neighbor *graphcache.Node, props map[string]match.Property, kin kinship) (from, to []byte, sig graphalign.EdgeSignature) {
 	if l.FromEnd {
 		from, to = self, l.Neighbor
@@ -210,13 +207,13 @@ func canonSignature(self []byte, selfKind string, n *graphcache.Node, l graphcac
 	var typeTerm string
 	if l.BridgeTypeKey == "participation" {
 		event := neighbor
-		if selfKind == "event" {
+		if selfKind == vocabkey.Event {
 			event = n
 		}
-		if l.NeighborTypeKey == "event" {
+		if l.NeighborTypeKey == vocabkey.Event {
 			event = neighbor
 		}
-		typeTerm = keptTerm(event, props, neighborTypeProperty["event"])
+		typeTerm = keptTerm(event, props, neighborTypeProperty[vocabkey.Event])
 	}
 	sig = graphalign.EdgeSignature{
 		BridgeType: l.BridgeTypeKey, RoleOrType: role,
@@ -242,7 +239,7 @@ func keptTerm(n *graphcache.Node, props map[string]match.Property, key string) s
 	return ""
 }
 
-func handleValues(props map[string]match.Property, neutral map[string]bool, n *graphcache.Node, namePattern string) (match.Values, error) {
+func handleValues(props map[string]match.Property, terms map[string]graphcache.VocabTerm, n *graphcache.Node, namePattern string) (match.Values, error) {
 	out := match.Values{}
 	if n == nil {
 		return out, nil
@@ -254,11 +251,12 @@ func handleValues(props map[string]match.Property, neutral map[string]bool, n *g
 		}
 		vals := make([]match.Value, 0, len(rows))
 		for _, row := range rows {
+			term := terms[string(row.TermID)]
 			v := match.Value{
 				Text: row.Text, HasText: row.HasText,
 				Integer: row.Integer, HasInteger: row.HasInteger,
 				Term: row.TermKey, TermID: append([]byte(nil), row.TermID...),
-				Neutral: neutral[string(row.TermID)],
+				Neutral: term.Neutral, TermLabel: term.Label,
 			}
 			if len(row.Date) > 0 {
 				d, err := valuecodec.UnmarshalDate(row.Date)
@@ -275,24 +273,10 @@ func handleValues(props map[string]match.Property, neutral map[string]bool, n *g
 				v.Name = &name
 				v.NamePattern = namePattern
 			}
+			v.SetEvidence(row.Support, row.Against, row.Rank, row.Reason)
 			vals = append(vals, v)
 		}
 		out[prop] = vals
-	}
-	return out, nil
-}
-
-// neutralTerms is the ids of the terms flagged neutral.
-func neutralTerms(g *graphcache.Graph) (map[string]bool, error) {
-	v, err := g.Vocabulary()
-	if err != nil {
-		return nil, err
-	}
-	out := map[string]bool{}
-	for _, t := range v.Terms {
-		if t.Neutral {
-			out[string(t.ID)] = true
-		}
 	}
 	return out, nil
 }
@@ -316,7 +300,7 @@ func typeByKey(g *graphcache.Graph) (map[string][]byte, error) {
 	}
 	out := map[string][]byte{}
 	for _, t := range v.Types {
-		if t.Origin != connectrules.OriginProvenencia {
+		if t.Origin != vocabkey.OriginProvenencia {
 			continue
 		}
 		out[t.Key] = append([]byte(nil), t.ID...)

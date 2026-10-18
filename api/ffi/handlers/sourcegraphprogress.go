@@ -59,5 +59,7 @@ func protoProgress(row sourcegraphprogress.Progress) *engine.SourceGraphProgress
 		SourceId:         uuidString(row.SourceID),
 		SubjectCount:     row.SubjectCount,
 		ObservationCount: row.ObservationCount,
+		PrimaryCount:     row.PrimaryCount,
+		FiledCount:       row.FiledCount,
 	}
 }

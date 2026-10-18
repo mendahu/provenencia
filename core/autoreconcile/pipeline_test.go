@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // Evidence helpers: a Source, weak evidence each way, high trust, a negative,
@@ -121,7 +121,7 @@ func TestPipeline(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.group+"/"+tc.name, func(t *testing.T) {
-			got, err := Reconcile(properties.ValueTypeText, tc.in, nil, properties.CardinalitySingle)
+			got, err := Reconcile(testRules, propertymeta.ValueTypeText, tc.in, nil, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -151,7 +151,7 @@ func TestPipelineMultipleCardinality(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Reconcile(properties.ValueTypeText, tc.in, nil, properties.CardinalityMultiple)
+			got, err := Reconcile(testRules, propertymeta.ValueTypeText, tc.in, nil, propertymeta.CardinalityMultiple)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -177,7 +177,7 @@ func TestPipelineOutcomes(t *testing.T) {
 		from("x", text(8, "Upper Canada")),         // kept
 		from("x", lowTrust(text(9, "Muddy York"))), // weak
 	}
-	got, err := Reconcile(properties.ValueTypeText, in, nil, properties.CardinalitySingle)
+	got, err := Reconcile(testRules, propertymeta.ValueTypeText, in, nil, propertymeta.CardinalitySingle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +212,7 @@ func TestPipelineOutcomes(t *testing.T) {
 
 func TestPipelineConcluded(t *testing.T) {
 	in := []Candidate{text(1, "A"), text(2, "A"), text(3, "B")}
-	got, err := Reconcile(properties.ValueTypeText, in, &Value{Text: "b", HasText: true}, properties.CardinalitySingle)
+	got, err := Reconcile(testRules, propertymeta.ValueTypeText, in, &Value{Text: "b", HasText: true}, propertymeta.CardinalitySingle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -255,14 +255,14 @@ func TestPipelineInvariants(t *testing.T) {
 				in = append(in, c)
 			}
 			where := fmt.Sprintf("seed %d list %d: %+v", seed, list, in)
-			got, err := Reconcile(properties.ValueTypeText, in, nil, properties.CardinalitySingle)
+			got, err := Reconcile(testRules, propertymeta.ValueTypeText, in, nil, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatalf("%s: %v", where, err)
 			}
 
 			shuffled := append([]Candidate(nil), in...)
 			rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
-			if again, _ := Reconcile(properties.ValueTypeText, shuffled, nil, properties.CardinalitySingle); !reflect.DeepEqual(again, got) {
+			if again, _ := Reconcile(testRules, propertymeta.ValueTypeText, shuffled, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(again, got) {
 				t.Fatalf("%s: input order changed the result", where)
 			}
 
@@ -346,24 +346,24 @@ func TestOutvotedVote(t *testing.T) {
 		in        []Candidate
 		want      map[byte]Vote
 	}{
-		{"two of three Sources", properties.ValueTypeText,
+		{"two of three Sources", propertymeta.ValueTypeText,
 			[]Candidate{from("a", text(1, "York")), from("b", text(2, "york")), from("c", text(3, "Toronto"))},
 			map[byte]Vote{1: {}, 2: {}, 3: {Support: 2, Of: 3}}},
-		{"four of five, one Source each", properties.ValueTypeText,
+		{"four of five, one Source each", propertymeta.ValueTypeText,
 			[]Candidate{text(1, "B"), text(2, "A"), text(3, "A"), text(4, "A"), text(5, "A")},
 			map[byte]Vote{1: {Support: 4, Of: 5}, 2: {}, 3: {}, 4: {}, 5: {}}},
-		{"a Source's records are one vote", properties.ValueTypeText,
+		{"a Source's records are one vote", propertymeta.ValueTypeText,
 			[]Candidate{from("a", text(1, "A")), from("a", text(2, "A")), from("b", text(3, "A")), from("c", text(4, "B"))},
 			map[byte]Vote{1: {}, 2: {}, 3: {}, 4: {Support: 2, Of: 3}}},
-		{"weak and kept carry none", properties.ValueTypeText,
+		{"weak and kept carry none", propertymeta.ValueTypeText,
 			[]Candidate{lowTrust(text(1, "Robbins")), text(2, "Robins")},
 			map[byte]Vote{1: {}, 2: {}}},
-		{"a name outvoted on its surname carries that part's vote", properties.ValueTypeName,
+		{"a name outvoted on its surname carries that part's vote", propertymeta.ValueTypeName,
 			[]Candidate{nm(1, "given=J.|surname=Robins"), nm(2, "given=James|surname=Robins"), nm(3, "given=James|surname=Robbins"), nm(4, "given=Jim|surname=Robins")},
 			map[byte]Vote{1: {}, 2: {}, 3: {Support: 3, Of: 4}, 4: {}}},
 	}
 	for _, tc := range cases {
-		got, err := Reconcile(tc.valueType, tc.in, nil, properties.CardinalitySingle)
+		got, err := Reconcile(testRules, tc.valueType, tc.in, nil, propertymeta.CardinalitySingle)
 		if err != nil {
 			t.Fatal(err)
 		}

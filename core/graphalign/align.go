@@ -283,7 +283,7 @@ func (st *state) supports(subjectID, handleID, neighbor []byte) bool {
 }
 
 func (st *state) evaluate(a, b match.Values) match.Evaluation {
-	return match.EvaluateWithNames(a, b, st.metas, st.cfg.Names)
+	return match.Evaluate(a, b, st.metas, st.cfg.Value)
 }
 
 func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
@@ -415,10 +415,7 @@ func (st *state) fallbackUnreachable() {
 		if !ok {
 			continue
 		}
-		if st.cfg.Names != nil {
-			profile = profile.WithNameComparer(*st.cfg.Names)
-		}
-		for _, m := range match.Rank(profile, s.Values, st.candidatesOfKind(s.Kind), st.cfg.AlternativeLimit) {
+		for _, m := range match.Rank(profile, st.cfg.Value, s.Values, st.candidatesOfKind(s.Kind), st.cfg.AlternativeLimit) {
 			h := st.handles[string(m.EntityID)]
 			sc := st.scoreCandidate(s.ID, h)
 			st.recordBest(sk, sc)
@@ -887,8 +884,9 @@ func comparisonsFrom(ev match.Evaluation, probe match.Values, cfg Config, stats 
 			Property:  pc.Property,
 			Outcome:   outcome,
 			ValueType: pc.ValueType,
-			Pinned:    outcome == match.OutcomeAgree,
 			Weight:    weight,
+			Probe:     pc.Probe,
+			Candidate: pc.Candidate,
 		})
 	}
 	return out
@@ -970,12 +968,7 @@ func (st *state) alternative(sc scoredCand, probe match.Values) Alternative {
 }
 
 func subjectHasValues(s *Subject) bool {
-	for _, vs := range s.Values {
-		if len(vs) > 0 {
-			return true
-		}
-	}
-	return false
+	return s.Values.HasPositive()
 }
 
 func (st *state) band(score float64) Assessment {

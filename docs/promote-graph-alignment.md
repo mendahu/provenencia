@@ -1,8 +1,10 @@
 # Provenencia — Promote Graph Alignment
 
+> **Spike 11 replaces §4.1, §5, §6 and §12.** The target model is [matching-model.md](matching-model.md); until then those sections describe the running code.
+
 ## Status
 
-**Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). Renamed from “Promote alignment” to **Promote graph alignment** (2026-10-07) so the name names the graph-to-graph proposal, not property-only matching. It replaced the per-Property compare checklist and the per-Subject walk; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3–§5.4 now state its model rules. How we got here, and the directions we turned down: [`ideas/promote-matching.md`](ideas/promote-matching.md). Matching today: [`matching.md`](matching.md).
+**Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). Renamed from “Promote alignment” to **Promote graph alignment** (2026-10-07) so the name names the graph-to-graph proposal, not property-only matching. It replaced the per-Property compare checklist and the per-Subject walk; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3–§5.4 now state its model rules. How we got here, and the directions we turned down: [`ideas/archive/promote-matching.md`](ideas/archive/promote-matching.md). Matching today: [`matching.md`](matching.md).
 
 **The data model doesn't change:** one Identity Claim per Subject and handle, with Observation pins on the claim and backfill (§5, §5.1).
 
@@ -12,7 +14,7 @@
 
 Promote files Interpretation Subjects onto canonical handles. A Subject's identity is carried mostly by its **neighbors** (its birth event, its places, its family), not by its own Properties. An Evidence graph is also much bigger than one Subject: the reference case, an obituary, has 41 Subjects. Ticking agreements Property by Property, Subject by Subject, is the wrong amount of work. Most of those agreements the machine can decide, and none of them can see the structure that actually identifies people.
 
-**The picture** ([`ideas/promote-matching.md`](ideas/promote-matching.md#the-stack-how-to-picture-the-problem)):
+**The picture** ([`ideas/archive/promote-matching.md`](ideas/archive/promote-matching.md#the-stack-how-to-picture-the-problem)):
 - every Evidence graph is a **layer**;
 - the layers stack so that Subjects about the same thing line up in **columns**;
 - a handle is a column, and an Identity Claim is a vertical link;
@@ -44,7 +46,7 @@ Promote is one workspace page; the choose-target screen and the separate claim s
 
 - **Entry:** the Promote button on any unpromoted Subject card, as today. The page opens with that Subject's row, preselected to its best match, plus **"Map the rest of this graph (N Subjects)"**. Promoting one Subject is the same page with one row.
 - **Rows:** one per primary Subject on the Evidence graph (person, event, place).
-  - **Already promoted:** shown read-only, with no controls. They are anchors for the graph alignment, and editing them is a separate workflow ([`ideas/identity-claim-review.md`](ideas/identity-claim-review.md)), not Spike 10.
+  - **Already promoted:** shown read-only, with no controls. They are anchors for the graph alignment, and editing them is a separate workflow ([`ideas/identity-claim-review.md`](ideas/identity-claim-review.md)), not this page.
   - **Unpromoted:** a target dropdown with the best match preselected, the next few alternatives, **New**, and **Skip**.
 - **Assessment:** each row shows **strong**, **medium**, **weak** or **no match**. Clicking it opens a **sheet** with every comparison that contributed: agree, conflict or unknown, with its weight. The agreeing comparisons are preselected as pins and can be toggled.
 - **Claim fields per row:** status, confidence and argument. The argument can be drafted from the assessment.
@@ -92,6 +94,8 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg *Config) Pr
 
 ## 4.1 Abstraction, composition, and tunables
 
+> Superseded in Spike 11; see [matching-model.md](matching-model.md).
+
 **Goal:** code that is well abstracted, strongly separated by concern, and highly composable. Graph alignment must not become a monolith that embeds sameness logic, catalog I/O, and UI drafting in one place.
 
 **Compose smaller pure units upward:**
@@ -104,7 +108,7 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg *Config) Pr
 | **Catalog adapter** (S9-42) | Build `Layer` / `Canon` / `Stats`, call `Align`, map the proposal to FFI | Contain scoring or walk policy |
 | **Promote page** (S9-44) | Present rows, decisions, Done | Reimplement alignment |
 
-Alignment **orchestrates**; matching / pairwise evaluation **judges a pair**. Alignment must not call only today’s bulk `Rank` API for every hop — that API is “score against the catalog.” It calls the **pairwise** unit (with edge terms when neighbors are already mapped). `Rank` and the promote score share `ComparerFor` and keep their own scales, so a menu point total is not a promote score.
+Alignment **orchestrates**; matching / pairwise evaluation **judges a pair**. Alignment must not call only today’s bulk `Rank` API for every hop — that API is “score against the catalog.” It calls the **pairwise** unit (with edge terms when neighbors are already mapped). `Rank` and the promote score share `match.Compare` and keep their own scales, so a menu point total is not a promote score.
 
 **Package boundary:** graph alignment is **its own module**, not folded into Promote UI or FFI handlers. Config for the walk and scorer lives in **one registry file** in that pure package (same idea as matching’s `registry.go`): every tunable dogfood will tweak —
 
@@ -122,6 +126,8 @@ Defaults ship for the obituary golden and table tests. Real tuning is **empirica
 ---
 
 # 5. Walking: best-first propagation
+
+> Superseded in Spike 11; see [matching-model.md](matching-model.md).
 
 This is collective entity resolution: graph alignment by propagation (cf. PARIS, similarity flooding). The walk is **best-first, not recursive**. A depth-first walk commits to whatever it reaches first; a priority queue lets the strongest matches settle first, so the weaker ones are decided with the most context.
 
@@ -153,18 +159,19 @@ A layer is **one Source’s Subjects**, not one connected component. *Map the re
 
 # 6. Scoring
 
+> Superseded in Spike 11; see [matching-model.md](matching-model.md).
+
 Nothing names a Property or a relationship. Every weight comes from metadata or from data.
 
-**Node comparisons.** The score does not name a property. For each property both sides carry, `ComparerFor` returns a similarity (the same comparer `Rank` uses; `Rank`'s point total stays its own). A registry scale turns that similarity into points:
+**Node comparisons.** The score does not name a property. For each property both sides carry, `match.Compare` returns a similarity from value compare (the same one `Rank` uses; `Rank`'s point total stays its own). A registry scale turns that similarity into points:
 
-- Similarity at or above the scale's floor contributes `weight × similarity`. Similarity 1 agrees. A lower resemblance is partial.
-- Similarity below the floor conflicts for a single-value property and is unknown for a multiple-value one (residences never conflict on a difference). A comparable zero is below every floor.
+- A positive similarity contributes `weight × similarity`; 1 agrees, less is partial. A comparable 0 conflicts for a single-value property and is unknown for a multiple-value one.
 - Unknown (nothing to compare) is 0.
 
 The scale is looked up by property, then by value type. A property added later is another entry.
 
 - **Frequency scales** (text, terms, dates, integers, unless a property replaces them) derive the weight from catalog frequency: `u` is how often unrelated handles share the value, `m` is the prior that the same entity's records agree. A lone exact agreement is lifted to the accept bar (2, also the weak bar), and any agreement bonus is kept. A toponym's bonus makes an exact toponym medium and leaves it short of strong until an edge adds support. A partial is that lifted weight times the similarity, so a one-letter toponym typo is weak.
-- **Fixed scales** are not lifted. Name: floor 0.75, weight 2.5, contradiction 3. An identical name is 2.5, still under medium. A given name that exists only on one side does not lower that: Jake Robins against James Kenneth Jake Robins agrees, and so does James against James Kenneth. A shared surname with a different given name (about 0.6) conflicts. Sex at birth and gender: floor 1, weight 0.6, contradiction 1. Agreement is a small nudge. A mismatch subtracts 1 and does not erase a name that cleared its floor. A neutral term (`property_terms.neutral`, seeded on unknown and indeterminate) is not comparable, so it neither agrees nor conflicts; matching, Rank and the reconciler read the same flag.
+- **Fixed scales** are not lifted. Name: weight 2.5, contradiction 3. An identical name is 2.5, still under medium. A name with words on one side only is a partial (`Jake Robins` against `James Kenneth Jake Robins` is 2.5 × 0.75); a different first given name or surname on each side conflicts (value compare's `Different`). Sex at birth and gender: weight 0.6, contradiction 1. Agreement is a small nudge. A mismatch subtracts 1. A neutral term (`property_terms.neutral`, seeded on unknown and indeterminate) is not comparable, so it neither agrees nor conflicts; matching, Rank and the reconciler read the same flag.
 
 `autoreconcile.Compatible` is sameness for reconciliation and for pins. A partial name can make the row weak without being pinned. A line is pinned only when the values are the same.
 
@@ -256,7 +263,7 @@ Spike 9 was replanned around this on 2026-10-06. The close note is [`deployment-
   - S9-18, folded into S9-17 and S9-44.
 
   S9-D16 is a **rethink**: it replaces the S9-D9 / S9-D10 frames on the Promote board.
-- **Later, learned weights:** start logging the suggestions shown and the decisions made, so m and u can be fitted from real accepts and rejects ([`ideas/promote-matching.md`](ideas/promote-matching.md#directions-we-circled-none-chosen)). This is out of scope for Spike 9.
+- **Later, learned weights:** start logging the suggestions shown and the decisions made, so m and u can be fitted from real accepts and rejects ([`ideas/archive/promote-matching.md`](ideas/archive/promote-matching.md#directions-we-circled-none-chosen)). This is out of scope for Spike 9.
 
 ---
 
@@ -271,6 +278,8 @@ Spike 9 was replanned around this on 2026-10-06. The close note is [`deployment-
 ---
 
 # 12. Implementation status
+
+> Superseded in Spike 11; see [matching-model.md](matching-model.md).
 
 As built at the end of Spike 9 slice 9 (S9-41 – S9-44 and the review fixes stacked on them). Read this before assuming a section above is in the code.
 

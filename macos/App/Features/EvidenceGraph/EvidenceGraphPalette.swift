@@ -74,7 +74,7 @@ struct EvidenceGraphPalette: View {
     private var selectTool: some View {
         paletteTool(
             title: L10n.EvidenceGraph.toolSelect,
-            armed: model.armedSelect,
+            armed: model.inputMode == .selecting,
             enabled: true,
             help: L10n.EvidenceGraph.toolSelectHelp,
             focusCase: .toolSelect,

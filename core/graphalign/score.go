@@ -3,7 +3,6 @@ package graphalign
 import (
 	"strconv"
 
-	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/match"
 )
 
@@ -86,26 +85,20 @@ func ScoreSimilarity(similarity float64, comparable bool, cardinality string, pr
 	return ApplyScale(similarity, comparable, cardinality, cfg.resolvedScale(property, valueType, vals, stats))
 }
 
-// ApplyScale turns one similarity into an outcome and points. It has no
-// property names, value types, or catalog lookups.
+// ApplyScale turns one similarity into an outcome and points. The outcome is
+// match.OutcomeOf; an agreement or partial earns Weight × similarity, a
+// conflict costs Contradiction, unknown nothing. It has no property names,
+// value types, or catalog lookups.
 func ApplyScale(similarity float64, comparable bool, cardinality string, scale Scale) (match.Outcome, float64) {
-	if !comparable {
-		return match.OutcomeUnknown, 0
+	similarity = min(similarity, 1)
+	outcome := match.OutcomeOf(similarity, comparable, cardinality)
+	switch outcome {
+	case match.OutcomeAgree, match.OutcomePartial:
+		return outcome, scale.Weight * similarity
+	case match.OutcomeConflict:
+		return outcome, -scale.Contradiction
 	}
-	if similarity > 1 {
-		similarity = 1
-	}
-	if similarity > 0 && similarity >= scale.Floor {
-		points := scale.Weight * similarity
-		if similarity >= 1 {
-			return match.OutcomeAgree, points
-		}
-		return match.OutcomePartial, points
-	}
-	if cardinality == properties.CardinalityMultiple {
-		return match.OutcomeUnknown, 0
-	}
-	return match.OutcomeConflict, -scale.Contradiction
+	return outcome, 0
 }
 
 // resolvedScale is the property's scale, else its value type's, with a
@@ -145,6 +138,9 @@ func uFor(stats Stats, propertyKey string, vals []match.Value) float64 {
 		return 0
 	}
 	for _, v := range vals {
+		if v.Negative {
+			continue
+		}
 		k := valueKey(v)
 		if k == "" {
 			continue

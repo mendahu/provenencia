@@ -3,11 +3,15 @@ package observations
 import (
 	"bytes"
 	"database/sql"
-	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 
+	"github.com/mendahu/provenencia/core/database/rowchange"
+
 	"github.com/google/uuid"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 )
 
@@ -15,19 +19,12 @@ const (
 	sqlUpdateObservation = `UPDATE observations SET
 		subject_id = ?, property_id = ?, polarity = ?,
 		value_text = ?, value_integer = ?,
-		value_date_id = ?, value_name_id = ?, value_subject_id = ?, value_term_id = ?
+		value_date_id = ?, value_name_id = ?, value_subject_id = ?, value_term_id = ?,
+		value_depiction_id = ?
 		WHERE id = ? AND citation_id = ?`
-
-	sqlCountDateRefs = `SELECT COUNT(*) FROM observations WHERE value_date_id = ?`
-
-	sqlCountNameRefs = `SELECT COUNT(*) FROM observations WHERE value_name_id = ?`
-
-	sqlDeleteDateValue = `DELETE FROM date_values WHERE id = ?`
-
-	sqlDeleteNameValue = `DELETE FROM name_values WHERE id = ?`
 )
 
-func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Observation, []rowchange.Change, error) {
+func updateOne(tx *database.Tx, citationID []byte, prev Observation, in Input) (Observation, []rowchange.Change, error) {
 	polarity := stringsTrimPolarity(in.Polarity)
 	if polarity != PolarityPositive && polarity != PolarityNegative {
 		return Observation{}, nil, ErrInvalid
@@ -35,7 +32,7 @@ func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Obser
 	if len(in.SubjectID) != 16 || len(in.PropertyID) != 16 {
 		return Observation{}, nil, ErrInvalid
 	}
-	if err := requireSubjectSource(tx, citationID, in.SubjectID); err != nil {
+	if err := requireSubjectSource(tx.Tx, citationID, in.SubjectID); err != nil {
 		return Observation{}, nil, err
 	}
 
@@ -53,11 +50,11 @@ func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Obser
 		}
 		return Observation{}, nil, err
 	}
-	prop, err := getPropertyTx(tx, in.PropertyID)
+	prop, err := getPropertyTx(tx.Tx, in.PropertyID)
 	if err != nil {
 		return Observation{}, nil, err
 	}
-	resolved, err := resolveValue(tx, prop.ValueType, in, &prev)
+	resolved, err := resolveValue(tx.Tx, citationID, prop.ValueType, in, &prev)
 	if err != nil {
 		return Observation{}, nil, err
 	}
@@ -73,6 +70,7 @@ func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Obser
 		nullBlob(resolved.NameID),
 		nullBlob(resolved.SubjectID),
 		nullBlob(resolved.TermID),
+		nullBlob(resolved.DepictionID),
 		prev.ID,
 		citationID,
 	); err != nil {
@@ -80,31 +78,37 @@ func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Obser
 	}
 	var extra []rowchange.Change
 	if in.Notes != nil {
-		noteChanges, err := replaceNotes(tx, prev.ID, in.Notes)
+		noteChanges, err := replaceNotes(tx.Tx, prev.ID, in.Notes)
 		if err != nil {
 			return Observation{}, nil, err
 		}
 		extra = append(extra, noteChanges...)
 	}
-	if deleted, err := releaseDateValue(tx, prev.ValueDateID, resolved.DateID); err != nil {
-		return Observation{}, nil, err
-	} else if deleted != nil {
-		extra = append(extra, rowchange.Change{
-			EntityType: "date_value",
-			EntityID:   append([]byte(nil), prev.ValueDateID...),
-			Action:     rowchange.ActionDelete,
-			Fields:     rowchange.DeletedRow(deleted),
-		})
-	}
-	if deleted, err := releaseNameValue(tx, prev.ValueNameID, resolved.NameID); err != nil {
-		return Observation{}, nil, err
-	} else if deleted != nil {
-		extra = append(extra, rowchange.Change{
-			EntityType: "name_value",
-			EntityID:   append([]byte(nil), prev.ValueNameID...),
-			Action:     rowchange.ActionDelete,
-			Fields:     rowchange.DeletedRow(deleted),
-		})
+	for _, rel := range []struct {
+		column, entity string
+		prevID, newID  []byte
+		rowMap         func() (map[string]any, error)
+	}{
+		{"observations.value_date_id", "date_value", prev.ValueDateID, resolved.DateID, func() (map[string]any, error) {
+			v, err := datevalues.LookupTx(tx.Tx, prev.ValueDateID)
+			return dateValueMap(prev.ValueDateID, v), err
+		}},
+		{"observations.value_name_id", "name_value", prev.ValueNameID, resolved.NameID, func() (map[string]any, error) {
+			v, err := namevalues.LookupTx(tx.Tx, prev.ValueNameID)
+			return nameValueMap(prev.ValueNameID, v), err
+		}},
+		{"observations.value_depiction_id", "depiction_value", prev.ValueDepictionID, resolved.DepictionID, func() (map[string]any, error) {
+			v, err := depictionvalues.LookupTx(tx.Tx, prev.ValueDepictionID)
+			return depictionValueMap(prev.ValueDepictionID, v), err
+		}},
+	} {
+		ch, err := releaseReplacedValue(tx, rel.column, rel.entity, rel.prevID, rel.newID, rel.rowMap)
+		if err != nil {
+			return Observation{}, nil, err
+		}
+		if ch != nil {
+			extra = append(extra, *ch)
+		}
 	}
 
 	obs := Observation{
@@ -127,13 +131,9 @@ func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Obser
 	obs.ValueNameID = append([]byte(nil), resolved.NameID...)
 	obs.ValueSubjectID = append([]byte(nil), resolved.SubjectID...)
 	obs.ValueTermID = append([]byte(nil), resolved.TermID...)
+	obs.ValueDepictionID = append([]byte(nil), resolved.DepictionID...)
 	changes := extra
-	if resolved.DateChange != nil {
-		changes = append(changes, *resolved.DateChange)
-	}
-	if resolved.NameChange != nil {
-		changes = append(changes, *resolved.NameChange)
-	}
+	changes = append(changes, resolved.ValueChanges...)
 	if ch := observationUpdateChange(prev, obs); ch != nil {
 		changes = append([]rowchange.Change{*ch}, changes...)
 	}
@@ -176,6 +176,9 @@ func observationUpdateChange(prev, next Observation) *rowchange.Change {
 	if !bytes.Equal(prev.ValueTermID, next.ValueTermID) {
 		fields["value_term_id"] = rowchange.FieldDiff{Old: uuidString(prev.ValueTermID), New: uuidString(next.ValueTermID)}
 	}
+	if !bytes.Equal(prev.ValueDepictionID, next.ValueDepictionID) {
+		fields["value_depiction_id"] = rowchange.FieldDiff{Old: uuidString(prev.ValueDepictionID), New: uuidString(next.ValueDepictionID)}
+	}
 	if len(fields) == 0 {
 		return nil
 	}
@@ -187,46 +190,28 @@ func observationUpdateChange(prev, next Observation) *rowchange.Change {
 	}
 }
 
-func releaseDateValue(tx *sql.Tx, oldID, newID []byte) (map[string]any, error) {
-	if len(oldID) != 16 || bytes.Equal(oldID, newID) {
+// releaseReplacedValue releases the value row an update replaced: the old
+// child of an owned FK, with its own owned children. It does nothing when
+// prevID is empty or still the Observation's value. The delete change is built
+// from rowMap before the release. Call it after the Observation holds the new
+// value.
+func releaseReplacedValue(tx *database.Tx, column, entity string, prevID, newID []byte, rowMap func() (map[string]any, error)) (*rowchange.Change, error) {
+	if len(prevID) != 16 || bytes.Equal(prevID, newID) {
 		return nil, nil
 	}
-	var n int
-	if err := tx.QueryRow(sqlCountDateRefs, oldID).Scan(&n); err != nil {
-		return nil, err
-	}
-	if n > 0 {
-		return nil, nil
-	}
-	prev, err := datevalues.LookupTx(tx, oldID)
+	row, err := rowMap()
 	if err != nil {
 		return nil, err
 	}
-	if _, err := tx.Exec(sqlDeleteDateValue, oldID); err != nil {
+	if err := deleteimpact.ReleaseReplaced(tx, column, prevID); err != nil {
 		return nil, err
 	}
-	return dateValueMap(oldID, prev), nil
-}
-
-func releaseNameValue(tx *sql.Tx, oldID, newID []byte) (map[string]any, error) {
-	if len(oldID) != 16 || bytes.Equal(oldID, newID) {
-		return nil, nil
-	}
-	var n int
-	if err := tx.QueryRow(sqlCountNameRefs, oldID).Scan(&n); err != nil {
-		return nil, err
-	}
-	if n > 0 {
-		return nil, nil
-	}
-	prev, err := namevalues.LookupTx(tx, oldID)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := tx.Exec(sqlDeleteNameValue, oldID); err != nil {
-		return nil, err
-	}
-	return nameValueMap(oldID, prev), nil
+	return &rowchange.Change{
+		EntityType: entity,
+		EntityID:   append([]byte(nil), prevID...),
+		Action:     rowchange.ActionDelete,
+		Fields:     rowchange.DeletedRow(row),
+	}, nil
 }
 
 func stringsTrimPolarity(polarity string) string {

@@ -2,19 +2,19 @@ package promotealign
 
 import (
 	"database/sql"
-	"strconv"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 type exhibitObs struct {
@@ -23,7 +23,6 @@ type exhibitObs struct {
 	prop        match.Property
 	valueType   string
 	cardinality string
-	display     string
 	source      string
 	value       match.Value
 }
@@ -34,7 +33,7 @@ type exhibitObs struct {
 // members one hop from the chosen handle's members: "her birth date matches"
 // compares this birth with that birth, never with some other event's date.
 // A neighbor Align didn't map (New, Skip, unreachable) contributes nothing.
-func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop *graphalign.Proposal, cfg graphalign.Config, stats graphalign.Stats) error {
+func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop *graphalign.Proposal, cfg graphalign.Config, stats graphalign.Stats, namePattern string) error {
 	if prop == nil || len(prop.Rows) == 0 {
 		return nil
 	}
@@ -138,34 +137,84 @@ func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop
 			plan.neighbors = append(plan.neighbors, neighborPair{neighbor: n, sides: sides})
 		}
 	}
-	if len(want) == 0 {
-		return nil
-	}
-	obs, err := loadExhibitObservations(q, want)
-	if err != nil {
-		return err
-	}
-	bySubject := map[string][]exhibitObs{}
-	for _, o := range obs {
-		bySubject[string(o.subjectID)] = append(bySubject[string(o.subjectID)], o)
-	}
-	collect := func(ids [][]byte) []exhibitObs {
-		var out []exhibitObs
-		for _, id := range ids {
-			out = append(out, bySubject[string(id)]...)
+	if len(want) > 0 {
+		obs, err := loadExhibitObservations(q, want, namePattern)
+		if err != nil {
+			return err
 		}
-		return out
-	}
+		bySubject := map[string][]exhibitObs{}
+		for _, o := range obs {
+			bySubject[string(o.subjectID)] = append(bySubject[string(o.subjectID)], o)
+		}
+		collect := func(ids [][]byte) []exhibitObs {
+			var out []exhibitObs
+			for _, id := range ids {
+				out = append(out, bySubject[string(id)]...)
+			}
+			return out
+		}
 
-	for _, plan := range plans {
-		r := &prop.Rows[plan.idx]
-		exhibits := pairExhibits(bySubject[string(r.SubjectID)], nil, collect(plan.own), cfg, stats)
-		for _, np := range plan.neighbors {
-			exhibits = append(exhibits, pairExhibits(bySubject[string(np.neighbor)], np.neighbor, collect(np.sides), cfg, stats)...)
+		for _, plan := range plans {
+			r := &prop.Rows[plan.idx]
+			exhibits := pairExhibits(bySubject[string(r.SubjectID)], nil, collect(plan.own), cfg, stats)
+			for _, np := range plan.neighbors {
+				exhibits = append(exhibits, pairExhibits(bySubject[string(np.neighbor)], np.neighbor, collect(np.sides), cfg, stats)...)
+			}
+			r.Exhibits = exhibits
 		}
-		r.Exhibits = exhibits
+	}
+	for i := range prop.Rows {
+		r := &prop.Rows[i]
+		r.Exhibits = withRowLines(r.Exhibits, r.Comparisons)
 	}
 	return nil
+}
+
+// withRowLines completes a row's sheet lines from its comparisons. A row with
+// no exhibit gets a line per comparison that spoke, so the sheet still shows
+// the two values behind each outcome. A row with exhibits gets a line for each
+// Property the row judges a conflict that the own-record exhibits do not
+// already show as one: the majority disagreeing with a minority value, or a
+// negative Observation, which the member picker never pairs. These lines
+// carry no Observation, so they cannot be pinned.
+func withRowLines(exhibits []graphalign.Exhibit, comparisons []graphalign.Comparison) []graphalign.Exhibit {
+	none := len(exhibits) == 0
+	for _, c := range comparisons {
+		if none {
+			if c.Outcome == match.OutcomeUnknown {
+				continue
+			}
+		} else {
+			if c.Outcome != match.OutcomeConflict {
+				continue
+			}
+			shown := false
+			for _, ex := range exhibits {
+				shown = shown || len(ex.GroupSubjectID) == 0 && ex.Property == c.Property && ex.Outcome == match.OutcomeConflict
+			}
+			if shown {
+				continue
+			}
+		}
+		exhibits = append(exhibits, refLine(c))
+	}
+	return exhibits
+}
+
+// refLine is the sheet line for one row comparison: its two values and dates,
+// with no Observation behind either.
+func refLine(c graphalign.Comparison) graphalign.Exhibit {
+	return graphalign.Exhibit{
+		Property:         c.Property,
+		Outcome:          c.Outcome,
+		ValueType:        c.ValueType,
+		Weight:           c.Weight,
+		IncomingDisplay:  c.Probe.Label,
+		IncomingDate:     cloneDate(c.Probe.Date),
+		IncomingNegative: c.Probe.Negative,
+		MemberDisplay:    c.Candidate.Label,
+		MemberDate:       cloneDate(c.Candidate.Date),
+	}
 }
 
 // pairExhibits pairs each incoming record with the closest record on the
@@ -179,10 +228,6 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 		if in.valueType == "" || in.valueType == "subject" {
 			continue
 		}
-		cmp := match.ComparerFor(in.valueType)
-		if in.valueType == properties.ValueTypeName && cfg.Names != nil {
-			cmp = *cfg.Names
-		}
 		var chosen *exhibitObs
 		var sim float64
 		var comparable bool
@@ -192,13 +237,13 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 			if mem.prop != in.prop || mem.valueType != in.valueType {
 				continue
 			}
-			if exhibitCompatible(in.valueType, in.value, mem.value) {
+			if exhibitCompatible(cfg.Value, in.valueType, in.value, mem.value) {
 				chosen = mem
 				pinned = true
-				sim, comparable = comparerSimilarity(cmp, in.value, mem.value)
+				sim, comparable = match.Compare(cfg.Value, in.valueType, in.value, mem.value)
 				break
 			}
-			s, ok := comparerSimilarity(cmp, in.value, mem.value)
+			s, ok := match.Compare(cfg.Value, in.valueType, in.value, mem.value)
 			if !ok {
 				continue
 			}
@@ -216,7 +261,7 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 		}
 		card := in.cardinality
 		if card == "" {
-			card = properties.CardinalitySingle
+			card = propertymeta.CardinalitySingle
 		}
 		outcome, weight := graphalign.ScoreSimilarity(sim, comparable, card, in.prop, in.valueType, []match.Value{in.value}, cfg, stats)
 		if outcome == match.OutcomeUnknown {
@@ -232,11 +277,11 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 			Weight:                weight,
 			GroupSubjectID:        append([]byte(nil), neighbor...),
 			IncomingObservationID: append([]byte(nil), in.id...),
-			IncomingDisplay:       in.display,
+			IncomingDisplay:       in.value.Label(),
 			IncomingSource:        in.source,
 			IncomingDate:          cloneDate(in.value.Date),
 			MemberObservationID:   append([]byte(nil), chosen.id...),
-			MemberDisplay:         chosen.display,
+			MemberDisplay:         chosen.value.Label(),
 			MemberSource:          chosen.source,
 			MemberDate:            cloneDate(chosen.value.Date),
 		})
@@ -244,7 +289,7 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 	return out
 }
 
-func cloneDate(d *datevalues.Value) *datevalues.Value {
+func cloneDate(d *datevalue.Value) *datevalue.Value {
 	if d == nil {
 		return nil
 	}
@@ -252,26 +297,8 @@ func cloneDate(d *datevalues.Value) *datevalues.Value {
 	return &c
 }
 
-func comparerSimilarity(cmp match.Comparer, a, b match.Value) (float64, bool) {
-	if cmp == nil {
-		return 0, false
-	}
-	return cmp.Compare(a, b)
-}
-
-func exhibitCompatible(valueType string, a, b match.Value) bool {
-	return autoreconcile.Compatible(valueType, exhibitAuto(a), exhibitAuto(b))
-}
-
-func exhibitAuto(v match.Value) autoreconcile.Value {
-	termID := append([]byte(nil), v.TermID...)
-	if len(termID) == 0 && v.Term != "" {
-		termID = []byte(v.Term)
-	}
-	return autoreconcile.Value{
-		Text: v.Text, HasText: v.HasText, Integer: v.Integer, HasInteger: v.HasInteger,
-		TermKey: v.Term, TermID: termID, Neutral: v.Neutral, Date: v.Date, Name: v.Name,
-	}
+func exhibitCompatible(rules valuecompare.Rules, valueType string, a, b match.Value) bool {
+	return autoreconcile.Compatible(rules, valueType, a.Auto(), b.Auto())
 }
 
 // acceptedMembers maps each handle to its accepted member Subjects, in claim
@@ -351,7 +378,7 @@ func bridgeNeighbors(q Querier, from, toward [][]byte) (map[string][][]byte, err
 	return out, nil
 }
 
-func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, error) {
+func loadExhibitObservations(q Querier, subjectIDs [][]byte, namePattern string) ([]exhibitObs, error) {
 	query := `SELECT o.id, o.subject_id, p.key, p.origin, p.value_type, p.cardinality,
 			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, t.key, t.label, COALESCE(t.neutral, 0), src.title
 		FROM observations o
@@ -364,7 +391,6 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 	type pending struct {
 		o              exhibitObs
 		dateID, nameID []byte
-		termLabel      string
 	}
 	var all []pending
 	var dateIDs, nameIDs [][]byte
@@ -384,8 +410,8 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 			Text: text.String, HasText: text.Valid,
 			Integer: integer.Int64, HasInteger: integer.Valid,
 			Term: term.String, Neutral: p.o.value.Neutral,
+			TermLabel: termLabel.String,
 		}
-		p.termLabel = termLabel.String
 		all = append(all, p)
 		if len(p.dateID) > 0 {
 			dateIDs = append(dateIDs, p.dateID)
@@ -407,29 +433,14 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 	if err != nil {
 		return nil, err
 	}
-	loaded, err := nameformats.Load(q)
-	if err != nil {
-		return nil, err
-	}
 	out := make([]exhibitObs, 0, len(all))
 	for _, p := range all {
 		if d, ok := dates[string(p.dateID)]; ok {
 			p.o.value.Date = &d
-			p.o.display = datevalues.CompactDisplay(d)
 		}
 		if n, ok := names[string(p.nameID)]; ok {
 			p.o.value.Name = &n
-			p.o.value.NamePattern = loaded.Key
-			p.o.display = n.Form
-		}
-		if p.o.display == "" && p.o.value.HasText {
-			p.o.display = p.o.value.Text
-		}
-		if p.o.display == "" && p.termLabel != "" {
-			p.o.display = p.termLabel
-		}
-		if p.o.display == "" && p.o.value.HasInteger {
-			p.o.display = strconv.FormatInt(p.o.value.Integer, 10)
+			p.o.value.NamePattern = namePattern
 		}
 		out = append(out, p.o)
 	}

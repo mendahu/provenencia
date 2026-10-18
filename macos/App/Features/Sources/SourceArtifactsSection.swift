@@ -156,14 +156,14 @@ final class SourceArtifactsSection {
         savingID = id
         defer { savingID = nil }
         do {
-            let updated = try await context.store.updateArtifact(
+            let (updated, effects) = try await context.store.updateArtifact(
                 projectDir: context.projectDir,
                 userID: context.userID,
                 artifactID: id,
                 label: label,
                 description: desc
             )
-            replace(updated)
+            replace(updated, effects: effects)
             if editingArtifactID == id { editingArtifactID = nil }
         } catch {
             context.pageError = L10n.Errors.message(for: error)
@@ -259,7 +259,7 @@ final class SourceArtifactsSection {
         isSavingDraft = true
         defer { isSavingDraft = false }
         do {
-            var art = try await context.store.createArtifact(
+            var (art, effects) = try await context.store.createArtifact(
                 projectDir: context.projectDir,
                 userID: context.userID,
                 sourceID: context.sourceID,
@@ -275,6 +275,7 @@ final class SourceArtifactsSection {
                     path: path
                 )
                 art = ingested.artifact
+                effects = ingested.effects
             }
             context.workspace?.artifacts.append(art)
             labels[art.id] = art.label
@@ -282,6 +283,9 @@ final class SourceArtifactsSection {
             isAdding = false
             draftLabelError = nil
             draft.reject = nil
+            // The artifact list is appended above, so only the effects apply:
+            // the Source's row moves and its graph reads follow.
+            context.session.apply(effects)
             await context.refreshCoverFromStore()
             context.toast = VocabularyToast(
                 title: L10n.Sources.toastArtifactCreatedTitle(ref: art.ref),
@@ -384,7 +388,7 @@ final class SourceArtifactsSection {
                 artifactID: id,
                 path: path
             )
-            replace(ingested.artifact)
+            replace(ingested.artifact, effects: ingested.effects)
             isAttaching = false
             attachDraft = AttachDraft()
             await context.refreshCoverFromStore()
@@ -431,12 +435,12 @@ final class SourceArtifactsSection {
         }
     }
 
-    private func replace(_ updated: CatalogArtifact) {
+    private func replace(_ updated: CatalogArtifact, effects: CatalogWriteEffects) {
         if let idx = context.workspace?.artifacts.firstIndex(where: { $0.id == updated.id }) {
             context.workspace?.artifacts[idx] = updated
         }
         labels[updated.id] = updated.label
         descriptions[updated.id] = updated.description
-        context.notifyWorkspaceMutated()
+        context.applyWrite(effects)
     }
 }

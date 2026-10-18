@@ -97,8 +97,8 @@ with the routing table below).
 | Conformance and regression | `review-pr/lenses/conformance.md` | Always |
 | Maintainability | `review-pr/lenses/maintainability.md` | Always |
 | User experience | `review-pr/lenses/ux.md` | `macos/App/**`, `Localizable.xcstrings`, `core/apperr`, new error codes |
-| Security | `review-pr/lenses/security.md` | `core/ingest`, `core/objectpath`, `core/objectstore`, `core/derivatives`, `core/identity`, `core/catalogsession`, `api/ffi/**`, migrations, `*.entitlements`, URL or locator code |
-| Performance | `review-pr/lenses/performance.md` | `core/database/**`, `core/search`, `core/derivatives`, graph, list, and cache code, `macos/App/Features/**` models |
+| Security | `review-pr/lenses/security.md` | `core/ingest`, `core/objectpath`, `core/objectstore`, `core/derivatives`, `core/raster`, `core/identity`, `core/catalogsession`, `api/ffi/**`, `macos/App/Platform/ProjectFiles.swift`, `macos/App/Platform/ThumbnailCache.swift`, migrations, `*.entitlements`, URL or locator code |
+| Performance | `review-pr/lenses/performance.md` | `core/database/**`, `core/search`, `core/derivatives`, `core/raster`, graph, list, and cache code, `macos/App/Features/**` models |
 
 Dispatch one `pr-reviewer` per lens, **in parallel**:
 
@@ -136,14 +136,21 @@ Every finding gets exactly one decision, written in the ship log.
 
 | Decision | When |
 | --- | --- |
-| **Fix now** | Verified blocker or major whose Fit is this PR. A minor only when the fix plan already touches that file and the change is a few lines |
-| **Follow-up** | Fit is a preparatory PR or an idea; a Reshape; minors not fixed now. Goes to the PR body's follow-up list, and to `docs/ideas/` or the map if the user agrees |
+| **Fix now** | Verified blocker or major whose Fit is this PR. A defect in code this PR adds or changes, whatever later PR would first reach it. A minor only when the fix plan already touches that file and the change is a few lines |
+| **Follow-up** | Fit is a preparatory PR or an idea, for code this PR does not add, change, or make worse; a Reshape; minors not fixed now. Goes to the PR body's follow-up list, and to `docs/ideas/` or the map if the user agrees |
 | **Rejected** | Refuted, out of the plan's scope with no harm, or contradicted by a Decision or working rule. One line of evidence |
 | **To user** | Contradicts a plan Decision, an AC, or a working rule but looks right; a product call; two lenses that disagree and the code cannot settle it. Pauses the loop |
 | **Logged** | Nits |
 
 A finding that contradicts the plan is never fixed by quietly changing the
 plan. The plan's Decisions bind the orchestrator too.
+
+**Re-rate before you decide.** A reviewer's severity is a floor to check, not
+a ceiling. Raise it when the finding is rated down for a reason
+[`review-pr`](../review-pr/SKILL.md) "Rate the code as merged" rules out:
+"nothing calls it yet", "the plan said so", "it is small". A finding whose
+`Fit:` names a later PR, in code this PR adds, is **Fix now** (or **To user**
+when it contradicts a Decision), never Follow-up.
 
 5. **Write the fix plan** in the ship log, in the plan's Step shape:
 
@@ -178,8 +185,8 @@ the user).
 
 1. Update the PR body: what shipped against each user story, AC evidence,
    review summary by lens, follow-ups, deviations, the plan's **Manual check**,
-   and links to the plan, its review log, and the ship log.
-2. Commit the final ship log on the branch ("Record the S#-NN ship log.") and push.
+   and links to the plan, its review log, and the ship log (for a spike close, S#-99, the plan path and "deleted in this PR").
+2. Commit the final ship log on the branch ("Record the S#-NN ship log.") and push. A spike close (S#-99) removes the spike folder in that same commit, `git rm -r docs/deployment-plan/spike-N`, subject "Record the S#-99 ship log and remove the Spike N folder." ([`archive-docs`](../archive-docs/SKILL.md)).
 3. `gh pr ready <n>`. CI runs on non-draft PRs. `gh pr checks <n> --watch`.
    A red CI check is a gate failure: one fix round, then back to the user if
    it stays red.
@@ -229,7 +236,18 @@ Gate PASS · CI <green> · open: none · follow-ups: MNT-3, UX-5 · to user: —
 - Needs you: To user items, each with your recommendation. "Nothing."
 - Follow-ups: one line each, with a suggested home.
 - Manual check: the plan's §10 steps.
+- Build: open this checkout's Xcode project, then ⌘R:
 ```
+
+End the report with the build command for the checkout the branch is in
+(a worktree's own path when you worked in one), in its own `bash` block so
+the user can run it:
+
+````markdown
+```bash
+open /absolute/path/to/checkout/macos/Provenencia.xcodeproj
+```
+````
 
 If the loop stopped early, say where, why, and what you need.
 

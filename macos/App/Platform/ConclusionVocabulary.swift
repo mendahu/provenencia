@@ -66,13 +66,27 @@ enum ReconcilerReason: Sendable, Equatable {
 enum SeededPropertyKey {
     static let name = "name"
     static let sexAtBirth = "sex_at_birth"
+    static let gender = "gender"
     static let toponym = "toponym"
     static let date = "date"
     static let startDate = "start_date"
     static let endDate = "end_date"
 }
 
-/// A DateValue qualifier (`datevalues.Qualifier*`).
+/// Seeded `gender` terms the Person header colours by (`subjectvocab` seed).
+enum SeededGenderTerm {
+    static let man = "man"
+    static let woman = "woman"
+    static let nonBinary = "non_binary"
+}
+
+/// Seeded `sex_at_birth` terms the Person header colours by.
+enum SeededSexAtBirthTerm {
+    static let female = "female"
+    static let male = "male"
+}
+
+/// A DateValue qualifier (`datevalue.Qualifier*`).
 enum DateQualifier {
     static let about = "ABT"
     static let before = "BEF"

@@ -101,17 +101,42 @@ final class WorkspaceSession {
     /// If a load was in flight, the patch wins immediately and that load is
     /// restarted so a later refetch is not dropped.
     func setQueryValue<Value>(_ key: CatalogQueryKey, value: Value) {
+        replaceValue(key, value, clearStale: true)
+    }
+
+    /// The one patch primitive: replaces the cached value now. An in-flight
+    /// load is cancelled and restarted, so an older response cannot overwrite
+    /// the patch. `clearStale` says whether the patch makes the key current.
+    private func replaceValue<Value>(_ key: CatalogQueryKey, _ value: Value, clearStale: Bool) {
         let hadInFlight = inFlight[key] != nil
         bumpGeneration(key)
         inFlight[key]?.task.cancel()
         inFlight[key] = nil
         let handle = typedHandle(for: key, as: Value.self)
         handle.applySuccess(value)
-        invalidatedKeys.remove(key)
+        if clearStale {
+            invalidatedKeys.remove(key)
+        }
         if hadInFlight {
             invalidatedKeys.insert(key)
             revalidate(key)
         }
+    }
+
+    /// Edits the cached value in place. `change` returns whether it changed
+    /// anything; nothing happens when it did not or the key has no value. The
+    /// stale flag is left as it was: a partial patch does not make the key current.
+    /// Returns whether a patch applied.
+    @discardableResult
+    func patchCached<Value>(
+        _ key: CatalogQueryKey,
+        as _: Value.Type,
+        _ change: (inout Value) -> Bool
+    ) -> Bool {
+        guard let handle: QueryHandle<Value> = queryHandle(key), var value = handle.value else { return false }
+        guard change(&value) else { return false }
+        replaceValue(key, value, clearStale: false)
+        return true
     }
 
     /// Resolves the place for `location` and starts loading its query keys (non-blocking).
@@ -134,42 +159,62 @@ final class WorkspaceSession {
         }
     }
 
-    /// Patches the list row + cached page shell on identity/cover save, then
-    /// invalidates and revalidates whatever else the registry says the write
-    /// reached. Keys the registry evicts when hidden are dropped instead
-    /// unless on screen. Features only call `apply`; they do not query
-    /// afterward or tell sibling views to refresh.
-    /// Drops the cached reads named by a write's effects: that Source's graph
-    /// and citation counts, and only the conclusion pages whose handles changed.
-    func apply(_ effects: CatalogWriteEffects) {
-        apply(
-            invalidations: registry.invalidations(for: effects, project: projectKey),
-            stale: effects.touchedSources.isEmpty
-                ? []
-                : [.key(.sourcesList(project: projectKey))]
-        )
-        for sourceID in effects.touchedSources {
+    /// The one application of a write. Patches in place first, with no load:
+    /// every cached row whose last activity the effects moved
+    /// (`patchLastUpdated`), then the mutation's enriched Source row and cached
+    /// page shell. Then it invalidates the deduped union of what the effects
+    /// reported (that Source's graph and citation reads, the Conclusions whose
+    /// handles changed) and what the mutation names (the Source page's own
+    /// workspace, the metadata field list), so a key both name is invalidated
+    /// once, not cancelled and restarted twice. Keys the registry evicts or
+    /// marks stale when hidden are not loaded unless on screen. Last, it
+    /// refreshes graph progress for the Sources the effects and the mutation
+    /// moved. Features only call `apply`; they do not query afterward or tell
+    /// sibling views to refresh.
+    func apply(_ effects: CatalogWriteEffects = .empty, _ mutation: CatalogMutation? = nil) {
+        patchLastUpdated(effects)
+        if let source = mutation?.patchedSource {
+            patchUpdatedSource(source)
+        }
+        apply(invalidations: registry.invalidations(for: effects, by: mutation, project: projectKey))
+        var progressSources = effects.sources
+        if let mutation, let sourceID = graphProgressSource(of: mutation), !progressSources.contains(sourceID) {
+            progressSources.append(sourceID)
+        }
+        for sourceID in progressSources {
             refreshSourceGraphProgress(sourceId: sourceID)
         }
     }
 
+    /// A mutation with no reported effects.
     func apply(_ mutation: CatalogMutation) {
-        if let source = mutation.patchedSource {
-            patchUpdatedSource(source)
-        }
-        apply(
-            invalidations: registry.invalidations(by: mutation, project: projectKey),
-            stale: registry.staleMarks(by: mutation, project: projectKey)
-        )
-        refreshSourceGraphProgress(for: mutation)
+        apply(.empty, mutation)
     }
 
-    private func apply(invalidations: [CatalogQueryInvalidation], stale: [CatalogQueryInvalidation]) {
+    /// Moves the last-updated cell of every cached row the write reports, using
+    /// the write's own activity. Each list declares its patch in the registry.
+    /// No loader runs.
+    private func patchLastUpdated(_ effects: CatalogWriteEffects) {
+        guard effects.activity.revision > 0 else { return }
+        for key in Array(handles.keys) where key.project == projectKey {
+            guard let patch = registry.lastUpdatedPatch(key) else { continue }
+            let ids = Set(patch.scope.ids(in: effects))
+            if !ids.isEmpty {
+                patch.apply(self, key, ids, effects.activity)
+            }
+        }
+    }
+
+    private func apply(invalidations: [CatalogQueryInvalidation]) {
         var keys: [CatalogQueryKey] = []
         for key in cachedKeys(for: invalidations) {
-            if registry.evictsWhenHidden(key), !visibleKeys.contains(key) {
+            switch visibleKeys.contains(key) ? CatalogHiddenPolicy.revalidate : registry.hiddenPolicy(key) {
+            case .evict:
                 evict(key)
-            } else {
+            case .markStale:
+                // The old value stays; the next `query` reloads it.
+                if handles[key] != nil { invalidatedKeys.insert(key) }
+            case .revalidate:
                 keys.append(key)
             }
         }
@@ -178,11 +223,6 @@ final class WorkspaceSession {
         }
         for key in keys {
             revalidate(key)
-        }
-        // Stale-on-next-query only: the loaded value stays on screen and the
-        // next `query` (e.g. the Sources list reappearing) reloads it.
-        for key in cachedKeys(for: stale) where handles[key] != nil && !keys.contains(key) {
-            invalidatedKeys.insert(key)
         }
     }
 
@@ -201,18 +241,17 @@ final class WorkspaceSession {
         return keys
     }
 
-    /// Surgical Get-one + map merge. Skips when the list never warmed the map.
-    private func refreshSourceGraphProgress(for mutation: CatalogMutation) {
-        let sourceId: String
+    /// The Source whose graph progress a mutation moved, if it moved one.
+    private func graphProgressSource(of mutation: CatalogMutation) -> String? {
         switch mutation {
-        case .mutatedSourceGraph(let id), .savedCitation(let id), .deletedSubject(let id):
-            sourceId = id
+        case .mutatedSourceGraph(let id), .deletedSubject(let id), .promotedSubject(let id):
+            return id
         default:
-            return
+            return nil
         }
-        refreshSourceGraphProgress(sourceId: sourceId)
     }
 
+    /// Surgical Get-one + map merge. Skips when the list never warmed the map.
     private func refreshSourceGraphProgress(sourceId: String) {
         let key = CatalogQueryKey.sourceGraphProgress(project: projectKey)
         let existing: QueryHandle<[String: SourceGraphProgress]>? = queryHandle(key)
@@ -368,21 +407,19 @@ final class WorkspaceSession {
 
     private func patchUpdatedSource(_ source: CatalogSource) {
         let listKey = CatalogQueryKey.sourcesList(project: projectKey)
-        if let listHandle: QueryHandle<[CatalogSource]> = queryHandle(listKey),
-           var sources = listHandle.value,
-           let index = sources.firstIndex(where: { $0.id == source.id }) {
+        // Leaves any stale flag on the list: other rows may still owe a reload.
+        patchCached(listKey, as: [CatalogSource].self) { sources in
+            guard let index = sources.firstIndex(where: { $0.id == source.id }) else { return false }
             sources[index] = source
-            listHandle.applySuccess(sources)
-            // Leave any stale flag: other rows may still owe a reload.
+            return true
         }
 
         let workspaceKey = CatalogQueryKey.sourceWorkspace(project: projectKey, sourceId: source.id)
-        if let workspaceHandle: QueryHandle<CatalogSourceWorkspace> = queryHandle(workspaceKey),
-           var workspace = workspaceHandle.value {
-            workspace.source = source
-            workspaceHandle.applySuccess(workspace)
-            invalidatedKeys.remove(workspaceKey)
+        let patched = patchCached(workspaceKey, as: CatalogSourceWorkspace.self) {
+            $0.source = source
+            return true
         }
+        if patched { invalidatedKeys.remove(workspaceKey) }  // that page is now current
     }
 
     private func typedHandle<Value>(for key: CatalogQueryKey, as type: Value.Type) -> QueryHandle<Value> {

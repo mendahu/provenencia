@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 )
 
@@ -104,6 +105,63 @@ type bridgeHead struct {
 	typeID  []byte
 }
 
+// touchesEnd is true for a bridge Subject s (alias) that has subject ? as an
+// end: one of its Observations names that Subject as its value. It takes one
+// argument and applies no polarity filter, as filing reads none.
+const touchesEnd = `EXISTS (
+		      SELECT 1 FROM observations o
+		      WHERE o.subject_id = s.id AND o.value_subject_id = ?
+		    )`
+
+// UnfileBridges is the inverse of FileBridgesTx: it deletes, audited, the
+// accepted claim of every bridge on sourceID that has subjectID as an end,
+// pins first, in bridge Subject id order. The bridges' handles (their
+// associations) are left alone. Does not commit.
+func UnfileBridges(tx *database.Tx, sourceID, subjectID []byte) ([]rowchange.Change, error) {
+	keys := connectrules.BridgeTypeKeys()
+	if len(keys) == 0 || len(sourceID) != 16 || len(subjectID) != 16 {
+		return nil, nil
+	}
+	args := make([]any, 0, len(keys)+2)
+	args = append(args, sourceID)
+	for _, k := range keys {
+		args = append(args, k)
+	}
+	args = append(args, subjectID)
+	rows, err := tx.Query(`SELECT ic.id FROM subjects s
+		JOIN subject_types st ON st.id = s.subject_type_id AND st.origin = 'provenencia'
+		JOIN identity_claims ic ON ic.subject_id = s.id AND ic.status = 'accepted'
+		WHERE s.source_id = ? AND st.key IN (`+database.SQLInPlaceholders(len(keys))+`)
+		  AND `+touchesEnd+`
+		ORDER BY s.id`, args...)
+	if err != nil {
+		return nil, err
+	}
+	var claimIDs [][]byte
+	for rows.Next() {
+		var id []byte
+		if err := rows.Scan(&id); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		claimIDs = append(claimIDs, append([]byte(nil), id...))
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return nil, err
+	}
+	_ = rows.Close()
+	var changes []rowchange.Change
+	for _, id := range claimIDs {
+		released, err := deleteimpact.ReleaseClaim(tx, id)
+		if err != nil {
+			return nil, err
+		}
+		changes = append(changes, released...)
+	}
+	return changes, nil
+}
+
 func bridgesTouching(tx *sql.Tx, subjectID []byte) ([]bridgeHead, error) {
 	keys := connectrules.BridgeTypeKeys()
 	if len(keys) == 0 {
@@ -120,10 +178,7 @@ func bridgesTouching(tx *sql.Tx, subjectID []byte) ([]bridgeHead, error) {
 		WHERE st.key IN (` + database.SQLInPlaceholders(len(keys)) + `)
 		  AND (
 		    s.id = ?
-		    OR EXISTS (
-		      SELECT 1 FROM observations o
-		      WHERE o.subject_id = s.id AND o.value_subject_id = ?
-		    )
+		    OR ` + touchesEnd + `
 		  )`
 	rows, err := tx.Query(q, args...)
 	if err != nil {

@@ -10,11 +10,13 @@ import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -26,7 +28,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -62,14 +67,14 @@ func newFixture(t *testing.T) *fixture {
 	must(t, subjectvocab.Install(c))
 	must(t, sourcecredibilitygrades.Install(c))
 	must(t, claimconfidencegrades.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	f := &fixture{t: t, c: c, typeID: typeID, arts: map[string]artifacts.Artifact{}}
-	f.person, err = subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	f.person, err = subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	must(t, err)
-	f.name, err = properties.Lookup(c, "name", properties.OriginProvenencia)
+	f.name, err = properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 	must(t, err)
-	f.sex, err = properties.Lookup(c, "sex_at_birth", properties.OriginProvenencia)
+	f.sex, err = properties.Lookup(c, "sex_at_birth", vocabkey.OriginProvenencia)
 	must(t, err)
 	return f
 }
@@ -106,14 +111,14 @@ func (f *fixture) cite(s subjects.Subject, in observations.Input) observations.O
 }
 
 func (f *fixture) nameIn(s subjects.Subject, spec string) observations.Input {
-	v := &namevalues.Value{}
+	v := &namevalue.Value{}
 	if form, ok := strings.CutPrefix(spec, "form:"); ok {
 		v.Form = form
 	} else {
 		var words []string
 		for i, item := range strings.Split(spec, "|") {
 			typ, val, _ := strings.Cut(item, "=")
-			v.Parts = append(v.Parts, namevalues.Part{Idx: i, Type: typ, Value: val})
+			v.Parts = append(v.Parts, namevalue.Part{Idx: i, Type: typ, Value: val})
 			words = append(words, val)
 		}
 		v.Form = strings.Join(words, " ")
@@ -172,7 +177,7 @@ func TestForEntity(t *testing.T) {
 		t.Fatalf("entity %+v, %d members", d.Entity, d.MemberCount)
 	}
 	name := field(d, "name")
-	if name.State != autoreconcile.StateMerged || name.ValueType != properties.ValueTypeName || name.Label == "" {
+	if name.State != autoreconcile.StateMerged || name.ValueType != propertymeta.ValueTypeName || name.Label == "" {
 		t.Fatalf("name field %+v", name)
 	}
 	if len(name.Values) != 2 || !name.Values[0].Displayed() || name.Values[0].Support != 2 ||
@@ -226,10 +231,112 @@ func TestForEntityFieldsFollowTheRecords(t *testing.T) {
 	}
 }
 
+// The Person page lists likenesses apart from its fields, earliest first.
+func TestForEntityLikenesses(t *testing.T) {
+	f := newFixture(t)
+	register, census := f.source("Register"), f.source("Census")
+	a, b := f.personOn(register), f.personOn(census)
+	f.cite(a, f.nameIn(a, "given=James|surname=Robins"))
+	oa := observationstest.SaveLikeness(t, f.c, userID, register.ID, a.ID, 100)
+	ob := observationstest.SaveLikeness(t, f.c, userID, census.ID, b.ID, 200)
+	h := f.promote(a, nil)
+	f.promote(b, h)
+	d := f.detail(h)
+	if len(d.Fields) != 1 || d.Fields[0].PropertyKey != "name" {
+		t.Fatalf("fields %+v", d.Fields)
+	}
+	if len(d.Likenesses) != 2 {
+		t.Fatalf("likenesses %+v", d.Likenesses)
+	}
+	first := d.Likenesses[0]
+	if first.Record.SourceTitle != "Register" || !bytes.Equal(first.Record.ObservationID, oa.ID) ||
+		!bytes.Equal(first.Record.CitationID, oa.CitationID) || len(first.ImageFileID) != 16 {
+		t.Fatalf("first %+v", first)
+	}
+	if !bytes.Equal(d.Likenesses[1].Record.ObservationID, ob.ID) || d.Likenesses[1].Record.SourceTitle != "Census" {
+		t.Fatalf("second %+v", d.Likenesses[1])
+	}
+	if d.Likenesses[0].Preferred || d.Likenesses[1].Preferred {
+		t.Fatalf("preferred before a choice: %+v", d.Likenesses)
+	}
+	if !d.Likenesses[0].Leads || d.Likenesses[1].Leads {
+		t.Fatalf("leads before a choice: %+v", d.Likenesses)
+	}
+	_, err := writes.Call(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		ch, err := canonicalentities.SetPreferredLikeness(tx, userID, h, ob.ID)
+		return struct{}{}, ch, err
+	})
+	must(t, err)
+	d = f.detail(h)
+	if len(d.Likenesses) != 2 || d.Likenesses[0].Preferred || !d.Likenesses[1].Preferred {
+		t.Fatalf("after choosing B: %+v", d.Likenesses)
+	}
+	if d.Likenesses[0].Leads || !d.Likenesses[1].Leads {
+		t.Fatalf("leads after choosing B: %+v", d.Likenesses)
+	}
+
+	only := newFixture(t)
+	n := only.personOn(only.source("Register"))
+	only.cite(n, only.nameIn(n, "given=Ann"))
+	if got := only.detail(only.promote(n, nil)); len(got.Likenesses) != 0 {
+		t.Fatalf("likenesses %+v", got.Likenesses)
+	}
+}
+
+// A negative of the same picture is not a gallery record, so no tile opens it.
+func TestForEntityLikenessesSkipNegatives(t *testing.T) {
+	f := newFixture(t)
+	album, census, register := f.source("Album"), f.source("Census"), f.source("Register")
+	sn, sb, sa := f.personOn(album), f.personOn(census), f.personOn(register)
+	n := observationstest.SaveNegativeLikeness(t, f.c, userID, album.ID, sn.ID, 100)
+	b := observationstest.SaveLikeness(t, f.c, userID, census.ID, sb.ID, 200)
+	observationstest.SaveLikeness(t, f.c, userID, register.ID, sa.ID, 100)
+	h := f.promote(sa, nil)
+	f.promote(sb, h)
+	f.promote(sn, h)
+	d := f.detail(h)
+	if len(d.Likenesses) != 2 {
+		t.Fatalf("likenesses %+v", d.Likenesses)
+	}
+	if first := d.Likenesses[0]; !bytes.Equal(first.Record.ObservationID, b.ID) || first.Record.Reason != "kept" {
+		t.Fatalf("first %+v", first)
+	}
+	for _, l := range d.Likenesses {
+		if bytes.Equal(l.Record.ObservationID, n.ID) {
+			t.Fatalf("negative opens from a tile: %+v", l)
+		}
+	}
+}
+
+// A likeness whose image File is not a PNG is neither listed nor the lead.
+func TestForEntityLikenessNeedsAPNG(t *testing.T) {
+	f := newFixture(t)
+	src := f.source("Register")
+	a := f.personOn(src)
+	oa := observationstest.SaveLikeness(t, f.c, userID, src.ID, a.ID, 100)
+	h := f.promote(a, nil)
+	db, err := f.c.DB()
+	must(t, err)
+	var image []byte
+	must(t, db.QueryRow(`SELECT dv.image_file_id FROM observations o
+		JOIN depiction_values dv ON dv.id = o.value_depiction_id WHERE o.id = ?`, oa.ID).Scan(&image))
+	_, err = db.Exec(`UPDATE files SET media_type = 'image/jpeg' WHERE id = ?`, image)
+	must(t, err)
+	if d := f.detail(h); len(d.Likenesses) != 0 {
+		t.Fatalf("likenesses %+v", d.Likenesses)
+	}
+	f.c.Graph().Drop()
+	rows, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{h})
+	must(t, err)
+	if len(rows) != 1 || rows[0].LikenessImageFileID != nil {
+		t.Fatalf("header leads with %x", rows[0].LikenessImageFileID)
+	}
+}
+
 func TestForEntityEvidence(t *testing.T) {
 	f := newFixture(t)
 	register, census, gazette := f.source("Register"), f.source("Census"), f.source("Gazette")
-	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", sourcecredibilitygrades.OriginProvenencia)
+	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", vocabkey.OriginProvenencia)
 	must(t, err)
 	p6in2 := sourcecredibility.UpsertInput{SourceID: register.ID, CredibilityGradeID: g.ID}
 	p6act1 := "create_source_credibility_assessment"
@@ -240,7 +347,7 @@ func TestForEntityEvidence(t *testing.T) {
 		return sourcecredibility.Upsert(tx, userID, p6in2)
 	})
 	must(t, err)
-	hg, err := sourcecredibilitygrades.Lookup(f.c, "high_trust", sourcecredibilitygrades.OriginProvenencia)
+	hg, err := sourcecredibilitygrades.Lookup(f.c, "high_trust", vocabkey.OriginProvenencia)
 	must(t, err)
 	p6in5 := sourcecredibility.UpsertInput{SourceID: gazette.ID, CredibilityGradeID: hg.ID}
 	p6act4 := "create_source_credibility_assessment"

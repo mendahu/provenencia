@@ -247,7 +247,9 @@ A claim that still pins another remaining member has a live comparison. A claim 
 
 The same review applies when a pinned Observation is deleted or its value changes materially. Deleting a pinned Observation is never refused (§5); the claims it supported are left for this review instead.
 
-**Weak claims (review alert, future UI).** A claim is surfaced for review when it is accepted, has **zero pins**, and its handle has **more than one** accepted member — it explains membership with no confirmed comparison. A handle's only member (a grounding claim, §5.1) is not flagged. No column stores this; it is a query over `identity_claims` and `identity_claim_evidence`. The audit history of `identity_claim_evidence` (removals are recorded under the claim's id) says *why* a claim is weak: never pinned, or evidence removed when an Observation or member was deleted. The alert offers the same three actions as above — re-pin against a remaining member, accept as-is, or reject — and never acts on its own. Planned with claim management, which is unscheduled; see [`ideas/identity-claim-review.md`](ideas/identity-claim-review.md). Spike 10 is the dogfood UX cleanup.
+**Weak claims (review alert, future UI).** A claim is surfaced for review when it is accepted, has **zero pins**, and its handle has **more than one** accepted member — it explains membership with no confirmed comparison. A handle's only member (a grounding claim, §5.1) is not flagged. No column stores this; it is a query over `identity_claims` and `identity_claim_evidence`. The audit history of `identity_claim_evidence` (removals are recorded under the claim's id) says *why* a claim is weak: never pinned, or evidence removed when an Observation or member was deleted. The alert offers the same three actions as above — re-pin against a remaining member, accept as-is, or reject — and never acts on its own. Planned with claim management, which is unscheduled; see [`ideas/identity-claim-review.md`](ideas/identity-claim-review.md).
+
+Unpromote on the Evidence graph deletes a primary Subject's accepted claim and, in the same revision, the accepted claims of the bridges on that Source that have it as an end. It does not reject, and it deletes no handle.
 
 ## 5.3 Promote
 
@@ -306,6 +308,7 @@ CREATE TABLE canonical_entities (
     argument                TEXT,
     label                   TEXT,
     merged_into_id          BLOB REFERENCES canonical_entities(id),
+    preferred_likeness_observation_id BLOB REFERENCES observations(id) ON DELETE SET NULL,
 
     UNIQUE (id, subject_type_id)
 ) STRICT;
@@ -314,6 +317,10 @@ CREATE TABLE canonical_entities (
 `subject_type_id` is the same vocabulary as Interpretation Subject types (referenced by id so origin-namespaced keys stay unambiguous). The table is an implementation detail; in the UI a `person` row is a Person (`PER-7KD45`), not a “canonical entity.” The Subject type is immutable after insert.
 
 `ref` is required: `{ref_prefix}-{token}` from the Subject type — `PER-7KD45` for a person. Candidate person Subjects are minted off the same type's `candidate_ref_prefix` (`CPR-…`), so the two layers stay distinct by prefix while sharing one ref format.
+
+`preferred_likeness_observation_id` is a display pointer for a Person: the likeness Observation the Person page and the Persons list lead with. It is not evidence and not a Reconciliation Claim. A reader honours it only when that likeness is in the handle's gallery; otherwise the earliest likeness leads. Deleting the Observation clears it.
+
+A Person's **gallery** is its likeness values with their gallery records: each record whose own outcome is `kept` or `weak`. A negative, denied, or provisional record of the same picture is not a gallery record. The gallery is ordered by each likeness's first recorded gallery record (the smallest Observation id), then by value rank; a redraw keeps its Observation, so it keeps its place. The earliest likeness is the first in that order.
 
 There is no identity anchor and no `representative_subject_id`. Membership is not a column on this row. Creating a handle from a record inserts the entity and an accepted Identity Claim for that subject. **Adopt** (first grounding of an inferred handle) is the first accepted Identity Claim on a handle that had none. Dropping the last member does not delete the entity or change its id.
 

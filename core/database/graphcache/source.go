@@ -53,8 +53,14 @@ type SourceObservation struct {
 	NameID         []byte
 	ValueSubjectID []byte
 	TermID         []byte
-	Date           []byte
-	Name           []byte
+	DepictionID    []byte
+	// DepictionRegion and DepictionImageFileID are the depiction as
+	// depictionvalues.Readable returns it: empty when the stored half is not
+	// one to show.
+	DepictionRegion      string
+	DepictionImageFileID []byte
+	Date                 []byte
+	Name                 []byte
 }
 
 // SourceMember is an accepted claim: the subject, the claim, and the handle.

@@ -18,13 +18,15 @@ One place to see and manage every term, grouped by its Property:
 - Add, rename, describe, and delete the researcher's own terms, with the delete-impact preview other deletes use. Product and plugin terms are read-only (`propertyterms.ErrLocked`); `place_relationship_type` takes no new terms at all.
 - For relationship-like Properties: mark a term as directed, and pick its inverse from the same Property (the choice is mutual: setting godparent's inverse to godchild sets godchild's too).
 
+Direction and inverse also feed Spike 11's segment comparison, which matches a term and its inverse with the ends swapped, so a researcher's godparent ↔ godchild lines up once this ships.
+
 The composer dialog stays as it is, the quick path while transcribing. Terms made there can be refined here later. Changing a term's direction or inverse afterwards is safe for matching, which reads both from the catalog on every proposal.
 
 ## Open questions
 
 1. **Placement:** a terms panel inside a term-valued Property on the Properties page, or a first-class Terms page that lists every term-valued Property.
 2. **Which Properties offer direction and inverse:** only `relationship_type`, or any term Property (a later "contains" could be `part_of`'s inverse if place relationships ever open up).
-3. **Merging terms:** two researcher terms that mean the same ("godfather", "god-father"). Rename-only, or a merge that repoints Observations.
+3. **Merging terms:** two researcher terms that mean the same ("godfather", "god-father"). Spike 11 (S11-07) catches the duplicate when the second is created or a term is renamed, against every term of the Property. Existing duplicates: rename-only, or a merge that repoints Observations.
 4. **Seeded vocabulary changes** stay in `subjectvocab` (create-time Install); this view never edits product terms.
 
 ## What it would touch

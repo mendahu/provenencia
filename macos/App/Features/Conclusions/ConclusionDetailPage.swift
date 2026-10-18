@@ -50,6 +50,42 @@ struct ConclusionDetailSection: Equatable, Identifiable {
     var omittedCount: Int = 0
 }
 
+/// What the header thumb takes from a kind. One slot, so a later PR adds to
+/// this struct instead of adding another protocol member (S10-23, S10-35).
+struct ConclusionDetailThumbnail: Equatable {
+    /// The kind's mark and its spoken label, shown when there is no image.
+    var mark: PVMarkKey
+    var label: LocalizedStringResource
+    /// The `objects/…` path of the image to show; "" for none.
+    var imageRelPath: String = ""
+    /// Spoken label while the image shows.
+    var imageLabel: String? = nil
+    var colors: PVThumbnail.Colors? = nil
+    /// The header leads with a likeness other than the earliest, so its menu
+    /// offers the earliest (S10-39, user 2026-10-17).
+    var offersEarliest: Bool = false
+}
+
+/// One likeness tile under Details: the image, its Source's title, and the
+/// composer location its Citation opens at (S10-35).
+struct ConclusionDetailLikeness: Equatable, Identifiable {
+    var id: String
+    var imageRelPath: String
+    var sourceTitle: String
+    var location: WorkspaceLocation
+    /// The tile the header leads with wears the Portrait Badge (S10-39, user
+    /// 2026-10-17); exactly one tile.
+    var isPortrait: Bool = false
+}
+
+/// The Badge a kind may draw above the title: data, so Event and Place stay
+/// free of view generics.
+struct ConclusionDetailBadge: Equatable {
+    var text: String
+    var ink: Color
+    var accessibilityLabel: String
+}
+
 /// The fields a Conclusion detail page lays out. Each kind owns how it
 /// fills them (mark, title, the line under the title, and the rows). The
 /// page only places them. Giving a kind its own page later does not need a
@@ -61,10 +97,15 @@ protocol ConclusionDetailBody: Equatable {
     var members: String { get }
     var rows: [ReconciledValueRowModel] { get }
     var sections: [ConclusionDetailSection] { get }
+    var thumbnail: ConclusionDetailThumbnail { get }
+    var badge: ConclusionDetailBadge? { get }
+    var likenesses: [ConclusionDetailLikeness] { get }
 }
 
 extension ConclusionDetailBody {
     var sections: [ConclusionDetailSection] { [] }
+    var badge: ConclusionDetailBadge? { nil }
+    var likenesses: [ConclusionDetailLikeness] { [] }
 }
 
 /// Shared Conclusion detail chrome (S9-24). A view, not a place: the caller
@@ -73,12 +114,12 @@ extension ConclusionDetailBody {
 struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View {
     let session: WorkspaceSession
     let entityId: String
-    let mark: PVMarkKey
-    let thumbnailLabel: LocalizedStringResource
     let pageIdentifier: String
     let errorIdentifier: String
     let make: (CatalogConclusionDetail) -> Content
     let summary: (Content) -> Summary
+    /// Handed only by a kind whose likenesses can be chosen as the portrait (the Person page).
+    var portrait: ConclusionPortraitModel? = nil
 
     private var key: CatalogQueryKey {
         .conclusionDetail(project: session.projectKey, entityId: entityId)
@@ -89,12 +130,12 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
             if let handle: QueryHandle<CatalogConclusionDetail> = session.queryHandle(key) {
                 ConclusionDetailLoaded(
                     handle: handle,
-                    mark: mark,
-                    thumbnailLabel: thumbnailLabel,
+                    projectDir: session.projectKey.projectDir,
                     pageIdentifier: pageIdentifier,
                     errorIdentifier: errorIdentifier,
                     make: make,
-                    summary: summary
+                    summary: summary,
+                    portrait: portrait
                 )
             } else {
                 Self.page(identifier: pageIdentifier) { Self.loading }
@@ -131,12 +172,12 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
 
 private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: View>: View {
     @Bindable var handle: QueryHandle<CatalogConclusionDetail>
-    let mark: PVMarkKey
-    let thumbnailLabel: LocalizedStringResource
+    let projectDir: String
     let pageIdentifier: String
     let errorIdentifier: String
     let make: (CatalogConclusionDetail) -> Content
     let summary: (Content) -> Summary
+    let portrait: ConclusionPortraitModel?
 
     private var presentation: ConclusionDetailPresentation<Content> {
         ConclusionDetailPresentation(
@@ -159,9 +200,9 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
             case .content(let content, let refreshing):
                 ConclusionDetailHeader(
                     content: content,
-                    mark: mark,
-                    thumbnailLabel: thumbnailLabel,
-                    summary: summary
+                    projectDir: projectDir,
+                    summary: summary,
+                    portrait: portrait
                 )
                 VStack(alignment: .leading, spacing: 0) {
                     PVSectionHeader(title: L10n.Conclusions.detailsSection, aside: {
@@ -173,11 +214,105 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
                         ReconciledValueRow(model: row)
                     }
                 }
+                if !content.likenesses.isEmpty {
+                    ConclusionDetailLikenessSection(
+                        projectDir: projectDir,
+                        likenesses: content.likenesses,
+                        portrait: portrait
+                    )
+                }
                 ForEach(content.sections) { section in
                     ConclusionDetailRelationshipSection(section: section)
                 }
             }
         }
+    }
+}
+
+/// The Person page's likenesses: a header with the count, then one 96pt crop
+/// per likeness in a wrapping grid, each captioned with its Source. A tile
+/// opens the Citation that holds it (S10-35, S10-D12 PDP-7, PDP-8).
+private struct ConclusionDetailLikenessSection: View {
+    let projectDir: String
+    let likenesses: [ConclusionDetailLikeness]
+    let portrait: ConclusionPortraitModel?
+
+    @Environment(WorkspaceNavigation.self) private var navigation
+    @FocusState private var focusedID: String?
+
+    private static let column: CGFloat = 120
+    private static let crop: CGFloat = 96
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            PVSectionHeader(title: L10n.Conclusions.likenessesSection, meta: String(likenesses.count))
+            LazyVGrid(
+                columns: [GridItem(
+                    .adaptive(minimum: Self.column, maximum: Self.column),
+                    spacing: PVSpacing.space6,
+                    alignment: .top
+                )],
+                alignment: .leading,
+                spacing: PVSpacing.space7
+            ) {
+                ForEach(likenesses) { tile in
+                    tileView(tile)
+                }
+            }
+            .padding(.top, PVSpacing.space6)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L10n.string(L10n.Conclusions.likenessesSection))
+    }
+
+    private func tileView(_ tile: ConclusionDetailLikeness) -> some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space3) {
+            CachedThumbnail(
+                projectDir: projectDir,
+                relPath: tile.imageRelPath,
+                size: Self.crop,
+                fallbackMark: .subjectPerson
+            )
+            .accessibilityHidden(true)
+            .overlay {
+                Button {
+                    navigation.go(to: tile.location)
+                } label: {
+                    Color.clear
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .focused($focusedID, equals: tile.id)
+                .pvFocusRing(focusedID == tile.id, cornerRadius: PVRadius.sm)
+                .help(Text(L10n.Conclusions.likenessOpenTip))
+                .accessibilityLabel(L10n.Conclusions.likenessTileLabel(tile.sourceTitle))
+                .accessibilityIdentifier("persons.detail.likeness.\(tile.id)")
+            }
+            Text(verbatim: tile.sourceTitle)
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textMuted)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: Self.column, alignment: .leading)
+                .help(Text(verbatim: tile.sourceTitle))
+                .accessibilityHidden(true)
+            if let portrait {
+                if tile.isPortrait {
+                    PVBadge(L10n.Conclusions.portraitBadge, tone: .accent, icon: .photo)
+                        .accessibilityIdentifier("persons.detail.likeness.\(tile.id).portraitBadge")
+                } else {
+                    PVButton(L10n.Conclusions.useAsPortrait, variant: .ghost, size: .sm) {
+                        Task { await portrait.choose(tile) }
+                    }
+                    .disabled(portrait.isSaving)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .accessibilityLabel(L10n.Conclusions.useAsPortraitLabel(tile.sourceTitle))
+                    .accessibilityIdentifier("persons.detail.likeness.\(tile.id).usePortrait")
+                }
+            }
+        }
+        .frame(width: Self.column, alignment: .leading)
     }
 }
 
@@ -220,17 +355,27 @@ private struct ConclusionDetailRelationshipSection: View {
     }
 }
 
-/// Thumbnail slot · title and the kind's summary · ref and member count.
+/// Thumbnail slot · badge, title and the kind's summary · ref and member count.
 private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: View>: View {
     let content: Content
-    let mark: PVMarkKey
-    let thumbnailLabel: LocalizedStringResource
+    let projectDir: String
     let summary: (Content) -> Summary
+    let portrait: ConclusionPortraitModel?
+
+    @State private var portraitMenu = PVContextMenuState()
+    @State private var portraitKeyboard = PVContextMenuKeyboard.inactive
+
+    /// PDP-11: the menu exists only while the lead is not the earliest.
+    private var showsPortraitMenu: Bool { portrait != nil && content.thumbnail.offersEarliest }
 
     var body: some View {
         HStack(alignment: .top, spacing: PVSpacing.space7) {
-            PVThumbnail(.init(glyph: .mark(mark), label: thumbnailLabel), size: 80)
+            thumbnail
             VStack(alignment: .leading, spacing: PVSpacing.space4) {
+                if let badge = content.badge {
+                    PVBadge(text: badge.text, tone: .neutral, subtle: false, foreground: badge.ink)
+                        .accessibilityLabel(badge.accessibilityLabel)
+                }
                 title
                 summary(content)
             }
@@ -248,6 +393,51 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
                     .foregroundStyle(PVColor.textMuted)
             }
             .padding(.top, PVSpacing.space6)
+        }
+        // Menu on the row (not the 120pt thumb) so the click origin shares
+        // the panel's coordinate space, as on the Source header.
+        .pvContextMenu(
+            $portraitMenu,
+            keyboard: $portraitKeyboard,
+            keyboardTitles: [L10n.string(L10n.Conclusions.useEarliestLikeness)]
+        ) {
+            PVContextMenuPanel(
+                title: L10n.Conclusions.portraitMenuTitle,
+                accessibilityIdentifier: "persons.detail.portrait.menu"
+            ) {
+                PVContextMenuItem(
+                    L10n.Conclusions.useEarliestLikeness,
+                    index: 0,
+                    accessibilityIdentifier: "persons.detail.portrait.useEarliest"
+                ) {
+                    Task { await portrait?.useEarliest() }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var thumbnail: some View {
+        let thumb = CachedThumbnail(
+            projectDir: projectDir,
+            relPath: content.thumbnail.imageRelPath,
+            size: 120,
+            fallbackMark: content.thumbnail.mark,
+            fallbackLabel: content.thumbnail.label,
+            imageLabel: content.thumbnail.imageLabel,
+            colors: content.thumbnail.colors
+        )
+        if showsPortraitMenu {
+            thumb
+                .pvContextMenuTrigger($portraitMenu)
+                .help(L10n.string(L10n.Conclusions.portraitMenuHint))
+                .accessibilityHint(L10n.string(L10n.Conclusions.portraitMenuHint))
+                .accessibilityAction(named: Text(L10n.Conclusions.useEarliestLikeness)) {
+                    Task { await portrait?.useEarliest() }
+                }
+                .accessibilityIdentifier("persons.detail.portrait")
+        } else {
+            thumb
         }
     }
 

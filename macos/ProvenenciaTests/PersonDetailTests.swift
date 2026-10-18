@@ -62,6 +62,145 @@ struct PersonDetailTests {
         #expect(content.rows[5].lead == nil && content.rows[5].emptyText == "Nothing recorded" && content.rows[5].records.count == 1)
     }
 
+    @Test func treatmentRidesOnContentAndRowsStay() {
+        let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Woman")
+        let gender = D.field(
+            "single", key: "gender", label: "Gender", valueType: "term",
+            [D.value(1, "kept", woman)], outcomes: [D.outcome("g", "kept", recorded: woman)]
+        )
+        let content = PersonDetailContent(detail: detail(extra: [gender]))
+        #expect(content.treatment?.family == .woman)
+        #expect(content.thumbnail.colors != nil)
+        #expect(content.badge?.text == "Woman")
+        #expect(content.rows.map(\.label).contains("Gender"))
+        let plain = PersonDetailContent(detail: detail())
+        #expect(plain.treatment == nil && plain.badge == nil)
+        #expect(plain.thumbnail == .init(mark: .subjectPerson, label: L10n.Conclusions.personNoLikeness))
+        #expect(plain.rows.map(\.label) == ["Name", "Birth date", "Birth place", "Death date", "Death place"])
+        let event = EventDetailContent(detail: detail())
+        #expect(event.thumbnail == .init(mark: .subjectEvent, label: L10n.Conclusions.eventNoImage) && event.badge == nil)
+        let place = PlaceDetailContent(detail: detail())
+        #expect(place.thumbnail == .init(mark: .subjectPlace, label: L10n.Conclusions.placeNoImage) && place.badge == nil)
+    }
+
+    private func likeness(_ id: String, path: String, title: String) -> CatalogLikeness {
+        CatalogLikeness(imageRelPath: path, record: D.outcome(id, "kept", title: title))
+    }
+
+    @Test func headerThumbIsTheLeadLikeness() {
+        let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Woman")
+        let gender = D.field(
+            "single", key: "gender", label: "Gender", valueType: "term",
+            [D.value(1, "kept", woman)], outcomes: [D.outcome("g", "kept", recorded: woman)]
+        )
+        var header = CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: ""),
+            name: nil, nameValueCount: 0
+        )
+        header.likenessImageRelPath = "objects/ab/cd.png"
+        var source = detail(extra: [gender], header: header)
+        source.likenesses = [likeness("a", path: "objects/ab/cd.png", title: "Register")]
+        let thumb = PersonDetailContent(detail: source).thumbnail
+        #expect(thumb.imageRelPath == "objects/ab/cd.png")
+        #expect(thumb.imageLabel == "Likeness from Register")
+        #expect(thumb.colors != nil)
+        #expect(thumb.mark == .subjectPerson)
+        #expect(thumb.label == L10n.Conclusions.personLikenessThumb)
+        header.likenessImageRelPath = ""
+        let bare = PersonDetailContent(detail: detail(extra: [gender], header: header)).thumbnail
+        #expect(bare.label == L10n.Conclusions.personNoLikeness)
+    }
+
+    @Test func likenessesBecomeTilesEarliestFirst() {
+        var source = detail()
+        var second = likeness("b", path: "objects/ef/01.png", title: "")
+        second.record.observationRef = "OBS-2"
+        source.likenesses = [likeness("a", path: "objects/ab/cd.png", title: "Register"), second]
+        let content = PersonDetailContent(detail: source)
+        #expect(content.likenesses.map(\.id) == ["a", "b"])
+        #expect(content.likenesses.map(\.sourceTitle) == ["Register", "OBS-2"])
+        let first = content.likenesses[0].location
+        #expect(first.citationId == "cit-a" && first.observationId == "a" && first.sourceSurface == .citationComposer)
+        #expect(PersonDetailContent(detail: detail()).likenesses.isEmpty)
+        #expect(EventDetailContent(detail: detail()).likenesses.isEmpty)
+    }
+
+    @Test func portraitFlagsFollowThePreferredLikeness() {
+        func content(preferred: String?, lead: String) -> PersonDetailContent {
+            var header = CatalogPersonHeader(
+                entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: ""),
+                name: nil, nameValueCount: 0
+            )
+            header.likenessImageRelPath = lead == "a" ? "objects/ab/cd.png" : "objects/ef/01.png"
+            var a = likeness("a", path: "objects/ab/cd.png", title: "Register")
+            var b = likeness("b", path: "objects/ef/01.png", title: "Census")
+            a.preferred = preferred == "a"
+            b.preferred = preferred == "b"
+            a.leads = lead == "a"
+            b.leads = lead == "b"
+            var source = detail(header: header)
+            source.likenesses = [a, b]
+            return PersonDetailContent(detail: source)
+        }
+        let neither = content(preferred: nil, lead: "a")
+        #expect(neither.likenesses.map(\.isPortrait) == [true, false])
+        #expect(!neither.thumbnail.offersEarliest)
+
+        let chosen = content(preferred: "b", lead: "b")
+        #expect(chosen.likenesses.map(\.isPortrait) == [false, true])
+        #expect(chosen.thumbnail.offersEarliest)
+        #expect(chosen.thumbnail.imageLabel == "Likeness from Census")
+
+        let earliest = content(preferred: "a", lead: "a")
+        #expect(earliest.likenesses.map(\.isPortrait) == [true, false])
+        #expect(!earliest.thumbnail.offersEarliest)
+        #expect(!EventDetailContent(detail: detail()).thumbnail.offersEarliest)
+    }
+
+    @MainActor
+    private func portraitModel(_ store: FakeStore) -> ConclusionPortraitModel {
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: "/tmp/p.provenencia"), store: store)
+        return ConclusionPortraitModel(session: session, userID: "user-1", entityId: "per-1")
+    }
+
+    @MainActor
+    @Test func choosingAPortraitWritesAndToasts() async {
+        let store = FakeStore()
+        let model = portraitModel(store)
+        let tile = ConclusionDetailLikeness(
+            id: "obs-b", imageRelPath: "objects/ef/01.png", sourceTitle: "Census",
+            location: ReconciliationRecord.composerLocation(for: D.outcome("obs-b", "kept", title: "Census"))
+        )
+        await model.choose(tile)
+        #expect(store.recordedCalls.last == "setPreferredLikeness entity=per-1 observation=obs-b")
+        #expect(model.toast == VocabularyToast(
+            title: "Portrait updated", body: "Using the likeness from Census as the portrait.", tone: .success
+        ))
+        #expect(!model.isSaving)
+    }
+
+    @MainActor
+    @Test func useEarliestClearsAndToasts() async {
+        let store = FakeStore()
+        let model = portraitModel(store)
+        await model.useEarliest()
+        #expect(store.recordedCalls.last == "setPreferredLikeness entity=per-1 observation=")
+        #expect(model.toast == VocabularyToast(
+            title: "Portrait updated", body: "Using the earliest likeness as the portrait.", tone: .success
+        ))
+    }
+
+    @MainActor
+    @Test func portraitFailureToastsTheError() async {
+        let store = FakeStore()
+        let failure = CoreInvokeError.coded(status: 1, code: "canonicalentities.invalid", kind: .user, params: [])
+        store.setPreferredLikenessError = failure
+        let model = portraitModel(store)
+        await model.useEarliest()
+        #expect(model.toast == VocabularyToast(title: L10n.Errors.message(for: failure), body: "", tone: .danger))
+        #expect(!model.isSaving)
+    }
+
     @Test func aMergedNameRowCarriesItsStateAndWhy() {
         let row = PersonDetailContent(detail: detail()).rows[0]
         #expect(row.lead == "James Robins" && row.style == .text)

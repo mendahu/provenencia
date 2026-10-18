@@ -4,15 +4,20 @@ import (
 	"math"
 
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // The registry: every walk and band tunable graph alignment reads, in one
-// file. Tune here while dogfooding. Pairwise / Rank tunables stay in
-// core/match. Tests pass Config overrides without editing these defaults.
+// file. Tune here while dogfooding. Value compare's numbers come from
+// core/matchregistry as Config.Value. Tests pass Config overrides without
+// editing these defaults.
 
 // DefaultConfig is the shipped walk/band configuration.
 func DefaultConfig() Config {
 	return Config{
+		Value:           matchregistry.Default().Value,
 		AcceptScore:     2.0,
 		StrongScore:     4.0,
 		MediumScore:     3.0,
@@ -23,37 +28,37 @@ func DefaultConfig() Config {
 		// on the scale. Toponym +1 clears medium (3) and stays short of
 		// strong (4) until an edge adds support.
 		PropertyAgreement: map[match.Property]float64{
-			{Key: "toponym", Origin: "provenencia"}: 1,
+			{Key: "toponym", Origin: vocabkey.OriginProvenencia}: 1,
 		},
 		// Value-type defaults. A property entry replaces one of these.
 		// Frequency weights are filled when the score is computed.
 		ValueTypeScale: map[string]Scale{
-			"text":    {Floor: 0, Frequency: true},
-			"term":    {Floor: 1, Frequency: true},
-			"integer": {Floor: 1, Frequency: true},
-			// Any resemblance the date comparer reports is partial. A
+			"text":    {Frequency: true},
+			"term":    {Frequency: true},
+			"integer": {Frequency: true},
+			// Any resemblance value compare reports is partial. A
 			// disagreement scores 0 and conflicts. Open bounds that overlap
 			// (before 2001, before 1985) resemble; they are not the same date.
-			"date":    {Floor: 0, Frequency: true},
-			"name":    {Floor: 1, Frequency: true},
-			"subject": {Floor: 1, Frequency: true},
+			"date":    {Frequency: true},
+			"name":    {Frequency: true},
+			"subject": {Frequency: true},
 		},
-		// Name: a different given name is about 0.6 and conflicts. A word
-		// that exists only on one side does not lower the score, so Jake
-		// Robins against James Kenneth Jake Robins agrees. An initial
-		// (J. ~ James, 0.8) is 2.5 × 0.8, exactly the weak bar. The floor
-		// sits above the given-name clash.
+		// Name: value compare decides a clash. A different first given name
+		// or surname on each side is Different (0) and conflicts; a word on
+		// one side only is a resemblance below a full match, so Jake Robins
+		// against James Kenneth Jake Robins is 2.5 × 0.75. An initial
+		// (J. ~ James, 0.8) is 2.5 × 0.8, exactly the weak bar.
 		// Sex and gender: agreement is a small nudge and a mismatch subtracts
 		// 1 rather than the global penalty.
 		PropertyScale: map[match.Property]Scale{
-			{Key: "name", Origin: "provenencia"}: {
-				Floor: 0.75, Weight: 2.5, Contradiction: 3,
+			{Key: "name", Origin: vocabkey.OriginProvenencia}: {
+				Weight: 2.5, Contradiction: 3,
 			},
-			{Key: "sex_at_birth", Origin: "provenencia"}: {
-				Floor: 1, Weight: 0.6, Contradiction: 1,
+			{Key: "sex_at_birth", Origin: vocabkey.OriginProvenencia}: {
+				Weight: 0.6, Contradiction: 1,
 			},
-			{Key: "gender", Origin: "provenencia"}: {
-				Floor: 1, Weight: 0.6, Contradiction: 1,
+			{Key: "gender", Origin: vocabkey.OriginProvenencia}: {
+				Weight: 0.6, Contradiction: 1,
 			},
 		},
 		EdgeSupportLow:     1.5, // fan-out ≈1 correspondence
@@ -107,8 +112,10 @@ type Config struct {
 	AlternativeLimit   int
 	MPrior             map[string]float64 // value type → m
 	UPrior             float64
-	// Names scores name values when set. Nil keeps match.ComparerFor.
-	Names *match.NameComparer
+	// Value is the value section, with the catalog's name patterns and alias
+	// tables. DefaultConfig holds the registry's; valuerules.Load fills a
+	// catalog's.
+	Value valuecompare.Rules
 	// SignatureScale is how one edge signature combines with the candidate's
 	// own property score. The walk looks a signature up and copies the
 	// numbers onto the fact. A missing key is the zero value.
@@ -144,13 +151,11 @@ func (c Config) uOr(u float64) float64 {
 // Scale is how one property's similarity becomes points. The scorer looks
 // a property up here and does not name it.
 type Scale struct {
-	// Floor is the least similarity that earns points. Below it, a
-	// single-value property conflicts and a multiple-value one is unknown.
-	Floor float64
 	// Weight is the points at similarity 1. The contribution is Weight ×
 	// similarity. Ignored when Frequency is set; the log-odds fill it in.
 	Weight float64
-	// Contradiction is the penalty below Floor. Zero on a frequency scale
+	// Contradiction is the penalty when value compare finds the values
+	// different (similarity 0). Zero on a frequency scale
 	// means the global ConflictPenalty.
 	Contradiction float64
 	// Frequency derives Weight from catalog frequency (m, u) plus any

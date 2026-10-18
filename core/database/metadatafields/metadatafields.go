@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/slug"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeMetadataFieldsInvalid, apperr.KindUser)
@@ -35,9 +36,6 @@ var ErrInUse = apperr.New(apperr.CodeMetadataFieldsInUse, apperr.KindConflict)
 var ErrOriginLocked = apperr.New(apperr.CodeMetadataFieldsOriginLocked, apperr.KindConflict)
 
 const (
-	OriginProvenencia = "provenencia"
-	OriginUser        = "user"
-
 	DataTypeText = "text"
 	DataTypeURL  = "url"
 
@@ -93,7 +91,7 @@ func Upsert(c *database.Catalog, f Field) ([]byte, error) {
 	f.Label = strings.TrimSpace(f.Label)
 	f.DataType = strings.TrimSpace(f.DataType)
 	f.Description = strings.TrimSpace(f.Description)
-	if f.Key == "" || f.Label == "" || !originOK(f.Origin) || !dataTypeOK(f.DataType) {
+	if f.Key == "" || f.Label == "" || !vocabkey.ValidOrigin(f.Origin) || !dataTypeOK(f.DataType) {
 		return nil, ErrInvalid
 	}
 	id := f.ID
@@ -141,7 +139,7 @@ func Create(tx *database.Tx, label, dataType, description string) (Field, []rowc
 	if key == "" {
 		return Field{}, nil, ErrInvalid
 	}
-	if _, err := lookupTx(tx.Tx, key, OriginUser); err == nil {
+	if _, err := lookupTx(tx.Tx, key, vocabkey.OriginUser); err == nil {
 		return Field{}, nil, ErrDuplicateKey.WithParams(key)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return Field{}, nil, err
@@ -163,13 +161,13 @@ func Create(tx *database.Tx, label, dataType, description string) (Field, []rowc
 	} else {
 		desc = description
 	}
-	if _, err := tx.Exec(sqlUpsert, id, key, OriginUser, label, dataType, desc); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, dataType, desc); err != nil {
 		return Field{}, nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
 		"id":        {Old: nil, New: uid.String()},
 		"key":       {Old: nil, New: key},
-		"origin":    {Old: nil, New: OriginUser},
+		"origin":    {Old: nil, New: vocabkey.OriginUser},
 		"label":     {Old: nil, New: label},
 		"data_type": {Old: nil, New: dataType},
 	}
@@ -208,7 +206,7 @@ func Update(tx *database.Tx, id []byte, label, dataType, description string) (Fi
 	if err != nil {
 		return Field{}, nil, err
 	}
-	if existing.Origin != OriginUser && existing.Origin != OriginProvenencia {
+	if existing.Origin != vocabkey.OriginUser && existing.Origin != vocabkey.OriginProvenencia {
 		return Field{}, nil, ErrLocked
 	}
 	if dataType != existing.DataType {
@@ -340,9 +338,9 @@ func CountByOrigin(c *database.Catalog) (OriginCounts, error) {
 			return OriginCounts{}, err
 		}
 		switch {
-		case origin == OriginProvenencia:
+		case origin == vocabkey.OriginProvenencia:
 			out.Seeded += n
-		case origin == OriginUser:
+		case origin == vocabkey.OriginUser:
 			out.User += n
 		default:
 			out.Plugin += n
@@ -384,7 +382,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		return nil, err
 	}
 	// Per-Source layout rows (order, dismissed suggestions) are released and audited.
-	released, err := deleteimpact.ReleaseFacets(tx.Tx, catalogmodel.KindMetadataField, id)
+	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindMetadataField, id)
 	if err != nil {
 		return nil, err
 	}
@@ -401,19 +399,12 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if prev.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: prev.Description, New: nil}
 	}
-	return append(released.Changes, rowchange.Change{
+	return append(released, rowchange.Change{
 		EntityType: "metadata_field",
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionDelete,
 		Fields:     fields,
 	}), nil
-}
-
-func originOK(origin string) bool {
-	if origin == OriginProvenencia || origin == OriginUser {
-		return true
-	}
-	return strings.HasPrefix(origin, "plugin:") && len(origin) > len("plugin:")
 }
 
 func dataTypeOK(dt string) bool {

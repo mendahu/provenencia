@@ -21,12 +21,32 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Guarding a Citation page change after depictions are saved on it
+
+- **Date:** 2026-10-17
+- **Where:** Citation composer
+- **Annoyance:** A likeness is drawn on the Citation's PDF page. Moving the Citation to another page leaves the saved likenesses pointing at a region that no longer matches; Go hides it and the edit dialog asks for a redraw, but nothing warns before the page changes (deferred from S10-34).
+- **Wanted:** A confirm before the page change when depictions are saved on it.
+
+### Folding the other test copies of PNG / PDF writers and `waitUntil` into `ArtifactFileFixtures`
+
+- **Date:** 2026-10-17
+- **Where:** Tooling (macOS tests)
+- **Annoyance:** `ArtifactFileFixtures` now holds the PNG and PDF writers and `waitUntil`, but older tests keep their own copies: `ArtifactViewerModelTests.swift`, `PromoteModelTests.swift`, `CitationAutoTranscribeTests.swift`, `EvidenceGraphModelTests.swift`, and `seedArtifact` in `CitationComposerModelTests.swift` (deferred from S10-34).
+- **Wanted:** One shared copy.
+
+### No keyboard way to add one card to a multi-selection
+
+- **Date:** 2026-10-17
+- **Where:** Evidence graph
+- **Annoyance:** Shift-click adds or removes one card, but keyboard and VoiceOver users have no way to do the same (deferred from S10-57).
+
 ### Dense Evidence graphs (census-scale)
 
 - **Date:** 2026-09-24
 - **Where:** Evidence graph
 - **Annoyance:** A real census page can put dozens of Subjects and hundreds of Observations on one canvas. Nothing is wrong with the model — it just gets hard to see the household you care about.
-- **Wanted:** Layers or filters when a Source actually hurts. Descoped from [Spike 10](../deployment-plan/spike-10/) on 2026-10-08. Canvas growth and box-select are in that spike; hiding part of a Source is not.
+- **Wanted:** Layers or filters when a Source actually hurts. Descoped from [Spike 10](../deployment-plan/archive/spike-10/) on 2026-10-08. Canvas growth and box-select shipped in that spike; hiding part of a Source did not.
 
 ### Automatic structure from the Artifact (beyond transcription)
 

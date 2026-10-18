@@ -6,26 +6,73 @@ struct CitationComposerViewerPane: View {
     @State private var clearMenu = PVContextMenuState()
     @State private var clearKeyboard = PVContextMenuKeyboard.inactive
     @FocusState private var findFieldFocused: Bool
+    /// Set when the drawing band appears so Cancel holds keyboard focus.
+    @FocusState private var drawingCancelFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             toolStrip
             locatorStrip
                 .layoutPriority(-1)
+            if model.isDrawingDepiction {
+                drawingBand
+            }
 
             ArtifactViewer(
                 model: model.artifactViewer,
                 showsToolStrip: false,
                 locatorPage: model.locator.page,
                 onSetPage: { model.setPageFromViewer() },
-                armedRegionTool: $model.armedRegionTool,
-                committedRegion: model.locator.region,
-                onCommitRegion: { model.setRegion($0) },
+                armedRegionTool: $model.viewerArmedRegionTool,
+                committedRegion: model.viewerRegion,
+                onCommitRegion: { model.commitViewerRegion($0) },
                 onDisarmRegionTool: { model.disarmRegionTool() },
                 freeformDeleteTooltip: L10n.string(L10n.CitationComposer.freeformDeleteVertex)
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(PVSpacing.space6)
+        }
+    }
+
+    /// While a depiction's region is drawn: the hint (or the wrong-page warning)
+    /// and Cancel. Escape cancels too.
+    private var drawingBand: some View {
+        HStack(alignment: .center, spacing: PVSpacing.space5) {
+            if model.depictionWrongPage, let page = model.depictionPage {
+                PVCallout(
+                    tone: .warning,
+                    message: L10n.CitationComposer.depictionWrongPage(page),
+                    compact: true
+                )
+                .frame(maxWidth: .infinity)
+            } else {
+                PVCallout(
+                    tone: .info,
+                    message: L10n.string(L10n.CitationComposer.depictionDrawingHint),
+                    compact: true
+                )
+                .frame(maxWidth: .infinity)
+            }
+            PVButton(L10n.CitationComposer.depictionCancel, variant: .ghost, size: .sm) {
+                model.cancelDepictionDrawing()
+            }
+            .keyboardShortcut(.cancelAction)
+            .focused($drawingCancelFocused)
+            .accessibilityIdentifier("citationComposer.depiction.cancel")
+        }
+        .padding(.horizontal, PVSpacing.space6)
+        .padding(.vertical, PVSpacing.space4)
+        .background(PVColor.surfaceCard)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("citationComposer.depiction.drawingBand")
+        .onAppear { claimDrawingFocus() }
+        .onDisappear { drawingCancelFocused = false }
+    }
+
+    /// Moves focus to Cancel and announces drawing mode.
+    private func claimDrawingFocus() {
+        FocusClaim.claim($drawingCancelFocused, true) {
+            AccessibilityAnnouncement.post(L10n.string(L10n.CitationComposer.depictionDrawingHint))
         }
     }
 
@@ -171,9 +218,17 @@ struct CitationComposerViewerPane: View {
         PVButton(L10n.CitationComposer.clearMenu, variant: .link, size: .sm) {
             toggleClearMenu()
         }
-        .disabled(model.isLocatorArtifactOnly)
+        .disabled(model.isLocatorArtifactOnly || model.isDrawingDepiction)
         .accessibilityIdentifier("citationComposer.clearMenu")
-        .pvContextMenu($clearMenu, keyboard: $clearKeyboard, dismissOnClickAway: true) {
+        .pvContextMenu(
+            $clearMenu,
+            keyboard: $clearKeyboard,
+            keyboardTitles: [
+                L10n.string(L10n.CitationComposer.clearRegion),
+                L10n.string(L10n.CitationComposer.resetToEntireArtifact),
+            ],
+            dismissOnClickAway: true
+        ) {
             PVContextMenuPanel(
                 accessibilityIdentifier: "citationComposer.clearMenu.menu"
             ) {
@@ -202,14 +257,6 @@ struct CitationComposerViewerPane: View {
             clearMenu.dismiss()
             return
         }
-        clearKeyboard = PVContextMenuKeyboard(
-            itemCount: 2,
-            activeIndex: -1,
-            itemTitles: [
-                L10n.string(L10n.CitationComposer.clearRegion),
-                L10n.string(L10n.CitationComposer.resetToEntireArtifact),
-            ]
-        )
         clearMenu.present(at: CGPoint(x: 0, y: PVSpacing.controlHeightSmall))
     }
 

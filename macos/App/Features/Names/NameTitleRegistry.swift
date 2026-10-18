@@ -4,21 +4,21 @@ import Foundation
 /// does not read it, and researchers cannot add to it. A token is a title only
 /// when another word remains; the splitter decides which end.
 enum NameTitleRegistry {
-    /// Case-insensitive, and one trailing period does not count (`Dr` and `Dr.`).
-    static func lookupKey(_ token: String) -> String {
-        var key = token.trimmingCharacters(in: .whitespacesAndNewlines)
-        if key.hasSuffix(".") {
-            key.removeLast()
-        }
-        return key.lowercased()
-    }
-
+    /// Case and edge punctuation do not count (`Dr`, `Dr.`, `Jr.,`); dotted
+    /// initials (`S.R.`) are never titles.
     static func isPrefix(_ token: String) -> Bool {
-        prefixes.contains(lookupKey(token))
+        !hasDottedInitials(token) && prefixes.contains(TextMatch.key(token, at: .same, locale: TextMatch.posix))
     }
 
     static func isSuffix(_ token: String) -> Bool {
-        suffixes.contains(lookupKey(token))
+        !hasDottedInitials(token) && suffixes.contains(TextMatch.key(token, at: .same, locale: TextMatch.posix))
+    }
+
+    /// A period with a letter on each side: `S.R.` reads as initials, not `Sr`.
+    private static func hasDottedInitials(_ token: String) -> Bool {
+        let chars = Array(token)
+        guard chars.count >= 3 else { return false }
+        return (1..<chars.count - 1).contains { chars[$0] == "." && chars[$0 - 1].isLetter && chars[$0 + 1].isLetter }
     }
 
     /// Leading titles. `sr` here is Sister; a trailing `Sr` is Senior.

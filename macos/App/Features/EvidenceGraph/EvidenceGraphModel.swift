@@ -10,7 +10,16 @@ final class EvidenceGraphModel {
         var description: String = ""
     }
 
-    /// Snapshot of the subject a v1 Promote confirm names (`.pvConfirm(item:)`).
+    /// What the Unpromote confirm names: the subject, and the bridge sentences
+    /// that come off with it. Built fresh on open, so `error` starts nil.
+    struct PendingUnpromote: Identifiable, Equatable {
+        /// The subject's id.
+        let id: String
+        let name: String
+        let bridges: [String]
+        var error: String?
+    }
+
     let sourceID: String
     let session: WorkspaceSession
     let store: any GenealogyStore
@@ -19,9 +28,12 @@ final class EvidenceGraphModel {
     var armedKind: EvidencePrimaryKind?
     /// Connect tool armed (mutually exclusive with `armedKind`).
     var armedConnect = false
-    /// Select tool armed: an empty-canvas drag draws a rectangle (exclusive with
-    /// Place and Connect). Shift-drag draws the same rectangle without it.
+    /// Select tool armed from the palette: an empty-canvas drag draws a rectangle,
+    /// and its release disarms it (exclusive with Place and Connect). Holding Shift
+    /// engages the same mode without arming it.
     var armedSelect = false
+    /// Shift is down over the graph. Engages Select without arming it.
+    private(set) var shiftSelectHeld = false
     /// First primary chosen while connecting.
     var connectOriginID: String?
 
@@ -50,6 +62,9 @@ final class EvidenceGraphModel {
         value: SourceGraphSnapshot,
         text: EvidenceGraphText
     )?
+    /// Subject whose filing the Unpromote confirm names (`.pvConfirm(item:)`).
+    var pendingUnpromote: PendingUnpromote?
+    var isUnpromoting = false
     /// Subject pending DeleteImpact confirm or notice.
     let deleteImpact = DeleteImpactFlow()
     var pendingImpact: PVDeleteImpactRequest? {
@@ -405,6 +420,28 @@ final class EvidenceGraphModel {
         }
     }
 
+    func setShiftSelectHeld(_ held: Bool) {
+        shiftSelectHeld = held
+    }
+
+    /// Shift-click: adds a card (a bridge is allowed) to the selection, or removes it.
+    func toggleSubjectInSelection(id: String) {
+        var next = selectedSubjectIDs
+        if next.contains(id) {
+            next.remove(id)
+        } else {
+            next.insert(id)
+        }
+        replacePrimarySelection(next)
+    }
+
+    /// A rectangle was released: replaces the selection with its cards, or adds
+    /// them when Shift was down. One rectangle per arm, even one that caught nothing.
+    func finishRectangleSelection(_ ids: Set<String>, additive: Bool) {
+        replacePrimarySelection(additive ? selectedSubjectIDs.union(ids) : ids)
+        armedSelect = false
+    }
+
     func activateSubject(id: String) {
         selectedSubjectIDs = [id]
         activatedSubjectID = id
@@ -508,6 +545,9 @@ final class EvidenceGraphModel {
             return promoteLocation(for: subjectID)
         case EvidenceSubjectCard.openHandleActionID:
             return openHandle(subjectID: subjectID)
+        case EvidenceSubjectCard.unpromoteActionID:
+            beginUnpromote(subjectID: subjectID)
+            return nil
         default:
             guard let observationID = EvidenceSubjectCard.observationID(fromEditPropertyAction: actionID)
             else { return nil }
@@ -709,14 +749,14 @@ final class EvidenceGraphModel {
         labelError = nil
         createError = nil
         do {
-            _ = try await store.updateSubject(
+            let (_, effects) = try await store.updateSubject(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 subjectID: subjectID,
                 label: storedLabel,
                 description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
             )
-            session.apply(.mutatedSourceGraph(sourceId: sourceID))
+            session.apply(effects, .mutatedSourceGraph(sourceId: sourceID))
             editingSubjectID = nil
             editingPrimaryKind = nil
             editingBridgeKind = nil
@@ -876,6 +916,47 @@ final class EvidenceGraphModel {
         )
     }
 
+    // MARK: Unpromote (S10-44)
+
+    /// Opens the Unpromote confirm for a promoted primary. The bridge list is
+    /// the inverse of Promote's forecast, read from the same snapshot fields:
+    /// filed bridges that have this subject as an end. The engine recomputes
+    /// the authoritative set in the write. Does nothing otherwise.
+    func beginUnpromote(subjectID: String) {
+        guard let snapshot = currentSnapshot(),
+              let placed = primary(in: snapshot, id: subjectID),
+              placed.membership != nil
+        else { return }
+        let bridges = snapshot.bridges
+            .filter { ($0.endpointAID == subjectID || $0.endpointBID == subjectID) && $0.membership != nil }
+            .sorted { $0.id < $1.id }
+            .map { EvidenceBridgeEdgeSummary.sentence(for: $0, in: snapshot, orders: session.nameFormat) }
+        pendingUnpromote = PendingUnpromote(
+            id: placed.id,
+            name: placed.displayName(orders: session.nameFormat),
+            bridges: bridges
+        )
+    }
+
+    /// Writes the Unpromote. Success refreshes through the write's effects and
+    /// closes the confirm; a failure stays in the confirm as its error.
+    func confirmUnpromote() async {
+        guard let pending = pendingUnpromote, !isUnpromoting else { return }
+        isUnpromoting = true
+        defer { isUnpromoting = false }
+        do {
+            let effects = try await store.unpromoteSubject(
+                projectDir: session.projectKey.projectDir,
+                userID: userID,
+                subjectID: pending.id
+            )
+            session.apply(effects)
+            pendingUnpromote = nil
+        } catch {
+            pendingUnpromote?.error = L10n.Errors.message(for: error)
+        }
+    }
+
     /// Location of a promoted subject's handle page. Persons, Events, and
     /// Places open their pages.
     func openHandle(subjectID: String) -> WorkspaceLocation? {
@@ -909,12 +990,12 @@ final class EvidenceGraphModel {
     @discardableResult
     func confirmPendingImpact() async -> Bool {
         return await deleteImpact.confirm { target in
-            try await store.deleteSubject(
+            let effects = try await store.deleteSubject(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 subjectID: target.id
             )
-            session.apply(.deletedSubject(sourceId: sourceID))
+            session.apply(effects, .deletedSubject(sourceId: sourceID))
             selectedSubjectIDs.remove(target.id)
             if activatedSubjectID == target.id {
                 activatedSubjectID = nil
@@ -960,7 +1041,7 @@ final class EvidenceGraphModel {
         labelError = nil
         createError = nil
         do {
-            let created = try await store.createSubject(
+            let (created, effects) = try await store.createSubject(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 sourceID: sourceID,
@@ -969,7 +1050,7 @@ final class EvidenceGraphModel {
                 description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines),
                 placement: CatalogGridCell(gridX: pendingGridX, gridY: pendingGridY)
             )
-            session.apply(.mutatedSourceGraph(sourceId: sourceID))
+            session.apply(effects, .mutatedSourceGraph(sourceId: sourceID))
             isCreating = false
             disarm()
             return created.id

@@ -33,6 +33,18 @@ struct L10nResolutionTests {
         #expect(L10n.SourceTypes.usage(count: 7) == "in use on 7 sources")
     }
 
+    @Test func unpromoteCopyResolves() {
+        #expect(L10n.string(L10n.EvidenceGraph.unpromote) == "Unpromote")
+        #expect(L10n.string(L10n.EvidenceGraph.unpromoteKeep) == "Keep filing")
+        #expect(L10n.EvidenceGraph.unpromoteConfirmTitle(name: "James Robins") == "Unpromote James Robins?")
+        #expect(
+            L10n.string(L10n.EvidenceGraph.unpromoteConfirmMessage)
+                == "This filing is removed. The cards stay on the graph, and the handle stays."
+        )
+        #expect(L10n.string(L10n.EvidenceGraph.unpromoteConfirmBridgesHeader) == "Also unfiled")
+        #expect(L10n.string(L10n.EvidenceGraph.unpromoteConfirmBridgesNote) == "The other end of each stays filed.")
+    }
+
     @Test func formatWithExplicitLocaleUsesIt() {
         #expect(
             L10n.Dates.displayBetween(start: "1850", end: "1860", locale: Locale(identifier: "en_US"))
@@ -66,5 +78,15 @@ struct L10nResolutionTests {
             _ = L10n.EvidenceGraph.deleteAccessibility(kind: "Person", label: "Ada", ref: "PER-\(index)")
         }
         #expect(ContinuousClock.now - start < .milliseconds(250))
+    }
+
+    @Test func depictionSaveErrorsHaveCopy() {
+        let unknown = L10n.Errors.message(code: "internal.unknown")
+        let image = L10n.Errors.message(code: "ingest.unsupported_image")
+        let invalid = L10n.Errors.message(code: "depictionvalues.invalid")
+        #expect(image == "The picture of that region couldn’t be read. Draw the region again, or try a smaller one.")
+        #expect(invalid == "Invalid depiction value.")
+        #expect(image != unknown)
+        #expect(invalid != unknown)
     }
 }

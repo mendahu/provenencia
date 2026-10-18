@@ -45,9 +45,9 @@ struct CatalogSource: Sendable, Equatable, Identifiable {
     /// Used by the Sources list Evidence graph gate — not cover presence.
     var hasArtifact: Bool = false
     /// Latest audit revision of any work scoped to this Source (its row, notes,
-    /// metadata, artifacts, Evidence graph). Sources list "Updated" sort; zero
-    /// means unset / unknown.
-    var updatedRevision: Int64 = 0
+    /// metadata, artifacts, Evidence graph) and when it was recorded. Sources
+    /// list "Updated" sort reads the revision; zero means unset / unknown.
+    var updated = CatalogActivity()
 }
 
 struct CatalogSourceNote: Sendable, Equatable {
@@ -247,6 +247,8 @@ struct CatalogPromoteGraphAlignmentComparison: Sendable, Equatable, Identifiable
     var groupSubjectID: String = ""
     var incomingObservationID: String = ""
     var incomingDisplay: String = ""
+    /// The incoming value is a negative Observation: shown as "not <value>".
+    var incomingNegative: Bool = false
     var incomingSource: String = ""
     var memberObservationID: String = ""
     var memberDisplay: String = ""
@@ -369,6 +371,21 @@ struct CatalogNameValuePart: Sendable, Equatable {
     var type: String
 }
 
+/// A depiction to save: the region locator and the absolute path of the image
+/// the app rendered from it. Go stages the file; its bytes never cross the FFI.
+struct CatalogDepictionValueInput: Sendable, Equatable {
+    var regionJSON: String
+    var imagePath: String
+}
+
+/// A saved depiction: its region locator and the `objects/…` path (relative to
+/// the project folder) of the image Go stored. Either is empty when the stored
+/// half is not one Go would show.
+struct CatalogDepictionValue: Sendable, Equatable {
+    var regionJSON: String
+    var imageRelPath: String
+}
+
 /// A structured NameValue: the full-form reading plus optional ordered parts.
 struct CatalogNameValue: Sendable, Equatable {
     var form: String
@@ -429,6 +446,11 @@ struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
     var nameValueCount: Int
     var birth: CatalogLifeFacts = CatalogLifeFacts()
     var death: CatalogLifeFacts = CatalogLifeFacts()
+    /// The last revision that touched this Person and when; revision 0 when unknown.
+    var updated = CatalogActivity()
+    /// The `objects/…` path of the likeness the Person leads with; "" when none.
+    /// Filled by the Person list and the detail reads only.
+    var likenessImageRelPath: String = ""
 
     var id: String { entity.id }
 }
@@ -454,6 +476,8 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
     var places: [CatalogHeaderPlace] = []
     /// The naming-matrix rule Go chose, and its parts.
     var title: CatalogEventTitle
+    /// The last revision that touched this Event and when; revision 0 when unknown.
+    var updated = CatalogActivity()
 
     var id: String { entity.id }
 }
@@ -501,6 +525,8 @@ struct CatalogPlaceHeader: Sendable, Equatable, Identifiable {
     var contains: [CatalogPlaceRelationship] = []
     var predecessors: [CatalogPlaceRelationship] = []
     var successors: [CatalogPlaceRelationship] = []
+    /// The last revision that touched this Place and when; revision 0 when unknown.
+    var updated = CatalogActivity()
 
     var id: String { entity.id }
 }
@@ -579,6 +605,20 @@ struct CatalogConclusionField: Sendable, Equatable, Identifiable {
     var displayedValues: [CatalogReconciledValue] { values.filter(\.isDisplayed) }
 }
 
+/// One likeness a Person page's gallery shows: its image and the record (its
+/// earliest Observation) the tile opens.
+struct CatalogLikeness: Sendable, Equatable, Identifiable {
+    var imageRelPath: String
+    var record: CatalogReconcilerOutcome
+    /// True for the likeness chosen as the Person's portrait (S10-39); at most one.
+    var preferred: Bool = false
+    /// True for the likeness the Person's header leads with: the preferred one,
+    /// else the earliest; exactly one in a gallery.
+    var leads: Bool = false
+
+    var id: String { record.observationID }
+}
+
 /// One handle's detail (S9-15), composed by Go from the auto-reconciler cache.
 /// Generic over kind: Person, Event and Place pages all read it.
 struct CatalogConclusionDetail: Sendable, Equatable {
@@ -589,6 +629,8 @@ struct CatalogConclusionDetail: Sendable, Equatable {
     /// The handle's header for its kind, read in the same call, so a page
     /// has one load, one error, and one consistent read.
     var header: CatalogConclusionHeader?
+    /// The handle's likenesses, earliest recorded first.
+    var likenesses: [CatalogLikeness] = []
 
     var personHeader: CatalogPersonHeader? {
         if case .person(let header) = header { header } else { nil }
@@ -635,6 +677,10 @@ struct CatalogObservation: Sendable, Equatable, Identifiable {
     var propertyValueType: String
     /// Product/user term key when `valueTermID` is set (empty when unknown).
     var valueTermKey: String = ""
+    /// depiction_values.id when the Observation holds a depiction.
+    var valueDepictionID: String = ""
+    /// The saved depiction when listed; response data, never sent back to Go.
+    var depiction: CatalogDepictionValue? = nil
 }
 
 struct CatalogProperty: Sendable, Equatable, Identifiable {
@@ -643,7 +689,7 @@ struct CatalogProperty: Sendable, Equatable, Identifiable {
     var origin: String
     var label: String
     var description: String
-    /// text | integer | date | name | subject | term
+    /// text | integer | date | name | subject | term | depiction
     var valueType: String
     /// single | multiple. Empty input is treated as single.
     var cardinality: String = "single"
@@ -954,10 +1000,10 @@ protocol GenealogyStore: Sendable {
         primaryArtifactID: String
     ) async throws -> CatalogSource
     func addSourceNote(projectDir: String, userID: String, sourceID: String, body: String) async throws
-        -> CatalogSourceNote
+        -> (CatalogSourceNote, CatalogWriteEffects)
     func updateSourceNote(projectDir: String, userID: String, noteID: String, body: String) async throws
-        -> CatalogSourceNote
-    func deleteSourceNote(projectDir: String, userID: String, noteID: String) async throws
+        -> (CatalogSourceNote, CatalogWriteEffects)
+    func deleteSourceNote(projectDir: String, userID: String, noteID: String) async throws -> CatalogWriteEffects
     /// Returns the refreshed workspace entry so callers can patch without refetching.
     func setSourceMetadata(
         projectDir: String,
@@ -965,8 +1011,10 @@ protocol GenealogyStore: Sendable {
         sourceID: String,
         fieldID: String,
         valueText: String
-    ) async throws -> CatalogMetadataEntry
-    func clearSourceMetadata(projectDir: String, userID: String, sourceID: String, fieldID: String) async throws
+    ) async throws -> (CatalogMetadataEntry, CatalogWriteEffects)
+    func clearSourceMetadata(
+        projectDir: String, userID: String, sourceID: String, fieldID: String
+    ) async throws -> CatalogWriteEffects
     /// Permanently dismiss an unfilled type suggestion for this Source.
     /// Returns the updated workspace metadata list.
     func dismissSourceMetadataSuggestion(
@@ -974,14 +1022,14 @@ protocol GenealogyStore: Sendable {
         userID: String,
         sourceID: String,
         fieldID: String
-    ) async throws -> [CatalogMetadataEntry]
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects)
     /// Persist display order for visible metadata rows (field ids in order).
     func reorderSourceMetadata(
         projectDir: String,
         userID: String,
         sourceID: String,
         fieldIDs: [String]
-    ) async throws -> [CatalogMetadataEntry]
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects)
     func createArtifact(
         projectDir: String,
         userID: String,
@@ -989,21 +1037,21 @@ protocol GenealogyStore: Sendable {
         fileID: String,
         label: String,
         description: String
-    ) async throws -> CatalogArtifact
-    func deleteArtifact(projectDir: String, userID: String, artifactID: String) async throws
+    ) async throws -> (CatalogArtifact, CatalogWriteEffects)
+    func deleteArtifact(projectDir: String, userID: String, artifactID: String) async throws -> CatalogWriteEffects
     func updateArtifact(
         projectDir: String,
         userID: String,
         artifactID: String,
         label: String,
         description: String
-    ) async throws -> CatalogArtifact
+    ) async throws -> (CatalogArtifact, CatalogWriteEffects)
     func ingestArtifactFile(
         projectDir: String,
         userID: String,
         artifactID: String,
         path: String
-    ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool)
+    ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool, effects: CatalogWriteEffects)
     func listSourceCredibilityGrades(projectDir: String) async throws -> [CatalogCredibilityGrade]
     func upsertSourceCredibilityAssessment(
         projectDir: String,
@@ -1011,7 +1059,7 @@ protocol GenealogyStore: Sendable {
         sourceID: String,
         gradeID: String,
         argument: String
-    ) async throws -> CatalogCredibilityAssessment
+    ) async throws -> (CatalogCredibilityAssessment, CatalogWriteEffects)
     func listSourceTypes(projectDir: String) async throws -> [CatalogSourceType]
     /// `key` is never accepted from the caller — the engine mints it as a
     /// kebab-case slug of `label`, the same rule `createMetadataField` uses.
@@ -1110,15 +1158,15 @@ protocol GenealogyStore: Sendable {
         label: String,
         description: String,
         placement: CatalogGridCell?
-    ) async throws -> CatalogSubject
+    ) async throws -> (CatalogSubject, CatalogWriteEffects)
     func updateSubject(
         projectDir: String,
         userID: String,
         subjectID: String,
         label: String,
         description: String
-    ) async throws -> CatalogSubject
-    func deleteSubject(projectDir: String, userID: String, subjectID: String) async throws
+    ) async throws -> (CatalogSubject, CatalogWriteEffects)
+    func deleteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogWriteEffects
     /// File an accepted claim for the Subject (one transaction): onto a new handle of its type when
     /// `entityID` is `nil`, else onto that existing handle (same type, unmerged; claim only).
     func promoteSubject(
@@ -1129,6 +1177,18 @@ protocol GenealogyStore: Sendable {
         confidenceGradeID: String?,
         argument: String
     ) async throws -> CatalogPromoteResult
+    /// Take a primary Subject's filing back: its accepted claim and, in the same write, the accepted
+    /// claims of the bridges on its Source that have it as an end. No handle is deleted. A Subject with
+    /// no accepted claim writes nothing.
+    func unpromoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogWriteEffects
+    /// Choose a gallery likeness as the Person's portrait, or clear it with an empty observationID.
+    /// A display choice, not evidence.
+    func setPreferredLikeness(
+        projectDir: String,
+        userID: String,
+        entityID: String,
+        observationID: String
+    ) async throws -> CatalogWriteEffects
     /// Propose a handle, New, or Skip for every primary Subject on one Source (graph alignment).
     func proposePromoteGraphAlignment(
         projectDir: String,
@@ -1255,10 +1315,13 @@ protocol GenealogyStore: Sendable {
         transcriptionNote: String
     ) async throws -> (CatalogCitation, CatalogWriteEffects)
 
+    /// `depictionInput` is a new region and crop for a depiction Observation;
+    /// nil keeps the value named by `observation.valueDepictionID`.
     func updateObservation(
         projectDir: String,
         userID: String,
-        observation: CatalogObservation
+        observation: CatalogObservation,
+        depictionInput: CatalogDepictionValueInput?
     ) async throws -> (CatalogObservation, CatalogWriteEffects)
 
     func deleteObservation(projectDir: String, userID: String, observationID: String) async throws -> CatalogWriteEffects
@@ -1292,6 +1355,10 @@ struct SourceGraphProgress: Sendable, Equatable, Identifiable {
     var sourceId: String
     var subjectCount: Int
     var observationCount: Int
+    /// Subjects of a Promote primary kind (person, event, place).
+    var primaryCount: Int = 0
+    /// Primary subjects with an accepted Identity Claim.
+    var filedCount: Int = 0
 
     static func zeros(sourceId: String) -> SourceGraphProgress {
         SourceGraphProgress(sourceId: sourceId, subjectCount: 0, observationCount: 0)
@@ -1317,9 +1384,23 @@ struct CatalogObservationDraft: Sendable {
     var valueSubjectID: String = ""
     var valueTermID: String = ""
     var notes: [String] = []
+    var depiction: CatalogDepictionValueInput?
 }
 
 extension GenealogyStore {
+    func updateObservation(
+        projectDir: String,
+        userID: String,
+        observation: CatalogObservation
+    ) async throws -> (CatalogObservation, CatalogWriteEffects) {
+        try await updateObservation(
+            projectDir: projectDir,
+            userID: userID,
+            observation: observation,
+            depictionInput: nil
+        )
+    }
+
     /// Promote onto a new handle with no grade or argument (the graph card's Confirm).
     func promoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogPromoteResult {
         try await promoteSubject(

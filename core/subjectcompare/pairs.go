@@ -1,0 +1,73 @@
+package subjectcompare
+
+import (
+	"slices"
+
+	"github.com/mendahu/provenencia/core/propertycompare"
+	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
+)
+
+// side is the values one Subject offers for a lead property: the lead's own,
+// then each pooled property's in list order, or, when the lead has a period
+// and the Subject has no positive lead value, the lead's own and the period
+// built from its start and end. It copies; it never appends to values.
+func side(kind vocabkey.SubjectType, lead vocabkey.PropertyKey, values Values, rules Rules) []propertycompare.Value {
+	out := slices.Clone(values[lead])
+	for _, with := range rules.Pools[kind][lead].With {
+		out = append(out, values[with]...)
+	}
+	if p, ok := rules.Periods[kind][lead]; ok && !slices.ContainsFunc(out, propertycompare.Value.Positive) {
+		if v, ok := period(values[p.Start], values[p.End]); ok {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+// period is the widest span the positive start and end values record: the
+// earliest start and the latest end, each picked by day number, so the order
+// of the values never matters. A missing start or end is open. ok is false
+// when neither is recorded or the span would end before it begins.
+func period(starts, ends []propertycompare.Value) (propertycompare.Value, bool) {
+	var first, last valuecompare.DateEnd
+	var hasFirst, hasLast bool
+	for _, v := range starts {
+		if !v.Positive() || v.Date == nil {
+			continue
+		}
+		e, _, ok := valuecompare.DateEnds(*v.Date)
+		if !ok || e.Open {
+			continue
+		}
+		if !hasFirst || e.Lo < first.Lo || (e.Lo == first.Lo && e.Hi < first.Hi) {
+			first, hasFirst = e, true
+		}
+	}
+	for _, v := range ends {
+		if !v.Positive() || v.Date == nil {
+			continue
+		}
+		_, e, ok := valuecompare.DateEnds(*v.Date)
+		if !ok || e.Open {
+			continue
+		}
+		if !hasLast || e.Hi > last.Hi || (e.Hi == last.Hi && e.Lo > last.Lo) {
+			last, hasLast = e, true
+		}
+	}
+	if !hasFirst && !hasLast {
+		return propertycompare.Value{}, false
+	}
+	if !hasFirst {
+		first = valuecompare.DateEnd{Open: true}
+	}
+	if !hasLast {
+		last = valuecompare.DateEnd{Open: true}
+	}
+	d, ok := valuecompare.EndsDate(first, last)
+	if !ok {
+		return propertycompare.Value{}, false
+	}
+	return propertycompare.Value{Value: valuecompare.Value{Date: &d}}, true
+}

@@ -20,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -133,7 +134,7 @@ func TestRunMixedOmitsNone(t *testing.T) {
 		t.Fatal(err)
 	}
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -145,7 +146,7 @@ func TestRunMixedOmitsNone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,6 +253,34 @@ func TestRunDropsListeners(t *testing.T) {
 	}
 }
 
+// TestRunReportsCommitTime: the result carries the time audit stored for its
+// revision, and a listener hears the same commit.
+func TestRunReportsCommitTime(t *testing.T) {
+	c := newCatalog(t)
+	l := &recListener{}
+	c.Listen(l)
+	_, res, err := writes.Run(c, writes.Op{Action: "test"}, func(tx *database.Tx) (string, []rowchange.Change, error) {
+		return "saved", oneChange(t), nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stored string
+	if err := db.QueryRow(`SELECT created_at FROM audit_transactions WHERE revision = ?`, res.Revision).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if res.Revision == 0 || res.At == "" || res.At != stored {
+		t.Fatalf("result rev %d at %q, stored %q", res.Revision, res.At, stored)
+	}
+	if l.last.Revision != res.Revision || l.last.At != res.At {
+		t.Fatalf("listener heard %+v, result %+v", l.last, res)
+	}
+}
+
 func TestPropertyTermRun(t *testing.T) {
 	c := newCatalog(t)
 	userID := mustID(t)
@@ -261,7 +290,7 @@ func TestPropertyTermRun(t *testing.T) {
 	if err := subjectvocab.Install(c); err != nil {
 		t.Fatal(err)
 	}
-	prop, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+	prop, err := properties.Lookup(c, "event_type", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -324,11 +353,13 @@ func assertTermEffects(t *testing.T, res writes.Result) {
 type recListener struct {
 	fail    error
 	notices int
+	last    effects.Commit
 	dropped int
 }
 
-func (r *recListener) OnCommit(int64, effects.Set) error {
+func (r *recListener) OnCommit(c effects.Commit) error {
 	r.notices++
+	r.last = c
 	return r.fail
 }
 

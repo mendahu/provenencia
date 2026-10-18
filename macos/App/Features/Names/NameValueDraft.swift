@@ -1,7 +1,7 @@
 import Foundation
 
 /// Editable draft of a genealogical NameValue (form + optional ordered parts).
-/// Validation mirrors `core/database/namevalues`: form required; empty part
+/// Validation mirrors `core/namevalue`: form required; empty part
 /// values refused; unknown non-empty types refused; empty type is untyped.
 struct NameValueDraft: Equatable, Sendable {
     struct Part: Identifiable, Equatable, Sendable {

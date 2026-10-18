@@ -15,7 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/project"
@@ -29,7 +29,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -64,7 +66,7 @@ func newBridgeWorld(t *testing.T) *bridgeWorld {
 	if err := subjectvocab.Install(c); err != nil {
 		t.Fatal(err)
 	}
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +99,7 @@ func newBridgeWorld(t *testing.T) *bridgeWorld {
 
 func (w *bridgeWorld) prop(key string) properties.Property {
 	w.t.Helper()
-	p, err := properties.Lookup(w.c, key, properties.OriginProvenencia)
+	p, err := properties.Lookup(w.c, key, vocabkey.OriginProvenencia)
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -106,7 +108,7 @@ func (w *bridgeWorld) prop(key string) properties.Property {
 
 func (w *bridgeWorld) term(p properties.Property, key string) propertyterms.Term {
 	w.t.Helper()
-	term, err := propertyterms.Lookup(w.c, p.ID, key, propertyterms.OriginProvenencia)
+	term, err := propertyterms.Lookup(w.c, p.ID, key, vocabkey.OriginProvenencia)
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -115,7 +117,7 @@ func (w *bridgeWorld) term(p properties.Property, key string) propertyterms.Term
 
 func (w *bridgeWorld) node(kind, label string, x, y int64) subjects.Subject {
 	w.t.Helper()
-	st, err := subjecttypes.Lookup(w.c, kind, subjecttypes.OriginProvenencia)
+	st, err := subjecttypes.Lookup(w.c, kind, vocabkey.OriginProvenencia)
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -442,7 +444,7 @@ func TestBridgeFiling(t *testing.T) {
 		birth := w.node("event", "Birth", 2, 0)
 		w.participation(james, birth, w.subjectRole)
 		w.promote(james)
-		eventType, err := subjecttypes.Lookup(w.c, "event", subjecttypes.OriginProvenencia)
+		eventType, err := subjecttypes.Lookup(w.c, "event", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -485,11 +487,11 @@ func TestBridgeFiling(t *testing.T) {
 		endProp := w.prop("end_date")
 		if _, err := writes.Call(w.c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
 			return observations.AddToCitation(tx, userID, link.Citation.ID, []observations.Input{
-				{SubjectID: link.Subject.ID, PropertyID: startProp.ID, Date: &datevalues.Value{
-					Kind: datevalues.KindPoint, StartYear: &year,
+				{SubjectID: link.Subject.ID, PropertyID: startProp.ID, Date: &datevalue.Value{
+					Kind: datevalue.KindPoint, StartYear: &year,
 				}},
-				{SubjectID: link.Subject.ID, PropertyID: endProp.ID, Date: &datevalues.Value{
-					Kind: datevalues.KindPoint, StartYear: &year,
+				{SubjectID: link.Subject.ID, PropertyID: endProp.ID, Date: &datevalue.Value{
+					Kind: datevalue.KindPoint, StartYear: &year,
 				}},
 			})
 		}); err != nil {
@@ -588,10 +590,15 @@ func TestBridgeSubjectDeleteReleasesPins(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("pin %v %v", err, ok)
 	}
-	if _, err := audit.Record(tx, audit.Revision{
+	rev := audit.Revision{
 		UserID: userID, ActionType: "pin_edge", CreatedAt: project.NowUTC(),
 		Changes: []rowchange.Change{change},
-	}); err != nil {
+	}
+	set, err := effects.Resolve(tx, rev.Changes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := audit.Record(tx, rev, set); err != nil {
 		t.Fatal(err)
 	}
 	if err := tx.Commit(); err != nil {

@@ -4,6 +4,8 @@ import Foundation
 /// Normalized (0…1) region geometry for the raster Artifact overlay.
 enum ArtifactRegionGeometry {
     static let circleRingCount = 32
+    /// Matches `locator.MaxRegionPoints`, which Go counts across a whole locator; the app writes one region per locator, so a per-polygon cap equals Go's for anything the app writes.
+    static let maxRegionPoints = 256
     static let minimumPolygonArea: CGFloat = 1e-12
     static let freeformMinimumVertices = 3
 
@@ -333,6 +335,12 @@ enum ArtifactRegionGeometry {
         return next
     }
 
+    /// The points with one more vertex, or nil once the polygon holds `maxRegionPoints`.
+    static func appendFreeformVertex(points: [CGPoint], _ point: CGPoint) -> [CGPoint]? {
+        guard points.count < maxRegionPoints else { return nil }
+        return points + [point]
+    }
+
     // MARK: Queries
 
     static func isAxisAlignedRectangle(_ points: [CGPoint]) -> Bool {
@@ -413,7 +421,7 @@ enum ArtifactRegionGeometry {
     }
 
     static func isValidPolygon(_ points: [CGPoint]) -> Bool {
-        guard points.count >= 3 else { return false }
+        guard points.count >= 3, points.count <= maxRegionPoints else { return false }
         if nearlyEqual(points[0], points[points.count - 1]) { return false }
         for point in points {
             if point.x < 0 || point.x > 1 || point.y < 0 || point.y > 1 {

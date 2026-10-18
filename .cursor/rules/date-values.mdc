@@ -1,6 +1,6 @@
 ---
-description: Shared genealogical date_values live in core/database/datevalues
-globs: core/database/datevalues/**,docs/structured-date-model.md
+description: Shared genealogical date_values: pure type in core/datevalue, queries in core/database/datevalues
+globs: core/datevalue/**,core/database/datevalues/**,docs/structured-date-model.md
 alwaysApply: false
 ---
 
@@ -8,6 +8,6 @@ alwaysApply: false
 
 Follow the project skill `.agents/skills/add-date-value/SKILL.md`. Design notes: `docs/structured-date-model.md`.
 
-- Use `datevalues.Insert` / `Lookup`; kinds `point` / `range`; point qualifiers `ABT` / `BEF` / `AFT`.
+- Types, `Validate` and `CompactDisplay` live in `core/datevalue`; use `datevalues.Insert` / `Lookup` for storage; kinds `point` / `range`; point qualifiers `ABT` / `BEF` / `AFT`.
 - Optional civil components (gaps allowed); at least one of year/month/day/hour/minute/second or a phrase; free-text `start_tz` / `end_tz`; empty = unspecified (not UTC).
 - Schema changes go through catalog migrations; do not invent a parallel date store.

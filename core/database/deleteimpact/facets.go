@@ -3,7 +3,9 @@ package deleteimpact
 import (
 	"database/sql"
 	"fmt"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/mendahu/provenencia/core/apperr"
@@ -20,17 +22,21 @@ import (
 // silently delete. It is a programming error, never a researcher outcome.
 var ErrReleaseIncomplete = apperr.New(apperr.CodeDeleteImpactReleaseIncomplete, apperr.KindInternal)
 
-// Released is what ReleaseFacets removed for one parent.
-type Released struct {
+// released is what releaseFacets removed for one parent.
+type released struct {
 	// Changes are audit rows for every removed facet, ready to append ahead of
 	// the parent's own delete change in the same revision. Handles come from
 	// effects.Handles on these changes, including through ghosts when a claim
 	// row is already gone.
 	Changes []rowchange.Change
+	// Objects are the stored bytes of Files the release deleted. The exported
+	// release schedules their purge with files.PurgeAfterCommit.
+	Objects []files.Object
 }
 
-func (r *Released) merge(o Released) {
+func (r *released) merge(o released) {
 	r.Changes = append(r.Changes, o.Changes...)
+	r.Objects = append(r.Objects, o.Objects...)
 }
 
 type facetRelease struct {
@@ -48,22 +54,38 @@ type facetRelease struct {
 	// must be zero. Empty only for non-CASCADE releases (connection facets),
 	// whose leftovers Impact has already refused.
 	Remaining string
-	Release   func(tx *sql.Tx, parentID []byte) (Released, error)
+	Release   func(tx *sql.Tx, parentID []byte) (released, error)
 }
 
-// ReleaseFacets removes and audits every registered facet of one parent, in
+// ReleaseFacets removes and audits every registered facet of one parent and
+// schedules the purge of any File it released, then returns the audit changes
+// to prepend to the delete's own. It takes the write's Tx so no caller holds
+// the objects. See releaseFacets.
+func ReleaseFacets(tx *database.Tx, kind catalogmodel.Kind, id []byte) ([]rowchange.Change, error) {
+	if tx == nil {
+		return nil, ErrInvalid
+	}
+	r, err := releaseFacets(tx.Tx, kind, id)
+	if err != nil {
+		return nil, err
+	}
+	files.PurgeAfterCommit(tx, r.Objects)
+	return r.Changes, nil
+}
+
+// releaseFacets removes and audits every registered facet of one parent, in
 // registry order. Call it inside the delete transaction, after Refuse and
 // before the parent DELETE. Releases compose: a facet row that is itself a
 // parent (a claim, a connection Observation) has its own facets released first.
-func ReleaseFacets(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (Released, error) {
+func releaseFacets(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (released, error) {
 	if tx == nil || len(id) != 16 {
-		return Released{}, ErrInvalid
+		return released{}, ErrInvalid
 	}
-	var out Released
+	var out released
 	for _, f := range facetReleasesFor(kind) {
 		r, err := f.Release(tx, id)
 		if err != nil {
-			return Released{}, err
+			return released{}, err
 		}
 		out.merge(r)
 		if f.Remaining == "" {
@@ -71,10 +93,10 @@ func ReleaseFacets(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (Released, err
 		}
 		var n int
 		if err := tx.QueryRow(f.Remaining, id).Scan(&n); err != nil {
-			return Released{}, err
+			return released{}, err
 		}
 		if n != 0 {
-			return Released{}, fmt.Errorf("%w: %s left %d", ErrReleaseIncomplete, f.Via, n)
+			return released{}, fmt.Errorf("%w: %s left %d", ErrReleaseIncomplete, f.Via, n)
 		}
 	}
 	return out, nil
@@ -186,54 +208,87 @@ func buildFacetReleases() []facetRelease {
 
 // --- Conclusion releases ----------------------------------------------------
 
-func releaseSubjectClaims(tx *sql.Tx, subjectID []byte) (Released, error) {
-	rows, err := tx.Query(`SELECT id, subject_id, entity_id, subject_type_id, status,
-		confidence_grade_id, argument FROM identity_claims WHERE subject_id = ? ORDER BY id`, subjectID)
+func releaseSubjectClaims(tx *sql.Tx, subjectID []byte) (released, error) {
+	rows, err := tx.Query(`SELECT id FROM identity_claims WHERE subject_id = ? ORDER BY id`, subjectID)
 	if err != nil {
-		return Released{}, err
+		return released{}, err
 	}
-	type claim struct {
+	var ids [][]byte
+	for rows.Next() {
+		var id []byte
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return released{}, err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Close(); err != nil {
+		return released{}, err
+	}
+	var out released
+	for _, id := range ids {
+		r, err := releaseClaim(tx, id)
+		if err != nil {
+			return released{}, err
+		}
+		out.merge(r)
+	}
+	return out, nil
+}
+
+// ReleaseClaim is releaseClaim on the write's Tx: it schedules the purge of any
+// File released and returns the audit changes.
+func ReleaseClaim(tx *database.Tx, claimID []byte) ([]rowchange.Change, error) {
+	if tx == nil {
+		return nil, ErrInvalid
+	}
+	r, err := releaseClaim(tx.Tx, claimID)
+	if err != nil {
+		return nil, err
+	}
+	files.PurgeAfterCommit(tx, r.Objects)
+	return r.Changes, nil
+}
+
+// releaseClaim removes one identity claim, audited: its pins first (through
+// ReleaseFacets), then the row, then the claim's own delete change carrying the
+// fields the effects registry resolves a ghost row from. It is the one claim
+// removal; Subject delete and Unpromote both call it. Does not commit.
+func releaseClaim(tx *sql.Tx, claimID []byte) (released, error) {
+	if tx == nil || len(claimID) != 16 {
+		return released{}, ErrInvalid
+	}
+	var (
 		id, subjectID, entityID, typeID, gradeID []byte
 		status                                   string
 		argument                                 sql.NullString
+	)
+	if err := tx.QueryRow(`SELECT id, subject_id, entity_id, subject_type_id, status,
+		confidence_grade_id, argument FROM identity_claims WHERE id = ?`, claimID).
+		Scan(&id, &subjectID, &entityID, &typeID, &status, &gradeID, &argument); err != nil {
+		return released{}, err
 	}
-	var claims []claim
-	for rows.Next() {
-		var c claim
-		if err := rows.Scan(&c.id, &c.subjectID, &c.entityID, &c.typeID, &c.status, &c.gradeID, &c.argument); err != nil {
-			rows.Close()
-			return Released{}, err
-		}
-		claims = append(claims, c)
+	out, err := releaseFacets(tx, catalogmodel.KindIdentityClaim, id)
+	if err != nil {
+		return released{}, err
 	}
-	if err := rows.Close(); err != nil {
-		return Released{}, err
+	if _, err := tx.Exec(`DELETE FROM identity_claims WHERE id = ?`, id); err != nil {
+		return released{}, err
 	}
-	var out Released
-	for _, c := range claims {
-		pins, err := ReleaseFacets(tx, catalogmodel.KindIdentityClaim, c.id)
-		if err != nil {
-			return Released{}, err
-		}
-		out.merge(pins)
-		if _, err := tx.Exec(`DELETE FROM identity_claims WHERE id = ?`, c.id); err != nil {
-			return Released{}, err
-		}
-		out.Changes = append(out.Changes, rowchange.Change{
-			EntityType: "identity_claim",
-			EntityID:   c.id,
-			Action:     rowchange.ActionDelete,
-			Fields: rowchange.DeletedRow(map[string]any{
-				"id":                  uuidJSON(c.id),
-				"subject_id":          uuidJSON(c.subjectID),
-				"entity_id":           uuidJSON(c.entityID),
-				"subject_type_id":     uuidJSON(c.typeID),
-				"status":              c.status,
-				"confidence_grade_id": uuidJSON(c.gradeID),
-				"argument":            nullStringJSON(c.argument),
-			}),
-		})
-	}
+	out.Changes = append(out.Changes, rowchange.Change{
+		EntityType: "identity_claim",
+		EntityID:   id,
+		Action:     rowchange.ActionDelete,
+		Fields: rowchange.DeletedRow(map[string]any{
+			"id":                  uuidJSON(id),
+			"subject_id":          uuidJSON(subjectID),
+			"entity_id":           uuidJSON(entityID),
+			"subject_type_id":     uuidJSON(typeID),
+			"status":              status,
+			"confidence_grade_id": uuidJSON(gradeID),
+			"argument":            nullStringJSON(argument),
+		}),
+	})
 	return out, nil
 }
 
@@ -242,11 +297,11 @@ func releaseSubjectClaims(tx *sql.Tx, subjectID []byte) (Released, error) {
 // yields that claim's exhibit history. The claim join keeps a pin whose claim
 // is already gone out of this release; effects.Handles walks identity_claim_id
 // to the handle, including through that claim's delete when the row is gone.
-func pinRelease(q string) func(*sql.Tx, []byte) (Released, error) {
-	return func(tx *sql.Tx, parentID []byte) (Released, error) {
+func pinRelease(q string) func(*sql.Tx, []byte) (released, error) {
+	return func(tx *sql.Tx, parentID []byte) (released, error) {
 		rows, err := tx.Query(q, parentID)
 		if err != nil {
-			return Released{}, err
+			return released{}, err
 		}
 		type pin struct{ claimID, observationID []byte }
 		var pins []pin
@@ -254,18 +309,18 @@ func pinRelease(q string) func(*sql.Tx, []byte) (Released, error) {
 			var p pin
 			if err := rows.Scan(&p.claimID, &p.observationID); err != nil {
 				rows.Close()
-				return Released{}, err
+				return released{}, err
 			}
 			pins = append(pins, p)
 		}
 		if err := rows.Close(); err != nil {
-			return Released{}, err
+			return released{}, err
 		}
-		var out Released
+		var out released
 		for _, p := range pins {
 			if _, err := tx.Exec(`DELETE FROM identity_claim_evidence
 				WHERE identity_claim_id = ? AND observation_id = ?`, p.claimID, p.observationID); err != nil {
-				return Released{}, err
+				return released{}, err
 			}
 			out.Changes = append(out.Changes, rowchange.Change{
 				EntityType: "identity_claim_evidence",
@@ -283,19 +338,19 @@ func pinRelease(q string) func(*sql.Tx, []byte) (Released, error) {
 
 // --- Interpretation releases ------------------------------------------------
 
-func releaseConnectionFacets(tx *sql.Tx, subjectID []byte) (Released, error) {
+func releaseConnectionFacets(tx *sql.Tx, subjectID []byte) (released, error) {
 	rows, err := listSubjectObs(tx, subjectID)
 	if err != nil {
-		return Released{}, err
+		return released{}, err
 	}
-	var out Released
+	var out released
 	for _, r := range rows {
 		if !isConnectionFacet(r) {
 			continue
 		}
 		erased, err := eraseObservation(tx, r.id)
 		if err != nil {
-			return Released{}, err
+			return released{}, err
 		}
 		out.merge(erased)
 	}
@@ -305,33 +360,35 @@ func releaseConnectionFacets(tx *sql.Tx, subjectID []byte) (Released, error) {
 // eraseObservation removes one Observation whole: its facets, the row, and its
 // owned date / name values, auditing the full row. Only connection-facet
 // release uses it; ordinary Observations go through observations.Delete.
-func eraseObservation(tx *sql.Tx, id []byte) (Released, error) {
+func eraseObservation(tx *sql.Tx, id []byte) (released, error) {
 	var (
-		obsID, citationID, subjectID, propertyID, dateID, nameID, valueSubjectID, termID []byte
-		ref, polarity                                                                    string
-		text                                                                             sql.NullString
-		integer                                                                          sql.NullInt64
+		obsID, citationID, subjectID, propertyID, dateID, nameID, valueSubjectID, termID, depictionID []byte
+		ref, polarity                                                                                 string
+		text                                                                                          sql.NullString
+		integer                                                                                       sql.NullInt64
 	)
 	if err := tx.QueryRow(`SELECT id, ref, citation_id, subject_id, property_id, polarity,
-		value_text, value_integer, value_date_id, value_name_id, value_subject_id, value_term_id
+		value_text, value_integer, value_date_id, value_name_id, value_subject_id, value_term_id, value_depiction_id
 		FROM observations WHERE id = ?`, id).Scan(&obsID, &ref, &citationID, &subjectID, &propertyID,
-		&polarity, &text, &integer, &dateID, &nameID, &valueSubjectID, &termID); err != nil {
-		return Released{}, err
+		&polarity, &text, &integer, &dateID, &nameID, &valueSubjectID, &termID, &depictionID); err != nil {
+		return released{}, err
 	}
-	out, err := ReleaseFacets(tx, catalogmodel.KindObservation, id)
+	out, err := releaseFacets(tx, catalogmodel.KindObservation, id)
 	if err != nil {
-		return Released{}, err
+		return released{}, err
 	}
 	snap, err := SnapshotOwned(tx, catalogmodel.KindObservation, id)
 	if err != nil {
-		return Released{}, err
+		return released{}, err
 	}
 	if _, err := tx.Exec(`DELETE FROM observations WHERE id = ?`, id); err != nil {
-		return Released{}, err
+		return released{}, err
 	}
-	if err := ReleaseSnapshot(tx, snap); err != nil {
-		return Released{}, err
+	objects, err := releaseSnapshot(tx, snap)
+	if err != nil {
+		return released{}, err
 	}
+	out.Objects = append(out.Objects, objects...)
 	var integerJSON any
 	if integer.Valid {
 		integerJSON = integer.Int64
@@ -341,18 +398,19 @@ func eraseObservation(tx *sql.Tx, id []byte) (Released, error) {
 		EntityID:   obsID,
 		Action:     rowchange.ActionDelete,
 		Fields: rowchange.DeletedRow(map[string]any{
-			"id":               uuidJSON(obsID),
-			"ref":              ref,
-			"citation_id":      uuidJSON(citationID),
-			"subject_id":       uuidJSON(subjectID),
-			"property_id":      uuidJSON(propertyID),
-			"polarity":         polarity,
-			"value_text":       nullStringJSON(text),
-			"value_integer":    integerJSON,
-			"value_date_id":    uuidJSON(dateID),
-			"value_name_id":    uuidJSON(nameID),
-			"value_subject_id": uuidJSON(valueSubjectID),
-			"value_term_id":    uuidJSON(termID),
+			"id":                 uuidJSON(obsID),
+			"ref":                ref,
+			"citation_id":        uuidJSON(citationID),
+			"subject_id":         uuidJSON(subjectID),
+			"property_id":        uuidJSON(propertyID),
+			"polarity":           polarity,
+			"value_text":         nullStringJSON(text),
+			"value_integer":      integerJSON,
+			"value_date_id":      uuidJSON(dateID),
+			"value_name_id":      uuidJSON(nameID),
+			"value_subject_id":   uuidJSON(valueSubjectID),
+			"value_term_id":      uuidJSON(termID),
+			"value_depiction_id": uuidJSON(depictionID),
 		}),
 	})
 	return out, nil
@@ -397,10 +455,10 @@ func rowFacet(parent catalogmodel.Kind, table, fkCol, entityType, entityIDCol st
 		Parent:    parent,
 		Via:       table + "." + fkCol,
 		Remaining: fmt.Sprintf(`SELECT COUNT(*) FROM %s WHERE %s = ?`, table, fkCol),
-		Release: func(tx *sql.Tx, parentID []byte) (Released, error) {
+		Release: func(tx *sql.Tx, parentID []byte) (released, error) {
 			rows, err := tx.Query(selectSQL, parentID)
 			if err != nil {
-				return Released{}, err
+				return released{}, err
 			}
 			type row struct {
 				rowid    int64
@@ -418,7 +476,7 @@ func rowFacet(parent catalogmodel.Kind, table, fkCol, entityType, entityIDCol st
 				}
 				if err := rows.Scan(dest...); err != nil {
 					rows.Close()
-					return Released{}, err
+					return released{}, err
 				}
 				fields := make(map[string]any, len(cols))
 				for i, c := range cols {
@@ -428,12 +486,12 @@ func rowFacet(parent catalogmodel.Kind, table, fkCol, entityType, entityIDCol st
 				found = append(found, row{rowid: rowid, entityID: append([]byte(nil), id...), fields: fields})
 			}
 			if err := rows.Close(); err != nil {
-				return Released{}, err
+				return released{}, err
 			}
-			var out Released
+			var out released
 			for _, r := range found {
 				if _, err := tx.Exec(deleteSQL, r.rowid); err != nil {
-					return Released{}, err
+					return released{}, err
 				}
 				out.Changes = append(out.Changes, rowchange.Change{
 					EntityType: entityType,

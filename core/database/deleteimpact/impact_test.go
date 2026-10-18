@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
@@ -26,6 +27,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -78,7 +80,7 @@ func TestImpactGates(t *testing.T) {
 	})
 
 	t.Run("seeded property origin_locked", func(t *testing.T) {
-		p, err := properties.Lookup(c, "name", properties.OriginProvenencia)
+		p, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -89,11 +91,11 @@ func TestImpactGates(t *testing.T) {
 	})
 
 	t.Run("seeded term origin_locked", func(t *testing.T) {
-		p, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+		p, err := properties.Lookup(c, "event_type", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		term, err := propertyterms.Lookup(c, p.ID, "birth", propertyterms.OriginProvenencia)
+		term, err := propertyterms.Lookup(c, p.ID, "birth", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -105,7 +107,7 @@ func TestImpactGates(t *testing.T) {
 
 	t.Run("seeded unused source type allowed", func(t *testing.T) {
 		id, err := sourcetypes.Upsert(c, sourcetypes.Type{
-			Key: "unused_book", Origin: sourcetypes.OriginProvenencia, Label: "Unused book",
+			Key: "unused_book", Origin: vocabkey.OriginProvenencia, Label: "Unused book",
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -117,7 +119,7 @@ func TestImpactGates(t *testing.T) {
 	})
 
 	t.Run("get works for subject type grade user term", func(t *testing.T) {
-		person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+		person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -125,7 +127,7 @@ func TestImpactGates(t *testing.T) {
 		if !got.Allowed || got.Gate != deleteimpact.GateOK {
 			t.Fatalf("person type %+v", got)
 		}
-		grade, err := sourcecredibilitygrades.Lookup(c, "standard", sourcecredibilitygrades.OriginProvenencia)
+		grade, err := sourcecredibilitygrades.Lookup(c, "standard", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -133,7 +135,7 @@ func TestImpactGates(t *testing.T) {
 		if got.Allowed || got.Gate != deleteimpact.GateOriginLocked {
 			t.Fatalf("grade %+v", got)
 		}
-		p, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+		p, err := properties.Lookup(c, "event_type", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -146,8 +148,8 @@ func TestImpactGates(t *testing.T) {
 
 	t.Run("property with term row inbound", func(t *testing.T) {
 		propID, err := properties.Upsert(c, properties.Property{
-			Key: "custom_event", Origin: properties.OriginUser,
-			Label: "Custom Event", ValueType: properties.ValueTypeTerm,
+			Key: "custom_event", Origin: vocabkey.OriginUser,
+			Label: "Custom Event", ValueType: propertymeta.ValueTypeTerm,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -193,7 +195,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		t.Fatal(err)
 	}
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -208,15 +210,15 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	placeType, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+	placeType, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	personType, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	eventType, err := subjecttypes.Lookup(c, "event", subjecttypes.OriginProvenencia)
+	eventType, err := subjecttypes.Lookup(c, "event", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,7 +246,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	toponym, err := properties.Lookup(c, "toponym", properties.OriginProvenencia)
+	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,7 +283,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	})
 
 	t.Run("propertyterms delete uses impact", func(t *testing.T) {
-		eventTypeProp, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+		eventTypeProp, err := properties.Lookup(c, "event_type", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -337,19 +339,19 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	})
 
 	t.Run("G2 value_subject_id", func(t *testing.T) {
-		roleProp, err := properties.Lookup(c, "role", properties.OriginProvenencia)
+		roleProp, err := properties.Lookup(c, "role", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		personProp, err := properties.Lookup(c, "person", properties.OriginProvenencia)
+		personProp, err := properties.Lookup(c, "person", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		eventProp, err := properties.Lookup(c, "event", properties.OriginProvenencia)
+		eventProp, err := properties.Lookup(c, "event", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		roleTerm, err := propertyterms.Lookup(c, roleProp.ID, "witness", propertyterms.OriginProvenencia)
+		roleTerm, err := propertyterms.Lookup(c, roleProp.ID, "witness", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -384,15 +386,14 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			if !got.Allowed || got.Gate != deleteimpact.GateOK {
 				t.Fatalf("bridge %+v", got)
 			}
-			db, err := c.DB()
+			tx, err := c.BeginWrite()
 			if err != nil {
 				t.Fatal(err)
 			}
-			tx, err := db.Begin()
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() { _ = tx.Rollback() }()
+			defer func() {
+				_ = tx.Rollback()
+				c.EndWrite()
+			}()
 			if _, err := tx.Exec(`DELETE FROM subjects WHERE id = ?`, bridge.Subject.ID); err == nil {
 				t.Fatal("raw subject delete should fail while facets remain")
 			}
@@ -455,12 +456,12 @@ func TestImpactCitationAndSubject(t *testing.T) {
 
 	t.Run("user role property on person is inbound not a facet", func(t *testing.T) {
 		userRole, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
-			return properties.Create(tx, userID, "Role", properties.ValueTypeText, "", "")
+			return properties.Create(tx, userID, "Role", propertymeta.ValueTypeText, "", "")
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if userRole.Key != "role" || userRole.Origin != properties.OriginUser {
+		if userRole.Key != "role" || userRole.Origin != vocabkey.OriginUser {
 			t.Fatalf("user role %+v", userRole)
 		}
 		if err := subjectvocab.AppendBinding(c, personType.ID, userRole.ID); err != nil {
@@ -508,14 +509,14 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	})
 
 	t.Run("seeded role bound to person is inbound not a facet", func(t *testing.T) {
-		roleProp, err := properties.Lookup(c, "role", properties.OriginProvenencia)
+		roleProp, err := properties.Lookup(c, "role", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if err := subjectvocab.AppendBinding(c, personType.ID, roleProp.ID); err != nil {
 			t.Fatal(err)
 		}
-		roleTerm, err := propertyterms.Lookup(c, roleProp.ID, "witness", propertyterms.OriginProvenencia)
+		roleTerm, err := propertyterms.Lookup(c, roleProp.ID, "witness", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -568,7 +569,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 func TestSnapshotOwnedThenRelease(t *testing.T) {
 	c, userID := testCatalog(t)
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -615,54 +616,56 @@ func TestSnapshotOwnedThenRelease(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tx, err = db.Begin()
+	wtx, err := c.BeginWrite()
 	if err != nil {
 		t.Fatal(err)
 	}
-	snap1, err := deleteimpact.SnapshotOwned(tx, catalogmodel.KindArtifact, art1.ID)
+	snap1, err := deleteimpact.SnapshotOwned(wtx.Tx, catalogmodel.KindArtifact, art1.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, art1.ID); err != nil {
+	if _, err := wtx.Exec(`DELETE FROM artifacts WHERE id = ?`, art1.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := deleteimpact.ReleaseSnapshot(tx, snap1); err != nil {
+	if err := deleteimpact.ReleaseSnapshot(wtx, snap1); err != nil {
 		t.Fatal(err)
 	}
 	var left int
-	if err := tx.QueryRow(`SELECT COUNT(*) FROM files WHERE id = ?`, fileA).Scan(&left); err != nil {
+	if err := wtx.QueryRow(`SELECT COUNT(*) FROM files WHERE id = ?`, fileA).Scan(&left); err != nil {
 		t.Fatal(err)
 	}
 	if left != 1 {
 		t.Fatalf("shared file removed early left=%d", left)
 	}
-	if err := tx.Commit(); err != nil {
+	if err := wtx.Commit(); err != nil {
 		t.Fatal(err)
 	}
+	c.EndWrite()
 
-	tx, err = db.Begin()
+	wtx, err = c.BeginWrite()
 	if err != nil {
 		t.Fatal(err)
 	}
-	snap2, err := deleteimpact.SnapshotOwned(tx, catalogmodel.KindArtifact, art2.ID)
+	snap2, err := deleteimpact.SnapshotOwned(wtx.Tx, catalogmodel.KindArtifact, art2.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, art2.ID); err != nil {
+	if _, err := wtx.Exec(`DELETE FROM artifacts WHERE id = ?`, art2.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := deleteimpact.ReleaseSnapshot(tx, snap2); err != nil {
+	if err := deleteimpact.ReleaseSnapshot(wtx, snap2); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.QueryRow(`SELECT COUNT(*) FROM files WHERE id = ?`, fileA).Scan(&left); err != nil {
+	if err := wtx.QueryRow(`SELECT COUNT(*) FROM files WHERE id = ?`, fileA).Scan(&left); err != nil {
 		t.Fatal(err)
 	}
 	if left != 0 {
 		t.Fatalf("last pointer left files=%d", left)
 	}
-	if err := tx.Commit(); err != nil {
+	if err := wtx.Commit(); err != nil {
 		t.Fatal(err)
 	}
+	c.EndWrite()
 }
 
 func TestImpactSourceAndArtifact(t *testing.T) {
@@ -671,7 +674,7 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 		t.Fatal(err)
 	}
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -751,7 +754,7 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	personType, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -781,7 +784,7 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 func TestImpactAgreesWithSQLite(t *testing.T) {
 	c, userID := testCatalog(t)
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)

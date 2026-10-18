@@ -3,23 +3,26 @@ package match
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // name is a structured name. The form is a transcription and is not compared;
 // the words become given names and a surname, the way a researcher files parts.
 func name(form string) Value {
-	n := &namevalues.Value{Form: form}
+	n := &namevalue.Value{Form: form}
 	words := strings.Fields(form)
 	for i, w := range words {
-		typ := namevalues.PartTypeGiven
+		typ := namevalue.PartTypeGiven
 		if i == len(words)-1 {
-			typ = namevalues.PartTypeSurname
+			typ = namevalue.PartTypeSurname
 		}
-		n.Parts = append(n.Parts, namevalues.Part{Idx: i, Value: w, Type: typ})
+		n.Parts = append(n.Parts, namevalue.Part{Idx: i, Value: w, Type: typ})
 	}
 	return Value{Name: n}
 }
@@ -32,52 +35,49 @@ func approx(near float64) func(float64) bool {
 	return func(got float64) bool { return math.Abs(got-near) < 1e-9 }
 }
 
-func TestComparers(t *testing.T) {
+// rules is the registry's value section, as callers pass it to Rank.
+var rules = matchregistry.Default().Value
+
+func bound(q string, y int) Value {
+	return Value{Date: &datevalue.Value{Kind: datevalue.KindPoint, Qualifier: q, StartYear: &y}}
+}
+
+func date(y int, m, d *int) Value {
+	return Value{Date: &datevalue.Value{StartYear: &y, StartMonth: m, StartDay: d}}
+}
+
+func TestCompare(t *testing.T) {
 	tests := []struct {
 		name       string
-		cmp        Comparer
+		valueType  string
 		a, b       Value
 		want       float64
 		comparable bool
 	}{
-
-		{"text: same", TextComparer{}, text("York"), text("york"), 1, true},
-		{"text: contained", TextComparer{}, text("York, Upper Canada"), text("York"), 0.35, true},
-		{"text: lone letters are not initials", TextComparer{}, text("A"), text("Abbey Street"), 0, true},
-		{"text: long text pairs greedily", TextComparer{}, text("a1 b2 c3 d4 e5 f6 g7 h8 i9 j10 k11 l12 m13 n14"), text("n14 m13 l12 k11 j10 i9 h8 g7 f6 e5 d4 c3 b2 a1"), 0.7, true},
-		{"text: a lone letter matches itself", TextComparer{}, text("Lot A"), text("Lot A"), 1, true},
-		{"text: different", TextComparer{}, text("York"), text("Toronto"), 0, true},
-
-		{"term: same", TermComparer{}, term("male"), term("male"), 1, true},
-		{"term: different", TermComparer{}, term("male"), term("female"), 0, true},
-		{"term: neutral", TermComparer{}, neutral("unknown"), term("male"), 0, false},
-		{"term: the key alone is not neutral", TermComparer{}, term("unknown"), term("male"), 0, true},
-
-		{"integer: equal", IntegerComparer{}, integer(40), integer(40), 1, true},
-		{"integer: off by one", IntegerComparer{}, integer(40), integer(41), 0, true},
-		{"integer: within tolerance", IntegerComparer{Tolerance: Set(int64(1))}, integer(40), integer(41), 0.5, true},
+		{"term: same", "term", term("male"), term("male"), 1, true},
+		{"term: different", "term", term("male"), term("female"), 0, true},
+		{"term: neutral", "term", neutral("unknown"), term("male"), 0, false},
+		{"term: the key alone is not neutral", "term", term("unknown"), term("male"), 0, true},
+		{"text: same", "text", text("York"), text("york"), 1, true},
+		{"text: contained", "text", text("York, Upper Canada"), text("York"), 0.35, true},
+		{"text: a name value is not text", "text", name("James Robins"), text("James Robins"), 0, false},
+		{"integer: equal", "integer", integer(40), integer(40), 1, true},
+		{"integer: off by one", "integer", integer(40), integer(41), 0, true},
+		{"integer: one side has none", "integer", Value{Integer: 0}, integer(0), 0, false},
+		{"date: a phrase only is not comparable", "date", Value{Date: &datevalue.Value{Phrase: "in the spring"}}, date(1817, nil, nil), 0, false},
+		{"name: a word on one side only", "name", name("James Robins"), name("James Kenneth Robins"), 5.0 / 5.5, true},
+		{"subject: not compared", "subject", text("x"), text("x"), 0, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, ok := tt.cmp.Compare(tt.a, tt.b)
+			got, ok := Compare(rules, tt.valueType, tt.a, tt.b)
 			if ok != tt.comparable || !approx(tt.want)(got) {
 				t.Fatalf("got %v %v, want %v %v", got, ok, tt.want, tt.comparable)
 			}
-			if back, _ := tt.cmp.Compare(tt.b, tt.a); !approx(got)(back) {
+			if back, backOK := Compare(rules, tt.valueType, tt.b, tt.a); backOK != ok || !approx(got)(back) {
 				t.Fatalf("not symmetric: %v then %v", got, back)
 			}
 		})
-	}
-}
-
-func TestComparerFor(t *testing.T) {
-	for _, vt := range []string{"name", "text", "term", "date", "integer"} {
-		if ComparerFor(vt) == nil {
-			t.Errorf("%s has no comparer", vt)
-		}
-	}
-	if ComparerFor("subject") != nil {
-		t.Error("subject values are not compared")
 	}
 }
 
@@ -113,52 +113,63 @@ func TestRankPersons(t *testing.T) {
 	candidates := []Candidate{
 		person("PER-B", []string{"Jim Robins", "James Robins"}, "male"), // best cluster wins: 10 + 1
 		person("PER-A", []string{"James Robins"}, ""),                   // no sex to compare: 10
-		person("PER-C", []string{"Mary Robins"}, "unknown"),             // neutral sex: 6
+		person("PER-C", []string{"Mary Robins"}, "unknown"),             // neutral sex; Different name: 0, below
 		person("PER-D", []string{"James Robins"}, "female"),             // 10 − 2 = 8, still shown
 		person("PER-E", []string{"Ada Lovelace"}, "male"),               // 0 + 1, below
 		person("PER-F", nil, "male"),                                    // no name: 1, below
 	}
-	got := Rank(p, probe, candidates, 0)
-	if want := "[PER-B=11.0 PER-A=10.0 PER-D=8.0 PER-C=6.0]"; refs(got) != want {
+	got := Rank(p, rules, probe, candidates, 0)
+	if want := "[PER-B=11.0 PER-A=10.0 PER-D=8.0]"; refs(got) != want {
 		t.Fatalf("got %s, want %s", refs(got), want)
 	}
 	if r := got[0].Reasons; len(r) != 2 || r[0].Property.Key != "name" || r[0].Similarity != 1 || r[1].Contribution != 1 {
 		t.Fatalf("reasons %+v", r)
 	}
-	if r := got[3].Reasons; len(r) != 1 {
+	if r := Score(p, rules, probe, candidates[2]).Reasons; len(r) != 1 {
 		t.Fatalf("a neutral term is not a reason: %+v", r)
 	}
-	if contra := Score(p, probe, candidates[3]); contra.Reasons[1].Contribution != -2 {
+	if contra := Score(p, rules, probe, candidates[3]); contra.Reasons[1].Contribution != -2 {
 		t.Fatalf("contradiction %+v", contra.Reasons)
 	}
 
+	t.Run("a surname alone is a resemblance, another first name is none", func(t *testing.T) {
+		cands := []Candidate{
+			person("PER-A", []string{"James Robins"}, ""),
+			person("PER-B", []string{"Robins"}, ""), // 10 × 2·F / (2·F + G1) = 7.5
+			person("PER-C", []string{"Mary Robins"}, ""),
+		}
+		if got := Rank(p, rules, person("", []string{"James Robins"}, "").Values, cands, 0); refs(got) != "[PER-A=10.0 PER-B=7.5]" {
+			t.Fatalf("%s", refs(got))
+		}
+	})
+
 	t.Run("limit", func(t *testing.T) {
-		if got := Rank(p, probe, candidates, 1); refs(got) != "[PER-B=11.0]" {
+		if got := Rank(p, rules, probe, candidates, 1); refs(got) != "[PER-B=11.0]" {
 			t.Fatalf("%s", refs(got))
 		}
 	})
 
 	t.Run("ties break by ref", func(t *testing.T) {
 		tied := []Candidate{person("PER-Z", []string{"James Robins"}, ""), person("PER-Y", []string{"James Robins"}, "")}
-		if got := Rank(p, probe, tied, 0); refs(got) != "[PER-Y=10.0 PER-Z=10.0]" {
+		if got := Rank(p, rules, probe, tied, 0); refs(got) != "[PER-Y=10.0 PER-Z=10.0]" {
 			t.Fatalf("%s", refs(got))
 		}
 	})
 
 	t.Run("a probe with nothing comparable matches nothing", func(t *testing.T) {
-		if got := Rank(p, Values{}, candidates, 0); len(got) != 0 {
+		if got := Rank(p, rules, Values{}, candidates, 0); len(got) != 0 {
 			t.Fatalf("%s", refs(got))
 		}
 	})
 
 	t.Run("tuned profile", func(t *testing.T) {
-		lenient := p.With(Feature{Property: product("sex_at_birth"), Comparer: TermComparer{}, Weight: 1})
+		lenient := p.With(Feature{Property: product("sex_at_birth"), ValueType: "term", Weight: 1})
 		lenient.MinScore = 1
 		if len(lenient.Features) != 3 || len(p.Features) != 3 || p.Features[1].Contradiction != 2 {
 			t.Fatal("With must replace in a copy")
 		}
-		got := Rank(lenient, probe, candidates, 0)
-		if want := "[PER-B=11.0 PER-A=10.0 PER-D=10.0 PER-C=6.0 PER-E=1.0 PER-F=1.0]"; refs(got) != want {
+		got := Rank(lenient, rules, probe, candidates, 0)
+		if want := "[PER-B=11.0 PER-A=10.0 PER-D=10.0 PER-E=1.0 PER-F=1.0]"; refs(got) != want {
 			t.Fatalf("got %s, want %s", refs(got), want)
 		}
 	})
@@ -174,22 +185,31 @@ func TestRankEventsAndPlaces(t *testing.T) {
 		return Candidate{EntityID: []byte(ref), Ref: ref, Values: v}
 	}
 	probe := event("", "birth", date(1817, ip(5), ip(14))).Values
-	got := Rank(ev, probe, []Candidate{
+	got := Rank(ev, rules, probe, []Candidate{
 		event("EVT-A", "birth", date(1817, ip(5), ip(14))), // 4 + 6
-		event("EVT-B", "birth", date(1818, nil, nil)),      // 4 + 6 × 0.533
+		event("EVT-B", "birth", date(1818, nil, nil)),      // 4 + 6 × 0.498
 		event("EVT-C", "birth", Value{}),                   // type alone: 4, below
 		event("EVT-D", "death", date(1817, ip(5), ip(14))), // −6 + 6 = 0
 		event("EVT-E", "birth", date(1900, nil, nil)),      // 4 − 4 = 0
 	}, 0)
-	if want := "[EVT-A=10.0 EVT-B=7.2]"; refs(got) != want {
+	if want := "[EVT-A=10.0 EVT-B=7.0]"; refs(got) != want {
 		t.Fatalf("events: got %s, want %s", refs(got), want)
 	}
+
+	t.Run("about reads as a range", func(t *testing.T) {
+		abt := Value{Date: &datevalue.Value{StartYear: ip(1817), Qualifier: "ABT"}}
+		probe := Values{product("event_type"): {term("birth")}, product("date"): {abt}}
+		m := Score(ev, rules, probe, event("EVT-B", "birth", date(1818, nil, nil)))
+		if !approx(4 + 6*0.7)(m.Score) {
+			t.Fatalf("score %v, reasons %+v", m.Score, m.Reasons)
+		}
+	})
 
 	pl, _ := DefaultProfile("place")
 	place := func(ref, toponym string) Candidate {
 		return Candidate{EntityID: []byte(ref), Ref: ref, Values: Values{product("toponym"): {text(toponym)}}}
 	}
-	got = Rank(pl, Values{product("toponym"): {text("York")}}, []Candidate{
+	got = Rank(pl, rules, Values{product("toponym"): {text("York")}}, []Candidate{
 		place("PLC-A", "York, Upper Canada"), place("PLC-B", "york"), place("PLC-C", "Toronto"),
 	}, 0)
 	if want := "[PLC-B=10.0 PLC-A=3.5]"; refs(got) != want {
@@ -208,13 +228,167 @@ func TestEvaluateNeutralTermIsNotComparable(t *testing.T) {
 	sex := Property{Key: "sex_at_birth", Origin: "provenencia"}
 	metas := []PropertyMeta{{Property: sex, ValueType: "term"}}
 	for _, other := range []Value{term("male"), neutral("unknown"), neutral("indeterminate")} {
-		ev := Evaluate(Values{sex: {neutral("unknown")}}, Values{sex: {other}}, metas)
+		ev := Evaluate(Values{sex: {neutral("unknown")}}, Values{sex: {other}}, metas, rules)
 		if c := ev.Comparisons[0]; c.Comparable || c.Outcome != OutcomeUnknown {
 			t.Fatalf("unknown vs %s: comparable=%v outcome=%s, want not comparable", other.Term, c.Comparable, c.Outcome)
 		}
 	}
-	ev := Evaluate(Values{sex: {{Term: "female"}}}, Values{sex: {{Term: "male"}}}, metas)
+	ev := Evaluate(Values{sex: {{Term: "female"}}}, Values{sex: {{Term: "male"}}}, metas, rules)
 	if c := ev.Comparisons[0]; !c.Comparable || c.Outcome != OutcomeConflict {
 		t.Fatalf("female vs male: comparable=%v outcome=%s, want a conflict", c.Comparable, c.Outcome)
 	}
+}
+
+// cachedPerson is a handle whose values carry cache support, in rank order.
+func cachedPerson(ref string, names map[string]int, sex map[string]int) Candidate {
+	v := Values{}
+	for _, f := range sortedKeys(names) {
+		n := name(f)
+		n.SetEvidence(names[f], 0, len(v[product("name")])+1, "kept")
+		v[product("name")] = append(v[product("name")], n)
+	}
+	for _, k := range sortedKeys(sex) {
+		t := term(k)
+		t.SetEvidence(sex[k], 0, len(v[product("sex_at_birth")])+1, "kept")
+		v[product("sex_at_birth")] = append(v[product("sex_at_birth")], t)
+	}
+	return Candidate{EntityID: []byte(ref), Ref: ref, Values: v}
+}
+
+func sortedKeys(m map[string]int) []string {
+	var out []string
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func reasonFor(t *testing.T, m Match, key string) Reason {
+	t.Helper()
+	for _, r := range m.Reasons {
+		if r.Property.Key == key {
+			return r
+		}
+	}
+	t.Fatalf("no %s reason in %+v", key, m.Reasons)
+	return Reason{}
+}
+
+func TestScoreSupport(t *testing.T) {
+	p, _ := DefaultProfile("person")
+	sexProbe := func(k string) Values { return Values{product("sex_at_birth"): {term(k)}} }
+	handle := cachedPerson("PER-A", nil, map[string]int{"male": 3, "female": 1})
+
+	if r := reasonFor(t, Score(p, rules, sexProbe("female"), handle), "sex_at_birth"); r.Contribution != -2 || r.Probe.Label != "female" || r.Candidate.Label != "male" {
+		t.Errorf("AC-1.1: %+v", r)
+	}
+	if r := reasonFor(t, Score(p, rules, sexProbe("male"), handle), "sex_at_birth"); r.Contribution != 1 || r.Probe.Label != "male" || r.Candidate.Label != "male" {
+		t.Errorf("AC-1.2: %+v", r)
+	}
+
+	stray := cachedPerson("PER-B", map[string]int{"Mary Smith": 5, "James Robins": 1}, nil)
+	probe := Values{product("name"): {name("James Robins")}}
+	r := reasonFor(t, Score(p, rules, probe, stray), "name")
+	if r.Similarity != 0 || r.Contribution != 0 || r.Probe.Label != "James Robins" || r.Candidate.Label != "Mary Smith" {
+		t.Errorf("AC-1.4: %+v", r)
+	}
+
+	equal := cachedPerson("PER-C", map[string]int{"Mary Smith": 1, "Mary Jones": 1}, nil)
+	probe = Values{product("name"): {name("Mary Jones")}}
+	if r := reasonFor(t, Score(p, rules, probe, equal), "name"); r.Contribution != 10 {
+		t.Errorf("AC-1.5: %+v", r)
+	}
+
+	near := cachedPerson("PER-D", map[string]int{"Robins": 3, "Robbins": 1}, nil)
+	probe = Values{product("name"): {name("Robbins")}}
+	r = reasonFor(t, Score(p, rules, probe, near), "name")
+	if !approx(0.857)(math.Round(r.Similarity*1000)/1000) || r.Probe.Label != "Robbins" || r.Candidate.Label != "Robins" {
+		t.Errorf("AC-1.6: %+v", r)
+	}
+}
+
+// A multiple-cardinality Feature keeps every displayed value as a leader, so
+// a handle's minority toponym still matches in full.
+func TestScoreMultipleToponyms(t *testing.T) {
+	p, _ := DefaultProfile("place")
+	york, eboracum := text("York"), text("Eboracum")
+	york.SetEvidence(3, 0, 1, "kept")
+	eboracum.SetEvidence(1, 0, 2, "kept")
+	cand := Candidate{EntityID: []byte("PLC-A"), Ref: "PLC-A", Values: Values{product("toponym"): {york, eboracum}}}
+	probe := Values{product("toponym"): {text("Eboracum")}}
+
+	if r := reasonFor(t, Score(p, rules, probe, cand), "toponym"); r.Contribution != 10 || r.Candidate.Label != "Eboracum" {
+		t.Errorf("minority toponym: %+v", r)
+	}
+	if got := Rank(p, rules, probe, []Candidate{cand}, 10); len(got) != 1 || got[0].Ref != "PLC-A" {
+		t.Errorf("Rank = %+v", got)
+	}
+}
+
+func TestScoreDatePeriod(t *testing.T) {
+	ev, _ := DefaultProfile("event")
+	period := Candidate{Ref: "EVT-P", Values: Values{pStart: {year(1815)}, pEnd: {year(1820)}}}
+	dated := func(y int) Candidate { return Candidate{Ref: "EVT-D", Values: Values{pDate: {year(y)}}} }
+	reasonFor := func(m Match, p Property) (Reason, bool) {
+		for _, r := range m.Reasons {
+			if r.Property == p {
+				return r, true
+			}
+		}
+		return Reason{}, false
+	}
+
+	t.Run("a date inside a period", func(t *testing.T) {
+		m := Score(ev, rules, Values{pDate: {year(1817)}}, period)
+		r, ok := reasonFor(m, pDate)
+		if !ok || !approx(0.55)(r.Similarity) || !approx(3.3)(r.Contribution) || len(m.Reasons) != 1 {
+			t.Fatalf("%+v", m.Reasons)
+		}
+		if r.Probe.Label != "1817" || r.Candidate.Label != "Between 1815 and 1820" || r.Candidate.Date == nil {
+			t.Fatalf("labels %+v", r)
+		}
+	})
+	t.Run("swapped", func(t *testing.T) {
+		m := Score(ev, rules, period.Values, dated(1817))
+		r, ok := reasonFor(m, pDate)
+		if !ok || !approx(3.3)(r.Contribution) || r.Probe.Label != "Between 1815 and 1820" || r.Candidate.Label != "1817" {
+			t.Fatalf("%+v", m.Reasons)
+		}
+	})
+	t.Run("a date beyond the tolerance", func(t *testing.T) {
+		m := Score(ev, rules, Values{pDate: {year(1823)}}, period)
+		if r, ok := reasonFor(m, pDate); !ok || r.Contribution != -4 {
+			t.Fatalf("%+v", m.Reasons)
+		}
+	})
+	t.Run("only a start", func(t *testing.T) {
+		m := Score(ev, rules, Values{pDate: {year(1817)}}, Candidate{Values: Values{pStart: {year(1815)}}})
+		r, ok := reasonFor(m, pDate)
+		if !ok || !approx(0.2)(r.Similarity) || r.Candidate.Label != "After 1815" {
+			t.Fatalf("%+v", m.Reasons)
+		}
+	})
+	t.Run("both with a date", func(t *testing.T) {
+		m := Score(ev, rules, Values{pDate: {year(1817)}}, dated(1817))
+		if r, ok := reasonFor(m, pDate); !ok || r.Similarity != 1 || r.Candidate.Date.Kind == datevalue.KindRange {
+			t.Fatalf("%+v", m.Reasons)
+		}
+	})
+	t.Run("start and end only", func(t *testing.T) {
+		m := Score(ev, rules, period.Values, period)
+		if _, ok := reasonFor(m, pDate); ok || len(m.Reasons) != 2 {
+			t.Fatalf("%+v", m.Reasons)
+		}
+		if m.Reasons[0].Property != pStart || m.Reasons[1].Property != pEnd {
+			t.Fatalf("%+v", m.Reasons)
+		}
+	})
+	t.Run("a date, a start, and an end against a start and an end", func(t *testing.T) {
+		probe := Values{pDate: {year(1817)}, pStart: {year(1815)}, pEnd: {year(1820)}}
+		m := Score(ev, rules, probe, period)
+		if _, ok := reasonFor(m, pDate); ok || len(m.Reasons) != 2 {
+			t.Fatalf("%+v", m.Reasons)
+		}
+	})
 }

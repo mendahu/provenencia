@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -652,6 +653,66 @@ func TestSearchAccentedPlaceTypo(t *testing.T) {
 	}
 }
 
+func TestFoldedQueryScoresLikeExact(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	typeID := seedType(t, c, "Book", "")
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Montréal parish register"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scores []float64
+	for _, text := range []string{"Montreal", "Montréal"} {
+		hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: text})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(hits) == 0 || hits[0].ID != uuidString(src.ID) || hits[0].MatchReason != "title" {
+			t.Fatalf("%q: want the Source first as a title hit, got %+v", text, hits)
+		}
+		scores = append(scores, hits[0].Score)
+	}
+	if scores[0] != scores[1] {
+		t.Fatalf("scores differ: Montreal %v, Montréal %v", scores[0], scores[1])
+	}
+}
+
+// TestScoreFieldsJoinsWordBreaks: rescoring keys fields, so a token matches
+// across a word break. Retrieval is not involved.
+func TestScoreFieldsJoinsWordBreaks(t *testing.T) {
+	spec, _ := kindSpec(KindSource)
+	score, field, _ := scoreFields(spec, map[string]string{"title": "Sainte-Anne register"}, newQueryTokens([]string{"sainteanne"}))
+	if score <= 0 || field != "title" {
+		t.Fatalf("score %v field %q", score, field)
+	}
+}
+
+// BenchmarkScoreFieldsSource is the per-candidate cost of rescoring one Source
+// with long notes, the work done for every FTS candidate per query.
+func BenchmarkScoreFieldsSource(b *testing.B) {
+	spec, _ := kindSpec(KindSource)
+	para := "Le père Noël a mangé des crêpes à l'église de Saint-Étienne, puis la famille Robins est partie. "
+	values := map[string]string{
+		"title":       "Parish register of Sainte-Anne, Montréal",
+		"ref":         "SRC-F4N2P",
+		"description": strings.Repeat("Baptisms and burials. ", 14),
+		"notes":       strings.Repeat(para, 21),
+		"metadata":    strings.Repeat("Repository: Archives nationales du Québec. ", 9),
+		"filename":    "sainte-anne-register-1790.pdf",
+	}
+	q := newQueryTokens([]string{"robins"})
+	b.ReportAllocs()
+	for b.Loop() {
+		scoreFields(spec, values, q)
+	}
+}
+
 func TestEnsureCatalogRebuildsAfterWipe(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
@@ -726,7 +787,7 @@ func seedUser(t *testing.T, c *database.Catalog) []byte {
 func seedType(t *testing.T, c *database.Catalog, label, desc string) []byte {
 	t.Helper()
 	id, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: label, Description: desc,
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: label, Description: desc,
 	})
 	if err != nil {
 		t.Fatal(err)

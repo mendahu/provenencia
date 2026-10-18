@@ -3,12 +3,16 @@ package namealiases
 import (
 	"database/sql"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 func TestInstallAndLoad(t *testing.T) {
@@ -63,42 +67,42 @@ func TestWarmHoldsAliasTablesUntilInvalidated(t *testing.T) {
 	if _, err := db.Exec(`DELETE FROM name_alias_members WHERE token = 'jas'`); err != nil {
 		t.Fatal(err)
 	}
-	cmp, err := Comparer(c.Graph(), db, match.DefaultNames)
+	rules, err := Rules(c.Graph(), db, matchregistry.Default().Value)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertScore(t, cmp, "Jas.", "James", match.AliasCredit)
+	assertScore(t, rules, "Jas.", "James", matchregistry.Default().Value.Words.AliasCredit)
 
 	if err := Invalidate(c); err != nil {
 		t.Fatal(err)
 	}
-	cmp, err = Comparer(c.Graph(), db, match.DefaultNames)
+	rules, err = Rules(c.Graph(), db, matchregistry.Default().Value)
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, ok := cmp.Compare(given("Jas."), given("James"))
-	if ok && math.Abs(got-match.AliasCredit) < 1e-9 {
+	got, ok := compareGiven(rules, "Jas.", "James")
+	if ok && math.Abs(got-matchregistry.Default().Value.Words.AliasCredit) < 1e-9 {
 		t.Fatal("invalidate left the deleted token in the cache")
 	}
 
 	insertTable(t, db, "xyzzy", "user", "nickname", [][]string{{"xyzzy", "plugh"}})
-	cmp, err = Comparer(c.Graph(), db, match.DefaultNames)
+	rules, err = Rules(c.Graph(), db, matchregistry.Default().Value)
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, ok = cmp.Compare(given("Plugh"), given("Xyzzy"))
-	if ok && math.Abs(got-match.AliasCredit) < 1e-9 {
+	got, ok = compareGiven(rules, "Plugh", "Xyzzy")
+	if ok && math.Abs(got-matchregistry.Default().Value.Words.AliasCredit) < 1e-9 {
 		t.Fatal("a new table scored before invalidate")
 	}
 
 	if err := Invalidate(c); err != nil {
 		t.Fatal(err)
 	}
-	cmp, err = Comparer(c.Graph(), db, match.DefaultNames)
+	rules, err = Rules(c.Graph(), db, matchregistry.Default().Value)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertScore(t, cmp, "Plugh", "Xyzzy", match.AliasCredit)
+	assertScore(t, rules, "Plugh", "Xyzzy", matchregistry.Default().Value.Words.AliasCredit)
 }
 
 func TestEmptyCatalogScoresNoAliases(t *testing.T) {
@@ -111,12 +115,12 @@ func TestEmptyCatalogScoresNoAliases(t *testing.T) {
 	if len(tables) != 0 {
 		t.Fatalf("empty catalog loaded %d tables", len(tables))
 	}
-	cmp, err := Comparer(c.Graph(), db, match.DefaultNames)
+	rules, err := Rules(c.Graph(), db, matchregistry.Default().Value)
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, ok := cmp.Compare(given("Jas."), given("James"))
-	if !ok || math.Abs(got-match.AliasCredit) < 1e-9 {
+	got, ok := compareGiven(rules, "Jas.", "James")
+	if !ok || math.Abs(got-matchregistry.Default().Value.Words.AliasCredit) < 1e-9 {
 		t.Fatalf("empty catalog still aliased: %.4f %v", got, ok)
 	}
 }
@@ -129,14 +133,46 @@ func TestUserAndPluginRowsScore(t *testing.T) {
 	db := mustDB(t, c)
 	insertTable(t, db, "xyzzy", "user", "nickname", [][]string{{"xyzzy", "plugh"}})
 	insertTable(t, db, "pepe", "plugin:example", "nickname", [][]string{{"josé", "pepe"}})
-	cmp, err := Comparer(c.Graph(), db, match.DefaultNames)
+	rules, err := Rules(c.Graph(), db, matchregistry.Default().Value)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertScore(t, cmp, "Plugh", "Xyzzy", match.AliasCredit)
-	assertScore(t, cmp, "Pepe", "José", match.AliasCredit)
-	assertScore(t, cmp, "Jas.", "James", match.AliasCredit)
-	assertScore(t, cmp, "Jim", "James", match.AliasCredit)
+	assertScore(t, rules, "Plugh", "Xyzzy", matchregistry.Default().Value.Words.AliasCredit)
+	assertScore(t, rules, "Pepe", "José", matchregistry.Default().Value.Words.AliasCredit)
+	assertScore(t, rules, "Jas.", "James", matchregistry.Default().Value.Words.AliasCredit)
+	assertScore(t, rules, "Jim", "James", matchregistry.Default().Value.Words.AliasCredit)
+}
+
+// TestInstallStoresComparisonTokens: a set is stored as the tokens a name
+// produces, once each, so case and a repeated token cannot split or collide.
+func TestInstallStoresComparisonTokens(t *testing.T) {
+	t.Cleanup(ResetAliasTablesForTest)
+	Register(valuecompare.AliasTable{
+		Key: "test-nicks", Origin: vocabkey.OriginUser, Label: "Test", Kind: valuecompare.AliasNickname,
+		Roles: aliasPartRoles(),
+		Sets:  [][]string{{"Jim", "JAMES"}, {"Jim", "jim", "James"}, {"Mary-Ann", "Polly"}},
+	})
+	c := newCatalog(t)
+	if err := Install(c); err != nil {
+		t.Fatal(err)
+	}
+	db := mustDB(t, c)
+	tables, err := Load(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := tableByKey(t, tables, "test-nicks")
+	want := [][]string{{"james", "jim"}, {"james", "jim"}, {"maryann", "polly"}}
+	if !reflect.DeepEqual(got.Sets, want) {
+		t.Fatalf("stored sets %v, want %v", got.Sets, want)
+	}
+	rules, err := Rules(c.Graph(), db, matchregistry.Default().Value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertScore(t, rules, "Jim", "James", matchregistry.Default().Value.Words.AliasCredit)
+	// No seed set holds maryann: only the registered set scores this.
+	assertScore(t, rules, "Maryann", "Polly", matchregistry.Default().Value.Words.AliasCredit)
 }
 
 func newCatalog(t *testing.T) *database.Catalog {
@@ -183,7 +219,7 @@ func insertTable(t *testing.T, db *sql.DB, key, origin, kind string, sets [][]st
 	}
 }
 
-func tableByKey(t *testing.T, tables []match.AliasTable, key string) match.AliasTable {
+func tableByKey(t *testing.T, tables []valuecompare.AliasTable, key string) valuecompare.AliasTable {
 	t.Helper()
 	for _, table := range tables {
 		if table.Key == key {
@@ -191,10 +227,10 @@ func tableByKey(t *testing.T, tables []match.AliasTable, key string) match.Alias
 		}
 	}
 	t.Fatalf("no table %q", key)
-	return match.AliasTable{}
+	return valuecompare.AliasTable{}
 }
 
-func hasSet(table match.AliasTable, a, b string) bool {
+func hasSet(table valuecompare.AliasTable, a, b string) bool {
 	for _, set := range table.Sets {
 		foundA, foundB := false, false
 		for _, token := range set {
@@ -212,9 +248,16 @@ func hasSet(table match.AliasTable, a, b string) bool {
 	return false
 }
 
-func assertScore(t *testing.T, cmp match.NameComparer, a, b string, want float64) {
+// compareGiven is the similarity of two given names under rules, and whether
+// they are comparable at all.
+func compareGiven(rules valuecompare.Rules, a, b string) (float64, bool) {
+	res, _ := valuecompare.Compare(given(a), given(b), rules)
+	return res.Similarity, res.Relation != valuecompare.Unknown
+}
+
+func assertScore(t *testing.T, rules valuecompare.Rules, a, b string, want float64) {
 	t.Helper()
-	got, ok := cmp.Compare(given(a), given(b))
+	got, ok := compareGiven(rules, a, b)
 	if !ok || math.Abs(got-want) > 1e-9 {
 		t.Fatalf("%s vs %s: got %.4f %v, want %.4f", a, b, got, ok, want)
 	}
@@ -240,7 +283,7 @@ func TestAddProductNicknamesFillsAnEmptyCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(tables) != 1 || tables[0].Key != "nicknames" || tables[0].Origin != match.OriginProvenencia {
+	if len(tables) != 1 || tables[0].Key != "nicknames" || tables[0].Origin != vocabkey.OriginProvenencia {
 		t.Fatalf("tables %+v", tables)
 	}
 	if !hasSet(tables[0], "chris", "christine") || hasSet(tables[0], "tina", "christopher") {
@@ -251,7 +294,7 @@ func TestAddProductNicknamesFillsAnEmptyCatalog(t *testing.T) {
 func TestAddProductNicknamesGrowsTheShortList(t *testing.T) {
 	c := newCatalog(t)
 	db := mustDB(t, c)
-	insertTable(t, db, "nicknames", match.OriginProvenencia, "nickname", [][]string{{"james", "jim", "jimmy"}})
+	insertTable(t, db, "nicknames", vocabkey.OriginProvenencia, "nickname", [][]string{{"james", "jim", "jimmy"}})
 	insertTable(t, db, "nicknames", "user", "nickname", [][]string{{"xyzzy", "plugh"}})
 
 	added, err := AddProductNicknames(c)
@@ -268,7 +311,7 @@ func TestAddProductNicknamesGrowsTheShortList(t *testing.T) {
 	product := tableByKey(t, tables, "nicknames")
 	// Load orders by key, origin. Both tables share the key. Take provenencia.
 	for _, table := range tables {
-		if table.Key == "nicknames" && table.Origin == match.OriginProvenencia {
+		if table.Key == "nicknames" && table.Origin == vocabkey.OriginProvenencia {
 			product = table
 		}
 	}
@@ -278,7 +321,7 @@ func TestAddProductNicknamesGrowsTheShortList(t *testing.T) {
 	if !hasSet(product, "chris", "christine") || hasSet(product, "tina", "christopher") {
 		t.Fatal("shared nickname joined two formal names")
 	}
-	user := match.AliasTable{}
+	user := valuecompare.AliasTable{}
 	for _, table := range tables {
 		if table.Origin == "user" {
 			user = table
@@ -289,7 +332,7 @@ func TestAddProductNicknamesGrowsTheShortList(t *testing.T) {
 	}
 }
 
-func setsWithAll(table match.AliasTable, tokens ...string) int {
+func setsWithAll(table valuecompare.AliasTable, tokens ...string) int {
 	n := 0
 	for _, set := range table.Sets {
 		have := map[string]bool{}
@@ -310,8 +353,8 @@ func setsWithAll(table match.AliasTable, tokens ...string) int {
 	return n
 }
 
-func given(text string) match.Value {
-	return match.Value{Name: &namevalues.Value{Parts: []namevalues.Part{{
-		Value: text, Type: namevalues.PartTypeGiven,
+func given(text string) valuecompare.Value {
+	return valuecompare.Value{Type: propertymeta.ValueTypeName, Name: &namevalue.Value{Parts: []namevalue.Part{{
+		Value: text, Type: namevalue.PartTypeGiven,
 	}}}}
 }

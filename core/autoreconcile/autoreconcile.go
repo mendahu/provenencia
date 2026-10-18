@@ -19,19 +19,19 @@
 // or NameValue row (seeded-vocabulary §5.3).
 //
 // Names reconcile by structured parts (names.go). Dates reconcile by window
-// (dates.go). Subjects stay on an exact-key module until S9-28.
+// (dates.go). Subjects reconcile by their accepted handle. Depictions reconcile by image File.
 package autoreconcile
 
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
-	"unicode"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/depictionvalues"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // State describes how a Property's candidates reconciled.
@@ -63,7 +63,7 @@ const (
 
 var (
 	// ErrUnknownValueType is returned for a value type outside the closed
-	// properties.ValueType* set.
+	// propertymeta.ValueType* set.
 	ErrUnknownValueType = errors.New("resolve: unknown value type")
 	// ErrValueMismatch is returned when a candidate or concluded value does
 	// not carry the field its value type needs.
@@ -82,8 +82,11 @@ type Value struct {
 	Neutral    bool   // the term is no evidence either way (its catalog flag)
 	SubjectID  []byte // the cited subject
 	EntityID   []byte // that subject's accepted handle, when the loader resolved one
-	Date       *datevalues.Value
-	Name       *namevalues.Value
+	Date       *datevalue.Value
+	Name       *namevalue.Value
+	// Depiction is the depiction_values row, read through
+	// depictionvalues.Readable; its ImageFileID is empty when the image is refused.
+	Depiction *depictionvalues.Value
 }
 
 // Candidate is one member Observation's value for the Property, with the
@@ -143,7 +146,16 @@ type ReconciledValue struct {
 }
 
 // Displayed reports whether the value is one of the displayed values.
-func (c ReconciledValue) Displayed() bool { return c.Reason == ReasonKept }
+// Displayed reports whether the verdict is a displayed value: the one rule
+// the matcher and the reconciler share.
+func (r Reason) Displayed() bool { return r == ReasonKept }
+
+// InGallery reports whether a gallery lists a record whose outcome has this reason:
+// a vote for a displayed value, or weak evidence; a weak photo does not contradict
+// another photo (working rule "A gallery is the reconciled likeness values").
+func (r Reason) InGallery() bool { return r == ReasonKept || r == ReasonWeak }
+
+func (c ReconciledValue) Displayed() bool { return c.Reason.Displayed() }
 
 // Outcome is what happened to one candidate.
 type Outcome struct {
@@ -188,7 +200,7 @@ func (r Result) State() State {
 	case len(shown) == 0:
 		return StateEmpty
 	case len(shown) > 1:
-		if r.cardinality == properties.CardinalityMultiple {
+		if r.cardinality == propertymeta.CardinalityMultiple {
 			return StateMultiple
 		}
 		return StateMixed
@@ -200,56 +212,50 @@ func (r Result) State() State {
 }
 
 // Reconcile reconciles candidates for a Property of valueType and cardinality
-// (single or multiple). The result does not depend on the input order. A
+// (single or multiple), deciding "the same value" with value compare under
+// rules. The result does not depend on the input order. A
 // non-nil concluded value always takes rank 1: it joins the auto-reconciled
 // value it equals, or stands alone with support 0 ahead of the rest.
-func Reconcile(valueType string, candidates []Candidate, concluded *Value, cardinality string) (Result, error) {
-	if !knownValueType(valueType) {
+func Reconcile(rules valuecompare.Rules, valueType string, candidates []Candidate, concluded *Value, cardinality string) (Result, error) {
+	m := moduleFor(rules, valueType)
+	if m == nil {
 		return Result{}, fmt.Errorf("%w: %q", ErrUnknownValueType, valueType)
 	}
 	switch cardinality {
-	case properties.CardinalitySingle, properties.CardinalityMultiple:
+	case propertymeta.CardinalitySingle, propertymeta.CardinalityMultiple:
 	default:
 		return Result{}, fmt.Errorf("%w: %q", ErrUnknownValueType, cardinality)
 	}
 	for _, c := range candidates {
-		if !carries(valueType, c.Value) {
+		if !Carries(valueType, c.Value) {
 			return Result{}, ErrValueMismatch
 		}
 	}
-	if concluded != nil && !carries(valueType, *concluded) {
+	if concluded != nil && !Carries(valueType, *concluded) {
 		return Result{}, ErrValueMismatch
 	}
-	return reconcile(moduleFor(valueType), candidates, concluded, cardinality), nil
+	return reconcile(m, candidates, concluded, cardinality), nil
 }
 
-func knownValueType(vt string) bool {
-	switch vt {
-	case properties.ValueTypeText, properties.ValueTypeInteger, properties.ValueTypeDate,
-		properties.ValueTypeName, properties.ValueTypeSubject, properties.ValueTypeTerm:
-		return true
-	default:
-		return false
-	}
-}
-
-// carries reports whether v sets the field its value type needs. An empty
+// Carries reports whether v sets the field its value type needs. An empty
 // value of the right kind (blank text, a name with no parts) is carried and
 // becomes no evidence in the pipeline.
-func carries(valueType string, v Value) bool {
+func Carries(valueType string, v Value) bool {
 	switch valueType {
-	case properties.ValueTypeText:
+	case propertymeta.ValueTypeText:
 		return v.HasText
-	case properties.ValueTypeInteger:
+	case propertymeta.ValueTypeInteger:
 		return v.HasInteger
-	case properties.ValueTypeTerm:
+	case propertymeta.ValueTypeTerm:
 		return len(v.TermID) > 0
-	case properties.ValueTypeSubject:
+	case propertymeta.ValueTypeSubject:
 		return len(v.SubjectID) > 0
-	case properties.ValueTypeName:
+	case propertymeta.ValueTypeName:
 		return v.Name != nil
-	case properties.ValueTypeDate:
+	case propertymeta.ValueTypeDate:
 		return v.Date != nil
+	case propertymeta.ValueTypeDepiction:
+		return v.Depiction != nil
 	}
 	return false
 }
@@ -260,85 +266,31 @@ func carries(valueType string, v Value) bool {
 // Terms have no sort key here (ok = false): they sort by label.
 func SortKey(valueType string, v Value) (key string, ok bool) {
 	switch valueType {
-	case properties.ValueTypeName:
+	case propertymeta.ValueTypeName:
 		if v.Name == nil {
 			return "", false
 		}
-		return NormalizeForm(v.Name.Form), true
-	case properties.ValueTypeText:
+		return valuecompare.NormalizeForm(v.Name.Form), true
+	case propertymeta.ValueTypeText:
 		if !v.HasText {
 			return "", false
 		}
 		return strings.ToLower(strings.TrimSpace(v.Text)), true
-	case properties.ValueTypeInteger:
+	case propertymeta.ValueTypeInteger:
 		if !v.HasInteger {
 			return "", false
 		}
 		// Offset into uint64 so byte order matches numeric order, negatives included.
 		return fmt.Sprintf("%020d", uint64(v.Integer)^(1<<63)), true
-	case properties.ValueTypeDate:
+	case propertymeta.ValueTypeDate:
 		if v.Date == nil {
 			return "", false
 		}
-		lo, _, ok := DateBounds(*v.Date)
-		if !ok || lo == nil {
+		w, ok := valuecompare.DateWindow(*v.Date)
+		if !ok || w.Lo == nil {
 			return "", false
 		}
-		return fmt.Sprintf("%020d", int64(*lo)+dateSortOffset), true
+		return fmt.Sprintf("%020d", int64(*w.Lo)+dateSortOffset), true
 	}
 	return "", false
-}
-
-// NormalizeForm ignores case, punctuation, and whitespace differences: the
-// name sort key, and the text core/match tokenizes. Dashes
-// and slashes separate words ("Smith-Jones" reads as "smith jones"); other
-// punctuation is dropped, so an apostrophe joins ("O'Brien" reads as
-// "obrien", the same as "OBrien").
-func NormalizeForm(form string) string {
-	var b strings.Builder
-	space := false
-	for _, r := range form {
-		switch {
-		case unicode.Is(unicode.Pd, r) || r == '/':
-			space = b.Len() > 0
-			continue
-		case unicode.IsPunct(r):
-			continue
-		case unicode.IsSpace(r):
-			space = b.Len() > 0
-			continue
-		}
-		if space {
-			b.WriteByte(' ')
-			space = false
-		}
-		b.WriteRune(unicode.ToLower(r))
-	}
-	return b.String()
-}
-
-// dateKey matches on every structured field. Containment and overlap are
-// dateModule.fold, not this key.
-func dateKey(d *datevalues.Value) string {
-	parts := []string{
-		d.Kind, d.Qualifier, d.Calendar,
-		optInt(d.StartYear), optInt(d.StartMonth), optInt(d.StartDay),
-		optInt(d.StartHour), optInt(d.StartMinute), optInt(d.StartSecond), optInt(d.StartMillisecond),
-		d.StartTZ,
-		optInt(d.EndYear), optInt(d.EndMonth), optInt(d.EndDay),
-		optInt(d.EndHour), optInt(d.EndMinute), optInt(d.EndSecond), optInt(d.EndMillisecond),
-		d.EndTZ,
-		d.Phrase,
-	}
-	for i, p := range parts {
-		parts[i] = strconv.Quote(p)
-	}
-	return strings.Join(parts, "|")
-}
-
-func optInt(p *int) string {
-	if p == nil {
-		return "-"
-	}
-	return strconv.Itoa(*p)
 }

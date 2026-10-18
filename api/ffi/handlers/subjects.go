@@ -57,7 +57,7 @@ func CreateSubject(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateSubjectResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		s, _, err := writes.Run(c, writes.Op{Action: "create_subject", UserID: userID},
+		s, wrote, err := writes.Run(c, writes.Op{Action: "create_subject", UserID: userID},
 			func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 				return subjects.Create(tx, userID, subjects.CreateInput{
 					SourceID:      sourceID,
@@ -69,7 +69,7 @@ func CreateSubject(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.CreateSubjectResponse{Subject: subjectProto(s)}
+		out = &engine.CreateSubjectResponse{Subject: subjectProto(s), Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -93,18 +93,19 @@ func UpdateSubject(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdateSubjectResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if _, _, err := writes.Run(c, writes.Op{Action: "update_subject", UserID: userID},
+		_, wrote, err := writes.Run(c, writes.Op{Action: "update_subject", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := subjects.Update(tx, userID, subjectID, req.GetLabel(), req.GetDescription())
 				return struct{}{}, changes, err
-			}); err != nil {
+			})
+		if err != nil {
 			return err
 		}
 		s, err := subjects.Get(c, subjectID)
 		if err != nil {
 			return err
 		}
-		out = &engine.UpdateSubjectResponse{Subject: subjectProto(s)}
+		out = &engine.UpdateSubjectResponse{Subject: subjectProto(s), Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -126,18 +127,23 @@ func DeleteSubject(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	var out *engine.DeleteSubjectResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		_, _, err := writes.Run(c, writes.Op{Action: "delete_subject", UserID: userID},
+		_, wrote, err := writes.Run(c, writes.Op{Action: "delete_subject", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := subjects.Delete(tx, userID, subjectID)
 				return struct{}{}, changes, err
 			})
-		return err
+		if err != nil {
+			return err
+		}
+		out = &engine.DeleteSubjectResponse{Effects: writeEffectsProto(wrote)}
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return proto.Marshal(&engine.DeleteSubjectResponse{})
+	return proto.Marshal(out)
 }
 
 func ListSubjects(in []byte) ([]byte, error) {

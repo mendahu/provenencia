@@ -9,15 +9,15 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"math"
 	"strings"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 const (
-	OriginProvenencia = "provenencia"
-
 	StyleNatural = "natural"
 	StyleSorted  = "sorted"
 
@@ -45,7 +45,7 @@ type Profile struct {
 	Origin      string
 	Label       string
 	Description string
-	Pattern     match.NamePattern
+	Pattern     valuecompare.NamePattern
 	Natural     []PartOrder
 	Sorted      []PartOrder
 }
@@ -63,17 +63,17 @@ func (p Profile) Order(style string) []PartOrder {
 // Format joins name's parts in this profile's order for style. A part type
 // the style does not list follows, in stored order. No parts returns form.
 // form is never rewritten.
-func (p Profile) Format(name namevalues.Value, style string) string {
+func (p Profile) Format(name namevalue.Value, style string) string {
 	return Format(name, p.Order(style))
 }
 
 // Format joins name's parts by order. An empty order keeps stored order,
 // spaces between parts. No parts returns form.
-func Format(name namevalues.Value, order []PartOrder) string {
+func Format(name namevalue.Value, order []PartOrder) string {
 	if len(name.Parts) == 0 {
 		return strings.TrimSpace(name.Form)
 	}
-	byType := map[string][]namevalues.Part{}
+	byType := map[string][]namevalue.Part{}
 	var stored []string
 	seen := map[string]bool{}
 	for _, part := range name.Parts {
@@ -124,7 +124,7 @@ func Format(name namevalues.Value, order []PartOrder) string {
 	return b.String()
 }
 
-func joinPartValues(parts []namevalues.Part) string {
+func joinPartValues(parts []namevalue.Part) string {
 	var words []string
 	for _, part := range parts {
 		word := strings.TrimSpace(part.Value)
@@ -140,20 +140,18 @@ func joinPartValues(parts []namevalues.Part) string {
 type Loaded struct {
 	Key     string
 	Profile Profile
-	Set     match.NamePatternSet
 	Builtin bool
 }
 
-// Comparer scores names with the loaded patterns. A builtin load is
-// DefaultNames, so a catalog with no default scores as it does today.
-func (l Loaded) Comparer() match.NameComparer {
-	if l.Builtin || l.Set == nil {
-		return match.DefaultNames
+// Rules is base with the loaded pattern in Names.Patterns under its key, so a
+// name value that carries Key reads it. A builtin load returns base unchanged:
+// the western pattern is already Names.Western.
+func (l Loaded) Rules(base valuecompare.Rules) valuecompare.Rules {
+	if l.Builtin {
+		return base
 	}
-	c := match.DefaultNames
-	c.Patterns = l.Set
-	c.Pattern = match.Set(l.Key)
-	return c
+	base.Names.Patterns = map[string]valuecompare.NamePattern{l.Key: l.Profile.Pattern}
+	return base
 }
 
 // Load reads the project default. A missing or empty setting returns the
@@ -181,9 +179,11 @@ func Load(q Querier) (Loaded, error) {
 	return Loaded{
 		Key:     p.Key,
 		Profile: p,
-		Set:     match.NamePatternSet{p.Key: p.Pattern},
 	}, nil
 }
+
+// maxWeight is far above the built-in 1.5; it refuses weights whose sums overflow.
+const maxWeight = 1000
 
 // LoadID reads one profile. sql.ErrNoRows when the id is absent.
 func LoadID(q Querier, id []byte) (Profile, error) {
@@ -195,7 +195,7 @@ func LoadID(q Querier, id []byte) (Profile, error) {
 		return Profile{}, err
 	}
 	p.Description = description.String
-	p.Pattern = match.NamePattern{Key: p.Key, PartRoles: map[string]match.NameRole{}}
+	p.Pattern = valuecompare.NamePattern{PartRoles: map[string]valuecompare.NameRole{}}
 	rows, err := q.Query(`SELECT part_type, role FROM name_format_profile_roles WHERE profile_id = ?`, id)
 	if err != nil {
 		return Profile{}, err
@@ -206,7 +206,7 @@ func LoadID(q Querier, id []byte) (Profile, error) {
 			rows.Close()
 			return Profile{}, err
 		}
-		p.Pattern.PartRoles[partType] = match.NameRole(role)
+		p.Pattern.PartRoles[partType] = valuecompare.NameRole(role)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
@@ -224,6 +224,10 @@ func LoadID(q Querier, id []byte) (Profile, error) {
 		if err := rows.Scan(&slot, &weight); err != nil {
 			rows.Close()
 			return Profile{}, err
+		}
+		if math.IsNaN(weight) || math.IsInf(weight, 0) || weight < 0 || weight > maxWeight {
+			rows.Close()
+			return Profile{}, fmt.Errorf("nameformats: profile %q weight %q is %v; a weight is a finite number from 0 to %v", p.Key, slot, weight, float64(maxWeight))
 		}
 		switch slot {
 		case "family":
@@ -267,5 +271,5 @@ func LoadID(q Querier, id []byte) (Profile, error) {
 }
 
 func builtinLoaded() Loaded {
-	return Loaded{Key: match.WesternPattern, Builtin: true}
+	return Loaded{Key: valuecompare.WesternPattern, Builtin: true}
 }

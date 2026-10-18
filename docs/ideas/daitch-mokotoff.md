@@ -2,19 +2,21 @@
 
 **Status:** idea, 2026-10-12. Not scheduled. Descoped from Spike 10 (S10-26).
 
+**Spike 11 moves the code this note names.** The spelling helpers that lived in `core/autoreconcile` moved to value compare (`core/valuecompare`) in S11-02; `wordSimilarity` lives in `core/valuecompare/words.go` and its numbers in `core/matchregistry/value.go`; S11-05 deleted `match`'s copy ([`comparison-layers.md`](../deployment-plan/spike-11/comparison-layers.md)). Read the code paths below as "today's". **One conflict to settle when this is pulled in:** a shared code scores 0.7 below, but a name pair now needs at least 0.75 to be `Near`, so a sound-alike would read `Different`. The likely shape is `Near` with cause `phonetic` and its own minimum in the registry.
+
 A sound-alike tier under near-spelling, for two surnames that are not a one-edit misspelling and still share a code. Beider–Morse is the more precise phonetic algorithm and stays a separate later idea ([`international-names.md`](international-names.md)). This note is the Daitch–Mokotoff design if that is the one pulled back.
 
 Call it Daitch–Mokotoff. Do not call it a Jewish chart, Jewish Soundex, Eastern European Soundex, or a JewishGen chart. The authors discourage those nicknames because the rules are not tied to one community. The letter-to-digit rules are the procedure. Implementing them does not need a citation, a publisher link, or a borrowed copyright header. Do not copy anyone's explanatory prose. A one-line comment that names Daitch–Mokotoff Soundex is enough.
 
 ## Where it sits
 
-[`wordSimilarity`](../../core/match/words.go) already returns, in order: exact (1), initial, alias (0.98), fold (0.95), then the edit-distance ratio. Phonetics runs only when that ratio is 0, on the already-folded word.
+[`wordSimilarity`](../../core/valuecompare/words.go) already returns, in order: exact (1), initial, alias (0.98), fold (0.95), then the edit-distance ratio. Phonetics runs only when that ratio is 0, on the already-folded word.
 
 A shared code scores **0.7**. That is above 0 and below the lowest one-edit score the spelling tier returns (Ann/Anne is 0.75, Smyth/Smith is 0.8). Exact, alias, fold, and near-spelling never reach it. An initial is decided earlier and does not fall through.
 
 The tier applies to every role. Alias tables stay given, nick, and untyped. Surnames are why this tier exists.
 
-Do not change [`core/autoreconcile/spelling.go`](../../core/autoreconcile/spelling.go). The reconciler keeps merging only edit-distance variants. Display, `NormalizeForm`, and `sort_key` do not code, so the Person page still keeps both spellings.
+Do not change `SpellingSimilarity` in [`core/valuecompare/words.go`](../../core/valuecompare/words.go). The reconciler keeps merging only edit-distance variants. Display, `NormalizeForm`, and `sort_key` do not code, so the Person page still keeps both spellings.
 
 ## Pairs
 
@@ -118,7 +120,7 @@ Worked paths:
 
 ## When it is built
 
-`WordRules` gains a phonetic chart. Nil uses the default chart. An empty chart scores no phonetic hits, the same shape as an empty fold map. [`DefaultWordRules`](../../core/match/registry.go) points at the chart so the registry test stays green.
+`WordRules` gains a phonetic chart. Nil uses the default chart. An empty chart scores no phonetic hits, the same shape as an empty fold map. `valuecompare.WordRules` (numbers in [`core/matchregistry/value.go`](../../core/matchregistry/value.go)) points at the chart so the registry test stays green.
 
 Coder tests lock the codes above: Auerbach is `097400` and `097500`; Uhrbach shares both; Moskowitz and Moskovitz are `645740`; Lewinsky and Levinski are `876450`; Lee is `800000` and Leigh is `850000`. A surname-only Lewinsky/Levinski comparison equals 0.7. The existing Smyth/Smith case stays the edit-distance score. `José`/`Jose` stays 0.95. An empty chart makes Lewinsky/Levinski score 0.
 

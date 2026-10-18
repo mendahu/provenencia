@@ -9,7 +9,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -22,7 +21,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -55,7 +56,7 @@ func TestHandlePaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -70,11 +71,11 @@ func TestHandlePaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	personType, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	placeType, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+	placeType, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,11 +137,11 @@ func TestHandlePaths(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	personProp, err := properties.Lookup(c, "person", properties.OriginProvenencia)
+	personProp, err := properties.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dateProp, err := properties.Lookup(c, "start_date", properties.OriginProvenencia)
+	dateProp, err := properties.Lookup(c, "start_date", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +151,7 @@ func TestHandlePaths(t *testing.T) {
 			ArtifactID: art.ID, LocatorJSON: locator,
 		}, []observations.Input{{
 			SubjectID: boston.ID, PropertyID: dateProp.ID,
-			Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+			Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
 		}})
 	})
 	if err != nil {
@@ -292,6 +293,29 @@ func TestHandlePaths(t *testing.T) {
 		}
 	})
 
+	t.Run("resolve reports note handle scopes", func(t *testing.T) {
+		noteID, err := uuid.NewV7()
+		if err != nil {
+			t.Fatal(err)
+		}
+		ch := rowchange.Change{
+			EntityType: "observation_note", EntityID: noteID[:], Action: rowchange.ActionCreate,
+			Fields: map[string]rowchange.FieldDiff{
+				"observation_id": {New: dashed(created.Observations[0].ID)},
+			},
+		}
+		set, err := effects.Resolve(tx, []rowchange.Change{ch})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !idSet(set.HandleScopes, bostonRes.Entity.ID) {
+			t.Fatalf("resolve scoped %d handles", len(set.HandleScopes))
+		}
+		if len(set.Handles) != 0 {
+			t.Fatalf("resolve reported %d recompute handles for a note", len(set.Handles))
+		}
+	})
+
 	t.Run("subject move scopes both handles", func(t *testing.T) {
 		ch := observationSubject(bob.ID)
 		ch.Fields["subject_id"] = rowchange.FieldDiff{Old: dashed(alice.ID), New: dashed(bob.ID)}
@@ -353,11 +377,11 @@ func mustHandles(t *testing.T, tx *sql.Tx, changes ...rowchange.Change) [][]byte
 
 func mustHandleScopes(t *testing.T, tx *sql.Tx, changes ...rowchange.Change) [][]byte {
 	t.Helper()
-	got, err := effects.HandleScopes(tx, changes)
+	set, err := effects.Resolve(tx, changes)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return got
+	return set.HandleScopes
 }
 
 func idSet(got [][]byte, want ...[]byte) bool {

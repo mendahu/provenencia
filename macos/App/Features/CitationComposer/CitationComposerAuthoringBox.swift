@@ -44,7 +44,7 @@ struct CitationComposerAuthoringBox: View {
         case .rest:
             .subject
         case .property(let draft):
-            CitationAuthoringNavigation.initialPropertyFocus(subjectID: draft.values.subjectID)
+            propertyFocus(for: draft.values)
         case .bridge(let draft):
             CitationAuthoringNavigation.initialBridgeFocus(
                 endA: draft.endA,
@@ -53,6 +53,10 @@ struct CitationComposerAuthoringBox: View {
                 termID: draft.termID
             )
         }
+    }
+
+    private func propertyFocus(for values: ObservationRowValues) -> CitationAuthoringFocus {
+        CitationAuthoringNavigation.initialPropertyFocus(values: values, vocabulary: model.vocabulary)
     }
 
     private func form<Content: View>(
@@ -106,7 +110,8 @@ struct CitationComposerAuthoringBox: View {
         )
         .onChange(of: draft.isSaving) { wasSaving, saving in
             guard wasSaving, !saving, draft.error == nil else { return }
-            DispatchQueue.main.async { focus = .property }
+            let next = propertyFocus(for: draft.values)
+            DispatchQueue.main.async { focus = next }
         }
     }
 
@@ -136,7 +141,7 @@ struct CitationComposerAuthoringBox: View {
             }
             bridgeStatus(pair, draft: draft)
             if let error = draft.error {
-                PVCallout(tone: .danger, message: error)
+                PVCallout(tone: .danger, title: L10n.CitationComposer.rowStateError, message: error)
             }
         }
         .accessibilityIdentifier("citationComposer.authoring.bridge")
@@ -281,16 +286,7 @@ struct CitationComposerAuthoringBox: View {
             via: via,
             draftAfterCommit: CitationAuthoringDraftAfterCommit(bridgeHasTerm: bridgeHasTerm)
         ) else { return false }
-        // The next field may be inserted by this same commit. A name or date
-        // editor is not in the hierarchy until the following turn, and a deep
-        // form can miss the first write.
-        let nextField = next
-        DispatchQueue.main.async {
-            focus = nextField
-            DispatchQueue.main.async {
-                if focus != nextField { focus = nextField }
-            }
-        }
+        FocusClaim.claim($focus, next)
         return true
     }
 
@@ -354,14 +350,14 @@ struct CitationPropertyFields: View {
                 .frame(maxWidth: .infinity)
             }
             valueControls
+            if let error {
+                PVCallout(tone: .danger, title: L10n.CitationComposer.rowStateError, message: error)
+            }
             PVCheckbox(
                 L10n.CitationComposer.negativeLabel,
                 description: L10n.CitationComposer.negativeDescription,
                 isChecked: negativeBinding
             )
-            if let error {
-                PVCallout(tone: .danger, message: error)
-            }
         }
         .accessibilityIdentifier("\(identifierPrefix).propertyForm")
     }
@@ -422,6 +418,8 @@ struct CitationPropertyFields: View {
                         yearFocus: PVInputFocus(focus, equals: .value)
                     )
                 }
+            case PropertyValueType.depiction.rawValue:
+                CitationDepictionValueArea(model: model, draft: values.depictionDraft, focus: focus)
             default:
                 PVInput(
                     text: .constant(""),
@@ -456,24 +454,23 @@ struct CitationPropertyFields: View {
             from: field,
             committed: committed,
             via: via,
-            draftAfterCommit: CitationAuthoringDraftAfterCommit()
+            draftAfterCommit: CitationAuthoringDraftAfterCommit(
+                propertyValueTakesFocus: !(
+                    model.vocabulary.isDepiction(propertyID: committed)
+                        && model.depictionDrawBlocked
+                )
+            )
         ) else { return false }
-        // The next field may be inserted by this same commit. A name or date
-        // editor is not in the hierarchy until the following turn, and a deep
-        // form can miss the first write.
-        let binding = focus
-        let nextField = next
-        DispatchQueue.main.async {
-            binding.wrappedValue = nextField
-            DispatchQueue.main.async {
-                if binding.wrappedValue != nextField { binding.wrappedValue = nextField }
-            }
-        }
+        FocusClaim.claim(focus, next)
         return true
     }
 
     private var propertyOptions: [PVComboBoxOption] {
-        model.vocabulary.propertyOptions(forSubjectID: values.subjectID).map {
+        model.vocabulary.propertyOptions(
+            forSubjectID: values.subjectID,
+            keeping: values.propertyID,
+            capabilities: model.depictionCapabilities
+        ).map {
             PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key)
         }
     }
@@ -893,5 +890,84 @@ private struct FlowLayout: Layout {
     private struct Row {
         var items: [Item]
         var height: CGFloat
+    }
+}
+
+/// The value area of a depiction Property: a preview of the image a save
+/// would send, a caption, and the Draw, whole-file and citation's-region buttons.
+struct CitationDepictionValueArea: View {
+    @Bindable var model: CitationComposerModel
+    var draft: DepictionValueDraft
+    var focus: FocusState<CitationAuthoringFocus?>.Binding
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space4) {
+            if model.depictionNeedsPage {
+                PVCallout(
+                    tone: .warning,
+                    message: L10n.string(L10n.CitationComposer.depictionNeedsPage)
+                )
+            } else if draft.regionHidden {
+                PVCallout(
+                    tone: .warning,
+                    message: L10n.string(L10n.CitationComposer.depictionRegionHidden)
+                )
+            }
+            HStack(alignment: .top, spacing: PVSpacing.space5) {
+                PVThumbnail(
+                    PVThumbnail.Content(
+                        image: model.depictionPreview.map { Image(nsImage: $0) },
+                        label: L10n.CitationComposer.depictionPreviewLabel
+                    ),
+                    size: 96
+                )
+                VStack(alignment: .leading, spacing: PVSpacing.space4) {
+                    Text(model.depictionCaption)
+                        .font(PVFont.body(size: 12, italic: true))
+                        .foregroundStyle(PVColor.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                    FlowLayout(spacing: PVSpacing.space4, lineSpacing: PVSpacing.space3) {
+                        PVButton(
+                            draft.hasRegion || !draft.valueDepictionID.isEmpty
+                                ? L10n.CitationComposer.depictionRedraw
+                                : L10n.CitationComposer.depictionDraw,
+                            variant: .secondary,
+                            size: .sm,
+                            icon: .crop
+                        ) {
+                            model.startDepictionDrawing()
+                        }
+                        .disabled(!model.canStartDepictionDrawing)
+                        .focused(focus, equals: .value)
+                        .accessibilityIdentifier("citationComposer.depiction.draw")
+                        PVButton(model.depictionWholeFileTitle, variant: .secondary, size: .sm) {
+                            useRegion(.whole)
+                        }
+                        .disabled(!model.canStartDepictionDrawing)
+                        .accessibilityIdentifier("citationComposer.depiction.useWhole")
+                        if let region = model.depictionCitationRegion {
+                            PVButton(
+                                L10n.CitationComposer.depictionUseCitationRegion,
+                                variant: .secondary,
+                                size: .sm
+                            ) {
+                                useRegion(region)
+                            }
+                            .disabled(!model.canStartDepictionDrawing)
+                            .accessibilityIdentifier("citationComposer.depiction.useCitationRegion")
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .accessibilityIdentifier("citationComposer.depiction")
+    }
+
+    /// Sets the region without drawing and announces the caption it produced.
+    private func useRegion(_ region: ArtifactRegionDraft) {
+        if model.useDepictionRegion(region) {
+            AccessibilityAnnouncement.post(L10n.string(model.depictionCaption))
+        }
     }
 }

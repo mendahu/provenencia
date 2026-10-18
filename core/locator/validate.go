@@ -22,6 +22,17 @@ const (
 	TypeTextQuote = "text_quote"
 )
 
+const (
+	// MaxRegionPoints is the most region points one locator document holds,
+	// counted per document across all its region selectors. The crossing test
+	// grows with the square of the point count, and a stored document is checked
+	// on every read, so the cap keeps one check near 0.3 ms.
+	MaxRegionPoints = 256
+	// MaxDocumentBytes is the longest locator document, after trimming, that
+	// decode will unmarshal.
+	MaxDocumentBytes = 65536
+)
+
 type document struct {
 	Version   int           `json:"version"`
 	Selectors []selectorRaw `json:"selectors"`
@@ -48,15 +59,42 @@ type point struct {
 
 // Validate checks locator JSON against version-1 invariants for known selector types.
 func Validate(locatorJSON string) error {
+	doc, err := decode(locatorJSON)
+	if err != nil {
+		return err
+	}
+	return validateDoc(doc)
+}
+
+// decode parses locator JSON and checks the document envelope: non-empty,
+// valid JSON, version 1, at least one selector.
+func decode(locatorJSON string) (document, error) {
 	locatorJSON = strings.TrimSpace(locatorJSON)
 	if locatorJSON == "" {
-		return ErrInvalid
+		return document{}, ErrInvalid
+	}
+	if len(locatorJSON) > MaxDocumentBytes {
+		return document{}, ErrInvalid
 	}
 	var doc document
 	if err := json.Unmarshal([]byte(locatorJSON), &doc); err != nil {
-		return ErrInvalid
+		return document{}, ErrInvalid
 	}
 	if doc.Version != 1 || len(doc.Selectors) == 0 {
+		return document{}, ErrInvalid
+	}
+	return doc, nil
+}
+
+// validateDoc checks each selector of a decoded document.
+func validateDoc(doc document) error {
+	regionPoints := 0
+	for _, sel := range doc.Selectors {
+		if strings.TrimSpace(sel.Type) == TypeRegion {
+			regionPoints += len(sel.Points)
+		}
+	}
+	if regionPoints > MaxRegionPoints {
 		return ErrInvalid
 	}
 	for i, sel := range doc.Selectors {

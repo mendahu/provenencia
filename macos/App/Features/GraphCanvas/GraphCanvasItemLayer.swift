@@ -1,12 +1,12 @@
 @preconcurrency import AppKit
-import SwiftUI
 
 /// One host-drawn item the canvas positions in AppKit — a graph card.
 ///
-/// Each item is its own `NSHostingView`, a subview of
-/// ``GraphCanvasDocumentView`` above the host's base SwiftUI layer. AppKit owns
-/// where items are: a drag moves one view's frame and runs no SwiftUI. SwiftUI
-/// only draws an item's content, and only rebuilds it when ``model`` changes.
+/// Each item is an `NSView` the host builds with ``makeView``, sized by its
+/// `intrinsicContentSize` (which includes ``GraphCanvasItemLayer/paintOutset``),
+/// and a subview of ``GraphCanvasDocumentView`` above the host's base SwiftUI
+/// layer. AppKit owns where items are: a drag moves one view's frame. A view is
+/// rebuilt only when ``model`` changes.
 struct GraphCanvasItem {
     let id: String
     /// Document-space top-leading corner of the item's content.
@@ -15,15 +15,13 @@ struct GraphCanvasItem {
     var isRaised: Bool = false
     /// The VoiceOver rotor that lists this item, if any.
     var rotor: GraphCanvasRotorEntry?
-    /// Everything the content draws. The hosted view is rebuilt only when this
-    /// changes, so a host can push every item on any state change.
+    /// Everything the view draws. The view is rebuilt only when this changes,
+    /// so a host can push every item on any state change.
     var model: any Equatable
-    /// Builds the SwiftUI content for ``model``. Content is paint plus
+    /// Builds the item's view for ``model``. The view is paint plus
     /// accessibility; pointer input stays with ``GraphCanvasPointerController``.
-    var content: @MainActor () -> AnyView
-    /// When set, the canvas hosts this AppKit view instead of a SwiftUI
-    /// hosting view. The Evidence graph uses it for subject and bridge cards.
-    var appKitView: (@MainActor () -> NSView)? = nil
+    /// It sizes itself through `intrinsicContentSize`, outset margin included.
+    var makeView: @MainActor () -> NSView
 }
 
 /// An item's entry in a document-level VoiceOver rotor.
@@ -38,7 +36,7 @@ struct GraphCanvasRotorEntry: Equatable {
 @MainActor
 final class GraphCanvasItemLayer {
     /// Transparent margin around each item's content, so shadows and selection
-    /// halos that paint outside the content are not clipped by its hosting view.
+    /// halos that paint outside the content are not clipped by its view.
     static let paintOutset: CGFloat = 24
 
     /// Called when VoiceOver moves to an item through a rotor.
@@ -58,7 +56,7 @@ final class GraphCanvasItemLayer {
     }
 
     /// Replaces the item set: adds, removes, repositions, and rebuilds the
-    /// content of items whose model changed.
+    /// view of items whose model changed.
     func update(_ items: [GraphCanvasItem]) {
         guard let container else { return }
         let ids = Set(items.map(\.id))
@@ -75,16 +73,10 @@ final class GraphCanvasItemLayer {
             let view: NSView
             if let existing = views[item.id] {
                 if let previous = models[item.id], !item.model.isEqual(to: previous) {
-                    if let host = existing as? NSHostingView<AnyView>, item.appKitView == nil {
-                        host.rootView = Self.padded(item.content())
-                        host.frame.size = host.fittingSize
-                        view = host
-                    } else {
-                        existing.removeFromSuperview()
-                        let created = makeView(item)
-                        container.addSubview(created, positioned: .above, relativeTo: nil)
-                        view = created
-                    }
+                    existing.removeFromSuperview()
+                    let created = makeView(item)
+                    container.addSubview(created, positioned: .above, relativeTo: nil)
+                    view = created
                 } else {
                     view = existing
                 }
@@ -117,7 +109,7 @@ final class GraphCanvasItemLayer {
         }
     }
 
-    /// The hosting view for an item, for accessibility targets and tests.
+    /// The view for an item, for accessibility targets and tests.
     func view(for id: String) -> NSView? {
         views[id]
     }
@@ -141,15 +133,9 @@ final class GraphCanvasItemLayer {
         }
     }
 
-    /// Creates the item's view and sizes it. AppKit cards supply their own
-    /// view; every other host still gets a SwiftUI hosting view.
+    /// Creates the item's view and sizes it to its intrinsic size.
     private func makeView(_ item: GraphCanvasItem) -> NSView {
-        if let makeAppKit = item.appKitView {
-            let view = makeAppKit()
-            view.frame.size = view.fittingSize
-            return view
-        }
-        let view = NSHostingView(rootView: Self.padded(item.content()))
+        let view = item.makeView()
         view.frame.size = view.fittingSize
         return view
     }
@@ -161,14 +147,6 @@ final class GraphCanvasItemLayer {
             x: origin.x + offset.width - Self.paintOutset,
             y: origin.y + offset.height - Self.paintOutset
         ))
-    }
-
-    private static func padded(_ content: AnyView) -> AnyView {
-        AnyView(
-            content
-                .fixedSize()
-                .padding(paintOutset)
-        )
     }
 }
 
@@ -201,10 +179,8 @@ final class GraphCanvasRotorSearch: NSObject, @preconcurrency NSAccessibilityCus
 
     func result(for searchParameters: NSAccessibilityCustomRotor.SearchParameters) -> NSAccessibilityCustomRotor.ItemResult? {
         guard let layer else { return nil }
-        let filter = searchParameters.filterString.lowercased()
-        let items = layer.rotorItems(named: name).filter {
-            filter.isEmpty || $0.label.lowercased().contains(filter)
-        }
+        let query = TextMatch.Query(searchParameters.filterString)
+        let items = layer.rotorItems(named: name).filter { query.matches($0.label) }
         guard !items.isEmpty else { return nil }
 
         let current = searchParameters.currentItem?.targetElement as? NSView

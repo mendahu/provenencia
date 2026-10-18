@@ -43,7 +43,7 @@ final class SourceNotesSection {
         defer { isSaving = false }
         context.clearPageError()
         do {
-            let note = try await context.store.addSourceNote(
+            let (note, effects) = try await context.store.addSourceNote(
                 projectDir: context.projectDir,
                 userID: context.userID,
                 sourceID: context.sourceID,
@@ -51,7 +51,7 @@ final class SourceNotesSection {
             )
             draft = ""
             context.workspace?.notes.append(note)
-            context.notifyWorkspaceMutated()
+            context.applyWrite(effects)
         } catch {
             context.pageError = L10n.Errors.message(for: error)
         }
@@ -95,7 +95,7 @@ final class SourceNotesSection {
         isSaving = true
         defer { isSaving = false }
         do {
-            let updated = try await context.store.updateSourceNote(
+            let (updated, effects) = try await context.store.updateSourceNote(
                 projectDir: context.projectDir,
                 userID: context.userID,
                 noteID: id,
@@ -106,7 +106,7 @@ final class SourceNotesSection {
             }
             editingNoteID = nil
             bodyDraft = ""
-            context.notifyWorkspaceMutated()
+            context.applyWrite(effects)
         } catch {
             bodyError = L10n.Errors.message(for: error)
         }
@@ -126,7 +126,7 @@ final class SourceNotesSection {
         guard !isSaving else { return }
         context.clearPageError()
         do {
-            try await context.store.deleteSourceNote(
+            let effects = try await context.store.deleteSourceNote(
                 projectDir: context.projectDir,
                 userID: context.userID,
                 noteID: id
@@ -137,7 +137,7 @@ final class SourceNotesSection {
                 bodyError = nil
             }
             context.workspace?.notes.removeAll { $0.id == id }
-            context.notifyWorkspaceMutated()
+            context.applyWrite(effects)
         } catch {
             context.pageError = L10n.Errors.message(for: error)
         }

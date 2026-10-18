@@ -29,7 +29,7 @@ new Install into **`onboarding.createCatalog` only**.
 | `core/connectrules/` | `productBridges` / `productRefusals` (`Bridge.Endpoints` + `Disambiguation` + `Pairs`); `All()` / `Register` | Product connect matrix: which Properties on which bridge types are endpoints or disambiguation. Impact, edge-lock, Connect, and Install bridge bindings loop `All()` / `BridgeBindings()`. Future plugins append via `Register`. |
 | `core/database/subjectvocab/` | `registry.go` (`seedTypes` / `seedProperties` / `seedBindings` / `seedTerms`) | Interpretation Subject types, Properties, non-bridge `subject_type_properties`, **`property_terms`** (S7-01b), plus compiled presentation. Bridge bindings are derived from `connectrules.BridgeBindings()` (product origin only at create). |
 | `core/database/nameformats/` | `registry.go` (`seedProfiles`) | Name format profiles: part order, roles, weights, and which profile is the project default. Install writes the list. Load and Format do not branch on the profile key. |
-| `core/database/namealiases/` | product lists in `core/match/registry.go` (`productAliasTables`); `Register` appends | Abbreviation and nickname tables. Install writes the registered list. Scoring reads the catalog only; an empty catalog makes no alias hits. Opening a project stores that read on the catalog graph until close. `Invalidate` reloads it. Origin does not filter scoring. |
+| `core/database/namealiases/` | `registry.go` (`productAliasTables`, with `nicknames_seed.go` and `third_party/nicknames/`); `Register` appends | Abbreviation and nickname tables. Install writes the registered list. Scoring reads the catalog only; an empty catalog makes no alias hits. Opening a project stores that read on the catalog graph until close. `Invalidate` reloads it. Origin does not filter scoring. |
 
 ### Source vocabulary (`sourcevocab`)
 
@@ -41,6 +41,9 @@ new Install into **`onboarding.createCatalog` only**.
    create time; existing catalogs are not backfilled on open.
 3. All registry rows are **`origin = provenencia`**. Researcher/plugin rows use
    Upsert APIs with `user` / `plugin:<id>` — never put those in the registry.
+   Origins, primary kinds and the Property keys code reads by name come from
+   `core/vocabkey`. A vocabulary package does not declare its own
+   `OriginProvenencia` or origin check; it calls `vocabkey.ValidOrigin`.
 4. **No seed `INSERT`s** in `migrations/*.sql`. DDL-only migrations for new tables.
 5. Adding rows to the registry is enough for normal growth of the create-time
    starter. Do not reintroduce open-time heal.
@@ -53,9 +56,9 @@ new Install into **`onboarding.createCatalog` only**.
 Same pattern as Source: edit that package’s `registry.go`, keep
 `origin = provenencia`, no SQL seeds, tests that create installs and open does
 not heal. Subject type keys/prefixes: `docs/seeded-vocabulary.md` §3.1.
-Property value types: `text` \| `integer` \| `date` \| `name` \| `subject` \| **`term`**.
+Property value types: `text` \| `integer` \| `date` \| `name` \| `subject` \| **`term`** \| **`depiction`**.
 Kind/edge Properties (`event_type`, `role`, `relationship_type`) use `term` + `property_terms` (S7-01b) — not free-text Observation strings.
-**`value_type = term` Properties are Install/registry only** (`origin=provenencia` or `plugin:<id>`). Researcher Create Property must refuse `term`.
+**`value_type = term` and `depiction` Properties are Install/registry only** (`origin=provenencia` or `plugin:<id>`). Researcher Create Property must refuse `term` and `depiction`.
 Researchers may still add `origin=user` **term rows** under those Properties via the composer picker.
 Capabilities and presentation tokens stay in the compiled `subjectvocab`
 registry (not SQL columns). Non-bridge locked bindings stay in `seedBindings`.
@@ -139,3 +142,4 @@ Join/suggestion tables have **no `origin`** column.
 - Treat `provenencia` as a `builtin` boolean — use `origin`
 - Expand the full horizon catalog in one PR “just because” it is listed in the docs
 - Reintroduce open-time Ensure/heal for seeded vocabulary
+- Write `"provenencia"`, `"plugin:"`, a primary kind or a `vocabkey` Property key as a Go string literal outside the seed (SQL text keeps its literals)

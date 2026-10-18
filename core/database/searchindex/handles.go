@@ -7,30 +7,20 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/eventtitle"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// Handle kinds (Conclusion layer). Documents are match text from the header
+// Handle documents (Conclusion layer) are match text from the header
 // composers: the title the list shows, plus the secondary line (a Person's
 // life, a Place's names and chain). autoreconciler.RecomputeTx reprojects
 // the handles it rewrites and their header dependents, in the same transaction.
-const (
-	KindPerson = "person"
-	KindEvent  = "event"
-	KindPlace  = "place"
-)
-
-// handleKinds are the Conclusion kinds that have a search document.
-var handleKinds = map[string]bool{
-	KindPerson: true,
-	KindEvent:  true,
-	KindPlace:  true,
-}
-
 const (
 	sqlHandleHeads = `SELECT e.id, e.ref, COALESCE(e.label, ''), st.key, st.origin, e.merged_into_id IS NOT NULL
 		FROM canonical_entities e JOIN subject_types st ON st.id = e.subject_type_id
@@ -91,7 +81,7 @@ func reprojectHandleBatch(q Querier, ids [][]byte) error {
 			_ = rows.Close()
 			return err
 		}
-		if handleKinds[typeKey] && typeOrigin == "provenencia" {
+		if vocabkey.IsPrimaryType(typeKey, typeOrigin) {
 			h.kind = typeKey
 		}
 		h.id = uuidString(id)
@@ -116,7 +106,7 @@ func reprojectHandleBatch(q Querier, ids [][]byte) error {
 		h, ok := heads[string(id)]
 		if !ok {
 			// Gone: drop any document of any handle kind.
-			for kind := range handleKinds {
+			for _, kind := range vocabkey.PrimaryKinds() {
 				if err := Delete(q, kind, uuidString(id)); err != nil {
 					return err
 				}
@@ -208,11 +198,11 @@ func loadHandleHeaders(q Querier, heads map[string]handleHead) (handleHeaders, e
 		}
 		id := []byte(key)
 		switch h.kind {
-		case KindPerson:
+		case vocabkey.Person:
 			persons = append(persons, id)
-		case KindEvent:
+		case vocabkey.Event:
 			events = append(events, id)
-		case KindPlace:
+		case vocabkey.Place:
 			places = append(places, id)
 		}
 	}
@@ -261,37 +251,40 @@ func handleDocument(h handleHead, v handleValues, headers handleHeaders) Documen
 
 func matchText(h handleHead, v handleValues, headers handleHeaders) (string, []string) {
 	var title string
-	var secondary []string
+	var secondary, alts, names, parents []string
 	switch h.kind {
-	case KindPerson:
+	case vocabkey.Person:
 		if p, ok := headers.persons[h.id]; ok {
 			if p.Name != nil {
 				title = strings.TrimSpace(p.Name.Form)
 			}
 			secondary = append(secondary, personLifeMatch(p)...)
 		}
-		secondary = append(secondary, tagged(extraValues(v, "name", title), "name")...)
-	case KindEvent:
+		alts = distinctAlternates(title, v[vocabkey.PropertyName])
+		secondary = append(secondary, tagged(alts, "name")...)
+	case vocabkey.Event:
 		if e, ok := headers.events[h.id]; ok {
 			title = eventMatchTitle(e)
 			secondary = append(secondary, eventMatchSecondary(e)...)
 		}
-	case KindPlace:
+	case vocabkey.Place:
 		if p, ok := headers.places[h.id]; ok {
 			if len(p.Names) > 0 {
 				title = p.Names[0]
 			}
 			if len(p.Names) > 1 {
-				secondary = append(secondary, tagged(p.Names[1:], "toponym")...)
+				names = p.Names[1:]
 			}
-			secondary = append(secondary, p.Parents...)
+			parents = p.Parents
 		}
-		secondary = append(secondary, tagged(extraValues(v, "toponym", title), "toponym")...)
+		alts = distinctAlternates(title, names, v[vocabkey.PropertyToponym])
+		secondary = append(secondary, tagged(alts, "toponym")...)
+		secondary = append(secondary, parents...)
 	}
 	if h.label != "" {
 		if title == "" {
 			title = h.label
-		} else if h.label != title {
+		} else if len(distinctAlternates(title, alts, []string{h.label})) > len(alts) {
 			secondary = append(secondary, h.label)
 		}
 	}
@@ -309,13 +302,28 @@ func tagged(vals []string, tag string) []string {
 	return out
 }
 
-func extraValues(v handleValues, key, title string) []string {
+// valueWords are the shipped registry's word rules, never catalog data: a text
+// key reads nothing else.
+var valueWords = matchregistry.Default().Value.Words
+
+// distinctAlternates walks the lists in order and keeps a value whose text key
+// at Equivalent is neither the title's nor an earlier kept value's. A value
+// with no key is dropped; a title with no key excludes nothing.
+func distinctAlternates(title string, lists ...[]string) []string {
+	seen := map[string]bool{}
+	if k, ok := valuecompare.TextKey(title, valuecompare.Equivalent, valueWords); ok {
+		seen[k] = true
+	}
 	var out []string
-	for _, val := range v[key] {
-		if val == title {
-			continue
+	for _, list := range lists {
+		for _, val := range list {
+			k, ok := valuecompare.TextKey(val, valuecompare.Equivalent, valueWords)
+			if !ok || seen[k] {
+				continue
+			}
+			seen[k] = true
+			out = append(out, val)
 		}
-		out = append(out, val)
 	}
 	return out
 }
@@ -324,7 +332,7 @@ func personLifeMatch(h conclusionheaders.PersonHeader) []string {
 	var out []string
 	for _, life := range []conclusionheaders.LifeFacts{h.Birth, h.Death} {
 		if life.Date != nil {
-			if s := datevalues.CompactDisplay(*life.Date); s != "" {
+			if s := datevalue.CompactDisplay(*life.Date); s != "" {
 				out = append(out, s)
 			}
 		}
@@ -338,11 +346,11 @@ func personLifeMatch(h conclusionheaders.PersonHeader) []string {
 
 func eventMatchSecondary(h conclusionheaders.EventHeader) []string {
 	var out []string
-	for _, d := range []*datevalues.Value{h.Date, h.StartDate, h.EndDate} {
+	for _, d := range []*datevalue.Value{h.Date, h.StartDate, h.EndDate} {
 		if d == nil {
 			continue
 		}
-		if s := datevalues.CompactDisplay(*d); s != "" {
+		if s := datevalue.CompactDisplay(*d); s != "" {
 			out = append(out, s)
 		}
 	}

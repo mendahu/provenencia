@@ -1,6 +1,6 @@
 # International names — later
 
-**Status:** idea, not scheduled. Spike 10 takes accent folding in matching (not display, not the auto-reconciler), spaced particles, a short nickname table, and collation with a default locale and no picker. Daitch–Mokotoff was descoped (S10-26); the design is [`daitch-mokotoff.md`](daitch-mokotoff.md). S10-29 installed the Western name-format profile and reads it from the catalog. Spanish dual surnames and a `patronymic` part are unscheduled again, below. Design: [`spike-10/international-names.md`](../deployment-plan/spike-10/international-names.md). Abbreviations, project name frequency, and the rest of the matcher are in [`name-matching-enhancements.md`](name-matching-enhancements.md) for the leftovers, and in that same spike for what it builds.
+**Status:** idea, not scheduled. Spike 10 shipped accent folding in matching, spaced particles, nickname tables, and the Western profile ([decisions](../deployment-plan/archive/spike-10/)). Daitch–Mokotoff: [`daitch-mokotoff.md`](daitch-mokotoff.md).
 
 ## Scripts and sound
 
@@ -23,10 +23,17 @@ S10-29 seeds `western` only. Both surname words keep the single family weight. S
 | Particle sort | Dutch *van der*; German *von*; Portuguese *da* | Matching already ignores them. Sorting needs a per-profile rule: *van Gogh* under V or G. |
 | Single names | Mononyms; enslaved people recorded by given name only | A missing role is already left out. Context (owner, place, date) has to carry more of the weight, on the profile. |
 
+A `generation` weight slot, and one declared slot list read by both `nameformats.LoadID` and `seedProfiles`, would replace the registry's `value.Names.Generation` knob (S11-03 kept it a knob).
+
 `maternal_surname` as its own part type is not seeded. GEDCOM has no patronymic type, so export needs a mapping when export exists.
+
+## Name changes
+
+- **Name changes as a signal.** Married, religious and anglicized names connect today only when one of a handle's names matches. A "known as" relationship between names, or the marriage event, could carry it. Spike 11 treats Mary Smith / Mary Robins as `Different` at the value level, and leaves marriage evidence to links. Maiden names in the conclusion are the intended path ([`comparison-layers.md`](../deployment-plan/spike-11/comparison-layers.md#entities-compare-against-the-conclusion)).
 
 ## Format and sort, beyond the project default
 
 - **Per-person name format.** A Reconciliation Claim on `name_format`. Until that exists, every name uses the project default profile. Each name already may carry its own pattern once a loader sets `Value.NamePattern`.
-- **Accent merging on the Person page.** José and Jose match in suggestions and stay separate groupings. An auto-reconciler rule that folds them is later, and it is manual reconciliation until then.
-- **Collation picker.** The project has a locale setting (default `en`) and no control. A viewer who wants a locale other than the project's (a shared tree read abroad) is the same gap.
+- **Accent merging on the Person page** — decided 2026-10-17 (S11-06): an accent fold is value compare's `Equivalent`, which never groups or folds, so *José* and *Jose* show as two values.
+- **Collation locale.** A project setting (default `en`) whose locale orders name lists through `golang.org/x/text/collate`, so accented and unaccented names sort in that locale's order. Comparison fold is not the sort, and the match score does not change. Descoped from S10-37 (2026-10-16); nothing stores a locale today.
+- **Collation picker.** A control for that setting. A viewer who wants a locale other than the project's (a shared tree read abroad) is the same gap.

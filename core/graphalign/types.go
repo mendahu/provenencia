@@ -4,7 +4,7 @@
 package graphalign
 
 import (
-	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/match"
 )
 
@@ -120,15 +120,17 @@ const (
 	AssessNone   Assessment = "none"
 )
 
-// Comparison is one Property outcome on the chosen (or top) candidate,
-// suitable for drafting pins later (S9-43).
+// Comparison is one Property outcome on the chosen (or top) candidate: an
+// input to the score. Pins come from Exhibit, which pairs Observations.
 type Comparison struct {
 	Property  match.Property
 	Outcome   match.Outcome
 	ValueType string
-	Pinned    bool // drafted true when the values are the same; a partial resemblance stays unpinned
 	// Weight is the points this outcome added (negative for a conflict).
 	Weight float64
+	// Probe and Candidate are the two values behind the outcome; a conflict
+	// the exhibits did not show is shown from these.
+	Probe, Candidate match.ValueRef
 }
 
 // Via is the layer edge that seeded this row's handle, when the walk
@@ -151,12 +153,15 @@ type Exhibit struct {
 	GroupSubjectID        []byte
 	IncomingObservationID []byte
 	IncomingDisplay       string
-	IncomingSource        string
-	IncomingDate          *datevalues.Value
-	MemberObservationID   []byte
-	MemberDisplay         string
-	MemberSource          string
-	MemberDate            *datevalues.Value
+	// IncomingNegative is true when the incoming value is a negative
+	// Observation: the record says the Subject is not this value.
+	IncomingNegative    bool
+	IncomingSource      string
+	IncomingDate        *datevalue.Value
+	MemberObservationID []byte
+	MemberDisplay       string
+	MemberSource        string
+	MemberDate          *datevalue.Value
 }
 
 // Reason is why a row reads as it does. Codes, not copy: the page words them.

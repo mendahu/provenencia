@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 func TestGrades(t *testing.T) {
@@ -29,7 +30,7 @@ func TestGrades(t *testing.T) {
 				if list[0].Key != "low_confidence" || list[1].Key != "moderate" || list[2].Key != "high_confidence" {
 					t.Fatalf("order %+v", list)
 				}
-				std, err := Lookup(c, "moderate", OriginProvenencia)
+				std, err := Lookup(c, "moderate", vocabkey.OriginProvenencia)
 				if err != nil || std.Label != "Moderate" || std.SortOrder != 2 {
 					t.Fatalf("%v %+v", err, std)
 				}
@@ -53,10 +54,10 @@ func TestGrades(t *testing.T) {
 		{
 			name: "reject empty key label",
 			run: func(t *testing.T, c *database.Catalog) {
-				if _, err := Upsert(c, Grade{Key: "", Origin: OriginUser, Label: "X"}); !errors.Is(err, ErrInvalid) {
+				if _, err := Upsert(c, Grade{Key: "", Origin: vocabkey.OriginUser, Label: "X"}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
-				if _, err := Upsert(c, Grade{Key: "x", Origin: OriginUser, Label: ""}); !errors.Is(err, ErrInvalid) {
+				if _, err := Upsert(c, Grade{Key: "x", Origin: vocabkey.OriginUser, Label: ""}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},

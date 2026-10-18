@@ -16,6 +16,7 @@ enum EventsList: ConclusionListKind {
     static var mark: PVMarkKey { .subjectEvent }
 
     static func ref(_ header: CatalogEventHeader) -> String { header.entity.ref }
+    static func updatedAt(_ header: CatalogEventHeader) -> String { header.updated.at }
 
     static func titleSource(_ header: CatalogEventHeader) -> ConclusionTitleSource {
         titleSource(header, orders: NameFormatOrders())

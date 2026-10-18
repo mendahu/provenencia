@@ -1343,6 +1343,9 @@ enum L10n {
         static func pinLine(property: String, here: String, there: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.pinLine", defaultValue: "Pin %1$@: %2$@ and %3$@", comment: "VoiceOver label for one pin box; 1 = property, 2 = this source's value, 3 = the matched record's value"), property, here, there)
         }
+        static func negatedValue(_ value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.negatedValue", defaultValue: "not %@", comment: "An incoming value a record denies, on the evidence sheet; %@ = the value it says the subject is not"), value)
+        }
         static func evidenceFor(name: String, assessment: String, reason: String) -> String {
             L10n.format(LocalizedStringResource("promote.row.evidenceFor", defaultValue: "Evidence for %1$@: %2$@, %3$@", comment: "VoiceOver label for the button that opens a row's evidence; 1 = subject name, 2 = assessment, 3 = reason"), name, assessment, reason)
         }
@@ -1688,35 +1691,50 @@ enum L10n {
             comment: "Footer button on an unpromoted primary card that creates its Person, Event or Place"
         )
 
+        static let unpromote = LocalizedStringResource(
+            "evidenceGraph.subject.unpromote",
+            defaultValue: "Unpromote",
+            comment: "Footer icon button's tooltip and VoiceOver action on a promoted card, and the confirm button, that takes its filing back"
+        )
+
+        static let unpromoteKeep = LocalizedStringResource(
+            "evidenceGraph.subject.unpromoteKeep",
+            defaultValue: "Keep filing",
+            comment: "Cancel button of the Unpromote confirm"
+        )
+
+        static func unpromoteConfirmTitle(name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "evidenceGraph.subject.unpromoteConfirmTitle",
+                defaultValue: "Unpromote %1$@?",
+                comment: "Title of the Unpromote confirm; argument is the subject's name"
+            ), name)
+        }
+
+        static let unpromoteConfirmMessage = LocalizedStringResource(
+            "evidenceGraph.subject.unpromoteConfirmMessage",
+            defaultValue: "This filing is removed. The cards stay on the graph, and the handle stays.",
+            comment: "Message of the Unpromote confirm"
+        )
+
+        static let unpromoteConfirmBridgesHeader = LocalizedStringResource(
+            "evidenceGraph.subject.unpromoteConfirmBridgesHeader",
+            defaultValue: "Also unfiled",
+            comment: "Header over the relationships, participations, and locations the Unpromote confirm lists"
+        )
+
+        static let unpromoteConfirmBridgesNote = LocalizedStringResource(
+            "evidenceGraph.subject.unpromoteConfirmBridgesNote",
+            defaultValue: "The other end of each stays filed.",
+            comment: "Note under the list in the Unpromote confirm"
+        )
+
         static func promoteAccessibility(label: String, ref: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "evidenceGraph.subject.promoteAccessibility",
                 defaultValue: "Promote %1$@, %2$@",
                 comment: "VoiceOver for the Promote footer; arguments are the subject label and its candidate ref"
             ), label, ref)
-        }
-
-        static func promoteHelp(kind: EvidencePrimaryKind) -> LocalizedStringResource {
-            switch kind {
-            case .person:
-                LocalizedStringResource(
-                    "evidenceGraph.subject.promoteHelp.person",
-                    defaultValue: "Promote to a person",
-                    comment: "Tooltip on the Promote footer button"
-                )
-            case .event:
-                LocalizedStringResource(
-                    "evidenceGraph.subject.promoteHelp.event",
-                    defaultValue: "Promote to an event",
-                    comment: "Tooltip on the Promote footer button"
-                )
-            case .place:
-                LocalizedStringResource(
-                    "evidenceGraph.subject.promoteHelp.place",
-                    defaultValue: "Promote to a place",
-                    comment: "Tooltip on the Promote footer button"
-                )
-            }
         }
 
         static func openHandlePage(kind: EvidencePrimaryKind) -> LocalizedStringResource {
@@ -1864,12 +1882,6 @@ enum L10n {
             "evidenceGraph.legend.conflict",
             defaultValue: "Conflict — competing values",
             comment: "Canvas legend line for the ochre conflict bracket"
-        )
-
-        static let citedValueUnavailable = LocalizedStringResource(
-            "evidenceGraph.subject.citedValueUnavailable",
-            defaultValue: "—",
-            comment: "Placeholder when a cited Observation has no displayable value summary yet"
         )
 
         static let noArtifactTitle = LocalizedStringResource(
@@ -3100,10 +3112,160 @@ enum L10n {
             comment: "Badge on an Observation or connection role that differs from its baseline"
         )
 
+        static let depictionDraw = LocalizedStringResource(
+            "citationComposer.depictionDraw",
+            defaultValue: "Draw on the file",
+            comment: "Button that starts drawing a depiction's region on the open file"
+        )
+
+        static let depictionRedraw = LocalizedStringResource(
+            "citationComposer.depictionRedraw",
+            defaultValue: "Draw again",
+            comment: "Button that redraws a depiction's region on the open file"
+        )
+
+        static let depictionUseWholePhoto = LocalizedStringResource(
+            "citationComposer.depictionUseWholePhoto",
+            defaultValue: "Use the whole photo",
+            comment: "Button that sets a depiction's region to the whole photo"
+        )
+
+        static let depictionUseWholePage = LocalizedStringResource(
+            "citationComposer.depictionUseWholePage",
+            defaultValue: "Use the whole page",
+            comment: "Button that sets a depiction's region to the whole PDF page"
+        )
+
+        static let depictionUseCitationRegion = LocalizedStringResource(
+            "citationComposer.depictionUseCitationRegion",
+            defaultValue: "Use the citation's region",
+            comment: "Button that sets a depiction's region to the citation's own region"
+        )
+
+        static let depictionDrawingHint = LocalizedStringResource(
+            "citationComposer.depictionDrawingHint",
+            defaultValue: "Draw the region with the tools above. Escape goes back to the observation.",
+            comment: "Hint above the viewer while a depiction's region is drawn"
+        )
+
+        static let depictionCancel = LocalizedStringResource(
+            "citationComposer.depictionCancel",
+            defaultValue: "Cancel",
+            comment: "Button above the viewer that stops drawing a depiction's region"
+        )
+
+        static let depictionPreviewLabel = LocalizedStringResource(
+            "citationComposer.depictionPreviewLabel",
+            defaultValue: "Image to save",
+            comment: "VoiceOver label of the depiction preview in the observation dialog"
+        )
+
+        static let depictionNeedsPage = LocalizedStringResource(
+            "citationComposer.depictionNeedsPage",
+            defaultValue: "Set this citation's page and save the citation to draw a region.",
+            comment: "Warning when an existing PDF citation has no page, so a depiction cannot be drawn"
+        )
+
+        static let observationSaveFailed = LocalizedStringResource(
+            "citationComposer.observationSaveFailed",
+            defaultValue: "The observation could not be saved. Try again.",
+            comment: "Fallback error when an observation save fails with no specific message"
+        )
+
+        static let depictionRegionHidden = LocalizedStringResource(
+            "citationComposer.depictionRegionHidden",
+            defaultValue: "This region no longer matches the citation's page. Draw it again.",
+            comment: "Warning when a saved depiction's region no longer matches its citation's page"
+        )
+
+        static let depictionRenderFailed = LocalizedStringResource(
+            "citationComposer.depictionRenderFailed",
+            defaultValue: "The region could not be cut from the file. Draw it again.",
+            comment: "Error when the app cannot cut the drawn region from the open file"
+        )
+
+        static let depictionCaptionEmpty = LocalizedStringResource(
+            "citationComposer.depictionCaptionEmpty",
+            defaultValue: "Nothing drawn yet. Draw the region on the file",
+            comment: "Caption beside the depiction preview when no region is drawn"
+        )
+
+        static let depictionCaptionBox = LocalizedStringResource(
+            "citationComposer.depictionCaptionBox",
+            defaultValue: "The rectangle around the region, up to 2,048 px on its long edge",
+            comment: "Caption beside the depiction preview when a region is drawn"
+        )
+
+        static let depictionCaptionRedrawn = LocalizedStringResource(
+            "citationComposer.depictionCaptionRedrawn",
+            defaultValue: "Redrawn. Saving replaces the saved image",
+            comment: "Caption beside the depiction preview after a saved depiction is redrawn"
+        )
+
+        static let depictionCaptionNeedsPage = LocalizedStringResource(
+            "citationComposer.depictionCaptionNeedsPage",
+            defaultValue: "Draw is unavailable until the citation has a page",
+            comment: "Caption beside the depiction preview when the citation has no page"
+        )
+
+        static let depictionCaptionHidden = LocalizedStringResource(
+            "citationComposer.depictionCaptionHidden",
+            defaultValue: "Save waits for the region to be drawn again",
+            comment: "Caption beside the depiction preview when the saved region is hidden"
+        )
+
+        static func depictionWrongPage(_ page: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.depictionWrongPage",
+                defaultValue: "Draw on page %lld, this citation's page.",
+                comment: "Hint while drawing on the wrong PDF page; argument is the citation's page"
+            ), page)
+        }
+
+        static func depictionThumbLabel(_ property: String, _ person: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.depictionThumbLabel",
+                defaultValue: "%1$@ of %2$@",
+                comment: "VoiceOver label of a saved depiction's thumbnail; arguments are the property label and the person"
+            ), property, person)
+        }
+
+        static func depictionLineLabel(_ property: String, _ person: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.depictionLineLabel",
+                defaultValue: "%1$@, %2$@",
+                comment: "VoiceOver label of a saved depiction line; arguments are the property label and the person"
+            ), property, person)
+        }
+
+        static func editDepictionSubtitle(ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.editDepictionSubtitle",
+                defaultValue: "%1$@ · saves on its own. A redraw replaces the image",
+                comment: "Depiction edit sheet subtitle; argument is the observation ref"
+            ), ref)
+        }
+
+        static func depictionDuplicatedFrom(_ person: String, _ property: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.depictionDuplicatedFrom",
+                defaultValue: "Duplicated from %1$@’s %2$@. Saving cuts its own image; the original is unchanged",
+                comment: "Note on a duplicated depiction draft; arguments are the person and the property label"
+            ), person, property)
+        }
+
+        static func leaveDepictionDraft(property: String, person: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.leaveDepictionDraft",
+                defaultValue: "The %1$@ of %2$@ you drew is not saved. Everything already saved on %3$@ stays.",
+                comment: "Leave confirm for an unsaved depiction; arguments are the property label, the person, and the citation ref"
+            ), property, person, ref)
+        }
+
         static let rowStateError = LocalizedStringResource(
             "citationComposer.rowStateError",
             defaultValue: "Not saved",
-            comment: "Badge when a row-level Save failed"
+            comment: "Badge when a row-level Save failed; also the title of a save-error Callout"
         )
 
         static let rowStateSaved = LocalizedStringResource(
@@ -3158,12 +3320,6 @@ enum L10n {
             "citationComposer.subjectRequiredError",
             defaultValue: "Choose a subject.",
             comment: "Row error when Save is pressed with no subject"
-        )
-
-        static let propertyRequiredAfterSubject = LocalizedStringResource(
-            "citationComposer.propertyRequiredAfterSubject",
-            defaultValue: "This subject does not allow that property.",
-            comment: "Property field error after an incompatible subject change"
         )
 
         static let newSubjectTitle = LocalizedStringResource(
@@ -4687,14 +4843,14 @@ enum L10n {
 
         static let noFilterMatchesTitle = LocalizedStringResource(
             "sources.list.noFilterMatchesTitle",
-            defaultValue: "No sources for this type",
-            comment: "Empty-state title when the Sources type filter matches nothing"
+            defaultValue: "No matching sources",
+            comment: "Empty-state title when the Sources type, status, and search filters match nothing"
         )
 
         static let noFilterMatchesMessage = LocalizedStringResource(
             "sources.list.noFilterMatchesMessage",
-            defaultValue: "Try another type, or choose All types.",
-            comment: "Empty-state body when the Sources type filter matches nothing"
+            defaultValue: "Try another filter, or clear them to see every source.",
+            comment: "Empty-state body when the Sources type, status, and search filters match nothing"
         )
 
         static let filterAllTypes = LocalizedStringResource(
@@ -4724,7 +4880,49 @@ enum L10n {
         static let sortUpdated = LocalizedStringResource(
             "sources.list.sort.updated",
             defaultValue: "Date updated",
-            comment: "Sources sort option: reverse catalog order (stand-in until audit timestamps surface)"
+            comment: "Sources sort option: most recent work first (audit revision)"
+        )
+
+        static let searchPrompt = LocalizedStringResource(
+            "sources.list.searchPrompt",
+            defaultValue: "Search title or ref",
+            comment: "Placeholder of the Sources list search field"
+        )
+
+        static let statusMenu = LocalizedStringResource(
+            "sources.list.statusMenu",
+            defaultValue: "Evidence status",
+            comment: "Accessibility label for the Sources evidence-status filter control"
+        )
+
+        static let statusAll = LocalizedStringResource(
+            "sources.list.status.all",
+            defaultValue: "All statuses",
+            comment: "Sources evidence-status filter menu: show every status"
+        )
+
+        static let clearFilters = LocalizedStringResource(
+            "sources.list.clearFilters",
+            defaultValue: "Clear filters",
+            comment: "Button on the Sources empty filter result: reset type, status, and search"
+        )
+
+        static let statusEmpty = LocalizedStringResource(
+            "sources.list.status.empty",
+            defaultValue: "Empty",
+            comment: "Sources evidence-status filter option: the Source's graph has no person, event, or place subjects"
+        )
+
+        static let statusInProgress = LocalizedStringResource(
+            "sources.list.status.inProgress",
+            defaultValue: "In progress",
+            comment: "Sources evidence-status filter option: at least one person, event, or place on the graph is not promoted yet"
+        )
+
+        static let statusFullyPromoted = LocalizedStringResource(
+            "sources.list.status.fullyPromoted",
+            defaultValue: "Fully promoted",
+            comment: "Sources evidence-status filter option: every person, event, and place on the graph is promoted"
         )
 
         static let sortAZ = LocalizedStringResource(
@@ -6339,6 +6537,11 @@ enum L10n {
             "properties.valueType.subject",
             defaultValue: "Subject",
             comment: "Property value type label: subject"
+        )
+        static let valueTypeDepiction = LocalizedStringResource(
+            "properties.valueType.depiction",
+            defaultValue: "Depiction",
+            comment: "Property value type label: depiction (registry-only)"
         )
         static let valueTypeTerm = LocalizedStringResource(
             "properties.valueType.term",
@@ -8048,11 +8251,106 @@ enum L10n {
             comment: "Section heading over a Person's fields"
         )
 
+        static let likenessesSection = LocalizedStringResource(
+            "conclusions.detail.likenesses",
+            defaultValue: "Likenesses",
+            comment: "Section heading over a Person's likeness crops"
+        )
+
+        static let personLikenessThumb = LocalizedStringResource(
+            "conclusions.person.likeness",
+            defaultValue: "Likeness",
+            comment: "Label of the Person page header thumb when it shows a likeness no gallery tile matches"
+        )
+
+        static let likenessOpenTip = LocalizedStringResource(
+            "conclusions.person.likenessOpen",
+            defaultValue: "Open citation",
+            comment: "Help text on a likeness tile in a Person's gallery"
+        )
+
+        /// "Likeness from {Source title}" — the header thumb's spoken label.
+        static func likenessLabel(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.person.likenessFrom",
+                defaultValue: "Likeness from %@",
+                comment: "Accessibility label of the Person page header thumb when it shows a likeness; the argument is that likeness's Source title"
+            ), source)
+        }
+
+        /// "Likeness from {Source title}. Open citation" — a gallery tile's spoken label.
+        static func likenessTileLabel(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.person.likenessTile",
+                defaultValue: "Likeness from %@. Open citation",
+                comment: "Accessibility label of a likeness tile in a Person's gallery; the argument is the Source title"
+            ), source)
+        }
+
         static let personNoLikeness = LocalizedStringResource(
             "conclusions.person.noLikeness",
             defaultValue: "No likeness recorded",
             comment: "Accessibility label of the empty portrait slot on a Person page"
         )
+
+        static let portraitBadge = LocalizedStringResource(
+            "conclusions.person.portraitBadge",
+            defaultValue: "Portrait",
+            comment: "Badge on the gallery likeness chosen as the Person's portrait"
+        )
+
+        static let useAsPortrait = LocalizedStringResource(
+            "conclusions.person.useAsPortrait",
+            defaultValue: "Use as portrait",
+            comment: "Button under a gallery likeness that makes it the Person's portrait"
+        )
+
+        /// "Use the likeness from {Source title} as portrait" — the button's spoken label.
+        static func useAsPortraitLabel(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.person.useAsPortraitLabel",
+                defaultValue: "Use the likeness from %@ as portrait",
+                comment: "Accessibility label of the button that makes a gallery likeness the Person's portrait; the argument is the Source title (or the Observation ref when the title is empty)"
+            ), source)
+        }
+
+        static let useEarliestLikeness = LocalizedStringResource(
+            "conclusions.person.useEarliestLikeness",
+            defaultValue: "Use earliest likeness",
+            comment: "Header thumb menu item and accessibility action that clears the Person's portrait"
+        )
+
+        static let portraitMenuTitle = LocalizedStringResource(
+            "conclusions.person.portraitMenuTitle",
+            defaultValue: "Person portrait",
+            comment: "Title of the Person page header thumb menu"
+        )
+
+        static let portraitMenuHint = LocalizedStringResource(
+            "conclusions.person.portraitMenuHint",
+            defaultValue: "Right-click for portrait options",
+            comment: "Help and accessibility hint on the Person page header thumb while a portrait is chosen"
+        )
+
+        static let toastPortraitUpdatedTitle = L10n.string(LocalizedStringResource(
+            "conclusions.person.toastPortraitUpdatedTitle",
+            defaultValue: "Portrait updated",
+            comment: "Toast title after choosing or clearing the Person's portrait"
+        ))
+
+        static func toastPortraitChosenBody(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.person.toastPortraitChosenBody",
+                defaultValue: "Using the likeness from %@ as the portrait.",
+                comment: "Toast body after choosing a portrait; the argument is the tile's Source title"
+            ), source)
+        }
+
+        static let toastPortraitEarliestBody = L10n.string(LocalizedStringResource(
+            "conclusions.person.toastPortraitEarliestBody",
+            defaultValue: "Using the earliest likeness as the portrait.",
+            comment: "Toast body after clearing the portrait"
+        ))
 
         static let eventNoImage = LocalizedStringResource(
             "conclusions.event.noImage",
@@ -8442,12 +8740,91 @@ enum L10n {
             ), word, date, place)
         }
 
+        static func sexAtBirthBadge(_ value: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.sexAtBirthBadge",
+                defaultValue: "%@ · at birth",
+                comment: "Person page badge when only sex at birth is recorded; argument is the term label"
+            ), value)
+        }
+
         static func a11yRef(_ ref: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.a11y.ref",
                 defaultValue: "Reference %@",
                 comment: "VoiceOver label of a handle's ref (PER-…)"
             ), ref)
+        }
+    }
+
+    /// Last-updated cell on a list row: the hover help and the spoken suffix.
+    /// The day words and the stamp are `L10n.Timestamp`.
+    enum LastUpdated {
+        static func a11yJoin(_ base: String, _ updated: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "lastUpdated.a11y.join",
+                defaultValue: "%1$@, %2$@",
+                comment: "Joins a list row's spoken label and its last-updated phrase"
+            ), base, updated)
+        }
+
+        static func a11yUpdated(_ text: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "lastUpdated.a11y.updated",
+                defaultValue: "updated %@",
+                comment: "VoiceOver suffix of a list row; argument is the spoken time (Today at 3:15 PM, Yesterday, October 12, 2026)"
+            ), text)
+        }
+
+        static var a11yUnknown: String {
+            L10n.string(LocalizedStringResource(
+                "lastUpdated.a11y.unknown",
+                defaultValue: "last updated unknown",
+                comment: "VoiceOver suffix of a list row with no recorded last-updated time"
+            ))
+        }
+
+        static func help(stamp: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "lastUpdated.help",
+                defaultValue: "Last updated %@",
+                comment: "Hover help of the last-updated cell; argument is the full date and time"
+            ), stamp)
+        }
+    }
+
+    /// Day words and the stamp joiner `TimestampFormat` uses for every catalog timestamp.
+    enum Timestamp {
+        static func today(time: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "timestamp.today",
+                defaultValue: "Today, %@",
+                comment: "Relative timestamp for a time today; argument is the time of day"
+            ), time)
+        }
+
+        static func todayAt(time: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "timestamp.todayAt",
+                defaultValue: "Today at %@",
+                comment: "Spoken timestamp for a time today; argument is the time of day"
+            ), time)
+        }
+
+        static var yesterday: String {
+            L10n.string(LocalizedStringResource(
+                "timestamp.yesterday",
+                defaultValue: "Yesterday",
+                comment: "Relative and spoken timestamp for a time yesterday"
+            ))
+        }
+
+        static func stamp(date: String, time: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "timestamp.stamp",
+                defaultValue: "%1$@ · %2$@",
+                comment: "Full timestamp: date, then time with zone, joined by a middle dot"
+            ), date, time)
         }
     }
 
@@ -8678,6 +9055,16 @@ enum L10n {
             "error.ingest.invalid",
             defaultValue: "Could not ingest that file.",
             comment: "FFI error ingest.invalid"
+        )
+        static let ingestUnsafeObjectsTitle = LocalizedStringResource(
+            "error.ingest.unsafe_objects.title",
+            defaultValue: "This project’s objects folder can’t be used",
+            comment: "Callout title for ingest.unsafe_objects"
+        )
+        static let ingestUnsafeObjectsHelp = LocalizedStringResource(
+            "error.ingest.unsafe_objects.help",
+            defaultValue: "Its objects folder is a link to another location. Provenencia stores files only inside the project folder. Replace the link with a real folder, then try again.",
+            comment: "Callout help for ingest.unsafe_objects"
         )
         static let ingestPermissionDeniedTitle = LocalizedStringResource(
             "error.ingest.permission_denied.title",
@@ -8933,6 +9320,11 @@ enum L10n {
                     ),
                     message: L10n.string(ingestInvalid)
                 )
+            case "ingest.unsafe_objects":
+                return IngestCallout(
+                    title: ingestUnsafeObjectsTitle,
+                    message: L10n.string(ingestUnsafeObjectsHelp)
+                )
             default:
                 return nil
             }
@@ -9013,12 +9405,12 @@ enum L10n {
             defaultValue: "Invalid property term.",
             comment: "FFI error propertyterms.invalid"
         )
-        static func propertyTermsDuplicateKey(key: String) -> String {
+        static func propertyTermsDuplicateKey(label: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "error.propertyterms.duplicate_key",
-                defaultValue: "You already have a term with the key %@. Give this one a different label.",
-                comment: "FFI error propertyterms.duplicate_key; argument is the colliding key"
-            ), key)
+                defaultValue: "This property already has the term “%@”. Use that one, or give this one a different label.",
+                comment: "FFI error propertyterms.duplicate_key; argument is the existing term's label"
+            ), label)
         }
         static let propertyTermsLocked = LocalizedStringResource(
             "error.propertyterms.locked",
@@ -9090,6 +9482,16 @@ enum L10n {
             "error.datevalues.invalid",
             defaultValue: "Invalid date value.",
             comment: "FFI error datevalues.invalid"
+        )
+        static let depictionValuesInvalid = LocalizedStringResource(
+            "error.depictionvalues.invalid",
+            defaultValue: "Invalid depiction value.",
+            comment: "FFI error depictionvalues.invalid"
+        )
+        static let ingestUnsupportedImage = LocalizedStringResource(
+            "error.ingest.unsupported_image",
+            defaultValue: "The picture of that region couldn’t be read. Draw the region again, or try a smaller one.",
+            comment: "FFI error ingest.unsupported_image (a depiction crop Go could not decode)"
         )
         static let nameValuesInvalid = LocalizedStringResource(
             "error.namevalues.invalid",
@@ -9242,6 +9644,8 @@ enum L10n {
                 return L10n.string(ingestSymlinkHelp)
             case "ingest.missing":
                 return L10n.string(ingestMissingHelp)
+            case "ingest.unsupported_image":
+                return L10n.string(ingestUnsupportedImage)
             case "sourcetypes.invalid":
                 return L10n.string(sourceTypesInvalid)
             case "sourcetypes.in_use":
@@ -9271,7 +9675,7 @@ enum L10n {
             case "propertyterms.invalid":
                 return L10n.string(propertyTermsInvalid)
             case "propertyterms.duplicate_key":
-                return propertyTermsDuplicateKey(key: params.first ?? "?")
+                return propertyTermsDuplicateKey(label: params.first ?? "?")
             case "propertyterms.locked":
                 return L10n.string(propertyTermsLocked)
             case "propertyterms.in_use":
@@ -9300,6 +9704,8 @@ enum L10n {
                 return L10n.string(dateValuesInvalid)
             case "namevalues.invalid":
                 return L10n.string(nameValuesInvalid)
+            case "depictionvalues.invalid":
+                return L10n.string(depictionValuesInvalid)
             case "deleteimpact.invalid":
                 return L10n.string(deleteImpactInvalid)
             case "filederivatives.invalid":

@@ -1,6 +1,14 @@
 package handlers
 
 import (
+	"errors"
+	"image/png"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"regexp"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 
@@ -8,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/locator"
 	"google.golang.org/protobuf/proto"
 )
@@ -83,7 +92,241 @@ func citationFixture(t *testing.T) (projectDir, userID, sourceID, artifactID, pl
 	return dir, userID, sourceID, art.Artifact.GetId(), subj.Subject.GetId(), toponymID
 }
 
+const (
+	likenessLocatorJSON = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
+	likenessRegionJSON  = `{"version":1,"selectors":[{"type":"page","artifact_page":1},{"type":"region","unit":"normalized","points":[{"x":0.1,"y":0.1},{"x":0.4,"y":0.1},{"x":0.4,"y":0.5}]}]}`
+	likenessRegion2JSON = `{"version":1,"selectors":[{"type":"page","artifact_page":1},{"type":"region","unit":"normalized","points":[{"x":0.5,"y":0.5},{"x":0.9,"y":0.5},{"x":0.9,"y":0.9}]}]}`
+)
+
+var objectPathPattern = regexp.MustCompile(`^objects/[0-9a-f]{2}/[0-9a-f]{2}/[0-9a-f]{64}\.png$`)
+
+// likenessFixture is a project whose Artifact has an 8 x 8 PNG File and whose
+// Source has a Person subject, plus the likeness Property.
+func likenessFixture(t *testing.T) (dir, userID, sourceID, artifactID, personID, likenessID string) {
+	t.Helper()
+	dir, userID, sourceID, personTypeID := subjectFixture(t)
+	aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
+		ProjectDir: dir, UserId: userID, SourceId: sourceID, Label: "Photo",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var art engine.CreateArtifactResponse
+	if err := proto.Unmarshal(aout, &art); err != nil {
+		t.Fatal(err)
+	}
+	artifactID = art.Artifact.GetId()
+	photo := filepath.Join(t.TempDir(), "photo.png")
+	writePNG(t, photo)
+	if _, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
+		ProjectDir: dir, UserId: userID, ArtifactId: artifactID, Path: photo,
+	})); err != nil {
+		t.Fatal(err)
+	}
+	sout, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
+		ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: personTypeID, Label: "Ada",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var subj engine.CreateSubjectResponse
+	if err := proto.Unmarshal(sout, &subj); err != nil {
+		t.Fatal(err)
+	}
+	return dir, userID, sourceID, artifactID, subj.Subject.GetId(), propertyIDByKey(t, dir, "likeness")
+}
+
+// objectRelPaths lists every regular file under dir/objects, relative to dir, sorted.
+func objectRelPaths(t *testing.T, dir string) []string {
+	t.Helper()
+	var out []string
+	root := filepath.Join(dir, "objects")
+	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		if d.Type().IsRegular() {
+			rel, err := filepath.Rel(dir, p)
+			if err != nil {
+				return err
+			}
+			out = append(out, filepath.ToSlash(rel))
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func likenessDraft(personID, likenessID, region, imagePath string) *engine.ObservationDraft {
+	return &engine.ObservationDraft{
+		SubjectId:  personID,
+		PropertyId: likenessID,
+		Depiction:  &engine.DepictionValueInput{RegionJson: region, ImagePath: imagePath},
+	}
+}
+
+// saveLikeness saves one likeness on a new Citation and returns the response.
+func saveLikeness(t *testing.T, dir, userID, artifactID, personID, likenessID, crop string) *engine.CreateCitationWithObservationsResponse {
+	t.Helper()
+	out, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+		ProjectDir: dir, UserId: userID, ArtifactId: artifactID, LocatorJson: likenessLocatorJSON,
+		Observations: []*engine.ObservationDraft{likenessDraft(personID, likenessID, likenessRegionJSON, crop)},
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var created engine.CreateCitationWithObservationsResponse
+	if err := proto.Unmarshal(out, &created); err != nil {
+		t.Fatal(err)
+	}
+	return &created
+}
+
+// sameLikeness asserts a read row carries the depiction id and value the save returned.
+func sameLikeness(t *testing.T, got, saved *engine.Observation) {
+	t.Helper()
+	if got.GetValueDepictionId() != saved.GetValueDepictionId() || !proto.Equal(got.GetDepiction(), saved.GetDepiction()) {
+		t.Fatalf("read %+v, saved %+v", got, saved)
+	}
+}
+
+// checkSavedLikeness asserts the AC-1.1 shape of one saved likeness row.
+func checkSavedLikeness(t *testing.T, dir string, row *engine.Observation) {
+	t.Helper()
+	if row.GetPropertyValueType() != "depiction" || row.GetValueDepictionId() == "" {
+		t.Fatalf("row %+v", row)
+	}
+	if row.GetDepiction().GetRegionJson() != likenessRegionJSON {
+		t.Fatalf("region %q", row.GetDepiction().GetRegionJson())
+	}
+	rel := row.GetDepiction().GetImageRelPath()
+	if !objectPathPattern.MatchString(rel) {
+		t.Fatalf("image path %q", rel)
+	}
+	f, err := os.Open(filepath.Join(dir, filepath.FromSlash(rel)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	cfg, err := png.DecodeConfig(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Width != 300 || cfg.Height != 200 {
+		t.Fatalf("stored image %d x %d", cfg.Width, cfg.Height)
+	}
+}
+
+func TestCreateCitationRefusesSymlinkedCrop(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
+	before := objectRelPaths(t, dir)
+	link := filepath.Join(t.TempDir(), "link.jpg")
+	if err := os.Symlink(writeCrop(t, 300, 200, 128), link); err != nil {
+		t.Fatal(err)
+	}
+	_, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+		ProjectDir: dir, UserId: userID, ArtifactId: artifactID, LocatorJson: likenessLocatorJSON,
+		Observations: []*engine.ObservationDraft{likenessDraft(personID, likenessID, likenessRegionJSON, link)},
+	}))
+	if !errors.Is(err, ingest.ErrSymlink) {
+		t.Fatalf("got %v", err)
+	}
+	if after := objectRelPaths(t, dir); strings.Join(after, ",") != strings.Join(before, ",") {
+		t.Fatalf("objects changed: %v -> %v", before, after)
+	}
+	lout, err := ListCitationsByArtifact(marshalProto(t, &engine.ListCitationsByArtifactRequest{ProjectDir: dir, ArtifactId: artifactID}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var list engine.ListCitationsByArtifactResponse
+	if err := proto.Unmarshal(lout, &list); err != nil {
+		t.Fatal(err)
+	}
+	if len(list.GetCitations()) != 0 {
+		t.Fatalf("citations %+v", list.GetCitations())
+	}
+}
+
+func TestLikenessReadHidesDamagedValue(t *testing.T) {
+	offPage := strings.Replace(likenessRegionJSON, `"artifact_page":1`, `"artifact_page":9`, 1)
+	tests := []struct {
+		name       string
+		damage     string
+		args       []any
+		wantRegion string
+		wantImage  bool
+	}{
+		{name: "region off the page", damage: `UPDATE depiction_values SET region_json = ?`, args: []any{offPage}, wantRegion: "", wantImage: true},
+		{name: "image not a PNG", damage: `UPDATE files SET media_type = 'application/pdf' WHERE id IN (SELECT image_file_id FROM depiction_values)`, wantRegion: likenessRegionJSON, wantImage: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() { _ = catalogsession.CloseAll() })
+			dir, userID, sourceID, artifactID, personID, likenessID := likenessFixture(t)
+			saved := saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
+			row := saved.Observations[0]
+			err := catalogsession.Do(dir, func(c *database.Catalog) error {
+				db, err := c.DB()
+				if err != nil {
+					return err
+				}
+				_, err = db.Exec(tt.damage, tt.args...)
+				return err
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := catalogsession.CloseAll(); err != nil {
+				t.Fatal(err)
+			}
+			check := func(t *testing.T, rows []*engine.Observation) {
+				t.Helper()
+				if len(rows) != 1 || rows[0].GetValueDepictionId() != row.GetValueDepictionId() {
+					t.Fatalf("rows %+v", rows)
+				}
+				d := rows[0].GetDepiction()
+				if d.GetRegionJson() != tt.wantRegion {
+					t.Fatalf("region %q", d.GetRegionJson())
+				}
+				if (d.GetImageRelPath() != "") != tt.wantImage {
+					t.Fatalf("image path %q", d.GetImageRelPath())
+				}
+			}
+			gout, err := GetCitation(marshalProto(t, &engine.GetCitationRequest{ProjectDir: dir, CitationId: saved.Citation.GetId()}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got engine.GetCitationResponse
+			if err := proto.Unmarshal(gout, &got); err != nil {
+				t.Fatal(err)
+			}
+			check(t, got.Observations)
+			lout, err := ListObservationsBySource(marshalProto(t, &engine.ListObservationsBySourceRequest{ProjectDir: dir, SourceId: sourceID}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var list engine.ListObservationsBySourceResponse
+			if err := proto.Unmarshal(lout, &list); err != nil {
+				t.Fatal(err)
+			}
+			check(t, list.Observations)
+			if err := catalogsession.Do(dir, func(c *database.Catalog) error { return c.Graph().Verify() }); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 func TestCreateCitationWithObservations(t *testing.T) {
+	var objectsBefore []string
 	runRPC(t, CreateCitationWithObservations, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
@@ -112,7 +355,7 @@ func TestCreateCitationWithObservations(t *testing.T) {
 				if created.Citation.GetTranscription() != "transcribe first" {
 					t.Fatalf("transcription %q", created.Citation.GetTranscription())
 				}
-				if created.GetEffects() == nil || len(created.GetEffects().GetSources())+len(created.GetEffects().GetCacheSources()) == 0 {
+				if created.GetEffects() == nil || len(created.GetEffects().GetSources()) == 0 {
 					t.Fatalf("effects %+v", created.GetEffects())
 				}
 				cr := req.(*engine.CreateCitationWithObservationsRequest)
@@ -137,6 +380,33 @@ func TestCreateCitationWithObservations(t *testing.T) {
 			},
 			wantErr:   true,
 			wantErrIs: locator.ErrInvalid,
+		},
+		{
+			name: "saves a likeness and returns its image path",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
+				objectsBefore = objectRelPaths(t, dir)
+				return &engine.CreateCitationWithObservationsRequest{
+					ProjectDir: dir, UserId: userID, ArtifactId: artifactID, LocatorJson: likenessLocatorJSON,
+					Observations: []*engine.ObservationDraft{likenessDraft(personID, likenessID, likenessRegionJSON, writeCrop(t, 300, 200, 128))},
+				}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var created engine.CreateCitationWithObservationsResponse
+				if err := proto.Unmarshal(out, &created); err != nil {
+					t.Fatal(err)
+				}
+				if len(created.Observations) != 1 {
+					t.Fatalf("observations %+v", created.Observations)
+				}
+				dir := req.(*engine.CreateCitationWithObservationsRequest).ProjectDir
+				checkSavedLikeness(t, dir, created.Observations[0])
+				want := append(append([]string{}, objectsBefore...), created.Observations[0].GetDepiction().GetImageRelPath())
+				sort.Strings(want)
+				if got := objectRelPaths(t, dir); !slices.Equal(got, want) {
+					t.Fatalf("objects %v, want %v", got, want)
+				}
+			},
 		},
 		{
 			name: "creates citation with text observation",
@@ -182,6 +452,36 @@ func TestCreateCitationWithObservations(t *testing.T) {
 func TestAddObservationsToCitation(t *testing.T) {
 	runRPC(t, AddObservationsToCitation, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "adds a likeness",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
+				createOut, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir: dir, UserId: userID, ArtifactId: artifactID, LocatorJson: likenessLocatorJSON,
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateCitationWithObservationsResponse
+				if err := proto.Unmarshal(createOut, &created); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.AddObservationsToCitationRequest{
+					ProjectDir: dir, UserId: userID, CitationId: created.Citation.GetId(),
+					Observations: []*engine.ObservationDraft{likenessDraft(personID, likenessID, likenessRegionJSON, writeCrop(t, 300, 200, 128))},
+				}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var added engine.AddObservationsToCitationResponse
+				if err := proto.Unmarshal(out, &added); err != nil {
+					t.Fatal(err)
+				}
+				if len(added.Observations) != 1 {
+					t.Fatalf("%+v", added.Observations)
+				}
+				checkSavedLikeness(t, req.(*engine.AddObservationsToCitationRequest).ProjectDir, added.Observations[0])
+			},
+		},
 		{
 			name: "appends observation",
 			reqFn: func(t *testing.T) proto.Message {
@@ -231,8 +531,32 @@ func TestAddObservationsToCitation(t *testing.T) {
 }
 
 func TestListObservationsBySource(t *testing.T) {
+	var saved *engine.CreateCitationWithObservationsResponse
 	runRPC(t, ListObservationsBySource, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "returns a likeness",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, sourceID, artifactID, personID, likenessID := likenessFixture(t)
+				saved = saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
+				return &engine.ListObservationsBySourceRequest{ProjectDir: dir, SourceId: sourceID}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var list engine.ListObservationsBySourceResponse
+				if err := proto.Unmarshal(out, &list); err != nil {
+					t.Fatal(err)
+				}
+				if len(list.Observations) != 1 {
+					t.Fatalf("%+v", list.Observations)
+				}
+				dir := req.(*engine.ListObservationsBySourceRequest).ProjectDir
+				checkSavedLikeness(t, dir, list.Observations[0])
+				sameLikeness(t, list.Observations[0], saved.Observations[0])
+				if err := catalogsession.Do(dir, func(c *database.Catalog) error { return c.Graph().Verify() }); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
 		{
 			name: "lists by source",
 			reqFn: func(t *testing.T) proto.Message {
@@ -466,8 +790,28 @@ func TestListCitationsByArtifact(t *testing.T) {
 }
 
 func TestGetCitation(t *testing.T) {
+	var saved *engine.CreateCitationWithObservationsResponse
 	runRPC(t, GetCitation, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "returns a likeness",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
+				saved = saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
+				return &engine.GetCitationRequest{ProjectDir: dir, CitationId: saved.Citation.GetId()}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var got engine.GetCitationResponse
+				if err := proto.Unmarshal(out, &got); err != nil {
+					t.Fatal(err)
+				}
+				if len(got.Observations) != 1 {
+					t.Fatalf("%+v", got.Observations)
+				}
+				checkSavedLikeness(t, req.(*engine.GetCitationRequest).ProjectDir, got.Observations[0])
+				sameLikeness(t, got.Observations[0], saved.Observations[0])
+			},
+		},
 		{
 			name: "loads citation with observations",
 			reqFn: func(t *testing.T) proto.Message {
@@ -732,8 +1076,96 @@ func TestUpdateCitation(t *testing.T) {
 }
 
 func TestUpdateObservation(t *testing.T) {
+	// likenessUpdate saves a likeness and returns the request that edits it.
+	likenessUpdate := func(t *testing.T) (*engine.UpdateObservationRequest, *engine.Observation) {
+		dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
+		saved := saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
+		row := saved.Observations[0]
+		return &engine.UpdateObservationRequest{ProjectDir: dir, UserId: userID, Observation: proto.Clone(row).(*engine.Observation)}, row
+	}
+	updated := func(t *testing.T, out []byte) *engine.Observation {
+		t.Helper()
+		var resp engine.UpdateObservationResponse
+		if err := proto.Unmarshal(out, &resp); err != nil {
+			t.Fatal(err)
+		}
+		return resp.Observation
+	}
+	// saved is the row before the update; the request carries the same row.
+	var saved *engine.Observation
 	runRPC(t, UpdateObservation, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "replaces a likeness image",
+			reqFn: func(t *testing.T) proto.Message {
+				req, row := likenessUpdate(t)
+				saved = row
+				req.DepictionInput = &engine.DepictionValueInput{RegionJson: likenessRegion2JSON, ImagePath: writeCrop(t, 200, 200, 64)}
+				return req
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				got := updated(t, out)
+				dir := req.(*engine.UpdateObservationRequest).ProjectDir
+				if got.GetValueDepictionId() == "" || got.GetValueDepictionId() == saved.GetValueDepictionId() {
+					t.Fatalf("value id %q was %q", got.GetValueDepictionId(), saved.GetValueDepictionId())
+				}
+				if got.GetDepiction().GetRegionJson() != likenessRegion2JSON {
+					t.Fatalf("region %q", got.GetDepiction().GetRegionJson())
+				}
+				oldPath, newPath := saved.GetDepiction().GetImageRelPath(), got.GetDepiction().GetImageRelPath()
+				if newPath == oldPath || !objectPathPattern.MatchString(newPath) {
+					t.Fatalf("path %q was %q", newPath, oldPath)
+				}
+				onDisk := strings.Join(objectRelPaths(t, dir), ",")
+				if strings.Contains(onDisk, oldPath) || !strings.Contains(onDisk, newPath) {
+					t.Fatalf("objects %s", onDisk)
+				}
+			},
+		},
+		{
+			name: "keeps a likeness on a polarity change",
+			reqFn: func(t *testing.T) proto.Message {
+				req, row := likenessUpdate(t)
+				saved = row
+				req.Observation.Polarity = "negative"
+				return req
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				got := updated(t, out)
+				dir := req.(*engine.UpdateObservationRequest).ProjectDir
+				if got.GetPolarity() != "negative" || got.GetValueDepictionId() != saved.GetValueDepictionId() ||
+					!proto.Equal(got.GetDepiction(), saved.GetDepiction()) {
+					t.Fatalf("got %+v want %+v", got, saved)
+				}
+				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(got.GetDepiction().GetImageRelPath()))); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "ignores a sent image path",
+			reqFn: func(t *testing.T) proto.Message {
+				req, row := likenessUpdate(t)
+				saved = row
+				other := ""
+				for _, p := range objectRelPaths(t, req.ProjectDir) {
+					if p != row.GetDepiction().GetImageRelPath() {
+						other = p
+					}
+				}
+				if other == "" {
+					t.Fatal("artifact object missing")
+				}
+				req.Observation.Depiction.ImageRelPath = other
+				return req
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				got := updated(t, out)
+				if !proto.Equal(got.GetDepiction(), saved.GetDepiction()) || got.GetValueDepictionId() != saved.GetValueDepictionId() {
+					t.Fatalf("got %+v want %+v", got, saved)
+				}
+			},
+		},
 		{
 			name: "updates one observation",
 			reqFn: func(t *testing.T) proto.Message {

@@ -27,7 +27,7 @@ Rule: [`.cursor/rules/catalog-deletes.mdc`](../../../.cursor/rules/catalog-delet
 | `sources` / `artifacts` / `citations` / `observations` / `subjects` | Note row delete, `ClearSourceMetadata` |
 | Vocab: `sourcetypes`, `metadatafields`, `properties`, `propertyterms`, later subject types | `sourcevocab` / `subjectvocab` join-row remove |
 | Later Claim / Narrative resources | `searchindex.Delete` (FTS doc only) |
-| Existing `Delete` with no UI this spike | Owned-outbound child SQL that the register already walks |
+| Existing `Delete` with no UI this spike | Owned-outbound child rows that `catalogmodel` already declares |
 
 Every facet `CASCADE` FK is registered as `facet` and classified:
 
@@ -43,7 +43,7 @@ Every facet `CASCADE` FK is registered as `facet` and classified:
 
 ```
 - [ ] Table and every live FK registered in `catalogmodel` ([`add-catalog-model`](../add-catalog-model/SKILL.md))
-- [ ] Resource inbound edges have count + list probes; owned outbound is on the release list
+- [ ] Resource inbound edges have count + list probes; owned outbound is declared `BucketOwnedOutbound` in `catalogmodel` (a row child registers `PK`); no `deleteimpact` code
 - [ ] Title + location projectors registered on the blocker kind (domain package)
 - [ ] Proto kind / via keys; recipe L10n heading (unknown via still renders)
 - [ ] Domain `Delete`: load → extra gates → Impact in the same tx → connection facets if any → `SnapshotOwned` if owned outbound → DELETE parent → `ReleaseSnapshot` → audit / FTS
@@ -72,13 +72,13 @@ func Delete(c *database.Catalog, userID, id []byte) error {
     if err := deleteimpact.Refuse(report, deleteimpact.Codes{
         InUse: ErrInUse, NotFound: ErrInvalid, // OriginLocked / EdgeLocked when the kind has those gates
     }); err != nil { return err }
-    released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindCitation, id) // audited facets, connection facets, claims, pins
+    changes, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindCitation, id) // audited facets, connection facets, claims, pins
     if err != nil { return err }
     // owned outbound: snap, err := deleteimpact.SnapshotOwned(tx, kind, id) — missing parent is ErrInvalid
     // DELETE parent
-    // deleteimpact.ReleaseSnapshot(tx, snap)
-    // audit.Record(Changes: append(released.Changes, parentChange)), searchindex.Delete / Reproject
-    // handles come from effects.Handles on released.Changes
+    // err = deleteimpact.ReleaseSnapshot(tx, snap) — it schedules the purge
+    // effects.Resolve then audit.Record(Changes: append(changes, parentChange), set), searchindex.Delete / Reproject
+    // handles come from effects.Handles on changes
 }
 ```
 
@@ -93,7 +93,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 ## New table
 
 1. Classify the FKs in the migration skill (`NO ACTION` / `CASCADE` / `SET NULL` / owned outbound).
-2. Register the table and its FKs with [`add-catalog-model`](../add-catalog-model/SKILL.md). In the same PR, add probes, projectors, and releases in `core/database/deleteimpact`. A composite FK registers once, under its leading column, with the full tuple in `FromCols`.
+2. Register the table and its FKs with [`add-catalog-model`](../add-catalog-model/SKILL.md). In the same PR, add probes, projectors, and facet releases in `core/database/deleteimpact`. A table that owns a File or a value row declares its FKs as `BucketOwnedOutbound` (and a `PK` on a row child) in `catalogmodel` and adds no `deleteimpact` code; its `Delete` calls the release, which schedules the purge, and an update that swaps an owned child calls `deleteimpact.ReleaseReplaced` for the old one. A composite FK registers once, under its leading column, with the full tuple in `FromCols`.
 3. If researchers can delete the row, add `Delete` in the domain package using the pattern above.
 4. If this spike has no UI, still register + cut over any existing `Delete`.
 

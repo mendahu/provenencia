@@ -459,4 +459,18 @@ struct PromoteFlowTests {
         flow.merge(proposal(rows: [held], revision: 4), subjects: [fact("a")])
         #expect(flow.rows[0].conflictNote == "PER-1")
     }
+
+    @Test func aNegatedConflictLineIsNotDraftedAsAPin() {
+        var proposed = row(id: "a")
+        proposed.comparisons.append(CatalogPromoteGraphAlignmentComparison(
+            propertyKey: "sex_at_birth", propertyOrigin: "provenencia", outcome: "conflict",
+            valueType: "term", pinned: false, incomingDisplay: "male", incomingNegative: true,
+            memberDisplay: "male"
+        ))
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [proposed]), subjects: [fact("a")], bridges: [])
+        let line = proposed.comparisons[proposed.comparisons.count - 1]
+        #expect(!flow.rows[0].pins.contains(line.id))
+        #expect(L10n.Promote.negatedValue(line.incomingDisplay) == "not male")
+    }
 }

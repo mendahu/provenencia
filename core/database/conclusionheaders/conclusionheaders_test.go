@@ -1,6 +1,7 @@
 package conclusionheaders_test
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 	"testing"
@@ -8,18 +9,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
-	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/nameformats"
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -32,7 +31,11 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -64,7 +67,7 @@ func newFixture(t *testing.T) *fixture {
 	must(t, err)
 	must(t, users.Upsert(c, userID, "Tester", r))
 	must(t, subjectvocab.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
@@ -72,13 +75,13 @@ func newFixture(t *testing.T) *fixture {
 	must(t, err)
 	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
-	name, err := properties.Lookup(c, "name", properties.OriginProvenencia)
+	name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 	must(t, err)
 	return &fixture{t: t, c: c, source: src, artifact: art, name: name}
 }
 
 func (f *fixture) typeID(key string) []byte {
-	st, err := subjecttypes.Lookup(f.c, key, subjecttypes.OriginProvenencia)
+	st, err := subjecttypes.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return st.ID
 }
@@ -95,7 +98,7 @@ func (f *fixture) person(forms ...string) (subjects.Subject, []observations.Obse
 	if len(forms) > 0 {
 		var in []observations.Input
 		for _, form := range forms {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.name.ID, Name: namevaluestest.Western(form)})
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.name.ID, Name: namevaluetest.Western(form)})
 		}
 		res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
@@ -167,7 +170,7 @@ func TestListPersons(t *testing.T) {
 		_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 			return observations.Update(tx, userID, observations.Input{
 				ID: jamesObs[1].ID, SubjectID: jamesObs[1].SubjectID, PropertyID: f.name.ID,
-				Name: namevaluestest.Western("James Robins"),
+				Name: namevaluetest.Western("James Robins"),
 			})
 		})
 		must(t, err)
@@ -185,7 +188,7 @@ func TestListPersonsSortsBySortedPartsNotForm(t *testing.T) {
 	must(t, nameformats.Install(f.c))
 	f.person("Aaron Zimmerman")
 	f.person("Zachary Adams")
-	formOnly := &namevalues.Value{Form: "Aaron Aardvark"}
+	formOnly := &namevalue.Value{Form: "Aaron Aardvark"}
 	personType := f.typeID("person")
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: personType}, nil)
@@ -244,7 +247,7 @@ func TestHeadersShowKeptValuesOnly(t *testing.T) {
 			name: "a provisional member's name is not the Person's name",
 			kind: "person",
 			cite: func(f *fixture) []observations.Input {
-				return []observations.Input{{PropertyID: f.name.ID, Name: namevaluestest.Western("Ghost Name")}}
+				return []observations.Input{{PropertyID: f.name.ID, Name: namevaluetest.Western("Ghost Name")}}
 			},
 			check: func(t *testing.T, f *fixture, entityID []byte) {
 				for _, h := range f.list() {
@@ -312,11 +315,111 @@ func TestListPersonsQueryCountIsConstant(t *testing.T) {
 	f.c.Graph().Drop()
 	many, err := conclusionheaders.ListPersonsQueryCount(f.c)
 	must(t, err)
-	// The name row is one query; birth and death are one more, for the whole
-	// list. The count stays put as the list grows.
+	// The name row is one query; birth and death are one more, and the
+	// likeness lead one more, each for the whole list. The count stays put as the list grows.
 	if one < 1 || many != one {
 		t.Fatalf("queries: %d for 1 Person, %d for 51", one, many)
 	}
+}
+
+func TestPersonHeaderLeadsWithEarliestLikeness(t *testing.T) {
+	f := newFixture(t)
+	s, _, h := f.person("Ann Lee")
+	_, _, other := f.person("Bob Lee")
+	save := func(shade uint8) observations.Observation {
+		return observationstest.SaveLikeness(t, f.c, userID, f.source.ID, s.ID, shade)
+	}
+	imageOf := func(o observations.Observation) []byte { return observationstest.ImageOf(t, f.c, o.ID) }
+	lead := func(rows []conclusionheaders.PersonHeader, id []byte) []byte {
+		for _, r := range rows {
+			if bytes.Equal(r.Entity.ID, id) {
+				return r.LikenessImageFileID
+			}
+		}
+		t.Fatalf("no row for %x", id)
+		return nil
+	}
+	if got := lead(f.list(), h); got != nil {
+		t.Fatalf("lead before any likeness: %x", got)
+	}
+	a := save(100)
+	if got := lead(f.list(), h); !bytes.Equal(got, imageOf(a)) {
+		t.Fatalf("lead after A: %x, want %x", got, imageOf(a))
+	}
+	save(200)
+	if got := lead(f.list(), h); !bytes.Equal(got, imageOf(a)) {
+		t.Fatalf("lead after B: %x, want %x", got, imageOf(a))
+	}
+	byIDs, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{h, other})
+	must(t, err)
+	if got := lead(byIDs, h); !bytes.Equal(got, imageOf(a)) {
+		t.Fatalf("PersonsByIDs lead %x", got)
+	}
+	if got := lead(byIDs, other); got != nil {
+		t.Fatalf("person without a likeness leads with %x", got)
+	}
+	must(t, f.c.Graph().Verify())
+}
+
+func TestPersonHeaderSkipsNegativeLikeness(t *testing.T) {
+	f := newFixture(t)
+	s, _, h := f.person("Ann Lee")
+	observationstest.SaveNegativeLikeness(t, f.c, userID, f.source.ID, s.ID, 100)
+	b := observationstest.SaveLikeness(t, f.c, userID, f.source.ID, s.ID, 200)
+	observationstest.SaveLikeness(t, f.c, userID, f.source.ID, s.ID, 100)
+	var got []byte
+	for _, r := range f.list() {
+		if bytes.Equal(r.Entity.ID, h) {
+			got = r.LikenessImageFileID
+		}
+	}
+	if want := observationstest.ImageOf(t, f.c, b.ID); !bytes.Equal(got, want) {
+		t.Fatalf("lead %x, want %x", got, want)
+	}
+	must(t, f.c.Graph().Verify())
+}
+
+func TestPersonHeaderLeadsWithPortrait(t *testing.T) {
+	f := newFixture(t)
+	s, _, h := f.person("Ann Lee")
+	a := observationstest.SaveLikeness(t, f.c, userID, f.source.ID, s.ID, 100)
+	b := observationstest.SaveLikeness(t, f.c, userID, f.source.ID, s.ID, 200)
+	imageOf := func(o observations.Observation) []byte { return observationstest.ImageOf(t, f.c, o.ID) }
+	choose := func(obs []byte) {
+		t.Helper()
+		_, err := writes.Call(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			ch, err := canonicalentities.SetPreferredLikeness(tx, userID, h, obs)
+			return struct{}{}, ch, err
+		})
+		must(t, err)
+	}
+	check := func(want observations.Observation, label string) {
+		t.Helper()
+		for _, rows := range [][]conclusionheaders.PersonHeader{f.list(), func() []conclusionheaders.PersonHeader {
+			r, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{h})
+			must(t, err)
+			return r
+		}()} {
+			found := false
+			for _, r := range rows {
+				if bytes.Equal(r.Entity.ID, h) {
+					found = true
+					if !bytes.Equal(r.LikenessImageFileID, imageOf(want)) {
+						t.Fatalf("%s: lead %x, want %x", label, r.LikenessImageFileID, imageOf(want))
+					}
+				}
+			}
+			if !found {
+				t.Fatalf("%s: no row", label)
+			}
+		}
+		must(t, f.c.Graph().Verify())
+	}
+	check(a, "no choice")
+	choose(b.ID)
+	check(b, "B chosen")
+	choose(nil)
+	check(a, "cleared")
 }
 
 func TestPersonsByIDs(t *testing.T) {
@@ -342,7 +445,7 @@ func TestPersonsByIDs(t *testing.T) {
 
 func (f *fixture) prop(key string) properties.Property {
 	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, properties.OriginProvenencia)
+	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return p
 }
@@ -350,14 +453,14 @@ func (f *fixture) prop(key string) properties.Property {
 func (f *fixture) term(propertyKey, termKey string) propertyterms.Term {
 	f.t.Helper()
 	p := f.prop(propertyKey)
-	term, err := propertyterms.Lookup(f.c, p.ID, termKey, propertyterms.OriginProvenencia)
+	term, err := propertyterms.Lookup(f.c, p.ID, termKey, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return term
 }
 
-func pointYear(year int) *datevalues.Value {
+func pointYear(year int) *datevalue.Value {
 	y := year
-	return &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &y}
+	return &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
 }
 
 // event promotes a new event Subject with the given Observations.
@@ -506,7 +609,7 @@ func (f *fixture) book(title string) (sources.Source, artifacts.Artifact) {
 
 func (f *fixture) lowTrust(src sources.Source) {
 	f.t.Helper()
-	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", sourcecredibilitygrades.OriginProvenencia)
+	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", vocabkey.OriginProvenencia)
 	must(f.t, err)
 	p6in11 := sourcecredibility.UpsertInput{
 		SourceID: src.ID, CredibilityGradeID: g.ID,
@@ -760,7 +863,7 @@ func TestListHeadersCarryUpdated(t *testing.T) {
 	db, err := f.c.DB()
 	must(t, err)
 	// A handle with no scope row, inserted before the graph is first loaded.
-	personType, err := subjecttypes.Lookup(f.c, "person", subjecttypes.OriginProvenencia)
+	personType, err := subjecttypes.Lookup(f.c, "person", vocabkey.OriginProvenencia)
 	must(t, err)
 	raw, err := uuid.NewV7()
 	must(t, err)
@@ -782,20 +885,20 @@ func TestListHeadersCarryUpdated(t *testing.T) {
 		must(t, db.QueryRow(`SELECT created_at FROM audit_transactions WHERE revision = ?`, rev).Scan(&s))
 		return s
 	}
-	check := func(who string, got audit.Latest) {
+	check := func(who string, got effects.Activity) {
 		t.Helper()
 		if got.Revision <= 0 || got.At == "" || got.At != at(got.Revision) {
 			t.Fatalf("%s updated %+v", who, got)
 		}
 	}
-	byID := map[string]audit.Latest{}
+	byID := map[string]effects.Activity{}
 	people := f.list()
 	for _, h := range people {
 		byID[string(h.Entity.ID)] = h.Updated
 	}
 	check("Bob", byID[string(bob)])
 	check("Ann", byID[string(ann)])
-	if got, ok := byID[string(raw[:])]; !ok || got != (audit.Latest{}) {
+	if got, ok := byID[string(raw[:])]; !ok || got != (effects.Activity{}) {
 		t.Fatalf("handle without scope rows: listed %v, updated %+v", ok, got)
 	}
 	evs, err := conclusionheaders.ListEvents(f.c)
@@ -816,11 +919,11 @@ func TestListHeadersCarryUpdated(t *testing.T) {
 	_, err = writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 		return observations.Update(tx, userID, observations.Input{
 			ID: bobObs[0].ID, SubjectID: bobSubject.ID, PropertyID: f.name.ID,
-			Name: namevaluestest.Western("Bob Smith"), Notes: []string{"seen"},
+			Name: namevaluetest.Western("Bob Smith"), Notes: []string{"seen"},
 		})
 	})
 	must(t, err)
-	byID = map[string]audit.Latest{}
+	byID = map[string]effects.Activity{}
 	for _, h := range f.list() {
 		byID[string(h.Entity.ID)] = h.Updated
 	}
@@ -832,13 +935,13 @@ func TestListHeadersCarryUpdated(t *testing.T) {
 	if got := byID[string(ann)]; got != annBefore {
 		t.Fatalf("Ann moved: %+v → %+v", annBefore, got)
 	}
-	if got := byID[string(raw[:])]; got != (audit.Latest{}) {
+	if got := byID[string(raw[:])]; got != (effects.Activity{}) {
 		t.Fatalf("handle without scope rows updated %+v", got)
 	}
 
 	byIDs, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{bob})
 	must(t, err)
-	if len(byIDs) != 1 || byIDs[0].Updated != (audit.Latest{}) {
+	if len(byIDs) != 1 || byIDs[0].Updated != (effects.Activity{}) {
 		t.Fatalf("PersonsByIDs %+v", byIDs)
 	}
 }

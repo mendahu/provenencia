@@ -42,6 +42,25 @@ struct WorkspaceNavigationTests {
         #expect(navigation.currentLocation == .sectionRoot(.sources))
     }
 
+    @Test func attachProjectSetsUuidAndCommitsSynchronously() throws {
+        let (seed, url) = try attachedNavigation()
+        seed.go(to: WorkspaceLocation.sectionRoot(.sources).withListScrollAnchor("s3"))
+
+        let navigation = WorkspaceNavigation()
+        var recorded: [WorkspaceLocation] = []
+        navigation.onLocationCommit = { recorded.append($0) }
+        navigation.attachProject(uuid: projectUuid, fileURL: url)
+
+        #expect(navigation.projectUuid == projectUuid)
+        #expect(navigation.currentLocation == .sectionRoot(.sources))
+        #expect(navigation.currentLocation.listScrollAnchor == "s3")
+        #expect(recorded.count == 1)
+        #expect(recorded[0].listScrollAnchor == "s3")
+
+        navigation.attachProject(uuid: projectUuid, fileURL: url)
+        #expect(recorded.count == 1)
+    }
+
     @Test func defaultsToSources() {
         let navigation = WorkspaceNavigation()
         #expect(navigation.selectedSection == .sources)

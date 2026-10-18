@@ -4,6 +4,7 @@ import Testing
 @testable import Provenencia
 
 @Suite
+@MainActor
 struct GraphCanvasEdgeGeometryTests {
     private func snapshot(for placed: SourceGraphPlacedBridge) -> SourceGraphSnapshot {
         var placed = placed

@@ -2,8 +2,10 @@ package deleteimpact
 
 import (
 	"database/sql"
-	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"strings"
+
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // ParseKind maps a GetDeleteImpact kind string to a registered kind.
@@ -131,10 +133,10 @@ func originGate(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (Gate, error) {
 		return "", err
 	}
 	origin = strings.TrimSpace(origin)
-	if rule.PluginNever && strings.HasPrefix(origin, originPluginPref) && len(origin) > len(originPluginPref) {
+	if rule.PluginNever && vocabkey.IsPluginOrigin(origin) {
 		return GateOriginLocked, nil
 	}
-	if rule.SeededLocked && origin == originProvenencia {
+	if rule.SeededLocked && origin == vocabkey.OriginProvenencia {
 		return GateOriginLocked, nil
 	}
 	return GateOK, nil

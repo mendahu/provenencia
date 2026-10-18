@@ -2,17 +2,14 @@ package audit_test
 
 import (
 	"bytes"
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -23,8 +20,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -70,7 +69,7 @@ func newScopeSeed(t *testing.T) scopeSeed {
 		t.Fatal(err)
 	}
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -85,11 +84,11 @@ func newScopeSeed(t *testing.T) scopeSeed {
 	if err != nil {
 		t.Fatal(err)
 	}
-	personType, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	eventType, err := subjecttypes.Lookup(c, "event", subjecttypes.OriginProvenencia)
+	eventType, err := subjecttypes.Lookup(c, "event", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,17 +105,17 @@ func newScopeSeed(t *testing.T) scopeSeed {
 	}
 	person := mkSubject(personType.ID, "Bob", 0)
 	event := mkSubject(eventType.ID, "Birth", 4)
-	placeType, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+	placeType, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
 	place := mkSubject(placeType.ID, "Boston", 8)
 	place2 := mkSubject(placeType.ID, "Salem", 12)
-	toponymProp, err := properties.Lookup(c, "toponym", properties.OriginProvenencia)
+	toponymProp, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dateProp, err := properties.Lookup(c, "date", properties.OriginProvenencia)
+	dateProp, err := properties.Lookup(c, "date", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,9 +143,9 @@ func (s scopeSeed) sourceRevisions(t *testing.T) (a, b int64) {
 	for _, src := range all {
 		switch {
 		case bytes.Equal(src.ID, s.a.ID):
-			a = src.UpdatedRevision
+			a = src.Updated.Revision
 		case bytes.Equal(src.ID, s.b.ID):
-			b = src.UpdatedRevision
+			b = src.Updated.Revision
 		}
 	}
 	return a, b
@@ -235,11 +234,14 @@ func (s scopeSeed) handleRevision(t *testing.T, id []byte) int64 {
 	if err != nil {
 		t.Fatal(err)
 	}
-	all, err := audit.LatestByScope(db, audit.ScopeCanonicalEntity)
-	if err != nil {
+	var rev int64
+	if err := db.QueryRow(`SELECT COALESCE(MAX(t.revision), 0)
+		FROM audit_transaction_scopes sc
+		JOIN audit_transactions t ON t.id = sc.audit_transaction_id
+		WHERE sc.scope_type = ? AND sc.scope_id = ?`, effects.ScopeCanonicalEntity, id).Scan(&rev); err != nil {
 		t.Fatal(err)
 	}
-	return all[string(id)].Revision
+	return rev
 }
 
 // TestSourceScopes drives real write paths and checks each one moves the
@@ -412,13 +414,13 @@ func TestSourceScopes(t *testing.T) {
 				year := 1842
 				res := s.citation(t, citations.CreateInput{}, observations.Input{
 					SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-					Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+					Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
 				})
 				year2 := 1843
 				s.bumpsA(t, func() {
 					s.updateObservation(t, observations.Input{
 						ID: res.Observations[0].ID, SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-						Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year2},
+						Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year2},
 					})
 				})
 			},
@@ -511,6 +513,25 @@ func TestHandleScopes(t *testing.T) {
 			},
 		},
 		{
+			name: "unpromote moves the handle, not the source",
+			run: func(t *testing.T, s scopeSeed) {
+				h := s.promote(t, s.person)
+				a0, b0 := s.sourceRevisions(t)
+				if _, err := writes.Call(s.c, writes.Op{Action: "unpromote_subject", UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := promote.Unpromote(tx, scopeUserID, s.person.ID)
+					return struct{}{}, changes, err
+				}); err != nil {
+					t.Fatal(err)
+				}
+				if got, want := s.handleRevision(t, h), s.latest(t); got != want {
+					t.Fatalf("handle revision %d, want latest %d", got, want)
+				}
+				if a1, b1 := s.sourceRevisions(t); a1 != a0 || b1 != b0 {
+					t.Fatalf("unpromote moved the sources (%d,%d) → (%d,%d)", a0, b0, a1, b1)
+				}
+			},
+		},
+		{
 			name: "member observation add, edit, note, delete",
 			run: func(t *testing.T, s scopeSeed) {
 				h := s.promote(t, s.place)
@@ -539,14 +560,14 @@ func TestHandleScopes(t *testing.T) {
 				s.movesBoth(t, h, func() {
 					res = s.citation(t, citations.CreateInput{}, observations.Input{
 						SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-						Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+						Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
 					})
 				})
 				year2 := 1843
 				s.movesBoth(t, h, func() {
 					s.updateObservation(t, observations.Input{
 						ID: res.Observations[0].ID, SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-						Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year2},
+						Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year2},
 					})
 				})
 			},
@@ -581,64 +602,6 @@ func TestHandleScopes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.run(t, newScopeSeed(t))
 		})
-	}
-}
-
-// TestLatestByScope reads each handle's newest revision with its time, leaves
-// out a handle that has no scope row, and rejects a bad call.
-func TestLatestByScope(t *testing.T) {
-	s := newScopeSeed(t)
-	h := s.promote(t, s.place)
-	res := s.citation(t, citations.CreateInput{}, s.textObs(s.place, "Boston"))
-	s.updateObservation(t, observations.Input{
-		ID: res.Observations[0].ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-		ValueText: "Boston Town", HasText: true,
-	})
-	db, err := s.c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	personType, err := subjecttypes.Lookup(s.c, "person", subjecttypes.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
-	raw, err := uuid.NewV7()
-	if err != nil {
-		t.Fatal(err)
-	}
-	r, err := ref.Mint(personType.RefPrefix)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := db.Exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, ?)`,
-		raw[:], personType.ID, r); err != nil {
-		t.Fatal(err)
-	}
-
-	got, err := audit.LatestByScope(db, audit.ScopeCanonicalEntity)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := s.latest(t)
-	l, ok := got[string(h)]
-	if !ok || l.Revision != want {
-		t.Fatalf("handle latest %+v, want revision %d", l, want)
-	}
-	var at string
-	if err := db.QueryRow(`SELECT created_at FROM audit_transactions WHERE revision = ?`, want).Scan(&at); err != nil {
-		t.Fatal(err)
-	}
-	if l.At != at {
-		t.Fatalf("handle time %q, want %q", l.At, at)
-	}
-	if _, ok := got[string(raw[:])]; ok {
-		t.Fatal("handle with no scope row was listed")
-	}
-	if _, err := audit.LatestByScope(db, ""); !errors.Is(err, audit.ErrInvalid) {
-		t.Fatalf("empty scope type: %v", err)
-	}
-	if _, err := audit.LatestByScope(nil, audit.ScopeCanonicalEntity); !errors.Is(err, audit.ErrInvalid) {
-		t.Fatalf("nil querier: %v", err)
 	}
 }
 

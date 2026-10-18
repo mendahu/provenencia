@@ -269,7 +269,11 @@ final class ArtifactRegionOverlayView: NSView {
             }
             return
         }
-        inProgressPoints.append(normalized)
+        guard let next = ArtifactRegionGeometry.appendFreeformVertex(points: inProgressPoints, normalized) else {
+            NSSound.beep()
+            return
+        }
+        inProgressPoints = next
         needsDisplay = true
     }
 

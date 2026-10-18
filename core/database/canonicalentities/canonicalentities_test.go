@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -194,7 +195,7 @@ func TestCanonicalEntities(t *testing.T) {
 
 func lookupType(t *testing.T, c *database.Catalog, key string) subjecttypes.Type {
 	t.Helper()
-	st, err := subjecttypes.Lookup(c, key, subjecttypes.OriginProvenencia)
+	st, err := subjecttypes.Lookup(c, key, vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}

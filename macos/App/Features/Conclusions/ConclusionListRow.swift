@@ -19,7 +19,7 @@ enum ConclusionTitleSource: Equatable {
 /// secondary line is per kind: birth and death for Persons, the date and
 /// place for Events, the parent chain for Places.
 ///
-/// - **thumbnail:** always reserved; the kind's `subject_*` mark, never a photo.
+/// - **thumbnail:** always reserved; the kind's `subject_*` mark, or the likeness a Person leads with.
 /// - **title:** auto-reconciled value → *italic* working label → mono ref.
 /// - **meta:** the ref, always shown — even when it is also the title — so the
 ///   column scans.
@@ -58,6 +58,14 @@ enum ConclusionListRow {
             Text(verbatim: text)
                 .font(PVFont.mono(size: PVTypeScale.bodySmall))
                 .foregroundStyle(PVColor.textSecondary)
+        }
+    }
+
+    /// The last-updated column: the history icon and the cell text, faint when
+    /// no time is recorded. `now` is read as each row builds (no timer).
+    static func updatedColumn<Kind: ConclusionListKind>(_: Kind.Type) -> PVListDetailColumn<Kind.Row> {
+        PVListDetailColumn(width: PVLastUpdated.columnWidth) { row in
+            PVLastUpdated.detail(Kind.updatedAt(row), in: .current)
         }
     }
 

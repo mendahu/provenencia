@@ -1,11 +1,12 @@
 package match
 
 import (
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // Pairwise evaluation reports how close two value sets are. Each property's
-// similarity comes from ComparerFor, the same comparer Rank uses. The promote
+// similarity comes from Compare, the same value compare Rank uses. The promote
 // scale turns that similarity into points. Reconciliation stays on
 // autoreconcile.Compatible, so two spellings remain two values on a handle.
 
@@ -14,7 +15,7 @@ type Outcome string
 
 const (
 	OutcomeAgree    Outcome = "agree"   // similarity 1
-	OutcomePartial  Outcome = "partial" // resemblance above the scale floor
+	OutcomePartial  Outcome = "partial" // resemblance above 0, below 1
 	OutcomeConflict Outcome = "conflict"
 	OutcomeUnknown  Outcome = "unknown"
 )
@@ -22,8 +23,8 @@ const (
 // PropertyMeta names a Property and how pairwise evaluation treats it.
 type PropertyMeta struct {
 	Property    Property
-	ValueType   string // properties.ValueType*
-	Cardinality string // properties.Cardinality*; empty means single
+	ValueType   string // propertymeta.ValueType*
+	Cardinality string // propertymeta.Cardinality*; empty means single
 }
 
 // PropertyComparison is one Property's pairwise result.
@@ -32,10 +33,13 @@ type PropertyComparison struct {
 	Outcome     Outcome
 	ValueType   string
 	Cardinality string
-	// Similarity is the comparer result, 0…1, when Comparable.
-	// Comparable is false when either side has nothing the comparer can judge.
+	// Similarity is the value-compare result times both values' support weights,
+	// 0…1, when Comparable; a minority value that matches exactly is below 1.
+	// Comparable is false when either side has nothing value compare can judge.
 	Similarity float64
 	Comparable bool
+	// Probe and Candidate are the two values behind the result.
+	Probe, Candidate ValueRef
 }
 
 // Evaluation is the pairwise result for every Property listed in metas.
@@ -43,22 +47,10 @@ type Evaluation struct {
 	Comparisons []PropertyComparison
 }
 
-// Evaluate reports a comparer similarity for each property in metas.
-// The outcome here uses a floor of zero: similarity 1 agrees, a positive
-// resemblance is partial, and a comparable zero conflicts (or is unknown
-// when the property holds several values). Promote applies its own scale
-// on top of Similarity and Comparable, which can raise that floor.
-func Evaluate(probe, candidate Values, metas []PropertyMeta) Evaluation {
-	return evaluate(probe, candidate, metas, nil)
-}
-
-// EvaluateWithNames is Evaluate, scoring name values with names when it is
-// set. A nil names comparer keeps ComparerFor, the built-in Western pattern.
-func EvaluateWithNames(probe, candidate Values, metas []PropertyMeta, names *NameComparer) Evaluation {
-	return evaluate(probe, candidate, metas, names)
-}
-
-func evaluate(probe, candidate Values, metas []PropertyMeta, names *NameComparer) Evaluation {
+// Evaluate reports a value-compare similarity for each property in metas,
+// under rules. The outcome is OutcomeOf the similarity. Promote applies its
+// own scale on top of Similarity and Comparable.
+func Evaluate(probe, candidate Values, metas []PropertyMeta, rules valuecompare.Rules) Evaluation {
 	var out Evaluation
 	for _, m := range metas {
 		if m.ValueType == "" {
@@ -66,49 +58,38 @@ func evaluate(probe, candidate Values, metas []PropertyMeta, names *NameComparer
 		}
 		card := m.Cardinality
 		if card == "" {
-			card = properties.CardinalitySingle
+			card = propertymeta.CardinalitySingle
 		}
-		sim, ok := compareProperty(m.ValueType, probe[m.Property], candidate[m.Property], names)
-		pc := PropertyComparison{
+		a, b := poolPeriods(m.Property, probe, candidate)
+		pr := pairValues(rules, m.ValueType, card, a, b)
+		out.Comparisons = append(out.Comparisons, PropertyComparison{
 			Property:    m.Property,
 			ValueType:   m.ValueType,
 			Cardinality: card,
-			Similarity:  sim,
-			Comparable:  ok,
-			Outcome:     outcomeAtFloor(sim, ok, card, 0),
-		}
-		out.Comparisons = append(out.Comparisons, pc)
+			Similarity:  pr.Similarity,
+			Comparable:  pr.Comparable,
+			Probe:       pr.Probe,
+			Candidate:   pr.Candidate,
+			Outcome:     OutcomeOf(pr.Similarity, pr.Comparable, card),
+		})
 	}
 	return out
 }
 
-func compareProperty(valueType string, a, b []Value, names *NameComparer) (float64, bool) {
-	var cmp Comparer
-	if valueType == properties.ValueTypeName && names != nil {
-		cmp = *names
-	} else {
-		cmp = ComparerFor(valueType)
-	}
-	if cmp == nil {
-		return 0, false
-	}
-	return best(cmp, a, b)
-}
-
-// outcomeAtFloor is the outcome a scale with this floor would give.
-// Promote's ApplyScale is the one that scores; this mirrors a floor of zero
-// so a caller without a scale still sees agree, partial, or conflict.
-func outcomeAtFloor(similarity float64, comparable bool, cardinality string, floor float64) Outcome {
+// OutcomeOf is the outcome of a pair: not comparable is unknown; a similarity
+// above 0 agrees at 1 or more and is partial below; otherwise a multiple
+// Property is unknown and any other conflicts.
+func OutcomeOf(similarity float64, comparable bool, cardinality string) Outcome {
 	if !comparable {
 		return OutcomeUnknown
 	}
-	if similarity > 0 && similarity >= floor {
+	if similarity > 0 {
 		if similarity >= 1 {
 			return OutcomeAgree
 		}
 		return OutcomePartial
 	}
-	if cardinality == properties.CardinalityMultiple {
+	if cardinality == propertymeta.CardinalityMultiple {
 		return OutcomeUnknown
 	}
 	return OutcomeConflict

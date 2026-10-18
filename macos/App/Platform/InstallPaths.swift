@@ -6,7 +6,8 @@ enum InstallPaths {
     static let catalogFile = "provenencia.sqlite"
 
     /// `{Application Support}/Provenencia`. Holds `identity.json`, `active-project.json`,
-    /// `navigation/{uuid}.json` (workspace history), and `evidence-links/` (S6-04).
+    /// `navigation/{uuid}.json` (workspace history), `sources-list/{uuid}.json` (Sources list settings),
+    /// and `evidence-links/` (S6-04).
     static func identityDirectory(fileManager: FileManager = .default) throws -> URL {
         let base = try fileManager.url(
             for: .applicationSupportDirectory,
@@ -47,12 +48,27 @@ enum InstallPaths {
     }
 
     /// Filename key: lowercase hex of the catalog project UUID with no dashes/braces.
-    static func navigationFileName(projectUuid: String) -> String {
-        let hex = projectUuid
+    static func projectKey(projectUuid: String) -> String {
+        projectUuid
             .trimmingCharacters(in: CharacterSet(charactersIn: "{}"))
             .replacingOccurrences(of: "-", with: "")
             .lowercased()
-        return "\(hex).json"
+    }
+
+    static func navigationFileName(projectUuid: String) -> String {
+        "\(projectKey(projectUuid: projectUuid)).json"
+    }
+
+    /// `{Application Support}/Provenencia/sources-list`.
+    static func sourcesListSettingsDirectory(fileManager: FileManager = .default) throws -> URL {
+        try identityDirectory(fileManager: fileManager)
+            .appendingPathComponent("sources-list", isDirectory: true)
+    }
+
+    /// `{Application Support}/Provenencia/sources-list/{projectKey}.json`.
+    static func sourcesListSettingsFile(projectUuid: String, fileManager: FileManager = .default) throws -> URL {
+        try sourcesListSettingsDirectory(fileManager: fileManager)
+            .appendingPathComponent("\(projectKey(projectUuid: projectUuid)).json", isDirectory: false)
     }
 
     static func navigationFile(projectUuid: String, fileManager: FileManager = .default) throws -> URL {

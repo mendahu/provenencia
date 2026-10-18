@@ -32,6 +32,9 @@ enum CitationAuthoringFocus: Hashable {
 /// not a guess about what was on screen before the keystroke.
 struct CitationAuthoringDraftAfterCommit: Equatable {
     var bridgeHasTerm = false
+    /// False when the value area has no control to land on (a depiction's
+    /// Draw button while it is disabled), so Tab goes on to the footer.
+    var propertyValueTakesFocus = true
 }
 
 /// Field order for the observation dialogs. The combo reports the commit;
@@ -51,7 +54,7 @@ enum CitationAuthoringNavigation {
     ) -> CitationAuthoringFocus? {
         switch field {
         case .subject: .property
-        case .property: .value
+        case .property: draftAfterCommit.propertyValueTakesFocus ? .value : nil
         case .endA: .endB
         case .endB: draftAfterCommit.bridgeHasTerm ? .term : nil
         case .value, .term: nil
@@ -70,8 +73,27 @@ enum CitationAuthoringNavigation {
         return next(after: field, draftAfterCommit: draftAfterCommit)
     }
 
-    static func initialPropertyFocus(subjectID: String) -> CitationAuthoringFocus {
-        subjectID.isEmpty ? .subject : .property
+    /// A run of likenesses is one face per person, so a depiction opens on the person.
+    static func initialPropertyFocus(
+        subjectID: String,
+        propertyID: String = "",
+        isDepiction: Bool = false
+    ) -> CitationAuthoringFocus {
+        if subjectID.isEmpty { return .subject }
+        if propertyID.isEmpty { return .property }
+        return isDepiction ? .subject : .property
+    }
+
+    /// Property focus for a draft's values; the one place the depiction rule lives.
+    static func initialPropertyFocus(
+        values: ObservationRowValues,
+        vocabulary: CitationComposerVocabulary
+    ) -> CitationAuthoringFocus {
+        initialPropertyFocus(
+            subjectID: values.subjectID,
+            propertyID: values.propertyID,
+            isDepiction: vocabulary.isDepiction(propertyID: values.propertyID)
+        )
     }
 
     static func initialBridgeFocus(endA: String, endB: String, hasTermField: Bool, termID: String) -> CitationAuthoringFocus {
@@ -190,6 +212,8 @@ struct CitationSavedLine: Identifiable, Equatable {
     var body: String
     var negative: Bool
     var markKey: PVMarkKey?
+    /// `objects/…` path of a saved depiction's image; nil for every other line.
+    var imageRelPath: String? = nil
 
     /// Label and value as one phrase, the way a duplicate note names the copied line.
     var phrase: String {
@@ -318,7 +342,10 @@ enum CitationComposerAuthoring {
                     mono: mono,
                     body: [label, valueText].filter { !$0.isEmpty }.joined(separator: " "),
                     negative: row.isNegated,
-                    markKey: nil
+                    markKey: nil,
+                    imageRelPath: row.depictionDraft.imageRelPath.isEmpty
+                        ? nil
+                        : row.depictionDraft.imageRelPath
                 )
             )
         }

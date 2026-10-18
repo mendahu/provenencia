@@ -1,9 +1,13 @@
 package match
 
+import "github.com/mendahu/provenencia/core/vocabkey"
+
 // Feature is one Property a Profile weighs.
 type Feature struct {
 	Property Property
-	Comparer Comparer
+	// ValueType is the Property's value type (propertymeta.ValueType*), which
+	// picks the value comparison.
+	ValueType string
 	// Weight is the points a perfect resemblance adds; a partial one adds
 	// Weight × similarity.
 	Weight float64
@@ -11,6 +15,10 @@ type Feature struct {
 	// away. 0 for Properties where differing values say little (names vary
 	// across records); high where they rule a match out (sex at birth).
 	Contradiction float64
+	// Cardinality is the Property's cardinality (propertymeta.Cardinality*);
+	// empty means single. A multiple Property's displayed values all speak
+	// at full weight, so any one of them can match.
+	Cardinality string
 }
 
 // Profile is the matching algorithm for one Subject type.
@@ -20,19 +28,6 @@ type Profile struct {
 	Features []Feature
 	// MinScore is the least score a candidate needs to be returned.
 	MinScore float64
-}
-
-// WithNameComparer returns a copy of p whose name features use c. Other
-// features stay as they are.
-func (p Profile) WithNameComparer(c NameComparer) Profile {
-	out := p
-	out.Features = append([]Feature(nil), p.Features...)
-	for i := range out.Features {
-		if _, ok := out.Features[i].Comparer.(NameComparer); ok {
-			out.Features[i].Comparer = c
-		}
-	}
-	return out
 }
 
 // With returns a copy of p with f replacing the Feature for the same
@@ -59,4 +54,4 @@ func (p Profile) Properties() []Property {
 	return out
 }
 
-func product(key string) Property { return Property{Key: key, Origin: "provenencia"} }
+func product(key string) Property { return Property{Key: key, Origin: vocabkey.OriginProvenencia} }

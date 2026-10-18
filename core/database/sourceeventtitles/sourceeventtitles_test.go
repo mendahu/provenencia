@@ -8,7 +8,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -23,7 +22,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/eventtitle"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -55,7 +56,7 @@ func newFixture(t *testing.T) *fixture {
 	must(t, err)
 	must(t, users.Upsert(c, userID, "Tester", r))
 	must(t, subjectvocab.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
@@ -68,7 +69,7 @@ func newFixture(t *testing.T) *fixture {
 
 func (f *fixture) subject(kind, label string, in ...observations.Input) subjects.Subject {
 	f.t.Helper()
-	st, err := subjecttypes.Lookup(f.c, kind, subjecttypes.OriginProvenencia)
+	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.src.ID, SubjectTypeID: st.ID, Label: label}, nil)
@@ -93,14 +94,14 @@ func (f *fixture) subject(kind, label string, in ...observations.Input) subjects
 
 func (f *fixture) prop(key string) []byte {
 	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, properties.OriginProvenencia)
+	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return p.ID
 }
 
 func (f *fixture) term(propertyKey, termKey string) []byte {
 	f.t.Helper()
-	term, err := propertyterms.Lookup(f.c, f.prop(propertyKey), termKey, propertyterms.OriginProvenencia)
+	term, err := propertyterms.Lookup(f.c, f.prop(propertyKey), termKey, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return term.ID
 }
@@ -141,7 +142,7 @@ func (f *fixture) location(event, place subjects.Subject) {
 func TestForSource(t *testing.T) {
 	f := newFixture(t)
 	name := func(form string) observations.Input {
-		return observations.Input{PropertyID: f.prop("name"), Name: namevaluestest.Western(form)}
+		return observations.Input{PropertyID: f.prop("name"), Name: namevaluetest.Western(form)}
 	}
 	text := func(key, v string) observations.Input {
 		return observations.Input{PropertyID: f.prop(key), ValueText: v, HasText: true}

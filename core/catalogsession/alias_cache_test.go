@@ -7,9 +7,11 @@ import (
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/namealiases"
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/onboarding"
+	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 func TestDoKeepsAliasTablesForTheOpenProject(t *testing.T) {
@@ -29,12 +31,13 @@ func TestDoKeepsAliasTablesForTheOpenProject(t *testing.T) {
 		if _, err := db.Exec(`DELETE FROM name_alias_members WHERE token = 'jas'`); err != nil {
 			return err
 		}
-		cmp, err := namealiases.Comparer(c.Graph(), db, match.DefaultNames)
+		rules, err := namealiases.Rules(c.Graph(), db, matchregistry.Default().Value)
 		if err != nil {
 			return err
 		}
-		got, ok := cmp.Compare(aliasGiven("Jas."), aliasGiven("James"))
-		if !ok || math.Abs(got-match.AliasCredit) > 1e-9 {
+		res, _ := valuecompare.Compare(aliasGiven("Jas."), aliasGiven("James"), rules)
+		got, ok := res.Similarity, res.Relation != valuecompare.Unknown
+		if !ok || math.Abs(got-matchregistry.Default().Value.Words.AliasCredit) > 1e-9 {
 			t.Fatalf("open project missed the warmed seed: %.4f %v", got, ok)
 		}
 		return nil
@@ -51,12 +54,13 @@ func TestDoKeepsAliasTablesForTheOpenProject(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		cmp, err := namealiases.Comparer(c.Graph(), db, match.DefaultNames)
+		rules, err := namealiases.Rules(c.Graph(), db, matchregistry.Default().Value)
 		if err != nil {
 			return err
 		}
-		got, ok := cmp.Compare(aliasGiven("Jas."), aliasGiven("James"))
-		if ok && math.Abs(got-match.AliasCredit) < 1e-9 {
+		res, _ := valuecompare.Compare(aliasGiven("Jas."), aliasGiven("James"), rules)
+		got, ok := res.Similarity, res.Relation != valuecompare.Unknown
+		if ok && math.Abs(got-matchregistry.Default().Value.Words.AliasCredit) < 1e-9 {
 			t.Fatal("reopen kept the previous project's alias cache")
 		}
 		return nil
@@ -66,8 +70,8 @@ func TestDoKeepsAliasTablesForTheOpenProject(t *testing.T) {
 	}
 }
 
-func aliasGiven(text string) match.Value {
-	return match.Value{Name: &namevalues.Value{Parts: []namevalues.Part{{
-		Value: text, Type: namevalues.PartTypeGiven,
+func aliasGiven(text string) valuecompare.Value {
+	return valuecompare.Value{Type: propertymeta.ValueTypeName, Name: &namevalue.Value{Parts: []namevalue.Part{{
+		Value: text, Type: namevalue.PartTypeGiven,
 	}}}}
 }

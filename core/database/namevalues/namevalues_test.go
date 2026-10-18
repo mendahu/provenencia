@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 func TestInsertLookup(t *testing.T) {
@@ -40,7 +41,7 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "form only round trip",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{Form: "蒋浩"})
+				id, err := Insert(c, namevalue.Value{Form: "蒋浩"})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -59,12 +60,12 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "form with typed parts round trip",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
+				id, err := Insert(c, namevalue.Value{
 					Form: "James K. Robins",
-					Parts: []Part{
-						{Idx: 0, Value: "James", Type: PartTypeGiven},
-						{Idx: 1, Value: "K.", Type: PartTypeGiven},
-						{Idx: 2, Value: "Robins", Type: PartTypeSurname},
+					Parts: []namevalue.Part{
+						{Idx: 0, Value: "James", Type: namevalue.PartTypeGiven},
+						{Idx: 1, Value: "K.", Type: namevalue.PartTypeGiven},
+						{Idx: 2, Value: "Robins", Type: namevalue.PartTypeSurname},
 					},
 				})
 				if err != nil {
@@ -77,9 +78,9 @@ func TestInsertLookup(t *testing.T) {
 				if got.Form != "James K. Robins" || len(got.Parts) != 3 {
 					t.Fatalf("got %+v", got)
 				}
-				if got.Parts[0].Value != "James" || got.Parts[0].Type != PartTypeGiven ||
-					got.Parts[1].Value != "K." || got.Parts[1].Type != PartTypeGiven ||
-					got.Parts[2].Value != "Robins" || got.Parts[2].Type != PartTypeSurname {
+				if got.Parts[0].Value != "James" || got.Parts[0].Type != namevalue.PartTypeGiven ||
+					got.Parts[1].Value != "K." || got.Parts[1].Type != namevalue.PartTypeGiven ||
+					got.Parts[2].Value != "Robins" || got.Parts[2].Type != namevalue.PartTypeSurname {
 					t.Fatalf("parts %+v", got.Parts)
 				}
 				for _, p := range got.Parts {
@@ -92,11 +93,11 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "untyped part and gapped idx",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
+				id, err := Insert(c, namevalue.Value{
 					Form: "Maria da Silva Costa",
-					Parts: []Part{
+					Parts: []namevalue.Part{
 						{Idx: 0, Value: "Maria"},
-						{Idx: 2, Value: "Costa", Type: PartTypeSurname},
+						{Idx: 2, Value: "Costa", Type: namevalue.PartTypeSurname},
 					},
 				})
 				if err != nil {
@@ -108,7 +109,7 @@ func TestInsertLookup(t *testing.T) {
 				}
 				if len(got.Parts) != 2 ||
 					got.Parts[0].Idx != 0 || got.Parts[0].Type != "" ||
-					got.Parts[1].Idx != 2 || got.Parts[1].Type != PartTypeSurname {
+					got.Parts[1].Idx != 2 || got.Parts[1].Type != namevalue.PartTypeSurname {
 					t.Fatalf("parts %+v", got.Parts)
 				}
 			},
@@ -116,9 +117,9 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "trims form and part fields",
 			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Insert(c, Value{
+				id, err := Insert(c, namevalue.Value{
 					Form: "  James Robins  ",
-					Parts: []Part{
+					Parts: []namevalue.Part{
 						{Idx: 0, Value: "  James  ", Type: "  given  "},
 					},
 				})
@@ -138,11 +139,11 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects unknown part type",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
+				_, err := Insert(c, namevalue.Value{
 					Form:  "James",
-					Parts: []Part{{Idx: 0, Value: "James", Type: "first_name"}},
+					Parts: []namevalue.Part{{Idx: 0, Value: "James", Type: "first_name"}},
 				})
-				if !errors.Is(err, ErrInvalid) {
+				if !errors.Is(err, namevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -150,8 +151,8 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects blank form",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{Form: "   "})
-				if !errors.Is(err, ErrInvalid) {
+				_, err := Insert(c, namevalue.Value{Form: "   "})
+				if !errors.Is(err, namevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -159,11 +160,11 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects blank part value",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
+				_, err := Insert(c, namevalue.Value{
 					Form:  "James",
-					Parts: []Part{{Idx: 0, Value: "  "}},
+					Parts: []namevalue.Part{{Idx: 0, Value: "  "}},
 				})
-				if !errors.Is(err, ErrInvalid) {
+				if !errors.Is(err, namevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -171,11 +172,11 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects negative idx",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
+				_, err := Insert(c, namevalue.Value{
 					Form:  "James",
-					Parts: []Part{{Idx: -1, Value: "James"}},
+					Parts: []namevalue.Part{{Idx: -1, Value: "James"}},
 				})
-				if !errors.Is(err, ErrInvalid) {
+				if !errors.Is(err, namevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -183,14 +184,14 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "rejects duplicate idx",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
+				_, err := Insert(c, namevalue.Value{
 					Form: "James Robins",
-					Parts: []Part{
+					Parts: []namevalue.Part{
 						{Idx: 0, Value: "James"},
 						{Idx: 0, Value: "Robins"},
 					},
 				})
-				if !errors.Is(err, ErrInvalid) {
+				if !errors.Is(err, namevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -199,7 +200,7 @@ func TestInsertLookup(t *testing.T) {
 			name: "lookup rejects short id",
 			run: func(t *testing.T, c *database.Catalog) {
 				_, err := Lookup(c, []byte{1})
-				if !errors.Is(err, ErrInvalid) {
+				if !errors.Is(err, namevalue.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -217,17 +218,17 @@ func TestInsertLookup(t *testing.T) {
 		{
 			name: "lookup many hydrates parts and skips missing",
 			run: func(t *testing.T, c *database.Catalog) {
-				id1, err := Insert(c, Value{
+				id1, err := Insert(c, namevalue.Value{
 					Form: "James K. Robins",
-					Parts: []Part{
-						{Idx: 0, Value: "James", Type: PartTypeGiven},
-						{Idx: 1, Value: "Robins", Type: PartTypeSurname},
+					Parts: []namevalue.Part{
+						{Idx: 0, Value: "James", Type: namevalue.PartTypeGiven},
+						{Idx: 1, Value: "Robins", Type: namevalue.PartTypeSurname},
 					},
 				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				id2, err := Insert(c, Value{Form: "蒋浩"})
+				id2, err := Insert(c, namevalue.Value{Form: "蒋浩"})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -254,7 +255,7 @@ func TestInsertLookup(t *testing.T) {
 			name: "rejects closed catalog",
 			run: func(t *testing.T, c *database.Catalog) {
 				c.Close()
-				_, err := Insert(c, Value{Form: "James"})
+				_, err := Insert(c, namevalue.Value{Form: "James"})
 				if !errors.Is(err, database.ErrClosed) {
 					t.Fatalf("got %v", err)
 				}

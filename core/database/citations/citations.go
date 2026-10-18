@@ -371,20 +371,20 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 		return Citation{}, nil, err
 	}
 	return Citation{
-		ID:                     append([]byte(nil), citationID...),
-		Ref:                    prev.Ref,
-		ArtifactID:             append([]byte(nil), prev.ArtifactID...),
-		LocatorJSON:            in.LocatorJSON,
-		Transcription:          in.Transcription,
-		Label:                  in.Label,
-		TranscriptionUncertain: in.TranscriptionUncertain,
-		TranscriptionNote:      in.TranscriptionNote,
-	}, []rowchange.Change{{
-		EntityType: "citation",
-		EntityID:   append([]byte(nil), citationID...),
-		Action:     rowchange.ActionUpdate,
-		Fields:     fields,
-	}}, nil
+			ID:                     append([]byte(nil), citationID...),
+			Ref:                    prev.Ref,
+			ArtifactID:             append([]byte(nil), prev.ArtifactID...),
+			LocatorJSON:            in.LocatorJSON,
+			Transcription:          in.Transcription,
+			Label:                  in.Label,
+			TranscriptionUncertain: in.TranscriptionUncertain,
+			TranscriptionNote:      in.TranscriptionNote,
+		}, []rowchange.Change{{
+			EntityType: "citation",
+			EntityID:   append([]byte(nil), citationID...),
+			Action:     rowchange.ActionUpdate,
+			Fields:     fields,
+		}}, nil
 }
 
 func emptyAsNil(s string) any {
@@ -420,7 +420,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	}); err != nil {
 		return nil, err
 	}
-	released, err := deleteimpact.ReleaseFacets(tx.Tx, catalogmodel.KindCitation, id)
+	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindCitation, id)
 	if err != nil {
 		return nil, err
 	}
@@ -438,7 +438,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if prev.Transcription != "" {
 		fields["transcription"] = rowchange.FieldDiff{Old: prev.Transcription, New: nil}
 	}
-	return append(released.Changes, rowchange.Change{
+	return append(released, rowchange.Change{
 		EntityType: "citation",
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionDelete,

@@ -54,7 +54,7 @@ user                 -- created by the researcher in this project
 plugin:<plugin_id>   -- reserved prefix for future plugin-contributed vocabulary
 ```
 
-`<plugin_id>` is a stable plugin slug (lowercase ASCII letters, digits, hyphens). No other `origin` prefixes are reserved yet; do not invent ad hoc origins outside these three shapes without updating this catalog.
+`<plugin_id>` is a stable plugin slug (lowercase ASCII letters, digits, hyphens). No other `origin` prefixes are reserved yet; do not invent ad hoc origins outside these three shapes without updating this catalog. Go code names these origins through `core/vocabkey` (`OriginProvenencia`, `OriginUser`, `ValidOrigin`, `IsPluginOrigin`).
 
 ### Uniqueness and foreign keys
 
@@ -338,6 +338,7 @@ mentions            subject       app target hint: source
 remark              text          free-text commentary about a source subject
 toponym             text          place name as interpreted from a Source (not a personal NameValue); cardinality `multiple`
 interests           text          free-text interests; cardinality `multiple`; unlocked on person
+likeness            depiction     region plus image; cardinality `multiple`; locked on person; new catalogs only (S10-32)
 ```
 
 Target Subject type hints are application-only (not SQL allow-lists). See the Interpretation doc.
@@ -358,6 +359,7 @@ person          name                # locked
 person          sex_at_birth        # term
 person          gender              # term; unlocked
 person          interests           # text; multiple; unlocked
+person          likeness            # depiction; multiple; locked
 
 event           event_type          # term; locked
 event           event_name          # text; unlocked
@@ -498,7 +500,7 @@ Schema: [`structured-name-model.md`](structured-name-model.md).
 
 ## 4.1 Name part `type` product set
 
-GEDCOM-aligned **product keys** (compiled registry in `core/database/namevalues`, not catalog rows). UI picks from this set with localized labels. Empty type on a part remains allowed (untyped). Unknown non-empty keys are refused on Insert.
+GEDCOM-aligned **product keys** (compiled registry in `core/namevalue`, not catalog rows). UI picks from this set with localized labels. Empty type on a part remains allowed (untyped). Unknown non-empty keys are refused on Insert.
 
 User-minted part types (DB vocabulary, Property-terms-shaped) are **TBD** — do not invent free-text types in the editor.
 
@@ -557,7 +559,7 @@ New catalogs install this profile at create. The rows are the `seedProfiles` lis
 
 ## 4.5 Abbreviation and nickname tables
 
-Schema: `name_alias_tables`, `name_alias_members`, `name_alias_roles`. Rows are create-time Install, not SQL seeds. The product lists are `productAliasTables` in `core/match/registry.go` (`namealiases.Install`).
+Schema: `name_alias_tables`, `name_alias_members`, `name_alias_roles`. Rows are create-time Install, not SQL seeds. The product lists are `productAliasTables` in `core/database/namealiases/registry.go` (`namealiases.Install`).
 
 Origin is the only attribution: `provenencia`, `user`, or `plugin:<id>`, unique on `(key, origin)`. Every installed table is consulted. Origin does not turn a table off. There is no editor UI.
 
@@ -577,7 +579,7 @@ abbreviations
   robert robt
 ```
 
-The nickname table is `nicknameSets` in [`core/match/nicknames_seed.go`](../core/match/nicknames_seed.go). Each set is one canonical name and the nicknames listed for it. A nickname that belongs to two canonical names does not join those sets, so Chris connects Christine and also Christopher, and Tina does not connect Christopher. The list is names.csv from [carltonnorthern/nicknames](https://github.com/carltonnorthern/nicknames), Apache License 2.0. The license and the upstream credit are in [`core/match/third_party/nicknames/`](../core/match/third_party/nicknames/).
+The nickname table is `nicknameSets` in [`core/database/namealiases/nicknames_seed.go`](../core/database/namealiases/nicknames_seed.go). Each set is one canonical name and the nicknames listed for it. A nickname that belongs to two canonical names does not join those sets, so Chris connects Christine and also Christopher, and Tina does not connect Christopher. The list is names.csv from [carltonnorthern/nicknames](https://github.com/carltonnorthern/nicknames), Apache License 2.0. The license and the upstream credit are in [`core/database/namealiases/third_party/nicknames/`](../core/database/namealiases/third_party/nicknames/).
 
 `Register` appends a table for a future plugin. Install writes whatever is registered at catalog create. Open does not heal. Scoring reads these rows and no in-code list. Opening a project loads them once onto the catalog graph and keeps them until the project closes. A future editor calls `namealiases.Invalidate` after a change. An empty catalog makes no abbreviation or nickname hits. `namealiases.AddProductNicknames` copies the product nickname list into a catalog created before that list grew. A set already stored in full is left as it is. Call `namealiases.Invalidate` if that catalog stays open.
 

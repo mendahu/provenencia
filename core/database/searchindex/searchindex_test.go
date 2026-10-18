@@ -1,13 +1,15 @@
 package searchindex
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/eventtitle"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/objectpath"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 func TestMigrationCreatesSearchTables(t *testing.T) {
@@ -114,14 +116,53 @@ func TestEventMatchTitleCoupleUsesTypeWord(t *testing.T) {
 					Parts: eventtitle.Parts{
 						TypeLabel: tt.label,
 						Subjects: []eventtitle.Subject{
-							{Name: &namevalues.Value{Form: "James"}},
-							{Name: &namevalues.Value{Form: "Mary"}},
+							{Name: &namevalue.Value{Form: "James"}},
+							{Name: &namevalue.Value{Form: "Mary"}},
 						},
 					},
 				},
 			})
 			if got != tt.want {
 				t.Fatalf("got %q want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMatchTextListsEachAlternateOnce(t *testing.T) {
+	place := conclusionheaders.PlaceHeader{Names: []string{"Montréal", "Ville-Marie"}, Parents: []string{"Québec"}}
+	person := conclusionheaders.PersonHeader{Name: &namevalue.Value{Form: "José Robins"}}
+	for _, tt := range []struct {
+		name          string
+		head          handleHead
+		v             handleValues
+		wantTitle     string
+		wantSecondary []string
+	}{
+		{
+			name: "place", head: handleHead{id: "p", kind: vocabkey.Place},
+			v:         handleValues{vocabkey.PropertyToponym: {"Montréal", "Montreal", "Ville-Marie", "Ville Marie"}},
+			wantTitle: "Montréal", wantSecondary: []string{"toponym:\tVille-Marie", "Québec"},
+		},
+		{
+			name: "person", head: handleHead{id: "p", kind: vocabkey.Person},
+			v:         handleValues{vocabkey.PropertyName: {"José Robins", "Jose Robins", "JOSÉ ROBINS", "Joe Robins"}},
+			wantTitle: "José Robins", wantSecondary: []string{"name:\tJoe Robins"},
+		},
+		{
+			name: "label reading like the title adds no line", head: handleHead{id: "p", kind: vocabkey.Place, label: "montreal"},
+			v:         handleValues{vocabkey.PropertyToponym: {"Montréal", "Montreal", "Ville-Marie", "Ville Marie"}},
+			wantTitle: "Montréal", wantSecondary: []string{"toponym:\tVille-Marie", "Québec"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			headers := handleHeaders{
+				persons: map[string]conclusionheaders.PersonHeader{"p": person},
+				places:  map[string]conclusionheaders.PlaceHeader{"p": place},
+			}
+			title, secondary := matchText(tt.head, tt.v, headers)
+			if title != tt.wantTitle || !reflect.DeepEqual(secondary, tt.wantSecondary) {
+				t.Fatalf("title %q secondary %q, want %q %q", title, secondary, tt.wantTitle, tt.wantSecondary)
 			}
 		})
 	}

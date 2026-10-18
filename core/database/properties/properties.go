@@ -8,11 +8,13 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/slug"
 )
 
@@ -34,22 +36,6 @@ var ErrInUse = apperr.New(apperr.CodePropertiesInUse, apperr.KindConflict)
 var ErrOriginLocked = apperr.New(apperr.CodePropertiesOriginLocked, apperr.KindConflict)
 
 const (
-	OriginProvenencia = "provenencia"
-	OriginUser        = "user"
-
-	ValueTypeText    = "text"
-	ValueTypeInteger = "integer"
-	ValueTypeDate    = "date"
-	ValueTypeName    = "name"
-	ValueTypeSubject = "subject"
-	ValueTypeTerm    = "term"
-
-	// CardinalitySingle aims for one value. Several survivors are mixed.
-	CardinalitySingle = "single"
-	// CardinalityMultiple keeps every distinct surviving value. Majority
-	// does not crowd one out; weak evidence still drops.
-	CardinalityMultiple = "multiple"
-
 	sqlUpsert = `INSERT INTO properties (id, key, origin, label, description, value_type, cardinality)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(key, origin) DO UPDATE SET
@@ -107,9 +93,9 @@ func Upsert(c *database.Catalog, p Property) ([]byte, error) {
 	p.ValueType = strings.TrimSpace(p.ValueType)
 	p.Cardinality = strings.TrimSpace(p.Cardinality)
 	if p.Cardinality == "" {
-		p.Cardinality = CardinalitySingle
+		p.Cardinality = propertymeta.CardinalitySingle
 	}
-	if p.Key == "" || p.Label == "" || !originOK(p.Origin) || !valueTypeOK(p.ValueType) || !cardinalityOK(p.Cardinality) {
+	if p.Key == "" || p.Label == "" || !vocabkey.ValidOrigin(p.Origin) || !valueTypeOK(p.ValueType) || !cardinalityOK(p.Cardinality) {
 		return nil, ErrInvalid
 	}
 	id := p.ID
@@ -143,7 +129,8 @@ func Upsert(c *database.Catalog, p Property) ([]byte, error) {
 
 // Create mints a kebab-case key from label and inserts a user-origin Property.
 // The caller records the returned change as create_property.
-// value_type = term is registry/Install only — Create refuses it for researchers.
+// value_type = term and depiction are registry/Install only — Create refuses
+// them for researchers (researcherCreatable).
 // An empty cardinality is single.
 func Create(tx *database.Tx, userID []byte, label, valueType, description, cardinality string) (Property, []rowchange.Change, error) {
 	if tx == nil {
@@ -153,14 +140,14 @@ func Create(tx *database.Tx, userID []byte, label, valueType, description, cardi
 		return Property{}, nil, err
 	}
 	valueType = strings.TrimSpace(valueType)
-	if valueType == ValueTypeTerm {
+	if !researcherCreatable(valueType) {
 		return Property{}, nil, ErrInvalid
 	}
 	key := slug.Kebab(label)
 	if key == "" {
 		return Property{}, nil, ErrInvalid
 	}
-	if _, err := LookupTx(tx.Tx, key, OriginUser); err == nil {
+	if _, err := LookupTx(tx.Tx, key, vocabkey.OriginUser); err == nil {
 		return Property{}, nil, ErrDuplicateKey.WithParams(key)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return Property{}, nil, err
@@ -175,7 +162,7 @@ func Create(tx *database.Tx, userID []byte, label, valueType, description, cardi
 	description = strings.TrimSpace(description)
 	cardinality = strings.TrimSpace(cardinality)
 	if cardinality == "" {
-		cardinality = CardinalitySingle
+		cardinality = propertymeta.CardinalitySingle
 	}
 	if label == "" || !valueTypeOK(valueType) || !cardinalityOK(cardinality) {
 		return Property{}, nil, ErrInvalid
@@ -186,13 +173,13 @@ func Create(tx *database.Tx, userID []byte, label, valueType, description, cardi
 	} else {
 		desc = description
 	}
-	if _, err := tx.Exec(sqlUpsert, id, key, OriginUser, label, desc, valueType, cardinality); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, desc, valueType, cardinality); err != nil {
 		return Property{}, nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
 		"id":          {Old: nil, New: uid.String()},
 		"key":         {Old: nil, New: key},
-		"origin":      {Old: nil, New: OriginUser},
+		"origin":      {Old: nil, New: vocabkey.OriginUser},
 		"label":       {Old: nil, New: label},
 		"value_type":  {Old: nil, New: valueType},
 		"cardinality": {Old: nil, New: cardinality},
@@ -201,19 +188,19 @@ func Create(tx *database.Tx, userID []byte, label, valueType, description, cardi
 		fields["description"] = rowchange.FieldDiff{Old: nil, New: description}
 	}
 	return Property{
-		ID:          append([]byte(nil), id...),
-		Key:         key,
-		Origin:      OriginUser,
-		Label:       label,
-		Description: description,
-		ValueType:   valueType,
-		Cardinality: cardinality,
-	}, []rowchange.Change{{
-		EntityType: "property",
-		EntityID:   append([]byte(nil), id...),
-		Action:     rowchange.ActionCreate,
-		Fields:     fields,
-	}}, nil
+			ID:          append([]byte(nil), id...),
+			Key:         key,
+			Origin:      vocabkey.OriginUser,
+			Label:       label,
+			Description: description,
+			ValueType:   valueType,
+			Cardinality: cardinality,
+		}, []rowchange.Change{{
+			EntityType: "property",
+			EntityID:   append([]byte(nil), id...),
+			Action:     rowchange.ActionCreate,
+			Fields:     fields,
+		}}, nil
 }
 
 // Update patches label, description, and cardinality for a project Property
@@ -239,7 +226,7 @@ func Update(tx *database.Tx, userID, id []byte, label, valueType, description, c
 	if err != nil {
 		return Property{}, nil, err
 	}
-	if existing.Origin != OriginUser && existing.Origin != OriginProvenencia {
+	if existing.Origin != vocabkey.OriginUser && existing.Origin != vocabkey.OriginProvenencia {
 		return Property{}, nil, ErrLocked
 	}
 	if valueType != existing.ValueType {
@@ -252,7 +239,7 @@ func Update(tx *database.Tx, userID, id []byte, label, valueType, description, c
 		return Property{}, nil, ErrInvalid
 	}
 	cardinalityChanged := cardinality != existing.Cardinality
-	if cardinalityChanged && existing.Origin != OriginUser {
+	if cardinalityChanged && existing.Origin != vocabkey.OriginUser {
 		return Property{}, nil, ErrLocked
 	}
 
@@ -390,9 +377,9 @@ func CountByOrigin(c *database.Catalog) (OriginCounts, error) {
 			return OriginCounts{}, err
 		}
 		switch {
-		case origin == OriginProvenencia:
+		case origin == vocabkey.OriginProvenencia:
 			out.Seeded += n
-		case origin == OriginUser:
+		case origin == vocabkey.OriginUser:
 			out.User += n
 		default:
 			out.Plugin += n
@@ -456,16 +443,21 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	}}, nil
 }
 
-func originOK(origin string) bool {
-	if origin == OriginProvenencia || origin == OriginUser {
-		return true
-	}
-	return strings.HasPrefix(origin, "plugin:") && len(origin) > len("plugin:")
-}
-
 func valueTypeOK(vt string) bool {
 	switch vt {
-	case ValueTypeText, ValueTypeInteger, ValueTypeDate, ValueTypeName, ValueTypeSubject, ValueTypeTerm:
+	case propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeDate, propertymeta.ValueTypeName, propertymeta.ValueTypeSubject, propertymeta.ValueTypeTerm, propertymeta.ValueTypeDepiction:
+		return true
+	default:
+		return false
+	}
+}
+
+// researcherCreatable lists the value types a researcher may give a new
+// Property. It matches Swift's SubjectPropertyValueType.researcherCreatable;
+// term and depiction are Install/registry only.
+func researcherCreatable(valueType string) bool {
+	switch valueType {
+	case propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeDate, propertymeta.ValueTypeName, propertymeta.ValueTypeSubject:
 		return true
 	default:
 		return false
@@ -473,7 +465,7 @@ func valueTypeOK(vt string) bool {
 }
 
 func cardinalityOK(cardinality string) bool {
-	return cardinality == CardinalitySingle || cardinality == CardinalityMultiple
+	return cardinality == propertymeta.CardinalitySingle || cardinality == propertymeta.CardinalityMultiple
 }
 
 func uuidString(id []byte) string {

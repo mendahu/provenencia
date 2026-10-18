@@ -10,11 +10,13 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 
 	// promotableSubject creates a person Subject and returns a promote request for it.
@@ -84,6 +86,123 @@ func TestPromoteSubject(t *testing.T) {
 			calls:     2,
 			wantErr:   true,
 			wantErrIs: identityclaims.ErrAlreadyMember,
+		},
+	})
+}
+
+func TestUnpromoteSubject(t *testing.T) {
+	promoted := func(t *testing.T) *engine.UnpromoteSubjectRequest {
+		t.Helper()
+		req := promotableSubject(t)
+		if _, err := PromoteSubject(marshalProto(t, req)); err != nil {
+			t.Fatal(err)
+		}
+		return &engine.UnpromoteSubjectRequest{ProjectDir: req.GetProjectDir(), UserId: req.GetUserId(), SubjectId: req.GetSubjectId()}
+	}
+	memberships := func(t *testing.T, dir, subjectID string) int {
+		t.Helper()
+		sources, err := ListSources(marshalProto(t, &engine.ListSourcesRequest{ProjectDir: dir}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var list engine.ListSourcesResponse
+		if err := proto.Unmarshal(sources, &list); err != nil {
+			t.Fatal(err)
+		}
+		n := 0
+		for _, src := range list.Sources {
+			out, err := ListSubjectMemberships(marshalProto(t, &engine.ListSubjectMembershipsRequest{ProjectDir: dir, SourceId: src.GetId()}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var resp engine.ListSubjectMembershipsResponse
+			if err := proto.Unmarshal(out, &resp); err != nil {
+				t.Fatal(err)
+			}
+			for _, m := range resp.Memberships {
+				if m.GetSubjectId() == subjectID {
+					n++
+				}
+			}
+		}
+		return n
+	}
+	runRPC(t, UnpromoteSubject, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "bad subject id",
+			reqFn: func(t *testing.T) proto.Message {
+				req := promoted(t)
+				req.SubjectId = "nope"
+				return req
+			},
+			wantErr: true,
+		},
+		{
+			name: "unknown subject",
+			reqFn: func(t *testing.T) proto.Message {
+				req := promoted(t)
+				req.SubjectId = uuid.Must(uuid.NewV7()).String()
+				return req
+			},
+			wantErr:   true,
+			wantErrIs: promote.ErrInvalid,
+		},
+		{
+			name:  "a filed subject is unfiled and the write reports effects",
+			reqFn: func(t *testing.T) proto.Message { return promoted(t) },
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var resp engine.UnpromoteSubjectResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				e := resp.GetEffects()
+				if len(e.GetSources()) == 0 || len(e.GetHandles()) == 0 {
+					t.Fatalf("effects %+v", e)
+				}
+				in := req.(*engine.UnpromoteSubjectRequest)
+				if n := memberships(t, in.GetProjectDir(), in.GetSubjectId()); n != 0 {
+					t.Fatalf("still a member %d times", n)
+				}
+			},
+		},
+		{
+			name:  "a second unpromote writes nothing and succeeds",
+			reqFn: func(t *testing.T) proto.Message { return promoted(t) },
+			calls: 2,
+		},
+		{
+			name: "a bridge is unsupported",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, sourceID, _ := subjectFixture(t)
+				typesOut, err := ListSubjectTypes(marshalProto(t, &engine.ListSubjectTypesRequest{ProjectDir: dir}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var types engine.ListSubjectTypesResponse
+				if err := proto.Unmarshal(typesOut, &types); err != nil {
+					t.Fatal(err)
+				}
+				relID := ""
+				for _, typ := range types.Types {
+					if typ.GetKey() == "relationship" {
+						relID = typ.GetId()
+					}
+				}
+				out, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
+					ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: relID, Label: "bridge",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateSubjectResponse
+				if err := proto.Unmarshal(out, &created); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.UnpromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: created.Subject.GetId()}
+			},
+			wantErr:   true,
+			wantErrIs: promote.ErrUnsupportedType,
 		},
 	})
 }
@@ -221,7 +340,7 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		if len(forms) == 0 {
 			return nil
 		}
-		name, err := properties.Lookup(c, "name", properties.OriginProvenencia)
+		name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
@@ -231,7 +350,7 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		}
 		var in []observations.Input
 		for _, form := range forms {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluestest.Western(form)})
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluetest.Western(form)})
 		}
 		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID[:], citations.CreateInput{

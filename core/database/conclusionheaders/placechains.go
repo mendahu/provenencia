@@ -5,18 +5,18 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/hops"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // placeLink is one filed place_relationship edge with its membership dates.
 type placeLink struct {
 	from, to    []byte
 	association []byte
-	start, end  *datevalues.Value
+	start, end  *datevalue.Value
 }
 
 // placeGraph is the part_of / succeeded_by neighborhood needed to compose
@@ -28,7 +28,7 @@ type placeGraph struct {
 	partTo   map[string][]placeLink // whole id → parts
 	succFrom map[string][]placeLink // predecessor id → successors
 	succTo   map[string][]placeLink // successor id → predecessors
-	period   map[string]autoreconcile.Window
+	period   map[string]valuecompare.Window
 }
 
 func newPlaceGraph() *placeGraph {
@@ -38,41 +38,41 @@ func newPlaceGraph() *placeGraph {
 		partTo:   map[string][]placeLink{},
 		succFrom: map[string][]placeLink{},
 		succTo:   map[string][]placeLink{},
-		period:   map[string]autoreconcile.Window{},
+		period:   map[string]valuecompare.Window{},
 	}
 }
 
 type assocDates struct {
-	start, end *datevalues.Value
+	start, end *datevalue.Value
 }
 
-func (g *placeGraph) periodOf(id []byte) autoreconcile.Window {
+func (g *placeGraph) periodOf(id []byte) valuecompare.Window {
 	if w, ok := g.period[string(id)]; ok {
 		return w
 	}
-	return autoreconcile.Always()
+	return valuecompare.Always()
 }
 
-func (g *placeGraph) linkHolds(query autoreconcile.Window, l placeLink) bool {
-	mem, ok := autoreconcile.LinkMembership(l.start, l.end, g.periodOf(l.from), g.periodOf(l.to))
+func (g *placeGraph) linkHolds(query valuecompare.Window, l placeLink) bool {
+	mem, ok := linkMembership(l.start, l.end, g.periodOf(l.from), g.periodOf(l.to))
 	if !ok {
 		return false
 	}
-	return autoreconcile.HoldsAt(query, mem)
+	return query.Overlaps(mem)
 }
 
-func queryWindow(at *datevalues.Value) autoreconcile.Window {
+func queryWindow(at *datevalue.Value) valuecompare.Window {
 	if at == nil {
-		return autoreconcile.Always()
+		return valuecompare.Always()
 	}
-	if w, ok := autoreconcile.WindowOfDate(*at); ok {
+	if w, ok := valuecompare.DateWindow(*at); ok {
 		return w
 	}
-	return autoreconcile.Always()
+	return valuecompare.Always()
 }
 
 // ImmediateParents are the part_of wholes that hold (or are ambiguous) at at.
-func (g *placeGraph) ImmediateParents(placeID []byte, at *datevalues.Value) [][]byte {
+func (g *placeGraph) ImmediateParents(placeID []byte, at *datevalue.Value) [][]byte {
 	q := queryWindow(at)
 	seen := map[string]bool{}
 	var out [][]byte
@@ -93,7 +93,7 @@ func (g *placeGraph) ImmediateParents(placeID []byte, at *datevalues.Value) [][]
 }
 
 // ImmediateParts are the part_of parts that hold at at.
-func (g *placeGraph) ImmediateParts(placeID []byte, at *datevalues.Value) [][]byte {
+func (g *placeGraph) ImmediateParts(placeID []byte, at *datevalue.Value) [][]byte {
 	q := queryWindow(at)
 	seen := map[string]bool{}
 	var out [][]byte
@@ -162,17 +162,17 @@ func (g *placeGraph) displayName(id []byte) string {
 // ParentChain walks hierarchical parents at at. One unambiguous path is
 // nearest-first ancestors. Several parents at a level are every candidate
 // (candidates=true; no nature preference). Cycle-guarded.
-func (g *placeGraph) ParentChain(placeID []byte, at *datevalues.Value) (names []string, candidates bool) {
+func (g *placeGraph) ParentChain(placeID []byte, at *datevalue.Value) (names []string, candidates bool) {
 	return g.parentChain(placeID, at, map[string]bool{string(placeID): true})
 }
 
 // ParentChainNames is ParentChain's names only.
-func (g *placeGraph) ParentChainNames(placeID []byte, at *datevalues.Value) []string {
+func (g *placeGraph) ParentChainNames(placeID []byte, at *datevalue.Value) []string {
 	names, _ := g.ParentChain(placeID, at)
 	return names
 }
 
-func (g *placeGraph) parentChain(placeID []byte, at *datevalues.Value, seen map[string]bool) ([]string, bool) {
+func (g *placeGraph) parentChain(placeID []byte, at *datevalue.Value, seen map[string]bool) ([]string, bool) {
 	parents := g.ImmediateParents(placeID, at)
 	if len(parents) == 0 {
 		return nil, false
@@ -201,7 +201,7 @@ func (g *placeGraph) parentChain(placeID []byte, at *datevalues.Value, seen map[
 
 // isAncestor reports whether ancestor reaches descendant via holding
 // part_of links at at (cycle-guarded BFS upward from descendant).
-func (g *placeGraph) isAncestor(ancestor, descendant []byte, at *datevalues.Value) bool {
+func (g *placeGraph) isAncestor(ancestor, descendant []byte, at *datevalue.Value) bool {
 	if bytes.Equal(ancestor, descendant) {
 		return false
 	}
@@ -230,7 +230,7 @@ func (g *placeGraph) isAncestor(ancestor, descendant []byte, at *datevalues.Valu
 // below it. Places that are not on one chain stay competing, even when a
 // vaguer listed Place is above both: Toronto and Hamilton under Ontario are
 // two readings, not one. Succession never connects Places.
-func (g *placeGraph) FoldLocations(places []HeaderPlace, at *datevalues.Value) []HeaderPlace {
+func (g *placeGraph) FoldLocations(places []HeaderPlace, at *datevalue.Value) []HeaderPlace {
 	var out []HeaderPlace
 	seen := map[string]bool{}
 	for i := range places {
@@ -266,12 +266,12 @@ func (g *placeGraph) FoldLocations(places []HeaderPlace, at *datevalues.Value) [
 
 // chainQueryDate is today, or the Place's end when today is after its period
 // (D7: show the last chain for a place whose period has ended).
-func chainQueryDate(h PlaceHeader, today datevalues.Value) datevalues.Value {
+func chainQueryDate(h PlaceHeader, today datevalue.Value) datevalue.Value {
 	if h.EndDate == nil {
 		return today
 	}
-	tw, tok := autoreconcile.WindowOfDate(today)
-	ew, eok := autoreconcile.WindowOfDate(*h.EndDate)
+	tw, tok := valuecompare.DateWindow(today)
+	ew, eok := valuecompare.DateWindow(*h.EndDate)
 	if !tok || !eok || tw.Lo == nil || ew.Hi == nil {
 		return today
 	}
@@ -307,12 +307,12 @@ func AttachPlaceRelationships(c *database.Catalog, h *PlaceHeader) error {
 		return err
 	}
 	g.byID[string(h.Entity.ID)] = *h
-	g.period[string(h.Entity.ID)] = autoreconcile.PeriodWindow(h.StartDate, h.EndDate)
+	g.period[string(h.Entity.ID)] = periodWindow(h.StartDate, h.EndDate)
 	today := TodayDate()
 
 	seenPart := map[string]bool{}
 	for _, l := range g.partFrom[string(h.Entity.ID)] {
-		if _, ok := autoreconcile.LinkMembership(l.start, l.end, g.periodOf(l.from), g.periodOf(l.to)); !ok {
+		if _, ok := linkMembership(l.start, l.end, g.periodOf(l.from), g.periodOf(l.to)); !ok {
 			continue
 		}
 		key := string(l.to)
@@ -369,51 +369,94 @@ func (g *placeGraph) relationship(id []byte, kind string) PlaceRelationship {
 
 // membershipDates is the span a hierarchical link shows: the link's own
 // dates when present, else the overlap of the two places' periods.
-func membershipDates(l placeLink, from, to PlaceHeader) (start, end *datevalues.Value) {
+func membershipDates(l placeLink, from, to PlaceHeader) (start, end *datevalue.Value) {
 	if l.start != nil || l.end != nil {
 		return l.start, l.end
 	}
 	return laterStart(from.StartDate, to.StartDate), earlierEnd(from.EndDate, to.EndDate)
 }
 
-func yearOf(d *datevalues.Value) *int {
-	if d == nil || d.StartYear == nil {
-		return nil
-	}
-	return d.StartYear
-}
-
-func laterStart(a, b *datevalues.Value) *datevalues.Value {
-	ya, yb := yearOf(a), yearOf(b)
+// laterStart is the later of two starts by day. A nil side yields the other;
+// an unreadable date (phrase-only) never beats a readable one, and an open
+// start (BEF) loses to a set one. A tie keeps a.
+func laterStart(a, b *datevalue.Value) *datevalue.Value {
 	switch {
 	case a == nil:
 		return b
 	case b == nil:
 		return a
-	case ya != nil && yb != nil && *yb > *ya:
+	}
+	wa, okA := valuecompare.DateWindow(*a)
+	wb, okB := valuecompare.DateWindow(*b)
+	switch {
+	case !okB:
+		return a
+	case !okA:
+		return b
+	case wb.Lo != nil && (wa.Lo == nil || *wb.Lo > *wa.Lo):
 		return b
 	default:
 		return a
 	}
 }
 
-func earlierEnd(a, b *datevalues.Value) *datevalues.Value {
-	ya, yb := yearOf(a), yearOf(b)
+// earlierEnd is the earlier of two ends by day, mirroring laterStart on the
+// last day.
+func earlierEnd(a, b *datevalue.Value) *datevalue.Value {
 	switch {
 	case a == nil:
 		return b
 	case b == nil:
 		return a
-	case ya != nil && yb != nil && *yb < *ya:
+	}
+	wa, okA := valuecompare.DateWindow(*a)
+	wb, okB := valuecompare.DateWindow(*b)
+	switch {
+	case !okB:
+		return a
+	case !okA:
+		return b
+	case wb.Hi != nil && (wa.Hi == nil || *wb.Hi < *wa.Hi):
 		return b
 	default:
 		return a
 	}
+}
+
+// periodWindow is a Place's existence span from optional start and end
+// dates. Missing sides are open; both missing is Always.
+func periodWindow(start, end *datevalue.Value) valuecompare.Window {
+	w := valuecompare.Always()
+	if start != nil {
+		if sw, ok := valuecompare.DateWindow(*start); ok {
+			w.Lo = sw.Lo
+		}
+	}
+	if end != nil {
+		if ew, ok := valuecompare.DateWindow(*end); ok {
+			w.Hi = ew.Hi
+		}
+	}
+	return w
+}
+
+// linkMembership is when a hierarchical place relationship holds.
+// An undated link (nil start and end) holds on the overlap of the two
+// places' periods. A dated link holds inside its own span and both periods.
+func linkMembership(linkStart, linkEnd *datevalue.Value, fromPeriod, toPeriod valuecompare.Window) (valuecompare.Window, bool) {
+	base, ok := fromPeriod.Intersect(toPeriod)
+	if !ok {
+		return valuecompare.Window{}, false
+	}
+	if linkStart == nil && linkEnd == nil {
+		return base, true
+	}
+	return base.Intersect(periodWindow(linkStart, linkEnd))
 }
 
 // ParentsAtDate is the hierarchical parent display names for placeID at at
 // (nearest first; several parents → every candidate).
-func ParentsAtDate(c *database.Catalog, placeID []byte, at datevalues.Value) ([]string, error) {
+func ParentsAtDate(c *database.Catalog, placeID []byte, at datevalue.Value) ([]string, error) {
 	g, err := placeNeighborhood(c, [][]byte{placeID})
 	if err != nil {
 		return nil, err
@@ -422,7 +465,7 @@ func ParentsAtDate(c *database.Catalog, placeID []byte, at datevalues.Value) ([]
 }
 
 // PartsAtDate is the display names of Places that are part_of placeID at at.
-func PartsAtDate(c *database.Catalog, placeID []byte, at datevalues.Value) ([]string, error) {
+func PartsAtDate(c *database.Catalog, placeID []byte, at datevalue.Value) ([]string, error) {
 	g, err := placeStep(c, placeID, hops.PartsOfPlace)
 	if err != nil {
 		return nil, err

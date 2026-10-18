@@ -1,0 +1,28 @@
+// Package matchregistry holds every matching tunable, one section per layer
+// group. Layers take their section as an argument; Default() is the shipped
+// set.
+//
+// Layers declare their section's types and never import this package, so the
+// registry can name a layer's types without a cycle. Numbers are written only
+// here (guard_test.go keeps the layers free of them).
+package matchregistry
+
+import (
+	"github.com/mendahu/provenencia/core/subjectcompare"
+	"github.com/mendahu/provenencia/core/valuecompare"
+)
+
+// Registry is the whole set of matching tunables.
+type Registry struct {
+	// Value is layer 1: how two values of one type compare.
+	Value valuecompare.Rules
+	// Subject is layer 3: what each property counts when two Subjects of one
+	// type are compared.
+	Subject subjectcompare.Rules
+}
+
+// Default is the shipped registry. Each call builds new slices and maps, so a
+// caller that changes its copy changes no one else's.
+func Default() Registry {
+	return Registry{Value: defaultValue(), Subject: defaultSubject()}
+}

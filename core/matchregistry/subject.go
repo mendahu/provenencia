@@ -1,0 +1,32 @@
+package matchregistry
+
+import (
+	"github.com/mendahu/provenencia/core/subjectcompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
+)
+
+// defaultSubject is layer 3's shipped section: what each property counts when
+// two Subjects of one type are compared.
+func defaultSubject() subjectcompare.Rules {
+	return subjectcompare.Rules{
+		Weights: map[vocabkey.SubjectType]map[vocabkey.PropertyKey]subjectcompare.Weights{
+			vocabkey.Person: {
+				vocabkey.PropertyName:       {Agree: 2.5, Conflict: 3}, // graphalign name PropertyScale
+				vocabkey.PropertySexAtBirth: {Agree: 0.6, Conflict: 1}, // graphalign sex / gender PropertyScale; pools gender
+			},
+			vocabkey.Event: {
+				vocabkey.PropertyEventType: {Agree: 0.5, Conflict: 20}, // estimate: generic alone; a birth is never a death
+				vocabkey.PropertyDate:      {Agree: 2, Conflict: 3},    // estimate: cold-start ln(0.85 / 0.1) rounded; ConflictPenalty
+			},
+			vocabkey.Place: {
+				vocabkey.PropertyToponym: {Agree: 3, Conflict: 3}, // estimate: cold-start + toponym bonus, rounded; ConflictPenalty
+			},
+		},
+		Pools: map[vocabkey.SubjectType]map[vocabkey.PropertyKey]subjectcompare.Pool{
+			vocabkey.Person: {vocabkey.PropertySexAtBirth: {With: []vocabkey.PropertyKey{vocabkey.PropertyGender}}},
+		},
+		Periods: map[vocabkey.SubjectType]map[vocabkey.PropertyKey]subjectcompare.Period{
+			vocabkey.Event: {vocabkey.PropertyDate: {Start: vocabkey.PropertyStartDate, End: vocabkey.PropertyEndDate}},
+		},
+	}
+}

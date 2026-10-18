@@ -3,14 +3,13 @@ package promotealign_test
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promotealign"
@@ -25,9 +24,13 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -59,7 +62,7 @@ func newFixture(t testing.TB) *fixture {
 	must(t, err)
 	must(t, users.Upsert(c, userID, "Tester", r))
 	must(t, subjectvocab.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
@@ -72,7 +75,7 @@ func newFixture(t testing.TB) *fixture {
 
 func (f *fixture) newSource(title string) (sources.Source, artifacts.Artifact) {
 	f.t.Helper()
-	typeID, err := sourcetypes.Upsert(f.c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(f.c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(f.t, err)
 	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: title})
@@ -85,21 +88,21 @@ func (f *fixture) newSource(title string) (sources.Source, artifacts.Artifact) {
 
 func (f *fixture) prop(key string) properties.Property {
 	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, properties.OriginProvenencia)
+	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return p
 }
 
 func (f *fixture) term(propKey, termKey string) propertyterms.Term {
 	f.t.Helper()
-	t, err := propertyterms.Lookup(f.c, f.prop(propKey).ID, termKey, propertyterms.OriginProvenencia)
+	t, err := propertyterms.Lookup(f.c, f.prop(propKey).ID, termKey, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	return t
 }
 
 func (f *fixture) bare(src sources.Source, kind string) subjects.Subject {
 	f.t.Helper()
-	st, err := subjecttypes.Lookup(f.c, kind, subjecttypes.OriginProvenencia)
+	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: st.ID}, nil)
@@ -130,7 +133,7 @@ func (f *fixture) person(src sources.Source, art artifacts.Artifact, name string
 	f.t.Helper()
 	s := f.bare(src, "person")
 	f.cite(art, s, observations.Input{
-		PropertyID: f.prop("name").ID, Name: namevaluestest.Western(name),
+		PropertyID: f.prop("name").ID, Name: namevaluetest.Western(name),
 	})
 	return s
 }
@@ -336,10 +339,10 @@ func TestProposePlacePartOfChain(t *testing.T) {
 
 func TestProposeOverlappingBoundShowsTheDateAndResembles(t *testing.T) {
 	f := newFixture(t)
-	bef := func(year, month, day int) *datevalues.Value {
+	bef := func(year, month, day int) *datevalue.Value {
 		y, m, d := year, month, day
-		return &datevalues.Value{
-			Kind: datevalues.KindPoint, Qualifier: datevalues.QualifierBEF,
+		return &datevalue.Value{
+			Kind: datevalue.KindPoint, Qualifier: datevalue.QualifierBEF,
 			StartYear: &y, StartMonth: &m, StartDay: &d,
 		}
 	}
@@ -388,7 +391,7 @@ func TestProposeOverlappingBoundShowsTheDateAndResembles(t *testing.T) {
 func TestProposeOneHopDateExhibit(t *testing.T) {
 	f := newFixture(t)
 	year := 1901
-	date := &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &year}
+	date := &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &year}
 
 	aPerson := f.person(f.source, f.artifact, "Gracie")
 	aBirth := f.bare(f.source, "event")
@@ -518,8 +521,8 @@ func TestStatsFanOut(t *testing.T) {
 // The handle's person also has a death in 1901; a layer event dated 1901 must
 // not "agree" with it unless that event is mapped to the death.
 func TestProposeOneHopExhibitsPairOnlyTheMappedNeighbor(t *testing.T) {
-	yearOf := func(y int) *datevalues.Value {
-		return &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &y}
+	yearOf := func(y int) *datevalue.Value {
+		return &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
 	}
 	tests := []struct {
 		name        string
@@ -939,10 +942,11 @@ func TestProposeIgnoresANeutralSex(t *testing.T) {
 	}
 }
 
-// Jake Robins agrees with James Kenneth Jake Robins: Jake and Robins match,
-// and James and Kenneth exist only on the conclusion, so they are neutral.
-// Gender agrees as well. Together that is a medium match.
-func TestProposeExtraGivenNamesAreNeutral(t *testing.T) {
+// Jake Robins against James Kenneth Jake Robins: Jake and Robins match, and
+// James and Kenneth exist only on the conclusion, so the name is a resemblance
+// (2.5 × 0.75), below a full match. Gender agrees as well (0.6). Together that
+// is a weak match.
+func TestProposeExtraGivenNamesAreAWeakMatch(t *testing.T) {
 	f := newFixture(t)
 	withGender := func(src sources.Source, art artifacts.Artifact, name string) subjects.Subject {
 		s := f.person(src, art, name)
@@ -961,8 +965,9 @@ func TestProposeExtraGivenNamesAreNeutral(t *testing.T) {
 	row := rowFor(f.propose(noteSrc.ID, nil), probe.ID)
 	cfg := graphalign.DefaultConfig()
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, handle) ||
-		row.Assessment != graphalign.AssessMedium || row.Score < cfg.MediumScore || row.Score >= cfg.StrongScore {
-		t.Fatalf("Jake Robins: target %s assessment %s score %.2f", row.Target, row.Assessment, row.Score)
+		row.Assessment != graphalign.AssessWeak || row.Score < cfg.WeakScore || row.Score >= cfg.MediumScore ||
+		math.Abs(row.Score-(2.5*0.75+0.6)) > 1e-9 {
+		t.Fatalf("Jake Robins: target %s assessment %s score %.4f", row.Target, row.Assessment, row.Score)
 	}
 }
 
@@ -972,4 +977,247 @@ func (f *fixture) join(s subjects.Subject, entityID []byte) {
 		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
 	})
 	must(f.t, err)
+}
+
+func comparisonOutcome(t *testing.T, row graphalign.Row, key string) match.Outcome {
+	t.Helper()
+	for _, c := range row.Comparisons {
+		if c.Property.Key == key {
+			return c.Outcome
+		}
+	}
+	t.Fatalf("no %s comparison in %+v", key, row.Comparisons)
+	return ""
+}
+
+// conflictExhibit is the row's own-group conflict line for a Property.
+func conflictExhibit(t *testing.T, row graphalign.Row, key string) graphalign.Exhibit {
+	t.Helper()
+	for _, e := range row.Exhibits {
+		if e.Property.Key == key && e.Outcome == match.OutcomeConflict && len(e.GroupSubjectID) == 0 {
+			return e
+		}
+	}
+	t.Fatalf("no %s conflict exhibit in %+v", key, row.Exhibits)
+	return graphalign.Exhibit{}
+}
+
+func TestProposeJudgesAgainstTheMajority(t *testing.T) {
+	t.Run("a stray name", func(t *testing.T) {
+		f := newFixture(t)
+		handle := f.promote(f.person(f.source, f.artifact, "Mary Smith")).Entity.ID
+		blob, err := valuecodec.MarshalName(*namevaluetest.Western("James Robins"))
+		must(t, err)
+		db, err := f.c.DB()
+		must(t, err)
+		_, err = db.Exec(`UPDATE auto_reconciler_values SET support = 5 WHERE entity_id = ? AND property_id = ? AND rank = 1`, handle, f.prop("name").ID)
+		must(t, err)
+		_, err = db.Exec(`INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_name, support, against, reason)
+			VALUES (?, ?, 2, ?, 1, 0, 'kept')`, handle, f.prop("name").ID, blob)
+		must(t, err)
+		f.c.Graph().Drop()
+
+		src, art := f.newSource("Register")
+		incoming := f.person(src, art, "James Robins")
+		row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+		if got := comparisonOutcome(t, row, "name"); got != match.OutcomeConflict {
+			t.Fatalf("name comparison %s, want conflict", got)
+		}
+		ex := conflictExhibit(t, row, "name")
+		if ex.Pinned || ex.IncomingNegative || ex.IncomingDisplay != "James Robins" {
+			t.Fatalf("name conflict exhibit %+v", ex)
+		}
+	})
+
+	t.Run("a negative Observation", func(t *testing.T) {
+		f := newFixture(t)
+		sex := func(src sources.Source, art artifacts.Artifact, key string) subjects.Subject {
+			s := f.person(src, art, "Mary Smith")
+			f.cite(art, s, observations.Input{PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", key).ID})
+			return s
+		}
+		handle := f.promote(sex(f.source, f.artifact, "male")).Entity.ID
+		db, err := f.c.DB()
+		must(t, err)
+		_, err = db.Exec(`UPDATE auto_reconciler_values SET support = 3 WHERE entity_id = ? AND property_id = ?`, handle, f.prop("sex_at_birth").ID)
+		must(t, err)
+		f.c.Graph().Drop()
+
+		src, art := f.newSource("Census")
+		incoming := f.person(src, art, "Mary Smith")
+		f.cite(art, incoming, observations.Input{
+			PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", "male").ID,
+			Polarity: observations.PolarityNegative,
+		})
+		row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+		if got := comparisonOutcome(t, row, "sex_at_birth"); got != match.OutcomeConflict {
+			t.Fatalf("sex comparison %s, want conflict", got)
+		}
+		ex := conflictExhibit(t, row, "sex_at_birth")
+		if ex.Pinned || len(ex.IncomingObservationID) != 0 || !ex.IncomingNegative || ex.IncomingDisplay != "Male" || ex.MemberDisplay != "Male" {
+			t.Fatalf("sex conflict exhibit %+v", ex)
+		}
+		hasName := false
+		for _, e := range row.Exhibits {
+			hasName = hasName || e.Property.Key == "name"
+		}
+		if !hasName {
+			t.Fatalf("expected the agreeing name exhibit beside the conflict: %+v", row.Exhibits)
+		}
+	})
+}
+
+// A Place handle keeps every toponym it was read as; the minority one still
+// agrees, because a multiple-cardinality Property weighs no value down.
+func TestProposeMultipleToponyms(t *testing.T) {
+	f := newFixture(t)
+	handle := f.promote(f.place(f.source, f.artifact, "York")).Entity.ID
+	db, err := f.c.DB()
+	must(t, err)
+	_, err = db.Exec(`UPDATE auto_reconciler_values SET support = 5 WHERE entity_id = ? AND property_id = ? AND rank = 1`, handle, f.prop("toponym").ID)
+	must(t, err)
+	_, err = db.Exec(`INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_text, support, against, reason)
+		VALUES (?, ?, 2, 'Eboracum', 1, 0, 'kept')`, handle, f.prop("toponym").ID)
+	must(t, err)
+	f.c.Graph().Drop()
+
+	src, art := f.newSource("Roman itinerary")
+	incoming := f.place(src, art, "Eboracum")
+	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+	if got := comparisonOutcome(t, row, "toponym"); got != match.OutcomeAgree {
+		t.Fatalf("toponym comparison %s, want agree", got)
+	}
+}
+
+// A name Observation with parts and no Form still shows on the sheet. The
+// writers require a Form, so the fixture blanks it after the names are filed.
+func TestExhibitNameWithoutForm(t *testing.T) {
+	f := newFixture(t)
+	handle := f.promote(f.person(f.source, f.artifact, "Mary Smith")).Entity.ID
+	src, art := f.newSource("Register")
+	incoming := f.person(src, art, "Mary Smith")
+	db, err := f.c.DB()
+	must(t, err)
+	_, err = db.Exec(`UPDATE name_values SET form = ''`)
+	must(t, err)
+
+	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+	var found bool
+	for _, ex := range row.Exhibits {
+		if ex.Property.Key == "name" && len(ex.IncomingObservationID) > 0 {
+			found = true
+			if ex.IncomingDisplay != "Mary Smith" || ex.MemberDisplay != "Mary Smith" {
+				t.Fatalf("name exhibit %+v", ex)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("no name exhibit in %+v", row.Exhibits)
+	}
+}
+
+// provisionalOnly leaves a handle with no accepted member claim, so Propose
+// builds no exhibits for a row fixed to it.
+func (f *fixture) provisionalOnly(entityID []byte) {
+	f.t.Helper()
+	db, err := f.c.DB()
+	must(f.t, err)
+	_, err = db.Exec(`UPDATE identity_claims SET status = 'provisional' WHERE entity_id = ?`, entityID)
+	must(f.t, err)
+	f.c.Graph().Drop()
+}
+
+// A row with no exhibit still shows the two values behind each outcome.
+func TestProposeRowWithoutExhibitsShowsValues(t *testing.T) {
+	f := newFixture(t)
+	sex := func(src sources.Source, art artifacts.Artifact) subjects.Subject {
+		s := f.person(src, art, "Mary Smith")
+		f.cite(art, s, observations.Input{PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", "female").ID})
+		return s
+	}
+	handle := f.promote(sex(f.source, f.artifact)).Entity.ID
+	f.provisionalOnly(handle)
+
+	src, art := f.newSource("Register")
+	incoming := sex(src, art)
+	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+
+	var want int
+	for _, c := range row.Comparisons {
+		if c.Outcome != match.OutcomeUnknown {
+			want++
+		}
+	}
+	if want != 2 || len(row.Exhibits) != want {
+		t.Fatalf("%d exhibits for %d spoken comparisons: %+v", len(row.Exhibits), want, row.Exhibits)
+	}
+	shown := map[string][2]string{}
+	for _, ex := range row.Exhibits {
+		if ex.Pinned || len(ex.IncomingObservationID) != 0 || len(ex.MemberObservationID) != 0 || len(ex.GroupSubjectID) != 0 {
+			t.Fatalf("a ref line is never pinned or tied to an Observation: %+v", ex)
+		}
+		if got := comparisonOutcome(t, row, ex.Property.Key); got != ex.Outcome {
+			t.Fatalf("%s line outcome %s, comparison %s", ex.Property.Key, ex.Outcome, got)
+		}
+		shown[ex.Property.Key] = [2]string{ex.IncomingDisplay, ex.MemberDisplay}
+	}
+	if shown["name"] != [2]string{"Mary Smith", "Mary Smith"} || shown["sex_at_birth"] != [2]string{"Female", "Female"} {
+		t.Fatalf("values %v", shown)
+	}
+	if _, ok := shown["gender"]; ok {
+		t.Fatalf("an unknown comparison has no line: %v", shown)
+	}
+}
+
+func birthEvent(f *fixture, src sources.Source, art artifacts.Artifact, year int, polarity string) subjects.Subject {
+	b := f.bare(src, "event")
+	f.cite(art, b,
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.prop("date").ID, Polarity: polarity,
+			Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &year}},
+	)
+	return b
+}
+
+func dateLine(t *testing.T, row graphalign.Row) graphalign.Exhibit {
+	t.Helper()
+	for _, ex := range row.Exhibits {
+		if ex.Property.Key == "date" && len(ex.GroupSubjectID) == 0 {
+			return ex
+		}
+	}
+	t.Fatalf("no date line in %+v", row.Exhibits)
+	return graphalign.Exhibit{}
+}
+
+func TestProposeEventWithoutExhibitsShowsDates(t *testing.T) {
+	f := newFixture(t)
+	handle := f.promote(birthEvent(f, f.source, f.artifact, 1890, "")).Entity.ID
+	f.provisionalOnly(handle)
+
+	src, art := f.newSource("Obituary")
+	incoming := birthEvent(f, src, art, 1890, "")
+	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+	ex := dateLine(t, row)
+	if ex.IncomingDate == nil || ex.MemberDate == nil || ex.Pinned {
+		t.Fatalf("date line %+v", ex)
+	}
+	for _, e := range row.Exhibits {
+		if e.Property.Key == "event_type" && (e.IncomingDisplay != "Birth" || e.MemberDisplay != "Birth") {
+			t.Fatalf("event_type line %+v", e)
+		}
+	}
+}
+
+func TestProposeNegativeDateConflictLine(t *testing.T) {
+	f := newFixture(t)
+	handle := f.promote(birthEvent(f, f.source, f.artifact, 1890, "")).Entity.ID
+
+	src, art := f.newSource("Obituary")
+	incoming := birthEvent(f, src, art, 1890, observations.PolarityNegative)
+	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+	ex := dateLine(t, row)
+	if ex.Outcome != match.OutcomeConflict || !ex.IncomingNegative || ex.IncomingDate == nil || ex.MemberDate == nil {
+		t.Fatalf("date line %+v", ex)
+	}
 }

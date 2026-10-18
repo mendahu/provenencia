@@ -109,6 +109,8 @@ enum Method {
   METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT = 97;
   METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT = 98;
   METHOD_GET_NAME_FORMAT = 99;
+  METHOD_UNPROMOTE_SUBJECT = 100;
+  METHOD_SET_PREFERRED_LIKENESS = 101;
 }
 
 message PingRequest {
@@ -251,6 +253,8 @@ message Source {
   // Max audit_transactions.revision scoped to this Source (audit_transaction_scopes):
   // its row and any work under it. Sources list "Updated" sort.
   int64 updated_revision = 12;
+  // When that revision was recorded (RFC3339 UTC); empty when updated_revision is 0.
+  string updated_at = 13;
 }
 
 message SourceNote {
@@ -458,6 +462,7 @@ message AddSourceNoteRequest {
 
 message AddSourceNoteResponse {
   SourceNote note = 1;
+  WriteEffects effects = 2;
 }
 
 message UpdateSourceNoteRequest {
@@ -469,6 +474,7 @@ message UpdateSourceNoteRequest {
 
 message UpdateSourceNoteResponse {
   SourceNote note = 1;
+  WriteEffects effects = 2;
 }
 
 message DeleteSourceNoteRequest {
@@ -477,7 +483,9 @@ message DeleteSourceNoteRequest {
   string note_id = 3;
 }
 
-message DeleteSourceNoteResponse {}
+message DeleteSourceNoteResponse {
+  WriteEffects effects = 1;
+}
 
 message SetSourceMetadataRequest {
   string project_dir = 1;
@@ -493,6 +501,7 @@ message SetSourceMetadataRequest {
 // client can patch its list without refetching.
 message SetSourceMetadataResponse {
   MetadataWorkspaceEntry entry = 1;
+  WriteEffects effects = 2;
 }
 
 message ClearSourceMetadataRequest {
@@ -502,7 +511,9 @@ message ClearSourceMetadataRequest {
   string field_id = 4;
 }
 
-message ClearSourceMetadataResponse {}
+message ClearSourceMetadataResponse {
+  WriteEffects effects = 1;
+}
 
 // DismissSourceMetadataSuggestionRequest permanently hides an unfilled type
 // suggestion for this Source (source_metadata_layout.dismissed).
@@ -515,6 +526,7 @@ message DismissSourceMetadataSuggestionRequest {
 
 message DismissSourceMetadataSuggestionResponse {
   repeated MetadataWorkspaceEntry metadata = 1;
+  WriteEffects effects = 2;
 }
 
 // ReorderSourceMetadataRequest sets display order for the Source's visible
@@ -528,6 +540,7 @@ message ReorderSourceMetadataRequest {
 
 message ReorderSourceMetadataResponse {
   repeated MetadataWorkspaceEntry metadata = 1;
+  WriteEffects effects = 2;
 }
 
 message CreateArtifactRequest {
@@ -541,6 +554,7 @@ message CreateArtifactRequest {
 
 message CreateArtifactResponse {
   Artifact artifact = 1;
+  WriteEffects effects = 2;
 }
 
 // UpdateArtifactRequest patches label and/or description only.
@@ -555,6 +569,7 @@ message UpdateArtifactRequest {
 
 message UpdateArtifactResponse {
   Artifact artifact = 1;
+  WriteEffects effects = 2;
 }
 
 message DeleteArtifactRequest {
@@ -563,7 +578,9 @@ message DeleteArtifactRequest {
   string artifact_id = 3;
 }
 
-message DeleteArtifactResponse {}
+message DeleteArtifactResponse {
+  WriteEffects effects = 1;
+}
 
 message DeleteCitationRequest {
   string project_dir = 1;
@@ -579,11 +596,29 @@ message DeleteCitationResponse {
 // handles and Sources instead of a broad citation refetch.
 message WriteEffects {
   repeated string handles = 1;
+  // Sources whose graph changed: what the Source graph and graph progress load.
   repeated string sources = 2;
-  repeated string cache_sources = 3;
+  reserved 3;
   bool vocabulary = 4;
   bool structure = 5;
   repeated string header_handles = 6;
+  // Handles whose last-updated revision this write moved. Swift patches those
+  // rows in the cached People, Events, and Places lists with (revision,
+  // revision_at); it reloads nothing and leaves detail pages alone.
+  repeated string handle_scopes = 7;
+  // The write's own activity: its audit revision and when it was recorded
+  // (RFC3339 UTC). Zero and empty when the write recorded no revision.
+  int64 revision = 8;
+  string revision_at = 9;
+  // Sources whose last activity this write moved (the audit source scope).
+  // Swift patches the cached Sources list rows with (revision, revision_at).
+  repeated string source_scopes = 10;
+  // Sources whose citation reads (citation counts, citations by artifact) this
+  // write moved.
+  repeated string citation_sources = 11;
+  // An Observation was created, deleted, or moved to another Property, so the
+  // Properties workspace's usedBy counts changed.
+  bool property_usage = 12;
 }
 
 message IngestArtifactFileRequest {
@@ -597,6 +632,7 @@ message IngestArtifactFileResponse {
   Artifact artifact = 1;
   SourceFileRef file = 2;
   bool reused = 3;
+  WriteEffects effects = 4;
 }
 
 message ListSourceCredibilityGradesRequest {
@@ -619,6 +655,7 @@ message UpsertSourceCredibilityAssessmentRequest {
 
 message UpsertSourceCredibilityAssessmentResponse {
   SourceCredibilityAssessment assessment = 1;
+  WriteEffects effects = 2;
 }
 
 message ListSourceTypesRequest {
@@ -903,6 +940,7 @@ message CreateSubjectRequest {
 
 message CreateSubjectResponse {
   Subject subject = 1;
+  WriteEffects effects = 2;
 }
 
 message UpdateSubjectRequest {
@@ -915,6 +953,7 @@ message UpdateSubjectRequest {
 
 message UpdateSubjectResponse {
   Subject subject = 1;
+  WriteEffects effects = 2;
 }
 
 message DeleteSubjectRequest {
@@ -923,7 +962,9 @@ message DeleteSubjectRequest {
   string subject_id = 3;
 }
 
-message DeleteSubjectResponse {}
+message DeleteSubjectResponse {
+  WriteEffects effects = 1;
+}
 
 // CanonicalEntity is a Conclusion handle (PER-…, EVT-…, PLC-…).
 message CanonicalEntity {
@@ -977,6 +1018,33 @@ message PromoteSubjectRequest {
 message PromoteSubjectResponse {
   CanonicalEntity entity = 1;
   IdentityClaim claim = 2;
+}
+
+// UnpromoteSubject deletes a primary Subject's accepted claim and, in the same
+// revision, the accepted claims of the bridges on its Source that have it as an
+// end. No handle is deleted. A Subject with no accepted claim writes nothing.
+message UnpromoteSubjectRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string subject_id = 3;
+}
+
+message UnpromoteSubjectResponse {
+  WriteEffects effects = 1;
+}
+
+// SetPreferredLikeness chooses a Person's portrait (S10-39): observation_id is
+// one of the Person's gallery likenesses' record Observation; empty clears the
+// choice. A display pointer, not evidence. An unchanged choice writes nothing.
+message SetPreferredLikenessRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string entity_id = 3;
+  string observation_id = 4;
+}
+
+message SetPreferredLikenessResponse {
+  WriteEffects effects = 1;
 }
 
 // SubjectMembership is a view of one Subject's accepted Identity Claim: the
@@ -1100,6 +1168,11 @@ message PersonHeader {
   // List*Headers responses only.
   int64 updated_revision = 6;
   string updated_at = 7;
+  // likeness_image_rel_path is the objects/… path of the likeness the Person
+  // leads with on its page and in the Persons list (the preferred portrait,
+  // else the earliest gallery likeness); empty when none. Filled on ListPersonHeaders and
+  // GetConclusionDetail only.
+  string likeness_image_rel_path = 8;
 }
 
 // ListPersonHeaders returns every unmerged Person in list order: by the title
@@ -1280,6 +1353,22 @@ message GetConclusionDetailRequest {
   string entity_id = 2;
 }
 
+// LikenessDetail is one likeness a Person page's gallery shows (S10-35),
+// earliest recorded first. record is its earliest Observation, as the Why
+// shows it; the tile opens that record's Citation. image_rel_path is empty
+// when the File's path cannot be derived.
+message LikenessDetail {
+  string image_rel_path = 1;
+  ReconcilerOutcomeDetail record = 2;
+  // preferred is true for the likeness chosen as the Person's portrait
+  // (S10-39); at most one.
+  bool preferred = 3;
+  // leads is true for the likeness the Person's header leads with: the
+  // preferred one when set, else the earliest; exactly one per gallery. The
+  // tile that leads shows the Portrait Badge (user, 2026-10-17).
+  bool leads = 4;
+}
+
 message ConclusionDetail {
   CanonicalEntity entity = 1;
   repeated ConclusionField fields = 2;
@@ -1292,6 +1381,7 @@ message ConclusionDetail {
     EventHeader event = 5;
     PlaceHeader place = 6;
   }
+  repeated LikenessDetail likenesses = 7;
 }
 
 // ProposePromoteGraphAlignment loads one Source's Evidence layer and proposes
@@ -1332,6 +1422,8 @@ message PromoteGraphAlignmentComparison {
   // fallback.
   DateValueInput incoming_date = 15;
   DateValueInput member_date = 16;
+  // The incoming value is a negative Observation: shown as "not <value>".
+  bool incoming_negative = 17;
 }
 
 message PromoteGraphAlignmentAlternative {
@@ -1672,6 +1764,24 @@ message NameValueInput {
   repeated NameValuePartInput parts = 2;
 }
 
+// DepictionValueInput is a depiction to save: a region locator on the
+// Citation's page and the absolute path of the PNG or JPEG the app rendered
+// from that region. Go checks and re-encodes it; the file's bytes are never
+// stored and never cross the FFI.
+message DepictionValueInput {
+  string region_json = 1;
+  string image_path = 2;
+}
+
+// DepictionValue is a saved depiction: its region locator and the objects/…
+// path, relative to the project folder, of the PNG Go stored. Either is empty
+// when the stored half is not one Go would show (a region not on the
+// Citation's page, an image that is not a stored PNG).
+message DepictionValue {
+  string region_json = 1;
+  string image_rel_path = 2;
+}
+
 // Citation is one citations row.
 message Citation {
   string id = 1;
@@ -1703,6 +1813,9 @@ message Observation {
   string property_key = 15;
   string property_label = 16;
   string property_value_type = 17;
+  string value_depiction_id = 18;
+  // Response data; never read from a request.
+  DepictionValue depiction = 19;
 }
 
 // ObservationDraft is one Observation insert payload (create or append).
@@ -1720,6 +1833,7 @@ message ObservationDraft {
   string value_subject_id = 10;
   string value_term_id = 11;
   repeated string notes = 12;
+  DepictionValueInput depiction = 13;
 }
 
 message CreateCitationWithObservationsRequest {
@@ -1850,6 +1964,9 @@ message UpdateObservationRequest {
   string project_dir = 1;
   string user_id = 2;
   Observation observation = 3;
+  // A new region and its crop for the depiction Observation. Unset keeps the
+  // value named by observation.value_depiction_id.
+  DepictionValueInput depiction_input = 4;
 }
 message UpdateObservationResponse {
   Observation observation = 1;
@@ -1883,6 +2000,8 @@ message SourceGraphProgress {
   int32 observation_count = 3;
   reserved 4;
   reserved "uncited_count";
+  int32 primary_count = 5;
+  int32 filed_count = 6;
 }
 
 message ListSourceGraphProgressRequest {

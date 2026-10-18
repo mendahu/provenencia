@@ -131,6 +131,7 @@ This is most of the work. A plan built from the docs alone is a guess.
 | Delete of a resource | `add-catalog-delete` |
 | Seeded terms, properties, types | `add-seeded-vocabulary` |
 | Dates, names | `add-date-value`, `add-name-value` |
+| Matching layer, registry knob, relation or cause code | `add-match-rule` |
 | Short refs (`SRC-…`) | `add-catalog-ref` |
 | Omnibar hit kind | `add-searchable-kind` |
 | FFI method | `add-ffi-handler`, `use-catalog-session` |
@@ -222,6 +223,7 @@ Do not mark a plan `Planned` until each line is true. Fix the plan, not the gate
 - [ ] No soft words (list above) in Scope, Decisions, Design, Steps, or DoD
 - [ ] Version bump line is filled in and matches docs/versioning.md
 - [ ] Docs updates the PR owes are in the DoD (completed.md, map status, brief archive, domain doc)
+- [ ] A spike close (S#-99) owes no completed.md paragraph, map status, or Landed note: it deletes its plan with the spike folder ([`archive-docs`](../archive-docs/SKILL.md))
 - [ ] Stop conditions name concrete evidence, not "if something seems off"
 - [ ] Open questions is empty, or status is Draft / Blocked
 - [ ] Plan agrees with the map row and the working rules; any change was made in the map too

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/connectrules"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // TermFilter keeps an association only when its kept rank-1 value of the
@@ -40,7 +41,7 @@ func NewHop(bridgeTypeKey, fromProperty, toProperty string, filter *TermFilter) 
 	}
 	origin := strings.TrimSpace(b.Origin)
 	if origin == "" {
-		origin = connectrules.OriginProvenencia
+		origin = vocabkey.OriginProvenencia
 	}
 	h := Hop{origin: origin, bridge: b.BridgeTypeKey, from: fromProperty, to: toProperty}
 	if filter != nil {

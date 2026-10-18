@@ -3,6 +3,7 @@ import Testing
 @testable import Provenencia
 
 @Suite
+@MainActor
 struct SourceGraphSnapshotTests {
     private let personType = CatalogSubjectType(
         id: "type-person",

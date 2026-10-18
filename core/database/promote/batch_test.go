@@ -12,7 +12,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -26,7 +25,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -57,7 +58,7 @@ func newBatchFixture(t *testing.T) *batchFixture {
 	if err := subjectvocab.Install(c); err != nil {
 		t.Fatal(err)
 	}
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +77,7 @@ func newBatchFixture(t *testing.T) *batchFixture {
 
 func (f *batchFixture) prop(key string) properties.Property {
 	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, properties.OriginProvenencia)
+	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -85,7 +86,7 @@ func (f *batchFixture) prop(key string) properties.Property {
 
 func (f *batchFixture) term(propKey, termKey string) propertyterms.Term {
 	f.t.Helper()
-	term, err := propertyterms.Lookup(f.c, f.prop(propKey).ID, termKey, propertyterms.OriginProvenencia)
+	term, err := propertyterms.Lookup(f.c, f.prop(propKey).ID, termKey, vocabkey.OriginProvenencia)
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -94,7 +95,7 @@ func (f *batchFixture) term(propKey, termKey string) propertyterms.Term {
 
 func (f *batchFixture) bare(kind string) subjects.Subject {
 	f.t.Helper()
-	st, err := subjecttypes.Lookup(f.c, kind, subjecttypes.OriginProvenencia)
+	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -205,8 +206,8 @@ func (f *batchFixture) hasClaim(subjectID []byte) bool {
 	return true
 }
 
-func yearDate(y int) *datevalues.Value {
-	return &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &y}
+func yearDate(y int) *datevalue.Value {
+	return &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
 }
 
 func containsID(ids [][]byte, id []byte) bool {

@@ -19,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -27,7 +28,7 @@ import (
 func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 	c, userID := testCatalog(t)
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -35,18 +36,18 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 	if err := sourcecredibilitygrades.Install(c); err != nil {
 		t.Fatal(err)
 	}
-	grade, err := sourcecredibilitygrades.Lookup(c, "standard", sourcecredibilitygrades.OriginProvenencia)
+	grade, err := sourcecredibilitygrades.Lookup(c, "standard", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fieldID, err := metadatafields.Upsert(c, metadatafields.Field{
-		Key: "shelfmark", Origin: metadatafields.OriginUser, Label: "Shelfmark", DataType: "text",
+		Key: "shelfmark", Origin: vocabkey.OriginUser, Label: "Shelfmark", DataType: "text",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	other, err := metadatafields.Upsert(c, metadatafields.Field{
-		Key: "box", Origin: metadatafields.OriginUser, Label: "Box", DataType: "text",
+		Key: "box", Origin: vocabkey.OriginUser, Label: "Box", DataType: "text",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -157,21 +158,20 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 // effects.Handles on the released changes is the set subject delete recomputes.
 func TestReleaseFacetsReportsHandles(t *testing.T) {
 	f := newConclusionFixture(t)
-	db, err := f.c.DB()
+	tx, err := f.c.BeginWrite()
 	if err != nil {
 		t.Fatal(err)
 	}
-	tx, err := db.Begin()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = tx.Rollback() }()
+	defer func() {
+		_ = tx.Rollback()
+		f.c.EndWrite()
+	}()
 	// obsA is pinned on both claims of one handle: one handle, reported once.
 	got, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindObservation, f.obsA)
 	if err != nil {
 		t.Fatal(err)
 	}
-	handles, err := effects.Handles(tx, got.Changes)
+	handles, err := effects.Handles(tx.Tx, got)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +179,7 @@ func TestReleaseFacetsReportsHandles(t *testing.T) {
 		t.Fatalf("handles %v", handles)
 	}
 	var types []string
-	for _, ch := range got.Changes {
+	for _, ch := range got {
 		types = append(types, ch.EntityType)
 	}
 	sort.Strings(types)

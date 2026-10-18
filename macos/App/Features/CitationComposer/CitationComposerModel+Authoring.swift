@@ -133,7 +133,8 @@ extension CitationComposerModel {
                 valueTermID: values.valueTermID,
                 valueSubjectID: values.valueSubjectID,
                 dateDraft: values.dateDraft,
-                nameDraft: values.nameDraft
+                nameDraft: values.nameDraft,
+                depictionDraft: values.depictionDraft
             )
         )
     }
@@ -145,6 +146,7 @@ extension CitationComposerModel {
     }
 
     func openAuthoring(_ work: @escaping @MainActor () -> Void) {
+        guard !isDrawingDepiction else { return }
         if authoring.holdsLeave || (editSession?.isDirty ?? false) {
             stepContinuation = work
             pendingLeave = PendingLeave()
@@ -211,26 +213,24 @@ extension CitationComposerModel {
             beginNewSubject(typeKey: key, field: field)
             return
         }
-        let previous = vocabulary.subjectsByID[values.subjectID]?.typeKey
-        let nextType = vocabulary.subjectsByID[raw]?.typeKey
         values.subjectID = raw
-        if previous != nextType {
-            values.propertyID = ""
-            clearObservationValue(&values)
+        // A Property the new subject also offers keeps its value, so a run of
+        // likenesses keeps Likeness while the person changes.
+        if !values.propertyID.isEmpty {
+            let offered = vocabulary.propertyOptions(
+                forSubjectID: raw,
+                capabilities: depictionCapabilities
+            )
+            if !offered.contains(where: { $0.id == values.propertyID }) {
+                values.propertyID = ""
+                values.clearValue()
+            }
         }
     }
 
     func applyObservationProperty(_ propertyID: String, values: inout ObservationRowValues) {
         values.propertyID = propertyID
-        clearObservationValue(&values)
-    }
-
-    private func clearObservationValue(_ values: inout ObservationRowValues) {
-        values.valueText = ""
-        values.valueIntegerText = ""
-        values.valueTermID = ""
-        values.dateDraft = .empty()
-        values.nameDraft = .empty()
+        values.clearValue()
     }
 
     func selectAuthoringSubject(_ raw: String, field: CitationSubjectField) {
@@ -293,15 +293,20 @@ extension CitationComposerModel {
     }
 
     func duplicate(line: CitationSavedLine) {
+        guard !isDrawingDepiction else { return }
         openAuthoring {
             if let observationID = line.observationID,
                let row = self.observationRows.rows.first(where: { $0.persistedID == observationID })
             {
+                // The copy owns its own image: it keeps the region, not the saved value.
+                var values = row.values
+                values.depictionDraft.valueDepictionID = ""
+                values.depictionDraft.imageRelPath = ""
                 self.authoring = .property(
                     CitationPropertyDraft(
-                        values: row.values,
+                        values: values,
                         baseline: ObservationRowValues(),
-                        note: self.duplicateOrigin(subjectID: line.subjectID, phrase: line.phrase),
+                        note: self.duplicateOrigin(line: line),
                         isDuplicate: true
                     )
                 )
@@ -318,7 +323,7 @@ extension CitationComposerModel {
                     origin: .duplicate
                 )
                 if case .bridge(var draft) = self.authoring {
-                    draft.note = self.duplicateOrigin(subjectID: line.subjectID, phrase: line.phrase)
+                    draft.note = self.duplicateOrigin(line: line)
                     self.authoring = .bridge(draft)
                 }
             }
@@ -326,6 +331,7 @@ extension CitationComposerModel {
     }
 
     func beginEdit(line: CitationSavedLine) {
+        guard !isDrawingDepiction else { return }
         if let observationID = line.observationID,
            beginEdit(observationID: observationID, subjectID: line.subjectID)
         {
@@ -354,6 +360,7 @@ extension CitationComposerModel {
     /// has no such observation.
     @discardableResult
     func beginEdit(observationID: String, subjectID: String) -> Bool {
+        guard !isDrawingDepiction else { return false }
         if let row = observationRows.rows.first(where: { $0.persistedID == observationID }) {
             editSession = CitationEditSession(
                 kind: .property(
@@ -420,7 +427,24 @@ extension CitationComposerModel {
             }
             observationRows.replaceValues(rowID: row.id, values: values)
             let creating = context.citationID?.isEmpty != false
-            await observationRows.commit(rowID: row.id, citation: fields.values)
+            do {
+                if isDepictionRedrawn {
+                    try await withDepictionInput(for: values) { input in
+                        await self.observationRows.commit(
+                            rowID: row.id,
+                            citation: self.fields.values,
+                            depictionInput: input
+                        )
+                    }
+                } else {
+                    await observationRows.commit(rowID: row.id, citation: fields.values)
+                }
+            } catch {
+                session.isSaving = false
+                session.error = L10n.string(L10n.CitationComposer.depictionRenderFailed)
+                editSession = session
+                return
+            }
             if creating, context.citationID?.isEmpty == false {
                 fields.captureBaseline()
             }
@@ -460,6 +484,7 @@ extension CitationComposerModel {
     }
 
     func askDeleteLine(_ line: CitationSavedLine) async {
+        guard !isDrawingDepiction else { return }
         if let observationID = line.observationID,
            let row = observationRows.rows.first(where: { $0.persistedID == observationID })
         {
@@ -507,20 +532,29 @@ extension CitationComposerModel {
         draft.isSaving = true
         draft.error = nil
         authoring = .property(draft)
-        let subjectID = draft.values.subjectID
+        let values = draft.values
+        let isDepiction = vocabulary.isDepiction(propertyID: values.propertyID)
         do {
-            let citationID = try await ensuredCitationID()
-            let written = try await context.store.addObservationsToCitation(
-                projectDir: context.projectDir,
-                userID: context.userID,
-                citationID: citationID,
-                observations: [observation]
-            )
+            let written: ([CatalogObservation], CatalogWriteEffects)
+            if isDepiction {
+                written = try await withDepictionInput(for: values) { input in
+                    var withImage = observation
+                    withImage.depiction = input
+                    return try await self.addObservation(withImage)
+                }
+            } else {
+                written = try await addObservation(observation)
+            }
             context.applyWrite(written.1)
             let savedID = written.0.first?.id
             await refreshCitationLines()
+            // A run of faces is one per person: Likeness stays, the person goes.
             var kept = ObservationRowValues()
-            kept.subjectID = subjectID
+            if isDepiction {
+                kept.propertyID = values.propertyID
+            } else {
+                kept.subjectID = values.subjectID
+            }
             authoring = .property(CitationPropertyDraft(values: kept, baseline: kept))
             showAuthoringDialog()
             if let savedID {
@@ -530,11 +564,27 @@ extension CitationComposerModel {
             draft.isSaving = false
             draft.error = L10n.string(L10n.CitationComposer.needArtifact)
             authoring = .property(draft)
+        } catch is DepictionRenderFailed {
+            draft.isSaving = false
+            draft.error = L10n.string(L10n.CitationComposer.depictionRenderFailed)
+            authoring = .property(draft)
         } catch {
             draft.isSaving = false
             draft.error = L10n.Errors.message(for: error)
             authoring = .property(draft)
         }
+    }
+
+    private func addObservation(
+        _ observation: CatalogObservationDraft
+    ) async throws -> ([CatalogObservation], CatalogWriteEffects) {
+        let citationID = try await ensuredCitationID()
+        return try await context.store.addObservationsToCitation(
+            projectDir: context.projectDir,
+            userID: context.userID,
+            citationID: citationID,
+            observations: [observation]
+        )
     }
 
     private func saveBridgeDraft(_ draft: inout CitationBridgeDraft) async {
@@ -638,10 +688,16 @@ extension CitationComposerModel {
         authoring = .property(draft)
     }
 
-    func duplicateOrigin(subjectID: String, phrase: String) -> String {
-        let name = vocabulary.subjectsByID[subjectID]?.label
+    func duplicateOrigin(line: CitationSavedLine) -> String {
+        let name = vocabulary.subjectsByID[line.subjectID]?.label
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let phrase = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isDepiction = observationRows.rows
+            .first { $0.persistedID == line.observationID && line.observationID != nil }
+            .map { vocabulary.isDepiction(propertyID: $0.propertyID) } ?? false
+        if isDepiction, !name.isEmpty {
+            return L10n.CitationComposer.depictionDuplicatedFrom(name, line.label)
+        }
+        let phrase = line.phrase.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, !phrase.isEmpty else {
             return L10n.string(L10n.CitationComposer.duplicatedNote)
         }

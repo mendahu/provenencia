@@ -7,8 +7,8 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -54,6 +54,11 @@ func CreateCitedBridge(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateCitedBridgeResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		discard, err := ingest.StageDepictions(c, inputs)
+		if err != nil {
+			return err
+		}
+		defer discard()
 		res, wrote, err := writes.Run(c, writes.Op{Action: "create_cited_bridge", UserID: userID},
 			func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 				return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
@@ -78,24 +83,15 @@ func CreateCitedBridge(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		listed, err := observations.ListByCitation(c, res.Citation.ID)
+		listed, err := listedWritten(c, res.Citation.ID, res.Observations)
 		if err != nil {
 			return err
 		}
-		keep := make(map[string]struct{}, len(res.Observations))
-		for _, o := range res.Observations {
-			keep[uuidString(o.ID)] = struct{}{}
-		}
 		out = &engine.CreateCitedBridgeResponse{
-			Subject:  subjectProto(res.Subject),
-			Citation: citationProto(res.Citation),
-			Effects:  writeEffectsProto(wrote.Effects),
-		}
-		for _, row := range listed {
-			if _, ok := keep[uuidString(row.ID)]; !ok {
-				continue
-			}
-			out.Observations = append(out.Observations, listedObservationProto(row))
+			Subject:      subjectProto(res.Subject),
+			Citation:     citationProto(res.Citation),
+			Effects:      writeEffectsProto(wrote),
+			Observations: listed,
 		}
 		return nil
 	})

@@ -5,7 +5,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // NicknameAdd is how many product nickname rows were new.
@@ -46,16 +48,16 @@ func AddProductNicknames(c *database.Catalog) (NicknameAdd, error) {
 	return added, nil
 }
 
-func productNicknames() (match.AliasTable, bool) {
-	for _, table := range match.AliasTables() {
-		if table.Key == "nicknames" && table.Origin == match.OriginProvenencia && table.Kind == match.AliasNickname {
+func productNicknames() (valuecompare.AliasTable, bool) {
+	for _, table := range AliasTables() {
+		if table.Key == "nicknames" && table.Origin == vocabkey.OriginProvenencia && table.Kind == valuecompare.AliasNickname {
 			return table, true
 		}
 	}
-	return match.AliasTable{}, false
+	return valuecompare.AliasTable{}, false
 }
 
-func addProductNicknames(tx *sql.Tx, seed match.AliasTable) (NicknameAdd, error) {
+func addProductNicknames(tx *sql.Tx, seed valuecompare.AliasTable) (NicknameAdd, error) {
 	var id []byte
 	err := tx.QueryRow(`SELECT id FROM name_alias_tables WHERE key = ? AND origin = ?`,
 		seed.Key, seed.Origin).Scan(&id)
@@ -97,13 +99,14 @@ func addProductNicknames(tx *sql.Tx, seed match.AliasTable) (NicknameAdd, error)
 			added.Tokens += n
 			continue
 		}
-		if _, err := insertSet(tx, id, next, want); err != nil {
+		n, err := insertSet(tx, id, next, want)
+		if err != nil {
 			return NicknameAdd{}, err
 		}
 		stored = append(stored, memberSet{idx: next, tokens: seeds[i], supersets: 1})
 		next++
 		added.Sets++
-		added.Tokens += len(want)
+		added.Tokens += n
 	}
 	return added, nil
 }
@@ -144,12 +147,29 @@ func loadMemberSets(tx *sql.Tx, tableID []byte) ([]memberSet, error) {
 	return out, nil
 }
 
-func tokenSet(tokens []string) map[string]bool {
-	out := make(map[string]bool, len(tokens))
+// valueWords are the shipped registry's word rules, never catalog data: a text
+// key reads nothing else.
+var valueWords = matchregistry.Default().Value.Words
+
+// aliasTokens are the distinct comparison tokens of tokens, in first-seen
+// order, with the ones that have none dropped.
+func aliasTokens(tokens []string) []string {
+	var out []string
+	seen := make(map[string]bool, len(tokens))
 	for _, token := range tokens {
-		if token != "" {
-			out[token] = true
+		if k, ok := valuecompare.AliasToken(token, valueWords); ok && !seen[k] {
+			seen[k] = true
+			out = append(out, k)
 		}
+	}
+	return out
+}
+
+func tokenSet(tokens []string) map[string]bool {
+	keys := aliasTokens(tokens)
+	out := make(map[string]bool, len(keys))
+	for _, k := range keys {
+		out[k] = true
 	}
 	return out
 }
@@ -208,8 +228,8 @@ func insertMissing(tx *sql.Tx, tableID []byte, idx int, sets []memberSet, tokens
 		}
 	}
 	n := 0
-	for _, token := range tokens {
-		if token == "" || have[token] {
+	for _, token := range aliasTokens(tokens) {
+		if have[token] {
 			continue
 		}
 		if _, err := tx.Exec(`INSERT INTO name_alias_members (table_id, set_idx, token) VALUES (?, ?, ?)`,
@@ -224,10 +244,7 @@ func insertMissing(tx *sql.Tx, tableID []byte, idx int, sets []memberSet, tokens
 
 func insertSet(tx *sql.Tx, tableID []byte, idx int, tokens []string) (int, error) {
 	n := 0
-	for _, token := range tokens {
-		if token == "" {
-			continue
-		}
+	for _, token := range aliasTokens(tokens) {
 		if _, err := tx.Exec(`INSERT INTO name_alias_members (table_id, set_idx, token) VALUES (?, ?, ?)`,
 			tableID, idx, token); err != nil {
 			return 0, err
@@ -237,7 +254,7 @@ func insertSet(tx *sql.Tx, tableID []byte, idx int, tokens []string) (int, error
 	return n, nil
 }
 
-func insertNicknameTable(tx *sql.Tx, seed match.AliasTable) (NicknameAdd, error) {
+func insertNicknameTable(tx *sql.Tx, seed valuecompare.AliasTable) (NicknameAdd, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
 		return NicknameAdd{}, err

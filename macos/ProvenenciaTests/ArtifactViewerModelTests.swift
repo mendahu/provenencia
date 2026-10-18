@@ -93,6 +93,27 @@ struct ArtifactViewerModelTests {
         #expect(model.emptyReason == .missingFile)
     }
 
+    @Test func symlinkedObjectSetsMissingFile() async throws {
+        let fm = FileManager.default
+        let model = ArtifactViewerModel()
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        let rel = "objects/ab/cd/x.png"
+        let outside = try ArtifactFileFixtures.linkToOutsidePNG(at: project + "/" + rel)
+        defer {
+            try? fm.removeItem(atPath: project)
+            try? fm.removeItem(atPath: outside)
+        }
+        let source = ArtifactViewerSource(projectDir: project, relPath: rel, mediaType: "image/png")
+        await model.load(source)
+        #expect(model.emptyReason == .missingFile)
+
+        try fm.removeItem(atPath: project + "/" + rel)
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: rel)
+        await model.load(source)
+        #expect(model.emptyReason == .idle)
+        #expect(model.displayImage != nil)
+    }
+
     @Test func loadsPNGImageViaProjectFiles() async throws {
         let model = ArtifactViewerModel()
         let project = makeTempProject()

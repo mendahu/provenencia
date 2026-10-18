@@ -1,15 +1,10 @@
-// Package namevalues stores shared genealogical NameValue rows.
-//
-// A NameValue always has a full-form normalized reading (`form`). Ordered
-// parts are optional. Part `type` is a product-known key from the compiled
-// registry (see registry.go) when set; empty type means an untyped segment.
-// Insert rejects unknown non-empty types. User-minted part-type vocabulary
-// (DB rows) is deferred — keep DDL as open TEXT.
+// Package namevalues stores shared genealogical NameValue rows. The value type,
+// part-type registry and validation live in the pure package core/namevalue;
+// this package holds the queries.
 //
 // NameValues are value objects (UUID for persistence only). Observation saves
 // call UpdateTx to rewrite a row an observation already points at, so
 // value_name_id stays stable. Other callers attach a new row.
-// Format profiles and project defaults live elsewhere (structured-name-model §4).
 package namevalues
 
 import (
@@ -17,23 +12,12 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
-var ErrInvalid = apperr.New(apperr.CodeNameValuesInvalid, apperr.KindUser)
-
-// Product part-type keys (seeded-vocabulary §4.1). Same strings as PartTypes().
 const (
-	PartTypePrefix        = "prefix"
-	PartTypeGiven         = "given"
-	PartTypeNick          = "nick"
-	PartTypeSurnamePrefix = "surname_prefix"
-	PartTypeSurname       = "surname"
-	PartTypeSuffix        = "suffix"
-	PartTypeUndetermined  = "undetermined"
-
 	sqlInsertValue = `INSERT INTO name_values (id, form) VALUES (?, ?)`
 
 	sqlInsertPart = `INSERT INTO name_value_parts (id, name_value_id, idx, value, type)
@@ -56,24 +40,9 @@ const (
 		FROM name_value_parts WHERE name_value_id IN (`
 )
 
-// Part is one ordered segment of a NameValue.
-type Part struct {
-	ID    []byte
-	Idx   int
-	Value string
-	Type  string // empty or a KnownPartType key
-}
-
-// Value is one name_values row plus optional ordered parts.
-type Value struct {
-	ID    []byte
-	Form  string
-	Parts []Part // ordered by idx on Lookup
-}
-
 // Insert mints UUIDv7 ids, validates, inserts form + parts in one transaction,
 // and returns the parent id.
-func Insert(c *database.Catalog, v Value) ([]byte, error) {
+func Insert(c *database.Catalog, v namevalue.Value) ([]byte, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, err
@@ -94,20 +63,20 @@ func Insert(c *database.Catalog, v Value) ([]byte, error) {
 }
 
 // InsertTx validates and inserts form + parts on an existing transaction.
-func InsertTx(tx *sql.Tx, v Value) ([]byte, error) {
+func InsertTx(tx *sql.Tx, v namevalue.Value) ([]byte, error) {
 	if tx == nil {
-		return nil, ErrInvalid
+		return nil, namevalue.ErrInvalid
 	}
 	v.Form = strings.TrimSpace(v.Form)
-	parts := make([]Part, len(v.Parts))
+	parts := make([]namevalue.Part, len(v.Parts))
 	for i, p := range v.Parts {
-		parts[i] = Part{
+		parts[i] = namevalue.Part{
 			Idx:   p.Idx,
 			Value: strings.TrimSpace(p.Value),
 			Type:  strings.TrimSpace(p.Type),
 		}
 	}
-	if err := validate(v.Form, parts); err != nil {
+	if err := namevalue.Validate(namevalue.Value{Form: v.Form, Parts: parts}); err != nil {
 		return nil, err
 	}
 
@@ -139,26 +108,26 @@ func InsertTx(tx *sql.Tx, v Value) ([]byte, error) {
 }
 
 // UpdateTx rewrites form and replaces parts for an existing name_values id.
-func UpdateTx(tx *sql.Tx, id []byte, v Value) error {
+func UpdateTx(tx *sql.Tx, id []byte, v namevalue.Value) error {
 	if tx == nil || len(id) != 16 {
-		return ErrInvalid
+		return namevalue.ErrInvalid
 	}
 	v.Form = strings.TrimSpace(v.Form)
-	parts := make([]Part, len(v.Parts))
+	parts := make([]namevalue.Part, len(v.Parts))
 	for i, p := range v.Parts {
-		parts[i] = Part{
+		parts[i] = namevalue.Part{
 			Idx:   p.Idx,
 			Value: strings.TrimSpace(p.Value),
 			Type:  strings.TrimSpace(p.Type),
 		}
 	}
-	if err := validate(v.Form, parts); err != nil {
+	if err := namevalue.Validate(namevalue.Value{Form: v.Form, Parts: parts}); err != nil {
 		return err
 	}
 	var one int
 	if err := tx.QueryRow(sqlValueExists, id).Scan(&one); err != nil {
 		if err == sql.ErrNoRows {
-			return ErrInvalid
+			return namevalue.ErrInvalid
 		}
 		return err
 	}
@@ -188,10 +157,10 @@ func UpdateTx(tx *sql.Tx, id []byte, v Value) error {
 }
 
 // Lookup returns the name_values row and ordered parts for id, or sql.ErrNoRows.
-func Lookup(c *database.Catalog, id []byte) (Value, error) {
+func Lookup(c *database.Catalog, id []byte) (namevalue.Value, error) {
 	db, err := c.DB()
 	if err != nil {
-		return Value{}, err
+		return namevalue.Value{}, err
 	}
 	return LookupTx(db, id)
 }
@@ -200,42 +169,42 @@ func Lookup(c *database.Catalog, id []byte) (Value, error) {
 func LookupTx(q interface {
 	QueryRow(query string, args ...any) *sql.Row
 	Query(query string, args ...any) (*sql.Rows, error)
-}, id []byte) (Value, error) {
+}, id []byte) (namevalue.Value, error) {
 	if q == nil || len(id) != 16 {
-		return Value{}, ErrInvalid
+		return namevalue.Value{}, namevalue.ErrInvalid
 	}
-	var v Value
+	var v namevalue.Value
 	v.ID = append([]byte(nil), id...)
 	if err := q.QueryRow(sqlLookupValue, id).Scan(&v.Form); err != nil {
-		return Value{}, err
+		return namevalue.Value{}, err
 	}
 	rows, err := q.Query(sqlLookupParts, id)
 	if err != nil {
-		return Value{}, err
+		return namevalue.Value{}, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			p    Part
+			p    namevalue.Part
 			typ  sql.NullString
 			part []byte
 		)
 		if err := rows.Scan(&part, &p.Idx, &p.Value, &typ); err != nil {
-			return Value{}, err
+			return namevalue.Value{}, err
 		}
 		p.ID = append([]byte(nil), part...)
 		p.Type = typ.String
 		v.Parts = append(v.Parts, p)
 	}
 	if err := rows.Err(); err != nil {
-		return Value{}, err
+		return namevalue.Value{}, err
 	}
 	return v, nil
 }
 
 // LookupMany returns name_values rows and ordered parts for the given ids.
 // Missing ids are omitted. Empty ids returns an empty map.
-func LookupMany(c *database.Catalog, ids [][]byte) (map[string]Value, error) {
+func LookupMany(c *database.Catalog, ids [][]byte) (map[string]namevalue.Value, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, err
@@ -247,15 +216,15 @@ func LookupMany(c *database.Catalog, ids [][]byte) (map[string]Value, error) {
 // queries per sqlbatch.Size ids.
 func LookupManyTx(db interface {
 	Query(query string, args ...any) (*sql.Rows, error)
-}, ids [][]byte) (map[string]Value, error) {
+}, ids [][]byte) (map[string]namevalue.Value, error) {
 	ids = database.UniqueBlobIDs(ids)
-	out := make(map[string]Value, len(ids))
+	out := make(map[string]namevalue.Value, len(ids))
 	if len(ids) == 0 {
 		return out, nil
 	}
 	err := sqlbatch.Query(db, sqlLookupValueID, `)`, nil, ids, func(rows *sql.Rows) error {
 		var (
-			v  Value
+			v  namevalue.Value
 			id []byte
 		)
 		if err := rows.Scan(&id, &v.Form); err != nil {
@@ -275,7 +244,7 @@ func LookupManyTx(db interface {
 	// A parent's parts all come back in its batch, in idx order.
 	err = sqlbatch.Query(db, sqlLookupPartsByParents, `) ORDER BY name_value_id, idx`, nil, parentIDs, func(rows *sql.Rows) error {
 		var (
-			p        Part
+			p        namevalue.Part
 			parentID []byte
 			typ      sql.NullString
 			part     []byte
@@ -295,29 +264,6 @@ func LookupManyTx(db interface {
 		return nil, err
 	}
 	return out, nil
-}
-
-func validate(form string, parts []Part) error {
-	if form == "" {
-		return ErrInvalid
-	}
-	seen := make(map[int]struct{}, len(parts))
-	for _, p := range parts {
-		if p.Idx < 0 {
-			return ErrInvalid
-		}
-		if p.Value == "" {
-			return ErrInvalid
-		}
-		if p.Type != "" && !KnownPartType(p.Type) {
-			return ErrInvalid
-		}
-		if _, dup := seen[p.Idx]; dup {
-			return ErrInvalid
-		}
-		seen[p.Idx] = struct{}{}
-	}
-	return nil
 }
 
 func nullIfEmpty(s string) any {

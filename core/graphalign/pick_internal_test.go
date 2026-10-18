@@ -3,8 +3,8 @@ package graphalign
 import (
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // A row whose handle has no recorded score is scored against that handle,
@@ -16,7 +16,7 @@ func TestPickScoreScoresAMissingPick(t *testing.T) {
 	}
 	layer := Layer{
 		Subjects: []Subject{{ID: []byte("s"), Ref: "S", Kind: "person", Values: vals("miller")}},
-		Metas:    []match.PropertyMeta{{Property: occupation, ValueType: properties.ValueTypeText}},
+		Metas:    []match.PropertyMeta{{Property: occupation, ValueType: propertymeta.ValueTypeText}},
 	}
 	canon := Canon{Handles: []Handle{
 		{ID: []byte("same"), Ref: "A", Kind: "person", Values: vals("miller")},

@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -33,7 +34,7 @@ func TestSourceMetadata(t *testing.T) {
 		if err := sourcevocab.Install(c); err != nil {
 			t.Fatal(err)
 		}
-		st, err := sourcetypes.Lookup(c, "birth_certificate", sourcetypes.OriginProvenencia)
+		st, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -50,7 +51,7 @@ func TestSourceMetadata(t *testing.T) {
 	}
 	mustField := func(t *testing.T, c *database.Catalog, key string) metadatafields.Field {
 		t.Helper()
-		f, err := metadatafields.Lookup(c, key, metadatafields.OriginProvenencia)
+		f, err := metadatafields.Lookup(c, key, vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -286,7 +287,7 @@ func TestSourceMetadata(t *testing.T) {
 					t.Fatal(err)
 				}
 				extraID, err := metadatafields.Upsert(c, metadatafields.Field{
-					Key: "shelf_mark", Origin: metadatafields.OriginUser, Label: "Shelf mark", DataType: metadatafields.DataTypeText,
+					Key: "shelf_mark", Origin: vocabkey.OriginUser, Label: "Shelf mark", DataType: metadatafields.DataTypeText,
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -468,7 +469,7 @@ func TestSourceMetadata(t *testing.T) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
 				extraID, err := metadatafields.Upsert(c, metadatafields.Field{
-					Key: "shelf_mark", Origin: metadatafields.OriginUser, Label: "Shelf mark", DataType: metadatafields.DataTypeText,
+					Key: "shelf_mark", Origin: vocabkey.OriginUser, Label: "Shelf mark", DataType: metadatafields.DataTypeText,
 				})
 				if err != nil {
 					t.Fatal(err)

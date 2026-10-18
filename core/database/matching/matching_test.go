@@ -4,16 +4,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/matching"
-	"github.com/mendahu/provenencia/core/database/nameformats"
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -25,8 +22,16 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/database/valuerules"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -62,7 +67,7 @@ func newFixture(t *testing.T) *fixture {
 	must(t, err)
 	must(t, users.Upsert(c, userID, "Tester", r))
 	must(t, subjectvocab.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
@@ -75,12 +80,12 @@ func newFixture(t *testing.T) *fixture {
 	f := &fixture{t: t, c: c, db: db, source: src, artifact: art,
 		types: map[string]subjecttypes.Type{}, props: map[string]properties.Property{}}
 	for _, k := range []string{"person", "event", "place", "participation"} {
-		st, err := subjecttypes.Lookup(c, k, subjecttypes.OriginProvenencia)
+		st, err := subjecttypes.Lookup(c, k, vocabkey.OriginProvenencia)
 		must(t, err)
 		f.types[k] = st
 	}
 	for _, k := range []string{"name", "sex_at_birth", "event_type", "date", "toponym"} {
-		p, err := properties.Lookup(c, k, properties.OriginProvenencia)
+		p, err := properties.Lookup(c, k, vocabkey.OriginProvenencia)
 		must(t, err)
 		f.props[k] = p
 	}
@@ -92,7 +97,7 @@ type value func(f *fixture, s subjects.Subject) observations.Input
 
 func named(form string) value {
 	return func(f *fixture, s subjects.Subject) observations.Input {
-		return observations.Input{SubjectID: s.ID, PropertyID: f.props["name"].ID, Name: namevaluestest.Western(form)}
+		return observations.Input{SubjectID: s.ID, PropertyID: f.props["name"].ID, Name: namevaluetest.Western(form)}
 	}
 }
 
@@ -100,15 +105,15 @@ func named(form string) value {
 // parts say which word is which.
 func namedParts(form, given, surname string) value {
 	return func(f *fixture, s subjects.Subject) observations.Input {
-		return observations.Input{SubjectID: s.ID, PropertyID: f.props["name"].ID, Name: &namevalues.Value{Form: form, Parts: []namevalues.Part{
-			{Idx: 0, Value: given, Type: namevalues.PartTypeGiven}, {Idx: 1, Value: surname, Type: namevalues.PartTypeSurname},
+		return observations.Input{SubjectID: s.ID, PropertyID: f.props["name"].ID, Name: &namevalue.Value{Form: form, Parts: []namevalue.Part{
+			{Idx: 0, Value: given, Type: namevalue.PartTypeGiven}, {Idx: 1, Value: surname, Type: namevalue.PartTypeSurname},
 		}}}
 	}
 }
 
 func termed(prop, key string) value {
 	return func(f *fixture, s subjects.Subject) observations.Input {
-		term, err := propertyterms.Lookup(f.c, f.props[prop].ID, key, propertyterms.OriginProvenencia)
+		term, err := propertyterms.Lookup(f.c, f.props[prop].ID, key, vocabkey.OriginProvenencia)
 		must(f.t, err)
 		return observations.Input{SubjectID: s.ID, PropertyID: f.props[prop].ID, ValueTermID: term.ID}
 	}
@@ -116,8 +121,8 @@ func termed(prop, key string) value {
 
 func dated(y int, m, d *int) value {
 	return func(f *fixture, s subjects.Subject) observations.Input {
-		return observations.Input{SubjectID: s.ID, PropertyID: f.props["date"].ID, Date: &datevalues.Value{
-			Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: ip(y), StartMonth: m, StartDay: d,
+		return observations.Input{SubjectID: s.ID, PropertyID: f.props["date"].ID, Date: &datevalue.Value{
+			Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: ip(y), StartMonth: m, StartDay: d,
 		}}
 	}
 }
@@ -170,7 +175,7 @@ func TestForSubjectPersons(t *testing.T) {
 	f := newFixture(t)
 	exact := f.handle("person", named("James Robins"), termed("sex_at_birth", "male"))
 	variant := f.handle("person", named("James Robbins"))
-	surname := f.handle("person", named("Mary Robins"))
+	f.handle("person", named("Mary Robins"))
 	female := f.handle("person", named("James Robins"), termed("sex_at_birth", "female"))
 	f.handle("person", named("Ada Lovelace"))
 	f.handle("place", toponym("James Robins")) // another type never matches
@@ -181,9 +186,10 @@ func TestForSubjectPersons(t *testing.T) {
 	if res.Kind != "person" || !res.Profiled {
 		t.Fatalf("%+v", res)
 	}
-	// Fixture names are typed (given, surname), so a surname weighs more than a given name.
-	// A sex mismatch subtracts 2, so the female James stays in the list at 8.
-	want := fmt.Sprintf("[%s=11.0 %s=9.1 %s=8.0 %s=6.0]", exact.Entity.Ref, variant.Entity.Ref, female.Entity.Ref, surname.Entity.Ref)
+	// A sex mismatch subtracts 2, so the female James stays in the list at 8.0.
+	// Mary Robins has another first given name, which value compare calls
+	// Different: no points, below MinScore, not returned.
+	want := fmt.Sprintf("[%s=11.0 %s=9.1 %s=8.0]", exact.Entity.Ref, variant.Entity.Ref, female.Entity.Ref)
 	if refs(res.Matches) != want {
 		t.Fatalf("got %s, want %s", refs(res.Matches), want)
 	}
@@ -201,10 +207,10 @@ func TestForSubjectPersons(t *testing.T) {
 
 	t.Run("a profile override reweighs", func(t *testing.T) {
 		p, _ := match.DefaultProfile("person")
-		p = p.With(match.Feature{Property: match.Property{Key: "sex_at_birth", Origin: "provenencia"}, Comparer: match.TermComparer{}, Weight: 1})
+		p = p.With(match.Feature{Property: match.Property{Key: "sex_at_birth", Origin: "provenencia"}, ValueType: "term", Weight: 1})
 		res, err := matching.ForSubject(f.db, james.ID, matching.Options{Profile: &p})
 		must(t, err)
-		if len(res.Matches) != 4 || res.Matches[1].Ref != female.Entity.Ref || res.Matches[1].Score != 10 {
+		if len(res.Matches) != 3 || res.Matches[1].Ref != female.Entity.Ref || math.Abs(res.Matches[1].Score-10) > 0.01 {
 			t.Fatalf("female James should rank once sex no longer contradicts: %s", refs(res.Matches))
 		}
 	})
@@ -216,7 +222,7 @@ func TestForSubjectPersons(t *testing.T) {
 		must(t, err)
 		res, err := matching.ForSubject(f.db, james.ID, matching.Options{})
 		must(t, err)
-		if want := fmt.Sprintf("[%s=9.1 %s=8.0 %s=6.0]", variant.Entity.Ref, female.Entity.Ref, surname.Entity.Ref); refs(res.Matches) != want {
+		if want := fmt.Sprintf("[%s=9.1 %s=8.0]", variant.Entity.Ref, female.Entity.Ref); refs(res.Matches) != want {
 			t.Fatalf("got %s, want %s", refs(res.Matches), want)
 		}
 	})
@@ -247,12 +253,12 @@ func TestForSubjectPersons(t *testing.T) {
 func TestForSubjectComparesNameParts(t *testing.T) {
 	f := newFixture(t)
 	same := f.handle("person", namedParts("James Robins", "James", "Robins"))
-	sibling := f.handle("person", namedParts("Mary Robins", "Mary", "Robins"))
-	f.handle("person", namedParts("James Smith", "James", "Smith")) // 10 × 0.2: below MinScore
+	f.handle("person", namedParts("Mary Robins", "Mary", "Robins")) // another first name: Different, 0
+	f.handle("person", namedParts("James Smith", "James", "Smith")) // another surname: Different, 0
 
 	res, err := matching.ForSubject(f.db, f.subject("person", namedParts("ROBINS, Jas.", "James", "Robins")).ID, matching.Options{})
 	must(t, err)
-	if want := fmt.Sprintf("[%s=10.0 %s=6.0]", same.Entity.Ref, sibling.Entity.Ref); refs(res.Matches) != want {
+	if want := fmt.Sprintf("[%s=10.0]", same.Entity.Ref); refs(res.Matches) != want {
 		t.Fatalf("got %s, want %s", refs(res.Matches), want)
 	}
 }
@@ -267,7 +273,7 @@ func TestForSubjectEventsAndPlaces(t *testing.T) {
 	birth := f.subject("event", termed("event_type", "birth"), dated(1817, ip(5), ip(14)))
 	res, err := matching.ForSubject(f.db, birth.ID, matching.Options{})
 	must(t, err)
-	if want := fmt.Sprintf("[%s=10.0 %s=7.2]", sameDay.Entity.Ref, nextYear.Entity.Ref); refs(res.Matches) != want {
+	if want := fmt.Sprintf("[%s=10.0 %s=7.0]", sameDay.Entity.Ref, nextYear.Entity.Ref); refs(res.Matches) != want {
 		t.Fatalf("events: got %s, want %s", refs(res.Matches), want)
 	}
 
@@ -327,11 +333,16 @@ func TestNoStoredDefaultStampsWestern(t *testing.T) {
 		}
 	}
 	subject := vals[string(probe.ID)][prop][0]
-	if subject.NamePattern != match.WesternPattern || candidate.NamePattern != match.WesternPattern {
+	if subject.NamePattern != valuecompare.WesternPattern || candidate.NamePattern != valuecompare.WesternPattern {
 		t.Fatalf("patterns %q %q", subject.NamePattern, candidate.NamePattern)
 	}
-	got, ok := nameformats.Loaded{Key: match.WesternPattern, Builtin: true}.Comparer().Compare(subject, candidate)
-	want, wantOK := match.DefaultNames.Compare(subject, candidate)
+	rules, key, err := valuerules.Load(nil, f.db)
+	must(t, err)
+	if key != valuecompare.WesternPattern {
+		t.Fatalf("key %q", key)
+	}
+	got, ok := match.Compare(rules, propertymeta.ValueTypeName, subject, candidate)
+	want, wantOK := match.Compare(matchregistry.Default().Value, propertymeta.ValueTypeName, subject, candidate)
 	if ok != wantOK || got != want {
 		t.Fatalf("score %v %v, built-in %v %v", got, ok, want, wantOK)
 	}
@@ -353,10 +364,171 @@ func TestForSubjectQueryCountIsConstant(t *testing.T) {
 	}
 }
 
+func TestRankSkipsCountsWithoutANameFeature(t *testing.T) {
+	f := newFixture(t)
+	f.handle("place", toponym("York"))
+	s := f.subject("place", toponym("York"))
+	one, err := matching.ForSubjectQueryCount(f.db, s.ID)
+	must(t, err)
+	for i := 0; i < 20; i++ {
+		f.handle("place", toponym("York"))
+	}
+	many, err := matching.ForSubjectQueryCount(f.db, s.ID)
+	must(t, err)
+	if one != many {
+		t.Fatalf("queries: %d then %d", one, many)
+	}
+	res, err := matching.ForSubject(f.db, s.ID, matching.Options{})
+	must(t, err)
+	if len(res.Matches) == 0 || res.Matches[0].Score != 10 {
+		t.Fatalf("%v", refs(res.Matches))
+	}
+}
+
 func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
 	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
 		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
 			return artifacts.Create(tx, userID, in)
 		})
 	return a, err
+}
+
+// negated files the value as a negative Observation ("not male").
+func negated(v value) value {
+	return func(f *fixture, s subjects.Subject) observations.Input {
+		in := v(f, s)
+		in.Polarity = observations.PolarityNegative
+		return in
+	}
+}
+
+// addCachedTerm gives a handle another cached term row, as the reconciler
+// would have written it.
+func (f *fixture) addCachedTerm(entityID []byte, prop string, rank int, key string, support int, reason string) {
+	f.t.Helper()
+	term, err := propertyterms.Lookup(f.c, f.props[prop].ID, key, vocabkey.OriginProvenencia)
+	must(f.t, err)
+	_, err = f.db.Exec(`INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_term_id, support, against, reason)
+		VALUES (?, ?, ?, ?, ?, 0, ?)`, entityID, f.props[prop].ID, rank, term.ID, support, reason)
+	must(f.t, err)
+}
+
+func (f *fixture) setCachedTerm(entityID []byte, prop string, support int, reason string) {
+	f.t.Helper()
+	_, err := f.db.Exec(`UPDATE auto_reconciler_values SET support = ?, reason = ? WHERE entity_id = ? AND property_id = ? AND rank = 1`,
+		support, reason, entityID, f.props[prop].ID)
+	must(f.t, err)
+}
+
+func sexReason(t *testing.T, res matching.Result, ref string) match.Reason {
+	t.Helper()
+	for _, m := range res.Matches {
+		if m.Ref != ref {
+			continue
+		}
+		for _, r := range m.Reasons {
+			if r.Property.Key == "sex_at_birth" {
+				return r
+			}
+		}
+	}
+	t.Fatalf("no sex reason for %s in %+v", ref, res.Matches)
+	return match.Reason{}
+}
+
+func TestForSubjectJudgesAgainstTheMajority(t *testing.T) {
+	f := newFixture(t)
+	h := f.handle("person", named("Mary Robins"), termed("sex_at_birth", "male"))
+	f.setCachedTerm(h.Entity.ID, "sex_at_birth", 3, "kept")
+	f.addCachedTerm(h.Entity.ID, "sex_at_birth", 2, "female", 1, "kept")
+
+	female := f.subject("person", named("Mary Robins"), termed("sex_at_birth", "female"))
+	res, err := matching.ForSubject(f.db, female.ID, matching.Options{})
+	must(t, err)
+	r := sexReason(t, res, h.Entity.Ref)
+	if r.Contribution != -2 || r.Probe.Label != "Female" || r.Candidate.Label != "Male" {
+		t.Fatalf("one dissenting reading: %+v", r)
+	}
+
+	male := f.subject("person", named("Mary Robins"), termed("sex_at_birth", "male"))
+	res, err = matching.ForSubject(f.db, male.ID, matching.Options{})
+	must(t, err)
+	if r := sexReason(t, res, h.Entity.Ref); r.Contribution != 1 {
+		t.Fatalf("the majority matches: %+v", r)
+	}
+
+	t.Run("a denied value", func(t *testing.T) {
+		d := f.handle("person", named("Mary Robins"), termed("sex_at_birth", "male"))
+		f.setCachedTerm(d.Entity.ID, "sex_at_birth", 3, "denied")
+		f.addCachedTerm(d.Entity.ID, "sex_at_birth", 2, "female", 1, "kept")
+		res, err := matching.ForSubject(f.db, male.ID, matching.Options{})
+		must(t, err)
+		r := sexReason(t, res, d.Entity.Ref)
+		if r.Contribution != -2 || r.Probe.Label != "Male" || r.Candidate.Label != "Male" {
+			t.Fatalf("%+v", r)
+		}
+	})
+}
+
+func TestSubjectsValuesNegatives(t *testing.T) {
+	f := newFixture(t)
+	profile, _ := match.DefaultProfile("person")
+	both := f.subject("person", named("Mary Robins"), termed("sex_at_birth", "female"), negated(termed("sex_at_birth", "male")))
+	only := f.subject("person", negated(termed("sex_at_birth", "male")))
+
+	got, err := matching.SubjectsValues(f.db, [][]byte{both.ID, only.ID}, profile)
+	must(t, err)
+	sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
+	vs := got[string(both.ID)][sex]
+	if len(vs) != 2 || vs[0].Negative || vs[0].Term != "female" || !vs[1].Negative || vs[1].Term != "male" || len(vs[1].ObservationID) != 16 {
+		t.Fatalf("%+v", vs)
+	}
+	if string(vs[0].ObservationID) >= string(vs[1].ObservationID) {
+		t.Fatalf("not in Observation id order: %x then %x", vs[0].ObservationID, vs[1].ObservationID)
+	}
+	if o := got[string(only.ID)][sex]; len(o) != 1 || !o[0].Negative {
+		t.Fatalf("%+v", o)
+	}
+
+	f.handle("person", named("Mary Robins"), termed("sex_at_birth", "male"))
+	res, err := matching.ForSubject(f.db, only.ID, matching.Options{})
+	must(t, err)
+	if len(res.Matches) != 0 {
+		t.Fatalf("a Subject with only a negative ranks nothing: %+v", res.Matches)
+	}
+}
+
+func TestValuesCarryTermLabel(t *testing.T) {
+	f := newFixture(t)
+	profile, _ := match.DefaultProfile("person")
+	sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
+	check := func(what string, vs []match.Value) {
+		t.Helper()
+		if len(vs) != 1 || vs[0].Term != "male" || vs[0].TermLabel != "Male" {
+			t.Fatalf("%s: %+v", what, vs)
+		}
+	}
+
+	s := f.subject("person", termed("sex_at_birth", "male"))
+	got, err := matching.SubjectsValues(f.db, [][]byte{s.ID}, profile)
+	must(t, err)
+	check("SubjectsValues", got[string(s.ID)][sex])
+
+	h := f.handle("person", named("Mary Robins"), termed("sex_at_birth", "male"))
+	cands, err := matching.CandidatesOfType(f.db, "person", "provenencia", profile)
+	must(t, err)
+	var found bool
+	for _, c := range cands {
+		if c.Ref == h.Entity.Ref {
+			found = true
+			check("CandidatesOfType", c.Values[sex])
+		}
+	}
+	if !found {
+		t.Fatalf("handle %s missing from candidates", h.Entity.Ref)
+	}
+
+	ev, err := matching.EntitiesValues(f.db, [][]byte{h.Entity.ID}, profile)
+	must(t, err)
+	check("EntitiesValues", ev[string(h.Entity.ID)][sex])
 }

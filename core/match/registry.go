@@ -1,226 +1,23 @@
 package match
 
 import (
-	"github.com/mendahu/provenencia/core/autoreconcile"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
-// The registry: every number the matching algorithm uses, every built-in name
-// pattern, and every default profile, in one file. Tune here.
-//
-// Comparers read their defaults from this file: a nil setting on any
-// comparer falls back to the value below, so a bare NameComparer{} and
-// DefaultNames score identically, and no number is written twice. Callers
-// override a setting per call with Set (match.NameComparer{CrossRole:
-// match.Set(0.0)}) or pass a whole Profile (matching.Options.Profile).
-// registry_test.go fails if a setting is added without a registry value.
-//
-// A catalog with a default name format replaces Patterns and Pattern at
-// score time (nameformats.Load). These values stay the fallback when that
-// row is missing, and for callers with no catalog.
+// The registry: the default profiles and the period map. The numbers value
+// comparison uses (words, names, text, integers, dates) live in the match
+// registry's value section and reach match as valuecompare.Rules, an argument
+// to Rank, Score and Evaluate; match reads none.
 
-// ---------------------------------------------------------------------------
-// Words (names and free text)
+// PeriodProperties are the Properties whose dates make a period: a thing's
+// start and end.
+type PeriodProperties struct{ Start, End Property }
 
-// SpacedParticles are words that rejoin with the next word before scoring.
-// Add a word here; comparison reads this list. A period initial ("O.") never
-// rejoins. Entries are comparison tokens (lowercase, punctuation already
-// dropped). van and de are not here: a typed surname prefix is a part role.
-var SpacedParticles = []string{"o", "mc", "mac", "st", "d", "fitz"}
-
-// LetterFolds replaces letters that survive accent stripping. Add a letter
-// here; comparison reads this map. Keys are comparison tokens (lowercase).
-// An empty map still drops combining marks, so José and Jose stay a fold.
-var LetterFolds = map[rune]string{
-	'ß': "ss",
-	'æ': "ae",
-	'œ': "oe",
-	'ø': "o",
-	'ł': "l",
-	'đ': "d",
-	'þ': "th",
-	'ı': "i",
-}
-
-// DefaultWordRules: how two words compare.
-var DefaultWordRules = WordRules{
-	// Least edit-distance ratio (1 − edits / longer length) for a spelling
-	// variant: Robins ~ Robbins (0.86) counts, Mary ~ Mark (0.75) does not.
-	// 1 turns fuzzy matching off.
-	FuzzyFloor: Set(autoreconcile.SpellingFloor),
-	// An initial against a word it begins: "J." ~ "James".
-	InitialCredit: Set(0.5),
-	// Words at least this long may differ by one added or dropped letter
-	// below FuzzyFloor (Ann ~ Anne, Jon ~ John).
-	ShortVariantMinLength: Set(autoreconcile.SpellingShortMin),
-	Particles:             &SpacedParticles,
-	Folds:                 &LetterFolds,
-	// No alias tables. Scoring reads the catalog; this seed is not a fallback.
-	Aliases: &noAliasTables,
-}
-
-// AliasCredit is an abbreviation or nickname table hit. Exact is 1. A
-// fold-only pair is lower (foldOnly).
-const AliasCredit = 0.98
-
-// OriginProvenencia is the app's vocabulary origin.
-const OriginProvenencia = "provenencia"
-
-// AliasKind is abbreviation or nickname. Both score AliasCredit.
-type AliasKind string
-
-const (
-	AliasAbbreviation AliasKind = "abbreviation"
-	AliasNickname     AliasKind = "nickname"
-)
-
-// AliasTable is one contributed list. Origin records who contributed it
-// (provenencia, user, or plugin:<id>) and does not turn the table off.
-// A set is one equivalence group. Roles are the part roles that may use it.
-type AliasTable struct {
-	Key, Origin, Label string
-	Kind               AliasKind
-	Roles              []NameRole
-	Sets               [][]string
-}
-
-func aliasPartRoles() []NameRole {
-	return []NameRole{RoleGiven, RoleNick, RoleUntyped}
-}
-
-// noAliasTables is the comparer default: no abbreviation or nickname hits
-// until a catalog load supplies rows.
-var noAliasTables []AliasTable
-
-// productAliasTables is the create-time seed. Install writes this list.
-// Scoring does not read it. Tokens are normalized comparison forms.
-var productAliasTables = []AliasTable{
-	{
-		Key: "abbreviations", Origin: OriginProvenencia, Label: "Abbreviations",
-		Kind: AliasAbbreviation, Roles: aliasPartRoles(),
-		Sets: [][]string{
-			{"james", "jas"},
-			{"william", "wm"},
-			{"charles", "chas"},
-			{"thomas", "thos"},
-			{"george", "geo"},
-			{"elizabeth", "eliz"},
-			{"john", "jno"},
-			{"robert", "robt"},
-		},
-	},
-	{
-		Key: "nicknames", Origin: OriginProvenencia, Label: "Nicknames",
-		Kind: AliasNickname, Roles: aliasPartRoles(),
-		// Each set is one canonical name and its direct nicknames, from
-		// carltonnorthern/nicknames. A nickname shared by two canonical
-		// names does not join those sets. License and credit:
-		// third_party/nicknames/.
-		Sets: nicknameSets,
-	},
-}
-
-// MaxExactPairing bounds the exact best-pairing search (2^n states over the
-// shorter word list); longer lists pair greedily. A performance limit, not a
-// scoring weight: names never get close.
-const MaxExactPairing = 12
-
-// ---------------------------------------------------------------------------
-// Names
-
-// DefaultNames: how two names compare once their words have roles and weights
-// (which come from the name pattern, below).
-var DefaultNames = NameComparer{
-	Patterns: BuiltinNamePatterns,
-	// The pattern for names that don't name one (today: every name).
-	// Later: the project default name format.
-	Pattern: Set(WesternPattern),
-
-	// Affinities: how much a pair of words counts when their roles differ.
-	UntypedAffinity: Set(0.8), // a typed word against an untyped one
-	NickAffinity:    Set(0.9), // a nickname against a given name
-	CrossRole:       Set(0.5), // any other mismatch: surname against given
-
-	// Both names have family words and none resembles any word of the other.
-	GivenOnlyFactor: Set(0.5),
-	// Both names carry generation words (Jr., Sr.) and share none.
-	SuffixConflict: Set(0.3),
-
-	Words: DefaultWordRules,
-}
-
-// WesternPattern is the key of the built-in Western name pattern.
-const WesternPattern = "western"
-
-// WesternNamePattern: given names then surname, with GEDCOM-style part types.
-// The first given name leads; middle names and initials count less; titles
-// and surname particles are ignored. Every product part type (namevalues
-// registry) must have a role here.
-var WesternNamePattern = NamePattern{
-	Key: WesternPattern,
-	PartRoles: map[string]NameRole{
-		namevalues.PartTypeSurname:       RoleFamily,
-		namevalues.PartTypeGiven:         RoleGiven,
-		namevalues.PartTypeNick:          RoleNick,
-		namevalues.PartTypeSuffix:        RoleGeneration,
-		namevalues.PartTypePrefix:        RoleIgnored,
-		namevalues.PartTypeSurnamePrefix: RoleIgnored,
-		namevalues.PartTypeUndetermined:  RoleUntyped,
-		"":                               RoleUntyped,
-	},
-	// What a matched word of each role earns and an unmatched one costs.
-	Weights: NameWeights{
-		Family:     1.5,
-		FirstGiven: 1,
-		OtherGiven: 0.5, // middle names and initials
-		Nick:       0.3,
-		Untyped:    1,
-	},
-}
-
-// BuiltinNamePatterns are the patterns that ship in code. A later NamePatterns
-// source reads name_format_profiles instead; nothing else changes.
-var BuiltinNamePatterns = NamePatternSet{
-	WesternPattern: WesternNamePattern,
-}
-
-// ---------------------------------------------------------------------------
-// Dates
-
-// DefaultDates: how two dates compare as spans of years.
-var DefaultDates = DateComparer{
-	// Years apart that still resemble; beyond is a disagreement.
-	Tolerance: Set(2),
-	// ABT on either point multiplies the tolerance.
-	ApproxToleranceFactor: Set(2),
-
-	// Two points in the same year (identical dates are always 1):
-	MissingDay:   Set(0.9), // same month, a day missing on one side
-	MissingMonth: Set(0.8), // a month missing on one side
-	OtherDay:     Set(0.7), // same month, different known days
-	OtherMonth:   Set(0.6), // different known months
-	// Points years apart fall off linearly from this, within the tolerance.
-	YearsApartFrom: Set(0.8),
-
-	// A range or bound on either side, overlapping: judged by the wider span.
-	SpanOneYear:      Set(0.8),  // a one-year span
-	SpanPerExtraYear: Set(0.05), // less for each extra year of width
-	SpanFloor:        Set(0.2),  // never below; open spans (BEF, AFT, FROM)
-}
-
-// ---------------------------------------------------------------------------
-// Text, terms, integers
-
-// DefaultText: free text (toponyms, remarks). The same normalized text is 1;
-// otherwise shared words, capped at Partial.
-var DefaultText = TextComparer{
-	Partial: Set(0.7),
-	Words:   DefaultWordRules,
-}
-
-// DefaultIntegers: equal is 1; Tolerance 0 means any difference disagrees.
-var DefaultIntegers = IntegerComparer{
-	Tolerance: Set(int64(0)),
+// DatePeriods maps a date Property to the start and end Properties that stand
+// for it when the other side has only a date (see poolPeriods). Another
+// pair of start and end dates with no date of its own is one more entry.
+var DatePeriods = map[Property]PeriodProperties{
+	product("date"): {Start: product("start_date"), End: product("end_date")},
 }
 
 // ---------------------------------------------------------------------------
@@ -236,35 +33,30 @@ const DefaultSuggestionLimit = 10
 //
 // The weights are points. As a guide: a candidate worth showing scores at
 // least MinScore; the same name alone clears it, a shared surname alone
-// clears it barely. A sex or gender mismatch narrows the score; it does not hide
-// a name that otherwise cleared MinScore.
-// ProfiledKinds are the subject type keys DefaultProfile knows.
-func ProfiledKinds() []string {
-	return []string{"person", "event", "place"}
-}
-
+// clears it barely. A sex or gender mismatch narrows the score; it does not
+// hide a name that otherwise cleared MinScore.
 func DefaultProfile(kind string) (Profile, bool) {
 	switch kind {
 	case "person":
 		return Profile{
 			Kind: "person",
 			Features: []Feature{
-				{Property: product("name"), Comparer: DefaultNames, Weight: 10},
-				{Property: product("sex_at_birth"), Comparer: TermComparer{}, Weight: 1, Contradiction: 2},
-				{Property: product("gender"), Comparer: TermComparer{}, Weight: 1, Contradiction: 2},
+				{Property: product("name"), ValueType: propertymeta.ValueTypeName, Weight: 10},
+				{Property: product("sex_at_birth"), ValueType: propertymeta.ValueTypeTerm, Weight: 1, Contradiction: 2},
+				{Property: product("gender"), ValueType: propertymeta.ValueTypeTerm, Weight: 1, Contradiction: 2},
 			},
-			// "Mary Robins" ~ "James Robins" is 10 × 0.6 = 6: shown, low.
-			// "James Smith" is 10 × 0.2 = 2: hidden.
+			// "Mary Robins" ~ "James Robins" is Different: 0, hidden.
+			// "Robins" ~ "James Robins" is 10 × 0.75 = 7.5: shown.
 			MinScore: 3,
 		}, true
 	case "event":
 		return Profile{
 			Kind: "event",
 			Features: []Feature{
-				{Property: product("event_type"), Comparer: TermComparer{}, Weight: 4, Contradiction: 6},
-				{Property: product("date"), Comparer: DefaultDates, Weight: 6, Contradiction: 4},
-				{Property: product("start_date"), Comparer: DefaultDates, Weight: 3, Contradiction: 2},
-				{Property: product("end_date"), Comparer: DefaultDates, Weight: 3, Contradiction: 2},
+				{Property: product("event_type"), ValueType: propertymeta.ValueTypeTerm, Weight: 4, Contradiction: 6},
+				{Property: product("date"), ValueType: propertymeta.ValueTypeDate, Weight: 6, Contradiction: 4},
+				{Property: product("start_date"), ValueType: propertymeta.ValueTypeDate, Weight: 3, Contradiction: 2},
+				{Property: product("end_date"), ValueType: propertymeta.ValueTypeDate, Weight: 3, Contradiction: 2},
 			},
 			// The same type alone (every birth) is not enough; a date is.
 			MinScore: 5,
@@ -273,7 +65,7 @@ func DefaultProfile(kind string) (Profile, bool) {
 		return Profile{
 			Kind: "place",
 			Features: []Feature{
-				{Property: product("toponym"), Comparer: DefaultText, Weight: 10},
+				{Property: product("toponym"), ValueType: propertymeta.ValueTypeText, Weight: 10, Cardinality: propertymeta.CardinalityMultiple},
 			},
 			MinScore: 3,
 		}, true

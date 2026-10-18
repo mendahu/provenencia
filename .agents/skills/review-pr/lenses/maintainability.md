@@ -29,7 +29,7 @@ and by [`review-pr`](../SKILL.md) on a diff or an area of the app.
 1. Read the plan, then the change (the diff against its base, or the plan's
    Design and Steps).
 2. For each thing the change adds — file, type, function, table, FFI method,
-   component, cache key, L10n namespace, test helper — run Q1–Q11.
+   component, cache key, L10n namespace, test helper — run Q1–Q11 and Q14.
    **Search before you claim.** Every finding names the code you found, or the
    map row or idea file that names the future add.
 3. Then step back from the parts (Q12) and place each finding (Q13).
@@ -146,6 +146,12 @@ one this code will be touched by: does this shape give it a slot (a registry
 entry, an enum case, a column already there), or will that PR have to undo or
 fork this one? Only futures that are written down count.
 
+Count what the next named add must touch. A per-type field, `case`, or
+nil-checked append that every new type repeats (`DateChange`, `NameChange`,
+`DepictionChanges`, each read by the same append blocks), where one list or
+one entry would serve them all, is a fork the next add pays for. When the map
+or an idea file names that next type, it is a **blocker**.
+
 ### Q9. State and caches
 
 One owner per concern; a parent machine instead of sibling ping-pong; caches
@@ -172,6 +178,14 @@ that stay the single source of truth. Target: view → feature model (`enum Phas
   already warms the place; `session.query()` from `body`.
 - **Cache vs workflow.** Draft or dirty form state on the session; a
   `QueryHandle.status` used as a wizard phase.
+- **Refetch where the write already knows.** When a write reports what it
+  changed and the new value (an id set, a time, a field), the cache patches
+  the affected rows in place through the cache layer, declared once so the
+  next list reuses it. Invalidate-and-reload is for changes the client cannot
+  know. A whole list or page rebuilt to move one field, a reload of data that
+  is not on screen, or a write result the cache ignores is a finding. A
+  one-off patch written in a feature or in one mutation branch, instead of in
+  the cache layer, is a second mechanism (Q14).
 
 Allow: ephemeral view-only chrome (hover, focus, scroll, one-shot animation
 flags), preview fixtures, deliberate stale-while-revalidate on navigation reads.
@@ -215,14 +229,62 @@ A better shape is not automatically this change's job. Pick one and say it:
 
 Do not widen a PR silently.
 
+### Q14. One mechanism per cross-cutting job
+
+Some jobs recur across the app: presenting a kind of value (timestamps,
+dates, names, counts, refs, file sizes), updating the cache after a write,
+resolving what a write touched, mapping an error to copy. Each has one
+mechanism, and every caller goes through it. The cheapest time to keep it
+that way is the PR that adds the second caller.
+
+- **Look for a parallel path.** A new type, struct, or helper that produces
+  the same kind of output as an existing one, shaped for one screen or one
+  caller. A value object that bundles the display strings for one view next
+  to an existing formatter. A formatter variant with different inputs than
+  its siblings (one takes a locale, the others read the process default). It
+  does not matter that it is small, well named, or in the right folder: two
+  ways to do one job is the debt.
+- **Formatting is not styling.** A shared formatter takes the value, the
+  display option, and the context (locale, calendar, time zone, clock) and
+  returns text. Icons, colors, fonts, placeholders, and layout belong to the
+  caller that composes the text into its view. A formatter that returns a
+  view, or a view-model that owns formatting rules, mixes the two.
+- **Hidden inputs.** A shared function that reads the process locale, the
+  wall clock, or the current time zone implicitly cannot be tested for every
+  style, so callers re-implement it to make it testable. Context is a
+  parameter with a `.current` default.
+- **Inside one package too.** A second way to do a job the package already
+  does is a second mechanism even when it is private and short: a private
+  `parse` that unmarshals the same format beside the exported `Validate`, a
+  second scan of the same row shape, a local trim or normalize rule beside the
+  one the store applies. The next rule added to one path (a version check, a
+  size limit) silently misses the other.
+- **The fix shape.** Extend the one mechanism (a style case, a context
+  parameter, a declared cache hook, a split of the exported function into its
+  steps) and move the existing callers onto it in the same PR. Delete what that
+  makes dead (Q7).
+
 ## Severity in this lens
 
 | Severity | Use when |
 | --- | --- |
-| **blocker** | Debt that is expensive to undo once merged: wrong layer for domain logic, a second mechanism beside an existing one, bypassing a registry CI expects, a schema shape the next named add must fight, a split brain that can show the wrong row |
+| **blocker** | Debt that is expensive to undo once merged: wrong layer for domain logic; a second mechanism beside an existing one (Q14), including a small or private one in the same package and one shaped for one screen; bypassing a registry CI expects; a schema shape, or a per-type field or case, that the next named add must fight or repeat (Q8); a split brain that can show the wrong row; a cache that reloads what the write already reported (Q9); a cost on a common path that grows with the catalog or its history (rate it with the performance lens) |
 | **major** | A clear structural win in this PR's files: reuse an existing helper, delete what this made dead, update the skill it made false |
 | **minor** | Naming polish, a small extraction, a comment |
 | **nit** | Taste |
+
+When unsure between two severities, pick the higher one; the orchestrator can
+lower it with evidence, but cannot see a problem rated below its weight.
+
+**Precedent is not a mitigation.** Rate a finding by the debt after merge. A
+change that copies, extends, or widens an existing weak pattern adds to it;
+"the code already did this" lowers nothing. Say which existing code shares
+the problem so the fix plan can include it or log it.
+
+**The plan is not a mitigation either.** A Decision that names the weaker
+shape (three per-type fields, a private decoder) does not lower the severity.
+Rate the debt, cite the Decision it contradicts, and the orchestrator takes it
+to the user (see [`review-pr`](../SKILL.md) "Rate the code as merged").
 
 ## Known traps
 
@@ -237,6 +299,10 @@ the rule; do not restate it.
 - A feature model copying `handle.value` into its own array — Q9.
 - Domain logic in an `api/ffi/handlers` function — Q3.
 - New files in legacy `DesignSystem/Components/Core|Forms|Research/` or loose at a layer root — Q4.
+- A screen-shaped value type that formats beside an existing shared formatter — Q14.
+- Invalidating a list to move one field the write already reported — Q9.
+- A private decoder beside the package's exported validator for the same format (S10-32 `locator.parse` beside `Validate`) — Q14.
+- One result field per value type, each with its own append, when the map names more types (S10-32 `DateChange` / `NameChange` / `DepictionChanges`) — Q8.
 
 ## Good finding shape
 

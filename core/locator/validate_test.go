@@ -2,8 +2,58 @@ package locator
 
 import (
 	"errors"
+	"fmt"
+	"math"
+	"strconv"
+	"strings"
 	"testing"
+	"time"
 )
+
+// ringPoints returns n points on a circle of radius 0.4 around (0.5, 0.5),
+// counter-clockwise from angle 0.
+func ringPoints(n int) []point {
+	pts := make([]point, n)
+	for i := range pts {
+		a := 2 * math.Pi * float64(i) / float64(n)
+		pts[i] = point{X: 0.5 + 0.4*math.Cos(a), Y: 0.5 + 0.4*math.Sin(a)}
+	}
+	return pts
+}
+
+// ringRegion returns a region selector object holding an n-point ring.
+func ringRegion(n int) string {
+	var b strings.Builder
+	b.WriteString(`{"type":"region","unit":"normalized","points":[`)
+	for i, p := range ringPoints(n) {
+		if i > 0 {
+			b.WriteString(",")
+		}
+		fmt.Fprintf(&b, `{"x":%s,"y":%s}`, strconv.FormatFloat(p.X, 'f', 6, 64), strconv.FormatFloat(p.Y, 'f', 6, 64))
+	}
+	b.WriteString(`]}`)
+	return b.String()
+}
+
+// paddedArtifactDoc returns a valid artifact-only document of n bytes, padded
+// with spaces inside the JSON.
+func paddedArtifactDoc(n int) string {
+	const base = `{"version":1,"selectors":[{"type":"artifact"}]}`
+	return `{"version":1,"selectors":[{"type":"artifact"}` + strings.Repeat(" ", n-len(base)) + `]}`
+}
+
+func TestValidateDocCapBeforeCrossing(t *testing.T) {
+	doc := document{Version: 1, Selectors: []selectorRaw{{Type: TypeRegion, Unit: "normalized", Points: ringPoints(200_000)}}}
+	start := time.Now()
+	err := validateDoc(doc)
+	elapsed := time.Since(start)
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("got %v, want ErrInvalid", err)
+	}
+	if elapsed > 100*time.Millisecond {
+		t.Fatalf("took %v, want under 100ms", elapsed)
+	}
+}
 
 func TestValidate(t *testing.T) {
 	tests := []struct {
@@ -120,6 +170,29 @@ func TestValidate(t *testing.T) {
 			json: `{"version":1,"selectors":[{"type":"region","unit":"normalized","points":[
 				{"x":0.1,"y":0.1},{"x":0.5,"y":0.1},{"x":0.9,"y":0.1}
 			]}]}`,
+			wantErr: true,
+		},
+		{
+			name: "region at the point cap",
+			json: fmt.Sprintf(`{"version":1,"selectors":[%s]}`, ringRegion(MaxRegionPoints)),
+		},
+		{
+			name:    "region over the point cap",
+			json:    fmt.Sprintf(`{"version":1,"selectors":[%s]}`, ringRegion(MaxRegionPoints+1)),
+			wantErr: true,
+		},
+		{
+			name:    "points over the cap across two region selectors",
+			json:    fmt.Sprintf(`{"version":1,"selectors":[{"type":"page","artifact_page":1},%s,%s]}`, ringRegion(129), ringRegion(128)),
+			wantErr: true,
+		},
+		{
+			name: "document at the byte cap",
+			json: paddedArtifactDoc(MaxDocumentBytes),
+		},
+		{
+			name:    "document over the byte cap",
+			json:    paddedArtifactDoc(MaxDocumentBytes + 1),
 			wantErr: true,
 		},
 		{

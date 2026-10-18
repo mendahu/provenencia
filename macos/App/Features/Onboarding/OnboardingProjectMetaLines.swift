@@ -58,6 +58,6 @@ struct OnboardingProjectMetaLines: View {
     }
 
     private static func formatDate(_ rfc3339: String) -> String {
-        TimestampFormat.abbreviatedDateTime(rfc3339)
+        TimestampFormat.string(rfc3339, .dateTime) ?? rfc3339
     }
 }

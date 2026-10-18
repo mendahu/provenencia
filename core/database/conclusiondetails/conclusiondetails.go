@@ -7,7 +7,8 @@
 // Field values are the node's auto-reconciler ranks. Term labels come from
 // the graph vocabulary. The Why stays a SQL read each time the page opens.
 // A Property no
-// record mentions isn't returned. Which empty fields a page still shows is
+// record mentions isn't returned. Likenesses are listed apart from the
+// fields, earliest first (likenesses.ForEntities). Which empty fields a page still shows is
 // the page's choice. Go returns structures; the app formats text.
 // Reconciliation Claims are never in these tables: when they ship, a
 // composer lays an accepted claim over the auto-reconciled value here.
@@ -23,8 +24,11 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/likenesses"
 	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -45,8 +49,8 @@ type Value struct {
 	TermID     []byte
 	TermKey    string
 	TermLabel  string
-	Date       *datevalues.Value
-	Name       *namevalues.Value
+	Date       *datevalue.Value
+	Name       *namevalue.Value
 }
 
 // ReconciledValue is one auto-reconciled value of a Property.
@@ -97,11 +101,21 @@ type Field struct {
 	Outcomes    []Outcome         // by value rank (none last), then Observation id
 }
 
+// LikenessTile is one likeness a gallery shows: its image, and the outcome of
+// its earliest gallery record, which the tile opens.
+type LikenessTile struct {
+	ImageFileID []byte
+	Record      Outcome
+	Preferred   bool // the Person's chosen portrait (S10-39)
+	Leads       bool // the likeness the header leads with (likenesses.Likeness.Leads)
+}
+
 // Detail is one handle's detail.
 type Detail struct {
 	Entity      canonicalentities.Entity
 	MemberCount int // accepted members
 	Fields      []Field
+	Likenesses  []LikenessTile // earliest recorded first
 }
 
 const (
@@ -161,8 +175,22 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 	if err := attachValues(c.Graph(), n, byProp); err != nil {
 		return Detail{}, err
 	}
-	if err := loadOutcomes(db, entityID, byProp); err != nil {
+	gallery, err := likenesses.ForEntities(db, [][]byte{entityID})
+	if err != nil {
 		return Detail{}, err
+	}
+	leads := map[string]bool{}
+	for _, l := range gallery[string(entityID)] {
+		leads[string(l.ObservationIDs[0])] = true
+	}
+	leadOutcomes, err := loadOutcomes(db, entityID, byProp, leads)
+	if err != nil {
+		return Detail{}, err
+	}
+	for _, l := range gallery[string(entityID)] {
+		if o, ok := leadOutcomes[string(l.ObservationIDs[0])]; ok {
+			d.Likenesses = append(d.Likenesses, LikenessTile{ImageFileID: l.ImageFileID, Record: o, Preferred: l.Preferred, Leads: l.Leads})
+		}
 	}
 	for _, f := range fields {
 		f.State = state(f.Values, f.cardinality)
@@ -215,7 +243,7 @@ func state(values []ReconciledValue, cardinality string) autoreconcile.State {
 	case len(shown) == 0:
 		return autoreconcile.StateEmpty
 	case len(shown) > 1:
-		if cardinality == properties.CardinalityMultiple {
+		if cardinality == propertymeta.CardinalityMultiple {
 			return autoreconcile.StateMultiple
 		}
 		return autoreconcile.StateMixed
@@ -252,7 +280,7 @@ func loadProperties(g *graphcache.Graph, q Querier, entityID, subjectTypeID []by
 			return nil, nil, err
 		}
 		p, ok := props[string(id)]
-		if !ok || p.ValueType == properties.ValueTypeSubject {
+		if !ok || p.ValueType == propertymeta.ValueTypeSubject || p.ValueType == propertymeta.ValueTypeDepiction {
 			continue
 		}
 		f := &Field{
@@ -282,20 +310,16 @@ func loadProperties(g *graphcache.Graph, q Querier, entityID, subjectTypeID []by
 	return fields, byProp, nil
 }
 
-type termName struct {
-	key   string
-	label string
-}
-
 func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Field) error {
-	labels, err := termLabels(g)
+	vocab, err := g.Vocabulary()
 	if err != nil {
 		return err
 	}
+	terms := vocab.TermsByID()
 	for prop, ranks := range n.Values {
 		f, ok := byProp[prop]
 		if !ok {
-			continue // a subject-valued Property, or one the outcomes no longer name
+			continue // a subject-valued or depiction Property, or one the outcomes no longer name
 		}
 		for _, rank := range ranks {
 			v := ReconciledValue{
@@ -305,8 +329,8 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 			v.Value.Text, v.Value.HasText = rank.Text, rank.HasText
 			v.Value.Integer, v.Value.HasInteger = rank.Integer, rank.HasInteger
 			v.Value.TermID = append([]byte(nil), rank.TermID...)
-			if name, ok := labels[string(rank.TermID)]; ok {
-				v.Value.TermKey, v.Value.TermLabel = name.key, name.label
+			if name, ok := terms[string(rank.TermID)]; ok {
+				v.Value.TermKey, v.Value.TermLabel = name.Key, name.Label
 			}
 			if len(rank.Date) > 0 {
 				d, err := valuecodec.UnmarshalDate(rank.Date)
@@ -328,23 +352,15 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 	return nil
 }
 
-func termLabels(g *graphcache.Graph) (map[string]termName, error) {
-	v, err := g.Vocabulary()
+// loadOutcomes attaches each field's outcomes to it. It also returns the
+// outcomes of the Observations in leads (a gallery's earliest records), which
+// belong to no field; their Recorded value has no Date or Name.
+func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field, leads map[string]bool) (map[string]Outcome, error) {
+	rows, err := q.Query(sqlOutcomes, entityID)
 	if err != nil {
 		return nil, err
 	}
-	out := map[string]termName{}
-	for _, t := range v.Terms {
-		out[string(t.ID)] = termName{key: t.Key, label: t.Label}
-	}
-	return out, nil
-}
-
-func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field) error {
-	rows, err := q.Query(sqlOutcomes, entityID)
-	if err != nil {
-		return err
-	}
+	leadOutcomes := map[string]Outcome{}
 	type pending struct {
 		f              *Field
 		o              Outcome
@@ -367,16 +383,19 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field) error {
 			&o.CredibilityKey, &o.ClaimConfidenceKey,
 			&o.Provenance.Credibility, &o.Provenance.Uncertain, &o.Provenance.ClaimConfidence); err != nil {
 			_ = rows.Close()
-			return err
-		}
-		f, ok := byProp[string(propertyID)]
-		if !ok {
-			continue
+			return nil, err
 		}
 		o.ValueRank = int(rank.Int64)
 		o.Recorded.Text, o.Recorded.HasText = text.String, text.Valid
 		o.Recorded.Integer, o.Recorded.HasInteger = integer.Int64, integer.Valid
 		o.Recorded.TermID = termID
+		f, ok := byProp[string(propertyID)]
+		if !ok {
+			if leads[string(o.ObservationID)] {
+				leadOutcomes[string(o.ObservationID)] = o
+			}
+			continue
+		}
 		all = append(all, pending{f: f, o: o, dateID: dateID, nameID: nameID})
 		if len(dateID) > 0 {
 			dateIDs = append(dateIDs, dateID)
@@ -388,15 +407,15 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field) error {
 	err = rows.Err()
 	_ = rows.Close()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	dates, err := datevalues.LookupManyTx(q, dateIDs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	names, err := namevalues.LookupManyTx(q, nameIDs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, p := range all {
 		if d, ok := dates[string(p.dateID)]; ok {
@@ -407,5 +426,5 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field) error {
 		}
 		p.f.Outcomes = append(p.f.Outcomes, p.o)
 	}
-	return nil
+	return leadOutcomes, nil
 }

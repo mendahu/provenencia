@@ -23,21 +23,9 @@ func errf(format string, args ...any) error {
 	return fmt.Errorf(format, args...)
 }
 
-// Sources resolves the Source ids a batch of changes touches. Column values
-// come from the diff when it has them, from the live row when it does not,
-// and from a delete's old fields only after the row is gone.
-func Sources(tx *sql.Tx, changes []rowchange.Change) ([][]byte, error) {
-	return resolve(tx, changes, func(e Effect) Path { return e.Source })
-}
-
 // Handles resolves handle ids.
 func Handles(tx *sql.Tx, changes []rowchange.Change) ([][]byte, error) {
 	return resolve(tx, changes, func(e Effect) Path { return e.Handles })
-}
-
-// HandleScopes resolves the handles whose canonical_entity audit scope a batch moves.
-func HandleScopes(tx *sql.Tx, changes []rowchange.Change) ([][]byte, error) {
-	return resolve(tx, changes, func(e Effect) Path { return e.HandleScope })
 }
 
 // WithoutNone drops changes whose effect is None. An unknown entity type is
@@ -77,7 +65,7 @@ func AllNone(changes []rowchange.Change) (bool, error) {
 	return true, nil
 }
 
-// Resolve is the whole effect of a batch: sources, handles, search documents,
+// Resolve is the whole effect of a batch: evidence sources, source scopes, handles, search documents,
 // and whether vocabulary labels or structure changed.
 func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 	if tx == nil {
@@ -102,11 +90,22 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 		if err != nil {
 			return Set{}, err
 		}
-		set.CacheSources, err = appendPath(w, table, eff.CacheSource, set.CacheSources)
+		set.CitationSources, err = appendPath(w, table, eff.CitationSource, set.CitationSources)
+		if err != nil {
+			return Set{}, err
+		}
+		if eff.usesProperty(ch) {
+			set.PropertyUsage = true
+		}
+		set.SourceScopes, err = appendPath(w, table, eff.SourceScope, set.SourceScopes)
 		if err != nil {
 			return Set{}, err
 		}
 		set.Handles, err = appendPath(w, table, eff.Handles, set.Handles)
+		if err != nil {
+			return Set{}, err
+		}
+		set.HandleScopes, err = appendPath(w, table, eff.HandleScope, set.HandleScopes)
 		if err != nil {
 			return Set{}, err
 		}
