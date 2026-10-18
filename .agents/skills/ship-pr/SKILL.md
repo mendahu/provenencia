@@ -2,9 +2,11 @@
 name: ship-pr
 description: >-
   Orchestrates one Provenencia PR from a Planned plan to a ready-for-review PR:
-  dispatches the implementer, runs scripts/check-pr.sh itself, fans out five
-  fresh reviewers (conformance and regression, maintainability, user
-  experience, security, performance), dedupes and verifies their findings,
+  dispatches the implementer, runs scripts/check-pr.sh itself, fans out fresh
+  reviewers routed by the diff's paths (conformance and regression and
+  maintainability always; user experience, and one combined security and
+  performance reviewer, when their paths are touched), dedupes and verifies
+  their findings,
   writes one fix plan, and loops at most two review rounds before handing the
   PR to the user. Keeps the ship log. Use when the user asks to ship,
   implement, build, or run the implementation workflow for a planned PR
@@ -22,7 +24,7 @@ decides what happens to each finding.
 orchestrator ──plan──▶ implementer ──report──▶ orchestrator ── runs scripts/check-pr.sh
      ▲                                              │
      │                                              ▼
-     └── fix plan ◀── triage ◀── 5 reviewers in parallel (fresh context, read-only)
+     └── fix plan ◀── triage ◀── 2–4 reviewers in parallel, routed by path (fresh, read-only)
 ```
 
 Skills the other roles load: [`implement-pr`](../implement-pr/SKILL.md),
@@ -34,7 +36,7 @@ Skills the other roles load: [`implement-pr`](../implement-pr/SKILL.md),
 | --- | --- | --- | --- |
 | Orchestrator | This session | The session's model | The plan, the ship log, reports, findings |
 | Implementer | `pr-implementer` (`.claude/agents/pr-implementer.md`) | Smaller | The plan or the round's fix plan. Nothing else |
-| Reviewer | `pr-reviewer` (`.claude/agents/pr-reviewer.md`), once per lens | Strongest | The lens, the plan, base and head. Never the implementer's reasoning |
+| Reviewer | `pr-reviewer` (`.claude/agents/pr-reviewer.md`), once per routed reviewer | Strongest; conformance on Sonnet (§3) | The lens, the plan, base and head. Never the implementer's reasoning |
 | Verifier | `pr-reviewer`, with a verify prompt | Strongest | One finding and the code |
 
 Start each implementer and reviewer as a new agent. Do not continue an earlier
@@ -56,10 +58,10 @@ reviewer into round 2; a reviewer that saw round 1 defends it.
 - [ ] 0. Ship log: create prs/S#-NN-<slug>.ship.md from the template below
 - [ ] 1. Implement: dispatch pr-implementer with the plan (round 0)
 - [ ] 2. Gate: read the report; run scripts/check-pr.sh yourself
-- [ ] 3. Review round 1: five pr-reviewers in parallel, full diff
+- [ ] 3. Review round 1: route by path; pr-reviewers in parallel, full diff
 - [ ] 4. Triage: dedupe, verify, decide each finding; write Fix plan 1
 - [ ] 5. Implement Fix plan 1; gate
-- [ ] 6. Review round 2: lenses with Fix-now findings, fix commits only
+- [ ] 6. Review round 2: reviewers with a Fix-now blocker or major, fix commits only
 - [ ] 7. Triage round 2; Fix plan 2 only for blockers; implement; gate
 - [ ] 8. Finish: PR body, ready for review, CI, report to the user
 ```
@@ -89,18 +91,37 @@ report's word for it.
 
 ### 3. Review
 
-Lenses: **all five on every PR** (the user's call, 2026-10-14; revisit for cost
-with the routing table below).
+Five lenses, up to four reviewers. Conformance and maintainability run on every
+PR. User experience runs when the diff touches its paths. Security and
+performance share **one** reviewer, which runs when the diff touches either
+lens's paths. Both lenses look for the same thing: an input or a count with no
+bound. That reviewer reads both rubrics, and its findings keep their own `SEC-`
+and `PRF-` IDs.
 
-| Lens | Rubric | Route by paths, if routing is turned on |
+| Reviewer | Rubric | Runs when the diff touches |
 | --- | --- | --- |
 | Conformance and regression | `review-pr/lenses/conformance.md` | Always |
 | Maintainability | `review-pr/lenses/maintainability.md` | Always |
 | User experience | `review-pr/lenses/ux.md` | `macos/App/**`, `Localizable.xcstrings`, `core/apperr`, new error codes |
-| Security | `review-pr/lenses/security.md` | `core/ingest`, `core/objectpath`, `core/objectstore`, `core/derivatives`, `core/raster`, `core/identity`, `core/catalogsession`, `api/ffi/**`, `macos/App/Platform/ProjectFiles.swift`, `macos/App/Platform/ThumbnailCache.swift`, migrations, `*.entitlements`, URL or locator code |
-| Performance | `review-pr/lenses/performance.md` | `core/database/**`, `core/search`, `core/derivatives`, `core/raster`, graph, list, and cache code, `macos/App/Features/**` models |
+| Security and performance | `review-pr/lenses/security.md` and `review-pr/lenses/performance.md` | **Security:** `core/ingest`, `core/objectpath`, `core/objectstore`, `core/derivatives`, `core/raster`, `core/identity`, `core/catalogsession`, `api/ffi/**`, `macos/App/Platform/ProjectFiles.swift`, `macos/App/Platform/ThumbnailCache.swift`, migrations, `*.entitlements`, URL or locator code, the matching layers (`core/matchregistry`, `core/valuecompare`, `core/propertycompare`, `core/subjectcompare`, `core/subjectprofile`, `core/autoreconcile`, `core/database/namealiases`), and any code that loads a stored number, weight, or list from the catalog and trusts its size or range. **Performance:** `core/database/**`, `core/search`, `core/derivatives`, `core/raster`, graph, list, and cache code, `macos/App/Features/**` models |
 
-Dispatch one `pr-reviewer` per lens, **in parallel**:
+Route from `git diff --name-only <base>...<head>`, and read the diff too: a
+path list cannot see "loads a stored weight". When you are unsure whether a
+path matches, dispatch the reviewer. A skipped reviewer is cheap to add
+and a missed blocker is not. Write the reviewers you dispatched in the ship
+log, and say why each one you skipped did not match. The user can ask for every
+reviewer on a PR.
+
+**Models.** Dispatch the conformance reviewer with the Agent tool's
+`model: sonnet` override. Its work is mostly mechanical: each AC, the code that
+meets it, and the test that proves it. Every other reviewer, and the verifier,
+runs on the agent's default (Opus). This started 2026-10-18 to save tokens and
+has not been measured yet. When a later round, another lens, CI, or the user
+turns up a conformance blocker or major that round-1 conformance should have
+caught, add a line to the ship log's **Result**: `CON miss: <ID>`. After two
+misses across PRs, take it to the user to move conformance back to Opus.
+
+Dispatch one `pr-reviewer` per routed reviewer, **in parallel**:
 
 ```text
 Review a Provenencia PR through the <Lens> lens. Follow
@@ -109,8 +130,19 @@ Plan: <plan path>. Base: <base sha>. Head: <head sha>. Round: 1.
 Read-only. Return findings in the review-pr format, then the verdict.
 ```
 
+The combined reviewer's first two lines are:
+
+```text
+Review a Provenencia PR through the Security and Performance lenses together.
+Follow .agents/skills/review-pr/SKILL.md and both rubrics.
+```
+
 Round 2 adds: `Round: 2. Ship log: <path>. Scope: <round-1 head>...<head>.`
-Round 2 goes only to lenses that had a Fix-now finding.
+Round 2 goes only to reviewers that had a Fix-now **blocker or major**. The
+combined reviewer goes when either lens did. A minor or nit fixed in the round
+does not send its reviewer back. Read its part of the fix commits yourself and
+mark it **Resolved** in the ship log, or **Not resolved** with what is missing.
+Round 2 can only add blockers, so a re-review for a minor buys nothing.
 
 ### 4. Triage
 
@@ -140,7 +172,7 @@ Every finding gets exactly one decision, written in the ship log.
 | **Follow-up** | Fit is a preparatory PR or an idea, for code this PR does not add, change, or make worse; a Reshape; minors not fixed now. Goes to the PR body's follow-up list, and to `docs/ideas/` or the map if the user agrees |
 | **Rejected** | Refuted, out of the plan's scope with no harm, or contradicted by a Decision or working rule. One line of evidence |
 | **To user** | Contradicts a plan Decision, an AC, or a working rule but looks right; a product call; two lenses that disagree and the code cannot settle it. Pauses the loop |
-| **Logged** | Nits |
+| **Logged** | Nits. Copy each reviewer's one-line **Nits** list into the ship log under the round's table, as is: no row each, no evidence |
 
 A finding that contradicts the plan is never fixed by quietly changing the
 plan. The plan's Decisions bind the orchestrator too.
@@ -208,11 +240,15 @@ reads when something went wrong.
 Head `<sha>`. Gate PASS. Report: <deviations, or "none">.
 
 ## Round 1 — review
+Reviewers: CON, MNT, SEC+PRF. Skipped: UX (no `macos/App/**`, strings, or error codes).
+
 | ID | Lens | Severity | Title | Decision | Evidence / reason |
 | --- | --- | --- | --- | --- | --- |
 | CON-1 | CON | blocker | … | Fix now → F-1 | verified: <how> |
 | MNT-3 | MNT | major | … | Follow-up | preparatory PR; to user |
 | SEC-2 | SEC | major | … | Rejected | `objectpath.Validate` already guards this, line 31 |
+
+Nits (logged): `MNT-5 · core/x/y.go:42 · rename …` · `CON-4 · …`
 
 ### Fix plan 1
 **F-1 — …**
@@ -224,7 +260,7 @@ Head `<sha>`. Gate PASS. F-1 done; F-2 not reproduced (dropped CON-3).
 …
 
 ## Result
-Gate PASS · CI <green> · open: none · follow-ups: MNT-3, UX-5 · to user: —
+Gate PASS · CI <green> · open: none · follow-ups: MNT-3, UX-5 · to user: — · CON miss: none
 ```
 
 ## Report to the user

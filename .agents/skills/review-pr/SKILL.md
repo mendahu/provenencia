@@ -34,7 +34,11 @@ the gate already ran it and parallel builds collide.
 
 ## Inputs (from the orchestrator)
 
-- **Lens**: one of the five.
+- **Lens**: one of the five, or **Security and performance** together. In
+  that case one reviewer reads both rubrics, works each one's **How to work**,
+  and numbers findings `SEC-` or `PRF-` by the rubric they come from. A finding
+  that is both (an unbounded decode, an unbounded list loaded from the catalog)
+  is written once, under the lens with the higher severity, and names the other.
 - **Plan**: `docs/deployment-plan/<spike>/prs/S#-NN-<slug>.md`.
 - **Base** and **head**: commits. The change is `git diff <base>...<head>`.
 - **Round**: 1, or 2 with the **ship log** (`S#-NN-<slug>.ship.md`) holding the
@@ -51,8 +55,9 @@ the gate already ran it and parallel builds collide.
 5. Write findings in the format below, most severe first. Then a verdict.
 
 **Round 2.** Your scope is the fix commits (`git diff <round-1 head>...<head>`)
-and the round-1 findings for your lens. For each round-1 finding marked Fix
-now, say **Resolved** or **Not resolved** with the evidence. Raise a new
+and the round-1 findings for your lens. For each round-1 blocker or major
+marked Fix now, say **Resolved** or **Not resolved** with the evidence (the
+orchestrator checks the minors). Raise a new
 finding only if it is a **blocker**.
 
 **Stay in your lens.** If you notice something serious in another lens, add it
@@ -71,12 +76,16 @@ at the end under **Outside my lens**, one line each. The orchestrator routes it.
 **Confidence:** high | medium | low
 ```
 
+**Nits do not use this format.** List them last, under **Nits**, one line
+each: `MNT-5 · path/to/file.go:42 · what to change`. Do not write Evidence,
+Fix, or Fit for a nit. A nit that needs evidence to be believed is a minor.
+
 | Severity | Means | Loop effect |
 | --- | --- | --- |
 | **blocker** | Must not merge: an AC not met, a regression, data loss, a security hole, a hang, debt expensive to undo, a defect in code this PR adds that a later PR in the map will reach | Fixed before the PR is done |
 | **major** | Should be fixed in this PR: a real problem on a real path, cheap enough here | Fixed this PR, or explicitly deferred by the orchestrator |
 | **minor** | Worth doing; not worth a round | Fixed only if the fix plan already touches the file; else follow-up |
-| **nit** | Taste | Logged, never fixed in the loop |
+| **nit** | Taste | One line under **Nits**; logged, never fixed in the loop |
 
 Each rubric has its own severity table; use it.
 
