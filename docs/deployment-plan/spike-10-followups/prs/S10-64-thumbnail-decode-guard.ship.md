@@ -67,7 +67,7 @@ Scope `230685fe...69a750c9`. Lenses: SEC, PRF, UX, MNT (those with Fix-now findi
 | PRF-1 (+UX-1) | PRF, UX | — | (round 1) | Resolved | abandoned waiters cost one slot handoff and no I/O; `dropsAQueuedDecodeWhoseCallersHaveGone` |
 | MNT-1, MNT-2 | MNT | — | (round 1) | Resolved | SKILL.md:17; re-indented closure |
 | MNT-3 (+PRF outside-lens) | MNT | blocker | Load state is split across `inflight`, `waiters` and `clearGeneration`, so a load cancelled by `clear()` resolves the next load's callers with nil | Fix now → F-4 | verified: `finish` (lines 122-135) gates only `inflight`/`insert` on generation; `waiters.removeValue(forKey:)` always runs. `clear()` has no caller in `macos/App` or `macos/ProvenenciaTests` (grep). This PR added `clearGeneration` for a function nothing calls |
-| UX-R2-a | UX | minor (observation) | `CachedThumbnail.load()` writes fallback on a cancelled nil without checking `Task.isCancelled`; stale-write predates PR | Follow-up | below blocker in round 2; Fix plan 2 does not touch `CachedThumbnail.swift` |
+| UX-R2-a | UX | minor (observation) | `CachedThumbnail.load()` writes fallback on a cancelled nil without checking `Task.isCancelled`; stale-write predates PR | Fix now → F-5 (user request) | below blocker in round 2; Fix plan 2 does not touch `CachedThumbnail.swift` |
 | MNT-R2-a | MNT (CON) | nit | Plan Out row "Cancelling a decode when every waiter has gone" now partly done | Fix now → F-4 (rides along; F-4 edits the plan's Landed note anyway) | plan line 79 vs Landed note |
 
 ### Fix plan 2
@@ -84,4 +84,15 @@ Head `eac05756`. Gate PASS (orchestrator run). F-4 done: `clear()`, `clearGenera
 Orchestrator note, not reviewed: an abandoned load resumes any caller that registered between the slot check and `finish` with nil and stores nothing, so that caller shows the fallback until the view reloads. It needs a re-request in the same main-actor gap; folded into the PRF-2 follow-up.
 
 ## Result
-Gate PASS · CI see PR #469 · open: none · follow-ups: UX-R2-a (`CachedThumbnail.load()` stale write on cancel), PRF-2 remainder (cancel a running decode; the abandoned-load race above), CON-1/CON-2 nits · to user: SEC-1, PRF-1 (both answered "Fix in this PR", 2026-10-18)
+Gate PASS · CI see PR #469 · open: none · follow-ups: PRF-2 remainder (cancel a running decode; the abandoned-load race above), CON-1/CON-2 nits · to user: SEC-1, PRF-1 (both answered "Fix in this PR", 2026-10-18)
+
+## User-requested fix (2026-10-18)
+The user asked for the UX-R2-a follow-up on this PR: "Do the one-line CachedThumbnail fix on this PR." UX-R2-a moves from Follow-up to Fix now → F-5. This is not a review round.
+
+**F-5 — Ignore a cancelled thumbnail load's result** (from UX-R2-a)
+Files: `macos/App/Platform/CachedThumbnail.swift` (`load()`, about lines 134-150).
+Failing test first: none; the race lives in SwiftUI `.task(id:)` state, which has no practical unit seam. Do not add a test harness for it.
+Do: Bind the result of `await ThumbnailCache.shared.image(...)` to a local. Then `guard !Task.isCancelled else { return }` before writing `content` in either branch, so a cancelled load writes neither the image nor the fallback. This matches `EvidenceCardView.loadMissingLikenesses`. Change nothing else. In the plan's Landed note, add one sentence: `CachedThumbnail.load()` ignores a cancelled load's result (user-requested, review follow-up).
+Check: scripts/check-pr.sh PASS.
+
+Head `878fcdbe`. Gate PASS (orchestrator run). F-5 done: `load()` returns early on `Task.isCancelled` before writing `content`. No deviations.
