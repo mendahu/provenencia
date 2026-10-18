@@ -97,7 +97,7 @@ with the routing table below).
 | Conformance and regression | `review-pr/lenses/conformance.md` | Always |
 | Maintainability | `review-pr/lenses/maintainability.md` | Always |
 | User experience | `review-pr/lenses/ux.md` | `macos/App/**`, `Localizable.xcstrings`, `core/apperr`, new error codes |
-| Security | `review-pr/lenses/security.md` | `core/ingest`, `core/objectpath`, `core/objectstore`, `core/derivatives`, `core/raster`, `core/identity`, `core/catalogsession`, `api/ffi/**`, migrations, `*.entitlements`, URL or locator code |
+| Security | `review-pr/lenses/security.md` | `core/ingest`, `core/objectpath`, `core/objectstore`, `core/derivatives`, `core/raster`, `core/identity`, `core/catalogsession`, `api/ffi/**`, `macos/App/Platform/ProjectFiles.swift`, `macos/App/Platform/ThumbnailCache.swift`, migrations, `*.entitlements`, URL or locator code |
 | Performance | `review-pr/lenses/performance.md` | `core/database/**`, `core/search`, `core/derivatives`, `core/raster`, graph, list, and cache code, `macos/App/Features/**` models |
 
 Dispatch one `pr-reviewer` per lens, **in parallel**:
