@@ -201,7 +201,7 @@ JSON remains useful for logs, debug dumps, and tests if a message is printed; it
 
 Structured messages carry ids, catalog fields, and small metadata. **File bytes do not go in protobuf** (no `bytes` fields for scans).
 
-**Read path:** Go returns `file_id`, MIME type, `original_filename`, and a path **relative to the project directory** (e.g. `objects/8f/ce/8fce3b…`). Swift already holds the folder it opened and reads the file with AppKit/SwiftUI. It opens a relative path only through `ProjectFiles.objectURL`, which refuses what `core/objectstore` refuses, and a Finder alias at the object path. Thumbnails decode through `ThumbnailCache`, which decodes only a PNG or JPEG declaring at most `raster.MaxEdgeLimit` pixels on each edge, and caps concurrent decodes at `ThumbnailCache.maxConcurrentDecodes`. SQLite still stores no absolute paths.
+**Read path:** Go returns `file_id`, MIME type, `original_filename`, and a path **relative to the project directory** (e.g. `objects/8f/ce/8fce3b…`). Swift already holds the folder it opened and reads the file with AppKit/SwiftUI. It opens a relative path only through `ProjectFiles.objectURL`, which refuses what `core/objectstore` refuses, and a Finder alias at the object path. Thumbnails decode through `ThumbnailCache`, which decodes only a PNG or JPEG declaring at most `raster.MaxEdgeLimit` pixels on each edge, and caps concurrent decodes at `ThumbnailCache.maxConcurrentDecodes`, dropping a queued decode when no caller still wants it. SQLite still stores no absolute paths.
 
 **Write path:** ingest only through a use-case (`ingestFile` / equivalent). Swift must not rewrite `objects/` itself.
 

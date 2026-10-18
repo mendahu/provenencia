@@ -314,3 +314,5 @@ Differences from the plan:
 - STEP-1, STEP-2, STEP-3 and STEP-4 are one commit, not two, because the policy, the cache check and the decode slot all edit `ThumbnailCache.swift` and its tests together.
 - `macos-client.mdc` and the `swift_vocabulary_test.go` header already carried S10-61 and S10-62 text on `main`; this PR only added `ThumbnailDecodePolicy.maxDeclaredEdge` to the rule's list and kept the existing header (a superset of the D-10 wording).
 - The manual check (section 10) is left for the user.
+- User-approved amendment to D-5 (2026-10-18): `ProjectFiles.objectURL` now runs inside the decode slot, right before the file opens, so the slot wait no longer sits between the object-path check and the open.
+- User-approved amendment to D-7 (2026-10-18): a queued decode whose callers have all gone is dropped without decoding and is not stored as missing; a cancelled caller returns nil at once. This pulls part of PRF-2 forward. New test: `ThumbnailCacheTests/dropsAQueuedDecodeWhoseCallersHaveGone`.
