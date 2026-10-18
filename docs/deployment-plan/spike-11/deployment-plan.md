@@ -94,7 +94,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-05 | Migrate matching onto value compare | 2 | `match`, `graphalign`, `promotealign` call `valuecompare`; `match`'s comparers deleted | — | S11-03, S11-04 | [plan](prs/S11-05-migrate-matching.md) | Landed #451 |
 | S11-06 | Migrate the reconciler onto value compare | 2 | `Compatible`, keys, grouping policy, place-chain windows | — | S11-05 | [plan](prs/S11-06-migrate-reconciler.md) | Landed #456 |
 | S11-07 | One normalization key across the core | 2 | Search rescoring, search-index dedupe, term dedupe, alias tokens use `Key`; text ignores word breaks | — | S11-05 | [plan](prs/S11-07-normalization-key.md) | Landed #460 |
-| S11-08 | One normalization helper in Swift | 2 | Shared Swift normalize for filters; `FakeStore` groups names by parts | — | S11-06, S11-07 | [plan](prs/S11-08-swift-normalization.md) | Planned |
+| S11-08 | One normalization helper in Swift | 2 | Shared Swift normalize for filters; `FakeStore` groups names by parts | — | S11-06, S11-07 | [plan](prs/S11-08-swift-normalization.md) | Landed #466 |
 | S11-09 | Property compare | 3 | `propertycompare`: negatives, neutral terms, cardinality, outcome table | — | S11-05 | [plan](prs/S11-09-property-compare.md) | Planned |
 | S11-10 | Subject compare | 3 | `subjectcompare` + registry subject section; pairs; similarity and evidence | — | S11-09 | — | Scoped |
 | S11-11 | Subject profile and entity compare | 3 | `subjectprofile.Build`: strict profile, denied as negatives, `Excluding` | — | S11-10 | — | Scoped |
@@ -285,8 +285,8 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Link, do not res
 
 #### S11-08 — One normalization helper in Swift
 
-**Ships.** `PVComboBoxMatch.normalize` becomes the shared Swift normalize helper (case and diacritic fold, a locale parameter defaulting to the current one; text ignores word breaks, S11-07 D-1), used by `PVComboBox`, the list filters (`PropertiesModel`, `SourcesModel`, `GraphCanvasItemLayer`, `PVFloatingMenuSelection`) and `DateValueTranscriptionMatch`; `FakeStore` groups names by parts, not by lowercase form. Closes "In-list text matching" in [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md).
-**Not this PR.** Go changes.
+**Ships.** `TextMatch` (`macos/App/Platform/TextMatch.swift`), a Swift mirror of `valuecompare.TextKey` (case, accents, punctuation and word breaks ignored; S11-07 D-1) that Go checks against its own key, replaces `PVComboBoxMatch.normalize` and the other Swift text rules: `PVComboBox` filter and highlight, the list filters (`PropertiesModel`, `SourcesModel`, `GraphCanvasItemLayer`, `PVFloatingMenuSelection`), `DateValueTranscriptionMatch` and `NameTitleRegistry`; `FakeStore` groups names by parts and searches like Go's rescoring. Closes "In-list text matching" in [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md).
+**Not this PR.** Go behavior changes (a Go test reads the Swift fixtures).
 **Check.** Filtering `jose` finds `José` in every list; `FakeStore`-backed tests group names like Go does.
 **Context.** [Reuse inventory](comparison-layers.md#reuse-across-the-app) "Lighter touch"; [`add-swift-test`](../../../.agents/skills/add-swift-test/SKILL.md).
 

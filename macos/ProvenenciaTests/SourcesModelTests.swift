@@ -423,9 +423,31 @@ struct SourcesModelTests {
         #expect(model.visibleSources.map(\.id) == ["s3"])
         model.settings.query = "src-4f"
         #expect(model.visibleSources.map(\.id) == ["s2"])
+        model.settings.query = "smith-family"
+        #expect(model.visibleSources.map(\.id) == ["s1"])
+        model.settings.query = "1851census"
+        #expect(model.visibleSources.map(\.id) == ["s2"])
         model.settings.query = "  "
         #expect(model.visibleSources.count == 3)
         #expect(!model.isFiltering)
+        model.settings.query = "-"
+        #expect(model.visibleSources.count == 3)
+        #expect(model.isFiltering)
+    }
+
+    @Test func searchSeesAnEditedTitle() async {
+        let (model, session) = makeModel(
+            sources: [source(id: "s1", title: "Smith family Bible", typeID: "t1", updatedRevision: 1)],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+        model.settings.query = "smith"
+        #expect(model.visibleSources.map(\.id) == ["s1"])
+
+        session.apply(.updatedSource(source(id: "s1", title: "Jones diary", typeID: "t1", updatedRevision: 2)))
+        #expect(model.visibleSources.map(\.id) == [])
+        model.settings.query = "jones"
+        #expect(model.visibleSources.map(\.id) == ["s1"])
     }
 
     @Test func filtersCombineAndClear() async {

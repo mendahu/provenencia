@@ -468,8 +468,8 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 
 **Lighter touch (still in scope):**
 - **Search's fuzzy ranker** (`jaroWinkler`, trigram shortlist). It ranks partial queries as they are typed, which is a different job, so it stays. Its Go rescoring moves onto the shared normalization key, so it folds accents like the FTS tokenizer already does.
-- **Swift filters** (combo box, list filters). They are UI-local, with different needs. They move onto one shared Swift normalize helper.
-- **`FakeStore`** clusters names by lowercase form, which contradicts Go's parts-only rule. Fix that when the reconciler moves, so Swift tests don't encode the wrong rule.
+- **Swift filters** (combo box, list filters). They are UI-local, with different needs. They move onto one shared Swift normalize helper. Done in S11-08: `TextMatch`, checked against `valuecompare.TextKey` by `TestSwiftTextMatchMirrorsTextKey`.
+- **`FakeStore`** clusters names by lowercase form, which contradicts Go's parts-only rule. Fix that when the reconciler moves, so Swift tests don't encode the wrong rule. Done in S11-08: names group by parts at `Same`.
 
 **Found in passing (fixed in this spike):**
 - `match.indexAliases` doesn't normalize alias tokens. That's latent: only the lowercase product seed writes tables today. It matters once user or plugin tables exist; `Key` fixes it.

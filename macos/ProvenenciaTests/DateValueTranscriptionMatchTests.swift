@@ -54,4 +54,9 @@ struct DateValueTranscriptionMatchTests {
         let match = DateValueTranscriptionMatch.first(in: "31 February 1817", locale: unitedStates)
         #expect(match != DateValueTranscriptionMatch(year: 1817, month: 2, day: 31))
     }
+
+    @Test func accentedMonthNameReadsAtAnyCase() {
+        let match = DateValueTranscriptionMatch.first(in: "3 FÉVRIER 1851", locale: Locale(identifier: "fr_FR"))
+        #expect(match == DateValueTranscriptionMatch(year: 1851, month: 2, day: 3))
+    }
 }

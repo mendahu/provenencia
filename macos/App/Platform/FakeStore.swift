@@ -1065,8 +1065,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     /// Call inside `withState`.
     private func handleSearchHits(query: String, kinds: Set<String>) -> [(hit: CatalogSearchHit, score: Double)] {
-        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !needle.isEmpty else { return [] }
+        let q = TextMatch.Query(query, locale: TextMatch.posix)
+        guard !q.isEmpty else { return [] }
         let names = Dictionary(personHeaders().map { ($0.entity.id, $0.name?.form ?? "") }, uniquingKeysWith: { a, _ in a })
         var seen = Set<String>()
         var out: [(hit: CatalogSearchHit, score: Double)] = []
@@ -1076,10 +1076,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             let header = handleSearchHeader(kind: membership.kind, id: entity.id)
             let name = names[entity.id] ?? ""
             let title = !name.isEmpty ? name : (!entity.label.isEmpty ? entity.label : entity.ref)
-            let haystack = [title, entity.ref, entity.label, handleSearchMatchText(header)]
-            guard haystack.contains(where: { $0.lowercased().contains(needle) }) else { continue }
+            guard q.matches(title, entity.ref, entity.label, handleSearchMatchText(header)) else { continue }
             let section: WorkspaceSection = membership.kind == "person" ? .persons : (membership.kind == "event" ? .events : .places)
-            let refMatch = entity.ref.lowercased().contains(needle)
+            let refMatch = q.matches(entity.ref)
             out.append((
                 CatalogSearchHit(
                     kind: membership.kind, id: entity.id, ref: entity.ref, title: title, subtitle: "",
@@ -1706,29 +1705,18 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     /// Mirrors the Go composer closely enough for UI tests: members' name
-    /// Observations cluster by case-folded form, the most-supported cluster
+    /// Observations group by parts (`nameField`), the most-supported value
     /// (then the earliest) is rank 1, and named Persons sort by name before
     /// unnamed ones by ref. Call inside `withState`.
     private func personHeaders() -> [CatalogPersonHeader] {
         let members = membershipBySubject.values.filter { $0.kind == "person" }
         let byEntity = Dictionary(grouping: members, by: \.entity.id)
-        let nameObservations = observationsBySource.values.flatMap { $0 }.filter { $0.propertyKey == "name" }
         let headers = byEntity.values.compactMap { group -> CatalogPersonHeader? in
             guard let entity = group.first?.entity else { return nil }
-            let memberIDs = Set(group.map(\.subjectID))
-            var clusters: [(key: String, name: CatalogNameValue, support: Int)] = []
-            for o in nameObservations where memberIDs.contains(o.subjectID) && !o.nameForm.isEmpty {
-                let key = o.nameForm.lowercased().trimmingCharacters(in: .whitespaces)
-                if let i = clusters.firstIndex(where: { $0.key == key }) {
-                    clusters[i].support += 1
-                } else {
-                    clusters.append((key, CatalogNameValue(form: o.nameForm, parts: o.nameParts), 1))
-                }
-            }
-            let top = clusters.enumerated().max { a, b in
-                a.element.support != b.element.support ? a.element.support < b.element.support : a.offset > b.offset
-            }?.element
-            return CatalogPersonHeader(entity: entity, name: top?.name, nameValueCount: clusters.count)
+            let field = nameField(memberIDs: Set(group.map(\.subjectID)), sources: [])
+            var top: CatalogNameValue?
+            if case let .name(name)? = field.values.first?.value { top = name }
+            return CatalogPersonHeader(entity: entity, name: top, nameValueCount: field.values.count)
         }
         return headers.sorted { a, b in
             switch (a.name, b.name) {
@@ -1758,15 +1746,20 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// A Person's name field, clustered as `personHeaders` does: one value
-    /// per case-folded form, supported by distinct Sources; rank 1 displayed
-    /// (`kept`) and the rest `outvoted`, each Observation an outcome. Other Properties are left out.
-    /// Call inside `withState`.
+    /// A Person's conclusion detail: the name field only. Call inside `withState`.
     private func conclusionDetail(projectDir: String, entityID: String) -> CatalogConclusionDetail? {
         let group = membershipBySubject.values.filter { $0.entity.id == entityID }
         guard let entity = group.first?.entity else { return nil }
-        let memberIDs = Set(group.map(\.subjectID))
-        let sources = sourcesByProject[projectDir] ?? []
+        let field = nameField(memberIDs: Set(group.map(\.subjectID)), sources: sourcesByProject[projectDir] ?? [])
+        return CatalogConclusionDetail(entity: entity, fields: [field], memberCount: group.count)
+    }
+
+    /// A Person's name field, grouped by parts (`nameKey`): one value per
+    /// group, supported by distinct Sources; rank 1 displayed (`kept`) and the
+    /// rest `outvoted`, each Observation an outcome. A name with no part word
+    /// is an outcome with no value (`noEvidence`). Other Properties are left
+    /// out. Call inside `withState`.
+    private func nameField(memberIDs: Set<String>, sources: [CatalogSource]) -> CatalogConclusionField {
         var values: [CatalogReconciledValue] = []
         var outcomes: [CatalogReconcilerOutcome] = []
         var keys: [String] = []
@@ -1776,20 +1769,22 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             for o in list where o.propertyKey == "name" && memberIDs.contains(o.subjectID) && !o.nameForm.isEmpty {
                 propertyID = o.propertyID
                 let name = CatalogNameValue(form: o.nameForm, parts: o.nameParts)
-                let key = o.nameForm.lowercased().trimmingCharacters(in: .whitespaces)
-                if let i = keys.firstIndex(of: key) {
-                    supportingSources[i].insert(sourceID)
-                    values[i].support = supportingSources[i].count
-                } else {
-                    keys.append(key)
-                    supportingSources.append([sourceID])
-                    values.append(CatalogReconciledValue(rank: 0, reason: .noEvidence, support: 1, against: 0, value: .name(name)))
+                let key = Self.nameKey(o.nameParts)
+                if let key {
+                    if let i = keys.firstIndex(of: key) {
+                        supportingSources[i].insert(sourceID)
+                        values[i].support = supportingSources[i].count
+                    } else {
+                        keys.append(key)
+                        supportingSources.append([sourceID])
+                        values.append(CatalogReconciledValue(rank: 0, reason: .noEvidence, support: 1, against: 0, value: .name(name)))
+                    }
                 }
                 outcomes.append(CatalogReconcilerOutcome(
                     observationID: o.id,
                     observationRef: o.ref,
                     reason: .noEvidence,
-                    valueRank: keys.firstIndex(of: key),
+                    valueRank: key.flatMap { keys.firstIndex(of: $0) },
                     deniedByObservationID: "",
                     recorded: .name(name),
                     subjectID: o.subjectID,
@@ -1817,7 +1812,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         // Every Source that voted, for the vote an outvoted record lost.
         let voters = Set(supportingSources.flatMap { $0 }).count
         for i in outcomes.indices {
-            let rank = outcomes[i].valueRank.flatMap { rankOf[$0] }
+            // A name with no value keeps `noEvidence` and zero votes.
+            guard let rank = outcomes[i].valueRank.flatMap({ rankOf[$0] }) else { continue }
             outcomes[i].valueRank = rank
             outcomes[i].reason = rank == 1 ? .kept : .outvoted
             if rank != 1 {
@@ -1833,7 +1829,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         } else {
             state = .single
         }
-        let field = CatalogConclusionField(
+        return CatalogConclusionField(
             propertyID: propertyID,
             propertyKey: SeededPropertyKey.name,
             label: "Name",
@@ -1842,7 +1838,22 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             values: ranked,
             outcomes: outcomes.sorted { ($0.valueRank ?? .max, $0.observationID) < ($1.valueRank ?? .max, $1.observationID) }
         )
-        return CatalogConclusionDetail(entity: entity, fields: [field], memberCount: group.count)
+    }
+
+    /// Go `autoreconcile` `nameModule.split`, simplified: by part type, untyped
+    /// words at `Same`, so case and punctuation never matter and accents do
+    /// (S11-06 policy); a name with no part word is not a value. No
+    /// generation, initials, folds or outvoting.
+    private static func nameKey(_ parts: [CatalogNameValuePart]) -> String? {
+        var wordsByType: [String: [String]] = [:]
+        for part in parts {
+            let type = part.type.trimmingCharacters(in: .whitespaces)
+            wordsByType[type, default: []].append(contentsOf: TextMatch.words(part.value, at: .same, locale: TextMatch.posix))
+        }
+        let groups = wordsByType.filter { !$0.value.isEmpty }
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value.sorted().joined(separator: " "))" }
+        return groups.isEmpty ? nil : groups.joined(separator: "|")
     }
 
     func deleteSubject(
@@ -3332,14 +3343,19 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         values: [String: String],
         tokens: [String]
     ) -> (score: Double, reason: String) {
+        let tokenKeys = tokens.map { TextMatch.key($0, locale: TextMatch.posix) }.filter { !$0.isEmpty }
+        guard !tokenKeys.isEmpty else { return (0, "") }
+        let valueKeys = Dictionary(fields.map {
+            ($0.name, TextMatch.key(values[$0.name] ?? "", locale: TextMatch.posix))
+        }, uniquingKeysWith: { first, _ in first })
         var score = 0.0
         var bestField = ""
         var bestWeight = 0.0
         var matchedTokens = 0
-        for tok in tokens {
+        for tok in tokenKeys {
             var tokHit = false
             for field in fields {
-                let value = (values[field.name] ?? "").lowercased()
+                let value = valueKeys[field.name] ?? ""
                 guard !value.isEmpty, value.contains(tok) else { continue }
                 tokHit = true
                 score += field.weight
@@ -3351,7 +3367,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if tokHit { matchedTokens += 1 }
         }
         guard matchedTokens > 0 else { return (0, "") }
-        score *= Double(matchedTokens) / Double(tokens.count)
+        score *= Double(matchedTokens) / Double(tokenKeys.count)
         return (score, bestField)
     }
 

@@ -27,7 +27,7 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 - **A doubled weight is written `w + w`.** The numbers guard allows no literal 2 in a layer package.
 - **Dates compute similarity through `falloff`.** Calendar facts (days in a month, day numbers, the year line) live in `core/datevalue/calendar.go`, not in the layer. The window algebra is `valuecompare.Window` (`core/valuecompare/datewindow.go`): `Overlaps`, `Contains`, `Intersect` as methods, and `AboutEnds` with `EndsWindow` to read a date as compared.
 - **The reconciler composes value compare under its own policy.** `autoreconcile.Reconcile` and `Compatible` take `valuecompare.Rules`; values group on `Key` at `Same` and fold on `Contains`. The cache passes `matchregistry.Default().Value`, never catalog data, so a rule change is a `CacheVersion` bump. `valuecompare.DateWindow` reads a date as written (sort keys, stored bounds, place periods).
-- **Callers outside matching key text with `valuecompare.TextKey` and the shipped word rules** (`matchregistry.Default().Value.Words`), not `valuerules.Load`: a text key reads no catalog data. A change to `text.key` or `WordRules` bumps `autoreconciler.CacheVersion` and `searchindex.ProjectionVersion`.
+- **Callers outside matching key text with `valuecompare.TextKey` and the shipped word rules** (`matchregistry.Default().Value.Words`), not `valuerules.Load`: a text key reads no catalog data. A change to `text.key` or `WordRules` bumps `autoreconciler.CacheVersion` and `searchindex.ProjectionVersion`. The key has a Swift mirror, `macos/App/Platform/TextMatch.swift` (with `Words.Folds`); a change to either side fails `TestSwiftTextMatchMirrorsTextKey` (`api/ffi`) until both agree.
 
 ## Add a knob
 

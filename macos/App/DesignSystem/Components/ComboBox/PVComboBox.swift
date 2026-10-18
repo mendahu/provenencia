@@ -25,30 +25,18 @@ struct PVComboBoxOption: Identifiable, Equatable {
 /// Filtering and highlight rules, split out so they can be unit-tested
 /// without a view — same split as `PVTableTypeSelectMatcher`.
 enum PVComboBoxMatch {
-    /// Decompose, drop combining marks, lowercase — so "Ó Riain" is reachable
-    /// by typing "o ri" (mirrors `norm` in `ComboBox.jsx`).
-    static func normalize(_ text: String) -> String {
-        text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
-    }
-
-    /// A row matches when the normalized query appears in its label or its
-    /// subtext. Substring, not prefix: a key like `publication-date` should
-    /// be findable by typing `date`.
-    static func matches(_ option: PVComboBoxOption, normalizedQuery: String) -> Bool {
-        guard !normalizedQuery.isEmpty else { return true }
-        return normalize(option.label).contains(normalizedQuery)
-            || normalize(option.subtext).contains(normalizedQuery)
-    }
-
     /// Contains matches, in three bands, then the caller's order inside a band:
-    /// the label starts with the query, a later word starts with it (spaces
-    /// and hyphens), then any other contains match including subtext only.
+    /// the label starts with the query, a later word starts with it, then any
+    /// other contains match including subtext only. Substring, not prefix: a
+    /// key like `publication-date` should be findable by typing `date`. Case,
+    /// accents, punctuation and word breaks never matter (`TextMatch`).
     static func filter(_ options: [PVComboBoxOption], query: String) -> [PVComboBoxOption] {
-        let q = normalize(query.trimmingCharacters(in: .whitespacesAndNewlines))
+        let q = TextMatch.Query(query)
         guard !q.isEmpty else { return options }
         return options.enumerated().compactMap { index, option -> (band: Int, index: Int, option: PVComboBoxOption)? in
-            guard matches(option, normalizedQuery: q) else { return nil }
-            return (band(for: option, normalizedQuery: q), index, option)
+            let labelKey = TextMatch.key(option.label)
+            guard q.matchesKey(labelKey) || q.matches(option.subtext) else { return nil }
+            return (band(for: option, labelKey: labelKey, query: q), index, option)
         }
         .sorted { lhs, rhs in
             if lhs.band != rhs.band { return lhs.band < rhs.band }
@@ -58,11 +46,9 @@ enum PVComboBoxMatch {
     }
 
     /// 0 label prefix, 1 a later word prefix, 2 any other contains match.
-    private static func band(for option: PVComboBoxOption, normalizedQuery: String) -> Int {
-        let label = normalize(option.label)
-        if label.hasPrefix(normalizedQuery) { return 0 }
-        let words = label.split { $0 == " " || $0 == "-" }
-        if words.dropFirst().contains(where: { $0.hasPrefix(normalizedQuery) }) { return 1 }
+    private static func band(for option: PVComboBoxOption, labelKey: String, query: TextMatch.Query) -> Int {
+        if query.isPrefix(ofKey: labelKey) { return 0 }
+        if TextMatch.words(option.label).dropFirst().contains(where: { query.isPrefix(ofKey: $0) }) { return 1 }
         return 2
     }
 
@@ -142,14 +128,10 @@ enum PVComboBoxPlacement {
 enum PVComboBoxHighlight {
     static func attributed(_ text: String, query: String) -> AttributedString {
         var full = AttributedString(text)
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return full }
-        // Search the normalized forms so the highlight lands on the same span
-        // the filter matched (accent- and case-insensitively).
-        guard let range = text.range(
-            of: q,
-            options: [.diacriticInsensitive, .caseInsensitive]
-        ), let attributed = Range(range, in: full) else {
+        // The span `TextMatch` matched, so the highlight lands where the
+        // filter matched.
+        guard let range = TextMatch.range(of: TextMatch.Query(query), in: text),
+              let attributed = Range(range, in: full) else {
             return full
         }
         // Typed `AttributeContainer` subscripts — not `.backgroundColor` /

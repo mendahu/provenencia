@@ -179,10 +179,8 @@ final class GraphCanvasRotorSearch: NSObject, @preconcurrency NSAccessibilityCus
 
     func result(for searchParameters: NSAccessibilityCustomRotor.SearchParameters) -> NSAccessibilityCustomRotor.ItemResult? {
         guard let layer else { return nil }
-        let filter = searchParameters.filterString.lowercased()
-        let items = layer.rotorItems(named: name).filter {
-            filter.isEmpty || $0.label.lowercased().contains(filter)
-        }
+        let query = TextMatch.Query(searchParameters.filterString)
+        let items = layer.rotorItems(named: name).filter { query.matches($0.label) }
         guard !items.isEmpty else { return nil }
 
         let current = searchParameters.currentItem?.targetElement as? NSView

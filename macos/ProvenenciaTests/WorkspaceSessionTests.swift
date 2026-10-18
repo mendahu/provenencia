@@ -487,7 +487,12 @@ struct WorkspaceSessionTests {
             CatalogObservation(
                 id: "o1", ref: "OBS-1", citationID: "c1", subjectID: "sub-2", propertyID: "p-name",
                 polarity: "positive", valueText: "Jim Robins", valueInteger: nil, valueDateID: "",
-                valueNameID: "n-1", nameForm: "Jim Robins", valueSubjectID: "", valueTermID: "",
+                valueNameID: "n-1", nameForm: "Jim Robins",
+                nameParts: [
+                    CatalogNameValuePart(value: "Jim", type: "given"),
+                    CatalogNameValuePart(value: "Robins", type: "surname"),
+                ],
+                valueSubjectID: "", valueTermID: "",
                 propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
             ),
         ]

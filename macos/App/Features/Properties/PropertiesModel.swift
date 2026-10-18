@@ -97,7 +97,7 @@ final class PropertiesModel {
 
     /// Board: type filter + keyword search only (no origin / value-type filters).
     var visibleProperties: [CatalogProperty] {
-        let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let q = TextMatch.Query(searchQuery)
         return snapshot.properties
             .filter { property in
                 if let selectedTypeKey,
@@ -105,11 +105,7 @@ final class PropertiesModel {
                     let bound = snapshot.propertiesByTypeID[type.id]?.contains { $0.property.id == property.id } == true
                     if !bound { return false }
                 }
-                if !q.isEmpty {
-                    let hay = (property.label + " " + property.key).lowercased()
-                    if !hay.contains(q) { return false }
-                }
-                return true
+                return q.matches(property.label, property.key)
             }
             .sorted { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
     }

@@ -1,6 +1,6 @@
 # S11-08 — One normalization helper in Swift
 
-**Status:** Planned
+**Status:** Landed in [#466](https://github.com/mendahu/provenencia/pull/466) (2026-10-18)
 **Spike / slice:** Spike 11 · Slice 2 — Value compare, everywhere
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: list filters, type-select, the combo highlight and the fake store change which rows match, which span is marked, or how names group; no view, layout or copy changes)
@@ -81,7 +81,7 @@ Every filter-as-you-type list in the app decides "this row matches what I typed"
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-5.1 | `NameTitleRegistry.isPrefix` of `Dr.`, `dr`, `D.r.`; `isSuffix` of `JR.`, `Jr.,`; `isPrefix("van")`; `isSuffix("Smith")` | true, true, true; true, true; false; false |
+| AC-5.1 | `NameTitleRegistry.isPrefix` of `Dr.`, `dr`; `isSuffix` of `JR.`, `Jr.,`; `isPrefix` of `D.r.`, `S.R.`, `M.S.`, `D.R.`; `isSuffix` of `I.I.`, `V.I.`; `isPrefix("van")`; `isSuffix("Smith")` | true, true; true, true; false, false, false, false; false, false; false; false |
 
 ## 3. Scope
 
@@ -339,3 +339,15 @@ None.
 
 **Title:** S11-08 — One normalization helper in Swift
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-08-swift-normalization.md`.
+
+## Landed
+
+Differences from the plan:
+
+- `TextMatch.range(of:in:)` matches on Unicode scalars (not `Character`s) so a key that ends in a combining scalar cannot merge with its neighbor; results are the same on every fixture.
+- A form-only name Observation also got `nameParts` in `EvidenceGraphModelTests` (`promotedPersonOpensItsPageAndShowsItsName`), assertions unchanged, as the stop conditions allow.
+- `scoreSearchFields` keys values per field name with `uniquingKeysWith`, so a duplicate field name cannot crash.
+- The in-app check (section 10) is left for the user.
+- Disk was full during the build; stale `DerivedData` folders for landed worktrees were removed to continue.
+- `NameTitleRegistry.isPrefix` / `isSuffix` refuse a token with a period between two letters (`S.R.`, `M.S.`, `I.I.`, `D.r.`), so dotted initials are never titles. This replaces D-10's `D.r.` → true and AC-5.1's `D.r.` row; it is the user's call on review finding UX-1 (2026-10-18), because dropping every `.` read initials as titles. The lookup is still `TextMatch.key(token, at: .same, locale: TextMatch.posix)`.
+- Review round 1 fixes: the ASCII fast path in `TextMatch` and a per-Source key cache in `SourcesModel` (the key is unchanged); queries match by Unicode scalar, as Go's `strings.Contains` does (`Query.isPrefix(ofKey:)`); the Go mirror reader refuses escaped fixtures and reads only the fixture and fold literals.

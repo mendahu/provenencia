@@ -1734,7 +1734,12 @@ struct EvidenceGraphModelTests {
             CatalogObservation(
                 id: "o-name", ref: "OBS-1", citationID: "c1", subjectID: "s-james", propertyID: "p-name",
                 polarity: "positive", valueText: "James Robins", valueInteger: nil, valueDateID: "",
-                valueNameID: "n1", nameForm: "James Robins", valueSubjectID: "", valueTermID: "",
+                valueNameID: "n1", nameForm: "James Robins",
+                nameParts: [
+                    CatalogNameValuePart(value: "James", type: "given"),
+                    CatalogNameValuePart(value: "Robins", type: "surname"),
+                ],
+                valueSubjectID: "", valueTermID: "",
                 propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
             ),
         ]
