@@ -49,7 +49,7 @@ These are the calls for this spike. PR plans treat them as binding.
 ### Copy Source
 
 - **The form** ([design](source-structure.md#copy-source)): title field prefilled `Copy of <title>`; required type dropdown preselected to the original's; checkboxes all on for description, metadata (values and layout), credibility (grade and argument), and one per Artifact. Notes are not offered. Graphs, Subjects, Citations and Observations are never copied. Binds S12-01, S12-02.
-- **A copy is an ordinary create.** `sources.Copy` creates through `sources.Create` (so the copy gets its Default graph from S12-03 onward) and copies each checked Artifact as a new row on the copy with the same label, description and `file_id`, through `artifacts.Create`. One `writes.Run` transaction, action `copy_source`. Binds S12-01.
+- **A copy is an ordinary create.** `sources.Copy` creates through `sources.Create` (so the copy gets its Default graph from S12-03 onward) and copies each checked Artifact as a new row on the copy with the same label, description and `file_id`, through `artifacts.Create`. The copy's cover is reset (`primary_artifact_id` empty). One `writes.Run` transaction, action `copy_source`. Binds S12-01.
 - **Entry points:** the Source page and a Sources list row's context menu. Binds S12-02.
 
 ### Graph data model
@@ -195,8 +195,8 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 **Ships.** `sources.Copy` (Go) and an FFI `CopySource` RPC with its store method: a new Source with the given title and type, and the chosen parts copied from the original, in one audited transaction.
 **Not this PR.** The form (S12-02). Graphs: before S12-03 the copy has none; after, it gets Default from `sources.Create`.
-**Check.** Go and handler tests: each part copied only when chosen; Artifacts share `file_id`; notes, Subjects and Citations never copied; the original is untouched.
-**Context.** Working rules "Copy Source"; [Copy Source](source-structure.md#copy-source). Open question: does the copy keep the original's cover?
+**Check.** Go and handler tests: each part copied only when chosen; Artifacts share `file_id`; notes, Subjects and Citations never copied; the copy has no cover; the original is untouched.
+**Context.** Working rules "Copy Source"; [Copy Source](source-structure.md#copy-source).
 
 #### S12-02 — Copy Source form
 

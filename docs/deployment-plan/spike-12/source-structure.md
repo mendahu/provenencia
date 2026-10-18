@@ -27,7 +27,7 @@ On the Source page, and from a Sources list row's context menu, **Copy…** open
 - **Checkboxes, all on:** description; metadata (values and the field layout); credibility (grade and argument); and **one checkbox per Artifact**.
 - Not offered: notes. Never copied: graphs, Subjects, Citations, Observations.
 
-Saving creates an ordinary new Source (new `SRC-` ref, audited create) and opens its page. Its own "Default" graph comes from Source creation. Each checked Artifact becomes a new Artifact row on the copy with the same label, description and file (`files` is unique by checksum, so nothing is stored twice). Whether the copy keeps the original's cover (`sources.primary_artifact_id`) is an open question for S12-01.
+Saving creates an ordinary new Source (new `SRC-` ref, audited create) and opens its page. Its own "Default" graph comes from Source creation. Each checked Artifact becomes a new Artifact row on the copy with the same label, description and file (`files` is unique by checksum, so nothing is stored twice). The copy's cover is reset: `sources.primary_artifact_id` starts empty, so it shows its type icon until a cover is chosen.
 
 ## Multiple Evidence graphs
 
