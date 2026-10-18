@@ -36,4 +36,19 @@ func TestVocabKeysMatchSeed(t *testing.T) {
 			t.Errorf("vocabkey Property %q is not a seeded Property", key)
 		}
 	}
+
+	terms := map[string]bool{}
+	for _, tm := range seedTerms {
+		terms[tm.PropertyKey+"/"+tm.Key] = true
+	}
+	for _, tc := range []struct{ property, key string }{
+		{vocabkey.PropertyEventType, string(vocabkey.EventBirth)},
+		{vocabkey.PropertyEventType, string(vocabkey.EventDeath)},
+		{vocabkey.PropertyEventType, string(vocabkey.EventBurial)},
+		{"role", string(vocabkey.RoleSubject)},
+	} {
+		if !terms[tc.property+"/"+tc.key] {
+			t.Errorf("vocabkey term %q is not a seeded %s term", tc.key, tc.property)
+		}
+	}
 }

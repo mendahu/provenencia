@@ -26,6 +26,23 @@ type Pool struct{ With []vocabkey.PropertyKey }
 // a side with no positive lead value.
 type Period struct{ Start, End vocabkey.PropertyKey }
 
+// EventRole names an event a person takes part in by its type and the
+// person's role in it.
+type EventRole struct {
+	EventType vocabkey.EventType
+	Role      vocabkey.Role
+}
+
+// Lifespan is a derived lifespan: the lead holds its window, where a life can
+// lie, and Span its first to last dated event. Compare checks each side's span
+// against the other side's window; the profile builder builds both.
+type Lifespan struct {
+	Span     vocabkey.PropertyKey // not a lead
+	MaxYears int                  // pads an end no Starts or Ends event fixes
+	Starts   []EventRole          // events that fix the start
+	Ends     []EventRole          // events that fix the end
+}
+
 // Rules is the match registry's subject section.
 type Rules struct {
 	// Weights lists, per Subject type, the lead properties compared and what
@@ -37,9 +54,14 @@ type Rules struct {
 	// Periods lists, per Subject type and lead property, the start and end
 	// properties read as one range for a side with no positive lead value.
 	Periods map[vocabkey.SubjectType]map[vocabkey.PropertyKey]Period
+	// Lifespans lists, per Subject type and lead property, the derived
+	// lifespan whose window is the lead and whose span is Span; the profile
+	// builder builds both from life events.
+	Lifespans map[vocabkey.SubjectType]map[vocabkey.PropertyKey]Lifespan
 }
 
-// Values are one Subject's values by property. Product properties only.
+// Values are one Subject's values by property: product properties, and the
+// derived properties the profile builder adds (a person's lifespan).
 type Values map[vocabkey.PropertyKey][]propertycompare.Value
 
 // Metas are the catalog's value type and cardinality for each property.
@@ -74,7 +96,12 @@ func Compare(kind vocabkey.SubjectType, a, b Values, metas Metas, rules Rules, v
 	var counted, score float64
 	for _, key := range slices.Sorted(maps.Keys(weights)) {
 		w := weights[key]
-		res := propertycompare.Compare(side(kind, key, a, rules), side(kind, key, b, rules), metas[key], value)
+		var res propertycompare.Result
+		if l, ok := rules.Lifespans[kind][key]; ok {
+			res = lifespan(key, a, b, l, value)
+		} else {
+			res = propertycompare.Compare(side(kind, key, a, rules), side(kind, key, b, rules), metas[key], value)
+		}
 		pr := PropertyResult{Key: key, Result: res}
 		switch res.Outcome {
 		case propertycompare.OutcomeAgree:

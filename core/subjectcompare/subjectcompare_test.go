@@ -129,9 +129,10 @@ func TestCompare(t *testing.T) {
 			check: is(name, unknown, noVals, 0)},
 		{name: "AC-1.12 both sides empty", kind: vocabkey.Person, sim: 0, ev: 0,
 			check: func(t *testing.T, r subjectcompare.Result) {
-				if !slices.Equal(keys(r), []vocabkey.PropertyKey{name, sex}) {
+				if !slices.Equal(keys(r), []vocabkey.PropertyKey{vocabkey.PropertyLifespan, name, sex}) {
 					t.Errorf("properties %v", keys(r))
 				}
+				is(vocabkey.PropertyLifespan, unknown, noVals, 0)(t, r)
 				is(name, unknown, noVals, 0)(t, r)
 				is(sex, unknown, noVals, 0)(t, r)
 			}},

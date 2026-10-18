@@ -42,6 +42,9 @@ func TestSubjectSectionMatchesSeed(t *testing.T) {
 	for kind, weights := range s.Weights {
 		checkKind(kind)
 		for key := range weights {
+			if _, derived := s.Lifespans[kind][key]; derived {
+				continue
+			}
 			checkBound(kind, key)
 		}
 	}
@@ -67,6 +70,10 @@ func TestSubjectSectionMatchesSeed(t *testing.T) {
 				}
 			}
 		}
+	}
+
+	for kind := range s.Lifespans {
+		checkKind(kind)
 	}
 
 	card := map[string]string{}
