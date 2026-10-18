@@ -1,7 +1,7 @@
 # Ship log — S10-64 Check a thumbnail before decoding it
 
 **Plan:** [`S10-64-thumbnail-decode-guard.md`](S10-64-thumbnail-decode-guard.md) · **Branch:** `s10-64-thumbnail-decode-guard` · **PR:** #469
-**State:** fixing 1
+**State:** fixing 2
 
 Base: `main` @ `4f15ba70` (plan written against `e97cf54`). Worktree: `.claude/worktrees/s10-64-thumbnail-decode-guard`.
 
@@ -52,3 +52,28 @@ Do: Match the new `ArtifactFileFixtures` doc comment: an image (PNG, JPEG, TIFF)
 Check: `scripts/check-plan-docs.py` clean; scripts/check-pr.sh PASS.
 
 **Docs:** In the plan's Landed note, record the two user-approved amendments (D-5 ordering; D-7 queued decodes whose callers have gone are dropped, which pulls part of PRF-2 forward) and the new test. In `docs/application-stack.md`'s Read-path sentence, add that a queued decode is dropped when no caller still wants it, if the sentence describes the queue.
+
+## Round 1 — fix
+Head `69a750c9`. Gate PASS (orchestrator run; 1188 Swift tests). F-1, F-2, F-3 and the Docs line done. `dropsAQueuedDecodeWhoseCallersHaveGone` was run red at `230685fe` (k1 non-nil, `entryCount` 3), then green. Deviations:
+- F-1 and F-2 landed as one commit (`594738ef`), since both rewrite the same task body.
+- Not covered by a test: `clear()` and then a re-request of the same key before the old task finishes. The implementer left it as is.
+
+## Round 2 — review
+Scope `230685fe...69a750c9`. Lenses: SEC, PRF, UX, MNT (those with Fix-now findings).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| SEC-1 | SEC | — | (round 1) | Resolved | `objectURL` now runs inside the slot, right before the detached open |
+| PRF-1 (+UX-1) | PRF, UX | — | (round 1) | Resolved | abandoned waiters cost one slot handoff and no I/O; `dropsAQueuedDecodeWhoseCallersHaveGone` |
+| MNT-1, MNT-2 | MNT | — | (round 1) | Resolved | SKILL.md:17; re-indented closure |
+| MNT-3 (+PRF outside-lens) | MNT | blocker | Load state is split across `inflight`, `waiters` and `clearGeneration`, so a load cancelled by `clear()` resolves the next load's callers with nil | Fix now → F-4 | verified: `finish` (lines 122-135) gates only `inflight`/`insert` on generation; `waiters.removeValue(forKey:)` always runs. `clear()` has no caller in `macos/App` or `macos/ProvenenciaTests` (grep). This PR added `clearGeneration` for a function nothing calls |
+| UX-R2-a | UX | minor (observation) | `CachedThumbnail.load()` writes fallback on a cancelled nil without checking `Task.isCancelled`; stale-write predates PR | Follow-up | below blocker in round 2; Fix plan 2 does not touch `CachedThumbnail.swift` |
+| MNT-R2-a | MNT (CON) | nit | Plan Out row "Cancelling a decode when every waiter has gone" now partly done | Fix now → F-4 (rides along; F-4 edits the plan's Landed note anyway) | plan line 79 vs Landed note |
+
+### Fix plan 2
+
+**F-4 — Delete the unused `clear()` so one load's state cannot split** (from MNT-3; MNT-R2-a rides along)
+Files: `macos/App/Platform/ThumbnailCache.swift`; `docs/deployment-plan/spike-10-followups/prs/S10-64-thumbnail-decode-guard.md` (Landed note, Out row).
+Failing test first: none. The failure is reachable only through `clear()`, which this fix deletes. Confirm with `grep -rn "clear()" macos` that nothing calls `ThumbnailCache.clear()` before deleting it. If something does, stop and report.
+Do: Delete `clear()`, `clearGeneration`, and its doc comment. Drop the `generation` parameter from `finish` and the capture in `image(projectDir:relPath:)`. `finish` always sets `inflight[key] = nil` and inserts any outcome other than `.abandoned`; fix its doc comment to match. Change nothing else in the cancellation design. In the plan: add a sentence to the Landed note that `clear()` (no caller) was removed in fix round 2. Amend the Out row "Cancelling a decode when every waiter has gone" so it reads as the part still left: cancelling a decode that is already running.
+Check: all `ThumbnailCacheTests` pass, `dropsAQueuedDecodeWhoseCallersHaveGone` and `coalescesInflightLoads` included; scripts/check-pr.sh PASS.
