@@ -3,9 +3,11 @@ name: add-match-rule
 description: >-
   Adds or changes a Provenencia matching layer rule: a registry knob, a value
   comparer, a relation, cause or unit code, or a new layer package
-  (core/valuecompare, core/propertycompare, core/matchregistry). Use when adding a number the
-  matching algorithm tunes, a comparer for a value type, a Relation or Cause
-  code, a layer package, or a row in the matching-model.md knob inventory.
+  (core/valuecompare, core/propertycompare, core/subjectcompare,
+  core/matchregistry). Use when adding a number the matching algorithm tunes, a
+  comparer for a value type, a Relation or Cause code, a Subject property
+  weight, pool or period, a layer package, or a row in the matching-model.md
+  knob inventory.
 ---
 
 # Add or change a matching rule
@@ -22,9 +24,10 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 - **Types live in the layer, values in the registry.** The layer declares its `Rules` groups (field types and doc comments, no numbers). `core/matchregistry` declares `Registry` and the numbers, with a comment on each saying where it came from. A layer takes its section as an argument.
 - **`matchregistry.Default()` builds fresh slices and maps** on each call. A test overrides a section by editing its own copy.
 - **Numbers only in `matchregistry`.** A layer package marked `numbers` in `layerPackages` may hold no numeric literal other than 0 and 1. A fact that is not a tunable (a calendar fact) goes in its pure value package.
-- **Pure helpers are shared, not copied.** The word helpers live in `core/valuecompare/words.go`. `wordSimilarity` is the one word table (names add initials and alias tables through `wordOptions`), `BestAssignment` (`pairing.go`) the one pairing search, `AliasIndex` the one alias lookup, and the weighted `meanSimilarity` (`text.go`) the one rule for combining part similarities.
+- **Pure helpers are shared, not copied.** The word helpers live in `core/valuecompare/words.go`. `wordSimilarity` is the one word table (names add initials and alias tables through `wordOptions`), `BestAssignment` (`pairing.go`) the one pairing search, `AliasIndex` the one alias lookup, and the weighted `meanSimilarity` (`text.go`) the one rule for combining part similarities. `valuecompare.EndsDate` is the one way back from date ends to a date.
 - **Catalog data comes in through `Rules`.** A name value names its pattern by key (`Value.NamePattern`) and the layer reads it from `Rules.Names.Patterns`; alias tables come as `Rules.Names.Aliases`. Catalog data is not a knob: list its registry path in `catalogData` in `core/matchregistry/inventory_test.go` and name it under "Not knobs" in `docs/matching-model.md`, with no inventory row. A caller gets a catalog's rules from `valuerules.Load` (`core/database/valuerules`): the stored default name pattern under its key and the alias index, on a copy of `matchregistry.Default().Value`. New catalog data for `Rules` is loaded there.
 - **Layer 2 (`core/propertycompare`) reads relations, never numbers.** `Compare` takes the `value` section and has no section of its own; the outcome comes from the speaking pair's relation through `outcomeOf`, and relations rank with `valuecompare.Stronger`, the one relation order. A value carries only `Negative` and `Neutral` beside its layer 1 value: support, standing and denied are turned into positives and negatives by the profile builder before they reach it.
+- **Layer 3 (`core/subjectcompare`) turns outcomes into points.** It reads only the lead properties in `subject.Weights` for the kind; agree earns the agree weight, partial agree weight × similarity, conflict loses the penalty and weighs it in similarity. Registry maps are keyed by `vocabkey.SubjectType` and `vocabkey.PropertyKey`, written as `vocabkey` constants, never as string literals; no other package declares a key type. Value type and cardinality come from the catalog as `Metas`, never from the registry. Tests build values with `propertycomparetest` and metas with `subjectcomparetest.Metas`.
 - **A doubled weight is written `w + w`.** The numbers guard allows no literal 2 in a layer package.
 - **Dates compute similarity through `falloff`.** Calendar facts (days in a month, day numbers, the year line) live in `core/datevalue/calendar.go`, not in the layer. The window algebra is `valuecompare.Window` (`core/valuecompare/datewindow.go`): `Overlaps`, `Contains`, `Intersect` as methods, and `AboutEnds` with `EndsWindow` to read a date as compared.
 - **The reconciler composes value compare under its own policy.** `autoreconcile.Reconcile` and `Compatible` take `valuecompare.Rules`; values group on `Key` at `Same` and fold on `Contains`. The cache passes `matchregistry.Default().Value`, never catalog data, so a rule change is a `CacheVersion` bump. `valuecompare.DateWindow` reads a date as written (sort keys, stored bounds, place periods).
@@ -36,6 +39,14 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 2. Set the value in `core/matchregistry/<section>.go` with a comment naming its source.
 3. Add a row to the knob inventory in [`docs/matching-model.md`](../../../docs/matching-model.md) (key, start, source, changes). The key is the dotted path of the field.
 4. When the group's layer has landed, delete its prefix from `notYetBuilt` in `core/matchregistry/inventory_test.go`. `TestKnobInventoryMatchesRegistry` fails on a field with no row, a row with no field, and a prefix that still matches.
+
+## Add a Subject property or pair
+
+1. Add the key to `core/vocabkey` if it has none, and to the key list in `TestVocabKeysMatchSeed`.
+2. Add its `Weights` (or a `Pools` / `Periods` entry under an existing weighted lead) in `core/matchregistry/subject.go`, with a source comment.
+3. Add the inventory rows: `subject.Weights.<kind>.<property>.Agree` and `.Conflict`, `subject.Pools.<kind>.<lead>.With`, or `subject.Periods.<kind>.<lead>.Start` and `.End`.
+4. If the property is new to `subjectcomparetest.Metas`, add it there. `TestSubjectSection` and `TestSubjectSectionMatchesSeed` (`core/database/subjectvocab`) fail on a key the seed does not bind to the kind, a pair whose lead has no weights, a pooled property of another value type, and a fixture meta that differs from the seed.
+5. Add a `TestCompare` row for it in `core/subjectcompare`.
 
 ## Add a comparer
 
@@ -56,8 +67,10 @@ Add a row to `layerPackages` in `core/matchregistry/guard_test.go`, with `number
 ## Check
 
 ```
-go test ./core/valuecompare/... ./core/propertycompare/... ./core/matchregistry/...
+go test ./core/valuecompare/... ./core/propertycompare/... ./core/subjectcompare/... ./core/matchregistry/...
 ```
+
+and `CGO_ENABLED=1 go test -tags fts5 ./core/database/subjectvocab/` after a subject section change.
 
 No build tags. Then `scripts/check-pr.sh`.
 

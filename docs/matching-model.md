@@ -20,7 +20,7 @@ matchregistry ──────────────────────
 | --- | --- | --- | --- | --- | --- |
 | 1 | Value compare | `core/valuecompare` | Two values of one value type | A relation, a similarity from 0 to 1, and a detail saying which parts paired | `value` |
 | 2 | Property compare | `core/propertycompare` | Every value two Subjects hold for one property, with the property's value type and cardinality | An outcome (agree, partial, conflict, unknown) and the speaking pair | `value` (passed through to layer 1) |
-| 3 | Subject compare | `core/subjectcompare` | Two Subjects of one type, with every property each holds | A similarity and evidence in points | `subject` |
+| 3 | Subject compare | `core/subjectcompare` | Two Subjects of one type, with every property each holds | A similarity and evidence in points | `subject`, and `value` passed through to layer 2 |
 | 4 | Entity compare | `core/subjectprofile` (`Build`) with `core/subjectcompare` | A Subject and an entity's reconciled conclusion, built into a Subject-shaped profile | A similarity and evidence in points | `subject` |
 | 5 | Segment compare | `core/segmentcompare` | A segment on the layer and a segment in the research graph | An outcome, a similarity, evidence, and a detail | `segment`, `subject` |
 | 6 | Graph alignment | `core/graphalign` | The layer's Subjects and the research graph's handles | Rows: target, band, contested mark, reasons, alternatives | `alignment`, `segment`, `subject` |
@@ -67,7 +67,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **evidence** | Points of connection: agree weights minus conflict penalties, plus segment support; the main currency from layer 3 up |
 | **agree weight** | Points a property earns when it agrees |
 | **conflict penalty** | Points a property costs when it conflicts; also counts as 0 in similarity |
-| **pair (compared together)** | Two properties compared as one: sex with gender, `date` with `start_date` and `end_date` |
+| **pair (compared together)** | Two or more properties compared as one, keyed by the lead: a pool adds properties' values to the lead's on each side (sex at birth with gender); a period reads `start_date` and `end_date` as one range for `date` on a side with no date |
 | **profile** | A Subject-shaped set of values built from an entity's reconciled conclusion |
 | **entity comparison** | Layer 4: a Subject against an entity's profile |
 | **lifespan** | A derived window for a person, built from the dates of direct neighbors, compared as a registry-declared special case |
