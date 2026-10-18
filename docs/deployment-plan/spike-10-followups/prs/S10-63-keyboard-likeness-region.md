@@ -1,6 +1,6 @@
 # S10-63 — Keyboard region for a likeness
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 10 follow-ups · likeness hardening
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (waived by the user 2026-10-18: two PVButtons in the existing Likeness value area, described in words in §6)
