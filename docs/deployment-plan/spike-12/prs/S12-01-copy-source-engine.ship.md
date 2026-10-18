@@ -1,7 +1,7 @@
 # Ship log — S12-01 Copy Source engine
 
 **Plan:** [`S12-01-copy-source-engine.md`](S12-01-copy-source-engine.md) · **Branch:** `s12-01-copy-source-engine` · **PR:** #478
-**State:** ready
+**State:** fixing 2
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s12-01`, from `main` @ `998306f9`.
 
@@ -14,7 +14,7 @@ Base `998306f9`, head `141890cf`. Five lenses. PRF and SEC clean.
 | ID | Lens | Severity | Title | Decision | Evidence / reason |
 | --- | --- | --- | --- | --- | --- |
 | MNT-1 | MNT | major | A new metadata value is trimmed and normalized twice; `Set` and `insertValueTx` both own the rule | Fix now → F-1 | verified: `sourcemetadata.go` `Set` normalizes before `if creating`, then `insertValueTx:170` normalizes again. D-6 puts trim + `normalizeValue` in `insertValueTx`, so the fix keeps D-6 |
-| CON-1 | CON | minor | `FakeStore.copySource` reports no evidence effect when Artifacts are copied; the engine does | To user | verified: `effects/registry.go:184-189` maps `artifacts` to `Source` + `CitationSource`; `FakeStore.swift:412` `bumpSource(copyID, evidence: false)`. Fix contradicts D-15's literal text, so it goes to the user. Recommend `evidence: !chosen.isEmpty` |
+| CON-1 | CON | minor | `FakeStore.copySource` reports no evidence effect when Artifacts are copied; the engine does | To user → Fix now → F-3 (user, 2026-10-18) | verified: `effects/registry.go:184-189` maps `artifacts` to `Source` + `CitationSource`; `FakeStore.swift:412` `bumpSource(copyID, evidence: false)`. Fix contradicts D-15's literal text, so it goes to the user. Recommend `evidence: !chosen.isEmpty` |
 | CON-2 | CON | minor | `TestCopy/other_type` counts metadata values but does not compare them (AC-2.4) | Fix now → F-2 | read the test: only `len(values) != 2`. Rides along: AC evidence in a test file this PR adds, a few lines |
 | MNT-3 | MNT | minor | `must[T]` panics instead of `t.Fatal`; comment misdescribes it | Fix now → F-2 | read `sourcecopy_test.go:49-54`. Same new test file as CON-2 |
 | MNT-4 | MNT | minor | `_ = i` dead binding in `seedObituary` | Fix now → F-2 | same file |
@@ -51,6 +51,16 @@ Scope `141890cf...b3dd61c6`. Lenses: MNT (only lens with a Fix-now finding; CON-
 | MNT-3, MNT-4, CON-2, CON-3 | MNT | — | Resolved | — | read by the round-2 reviewer |
 
 No new findings. No Fix plan 2.
+
+## To user — answered
+CON-1: the user said: "Yes: update D-15 and change FakeStore.copySource to bumpSource(copyID, evidence: !chosen.isEmpty) in this PR."
+
+### Fix plan 2 (user-approved, not a review round)
+**F-3 — The fake reports the evidence effect when it copies Artifacts** (from CON-1)
+Files: `macos/App/Platform/FakeStore.swift`, `docs/deployment-plan/spike-12/prs/S12-01-copy-source-engine.md` (D-15 row only).
+Failing test first: none (FakeStore unit tests are out of scope for this PR per the plan; S12-02 covers the model).
+Do: in `FakeStore.copySource`, `bumpSource(copyID, evidence: false)` → `bumpSource(copyID, evidence: !chosen.isEmpty)`, the same rule `createArtifact` uses. In the plan's D-15 row, replace "returns `bumpSource(copyID, evidence: false)`" with "returns `bumpSource(copyID, evidence: !chosen.isEmpty)` (the engine's `artifacts` effects entry reports `sources` and `citation_sources`; changed after review, CON-1)". Add one line to the plan's Landed note naming this change.
+Check: scripts/check-pr.sh PASS.
 
 ## Result
 Gate PASS · CI pending · open: none blocker/major · follow-ups: MNT-2, MNT-5, UX-1 · to user: CON-1 (fake evidence effect vs D-15) · logged: MNT-6, UX-note
