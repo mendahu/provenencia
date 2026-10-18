@@ -134,6 +134,9 @@ func sameKey(v propertycompare.Value, rules valuecompare.Rules) string {
 
 func neutralValue(r *rand.Rand, pool []V) V {
 	v := pool[r.Intn(len(pool))]
+	if v.Term != "" {
+		v = term("unknown") // a term is neutral as "unknown", never as a pool term
+	}
 	v.Neutral = true
 	v.Ref = []byte{0xff}
 	return v
