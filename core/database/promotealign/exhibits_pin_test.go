@@ -19,7 +19,7 @@ func TestOverlappingBoundsAreSimilarAndUnpinned(t *testing.T) {
 		id: []byte("mem"), prop: prop, valueType: propertymeta.ValueTypeDate,
 		value: match.Value{Date: befDate(1985, 2, 1)},
 	}
-	lines := pairExhibits([]exhibitObs{incoming}, nil, []exhibitObs{member}, graphalign.DefaultConfig(), graphalign.Stats{})
+	lines := pairExhibits([]exhibitObs{incoming}, nil, []exhibitObs{member}, graphalign.DefaultConfig())
 	if len(lines) != 1 {
 		t.Fatalf("lines %+v", lines)
 	}
@@ -44,7 +44,7 @@ func TestDisjointDatesConflict(t *testing.T) {
 		id: []byte("mem"), prop: prop, valueType: propertymeta.ValueTypeDate,
 		value: match.Value{Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year}},
 	}
-	lines := pairExhibits([]exhibitObs{incoming}, nil, []exhibitObs{member}, graphalign.DefaultConfig(), graphalign.Stats{})
+	lines := pairExhibits([]exhibitObs{incoming}, nil, []exhibitObs{member}, graphalign.DefaultConfig())
 	if len(lines) != 1 || lines[0].Outcome != match.OutcomeConflict || lines[0].Pinned {
 		t.Fatalf("disjoint %+v, want an unpinned conflict", lines)
 	}

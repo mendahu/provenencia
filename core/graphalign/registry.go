@@ -1,8 +1,6 @@
 package graphalign
 
 import (
-	"math"
-
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -16,32 +14,37 @@ import (
 
 // DefaultConfig is the shipped walk/band configuration.
 func DefaultConfig() Config {
+	reg := matchregistry.Default()
+	// subject is a property's weights in the registry's subject section, as
+	// a scale: the walk scores these properties on the same numbers.
+	subject := func(kind vocabkey.SubjectType, key vocabkey.PropertyKey) Scale {
+		w := reg.Subject.Weights[kind][key]
+		return Scale{Weight: w.Agree, Contradiction: w.Conflict}
+	}
+	// accept is the least evidence to place a pair. plain, every value
+	// type's weight, equals it, so one exact agreement alone reaches the
+	// weak bar.
+	accept := 2.0
+	plain := accept
+	// conflict is the points one disagreement costs.
+	conflict := 3.0
 	return Config{
-		Value:           matchregistry.Default().Value,
-		AcceptScore:     2.0,
+		Value:           reg.Value,
+		AcceptScore:     accept,
 		StrongScore:     4.0,
 		MediumScore:     3.0,
 		WeakScore:       2.0,
-		ConflictPenalty: 3.0,
-		// Added when that Property agrees, on top of its log-odds. A small
-		// catalog can make a real agreement look cheap; this is the finger
-		// on the scale. Toponym +1 clears medium (3) and stays short of
-		// strong (4) until an edge adds support.
-		PropertyAgreement: map[match.Property]float64{
-			{Key: "toponym", Origin: vocabkey.OriginProvenencia}: 1,
-		},
+		ConflictPenalty: conflict,
 		// Value-type defaults. A property entry replaces one of these.
-		// Frequency weights are filled when the score is computed.
+		// Any resemblance value compare reports is partial. A disagreement
+		// scores 0 and conflicts. Open bounds that overlap (before 2001,
+		// before 1985) resemble; they are not the same date.
 		ValueTypeScale: map[string]Scale{
-			"text":    {Frequency: true},
-			"term":    {Frequency: true},
-			"integer": {Frequency: true},
-			// Any resemblance value compare reports is partial. A
-			// disagreement scores 0 and conflicts. Open bounds that overlap
-			// (before 2001, before 1985) resemble; they are not the same date.
-			"date":    {Frequency: true},
-			"name":    {Frequency: true},
-			"subject": {Frequency: true},
+			"text":    {Weight: plain, Contradiction: conflict},
+			"term":    {Weight: plain, Contradiction: conflict},
+			"integer": {Weight: plain, Contradiction: conflict},
+			"date":    {Weight: plain, Contradiction: conflict},
+			"name":    {Weight: plain, Contradiction: conflict},
 		},
 		// Name: value compare decides a clash. A different first given name
 		// or surname on each side is Different (0) and conflicts; a word on
@@ -50,16 +53,12 @@ func DefaultConfig() Config {
 		// (J. ~ James, 0.8) is 2.5 × 0.8, exactly the weak bar.
 		// Sex and gender: agreement is a small nudge and a mismatch subtracts
 		// 1 rather than the global penalty.
+		// Toponym: an exact toponym alone is 3, medium, and short of strong (4) until an edge adds support.
 		PropertyScale: map[match.Property]Scale{
-			{Key: "name", Origin: vocabkey.OriginProvenencia}: {
-				Weight: 2.5, Contradiction: 3,
-			},
-			{Key: "sex_at_birth", Origin: vocabkey.OriginProvenencia}: {
-				Weight: 0.6, Contradiction: 1,
-			},
-			{Key: "gender", Origin: vocabkey.OriginProvenencia}: {
-				Weight: 0.6, Contradiction: 1,
-			},
+			{Key: "name", Origin: vocabkey.OriginProvenencia}:         subject(vocabkey.Person, vocabkey.PropertyName),
+			{Key: "sex_at_birth", Origin: vocabkey.OriginProvenencia}: subject(vocabkey.Person, vocabkey.PropertySexAtBirth),
+			{Key: "gender", Origin: vocabkey.OriginProvenencia}:       subject(vocabkey.Person, vocabkey.PropertySexAtBirth), // pooled with sex_at_birth (matchregistry subject.Pools)
+			{Key: "toponym", Origin: vocabkey.OriginProvenencia}:      subject(vocabkey.Place, vocabkey.PropertyToponym),
 		},
 		EdgeSupportLow:     1.5, // fan-out ≈1 correspondence
 		EdgeSupportHigh:    0.25,
@@ -68,15 +67,6 @@ func DefaultConfig() Config {
 		FanOutLowMax:       1.5,  // signatures with fan-out ≤ this get the low pair
 		FanOutUnknown:      2.0,  // a signature the catalog has no fan-out for yet
 		AlternativeLimit:   3,
-		MPrior: map[string]float64{
-			"text":    0.9,
-			"term":    0.95,
-			"integer": 0.9,
-			"date":    0.85,
-			"name":    0.8,
-			"subject": 0.9,
-		},
-		UPrior: 0.1, // cold-start agreement rate among unrelated
 		// Keyed by EdgeSignature.ScaleKey. A missing entry is the zero
 		// scale: support is added even when the candidate's own properties
 		// contribute nothing, and a different neighbor is silence.
@@ -93,12 +83,11 @@ func DefaultConfig() Config {
 
 // Config holds every graph-alignment tunable Align reads.
 type Config struct {
-	AcceptScore       float64 // minimum score to accept a structure-backed candidate
-	StrongScore       float64 // assessment ≥ this → strong
-	MediumScore       float64 // assessment ≥ this (and < Strong) → medium
-	WeakScore         float64 // assessment ≥ this (and < Medium) → weak; else no match
-	ConflictPenalty   float64
-	PropertyAgreement map[match.Property]float64 // extra weight when this Property agrees
+	AcceptScore     float64 // minimum score to accept a structure-backed candidate
+	StrongScore     float64 // assessment ≥ this → strong
+	MediumScore     float64 // assessment ≥ this (and < Strong) → medium
+	WeakScore       float64 // assessment ≥ this (and < Medium) → weak; else no match
+	ConflictPenalty float64
 	// PropertyScale replaces the value-type scale for that Property.
 	PropertyScale map[match.Property]Scale
 	// ValueTypeScale is the scale for a value type with no property entry.
@@ -110,8 +99,6 @@ type Config struct {
 	FanOutLowMax       float64
 	FanOutUnknown      float64
 	AlternativeLimit   int
-	MPrior             map[string]float64 // value type → m
-	UPrior             float64
 	// Value is the value section, with the catalog's name patterns and alias
 	// tables. DefaultConfig holds the registry's; valuerules.Load fills a
 	// catalog's.
@@ -122,46 +109,13 @@ type Config struct {
 	SignatureScale map[string]SignatureScale
 }
 
-func (c Config) agreementWeight(p match.Property) float64 {
-	if c.PropertyAgreement == nil {
-		return 0
-	}
-	return c.PropertyAgreement[p]
-}
-
-func (c Config) mFor(valueType string) float64 {
-	if c.MPrior != nil {
-		if m, ok := c.MPrior[valueType]; ok && m > 0 && m < 1 {
-			return m
-		}
-	}
-	return 0.85
-}
-
-func (c Config) uOr(u float64) float64 {
-	if u > 0 && u < 1 {
-		return u
-	}
-	if c.UPrior > 0 && c.UPrior < 1 {
-		return c.UPrior
-	}
-	return 0.1
-}
-
 // Scale is how one property's similarity becomes points. The scorer looks
 // a property up here and does not name it.
 type Scale struct {
-	// Weight is the points at similarity 1. The contribution is Weight ×
-	// similarity. Ignored when Frequency is set; the log-odds fill it in.
+	// Weight is the points at similarity 1. The contribution is Weight × similarity.
 	Weight float64
-	// Contradiction is the penalty when value compare finds the values
-	// different (similarity 0). Zero on a frequency scale
-	// means the global ConflictPenalty.
+	// Contradiction is the penalty when value compare finds the values different (similarity 0).
 	Contradiction float64
-	// Frequency derives Weight from catalog frequency (m, u) plus any
-	// agreement bonus, and lifts a lone exact agreement to the weak bar.
-	// A fixed Weight is not lifted.
-	Frequency bool
 }
 
 // SignatureScale is how one edge combines with the candidate's own property
@@ -176,11 +130,4 @@ type SignatureScale struct {
 	// candidate has a same-end neighbor under the signature and it is a
 	// different handle. Zero leaves a mismatch silent.
 	ConflictFactor float64
-}
-
-func logOdds(m, u float64) float64 {
-	if m <= 0 || m >= 1 || u <= 0 || u >= 1 {
-		return 0
-	}
-	return math.Log(m / u)
 }

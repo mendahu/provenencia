@@ -83,10 +83,8 @@ type Canon struct {
 	Edges   []CanonEdge
 }
 
-// Stats supplies catalog frequencies for Fellegi–Sunter weights.
+// Stats supplies catalog edge fan-outs.
 type Stats struct {
-	// ValueFreq[propertyKey][valueKey] ≈ how often unrelated handles agree.
-	ValueFreq map[string]map[string]float64
 	// FanOut[signature.Key()] is the typical neighbor count for that edge.
 	FanOut map[string]float64
 }

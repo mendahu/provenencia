@@ -75,7 +75,7 @@ func Propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 	cfg := graphalign.DefaultConfig()
 	cfg.Value = rules
 	prop := graphalign.Align(layer, canon, stats, anchors, &cfg)
-	if err := attachExhibits(q, c.Graph(), layer, &prop, cfg, stats, namePattern); err != nil {
+	if err := attachExhibits(q, c.Graph(), layer, &prop, cfg, namePattern); err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
 	return prop, rev, nil
