@@ -66,11 +66,7 @@ func moduleFor(rules valuecompare.Rules, valueType string) module {
 			return idKey(v.Depiction.ImageFileID)
 		}}
 	case propertymeta.ValueTypeName:
-		particles := make(map[string]bool, len(rules.Words.Particles))
-		for _, p := range rules.Words.Particles {
-			particles[p] = true
-		}
-		return nameModule{rules: rules, particles: particles}
+		return nameModule{rules: rules}
 	case propertymeta.ValueTypeDate:
 		return dateModule{rules: rules}
 	}

@@ -40,11 +40,9 @@ import (
 //     type order of the member with the most types. A member that carries
 //     exactly the result is returned as is.
 
-// nameModule reads names under rules; particles is the set of
-// rules.Words.Particles, built once in moduleFor.
+// nameModule reads names under rules.
 type nameModule struct {
-	rules     valuecompare.Rules
-	particles map[string]bool
+	rules valuecompare.Rules
 }
 
 // nameUnit is one part type's parts of one name.
@@ -73,7 +71,7 @@ func (m nameModule) readName(n *namevalue.Value) (byType map[string]nameUnit, or
 	parts := append([]namevalue.Part(nil), n.Parts...)
 	sort.SliceStable(parts, func(i, j int) bool { return parts[i].Idx < parts[j].Idx })
 	for _, p := range parts {
-		words := valuecompare.SplitWords(p.Value, m.particles)
+		words := valuecompare.SplitWords(p.Value, m.rules.Words)
 		if len(words) == 0 {
 			continue
 		}
@@ -122,15 +120,18 @@ func (m nameModule) fold(_ string, from, into unit) bool {
 	return true
 }
 
-// outvotes: only a spelling variant of the winner — the same number of
-// words, each equal or a spelling variant (SpellingSimilarity).
+// outvotes: only a spelling variant of the winner — value compare pairs the
+// words and leaves none unpaired, and each pair is the same word or a
+// spelling variant (SpellingSimilarity).
 func (m nameModule) outvotes(_ string, winner, other unit) bool {
-	w, o := winner.data.(nameUnit).parts, other.data.(nameUnit).parts
-	if len(w) != len(o) {
+	_, det := valuecompare.Compare(other.data.(nameUnit).cmp, winner.data.(nameUnit).cmp, m.rules)
+	// No pairs means value compare found no match at all.
+	if len(det.Parts) == 0 || len(det.OnlyA) != 0 || len(det.OnlyB) != 0 {
 		return false
 	}
-	for i := range w {
-		if valuecompare.SpellingSimilarity(w[i], o[i], m.rules.Words.FuzzyFloor, m.rules.Words.ShortVariantMinLength) == 0 {
+	for _, p := range det.Parts {
+		if p.A.Text != p.B.Text &&
+			valuecompare.SpellingSimilarity(p.A.Text, p.B.Text, m.rules.Words.FuzzyFloor, m.rules.Words.ShortVariantMinLength) == 0 {
 			return false
 		}
 	}

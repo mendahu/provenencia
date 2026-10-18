@@ -50,14 +50,11 @@ func IsInitial(word string) bool {
 }
 
 // SplitWords is s as comparison tokens: split on whitespace, dashes and
-// slashes, each token normalized, and a particle rejoined with the word that
-// follows it. particles is the set of particle tokens.
-func SplitWords(s string, particles map[string]bool) []string {
-	return splitWords(s, func(token string) bool { return particles[token] })
-}
-
-// splitWords is SplitWords with the particle test as a function.
-func splitWords(s string, isParticle func(token string) bool) []string {
+// slashes, each token normalized, and a particle (w.Particles) rejoined with
+// the word that follows it. It is the one split every comparer and the
+// reconciler share.
+func SplitWords(s string, w WordRules) []string {
+	isParticle := func(token string) bool { return slices.Contains(w.Particles, token) }
 	raw := rawTokens(s)
 	var out []string
 	for i := 0; i < len(raw); i++ {
