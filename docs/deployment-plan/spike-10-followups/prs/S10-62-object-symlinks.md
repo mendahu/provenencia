@@ -8,12 +8,12 @@
 **Depends on:** —
 **Blocks:** —
 **Branch:** `s10-62-object-symlinks`
-**Version bump:** patch — a security bugfix with no new feature ([`docs/versioning.md`](../../../versioning.md))
+**Version bump:** none — spike PRs leave `VERSION` at 0.2.0 and a release cuts the bump (`git log -- VERSION`: last moved in #402; S10-60, S10-61, S10-63 and Spike 11 do the same) ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** [source layer data model, storage](../../../source-layer-data-model.md), [application stack, read path](../../../application-stack.md), audit 2026-10-18 finding SEC-2 (likeness and depiction area audit, all five lenses)
 **Planned:** 2026-10-18 against `main` @ `aa60b63`
-**Review:** — (not reviewed yet)
+**Review:** [`S10-62-object-symlinks.review.md`](S10-62-object-symlinks.review.md) — Fits with changes / Ready with changes, 1 round
 
 ### Implementer — read this first
 
@@ -47,7 +47,7 @@ The app reads object files (likeness images, Source thumbnails, Artifact files) 
 | AC-1.3 | `objects/ab/cd/x.png` is a symlink to an outside PNG | `objectURL` returns `nil` |
 | AC-1.4 | `objects/ab/cd/x.png` is a folder, or a FIFO made with `mkfifo` | `objectURL` returns `nil`, and returns without blocking |
 | AC-1.5 | `objects/ab/cd/x.png` does not exist | `objectURL` returns `nil` |
-| AC-1.6 | `relPath` is `catalog.sqlite` or `derivatives/x.jpg` (first segment is not `objects`) | `objectURL` returns `nil` |
+| AC-1.6 | `relPath` is `provenencia.sqlite` or `derivatives/x.jpg` (first segment is not `objects`) | `objectURL` returns `nil` |
 | AC-1.7 | A real regular file at `objects/ab/cd/x.png`, and the project folder path itself is a symlink to the real project folder | `objectURL` returns the URL `projectDir/objects/ab/cd/x.png` |
 | AC-1.8 | A thumbnail is requested for the symlinked object from AC-1.3 | `ThumbnailCache.image` returns `nil` and caches the missing sentinel; no image of the outside file is produced |
 | AC-1.9 | The Artifact viewer loads the symlinked object from AC-1.3 | `ArtifactViewerModel.emptyReason == .missingFile` |
@@ -59,7 +59,9 @@ The app reads object files (likeness images, Source thumbnails, Artifact files) 
 | --- | --- |
 | `ProjectFiles.objectURL` requires `objects` as the first segment and checks each component from `objects/` to the object with `lstat`: every folder is a real folder, the object is a regular file (D-1–D-5) | STEP-1, STEP-2, AC-1.1–AC-1.7 |
 | `openObject` and `ArtifactViewerModel.load` drop their separate `fileExists` checks, which `objectURL` now covers (D-6) | STEP-3, AC-1.9, AC-1.10 |
-| Tests for each refusal, for `ThumbnailCache` and `ArtifactViewerModel`, and the two existing join tests moved onto a real temp project | STEP-2, STEP-3, T-1–T-11 |
+| Tests for each refusal, for `ThumbnailCache` and `ArtifactViewerModel`, the two existing join tests and the three lexical tests moved onto a real temp project, and one shared symlinked-object fixture in `ArtifactFileFixtures` (D-9) | STEP-2, STEP-3, T-1–T-12 |
+| A Go test pins the Swift `objectsDir` to `objectpath.Dir`, and `openRegular`'s doc comment names the Swift mirror (D-10) | STEP-1, T-13 |
+| The security lens, the ship-pr Security routing paths, and `.cursor/rules/macos-client.mdc` name `ProjectFiles.objectURL` as the one Swift reader of object paths | STEP-4 |
 | The source layer storage paragraph and the application stack read path say what the app checks | STEP-4 |
 
 | Out | Home |
@@ -68,7 +70,8 @@ The app reads object files (likeness images, Source thumbnails, Artifact files) 
 | Reading object bytes through a no-follow file descriptor instead of a URL (TOCTOU) | not planned (D-4) |
 | A symlink or FIFO check on `derivatives/` or on the catalog file | not planned: no Swift reader opens them by catalog path |
 | App Sandbox | not planned ([`application-stack.md`](../../../application-stack.md) read path) |
-| Go-side changes to `core/objectstore` | not planned: Go already refuses these cases |
+| Go-side behavior changes to `core/objectstore` (a doc comment line is In, D-10) | not planned: Go already refuses these cases |
+| `IngestMediaPolicy.validate(url:)` moving from `resourceValues` to the same `lstat` check | logged in the review log (M-6); not planned |
 
 ## 4. Current state
 
@@ -82,9 +85,11 @@ The app reads object files (likeness images, Source thumbnails, Artifact files) 
 | Go rules to mirror | `core/objectstore/objectstore.go` `openObjectsRoot`, `openRegular` | `os.OpenRoot(projectDir)` (the project path may be a symlink), `Lstat("objects")` must be a folder, each shard folder top-down must be a folder (`Lstat`), the object must be `IsRegular()` before the open, so a FIFO cannot block. |
 | Paths Go returns | `core/objectpath/objectpath.go` `Dir = "objects"`, `Rel`; `core/database/files` `StorageRelPath` | Every `relPath` that reaches Swift (Artifact files, derived thumbnails, depiction images) is `objects/{hh}/{hh}/{hex}{ext}`. |
 | Swift precedent | `macos/App/Platform/IngestMediaPolicy.swift` `IngestMediaPolicy.validate(url:)` | Refuses a picked file whose `isSymbolicLink` resource value is true. Only the final component, and only for ingest. |
-| Tests | `macos/ProvenenciaTests/ProjectFilesTests.swift` | Lexical cases only, against the non-existent `/tmp/proj.provenencia`. `objectURLJoinsNormalContentAddressedPath` and `objectURLJoinsPathWithExtension` expect a URL for files that do not exist; they fail once `objectURL` checks the disk. No symlink case. |
+| Tests | `macos/ProvenenciaTests/ProjectFilesTests.swift` | Lexical cases only, against the non-existent `/tmp/proj.provenencia`. `objectURLJoinsNormalContentAddressedPath` and `objectURLJoinsPathWithExtension` expect a URL for files that do not exist; they fail once `objectURL` checks the disk. `objectURLRejectsDotSegments`, `objectURLRejectsHomeRelativeSegment`, and `objectURLRejectsParentDirectorySegments` would keep passing only because the file is missing, so they would no longer prove their rule. No symlink case. |
+| Test fixtures | `macos/ProvenenciaTests/ArtifactFileFixtures.swift` `ArtifactFileFixtures.uniqueProjectDir()`, `writePNG(projectDir:relPath:width:height:topHalfRed:)` | `uniqueProjectDir` returns a fresh path under the temp folder (it does not create it); `writePNG` writes a decodable PNG and creates the intermediate folders. The add-swift-test skill says artifact files on disk come from this enum. |
+| Swift-mirror guard | `api/ffi/swift_vocabulary_test.go` | Go tests that read Swift files so a mirrored value cannot drift (`swiftVocabulary`, `swiftValueKinds`, …). S10-61 adds `TestSwiftRegionCapMatchesGo` here. |
 | Tests | `macos/ProvenenciaTests/ThumbnailCacheTests.swift` `missingFileCachesSentinel`, `loadsAndHitsCache`; `macos/ProvenenciaTests/ArtifactViewerModelTests.swift` `missingFileSetsEmptyReason`, `loadsPNGImageViaProjectFiles`, `makeTempProject`, `writeFile` | Real temp projects under `FileManager.default.temporaryDirectory` (on macOS `/var/folders/…`, itself behind the `/var` → `/private/var` symlink), files under `objects/`. They keep passing because the check starts at `objects/`. |
-| Go tests to mirror | `core/objectstore/objectstore_test.go` subtests "objects subfolder symlinked outside", "objects folder symlinked outside", "object path symlinked to an outside file" | The three cases this PR brings to Swift. |
+| Go tests to mirror | `core/objectstore/objectstore_test.go` `TestOpenObject` cases "symlink to an outside file", "missing object", "object path is a folder", "objects folder symlinked outside", "objects/ab symlinked outside" | The read refusals this PR brings to Swift. (`TestWriteIfAbsent`'s symlink cases are the write path, where an object link is replaced, not refused; they are not mirrored.) |
 
 **Precedent.** `core/objectstore` `openRegular` (S10-53 / S10-56, [#425](https://github.com/mendahu/provenencia/pull/425)) is the rule set to copy: a top-down `lstat` of each folder, then `lstat` of the object, regular file required before any open. Copy its order and its refusals; do not copy `os.Root`, which Swift has no equivalent of.
 
@@ -99,7 +104,9 @@ The app reads object files (likeness images, Source thumbnails, Artifact files) 
 | D-5 | The `lstat` calls run where `objectURL` is called today, including the main actor in `ThumbnailCache` and `ArtifactViewerModel`. | At most five `lstat` calls per object (`objects`, two shard folders, the object; one more for a deeper path) on a local disk; moving them is a performance change this PR does not need. | Moving `objectURL` into the detached decode task — because it changes `ThumbnailCache`'s structure for no measured cost. |
 | D-6 | Delete the `fileExists` check in `openObject` and in `ArtifactViewerModel.load`. | `objectURL` now returns `nil` for a missing file, so both checks are dead, and `fileExists` follows symlinks, so keeping it suggests the wrong rule. | Keeping them as belt and braces — because they are dead code that reads like a second rule. |
 | D-7 | No new copy and no new error state. A refused object shows exactly what a missing one shows. | The researcher can do the same thing in both cases (the file is not in this project), and a "symlink refused" message would add a string for a case only a crafted folder hits. | A distinct "unsafe file" message — because it costs an L10n key and a state per reader for no different action. |
-| D-8 | Version bump: patch, `0.2.0` → `0.2.1`, in `VERSION`, `core/version.go`, and `MARKETING_VERSION` together. | A security bugfix with no feature, per [`docs/versioning.md`](../../../versioning.md) "What bumps". | None — because the PR ships a behavior change. |
+| D-8 | No version bump. `VERSION` stays 0.2.0. | Spike PRs leave the product version to the release cut: `VERSION` last moved in #402, and S10-60, S10-61, S10-63 and every Spike 11 plan say none. | A patch bump in this PR alone — because three sibling PRs land the same week without one, and the release cut would bump past it anyway. |
+| D-9 | Every new or rewritten test builds its project with `ArtifactFileFixtures.uniqueProjectDir()` and `ArtifactFileFixtures.writePNG`. One new fixture, `ArtifactFileFixtures.linkToOutsidePNG(at:)` *(new)*, makes a fresh outside folder with `uniqueProjectDir()`, writes `outside.png` in it with `writePNG`, creates the symlink at the given absolute path pointing at it, and returns the outside folder path so the test removes it in a `defer` beside the project. | The add-swift-test skill says artifact files on disk come from `ArtifactFileFixtures`; T-5, T-10, T-11 and T-12 need the same hostile fixture, and the audit's Medium item 5 will reuse it. | A suite-private temp-project helper and a pasted base64 PNG — because `writePNG` already writes the folders and a decodable PNG, and the PNG literal already has three copies in `ThumbnailCacheTests`. |
+| D-10 | `ProjectFiles` holds `private static let objectsDir = "objects"`. A Go test, `TestSwiftObjectsDirMatchesGo` *(new)* in `api/ffi/swift_vocabulary_test.go`, reads `macos/App/Platform/ProjectFiles.swift`, matches `static let objectsDir = "(\w+)"`, and fails unless it equals `objectpath.Dir`. One sentence is added to the `openRegular` doc comment in `core/objectstore/objectstore.go`: the app mirrors these rules in `ProjectFiles.objectURL`, which changes with them. | The existing "Swift mirrors Go" guard is that test file (S10-61 D-8 uses it); a rule added on the Go side then finds its Swift copy. No Go behavior changes. | A comment only — because it drifts silently. |
 
 ## 6. Design
 
@@ -107,12 +114,14 @@ The app reads object files (likeness images, Source thumbnails, Artifact files) 
 
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
-| `ProjectFiles.isSafeObject(at:projectURL:)` *(new)*, private | func | `IngestMediaPolicy.validate(url:)` (final-component symlink check); `core/objectstore` `openRegular` | `IngestMediaPolicy` checks one picked file, not every folder under `objects/`, and returns ingest callouts. Go's rule cannot be called from Swift for a URL read. This private helper extends `objectURL` (D-1); it is not a second entry point. Searched: `isSymbolicLink`, `lstat`, `resolvingSymlinks`, `fileExists` under `macos/App`. |
-| `ProjectFilesTests` symlink and FIFO cases *(new)* and a temp-project helper inside that file *(new)* | helper | `ArtifactViewerModelTests` `makeTempProject` / `writeFile` (private to that suite); `ArtifactFileFixtures.uniqueProjectDir` | Use `ArtifactFileFixtures.uniqueProjectDir()` for the project path; the file and link writes are three lines of `FileManager` calls, private to the suite, like `ArtifactViewerModelTests` does. |
+| `ProjectFiles.isSafeObject(segments:projectURL:)` *(new)*, private | func | `IngestMediaPolicy.validate(url:)` (final-component symlink check); `core/objectstore` `openRegular` | `IngestMediaPolicy` checks one picked file, not every folder under `objects/`, and returns ingest callouts. Go's rule cannot be called from Swift for a URL read. This private helper extends `objectURL` (D-1); it is not a second entry point. Searched: `isSymbolicLink`, `lstat`, `resolvingSymlinks`, `fileExists` under `macos/App`. |
+| `ProjectFiles.objectsDir` *(new)*, private constant | constant | `core/objectpath` `Dir` | Swift cannot import Go constants; T-13 pins the two together (D-10). |
+| `ArtifactFileFixtures.linkToOutsidePNG(at:)` *(new)* | test helper | `ArtifactFileFixtures.writePNG`, `uniqueProjectDir`; `ArtifactViewerModelTests` private `makeTempProject` / `writeFile` / `minimalPNGData` | Extends the shared fixture enum the add-swift-test skill names, built on `writePNG` (D-9). The `ArtifactViewerModelTests` private helpers stay as they are (Out: no tidy). |
+| `TestSwiftObjectsDirMatchesGo` *(new)* | Go test | `api/ffi/swift_vocabulary_test.go` mirror tests | Same file and pattern (D-10). |
 
-**Builds on.** The `core/objectstore` read rules (`openObjectsRoot`, `openRegular`) and `objectpath.Dir`; the existing `nil` → missing mapping in each reader.
-**Deletes.** The `fileExists` check in `ProjectFiles.openObject` and in `ArtifactViewerModel.load` (D-6). The two lexical-only join tests become disk tests (T-1, T-2).
-**Next adds.** Audit Medium item 5 (type and pixel-size checks before `ThumbnailCache` decodes) runs after `objectURL` on a URL this PR has already made safe; it adds its check in `ThumbnailCache`, not here.
+**Builds on.** The `core/objectstore` read rules (`openObjectsRoot`, `openRegular`) and `objectpath.Dir`; the existing `nil` → missing mapping in each reader; `ArtifactFileFixtures`; the `swift_vocabulary_test.go` mirror guard.
+**Deletes.** The `fileExists` check in `ProjectFiles.openObject` and in `ArtifactViewerModel.load` (D-6). The two join tests and the three lexical tests become disk tests (T-1, T-2, T-12).
+**Next adds.** Audit Medium item 5 (type and pixel-size checks before `ThumbnailCache` decodes) runs after `objectURL` on a URL this PR has already made safe; it adds its check in `ThumbnailCache`, not here, and reuses `linkToOutsidePNG`. The audio and video viewer in [`audio-video-sources.md`](../../../ideas/audio-video-sources.md) reads through `ArtifactViewerModel.load`, so it gains the check with no change.
 
 ### Schema
 
@@ -130,14 +139,19 @@ None — no message changes.
 
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
-| Object path check | `ProjectFiles.objectURL` | `macos/App/Platform/ProjectFiles.swift` | After the existing lexical checks and before the prefix check: require `segments.first == "objects"` and `segments.count >= 2` (D-2). After the prefix check: `isSafeObject` walks `projectURL/objects`, then each further folder, then the object (D-3). |
+| Object path check | `ProjectFiles.objectURL` | `macos/App/Platform/ProjectFiles.swift` | The existing loop over `trimmed.split(separator: "/") where !part.isEmpty` also appends each `segment` to a local `var segments: [String] = []` (empty parts are skipped, so `objects//ab/x` gives `["objects", "ab", "x"]`). After the loop and before the prefix check: `guard segments.count >= 2, segments[0] == objectsDir else { return nil }` (D-2). After the prefix check: `guard isSafeObject(segments: segments, projectURL: projectURL) else { return nil }` (D-3). Any depth of folders between `objects` and the object is allowed; each one is checked. |
 
 Sketch:
 
 ```swift
+private static let objectsDir = "objects"
+
 static func objectURL(projectDir: String, relPath: String) -> URL? {
-    // existing lexical join and refusals, plus: first segment == objectsDir, count >= 2
-    // existing prefix check
+    // existing trim and projectURL
+    var segments: [String] = []
+    // existing loop: refusals, url.appendPathComponent(segment), segments.append(segment)
+    guard segments.count >= 2, segments[0] == objectsDir else { return nil }
+    // existing standardizedFileURL + prefix check
     guard isSafeObject(segments: segments, projectURL: projectURL) else { return nil }
     return resolved
 }
@@ -145,9 +159,20 @@ static func objectURL(projectDir: String, relPath: String) -> URL? {
 /// Mirrors core/objectstore openObjectsRoot + openRegular: every folder from
 /// objects/ down is a real folder and the object is a regular file (lstat,
 /// never followed). The project folder path itself may be a symlink.
-private static func isSafeObject(segments: [String], projectURL: URL) -> Bool
-// lstat(path, &st); (st.st_mode & S_IFMT) == S_IFDIR for segments[0..<count-1]; == S_IFREG for the last
+private static func isSafeObject(segments: [String], projectURL: URL) -> Bool {
+    var url = projectURL
+    for (i, segment) in segments.enumerated() {
+        url.appendPathComponent(segment, isDirectory: false)
+        var st = stat()
+        guard lstat(url.path, &st) == 0 else { return false }
+        let kind = st.st_mode & S_IFMT
+        guard kind == (i == segments.count - 1 ? S_IFREG : S_IFDIR) else { return false }
+    }
+    return true
+}
 ```
+
+`lstat`, `stat`, and `S_IFMT` / `S_IFDIR` / `S_IFREG` come from Darwin through `import Foundation`; `url.path` is the path string passed to `lstat`.
 
 States: a refused object is the missing state each reader already has: `ThumbnailCache` `.missing` (placeholder glyph), `ArtifactViewerEmptyReason.missingFile`, `openObject` → `false` (D-7). Accessibility: unchanged.
 
@@ -158,30 +183,36 @@ None — no new copy (D-7).
 ## 7. Steps
 
 **STEP-1 — Check the object on disk in `objectURL`**
-Files: `macos/App/Platform/ProjectFiles.swift`.
-Do: Add the `objects` first-segment rule (D-2) and the private `isSafeObject` `lstat` walk (D-3). Update the `objectURL` doc comment to say it returns `nil` for a missing file, a symlink at or under `objects/`, or anything that is not a regular file. Keep the signature (D-1).
-Check: the Mac target builds: `xcodebuild build -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS'` succeeds.
+Files: `macos/App/Platform/ProjectFiles.swift`, `api/ffi/swift_vocabulary_test.go`, `core/objectstore/objectstore.go` (doc comment only).
+Do: Add `objectsDir`, the `segments` list, the `objects` first-segment rule (D-2), and the private `isSafeObject` `lstat` walk (D-3), as in §6. Update the `objectURL` doc comment to say it returns `nil` for a path not under `objects/`, a missing file, a symlink at or under `objects/`, or anything that is not a regular file. Keep the signature (D-1). Add T-13 and the `openRegular` comment sentence (D-10).
+Check: `xcodebuild build -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS'` succeeds; `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/ -run TestSwiftObjectsDirMatchesGo` passes. The two old join tests are expected to fail until STEP-2 rewrites them.
 
 **STEP-2 — Prove each refusal**
-Files: `macos/ProvenenciaTests/ProjectFilesTests.swift`. Skill: `add-swift-test`.
-Do: Rewrite `objectURLJoinsNormalContentAddressedPath` and `objectURLJoinsPathWithExtension` to write real files under a temp project from `ArtifactFileFixtures.uniqueProjectDir()` (T-1, T-2). Add T-3 to T-9. Remove each temp project in a `defer`. The lexical tests stay as they are (they still return `nil`).
+Files: `macos/ProvenenciaTests/ProjectFilesTests.swift`, `macos/ProvenenciaTests/ArtifactFileFixtures.swift`. Skill: `add-swift-test`.
+Do: Add `ArtifactFileFixtures.linkToOutsidePNG(at:)` (D-9). Rewrite `objectURLJoinsNormalContentAddressedPath` and `objectURLJoinsPathWithExtension` onto a real temp project (T-1, T-2). Rewrite the three lexical tests onto a real temp project as T-12. Add T-3 to T-9. Remove each temp project, and each outside folder `linkToOutsidePNG` returns, in a `defer`.
 Check: `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/ProjectFilesTests` passes.
 
 **STEP-3 — Drop the dead existence checks and test the readers**
-Files: `macos/App/Platform/ProjectFiles.swift` (`openObject`), `macos/App/Features/ArtifactViewer/ArtifactViewerModel.swift` (`load`), `macos/ProvenenciaTests/ThumbnailCacheTests.swift`, `macos/ProvenenciaTests/ArtifactViewerModelTests.swift`. Skill: `add-swift-test`.
-Do: Delete the `fileExists` guard in `openObject` and the `fileExists` guard after `objectURL` in `ArtifactViewerModel.load` (D-6). Add T-10 and T-11.
-Check: `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/ThumbnailCacheTests -only-testing:ProvenenciaTests/ArtifactViewerModelTests -only-testing:ProvenenciaTests/ProjectFilesTests` passes.
+Files: `macos/App/Platform/ProjectFiles.swift` (`openObject`), `macos/App/Features/ArtifactViewer/ArtifactViewerModel.swift` (`load`), `macos/ProvenenciaTests/ThumbnailCacheTests.swift`, `macos/ProvenenciaTests/ArtifactViewerModelTests.swift`, `macos/ProvenenciaTests/ProjectFilesTests.swift`. Skill: `add-swift-test`.
+Do: Delete the `fileExists` guard in `openObject` and the `fileExists` guard after `objectURL` in `ArtifactViewerModel.load` (D-6); `openObject`'s doc comment stays ("Returns false when missing or when `relPath` is rejected by `objectURL`" is still true). Add T-10 and both halves of T-11 (the viewer test in `ArtifactViewerModelTests.swift`, the `openObject` test in `ProjectFilesTests.swift`).
+Check: `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/ThumbnailCacheTests -only-testing:ProvenenciaTests/ArtifactViewerModelTests -only-testing:ProvenenciaTests/ProjectFilesTests -only-testing:ProvenenciaTests/CitationComposerDepictionTests -only-testing:ProvenenciaTests/PersonDetailTests` passes.
 
-**STEP-4 — Version and docs**
-Files: `VERSION`, `core/version.go`, `macos/Provenencia.xcodeproj/project.pbxproj` (`MARKETING_VERSION`), `docs/source-layer-data-model.md`, `docs/application-stack.md`, `docs/deployment-plan/spike-10-followups/deployment-plan.md`, this plan.
-Do: Bump to `0.2.1` (D-8). In `docs/source-layer-data-model.md`, the storage paragraph that says "Object files are read, written, and removed only through `core/objectstore`" becomes: Go reads, writes, and removes object files only through `core/objectstore`; the app reads them by their relative path through `ProjectFiles.objectURL`, which refuses the same things (a path not under `objects/`, a symlinked `objects/`, shard folder, or object, and anything that is not a regular file). In `docs/application-stack.md` **Read path**, add one sentence: Swift opens a relative path only through `ProjectFiles.objectURL`, which applies those refusals. Then the Definition of done lines for the map row and this plan.
-Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10-followups/prs/S10-62-object-symlinks.md` reports no errors; `scripts/check-pr.sh` prints `check-pr: PASS`.
+**STEP-4 — Docs and guidance**
+Files: `docs/source-layer-data-model.md`, `docs/application-stack.md`, `.agents/skills/review-pr/lenses/security.md`, `.agents/skills/ship-pr/SKILL.md`, `.cursor/rules/macos-client.mdc`, `docs/deployment-plan/spike-10-followups/deployment-plan.md`, this plan.
+Do:
+- In `docs/source-layer-data-model.md`, replace the sentence that begins "Object files are read, written, and removed only through `core/objectstore`" (it ends "…removes the shard folders it leaves empty.") with: "Go reads, writes, and removes object files only through `core/objectstore`, inside the project's objects/ folder; a symlinked objects/ or a symlink out of it is refused, and a removal also removes the shard folders it leaves empty. The app reads an object by its relative path only through `ProjectFiles.objectURL`, which refuses the same things: a path not under objects/, a symlinked objects/, shard folder, or object, and anything that is not a regular file." The next sentence ("A depiction value points at such a File…") stays.
+- In `docs/application-stack.md` **Read path**, after "Swift already holds the folder it opened and reads the file with AppKit/SwiftUI.", insert: "It opens a relative path only through `ProjectFiles.objectURL`, which refuses what `core/objectstore` refuses."
+- In `.agents/skills/review-pr/lenses/security.md`, the Object store row's Where cell becomes: "`core/objectpath`, `core/objectstore` (every Go object read, write, install, and removal goes through an `os.Root` on objects/); Swift reads: `macos/App/Platform/ProjectFiles.swift` `objectURL` (an `lstat` walk from objects/)".
+- In `.agents/skills/ship-pr/SKILL.md`, add `macos/App/Platform/ProjectFiles.swift` and `macos/App/Platform/ThumbnailCache.swift` to the Security row's routing paths.
+- In `.cursor/rules/macos-client.mdc`, add one bullet: "Open a catalog `relPath` only through `ProjectFiles.objectURL` (or `ThumbnailCache` / `CachedThumbnail`, which call it); never join it to `projectDir` yourself."
+- Then the Definition of done lines for the map row and this plan, after the draft PR has a number (implement-pr step 8).
+Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10-followups/prs/S10-62-object-symlinks.md` reports no errors; `scripts/check-pr.sh` prints `check-pr: PASS` on a macOS host.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
 
 ## 8. Tests
 
-All Swift Testing, in existing files (no `project.pbxproj` wiring). Each test makes its own project with `ArtifactFileFixtures.uniqueProjectDir()` (it returns a path only; create the folder with `FileManager.default.createDirectory(atPath:withIntermediateDirectories: true)`), writes the 1×1 PNG bytes `ThumbnailCacheTests.loadsAndHitsCache` already uses, makes links with `FileManager.default.createSymbolicLink(atPath:withDestinationPath:)`, and makes the outside target in a second temp folder.
+Swift tests are Swift Testing, in existing files (no `project.pbxproj` wiring). Each test makes its own project path with `ArtifactFileFixtures.uniqueProjectDir()`, writes real files with `ArtifactFileFixtures.writePNG(projectDir:relPath:)` (it creates the folders), makes an empty folder with `FileManager.default.createDirectory(atPath:withIntermediateDirectories: true)`, and makes an outside link with `ArtifactFileFixtures.linkToOutsidePNG(at:)` (folder links with `FileManager.default.createSymbolicLink(atPath:withDestinationPath:)` to a folder from `uniqueProjectDir()` filled with `writePNG`). Every project and outside folder is removed in a `defer`. A link test also asserts that the same `relPath` returns a non-nil URL when the file is regular, so it cannot pass because the fixture failed. T-6 carries the `.timeLimit(.minutes(1))` trait so a regression fails instead of hanging the run.
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
@@ -196,6 +227,8 @@ All Swift Testing, in existing files (no `project.pbxproj` wiring). Each test ma
 | T-9 | Swift | `ProjectFilesTests.swift` `objectURLAllowsSymlinkedProjectFolder` *(new)* | a link to the real project folder used as `projectDir`, real file `objects/ab/cd/x.png` → non-nil URL | AC-1.7, D-3 |
 | T-10 | Swift | `macos/ProvenenciaTests/ThumbnailCacheTests.swift` `symlinkedObjectCachesSentinel` *(new)* | object symlinked to an outside PNG → `image` is `nil`, `entryCount == 1` | AC-1.8 |
 | T-11 | Swift | `macos/ProvenenciaTests/ArtifactViewerModelTests.swift` `symlinkedObjectSetsMissingFile` *(new)*; `ProjectFilesTests.swift` `openObjectReturnsFalseForSymlinkedObject` *(new)* | object symlinked to an outside PNG, `mediaType` `image/png` → `emptyReason == .missingFile`; `openObject` → `false` | AC-1.9, AC-1.10, D-6 |
+| T-12 | Swift | `ProjectFilesTests.swift` `objectURLRejectsDotSegments`, `objectURLRejectsHomeRelativeSegment`, `objectURLRejectsParentDirectorySegments` (rewritten) | real file `objects/ab/cd/x`; `objects/./ab/cd/x`, `objects/~/x`, `objects/ab/../ab/cd/x` → `nil`, while `objects/ab/cd/x` → non-nil | D-1 (the lexical refusals still hold on their own) |
+| T-13 | Go | `api/ffi/swift_vocabulary_test.go` `TestSwiftObjectsDirMatchesGo` *(new)* | `objectsDir` in `ProjectFiles.swift` → equals `objectpath.Dir` (`"objects"`) | D-10 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `ArtifactViewerModelTests`, `ThumbnailCacheTests`, `CitationComposerDepictionTests`, `PersonDetailTests`, and any test that writes an object under a path not starting `objects/`.
 
@@ -208,11 +241,12 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `A
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left (none added: D-7)
 - [ ] UI matches the brief inventory; no new kit primitive unless the brief marks it New (no brief: no UI change)
-- [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together): 0.2.1
+- [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together): none (D-8)
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] docs/deployment-plan/spike-10-followups/deployment-plan.md: S10-62 row status → Landed #N (this folder has no completed.md)
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated): not gated
 - [ ] Domain doc updated: docs/source-layer-data-model.md storage paragraph and docs/application-stack.md read path (STEP-4)
+- [ ] Guidance updated: security lens Object store row, ship-pr Security routing paths, macos-client.mdc bullet (STEP-4)
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 
@@ -236,6 +270,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `A
 - A Swift caller of `ProjectFiles.objectURL` other than `ThumbnailCache.image`, `ArtifactViewerModel.load`, and `ProjectFiles.openObject` exists at your base (`rg "objectURL\(" macos/App`).
 - A `relPath` that reaches Swift from Go does not start with `objects/` (a test or a fixture in `FakeStore.swift` that only passes without D-2).
 - `lstat` is not callable from `ProjectFiles.swift` with `import Foundation` (Darwin) on the deployment target.
+- No macOS host with Xcode is available: every Swift check in this PR is `xcodebuild`, and `scripts/check-pr.sh` skips Xcode tests off macOS.
 - An existing test in `ArtifactViewerModelTests`, `ThumbnailCacheTests`, or `CitationComposerDepictionTests` fails after STEP-1 for a reason other than a missing `objects/` file.
 
 ## 12. Open questions
