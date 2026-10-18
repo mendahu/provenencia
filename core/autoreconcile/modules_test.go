@@ -209,7 +209,7 @@ func TestCompatibleIgnoresAliases(t *testing.T) {
 		Key: "t", Kind: valuecompare.AliasNickname,
 		Roles: []valuecompare.NameRole{valuecompare.RoleGiven, valuecompare.RoleNick, valuecompare.RoleUntyped},
 		Sets:  [][]string{{"jim", "james"}},
-	}})
+	}}, rules.Words)
 	a := nm(1, "given=Jim|surname=Robins").Value
 	b := nm(2, "given=James|given=Kenneth|surname=Robins").Value
 	if Compatible(rules, propertymeta.ValueTypeName, a, b) {

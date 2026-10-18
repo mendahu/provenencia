@@ -3,6 +3,7 @@ package namealiases
 import (
 	"database/sql"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/google/uuid"
@@ -139,6 +140,36 @@ func TestUserAndPluginRowsScore(t *testing.T) {
 	assertScore(t, rules, "Plugh", "Xyzzy", matchregistry.Default().Value.Words.AliasCredit)
 	assertScore(t, rules, "Pepe", "José", matchregistry.Default().Value.Words.AliasCredit)
 	assertScore(t, rules, "Jas.", "James", matchregistry.Default().Value.Words.AliasCredit)
+	assertScore(t, rules, "Jim", "James", matchregistry.Default().Value.Words.AliasCredit)
+}
+
+// TestInstallStoresComparisonTokens: a set is stored as the tokens a name
+// produces, once each, so case and a repeated token cannot split or collide.
+func TestInstallStoresComparisonTokens(t *testing.T) {
+	t.Cleanup(ResetAliasTablesForTest)
+	Register(valuecompare.AliasTable{
+		Key: "test-nicks", Origin: vocabkey.OriginUser, Label: "Test", Kind: valuecompare.AliasNickname,
+		Roles: aliasPartRoles(),
+		Sets:  [][]string{{"Jim", "JAMES"}, {"Jim", "jim", "James"}},
+	})
+	c := newCatalog(t)
+	if err := Install(c); err != nil {
+		t.Fatal(err)
+	}
+	db := mustDB(t, c)
+	tables, err := Load(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := tableByKey(t, tables, "test-nicks")
+	want := [][]string{{"james", "jim"}, {"james", "jim"}}
+	if !reflect.DeepEqual(got.Sets, want) {
+		t.Fatalf("stored sets %v, want %v", got.Sets, want)
+	}
+	rules, err := Rules(c.Graph(), db, matchregistry.Default().Value)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assertScore(t, rules, "Jim", "James", matchregistry.Default().Value.Words.AliasCredit)
 }
 

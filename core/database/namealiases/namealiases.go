@@ -61,7 +61,7 @@ func Install(c *database.Catalog) error {
 			return err
 		}
 		for i, set := range table.Sets {
-			for _, token := range set {
+			for _, token := range aliasTokens(set) {
 				if _, err := tx.Exec(`INSERT INTO name_alias_members (table_id, set_idx, token)
 					VALUES (?, ?, ?)`,
 					stored, i, token); err != nil {
@@ -218,6 +218,6 @@ func Rules(g *graphcache.Graph, q Querier, base valuecompare.Rules) (valuecompar
 }
 
 func withAliases(base valuecompare.Rules, tables []valuecompare.AliasTable) valuecompare.Rules {
-	base.Names.Aliases = valuecompare.NewAliasIndex(tables)
+	base.Names.Aliases = valuecompare.NewAliasIndex(tables, base.Words)
 	return base
 }

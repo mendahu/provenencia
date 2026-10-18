@@ -82,7 +82,7 @@ var (
 
 // withTables reads the alias tables.
 func withTables(tables ...valuecompare.AliasTable) func(*valuecompare.Rules) {
-	return func(r *valuecompare.Rules) { r.Names.Aliases = valuecompare.NewAliasIndex(tables) }
+	return func(r *valuecompare.Rules) { r.Names.Aliases = valuecompare.NewAliasIndex(tables, matchregistry.Default().Value.Words) }
 }
 
 // flipped is the Western pattern with given and surname trading roles.
@@ -339,7 +339,7 @@ func TestNameKey(t *testing.T) {
 	}
 	// Jim ~ James are Equivalent with a nickname table, and their keys differ.
 	tables := rules
-	tables.Names.Aliases = valuecompare.NewAliasIndex([]valuecompare.AliasTable{nicknameTable})
+	tables.Names.Aliases = valuecompare.NewAliasIndex([]valuecompare.AliasTable{nicknameTable}, rules.Words)
 	if res, _ := valuecompare.Compare(nv("g=Jim"), nv("g=James"), tables); res.Relation != valuecompare.Equivalent {
 		t.Fatalf("Jim / James with the table: %s", res.Relation)
 	}
