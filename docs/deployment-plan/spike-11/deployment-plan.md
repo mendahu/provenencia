@@ -67,7 +67,7 @@ These are the calls for this spike. PR plans treat them as binding.
 - **Bands come from evidence** ([bands](comparison-layers.md#bands)): similarity only gates candidates and gives the first sort. The accept bar is its own setting. A conflict shows a contested marker; it never caps the band.
 - **Frequency weighting is gone**, for names, event types and toponyms ([frequency](comparison-layers.md#frequency)).
 - **One match registry** ([match registry](comparison-layers.md#match-registry)): `core/matchregistry`, one file per section (value, subject, segment, alignment, evidence), typed keys, each layer gets its section as an argument. Catalog data (aliases, name patterns) is passed in; data-model facts (cardinality, term flags, bridge kinds) stay in the catalog. A guard test fails on numeric literals other than 0 and 1 in layer packages; another fails when the knob inventory drifts from the registry.
-- **`core/database/matching` is deleted.** `ForSubject` and `ForEntity` have no callers outside tests; merge hints are rebuilt on subject compare over two profiles when their UI exists. Its one live function, `SubjectsValues` (called from `promotealign/layer.go`), moves to the loader that feeds `propertycompare` and `subjectprofile` in S11-13.
+- **`core/database/matching` is deleted.** `ForSubject` and `ForEntity` have no callers outside tests; merge hints are rebuilt on subject compare over two profiles when their UI exists. Its one live function, `SubjectsValues` (called from `promotealign/layer.go`), is replaced in S11-13 by the loader that feeds `subjectprofile`, which reads the layer's Observations from the cached Source graph.
 - **The reconciler keeps its own decisions** and builds them on value compare. Grouping policy (user, 2026-10-17, S11-06): values group on `Same` and fold on `Contains`; `Equivalent` (an accent fold, an alias) never groups; text never folds; the reconciler reads `ABT` as a range, as matching does.
 - **Pure value types and kinds come first.** The date and name value structs, their display helpers, the name part-type registry, and the value-type and cardinality constants move out of `core/database` into pure packages (S11-22), and primary Subject kinds get one home (S11-23), before any layer is built. No layer defines its own copy.
 - **One matching skill, grown with the layers.** S11-02 adds a skill (working name `add-match-rule`) for the steps every change repeats: the knob in its registry section, its inventory row, contract tests, the guard list entry. S11-10, S11-14 and S11-16 extend it. Each migration PR also updates the domain docs and idea files it makes false (`matching.md`, `promote-graph-alignment.md`, `conclusion-reconciliation.md`, `seeded-vocabulary.md`, `ideas/daitch-mokotoff.md`, `ideas/archive/name-matching-enhancements.md`).
@@ -100,7 +100,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-11 | Subject profile and entity compare | 3 | `subjectprofile.Build`: strict profile, denied as negatives, `Excluding` | — | S11-10, S10-66 | [plan](prs/S11-11-subject-profile.md) | Landed #476 |
 | S11-12 | Lifespan for people | 3 | Profile builder derives a lifespan; subject compare checks it | — | S11-11 | [plan](prs/S11-12-lifespan.md) | Landed #480 |
 | S11-24 | Delete frequency weighting | 3 | `Stats.ValueFreq`, m / u priors, frequency scales and their benchmark go | — | S11-05 | [plan](prs/S11-24-delete-frequency.md) | Landed #483 |
-| S11-13 | Migrate Promote scoring onto subject compare | 3 | Property scoring, seeding, duplicate rows; values loader moves; delete `core/match`, `core/database/matching` | — | S11-12, S11-24 | — | Scoped |
+| S11-13 | Migrate Promote scoring onto subject compare | 3 | Property scoring, seeding, duplicate rows; values loader moves; delete `core/match`, `core/database/matching` | — | S11-12, S11-24 | [plan](prs/S11-13-promote-subject-compare.md) | Planned |
 | S11-14 | Segment compare | 4 | `segmentcompare`, typed bridge keys, birth / death cardinality, one-hop credit | — | S11-13 | — | Scoped |
 | S11-15 | Shortlist index | 4 | Key → handles per kind on `graphcache`; registry shortlist keys | — | S11-13 | — | Scoped |
 | S11-16 | Rewrite graph alignment | 4 | Layer 6 procedure, bands from evidence, accept bar; old walk and registry deleted | — | S11-14, S11-15 | — | Scoped |
@@ -327,7 +327,7 @@ Also builds `core/subjectcompare`'s `invariants_test.go` lead groups (`kindGroup
 **Ships.** `graphalign` scores candidates' properties with entity compare; `promotealign` seeds with it instead of `match.Rank`; duplicate-row checks (`alikeNew`, `pairNode`) use subject compare. `matching.SubjectsValues` moves to the loader that feeds `propertycompare` and `subjectprofile`. Delete `core/match` and `core/database/matching`.
 **Not this PR.** Segments and the walk (slice 4): the old walk stays until S11-16, calling the new scoring.
 **Check.** Golden and sparse cases pass; a birth is never proposed on a death; the packages are gone and `go build ./...` passes.
-**Also (from S11-12 review).** A person whose own dated events contradict each other (born after they died, an event outside their window) gets no lifespan by design (S11-12 D-12). Where this PR first shows a lifespan or a lifespan outcome to the researcher, say why it is missing instead of leaving it out silently. If nothing here shows lifespans yet, carry this line to the PR that first does.
+**Lifespan on the page.** Moved to S11-20 (user, 2026-10-18): this PR keeps the derived lifespan off the sheet and the row reason.
 **Context.** Rule "`core/database/matching` is deleted".
 
 #### S11-24 — Delete frequency weighting
@@ -395,6 +395,7 @@ Also builds `core/subjectcompare`'s `invariants_test.go` lead groups (`kindGroup
 **Ships.** The Promote sheet as S11-D2 draws it: "why suggested" summary, then "What's the evidence that this record is <entity>?", property sections, relationship lines with their checkboxes, expandable collapsed lines; all copy through L10n.
 **Not this PR.** Engine (S11-19).
 Likeness comparisons show the two crops, which S10-36 was to add in Spike 10; pinning one writes the same kind of pin a name pin writes.
+**Lifespan (from S11-12 review, carried by S11-13).** Word the person's lifespan line (`Comparison.Derived`), and where a person has no lifespan because their own dated events contradict each other (S11-12 D-12), say so instead of leaving it out silently.
 **Check.** The sheet reads as sentences; no "Through <name>"; checking a relationship line pins it; two people with a likeness show both images.
 **Context.** S11-D2; [wording](claim-evidence.md#wording); Spike 10 S10-54 (depiction values over the FFI) lands first.
 
