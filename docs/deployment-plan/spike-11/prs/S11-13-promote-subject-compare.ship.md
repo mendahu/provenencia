@@ -55,4 +55,4 @@ Nits (logged): `MNT-12 · .agents/skills/add-match-rule/SKILL.md:30 · Rules.Der
 No new blockers; no Fix plan 2.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: PRF-1 (major, user call → S11-15, noted on its Ships), MNT-3, MNT-4, MNT-5, PRF-2 (S11-19 / S11-25) · to user: PRF-1 (answered: defer) · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: PRF-1 (major, user call → S11-15, noted on its Ships), MNT-3, MNT-4, MNT-5, PRF-2 (S11-19 / S11-25) · to user: PRF-1 (answered: defer) · CON miss: none
