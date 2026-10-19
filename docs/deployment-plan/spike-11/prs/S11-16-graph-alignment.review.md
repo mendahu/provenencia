@@ -1,7 +1,7 @@
 # Review — S11-16 Rewrite graph alignment
 
-**Verdict:** Fits with changes — Not ready (round 1); every finding answered below. The plan stays **Blocked — on S11-15**, so round 2 runs with the refresh after S11-15 lands, against its Landed note.
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes (round 2); every finding fixed. Round 1 ran on the draft against `219a3b8`; round 2 on the refresh against `8915340` (S11-15 merged).
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 - None. The candidate gate (similarity, 0.5) was asked during planning and answered 2026-10-19.
@@ -11,6 +11,7 @@
 - An unplaced neighbor lines up at neighbor evidence ≥ 2 (`segment.UnplacedAlike`, new estimate) and differs below 0 (D-3).
 - Move reasons are three new `Reason` codes in a separate `Row.Move`; `Row.Reason` keeps its meaning (D-9).
 - Bridge properties are not compared: no golden needs them (D-15).
+- A row whose only candidate is under the weak band comes back Skip, not New, keeping `promote-graph-alignment.md` principle 5 (D-8, AC-2.6).
 - Ported tests may change expected values only where a named Decision causes it; the sparse, birth-vs-death, lifespan, obituary and part-of tests keep targets and bands, or the implementer stops (D-13).
 
 ## Round 1
@@ -65,3 +66,34 @@
 
 ### X-8 · minor · Small ambiguities
 **Answer:** Fixed. D-8 says which Skip rows are contested; STEP-3 names the fallback call and the rule for a changed expectation; MNT-3 scope is every comment naming deleted `core/match` / `graphalign` identifiers; D-6 keeps the most-evidence unplaced result per link; AC-2.2's EVT-1 is a birth in 1817; STEP-7 gives the benchmark command.
+
+## Round 2
+
+All round-1 answers were checked against the plan and the tree; both reviewers found them landed.
+
+### M-1 · blocker · `newPairSegments` decides "an unplaced neighbor lines up" with its own accept-bar gate
+**Answer:** Fixed. D-3: `newPairSegments` compares a different neighbor with `Unplaced` and counts agree or partial; its `AcceptScore` gate goes. "What stays" and STEP-4 name it.
+
+### M-2 · major · The old nomination and accept path is missing from Deletes and the grep
+**Answer:** Fixed. Deletes lists `pushFromAnchor`, `enqueue`, `accept`, `scoredCand`, `sortCands`, `scoreCandidate`; `lostContest` stays; `queueItem` gains `version`; STEP-4's grep names them.
+
+### M-3 · minor · `subject.go` comments end in a bare `ConflictPenalty`
+**Answer:** Fixed in D-14 and STEP-8.
+
+### M-4 · minor · A false `Result.Neighbor` doc and a copied Apart block
+**Answer:** Fixed. D-3 adds an `apart` helper both readings call and rewrites the field doc.
+
+### X-1 · blocker · Who sets `via` when a nominated handle is already a candidate
+**Answer:** Fixed. D-7: a nomination sets `via` on a candidate without one and keeps an existing one; D-13 pins reasons and `Via` in the Promote tests.
+
+### X-2 · major · A weak candidate turns New into Skip
+**Answer:** Fixed. Kept as Skip (principle 5); said under "What changes", AC-2.6 and T-6.
+
+### X-3 / X-4 · minor · §8 has no "stats" line
+**Answer:** Fixed. The §8 edit and the Docs row mention are dropped (S11-15 already rewrote §8).
+
+### X-5 · minor · `checkPure` change under-specified
+**Answer:** Fixed. D-11 states the rule per hop and per target.
+
+### X-6 · minor · Small gaps
+**Answer:** Fixed. MNT-3 scope is a grep; `withCandidates` returns a `Canon`; a released Subject may re-place on the same handle (`Move` nil); STEP-2 says `alikeNew` / `newPairSegments` read `AcceptBar` until STEP-4.
