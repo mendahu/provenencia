@@ -393,21 +393,14 @@ final class SourcesModel {
         isSaving = true
         defer { isSaving = false }
         do {
-            let created = try await store.createSource(
+            let (created, effects) = try await store.createSource(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 sourceTypeID: draft.sourceTypeID,
                 title: draft.trimmedTitle,
                 description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
             )
-            session.apply(.createdSource)
-            let listKey = CatalogQueryKey.sourcesList(project: session.projectKey)
-            if let listHandle: QueryHandle<[CatalogSource]> = session.queryHandle(listKey) {
-                var rows = listHandle.value ?? []
-                rows.insert(created, at: 0)
-                session.setQueryValue(listKey, value: rows)
-            }
-            syncCatalogCounts()
+            session.apply(effects, .createdSource)
             isAdding = false
             typeError = nil
             titleError = nil
@@ -424,7 +417,7 @@ final class SourcesModel {
         }
     }
 
-    /// Refreshes sidebar totals from the cached list (after warm load or create).
+    /// Refreshes sidebar totals from the cached list (after a warm load).
     func syncCatalogCounts() {
         catalogCounts?.publishSources(sources.count)
     }

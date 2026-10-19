@@ -347,20 +347,16 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         sourceTypeID: String,
         title: String,
         description: String
-    ) async throws -> CatalogSource {
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
         return withState {
-            let rev = nextAuditRevision
-            nextAuditRevision += 1
             let source = CatalogSource(
                 id: UUID().uuidString.lowercased(),
                 ref: "SRC-FAKE1",
                 sourceTypeID: sourceTypeID,
                 title: title,
-                description: description,
-                updated: CatalogActivity(revision: rev)
+                description: description
             )
-            sourcesByProject[projectDir, default: []].append(source)
-            return source
+            return insertSource(source, projectDir: projectDir, evidence: false)
         }
     }
 
@@ -408,10 +404,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 }
                 copy.hasArtifact = true
             }
-            sourcesByProject[projectDir, default: []].append(copy)
-            let effects = bumpSource(copyID, evidence: !chosen.isEmpty)
-            let stored = sourcesByProject[projectDir]?.first(where: { $0.id == copyID }) ?? copy
-            return (stored, effects)
+            return insertSource(copy, projectDir: projectDir, evidence: !chosen.isEmpty)
         }
     }
 
@@ -3328,6 +3321,18 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// changes its evidence (artifacts, Subjects, Citations, Observations), or
     /// `.empty` when the Source is not in any list.
     @discardableResult
+    /// Appends a new Source and bumps it like the engine's `sources` insert.
+    /// Call inside `withState`.
+    private func insertSource(
+        _ source: CatalogSource,
+        projectDir: String,
+        evidence: Bool
+    ) -> (CatalogSource, CatalogWriteEffects) {
+        sourcesByProject[projectDir, default: []].append(source)
+        let effects = bumpSource(source.id, evidence: evidence)
+        return (sourcesByProject[projectDir]?.first { $0.id == source.id } ?? source, effects)
+    }
+
     private func bumpSource(_ sourceID: String?, evidence: Bool) -> CatalogWriteEffects {
         guard let sourceID else { return .empty }
         for (project, var list) in sourcesByProject {

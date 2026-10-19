@@ -233,28 +233,50 @@ struct SourcesModelTests {
         #expect(!model.canSubmitAdd)
     }
 
-    @Test func createReturnsSourceAndPublishesCount() async {
-        let store = FakeStore()
-        let counts = CatalogCounts(projectDir: projectDir, store: store)
-        let (model, session) = makeModel(
-            store: store,
-            types: [photoType()],
-            catalogCounts: counts
-        )
+    @Test func createReturnsSourceAndRefreshesList() async {
+        let (model, session) = makeModel(types: [photoType()])
         await warmLists(model, session: session)
-        #expect(counts.sources == 0)
+        session.apply(location: .sectionRoot(.sources))
 
         model.openAdd()
         model.draft.sourceTypeID = "t1"
         model.draft.title = "  Family album  "
         model.draft.description = "Nan's prints"
         let created = await model.create()
+        if let handle: QueryHandle<[CatalogSource]> = session.queryHandle(
+            SourcesModel.sourcesListKey(for: session)
+        ) {
+            await waitForQuery(handle)
+        }
 
         #expect(!model.isAdding)
-        #expect(model.sources.count == 1)
         #expect(created?.title == "Family album")
-        #expect(counts.sources == 1)
+        #expect(model.sources.count == 1)
         #expect(model.toast != nil)
+    }
+
+    @Test func createRefreshesListThroughSession() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "Deed", typeID: "t1")],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+        session.apply(location: .sectionRoot(.sources))
+        store.sourcesByProject[projectDir]?.append(source(id: "s2", title: "Will", typeID: "t1"))
+
+        model.openAdd()
+        model.draft.sourceTypeID = "t1"
+        model.draft.title = "Family album"
+        _ = await model.create()
+        if let handle: QueryHandle<[CatalogSource]> = session.queryHandle(
+            SourcesModel.sourcesListKey(for: session)
+        ) {
+            await waitForQuery(handle)
+        }
+
+        #expect(Set(model.sources.map(\.title)) == ["Deed", "Will", "Family album"])
     }
 
     @Test func cancelAddDoesNotCreate() async {
