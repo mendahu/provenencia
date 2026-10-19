@@ -378,14 +378,14 @@ Also builds `core/subjectcompare`'s `invariants_test.go` lead groups (`kindGroup
 
 #### S11-19 — Claim evidence query
 
-**Ships.** A Go query from a row's target and its neighbors' targets: property lines per member through property compare, identical values collapsed, relationship lines through segment compare with bundles, the registry evidence section (pin defaults, defining properties), wording keys from cause codes.
+**Ships.** A Go query from a row's target and its neighbors' targets: property lines per member through property compare, identical values collapsed, relationship lines through segment compare with bundles, the registry evidence section (pin defaults, defining properties), wording keys from cause codes. A line's points come from `subjectcompare.Points` given the property's `propertycompare.Result`: reshape `Points` (or add one helper beside it) so no caller reads the speaking similarity itself, and drop `Compare`'s inline partial arithmetic and `promotealign`'s private `similarity` (S11-13 MNT-3). The Source side's Observations come from the Source graph through `promotealign`'s `decode`, the one row decoder, not a second SQL read like `loadExhibitObservations` (S11-13 MNT-4).
 **Not this PR.** The RPC, Apply defaults and Swift (S11-25). If the plan finds the pin tables can't hold one incoming Observation against many member Observations, a migration PR is cut ahead of it.
 **Check.** Five named members give one collapsed name line of five; a matching birth gives one relationship line whose bundle holds every Observation behind it.
 **Context.** [`claim-evidence.md`](claim-evidence.md); [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §9.
 
 #### S11-25 — Claim evidence RPC and pin policy
 
-**Ships.** A lazy per-row RPC over S11-19's query. Apply computes default pins in Go for rows whose sheet was never opened. Swift's pin drafting (`PromoteFlow.swift` `draftedPins`, `draftedArgument`, `kept.pins`) moves onto the RPC. `PromoteGraphAlignmentRow.comparisons` (field 9), `attachExhibits`, `pairExhibits`, `withRowLines` and `refLine` are deleted. Pins write one incoming Observation against many member Observations; Done backfills every member's claim.
+**Ships.** A lazy per-row RPC over S11-19's query. Apply computes default pins in Go for rows whose sheet was never opened. Swift's pin drafting (`PromoteFlow.swift` `draftedPins`, `draftedArgument`, `kept.pins`) moves onto the RPC. `PromoteGraphAlignmentRow.comparisons` (field 9), `attachExhibits`, `pairExhibits`, `withRowLines` and `refLine` are deleted. Pins write one incoming Observation against many member Observations; Done backfills every member's claim. Deleting `pairExhibits` also retires its compare-before-`Compatible` loop (S11-13 PRF-2) and the pin-test helper `obs` in `exhibits_pin_test.go` that copies how `exhibitObs` is built (S11-13 MNT-5); any pin test that survives builds its values through the production constructor.
 **Not this PR.** The new sheet layout (S11-20); the shipped sheet reads the new lines unchanged in shape.
 **Check.** Done on a row never opened pins its matching lines; opening the sheet shows the same defaults; every member's claim is backfilled.
 **Context.** Rule "The pin policy has one owner, in Go"; [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md).
