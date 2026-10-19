@@ -9,6 +9,7 @@ package namealiases
 import (
 	"database/sql"
 	"fmt"
+	"sort"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
@@ -75,7 +76,9 @@ func Install(c *database.Catalog) error {
 	return tx.Commit()
 }
 
-// Load reads every alias table. No rows returns a nil slice.
+// Load reads every alias table. No rows returns a nil slice. A table's Sets
+// are the stored sets in ascending set_idx order; a position is not a set_idx,
+// so a stored index far above the rest costs nothing.
 func Load(q Querier) ([]valuecompare.AliasTable, error) {
 	rows, err := q.Query(`SELECT id, key, origin, label, kind FROM name_alias_tables ORDER BY key, origin`)
 	if err != nil {
@@ -155,15 +158,14 @@ func Load(q Querier) ([]valuecompare.AliasTable, error) {
 		if len(byIdx) == 0 {
 			continue
 		}
-		max := 0
+		idxs := make([]int, 0, len(byIdx))
 		for idx := range byIdx {
-			if idx > max {
-				max = idx
-			}
+			idxs = append(idxs, idx)
 		}
-		tables[i].Sets = make([][]string, max+1)
-		for idx, tokens := range byIdx {
-			tables[i].Sets[idx] = tokens
+		sort.Ints(idxs)
+		tables[i].Sets = make([][]string, 0, len(idxs))
+		for _, idx := range idxs {
+			tables[i].Sets = append(tables[i].Sets, byIdx[idx])
 		}
 	}
 	return tables, nil

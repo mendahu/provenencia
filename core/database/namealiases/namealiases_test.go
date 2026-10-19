@@ -358,3 +358,28 @@ func given(text string) valuecompare.Value {
 		Value: text, Type: namevalue.PartTypeGiven,
 	}}}}
 }
+
+func TestLoadHugeSetIndex(t *testing.T) {
+	c := newCatalog(t)
+	db := mustDB(t, c)
+	insertTable(t, db, "huge", "user", "nickname", [][]string{{"jim", "james"}})
+	var id []byte
+	if err := db.QueryRow(`SELECT id FROM name_alias_tables WHERE key = 'huge'`).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	for _, token := range []string{"bill", "william"} {
+		if _, err := db.Exec(`INSERT INTO name_alias_members (table_id, set_idx, token) VALUES (?, ?, ?)`,
+			id, 2_000_000_000, token); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tables, err := Load(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := tableByKey(t, tables, "huge").Sets
+	want := [][]string{{"james", "jim"}, {"bill", "william"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("sets %v, want %v", got, want)
+	}
+}
