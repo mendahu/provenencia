@@ -1,9 +1,10 @@
 # S12-02 — Copy Source form
 
-**Status:** Planned
+**Status:** Landed in [#485](https://github.com/mendahu/provenencia/pull/485) (2026-10-18)
+**Landed:** Two differences. `sources.copy.artifactCount` is `%1$lld of %2$lld` (positional), because `scripts/check-localizable-xcstrings.py` requires numbered placeholders when a string has more than one argument. T-9 (`copyRefreshesSourcesList`) re-queries the list after the copy: from the Source page the list is not on screen, so `.createdSource` marks it stale (`whenHidden: .markStale`) and the next `session.query` reloads it; no write-through was added. Round 1 (user decisions 2026-10-18) changed two more things: `PVSkeletonBar` lives in `Components/SkeletonBar/PVSkeletonBar.swift` with its own group and README row, not `Components/List/` as D-23 named; and D-5's display rule is now that after the first edit to either Source field both field errors show (nothing on open), for Add Source and Copy Source alike. Round 3 (user-requested) made that rule follow only the researcher's own edits: `SourceTitleTypeFields` raises errors from wrapping bindings, so the app's changes to the draft (sole-type fill, Copy prefill) show none.
 **Spike / slice:** Spike 12 · Slice 1 — Copy Source
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S12-D1](../design/S12-D1-copy-source-form.md), board agreed 2026-10-18
+**Brief:** [S12-D1](../design/archive/S12-D1-copy-source-form.md), board agreed 2026-10-18
 **Board:** [Claude Design — Source page, S12-D1 frames](https://claude.ai/design/p/de1e1ccc-aa35-455f-9b9c-3ae269593dc7?via=share) (the S12-D1 strip: From this page, Obituary, Some unchecked, Parts absent, Census 40, Loading, Load error, Validation, Save failed). If you cannot open it, §6 macOS describes every frame in words; build from §6
 **Depends on:** S12-01 (landed [#478](https://github.com/mendahu/provenencia/pull/478)), S12-D1
 **Blocks:** S12-12, S12-16, S12-17

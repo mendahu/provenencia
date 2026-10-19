@@ -24,8 +24,9 @@ struct SourcePageIdentityHeader: View {
                     titleCluster
                         .frame(maxWidth: .infinity, alignment: .leading)
                     HStack(alignment: .top, spacing: PVSpacing.space4) {
-                        deleteSourceButton
                         evidenceGraphJump
+                        copySourceButton
+                        deleteSourceButton
                     }
                 }
                 // Menu on the row (not the 72pt thumb) so click origin shares
@@ -173,6 +174,18 @@ struct SourcePageIdentityHeader: View {
         }
     }
 
+    private var copySourceButton: some View {
+        PVIconButton(
+            .duplicate,
+            label: L10n.Sources.copySourceEntry,
+            size: .sm
+        ) {
+            model.openCopy()
+        }
+        .disabled(model.source == nil)
+        .accessibilityIdentifier("sources.page.copySource")
+    }
+
     private var deleteSourceButton: some View {
         PVIconButton(
             .trash,
@@ -231,16 +244,11 @@ struct SourcePageIdentityHeader: View {
                             accessibilityIdentifierPrefix: "sources.page.type",
                             focus: PVComboFocus($typeFieldFocused, equals: .combo)
                         ) { option, query in
-                            HStack(spacing: PVSpacing.space3) {
-                                if let type = model.identity.types.first(where: { $0.id == option.value }) {
-                                    PVMark(
-                                        PVMarkKey(catalogKey: type.iconKey),
-                                        size: .row,
-                                        decorative: true
-                                    )
-                                }
-                                PVComboBoxPlainRow(option: option, query: query)
-                            }
+                            SourceTypeComboRow(
+                                type: model.identity.types.first { $0.id == option.value },
+                                option: option,
+                                query: query
+                            )
                         }
                         .frame(width: 210)
                         .disabled(model.identity.isSaving)

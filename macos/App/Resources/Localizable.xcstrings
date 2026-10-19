@@ -5258,6 +5258,282 @@
         }
       }
     },
+    "sources.copy.allArtifacts": {
+      "comment": "Copy Source checkbox that checks or unchecks every Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All Artifacts"
+          }
+        }
+      }
+    },
+    "sources.copy.artifactCount": {
+      "comment": "Copy Source Artifact count; arguments are the checked count and the total",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "sources.copy.artifactsHeading": {
+      "comment": "Heading of the Copy Source Artifact checklist",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artifacts"
+          }
+        }
+      }
+    },
+    "sources.copy.confirm": {
+      "comment": "Confirm button on the Copy Source dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
+          }
+        }
+      }
+    },
+    "sources.copy.credibility": {
+      "comment": "Copy Source checkbox: copy the original's credibility",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credibility"
+          }
+        }
+      }
+    },
+    "sources.copy.credibilityHint": {
+      "comment": "Hint under the Copy Source Credibility checkbox",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grade and argument"
+          }
+        }
+      }
+    },
+    "sources.copy.description": {
+      "comment": "Copy Source checkbox: copy the original's description",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Description"
+          }
+        }
+      }
+    },
+    "sources.copy.descriptionHint": {
+      "comment": "Hint under the Copy Source Description checkbox",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The original's description, as written"
+          }
+        }
+      }
+    },
+    "sources.copy.dialogSubtitle": {
+      "comment": "Subtitle of the Copy Source dialog; argument is the original Source title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start a new Source from %@. Notes and the Evidence graph are not copied."
+          }
+        }
+      }
+    },
+    "sources.copy.dialogTitle": {
+      "comment": "Title of the Copy Source dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Source"
+          }
+        }
+      }
+    },
+    "sources.copy.entry": {
+      "comment": "Source page action that opens the Copy Source form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy…"
+          }
+        }
+      }
+    },
+    "sources.copy.loadErrorMessage": {
+      "comment": "Copy Source load error message; argument is the error text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Title and type are kept. Try reading them again. %@"
+          }
+        }
+      }
+    },
+    "sources.copy.loadErrorTitle": {
+      "comment": "Copy Source callout title when the original's workspace fails to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The original's parts could not be read."
+          }
+        }
+      }
+    },
+    "sources.copy.loading": {
+      "comment": "Copy Source loading state while the original's parts are read",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading the original's parts and Artifacts"
+          }
+        }
+      }
+    },
+    "sources.copy.metadata": {
+      "comment": "Copy Source checkbox: copy the original's metadata",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metadata"
+          }
+        }
+      }
+    },
+    "sources.copy.metadataHint": {
+      "comment": "Hint under the Copy Source Metadata checkbox",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Values and field layout"
+          }
+        }
+      }
+    },
+    "sources.copy.noArtifacts": {
+      "comment": "Copy Source note when the original has no Artifacts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Source has no Artifacts."
+          }
+        }
+      }
+    },
+    "sources.copy.partAbsent": {
+      "comment": "Hint under a Copy Source checkbox when the original has none of that part",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None on this Source"
+          }
+        }
+      }
+    },
+    "sources.copy.partsHeading": {
+      "comment": "Heading above the Copy Source part checkboxes",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy from the original"
+          }
+        }
+      }
+    },
+    "sources.copy.readAgain": {
+      "comment": "Button that reloads the original's parts in the Copy Source form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read again"
+          }
+        }
+      }
+    },
+    "sources.copy.saveErrorMessage": {
+      "comment": "Copy Source save error message; argument is the error text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing was written. Your choices are kept. %@"
+          }
+        }
+      }
+    },
+    "sources.copy.saveErrorTitle": {
+      "comment": "Copy Source callout title when the copy fails",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The copy could not be saved."
+          }
+        }
+      }
+    },
+    "sources.copy.titlePrefill": {
+      "comment": "Prefilled title of a copied Source; argument is the original title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy of %@"
+          }
+        }
+      }
+    },
     "sourceTypes.delete.action": {
       "comment": "Tooltip on the Source types inspector trash",
       "extractionState": "manual",

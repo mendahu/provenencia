@@ -365,16 +365,16 @@ struct PVListSkeleton: View {
                     PVThumbnail(PVThumbnail.Content(loading: true), size: thumbnailSize)
                     GeometryReader { geometry in
                         VStack(alignment: .leading, spacing: PVSpacing.space3) {
-                            bar(width: geometry.size.width * Self.titleWidths[index % Self.titleWidths.count], height: 12)
-                            bar(width: geometry.size.width * 0.62, height: 10)
+                            PVSkeletonBar(width: geometry.size.width * Self.titleWidths[index % Self.titleWidths.count], height: 12)
+                            PVSkeletonBar(width: geometry.size.width * 0.62, height: 10)
                         }
                         .frame(maxHeight: .infinity, alignment: .center)
                     }
                     if let detailWidth {
-                        bar(width: 64, height: 10)
+                        PVSkeletonBar(width: 64, height: 10)
                             .frame(width: detailWidth, alignment: .leading)
                     }
-                    bar(width: 72, height: 10)
+                    PVSkeletonBar(width: 72, height: 10)
                 }
                 .frame(height: thumbnailSize)
                 .padding(.vertical, density.vertical)
@@ -387,12 +387,6 @@ struct PVListSkeleton: View {
         .pvListChrome()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(L10n.DesignSystem.listLoading))
-    }
-
-    private func bar(width: CGFloat, height: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: 2, style: .continuous)
-            .fill(PVColor.borderSubtle)
-            .frame(width: width, height: height)
     }
 }
 

@@ -71,6 +71,17 @@ struct SourcePageModelTests {
         #expect(model.credibility.grades.count == 3)
     }
 
+    @Test func openCopyUsesThePageSource() async {
+        let model = makeModel(store: makeStore())
+        model.openCopy()
+        #expect(model.copying == nil)
+
+        await model.warmFromSession()
+        model.openCopy()
+        #expect(model.copying?.original.id == sourceID)
+        #expect(model.copying?.choices.draft.title == "Copy of Family album")
+    }
+
     @Test func saveTitleUpdatesCommittedTitle() async {
         let store = makeStore()
         let model = makeModel(store: store)

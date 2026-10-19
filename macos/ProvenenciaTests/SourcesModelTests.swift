@@ -63,17 +63,6 @@ struct SourcesModelTests {
         return (model, session)
     }
 
-    private func waitForQuery<Value>(_ handle: QueryHandle<Value>) async {
-        var waited: UInt64 = 0
-        let step: UInt64 = 10_000_000
-        while waited < 2_000_000_000 {
-            if handle.status == .ready || handle.status == .error { return }
-            await Task.yield()
-            try? await Task.sleep(nanoseconds: step)
-            waited += step
-        }
-    }
-
     private func warmLists(_ model: SourcesModel, session: WorkspaceSession) async {
         model.warmListQueries()
         if let sourcesHandle: QueryHandle<[CatalogSource]> = session.queryHandle(
@@ -211,6 +200,31 @@ struct SourcesModelTests {
         #expect(model.isAdding)
     }
 
+    @Test func draftValidation() {
+        let empty = SourcesModel.Draft(sourceTypeID: "", title: "  ").validation
+        #expect(empty.typeError == L10n.string(L10n.Sources.typeRequired))
+        #expect(empty.titleError == L10n.string(L10n.Sources.titleRequired))
+        #expect(!empty.isValid)
+
+        let draft = SourcesModel.Draft(sourceTypeID: "t1", title: " Album ")
+        #expect(draft.validation.typeError == nil)
+        #expect(draft.validation.titleError == nil)
+        #expect(draft.validation.isValid)
+        #expect(draft.trimmedTitle == "Album")
+    }
+
+    @Test func canSubmitAddFollowsValidation() async {
+        let (model, session) = makeModel(types: [photoType(), bookType()])
+        await warmLists(model, session: session)
+        model.openAdd()
+        #expect(!model.canSubmitAdd)
+        model.draft.sourceTypeID = "t1"
+        model.draft.title = "Album"
+        #expect(model.canSubmitAdd)
+        model.draft.title = " "
+        #expect(!model.canSubmitAdd)
+    }
+
     @Test func createReturnsSourceAndPublishesCount() async {
         let store = FakeStore()
         let counts = CatalogCounts(projectDir: projectDir, store: store)
@@ -258,7 +272,7 @@ struct SourcesModelTests {
             await waitForQuery(typesHandle)
         }
         #expect(model.types.map(\.id) == ["t1", "t2"])
-        #expect(model.typeComboOptions.count == 2)
+        #expect(model.types.count == 2)
     }
 
     @Test func typesHandleLoadsWhenSourcesListFails() async {

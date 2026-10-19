@@ -15,6 +15,9 @@ final class SourcePageModel {
     var notes: SourceNotesSection
     var artifacts: SourceArtifactsSection
 
+    /// The Copy Source form while it is open.
+    var copying: SourceCopyModel?
+
     private(set) var isLoading = false
     var loadError: Error?
     let deleteImpact = DeleteImpactFlow()
@@ -161,6 +164,17 @@ final class SourcePageModel {
         appliedWorkspace = workspace
     }
 
+    /// Opens the Copy Source form for this page's Source.
+    func openCopy() {
+        guard let source else { return }
+        copying = SourceCopyModel(
+            original: source,
+            session: context.session,
+            userID: context.userID,
+            store: context.store
+        )
+    }
+
     func askDeleteSource() async {
         guard let source else { return }
         await presentImpact(kind: "source", id: source.id, ref: source.ref, title: source.title)
@@ -168,8 +182,7 @@ final class SourcePageModel {
 
     func askDeleteArtifact(id: String) async {
         guard let art = artifacts.items.first(where: { $0.id == id }) else { return }
-        let title = art.label.isEmpty ? art.ref : art.label
-        await presentImpact(kind: "artifact", id: art.id, ref: art.ref, title: title)
+        await presentImpact(kind: "artifact", id: art.id, ref: art.ref, title: art.displayTitle)
     }
 
     /// Returns true when the Source itself was erased (leave the page).

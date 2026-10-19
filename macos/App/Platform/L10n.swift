@@ -5144,6 +5144,154 @@ enum L10n {
             ), title)
         }
 
+        static func copySourceTitlePrefill(_ title: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.copy.titlePrefill",
+                defaultValue: "Copy of %@",
+                comment: "Prefilled title of a copied Source; argument is the original title"
+            ), title)
+        }
+
+        static let copySourceArtifactsHeading = LocalizedStringResource(
+            "sources.copy.artifactsHeading",
+            defaultValue: "Artifacts",
+            comment: "Heading of the Copy Source Artifact checklist"
+        )
+
+        static let copySourceAllArtifacts = LocalizedStringResource(
+            "sources.copy.allArtifacts",
+            defaultValue: "All Artifacts",
+            comment: "Copy Source checkbox that checks or unchecks every Artifact"
+        )
+
+        static let copySourceNoArtifacts = LocalizedStringResource(
+            "sources.copy.noArtifacts",
+            defaultValue: "This Source has no Artifacts.",
+            comment: "Copy Source note when the original has no Artifacts"
+        )
+
+        static func copySourceArtifactCount(_ selected: Int, _ total: Int) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.copy.artifactCount",
+                defaultValue: "%1$lld of %2$lld",
+                comment: "Copy Source Artifact count; arguments are the checked count and the total"
+            ), selected, total)
+        }
+
+        static let copySourceEntry = LocalizedStringResource(
+            "sources.copy.entry",
+            defaultValue: "Copy…",
+            comment: "Source page action that opens the Copy Source form"
+        )
+
+        static let copySourceDialogTitle = LocalizedStringResource(
+            "sources.copy.dialogTitle",
+            defaultValue: "Copy Source",
+            comment: "Title of the Copy Source dialog"
+        )
+
+        static func copySourceDialogSubtitle(_ title: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.copy.dialogSubtitle",
+                defaultValue: "Start a new Source from %@. Notes and the Evidence graph are not copied.",
+                comment: "Subtitle of the Copy Source dialog; argument is the original Source title"
+            ), title)
+        }
+
+        static let copySourceConfirm = LocalizedStringResource(
+            "sources.copy.confirm",
+            defaultValue: "Copy",
+            comment: "Confirm button on the Copy Source dialog"
+        )
+
+        static let copySourcePartsHeading = LocalizedStringResource(
+            "sources.copy.partsHeading",
+            defaultValue: "Copy from the original",
+            comment: "Heading above the Copy Source part checkboxes"
+        )
+
+        static let copySourceDescription = LocalizedStringResource(
+            "sources.copy.description",
+            defaultValue: "Description",
+            comment: "Copy Source checkbox: copy the original's description"
+        )
+
+        static let copySourceMetadata = LocalizedStringResource(
+            "sources.copy.metadata",
+            defaultValue: "Metadata",
+            comment: "Copy Source checkbox: copy the original's metadata"
+        )
+
+        static let copySourceMetadataHint = LocalizedStringResource(
+            "sources.copy.metadataHint",
+            defaultValue: "Values and field layout",
+            comment: "Hint under the Copy Source Metadata checkbox"
+        )
+
+        static let copySourceCredibility = LocalizedStringResource(
+            "sources.copy.credibility",
+            defaultValue: "Credibility",
+            comment: "Copy Source checkbox: copy the original's credibility"
+        )
+
+        static let copySourceCredibilityHint = LocalizedStringResource(
+            "sources.copy.credibilityHint",
+            defaultValue: "Grade and argument",
+            comment: "Hint under the Copy Source Credibility checkbox"
+        )
+
+        static let copySourcePartAbsent = LocalizedStringResource(
+            "sources.copy.partAbsent",
+            defaultValue: "None on this Source",
+            comment: "Hint under a Copy Source checkbox when the original has none of that part"
+        )
+
+        static let copySourceDescriptionHint = LocalizedStringResource(
+            "sources.copy.descriptionHint",
+            defaultValue: "The original's description, as written",
+            comment: "Hint under the Copy Source Description checkbox"
+        )
+
+        static let copySourceLoading = LocalizedStringResource(
+            "sources.copy.loading",
+            defaultValue: "Reading the original's parts and Artifacts",
+            comment: "Copy Source loading state while the original's parts are read"
+        )
+
+        static let copySourceLoadErrorTitle = LocalizedStringResource(
+            "sources.copy.loadErrorTitle",
+            defaultValue: "The original's parts could not be read.",
+            comment: "Copy Source callout title when the original's workspace fails to load"
+        )
+
+        static func copySourceLoadErrorMessage(_ error: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.copy.loadErrorMessage",
+                defaultValue: "Title and type are kept. Try reading them again. %@",
+                comment: "Copy Source load error message; argument is the error text"
+            ), error)
+        }
+
+        static let copySourceReadAgain = LocalizedStringResource(
+            "sources.copy.readAgain",
+            defaultValue: "Read again",
+            comment: "Button that reloads the original's parts in the Copy Source form"
+        )
+
+        static let copySourceSaveErrorTitle = LocalizedStringResource(
+            "sources.copy.saveErrorTitle",
+            defaultValue: "The copy could not be saved.",
+            comment: "Copy Source callout title when the copy fails"
+        )
+
+        static func copySourceSaveErrorMessage(_ error: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.copy.saveErrorMessage",
+                defaultValue: "Nothing was written. Your choices are kept. %@",
+                comment: "Copy Source save error message; argument is the error text"
+            ), error)
+        }
+
         // MARK: Source page (S2-18)
 
         static let pageTitleRequired = LocalizedStringResource(

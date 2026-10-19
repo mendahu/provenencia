@@ -95,21 +95,17 @@ private struct SourcesListContent: View {
             ),
             isRunning: model.isSaving,
             isDirty: model.addSheetIsDirty,
+            confirmDisabled: !model.canSubmitAdd,
             accessibilityIdentifierPrefix: "sources.add",
             onConfirm: {
                 Task {
                     if let created = await model.create() {
-                        navigation.go(to: WorkspaceLocation(
-                            section: .sources,
-                            sourceId: created.id,
-                            ref: created.ref,
-                            title: created.title
-                        ))
+                        navigation.go(to: SourcesListNavigation.pageLocation(for: created))
                     }
                 }
             }
         ) {
-            addForm(typeOptions: model.typeComboOptions)
+            addForm
         }
         .task(id: model.isAdding) {
             guard model.isAdding else { return }
@@ -386,52 +382,25 @@ private struct SourcesListContent: View {
         .accessibilityIdentifier("sources.empty")
     }
 
-    private func addForm(typeOptions: [PVComboBoxOption]) -> some View {
+    private var addForm: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
             if let createError = model.createError {
                 PVCallout(tone: .danger, message: createError)
                     .accessibilityIdentifier("sources.add.error")
-            } else if let loadError = model.loadError, typeOptions.isEmpty {
+            } else if let loadError = model.loadError, model.types.isEmpty {
                 PVCallout(
                     tone: .danger,
                     message: L10n.Errors.message(for: loadError)
                 )
                 .accessibilityIdentifier("sources.add.loadError")
             }
-            PVField(
-                label: L10n.Sources.formTitle,
-                error: model.titleError,
-                required: true
-            ) {
-                PVInput(
-                    text: $model.draft.title,
-                    isInvalid: model.titleError != nil,
-                    activateOnAppear: true
-                )
-                .accessibilityIdentifier("sources.add.title")
-            }
-            PVField(
-                label: L10n.Sources.formType,
-                error: model.typeError,
-                required: true
-            ) {
-                PVComboBox(
-                    selection: $model.draft.sourceTypeID,
-                    options: typeOptions,
-                    placeholder: L10n.Sources.typePlaceholder,
-                    emptyLabel: typeOptions.isEmpty
-                        ? L10n.Sources.typePoolEmpty
-                        : L10n.Sources.typeNoMatch,
-                    isInvalid: model.typeError != nil,
-                    label: L10n.Sources.formType,
-                    accessibilityIdentifierPrefix: "sources.add.type"
-                ) { option, query in
-                    sourceTypeComboRow(option: option, query: query)
-                }
-                .onChange(of: model.draft.sourceTypeID) { _, newValue in
-                    if !newValue.isEmpty { model.typeError = nil }
-                }
-            }
+            SourceTitleTypeFields(
+                draft: $model.draft,
+                titleError: $model.titleError,
+                typeError: $model.typeError,
+                types: model.types,
+                accessibilityIdentifierPrefix: "sources.add"
+            )
             PVField(
                 label: L10n.Sources.formDescription,
                 hint: L10n.Sources.formDescriptionHint
@@ -439,19 +408,6 @@ private struct SourcesListContent: View {
                 PVInput(text: $model.draft.description)
                     .accessibilityIdentifier("sources.add.description")
             }
-        }
-    }
-
-    private func sourceTypeComboRow(option: PVComboBoxOption, query: String) -> some View {
-        HStack(spacing: PVSpacing.space3) {
-            if let type = model.types.first(where: { $0.id == option.value }) {
-                PVMark(
-                    PVMarkKey(catalogKey: type.iconKey),
-                    size: .row,
-                    decorative: true
-                )
-            }
-            PVComboBoxPlainRow(option: option, query: query)
         }
     }
 }
