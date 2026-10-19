@@ -104,7 +104,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-14 | Segment compare | 4 | `segmentcompare`, typed bridge keys, birth / death cardinality, one-hop credit | — | S11-13 | [plan](prs/S11-14-segment-compare.md) | Landed #493 |
 | S11-15 | Shortlist index | 4 | Key → handles per kind on `graphcache`; registry shortlist keys | — | S11-13 | [plan](prs/S11-15-shortlist-index.md) | Landed #497 |
 | S11-16 | Rewrite graph alignment | 4 | Layer 6 procedure, bands from evidence, accept bar; old walk and registry deleted | — | S11-14, S11-15 | [plan](prs/S11-16-graph-alignment.md) | Landed #501 |
-| S11-17 | Contested flag through FFI | 4 | Proposal rows carry contested and move reasons to Swift | — | S11-16 | — | Scoped |
+| S11-17 | Contested flag through FFI | 4 | Proposal rows carry contested and move reasons to Swift | — | S11-16 | [plan](prs/S11-17-contested-ffi.md) | Planned |
 | S11-18 | Contested marker on Promote rows | 4 | The marker on the page | S11-D1 | S11-17, S11-D1 | — | Scoped |
 | S11-19 | Claim evidence query | 5 | Go query: member lines, collapse, relationship bundles; registry evidence section | — | S11-16 | — | Scoped |
 | S11-25 | Claim evidence RPC and pin policy | 5 | Lazy per-row RPC; Go default pins at Apply; Swift drafting moves onto it; proposal field 9 and `attachExhibits` removed | — | S11-19 | — | Scoped |
@@ -366,15 +366,15 @@ Segment compare learns unplaced neighbors (entity compare decides). A bridge's o
 #### S11-17 — Contested flag through FFI
 
 **Ships.** The contested flag and move reasons reach Swift through `engine.proto` and the Promote handler. Promote's reason codes move from `PromoteFlow.swift` into `Platform/ConclusionVocabulary.swift`, under `api/ffi/swift_vocabulary_test.go`.
-**Not this PR.** The marker (S11-18).
+**Not this PR.** The marker and the move-reason copy (S11-18). Cause codes (S11-25).
 **Check.** A handler test returns contested on a row with a conflicting comparison.
 **Context.** [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md); [bands](comparison-layers.md#bands).
 
 #### S11-18 — Contested marker on Promote rows
 
-**Ships.** The contested marker beside the band, as S11-D1 draws it, with L10n copy.
+**Ships.** The contested marker beside the band, as S11-D1 draws it, with L10n copy. It words the three move reasons, naming the neighbor (`PromoteFlow.Row.move`, S11-17). A move is settled within one proposal and `Row.updated` is a change between proposals, so S11-D1 decides where a move shows: in the "Updated · <reason>" line, on its own, or both.
 **Not this PR.** The evidence sheet (S11-20).
-**Check.** A row with a conflict shows contested at any band; a clean row does not.
+**Check.** A row with a conflict shows contested at any band; a clean row does not; a row that moved says which neighbor moved it.
 **Context.** S11-D1; [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).
 
 ### Slice 5 — Claim evidence
@@ -388,7 +388,7 @@ Segment compare learns unplaced neighbors (entity compare decides). A bridge's o
 
 #### S11-25 — Claim evidence RPC and pin policy
 
-**Ships.** A lazy per-row RPC over S11-19's query. Apply computes default pins in Go for rows whose sheet was never opened. Swift's pin drafting (`PromoteFlow.swift` `draftedPins`, `draftedArgument`, `kept.pins`) moves onto the RPC. `PromoteGraphAlignmentRow.comparisons` (field 9), `attachExhibits`, `pairExhibits`, `withRowLines` and `refLine` are deleted. Pins write one incoming Observation against many member Observations; Done backfills every member's claim. Deleting `pairExhibits` also retires its compare-before-`Compatible` loop (S11-13 PRF-2) and the pin-test helper `obs` in `exhibits_pin_test.go` that copies how `exhibitObs` is built (S11-13 MNT-5); any pin test that survives builds its values through the production constructor.
+**Ships.** A lazy per-row RPC over S11-19's query. Apply computes default pins in Go for rows whose sheet was never opened. Each evidence line carries its value or segment cause code, parsed in `ConclusionVocabulary.swift` under `swift_vocabulary_test.go` (moved from S11-17). Swift's pin drafting (`PromoteFlow.swift` `draftedPins`, `draftedArgument`, `kept.pins`) moves onto the RPC. `PromoteGraphAlignmentRow.comparisons` (field 9), `attachExhibits`, `pairExhibits`, `withRowLines` and `refLine` are deleted. Pins write one incoming Observation against many member Observations; Done backfills every member's claim. Deleting `pairExhibits` also retires its compare-before-`Compatible` loop (S11-13 PRF-2) and the pin-test helper `obs` in `exhibits_pin_test.go` that copies how `exhibitObs` is built (S11-13 MNT-5); any pin test that survives builds its values through the production constructor.
 **Not this PR.** The new sheet layout (S11-20); the shipped sheet reads the new lines unchanged in shape.
 **Check.** Done on a row never opened pins its matching lines; opening the sheet shows the same defaults; every member's claim is backfilled.
 **Context.** Rule "The pin policy has one owner, in Go"; [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md).
