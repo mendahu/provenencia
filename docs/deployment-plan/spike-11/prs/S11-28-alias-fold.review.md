@@ -7,7 +7,7 @@
 - None. Product calls were asked before planning (2026-10-19): shorter folds into longer, nicknames and abbreviations both fold, the folded name disappears.
 
 ## Writer's own calls
-- Direction (user rule, 2026-10-19): two given names the alias list pairs fold; the set's head is kept; for the 144 pairs listed both ways, `nicknameDirections` (Appendix A, 108 directed, 36 never fold) decides. One-way pairs keep the head even when both are real names (*William* + *Wilma* → *Wilma*).
+- Direction (user rule, 2026-10-19): two given names the alias list pairs fold; the set's head is kept; for the 144 pairs listed both ways, `nicknameDirections` (Appendix A, 108 directed, 36 never fold) decides. One-way pairs keep the head. Pairs that joined two different names (31, e.g. *Wilma* / *William*, *Andrew* / *Andrea*) were removed from the seed in #499 after a review with the user.
 - The reconciler reads the **product seed** of alias tables, not a catalog's rows, so the cache still changes only with `CacheVersion`; a guard test pins the seed to the version.
 - `Compatible` (Promote exhibits) follows the fold, so *Jim* / *James* now counts as agreeing there.
 - Which part types alias-fold is decided by the alias tables' roles: given, nick and untyped (`undetermined`, untyped parts). Surnames never.
@@ -101,3 +101,7 @@ Reviewer (opus, both lenses), on the nickname-heads version. Verdict: Not ready.
 
 ### Minors
 **Answer:** Fixed — hash description points to T-7; STEP-3 rewrites the grouping-policy and §7.2 Fold first sentences; header round count; Writer's own calls updated.
+
+## After round 4 (user, 2026-10-19)
+
+The user asked whether *Wilma* is a nickname of *William*. It is not: the upstream row `{wilma, billiewilhelm, william}` is an error. With the user's agreement, #499 (the PR carrying this plan) also edits the seed: 31 pairs that join two different given names — masculine and feminine forms (*Andrew* / *Andrea*, *Louis* / *Louise*, *Felix* / *Felicia*) and upstream errors (*Paul* / *Polly*, *William* / *Bela*) — were removed; five sets left with one name were dropped (1,227 sets). Candidates came from an offline name-gender dataset; unisex short forms (*Alex*, *Chris*, *Jamie*, *Kit*) were kept. Appendix A was regenerated (143 two-way pairs: 108 directed, 35 kept). Matching for new catalogs no longer pairs these names; `go test -tags fts5 ./...` passes.

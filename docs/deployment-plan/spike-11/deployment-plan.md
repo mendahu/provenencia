@@ -433,7 +433,7 @@ Asked by the user on 2026-10-19, after S11-06. Planned as two PRs, with no migra
 
 #### S11-28 — Fold a nickname into its given name
 
-**Ships.** The name module folds a given-name or nickname unit into another when every word pair is the same, an initial, or a nickname or abbreviation of the other side's formal name (*Chris* → *Christopher*, *Wm* → *William*, *Ebbie* → *Abel*). Two given names the list pairs fold, keeping the set's head; for the 144 pairs listed both ways a reviewed table says which to keep. The upstream nickname seed is not edited. The reconciler cache reads the product alias tables; `CacheVersion` 18.
+**Ships.** The name module folds a given-name or nickname unit into another when every word pair is the same, an initial, or a nickname or abbreviation of the other side's formal name (*Chris* → *Christopher*, *Wm* → *William*, *Ebbie* → *Abel*). Two given names the list pairs fold, keeping the set's head; for the 143 pairs listed both ways a reviewed table says which to keep. The upstream nickname seed is not edited. The reconciler cache reads the product alias tables; `CacheVersion` 18.
 **Not this PR.** Storing the formal name in the catalog; reading a catalog's own alias rows; display changes (S11-29).
 **Check.** A Person recorded as *Chris Robins* and *Christopher Robins* shows *Christopher Robins*.
 **Context.** [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §7.2; rule "The reconciler keeps its own decisions".
