@@ -117,7 +117,7 @@ func eventHeaderProto(h conclusionheaders.EventHeader) *engine.EventHeader {
 	}
 	if h.EventType != nil {
 		eh.EventType = &engine.ConclusionTerm{
-			Id:    uuidString(h.EventType.ID),
+			Id:    database.UUIDString(h.EventType.ID),
 			Key:   h.EventType.Key,
 			Label: h.EventType.Label,
 		}

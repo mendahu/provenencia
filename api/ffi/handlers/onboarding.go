@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/onboarding"
 	"google.golang.org/protobuf/proto"
 )
@@ -96,6 +97,6 @@ func projectInfoProto(projectDir string, info onboarding.ResolvedInfo) *engine.P
 		UpdatedByUserId:      info.UpdatedByUserID,
 		UpdatedByDisplayName: info.UpdatedByDisplayName,
 		UpdatedByRef:         info.UpdatedByRef,
-		Uuid:                 uuidString(info.Info.UUID),
+		Uuid:                 database.UUIDString(info.Info.UUID),
 	}
 }

@@ -132,8 +132,8 @@ func DeletePropertyTerm(in []byte) ([]byte, error) {
 
 func propertyTermProto(t propertyterms.Term) *engine.PropertyTerm {
 	return &engine.PropertyTerm{
-		Id:          uuidString(t.ID),
-		PropertyId:  uuidString(t.PropertyID),
+		Id:          database.UUIDString(t.ID),
+		PropertyId:  database.UUIDString(t.PropertyID),
 		Key:         t.Key,
 		Origin:      t.Origin,
 		Label:       t.Label,

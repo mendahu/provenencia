@@ -73,7 +73,7 @@ func ListSourceEventTitles(in []byte) ([]byte, error) {
 		}
 		for _, t := range sourceeventtitles.FromStored(sg, keys, termLookup) {
 			out.Titles = append(out.Titles, &engine.SourceEventTitle{
-				SubjectId: uuidString(t.SubjectID),
+				SubjectId: database.UUIDString(t.SubjectID),
 				Title:     eventTitleProto(t.Plan),
 			})
 		}

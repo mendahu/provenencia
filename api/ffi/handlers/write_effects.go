@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -28,7 +29,7 @@ func idStrings(ids [][]byte) []string {
 	}
 	out := make([]string, 0, len(ids))
 	for _, id := range ids {
-		if s := uuidString(id); s != "" {
+		if s := database.UUIDString(id); s != "" {
 			out = append(out, s)
 		}
 	}

@@ -38,17 +38,6 @@ func parseID(s string) ([]byte, error) {
 	return u[:], nil
 }
 
-func uuidString(id []byte) string {
-	if len(id) != 16 {
-		return ""
-	}
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
-}
-
 func unmarshalErr(op string, err error) error {
 	return fmt.Errorf("%s: unmarshal: %w", op, err)
 }

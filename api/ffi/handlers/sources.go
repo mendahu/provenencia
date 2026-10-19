@@ -611,13 +611,13 @@ func ReorderSourceMetadata(in []byte) ([]byte, error) {
 
 func sourceProto(s sources.Source) *engine.Source {
 	return &engine.Source{
-		Id:                uuidString(s.ID),
+		Id:                database.UUIDString(s.ID),
 		Ref:               s.Ref,
-		SourceTypeId:      uuidString(s.SourceTypeID),
+		SourceTypeId:      database.UUIDString(s.SourceTypeID),
 		Title:             s.Title,
 		Description:       s.Description,
 		CoverMode:         s.CoverMode,
-		PrimaryArtifactId: uuidString(s.PrimaryArtifactID),
+		PrimaryArtifactId: database.UUIDString(s.PrimaryArtifactID),
 		UpdatedRevision:   s.Updated.Revision,
 		UpdatedAt:         s.Updated.At,
 	}
@@ -625,8 +625,8 @@ func sourceProto(s sources.Source) *engine.Source {
 
 func noteProto(n sources.Note) *engine.SourceNote {
 	return &engine.SourceNote{
-		Id:                uuidString(n.ID),
-		SourceId:          uuidString(n.SourceID),
+		Id:                database.UUIDString(n.ID),
+		SourceId:          database.UUIDString(n.SourceID),
 		Body:              n.Body,
 		AuthorDisplayName: n.AuthorDisplayName,
 		CreatedAt:         n.CreatedAt,
@@ -636,7 +636,7 @@ func noteProto(n sources.Note) *engine.SourceNote {
 func metadataEntryProto(_ *database.Catalog, e sourcemetadata.WorkspaceEntry) *engine.MetadataWorkspaceEntry {
 	out := &engine.MetadataWorkspaceEntry{
 		Field: &engine.MetadataField{
-			Id:          uuidString(e.Field.ID),
+			Id:          database.UUIDString(e.Field.ID),
 			Key:         e.Field.Key,
 			Origin:      e.Field.Origin,
 			Label:       e.Field.Label,
@@ -655,7 +655,7 @@ func metadataEntryProto(_ *database.Catalog, e sourcemetadata.WorkspaceEntry) *e
 
 func fileRefProto(f files.File, relPath string) *engine.SourceFileRef {
 	return &engine.SourceFileRef{
-		Id:               uuidString(f.ID),
+		Id:               database.UUIDString(f.ID),
 		RelPath:          relPath,
 		OriginalFilename: f.OriginalFilename,
 		MediaType:        f.MediaType,

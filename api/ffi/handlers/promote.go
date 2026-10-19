@@ -104,7 +104,7 @@ func ListClaimConfidenceGrades(in []byte) ([]byte, error) {
 		}
 		for _, g := range rows {
 			out.Grades = append(out.Grades, &engine.ClaimConfidenceGrade{
-				Id:        uuidString(g.ID),
+				Id:        database.UUIDString(g.ID),
 				Key:       g.Key,
 				Origin:    g.Origin,
 				Label:     g.Label,
@@ -145,8 +145,8 @@ func ListSubjectMemberships(in []byte) ([]byte, error) {
 		out = &engine.ListSubjectMembershipsResponse{}
 		for _, m := range rows {
 			sm := &engine.SubjectMembership{
-				SubjectId: uuidString(m.SubjectID),
-				ClaimId:   uuidString(m.ClaimID),
+				SubjectId: database.UUIDString(m.SubjectID),
+				ClaimId:   database.UUIDString(m.ClaimID),
 				Entity:    canonicalEntityProto(m.Entity),
 				Kind:      m.Kind,
 			}
@@ -165,20 +165,20 @@ func ListSubjectMemberships(in []byte) ([]byte, error) {
 
 func canonicalEntityProto(e canonicalentities.Entity) *engine.CanonicalEntity {
 	return &engine.CanonicalEntity{
-		Id:            uuidString(e.ID),
+		Id:            database.UUIDString(e.ID),
 		Ref:           e.Ref,
-		SubjectTypeId: uuidString(e.SubjectTypeID),
+		SubjectTypeId: database.UUIDString(e.SubjectTypeID),
 		Label:         e.Label,
 	}
 }
 
 func identityClaimProto(c identityclaims.Claim) *engine.IdentityClaim {
 	return &engine.IdentityClaim{
-		Id:                uuidString(c.ID),
-		SubjectId:         uuidString(c.SubjectID),
-		EntityId:          uuidString(c.EntityID),
+		Id:                database.UUIDString(c.ID),
+		SubjectId:         database.UUIDString(c.SubjectID),
+		EntityId:          database.UUIDString(c.EntityID),
 		Status:            c.Status,
-		ConfidenceGradeId: uuidString(c.ConfidenceGradeID),
+		ConfidenceGradeId: database.UUIDString(c.ConfidenceGradeID),
 		Argument:          c.Argument,
 	}
 }

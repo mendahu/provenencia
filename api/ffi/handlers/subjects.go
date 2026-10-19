@@ -255,7 +255,7 @@ func ListSubjectPositions(in []byte) ([]byte, error) {
 
 func subjectTypeProto(t subjecttypes.Type) *engine.SubjectType {
 	return &engine.SubjectType{
-		Id:                 uuidString(t.ID),
+		Id:                 database.UUIDString(t.ID),
 		Key:                t.Key,
 		Origin:             t.Origin,
 		Label:              t.Label,
@@ -267,10 +267,10 @@ func subjectTypeProto(t subjecttypes.Type) *engine.SubjectType {
 
 func subjectProto(s subjects.Subject) *engine.Subject {
 	return &engine.Subject{
-		Id:            uuidString(s.ID),
+		Id:            database.UUIDString(s.ID),
 		Ref:           s.Ref,
-		SourceId:      uuidString(s.SourceID),
-		SubjectTypeId: uuidString(s.SubjectTypeID),
+		SourceId:      database.UUIDString(s.SourceID),
+		SubjectTypeId: database.UUIDString(s.SubjectTypeID),
 		Label:         s.Label,
 		Description:   s.Description,
 	}
@@ -278,7 +278,7 @@ func subjectProto(s subjects.Subject) *engine.Subject {
 
 func subjectPositionProto(p subjectpositions.Position) *engine.SubjectPosition {
 	return &engine.SubjectPosition{
-		SubjectId: uuidString(p.SubjectID),
+		SubjectId: database.UUIDString(p.SubjectID),
 		GridX:     p.GridX,
 		GridY:     p.GridY,
 	}

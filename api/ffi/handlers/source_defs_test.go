@@ -264,7 +264,7 @@ func TestUpdateMetadataField(t *testing.T) {
 					t.Fatal(err)
 				}
 				return &engine.UpdateMetadataFieldRequest{
-					ProjectDir: dir, UserId: userID, FieldId: uuidString(id),
+					ProjectDir: dir, UserId: userID, FieldId: database.UUIDString(id),
 					Label: "Changed", DataType: "text",
 				}
 			},
@@ -332,7 +332,7 @@ func TestDeleteSourceType(t *testing.T) {
 					t.Fatal(err)
 				}
 				return &engine.DeleteSourceTypeRequest{
-					ProjectDir: dir, UserId: userID, TypeId: uuidString(id),
+					ProjectDir: dir, UserId: userID, TypeId: database.UUIDString(id),
 				}
 			},
 			wantErr:   true,
@@ -432,7 +432,7 @@ func TestDeleteMetadataField(t *testing.T) {
 					t.Fatal(err)
 				}
 				return &engine.DeleteMetadataFieldRequest{
-					ProjectDir: dir, UserId: userID, FieldId: uuidString(id),
+					ProjectDir: dir, UserId: userID, FieldId: database.UUIDString(id),
 				}
 			},
 			wantErr:   true,
@@ -535,7 +535,7 @@ func TestUpdateSourceType(t *testing.T) {
 					t.Fatal(err)
 				}
 				return &engine.UpdateSourceTypeRequest{
-					ProjectDir: dir, UserId: userID, TypeId: uuidString(id), Label: "Changed",
+					ProjectDir: dir, UserId: userID, TypeId: database.UUIDString(id), Label: "Changed",
 				}
 			},
 			wantErr: true,

@@ -120,15 +120,15 @@ func fillHitHeaders(c *database.Catalog, hits []*engine.SearchHit) error {
 	}
 	personByID := map[string]conclusionheaders.PersonHeader{}
 	for _, p := range listedPersons {
-		personByID[uuidString(p.Entity.ID)] = p
+		personByID[database.UUIDString(p.Entity.ID)] = p
 	}
 	eventByID := map[string]conclusionheaders.EventHeader{}
 	for _, e := range listedEvents {
-		eventByID[uuidString(e.Entity.ID)] = e
+		eventByID[database.UUIDString(e.Entity.ID)] = e
 	}
 	placeByID := map[string]conclusionheaders.PlaceHeader{}
 	for _, p := range listedPlaces {
-		placeByID[uuidString(p.Entity.ID)] = p
+		placeByID[database.UUIDString(p.Entity.ID)] = p
 	}
 	for _, h := range hits {
 		switch h.GetKind() {

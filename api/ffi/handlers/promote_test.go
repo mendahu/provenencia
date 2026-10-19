@@ -361,7 +361,7 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 	}); err != nil {
 		t.Fatal(err)
 	}
-	return uuidString(id)
+	return database.UUIDString(id)
 }
 
 func promoteOK(t *testing.T, req *engine.PromoteSubjectRequest) *engine.PromoteSubjectResponse {
