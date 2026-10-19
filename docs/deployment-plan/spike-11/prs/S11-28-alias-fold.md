@@ -1,6 +1,6 @@
 # S11-28 — Fold a nickname into the given name it stands for
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 11 · Slice 2 — Value compare, everywhere (follow-up to S11-06)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the reconciler's fold rule changes in Go; pages render the cache as they do today)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`, `.cursor/rules/name-values.mdc`
 **Context:** [`docs/conclusion-reconciliation.md`](../../../conclusion-reconciliation.md) §7 (grouping policy), §7.2; [S11-06 plan](S11-06-migrate-reconciler.md); working rules "The reconciler keeps its own decisions", "High tolerance for churn"
 **Planned:** 2026-10-19 against `main` @ `84a9b31`
-**Review:** — (not reviewed yet)
+**Review:** [`S11-28-alias-fold.review.md`](S11-28-alias-fold.review.md) — Fits with changes / Not ready → fixed, 1 round
 
 ### Implementer — read this first
 
@@ -43,13 +43,13 @@ A Person whose records say *Chris Robins* and *Christopher Robins* shows one giv
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-1.1 | Candidates `given=Chris\|surname=Robins` and `given=Christopher\|surname=Robins` | One value `given=Christopher\|surname=Robins`, both members, state merged |
-| AC-1.2 | `given=Wm\|surname=Robins` and `given=William\|surname=Robins` | One value `given=William\|surname=Robins` |
-| AC-1.3 | `given=Chris\|given=R\|surname=Robins` and `given=Christopher\|given=Robert\|surname=Robins` | One value `given=Christopher\|given=Robert\|surname=Robins` |
-| AC-1.4 | `given=Chris` beside `given=Christopher` (1 record) and `given=Christina` (2 records) | Chris folds into Christina, the best supported; the name is `given=Christina\|given=Christopher` (the ambiguous-initial rule, applied to an alias) |
-| AC-1.5 | `given=Jose` and `given=José\|given=Kenneth` | Unchanged: `given=Jose\|given=José\|given=Kenneth` (an accent fold never folds) |
-| AC-1.6 | `nick=Chris` and `given=Christopher` | Unchanged: `given=Christopher\|nick=Chris` (a fold never crosses part types) |
-| AC-1.7 | `surname=Bill` and `surname=William` (with an alias set holding both) | Unchanged: both stay; a surname never alias-folds |
-| AC-1.8 | Alias pair of equal length: `given=Chris` and `given=Kris` (one set) | Both stay; no fold without a longer side |
+| AC-1.2 | `given=Wm\|surname=Robins` and `given=William\|surname=Robins` | One value `given=William\|surname=Robins`, members {1,2}, merged |
+| AC-1.3 | `given=Chris\|given=R\|surname=Robins` and `given=Christopher\|given=Robert\|surname=Robins` | One value `given=Christopher\|given=Robert\|surname=Robins`, members {1,2}, merged |
+| AC-1.4 | Records 1 `given=Christopher\|surname=Robins`, 2 and 3 `given=Christina\|surname=Robins`, 4 `given=Chris\|surname=Robins` | Chris folds into Christina, the best supported: one value, members {1,2,3,4}, `given=Christina\|given=Christopher\|surname=Robins`, merged (the ambiguous-initial rule at `names_test.go` "an ambiguous initial folds into the best supported", applied to an alias) |
+| AC-1.5 | `given=Jose\|surname=Robins` and `given=José\|given=Kenneth\|surname=Robins` | Unchanged: the same result as without aliases (an accent fold never folds) |
+| AC-1.6 | `nick=Chris\|surname=Robins` and `given=Christopher\|surname=Robins` | Unchanged: the same result as without aliases (a fold never crosses part types) |
+| AC-1.7 | `given=Ann\|surname=Bill` and `given=Ann\|surname=William` (an alias set holds both) | Unchanged: the same result as without aliases; a surname never alias-folds |
+| AC-1.8 | Equal length: `given=Chris\|surname=Robins` and `given=Kris\|surname=Robins` (one set) | Unchanged: the same result as without aliases; no fold without a longer side |
 
 **US-2.** As the engine, the reconciler cache reads the product alias tables, so that the fold happens on every catalog and the cache changes only when `CacheVersion` does.
 
@@ -57,15 +57,16 @@ A Person whose records say *Chris Robins* and *Christopher Robins* shows one giv
 | --- | --- | --- |
 | AC-2.1 | A catalog with two Observations naming the same person *Chris Robins* and *Christopher Robins*, joined in one entity | `autoreconciler` writes one displayed name `Christopher Robins` |
 | AC-2.2 | `autoreconciler.CacheVersion` | `18`; a cache written at 17 rebuilds on open |
+| AC-2.3 | Promote's profile builder re-reconciles a Property for `Options.Excluding` | It runs under the same rules as the cache (`autoreconciler.ValueRules`), so *Chris* folds there too |
 
 ## 3. Scope
 
 | In | Covered by |
 | --- | --- |
 | `nameModule.fold` accepts an alias or abbreviation pair whose `from` word is shorter than its `into` word, for part types whose Western role is given or nick | STEP-1, AC-1.1 – AC-1.8 |
-| `autoreconciler.valueRules` carries the product alias tables; `CacheVersion` 18 | STEP-2, AC-2.1, AC-2.2 |
+| `autoreconciler.ValueRules` (exported) carries the product alias tables; `CacheVersion` 18; `promotealign` profiles read it | STEP-2, AC-2.1, AC-2.2, AC-2.3 |
 | `Compatible` follows the new fold (it calls `fold`); its alias test flips | STEP-1, T-3 |
-| Docs: grouping policy and §7.2 fold rule, `names.go` header | STEP-3 |
+| Docs: grouping policy and §7.2 fold rule, `names.go` header, `subjectprofile.Build` comment, `add-match-rule` skill | STEP-3 |
 
 | Out | Home |
 | --- | --- |
@@ -84,6 +85,8 @@ A Person whose records say *Chris Robins* and *Christopher Robins* shows one giv
 | Compatible | `core/autoreconcile/modules.go` `Compatible` | Two values are compatible when every shared unit has the same key or one folds into the other. Called from `core/database/promotealign/exhibits.go` |
 | Reconciler rules | `core/database/autoreconciler/autoreconciler.go` `valueRules` | `matchregistry.Default().Value`: no alias tables, by design, "so the cache changes only when CacheVersion does" |
 | Cache version | `core/database/autoreconciler/autoreconciler.go` `CacheVersion` | 17, with a changelog comment above it |
+| Promote profiles | `core/database/promotealign/profiles.go` profiler constructor (`reconcile: matchregistry.Default().Value`, line 169); `core/subjectprofile/subjectprofile.go` `Build` doc comment ("pass matchregistry.Default().Value, as the cache does") | A second copy of the cache's rules. `promotealign` already imports `autoreconciler` (checked with `go list -deps`) |
+| Skill text | `.agents/skills/add-match-rule/SKILL.md`, bullets "The profile builder" and "The reconciler composes value compare" | Say the cache and `Build` callers pass `matchregistry.Default().Value` |
 | Product alias seed | `core/database/namealiases/registry.go` `AliasTables`; `namealiases.go` `withAliases` (unexported) | The abbreviations and nicknames tables, roles given / nick / untyped |
 | Western roles | `core/matchregistry/value.go` `Names.Western.PartRoles` | `given` → given, `nick` → nick, `surname` → family, `undetermined` and `""` → untyped |
 | Tests | `core/autoreconcile/names_test.go` `TestReconcileNames` (group "fold"), `TestReconcileNamesWords` ("an accent-folded pair never folds"); `modules_test.go` `TestCompatibleIgnoresAliases`; `core/database/autoreconciler/autoreconciler_test.go` `TestReconciledNames` | `testRules` (in `autoreconcile_test.go`) has no aliases. `TestCompatibleIgnoresAliases` asserts Jim Robins is not compatible with James Kenneth Robins |
@@ -98,11 +101,11 @@ Value compare's output for the cases, checked at the planning base with the prod
 | --- | --- | --- | --- |
 | D-1 | A unit folds into another when `Compare(from, into)` is `Contains` with `Broader == SideA`, or `Equivalent`; every pair is `Same`, cause `initial`, or an alias pair (cause `alias` or `abbreviation`) whose `from` word has fewer runes than its `into` word; and at least one pair is not `Same` | The shorter word is the nickname in both product tables (*Chris*, *Wm*, *Bill*); `Equivalent` covers a unit with no unpaired words, `Contains` one with extra words | Folding into the set's canonical name — the catalog does not store which token is canonical (`name_alias_members` has no order), and the user accepted "shorter folds into longer" (2026-10-19) |
 | D-2 | Equal length (*Chris* / *Kris*) or a longer `from` word does not fold | A fold needs a direction; with none both names stay, as today | Alphabetical tie-break — arbitrary |
-| D-3 | Alias folding applies only when the unit's part type maps to role `given` or `nick` in `rules.Names.Western.PartRoles`; other types fold only on `Same` and initials, as today | The alias tables are given-name tables (roles given / nick / untyped); the reconciler strips roles before comparing, so without this a surname *Bill* would fold into *William* | Leaving it to the alias roles — the reconciler passes untyped words, which every table allows; hard-coding the strings `"given"` / `"nick"` in the module — the pattern already maps types to roles |
+| D-3 | An alias pair folds only when the catalog's alias data allows the unit's role: `role := m.rules.Names.Western.Role(typ)` and `m.rules.Names.Aliases.Hit(p.A.Text, p.B.Text, role, role)` must hit. The product tables allow given, nick and untyped, so `given`, `nick`, `undetermined` and untyped parts alias-fold; `surname` (family) and the others never do | Which roles may use an alias table is already data (`AliasTable.Roles`, checked by `AliasIndex.Hit`); the module names no role. The reconciler strips roles before comparing, so the role is re-read here | Hard-coding given / nick in the module — a second rule beside the table roles (review M-1); indexing `PartRoles` directly — `NamePattern.Role` is the one lookup (M-6) |
 | D-4 | Both nickname and abbreviation tables fold | User call (2026-10-19): "Just Christopher", nicknames and abbreviations both fold | Nicknames only |
 | D-5 | The folded name disappears from the displayed value; it is not turned into a `nick` part | User call (2026-10-19); matches how an initial folds | Showing *Christopher "Chris"* — a name no source wrote |
-| D-6 | `autoreconciler.valueRules` = the shipped registry plus the **product** alias tables (`namealiases.AliasTables()`), through `namealiases.ProductRules(base)` *(new)* | Keeps the cache's rule that it changes only when `CacheVersion` does; no catalog edits alias rows today | Reading the catalog's alias rows — the cache would go stale on an alias change with no rebuild hook |
-| D-7 | `Compatible` changes with the fold; `TestCompatibleIgnoresAliases` becomes `TestCompatibleFoldsAliases` and asserts Jim Robins is compatible with James Kenneth Robins | `Compatible` is defined as "the same value as the pipeline would see it"; Promote's exhibits (deleted in S11-19) agree with the reconciler | Keeping `Compatible` alias-blind through a flag — a second fold rule |
+| D-6 | `valuerules.Product() valuecompare.Rules` *(new)* = the shipped registry plus the **product seed** alias tables (`namealiases.ProductTables()` *(new)*, a copy of `productAliasTables`, not `AliasTables()`, which includes `Register`ed plugin tables). `autoreconciler.valueRules` is renamed `ValueRules` and set to `valuerules.Product()`; `promotealign/profiles.go` passes `autoreconciler.ValueRules` as `reconcile`, the one value every reconciler caller uses. A guard test pins the product tables to `CacheVersion` (T-7) | Keeps the cache's rule that it changes only when `CacheVersion` does: a plugin table cannot move it, and a seed edit fails a test until the version is bumped. `valuerules` is the declared one place `Rules` are assembled. Promote's `Excluding` re-reconcile agrees with the cache | Reading the catalog's alias rows — stale cache on an alias change; `AliasTables()` — plugin tables change the cache silently (M-2); building the rules in `namealiases` — `valuerules` owns assembly (M-5) |
+| D-7 | `Compatible` changes with the fold; `TestCompatibleIgnoresAliases` becomes `TestCompatibleFoldsAliases`, reads `aliasRules`, asserts Jim Robins is compatible with James Kenneth Robins, keeps its whole-name `Compare` == `Contains` assertion, and adds Jose Robins vs José Robins → not compatible. Promote exhibits that count through `Compatible` may now count an alias pair as agreeing | `Compatible` is defined as "the same value as the pipeline would see it"; Promote's exhibits (deleted in S11-19) agree with the reconciler | Keeping `Compatible` alias-blind through a flag — a second fold rule |
 | D-8 | `CacheVersion` 18 with the changelog line `18: a shorter alias of a given name folds into the longer (S11-28).` | Cached values change | — |
 | D-9 | No new registry knob | The rule has no number: rune length and the cause codes decide | A minimum length — nothing needs tuning |
 
@@ -112,11 +115,14 @@ Value compare's output for the cases, checked at the planning base with the prod
 
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
-| `namealiases.ProductRules(base valuecompare.Rules) valuecompare.Rules` *(new)* | func | `namealiases.Rules` (catalog / graph tables), `withAliases` | `Rules` reads catalog rows; this one reads `AliasTables()`. It reuses `withAliases` |
+| `valuerules.Product()` *(new)* | func | `valuerules.Load` (catalog rules) | Same assembly from the product seed instead of catalog rows; sits beside `Load` |
+| `namealiases.ProductTables()` *(new)* | func | `namealiases.AliasTables()` (seed + registered) | Product seed only (D-6) |
+| `TestProductAliasTablesPinCacheVersion` *(new)* | test | `TestKnobInventoryMatchesRegistry` (a drift guard) | Fails when the product seed changes without a `CacheVersion` bump |
 | `aliasFold(from, into string) bool` *(new, unexported, `names.go`)* | func | `valuecompare.SpellingSimilarity` use in `outvotes` | A rune-length test on one pair; nothing similar exists |
 | `aliasRules` *(new, test var in `names_test.go`)* | helper | the inline index in `TestCompatibleIgnoresAliases` | Moves that table to one var both tests use |
+| `autoreconciler.ValueRules` *(exported rename of `valueRules`)* | var | `valueRules`; `promotealign` `matchregistry.Default().Value` | One value for both reconciler callers |
 
-**Builds on.** S11-06's fold in `nameModule`; value compare's `Detail.Parts` causes; the Western pattern in `matchregistry`; `namealiases.withAliases`.
+**Builds on.** S11-06's fold in `nameModule`; value compare's `Detail.Parts` causes; `AliasIndex.Hit` and the tables' `Roles`; `NamePattern.Role`; `valuerules` as the one place rules are assembled.
 **Deletes.** The "an accent fold or an alias never folds" sentence in `names.go` and in §7 and §7.2 of `conclusion-reconciliation.md`; replaced in STEP-3. The map's working rule was amended at planning. The inline alias table in `TestCompatibleIgnoresAliases`.
 **Next adds.** A canonical token per alias set would replace D-1's length test with one check in `aliasFold`.
 
@@ -129,8 +135,10 @@ None — no catalog change.
 | Package | Change |
 | --- | --- |
 | `core/autoreconcile` (`names.go`) | `fold(typ string, from, into unit) bool` reads `typ`. Sketch below. Header comment "Fold" bullet rewritten (STEP-3 text) |
-| `core/database/namealiases` (`namealiases.go`) | `func ProductRules(base valuecompare.Rules) valuecompare.Rules { return withAliases(base, AliasTables()) }` *(new)* with a doc comment saying the reconciler cache reads it |
-| `core/database/autoreconciler` (`autoreconciler.go`) | `var valueRules = namealiases.ProductRules(matchregistry.Default().Value)`; comment says "the shipped registry and the product alias tables, never a catalog's own rows or name formats". `CacheVersion = 18` with D-8's line |
+| `core/database/namealiases` (`registry.go`) | `func ProductTables() []valuecompare.AliasTable` *(new)*: a copy of `productAliasTables`. Comments that say scoring never reads the in-code list (package doc in `namealiases.go`; `productAliasTables`, `aliasTables`, `AliasTables` in `registry.go`) now say: "Matching reads the catalog rows; the reconciler cache reads the product seed through `valuerules.Product`." |
+| `core/database/valuerules` (`valuerules.go`) | `func Product() valuecompare.Rules` *(new)*: `matchregistry.Default().Value` with `Names.Aliases = valuecompare.NewAliasIndex(namealiases.ProductTables(), rules.Words)`; doc: "the shipped registry and the product alias seed, never a catalog's own rows or name formats; the reconciler cache reads it" |
+| `core/database/promotealign` (`profiles.go`) | `reconcile: autoreconciler.ValueRules` |
+| `core/database/autoreconciler` (`autoreconciler.go`, `truth.go`) | `var ValueRules = valuerules.Product()` (renamed from `valueRules`; both call sites updated); `CacheVersion = 18` with D-8's line. `autoreconciler_test.go`: `TestProductAliasTablesPinCacheVersion` *(new)*: SHA-256 of the sorted product tables (key, kind, roles, sorted sets) equals a pinned hex constant; on mismatch the message says "the product alias seed changed: bump autoreconciler.CacheVersion and re-pin this hash" |
 
 ```go
 func (m nameModule) fold(typ string, from, into unit) bool {
@@ -141,15 +149,16 @@ func (m nameModule) fold(typ string, from, into unit) bool {
 	default:
 		return false
 	}
-	role := m.rules.Names.Western.PartRoles[typ]
-	aliases := role == valuecompare.RoleGiven || role == valuecompare.RoleNick
+	role := m.rules.Names.Western.Role(typ)
 	changed := false
 	for _, p := range det.Parts {
 		switch {
 		case p.Relation == valuecompare.Same:
 		case p.Cause == valuecompare.CauseInitial:
 			changed = true
-		case aliases && (p.Cause == valuecompare.CauseAlias || p.Cause == valuecompare.CauseAbbreviation) && aliasFold(p.A.Text, p.B.Text):
+		case (p.Cause == valuecompare.CauseAlias || p.Cause == valuecompare.CauseAbbreviation) &&
+		m.rules.Names.Aliases.Hit(p.A.Text, p.B.Text, role, role) &&
+		aliasFold(p.A.Text, p.B.Text):
 			changed = true
 		default:
 			return false
@@ -162,7 +171,7 @@ func (m nameModule) fold(typ string, from, into unit) bool {
 func aliasFold(from, into string) bool { return utf8.RuneCountInString(from) < utf8.RuneCountInString(into) }
 ```
 
-`typ` is the trimmed part type key (`readName` trims it), which is the `PartRoles` key. `p.A` is the `from` side because `from` is the first argument to `Compare`.
+`typ` is the trimmed part type key (`readName` trims it); `Role` returns untyped for a type the pattern does not list. `p.A` is the `from` side because `from` is the first argument to `Compare`.
 
 ### FFI
 
@@ -180,17 +189,17 @@ None —.
 
 **STEP-1 — Fold aliases of given names**
 Files: `core/autoreconcile/names.go`, `core/autoreconcile/names_test.go`, `core/autoreconcile/modules_test.go`. Skill: `add-match-rule` (no knob; read it for the layer rules).
-Do: implement D-1 – D-3 per the sketch. Add `aliasRules` (product `matchregistry.Default().Value` with a `NewAliasIndex` over two tables: nickname `{christopher, chris, kit}`, `{christina, chris}`, `{chris, kris}`, `{william, bill}`, `{james, jim}`; abbreviation `{william, wm}`; roles given / nick / untyped). Add `TestReconcileNamesAliases` *(new)* with T-1's rows. Rename `TestCompatibleIgnoresAliases` to `TestCompatibleFoldsAliases` and flip it per D-7, reading `aliasRules`.
+Do: implement D-1 – D-3 per the sketch. Add `aliasRules` (product `matchregistry.Default().Value` with a `NewAliasIndex` over two tables: nickname `{christopher, chris, kit}`, `{christina, chris}`, `{chris, kris}`, `{william, bill}`, `{james, jim}`; abbreviation `{william, wm}`; roles given / nick / untyped). Add `TestReconcileNamesAliases` *(new)* with T-1's rows, in the shape of `TestReconcileNames` (`in`, `want []cl`, `state`, `reasons`). Rename `TestCompatibleIgnoresAliases` to `TestCompatibleFoldsAliases` and flip it per D-7, reading `aliasRules`.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/autoreconcile/` passes, including the untouched `TestReconcileNamesWords` row "an accent-folded pair never folds".
 
 **STEP-2 — The reconciler cache reads the product alias tables**
-Files: `core/database/namealiases/namealiases.go`, `core/database/autoreconciler/autoreconciler.go`, `core/database/autoreconciler/autoreconciler_test.go`.
-Do: add `ProductRules`; wire `valueRules`; `CacheVersion` 18 (D-6, D-8). Add T-4's subtest to `TestReconciledNames`.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/autoreconciler/ ./core/database/namealiases/` passes; `go build ./...` has no import cycle.
+Files: `core/database/namealiases/registry.go`, `core/database/namealiases/namealiases.go` (comment), `core/database/valuerules/valuerules.go`, `core/database/autoreconciler/autoreconciler.go`, `core/database/autoreconciler/truth.go`, `core/database/autoreconciler/autoreconciler_test.go`, `core/database/promotealign/profiles.go`.
+Do: add `namealiases.ProductTables` and `valuerules.Product`; rename `valueRules` to `ValueRules` and set it; `profiles.go` passes it; `CacheVersion` 18 (D-6, D-8). Add T-4's subtest and T-7.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/autoreconciler/ ./core/database/namealiases/ ./core/database/valuerules/ ./core/database/promotealign/ ./core/subjectprofile/` passes; `go build ./...` succeeds.
 
 **STEP-3 — Docs**
-Files: `core/autoreconcile/names.go` (header), `docs/conclusion-reconciliation.md` §7 grouping policy and §7.2 Fold bullet, `docs/deployment-plan/spike-11/deployment-plan.md` (map row; the working rule was amended at planning), `docs/ideas/international-names.md` (one line under name changes: canonical alias tokens), `completed.md`, this plan.
-Do: replace "an alias never folds" with: "An alias or abbreviation folds a shorter given name or nickname into the longer one it stands for (*Chris* → *Christopher*, *Wm* → *William*; decided 2026-10-19, S11-28). An accent fold never folds, and a surname never alias-folds." In §7 grouping policy: "`Equivalent` never groups; it folds only through an alias of a given name (§7.2)". Then the Definition of done.
+Files: `core/autoreconcile/names.go` (header "Fold" bullet), `docs/conclusion-reconciliation.md` (line 132 grouping policy; line 167 §7.2 Fold bullet), `core/subjectprofile/subjectprofile.go` (`Build` comment: "pass autoreconciler.ValueRules, as the cache does"), `.agents/skills/add-match-rule/SKILL.md` (the two bullets "The profile builder" and "The reconciler composes value compare": the cache and `Build` callers pass `autoreconciler.ValueRules` = `valuerules.Product()`, the shipped registry plus the product alias seed, never catalog data; and the `valuerules.Load` line names `Product` as the reconciler's exception), `.agents/skills/add-seeded-vocabulary/SKILL.md` and `docs/seeded-vocabulary.md` §4.5 ("scoring reads the catalog only" → matching reads the catalog rows; the reconciler cache reads the product seed, so a seed edit bumps `CacheVersion`), `core/autoreconcile/names.go` "Format-agnostic" bullet and `docs/conclusion-reconciliation.md` §7.2 "Format-agnostic" bullet (add: "A type's role in the name format decides only whether an alias table applies (§7.2 Fold)."), `nameUnit.compareValue` comment (the role is re-read for the alias check), `docs/deployment-plan/spike-11/deployment-plan.md` (map row; the working rule was amended at planning), `docs/ideas/international-names.md` (one line under "Name changes as a signal": canonical alias tokens), `docs/deployment-plan/spike-11/completed.md`, this plan.
+Do: in the `names.go` header and the §7.2 Fold bullet, replace "An accent fold or an alias never folds (`[Jose]` stays beside `[José, Kenneth]`)." with: "An alias or abbreviation folds a shorter given name or nickname into the longer one it stands for (*Chris* → *Christopher*, *Wm* → *William*; decided 2026-10-19, S11-28). An alias applies only to the part roles its table allows; the product tables cover given names and nicknames, so a surname never alias-folds. An accent fold never folds (`[Jose]` stays beside `[José, Kenneth]`)." In the §7 grouping policy (line 132), replace "`Equivalent` (an accent fold, an alias) never groups or folds" with "`Equivalent` (an accent fold, an alias) never groups; it folds only through an alias of a given name (§7.2)". Then the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-11/prs/S11-28-alias-fold.md` reports no errors; links resolve.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period ("Fold a nickname into the given name it stands for.").
@@ -199,13 +208,14 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/autoreconcile/names_test.go` `TestReconcileNamesAliases` *(new)* | One row per AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, AC-1.8, with `aliasRules`; AC-1.7 uses the `{william, bill}` set on surnames | AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, AC-1.8, D-1 – D-5 |
-| T-2 | Go | same, row "the folded alias is in the value's members" | AC-1.1's result has members `{1, 2}` and reasons `kept` | AC-1.1 |
-| T-3 | Go | `core/autoreconcile/modules_test.go` `TestCompatibleFoldsAliases` *(renamed)* | Jim Robins vs James Kenneth Robins → compatible; Jose Robins vs José Robins → not compatible | D-7 |
-| T-4 | Go | `core/database/autoreconciler/autoreconciler_test.go` `TestReconciledNames` (new subtest "a nickname folds into the given name it stands for", shaped like "an initial expands into the full name") | `nameIn(a, …, "given=Chris\|surname=Robins")` and `nameIn(b, …, "given=Christopher\|surname=Robins")`, joined → one name row, `Support` 2, parts `given=Christopher\|surname=Robins` | AC-2.1, D-6 |
+| T-1 | Go | `core/autoreconcile/names_test.go` `TestReconcileNamesAliases` *(new)* | Folding rows AC-1.1, AC-1.2, AC-1.3, AC-1.4 with the members, parts and state in §2 and reasons `kept`; AC-1.4 also run with its input reversed, same result. "Unchanged" rows AC-1.5, AC-1.6, AC-1.7, AC-1.8 assert that `Reconcile` under `aliasRules` equals `Reconcile` under `testRules` on the same input (values, members, state, reasons). AC-1.7 uses the `{william, bill}` set on surnames | AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, AC-1.8, D-1 – D-5 |
+| T-3 | Go | `core/autoreconcile/modules_test.go` `TestCompatibleFoldsAliases` *(renamed)* | With `aliasRules`: Jim Robins vs James Kenneth Robins → compatible, and their whole-name `Compare` is still `Contains`; Jose Robins vs José Robins → not compatible | D-7 |
+| T-6 | Go | `core/database/promotealign` (existing profile tests) | Pass unchanged with `reconcile: autoreconciler.ValueRules` | AC-2.3, D-6 |
+| T-7 | Go | `core/database/autoreconciler/autoreconciler_test.go` `TestProductAliasTablesPinCacheVersion` *(new)* | The hash of `namealiases.ProductTables()` equals the pinned constant | D-6, AC-2.2 |
+| T-4 | Go | `core/database/autoreconciler/autoreconciler_test.go` `TestReconciledNames` (new subtest "a nickname folds into the given name it stands for", shaped like "an initial expands into the full name") | `nameIn(a, f.props["name"], "given=Chris\|surname=Robins")` and `nameIn(b, f.props["name"], "given=Christopher\|surname=Robins")`, joined → one name row, `Support` 2, parts `given=Christopher\|surname=Robins` | AC-2.1, D-6 |
 | T-5 | Go | `core/database/autoreconciler/autoreconciler_test.go` (existing check at the `StoredVersion(db)` call, line 1113 at the base) | Unchanged test; passes with `CacheVersion` 18 | AC-2.2 |
 
-Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `TestReconcileNamesInvariants` (order independence: the fold must not depend on input order), `core/database/promotealign` tests that count exhibits through `Compatible`.
+Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `TestReconcileNamesInvariants` (runs under `testRules`, so alias folds are not in it; T-1's reversed AC-1.4 row covers order), `core/database/promotealign` tests that count exhibits through `Compatible`. A `promotealign` expectation may change only where the changed count comes from an alias pair now agreeing; list each in the PR.
 
 ## 9. Definition of done
 
@@ -218,16 +228,16 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 - [ ] UI matches the brief inventory — no UI in this PR
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — none
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
-- [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
+- [ ] deployment-plan.md: map row status; docs/deployment-plan/spike-11/completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated) — not gated
-- [ ] Domain doc updated: conclusion-reconciliation.md §7 and §7.2
+- [ ] Domain doc updated: conclusion-reconciliation.md §7 and §7.2; seeded-vocabulary §4.5; subjectprofile.Build comment; add-match-rule and add-seeded-vocabulary skills; namealiases comments
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 
 ## 10. Manual check
 
 1. Open a project with a Source that names a person *Chris Robins* and another Source that names *Christopher Robins*; join both into one Person in Promote.
-2. Open Persons. The row reads *Robins, Christopher*, not *Robins, Christopher Chris*.
+2. Open Persons (sorted style, Western format). The row reads *Robins, Christopher*, not *Robins, Christopher Chris*.
 3. Open the Person. The title reads *Christopher Robins*; Why on the name shows both records counted toward it.
 
 ## 11. Risks and stop conditions
@@ -242,7 +252,8 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 - `valuecompare.Compare` on `Chris` / `Christopher` does not return `Equivalent` with one pair of cause `alias` at your base.
 - `TestReconcileNamesInvariants` fails after STEP-1 and the failure is not one of T-1's new expectations.
 - Importing `namealiases` from `autoreconciler` creates an import cycle.
-- A test outside `core/autoreconcile`, `core/database/autoreconciler` and `core/database/promotealign` changes result.
+- A test outside `core/autoreconcile`, `core/database/autoreconciler`, `core/database/promotealign` and `core/subjectprofile` changes result.
+- A `promotealign` test changes for a reason other than an alias pair now agreeing.
 
 ## 12. Open questions
 
