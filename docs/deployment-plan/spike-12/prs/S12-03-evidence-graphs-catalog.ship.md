@@ -1,7 +1,7 @@
 # Ship log — S12-03 Evidence graphs in the catalog
 
 **Plan:** [`S12-03-evidence-graphs-catalog.md`](S12-03-evidence-graphs-catalog.md) · **Branch:** `s12-03-evidence-graphs-catalog` · **PR:** #498
-**State:** fixing 5
+**State:** ready
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s12-03`, branched from `origin/main` @ `84a9b318`.
 
@@ -216,5 +216,9 @@ Failing test first: extend `TestParseMigrationsForeignKeys` with refused cases �
 Do: in the loader, any line whose trimmed, lower-cased text starts with `-- migrate:` must be exactly `-- migrate: foreign_keys off`, else refuse (CodeInternalMigrations, naming the file and line). Refuse a statement that is a transaction control on its own: a line whose trimmed, lower-cased text matches `^(begin( (deferred|immediate|exclusive))?( transaction)?|commit( transaction)?|end( transaction)?|rollback( transaction)?)\s*;$`. A trigger's `BEGIN` (no `;`) and `END;` inside a `CREATE TRIGGER` must still load — if `END;` alone cannot be told apart, refuse only `begin…;`, `commit…;` and `rollback…;`, and say so. Make the skill sentence match exactly what the loader refuses. Tidy the doubled blank line in `000052.sql`.
 Check: the extended test passes; every real migration still loads (Create/Open tests); scripts/check-pr.sh PASS. Orchestrator verifies; no further review round.
 
+
+## Round 6 — fix (Fix plan 6)
+Head `671a21b3`. Gate PASS; CI vet command clean; uncached `go test ./core/... ./api/...` ok. F-13 done (extended `TestParseMigrationsForeignKeys` red first on the trailing-space directive). Lone `END;` not refused (indistinguishable from a trigger body's), as the fix plan allowed; skill and comment say so. MNT-18, MNT-19: **Resolved** (orchestrator read of `scanDirectives` and `transactionControl`).
+
 ## Result
-Gate PASS · CI pending · open: none · fixed on this PR: PRF-1, MNT-1, MNT-2, MNT-3, MNT-4, MNT-5, MNT-9, MNT-10, MNT-11, MNT-12, MNT-17, CON-R2-1 · later PR: UX-1, UX-2 (S12-05), MNT-8 (S12-04), UX-3 (S12-11) · follow-ups: SEC-1, MNT-13 · to user: PRF-1 (override D-15), MNT-1/2/4/5 (fix here) · CON miss: none · rounds: 4 review (rounds 3–4 user-requested)
+Gate PASS · CI pending (re-run after `main` merge and F-11) · open: none · fixed on this PR: PRF-1, SEC-1, MNT-1, MNT-2, MNT-3, MNT-4, MNT-5, MNT-9, MNT-10, MNT-11, MNT-12, MNT-17, MNT-18, MNT-19, CON-R2-1 · later PR: UX-1, UX-2 (S12-05), MNT-8 (S12-04), UX-3 (S12-11) · follow-ups: MNT-13 · to user: PRF-1 (override D-15), MNT-1/2/4/5 (fix here), migration backfill (keep), `migrate` (fix here) · CON miss: none · CI miss: S11-15 merged into `main` with a test using a field this PR removed; local gate runs against the branch only
