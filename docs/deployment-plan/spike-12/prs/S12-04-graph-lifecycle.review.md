@@ -1,6 +1,6 @@
 # Review — S12-04 Graph lifecycle
 
-**Verdict:** Fits with changes — Ready with changes. No executability blocker; maintainability blocker M-1 and major M-2 are to the user.
+**Verdict:** Fits with changes — Ready with changes. No blocker open; M-1 and M-2 answered by the user (2026-10-19); M-9 fixed in round 2.
 **Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
@@ -86,3 +86,24 @@ Maintainability (opus): round-1 answers hold; D-7 sound. One new blocker.
 **Answer:** Fixed — D-15's `extraGateList` (`sync.OnceValue`) holds edge-locked, last-graph and one `originHolds(r)` entry per `originRules` row; `originGate` and `originRuleFor` go; `Impact` has one loop. STEP-5 runs `TestImpactGates` green on the edge and origin entries first. STEP-8 also fixes the `add-catalog-delete` checklist and `Delete` sketch lines that describe extra gates as domain-side checks.
 
 Minor (not numbered): §6's `UpdateInput` sketch lacked `ArtifactIDs` — Fixed. D-7 reads one graph's links through the Source's `list` — accepted at today's sizes.
+
+Executability (sonnet): round-1 answers hold; D-15 and STEP-5 dry-run clean.
+
+### X-10 · major · AC-3.6 and T-3's Citation case could not be built
+A Subject joins its Source's only graph (`SoleGraphTx`), so the in-use case cannot sit on a second graph.
+**Answer:** Fixed — AC-3.6 and T-3 run on the Source's `Default` graph, with A1 and A2 linked and the Citation made before any second graph exists.
+
+### X-11 · major · §6 `UpdateInput` contradicted D-7
+**Answer:** Fixed (with M-9's commit) — the sketch has `ArtifactIDs`.
+
+### X-12 · minor · D-7's stored-link lookup and description binding
+**Answer:** Fixed — D-7 names the list entry whose `ID` is `graphID` and the `NullString` binding in the `Exec`.
+
+### X-13 · minor · Where `List`'s 16-byte check lives
+**Answer:** Fixed — D-1: `List` and `list` both check.
+
+### X-14 · nit · STEP-5's first pass
+**Answer:** Fixed — STEP-5 adds every D-15 symbol first and registers only the edge and origin entries until `TestImpactGates` is green.
+
+### X-15 · nit · Header text stale
+**Answer:** Fixed — Status `Planned`, Review line updated.
