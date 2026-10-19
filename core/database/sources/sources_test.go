@@ -756,6 +756,41 @@ func TestSourceDelete(t *testing.T) {
 		t.Fatalf("subject inbound %v", err)
 	}
 
+	t.Run("releases the Default graph", func(t *testing.T) {
+		graphed, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Graph only"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []rowchange.Change
+		if _, err := writes.Call(c, writes.Op{Action: "delete_source", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := Delete(tx, userID, graphed.ID)
+			got = changes
+			return struct{}{}, changes, err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		var n int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM evidence_graphs WHERE source_id = ?`, graphed.ID).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		if n != 0 {
+			t.Fatalf("graph rows left=%d", n)
+		}
+		var types []string
+		for _, ch := range got {
+			types = append(types, ch.EntityType+" "+string(ch.Action))
+		}
+		want := []string{"evidence_graph delete", "source delete"}
+		if len(types) != len(want) {
+			t.Fatalf("changes %v", types)
+		}
+		for i := range want {
+			if types[i] != want[i] {
+				t.Fatalf("changes %v want %v", types, want)
+			}
+		}
+	})
+
 	missing := make([]byte, 16)
 	if err := runDelete(c, userID, missing); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("missing %v", err)

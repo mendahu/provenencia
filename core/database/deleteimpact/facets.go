@@ -190,10 +190,15 @@ func buildFacetReleases() []facetRelease {
 			col{"id", colUUID}, col{"observation_id", colUUID}, col{"body", colText}),
 		rowFacet(catalogmodel.KindCitation, "citation_notes", "citation_id", "citation_note", "id",
 			col{"id", colUUID}, col{"citation_id", colUUID}, col{"body", colText}),
+		// A link is audited under its graph's id, like the graph's own create.
+		rowFacet(catalogmodel.KindArtifact, "evidence_graph_artifacts", "artifact_id", "evidence_graph_artifact", "graph_id",
+			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
 
 		// --- Source ---------------------------------------------------------
 		rowFacet(catalogmodel.KindSource, "source_notes", "source_id", "source_note", "id",
 			col{"id", colUUID}, col{"source_id", colUUID}, col{"body", colText}),
+		rowFacet(catalogmodel.KindSource, "evidence_graphs", "source_id", "evidence_graph", "id",
+			col{"id", colUUID}, col{"ref", colText}, col{"source_id", colUUID}, col{"name", colText}, col{"description", colText}),
 		rowFacet(catalogmodel.KindSource, "source_metadata", "source_id", "source_metadata", "id",
 			col{"id", colUUID}, col{"source_id", colUUID}, col{"field_id", colUUID}, col{"value_text", colText}),
 		rowFacet(catalogmodel.KindSource, "source_credibility_assessments", "source_id", "source_credibility_assessment", "id",

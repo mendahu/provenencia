@@ -45,7 +45,9 @@ type Set struct {
 	HandleScopes [][]byte
 	Search       []SearchIDs
 	Vocabulary   bool
-	Structure    bool
+	// EvidenceGraphs is set when a graph or link row was written: the graph list changed.
+	EvidenceGraphs bool
+	Structure      bool
 	// HeaderDeps are handles whose stored rows read Handles. Run fills this
 	// from the walk RecomputeTx already did. HeaderDepsWalked says that walk
 	// happened, including when it found nobody, so a commit drops those rows
@@ -78,8 +80,10 @@ type Effect struct {
 	HandleScope Path
 	Search      []SearchDoc
 	Vocabulary  bool
-	Structure   Path
-	None        bool
+	// EvidenceGraphs marks a table whose rows are graphs or links: the graph list changed.
+	EvidenceGraphs bool
+	Structure      Path
+	None           bool
 }
 
 // Handle queries mirror autoreconciler. They stay here so the registry can
@@ -211,6 +215,16 @@ var registry = map[string]Effect{
 		HandleScope: chain(up("observation_id", "subject_id"), membersOf),
 	},
 	"subjects": {Entity: "subject", Source: field("source_id"), SourceScope: field("source_id")},
+	"evidence_graphs": {
+		Entity:         "evidence_graph",
+		SourceScope:    field("source_id"),
+		EvidenceGraphs: true,
+	},
+	"evidence_graph_artifacts": {
+		Entity:         "evidence_graph_artifact",
+		SourceScope:    up("graph_id", "source_id"),
+		EvidenceGraphs: true,
+	},
 	"files": {
 		Entity:      "file",
 		SourceScope: chain(inbound("artifacts", "file_id"), field("source_id")),
@@ -333,7 +347,7 @@ func (e Effect) validate(table string) error {
 				return errf("%s: None entry still has effects", table)
 			}
 		}
-		if len(e.Search) > 0 || e.Vocabulary {
+		if len(e.Search) > 0 || e.Vocabulary || e.EvidenceGraphs {
 			return errf("%s: None entry still has effects", table)
 		}
 		return nil

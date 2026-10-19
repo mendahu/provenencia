@@ -84,6 +84,9 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 		if eff.Vocabulary {
 			set.Vocabulary = true
 		}
+		if eff.EvidenceGraphs {
+			set.EvidenceGraphs = true
+		}
 		w := &walk{q: tx, ch: ch, ghosts: ghosts, table: table}
 		var err error
 		set.Sources, err = appendPath(w, table, eff.Source, set.Sources)

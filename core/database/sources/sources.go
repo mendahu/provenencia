@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/derivatives"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -131,19 +132,24 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Source, []rowchange
 	if in.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: nil, New: in.Description}
 	}
+	_, graphChanges, err := evidencegraphs.CreateDefault(tx, idBytes)
+	if err != nil {
+		return Source{}, nil, err
+	}
+	changes := append([]rowchange.Change{{
+		EntityType: "source",
+		EntityID:   append([]byte(nil), idBytes...),
+		Action:     rowchange.ActionCreate,
+		Fields:     fields,
+	}}, graphChanges...)
 	return Source{
-			ID:           append([]byte(nil), idBytes...),
-			Ref:          sourceRef,
-			SourceTypeID: append([]byte(nil), in.SourceTypeID...),
-			Title:        in.Title,
-			Description:  in.Description,
-			CoverMode:    CoverModeTypeIcon,
-		}, []rowchange.Change{{
-			EntityType: "source",
-			EntityID:   append([]byte(nil), idBytes...),
-			Action:     rowchange.ActionCreate,
-			Fields:     fields,
-		}}, nil
+		ID:           append([]byte(nil), idBytes...),
+		Ref:          sourceRef,
+		SourceTypeID: append([]byte(nil), in.SourceTypeID...),
+		Title:        in.Title,
+		Description:  in.Description,
+		CoverMode:    CoverModeTypeIcon,
+	}, changes, nil
 }
 
 // NormalizeCover checks a cover choice. Artifact mode ensures a thumbnail,

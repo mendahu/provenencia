@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -27,13 +28,13 @@ var (
 )
 
 const (
-	sqlInsert = `INSERT INTO subjects (id, ref, source_id, subject_type_id, label, description)
-		VALUES (?, ?, ?, ?, ?, ?)`
+	sqlInsert = `INSERT INTO subjects (id, ref, source_id, graph_id, subject_type_id, label, description)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`
 	sqlUpdate = `UPDATE subjects SET label = ?, description = ? WHERE id = ?`
 	sqlDelete = `DELETE FROM subjects WHERE id = ?`
-	sqlGet    = `SELECT id, ref, source_id, subject_type_id, COALESCE(label, ''), COALESCE(description, '')
+	sqlGet    = `SELECT id, ref, source_id, graph_id, subject_type_id, COALESCE(label, ''), COALESCE(description, '')
 		FROM subjects WHERE id = ?`
-	sqlGetByRef = `SELECT id, ref, source_id, subject_type_id, COALESCE(label, ''), COALESCE(description, '')
+	sqlGetByRef = `SELECT id, ref, source_id, graph_id, subject_type_id, COALESCE(label, ''), COALESCE(description, '')
 		FROM subjects WHERE ref = ?`
 	sqlSourceExists = `SELECT 1 FROM sources WHERE id = ?`
 	sqlTypePrefix   = `SELECT candidate_ref_prefix FROM subject_types WHERE id = ?`
@@ -45,6 +46,7 @@ type Subject struct {
 	ID            []byte
 	Ref           string
 	SourceID      []byte
+	GraphID       []byte
 	SubjectTypeID []byte
 	Label         string
 	Description   string
@@ -106,6 +108,10 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 	if err := requireSource(tx, in.SourceID); err != nil {
 		return Subject{}, rowchange.Change{}, err
 	}
+	graphID, err := evidencegraphs.SoleGraphTx(tx, in.SourceID)
+	if err != nil {
+		return Subject{}, rowchange.Change{}, err
+	}
 	prefix, err := requireTypePrefix(tx, in.SubjectTypeID)
 	if err != nil {
 		return Subject{}, rowchange.Change{}, err
@@ -123,7 +129,7 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 		if err != nil {
 			return Subject{}, rowchange.Change{}, err
 		}
-		_, err = tx.Exec(sqlInsert, idBytes, subjectRef, in.SourceID, in.SubjectTypeID, nullStr(in.Label), nullStr(in.Description))
+		_, err = tx.Exec(sqlInsert, idBytes, subjectRef, in.SourceID, graphID, in.SubjectTypeID, nullStr(in.Label), nullStr(in.Description))
 		if err == nil {
 			break
 		}
@@ -143,6 +149,7 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 			"id":              id.String(),
 			"ref":             subjectRef,
 			"source_id":       uuidJSON(in.SourceID),
+			"graph_id":        uuidJSON(graphID),
 			"subject_type_id": uuidJSON(in.SubjectTypeID),
 			"label":           nullJSON(in.Label),
 			"description":     nullJSON(in.Description),
@@ -152,6 +159,7 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 		ID:            append([]byte(nil), idBytes...),
 		Ref:           subjectRef,
 		SourceID:      append([]byte(nil), in.SourceID...),
+		GraphID:       append([]byte(nil), graphID...),
 		SubjectTypeID: append([]byte(nil), in.SubjectTypeID...),
 		Label:         in.Label,
 		Description:   in.Description,
@@ -266,6 +274,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		"id":              {Old: uuidString(id), New: nil},
 		"ref":             {Old: prev.Ref, New: nil},
 		"source_id":       {Old: uuidString(prev.SourceID), New: nil},
+		"graph_id":        {Old: uuidString(prev.GraphID), New: nil},
 		"subject_type_id": {Old: uuidString(prev.SubjectTypeID), New: nil},
 	}
 	if prev.Label != "" {
@@ -325,7 +334,7 @@ func getTx(tx *sql.Tx, id []byte) (Subject, error) {
 
 func scanSubject(row rowScanner) (Subject, error) {
 	var s Subject
-	if err := row.Scan(&s.ID, &s.Ref, &s.SourceID, &s.SubjectTypeID, &s.Label, &s.Description); err != nil {
+	if err := row.Scan(&s.ID, &s.Ref, &s.SourceID, &s.GraphID, &s.SubjectTypeID, &s.Label, &s.Description); err != nil {
 		return Subject{}, err
 	}
 	return s, nil
