@@ -12,7 +12,7 @@
 **Skills to load:** [`add-catalog-migration`](../../../../.agents/skills/add-catalog-migration/SKILL.md), [`add-catalog-model`](../../../../.agents/skills/add-catalog-model/SKILL.md), [`add-catalog-ref`](../../../../.agents/skills/add-catalog-ref/SKILL.md), [`add-audit-scope`](../../../../.agents/skills/add-audit-scope/SKILL.md), [`add-catalog-query`](../../../../.agents/skills/add-catalog-query/SKILL.md), [`add-catalog-delete`](../../../../.agents/skills/add-catalog-delete/SKILL.md), [`use-catalog-session`](../../../../.agents/skills/use-catalog-session/SKILL.md)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`
 **Context:** [data model](../source-structure.md#data-model), [rules](../source-structure.md#rules), [migration](../source-structure.md#migration); working rules: "Graph data model" (all), "One bridge, one function, deleted in S12-08", "`core/database/evidencegraphs` owns graphs and links from S12-03", "Every Source has at least one graph", "Refusals are of two kinds", "Artifact ↔ graph links", "The graph list has its own effect", "A re-keyed symbol is renamed in the PR that re-keys it", "Each PR updates the docs and skills it makes false" (S12-03 line)
-**Planned:** 2026-10-19 against `main` @ `2b14ad1`
+**Planned:** 2026-10-19 against `main` @ `231f7ed`
 **Review:** [`S12-03-evidence-graphs-catalog.review.md`](S12-03-evidence-graphs-catalog.review.md) — Fits with changes / Ready with changes, 2 rounds
 
 ### Implementer — read this first
