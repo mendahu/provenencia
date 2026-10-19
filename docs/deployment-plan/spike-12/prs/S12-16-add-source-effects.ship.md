@@ -64,4 +64,22 @@ Round-1 majors: CON-1/MNT-1 Resolved (CON, MNT), UX-1 Resolved (CON, UX), MNT-2 
 Nits (logged): `CON-3 · SourcesModelTests.swift:380-395 · add #expect(handle.isFetching) before the sentinel check`
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: CON-2 (misplaced test doc), PropertiesView/MetadataView settled-list publish, recount task ordering (round 1 PRF note), MNT-4 (repeated list-handle wait block), EvidenceGraph/CitationAutoTranscribe `waitUntil` onto the shared helper · to user: — · CON miss: none
+Gate PASS · CI green (round 2 head `f2aa0ebb`; re-runs on round 3) · open: none · follow-ups: PropertiesView/MetadataView settled-list publish (in its own session), recount task ordering (round 1 PRF note), MNT-4 (repeated list-handle wait block) · done in round 3: CON-2, CON-3, last `waitUntil` copies · to user: — · CON miss: none
+
+## Round 3 — user-requested follow-ups
+After the PR was marked ready, the user asked (2026-10-19) to fold two follow-ups into this PR: CON-2, the misplaced test doc, and the leftover `waitUntil` copies in `EvidenceGraphModelTests` and `CitationAutoTranscribeTests`. This is a fix round only, with no review round, since both changes are test-only.
+
+### Fix plan 3
+
+**F-5 — Put the Updated-sort doc back on its own test** (from CON-2)
+Files: `macos/ProvenenciaTests/SourcesModelTests.swift`.
+Do: move `/// A write's activity moves the row in the Updated sort without a reload.` from above `hiddenListRepublishesCountAfterReload` to directly above `@Test func writeActivityMovesTheRowInTheUpdatedSort`. Give `hiddenListRepublishesCountAfterReload` its own one-line doc: `/// A hidden list publishes its count only once its reload lands, not from the stale cached rows.` While in the test, add `#expect(handle.isFetching)` before the sentinel check if the handle is in scope there (CON-3 nit).
+Check: scripts/check-pr.sh PASS.
+
+**F-6 — Move the last two `waitUntil` copies onto the shared helper** (from MNT-2 follow-up)
+Files: `macos/ProvenenciaTests/QueryHandleWaiting.swift`, `EvidenceGraphModelTests.swift`, `CitationAutoTranscribeTests.swift`.
+Do: change the shared helper to `func waitUntil(timeout: Duration = .seconds(2), _ condition: () -> Bool) async -> Bool`. Poll every 10 ms against a `ContinuousClock` deadline, as `CitationAutoTranscribeTests.waitUntil` does, and update its doc. Existing trailing-closure callers stay unchanged. Delete the private copies in both files. `EvidenceGraphModelTests`'s copy defaulted to 5 s, so its call sites pass `timeout: .seconds(5)` to keep their budget. `CitationAutoTranscribeTests`'s copy matched the 2 s default, so its call sites stay as they are.
+Check: `grep -rn "func waitUntil" macos/ProvenenciaTests` → only `QueryHandleWaiting.swift`; scripts/check-pr.sh PASS.
+
+## Round 3 — fix
+Head `a1621338`. Gate PASS (orchestrator run). F-5 `2bb7e41e`: the Updated-sort doc is back on its own test, and the hidden-list test has its own doc plus `#expect(handle.isFetching)` (CON-3). F-6 `a1621338`: one shared `waitUntil(timeout:_:)`; `EvidenceGraphModelTests` passes `timeout: .seconds(5)` at its 9 call sites; `grep "func waitUntil"` → `QueryHandleWaiting.swift` only.
