@@ -50,6 +50,9 @@ type Layer struct {
 type Canon struct {
 	Handles []Handle
 	Edges   []CanonEdge
+	// Candidates are each Subject's shortlisted candidates, by Subject id, in
+	// Candidates order; the loader fills them.
+	Candidates map[string][][]byte
 }
 
 // Fixed is a decided or already-promoted row Align holds as given. Target

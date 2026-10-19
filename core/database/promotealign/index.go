@@ -38,12 +38,12 @@ func loadShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*sh
 	if m.shortlist != nil {
 		return m.shortlist, nil
 	}
-	ix := shortlist.NewIndex(cfg.Shortlist, cfg.Subject, cfg.Value, p.metas)
+	ix := shortlist.NewIndex(cfg.Alignment.Shortlist, cfg.Subject, cfg.Value, p.metas)
 	kinds := map[vocabkey.SubjectType]bool{}
-	for kind := range cfg.Shortlist.Words {
+	for kind := range cfg.Alignment.Shortlist.Words {
 		kinds[kind] = true
 	}
-	for kind := range cfg.Shortlist.Dated {
+	for kind := range cfg.Alignment.Shortlist.Dated {
 		kinds[kind] = true
 	}
 	sorted := make([]string, 0, len(kinds))

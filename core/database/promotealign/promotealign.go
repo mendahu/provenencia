@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/matchregistry"
 )
 
 // Querier is *sql.Tx or *sql.DB.
@@ -58,7 +59,7 @@ func propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 	if err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}
-	cfg := graphalign.DefaultConfig()
+	cfg := matchregistry.Default().AlignConfig()
 	cfg.Value = rules
 
 	terms, err := loadTerms(c.Graph())
@@ -87,7 +88,7 @@ func propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 		return graphalign.Proposal{}, 0, nil, err
 	}
 
-	prop := graphalign.Align(layer, canon, anchors, &cfg)
+	prop := graphalign.Align(layer, canon, anchors, cfg)
 	if err := attachExhibits(q, c.Graph(), layer, &prop, cfg, namePattern); err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}

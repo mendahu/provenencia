@@ -13,13 +13,6 @@ import (
 // notYetBuilt are the prefixes of inventory rows whose registry fields land
 // with their layer. The layer's PR deletes its prefixes.
 var notYetBuilt = []string{
-	"alignment.AcceptBar",
-	"alignment.Bands.",
-	"alignment.TopK",
-	"alignment.TieCap",
-	"alignment.Alternatives",
-	"alignment.SettleMargin",
-	"alignment.SettleRounds",
 	"evidence.",
 }
 

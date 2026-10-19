@@ -34,6 +34,7 @@ var layerPackages = []struct {
 	{"core/segmentcompare", true},
 	{"core/segmentcompare/segmentcomparetest", false},
 	{"core/shortlist", true},
+	{"core/graphalign", true},
 	{"core/matchregistry", false},
 	{"core/datevalue", false},
 	{"core/datevalue/datevaluetest", false},
@@ -48,7 +49,7 @@ var layerPackages = []struct {
 func TestLayerPackages(t *testing.T) {
 	root := filepath.Join("..", "..")
 	for _, p := range layerPackages {
-		t.Run(p.dir+"/pure", func(t *testing.T) { checkPure(t, root, p.dir) })
+		t.Run(p.dir+"/pure", func(t *testing.T) { checkPure(t, root, p.dir, p.numbers) })
 		if p.numbers {
 			t.Run(p.dir+"/numbers", func(t *testing.T) { checkNumbers(t, root, p.dir) })
 		}
@@ -57,8 +58,10 @@ func TestLayerPackages(t *testing.T) {
 
 // checkPure fails when the package has a file that builds only with a tag, or
 // imports, directly or through another package of the module, anything under
-// core/database.
-func checkPure(t *testing.T, root, dir string) {
+// core/database. Following only non-test imports, it also fails when a numbers
+// layer reaches core/matchregistry, and when a package other than
+// core/subjectprofile reaches core/autoreconcile.
+func checkPure(t *testing.T, root, dir string, numbers bool) {
 	ctx := build.Default
 	ctx.BuildTags = nil
 	pkg, err := ctx.ImportDir(filepath.Join(root, dir), 0)
@@ -95,6 +98,33 @@ func checkPure(t *testing.T, root, dir string) {
 		}
 	}
 	walk(pkg, []string{modulePath + dir})
+
+	seen := map[string]bool{}
+	var walkBuild func(pkg *build.Package, chain []string)
+	walkBuild = func(pkg *build.Package, chain []string) {
+		for _, imp := range pkg.Imports {
+			if !strings.HasPrefix(imp, modulePath) || seen[imp] {
+				continue
+			}
+			seen[imp] = true
+			next := append(slices.Clone(chain), imp)
+			rest := strings.TrimPrefix(imp, modulePath)
+			if numbers && rest == "core/matchregistry" {
+				t.Errorf("%s is a numbers layer and reaches the registry: %s", dir, strings.Join(next, " -> "))
+				continue
+			}
+			if rest == "core/autoreconcile" && dir != "core/subjectprofile" {
+				t.Errorf("%s reaches core/autoreconcile: %s", dir, strings.Join(next, " -> "))
+				continue
+			}
+			dep, err := ctx.ImportDir(filepath.Join(root, rest), 0)
+			if err != nil {
+				continue
+			}
+			walkBuild(dep, next)
+		}
+	}
+	walkBuild(pkg, []string{modulePath + dir})
 }
 
 // checkNumbers fails on every numeric literal in a non-test file other than 0

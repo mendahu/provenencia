@@ -71,3 +71,25 @@ func TestShortlistSection(t *testing.T) {
 		check(kind, d.Date)
 	}
 }
+
+// The alignment section's numbers stay in an order the walk can use: bands
+// ascend, the tie cap holds the K, and the walk always accepts something and
+// settles at least once.
+func TestAlignmentSection(t *testing.T) {
+	a := Default().Alignment
+	if a.TopK < 1 || a.TieCap < a.TopK {
+		t.Errorf("TopK %d, TieCap %d: want 1 <= TopK <= TieCap", a.TopK, a.TieCap)
+	}
+	if !(a.Bands.Weak <= a.Bands.Medium && a.Bands.Medium <= a.Bands.Strong) {
+		t.Errorf("Bands %+v: want Weak <= Medium <= Strong", a.Bands)
+	}
+	if a.AcceptBar <= 0 {
+		t.Errorf("AcceptBar = %v, want > 0", a.AcceptBar)
+	}
+	if a.SettleRounds < 1 {
+		t.Errorf("SettleRounds = %d, want >= 1", a.SettleRounds)
+	}
+	if a.MinSimilarity < 0 || a.MinSimilarity > 1 {
+		t.Errorf("MinSimilarity = %v, want in [0, 1]", a.MinSimilarity)
+	}
+}

@@ -13,7 +13,7 @@ import (
 // handles (S11-15); top K replaces the limit (S11-16).
 //
 // It returns the handles of kind whose evidence against values is at least
-// cfg.WeakScore, best first: evidence, then similarity, then Ref, then ID.
+// cfg.Alignment.Bands.Weak, best first: evidence, then similarity, then Ref, then ID.
 // At most limit; all when limit <= 0.
 func Candidates(kind string, values subjectcompare.Values, handles []Handle, metas subjectcompare.Metas, cfg Config, limit int) []Handle {
 	type scored struct {
@@ -27,7 +27,7 @@ func Candidates(kind string, values subjectcompare.Values, handles []Handle, met
 			continue
 		}
 		r := subjectcompare.Compare(vocabkey.SubjectType(kind), values, h.Values, metas, cfg.Subject, cfg.Value)
-		if r.Evidence < cfg.WeakScore {
+		if r.Evidence < cfg.Alignment.Bands.Weak {
 			continue
 		}
 		found = append(found, scored{h, r.Evidence, r.Similarity})

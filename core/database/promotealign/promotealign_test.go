@@ -28,6 +28,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/ref"
@@ -615,7 +616,7 @@ func TestPartOfChainIsAStrongMatch(t *testing.T) {
 	f.placeRel(srcB, artB, state2, country2, "part_of")
 
 	prop := f.propose(srcB.ID, nil)
-	cfg := graphalign.DefaultConfig()
+	cfg := matchregistry.Default().AlignConfig()
 	for _, pair := range []struct {
 		sub    subjects.Subject
 		handle []byte
@@ -626,7 +627,7 @@ func TestPartOfChainIsAStrongMatch(t *testing.T) {
 	} {
 		row := rowFor(prop, pair.sub.ID)
 		if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, pair.handle) ||
-			row.Assessment != graphalign.AssessStrong || row.Score < cfg.StrongScore {
+			row.Assessment != graphalign.AssessStrong || row.Score < cfg.Alignment.Bands.Strong {
 			t.Fatalf("%s: %+v", pair.sub.Ref, row)
 		}
 	}
@@ -662,10 +663,10 @@ func TestShorterStructuredNameIsAWeakMatch(t *testing.T) {
 			srcB, artB := f.newSource("Census")
 			again := f.person(srcB, artB, tc.short)
 			row := rowFor(f.propose(srcB.ID, nil), again.ID)
-			cfg := graphalign.DefaultConfig()
+			cfg := matchregistry.Default().AlignConfig()
 			if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known.Entity.ID) ||
 				row.Assessment != graphalign.AssessWeak ||
-				row.Score < cfg.WeakScore || row.Score >= cfg.MediumScore {
+				row.Score < cfg.Alignment.Bands.Weak || row.Score >= cfg.Alignment.Bands.Medium {
 				t.Fatalf("%s row %+v, want %s as a weak match", tc.short, row, known.Entity.Ref)
 			}
 			var saw bool
@@ -920,9 +921,9 @@ func TestProposeExtraGivenNamesAreAWeakMatch(t *testing.T) {
 	noteSrc, noteArt := f.newSource("Note")
 	probe := withGender(noteSrc, noteArt, "Jake Robins")
 	row := rowFor(f.propose(noteSrc.ID, nil), probe.ID)
-	cfg := graphalign.DefaultConfig()
+	cfg := matchregistry.Default().AlignConfig()
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, handle) ||
-		row.Assessment != graphalign.AssessWeak || row.Score < cfg.WeakScore || row.Score >= cfg.MediumScore ||
+		row.Assessment != graphalign.AssessWeak || row.Score < cfg.Alignment.Bands.Weak || row.Score >= cfg.Alignment.Bands.Medium ||
 		math.Abs(row.Score-(2.5*0.75+0.6)) > 1e-9 {
 		t.Fatalf("Jake Robins: target %s assessment %s score %.4f", row.Target, row.Assessment, row.Score)
 	}

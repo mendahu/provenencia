@@ -13,13 +13,9 @@ import (
 )
 
 // Align proposes a handle, New, or Skip for every primary Subject on layer,
-// holding fixed pairs as anchors. cfg nil uses DefaultConfig().
-func Align(layer Layer, canon Canon, fixed []Fixed, cfg *Config) Proposal {
-	c := DefaultConfig()
-	if cfg != nil {
-		c = *cfg
-	}
-	st := newState(layer, canon, fixed, c)
+// holding fixed pairs as anchors.
+func Align(layer Layer, canon Canon, fixed []Fixed, cfg Config) Proposal {
+	st := newState(layer, canon, fixed, cfg)
 	st.seed()
 	st.walk()
 	// Property matches that clear the bar seed the same walk. Candidates
@@ -369,7 +365,7 @@ func (st *state) accept(subjectID, handleID []byte, score float64) bool {
 	if _, taken := st.assigned[sk]; taken {
 		return false
 	}
-	if score < st.cfg.AcceptScore {
+	if score < st.cfg.Alignment.AcceptBar {
 		return false
 	}
 	if st.lostContest(sk, hk) {
@@ -399,7 +395,7 @@ func (st *state) fallbackUnreachable() {
 		if _, ok := st.cfg.Subject.Weights[vocabkey.SubjectType(s.Kind)]; !ok {
 			continue
 		}
-		for _, cand := range Candidates(s.Kind, s.Values, st.handlesOfKind(s.Kind), st.metas, st.cfg, st.cfg.AlternativeLimit) {
+		for _, cand := range Candidates(s.Kind, s.Values, st.handlesOfKind(s.Kind), st.metas, st.cfg, st.cfg.Alignment.Alternatives) {
 			h := st.handles[string(cand.ID)]
 			sc := st.scoreCandidate(s.ID, h)
 			st.recordBest(sk, sc)
@@ -651,7 +647,7 @@ func (st *state) proposal() Proposal {
 			row.Assessment = st.band(sc.score)
 			row.Alternatives = st.alts(sk, hid)
 			if st.fixedSet[sk] {
-				if best := st.bestNonAssigned(sk, hid); best != nil && best.score > sc.score+st.cfg.ConflictPenalty {
+				if best := st.bestNonAssigned(sk, hid); best != nil && best.score > sc.score+st.cfg.Alignment.SettleMargin {
 					row.Flags.ConflictWithFixed = true
 				}
 			}
@@ -668,7 +664,7 @@ func (st *state) proposal() Proposal {
 				row.Score = best.score
 				row.Alternatives = st.alts(sk, nil)
 				row.Reason = ReasonWeak
-				if best.score >= st.cfg.WeakScore {
+				if best.score >= st.cfg.Alignment.Bands.Weak {
 					row.Assessment = st.band(best.score)
 				}
 			} else if st.subjectHasValues(s) {
@@ -701,7 +697,7 @@ func (st *state) flagSharedHandles(rows []Row) {
 		}
 	}
 	for _, idx := range byHandle {
-		if len(idx) < 2 {
+		if len(idx) <= 1 {
 			continue
 		}
 		for _, i := range idx {
@@ -750,7 +746,7 @@ func (st *state) alikeNew(a, b *Subject) bool {
 	if disagree {
 		return false
 	}
-	return ScoreCandidate(r, segs, 1).Score >= st.cfg.AcceptScore
+	return ScoreCandidate(r, segs, 1).Score >= st.cfg.Alignment.AcceptBar
 }
 
 // newPairSegments compares the layer neighbors of two subjects, whose own
@@ -787,7 +783,7 @@ func (st *state) newPairSegments(a, b *Subject, own float64) (float64, bool) {
 					continue
 				}
 				res := st.compare(la.key, sa.Kind, sa.Values, lb.key, sb.Kind, sb.Values, segmentcompare.Together, own)
-				if !same && res.Neighbor.Evidence < st.cfg.AcceptScore {
+				if !same && res.Neighbor.Evidence < st.cfg.Alignment.AcceptBar {
 					continue
 				}
 				if !ok || res.Evidence > best {
@@ -860,10 +856,7 @@ func (st *state) bestNonAssigned(sk string, except []byte) *scoredCand {
 
 func (st *state) alts(sk string, except []byte) []Alternative {
 	kind := st.subjects[sk].Kind
-	limit := st.cfg.AlternativeLimit
-	if limit <= 0 {
-		limit = 3
-	}
+	limit := st.cfg.Alignment.Alternatives
 	var out []Alternative
 	for _, sc := range st.best[sk] {
 		if except != nil && bytes.Equal(sc.handleID, except) {
@@ -922,13 +915,13 @@ func (st *state) subjectHasValues(s *Subject) bool {
 }
 
 func (st *state) band(score float64) Assessment {
-	if score >= st.cfg.StrongScore {
+	if score >= st.cfg.Alignment.Bands.Strong {
 		return AssessStrong
 	}
-	if st.cfg.MediumScore > 0 && score >= st.cfg.MediumScore {
+	if st.cfg.Alignment.Bands.Medium > 0 && score >= st.cfg.Alignment.Bands.Medium {
 		return AssessMedium
 	}
-	if score >= st.cfg.WeakScore {
+	if score >= st.cfg.Alignment.Bands.Weak {
 		return AssessWeak
 	}
 	return AssessNone

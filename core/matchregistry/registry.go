@@ -8,6 +8,7 @@
 package matchregistry
 
 import (
+	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -22,12 +23,17 @@ type Registry struct {
 	Subject subjectcompare.Rules
 	// Segment is layer 5: what a matching or differing link counts.
 	Segment segmentcompare.Rules
-	// Alignment is layer 6: how Promote finds and walks to candidates.
-	Alignment Alignment
+	// Alignment is layer 6: candidates, the accept bar, bands and settling.
+	Alignment graphalign.Rules
 }
 
 // Default is the shipped registry. Each call builds new slices and maps, so a
 // caller that changes its copy changes no one else's.
 func Default() Registry {
 	return Registry{Value: defaultValue(), Subject: defaultSubject(), Segment: defaultSegment(), Alignment: defaultAlignment()}
+}
+
+// AlignConfig is the registry as graph alignment reads it.
+func (r Registry) AlignConfig() graphalign.Config {
+	return graphalign.Config{Value: r.Value, Subject: r.Subject, Segment: r.Segment, Alignment: r.Alignment}
 }
