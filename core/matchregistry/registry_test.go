@@ -57,7 +57,7 @@ func TestShortlistSection(t *testing.T) {
 		if _, ok := reg.Subject.Weights[kind][lead]; !ok {
 			t.Errorf("%s lead %s has no weights in the subject section", kind, lead)
 		}
-		if _, derived := reg.Subject.Lifespans[kind][lead]; derived {
+		if reg.Subject.Derived(kind, lead) {
 			t.Errorf("%s lead %s is derived (a lifespan): the shortlist builds no life", kind, lead)
 		}
 	}

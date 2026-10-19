@@ -18,18 +18,6 @@ import (
 
 type propertyValue = propertycompare.Value
 
-func bef(y int) *datevalue.Value {
-	v := datevaluetest.YMD(y, 0, 0)
-	v.Qualifier = datevalue.QualifierBEF
-	return v
-}
-
-func aft(y int) *datevalue.Value {
-	v := datevaluetest.YMD(y, 0, 0)
-	v.Qualifier = datevalue.QualifierAFT
-	return v
-}
-
 func date(y int) propertyValue { return pt.Date(datevaluetest.YMD(y, 0, 0)) }
 
 // entry is one handle: a one-byte id and its values.
@@ -129,11 +117,11 @@ func TestLookup(t *testing.T) {
 		{"type and year", "AC-1.5", plain, vocabkey.Event, events,
 			event(0, "birth", datevaluetest.YMD(1850, 0, 0)), []byte{1, 2}},
 		{"open index date", "AC-1.6", plain, vocabkey.Event,
-			append(slices.Clone(events), event(6, "birth", bef(1800))),
+			append(slices.Clone(events), event(6, "birth", datevaluetest.Before(1800, 0, 0))),
 			event(0, "birth", datevaluetest.YMD(1700, 0, 0)), []byte{6}},
 		{"open probe date", "AC-1.6", plain, vocabkey.Event,
-			append(slices.Clone(events), event(6, "birth", bef(1800))),
-			event(0, "birth", aft(1860)), []byte{1, 2, 3, 6}},
+			append(slices.Clone(events), event(6, "birth", datevaluetest.Before(1800, 0, 0))),
+			event(0, "birth", datevaluetest.After(1860, 0, 0)), []byte{1, 2, 3, 6}},
 		{"huge range probe", "AC-2.2", plain, vocabkey.Event,
 			append(slices.Clone(events), event(6, "birth", datevaluetest.Between(1, 0, 0, 10_000_000, 0, 0))),
 			event(0, "birth", datevaluetest.Between(1, 0, 0, 10_000_000, 0, 0)), []byte{1, 2, 3, 6}},

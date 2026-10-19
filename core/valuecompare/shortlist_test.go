@@ -43,18 +43,6 @@ func slDate(d *datevalue.Value) valuecompare.Value {
 	return valuecompare.Value{Type: propertymeta.ValueTypeDate, Date: d}
 }
 
-func slBef(y int) *datevalue.Value {
-	v := datevaluetest.YMD(y, 0, 0)
-	v.Qualifier = datevalue.QualifierBEF
-	return v
-}
-
-func slAft(y int) *datevalue.Value {
-	v := datevaluetest.YMD(y, 0, 0)
-	v.Qualifier = datevalue.QualifierAFT
-	return v
-}
-
 func TestWordKeys(t *testing.T) {
 	rules := billRules()
 	whole := func(v valuecompare.Value) string {
@@ -213,8 +201,8 @@ func TestYearReach(t *testing.T) {
 		checkLoHi bool
 	}{
 		{name: "year", d: datevaluetest.YMD(1850, 0, 0), lo: 1850 - int(rules.Dates.Tolerance), hi: 1850 + int(rules.Dates.Tolerance), ok: true, checkLoHi: true},
-		{name: "before is open", d: slBef(1850), open: true, ok: true},
-		{name: "after is open", d: slAft(1850), open: true, ok: true},
+		{name: "before is open", d: datevaluetest.Before(1850, 0, 0), open: true, ok: true},
+		{name: "after is open", d: datevaluetest.After(1850, 0, 0), open: true, ok: true},
 		{name: "nil", d: nil},
 	}
 	for _, tt := range tests {
@@ -244,7 +232,7 @@ func TestYearReachCoversEveryRelatedPair(t *testing.T) {
 	}
 	corpus = append(corpus,
 		datevaluetest.YMD(1850, 3, 0), datevaluetest.YMD(1850, 3, 4), datevaluetest.About(1850, 0, 0),
-		slBef(1850), slAft(1850), datevaluetest.Between(1840, 0, 0, 1845, 0, 0), datevaluetest.Between(1840, 0, 0, 1870, 0, 0),
+		datevaluetest.Before(1850, 0, 0), datevaluetest.After(1850, 0, 0), datevaluetest.Between(1840, 0, 0, 1845, 0, 0), datevaluetest.Between(1840, 0, 0, 1870, 0, 0),
 	)
 	for _, x := range corpus {
 		for _, y := range corpus {
