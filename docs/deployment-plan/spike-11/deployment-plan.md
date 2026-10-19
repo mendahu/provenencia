@@ -68,7 +68,7 @@ These are the calls for this spike. PR plans treat them as binding.
 - **Frequency weighting is gone**, for names, event types and toponyms ([frequency](comparison-layers.md#frequency)).
 - **One match registry** ([match registry](comparison-layers.md#match-registry)): `core/matchregistry`, one file per section (value, subject, segment, alignment, evidence), typed keys, each layer gets its section as an argument. Catalog data (aliases, name patterns) is passed in; data-model facts (cardinality, term flags, bridge kinds) stay in the catalog. A guard test fails on numeric literals other than 0 and 1 in layer packages; another fails when the knob inventory drifts from the registry.
 - **`core/database/matching` is deleted.** `ForSubject` and `ForEntity` have no callers outside tests; merge hints are rebuilt on subject compare over two profiles when their UI exists. Its one live function, `SubjectsValues` (called from `promotealign/layer.go`), is replaced in S11-13 by the loader that feeds `subjectprofile`, which reads the layer's Observations from the cached Source graph.
-- **The reconciler keeps its own decisions** and builds them on value compare. Grouping policy (user, 2026-10-17, S11-06): values group on `Same` and fold on `Contains`; `Equivalent` (an accent fold, an alias) never groups; text never folds; the reconciler reads `ABT` as a range, as matching does.
+- **The reconciler keeps its own decisions** and builds them on value compare. Grouping policy (user, 2026-10-17, S11-06): values group on `Same` and fold on `Contains`; `Equivalent` (an accent fold, an alias) never groups; an alias or abbreviation folds a shorter given name or nickname into the longer one it stands for (user, 2026-10-19, S11-28), and an accent fold never folds; text never folds; the reconciler reads `ABT` as a range, as matching does.
 - **Pure value types and kinds come first.** The date and name value structs, their display helpers, the name part-type registry, and the value-type and cardinality constants move out of `core/database` into pure packages (S11-22), and primary Subject kinds get one home (S11-23), before any layer is built. No layer defines its own copy.
 - **One matching skill, grown with the layers.** S11-02 adds a skill (working name `add-match-rule`) for the steps every change repeats: the knob in its registry section, its inventory row, contract tests, the guard list entry. S11-10, S11-14 and S11-16 extend it. Each migration PR also updates the domain docs and idea files it makes false (`matching.md`, `promote-graph-alignment.md`, `conclusion-reconciliation.md`, `seeded-vocabulary.md`, `ideas/daitch-mokotoff.md`, `ideas/archive/name-matching-enhancements.md`).
 - **One guard, not one per package.** The purity and numeric-literal checks are one repo-walking test (like `core/writes/begin_test.go` `TestBeginOnlyInDatabaseAndWrites`) with a list of layer packages; each layer PR adds its line.
@@ -112,6 +112,8 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-26 | Connections file by their ends | 6 | Drop the bridge switch-off: `SkipBridgeIDs`, `skip_bridge_ids`, the `skip` parameters | — | — | — | Scoped |
 | S11-27 | Connection subrows on Promote | 6 | Each connection as a subrow of a row it joins, its state from its ends; the panel and toggles go | S11-D1 | S11-26, S11-D1 | — | Scoped |
 | S11-21 | Large-Source performance check | 7 | 100-Subject benchmark; memoize only if it fails | — | S11-16 | — | Scoped |
+| S11-28 | Fold a nickname into its given name | 2 | Reconciler folds a shorter alias or abbreviation of a given name into the longer one; cache reads the product alias tables | — | S11-06 | [plan](prs/S11-28-alias-fold.md) | Draft |
+| S11-29 | Quote nicknames and add former surnames | 2 | Nicknames in quotes everywhere; `former_surname` part type in parentheses, italic on the Person titles | — | — | [plan](prs/S11-29-name-display.md) | Draft |
 | S11-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -424,3 +426,21 @@ Likeness comparisons show the two crops, which S10-36 was to add in Spike 10; pi
 **Not this PR.** Anything the benchmark doesn't need.
 **Check.** The benchmark passes; the PR says whether memoization was needed.
 **Context.** [Layer 6 procedure](comparison-layers.md#layer-6-procedure) step 6.
+
+### Slice 2 follow-ups — Names on the Person page
+
+Asked by the user on 2026-10-19, after S11-06. Planned as two PRs, with no migration for existing catalogs.
+
+#### S11-28 — Fold a nickname into its given name
+
+**Ships.** The name module folds a given-name or nickname unit into another when every word pair is the same, an initial, or an alias or abbreviation pair whose shorter word is on the folding side (*Chris* → *Christopher*, *Wm* → *William*). The reconciler cache reads the product alias tables; `CacheVersion` 18.
+**Not this PR.** Canonical alias tokens; reading a catalog's own alias rows; display changes (S11-29).
+**Check.** A Person recorded as *Chris Robins* and *Christopher Robins* shows *Christopher Robins*.
+**Context.** [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §7.2; rule "The reconciler keeps its own decisions".
+
+#### S11-29 — Quote nicknames and add former surnames
+
+**Ships.** Nickname parts display in curly quotes. A `former_surname` product part type (role `family`, after the nickname in both Western orders) displays in parentheses, with the surname italic on the Persons list row and the Person page title.
+**Not this PR.** Migrating existing catalogs; italics on other surfaces.
+**Check.** *James “Jake” Robins*; *Jones, Mary (Smith)* with *Smith* italic.
+**Context.** [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §4; [`ideas/international-names.md`](../../ideas/international-names.md).
