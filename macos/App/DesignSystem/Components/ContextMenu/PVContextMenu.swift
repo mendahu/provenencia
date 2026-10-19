@@ -274,7 +274,7 @@ extension View {
     /// Attach this to the view whose local coordinates match `state.origin`: the
     /// trigger view. Right-click menus use `.pvRightClickMenu`, which does this.
     ///
-    /// `keyboardTitles` are the row titles of a right-click menu; when set
+    /// `keyboardTitles` are the row titles of an action menu; when set
     /// (with `keyboard`), the keyboard is reset on each open. Leave nil when the
     /// caller seeds its own highlight (`PVSelect`).
     func pvContextMenu<Content: View>(

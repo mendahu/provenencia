@@ -1,6 +1,7 @@
 # S12-17 — Copy Source from the Sources list
 
 **Status:** Landed in [#488](https://github.com/mendahu/provenencia/pull/488) (2026-10-18)
+**Landed:** No code differs from the plan. One behavior note: the disabled Clear region row now has `index: nil`, as D-2's `PVActionMenuRows` specifies; before, it kept index 0, which no code used for a disabled row. Manual check §10 steps 1-11 are left to the user.
 **Spike / slice:** Spike 12 · Slice 1 — Copy Source
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S12-D6](../design/archive/S12-D6-sources-list-copy.md), board agreed 2026-10-18
