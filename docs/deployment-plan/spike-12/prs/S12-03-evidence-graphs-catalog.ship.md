@@ -105,3 +105,9 @@ Files: new `core/database/evidencegraphs/evidencegraphstest/evidencegraphstest.g
 Failing test first: none (test-only move); the moved tests must still go red if `ReconcileOnOpen` drops `evidencegraphs.EnsureRefs` — check that once by commenting the line out locally, and say so in the report.
 Do: move `seedGraphRefless` and `graphRef` into `evidencegraphstest` as exported helpers (`SeedRefless(t, c)`, `Ref(t, c, id)`); both test files call them and their private copies go. Keep T-15 and T-16 (they check two openers' wiring). Ride along: the `session.go` comment names `onboarding.createCatalog` instead of "Create" (MNT-7).
 Check: `TestDo`, `TestOpenCatalogMintsGraphRefs` pass; scripts/check-pr.sh PASS.
+
+## Round 2 — fix (Fix plan 2)
+Head `dee13d99`. Gate PASS (orchestrator run; uncached `go test ./core/... ./api/...` all ok). F-3 done (`de0b4411`; added a `CatalogList` ↔ `effects.Lists` pair in `swift_vocabulary_test.go` and `TestWriteEffectsProtoLists`), F-4 done (`51edb1d1`), F-5 done (`dee13d99`; mutation check: both tests fail with the `evidencegraphs.EnsureRefs` line removed). Deviations: `TestResolveLists` uses `source_type` for the vocabulary key (`subject_types` has no `Entity`); `datevalues.nullIfEmpty` and `audit.nullIfEmpty` trim whitespace, so they stay; old `artifacts.uuidJSON` returned `""` for a malformed non-empty id, shared `UUIDJSON` returns nil (no test depended on it); `engine.pb.swift` regenerated with `protoc-gen-swift` 1.38.1, matching the resolved SwiftProtobuf 1.38.1 runtime, which drops the old `_StorageClass` shape (~300 lines of churn; accepted); `sources/notes.go` gofmt'd.
+
+## Round 3 — review (user-requested scope)
+Reviewers: CON (Sonnet), MNT, UX (`macos/App/**`), SEC+PRF (`api/ffi/**`, `core/database/**`). Scope `2d4208e6...dee13d99`. Beyond the two-round cap because the user added this work to the PR; blockers only.
