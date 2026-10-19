@@ -93,18 +93,15 @@ private struct MetadataContent: View {
         .onChange(of: navigation.currentLocation) { _, location in
             reconcileSelection(for: location)
         }
-        .onChange(of: fieldsHandle.status) { _, status in
-            if status == .ready { model.syncCatalogCounts() }
+        .onChange(of: fieldsHandle.status) { _, _ in
             reconcileSelection(for: navigation.currentLocation)
         }
+        .onSettled(fieldsHandle) { model.syncCatalogCounts() }
         .onChange(of: fieldsHandle.value) { _, _ in
             reconcileSelection(for: navigation.currentLocation)
         }
         .onAppear {
             reconcileSelection(for: navigation.currentLocation)
-            if fieldsHandle.status == .ready {
-                model.syncCatalogCounts()
-            }
         }
         .accessibilityIdentifier("metadata")
     }
