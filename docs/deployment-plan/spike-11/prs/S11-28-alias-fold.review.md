@@ -1,7 +1,7 @@
 # Review — S11-28 Fold a nickname into the given name it stands for
 
-**Verdict:** Fits with changes — Not ready → fixed in round 1
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Not ready → fixed in round 1; round 2 Ready
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 - None. Product calls were asked before planning (2026-10-19): shorter folds into longer, nicknames and abbreviations both fold, the folded name disappears.
@@ -56,3 +56,12 @@
 
 ### M-6 · minor · Use `NamePattern.Role`
 **Answer:** Fixed — in the D-3 sketch.
+
+## Round 2
+
+Reviewer (opus, both lenses): no new blockers; every round-1 answer accepted, M-4's decline upheld. Verdict: Ready. Non-blocking notes, all fixed:
+- `AliasIndex.Hit` returns two values — sketch uses an `aliasAllowed` helper.
+- STEP-3 quoted the skill's wording for `seeded-vocabulary.md` §4.5 — both quotes now exact.
+- AC-2.3 had no observable test (`Excluding` has no caller) — AC reworded to the code fact; T-6 says so.
+- D-7 overstated exhibit agreement (exhibits read catalog alias rows) — reworded.
+- T-7 re-pin did not force a bump — pins `(CacheVersion, hash)` together.
