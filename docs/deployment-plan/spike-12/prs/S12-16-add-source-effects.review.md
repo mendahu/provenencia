@@ -39,3 +39,29 @@
 
 ### X-4 · minor · Go test insertion point for T-1 is unspecified
 **Answer:** Declined — any place in the case's `after` after `created` is unmarshalled works; not a decision.
+
+## Round 2 — refresh after S12-17 (`main` @ `6191fc8`)
+
+S12-17 ([#488](https://github.com/mendahu/provenencia/pull/488)) landed after round 1. It adds `SourcesModel.copying` / `openCopy`, `.sourceCopyDialog` in `SourcesListView`, and `openCopySetsCopyingForThatSource`; none of the code this PR edits moved. Both reviewers re-ran on the refreshed plan (round-2 rules: new blockers only). Verdict: Fits with changes — Ready with changes. No blocker.
+
+### M-4 · major · The recount after a create is a new pattern the skill does not teach
+**Plan:** STEP-5 edited only `add-workspace-place` line 172; the skill (line 41, line 156) still teaches publishing from the list. A Source delete has the Copy count lag too.
+**Answer:** Fixed — STEP-5 adds the apply-then-`refreshAll()` rule after `add-workspace-place` line 156; the Out row names the delete path beside both Copy builders.
+
+### M-5 · minor · Two doc comments become false
+**Answer:** Fixed — STEP-4 rewrites `SourcesModel.syncCatalogCounts()`, `CatalogCounts.publishSources` and `CatalogCounts.refreshAll` comments; Files and Deletes updated.
+
+### M-6 · minor · Header promised a refresh section the log lacked
+**Answer:** Fixed — this section; the plan's **Review:** line points at round 2.
+
+### X-5 · minor · Docs cited as "rule 3"; the text is cache contract item 2
+**Answer:** Fixed — header Context, §4 Docs row, STEP-5, DoD and the Out row now say cache contract item 2 (line 87).
+
+### X-6 · major · T-2 and T-3 assert before the list reload lands
+**Answer:** Fixed — T-2 and T-3 `await waitForQuery` on the Sources list handle (`QueryHandleWaiting.swift`) after `create()`. Round 1's M-1 removed the in-model wait, which opened this gap.
+
+### X-7 · minor · Stop condition 2 would fire on a timing failure
+**Answer:** Fixed — the condition now reads "after waiting for the list handle".
+
+### X-8 · nit · D-5 does not say how `createSource` mints the row
+**Answer:** Logged — it compiles as written (`updated` defaults to `CatalogActivity()`).
