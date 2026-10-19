@@ -25,3 +25,7 @@ S12-01 adds `database.Querier` (`Query` + `QueryRow`, in `core/database/tx.go`) 
 ## Query-wait test helper
 
 S12-02 added `macos/ProvenenciaTests/QueryHandleWaiting.swift` (`waitForQuery`, which also waits out a refetch). `MetadataModelTests`, `PropertiesModelTests` and `SourceTypesModelTests` still keep a private `waitForQuery`; move them onto it.
+
+## Trimmed empty-string binder
+
+`datevalues.nullIfEmpty` and `audit.nullIfEmpty` are identical: each trims whitespace and binds an empty result as NULL. `database.NullString` does not trim, so they stay local. Add `database.NullTrimmed` and move both onto it when a third caller needs the trim.
