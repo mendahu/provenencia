@@ -1,7 +1,7 @@
 # Review — S11-14 Segment compare
 
-**Verdict:** pending round 2 (round 1: Fits with changes — Not ready)
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits — Ready (round 1: Fits with changes — Not ready; round 2: Fits — Ready with changes, fixed)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 - None.
@@ -90,3 +90,23 @@ Logged. `newPairSegments` now calls subject compare once per pair (M-9).
 
 ### M-10 · nit · `bridgeKey` beside `BridgeKey`; a `Role` alias
 **Answer:** The rename is Fixed: `edgeSeenKey`. The alias is Declined (Out): `Role` types participation roles for lifespans, and an alias would let a relationship term pass as a role.
+
+## Round 2
+
+Both reviewers accepted every round-1 answer and raised no new blocker.
+
+### X-10 · major · AC-4.2 describes a scenario the named test does not contain
+`TestProposeRelationshipFromEitherEnd` records "parent" on both Sources; nothing recorded "John child of Mary".
+**Answer:** Fixed. AC-4.2 asserts `Via.Key` in both existing subtests, and the fixture is unchanged. New AC-4.6 / T-15 `TestProposeChildOfReadsAsParentOf` records "child of" on Source B. The stop condition names both tests.
+
+### X-11 · minor · A stop condition contradicts D-7's skip
+**Answer:** Fixed — the stop is dropped; D-7 skips a bridge with other than two endpoints, or with no layer Subjects at its first end.
+
+### X-12 · nit · Bare doc names; undefined `toIDs`
+**Answer:** Fixed — STEP-7 gives full paths; D-7 defines `eventIDs`.
+
+### Maintainability minors (verdict Fits)
+- **Event-type read behind a bridge-type check in `canonKeys`.** Fixed: both loaders read the event end's type for every bridge, and `linkOf` alone decides whether the key keeps it.
+- **Dedupe by `String()`.** Fixed: a comparable struct `seenEdge` keys both dedupe maps.
+- **Bridge refs for S11-19.** Fixed in Next adds: an added `Segment` field then.
+- **`docs/ideas/matching-test-suite.md` says "fan-out" and "signature".** Declined: the idea file describes the old algorithm as motivation (its "make the algorithm graspable" part shipped in S11-01). The rest of the file is open ideas, and rewording its history would mislabel them.
