@@ -7,10 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
-
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/onboarding"
 	"github.com/mendahu/provenencia/core/ref"
 )

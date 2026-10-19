@@ -5,10 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
-
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"

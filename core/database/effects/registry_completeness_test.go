@@ -131,9 +131,9 @@ func TestSourceEvidenceIsNotActivity(t *testing.T) {
 	}
 }
 
-// TestPropertyUsage pins when an Observation change moves the Properties
+// TestPropertyUsageList pins when an Observation change moves the Properties
 // workspace's usedBy counts: a create, a delete, or a property_id edit.
-func TestPropertyUsage(t *testing.T) {
+func TestPropertyUsageList(t *testing.T) {
 	text := map[string]rowchange.FieldDiff{"value_text": {Old: "a", New: "b"}}
 	prop := map[string]rowchange.FieldDiff{"property_id": {Old: []byte{1}, New: []byte{2}}}
 	tests := []struct {
@@ -157,9 +157,9 @@ func TestPropertyUsage(t *testing.T) {
 	}
 }
 
-// TestEvidenceGraphsFlag pins which tables flag the graph list, and that a
+// TestEvidenceGraphsList pins which tables move the graph list, and that a
 // None entry cannot.
-func TestEvidenceGraphsFlag(t *testing.T) {
+func TestEvidenceGraphsList(t *testing.T) {
 	var got []string
 	for table, eff := range registry {
 		if slices.Contains(eff.Lists, ListEvidenceGraphs) {
@@ -169,7 +169,7 @@ func TestEvidenceGraphsFlag(t *testing.T) {
 	sort.Strings(got)
 	want := []string{"evidence_graph_artifacts", "evidence_graphs"}
 	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("tables with EvidenceGraphs = %v, want %v", got, want)
+		t.Fatalf("tables with ListEvidenceGraphs = %v, want %v", got, want)
 	}
 	if err := (Effect{None: true, Lists: []List{ListEvidenceGraphs}}).validate("x"); err == nil {
 		t.Fatal("a None entry with Lists validated")
