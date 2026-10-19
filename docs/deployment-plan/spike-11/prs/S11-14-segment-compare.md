@@ -1,6 +1,7 @@
 # S11-14 — Segment compare
 
-**Status:** Planned
+**Status:** Landed in [#493](https://github.com/mendahu/provenencia/pull/493) (2026-10-19)
+**Landed:** The user's D-11 call is implemented as written: `TestProposeRelationshipFromEitherEnd` (sex-only subtests assert Skip / `weak` with the right handle first via the anchor; a third subtest files via the anchor and asserts `Via.Key` `relationship`·`child`) and `TestGracieObituaryGolden` (the burial asserts not-a-handle) carry `// dogfood:` comments. Reshaped fixtures: `TestNeighborCreditStopsAtOneHop` chains person, birth and place so the middle row is a One link; `TestProposeInverseKinshipTermsCorrespond` names the son ("John Smith"); `TestProposeOverlappingBoundShowsTheDateAndResembles` uses a death with bounds a month apart (1985-02-01 and 1985-03-31), since a residence is an Other link under the accept bar and a month-apart death keeps the lifespan consistent. AC-4.2's `Via.Key` assertion moved to the third subtest. STEP-4 and STEP-5 were one commit. Otherwise none.
 **Spike / slice:** Spike 11 · Slice 4 — Graph alignment
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the wire fields, the page and its copy are unchanged)
