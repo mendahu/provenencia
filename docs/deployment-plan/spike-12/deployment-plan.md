@@ -251,7 +251,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-04 — Graph lifecycle
 
-**Ships.** `evidencegraphs` `List` (full rows with linked Artifact ids, by name, optional Source filter), `Create` (at least one Artifact, through `Link`), `Update` (name, description), `Delete` (Subjects through `deleteimpact`; last graph as a domain invariant).
+**Ships.** `evidencegraphs` `List` (full rows with linked Artifact ids, by name, optional Source filter), `Create` (at least one Artifact, through `Link`), `Update` (name, description), `Delete` (Subjects through `deleteimpact`; last graph as a domain invariant). The test-only `defaultGraphID` copies S12-03 left in the `artifacts`, `subjects`, `evidencegraphs` and `connect` tests move onto `List` (S12-03 review MNT-8).
 **Not this PR.** RPCs (S12-05); UI (slice 4).
 **Check.** Go tests for each rule in [Rules](source-structure.md#rules).
 **Context.** Working rules "Graph rules", "Refusals are of two kinds"; `add-catalog-query`, `add-catalog-delete`.
@@ -304,7 +304,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-11 — Source page Graphs section
 
-**Ships.** The Graphs section on the Source page: one row per graph, alphabetical, with name, ref, description, Open and Delete (refusals worded). The header's graph jump is removed.
+**Ships.** The Graphs section on the Source page: one row per graph, alphabetical, with name, ref, description, Open and Delete (refusals worded). The header's graph jump is removed. The stored name `Default` (`evidencegraphs.DefaultName`, English catalog data) is shown as the researcher's own text, not localized; decide here whether a graph still named `Default` shows a localized label (S12-03 review UX-3).
 **Not this PR.** Create and edit (S12-12).
 **Check.** A Source's graphs show and open; deleting an empty, non-last graph works; the others are refused with the reason.
 **Context.** Working rule "Source page"; brief S12-D2.
