@@ -417,17 +417,10 @@ final class SourcesModel {
         }
     }
 
-    /// Publishes the count of a settled list to the sidebar. Call it only when
-    /// the list handle is `.ready` and not refetching: a refetch keeps the
-    /// cached `.ready` value, which may be stale.
+    /// Publishes the count of a settled list to the sidebar. The view calls it
+    /// through `onSettled`: a refetch keeps the cached `.ready` value, which
+    /// may be stale.
     func syncCatalogCounts() {
         catalogCounts?.publishSources(sources.count)
-    }
-
-    /// The view's one publish path: runs `syncCatalogCounts()` only when the
-    /// handle holds a settled list.
-    func syncCatalogCountsIfLoaded(_ handle: QueryHandle<[CatalogSource]>) {
-        guard handle.status == .ready, !handle.isFetching else { return }
-        syncCatalogCounts()
     }
 }

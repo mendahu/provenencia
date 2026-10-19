@@ -14,6 +14,9 @@ final class QueryHandle<Value> {
     /// of the stored rows.
     private(set) var revision = 0
 
+    /// Loaded and not refetching: `value` is the latest the loader returned.
+    var isSettled: Bool { status == .ready && !isFetching }
+
     init() {}
 
     func beginLoading(stale: Bool) {
