@@ -234,10 +234,9 @@ func (p *profiler) profile(nodes []*graphcache.Node) error {
 	return nil
 }
 
-// build makes one node's profile. A kind with a lifespan reads its life from
-// the already built events it is linked to.
-func (p *profiler) build(n *graphcache.Node) error {
-	kind := p.kind(n)
+// entity is a node's reconciled properties as the profile builder reads them,
+// with no life.
+func (p *profiler) entity(n *graphcache.Node) (subjectprofile.Entity, error) {
 	props := map[vocabkey.PropertyKey]subjectprofile.Property{}
 	for propID, rows := range n.Values {
 		prop, ok := p.props[propID]
@@ -248,13 +247,34 @@ func (p *profiler) build(n *graphcache.Node) error {
 		for _, row := range rows {
 			rv, err := reconciled(row, p.terms)
 			if err != nil {
-				return err
+				return subjectprofile.Entity{}, err
 			}
 			vals = append(vals, rv)
 		}
 		props[vocabkey.PropertyKey(prop.Key)] = subjectprofile.Property{Values: vals}
 	}
-	e := subjectprofile.Entity{Properties: props, NamePattern: p.namePattern}
+	return subjectprofile.Entity{Properties: props, NamePattern: p.namePattern}, nil
+}
+
+// keyValues is a node's values for shortlist keys: the profile with no derived
+// lead, so no life event is read. It is not kept in done, which holds only full
+// profiles.
+func (p *profiler) keyValues(n *graphcache.Node) (subjectcompare.Values, error) {
+	e, err := p.entity(n)
+	if err != nil {
+		return nil, err
+	}
+	return subjectprofile.Build(e, p.metas, p.reconcile, nil, subjectprofile.Options{})
+}
+
+// build makes one node's profile. A kind with a lifespan reads its life from
+// the already built events it is linked to.
+func (p *profiler) build(n *graphcache.Node) error {
+	kind := p.kind(n)
+	e, err := p.entity(n)
+	if err != nil {
+		return err
+	}
 	if len(p.rules.Lifespans[kind]) > 0 {
 		links, err := p.g.Follow(n.ID, hopPersonToEvent)
 		if err != nil {

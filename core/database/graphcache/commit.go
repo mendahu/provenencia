@@ -24,6 +24,8 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 		g.DropLabels()
 		g.vocabOK = false
 		g.vocab = Vocabulary{}
+		g.matchIndexOK = false
+		g.matchIndex = nil
 	}
 	if set.Structure {
 		g.Drop()
@@ -34,8 +36,8 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 	if len(ids) == 0 {
 		return g.verifyIfSet()
 	}
-	g.statsOK = false
-	g.stats = nil
+	g.matchIndexOK = false
+	g.matchIndex = nil
 	rows, err := g.entityRows(ids)
 	if err != nil {
 		return err

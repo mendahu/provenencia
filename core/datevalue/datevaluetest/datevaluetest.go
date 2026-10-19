@@ -27,6 +27,20 @@ func About(y, m, d int) *datevalue.Value {
 	return v
 }
 
+// Before is YMD with the BEF qualifier.
+func Before(y, m, d int) *datevalue.Value {
+	v := YMD(y, m, d)
+	v.Qualifier = datevalue.QualifierBEF
+	return v
+}
+
+// After is YMD with the AFT qualifier.
+func After(y, m, d int) *datevalue.Value {
+	v := YMD(y, m, d)
+	v.Qualifier = datevalue.QualifierAFT
+	return v
+}
+
 // Phrase is a point date that carries only a phrase.
 func Phrase(s string) *datevalue.Value {
 	return &datevalue.Value{Kind: datevalue.KindPoint, Phrase: s}

@@ -9,8 +9,8 @@ import (
 )
 
 // Candidates are the handles a Subject is offered on its own properties:
-// entity compare evidence at least the weak band. Shortlisting replaces the
-// scan (S11-15) and top K replaces the limit (S11-16).
+// entity compare evidence at least the weak band. Seeding passes it shortlisted
+// handles (S11-15); top K replaces the limit (S11-16).
 //
 // It returns the handles of kind whose evidence against values is at least
 // cfg.WeakScore, best first: evidence, then similarity, then Ref, then ID.

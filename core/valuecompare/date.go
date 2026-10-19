@@ -132,3 +132,18 @@ func (date) key(v Value, _ Relation, r Rules) (string, bool) {
 	}
 	return end(s.window.Lo) + ".." + end(s.window.Hi), true
 }
+
+// YearReach is the civil years a date can still be Near to. Two dates Compare
+// relates other than Different or Unknown have overlapping reaches, or one is
+// open. ok is false when the date cannot be placed; open when either end is
+// open.
+func YearReach(v Value, r Rules) (lo, hi int, open, ok bool) {
+	s, ok := readDate(v.Date, r)
+	if !ok {
+		return 0, 0, false, false
+	}
+	if s.first.Open || s.last.Open {
+		return 0, 0, true, true
+	}
+	return s.first.Year - r.Dates.Tolerance, s.last.Year + r.Dates.Tolerance, false, true
+}

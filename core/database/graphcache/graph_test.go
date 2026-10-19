@@ -433,3 +433,46 @@ func TestTermsByID(t *testing.T) {
 		t.Errorf("id-b = %+v", b)
 	}
 }
+
+func TestMatchIndexDrops(t *testing.T) {
+	c := openCatalog(t)
+	g := c.Graph()
+	id := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+	stored := func() bool {
+		_, ok := g.MatchIndex()
+		return ok
+	}
+	g.SetMatchIndex("index")
+	if v, ok := g.MatchIndex(); !ok || v != "index" {
+		t.Fatalf("MatchIndex = %v, %v after SetMatchIndex", v, ok)
+	}
+	g.SetAliasTables(nil)
+	if stored() {
+		t.Error("SetAliasTables left the match index")
+	}
+	g.SetMatchIndex("index")
+	if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 1}, Effects: effects.Set{Handles: [][]byte{id}}}); err != nil {
+		t.Fatal(err)
+	}
+	if stored() {
+		t.Error("a commit that names a handle left the match index")
+	}
+	g.SetMatchIndex("index")
+	g.Drop()
+	if stored() {
+		t.Error("Drop left the match index")
+	}
+	t.Run("vocabulary commit", func(t *testing.T) {
+		g.SetMatchIndex("index")
+		if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 2}, Effects: effects.Set{Vocabulary: true}}); err != nil {
+			t.Fatal(err)
+		}
+		if stored() {
+			t.Error("a vocabulary-only commit left the match index")
+		}
+	})
+	g.ResetMatchIndexForTest()
+	if stored() {
+		t.Error("ResetMatchIndexForTest left the match index")
+	}
+}

@@ -23,8 +23,9 @@ type Graph struct {
 	kindOn  map[string]bool
 	kindSet map[string]map[string]bool
 
-	stats   any
-	statsOK bool
+	// matchIndex is what Promote derives from the whole catalog.
+	matchIndex   any
+	matchIndexOK bool
 
 	vocab   Vocabulary
 	vocabOK bool
@@ -156,8 +157,8 @@ func (g *Graph) clear() {
 	g.kinds = map[string][][]byte{}
 	g.kindOn = map[string]bool{}
 	g.kindSet = map[string]map[string]bool{}
-	g.statsOK = false
-	g.stats = nil
+	g.matchIndexOK = false
+	g.matchIndex = nil
 	g.vocabOK = false
 	g.vocab = Vocabulary{}
 	g.displays = map[string]any{}
@@ -169,7 +170,7 @@ func (g *Graph) clear() {
 	// Alias tables stay. They follow the catalog connection, not a rebuild.
 }
 
-// Drop empties nodes, holders, kind indexes, and stats. The next read fills
+// Drop empties nodes, holders, kind indexes, and the match index. The next read fills
 // them. EnsureCatalog calls this after a rebuild, which does not go through Run.
 func (g *Graph) Drop() {
 	if g == nil {
@@ -232,14 +233,15 @@ func (g *Graph) Kind(typeID []byte) ([]*Node, error) {
 	return out, nil
 }
 
-// Stats returns the cached catalog-wide scan a feature stores in this slot. A
-// commit that names handles, and a structure drop, clear it. A vocabulary-only
-// write does not. Nothing fills it until S11-15.
-func (g *Graph) Stats() (any, bool) {
-	if g == nil || !g.statsOK {
+// MatchIndex returns the match index: what Promote derives from the whole
+// catalog, stored in this slot by a feature. A commit that names handles, a
+// vocabulary commit, a structure drop and SetAliasTables clear it: its keys
+// read term keys and metas as well as handles.
+func (g *Graph) MatchIndex() (any, bool) {
+	if g == nil || !g.matchIndexOK {
 		return nil, false
 	}
-	return g.stats, true
+	return g.matchIndex, true
 }
 
 // AliasTables returns the abbreviation and nickname tables warmed for this
@@ -254,29 +256,34 @@ func (g *Graph) AliasTables() (any, bool) {
 
 // SetAliasTables stores abbreviation and nickname tables until the catalog
 // closes. A nil slice is a warm catalog with no rows. Drop does not clear this.
+// The match index reads the alias sets, so new tables drop it.
 func (g *Graph) SetAliasTables(tables any) {
 	if g == nil {
 		return
 	}
+	g.matchIndexOK = false
+	g.matchIndex = nil
 	g.aliases = tables
 	g.aliasesOK = true
 }
 
-// SetStats stores a catalog-wide scan until the next handle commit or drop.
-func (g *Graph) SetStats(stats any) {
+// SetMatchIndex stores the match index until the next handle commit,
+// vocabulary commit, alias table load or drop.
+func (g *Graph) SetMatchIndex(index any) {
 	if g == nil {
 		return
 	}
-	g.stats = stats
-	g.statsOK = true
+	g.matchIndex = index
+	g.matchIndexOK = true
 }
 
-// ResetStatsForTest drops the cached scan.
-func (g *Graph) ResetStatsForTest() {
+// ResetMatchIndexForTest drops the match index.
+func (g *Graph) ResetMatchIndexForTest() {
 	if g == nil {
 		return
 	}
-	g.statsOK = false
+	g.matchIndexOK = false
+	g.matchIndex = nil
 }
 
 // SetQueryCounterForTest counts queries this graph issues. Tests only.
