@@ -70,7 +70,7 @@ The exact `ON DELETE` classes and `catalogmodel` buckets are set by the schema P
   - The Default graph may have none until the Source's first Artifact, which links to it automatically. "Add graph" is unavailable until the Source has an Artifact.
   - A new Artifact starts linked to every graph.
   - While a Source has one graph, linking is automatic and the checkboxes are hidden.
-  - Unlinking is refused when that graph's Citations use the Artifact (the message lists them), and when it is the graph's last link.
+  - Unlinking is refused when that graph's Citations use the Artifact (the refusal names the reason; the Citations are listed alongside it), and when it is the graph's last link.
   - Deleting an Artifact keeps today's rule (refused while Citations use it); it may leave a graph with no Artifacts.
 - **The Citation composer offers only the graph's linked Artifacts.**
 - **Promote is per graph.** A Promote layer is one graph's Subjects.
