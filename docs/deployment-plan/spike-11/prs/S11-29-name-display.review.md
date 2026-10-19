@@ -1,7 +1,7 @@
 # Review — S11-29 Quote nicknames and add former surnames
 
-**Verdict:** Fits with changes — Not ready → fixed in round 1
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Not ready → fixed in round 1; round 2 Ready
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 - None. Product calls were asked before planning (2026-10-19): curly quotes, parentheses + italic, new catalogs only.
@@ -63,3 +63,11 @@
 
 ### M-7 · nit · Key segment
 **Answer:** Fixed — `nameValue.display.former_surname`.
+
+## Round 2
+
+Reviewer (opus, both lenses): no new blockers; every round-1 answer accepted. Verdict: Ready. Notes, all fixed:
+- R2-1 · minor · `conclusionheaders/order.go` `personSortKey` comment says the key is the row string — added to STEP-1.
+- R2-2 · minor · D-7 split call — `components(separatedBy:)`, count then drop empties; T-7 case for `(%@`.
+- R2-3 · nit · `attributed` fallback narrower than `string` — "when the runs are empty".
+- R2-4 · nit · list-row italic font named (`PVFont.body(size: PVTypeScale.body)`); map row status updated.

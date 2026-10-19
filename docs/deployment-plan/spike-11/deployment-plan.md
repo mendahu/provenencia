@@ -112,8 +112,8 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-26 | Connections file by their ends | 6 | Drop the bridge switch-off: `SkipBridgeIDs`, `skip_bridge_ids`, the `skip` parameters | — | — | — | Scoped |
 | S11-27 | Connection subrows on Promote | 6 | Each connection as a subrow of a row it joins, its state from its ends; the panel and toggles go | S11-D1 | S11-26, S11-D1 | — | Scoped |
 | S11-21 | Large-Source performance check | 7 | 100-Subject benchmark; memoize only if it fails | — | S11-16 | — | Scoped |
-| S11-28 | Fold a nickname into its given name | 2 | Reconciler folds a shorter alias or abbreviation of a given name into the longer one; cache reads the product alias tables | — | S11-06 | [plan](prs/S11-28-alias-fold.md) | Draft |
-| S11-29 | Quote nicknames and add former surnames | 2 | Nicknames in quotes everywhere; `former_surname` part type in parentheses, italic on the Person titles | — | — | [plan](prs/S11-29-name-display.md) | Draft |
+| S11-28 | Fold a nickname into its given name | 2 | Reconciler folds a shorter alias or abbreviation of a given name into the longer one; cache reads the product alias tables | — | S11-06 | [plan](prs/S11-28-alias-fold.md) | Planned |
+| S11-29 | Quote nicknames and add former surnames | 2 | Nicknames in quotes everywhere; `former_surname` part type in parentheses, italic on the Person titles | — | — | [plan](prs/S11-29-name-display.md) | Planned |
 | S11-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
