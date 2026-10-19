@@ -8,6 +8,7 @@
 package matchregistry
 
 import (
+	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
@@ -19,10 +20,12 @@ type Registry struct {
 	// Subject is layer 3: what each property counts when two Subjects of one
 	// type are compared.
 	Subject subjectcompare.Rules
+	// Segment is layer 5: what a matching or differing link counts.
+	Segment segmentcompare.Rules
 }
 
 // Default is the shipped registry. Each call builds new slices and maps, so a
 // caller that changes its copy changes no one else's.
 func Default() Registry {
-	return Registry{Value: defaultValue(), Subject: defaultSubject()}
+	return Registry{Value: defaultValue(), Subject: defaultSubject(), Segment: defaultSegment()}
 }

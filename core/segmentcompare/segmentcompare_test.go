@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	pt "github.com/mendahu/provenencia/core/propertycompare/propertycomparetest"
 	"github.com/mendahu/provenencia/core/segmentcompare"
@@ -15,23 +16,6 @@ import (
 	"github.com/mendahu/provenencia/core/subjectcompare/subjectcomparetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
-
-// rules is the segment section with the registry's numbers; STEP-3 reads them
-// from matchregistry.Default().Segment.
-func rules() segmentcompare.Rules {
-	return segmentcompare.Rules{
-		One: []vocabkey.BridgeKey{
-			{Type: vocabkey.BridgeParticipation, Term: vocabkey.BridgeTerm(vocabkey.RoleSubject), EventType: vocabkey.EventBirth},
-			{Type: vocabkey.BridgeParticipation, Term: vocabkey.BridgeTerm(vocabkey.RoleSubject), EventType: vocabkey.EventDeath},
-		},
-		OneSupport: 1.5, OneCredit: 0.5, OneConflict: 3,
-		OtherSupport: 0.25, OtherCredit: 0.25,
-		Gates: map[vocabkey.BridgeKey]segmentcompare.Gate{
-			partOf(vocabkey.PropertyFrom): {MinOwnEvidence: 2, ConflictFactor: 1},
-			partOf(vocabkey.PropertyTo):   {MinOwnEvidence: 2},
-		},
-	}
-}
 
 func partOf(end vocabkey.PropertyKey) vocabkey.BridgeKey {
 	return vocabkey.BridgeKey{Type: vocabkey.BridgePlaceRelationship, Term: vocabkey.TermPartOf, End: end}
@@ -101,7 +85,7 @@ func TestKey(t *testing.T) {
 
 func TestCompare(t *testing.T) {
 	metas := subjectcomparetest.Metas()
-	reg := newRegistry()
+	reg := matchregistry.Default()
 	birthP := partKey(vocabkey.PropertyPerson, vocabkey.EventBirth)
 	birthE := partKey(vocabkey.PropertyEvent, vocabkey.EventBirth)
 	resid := partKey(vocabkey.PropertyPerson, "residence")
@@ -145,7 +129,7 @@ func TestCompare(t *testing.T) {
 
 func TestInvariants(t *testing.T) {
 	metas := subjectcomparetest.Metas()
-	reg := newRegistry()
+	reg := matchregistry.Default()
 	keys := []vocabkey.BridgeKey{
 		partKey(vocabkey.PropertyPerson, vocabkey.EventBirth), partKey(vocabkey.PropertyEvent, vocabkey.EventBirth),
 		partKey(vocabkey.PropertyPerson, vocabkey.EventDeath), partKey(vocabkey.PropertyEvent, vocabkey.EventDeath),
