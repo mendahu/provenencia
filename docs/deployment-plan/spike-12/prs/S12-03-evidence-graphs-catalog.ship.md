@@ -1,7 +1,7 @@
 # Ship log — S12-03 Evidence graphs in the catalog
 
 **Plan:** [`S12-03-evidence-graphs-catalog.md`](S12-03-evidence-graphs-catalog.md) · **Branch:** `s12-03-evidence-graphs-catalog` · **PR:** #498
-**State:** ready
+**State:** fixing 5
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s12-03`, branched from `origin/main` @ `84a9b318`.
 
@@ -165,6 +165,35 @@ Check: `grep -rn "desc = nil" core --include='*.go'` prints nothing; `go test ./
 
 ## Round 4 — fix (Fix plan 4)
 Head `df4e2cd7`. Gate PASS (orchestrator run; uncached `go test ./core/... ./api/...` ok). F-10 done; `grep -rn "desc = nil" core` prints nothing. MNT-17: **Resolved** (orchestrator read of the diff: 13 blocks → `database.NullString`, 5 files, −91/+13).
+
+
+## CI — red after `main` moved (2026-10-19)
+`test` (pull_request merge) failed at `go vet`: `core/database/graphcache/graph_test.go:467: unknown field Vocabulary in struct literal of type effects.Set`. The line comes from S11-15 (PR #497), merged into `main` after this branch; local runs did not see it. Merged `origin/main` into the branch (`6d9c76fb`, clean). Fix → F-11.
+
+## User decisions (2026-10-19)
+- Migration backfill: keep as is (option 1 of three: keep the SQL backfill and the Go ref fill-in; a new catalog runs every migration, so the `subjects` rebuild must stay either way).
+- "Fix the `migrate` function on this PR": steps run in one transaction each, `user_version` inside it, foreign-key check read and enforced. Supersedes SEC-1's Follow-up → F-12.
+
+### Fix plan 5
+
+**F-11 — `graphcache` test uses the list key** (CI)
+Files: `core/database/graphcache/graph_test.go`.
+Do: line 467 `effects.Set{Vocabulary: true}` → `effects.Set{Lists: []effects.List{effects.ListVocabulary}}`. Then search the merged tree for every other reader of the removed fields and binders — `grep -rnE "Vocabulary: *true|\.Vocabulary\b[^(]|PropertyUsage: *true|\.PropertyUsage\b|EvidenceGraphs: *true|maxRefRetries" core api --include='*.go'`, and the body greps from F-6 / F-7 — and move anything S11-15 added onto the shared code.
+Check: `CGO_ENABLED=1 go vet -tags fts5 ./api/... ./core/...` clean (the CI command); scripts/check-pr.sh PASS.
+
+**F-12 — Each migration step commits or rolls back whole, and a broken foreign key refuses it** (from the user; SEC-1)
+Files: `core/database/migrate.go`, `core/database/migrate_test.go`, `core/database/migrations/{000011,000024,000027,000028,000030,000033,000052,000055}.sql`, `.agents/skills/add-catalog-migration/SKILL.md`, `docs/versioning.md` if it describes how steps run. Skill: `add-catalog-migration`.
+Failing tests first (internal tests in package `database`, swapping the package's `migrations` list for a fake one and restoring it with `t.Cleanup`):
+- `TestMigrateRollsBackAFailedStep` — step 1 creates table `a`; step 2 creates table `b` then runs invalid SQL. `migrate` returns an error, `user_version` is 1, table `b` does not exist. Red today: `b` exists.
+- `TestMigrateRefusesBrokenForeignKeys` — step 1 creates `parent` and `child(parent_id REFERENCES parent(id))`; step 2 is marked foreign-keys-off and inserts a `child` row whose parent is missing. `migrate` returns an error, `user_version` is 1, `child` is empty, and `PRAGMA foreign_keys` reads 1 afterwards. Red today: it migrates.
+- `TestMigrateForeignKeysOffStepRebuilds` — a foreign-keys-off step that rebuilds a parent table referenced by an `ON DELETE CASCADE` child (create `__new`, copy, `DROP`, `RENAME`) keeps the child rows; `PRAGMA foreign_keys` is 1 afterwards.
+Do:
+- `migration` gains `foreignKeysOff bool`, set at load when the file has a line that is exactly `-- migrate: foreign_keys off`. The loader refuses (CodeInternalMigrations, "… toggles foreign_keys") any step whose SQL contains `PRAGMA foreign_keys` or `PRAGMA foreign_key_check`, because inside a transaction those do nothing.
+- `migrate` takes one `*sql.Conn` (`db.Conn(ctx)`) for the whole run. Per step: if `foreignKeysOff`, `PRAGMA foreign_keys=OFF` on the conn (outside any transaction); `BeginTx`; `Exec(step.sql)`; if `foreignKeysOff`, query `PRAGMA foreign_key_check` and, if it returns any row, roll back and return an internal migrations error naming the step and the first table it reports; `Exec(PRAGMA user_version = N)` in the transaction; `Commit`. Always restore `PRAGMA foreign_keys=ON` after a step that turned it off, on success and on error (defer). Steps without the directive keep foreign keys on, so cascades in the older `DELETE`/`UPDATE` steps (12, 16, 35, 37, 43, 44, 46) behave as before.
+- In the eight files, replace `PRAGMA foreign_keys=OFF;` with `-- migrate: foreign_keys off` (on its own line, near the top), and delete their `PRAGMA foreign_keys=ON;` and `PRAGMA foreign_key_check;` lines. Confirm nothing hashes migration file text (`schemahash.go` hashes the resulting schema); if something does, stop and report.
+- `add-catalog-migration` skill: a step runs in one transaction with `user_version`; a rebuild declares `-- migrate: foreign_keys off` and must leave every foreign key valid (`migrate` checks and refuses); never write `PRAGMA foreign_keys`, `foreign_key_check`, `BEGIN` or `COMMIT` in a step. Remove SEC-1 from the PR's follow-ups in the plan's Landed note if it lists it.
+- Per the user's standing rule, no per-migration upgrade test (`no-migration-tests`); the existing Create/Open tests and `TestPragmaHonesty` cover every real step.
+Check: the three tests pass; every Create/Open test passes; scripts/check-pr.sh PASS.
 
 ## Result
 Gate PASS · CI pending · open: none · fixed on this PR: PRF-1, MNT-1, MNT-2, MNT-3, MNT-4, MNT-5, MNT-9, MNT-10, MNT-11, MNT-12, MNT-17, CON-R2-1 · later PR: UX-1, UX-2 (S12-05), MNT-8 (S12-04), UX-3 (S12-11) · follow-ups: SEC-1, MNT-13 · to user: PRF-1 (override D-15), MNT-1/2/4/5 (fix here) · CON miss: none · rounds: 4 review (rounds 3–4 user-requested)
