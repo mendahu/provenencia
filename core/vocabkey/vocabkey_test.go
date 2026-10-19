@@ -67,3 +67,19 @@ func TestValidOrigin(t *testing.T) {
 		}
 	}
 }
+
+func TestBridgeKeyString(t *testing.T) {
+	tests := []struct {
+		key  BridgeKey
+		want string
+	}{
+		{BridgeKey{BridgeParticipation, "subject", PropertyPerson, EventBirth}, "participation·subject·person·birth"},
+		{BridgeKey{Type: BridgeRelationship, Term: "spouse"}, "relationship·spouse"},
+		{BridgeKey{Type: BridgeLocation, End: PropertyEvent}, "location·event"},
+	}
+	for _, tc := range tests {
+		if got := tc.key.String(); got != tc.want {
+			t.Errorf("%+v.String() = %q, want %q", tc.key, got, tc.want)
+		}
+	}
+}

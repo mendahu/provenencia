@@ -39,7 +39,7 @@ const (
 	KeyPlaceRelationshipType = "place_relationship_type"
 	// Locked place_relationship_type keys. Walk / cycle behaviour is keyed
 	// here in Go (part_of = containment; succeeded_by = succession).
-	KeyPartOf      = "part_of"
+	KeyPartOf      = string(vocabkey.TermPartOf)
 	KeySucceededBy = "succeeded_by"
 
 	sqlUpsert = `INSERT INTO property_terms (id, property_id, key, origin, label, description, directed, inverse_key, neutral)
