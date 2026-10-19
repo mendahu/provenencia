@@ -1,7 +1,7 @@
 # Review — S11-17 Contested flag through FFI
 
-**Verdict:** pending round 2 — round 1: Fits with changes / Not ready
-**Rounds:** 1 (round 2 required: M-1 was a fixed blocker that reshaped D-4, D-6, D-7). **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits — Ready with changes (round 2; every round-2 finding fixed)
+**Rounds:** 2 (round 2 required: M-1 was a fixed blocker that reshaped D-4, D-6, D-7). **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
@@ -15,6 +15,7 @@
 - A decided row's contested flag refreshes on every proposal, as its band does; anchor rows are never contested (D-7).
 - Wire reason fields typed as `PromoteReasonCode` in the store, which changes about a dozen literals in `FakeStore` and the Promote tests (D-6, D-8).
 - The S11-18 scope entry now leaves to S11-D1 where a move shows, because a move and `Row.updated` measure different things.
+- An empty neighbor id gives `.empty` for all four neighbor reasons (`via` and the three moves), today's `via` rule (round 2, M-8).
 
 ## Round 1
 
@@ -68,3 +69,28 @@
 
 ### X-11 · minor · D-4's `.via` handling is only described in prose
 **Answer:** Logged; AC-4.3 pins the behavior.
+
+## Round 2
+
+Both reviewers confirmed every round-1 answer (X-5's decline accepted). No new blockers.
+
+### M-6 · minor · D-6 leaves a doc comment on the alternative that lists codes
+**Answer:** Fixed. D-6 rewrites `CatalogPromoteGraphAlignmentAlternative.reason`'s comment; D-1's `move_reason` comment names `graphalign.Reason` instead of listing codes.
+
+### M-7 · minor · `PromoteFlow.move(_:)` puts a third wire-row-to-`Reason` conversion outside `Reason`
+**Answer:** Fixed. D-7 adds `PromoteFlow.Reason.init?(move:)` beside the row and alternative `init`s; Codebase fit updated.
+
+### M-8 · minor · D-4 applies two different empty-neighbor rules in one initializer
+**Answer:** Fixed. D-4 states one rule (empty neighbor → `.empty`) for all four neighbor cases; AC-3.4 and AC-4.3 follow it.
+
+### X-12 · major · AC-4.4 says "No match", but STEP-3's `rg` cannot return none
+**Answer:** Fixed. STEP-3's check is two searches scoped to the reason literals; run at planning, they print exactly D-8's literals and `PromoteFlow.Reason.init`'s six cases, so after the PR both print nothing. AC-4.4 points at them.
+
+### X-13 · minor · STEP-6 says the `row(…)` helper "stays as is", but D-8 edits its body
+**Answer:** Fixed. STEP-6 says its signature stays.
+
+### X-14 · minor · STEP-7 leaves the Landed record underspecified
+**Answer:** Fixed. STEP-7 gives the order (PR first, then commit 4), the `completed.md` heading and shape (S11-16's entry), the map status and the plan status.
+
+### X-15 · minor · GoStore placement of the new fields is implicit
+**Answer:** Fixed. D-6 says "in struct order: after `viaRole:`, before `person:`".
