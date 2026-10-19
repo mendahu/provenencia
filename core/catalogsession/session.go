@@ -44,8 +44,8 @@ func key(projectDir string) (string, error) {
 
 // ReconcileOnOpen runs the open-time repairs of a catalog, in order: refs for
 // rows a format step added without one, the project uuid, then the derived
-// caches. Create, onboarding's OpenCatalog and Do all call it, so the next
-// repair is one line here. It does not close c.
+// caches. onboarding.createCatalog, onboarding's OpenCatalog and Do all call
+// it, so the next repair is one line here. It does not close c.
 func ReconcileOnOpen(c *database.Catalog) error {
 	if err := users.EnsureRefs(c); err != nil {
 		return err
