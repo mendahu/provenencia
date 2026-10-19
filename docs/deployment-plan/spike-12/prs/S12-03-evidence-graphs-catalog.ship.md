@@ -149,3 +149,19 @@ Files: `macos/ProvenenciaTests/CatalogQueryRegistryTests.swift`; ride-along: `co
 Failing test first: `CatalogQueryRegistryTests` `listInvalidations` *(new, parameterized)* — `[.vocabulary]`, `[.propertyUsage]`, `[.vocabulary, .propertyUsage]`, `structure: true` alone, and `[.vocabulary]` + `structure: true` each give exactly one `.propertiesWorkspace` invalidation; `[.evidenceGraphs]` alone gives none. Show it red once by breaking the dedupe locally, then restore.
 Do: add the test. Ride along: reword the "tables with EvidenceGraphs" failure message and rename `TestEvidenceGraphsFlag` / `TestPropertyUsage` to list wording (`TestEvidenceGraphsList`, `TestPropertyUsageList`); fold the `evidencegraphstest` import into the module import group in both test files.
 Check: the new test passes; scripts/check-pr.sh PASS.
+
+## Round 3 — fix (Fix plan 3)
+Head `283874b4`. Gate PASS (orchestrator run; uncached `go test ./core/... ./api/...` ok; body grep prints only `null.go` ×2, `datevalues.nullIfEmpty`, `audit.nullIfEmpty`). F-6 `9a36980e`, F-7 `b48b9976`, F-8 `5e8c5197`, F-9 `283874b4` (red once with the dedupe removed). CON-R2-1: **Resolved** (orchestrator read: `listInvalidations`, 6 cases). Skill lesson `9dd6fda3`: same-pass copies are found by body, not name.
+
+## Round 4 — review (MNT, scope `3e63ac29...283874b4`)
+MNT-9, MNT-10, MNT-11, MNT-12: Resolved.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-17 | MNT | blocker | 13 inline `var desc any; if x == "" { desc = nil }` copies of `NullString` | Fix now → F-10 | verified: `grep -rn "desc = nil" core` → 13 (`metadatafields`, `properties`, `propertyterms`, `sourcetypes` ×3 each, in this PR's diff; `subjecttypes` ×1, same copy) |
+
+### Fix plan 4
+**F-10 — Inline description binders use `database.NullString`** (from MNT-17)
+Files: `core/database/{metadatafields,properties,propertyterms,sourcetypes,subjecttypes}`.
+Do: at each `var desc any` / `if … == "" { desc = nil } else { desc = … }` block, delete the block and pass `database.NullString(<x>)` in the `Exec`. Leave `propertyterms`' trimmed `InverseKey`, `audit.go:55`, `observations/write.go:257` (different rules).
+Check: `grep -rn "desc = nil" core --include='*.go'` prints nothing; `go test ./core/...` passes; scripts/check-pr.sh PASS. Orchestrator verifies; no further review round.
