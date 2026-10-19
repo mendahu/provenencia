@@ -223,33 +223,33 @@ struct CitationComposerViewerPane: View {
         .pvContextMenu(
             $clearMenu,
             keyboard: $clearKeyboard,
-            keyboardTitles: [
-                L10n.string(L10n.CitationComposer.clearRegion),
-                L10n.string(L10n.CitationComposer.resetToEntireArtifact),
-            ],
+            keyboardTitles: PVActionMenuItem.keyboardTitles(clearMenuItems),
             dismissOnClickAway: true
         ) {
             PVContextMenuPanel(
                 accessibilityIdentifier: "citationComposer.clearMenu.menu"
             ) {
-                PVContextMenuItem(
-                    L10n.CitationComposer.clearRegion,
-                    index: 0,
-                    isEnabled: model.locator.hasRegion
-                        && model.locatorCapabilities.supportsRegionLocator,
-                    accessibilityIdentifier: "citationComposer.clearRegion"
-                ) {
-                    model.clearRegion()
-                }
-                PVContextMenuItem(
-                    L10n.CitationComposer.resetToEntireArtifact,
-                    index: 1,
-                    accessibilityIdentifier: "citationComposer.resetToEntireArtifact"
-                ) {
-                    model.resetToEntireArtifact()
-                }
+                PVActionMenuRows(items: clearMenuItems)
             }
         }
+    }
+
+    private var clearMenuItems: [PVActionMenuItem] {
+        [
+            PVActionMenuItem(
+                title: L10n.CitationComposer.clearRegion,
+                isEnabled: model.locator.hasRegion && model.locatorCapabilities.supportsRegionLocator,
+                accessibilityIdentifier: "citationComposer.clearRegion"
+            ) {
+                model.clearRegion()
+            },
+            PVActionMenuItem(
+                title: L10n.CitationComposer.resetToEntireArtifact,
+                accessibilityIdentifier: "citationComposer.resetToEntireArtifact"
+            ) {
+                model.resetToEntireArtifact()
+            },
+        ]
     }
 
     private func toggleClearMenu() {

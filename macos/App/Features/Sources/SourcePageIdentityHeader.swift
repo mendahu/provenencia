@@ -7,14 +7,8 @@ struct SourcePageIdentityHeader: View {
     /// Local draft so title keystrokes don't invalidate the whole Source page
     /// observation graph on every character.
     @State private var titleDraft = ""
-    @State private var coverMenu = PVContextMenuState()
-    @State private var coverKeyboard = PVContextMenuKeyboard.inactive
     private enum TypeField: Hashable { case combo }
     @FocusState private var typeFieldFocused: TypeField?
-
-    private var coverMenuItemCount: Int {
-        model.source?.coverMode == "type_icon" ? 0 : 1
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
@@ -28,15 +22,6 @@ struct SourcePageIdentityHeader: View {
                         copySourceButton
                         deleteSourceButton
                     }
-                }
-                // Menu on the row (not the 72pt thumb) so click origin shares
-                // the panel's coordinate space.
-                .pvContextMenu(
-                    $coverMenu,
-                    keyboard: coverMenuItemCount > 0 ? $coverKeyboard : nil,
-                    keyboardTitles: coverMenuItemCount > 0 ? [L10n.string(L10n.Sources.thumbnailRevertToDefault)] : []
-                ) {
-                    coverMenuPanel
                 }
                 .frame(maxWidth: PVSpacing.widthContentMax, alignment: .leading)
             }
@@ -64,27 +49,26 @@ struct SourcePageIdentityHeader: View {
         )
         .accessibilityHint(L10n.string(L10n.Sources.thumbnailMenuHint))
         .accessibilityIdentifier("sources.page.cover")
-        .pvContextMenuTrigger($coverMenu)
+        .pvRightClickMenu(
+            title: L10n.Sources.thumbnailMenuTitle,
+            accessibilityIdentifier: "sources.page.cover.menu",
+            items: coverMenuItems
+        )
         .help(L10n.string(L10n.Sources.thumbnailMenuHint))
     }
 
-    private var coverMenuPanel: some View {
-        PVContextMenuPanel(
-            title: L10n.Sources.thumbnailMenuTitle,
-            accessibilityIdentifier: "sources.page.cover.menu"
-        ) {
-            if model.source?.coverMode == "type_icon" {
-                PVContextMenuItem(L10n.Sources.thumbnailDefaultInUse, isEnabled: false)
-            } else {
-                PVContextMenuItem(
-                    L10n.Sources.thumbnailRevertToDefault,
-                    index: 0,
-                    accessibilityIdentifier: "sources.page.cover.revert"
-                ) {
-                    Task { await model.artifacts.revertCoverToTypeIcon() }
-                }
-            }
+    private var coverMenuItems: [PVActionMenuItem] {
+        if model.source?.coverMode == "type_icon" {
+            return [PVActionMenuItem(title: L10n.Sources.thumbnailDefaultInUse, isEnabled: false)]
         }
+        return [
+            PVActionMenuItem(
+                title: L10n.Sources.thumbnailRevertToDefault,
+                accessibilityIdentifier: "sources.page.cover.revert"
+            ) {
+                Task { await model.artifacts.revertCoverToTypeIcon() }
+            },
+        ]
     }
 
     private var identityCover: (
