@@ -221,6 +221,18 @@ func TestKeys(t *testing.T) {
 			t.Errorf("index %q lacks the wide key", index)
 		}
 	})
+	t.Run("repeated type keys once", func(t *testing.T) {
+		once := event(0, "birth", datevaluetest.YMD(1850, 0, 0))
+		thrice := subjectcompare.Values{
+			vocabkey.PropertyEventType: {pt.Term("birth"), pt.Term("birth"), pt.Term("birth")},
+			vocabkey.PropertyDate:      once.v[vocabkey.PropertyDate],
+		}
+		wantIndex, wantLookup := keys(vocabkey.Event, once.v, r.Alignment.Shortlist)
+		index, lookup := keys(vocabkey.Event, thrice, r.Alignment.Shortlist)
+		if !slices.Equal(index, wantIndex) || !slices.Equal(lookup, wantLookup) {
+			t.Errorf("keys = %q, %q; want %q, %q", index, lookup, wantIndex, wantLookup)
+		}
+	})
 	t.Run("sorted and unique", func(t *testing.T) {
 		index, lookup := keys(vocabkey.Person, person(0, "Robins Robins").v, r.Alignment.Shortlist)
 		for _, list := range [][]string{index, lookup} {

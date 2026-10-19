@@ -81,6 +81,8 @@ func Keys(kind vocabkey.SubjectType, v subjectcompare.Values, metas subjectcompa
 				types = append(types, k)
 			}
 		}
+		slices.Sort(types)
+		types = slices.Compact(types)
 		indexTypes := append(slices.Clone(types), anyType)
 		lookupTypes := append(slices.Clone(types), noType)
 		if len(types) == 0 {
