@@ -111,17 +111,11 @@ func Upsert(c *database.Catalog, t Term) ([]byte, error) {
 	} else if len(id) != 16 {
 		return nil, ErrInvalid
 	}
-	var desc any
-	if t.Description == "" {
-		desc = nil
-	} else {
-		desc = t.Description
-	}
 	var inverse any
 	if k := strings.TrimSpace(t.InverseKey); k != "" {
 		inverse = k
 	}
-	if _, err := db.Exec(sqlUpsert, id, t.PropertyID, t.Key, t.Origin, t.Label, desc, directedBit(t.Directed), inverse, directedBit(t.Neutral)); err != nil {
+	if _, err := db.Exec(sqlUpsert, id, t.PropertyID, t.Key, t.Origin, t.Label, database.NullString(t.Description), directedBit(t.Directed), inverse, directedBit(t.Neutral)); err != nil {
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil
@@ -162,13 +156,7 @@ func Create(tx *database.Tx, userID, propertyID []byte, label, description strin
 	if label == "" {
 		return Term{}, nil, ErrInvalid
 	}
-	var desc any
-	if description == "" {
-		desc = nil
-	} else {
-		desc = description
-	}
-	if _, err := tx.Exec(sqlUpsert, id, propertyID, key, vocabkey.OriginUser, label, desc, 0, nil, 0); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, propertyID, key, vocabkey.OriginUser, label, database.NullString(description), 0, nil, 0); err != nil {
 		return Term{}, nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
@@ -234,13 +222,7 @@ func Update(tx *database.Tx, userID, id []byte, label, description string) (Term
 	if len(fields) == 0 {
 		return existing, nil, nil
 	}
-	var desc any
-	if description == "" {
-		desc = nil
-	} else {
-		desc = description
-	}
-	if _, err := tx.Exec(sqlUpdate, label, desc, id); err != nil {
+	if _, err := tx.Exec(sqlUpdate, label, database.NullString(description), id); err != nil {
 		return Term{}, nil, err
 	}
 	term, err := scanTerm(tx.QueryRow(sqlGetByID, id))

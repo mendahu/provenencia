@@ -117,13 +117,7 @@ func Upsert(c *database.Catalog, t Type) ([]byte, error) {
 	} else if len(id) != 16 {
 		return nil, ErrInvalid
 	}
-	var desc any
-	if t.Description == "" {
-		desc = nil
-	} else {
-		desc = t.Description
-	}
-	if _, err := db.Exec(sqlUpsert, id, t.Key, t.Origin, t.Label, desc, t.IconKey); err != nil {
+	if _, err := db.Exec(sqlUpsert, id, t.Key, t.Origin, t.Label, database.NullString(t.Description), t.IconKey); err != nil {
 		return nil, err
 	}
 	if err := searchindex.ReprojectSourceType(db, id); err != nil {
@@ -210,13 +204,7 @@ func Create(tx *database.Tx, label, description, iconKey string) (Type, []rowcha
 		return Type{}, nil, err
 	}
 	id := uid[:]
-	var desc any
-	if description == "" {
-		desc = nil
-	} else {
-		desc = description
-	}
-	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, desc, iconKey); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, database.NullString(description), iconKey); err != nil {
 		return Type{}, nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
@@ -285,13 +273,7 @@ func Update(tx *database.Tx, id []byte, label, description, iconKey string) (Typ
 	if len(fields) == 0 {
 		return existing, nil, nil
 	}
-	var desc any
-	if description == "" {
-		desc = nil
-	} else {
-		desc = description
-	}
-	if _, err := tx.Exec(sqlUpdate, label, desc, normalizedIcon, id); err != nil {
+	if _, err := tx.Exec(sqlUpdate, label, database.NullString(description), normalizedIcon, id); err != nil {
 		return Type{}, nil, err
 	}
 	got, err := getByIDTx(tx.Tx, id)

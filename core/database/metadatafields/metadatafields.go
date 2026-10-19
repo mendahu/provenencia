@@ -111,13 +111,7 @@ func Upsert(c *database.Catalog, f Field) ([]byte, error) {
 	} else if len(id) != 16 {
 		return nil, ErrInvalid
 	}
-	var desc any
-	if f.Description == "" {
-		desc = nil
-	} else {
-		desc = f.Description
-	}
-	if _, err := db.Exec(sqlUpsert, id, f.Key, f.Origin, f.Label, f.DataType, desc); err != nil {
+	if _, err := db.Exec(sqlUpsert, id, f.Key, f.Origin, f.Label, f.DataType, database.NullString(f.Description)); err != nil {
 		return nil, err
 	}
 	if err := searchindex.ReprojectMetadataField(db, id); err != nil {
@@ -155,13 +149,7 @@ func Create(tx *database.Tx, label, dataType, description string) (Field, []rowc
 		return Field{}, nil, err
 	}
 	id := uid[:]
-	var desc any
-	if description == "" {
-		desc = nil
-	} else {
-		desc = description
-	}
-	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, dataType, desc); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, dataType, database.NullString(description)); err != nil {
 		return Field{}, nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
@@ -222,13 +210,7 @@ func Update(tx *database.Tx, id []byte, label, dataType, description string) (Fi
 	if len(fields) == 0 {
 		return existing, nil, nil
 	}
-	var desc any
-	if description == "" {
-		desc = nil
-	} else {
-		desc = description
-	}
-	if _, err := tx.Exec(sqlUpdate, label, desc, id); err != nil {
+	if _, err := tx.Exec(sqlUpdate, label, database.NullString(description), id); err != nil {
 		return Field{}, nil, err
 	}
 	got, err := getByIDTx(tx.Tx, id)

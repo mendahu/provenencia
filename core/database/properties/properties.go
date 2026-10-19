@@ -115,13 +115,7 @@ func Upsert(c *database.Catalog, p Property) ([]byte, error) {
 	} else if len(id) != 16 {
 		return nil, ErrInvalid
 	}
-	var desc any
-	if p.Description == "" {
-		desc = nil
-	} else {
-		desc = p.Description
-	}
-	if _, err := db.Exec(sqlUpsert, id, p.Key, p.Origin, p.Label, desc, p.ValueType, p.Cardinality); err != nil {
+	if _, err := db.Exec(sqlUpsert, id, p.Key, p.Origin, p.Label, database.NullString(p.Description), p.ValueType, p.Cardinality); err != nil {
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil
@@ -167,13 +161,7 @@ func Create(tx *database.Tx, userID []byte, label, valueType, description, cardi
 	if label == "" || !valueTypeOK(valueType) || !cardinalityOK(cardinality) {
 		return Property{}, nil, ErrInvalid
 	}
-	var desc any
-	if description == "" {
-		desc = nil
-	} else {
-		desc = description
-	}
-	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, desc, valueType, cardinality); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, database.NullString(description), valueType, cardinality); err != nil {
 		return Property{}, nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
@@ -262,13 +250,7 @@ func Update(tx *database.Tx, userID, id []byte, label, valueType, description, c
 	if len(fields) == 0 {
 		return existing, nil, nil
 	}
-	var desc any
-	if description == "" {
-		desc = nil
-	} else {
-		desc = description
-	}
-	if _, err := tx.Exec(sqlUpdate, label, desc, cardinality, id); err != nil {
+	if _, err := tx.Exec(sqlUpdate, label, database.NullString(description), cardinality, id); err != nil {
 		return Property{}, nil, err
 	}
 	return existing, []rowchange.Change{{
