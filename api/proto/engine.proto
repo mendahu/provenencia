@@ -417,6 +417,7 @@ message CreateSourceRequest {
 
 message CreateSourceResponse {
   Source source = 1;
+  WriteEffects effects = 2;
 }
 
 // CopySource creates a new Source from an existing one in one audited write.

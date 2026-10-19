@@ -416,18 +416,6 @@ struct CitationAutoTranscribeTests {
         ), let cgImage = context.makeImage() else { return nil }
         return NSImage(cgImage: cgImage, size: NSSize(width: width, height: height))
     }
-
-    private func waitUntil(
-        timeout: Duration = .seconds(2),
-        _ predicate: () -> Bool
-    ) async -> Bool {
-        let deadline = ContinuousClock.now + timeout
-        while ContinuousClock.now < deadline {
-            if predicate() { return true }
-            try? await Task.sleep(for: .milliseconds(10))
-        }
-        return predicate()
-    }
 }
 
 private enum TestOCRError: Error {

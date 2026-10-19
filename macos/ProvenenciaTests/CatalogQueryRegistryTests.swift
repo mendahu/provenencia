@@ -1173,4 +1173,8 @@ struct CatalogQueryRegistryTests {
         #expect(workspaceHandle.value?.source.sourceTypeID == "t2")
         #expect(workspaceHandle.value?.metadata.count == 1)
     }
+
+    @Test func navCountTriggersAreSourceAndPromoteWrites() {
+        #expect(CatalogQueryRegistry.navCountTriggers == [.createdSource, .deletedSource, .promotedSubject])
+    }
 }

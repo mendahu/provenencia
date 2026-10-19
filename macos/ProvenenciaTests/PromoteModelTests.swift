@@ -8,14 +8,6 @@ struct PromoteModelTests {
     private let projectDir = "/tmp/promote-model.provenencia"
     private let sourceID = "src-1"
 
-    private func waitUntil(_ condition: () -> Bool) async -> Bool {
-        for _ in 0..<200 {
-            if condition() { return true }
-            try? await Task.sleep(nanoseconds: 10_000_000)
-        }
-        return condition()
-    }
-
     private func subject(_ id: String, ref: String, label: String) -> CatalogSubject {
         CatalogSubject(id: id, ref: ref, sourceID: sourceID, subjectTypeID: "type-person", label: label, description: "")
     }
@@ -60,7 +52,7 @@ struct PromoteModelTests {
         let entry = PromoteEntry(location: .promote(
             sourceId: sourceID, subjectId: subjectID, kind: .person, ref: "CPR-1", title: "James", sourceTitle: "Census"
         ))!
-        let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1", catalogCounts: nil)
+        let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1")
         let _: QueryHandle<SourceGraphRows> = session.query(model.graphKey)
         let _: QueryHandle<PropertiesSnapshot> = session.query(model.propertiesKey)
         let _: QueryHandle<[CatalogConnectRule]> = session.query(model.rulesKey)
@@ -76,7 +68,7 @@ struct PromoteModelTests {
             sourceId: sourceID, subjectId: "a", kind: .person, ref: "CPR-A", title: "Ada", sourceTitle: "Census"
         ))!
         // The graph key was never warmed, so readyValue has nothing to give.
-        let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1", catalogCounts: nil)
+        let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1")
         await model.load()
         #expect(model.loadError == L10n.string(L10n.Promote.graphUnavailable))
         #expect(model.flow.rows.isEmpty)

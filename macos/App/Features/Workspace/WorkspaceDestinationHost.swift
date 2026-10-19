@@ -55,8 +55,7 @@ struct WorkspaceDestinationHost: View {
                     entry: entry,
                     session: session,
                     store: store,
-                    userID: userID,
-                    catalogCounts: catalogCounts
+                    userID: userID
                 )
                 .id(entry.identityKey)
             }

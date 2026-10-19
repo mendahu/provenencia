@@ -130,7 +130,7 @@ func CreateSource(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.CreateSourceResponse{Source: sp}
+		out = &engine.CreateSourceResponse{Source: sp, Effects: writeEffectsProto(res)}
 		return nil
 	})
 	if err != nil {

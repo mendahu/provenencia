@@ -393,21 +393,14 @@ final class SourcesModel {
         isSaving = true
         defer { isSaving = false }
         do {
-            let created = try await store.createSource(
+            let (created, effects) = try await store.createSource(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 sourceTypeID: draft.sourceTypeID,
                 title: draft.trimmedTitle,
                 description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
             )
-            session.apply(.createdSource)
-            let listKey = CatalogQueryKey.sourcesList(project: session.projectKey)
-            if let listHandle: QueryHandle<[CatalogSource]> = session.queryHandle(listKey) {
-                var rows = listHandle.value ?? []
-                rows.insert(created, at: 0)
-                session.setQueryValue(listKey, value: rows)
-            }
-            syncCatalogCounts()
+            session.apply(effects, .createdSource)
             isAdding = false
             typeError = nil
             titleError = nil
@@ -424,8 +417,17 @@ final class SourcesModel {
         }
     }
 
-    /// Refreshes sidebar totals from the cached list (after warm load or create).
+    /// Publishes the count of a settled list to the sidebar. Call it only when
+    /// the list handle is `.ready` and not refetching: a refetch keeps the
+    /// cached `.ready` value, which may be stale.
     func syncCatalogCounts() {
         catalogCounts?.publishSources(sources.count)
+    }
+
+    /// The view's one publish path: runs `syncCatalogCounts()` only when the
+    /// handle holds a settled list.
+    func syncCatalogCountsIfLoaded(_ handle: QueryHandle<[CatalogSource]>) {
+        guard handle.status == .ready, !handle.isFetching else { return }
+        syncCatalogCounts()
     }
 }

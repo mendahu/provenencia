@@ -114,6 +114,9 @@ func TestCreateSourceAndWorkspace(t *testing.T) {
 				if created.Source.GetTitle() != "Passport" || created.Source.GetDescription() != "1948" {
 					t.Fatalf("%+v", created.Source)
 				}
+				if created.Effects.GetRevision() <= 0 || !slices.Contains(created.Effects.GetSourceScopes(), created.Source.GetId()) {
+					t.Fatalf("effects %+v", created.Effects)
+				}
 				cr := req.(*engine.CreateSourceRequest)
 				assertLatestAuditAction(t, cr.ProjectDir, "create_source")
 				wsOut, err := GetSourceWorkspace(marshalProto(t, &engine.GetSourceWorkspaceRequest{

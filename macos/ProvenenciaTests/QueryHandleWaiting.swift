@@ -14,3 +14,15 @@ func waitForQuery<Value>(_ handle: QueryHandle<Value>) async {
         waited += step
     }
 }
+
+/// Polls `condition` every 10 ms until it holds or `timeout` passes (two
+/// seconds by default); true once it holds.
+@MainActor
+func waitUntil(timeout: Duration = .seconds(2), _ condition: () -> Bool) async -> Bool {
+    let deadline = ContinuousClock.now + timeout
+    while ContinuousClock.now < deadline {
+        if condition() { return true }
+        try? await Task.sleep(for: .milliseconds(10))
+    }
+    return condition()
+}

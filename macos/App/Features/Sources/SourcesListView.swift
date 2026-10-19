@@ -113,16 +113,14 @@ private struct SourcesListContent: View {
             model.refreshTypes()
             model.selectSoleTypeIfNeeded()
         }
-        .onChange(of: sourcesHandle.status) { _, status in
-            if status == .ready { model.syncCatalogCounts() }
+        .onChange(of: sourcesHandle.revision) { _, _ in
+            model.syncCatalogCountsIfLoaded(sourcesHandle)
         }
         .onChange(of: typesHandle.status) { _, _ in
             if model.isAdding { model.selectSoleTypeIfNeeded() }
         }
         .onAppear {
-            if sourcesHandle.status == .ready {
-                model.syncCatalogCounts()
-            }
+            model.syncCatalogCountsIfLoaded(sourcesHandle)
         }
         .onChange(of: model.settings) { _, _ in
             navigation.go(to: navigation.currentLocation.withListScrollAnchor(nil))

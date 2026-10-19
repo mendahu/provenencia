@@ -233,28 +233,50 @@ struct SourcesModelTests {
         #expect(!model.canSubmitAdd)
     }
 
-    @Test func createReturnsSourceAndPublishesCount() async {
-        let store = FakeStore()
-        let counts = CatalogCounts(projectDir: projectDir, store: store)
-        let (model, session) = makeModel(
-            store: store,
-            types: [photoType()],
-            catalogCounts: counts
-        )
+    @Test func createReturnsSourceAndRefreshesList() async {
+        let (model, session) = makeModel(types: [photoType()])
         await warmLists(model, session: session)
-        #expect(counts.sources == 0)
+        session.apply(location: .sectionRoot(.sources))
 
         model.openAdd()
         model.draft.sourceTypeID = "t1"
         model.draft.title = "  Family album  "
         model.draft.description = "Nan's prints"
         let created = await model.create()
+        if let handle: QueryHandle<[CatalogSource]> = session.queryHandle(
+            SourcesModel.sourcesListKey(for: session)
+        ) {
+            await waitForQuery(handle)
+        }
 
         #expect(!model.isAdding)
-        #expect(model.sources.count == 1)
         #expect(created?.title == "Family album")
-        #expect(counts.sources == 1)
+        #expect(model.sources.count == 1)
         #expect(model.toast != nil)
+    }
+
+    @Test func createRefreshesListThroughSession() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "Deed", typeID: "t1")],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+        session.apply(location: .sectionRoot(.sources))
+        store.sourcesByProject[projectDir]?.append(source(id: "s2", title: "Will", typeID: "t1"))
+
+        model.openAdd()
+        model.draft.sourceTypeID = "t1"
+        model.draft.title = "Family album"
+        _ = await model.create()
+        if let handle: QueryHandle<[CatalogSource]> = session.queryHandle(
+            SourcesModel.sourcesListKey(for: session)
+        ) {
+            await waitForQuery(handle)
+        }
+
+        #expect(Set(model.sources.map(\.title)) == ["Deed", "Will", "Family album"])
     }
 
     @Test func cancelAddDoesNotCreate() async {
@@ -338,6 +360,44 @@ struct SourcesModelTests {
 
         #expect(model.sources.first?.title == "Deed renamed")
         #expect(model.sources.first?.coverMode == "type_icon")
+    }
+
+    /// A hidden list publishes its count only once its reload lands, not from the stale cached rows.
+    @Test func hiddenListRepublishesCountAfterReload() async {
+        let store = FakeStore()
+        let counts = CatalogCounts(projectDir: projectDir, store: store)
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "Album", typeID: "t1", ref: "SRC-0001")],
+            types: [photoType()],
+            catalogCounts: counts
+        )
+        await warmLists(model, session: session)
+        #expect(counts.sources == 1)
+
+        // The list is hidden: a write marks it stale instead of reloading it.
+        store.sourcesByProject[projectDir]?.append(
+            source(id: "s2", title: "Deed", typeID: "t1", ref: "SRC-0002")
+        )
+        session.apply(.createdSource)
+
+        // Coming back reloads it. The cached `.ready` value must not be republished.
+        model.warmListQueries()
+        guard let handle: QueryHandle<[CatalogSource]> = session.queryHandle(
+            SourcesModel.sourcesListKey(for: session)
+        ) else {
+            Issue.record("sources handle missing")
+            return
+        }
+        #expect(handle.isFetching)
+        counts.publishSources(7)
+        model.syncCatalogCountsIfLoaded(handle)
+        #expect(counts.sources == 7)
+
+        await waitForQuery(handle)
+        model.syncCatalogCountsIfLoaded(handle)
+        #expect(model.sources.count == 2)
+        #expect(counts.sources == 2)
     }
 
     /// A write's activity moves the row in the Updated sort without a reload.

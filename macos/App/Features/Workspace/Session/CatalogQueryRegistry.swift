@@ -37,6 +37,13 @@ struct CatalogQueryRegistry: Sendable {
         .promotedSubject, .deletedSource, .updatedProperty,
     ]
 
+    /// Writes that change a sidebar count (Sources, Persons, Events, Places).
+    /// `WorkspaceSession.apply` recounts after each; features never call
+    /// `CatalogCounts.refreshAll()`.
+    static let navCountTriggers: Set<CatalogMutationKind> = [
+        .createdSource, .deletedSource, .promotedSubject,
+    ]
+
     private struct Spec {
         let kind: CatalogQueryKey.Kind
         let stalePolicy: CatalogQueryStalePolicy

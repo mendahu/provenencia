@@ -246,4 +246,13 @@ struct SourceCopyModelTests {
         let (loadedModel, _) = await loaded(makeStore())
         #expect(loadedModel.loadState == .ready)
     }
+
+    @Test func copyRecountsThroughSession() async {
+        let store = makeStore()
+        let (model, session) = await loaded(store)
+        let counts = CatalogCounts(projectDir: projectDir, store: store)
+        session.onNavCountsMoved = { await counts.refreshAll() }
+        _ = await model.copy()
+        #expect(await waitUntil { counts.sources == 2 })
+    }
 }

@@ -22,6 +22,9 @@ final class WorkspaceSession {
     private(set) var visibleKeys: Set<CatalogQueryKey> = []
     /// Transient notice after leaving a place (composer save, etc.).
     var noticeToast: VocabularyToast?
+    /// Recounts the sidebar after a write in `CatalogQueryRegistry.navCountTriggers`. Set by `WorkspaceView`.
+    @ObservationIgnored
+    var onNavCountsMoved: (@MainActor () async -> Void)?
     /// Evidence-graph pan and zoom, keyed by Source id. Not catalog data; quit drops it.
     @ObservationIgnored
     private var graphCameras: [String: GraphCanvasCamera] = [:]
@@ -169,8 +172,9 @@ final class WorkspaceSession {
     /// once, not cancelled and restarted twice. Keys the registry evicts or
     /// marks stale when hidden are not loaded unless on screen. Last, it
     /// refreshes graph progress for the Sources the effects and the mutation
-    /// moved. Features only call `apply`; they do not query afterward or tell
-    /// sibling views to refresh.
+    /// moved, and runs `onNavCountsMoved` for a mutation in
+    /// `CatalogQueryRegistry.navCountTriggers`. Features only call `apply`;
+    /// they do not query afterward or tell sibling views to refresh.
     func apply(_ effects: CatalogWriteEffects = .empty, _ mutation: CatalogMutation? = nil) {
         patchLastUpdated(effects)
         if let source = mutation?.patchedSource {
@@ -183,6 +187,12 @@ final class WorkspaceSession {
         }
         for sourceID in progressSources {
             refreshSourceGraphProgress(sourceId: sourceID)
+        }
+        if let kind = mutation?.invalidationKind,
+           CatalogQueryRegistry.navCountTriggers.contains(kind),
+           let recount = onNavCountsMoved
+        {
+            Task { await recount() }
         }
     }
 

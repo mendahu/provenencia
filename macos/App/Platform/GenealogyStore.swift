@@ -997,13 +997,14 @@ protocol GenealogyStore: Sendable {
 
     func listSources(projectDir: String) async throws -> [CatalogSource]
     func getSourceWorkspace(projectDir: String, sourceID: String) async throws -> CatalogSourceWorkspace
+    /// Creates a Source in one audited write and returns it with the write's effects.
     func createSource(
         projectDir: String,
         userID: String,
         sourceTypeID: String,
         title: String,
         description: String
-    ) async throws -> CatalogSource
+    ) async throws -> (CatalogSource, CatalogWriteEffects)
     /// Copies a Source in one audited write: a new Source with `title` and
     /// `sourceTypeID`, plus, each only when chosen, the original's description,
     /// metadata with its layout, credibility, and the listed Artifacts. Notes,

@@ -81,7 +81,6 @@ final class PromoteModel {
     let session: WorkspaceSession
     let store: any GenealogyStore
     let userID: String
-    let catalogCounts: CatalogCounts?
     weak var navigation: WorkspaceNavigation?
 
     private(set) var flow: PromoteFlow
@@ -114,14 +113,12 @@ final class PromoteModel {
         entry: PromoteEntry,
         session: WorkspaceSession,
         store: any GenealogyStore,
-        userID: String,
-        catalogCounts: CatalogCounts?
+        userID: String
     ) {
         self.entry = entry
         self.session = session
         self.store = store
         self.userID = userID
-        self.catalogCounts = catalogCounts
         var flow = PromoteFlow(entryID: entry.subjectID)
         flow.nameOrders = session.nameFormat
         flow.mappedRest = entry.mapAll
@@ -293,7 +290,6 @@ final class PromoteModel {
                 skipBridgeIDs: flow.skipBridgeIDs()
             )
             session.apply(.promotedSubject(sourceId: entry.sourceID))
-            await catalogCounts?.refreshAll()
             session.noticeToast = VocabularyToast(
                 title: L10n.Promote.filedTitle(filed: flow.fileCount, connections: flow.connectionCount),
                 body: flow.skipCount > 0 ? L10n.Promote.filedBody(skipped: flow.skipCount) : "",

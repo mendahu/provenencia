@@ -157,7 +157,7 @@ struct GoStore: GenealogyStore {
         sourceTypeID: String,
         title: String,
         description: String
-    ) async throws -> CatalogSource {
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_CreateSourceRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -168,7 +168,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.createSource,
             request: req
         )
-        return Self.mapSource(resp.source)
+        return (Self.mapSource(resp.source), Self.mapWriteEffects(resp.effects))
     }
 
     func copySource(
