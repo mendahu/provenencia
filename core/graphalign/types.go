@@ -142,6 +142,21 @@ const (
 	ReasonEmpty   Reason = "empty"    // nothing to match on: Skip
 )
 
+// Move reasons: why settling released a row's earlier pair. They extend Reason
+// and appear only in Move.Reason.
+const (
+	ReasonNeighborPlaced   Reason = "neighbor_placed"   // a neighbor was placed
+	ReasonNeighborMoved    Reason = "neighbor_moved"    // a neighbor was placed on another handle than before
+	ReasonNeighborReleased Reason = "neighbor_released" // a neighbor was released
+)
+
+// Move is why settling released this row's earlier pair: a neighbor was
+// placed, moved or released.
+type Move struct {
+	Reason            Reason
+	NeighborSubjectID []byte
+}
+
 // Alternative is a handle the researcher can choose. Assessment and Reason
 // describe this record on its own, so the page can show them for the
 // selected record and show nothing for Skip, New, or an empty menu.
@@ -165,6 +180,9 @@ type RowFlags struct {
 	// or both rows are New and score alike.
 	PossibleDuplicate bool
 	DuplicateOf       []byte
+	// Contested: a comparison behind the pair this row reports conflicts,
+	// whatever its band.
+	Contested bool
 }
 
 // Row is one Subject's proposal.
@@ -184,6 +202,9 @@ type Row struct {
 	ReasonProperty vocabkey.PropertyKey
 	Via            *Via
 	Flags          RowFlags
+	// Move is set when settling released an earlier pair of this row and the
+	// row's final target is not that handle.
+	Move *Move
 }
 
 // Proposal is Align's full output: one row per primary Subject.

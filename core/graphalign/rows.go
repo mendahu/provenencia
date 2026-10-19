@@ -15,27 +15,33 @@ func (st *state) proposal() Proposal {
 	for _, s := range st.sortedSubjects() {
 		sk := string(s.ID)
 		row := Row{SubjectID: append([]byte(nil), s.ID...), Kind: s.Kind}
-		if hid, ok := st.assigned[sk]; ok {
+		var reported *cand
+		if hid, ok := st.placed[sk]; ok {
 			h := st.handles[string(hid)]
 			row.Target = TargetHandle
 			row.HandleID = append([]byte(nil), hid...)
-			sc := st.pickScore(sk, hid)
+			sc := st.cands[sk][string(hid)]
+			if sc == nil {
+				sc = &cand{handleID: append([]byte(nil), hid...)}
+				if h != nil {
+					st.score(sk, h, sc)
+				}
+			}
+			reported = sc
 			if h != nil {
 				row.HandleRef = h.Ref
-				if len(sc.result.Properties) == 0 {
-					sc.result = st.evaluate(s.Kind, s.Values, h.Values)
-				}
 			}
 			row.Score = sc.score
 			row.Comparisons = comparisonsFrom(sc.result, s.Kind, st.metas, st.cfg.Subject)
+			via, viaKey := st.viaOf(sk, sc)
 			switch {
 			case st.fixedSet[sk]:
 				row.Reason = ReasonDecided
-			case len(sc.viaNeighbor) > 0:
+			case len(via) > 0:
 				row.Reason = ReasonVia
 				row.Via = &Via{
-					NeighborSubjectID: append([]byte(nil), sc.viaNeighbor...),
-					Key:               sc.viaKey,
+					NeighborSubjectID: append([]byte(nil), via...),
+					Key:               viaKey,
 				}
 			default:
 				row.Reason = ReasonAgrees
@@ -61,6 +67,7 @@ func (st *state) proposal() Proposal {
 				row.Score = best.score
 				row.Alternatives = st.alts(sk, nil)
 				row.Reason = ReasonWeak
+				reported = best
 				if best.score >= st.cfg.Alignment.Bands.Weak {
 					row.Assessment = st.band(best.score)
 				}
@@ -76,6 +83,16 @@ func (st *state) proposal() Proposal {
 				row.Flags.PossibleDuplicate = true
 				row.Flags.DuplicateOf = []byte(owner)
 			}
+		}
+		if reported != nil {
+			row.Flags.Contested = reported.result.Conflicts() || slices.ContainsFunc(reported.links, func(l segmentcompare.Result) bool {
+				return l.Outcome == propertycompare.OutcomeConflict
+			})
+		}
+		if from, ok := st.releasedFrom[sk]; ok && !(row.Target == TargetHandle && bytes.Equal(row.HandleID, from)) {
+			mv := st.move[sk]
+			mv.NeighborSubjectID = append([]byte(nil), mv.NeighborSubjectID...)
+			row.Move = &mv
 		}
 		rows = append(rows, row)
 	}
@@ -148,8 +165,8 @@ func (st *state) alikeNew(a, b *Subject) bool {
 
 // newPairSegments compares the layer neighbors of two subjects, whose own
 // evidence is own. A key only one of them has stays out. A key both have
-// disagrees when no neighbor pair is the same subject or clears the accept bar
-// on its own properties. A directed key carries its end, so a man's son and
+// disagrees when no neighbor pair is the same subject or lined up as unplaced
+// neighbors (layer 5 reads their own properties). A directed key carries its end, so a man's son and
 // another man's father are not neighbors to compare. It returns the sum of
 // the best segment evidence per key.
 func (st *state) newPairSegments(a, b *Subject, own float64) (float64, bool) {
@@ -179,8 +196,12 @@ func (st *state) newPairSegments(a, b *Subject, own float64) (float64, bool) {
 				if sa == nil || sb == nil || (!same && sa.Kind != sb.Kind) {
 					continue
 				}
-				res := st.compare(la.key, sa.Kind, sa.Values, lb.key, sb.Kind, sb.Values, segmentcompare.Together, own)
-				if !same && res.Neighbor.Evidence < st.cfg.Alignment.AcceptBar {
+				placed := segmentcompare.Together
+				if !same {
+					placed = segmentcompare.Unplaced
+				}
+				res := st.compare(la.key, sa.Kind, sa.Values, lb.key, sb.Kind, sb.Values, placed, own)
+				if !same && res.Outcome != propertycompare.OutcomeAgree && res.Outcome != propertycompare.OutcomePartial {
 					continue
 				}
 				if !ok || res.Evidence > best {
@@ -226,27 +247,12 @@ func comparisonsFrom(r subjectcompare.Result, kind string, metas subjectcompare.
 	return out
 }
 
-// pickScore is the recorded score for the row's handle. Every pass records
-// the handle it assigns, so a miss scores it now rather than inventing one.
-func (st *state) pickScore(sk string, hid []byte) scoredCand {
-	for _, sc := range st.best[sk] {
-		if bytes.Equal(sc.handleID, hid) {
-			return sc
-		}
-	}
-	if h := st.handles[string(hid)]; h != nil {
-		return st.scoreCandidate([]byte(sk), h)
-	}
-	return scoredCand{handleID: append([]byte(nil), hid...)}
-}
-
-func (st *state) bestNonAssigned(sk string, except []byte) *scoredCand {
-	for i := range st.best[sk] {
-		sc := &st.best[sk][i]
-		if except != nil && bytes.Equal(sc.handleID, except) {
+func (st *state) bestNonAssigned(sk string, except []byte) *cand {
+	for _, c := range st.sortedCands(sk) {
+		if except != nil && bytes.Equal(c.handleID, except) {
 			continue
 		}
-		return sc
+		return c
 	}
 	return nil
 }
@@ -255,11 +261,11 @@ func (st *state) alts(sk string, except []byte) []Alternative {
 	kind := st.subjects[sk].Kind
 	limit := st.cfg.Alignment.Alternatives
 	var out []Alternative
-	for _, sc := range st.best[sk] {
-		if except != nil && bytes.Equal(sc.handleID, except) {
+	for _, c := range st.sortedCands(sk) {
+		if except != nil && bytes.Equal(c.handleID, except) {
 			continue
 		}
-		out = append(out, st.alternative(sc, kind))
+		out = append(out, st.alternative(sk, c, kind))
 		if len(out) >= limit {
 			break
 		}
@@ -270,24 +276,24 @@ func (st *state) alts(sk string, except []byte) []Alternative {
 // alternative is one selectable record: its band, and the sentence that
 // explains that band. A via walk wins; otherwise the strongest agreeing
 // property; otherwise there was too little to name.
-func (st *state) alternative(sc scoredCand, kind string) Alternative {
+func (st *state) alternative(sk string, c *cand, kind string) Alternative {
 	alt := Alternative{
-		HandleID:   append([]byte(nil), sc.handleID...),
-		Ref:        sc.ref,
-		Score:      sc.score,
-		Assessment: st.band(sc.score),
+		HandleID:   append([]byte(nil), c.handleID...),
+		Ref:        c.ref,
+		Score:      c.score,
+		Assessment: st.band(c.score),
 		Reason:     ReasonWeak,
 	}
-	if len(sc.viaNeighbor) > 0 {
+	if via, _ := st.viaOf(sk, c); len(via) > 0 {
 		alt.Reason = ReasonVia
-		alt.ViaNeighbor = append([]byte(nil), sc.viaNeighbor...)
+		alt.ViaNeighbor = append([]byte(nil), via...)
 		return alt
 	}
 	// Below the weak bar there is not enough to name an agreement.
 	if alt.Assessment == AssessNone {
 		return alt
 	}
-	prop := strongestAgreement(comparisonsFrom(sc.result, kind, st.metas, st.cfg.Subject))
+	prop := strongestAgreement(comparisonsFrom(c.result, kind, st.metas, st.cfg.Subject))
 	if prop != "" {
 		alt.Reason = ReasonAgrees
 		alt.ReasonProperty = prop
