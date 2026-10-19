@@ -71,7 +71,7 @@ Uniqueness: unique **within the project across all ref-bearing tables** (app rul
 
 1. **Migration** — follow [add-catalog-migration](../add-catalog-migration/SKILL.md): `ref TEXT NOT NULL` (+ unique). Nullable + Go backfill only when migrating existing rows.
 2. **Query package** — follow [add-catalog-query](../add-catalog-query/SKILL.md): Upsert takes/validates `ref`; mint in the use-case or package helper with the correct prefix.
-3. **Backfill** — if opening old catalogs, `EnsureRefs`-style mint for NULL/empty (see `users.EnsureRefs`).
+3. **Backfill** — if opening old catalogs, `EnsureRefs(c)` in the table package (see `users.EnsureRefs`, `evidencegraphs.EnsureRefs`), mint in one transaction with the `maxRefRetries` / `IsUniqueConflict` retry when the table grows with the catalog, and call it once from `catalogsession.ReconcileOnOpen`; never from an opener directly.
 4. **FFI / Swift** — expose `ref` on list/get protos; UI shows `Name (REF)` when names can collide ([add-localized-string](../add-localized-string/SKILL.md)).
 5. **Docs** — if adding a **new** prefix, update [`docs/catalog-refs.md`](../../../docs/catalog-refs.md) and §2 of the data-model philosophy doc.
 6. **Tests** — table-driven: mint shape (`ref.Valid`), upsert rejects bad ref, create/open round-trip preserves ref.
@@ -85,7 +85,8 @@ CGO_ENABLED=1 go test -tags fts5 ./core/ref/ ./core/database/...
 Contributor path already ships:
 
 - Mint: `identity.Mint` → `ref.Mint(ref.PrefixUser)`
-- Catalog: `users.Upsert(…, ref)`, `users.EnsureRefs`
+- Catalog: `users.Upsert(…, ref)`, `users.EnsureRefs`, `evidencegraphs.EnsureRefs`
+- Open-time backfill home: `catalogsession.ReconcileOnOpen`
 - Install file: `identity.json` field `ref`
 
 Copy that pattern for `SRC` / `ART` / … — same package, different prefix.
