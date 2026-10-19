@@ -1,7 +1,7 @@
 -- Source metadata field data_type = url (text-shaped; values stay in value_text).
 -- SQLite cannot ALTER CHECK; recreate source_metadata_fields with the expanded set.
 
-PRAGMA foreign_keys=OFF;
+-- migrate: foreign_keys off
 
 CREATE TABLE source_metadata_fields__new (
 	id          BLOB PRIMARY KEY,
@@ -20,5 +20,3 @@ SELECT id, key, origin, label, data_type, description FROM source_metadata_field
 
 DROP TABLE source_metadata_fields;
 ALTER TABLE source_metadata_fields__new RENAME TO source_metadata_fields;
-
-PRAGMA foreign_keys=ON;

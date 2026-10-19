@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"fmt"
@@ -19,9 +20,15 @@ import (
 //go:embed migrations/*.sql
 var migrationFS embed.FS
 
+// foreignKeysOffDirective is the one line a step uses to ask migrate to run it
+// with foreign keys off (a table rebuild). migrate checks every foreign key
+// before it commits such a step.
+const foreignKeysOffDirective = "-- migrate: foreign_keys off"
+
 type migration struct {
-	to  int
-	sql string
+	to             int
+	sql            string
+	foreignKeysOff bool
 }
 
 var (
@@ -69,7 +76,11 @@ func parseMigrations(fsys fs.FS, dir string) ([]migration, int, error) {
 		if sqlText == "" {
 			return nil, 0, apperr.New(apperr.CodeInternalMigrations, apperr.KindInternal, "empty "+name)
 		}
-		steps = append(steps, migration{to: n, sql: sqlText})
+		upper := strings.ToUpper(sqlText)
+		if strings.Contains(upper, "PRAGMA FOREIGN_KEYS") || strings.Contains(upper, "PRAGMA FOREIGN_KEY_CHECK") {
+			return nil, 0, apperr.New(apperr.CodeInternalMigrations, apperr.KindInternal, name+" toggles foreign_keys; use the "+foreignKeysOffDirective+" line")
+		}
+		steps = append(steps, migration{to: n, sql: sqlText, foreignKeysOff: hasForeignKeysOffLine(sqlText)})
 	}
 	sort.Slice(steps, func(i, j int) bool { return steps[i].to < steps[j].to })
 	for i, s := range steps {
@@ -83,12 +94,34 @@ func parseMigrations(fsys fs.FS, dir string) ([]migration, int, error) {
 	return steps, steps[len(steps)-1].to, nil
 }
 
+func hasForeignKeysOffLine(sqlText string) bool {
+	for _, line := range strings.Split(sqlText, "\n") {
+		if strings.TrimRight(line, "\r") == foreignKeysOffDirective {
+			return true
+		}
+	}
+	return false
+}
+
 // migrate applies embedded SQL until user_version matches formatVersion.
 // Open and Create call this; there is no migrate CLI. A catalog with a higher
 // user_version is refused (ErrUnsupportedVersion).
+//
+// Each step runs in one transaction with its user_version write, so a failed
+// step leaves the catalog at the previous version. A step marked
+// foreignKeysOff runs with foreign keys off and is refused, rolled back, if
+// PRAGMA foreign_key_check reports a row before it would commit. Foreign keys
+// are back on when migrate returns.
 func migrate(db *sql.DB) error {
+	ctx := context.Background()
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
 	var ver int
-	if err := db.QueryRow(`PRAGMA user_version`).Scan(&ver); err != nil {
+	if err := conn.QueryRowContext(ctx, `PRAGMA user_version`).Scan(&ver); err != nil {
 		return err
 	}
 	if ver > formatVersion {
@@ -98,15 +131,67 @@ func migrate(db *sql.DB) error {
 		if ver >= step.to {
 			continue
 		}
-		if _, err := db.Exec(step.sql); err != nil {
-			return err
-		}
-		if _, err := db.Exec(fmt.Sprintf(`PRAGMA user_version = %d`, step.to)); err != nil {
+		if err := applyStep(ctx, conn, step); err != nil {
 			return err
 		}
 		ver = step.to
 	}
 	return nil
+}
+
+func applyStep(ctx context.Context, conn *sql.Conn, step migration) (err error) {
+	if step.foreignKeysOff {
+		if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys=OFF`); err != nil {
+			return err
+		}
+		defer func() {
+			if _, onErr := conn.ExecContext(ctx, `PRAGMA foreign_keys=ON`); onErr != nil && err == nil {
+				err = onErr
+			}
+		}()
+	}
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+	if _, err = tx.ExecContext(ctx, step.sql); err != nil {
+		return err
+	}
+	if step.foreignKeysOff {
+		if err = checkForeignKeys(ctx, tx, step.to); err != nil {
+			return err
+		}
+	}
+	if _, err = tx.ExecContext(ctx, fmt.Sprintf(`PRAGMA user_version = %d`, step.to)); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// checkForeignKeys fails when any foreign key is broken after a step that ran
+// with foreign keys off.
+func checkForeignKeys(ctx context.Context, tx *sql.Tx, to int) error {
+	rows, err := tx.QueryContext(ctx, `PRAGMA foreign_key_check`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		var table, parent string
+		var rowid sql.NullInt64
+		var fkid int
+		if err := rows.Scan(&table, &rowid, &parent, &fkid); err != nil {
+			return err
+		}
+		return apperr.New(apperr.CodeInternalMigrations, apperr.KindInternal,
+			fmt.Sprintf("step %d leaves a broken foreign key in %s (parent %s)", to, table, parent))
+	}
+	return rows.Err()
 }
 
 // setApplicationID stamps FourCC 'PROV' on a new catalog.

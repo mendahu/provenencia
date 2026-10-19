@@ -2,7 +2,7 @@
 -- SQLite cannot ALTER ON DELETE; rebuild those three tables.
 -- Observation date/name values are exclusive (partial unique indexes).
 
-PRAGMA foreign_keys=OFF;
+-- migrate: foreign_keys off
 
 CREATE TABLE artifacts__new (
 	id          BLOB PRIMARY KEY,
@@ -65,6 +65,3 @@ CREATE UNIQUE INDEX observations_value_date_id_uidx
 	ON observations(value_date_id) WHERE value_date_id IS NOT NULL;
 CREATE UNIQUE INDEX observations_value_name_id_uidx
 	ON observations(value_name_id) WHERE value_name_id IS NOT NULL;
-
-PRAGMA foreign_key_check;
-PRAGMA foreign_keys=ON;

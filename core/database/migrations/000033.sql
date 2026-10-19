@@ -3,7 +3,7 @@
 -- Go deletes pins explicitly so each removal is audited; this CASCADE is
 -- only the backstop. SQLite cannot ALTER ON DELETE; rebuild the table.
 
-PRAGMA foreign_keys=OFF;
+-- migrate: foreign_keys off
 
 CREATE TABLE identity_claim_evidence__new (
 	identity_claim_id BLOB NOT NULL REFERENCES identity_claims(id) ON DELETE CASCADE,
@@ -19,6 +19,3 @@ DROP TABLE identity_claim_evidence;
 ALTER TABLE identity_claim_evidence__new RENAME TO identity_claim_evidence;
 
 CREATE INDEX identity_claim_evidence_observation_id_idx ON identity_claim_evidence(observation_id);
-
-PRAGMA foreign_key_check;
-PRAGMA foreign_keys=ON;

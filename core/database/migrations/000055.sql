@@ -32,7 +32,7 @@ SELECT id, id, 'Default' FROM sources;
 INSERT INTO evidence_graph_artifacts (graph_id, artifact_id)
 SELECT source_id, id FROM artifacts;
 
-PRAGMA foreign_keys=OFF;
+-- migrate: foreign_keys off
 
 CREATE TABLE subjects__new (
 	id              BLOB PRIMARY KEY,
@@ -56,6 +56,3 @@ ALTER TABLE subjects__new RENAME TO subjects;
 CREATE INDEX subjects_source_id_idx ON subjects(source_id);
 CREATE INDEX subjects_graph_id_idx ON subjects(graph_id);
 CREATE INDEX subjects_subject_type_id_idx ON subjects(subject_type_id);
-
-PRAGMA foreign_key_check;
-PRAGMA foreign_keys=ON;
