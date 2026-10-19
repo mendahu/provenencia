@@ -1,7 +1,7 @@
 -- S12-03: Evidence graphs. A Source holds one or more graphs; each Subject
 -- belongs to one graph of its Source (the composite key keeps it on its home
 -- Source). Artifacts and graphs are linked many-to-many. Every existing Source
--- gets a Default graph whose id is the Source's id; its GPH- ref is minted in
+-- gets a Default graph with a fresh UUIDv7 id from uuid7(); its GPH- ref is minted in
 -- Go at open (evidencegraphs.EnsureRefs). Every Subject moves into it and every
 -- Artifact is linked to it.
 
@@ -27,10 +27,11 @@ CREATE TABLE evidence_graph_artifacts (
 CREATE INDEX evidence_graph_artifacts_artifact_id_idx ON evidence_graph_artifacts(artifact_id);
 
 INSERT INTO evidence_graphs (id, source_id, name)
-SELECT id, id, 'Default' FROM sources;
+SELECT uuid7(), id, 'Default' FROM sources;
 
 INSERT INTO evidence_graph_artifacts (graph_id, artifact_id)
-SELECT source_id, id FROM artifacts;
+SELECT (SELECT g.id FROM evidence_graphs g WHERE g.source_id = a.source_id), a.id
+FROM artifacts a;
 
 -- migrate: foreign_keys off
 
@@ -48,7 +49,10 @@ CREATE TABLE subjects__new (
 ) STRICT;
 
 INSERT INTO subjects__new (id, ref, source_id, graph_id, subject_type_id, label, description)
-SELECT id, ref, source_id, source_id, subject_type_id, label, description FROM subjects;
+SELECT id, ref, source_id,
+	(SELECT g.id FROM evidence_graphs g WHERE g.source_id = subjects.source_id),
+	subject_type_id, label, description
+FROM subjects;
 
 DROP TABLE subjects;
 ALTER TABLE subjects__new RENAME TO subjects;

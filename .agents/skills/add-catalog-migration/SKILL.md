@@ -42,10 +42,15 @@ After migrate, `Create` / `Open` hash `sqlite_schema` and compare it to an **ini
 
 Agents “update the hash” by shipping the migration and proving tests pass — never by inventing a parallel digest file or constant.
 
+## Backfill ids
+
+A backfill that needs ids calls `uuid7()`, a SQL function registered on every catalog connection in `core/database/driver.go`. Prefer it over a nullable column filled at open (the `project.uuid` / `EnsureUUID` pattern). Take the new id by scalar subquery, not a JOIN, so an orphan row fails `NOT NULL` and the step rolls back instead of dropping it.
+
 ## Do not
 
 - Run a command against a researcher’s `*.provenencia` folder except by opening it with this engine
 - Add `golang-migrate` or a `schema_migrations` table
 - Put identity / FFI / ingest in the SQL
 - Commit a hand-maintained schema hash / bypass open-time schema verification
+- **`uuid7()` in the stored schema** (defaults, triggers, views, CHECK) — other tools opening the file have no such function; `TestSchemaCallsNoAppFunction` enforces it.
 - **Seed vocabulary rows** (`subject_types`, `properties`, `property_terms`, bindings, source types, grades, …) in SQL — use create-time `Install` / registries (`subjectvocab`, `sourcevocab`, …). Pre-production: refresh existing projects by re-running Install on the CLI; do not backfill seeds in migrations until the product owner says the app is in production.
