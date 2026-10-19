@@ -188,6 +188,13 @@ it **To user** only when the refactor changes behavior a researcher can see or
 needs a product call. A cleanup whose copies this PR does not touch at all is
 a Follow-up.
 
+Find the copies by **body, not name**. A reviewer names the copies it saw;
+others hide under different names (`nullStr`, `nullJSON`, `emptyAsNil` were
+one function). The fix plan's Check gives a grep over the signature and body
+shape (for example `grep -rnE "^func \w+\((s|b) (string|\[\]byte)\) any \{" core api`)
+and the exact lines it may still print, so the implementer and the next
+reviewer can prove none are left.
+
 A finding that contradicts the plan is never fixed by quietly changing the
 plan. The plan's Decisions bind the orchestrator too, except where the
 same-pass cleanup rule above supersedes a deferral.
