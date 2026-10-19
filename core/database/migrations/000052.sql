@@ -25,7 +25,6 @@ SELECT id, key, origin, label, description, value_type, cardinality FROM propert
 DROP TABLE properties;
 ALTER TABLE properties__new RENAME TO properties;
 
-
 CREATE TABLE depiction_values (
 	id            BLOB PRIMARY KEY,
 	region_json   TEXT NOT NULL,

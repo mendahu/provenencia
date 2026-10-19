@@ -6,6 +6,7 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -80,7 +81,11 @@ func parseMigrations(fsys fs.FS, dir string) ([]migration, int, error) {
 		if strings.Contains(upper, "PRAGMA FOREIGN_KEYS") || strings.Contains(upper, "PRAGMA FOREIGN_KEY_CHECK") {
 			return nil, 0, apperr.New(apperr.CodeInternalMigrations, apperr.KindInternal, name+" toggles foreign_keys; use the "+foreignKeysOffDirective+" line")
 		}
-		steps = append(steps, migration{to: n, sql: sqlText, foreignKeysOff: hasForeignKeysOffLine(sqlText)})
+		off, err := scanDirectives(name, sqlText)
+		if err != nil {
+			return nil, 0, err
+		}
+		steps = append(steps, migration{to: n, sql: sqlText, foreignKeysOff: off})
 	}
 	sort.Slice(steps, func(i, j int) bool { return steps[i].to < steps[j].to })
 	for i, s := range steps {
@@ -94,13 +99,33 @@ func parseMigrations(fsys fs.FS, dir string) ([]migration, int, error) {
 	return steps, steps[len(steps)-1].to, nil
 }
 
-func hasForeignKeysOffLine(sqlText string) bool {
-	for _, line := range strings.Split(sqlText, "\n") {
-		if strings.TrimRight(line, "\r") == foreignKeysOffDirective {
-			return true
+// transactionControl matches a line that is a transaction statement on its
+// own. migrate owns each step's transaction. A trigger body's BEGIN has no
+// semicolon and its END; is not matched, so CREATE TRIGGER still loads; a lone
+// END; is therefore not refused.
+var transactionControl = regexp.MustCompile(`^(begin( (deferred|immediate|exclusive))?( transaction)?|commit( transaction)?|rollback( transaction)?)\s*;$`)
+
+// scanDirectives reads a step's lines. Any line starting "-- migrate:" (after
+// trimming, any case) must be exactly the foreign_keys off directive, and a
+// line that is only a transaction statement is refused. It reports whether the
+// step carries the directive.
+func scanDirectives(name, sqlText string) (foreignKeysOff bool, err error) {
+	for i, raw := range strings.Split(sqlText, "\n") {
+		line := strings.TrimRight(raw, "\r")
+		lower := strings.ToLower(strings.TrimSpace(line))
+		if strings.HasPrefix(lower, "-- migrate:") {
+			if line != foreignKeysOffDirective {
+				return false, apperr.New(apperr.CodeInternalMigrations, apperr.KindInternal,
+					fmt.Sprintf("%s line %d: only %q is allowed", name, i+1, foreignKeysOffDirective))
+			}
+			foreignKeysOff = true
+		}
+		if transactionControl.MatchString(lower) {
+			return false, apperr.New(apperr.CodeInternalMigrations, apperr.KindInternal,
+				fmt.Sprintf("%s line %d: migrate owns the transaction; remove %q", name, i+1, strings.TrimSpace(line)))
 		}
 	}
-	return false
+	return foreignKeysOff, nil
 }
 
 // migrate applies embedded SQL until user_version matches formatVersion.

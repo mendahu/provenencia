@@ -101,9 +101,28 @@ func TestParseMigrationsForeignKeys(t *testing.T) {
 			t.Fatalf("%q: err %v want internal.migrations", body, err)
 		}
 	}
+	refused := []string{
+		"-- migrate: foreign_keys off \nSELECT 1;",
+		"-- migrate:  foreign_keys off\nSELECT 1;",
+		"-- Migrate: foreign_keys off\nSELECT 1;",
+		"-- migrate: foreign_keys on\nSELECT 1;",
+		"SELECT 1;\nCOMMIT;",
+		"BEGIN TRANSACTION;\nSELECT 1;",
+		"SELECT 1;\nROLLBACK;",
+		"SELECT 1;\n  begin;\nSELECT 2;",
+	}
+	for _, body := range refused {
+		fsys := fstest.MapFS{"migrations/000001.sql": {Data: []byte(body)}}
+		_, _, err := parseMigrations(fsys, "migrations")
+		if err == nil || !errors.Is(err, apperr.New(apperr.CodeInternalMigrations, apperr.KindInternal)) {
+			t.Fatalf("%q: err %v want internal.migrations", body, err)
+		}
+	}
+	trigger := "CREATE TABLE t (id INTEGER);\nCREATE TRIGGER t_ai AFTER INSERT ON t\nBEGIN\n\tUPDATE t SET id = id;\nEND;"
 	fsys := fstest.MapFS{
 		"migrations/000001.sql": {Data: []byte("SELECT 1;")},
 		"migrations/000002.sql": {Data: []byte("-- migrate: foreign_keys off\nSELECT 2;")},
+		"migrations/000003.sql": {Data: []byte(trigger)},
 	}
 	steps, _, err := parseMigrations(fsys, "migrations")
 	if err != nil {
