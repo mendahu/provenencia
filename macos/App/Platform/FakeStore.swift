@@ -3312,15 +3312,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return created
     }
 
-    /// Runs `body` under `stateLock`. Never spans an `await`: methods that
-    /// suspend take the lock separately for each synchronous stretch.
-    /// Mirrors the engine's audit scopes: any write under a Source moves its
-    /// "Updated" revision, not just edits to the Source row.
-    /// Returns the effects the engine would report for that write: the Source
-    /// scope and the new revision, plus the Source in `sources` when the write
-    /// changes its evidence (artifacts, Subjects, Citations, Observations), or
-    /// `.empty` when the Source is not in any list.
-    @discardableResult
     /// Appends a new Source and bumps it like the engine's `sources` insert.
     /// Call inside `withState`.
     private func insertSource(
@@ -3333,6 +3324,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return (sourcesByProject[projectDir]?.first { $0.id == source.id } ?? source, effects)
     }
 
+    /// Runs `body` under `stateLock`. Never spans an `await`: methods that
+    /// suspend take the lock separately for each synchronous stretch.
+    /// Mirrors the engine's audit scopes: any write under a Source moves its
+    /// "Updated" revision, not just edits to the Source row.
+    /// Returns the effects the engine would report for that write: the Source
+    /// scope and the new revision, plus the Source in `sources` when the write
+    /// changes its evidence (artifacts, Subjects, Citations, Observations), or
+    /// `.empty` when the Source is not in any list.
+    @discardableResult
     private func bumpSource(_ sourceID: String?, evidence: Bool) -> CatalogWriteEffects {
         guard let sourceID else { return .empty }
         for (project, var list) in sourcesByProject {
