@@ -1,7 +1,7 @@
 # Review — S12-03 Evidence graphs in the catalog
 
-**Verdict:** Fits with changes — Ready with changes. Every round-1 finding fixed or logged.
-**Rounds:** 1 (round 2 pending). **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes. Every finding fixed or logged; no blocker open.
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 - None open. Three map working rules changed with this plan (D-11, D-12, D-14); they are listed under Writer's own calls for veto.
@@ -11,7 +11,7 @@
 - `artifacts.CreateInput.GraphIDs` *empty* (not nil) means every graph, because proto3 cannot carry the difference. The map rule now says "empty" (D-11).
 - The "Citations use this Artifact" refusal is a plain code with no params. The list of Citations comes from S12-05's preflight over `CitationsUsingArtifactTx`, shown with the DeleteImpact recipe. The map rule "Refusals are of two kinds" now says so (D-12, from M-1).
 - The fixture rule is narrowed: only the `subjects` direct insert moves (`subjectpositions_test.go` becomes an external test package). The `sources` / `artifacts` inserts in `deleteimpact/release_test.go` and `derivatives/thumbnail_test.go` stay, because those internal packages cannot import the create functions (D-14).
-- `catalogsession.ReconcileOnOpen` becomes the one list of open-time repairs that both open paths call (D-15, from M-3).
+- `catalogsession.ReconcileOnOpen` becomes the one list of open-time repairs that both open paths and `createCatalog` call (D-15, from M-3 and M-3a).
 - Graph tables are audited facets; `subjects (graph_id, source_id) → evidence_graphs` is a resource edge with its probe added now; `KindEvidenceGraph` is not yet deletable (D-3, D-4).
 - Error codes are user kind, per the working rule, though `*.in_use` codes elsewhere are conflict kind (D-17).
 - No version bump.
@@ -72,3 +72,32 @@ The map working rule is updated to match (D-12, D-13).
 
 ### M-6 · minor · `EvidenceGraphs` is the third catalog-wide bool
 **Answer:** Logged. It is in `docs/ideas/shared-list-helpers.md` ("Catalog-wide list flags") with an Out row. The working rule names the field, so this PR follows it.
+
+## Round 2
+
+Both reviewers confirmed the round-1 answers and raised no new blocker.
+
+### X-9 · major · STEP-2 runs only `./core/...`, but `api` tests can break in that step
+**Answer:** Fixed. The STEP-2 check runs `./api/... ./core/...`, and its Files line covers any `api/...` test that the §7 rule lets it update.
+
+### X-10 · minor · STEP-3 and STEP-5 mark the STEP-2 files as new
+**Answer:** Fixed. Both steps now say the files were created in STEP-2 and this step adds to them. They keep the `(new)` tag that the plan linter needs.
+
+### X-11 · minor · T-17's second Artifact
+**Answer:** Fixed. The case creates it with `runArtifactCreate` and takes the graph id from `SoleGraphTx` inside each write. `newScopeSeed` is unchanged.
+
+### X-12 · minor · Fixtures for T-4, T-15 and T-16; evidence for AC-1.1
+**Answer:** Fixed. T-4 gives the insert columns. T-15 and T-16 name their builders, their own dirs, and `catalogsession.Close`. The DoD says AC-1.1 is checked by hand on macOS, and an implementer without macOS reports it as not run.
+
+### X-13 · minor · The map's link bullet still said "the error lists them"
+**Answer:** Fixed. Map line 87 now reads "the refusal is a plain code; S12-05's preflight lists them".
+
+### M-3a · major · `createCatalog` keeps a third copy of the repair list
+**Answer:** Fixed. In D-15, `createCatalog` runs `database.Create`, then its six `Install` calls, then `ReconcileOnOpen`. None of the installers reads `users` or `project`. The §4 row, Codebase fit and Deletes are updated.
+
+### K-1 · minor · The map scope entry and `source-structure.md` contradict the changed rules
+**Answer:** Fixed. The S12-03 scope entry now says "empty = every graph", names the narrowed fixture move and `ReconcileOnOpen`. `source-structure.md` § Rules no longer says the message lists the Citations. `deployment-plan.review.md` is an old log and is left as it is.
+
+### Below the bar, taken anyway
+- One per-Source graph-id read: D-9 adds an unexported `graphIDsTx`, which `SoleGraphTx` and `LinkArtifact` share.
+- `Link` and `Unlink` check membership through `IsLinkedTx` (D-12).
