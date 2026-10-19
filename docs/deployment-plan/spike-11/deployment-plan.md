@@ -355,7 +355,7 @@ Also builds `core/subjectcompare`'s `invariants_test.go` lead groups (`kindGroup
 
 #### S11-16 — Rewrite graph alignment
 
-**Ships.** `graphalign.Align` follows the layer 6 procedure: shortlist and nominate, top K with ties, one queue, segments around accepted pairs, dirty-pair settling with reasons, bands from evidence, the accept bar. Contested is a `RowFlags` field and move reasons are `Reason` codes; the plan decides whether `ConflictWithFixed` is subsumed. Registry alignment section. Delete the old walk, fallback, `refineOneHop` and `core/graphalign/registry.go`. [`promote-graph-alignment.md`](../../promote-graph-alignment.md) and the matching skill are updated.
+**Ships.** `graphalign.Align` follows the layer 6 procedure: shortlist and nominate, top K with ties, one queue, segments around accepted pairs, dirty-pair settling with reasons, bands from evidence, the accept bar. Contested is a `RowFlags` field and move reasons are `Reason` codes; the plan decides whether `ConflictWithFixed` is subsumed. Grows the registry alignment section S11-15 opened, and moves its type into `graphalign`. Delete the old walk, fallback, `refineOneHop` and `core/graphalign/registry.go`. [`promote-graph-alignment.md`](../../promote-graph-alignment.md) and the matching skill are updated.
 Segment compare learns unplaced neighbors (entity compare decides), and a bridge's own properties (place relationship dates) through subject compare if a golden needs them (moved from S11-14, 2026-10-19).
 **Not this PR.** FFI and UI for contested (S11-17, S11-18). Memoization (S11-21).
 **Check.** The invariants hold (order, decided rows, re-run, start-independence); name + birth date proposes strong; a decision moves only its neighborhood.
@@ -420,7 +420,7 @@ Likeness comparisons show the two crops, which S10-36 was to add in Spike 10; pi
 
 #### S11-21 — Large-Source performance check
 
-**Ships.** A budgeted `Test…` (not a `Benchmark…`, which `scripts/check-pr.sh` never runs) on a 100-Subject Source against a few thousand handles, reusing `promotealign/bench_test.go`'s `newFixture` and `bulkCanon`. Memoization of layers 1–4 across re-runs only if the benchmark fails; if built, a test that cached and uncached runs propose the same.
+**Ships.** A budgeted `Test…` (not a `Benchmark…`, which `scripts/check-pr.sh` never runs) on a 100-Subject Source against a few thousand handles, reusing `promotealign/bench_test.go`'s `newFixture` and `bulkCanon`. It also times the shortlist index's cold rebuild after a handle commit (S11-15 T-13 numbers); over budget, a commit records dirty handle ids and the index removes and re-adds only those. Memoization of layers 1–4 across re-runs only if the benchmark fails; if built, a test that cached and uncached runs propose the same.
 **Not this PR.** Anything the benchmark doesn't need.
 **Check.** The benchmark passes; the PR says whether memoization was needed.
 **Context.** [Layer 6 procedure](comparison-layers.md#layer-6-procedure) step 6.

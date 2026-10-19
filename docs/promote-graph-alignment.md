@@ -194,7 +194,7 @@ Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count foll
 
 - **Decisions live in the page's draft:** the Swift row list (suggested or decided, target, sheet toggles, claim fields). They're sent as `fixed` on every call and never stored.
 - **Loads read the catalog's in-memory graph** (`graphcache`), which keeps handles, Source graphs and stats between calls, so re-runs after decisions skip loading. Each commit drops what it touched (its effects), not a whole revision.
-- **`stats`** is dropped by any commit that names a handle; a vocabulary-only write keeps it.
+- **The match index** (the shortlist index) is cached on the graph and dropped by any commit that names a handle, and by new alias tables; a vocabulary-only write keeps it.
 
 ---
 
