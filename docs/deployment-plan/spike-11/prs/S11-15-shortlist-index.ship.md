@@ -122,4 +122,4 @@ Head `a6712343` (commits `cd170431`, `200062dd`, `a6712343`). Gate (orchestrator
 - MNT-1 **Resolved**: `promote-graph-alignment.md:197` names vocabulary commits; `SetMatchIndex` doc too. Plan AC-3.4/T-8 rows still say vocabulary-only keeps the index; left as plan history (the Landed note records F-4).
 
 ## Result
-Gate PASS · CI <pending> · open: none · follow-ups: PRF-1 (S11-21), PRF-3 (S11-21), PRF-4, SEC-3 · to user: toponym-gap call (resolved), Fix plan 2 approval (resolved) · CON miss: CON-x (vocabulary commit kept the match index; raised by MNT and PRF in round 1)
+Gate PASS · CI green · open: none · follow-ups: PRF-1 (S11-21), PRF-3 (S11-21), PRF-4, SEC-3 · to user: toponym-gap call (resolved), Fix plan 2 approval (resolved) · CON miss: CON-x (vocabulary commit kept the match index; raised by MNT and PRF in round 1)
