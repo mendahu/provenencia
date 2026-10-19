@@ -77,7 +77,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **support** | Points a matching neighbor adds to a pair through a segment |
 | **credit** | The share of a neighbor's own evidence passed on to the pair |
 | **shortlisting** | The cheap index lookup that decides which handles get compared at all |
-| **shortlist key** | A normalized value used for that lookup: a name word, an event type and year bucket, a toponym |
+| **shortlist key** | A normalized value used for that lookup: a name word, an event type and year bucket, a toponym word; made by layer 1 (`valuecompare.WordKeys`, `YearReach`) and indexed by `core/shortlist` |
 | **shortlisted handle** | A handle the lookup returned; nothing has been compared yet |
 | **nominated handle** | A handle reached through a link from an accepted pair; no lookup needed |
 | **candidate** | A shortlisted or nominated handle that has been scored and kept (top K) |
@@ -190,9 +190,10 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `alignment.SettleMargin` | 1 | estimate: one point, a third of a band | Lead a rival needs to displace a placed pair |
 | `alignment.SettleRounds` | 10 | estimate: a safety cap; dirty pairs normally settle in two or three | Most settle rounds |
 | `alignment.Shortlist.YearBucket` | 2 | estimate: the date tolerance, so a `Near` date shares a bucket | Width of an event's year bucket |
-| `alignment.Shortlist.person` | name words, not initials | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure)) | Shortlist keys for a person |
-| `alignment.Shortlist.event` | event type + year bucket | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure)) | Shortlist keys for an event |
-| `alignment.Shortlist.place` | toponym | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure)) | Shortlist keys for a place |
+| `alignment.Shortlist.MaxBuckets` | 100 | estimate: two centuries at `YearBucket` 2; a wider reach keys as open | Most year buckets a date may key |
+| `alignment.Shortlist.Words` | person `name`, place `toponym` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure)) | Leads whose words key a Subject |
+| `alignment.Shortlist.Dated.event.Type` | `event_type` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure)) | The term keyed with each year bucket |
+| `alignment.Shortlist.Dated.event.Date` | `date` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure)) | The date whose reach is bucketed; a period stands for it |
 | `evidence.Checked` | `Same`, `Equivalent` | decided ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md#lines)) | Relations whose lines start checked |
 | `evidence.Pinnable` | `Contains`, `Overlaps`, `Near` | decided ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md#lines)) | Pinnable but unchecked |
 | `evidence.Defining.event` | `event_type` | decided ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md#evidence-through-relationships)) | Neighbor properties bundled into a relationship line |

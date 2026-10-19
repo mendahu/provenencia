@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-15 — Shortlist index
+
+**Landed 2026-10-19** in [#497](https://github.com/mendahu/provenencia/pull/497). Promote no longer scores a Source Subject against every handle of its kind. A pure index (`core/shortlist`) maps a person's name words, an event's type with the year buckets its date can still be near, and a place's toponym words to handles; value compare makes every key, so shortlisting never misses a pair it calls the same. The index is built once per catalog state, holds no life events, and is dropped with a handle commit or new alias tables. A name or toponym that differs only by a misspelling, with no shared word, is no longer offered; the walk still reaches it through a mapped neighbor.
+
 ## S11-14 — Segment compare
 
 **Landed 2026-10-19** in [#493](https://github.com/mendahu/provenencia/pull/493). Promote judges each link with segment compare. A link is a typed key, so a spouse never stands for a sibling and a parent link reads the same from either record. Subject of a birth or a death is one per person and one per event: a birth placed on a different event, or on a different person, subtracts 3. Every other link earns the same small support whatever the catalog holds; the fan-out scan is gone.

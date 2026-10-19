@@ -2,7 +2,9 @@
 // roles, and role weights. A name value does not point at a profile. The
 // create-time rows live in registry.go. Install writes that list once when
 // a catalog is created. Load reads the project default, or the built-in
-// Western pattern when that row is missing.
+// Western pattern when that row is missing. A future writer of the catalog's
+// default name format must drop the graph's match index: shortlist keys read
+// its part roles.
 package nameformats
 
 import (

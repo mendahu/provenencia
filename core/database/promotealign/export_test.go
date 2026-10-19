@@ -1,6 +1,8 @@
 package promotealign
 
 import (
+	"slices"
+
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
@@ -27,4 +29,25 @@ func LayerBridges(c *database.Catalog, sourceID []byte) ([]graphalign.Bridge, er
 		return nil, err
 	}
 	return layer.Bridges, nil
+}
+
+// ProfiledRefsForTest proposes for the Source with no fixed rows and returns,
+// sorted, the Ref of every handle whose full profile was built.
+func ProfiledRefsForTest(c *database.Catalog, sourceID []byte) ([]string, error) {
+	_, _, prof, err := propose(c, sourceID, nil)
+	if err != nil || prof == nil {
+		return nil, err
+	}
+	var refs []string
+	for id := range prof.done {
+		n, err := c.Graph().Node([]byte(id))
+		if err != nil {
+			return nil, err
+		}
+		if n != nil {
+			refs = append(refs, n.Ref)
+		}
+	}
+	slices.Sort(refs)
+	return refs, nil
 }

@@ -100,7 +100,7 @@ func Compare(kind vocabkey.SubjectType, a, b Values, metas Metas, rules Rules, v
 		if l, ok := rules.Lifespans[kind][key]; ok {
 			res = lifespan(key, a, b, l, value)
 		} else {
-			res = propertycompare.Compare(side(kind, key, a, rules), side(kind, key, b, rules), metas[key], value)
+			res = propertycompare.Compare(Side(kind, key, a, rules), Side(kind, key, b, rules), metas[key], value)
 		}
 		pr := PropertyResult{Key: key, Result: res}
 		var sim float64

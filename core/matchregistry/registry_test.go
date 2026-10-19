@@ -40,3 +40,34 @@ func TestWesternPatternCoversEveryPartType(t *testing.T) {
 		t.Error("untyped parts have no role in the Western pattern")
 	}
 }
+
+// Every lead shortlisting keys by is a catalog property the subject section
+// weighs, not a derived lead: the index builds no life.
+func TestShortlistSection(t *testing.T) {
+	reg := Default()
+	rules := reg.Alignment.Shortlist
+	if rules.YearBucket <= 0 {
+		t.Errorf("YearBucket = %d, want > 0", rules.YearBucket)
+	}
+	if rules.MaxBuckets <= 0 {
+		t.Errorf("MaxBuckets = %d, want > 0", rules.MaxBuckets)
+	}
+	check := func(kind vocabkey.SubjectType, lead vocabkey.PropertyKey) {
+		t.Helper()
+		if _, ok := reg.Subject.Weights[kind][lead]; !ok {
+			t.Errorf("%s lead %s has no weights in the subject section", kind, lead)
+		}
+		if reg.Subject.Derived(kind, lead) {
+			t.Errorf("%s lead %s is derived (a lifespan): the shortlist builds no life", kind, lead)
+		}
+	}
+	for kind, leads := range rules.Words {
+		for _, lead := range leads {
+			check(kind, lead)
+		}
+	}
+	for kind, d := range rules.Dated {
+		check(kind, d.Type)
+		check(kind, d.Date)
+	}
+}

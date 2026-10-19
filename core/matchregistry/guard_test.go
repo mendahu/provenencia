@@ -33,6 +33,7 @@ var layerPackages = []struct {
 	{"core/subjectprofile", true},
 	{"core/segmentcompare", true},
 	{"core/segmentcompare/segmentcomparetest", false},
+	{"core/shortlist", true},
 	{"core/matchregistry", false},
 	{"core/datevalue", false},
 	{"core/datevalue/datevaluetest", false},
