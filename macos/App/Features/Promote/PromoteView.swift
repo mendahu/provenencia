@@ -9,15 +9,13 @@ struct PromoteView: View {
         entry: PromoteEntry,
         session: WorkspaceSession,
         store: any GenealogyStore,
-        userID: String,
-        catalogCounts: CatalogCounts?
+        userID: String
     ) {
         _model = State(initialValue: PromoteModel(
             entry: entry,
             session: session,
             store: store,
-            userID: userID,
-            catalogCounts: catalogCounts
+            userID: userID
         ))
     }
 

@@ -44,9 +44,11 @@ struct WorkspaceView: View {
         navigation.onLocationCommit = { location in
             session.apply(location: location)
         }
+        let counts = CatalogCounts(projectDir: projectDir, store: model.store)
+        session.onNavCountsMoved = { await counts.refreshAll() }
         _session = State(initialValue: session)
         _navigation = State(initialValue: navigation)
-        _catalogCounts = State(initialValue: CatalogCounts(projectDir: projectDir, store: model.store))
+        _catalogCounts = State(initialValue: counts)
     }
 
     var body: some View {

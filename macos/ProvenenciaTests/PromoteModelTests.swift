@@ -60,7 +60,7 @@ struct PromoteModelTests {
         let entry = PromoteEntry(location: .promote(
             sourceId: sourceID, subjectId: subjectID, kind: .person, ref: "CPR-1", title: "James", sourceTitle: "Census"
         ))!
-        let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1", catalogCounts: nil)
+        let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1")
         let _: QueryHandle<SourceGraphRows> = session.query(model.graphKey)
         let _: QueryHandle<PropertiesSnapshot> = session.query(model.propertiesKey)
         let _: QueryHandle<[CatalogConnectRule]> = session.query(model.rulesKey)
@@ -76,7 +76,7 @@ struct PromoteModelTests {
             sourceId: sourceID, subjectId: "a", kind: .person, ref: "CPR-A", title: "Ada", sourceTitle: "Census"
         ))!
         // The graph key was never warmed, so readyValue has nothing to give.
-        let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1", catalogCounts: nil)
+        let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1")
         await model.load()
         #expect(model.loadError == L10n.string(L10n.Promote.graphUnavailable))
         #expect(model.flow.rows.isEmpty)

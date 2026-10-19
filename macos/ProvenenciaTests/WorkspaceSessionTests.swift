@@ -1053,6 +1053,35 @@ struct WorkspaceSessionTests {
         #expect(session.graphCamera(for: "src-b") == second)
         #expect(session.graphCamera(for: "src-a") != session.graphCamera(for: "src-b"))
     }
+
+    private func waitUntil(_ condition: () -> Bool) async -> Bool {
+        for _ in 0..<200 {
+            if condition() { return true }
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+        return condition()
+    }
+
+    @Test func applyRunsNavCountsHookForTriggers() async {
+        let session = makeSession()
+        var calls = 0
+        session.onNavCountsMoved = { calls += 1 }
+        session.apply(.createdSource)
+        session.apply(.deletedSource(id: "s1"))
+        session.apply(.promotedSubject(sourceId: "s1"))
+        #expect(await waitUntil { calls == 3 })
+    }
+
+    @Test func applySkipsNavCountsHookForOtherWrites() async {
+        let session = makeSession()
+        var calls = 0
+        session.onNavCountsMoved = { calls += 1 }
+        session.apply(.mutatedSourceWorkspace(sourceId: "s1"))
+        session.apply(CatalogWriteEffects(sourceScopes: ["s1"], activity: CatalogActivity(revision: 1)))
+        session.apply(.createdSource)
+        #expect(await waitUntil { calls >= 1 })
+        #expect(calls == 1)
+    }
 }
 
 /// One-shot gate so concurrent loaders block until tests observe stale data.

@@ -1207,4 +1207,37 @@ struct SourcePageModelTests {
         #expect(model.notes.items.isEmpty)
         #expect(model.notes.pendingDelete == nil)
     }
+
+    private func waitUntil(_ condition: () -> Bool) async -> Bool {
+        for _ in 0..<200 {
+            if condition() { return true }
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+        return condition()
+    }
+
+    @Test func confirmDeleteSourceRecountsThroughSession() async {
+        let store = makeStore()
+        store.sourcesByProject[projectDir]?.append(
+            CatalogSource(
+                id: "src-2", ref: "SRC-BBBBB", sourceTypeID: "t1",
+                title: "Letters", description: ""
+            )
+        )
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let counts = CatalogCounts(projectDir: projectDir, store: store)
+        session.onNavCountsMoved = { await counts.refreshAll() }
+        let model = SourcePageModel(
+            sourceID: sourceID,
+            session: session,
+            userID: userID,
+            sessionDisplayName: "Jake Robins",
+            store: store
+        )
+        await model.warmFromSession()
+        await model.askDeleteSource()
+        let left = await model.confirmResourceDelete()
+        #expect(left)
+        #expect(await waitUntil { counts.sources == 1 })
+    }
 }
