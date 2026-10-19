@@ -1,6 +1,6 @@
 # S12-16 — Add Source reports its effects
 
-**Status:** Landed #492 (2026-10-19)
+**Status:** Landed in [#492](https://github.com/mendahu/provenencia/pull/492) (2026-10-19)
 **Landed:** One difference. `WorkspaceSession.onNavCountsMoved` is marked `@ObservationIgnored`, because it is a hook and not state a view reads.
 **Spike / slice:** Spike 12 · Slice 1 — Copy Source
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
