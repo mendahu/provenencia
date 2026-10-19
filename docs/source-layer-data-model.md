@@ -80,9 +80,13 @@ source_types
             |                                     |
             +-------------------------------------+
             |
-            +--< artifacts >-- files
-                                |
-                                +--< file_derivatives >-- files
+            +--< evidence_graphs >--< evidence_graph_artifacts >--+
+            |                                                     |
+            +--< artifacts >--------------------------------------+
+                    |
+                    +-- files
+                          |
+                          +--< file_derivatives >-- files
 ```
 
 The File store is shared infrastructure, but it is defined here because Artifacts are its primary Source-layer consumer.
@@ -382,6 +386,41 @@ Application-generated thumbnails and previews are not additional Artifacts.
 
 ---
 
+# 7.1 `evidence_graphs` and `evidence_graph_artifacts`
+
+An Evidence graph groups the Subjects drawn from one Source. A Source holds one or more graphs; every Subject belongs to exactly one graph of its Source. Artifacts and graphs are linked many-to-many.
+
+```sql
+CREATE TABLE evidence_graphs (
+    id          BLOB PRIMARY KEY,
+    ref         TEXT UNIQUE,                   -- GPH-XXXXX
+    source_id   BLOB NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+    name        TEXT NOT NULL,                 -- "Default" when minted with the Source
+    description TEXT,
+
+    UNIQUE (id, source_id)
+) STRICT;
+
+CREATE TABLE evidence_graph_artifacts (
+    graph_id    BLOB NOT NULL REFERENCES evidence_graphs(id) ON DELETE CASCADE,
+    artifact_id BLOB NOT NULL REFERENCES artifacts(id) ON DELETE CASCADE,
+
+    PRIMARY KEY (graph_id, artifact_id)
+) STRICT;
+```
+
+`subjects.graph_id` references `(id, source_id)` of `evidence_graphs`, so a Subject's graph is always on its home Source ([`interpretation-layer-data-model.md`](interpretation-layer-data-model.md) § 4.2).
+
+Rules the schema and `core/database/evidencegraphs` hold today:
+
+- Every Source has at least one graph. `sources.Create` mints one named `Default` with a fresh id and a `GPH-` ref. Migration 55 gave each existing Source a `Default` graph with the Source's id as its id; `evidencegraphs.EnsureRefs` mints those graphs' refs when the project next opens.
+- A new Subject joins its Source's graph through `evidencegraphs.SoleGraphTx`, the one bridge until a Subject can name its graph.
+- A new Artifact is linked to every graph of its Source, or to the graphs in `CreateInput.GraphIDs`. A graph of another Source, an unknown id or a repeated id is `evidencegraphs.invalid` and the whole write rolls back.
+- `Link` refuses an Artifact of another Source. `Unlink` is refused while a Citation on the Artifact has an Observation on a Subject of that graph (`evidencegraphs.artifact_in_use`) and when it is the graph's only link (`evidencegraphs.last_artifact`). Linking a linked pair and unlinking an unlinked pair change nothing.
+- A graph is part of its Source's record and a link row is part of both ends: their deletes are audited and released with the Source or Artifact ([`catalog-deletes.md`](catalog-deletes.md)). Both audit under the Source's scope and flag the graph list (`effects.Set.EvidenceGraphs`).
+
+---
+
 # 8. `file_derivatives`
 
 Generated assets are relationships between a source File and another File generated from it.
@@ -459,6 +498,8 @@ source_type_metadata_fields
 source_metadata
 source_metadata_layout
 artifacts
+evidence_graphs
+evidence_graph_artifacts
 ```
 
 with these directly supporting storage tables:
@@ -496,5 +537,6 @@ The audit tables are cross-cutting infrastructure and are defined separately in 
 20. Research notes for Sources use a typed `source_notes` table with a real foreign key, not a polymorphic notes table.
 21. Sources and Artifacts have required human-readable `ref` values (`SRC-…`, `ART-…`).
 22. All tables use SQLite `STRICT` typing.
+23. Every Source has at least one Evidence graph (`GPH-…`); a Subject belongs to one graph of its Source; Artifacts and graphs are linked many-to-many (§ 7.1).
 
 This schema keeps evidence description, digital representation, storage infrastructure, generated UI assets, and later genealogical interpretation as distinct concerns.

@@ -82,10 +82,9 @@ Uniqueness is **`UNIQUE (key, origin)`**. Lookup is always `(key, origin)`, neve
 ### Install semantics (pinned)
 
 - Each domain’s `Install` upserts its registry into a new catalog.
-- Call **only** from `onboarding.createCatalog` (after `database.Create` +
-  `users.EnsureRefs` / `project.EnsureUUID`). Today that is:
+- Call **only** from `onboarding.createCatalog` (after `database.Create`). Today that is:
   `sourcevocab.Install` → `sourcecredibilitygrades.Install` → `claimconfidencegrades.Install` → `subjectvocab.Install` → `nameformats.Install` → `namealiases.Install`
-  (then `searchindex.EnsureCatalog`).
+  (then `catalogsession.ReconcileOnOpen`).
 - **Do not** call `Install` from `OpenCatalog`, `catalogsession.Do`, or on every open.
 - **Do not** heal deleted `provenencia` rows or restored suggestion joins on open.
 - Calling `Install` twice would refresh labels via Upsert — create path calls each once.
@@ -98,15 +97,19 @@ Researcher-facing paths:
 
 ```
 core/onboarding/ready.go
-  createCatalog → database.Create + users.EnsureRefs + project.EnsureUUID
-                  + sourcevocab.Install + sourcecredibilitygrades.Install
+  createCatalog → database.Create + sourcevocab.Install
+                  + sourcecredibilitygrades.Install
                   + claimconfidencegrades.Install
                   + subjectvocab.Install + nameformats.Install
-                  + searchindex.EnsureCatalog
-  OpenCatalog   → database.Open + users.EnsureRefs   # one-shot / tests
+                  + namealiases.Install
+                  + catalogsession.ReconcileOnOpen
+  OpenCatalog   → database.Open + catalogsession.ReconcileOnOpen   # one-shot / tests
 
 core/catalogsession
-  Do(projectDir, fn) → open once like OpenCatalog, hold + serialize
+  ReconcileOnOpen(c) → users.EnsureRefs, evidencegraphs.EnsureRefs,
+                       project.EnsureUUID, autoreconciler.EnsureCatalog,
+                       searchindex.EnsureCatalog
+  Do(projectDir, fn) → open once like OpenCatalog (ReconcileOnOpen), hold + serialize
 ```
 
 Complete uses **`createCatalog`** (create-then-close). Open / ProjectInfo /

@@ -26,7 +26,7 @@ Authoritative product note: [`docs/ideas/archive/catalog-access-serialization.md
 | `onboarding.OpenCatalog` | One-shot open (tests / low-level). Prefer `Do` for product paths |
 | `database.Open` / `Create` | Migrate-only / package tests. **Never** from FFI handlers |
 
-`Do` get-or-opens once (same open policy as `OpenCatalog`: migrate + `users.EnsureRefs`), holds the connection, and runs `fn` under a per-session mutex. Opening a **different** `projectDir` closes other held sessions first (one live project).
+`Do` get-or-opens once (same open policy as `OpenCatalog`: migrate + `catalogsession.ReconcileOnOpen`, the one list of open-time repairs: `users.EnsureRefs`, `evidencegraphs.EnsureRefs`, `project.EnsureUUID`, the derived caches), holds the connection, and runs `fn` under a per-session mutex. Opening a **different** `projectDir` closes other held sessions first (one live project).
 
 ## FFI catalog handler pattern
 

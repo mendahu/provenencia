@@ -197,6 +197,7 @@ SRC   sources          e.g. SRC-F4N2P
 ART   artifacts        e.g. ART-3K9M2
 CIT   citations        e.g. CIT-3K9M2
 OBS   observations     e.g. OBS-2F8Q1
+GPH   evidence graphs  e.g. GPH-7M2QX
 ```
 
 Nodes and canonical entities are both typed by `subject_types`, which carries **two** prefixes per row. The concluded working subject is minted off `ref_prefix`; the source-local Interpretation subject is minted off `candidate_ref_prefix`, so it does not read as “final”:
@@ -215,7 +216,7 @@ There is **one ref format**. The layers differ by prefix alone — no marker seg
 
 Candidate prefixes conventionally begin with `C` (`CPR`, `CEV`, `CPL`, …), but the leading letter is not enforced and carries no meaning to the code. Which layer a prefix serves is a registry lookup, not a property of the string.
 
-Creating a Subject type supplies both prefixes. Catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS` stay reserved, and the two columns share one namespace: a prefix must be unique across every `ref_prefix` *and* every `candidate_ref_prefix`. The Subject type / canonical `kind` is immutable; a mistaken type is a new row, not an in-place change.
+Creating a Subject type supplies both prefixes. Catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`, `GPH` stay reserved, and the two columns share one namespace: a prefix must be unique across every `ref_prefix` *and* every `candidate_ref_prefix`. The Subject type / canonical `kind` is immutable; a mistaken type is a new row, not an in-place change.
 
 Machine identity remains the UUID. `ref` is assigned by the application on insert, stable, and not recycled. After canonical merge, old refs keep resolving to the surviving entity.
 

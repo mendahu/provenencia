@@ -47,6 +47,7 @@ Token = 5 chars, Crockford alphabet without `I L O U`. Prefix = exactly three AS
 | `ref.PrefixArtifact` | `ART` | artifacts |
 | `ref.PrefixCitation` | `CIT` | citations |
 | `ref.PrefixObservation` | `OBS` | observations |
+| `ref.PrefixEvidenceGraph` | `GPH` | evidence_graphs (backfilled rows: `evidencegraphs.EnsureRefs` at open) |
 
 `subject_types` carries **two** prefixes per row, because `subjects` and `canonical_entities` share that vocabulary. Mint from the one matching the table you are writing:
 
