@@ -4,6 +4,7 @@ package observations
 import (
 	"bytes"
 	"database/sql"
+	"errors"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -101,8 +102,6 @@ const (
 
 	sqlCountBySubjectOrValue = `SELECT COUNT(*) FROM observations
 		WHERE subject_id = ? OR value_subject_id = ?`
-
-	maxRefRetries = 8
 )
 
 // Observation is one observations row.
@@ -297,21 +296,16 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 	}
 	idBytes := id[:]
 
-	var obsRef string
-	for attempt := 0; attempt < maxRefRetries; attempt++ {
-		obsRef, err = ref.Mint(ref.PrefixObservation)
-		if err != nil {
-			return Observation{}, nil, err
-		}
-		_, err = tx.Exec(
+	obsRef, err := database.InsertWithRef(database.Minter(ref.PrefixObservation), func(storedRef string) error {
+		_, err := tx.Exec(
 			sqlInsert,
 			idBytes,
-			obsRef,
+			storedRef,
 			citationID,
 			in.SubjectID,
 			in.PropertyID,
 			polarity,
-			nullIfEmpty(resolved.Text),
+			database.NullString(resolved.Text),
 			nullInt64(resolved.Integer),
 			nullBlob(resolved.DateID),
 			nullBlob(resolved.NameID),
@@ -319,15 +313,13 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 			nullBlob(resolved.TermID),
 			nullBlob(resolved.DepictionID),
 		)
-		if err == nil {
-			break
-		}
-		if !database.IsUniqueConflict(err) {
-			return Observation{}, nil, mapConstraint(err)
-		}
+		return err
+	})
+	if errors.Is(err, database.ErrRefsExhausted) {
+		return Observation{}, nil, ErrInvalid
 	}
 	if err != nil {
-		return Observation{}, nil, ErrInvalid
+		return Observation{}, nil, mapConstraint(err)
 	}
 
 	changes := []rowchange.Change{{
@@ -337,17 +329,17 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 		Fields: rowchange.FullRow(map[string]any{
 			"id":                 id.String(),
 			"ref":                obsRef,
-			"citation_id":        uuidJSON(citationID),
-			"subject_id":         uuidJSON(in.SubjectID),
-			"property_id":        uuidJSON(in.PropertyID),
+			"citation_id":        database.UUIDJSON(citationID),
+			"subject_id":         database.UUIDJSON(in.SubjectID),
+			"property_id":        database.UUIDJSON(in.PropertyID),
 			"polarity":           polarity,
 			"value_text":         emptyAsNil(resolved.Text),
 			"value_integer":      nullInt64(resolved.Integer),
-			"value_date_id":      uuidJSON(resolved.DateID),
-			"value_name_id":      uuidJSON(resolved.NameID),
-			"value_subject_id":   uuidJSON(resolved.SubjectID),
-			"value_term_id":      uuidJSON(resolved.TermID),
-			"value_depiction_id": uuidJSON(resolved.DepictionID),
+			"value_date_id":      database.UUIDJSON(resolved.DateID),
+			"value_name_id":      database.UUIDJSON(resolved.NameID),
+			"value_subject_id":   database.UUIDJSON(resolved.SubjectID),
+			"value_term_id":      database.UUIDJSON(resolved.TermID),
+			"value_depiction_id": database.UUIDJSON(resolved.DepictionID),
 		}),
 	}}
 	changes = append(changes, resolved.ValueChanges...)
@@ -749,13 +741,6 @@ func getPropertyTx(tx *sql.Tx, id []byte) (properties.Property, error) {
 	return p, err
 }
 
-func nullIfEmpty(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
 func nullInt64(p *int64) any {
 	if p == nil {
 		return nil
@@ -768,25 +753,6 @@ func nullBlob(b []byte) any {
 		return nil
 	}
 	return b
-}
-
-func uuidString(id []byte) string {
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
-}
-
-func uuidJSON(id []byte) any {
-	if len(id) != 16 {
-		return nil
-	}
-	s := uuidString(id)
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 func mapConstraint(err error) error {
@@ -883,7 +849,7 @@ func namePartsJSON(parts []namevalue.Part) []map[string]any {
 
 func dateValueMap(id []byte, v datevalue.Value) map[string]any {
 	return map[string]any{
-		"id":                uuidJSON(id),
+		"id":                database.UUIDJSON(id),
 		"kind":              emptyAsNil(v.Kind),
 		"qualifier":         emptyAsNil(v.Qualifier),
 		"calendar":          emptyAsNil(v.Calendar),
@@ -909,7 +875,7 @@ func dateValueMap(id []byte, v datevalue.Value) map[string]any {
 
 func nameValueMap(id []byte, v namevalue.Value) map[string]any {
 	return map[string]any{
-		"id":    uuidJSON(id),
+		"id":    database.UUIDJSON(id),
 		"form":  v.Form,
 		"parts": namePartsJSON(v.Parts),
 	}
@@ -921,7 +887,7 @@ func dateCreateChange(id []byte, v datevalue.Value) rowchange.Change {
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionCreate,
 		Fields: rowchange.FullRow(map[string]any{
-			"id":                uuidJSON(id),
+			"id":                database.UUIDJSON(id),
 			"kind":              emptyAsNil(v.Kind),
 			"qualifier":         emptyAsNil(v.Qualifier),
 			"calendar":          emptyAsNil(v.Calendar),
@@ -960,7 +926,7 @@ func nameCreateChange(id []byte, v namevalue.Value) rowchange.Change {
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionCreate,
 		Fields: rowchange.FullRow(map[string]any{
-			"id":    uuidJSON(id),
+			"id":    database.UUIDJSON(id),
 			"form":  v.Form,
 			"parts": parts,
 		}),

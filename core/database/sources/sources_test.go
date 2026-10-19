@@ -715,7 +715,7 @@ func TestSourceDelete(t *testing.T) {
 	var docs int
 	if err := db.QueryRow(
 		`SELECT COUNT(*) FROM catalog_search_docs WHERE kind = 'source' AND entity_id = ?`,
-		uuidString(empty.ID),
+		database.UUIDString(empty.ID),
 	).Scan(&docs); err != nil {
 		t.Fatal(err)
 	}

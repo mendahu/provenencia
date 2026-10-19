@@ -404,7 +404,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		return nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
-		"id":     {Old: uuidString(id), New: nil},
+		"id":     {Old: database.UUIDString(id), New: nil},
 		"key":    {Old: prev.Key, New: nil},
 		"origin": {Old: prev.Origin, New: nil},
 		"label":  {Old: prev.Label, New: nil},
@@ -437,15 +437,6 @@ func lookupTx(tx *sql.Tx, key, origin string) (Type, error) {
 		&t.ID, &t.Key, &t.Origin, &t.Label, &t.Description, &t.IconKey,
 	)
 	return t, err
-}
-
-func uuidString(id []byte) string {
-	if len(id) != 16 {
-		return ""
-	}
-	var u uuid.UUID
-	copy(u[:], id)
-	return u.String()
 }
 
 func nullJSON(s string) any {

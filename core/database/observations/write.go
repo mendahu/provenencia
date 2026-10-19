@@ -3,9 +3,10 @@ package observations
 import (
 	"database/sql"
 	"errors"
+	"strings"
+
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/connectrules"
@@ -204,8 +205,8 @@ func replaceNotes(tx *sql.Tx, observationID []byte, notes []string) ([]rowchange
 			EntityID:   note.id,
 			Action:     rowchange.ActionDelete,
 			Fields: rowchange.DeletedRow(map[string]any{
-				"id":             uuidJSON(note.id),
-				"observation_id": uuidJSON(observationID),
+				"id":             database.UUIDJSON(note.id),
+				"observation_id": database.UUIDJSON(observationID),
 				"body":           note.body,
 			}),
 		})
@@ -228,7 +229,7 @@ func replaceNotes(tx *sql.Tx, observationID []byte, notes []string) ([]rowchange
 			Action:     rowchange.ActionCreate,
 			Fields: rowchange.FullRow(map[string]any{
 				"id":             noteID.String(),
-				"observation_id": uuidJSON(observationID),
+				"observation_id": database.UUIDJSON(observationID),
 				"body":           body,
 			}),
 		})
@@ -258,19 +259,19 @@ func observationRowMap(o Observation) map[string]any {
 		integer = o.ValueInteger
 	}
 	return map[string]any{
-		"id":                 uuidJSON(o.ID),
+		"id":                 database.UUIDJSON(o.ID),
 		"ref":                o.Ref,
-		"citation_id":        uuidJSON(o.CitationID),
-		"subject_id":         uuidJSON(o.SubjectID),
-		"property_id":        uuidJSON(o.PropertyID),
+		"citation_id":        database.UUIDJSON(o.CitationID),
+		"subject_id":         database.UUIDJSON(o.SubjectID),
+		"property_id":        database.UUIDJSON(o.PropertyID),
 		"polarity":           o.Polarity,
 		"value_text":         emptyAsNil(o.ValueText),
 		"value_integer":      integer,
-		"value_date_id":      uuidJSON(o.ValueDateID),
-		"value_name_id":      uuidJSON(o.ValueNameID),
-		"value_subject_id":   uuidJSON(o.ValueSubjectID),
-		"value_term_id":      uuidJSON(o.ValueTermID),
-		"value_depiction_id": uuidJSON(o.ValueDepictionID),
+		"value_date_id":      database.UUIDJSON(o.ValueDateID),
+		"value_name_id":      database.UUIDJSON(o.ValueNameID),
+		"value_subject_id":   database.UUIDJSON(o.ValueSubjectID),
+		"value_term_id":      database.UUIDJSON(o.ValueTermID),
+		"value_depiction_id": database.UUIDJSON(o.ValueDepictionID),
 	}
 }
 

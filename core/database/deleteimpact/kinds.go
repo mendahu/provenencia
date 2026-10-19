@@ -3,7 +3,6 @@
 package deleteimpact
 
 import (
-	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 )
@@ -84,15 +83,4 @@ type Listed struct {
 	Ref      string
 	Title    string
 	Location Location
-}
-
-func uuidString(id []byte) string {
-	if len(id) != 16 {
-		return ""
-	}
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
 }

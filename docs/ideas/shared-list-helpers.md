@@ -25,7 +25,3 @@ S12-01 adds `database.Querier` (`Query` + `QueryRow`, in `core/database/tx.go`) 
 ## Query-wait test helper
 
 S12-02 added `macos/ProvenenciaTests/QueryHandleWaiting.swift` (`waitForQuery`, which also waits out a refetch). `MetadataModelTests`, `PropertiesModelTests` and `SourceTypesModelTests` still keep a private `waitForQuery`; move them onto it.
-
-## One ref mint loop
-
-Seven table packages mint a ref and insert with the same loop: a package `maxRefRetries = 8`, `ref.Mint`, and a retry on `database.IsUniqueConflict` (`sources`, `artifacts`, `citations`, `observations`, `subjects`, `canonicalentities`, and `evidencegraphs` from S12-03). Eight copy `uuidJSON` (the same seven plus `identityclaims` and `deleteimpact`). A `ref`-side helper that takes the prefix and an insert func, and a `rowchange.UUID(id)`, would give a ref rule one home. Raised by the S12-03 plan review (M-5).

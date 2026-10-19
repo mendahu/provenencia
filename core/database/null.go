@@ -8,3 +8,12 @@ func NullBlob(b []byte) any {
 	}
 	return b
 }
+
+// NullString binds an empty string as SQL NULL, so an optional text column
+// stores NULL rather than "".
+func NullString(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}

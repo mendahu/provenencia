@@ -43,8 +43,6 @@ const (
 		ORDER BY c.ref COLLATE NOCASE`
 	sqlMissingRef = `SELECT id FROM evidence_graphs WHERE ref IS NULL`
 	sqlSetRef     = `UPDATE evidence_graphs SET ref = ? WHERE id = ?`
-
-	maxRefRetries = 8
 )
 
 // Graph is one evidence_graphs row.
@@ -70,7 +68,7 @@ func CreateDefault(tx *database.Tx, sourceID []byte) (Graph, []rowchange.Change,
 }
 
 // mintRef is the ref source for new graphs; tests replace it to force a collision.
-var mintRef = func() (string, error) { return ref.Mint(ref.PrefixEvidenceGraph) }
+var mintRef = database.Minter(ref.PrefixEvidenceGraph)
 
 func insert(tx *sql.Tx, sourceID []byte, name, description string) (Graph, rowchange.Change, error) {
 	id, err := uuid.NewV7()
@@ -79,22 +77,15 @@ func insert(tx *sql.Tx, sourceID []byte, name, description string) (Graph, rowch
 	}
 	idBytes := id[:]
 
-	var graphRef string
-	for attempt := 0; attempt < maxRefRetries; attempt++ {
-		graphRef, err = mintRef()
-		if err != nil {
-			return Graph{}, rowchange.Change{}, err
-		}
-		_, err = tx.Exec(sqlInsert, idBytes, graphRef, sourceID, name, nullStr(description))
-		if err == nil {
-			break
-		}
-		if !database.IsUniqueConflict(err) {
-			return Graph{}, rowchange.Change{}, mapConstraint(err)
-		}
+	graphRef, err := database.InsertWithRef(mintRef, func(storedRef string) error {
+		_, err := tx.Exec(sqlInsert, idBytes, storedRef, sourceID, name, database.NullString(description))
+		return err
+	})
+	if errors.Is(err, database.ErrRefsExhausted) {
+		return Graph{}, rowchange.Change{}, ErrInvalid
 	}
 	if err != nil {
-		return Graph{}, rowchange.Change{}, ErrInvalid
+		return Graph{}, rowchange.Change{}, mapConstraint(err)
 	}
 
 	change := rowchange.Change{
@@ -104,9 +95,9 @@ func insert(tx *sql.Tx, sourceID []byte, name, description string) (Graph, rowch
 		Fields: rowchange.FullRow(map[string]any{
 			"id":          id.String(),
 			"ref":         graphRef,
-			"source_id":   uuidJSON(sourceID),
+			"source_id":   database.UUIDJSON(sourceID),
 			"name":        name,
-			"description": nullStr(description),
+			"description": database.NullString(description),
 		}),
 	}
 	return Graph{
@@ -237,8 +228,8 @@ func checkLink(tx *database.Tx, userID, graphID, artifactID []byte) error {
 
 func linkFields(graphID, artifactID []byte) map[string]any {
 	return map[string]any{
-		"graph_id":    uuidJSON(graphID),
-		"artifact_id": uuidJSON(artifactID),
+		"graph_id":    database.UUIDJSON(graphID),
+		"artifact_id": database.UUIDJSON(artifactID),
 	}
 }
 
@@ -321,7 +312,7 @@ func LinkArtifact(tx *database.Tx, userID, sourceID, artifactID []byte, graphIDs
 	} else {
 		seen := map[string]bool{}
 		for _, id := range graphIDs {
-			if len(id) != 16 || seen[string(id)] {
+			if seen[string(id)] {
 				return nil, ErrInvalid
 			}
 			seen[string(id)] = true
@@ -368,40 +359,18 @@ func EnsureRefs(c *database.Catalog) error {
 	}
 	defer tx.Rollback()
 	for _, id := range need {
-		var setErr error
-		for attempt := 0; attempt < maxRefRetries; attempt++ {
-			r, err := mintRef()
-			if err != nil {
-				return err
-			}
-			_, setErr = tx.Exec(sqlSetRef, r, id)
-			if setErr == nil {
-				break
-			}
-			if !database.IsUniqueConflict(setErr) {
-				return setErr
-			}
-		}
-		if setErr != nil {
+		_, err := database.InsertWithRef(mintRef, func(r string) error {
+			_, err := tx.Exec(sqlSetRef, r, id)
+			return err
+		})
+		if errors.Is(err, database.ErrRefsExhausted) {
 			return ErrInvalid
+		}
+		if err != nil {
+			return err
 		}
 	}
 	return tx.Commit()
-}
-
-func nullStr(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func uuidJSON(id []byte) any {
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return nil
-	}
-	return u.String()
 }
 
 func mapConstraint(err error) error {

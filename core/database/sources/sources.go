@@ -57,7 +57,6 @@ const (
 	sqlDelete           = `DELETE FROM sources WHERE id = ?`
 	sqlTypeExists       = `SELECT 1 FROM source_types WHERE id = ?`
 	sqlArtifactForCover = `SELECT id, source_id, file_id FROM artifacts WHERE id = ?`
-	maxRefRetries       = 8
 )
 
 // Source is one sources row.
@@ -105,28 +104,21 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Source, []rowchange
 	}
 	idBytes := id[:]
 
-	var sourceRef string
-	for attempt := 0; attempt < maxRefRetries; attempt++ {
-		sourceRef, err = ref.Mint(ref.PrefixSource)
-		if err != nil {
-			return Source{}, nil, err
-		}
-		_, err = tx.Exec(sqlInsert, idBytes, sourceRef, in.SourceTypeID, in.Title, nullStr(in.Description))
-		if err == nil {
-			break
-		}
-		if !isUniqueConflict(err) {
-			return Source{}, nil, mapConstraint(err)
-		}
+	sourceRef, err := database.InsertWithRef(database.Minter(ref.PrefixSource), func(storedRef string) error {
+		_, err := tx.Exec(sqlInsert, idBytes, storedRef, in.SourceTypeID, in.Title, database.NullString(in.Description))
+		return err
+	})
+	if errors.Is(err, database.ErrRefsExhausted) {
+		return Source{}, nil, ErrInvalid
 	}
 	if err != nil {
-		return Source{}, nil, ErrInvalid
+		return Source{}, nil, mapConstraint(err)
 	}
 
 	fields := map[string]rowchange.FieldDiff{
 		"id":             {Old: nil, New: id.String()},
 		"ref":            {Old: nil, New: sourceRef},
-		"source_type_id": {Old: nil, New: uuidString(in.SourceTypeID)},
+		"source_type_id": {Old: nil, New: database.UUIDString(in.SourceTypeID)},
 		"title":          {Old: nil, New: in.Title},
 	}
 	if in.Description != "" {
@@ -215,8 +207,8 @@ func SetCover(tx *database.Tx, userID, sourceID []byte, mode string, primaryArti
 	}
 	if !bytes.Equal(prev.PrimaryArtifactID, primaryArtifactID) {
 		fields["primary_artifact_id"] = rowchange.FieldDiff{
-			Old: uuidJSON(prev.PrimaryArtifactID),
-			New: uuidJSON(primaryArtifactID),
+			Old: database.UUIDJSON(prev.PrimaryArtifactID),
+			New: database.UUIDJSON(primaryArtifactID),
 		}
 	}
 	prev.CoverMode = mode
@@ -261,8 +253,8 @@ func Update(tx *database.Tx, userID []byte, s Source) ([]rowchange.Change, error
 	fields := map[string]rowchange.FieldDiff{}
 	if !bytes.Equal(prev.SourceTypeID, s.SourceTypeID) {
 		fields["source_type_id"] = rowchange.FieldDiff{
-			Old: uuidString(prev.SourceTypeID),
-			New: uuidString(s.SourceTypeID),
+			Old: database.UUIDString(prev.SourceTypeID),
+			New: database.UUIDString(s.SourceTypeID),
 		}
 	}
 	if prev.Title != s.Title {
@@ -274,7 +266,7 @@ func Update(tx *database.Tx, userID []byte, s Source) ([]rowchange.Change, error
 	if len(fields) == 0 {
 		return nil, nil
 	}
-	if _, err := tx.Exec(sqlUpdate, s.SourceTypeID, s.Title, nullStr(s.Description), s.ID); err != nil {
+	if _, err := tx.Exec(sqlUpdate, s.SourceTypeID, s.Title, database.NullString(s.Description), s.ID); err != nil {
 		return nil, mapConstraint(err)
 	}
 	return []rowchange.Change{{
@@ -321,9 +313,9 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	}
 
 	fields := map[string]rowchange.FieldDiff{
-		"id":             {Old: uuidString(id), New: nil},
+		"id":             {Old: database.UUIDString(id), New: nil},
 		"ref":            {Old: existing.Ref, New: nil},
-		"source_type_id": {Old: uuidString(existing.SourceTypeID), New: nil},
+		"source_type_id": {Old: database.UUIDString(existing.SourceTypeID), New: nil},
 		"title":          {Old: existing.Title, New: nil},
 	}
 	if existing.Description != "" {
@@ -514,33 +506,11 @@ func nullBlob(b []byte) any {
 	return b
 }
 
-func uuidJSON(id []byte) any {
-	if len(id) != 16 {
-		return nil
-	}
-	return uuidString(id)
-}
-
-func nullStr(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
 func nullJSON(s string) any {
 	if s == "" {
 		return nil
 	}
 	return s
-}
-
-func uuidString(id []byte) string {
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
 }
 
 func isUniqueConflict(err error) bool {

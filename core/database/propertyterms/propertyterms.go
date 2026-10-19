@@ -173,7 +173,7 @@ func Create(tx *database.Tx, userID, propertyID []byte, label, description strin
 	}
 	fields := map[string]rowchange.FieldDiff{
 		"id":          {Old: nil, New: uid.String()},
-		"property_id": {Old: nil, New: uuidString(propertyID)},
+		"property_id": {Old: nil, New: database.UUIDString(propertyID)},
 		"key":         {Old: nil, New: key},
 		"origin":      {Old: nil, New: vocabkey.OriginUser},
 		"label":       {Old: nil, New: label},
@@ -317,8 +317,8 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		return nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
-		"id":          {Old: uuidString(id), New: nil},
-		"property_id": {Old: uuidString(existing.PropertyID), New: nil},
+		"id":          {Old: database.UUIDString(id), New: nil},
+		"property_id": {Old: database.UUIDString(existing.PropertyID), New: nil},
 		"key":         {Old: existing.Key, New: nil},
 		"origin":      {Old: existing.Origin, New: nil},
 		"label":       {Old: existing.Label, New: nil},
@@ -421,15 +421,6 @@ func propertyTermsLocked(tx *sql.Tx, propertyID []byte) (bool, error) {
 		return false, err
 	}
 	return key == KeyPlaceRelationshipType, nil
-}
-
-func uuidString(id []byte) string {
-	if len(id) != 16 {
-		return ""
-	}
-	var u uuid.UUID
-	copy(u[:], id)
-	return u.String()
 }
 
 func nullJSON(s string) any {

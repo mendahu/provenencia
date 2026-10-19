@@ -38,7 +38,6 @@ const (
 		FROM subjects WHERE ref = ?`
 	sqlSourceExists = `SELECT 1 FROM sources WHERE id = ?`
 	sqlTypePrefix   = `SELECT candidate_ref_prefix FROM subject_types WHERE id = ?`
-	maxRefRetries   = 8
 )
 
 // Subject is one subjects row.
@@ -123,22 +122,15 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 	}
 	idBytes := id[:]
 
-	var subjectRef string
-	for attempt := 0; attempt < maxRefRetries; attempt++ {
-		subjectRef, err = ref.Mint(prefix)
-		if err != nil {
-			return Subject{}, rowchange.Change{}, err
-		}
-		_, err = tx.Exec(sqlInsert, idBytes, subjectRef, in.SourceID, graphID, in.SubjectTypeID, nullStr(in.Label), nullStr(in.Description))
-		if err == nil {
-			break
-		}
-		if !database.IsUniqueConflict(err) {
-			return Subject{}, rowchange.Change{}, mapConstraint(err)
-		}
+	subjectRef, err := database.InsertWithRef(database.Minter(prefix), func(storedRef string) error {
+		_, err := tx.Exec(sqlInsert, idBytes, storedRef, in.SourceID, graphID, in.SubjectTypeID, database.NullString(in.Label), database.NullString(in.Description))
+		return err
+	})
+	if errors.Is(err, database.ErrRefsExhausted) {
+		return Subject{}, rowchange.Change{}, ErrInvalid
 	}
 	if err != nil {
-		return Subject{}, rowchange.Change{}, ErrInvalid
+		return Subject{}, rowchange.Change{}, mapConstraint(err)
 	}
 
 	change := rowchange.Change{
@@ -148,9 +140,9 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 		Fields: rowchange.FullRow(map[string]any{
 			"id":              id.String(),
 			"ref":             subjectRef,
-			"source_id":       uuidJSON(in.SourceID),
-			"graph_id":        uuidJSON(graphID),
-			"subject_type_id": uuidJSON(in.SubjectTypeID),
+			"source_id":       database.UUIDJSON(in.SourceID),
+			"graph_id":        database.UUIDJSON(graphID),
+			"subject_type_id": database.UUIDJSON(in.SubjectTypeID),
 			"label":           nullJSON(in.Label),
 			"description":     nullJSON(in.Description),
 		}),
@@ -197,7 +189,7 @@ func Update(tx *database.Tx, userID, id []byte, label, description string) ([]ro
 		return nil, nil
 	}
 
-	if _, err := tx.Exec(sqlUpdate, nullStr(label), nullStr(description), id); err != nil {
+	if _, err := tx.Exec(sqlUpdate, database.NullString(label), database.NullString(description), id); err != nil {
 		return nil, mapConstraint(err)
 	}
 	return []rowchange.Change{{
@@ -271,11 +263,11 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		return nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
-		"id":              {Old: uuidString(id), New: nil},
+		"id":              {Old: database.UUIDString(id), New: nil},
 		"ref":             {Old: prev.Ref, New: nil},
-		"source_id":       {Old: uuidString(prev.SourceID), New: nil},
-		"graph_id":        {Old: uuidString(prev.GraphID), New: nil},
-		"subject_type_id": {Old: uuidString(prev.SubjectTypeID), New: nil},
+		"source_id":       {Old: database.UUIDString(prev.SourceID), New: nil},
+		"graph_id":        {Old: database.UUIDString(prev.GraphID), New: nil},
+		"subject_type_id": {Old: database.UUIDString(prev.SubjectTypeID), New: nil},
 	}
 	if prev.Label != "" {
 		fields["label"] = rowchange.FieldDiff{Old: prev.Label, New: nil}
@@ -365,13 +357,6 @@ func requireTypePrefix(tx *sql.Tx, typeID []byte) (string, error) {
 	return prefix, nil
 }
 
-func nullStr(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
 func nullJSON(s string) any {
 	if s == "" {
 		return nil
@@ -399,25 +384,6 @@ func linkedHandles(tx *sql.Tx, subjectID []byte) ([][]byte, error) {
 		out = append(out, id)
 	}
 	return out, rows.Err()
-}
-
-func uuidString(id []byte) string {
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
-}
-
-func uuidJSON(id []byte) any {
-	if len(id) != 16 {
-		return nil
-	}
-	s := uuidString(id)
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 func mapConstraint(err error) error {

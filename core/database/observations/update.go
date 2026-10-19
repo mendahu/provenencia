@@ -64,7 +64,7 @@ func updateOne(tx *database.Tx, citationID []byte, prev Observation, in Input) (
 		in.SubjectID,
 		in.PropertyID,
 		polarity,
-		nullIfEmpty(resolved.Text),
+		database.NullString(resolved.Text),
 		nullInt64(resolved.Integer),
 		nullBlob(resolved.DateID),
 		nullBlob(resolved.NameID),
@@ -143,10 +143,10 @@ func updateOne(tx *database.Tx, citationID []byte, prev Observation, in Input) (
 func observationUpdateChange(prev, next Observation) *rowchange.Change {
 	fields := map[string]rowchange.FieldDiff{}
 	if !bytes.Equal(prev.SubjectID, next.SubjectID) {
-		fields["subject_id"] = rowchange.FieldDiff{Old: uuidString(prev.SubjectID), New: uuidString(next.SubjectID)}
+		fields["subject_id"] = rowchange.FieldDiff{Old: database.UUIDString(prev.SubjectID), New: database.UUIDString(next.SubjectID)}
 	}
 	if !bytes.Equal(prev.PropertyID, next.PropertyID) {
-		fields["property_id"] = rowchange.FieldDiff{Old: uuidString(prev.PropertyID), New: uuidString(next.PropertyID)}
+		fields["property_id"] = rowchange.FieldDiff{Old: database.UUIDString(prev.PropertyID), New: database.UUIDString(next.PropertyID)}
 	}
 	if prev.Polarity != next.Polarity {
 		fields["polarity"] = rowchange.FieldDiff{Old: prev.Polarity, New: next.Polarity}
@@ -165,19 +165,19 @@ func observationUpdateChange(prev, next Observation) *rowchange.Change {
 		fields["value_integer"] = rowchange.FieldDiff{Old: old, New: new}
 	}
 	if !bytes.Equal(prev.ValueDateID, next.ValueDateID) {
-		fields["value_date_id"] = rowchange.FieldDiff{Old: uuidString(prev.ValueDateID), New: uuidString(next.ValueDateID)}
+		fields["value_date_id"] = rowchange.FieldDiff{Old: database.UUIDString(prev.ValueDateID), New: database.UUIDString(next.ValueDateID)}
 	}
 	if !bytes.Equal(prev.ValueNameID, next.ValueNameID) {
-		fields["value_name_id"] = rowchange.FieldDiff{Old: uuidString(prev.ValueNameID), New: uuidString(next.ValueNameID)}
+		fields["value_name_id"] = rowchange.FieldDiff{Old: database.UUIDString(prev.ValueNameID), New: database.UUIDString(next.ValueNameID)}
 	}
 	if !bytes.Equal(prev.ValueSubjectID, next.ValueSubjectID) {
-		fields["value_subject_id"] = rowchange.FieldDiff{Old: uuidString(prev.ValueSubjectID), New: uuidString(next.ValueSubjectID)}
+		fields["value_subject_id"] = rowchange.FieldDiff{Old: database.UUIDString(prev.ValueSubjectID), New: database.UUIDString(next.ValueSubjectID)}
 	}
 	if !bytes.Equal(prev.ValueTermID, next.ValueTermID) {
-		fields["value_term_id"] = rowchange.FieldDiff{Old: uuidString(prev.ValueTermID), New: uuidString(next.ValueTermID)}
+		fields["value_term_id"] = rowchange.FieldDiff{Old: database.UUIDString(prev.ValueTermID), New: database.UUIDString(next.ValueTermID)}
 	}
 	if !bytes.Equal(prev.ValueDepictionID, next.ValueDepictionID) {
-		fields["value_depiction_id"] = rowchange.FieldDiff{Old: uuidString(prev.ValueDepictionID), New: uuidString(next.ValueDepictionID)}
+		fields["value_depiction_id"] = rowchange.FieldDiff{Old: database.UUIDString(prev.ValueDepictionID), New: database.UUIDString(next.ValueDepictionID)}
 	}
 	if len(fields) == 0 {
 		return nil

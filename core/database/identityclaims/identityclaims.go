@@ -132,7 +132,7 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Claim, rowchange.Change, error) {
 	}
 	idBytes := id[:]
 	if _, err := tx.Exec(sqlInsert, idBytes, in.SubjectID, in.EntityID, subjectTypeID,
-		in.Status, nullBytes(in.ConfidenceGradeID), nullStr(in.Argument)); err != nil {
+		in.Status, nullBytes(in.ConfidenceGradeID), database.NullString(in.Argument)); err != nil {
 		return Claim{}, rowchange.Change{}, mapInsert(tx, err, in.EntityID, subjectTypeID)
 	}
 
@@ -142,12 +142,12 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Claim, rowchange.Change, error) {
 		Action:     rowchange.ActionCreate,
 		Fields: rowchange.FullRow(map[string]any{
 			"id":                  id.String(),
-			"subject_id":          uuidJSON(in.SubjectID),
-			"entity_id":           uuidJSON(in.EntityID),
-			"subject_type_id":     uuidJSON(subjectTypeID),
+			"subject_id":          database.UUIDJSON(in.SubjectID),
+			"entity_id":           database.UUIDJSON(in.EntityID),
+			"subject_type_id":     database.UUIDJSON(subjectTypeID),
 			"status":              in.Status,
-			"confidence_grade_id": uuidJSON(in.ConfidenceGradeID),
-			"argument":            nullStr(in.Argument),
+			"confidence_grade_id": database.UUIDJSON(in.ConfidenceGradeID),
+			"argument":            database.NullString(in.Argument),
 		}),
 	}
 	return Claim{
@@ -274,27 +274,9 @@ func statusOK(s string) bool {
 	return false
 }
 
-func nullStr(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
 func nullBytes(b []byte) any {
 	if len(b) == 0 {
 		return nil
 	}
 	return b
-}
-
-func uuidJSON(id []byte) any {
-	if len(id) != 16 {
-		return nil
-	}
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return nil
-	}
-	return u.String()
 }

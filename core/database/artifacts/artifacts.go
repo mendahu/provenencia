@@ -48,7 +48,6 @@ const (
 	sqlExistsByFile   = `SELECT 1 FROM artifacts WHERE file_id = ? LIMIT 1`
 	sqlSourceExists   = `SELECT 1 FROM sources WHERE id = ?`
 	sqlFileExists     = `SELECT 1 FROM files WHERE id = ?`
-	maxRefRetries     = 8
 )
 
 // Artifact is one artifacts row. FileID is nil when fileless.
@@ -105,32 +104,25 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Artifact, []rowchan
 	}
 	idBytes := id[:]
 
-	var artRef string
-	for attempt := 0; attempt < maxRefRetries; attempt++ {
-		artRef, err = ref.Mint(ref.PrefixArtifact)
-		if err != nil {
-			return Artifact{}, nil, err
-		}
-		_, err = tx.Exec(sqlInsert, idBytes, artRef, in.SourceID, nullBlob(in.FileID), in.Label, nullStr(in.Description))
-		if err == nil {
-			break
-		}
-		if !database.IsUniqueConflict(err) {
-			return Artifact{}, nil, mapConstraint(err)
-		}
+	artRef, err := database.InsertWithRef(database.Minter(ref.PrefixArtifact), func(storedRef string) error {
+		_, err := tx.Exec(sqlInsert, idBytes, storedRef, in.SourceID, nullBlob(in.FileID), in.Label, database.NullString(in.Description))
+		return err
+	})
+	if errors.Is(err, database.ErrRefsExhausted) {
+		return Artifact{}, nil, ErrInvalid
 	}
 	if err != nil {
-		return Artifact{}, nil, ErrInvalid
+		return Artifact{}, nil, mapConstraint(err)
 	}
 
 	fields := map[string]rowchange.FieldDiff{
 		"id":        {Old: nil, New: id.String()},
 		"ref":       {Old: nil, New: artRef},
-		"source_id": {Old: nil, New: uuidString(in.SourceID)},
+		"source_id": {Old: nil, New: database.UUIDString(in.SourceID)},
 		"label":     {Old: nil, New: in.Label},
 	}
 	if len(in.FileID) == 16 {
-		fields["file_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.FileID)}
+		fields["file_id"] = rowchange.FieldDiff{Old: nil, New: database.UUIDString(in.FileID)}
 	}
 	if in.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: nil, New: in.Description}
@@ -197,8 +189,8 @@ func Update(tx *database.Tx, userID []byte, a Artifact) ([]rowchange.Change, err
 	fields := map[string]rowchange.FieldDiff{}
 	if !bytes.Equal(prev.FileID, a.FileID) {
 		fields["file_id"] = rowchange.FieldDiff{
-			Old: uuidJSON(prev.FileID),
-			New: uuidJSON(a.FileID),
+			Old: database.UUIDJSON(prev.FileID),
+			New: database.UUIDJSON(a.FileID),
 		}
 	}
 	if prev.Label != a.Label {
@@ -211,7 +203,7 @@ func Update(tx *database.Tx, userID []byte, a Artifact) ([]rowchange.Change, err
 		return nil, nil
 	}
 
-	if _, err := tx.Exec(sqlUpdate, nullBlob(a.FileID), a.Label, nullStr(a.Description), a.ID); err != nil {
+	if _, err := tx.Exec(sqlUpdate, nullBlob(a.FileID), a.Label, database.NullString(a.Description), a.ID); err != nil {
 		return nil, mapConstraint(err)
 	}
 	return []rowchange.Change{{
@@ -268,13 +260,13 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	}
 
 	fields := map[string]rowchange.FieldDiff{
-		"id":        {Old: uuidString(id), New: nil},
+		"id":        {Old: database.UUIDString(id), New: nil},
 		"ref":       {Old: existing.Ref, New: nil},
-		"source_id": {Old: uuidString(existing.SourceID), New: nil},
+		"source_id": {Old: database.UUIDString(existing.SourceID), New: nil},
 		"label":     {Old: existing.Label, New: nil},
 	}
 	if len(existing.FileID) == 16 {
-		fields["file_id"] = rowchange.FieldDiff{Old: uuidString(existing.FileID), New: nil}
+		fields["file_id"] = rowchange.FieldDiff{Old: database.UUIDString(existing.FileID), New: nil}
 	}
 	if existing.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: existing.Description, New: nil}
@@ -450,13 +442,6 @@ func requireFile(tx *sql.Tx, fileID []byte) error {
 	return err
 }
 
-func nullStr(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
 func nullBlob(b []byte) any {
 	if len(b) == 0 {
 		return nil
@@ -469,21 +454,6 @@ func nullJSON(s string) any {
 		return nil
 	}
 	return s
-}
-
-func uuidString(id []byte) string {
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
-}
-
-func uuidJSON(id []byte) any {
-	if len(id) == 0 {
-		return nil
-	}
-	return uuidString(id)
 }
 
 func copyBlob(b []byte) []byte {
