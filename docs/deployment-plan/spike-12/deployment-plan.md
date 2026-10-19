@@ -84,7 +84,7 @@ These are the calls for this spike. PR plans treat them as binding.
   - Creating a graph needs at least one Artifact; "Add graph" is unavailable while the Source has none.
   - The Default graph may have zero links until the Source's first Artifact, which links automatically.
   - A new Artifact links to the graphs it is given; `artifacts.CreateInput.GraphIDs` empty means every graph of its Source, linked through `evidencegraphs.LinkArtifact` (S12-03), and `CreateArtifactRequest.graph_ids` carries the choice over FFI (S12-05).
-  - Unlinking is refused when that graph's Citations use the Artifact (the error lists them) and when it is the graph's last link.
+  - Unlinking is refused when that graph's Citations use the Artifact (the refusal is a plain code; S12-05's preflight lists them) and when it is the graph's last link.
   - Deleting an Artifact keeps today's rule (refused while Citations use it) and may leave a graph with no links.
 
   Binds S12-03, S12-04, S12-05.

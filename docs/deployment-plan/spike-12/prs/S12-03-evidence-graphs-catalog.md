@@ -347,12 +347,12 @@ Do: D-18 and D-17. Add T-1.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/ref/ ./core/apperr/` passes. Commit.
 
 **STEP-2 — Schema, registries, Default graph, Subjects join it**
-Files: `core/database/migrations/000055.sql` *(new)*, `core/database/catalogmodel/model.go`, `core/database/deleteimpact/register.go`, `core/database/deleteimpact/facets.go`, `core/database/effects/registry.go`, `core/database/effects/resolve.go`, `core/database/effects/registry_completeness_test.go`, `core/database/evidencegraphs/evidencegraphs.go` *(new)*, `core/database/evidencegraphs/evidencegraphs_test.go` *(new)*, `core/database/sources/sources.go`, `core/database/subjects/subjects.go`, `core/database/subjectpositions/subjectpositions_test.go`, `core/database/sources/sources_test.go`, `core/database/subjects/subjects_test.go`, `core/database/connect/connect_test.go`. Skills: `add-catalog-migration`, `add-catalog-model`, `add-catalog-delete`, `add-audit-scope`, `add-catalog-query`.
+Files: `core/database/migrations/000055.sql` *(new)*, `core/database/catalogmodel/model.go`, `core/database/deleteimpact/register.go`, `core/database/deleteimpact/facets.go`, `core/database/effects/registry.go`, `core/database/effects/resolve.go`, `core/database/effects/registry_completeness_test.go`, `core/database/evidencegraphs/evidencegraphs.go` *(new)*, `core/database/evidencegraphs/evidencegraphs_test.go` *(new)*, `core/database/sources/sources.go`, `core/database/subjects/subjects.go`, `core/database/subjectpositions/subjectpositions_test.go`, `core/database/sources/sources_test.go`, `core/database/subjects/subjects_test.go`, `core/database/connect/connect_test.go`, and any `api/...` or `core/...` test that fails only under the §7 rule. Skills: `add-catalog-migration`, `add-catalog-model`, `add-catalog-delete`, `add-audit-scope`, `add-catalog-query`.
 Do: §6 Schema verbatim; D-3, D-4, D-5. The package with `Graph`, `DefaultName`, the three errors, `insert`, `CreateDefault`, `SoleGraphTx` (D-7, D-8, D-9). D-10 in `subjects`. `sources.Create` per D-8. D-14 for `subjectpositions_test.go`. Add T-2, T-3, T-4, T-5, T-6, T-7.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/...` and `go vet -tags fts5 ./core/...` pass. Commit: "Give every Source an Evidence graph that holds its Subjects."
+Check: `CGO_ENABLED=1 go test -tags fts5 ./api/... ./core/...` and `go vet -tags fts5 ./api/... ./core/...` pass. Commit: "Give every Source an Evidence graph that holds its Subjects."
 
 **STEP-3 — Membership reads and links**
-Files: `core/database/evidencegraphs/evidencegraphs.go` *(new)*, `core/database/evidencegraphs/evidencegraphs_test.go` *(new)*.
+Files: `core/database/evidencegraphs/evidencegraphs.go` *(new)*, `core/database/evidencegraphs/evidencegraphs_test.go` *(new)* (both created in STEP-2; this step adds to them).
 Do: `SubjectGraphTx`, `IsLinkedTx`, `CitationsUsingArtifactTx`, `Link`, `Unlink`, `LinkArtifact` (D-11, D-12, D-13, D-20). Add T-8, T-9, T-10.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/evidencegraphs` passes. Commit.
 
@@ -362,7 +362,7 @@ Do: D-11 (the `artifacts` half) and D-16. Add T-11, T-12, T-13.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./api/... ./core/...` passes. Commit.
 
 **STEP-5 — One open-time repair list that mints missing graph refs**
-Files: `core/database/evidencegraphs/evidencegraphs.go` *(new)*, `core/database/evidencegraphs/evidencegraphs_test.go` *(new)*, `core/catalogsession/session.go`, `core/catalogsession/session_test.go`, `core/onboarding/ready.go`, `core/onboarding/ready_test.go`. Skills: `add-catalog-ref`, `use-catalog-session`.
+Files: `core/database/evidencegraphs/evidencegraphs.go` *(new)*, `core/database/evidencegraphs/evidencegraphs_test.go` *(new)* (both created in STEP-2; this step adds to them), `core/catalogsession/session.go`, `core/catalogsession/session_test.go`, `core/onboarding/ready.go`, `core/onboarding/ready_test.go`. Skills: `add-catalog-ref`, `use-catalog-session`.
 Do: D-15. Add T-14, T-15, T-16.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/evidencegraphs ./core/onboarding ./core/catalogsession` passes. Commit.
 
@@ -405,7 +405,7 @@ All Go, table-driven (`.cursor/rules/go-tests.mdc`). New `evidencegraphs` tests 
 | T-1 | Go | `core/ref/ref_test.go` `TestValidatePrefix`, `TestMint` | `"GPH"` → `ErrReservedPrefix`; `TestMint` row `PrefixEvidenceGraph` → `ref.Valid` | D-18 |
 | T-2 | Go | `core/database/effects/registry_completeness_test.go` `TestSourceEvidenceIsNotActivity` | rows `{"evidence_graphs", false, true, false}`, `{"evidence_graph_artifacts", false, true, false}` | D-5 |
 | T-3 | Go | `core/database/evidencegraphs/evidencegraphs_test.go` `TestCreateDefault` *(new)* | `sources.Create` "Census 1881" → one graph: name `Default`, `ref.Valid(ref)` with prefix `GPH`, id ≠ Source id, empty description; changes `[source, evidence_graph]` with the graph change's `source_id` = the Source | AC-2.1, D-2, D-6 |
-| T-4 | Go | same file `TestSoleGraphTx` *(new)* | Source from `sources.Create` → its Default id; unknown 16-byte id → `ErrInvalid`; 15-byte id → `ErrInvalid`; a second `evidence_graphs` row inserted by SQL for the Source → an error that is not `ErrInvalid` | D-9 |
+| T-4 | Go | same file `TestSoleGraphTx` *(new)* | Source from `sources.Create` → its Default id; unknown 16-byte id → `ErrInvalid`; 15-byte id → `ErrInvalid`; a second row `INSERT INTO evidence_graphs (id, source_id, name) VALUES (<new UUIDv7>, <source id>, 'Second')` → an error that is not `ErrInvalid` | D-9 |
 | T-5 | Go | `core/database/subjects/subjects_test.go` `TestSubjects` *(new case "create joins the Source's graph")* | `subjects.Create` → `GraphID` = `defaultGraphID` of the Source; `subjects.Get` returns the same `GraphID`; the create change has `graph_id`; the `subjects.Delete` change has `graph_id` | AC-2.2, D-10 |
 | T-6 | Go | `core/database/connect/connect_test.go` `TestCreateCitedBridge` *(new assertion in the happy case)* | the bridge Subject's `graph_id` = the Source's Default graph | AC-2.7 |
 | T-7 | Go | `core/database/sources/sources_test.go` `TestSourceDelete` *(new case "releases the Default graph")* | Source with no Artifacts and no Subjects → `evidence_graphs` has no row for it; changes contain one `evidence_graph` delete before the `source` delete | AC-3.9, D-4 |
@@ -416,9 +416,9 @@ All Go, table-driven (`.cursor/rules/go-tests.mdc`). New `evidencegraphs` tests 
 | T-12 | Go | `artifacts_test.go` `TestArtifactDelete` *(new case "releases its graph links")* | linked Artifact with no Citations → deleted; no `evidence_graph_artifacts` row for it; changes `[evidence_graph_artifact delete, artifact delete]` | AC-3.8, D-16 |
 | T-13 | Go | `core/database/sourcecopy/sourcecopy_test.go` `TestCopy` *(new assertions in the every-part case)* | the copy's Default graph id ≠ the original's; its links are exactly the two copied Artifacts; the original's links unchanged | AC-2.6 |
 | T-14 | Go | `evidencegraphs_test.go` `TestEnsureRefs` *(new)* | Two Sources; `UPDATE evidence_graphs SET ref = NULL` on one → after `EnsureRefs` it has a valid `GPH-` ref; the other's ref unchanged; a second call changes nothing | AC-1.2, D-15 |
-| T-15 | Go | `core/onboarding/ready_test.go` `TestOpenCatalogMintsGraphRefs` *(new)* | a catalog with a Source whose graph ref was set NULL, closed, then `OpenCatalog` → the ref is valid | AC-1.2, D-15 |
-| T-16 | Go | `core/catalogsession/session_test.go` `TestDo` *(new case "open mints missing graph refs")* | same fixture, then `catalogsession.Do` → inside `fn` the ref is valid | AC-1.2, D-15 |
-| T-17 | Go | `core/database/audit/scopes_test.go` `TestSourceScopes` *(new case "graph link and unlink")* | `evidencegraphs.Unlink` then `Link` on Source A's graph (A has two Artifacts) each bump A only | AC-4.1, D-5 |
+| T-15 | Go | `core/onboarding/ready_test.go` `TestOpenCatalogMintsGraphRefs` *(new)* | `createCatalog` in a temp dir, a user (`users.Upsert`), a seeded type (`sourcetypes.Lookup` of a `sourcevocab` key) and `sources.Create` in `writes.Run`; `UPDATE evidence_graphs SET ref = NULL`; `Close`; then `OpenCatalog` → the ref is valid | AC-1.2, D-15 |
+| T-16 | Go | `core/catalogsession/session_test.go` `TestDo` *(new case "open mints missing graph refs")* | the same fixture in its own temp project dir, built with `database.Create`, `sourcevocab.Install`, a user and `sources.Create`, ref set NULL, closed; then `catalogsession.Do` on that dir → inside `fn` the ref is valid; `catalogsession.Close` of that dir at the end | AC-1.2, D-15 |
+| T-17 | Go | `core/database/audit/scopes_test.go` `TestSourceScopes` *(new case "graph link and unlink")* | inside the case, add a second Artifact to A with `runArtifactCreate` (as the "artifact create and update" case does), then `evidencegraphs.Unlink` and `Link` of it on A's graph (graph id from `SoleGraphTx` inside each write) each bump A only; `newScopeSeed` is unchanged | AC-4.1, D-5 |
 | T-18 | Go | `core/database/effects/registry_completeness_test.go` `TestEvidenceGraphsFlag` *(new)* | the entries with `EvidenceGraphs` are exactly `evidence_graphs` and `evidence_graph_artifacts`; a `None` entry with `EvidenceGraphs` fails `validate` | D-5 |
 | T-19 | Go | `core/database/effects/evidence_graphs_test.go` *(new)* `TestEvidenceGraphsResolve` (package `effects_test`) | on a real catalog with a Source and an Artifact, inside a transaction: `Resolve` over the Source's `evidence_graph` create change and the Artifact's link create change → `EvidenceGraphs` true, the Source in `SourceScopes`, `Sources` without it from those rows; over a `subjects` create change, a `citations` create change and a `sources` title update → `EvidenceGraphs` false | AC-4.1, AC-4.2 |
 
@@ -429,7 +429,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 ## 9. Definition of done
 
 ```
-- [ ] Every AC in §2 is true: test name or manual check line for each
+- [ ] Every AC in §2 is true: test name or manual check line for each (AC-1.1 and AC-1.2's migration half are evidenced by the macOS manual check; an implementer without macOS reports them as not run and the ship-pr owner runs §10)
 - [ ] Every T-# in §8 exists and passes
 - [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests, catalog and plan-doc checks)
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
