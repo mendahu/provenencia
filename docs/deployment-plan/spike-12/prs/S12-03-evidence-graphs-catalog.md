@@ -1,6 +1,7 @@
 # S12-03 — Evidence graphs in the catalog
 
-**Status:** Planned
+**Status:** Landed in [#498](https://github.com/mendahu/provenencia/pull/498) (2026-10-19)
+**Landed:** No difference from the plan.
 **Spike / slice:** Spike 12 · Slice 2 — Graphs in the catalog
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: schema, one Go package and the create paths; no FFI, no Swift)

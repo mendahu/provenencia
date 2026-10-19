@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-03 — Evidence graphs in the catalog
+
+**Landed 2026-10-19** in [#498](https://github.com/mendahu/provenencia/pull/498). The catalog (format 55) holds Evidence graphs: every Source has a Default graph with a `GPH-` ref, every Subject belongs to one graph of its Source, and Artifacts and graphs are linked many-to-many. Existing projects migrate in place, so each Source's Default graph holds its Subjects and is linked to all its Artifacts; the refs are minted when a project next opens, through one `catalogsession.ReconcileOnOpen` that create, `OpenCatalog` and `Do` share. `core/database/evidencegraphs` owns graphs and links (`Link`, `Unlink` with their refusals, `SoleGraphTx` until S12-08), and the graph list has its own `Set.EvidenceGraphs` effect. No screen or RPC changes; nothing changes for researchers.
+
 ## S12-16 — Add Source reports its effects
 
 **Landed 2026-10-19** in [#492](https://github.com/mendahu/provenencia/pull/492). `CreateSource` now returns `WriteEffects`, and Add Source applies them with `.createdSource` as Copy Source does, so the Sources list refreshes through the session and the hand-written list insert is gone. The session also recounts the sidebar after every write in `CatalogQueryRegistry.navCountTriggers` (Add, Copy, Source delete, Promote), which fixes the Sources count staying stale after Copy and Source delete; Promote's own recount went. Nothing else changes for researchers.
