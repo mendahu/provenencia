@@ -195,5 +195,26 @@ Do:
 - Per the user's standing rule, no per-migration upgrade test (`no-migration-tests`); the existing Create/Open tests and `TestPragmaHonesty` cover every real step.
 Check: the three tests pass; every Create/Open test passes; scripts/check-pr.sh PASS.
 
+
+## Round 5 — fix (Fix plan 5)
+Head `9435972a`. Gate PASS; CI's `go vet -tags fts5 ./api/... ./core/...` clean; uncached `go test ./core/... ./api/...` ok. F-11 `e597954c`, F-12 `9435972a` (three migrate tests red against the old `migrate`, plus `TestParseMigrationsForeignKeys`).
+
+## Round 5 — review (CON, SEC+PRF; scope `06eb1747...9435972a`)
+CON: clean (F-11, F-12 resolved; schema hash unchanged). SEC+PRF: clean (SEC-1 resolved; atomicity, FK restore, single conn checked).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| SEC outside-lens → MNT-18 | MNT | major | A typo'd `-- migrate:` directive silently runs a rebuild with foreign keys on, so `DROP TABLE` cascades child rows on a real catalog; fresh-catalog tests cannot see it | Fix now → F-13 | verified: `hasForeignKeysOffLine` matches the exact line only; any near-miss is ignored |
+| SEC outside-lens → MNT-19 | MNT | minor | Skill says the loader refuses `BEGIN`/`COMMIT`; it does not, and a stray `COMMIT;` would commit part of a step | Fix now → F-13 | code this PR adds (`migrate.go` loader, skill line) |
+
+Nits (ride along): `CON-R2-1 · 000052.sql:28 · two blank lines before CREATE TABLE depiction_values`
+
+### Fix plan 6
+**F-13 — The loader refuses near-miss directives and transaction statements** (from MNT-18, MNT-19)
+Files: `core/database/migrate.go`, `core/database/migrate_test.go`, `core/database/migrations/000052.sql`, `.agents/skills/add-catalog-migration/SKILL.md`.
+Failing test first: extend `TestParseMigrationsForeignKeys` with refused cases — `-- migrate: foreign_keys off ` (trailing space), `-- migrate:  foreign_keys off`, `-- Migrate: foreign_keys off`, `-- migrate: foreign_keys on`, a step with `COMMIT;`, `BEGIN TRANSACTION;`, `ROLLBACK;` on their own lines — and accepted cases: the exact directive, and a `CREATE TRIGGER … BEGIN … END;` body (as in `000015`).
+Do: in the loader, any line whose trimmed, lower-cased text starts with `-- migrate:` must be exactly `-- migrate: foreign_keys off`, else refuse (CodeInternalMigrations, naming the file and line). Refuse a statement that is a transaction control on its own: a line whose trimmed, lower-cased text matches `^(begin( (deferred|immediate|exclusive))?( transaction)?|commit( transaction)?|end( transaction)?|rollback( transaction)?)\s*;$`. A trigger's `BEGIN` (no `;`) and `END;` inside a `CREATE TRIGGER` must still load — if `END;` alone cannot be told apart, refuse only `begin…;`, `commit…;` and `rollback…;`, and say so. Make the skill sentence match exactly what the loader refuses. Tidy the doubled blank line in `000052.sql`.
+Check: the extended test passes; every real migration still loads (Create/Open tests); scripts/check-pr.sh PASS. Orchestrator verifies; no further review round.
+
 ## Result
 Gate PASS · CI pending · open: none · fixed on this PR: PRF-1, MNT-1, MNT-2, MNT-3, MNT-4, MNT-5, MNT-9, MNT-10, MNT-11, MNT-12, MNT-17, CON-R2-1 · later PR: UX-1, UX-2 (S12-05), MNT-8 (S12-04), UX-3 (S12-11) · follow-ups: SEC-1, MNT-13 · to user: PRF-1 (override D-15), MNT-1/2/4/5 (fix here) · CON miss: none · rounds: 4 review (rounds 3–4 user-requested)
