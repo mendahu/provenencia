@@ -172,8 +172,9 @@ final class WorkspaceSession {
     /// once, not cancelled and restarted twice. Keys the registry evicts or
     /// marks stale when hidden are not loaded unless on screen. Last, it
     /// refreshes graph progress for the Sources the effects and the mutation
-    /// moved. Features only call `apply`; they do not query afterward or tell
-    /// sibling views to refresh.
+    /// moved, and runs `onNavCountsMoved` for a mutation in
+    /// `CatalogQueryRegistry.navCountTriggers`. Features only call `apply`;
+    /// they do not query afterward or tell sibling views to refresh.
     func apply(_ effects: CatalogWriteEffects = .empty, _ mutation: CatalogMutation? = nil) {
         patchLastUpdated(effects)
         if let source = mutation?.patchedSource {
