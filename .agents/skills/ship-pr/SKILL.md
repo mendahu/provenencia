@@ -237,6 +237,11 @@ The loop is done when the gate passes and no **blocker** or **major** is open
 (every one is fixed, deferred by an explicit Follow-up decision, or answered by
 the user).
 
+0. Bring the branch up to date: `git fetch origin`; if `origin/main` moved
+   since the branch was cut, merge it (in an app-made worktree, the
+   `sync_with_base_branch` tool), then run `scripts/check-pr.sh` again. CI tests
+   the PR merged with `main`, and a field this PR removed can still be used by
+   code that landed there meanwhile.
 1. Update the PR body: what shipped against each user story, AC evidence,
    review summary by lens, follow-ups, deviations, the plan's **Manual check**,
    and links to the plan, its review log, and the ship log (for a spike close, S#-99, the plan path and "deleted in this PR").
