@@ -102,6 +102,14 @@ struct SourcesModelTests {
         return dir.appendingPathComponent("settings.json", isDirectory: false)
     }
 
+    @Test func openCopySetsCopyingForThatSource() {
+        let s1 = source(id: "s1", title: "Obit", typeID: "t1")
+        let (model, _) = makeModel(sources: [s1], types: [photoType()])
+        #expect(model.copying == nil)
+        model.openCopy(s1)
+        #expect(model.copying?.original.id == "s1")
+    }
+
     @Test func sessionQueryPopulatesSourcesTypesAndPublishesCount() async {
         let store = FakeStore()
         let counts = CatalogCounts(projectDir: projectDir, store: store)
