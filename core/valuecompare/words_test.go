@@ -33,7 +33,7 @@ func TestIsInitial(t *testing.T) {
 	}
 }
 
-// The spelling-variant rule shared with core/match (FuzzyFloor 0.8; one
+// The spelling-variant rule used by the name comparer (FuzzyFloor 0.8; one
 // added or dropped letter from ShortVariantMinLength letters up).
 func TestSpellingSimilarity(t *testing.T) {
 	words := matchregistry.Default().Value.Words
