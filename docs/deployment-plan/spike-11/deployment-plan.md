@@ -348,7 +348,7 @@ Also builds `core/subjectcompare`'s `invariants_test.go` lead groups (`kindGroup
 
 #### S11-15 — Shortlist index
 
-**Ships.** A key → handles map per kind on `graphcache`, built with `valuecompare.Key` from the registry's shortlist keys (person name words, not initials; event type + year bucket; toponym). It reuses `graphcache`'s stats slot (`Stats` / `SetStats` / `statsOK`, renamed), dropped on a handle commit like today.
+**Ships.** A key → handles map per kind on `graphcache`, built with `valuecompare.Key` from the registry's shortlist keys (person name words, not initials; event type + year bucket; toponym). It reuses `graphcache`'s stats slot (`Stats` / `SetStats` / `statsOK`, renamed), dropped on a handle commit like today. When the shortlist replaces the kind scan in `graphalign.Candidates`, the Promote profiler (`core/database/promotealign/profiles.go`, `profiler.profile`) loads and builds life events only for shortlisted handles (and the fixed and BFS-reached ones), not for every handle of the kind. S11-13 profiles every person and their events per repropose (PRF-1 in its ship log: warm repropose 40 to 160 ms on the 20k-person fixture).
 **Not this PR.** Using it in the walk (S11-16). A coarse misspelling key (open; [decided 2026-10-17](comparison-layers.md#decided-on-2026-10-17)).
 **Check.** "J. Robins" shortlists every handle with `robins`; aliases share a key; no `Same` / `Equivalent` pair is missed (property test).
 **Context.** [Layer 6 procedure](comparison-layers.md#layer-6-procedure) step 1; [vocabulary](comparison-layers.md#vocabulary-finding-candidates).
