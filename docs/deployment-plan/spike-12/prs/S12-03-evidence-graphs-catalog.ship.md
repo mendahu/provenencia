@@ -1,7 +1,7 @@
 # Ship log — S12-03 Evidence graphs in the catalog
 
 **Plan:** [`S12-03-evidence-graphs-catalog.md`](S12-03-evidence-graphs-catalog.md) · **Branch:** `s12-03-evidence-graphs-catalog` · **PR:** #498
-**State:** fixing 7
+**State:** ready
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s12-03`, branched from `origin/main` @ `84a9b318`.
 
@@ -240,5 +240,18 @@ Do:
 - Per `no-migration-tests`, no upgrade test; the manual check covers migrated data.
 Check: both tests pass; Create/Open tests and `TestPragmaHonesty` pass; scripts/check-pr.sh PASS.
 
+
+## Round 7 — fix (Fix plan 7)
+Head `0297a245`, then `origin/main` merged (`ad4d93a0`, plan docs only). Gate PASS; CI vet clean; uncached `go test ./core/... ./api/...` ok. F-14 done: `TestUUID7Function` red first (`no such function: uuid7`); `TestSchemaCallsNoAppFunction` guards the schema rule. Driver registered from a package-level var (before `migrate.go`'s `init`). `CGO_ENABLED=0 go build ./core/database/` ok.
+
+## Round 7 — review (SEC+PRF, CON)
+SEC+PRF: clean (every catalog connection gets `uuid7()`; DSN and locking unchanged; subqueries indexed; orphans roll back the step). CON: clean (CON verified two Sources at v54 each get their own UUIDv7 Default through the real migrations, in scratch only).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| CON-R2-2 | CON | minor | Plan §6's copy of the 000055 header still says the Default graph's id is the Source's id | Fix now (orchestrator, docs) | plan line 214 updated to the shipped header, marked Landed 4 |
+
+Nits (logged): `CON-R2-3 · driver_test.go:11 · two single-scenario tests are not table-driven`
+
 ## Result
-Gate PASS · CI pending (re-run after `main` merge and F-11) · open: none · fixed on this PR: PRF-1, SEC-1, MNT-1, MNT-2, MNT-3, MNT-4, MNT-5, MNT-9, MNT-10, MNT-11, MNT-12, MNT-17, MNT-18, MNT-19, CON-R2-1 · later PR: UX-1, UX-2 (S12-05), MNT-8 (S12-04), UX-3 (S12-11) · follow-ups: MNT-13 · to user: PRF-1 (override D-15), MNT-1/2/4/5 (fix here), migration backfill (keep), `migrate` (fix here) · CON miss: none · CI miss: S11-15 merged into `main` with a test using a field this PR removed; local gate runs against the branch only
+Gate PASS · CI pending · open: none · fixed on this PR: PRF-1, SEC-1, MNT-1, MNT-2, MNT-3, MNT-4, MNT-5, MNT-9, MNT-10, MNT-11, MNT-12, MNT-17, MNT-18, MNT-19, CON-R2-1, CON-R2-2, migrated graph ids (`uuid7()`) · later PR: UX-1, UX-2 (S12-05), MNT-8 (S12-04), UX-3 (S12-11) · follow-ups: MNT-13 · to user: PRF-1 (override D-15), MNT-1/2/4/5 (fix here), migration backfill (keep), `migrate` (fix here) · CON miss: none · user calls: migrated graph ids via `uuid7()` (supersedes D-1) · CI miss: S11-15 merged into `main` with a test using a field this PR removed; local gate runs against the branch only

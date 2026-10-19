@@ -211,7 +211,8 @@ Migration `core/database/migrations/000055.sql` *(new)*:
 -- S12-03: Evidence graphs. A Source holds one or more graphs; each Subject
 -- belongs to one graph of its Source (the composite key keeps it on its home
 -- Source). Artifacts and graphs are linked many-to-many. Every existing Source
--- gets a Default graph whose id is the Source's id; its GPH- ref is minted in
+-- gets a Default graph with a fresh UUIDv7 id from uuid7() (Landed 4; was the
+-- Source's id); its GPH- ref is minted in
 -- Go at open (evidencegraphs.EnsureRefs). Every Subject moves into it and every
 -- Artifact is linked to it.
 
