@@ -97,3 +97,17 @@ All round-1 answers were checked against the plan and the tree; both reviewers f
 
 ### X-6 · minor · Small gaps
 **Answer:** Fixed. MNT-3 scope is a grep; `withCandidates` returns a `Canon`; a released Subject may re-place on the same handle (`Move` nil); STEP-2 says `alikeNew` / `newPairSegments` read `AcceptBar` until STEP-4.
+
+## Refresh — STEP-3 stop (2026-10-19)
+
+The implementer stopped at STEP-3. D-4's similarity gate admits a handle that agrees on one property with nothing else to compare (similarity 1, evidence 0.5). Under D-8 that row is Skip `weak`, which conflicts with D-13's pin on `TestBirthIsNeverProposedOnADeath/AC-1.8` and with three unpinned tests.
+
+**Answer:** To user → option (a): keep D-4 and D-8; AC-1.8 expects Skip `weak` with an unbanded alternative. D-13 names the exception and the three tests' new expectations, written to keep each test's intent (`ViaNeighbor` empty, property-only score). §11's stop condition excepts AC-1.8. Coverage-aware similarity goes to [`docs/ideas/coverage-aware-similarity.md`](../../../ideas/coverage-aware-similarity.md).
+
+A fresh reviewer checked the refresh against the branch: Ready with changes.
+- **F-1 · major:** D-13's STEP-3 rule still forbade the changes. **Fixed:** the rule admits a handle that is at least half alike but under the weak band; the exception holds from STEP-3 on.
+- **F-2 · major:** Promote never shortlists an undated event. **Fixed:** "What changes" and the idea lead with surname-only; AC-1.8 pins `graphalign`'s rule only.
+- **F-3 · minor:** "may be an alternative" left a choice. **Fixed:** exact `Alternatives`, plus the real reason each score is property-only.
+- **F-4 · minor:** stale test comments. **Fixed:** D-13 names the rewording.
+- **F-5 · minor:** "unbanded" not asserted. **Fixed:** case renamed "offered as weak".
+- **F-6 · minor:** T-4 now pins the surname-only case.
