@@ -10,39 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// EdgeSignature identifies corresponding bridges on the layer and edges on
-// the canonical graph (design §6).
-//
-// Directed marks a term whose order is part of its meaning (parent of, part
-// of). A directed edge corresponds only from the same end: Bridge.A and
-// CanonEdge.From are the bridge's first endpoint. Key leaves it out, since
-// both ends of one bridge share a fan-out entry and a signature identity.
-type EdgeSignature struct {
-	BridgeType       string // participation, relationship, location, place_relationship
-	RoleOrType       string // role or relationship / place-relationship term key
-	NeighborKind     string // person, event, place
-	NeighborTypeTerm string // e.g. birth on an event
-	Directed         bool
-}
-
-// Key is a stable map key for the signature.
-func (s EdgeSignature) Key() string {
-	return s.BridgeType + "|" + s.RoleOrType + "|" + s.NeighborKind + "|" + s.NeighborTypeTerm
-}
-
-// ScaleKey is the signature-scale lookup. A directed signature has one entry
-// per end, the same "|from" / "|to" suffix pairGroup uses. An undirected
-// signature is Key alone.
-func (s EdgeSignature) ScaleKey(fromEnd bool) string {
-	if !s.Directed {
-		return s.Key()
-	}
-	if fromEnd {
-		return s.Key() + "|from"
-	}
-	return s.Key() + "|to"
-}
-
 // Subject is one primary Subject on the Evidence layer.
 type Subject struct {
 	ID         []byte
@@ -54,8 +21,8 @@ type Subject struct {
 
 // Bridge links two primary Subjects on the layer (walked undirected).
 type Bridge struct {
-	A, B      []byte
-	Signature EdgeSignature
+	A, B       []byte
+	KeyA, KeyB vocabkey.BridgeKey // the bridge read from A's end and from B's
 }
 
 // Handle is one canonical entity in the prefetched canon neighborhood.
@@ -68,8 +35,8 @@ type Handle struct {
 
 // CanonEdge is one filed association hop between handles.
 type CanonEdge struct {
-	From, To  []byte
-	Signature EdgeSignature
+	From, To       []byte
+	KeyFrom, KeyTo vocabkey.BridgeKey // the edge read from From's end and from To's
 }
 
 // Layer is one Source's primary Subjects and bridges.
@@ -83,12 +50,6 @@ type Layer struct {
 type Canon struct {
 	Handles []Handle
 	Edges   []CanonEdge
-}
-
-// Stats supplies catalog edge fan-outs.
-type Stats struct {
-	// FanOut[signature.Key()] is the typical neighbor count for that edge.
-	FanOut map[string]float64
 }
 
 // Fixed is a decided or already-promoted row Align holds as given. Target
@@ -137,7 +98,7 @@ type Comparison struct {
 // reached it from an already-decided neighbor.
 type Via struct {
 	NeighborSubjectID []byte
-	Signature         EdgeSignature
+	Key               vocabkey.BridgeKey
 }
 
 // Exhibit is one pin-able observation pair the loader attaches after Align.

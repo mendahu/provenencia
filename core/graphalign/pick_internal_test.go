@@ -24,7 +24,7 @@ func TestPickScoreScoresAMissingPick(t *testing.T) {
 		{ID: []byte("other"), Ref: "B", Kind: "person", Values: vals("weaver")},
 	}}
 	cfg := DefaultConfig()
-	st := newState(layer, canon, Stats{}, nil, cfg)
+	st := newState(layer, canon, nil, cfg)
 
 	same := st.pickScore("s", []byte("same"))
 	if want := st.scoreCandidate([]byte("s"), st.handles["same"]).score; same.score != want || want >= cfg.StrongScore {

@@ -15,6 +15,8 @@ import (
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertycompare/propertycomparetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/segmentcompare"
+	"github.com/mendahu/provenencia/core/segmentcompare/segmentcomparetest"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare/subjectcomparetest"
 	"github.com/mendahu/provenencia/core/subjectprofile"
@@ -83,17 +85,66 @@ func mergeMetas(ms ...subjectcompare.Metas) subjectcompare.Metas {
 	return out
 }
 
-func partSig(role, neighborKind, typeTerm string) graphalign.EdgeSignature {
-	return graphalign.EdgeSignature{
-		BridgeType: "participation", RoleOrType: role,
-		NeighborKind: neighborKind, NeighborTypeTerm: typeTerm,
-	}
+// link is one bridge read from both ends: a is the key at the first end
+// (Bridge.A, CanonEdge.From), b at the second.
+type link struct{ a, b vocabkey.BridgeKey }
+
+func bridge(a, b []byte, l link) graphalign.Bridge {
+	return graphalign.Bridge{A: a, B: b, KeyA: l.a, KeyB: l.b}
 }
 
-func relSig(typ string) graphalign.EdgeSignature {
-	return graphalign.EdgeSignature{
-		BridgeType: "relationship", RoleOrType: typ,
-		NeighborKind: "person",
+func edge(from, to []byte, l link) graphalign.CanonEdge {
+	return graphalign.CanonEdge{From: from, To: to, KeyFrom: l.a, KeyTo: l.b}
+}
+
+// partKeys are a participation read from the person's end and the event's,
+// built through segmentcompare.Key over the seeded terms.
+func partKeys(role vocabkey.BridgeTerm, eventType vocabkey.EventType) (person, event vocabkey.BridgeKey) {
+	terms := segmentcomparetest.Terms()
+	person = segmentcompare.Key(segmentcompare.Link{Type: vocabkey.BridgeParticipation, Term: role,
+		End: vocabkey.PropertyPerson, Other: vocabkey.PropertyEvent, EventType: eventType}, terms)
+	event = segmentcompare.Key(segmentcompare.Link{Type: vocabkey.BridgeParticipation, Term: role,
+		End: vocabkey.PropertyEvent, Other: vocabkey.PropertyPerson, EventType: eventType}, terms)
+	return person, event
+}
+
+// relKeys are a relationship read from the person's end and the related_to
+// end.
+func relKeys(term vocabkey.BridgeTerm) (a, b vocabkey.BridgeKey) {
+	terms := segmentcomparetest.Terms()
+	a = segmentcompare.Key(segmentcompare.Link{Type: vocabkey.BridgeRelationship, Term: term,
+		End: vocabkey.PropertyPerson, Other: vocabkey.PropertyRelatedTo, SameType: true}, terms)
+	b = segmentcompare.Key(segmentcompare.Link{Type: vocabkey.BridgeRelationship, Term: term,
+		End: vocabkey.PropertyRelatedTo, Other: vocabkey.PropertyPerson, SameType: true}, terms)
+	return a, b
+}
+
+// partOfKeys are part_of read from the part's end (from) and the whole's (to).
+func partOfKeys() (part, whole vocabkey.BridgeKey) {
+	terms := segmentcomparetest.Terms()
+	part = segmentcompare.Key(segmentcompare.Link{Type: vocabkey.BridgePlaceRelationship, Term: vocabkey.TermPartOf,
+		End: vocabkey.PropertyFrom, Other: vocabkey.PropertyTo, SameType: true}, terms)
+	whole = segmentcompare.Key(segmentcompare.Link{Type: vocabkey.BridgePlaceRelationship, Term: vocabkey.TermPartOf,
+		End: vocabkey.PropertyTo, Other: vocabkey.PropertyFrom, SameType: true}, terms)
+	return part, whole
+}
+
+func partLink(role vocabkey.BridgeTerm, eventType vocabkey.EventType) link {
+	a, b := partKeys(role, eventType)
+	return link{a, b}
+}
+
+func relLink(term vocabkey.BridgeTerm) link {
+	a, b := relKeys(term)
+	return link{a, b}
+}
+
+// locLink is a location read from the event's end and the place's.
+func locLink() link {
+	terms := segmentcomparetest.Terms()
+	return link{
+		segmentcompare.Key(segmentcompare.Link{Type: vocabkey.BridgeLocation, End: vocabkey.PropertyEvent, Other: vocabkey.PropertyPlace}, terms),
+		segmentcompare.Key(segmentcompare.Link{Type: vocabkey.BridgeLocation, End: vocabkey.PropertyPlace, Other: vocabkey.PropertyEvent}, terms),
 	}
 }
 
@@ -114,14 +165,14 @@ func TestSeedFromAlreadyPromotedNeighbor(t *testing.T) {
 	perH := id("h-person")
 	np, nv := textProp("name", "Gracie")
 	et, etv := termProp("event_type", "birth")
-	sig := partSig("subject", "event", "birth")
+	sig := partLink("subject", "birth")
 
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: evSub, Ref: "EVT-S", Kind: "event", Values: vals(et, etv)},
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: vals(np, nv)},
 		},
-		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
+		Bridges: []graphalign.Bridge{bridge(perSub, evSub, sig)},
 		Metas:   mergeMetas(personMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -129,10 +180,10 @@ func TestSeedFromAlreadyPromotedNeighbor(t *testing.T) {
 			{ID: evH, Ref: "EVT-1", Kind: "event", Values: vals(et, etv)},
 			{ID: perH, Ref: "PER-1", Kind: "person", Values: vals(np, nv)},
 		},
-		Edges: []graphalign.CanonEdge{{From: perH, To: evH, Signature: sig}},
+		Edges: []graphalign.CanonEdge{edge(perH, evH, sig)},
 	}
 	fixed := []graphalign.Fixed{{SubjectID: evSub, HandleID: evH}}
-	p := graphalign.Align(layer, canon, graphalign.Stats{}, fixed, nil)
+	p := graphalign.Align(layer, canon, fixed, nil)
 	row := rowBySubject(p, perSub)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, perH) {
 		t.Fatalf("person from promoted event: %+v", row)
@@ -150,14 +201,14 @@ func TestSeedFromNewlyFixedIntoUnpromoted(t *testing.T) {
 	perH := id("h-person")
 	np, nv := textProp("name", "Gracie")
 	et, etv := termProp("event_type", "birth")
-	sig := partSig("subject", "event", "birth")
+	sig := partLink("subject", "birth")
 
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: evSub, Ref: "EVT-S", Kind: "event", Values: vals(et, etv)},
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: vals(np, nv)},
 		},
-		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
+		Bridges: []graphalign.Bridge{bridge(perSub, evSub, sig)},
 		Metas:   mergeMetas(personMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -165,11 +216,10 @@ func TestSeedFromNewlyFixedIntoUnpromoted(t *testing.T) {
 			{ID: evH, Ref: "EVT-1", Kind: "event", Values: vals(et, etv)},
 			{ID: perH, Ref: "PER-1", Kind: "person", Values: vals(np, nv)},
 		},
-		Edges: []graphalign.CanonEdge{{From: perH, To: evH, Signature: sig}},
+		Edges: []graphalign.CanonEdge{edge(perH, evH, sig)},
 	}
 	fixed := []graphalign.Fixed{{SubjectID: perSub, HandleID: perH}}
-	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
-	p := graphalign.Align(layer, canon, stats, fixed, nil)
+	p := graphalign.Align(layer, canon, fixed, nil)
 	row := rowBySubject(p, evSub)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, evH) {
 		t.Fatalf("event from fixed person: %+v", row)
@@ -181,13 +231,13 @@ func TestBothUnpromotedOnceOneFixed(t *testing.T) {
 	ha, hb := id("h-a"), id("h-b")
 	na, va := textProp("name", "Ann")
 	nb, vb := textProp("name", "Bob")
-	sig := relSig("spouse")
+	sig := relLink("spouse")
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: a, Ref: "PER-A", Kind: "person", Values: vals(na, va)},
 			{ID: b, Ref: "PER-B", Kind: "person", Values: vals(nb, vb)},
 		},
-		Bridges: []graphalign.Bridge{{A: a, B: b, Signature: sig}},
+		Bridges: []graphalign.Bridge{bridge(a, b, sig)},
 		Metas:   personMetas(),
 	}
 	canon := graphalign.Canon{
@@ -195,10 +245,10 @@ func TestBothUnpromotedOnceOneFixed(t *testing.T) {
 			{ID: ha, Ref: "PER-1", Kind: "person", Values: vals(na, va)},
 			{ID: hb, Ref: "PER-2", Kind: "person", Values: vals(nb, vb)},
 		},
-		Edges: []graphalign.CanonEdge{{From: ha, To: hb, Signature: sig}},
+		Edges: []graphalign.CanonEdge{edge(ha, hb, sig)},
 	}
 	fixed := []graphalign.Fixed{{SubjectID: a, HandleID: ha}}
-	p := graphalign.Align(layer, canon, graphalign.Stats{}, fixed, nil)
+	p := graphalign.Align(layer, canon, fixed, nil)
 	if row := rowBySubject(p, b); row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, hb) {
 		t.Fatalf("spouse: %+v", row)
 	}
@@ -209,7 +259,6 @@ func TestOneAgreeingPropertyStaysAWeakMatch(t *testing.T) {
 	orphan := id("s-orphan")
 	known := id("h-known")
 	n, v := textProp("toponym", "York")
-	stats := graphalign.Stats{}
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: orphan, Ref: "PLC-O", Kind: "place", Values: vals(n, v)},
@@ -221,7 +270,7 @@ func TestOneAgreeingPropertyStaysAWeakMatch(t *testing.T) {
 			{ID: known, Ref: "PLC-K", Kind: "place", Values: vals(n, v)},
 		},
 	}
-	row := rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), orphan)
+	row := rowBySubject(graphalign.Align(layer, canon, nil, nil), orphan)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known) ||
 		row.Assessment != graphalign.AssessMedium || row.Reason != graphalign.ReasonAgrees ||
 		row.ReasonProperty != vocabkey.PropertyToponym || math.Abs(row.Score-3) > 1e-9 {
@@ -234,14 +283,14 @@ func TestOneAgreeingPropertyStaysAWeakMatch(t *testing.T) {
 	// Without the toponym scale, the text weight (2) is a weak match.
 	cfg := graphalign.DefaultConfig()
 	cfg.Subject.Weights[vocabkey.Place][vocabkey.PropertyToponym] = subjectcompare.Weights{Agree: 2, Conflict: 3}
-	row = rowBySubject(graphalign.Align(layer, canon, stats, nil, &cfg), orphan)
+	row = rowBySubject(graphalign.Align(layer, canon, nil, &cfg), orphan)
 	if row.Assessment != graphalign.AssessWeak {
 		t.Fatalf("toponym without the registry weight: %+v", row)
 	}
 
 	other, ov := textProp("toponym", "Leeds")
 	canon.Handles[0].Values = vals(other, ov)
-	row = rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), orphan)
+	row = rowBySubject(graphalign.Align(layer, canon, nil, nil), orphan)
 	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
 		t.Fatalf("different toponym should not match: %+v", row)
 	}
@@ -253,7 +302,6 @@ func TestSpellingVariantIsAWeakerTextMatch(t *testing.T) {
 	known := id("h-known")
 	probe, pv := textProp("toponym", "Provenance")
 	canonProp, cv := textProp("toponym", "Provenanced")
-	stats := graphalign.Stats{}
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: orphan, Ref: "PLC-O", Kind: "place", Values: vals(probe, pv)},
@@ -266,7 +314,7 @@ func TestSpellingVariantIsAWeakerTextMatch(t *testing.T) {
 		},
 	}
 	cfg := graphalign.DefaultConfig()
-	row := rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), orphan)
+	row := rowBySubject(graphalign.Align(layer, canon, nil, nil), orphan)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known) ||
 		row.Assessment != graphalign.AssessWeak || row.Reason != graphalign.ReasonAgrees ||
 		row.ReasonProperty != vocabkey.PropertyToponym ||
@@ -290,7 +338,7 @@ func TestSpellingVariantIsAWeakerTextMatch(t *testing.T) {
 	// Without the toponym scale, the text weight × the resemblance stays under weak. The toponym scale is what makes a spelling variant clear the bar.
 	bare := graphalign.DefaultConfig()
 	bare.Subject.Weights[vocabkey.Place][vocabkey.PropertyToponym] = subjectcompare.Weights{Agree: 2, Conflict: 3}
-	row = rowBySubject(graphalign.Align(layer, canon, stats, nil, &bare), orphan)
+	row = rowBySubject(graphalign.Align(layer, canon, nil, &bare), orphan)
 	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
 		t.Fatalf("spelling variant without the registry weight: %+v", row)
 	}
@@ -301,7 +349,7 @@ func TestSpellingVariantIsAWeakerTextMatch(t *testing.T) {
 	layer.Metas = placeMetas()
 	layer.Subjects[0].Values = vals(york, yv)
 	canon.Handles[0].Values = vals(longer, lv)
-	row = rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), orphan)
+	row = rowBySubject(graphalign.Align(layer, canon, nil, nil), orphan)
 	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
 		t.Fatalf("shared word should stay under the bar: %+v", row)
 	}
@@ -323,7 +371,7 @@ func TestOrphanFallsBackToPropertyOnlyOrSkip(t *testing.T) {
 			{ID: known, Ref: "PLC-K", Kind: "place", Values: vals(n, v)},
 		},
 	}
-	p := graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil)
+	p := graphalign.Align(layer, canon, nil, nil)
 	row := rowBySubject(p, orphan)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known) {
 		t.Fatalf("orphan with match: %+v", row)
@@ -343,7 +391,7 @@ func TestOrphanFallsBackToPropertyOnlyOrSkip(t *testing.T) {
 			{ID: known, Ref: "PLC-K", Kind: "place", Values: vals(other, ov)},
 		},
 	}
-	p2 := graphalign.Align(layer2, canon2, graphalign.Stats{}, nil, nil)
+	p2 := graphalign.Align(layer2, canon2, nil, nil)
 	row2 := rowBySubject(p2, weak)
 	if row2.Target == graphalign.TargetHandle {
 		t.Fatalf("weak orphan should not merge: %+v", row2)
@@ -359,13 +407,13 @@ func TestConfigOverrideWithoutEditingRegistry(t *testing.T) {
 	perH := id("h-person")
 	np, nv := textProp("name", "Gracie")
 	et, etv := termProp("event_type", "birth")
-	sig := partSig("subject", "event", "birth")
+	sig := partLink("subject", "birth")
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: evSub, Ref: "EVT-S", Kind: "event", Values: vals(et, etv)},
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: vals(np, nv)},
 		},
-		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
+		Bridges: []graphalign.Bridge{bridge(perSub, evSub, sig)},
 		Metas:   mergeMetas(personMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -373,10 +421,10 @@ func TestConfigOverrideWithoutEditingRegistry(t *testing.T) {
 			{ID: evH, Ref: "EVT-1", Kind: "event", Values: vals(et, etv)},
 			{ID: perH, Ref: "PER-1", Kind: "person", Values: vals(np, nv)},
 		},
-		Edges: []graphalign.CanonEdge{{From: perH, To: evH, Signature: sig}},
+		Edges: []graphalign.CanonEdge{edge(perH, evH, sig)},
 	}
 	fixed := []graphalign.Fixed{{SubjectID: evSub, HandleID: evH}}
-	p := graphalign.Align(layer, canon, graphalign.Stats{}, fixed, &cfg)
+	p := graphalign.Align(layer, canon, fixed, &cfg)
 	row := rowBySubject(p, perSub)
 	// Structure path refused; the fallback may still assign the same person.
 	if row.Target == graphalign.TargetHandle && bytes.Equal(row.HandleID, perH) {
@@ -414,10 +462,10 @@ func TestGracieObituaryGolden(t *testing.T) {
 	top, topV := textProp("toponym", "Medicine Hat")
 	resTop, resV := textProp("toponym", "York Township")
 
-	birthSig := partSig("subject", "event", "birth")
-	deathSig := partSig("subject", "event", "death")
-	burialSig := partSig("subject", "event", "burial")
-	childSig := relSig("parent")
+	birthSig := partLink("subject", "birth")
+	deathSig := partLink("subject", "death")
+	burialSig := partLink("subject", "burial")
+	childSig := relLink("parent")
 
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
@@ -431,11 +479,11 @@ func TestGracieObituaryGolden(t *testing.T) {
 			{ID: medHat, Ref: "PLC-M", Kind: "place", Values: vals(top, topV)},
 		},
 		Bridges: []graphalign.Bridge{
-			{A: gracie, B: birth, Signature: birthSig},
-			{A: gracie, B: death, Signature: deathSig},
-			{A: gracie, B: burial, Signature: burialSig},
-			{A: gracie, B: child1, Signature: childSig},
-			{A: gracie, B: child2, Signature: childSig},
+			bridge(gracie, birth, birthSig),
+			bridge(gracie, death, deathSig),
+			bridge(gracie, burial, burialSig),
+			bridge(gracie, child1, childSig),
+			bridge(gracie, child2, childSig),
 		},
 		Metas: mergeMetas(personMetas(), eventMetas(), placeMetas()),
 	}
@@ -449,24 +497,16 @@ func TestGracieObituaryGolden(t *testing.T) {
 			{ID: hChild2, Ref: "PER-B", Kind: "person", Values: vals(c2n, c2v)},
 		},
 		Edges: []graphalign.CanonEdge{
-			{From: hGracie, To: hBirth, Signature: birthSig},
-			{From: hGracie, To: hDeath, Signature: deathSig},
-			{From: hGracie, To: hBurial, Signature: burialSig},
-			{From: hGracie, To: hChild1, Signature: childSig},
-			{From: hGracie, To: hChild2, Signature: childSig},
-		},
-	}
-	stats := graphalign.Stats{
-		FanOut: map[string]float64{
-			birthSig.Key():  1,
-			deathSig.Key():  1,
-			burialSig.Key(): 1,
-			childSig.Key():  3,
+			edge(hGracie, hBirth, birthSig),
+			edge(hGracie, hDeath, deathSig),
+			edge(hGracie, hBurial, burialSig),
+			edge(hGracie, hChild1, childSig),
+			edge(hGracie, hChild2, childSig),
 		},
 	}
 	fixed := []graphalign.Fixed{{SubjectID: gracie, HandleID: hGracie}}
 
-	p1 := graphalign.Align(layer, canon, stats, fixed, nil)
+	p1 := graphalign.Align(layer, canon, fixed, nil)
 	mustHandle := func(sid, hid []byte) {
 		t.Helper()
 		r := rowBySubject(p1, sid)
@@ -477,7 +517,12 @@ func TestGracieObituaryGolden(t *testing.T) {
 	mustHandle(gracie, hGracie)
 	mustHandle(birth, hBirth)
 	mustHandle(death, hDeath)
-	mustHandle(burial, hBurial)
+	// dogfood: the burial (event type only) is an Other link and no longer
+	// files; revisit when the whole algorithm is dogfooded (Spike 11 matching
+	// dogfood).
+	if r := rowBySubject(p1, burial); r.Target == graphalign.TargetHandle {
+		t.Fatalf("burial: want not a handle, got %+v", r)
+	}
 	mustHandle(child1, hChild1)
 	mustHandle(child2, hChild2)
 
@@ -492,7 +537,7 @@ func TestGracieObituaryGolden(t *testing.T) {
 	}
 
 	// Deterministic re-run.
-	p2 := graphalign.Align(layer, canon, stats, fixed, nil)
+	p2 := graphalign.Align(layer, canon, fixed, nil)
 	if len(p1.Rows) != len(p2.Rows) {
 		t.Fatalf("row count %d vs %d", len(p1.Rows), len(p2.Rows))
 	}
@@ -579,7 +624,7 @@ func TestUnreachableFallbackScoresOnTheWalkScale(t *testing.T) {
 				Metas:    nameMetas(),
 			}
 			canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: tt.handle}}}
-			row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil), s)
+			row := rowBySubject(graphalign.Align(layer, canon, nil, nil), s)
 			if row.Target != tt.wantTarget || row.Assessment != tt.wantAssess || row.Reason != tt.wantReason {
 				t.Fatalf("got %s / %s / %s (score %.2f), want %s / %s / %s", row.Target, row.Assessment, row.Reason, row.Score, tt.wantTarget, tt.wantAssess, tt.wantReason)
 			}
@@ -603,7 +648,7 @@ func TestPartialNamesAreWeak(t *testing.T) {
 		return rowBySubject(graphalign.Align(
 			graphalign.Layer{Subjects: []graphalign.Subject{{ID: s, Ref: "SUB", Kind: "person", Values: probe}}, Metas: nameMetas()},
 			graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: handle}}},
-			graphalign.Stats{}, nil, nil,
+			nil, nil,
 		), s)
 	}
 	james := alignOne(
@@ -664,7 +709,7 @@ func TestPartialNamesAreWeak(t *testing.T) {
 	mismatch := rowBySubject(graphalign.Align(
 		graphalign.Layer{Subjects: []graphalign.Subject{{ID: s, Ref: "SUB", Kind: "person", Values: withSex(probe, "female")}}, Metas: metas},
 		graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: withSex(handle, "male")}}},
-		graphalign.Stats{}, []graphalign.Fixed{{SubjectID: s, HandleID: h}}, nil,
+		[]graphalign.Fixed{{SubjectID: s, HandleID: h}}, nil,
 	), s)
 	if diff := james.Score - mismatch.Score; diff < 0.99 || diff > 1.01 {
 		t.Fatalf("sex mismatch subtracted %.3f, want 1 (name %.3f, with sex %.3f)", diff, james.Score, mismatch.Score)
@@ -721,7 +766,7 @@ func TestSexAgreementAloneStaysUnderWeak(t *testing.T) {
 	row := rowBySubject(graphalign.Align(
 		graphalign.Layer{Subjects: []graphalign.Subject{{ID: s, Ref: "SUB", Kind: "person", Values: male}}, Metas: meta},
 		graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: male}}},
-		graphalign.Stats{}, nil, nil,
+		nil, nil,
 	), s)
 	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
 		t.Fatalf("sex alone published %+v", row)
@@ -761,7 +806,7 @@ func TestContestedHandleIsDecidedTheSameEveryRun(t *testing.T) {
 			}
 			canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: id("h-1"), Ref: "PER-1", Kind: "person", Values: handle}}}
 			for run := 0; run < 50; run++ {
-				p := graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil)
+				p := graphalign.Align(layer, canon, nil, nil)
 				var got []string
 				for _, r := range p.Rows {
 					if r.Target == graphalign.TargetHandle {
@@ -777,26 +822,25 @@ func TestContestedHandleIsDecidedTheSameEveryRun(t *testing.T) {
 }
 
 func TestEdgeSupportCountsTheSeedingNeighborOnce(t *testing.T) {
-	sig := partSig("subject", "event", "birth")
+	sig := partLink("subject", "birth")
 	evSub, perSub, evH, perH := id("s-event"), id("s-person"), id("h-event"), id("h-person")
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: evSub, Ref: "EVT-S", Kind: "event"},
 			{ID: perSub, Ref: "PER-S", Kind: "person"},
 		},
-		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
+		Bridges: []graphalign.Bridge{bridge(perSub, evSub, sig)},
 		Metas:   personMetas(),
 	}
 	canon := graphalign.Canon{
 		Handles: []graphalign.Handle{{ID: evH, Ref: "EVT-1", Kind: "event"}, {ID: perH, Ref: "PER-1", Kind: "person"}},
-		Edges:   []graphalign.CanonEdge{{From: perH, To: evH, Signature: sig}},
+		Edges:   []graphalign.CanonEdge{edge(perH, evH, sig)},
 	}
-	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
 	fixed := []graphalign.Fixed{{SubjectID: evSub, HandleID: evH}}
-	row := rowBySubject(graphalign.Align(layer, canon, stats, fixed, nil), perSub)
+	row := rowBySubject(graphalign.Align(layer, canon, fixed, nil), perSub)
 	cfg := graphalign.DefaultConfig()
-	if row.Score != cfg.EdgeSupportLow {
-		t.Fatalf("score %.2f, want one edge's support %.2f", row.Score, cfg.EdgeSupportLow)
+	if row.Score != cfg.Segment.OneSupport {
+		t.Fatalf("score %.2f, want one edge's support %.2f", row.Score, cfg.Segment.OneSupport)
 	}
 	if row.Target == graphalign.TargetHandle {
 		t.Fatalf("one edge and no shared values should not merge: %+v", row)
@@ -804,14 +848,14 @@ func TestEdgeSupportCountsTheSeedingNeighborOnce(t *testing.T) {
 }
 
 func TestExactNameCreditsTheNeighborOnce(t *testing.T) {
-	sig := partSig("subject", "event", "birth")
+	sig := partLink("subject", "birth")
 	evSub, perSub, evH, perH := id("s-event"), id("s-person"), id("h-event"), id("h-person")
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: evSub, Ref: "EVT-S", Kind: "event"},
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: nameVals("Ann", "Ames")},
 		},
-		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
+		Bridges: []graphalign.Bridge{bridge(perSub, evSub, sig)},
 		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -819,29 +863,28 @@ func TestExactNameCreditsTheNeighborOnce(t *testing.T) {
 			{ID: evH, Ref: "EVT-1", Kind: "event"},
 			{ID: perH, Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
 		},
-		Edges: []graphalign.CanonEdge{{From: perH, To: evH, Signature: sig}},
+		Edges: []graphalign.CanonEdge{edge(perH, evH, sig)},
 	}
-	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
 	fixed := []graphalign.Fixed{{SubjectID: perSub, HandleID: perH}}
-	row := rowBySubject(graphalign.Align(layer, canon, stats, fixed, nil), evSub)
+	row := rowBySubject(graphalign.Align(layer, canon, fixed, nil), evSub)
 	cfg := graphalign.DefaultConfig()
 	name := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree
-	want := cfg.EdgeSupportLow + cfg.NeighborCreditLow*name
+	want := cfg.Segment.OneSupport + cfg.Segment.OneCredit*name
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, evH) ||
 		math.Abs(row.Score-want) > 1e-9 || row.Assessment != graphalign.AssessWeak {
 		t.Fatalf("event %+v, want %s at %.2f", row, evH, want)
 	}
 }
 
-func TestHighFanOutNameCreditStaysUnderTheBar(t *testing.T) {
-	sig := partSig("subject", "event", "residence")
+func TestOtherLinkCreditStaysUnderTheBar(t *testing.T) {
+	sig := partLink("subject", "residence")
 	evSub, perSub, evH, perH := id("s-event"), id("s-person"), id("h-event"), id("h-person")
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: evSub, Ref: "EVT-S", Kind: "event"},
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: nameVals("Ann", "Ames")},
 		},
-		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
+		Bridges: []graphalign.Bridge{bridge(perSub, evSub, sig)},
 		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -849,28 +892,27 @@ func TestHighFanOutNameCreditStaysUnderTheBar(t *testing.T) {
 			{ID: evH, Ref: "EVT-1", Kind: "event"},
 			{ID: perH, Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
 		},
-		Edges: []graphalign.CanonEdge{{From: perH, To: evH, Signature: sig}},
+		Edges: []graphalign.CanonEdge{edge(perH, evH, sig)},
 	}
-	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 3}}
 	fixed := []graphalign.Fixed{{SubjectID: perSub, HandleID: perH}}
-	row := rowBySubject(graphalign.Align(layer, canon, stats, fixed, nil), evSub)
+	row := rowBySubject(graphalign.Align(layer, canon, fixed, nil), evSub)
 	cfg := graphalign.DefaultConfig()
 	name := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree
-	want := cfg.EdgeSupportHigh + cfg.NeighborCreditHigh*name
+	want := cfg.Segment.OtherSupport + cfg.Segment.OtherCredit*name
 	if row.Target == graphalign.TargetHandle || math.Abs(row.Score-want) > 1e-9 || row.Score >= cfg.AcceptScore {
 		t.Fatalf("event %+v, want a suggestion at %.2f", row, want)
 	}
 }
 
 func TestConflictingNeighborLowersTheScore(t *testing.T) {
-	sig := partSig("subject", "event", "birth")
+	sig := partLink("subject", "birth")
 	evSub, perSub, evH, perH := id("s-event"), id("s-person"), id("h-event"), id("h-person")
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: evSub, Ref: "EVT-S", Kind: "event"},
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: nameVals("Mary", "Robins")},
 		},
-		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
+		Bridges: []graphalign.Bridge{bridge(perSub, evSub, sig)},
 		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -878,15 +920,14 @@ func TestConflictingNeighborLowersTheScore(t *testing.T) {
 			{ID: evH, Ref: "EVT-1", Kind: "event"},
 			{ID: perH, Ref: "PER-1", Kind: "person", Values: nameVals("James", "Robins")},
 		},
-		Edges: []graphalign.CanonEdge{{From: perH, To: evH, Signature: sig}},
+		Edges: []graphalign.CanonEdge{edge(perH, evH, sig)},
 	}
-	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
 	fixed := []graphalign.Fixed{{SubjectID: perSub, HandleID: perH}}
-	row := rowBySubject(graphalign.Align(layer, canon, stats, fixed, nil), evSub)
+	row := rowBySubject(graphalign.Align(layer, canon, fixed, nil), evSub)
 	cfg := graphalign.DefaultConfig()
 	penalty := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Conflict
-	want := cfg.EdgeSupportLow + cfg.NeighborCreditLow*(-penalty)
-	if row.Target == graphalign.TargetHandle || math.Abs(row.Score-want) > 1e-9 || row.Score >= cfg.EdgeSupportLow {
+	want := cfg.Segment.OneSupport + cfg.Segment.OneCredit*(-penalty)
+	if row.Target == graphalign.TargetHandle || math.Abs(row.Score-want) > 1e-9 || row.Score >= cfg.Segment.OneSupport {
 		t.Fatalf("event %+v, want %.2f, under one edge's support", row, want)
 	}
 }
@@ -907,8 +948,8 @@ func TestAcceptedPropertyMatchNominatesItsNeighbor(t *testing.T) {
 	// the walk nominates the neighbor. The score counts both edges and a
 	// fraction of each neighbor's name. A canon neighbor on a different
 	// signature is not a suggestion.
-	sig := partSig("subject", "event", "gathering")
-	other := partSig("subject", "event", "other")
+	sig := partLink("subject", "gathering")
+	other := partLink("subject", "other")
 	a, b, mid := id("s-a"), id("s-b"), id("s-mid")
 	ha, hb, hMid, hWrong := id("h-a"), id("h-b"), id("h-mid"), id("h-wrong")
 	et, etv := termProp("event_type", "gathering")
@@ -919,8 +960,8 @@ func TestAcceptedPropertyMatchNominatesItsNeighbor(t *testing.T) {
 			{ID: mid, Ref: "EVT-M", Kind: "event", Values: vals(et, etv)},
 		},
 		Bridges: []graphalign.Bridge{
-			{A: a, B: mid, Signature: sig},
-			{A: b, B: mid, Signature: sig},
+			bridge(a, mid, sig),
+			bridge(b, mid, sig),
 		},
 		Metas: mergeMetas(nameMetas(), eventMetas()),
 	}
@@ -932,18 +973,17 @@ func TestAcceptedPropertyMatchNominatesItsNeighbor(t *testing.T) {
 			{ID: hWrong, Ref: "EVT-9", Kind: "event", Values: vals(et, etv)},
 		},
 		Edges: []graphalign.CanonEdge{
-			{From: ha, To: hMid, Signature: sig},
-			{From: hb, To: hMid, Signature: sig},
-			{From: ha, To: hWrong, Signature: other},
-			{From: hb, To: hWrong, Signature: other},
+			edge(ha, hMid, sig),
+			edge(hb, hMid, sig),
+			edge(ha, hWrong, other),
+			edge(hb, hWrong, other),
 		},
 	}
-	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1, other.Key(): 1}}
-	row := rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), mid)
+	row := rowBySubject(graphalign.Align(layer, canon, nil, nil), mid)
 	cfg := graphalign.DefaultConfig()
 	term := cfg.Subject.Weights[vocabkey.Event][vocabkey.PropertyEventType].Agree
 	name := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree
-	want := term + 2*(cfg.EdgeSupportLow+cfg.NeighborCreditLow*name)
+	want := term + 2*(cfg.Segment.OtherSupport+cfg.Segment.OtherCredit*name)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, hMid) ||
 		math.Abs(row.Score-want) > 1e-9 || hasAlt(row, hWrong) {
 		t.Fatalf("nominated neighbor %+v, want %s at %.4f", row, hMid, want)
@@ -954,7 +994,7 @@ func TestCandidateLoserDoesNotNominate(t *testing.T) {
 	// The exact name wins the row. Anne is still a candidate, and only that
 	// handle bridges to the third subject. Walking the loser would nominate
 	// it; walking the winner must not.
-	sig := partSig("subject", "event", "gathering")
+	sig := partLink("subject", "gathering")
 	person, mid := id("s-person"), id("s-mid")
 	win, lose, hMid := id("h-win"), id("h-lose"), id("h-mid")
 	et, etv := termProp("event_type", "gathering")
@@ -965,7 +1005,7 @@ func TestCandidateLoserDoesNotNominate(t *testing.T) {
 			{ID: person, Ref: "PER-A", Kind: "person", Values: nameVals("Ann", "Ames")},
 			{ID: mid, Ref: "EVT-M", Kind: "event", Values: vals(et, etv)},
 		},
-		Bridges: []graphalign.Bridge{{A: person, B: mid, Signature: sig}},
+		Bridges: []graphalign.Bridge{bridge(person, mid, sig)},
 		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -974,9 +1014,9 @@ func TestCandidateLoserDoesNotNominate(t *testing.T) {
 			{ID: lose, Ref: "PER-9", Kind: "person", Values: lesser},
 			{ID: hMid, Ref: "EVT-1", Kind: "event", Values: vals(et, etv)},
 		},
-		Edges: []graphalign.CanonEdge{{From: lose, To: hMid, Signature: sig}},
+		Edges: []graphalign.CanonEdge{edge(lose, hMid, sig)},
 	}
-	p := graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil)
+	p := graphalign.Align(layer, canon, nil, nil)
 	personRow := rowBySubject(p, person)
 	if personRow.Target != graphalign.TargetHandle || !bytes.Equal(personRow.HandleID, win) || !hasAlt(personRow, lose) {
 		t.Fatalf("winner %+v, want %s with %s still suggested", personRow, win, lose)
@@ -993,37 +1033,36 @@ func TestNeighborCreditStopsAtOneHop(t *testing.T) {
 	// nominates the subject beyond it. The far subject gets only the
 	// structural bonus: the middle has no properties, and the name does
 	// not travel a second hop.
-	sig := relSig("kin")
+	birth, loc := partLink("subject", "birth"), locLink()
 	person, mid, far := id("s-person"), id("s-mid"), id("s-far")
 	hp, hm, hf := id("h-person"), id("h-mid"), id("h-far")
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: person, Ref: "PER-A", Kind: "person", Values: nameVals("Ann", "Ames")},
-			{ID: mid, Ref: "PER-M", Kind: "person"},
-			{ID: far, Ref: "PER-F", Kind: "person"},
+			{ID: mid, Ref: "EVT-M", Kind: "event"},
+			{ID: far, Ref: "PLC-F", Kind: "place"},
 		},
 		Bridges: []graphalign.Bridge{
-			{A: person, B: mid, Signature: sig},
-			{A: mid, B: far, Signature: sig},
+			bridge(person, mid, birth),
+			bridge(mid, far, loc),
 		},
-		Metas: nameMetas(),
+		Metas: mergeMetas(nameMetas(), eventMetas(), placeMetas()),
 	}
 	canon := graphalign.Canon{
 		Handles: []graphalign.Handle{
 			{ID: hp, Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
-			{ID: hm, Ref: "PER-2", Kind: "person"},
-			{ID: hf, Ref: "PER-3", Kind: "person"},
+			{ID: hm, Ref: "EVT-2", Kind: "event"},
+			{ID: hf, Ref: "PLC-3", Kind: "place"},
 		},
 		Edges: []graphalign.CanonEdge{
-			{From: hp, To: hm, Signature: sig},
-			{From: hm, To: hf, Signature: sig},
+			edge(hp, hm, birth),
+			edge(hm, hf, loc),
 		},
 	}
-	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
-	p := graphalign.Align(layer, canon, stats, nil, nil)
+	p := graphalign.Align(layer, canon, nil, nil)
 	cfg := graphalign.DefaultConfig()
 	name := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree
-	midWant := cfg.EdgeSupportLow + cfg.NeighborCreditLow*name
+	midWant := cfg.Segment.OneSupport + cfg.Segment.OneCredit*name
 	midRow := rowBySubject(p, mid)
 	if midRow.Target != graphalign.TargetHandle || !bytes.Equal(midRow.HandleID, hm) ||
 		math.Abs(midRow.Score-midWant) > 1e-9 {
@@ -1031,13 +1070,13 @@ func TestNeighborCreditStopsAtOneHop(t *testing.T) {
 	}
 	farRow := rowBySubject(p, far)
 	if farRow.Target == graphalign.TargetHandle || !hasAlt(farRow, hf) ||
-		math.Abs(farRow.Score-cfg.EdgeSupportLow) > 1e-9 || farRow.Score >= cfg.AcceptScore {
-		t.Fatalf("far hop %+v, want %s suggested at %.2f", farRow, hf, cfg.EdgeSupportLow)
+		math.Abs(farRow.Score-cfg.Segment.OtherSupport) > 1e-9 || farRow.Score >= cfg.AcceptScore {
+		t.Fatalf("far hop %+v, want %s suggested at %.2f", farRow, hf, cfg.Segment.OtherSupport)
 	}
 }
 
 func TestHeldNewAndSkipDecisions(t *testing.T) {
-	sig := relSig("spouse")
+	sig := relLink("spouse")
 	tests := []struct {
 		name  string
 		hold  graphalign.Target
@@ -1080,8 +1119,8 @@ func TestHeldNewAndSkipDecisions(t *testing.T) {
 					{ID: id("s-z"), Ref: "PER-Z", Kind: "person"},
 				},
 				Bridges: []graphalign.Bridge{
-					{A: id("s-a"), B: id("s-x"), Signature: sig},
-					{A: id("s-x"), B: id("s-z"), Signature: sig},
+					bridge(id("s-a"), id("s-x"), sig),
+					bridge(id("s-x"), id("s-z"), sig),
 				},
 				Metas: nameMetas(),
 			}
@@ -1092,28 +1131,28 @@ func TestHeldNewAndSkipDecisions(t *testing.T) {
 					{ID: id("h-z"), Ref: "PER-3", Kind: "person"},
 				},
 				Edges: []graphalign.CanonEdge{
-					{From: id("h-a"), To: id("h-x"), Signature: sig},
-					{From: id("h-x"), To: id("h-z"), Signature: sig},
+					edge(id("h-a"), id("h-x"), sig),
+					edge(id("h-x"), id("h-z"), sig),
 				},
 			}
 			fixed := []graphalign.Fixed{
 				{SubjectID: id("s-a"), HandleID: id("h-a")},
 				{SubjectID: id("s-x"), Target: tt.hold},
 			}
-			tt.check(t, graphalign.Align(layer, canon, graphalign.Stats{}, fixed, nil))
+			tt.check(t, graphalign.Align(layer, canon, fixed, nil))
 		})
 	}
 }
 
 func TestDecidedRowTheNeighborsContradict(t *testing.T) {
-	sig := partSig("subject", "event", "birth")
+	sig := partLink("subject", "birth")
 	et, etv := termProp("event_type", "birth")
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: id("s-person"), Ref: "PER-S", Kind: "person", Values: nameVals("Gracie", "Gates")},
 			{ID: id("s-birth"), Ref: "EVT-S", Kind: "event", Values: vals(et, etv)},
 		},
-		Bridges: []graphalign.Bridge{{A: id("s-person"), B: id("s-birth"), Signature: sig}},
+		Bridges: []graphalign.Bridge{bridge(id("s-person"), id("s-birth"), sig)},
 		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -1122,13 +1161,13 @@ func TestDecidedRowTheNeighborsContradict(t *testing.T) {
 			{ID: id("h-gracie"), Ref: "PER-2", Kind: "person", Values: nameVals("Gracie", "Gates")},
 			{ID: id("h-birth"), Ref: "EVT-1", Kind: "event", Values: vals(et, etv)},
 		},
-		Edges: []graphalign.CanonEdge{{From: id("h-gracie"), To: id("h-birth"), Signature: sig}},
+		Edges: []graphalign.CanonEdge{edge(id("h-gracie"), id("h-birth"), sig)},
 	}
 	fixed := []graphalign.Fixed{
 		{SubjectID: id("s-person"), HandleID: id("h-chosen")},
 		{SubjectID: id("s-birth"), HandleID: id("h-birth")},
 	}
-	row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, fixed, nil), id("s-person"))
+	row := rowBySubject(graphalign.Align(layer, canon, fixed, nil), id("s-person"))
 	if !bytes.Equal(row.HandleID, id("h-chosen")) {
 		t.Fatalf("decided row moved: %+v", row)
 	}
@@ -1169,7 +1208,7 @@ func TestPossibleDuplicates(t *testing.T) {
 				},
 				Metas: nameMetas(),
 			}
-			p := graphalign.Align(layer, graphalign.Canon{Handles: tt.handles}, graphalign.Stats{}, nil, nil)
+			p := graphalign.Align(layer, graphalign.Canon{Handles: tt.handles}, nil, nil)
 			for _, r := range p.Rows {
 				want, flagged := tt.want[string(r.SubjectID)]
 				if r.Flags.PossibleDuplicate != flagged || string(r.Flags.DuplicateOf) != want {
@@ -1184,8 +1223,8 @@ func TestPossibleDuplicates(t *testing.T) {
 }
 
 func TestNewEventsDisagreeWhenTheirParticipantsDo(t *testing.T) {
-	part := partSig("subject", "person", "")
-	place := graphalign.EdgeSignature{BridgeType: "location", RoleOrType: "took_place_in", NeighborKind: "place"}
+	part := partLink("subject", "")
+	place := locLink()
 	et, residence := termProp("event_type", "residence")
 	dp, dv := dateProp(1850)
 	hatP, hatV := textProp("toponym", "Medicine Hat")
@@ -1209,16 +1248,16 @@ func TestNewEventsDisagreeWhenTheirParticipantsDo(t *testing.T) {
 		{
 			name: "different participants",
 			bridges: []graphalign.Bridge{
-				{A: id("p-paty"), B: id("e-a"), Signature: part},
-				{A: id("p-sandra"), B: id("e-b"), Signature: part},
+				bridge(id("p-paty"), id("e-a"), part),
+				bridge(id("p-sandra"), id("e-b"), part),
 			},
 			subjects: base,
 		},
 		{
 			name: "the same participant",
 			bridges: []graphalign.Bridge{
-				{A: id("p-paty"), B: id("e-a"), Signature: part},
-				{A: id("p-paty"), B: id("e-b"), Signature: part},
+				bridge(id("p-paty"), id("e-a"), part),
+				bridge(id("p-paty"), id("e-b"), part),
 			},
 			subjects: base,
 			dup:      true,
@@ -1227,10 +1266,10 @@ func TestNewEventsDisagreeWhenTheirParticipantsDo(t *testing.T) {
 		{
 			name: "the same participant and different places",
 			bridges: []graphalign.Bridge{
-				{A: id("p-paty"), B: id("e-a"), Signature: part},
-				{A: id("p-paty"), B: id("e-b"), Signature: part},
-				{A: id("e-a"), B: id("l-hat"), Signature: place},
-				{A: id("e-b"), B: id("l-calgary"), Signature: place},
+				bridge(id("p-paty"), id("e-a"), part),
+				bridge(id("p-paty"), id("e-b"), part),
+				bridge(id("e-a"), id("l-hat"), place),
+				bridge(id("e-b"), id("l-calgary"), place),
 			},
 			subjects: append(append([]graphalign.Subject{}, base...), places...),
 		},
@@ -1242,7 +1281,7 @@ func TestNewEventsDisagreeWhenTheirParticipantsDo(t *testing.T) {
 				Bridges:  tt.bridges,
 				Metas:    mergeMetas(nameMetas(), eventMetas(), placeMetas()),
 			}
-			p := graphalign.Align(layer, graphalign.Canon{}, graphalign.Stats{}, nil, nil)
+			p := graphalign.Align(layer, graphalign.Canon{}, nil, nil)
 			for _, sub := range []string{"e-a", "e-b"} {
 				row := rowBySubject(p, id(sub))
 				if row.Flags.PossibleDuplicate != tt.dup {
@@ -1255,7 +1294,7 @@ func TestNewEventsDisagreeWhenTheirParticipantsDo(t *testing.T) {
 
 func TestRowReasons(t *testing.T) {
 	nameKey := vocabkey.PropertyKey(vocabkey.PropertyName)
-	sig := relSig("spouse")
+	sig := relLink("spouse")
 	tests := []struct {
 		name     string
 		layer    []graphalign.Subject
@@ -1283,8 +1322,8 @@ func TestRowReasons(t *testing.T) {
 				{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
 				{ID: id("h-e"), Ref: "EVT-1", Kind: "event", Values: vals(termProp("event_type", "residence"))},
 			},
-			bridges: []graphalign.Bridge{{A: id("s-a"), B: id("s-e"), Signature: partSig("subject", "event", "residence")}},
-			edges:   []graphalign.CanonEdge{{From: id("h-a"), To: id("h-e"), Signature: partSig("subject", "event", "residence")}},
+			bridges: []graphalign.Bridge{bridge(id("s-a"), id("s-e"), partLink("subject", "residence"))},
+			edges:   []graphalign.CanonEdge{edge(id("h-a"), id("h-e"), partLink("subject", "residence"))},
 			fixed:   []graphalign.Fixed{{SubjectID: id("s-a"), HandleID: id("h-a")}},
 			subject: "s-e", want: graphalign.ReasonWeak,
 		},
@@ -1314,8 +1353,8 @@ func TestRowReasons(t *testing.T) {
 				{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
 				{ID: id("h-b"), Ref: "PER-2", Kind: "person", Values: nameVals("Bob", "Ames")},
 			},
-			bridges: []graphalign.Bridge{{A: id("s-a"), B: id("s-b"), Signature: sig}},
-			edges:   []graphalign.CanonEdge{{From: id("h-a"), To: id("h-b"), Signature: sig}},
+			bridges: []graphalign.Bridge{bridge(id("s-a"), id("s-b"), sig)},
+			edges:   []graphalign.CanonEdge{edge(id("h-a"), id("h-b"), sig)},
 			fixed:   []graphalign.Fixed{{SubjectID: id("s-a"), HandleID: id("h-a")}},
 			subject: "s-b", want: graphalign.ReasonVia,
 		},
@@ -1330,7 +1369,7 @@ func TestRowReasons(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			layer := graphalign.Layer{Subjects: tt.layer, Bridges: tt.bridges, Metas: mergeMetas(nameMetas(), eventMetas())}
 			canon := graphalign.Canon{Handles: tt.handles, Edges: tt.edges}
-			row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, tt.fixed, nil), id(tt.subject))
+			row := rowBySubject(graphalign.Align(layer, canon, tt.fixed, nil), id(tt.subject))
 			if row.Reason != tt.want || row.ReasonProperty != tt.wantProp {
 				t.Fatalf("reason %q / %+v, want %q / %+v", row.Reason, row.ReasonProperty, tt.want, tt.wantProp)
 			}
@@ -1338,15 +1377,13 @@ func TestRowReasons(t *testing.T) {
 	}
 }
 
-func partOfSig() graphalign.EdgeSignature {
-	return graphalign.EdgeSignature{
-		BridgeType: "place_relationship", RoleOrType: "part_of",
-		NeighborKind: "place", Directed: true,
-	}
+func partOfLink() link {
+	a, b := partOfKeys()
+	return link{a, b}
 }
 
 func TestPartOfChainIsStrongWithoutADecision(t *testing.T) {
-	sig := partOfSig()
+	sig := partOfLink()
 	city, state, country := id("s-city"), id("s-state"), id("s-country")
 	hCity, hState, hCountry := id("h-city"), id("h-state"), id("h-country")
 	cn, cv := textProp("toponym", "Gumptiontown")
@@ -1359,8 +1396,8 @@ func TestPartOfChainIsStrongWithoutADecision(t *testing.T) {
 			{ID: country, Ref: "CPL-U", Kind: "place", Values: vals(un, uv)},
 		},
 		Bridges: []graphalign.Bridge{
-			{A: city, B: state, Signature: sig},
-			{A: state, B: country, Signature: sig},
+			bridge(city, state, sig),
+			bridge(state, country, sig),
 		},
 		Metas: placeMetas(),
 	}
@@ -1371,12 +1408,11 @@ func TestPartOfChainIsStrongWithoutADecision(t *testing.T) {
 			{ID: hCountry, Ref: "PLC-U", Kind: "place", Values: vals(un, uv)},
 		},
 		Edges: []graphalign.CanonEdge{
-			{From: hCity, To: hState, Signature: sig},
-			{From: hState, To: hCountry, Signature: sig},
+			edge(hCity, hState, sig),
+			edge(hState, hCountry, sig),
 		},
 	}
-	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
-	p := graphalign.Align(layer, canon, stats, nil, nil)
+	p := graphalign.Align(layer, canon, nil, nil)
 	cfg := graphalign.DefaultConfig()
 	for _, pair := range []struct{ sub, handle []byte }{
 		{city, hCity}, {state, hState}, {country, hCountry},
@@ -1390,48 +1426,11 @@ func TestPartOfChainIsStrongWithoutADecision(t *testing.T) {
 	}
 }
 
-func TestEdgePointsHonorsTheSignatureScale(t *testing.T) {
-	cfg := graphalign.DefaultConfig()
-	support := graphalign.EdgeFact{FanOut: 1, NeighborNode: 4, MinNode: 2}
-	if got := graphalign.EdgePoints([]graphalign.EdgeFact{support}, 0, cfg); got != 0 {
-		t.Fatalf("below MinNode: %.2f, want 0", got)
-	}
-	want := cfg.EdgeSupportLow + cfg.NeighborCreditLow*4
-	if got := graphalign.EdgePoints([]graphalign.EdgeFact{support}, 3, cfg); math.Abs(got-want) > 1e-9 {
-		t.Fatalf("at MinNode: %.2f, want %.2f", got, want)
-	}
-	mismatch := graphalign.EdgeFact{Mismatch: true, ConflictFactor: 1}
-	if got := graphalign.EdgePoints([]graphalign.EdgeFact{mismatch}, 3, cfg); math.Abs(got-(-3)) > 1e-9 {
-		t.Fatalf("mismatch: %.2f, want -3", got)
-	}
-	plain := graphalign.EdgeFact{FanOut: 1, NeighborNode: 4}
-	if got := graphalign.EdgePoints([]graphalign.EdgeFact{plain}, 0, cfg); math.Abs(got-want) > 1e-9 {
-		t.Fatalf("zero scale: %.2f, want %.2f", got, want)
-	}
-	silent := graphalign.EdgeFact{Mismatch: true}
-	if got := graphalign.EdgePoints([]graphalign.EdgeFact{silent}, 3, cfg); got != 0 {
-		t.Fatalf("zero conflict factor: %.2f, want 0", got)
-	}
-}
-
-func TestDefaultPartOfScale(t *testing.T) {
-	cfg := graphalign.DefaultConfig()
-	sig := partOfSig()
-	from, ok := cfg.SignatureScale[sig.ScaleKey(true)]
-	if !ok || from.MinNode != 2 || from.ConflictFactor != 1 {
-		t.Fatalf("part end %+v present=%v", from, ok)
-	}
-	to, ok := cfg.SignatureScale[sig.ScaleKey(false)]
-	if !ok || to.MinNode != 2 || to.ConflictFactor != 0 {
-		t.Fatalf("whole end %+v present=%v", to, ok)
-	}
-}
-
 func TestPartOfDoesNotFileADifferentToponym(t *testing.T) {
 	// Calgary and Edmonton are both part of Alberta. The shared parent must
 	// not file Calgary onto Edmonton: a different toponym adds nothing, and
 	// part_of only reinforces a property score that already cleared the bar.
-	sig := partOfSig()
+	sig := partOfLink()
 	child, parent := id("s-calgary"), id("s-alberta")
 	hSibling, hParent := id("h-edmonton"), id("h-alberta")
 	cn, cv := textProp("toponym", "Calgary")
@@ -1442,7 +1441,7 @@ func TestPartOfDoesNotFileADifferentToponym(t *testing.T) {
 			{ID: child, Ref: "CPL-C", Kind: "place", Values: vals(cn, cv)},
 			{ID: parent, Ref: "CPL-A", Kind: "place", Values: vals(pn, pv)},
 		},
-		Bridges: []graphalign.Bridge{{A: child, B: parent, Signature: sig}},
+		Bridges: []graphalign.Bridge{bridge(child, parent, sig)},
 		Metas: subjectcompare.Metas{cn: {
 			ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalityMultiple,
 		}},
@@ -1452,11 +1451,10 @@ func TestPartOfDoesNotFileADifferentToponym(t *testing.T) {
 			{ID: hSibling, Ref: "PLC-E", Kind: "place", Values: vals(sn, sv)},
 			{ID: hParent, Ref: "PLC-A", Kind: "place", Values: vals(pn, pv)},
 		},
-		Edges: []graphalign.CanonEdge{{From: hSibling, To: hParent, Signature: sig}},
+		Edges: []graphalign.CanonEdge{edge(hSibling, hParent, sig)},
 	}
-	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
 	fixed := []graphalign.Fixed{{SubjectID: parent, HandleID: hParent}}
-	row := rowBySubject(graphalign.Align(layer, canon, stats, fixed, nil), child)
+	row := rowBySubject(graphalign.Align(layer, canon, fixed, nil), child)
 	cfg := graphalign.DefaultConfig()
 	if row.Target == graphalign.TargetHandle || bytes.Equal(row.HandleID, hSibling) || row.Score >= cfg.AcceptScore {
 		t.Fatalf("calgary %+v, want it off Edmonton", row)
@@ -1467,7 +1465,7 @@ func TestPartOfBreaksASharedToponym(t *testing.T) {
 	// Both Springfields score the same on the name. PLC-A sorts first, and
 	// it is the one whose parent is not Illinois. The part-of link has to
 	// move the row onto PLC-Z.
-	sig := partOfSig()
+	sig := partOfLink()
 	spring, ill := id("s-spring"), id("s-ill")
 	hWrong, hRight := id("h-wrong"), id("h-right")
 	hIll, hOhio := id("h-ill"), id("h-ohio")
@@ -1479,7 +1477,7 @@ func TestPartOfBreaksASharedToponym(t *testing.T) {
 			{ID: spring, Ref: "CPL-S", Kind: "place", Values: vals(sn, sv)},
 			{ID: ill, Ref: "CPL-I", Kind: "place", Values: vals(in, iv)},
 		},
-		Bridges: []graphalign.Bridge{{A: spring, B: ill, Signature: sig}},
+		Bridges: []graphalign.Bridge{bridge(spring, ill, sig)},
 		Metas:   placeMetas(),
 	}
 	canon := graphalign.Canon{
@@ -1490,12 +1488,11 @@ func TestPartOfBreaksASharedToponym(t *testing.T) {
 			{ID: hOhio, Ref: "PLC-O", Kind: "place", Values: vals(on, ov)},
 		},
 		Edges: []graphalign.CanonEdge{
-			{From: hWrong, To: hOhio, Signature: sig},
-			{From: hRight, To: hIll, Signature: sig},
+			edge(hWrong, hOhio, sig),
+			edge(hRight, hIll, sig),
 		},
 	}
-	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
-	p := graphalign.Align(layer, canon, stats, nil, nil)
+	p := graphalign.Align(layer, canon, nil, nil)
 	cfg := graphalign.DefaultConfig()
 	got := rowBySubject(p, spring)
 	if got.Target != graphalign.TargetHandle || !bytes.Equal(got.HandleID, hRight) ||
@@ -1521,25 +1518,25 @@ func TestPartOfBreaksASharedToponym(t *testing.T) {
 
 func TestDirectedRelationshipsMatchFromTheSameEnd(t *testing.T) {
 	tests := []struct {
-		name     string
-		directed bool
-		want     string
+		name string
+		term vocabkey.BridgeTerm
+		want string
 	}{
 		// PER-0 is the anchor's parent, PER-9 its child; Bob is the anchor's
-		// child. Undirected, the tie goes to the first ref (the parent).
-		{name: "a symmetric term reaches either end", directed: false, want: "h-parent"},
-		{name: "a directed term reaches only the same end", directed: true, want: "h-child"},
+		// child. A symmetric term, the tie goes to the first ref (the
+		// parent).
+		{name: "a symmetric term reaches either end", term: "spouse", want: "h-parent"},
+		{name: "a directed term reaches only the same end", term: "parent", want: "h-child"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sig := relSig("parent_of")
-			sig.Directed = tt.directed
+			l := relLink(tt.term)
 			layer := graphalign.Layer{
 				Subjects: []graphalign.Subject{
 					{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")},
 					{ID: id("s-b"), Ref: "B", Kind: "person", Values: nameVals("Bob", "Ames")},
 				},
-				Bridges: []graphalign.Bridge{{A: id("s-a"), B: id("s-b"), Signature: sig}}, // Ann parent_of Bob
+				Bridges: []graphalign.Bridge{bridge(id("s-a"), id("s-b"), l)}, // Ann is Bob's term
 				Metas:   nameMetas(),
 			}
 			canon := graphalign.Canon{
@@ -1549,12 +1546,12 @@ func TestDirectedRelationshipsMatchFromTheSameEnd(t *testing.T) {
 					{ID: id("h-child"), Ref: "PER-9", Kind: "person", Values: nameVals("Bob", "Ames")},
 				},
 				Edges: []graphalign.CanonEdge{
-					{From: id("h-parent"), To: id("h-a"), Signature: sig}, // PER-0 parent_of Ann
-					{From: id("h-a"), To: id("h-child"), Signature: sig},  // Ann parent_of PER-9
+					edge(id("h-parent"), id("h-a"), l), // PER-0 is Ann's term
+					edge(id("h-a"), id("h-child"), l),  // Ann is PER-9's term
 				},
 			}
 			fixed := []graphalign.Fixed{{SubjectID: id("s-a"), HandleID: id("h-a")}}
-			row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, fixed, nil), id("s-b"))
+			row := rowBySubject(graphalign.Align(layer, canon, fixed, nil), id("s-b"))
 			if row.Target != graphalign.TargetHandle || string(row.HandleID) != tt.want || row.Reason != graphalign.ReasonVia {
 				t.Fatalf("got %s %q (%s), want %q via the anchor", row.Target, row.HandleID, row.Reason, tt.want)
 			}
@@ -1579,7 +1576,7 @@ func TestRefinementDropsSupportFromAMovedNeighbor(t *testing.T) {
 	_, male := termProp("sex_at_birth", "male")
 	fem, mal := vals(sp, female), vals(sp, male)
 	metas := mergeMetas(nameMetas(), metasOf(map[vocabkey.PropertyKey]string{vocabkey.PropertySexAtBirth: propertymeta.ValueTypeTerm}))
-	spouse, sibling := relSig("spouse"), relSig("sibling")
+	spouse, sibling := relLink("spouse"), relLink("sibling")
 
 	ann, husband, carl, dora := id("s-ann"), id("s-husband"), id("s-carl"), id("s-dora")
 	annA, annB, bob, hCarl, hDora := id("h-ann-a"), id("h-ann-b"), id("h-bob"), id("h-carl"), id("h-dora")
@@ -1591,9 +1588,9 @@ func TestRefinementDropsSupportFromAMovedNeighbor(t *testing.T) {
 			{ID: dora, Ref: "S-DORA", Kind: "person", Values: nameVals("Dora", "Lee")},
 		},
 		Bridges: []graphalign.Bridge{
-			{A: ann, B: husband, Signature: spouse},
-			{A: ann, B: carl, Signature: sibling},
-			{A: ann, B: dora, Signature: sibling},
+			bridge(ann, husband, spouse),
+			bridge(ann, carl, sibling),
+			bridge(ann, dora, sibling),
 		},
 		Metas: metas,
 	}
@@ -1608,13 +1605,12 @@ func TestRefinementDropsSupportFromAMovedNeighbor(t *testing.T) {
 			{ID: hDora, Ref: "E", Kind: "person", Values: nameVals("Dora", "Lee")},
 		},
 		Edges: []graphalign.CanonEdge{
-			{From: annA, To: bob, Signature: spouse},
-			{From: annB, To: hCarl, Signature: sibling},
-			{From: annB, To: hDora, Signature: sibling},
+			edge(annA, bob, spouse),
+			edge(annB, hCarl, sibling),
+			edge(annB, hDora, sibling),
 		},
 	}
-	stats := graphalign.Stats{FanOut: map[string]float64{spouse.Key(): 1, sibling.Key(): 1}}
-	p := graphalign.Align(layer, canon, stats, nil, nil)
+	p := graphalign.Align(layer, canon, nil, nil)
 
 	if r := rowBySubject(p, ann); !bytes.Equal(r.HandleID, annB) {
 		t.Fatalf("Ann on %s, want the Ann with Carl and Dora", r.HandleID)
@@ -1635,8 +1631,7 @@ func TestRefinementDropsSupportFromAMovedNeighbor(t *testing.T) {
 // his father: those neighbors play different roles, so they neither confirm
 // nor rule out the pair, and the duplicate warning stands on the names.
 func TestNewDuplicateCheckComparesDirectedNeighborsByEnd(t *testing.T) {
-	parent := relSig("parent")
-	parent.Directed = true
+	parent := relLink("parent")
 	a, b, son, father := id("s-a"), id("s-b"), id("s-son"), id("s-father")
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
@@ -1646,12 +1641,12 @@ func TestNewDuplicateCheckComparesDirectedNeighborsByEnd(t *testing.T) {
 			{ID: father, Ref: "S-FATHER", Kind: "person", Values: nameVals("William", "Smith")},
 		},
 		Bridges: []graphalign.Bridge{
-			{A: a, B: son, Signature: parent},    // a is the son's parent
-			{A: father, B: b, Signature: parent}, // b is the father's child
+			bridge(a, son, parent),    // a is the son's parent
+			bridge(father, b, parent), // b is the father's child
 		},
 		Metas: nameMetas(),
 	}
-	p := graphalign.Align(layer, graphalign.Canon{}, graphalign.Stats{}, nil, nil)
+	p := graphalign.Align(layer, graphalign.Canon{}, nil, nil)
 	for _, sid := range [][]byte{a, b} {
 		r := rowBySubject(p, sid)
 		if r.Target != graphalign.TargetNew || !r.Flags.PossibleDuplicate {
@@ -1661,8 +1656,8 @@ func TestNewDuplicateCheckComparesDirectedNeighborsByEnd(t *testing.T) {
 
 	// The same end still rules a pair out: two Johns whose sons differ.
 	layer.Subjects[3] = graphalign.Subject{ID: father, Ref: "S-OTHERSON", Kind: "person", Values: nameVals("William", "Smith")}
-	layer.Bridges[1] = graphalign.Bridge{A: b, B: father, Signature: parent} // b is William's parent
-	p = graphalign.Align(layer, graphalign.Canon{}, graphalign.Stats{}, nil, nil)
+	layer.Bridges[1] = bridge(b, father, parent) // b is William's parent
+	p = graphalign.Align(layer, graphalign.Canon{}, nil, nil)
 	if r := rowBySubject(p, a); r.Flags.PossibleDuplicate {
 		t.Fatalf("Johns with different sons still flagged as one")
 	}
@@ -1688,7 +1683,7 @@ func TestUnknownSexIsNoEvidence(t *testing.T) {
 	canon := graphalign.Canon{Handles: []graphalign.Handle{
 		{ID: h, Ref: "PER-1", Kind: "person", Values: merge(nameVals("John", "Smith"), vals(sp, male))},
 	}}
-	r := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil), s)
+	r := rowBySubject(graphalign.Align(layer, canon, nil, nil), s)
 	if r.Target != graphalign.TargetHandle || !bytes.Equal(r.HandleID, h) {
 		t.Fatalf("target=%s score=%.2f, want John's handle", r.Target, r.Score)
 	}
@@ -1706,14 +1701,14 @@ func TestSparseNameAndBirthDate(t *testing.T) {
 	year := func(y int) propertycompare.Value { return propertycomparetest.Date(datevaluetest.YMD(y, 0, 0)) }
 	et, birth := termProp("event_type", "birth")
 	metas := mergeMetas(nameMetas(), eventMetas())
-	sig := partSig("subject", "event", "birth")
+	sig := partLink("subject", "birth")
 	per, ev := id("s-person"), id("s-event")
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: per, Ref: "PER-S", Kind: "person", Values: nameVals("Ann", "Ames")},
 			{ID: ev, Ref: "EVT-S", Kind: "event", Values: vals(et, birth, date, year(1817))},
 		},
-		Bridges: []graphalign.Bridge{{A: per, B: ev, Signature: sig}},
+		Bridges: []graphalign.Bridge{bridge(per, ev, sig)},
 		Metas:   metas,
 	}
 	p1, e1, p2, e2 := id("h-person-1"), id("h-event-1"), id("h-person-2"), id("h-event-2")
@@ -1725,12 +1720,11 @@ func TestSparseNameAndBirthDate(t *testing.T) {
 			{ID: e2, Ref: "EVT-2", Kind: "event", Values: vals(et, birth, date, year(1830))},
 		},
 		Edges: []graphalign.CanonEdge{
-			{From: p1, To: e1, Signature: sig},
-			{From: p2, To: e2, Signature: sig},
+			edge(p1, e1, sig),
+			edge(p2, e2, sig),
 		},
 	}
-	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
-	p := graphalign.Align(layer, canon, stats, nil, nil)
+	p := graphalign.Align(layer, canon, nil, nil)
 
 	cfg := graphalign.DefaultConfig()
 	name := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree
@@ -1741,8 +1735,8 @@ func TestSparseNameAndBirthDate(t *testing.T) {
 		handle  []byte
 		score   float64
 	}{
-		{"person", per, p1, name + cfg.EdgeSupportLow + cfg.NeighborCreditLow*event},
-		{"birth", ev, e1, event + cfg.EdgeSupportLow + cfg.NeighborCreditLow*name},
+		{"person", per, p1, name + cfg.Segment.OneSupport + cfg.Segment.OneCredit*event},
+		{"birth", ev, e1, event + cfg.Segment.OneSupport + cfg.Segment.OneCredit*name},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1789,20 +1783,20 @@ func TestBirthIsNeverProposedOnADeath(t *testing.T) {
 			Metas:    metas,
 		}
 		canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "EVT-1", Kind: "event", Values: eventVals("death", 1850)}}}
-		row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil), s)
+		row := rowBySubject(graphalign.Align(layer, canon, nil, nil), s)
 		if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch || len(row.Alternatives) != 0 {
 			t.Fatalf("birth against a death: %+v", row)
 		}
 	})
 	t.Run("AC-1.3", func(t *testing.T) {
-		sig := partSig("subject", "event", "birth")
+		sig := partLink("subject", "birth")
 		p, e, hp, hd := id("s-person"), id("s-event"), id("h-person"), id("h-death")
 		layer := graphalign.Layer{
 			Subjects: []graphalign.Subject{
 				{ID: p, Ref: "PER-S", Kind: "person", Values: vals(nameProp("Ann Ames"))},
 				{ID: e, Ref: "EVT-S", Kind: "event", Values: eventVals("birth", 1850)},
 			},
-			Bridges: []graphalign.Bridge{{A: p, B: e, Signature: sig}},
+			Bridges: []graphalign.Bridge{bridge(p, e, sig)},
 			Metas:   metas,
 		}
 		canon := graphalign.Canon{
@@ -1810,10 +1804,10 @@ func TestBirthIsNeverProposedOnADeath(t *testing.T) {
 				{ID: hp, Ref: "PER-1", Kind: "person", Values: vals(nameProp("Ann Ames"))},
 				{ID: hd, Ref: "EVT-1", Kind: "event", Values: eventVals("death", 1850)},
 			},
-			Edges: []graphalign.CanonEdge{{From: hp, To: hd, Signature: sig}},
+			Edges: []graphalign.CanonEdge{edge(hp, hd, sig)},
 		}
 		fixed := []graphalign.Fixed{{SubjectID: p, HandleID: hp}}
-		row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, fixed, nil), e)
+		row := rowBySubject(graphalign.Align(layer, canon, fixed, nil), e)
 		if row.Target != graphalign.TargetSkip || row.Assessment != graphalign.AssessNone || row.Reason != graphalign.ReasonWeak {
 			t.Fatalf("birth under a death's signature: %+v", row)
 		}
@@ -1829,7 +1823,7 @@ func TestBirthIsNeverProposedOnADeath(t *testing.T) {
 			Metas:    metas,
 		}
 		canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "EVT-1", Kind: "event", Values: vals(et, bv)}}}
-		row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil), s)
+		row := rowBySubject(graphalign.Align(layer, canon, nil, nil), s)
 		if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch {
 			t.Fatalf("undated birth against an undated birth: %+v", row)
 		}
@@ -1851,7 +1845,7 @@ func TestLifespanRulesOutAPerson(t *testing.T) {
 		s, h := id("s-person"), id("h-person")
 		layer := graphalign.Layer{Subjects: []graphalign.Subject{{ID: s, Ref: "PER-S", Kind: "person", Values: values}}, Metas: metas}
 		canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: handle}}}
-		return rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil), s)
+		return rowBySubject(graphalign.Align(layer, canon, nil, nil), s)
 	}
 	t.Run("AC-1.4", func(t *testing.T) {
 		row := align(probe(1840))
@@ -1893,7 +1887,7 @@ func TestGenderPoolsWithSex(t *testing.T) {
 		Metas:    subjectcomparetest.Metas(),
 	}
 	canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: vals(name, nv, sp, sv)}}}
-	row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil), s)
+	row := rowBySubject(graphalign.Align(layer, canon, nil, nil), s)
 	if row.Target != graphalign.TargetHandle || row.Assessment != graphalign.AssessMedium || math.Abs(row.Score-3.1) > 1e-9 {
 		t.Fatalf("gender against sex: %+v", row)
 	}
@@ -1921,7 +1915,7 @@ func TestEventPeriodStandsForTheDate(t *testing.T) {
 	}
 	canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "EVT-1", Kind: "event", Values: vals(et, rv, dp, dv)}}}
 	fixed := []graphalign.Fixed{{SubjectID: s, HandleID: h}}
-	row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, fixed, nil), s)
+	row := rowBySubject(graphalign.Align(layer, canon, fixed, nil), s)
 	var keys []vocabkey.PropertyKey
 	for _, c := range row.Comparisons {
 		keys = append(keys, c.Key)
@@ -1931,5 +1925,89 @@ func TestEventPeriodStandsForTheDate(t *testing.T) {
 	}
 	if want := []vocabkey.PropertyKey{vocabkey.PropertyDate, vocabkey.PropertyEventType}; !slices.Equal(keys, want) {
 		t.Fatalf("comparison keys %v, want %v", keys, want)
+	}
+}
+
+// placedApart places Ann on one Ann and her event on the other Ann's event,
+// and returns both rows' scores.
+func placedApart(t *testing.T, eventType string) (person, event float64) {
+	t.Helper()
+	link := partLink("subject", vocabkey.EventType(eventType))
+	et, etv := termProp("event_type", eventType)
+	dp, dv := dateProp(1817)
+	p, e := id("s-ann"), id("s-event")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: p, Ref: "PER-S", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: e, Ref: "EVT-S", Kind: "event", Values: vals(et, etv, dp, dv)},
+		},
+		Bridges: []graphalign.Bridge{bridge(p, e, link)},
+		Metas:   mergeMetas(nameMetas(), eventMetas()),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: id("h-ann-1"), Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: id("h-ann-2"), Ref: "PER-2", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: id("h-evt-1"), Ref: "EVT-1", Kind: "event", Values: vals(et, etv, dp, dv)},
+			{ID: id("h-evt-2"), Ref: "EVT-2", Kind: "event", Values: vals(et, etv, dp, dv)},
+		},
+		Edges: []graphalign.CanonEdge{
+			edge(id("h-ann-1"), id("h-evt-1"), link),
+			edge(id("h-ann-2"), id("h-evt-2"), link),
+		},
+	}
+	fixed := []graphalign.Fixed{
+		{SubjectID: p, HandleID: id("h-ann-1")},
+		{SubjectID: e, HandleID: id("h-evt-2")},
+	}
+	prop := graphalign.Align(layer, canon, fixed, nil)
+	return rowBySubject(prop, p).Score, rowBySubject(prop, e).Score
+}
+
+// A person and her birth placed on different Anns' births: a birth is one per
+// person and one per subject, so each end loses the one-cardinality conflict.
+func TestBirthPlacedApartSubtracts(t *testing.T) {
+	cfg := graphalign.DefaultConfig()
+	want := 2.5 - cfg.Segment.OneConflict
+	person, event := placedApart(t, "birth")
+	if math.Abs(person-want) > 1e-9 || math.Abs(event-want) > 1e-9 {
+		t.Fatalf("person %.2f, event %.2f, want both %.2f", person, event, want)
+	}
+}
+
+// A residence is not one per person: placed apart it says nothing.
+func TestResidencePlacedApartIsUnknown(t *testing.T) {
+	person, event := placedApart(t, "residence")
+	if math.Abs(person-2.5) > 1e-9 || math.Abs(event-2.5) > 1e-9 {
+		t.Fatalf("person %.2f, event %.2f, want both 2.5", person, event)
+	}
+}
+
+// A spouse link never stands for a sibling link: the neighbor, however well
+// its name matches, is reached by its own properties and not through Ann.
+func TestSpouseNeverCorrespondsToSibling(t *testing.T) {
+	ann, bob := id("s-ann"), id("s-bob")
+	hAnn, hBob := id("h-ann"), id("h-bob")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: ann, Ref: "S-ANN", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: bob, Ref: "S-BOB", Kind: "person", Values: nameVals("Bob", "Ames")},
+		},
+		Bridges: []graphalign.Bridge{bridge(ann, bob, relLink("spouse"))},
+		Metas:   nameMetas(),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: hAnn, Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: hBob, Ref: "PER-B", Kind: "person", Values: nameVals("Bob", "Ames")},
+		},
+		Edges: []graphalign.CanonEdge{edge(hAnn, hBob, relLink("sibling"))},
+	}
+	fixed := []graphalign.Fixed{{SubjectID: ann, HandleID: hAnn}}
+	cfg := graphalign.DefaultConfig()
+	row := rowBySubject(graphalign.Align(layer, canon, fixed, nil), bob)
+	want := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree
+	if row.Reason == graphalign.ReasonVia || math.Abs(row.Score-want) > 1e-9 {
+		t.Fatalf("Bob reason %s score %.2f, want a property match at %.2f", row.Reason, row.Score, want)
 	}
 }

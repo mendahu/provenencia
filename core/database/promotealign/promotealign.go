@@ -66,16 +66,12 @@ func Propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 		return graphalign.Proposal{}, 0, err
 	}
 
-	stats, err := loadStats(c)
-	if err != nil {
-		return graphalign.Proposal{}, 0, err
-	}
 	canon, err := loadCanon(c.Graph(), layer, anchors, cfg, namePattern)
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
 
-	prop := graphalign.Align(layer, canon, stats, anchors, &cfg)
+	prop := graphalign.Align(layer, canon, anchors, &cfg)
 	if err := attachExhibits(q, c.Graph(), layer, &prop, cfg, namePattern); err != nil {
 		return graphalign.Proposal{}, 0, err
 	}

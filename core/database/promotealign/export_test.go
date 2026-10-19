@@ -2,10 +2,25 @@ package promotealign
 
 import (
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
 )
 
-// LoadStatsForTest exposes the catalog's cached stats read.
-func LoadStatsForTest(c *database.Catalog) (graphalign.Stats, error) {
-	return loadStats(c)
+// LayerBridges exposes the bridges the loader reads for one Source.
+func LayerBridges(c *database.Catalog, sourceID []byte) ([]graphalign.Bridge, error) {
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	rules, namePattern, err := valuerules.Load(c.Graph(), db)
+	if err != nil {
+		return nil, err
+	}
+	cfg := graphalign.DefaultConfig()
+	cfg.Value = rules
+	layer, _, err := loadLayer(c.Graph(), db, sourceID, cfg, namePattern)
+	if err != nil {
+		return nil, err
+	}
+	return layer.Bridges, nil
 }

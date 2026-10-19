@@ -121,8 +121,8 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 		}
 		if r.Via != nil {
 			row.ViaNeighborSubjectId = uuidString(r.Via.NeighborSubjectID)
-			row.ViaBridgeType = r.Via.Signature.BridgeType
-			row.ViaRole = r.Via.Signature.RoleOrType
+			row.ViaBridgeType = string(r.Via.Key.Type)
+			row.ViaRole = string(r.Via.Key.Term)
 		}
 		for _, ex := range r.Exhibits {
 			cmp := &engine.PromoteGraphAlignmentComparison{
