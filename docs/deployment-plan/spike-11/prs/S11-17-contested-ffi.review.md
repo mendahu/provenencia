@@ -94,3 +94,15 @@ Both reviewers confirmed every round-1 answer (X-5's decline accepted). No new b
 
 ### X-15 · minor · GoStore placement of the new fields is implicit
 **Answer:** Fixed. D-6 says "in struct order: after `viaRole:`, before `person:`".
+
+## Refresh after S11-16 merged
+
+S11-16 merged in #501 (`main` @ `ed45eba`), with S12-03 alongside it. The plan was rebased and §4 rechecked against `main`:
+
+- `core/graphalign`: `RowFlags.Contested`, `Move`, `Row.Move` and the ten `Reason` constants are unchanged; the last S11-16 fix round only removed a dead nil guard in `rows.go`.
+- The handlers' `uuidString` is gone; `database.UUIDString` (`core/database/uuid.go`) replaces it with the same result ("" for a non-16-byte id). D-2 now names it.
+- `swift_vocabulary_test.go` gained a `CatalogList` row read by a new `listCase` regex (a raw-value enum). D-3's rejected alternative now says why reasons keep `ReconcilerReason`'s shape: a raw-value enum has no `.unrecognized`.
+- Proto `PromoteGraphAlignmentRow` still ends at field 22; every Swift symbol and test helper the plan names is unchanged.
+- The contested probe re-run at `ed45eba` gives AC-1's results: negative unfixed → skip / weak / contested; negative fixed → handle / decided / contested; positive → not contested.
+
+No Decision changed, so no new review round. Status → Planned.
