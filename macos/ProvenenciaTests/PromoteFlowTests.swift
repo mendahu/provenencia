@@ -276,6 +276,58 @@ struct PromoteFlowTests {
         #expect(bea?.decided == false)
     }
 
+    @Test func aContestedRowAndItsMoveReachTheFlow() {
+        var a = row(id: "a")
+        a.contested = true
+        a.moveReason = .neighborMoved
+        a.moveNeighborSubjectID = "b"
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [a, row(id: "b", handleID: "e2")]), subjects: [fact("a"), fact("b")], bridges: [])
+        let rowA = flow.rows.first { $0.subjectID == "a" }
+        let rowB = flow.rows.first { $0.subjectID == "b" }
+        #expect(rowA?.contested == true)
+        #expect(rowA?.move == .neighborMoved(neighborID: "b"))
+        #expect(rowB?.contested == false)
+        #expect(rowB?.move == nil)
+
+        func move(_ code: PromoteReasonCode?, neighbor: String) -> PromoteFlow.Reason? {
+            var r = row(id: "a")
+            r.moveReason = code
+            r.moveNeighborSubjectID = neighbor
+            return PromoteFlow.Reason(move: r)
+        }
+        #expect(move(nil, neighbor: "b") == nil)
+        #expect(move(.neighborReleased, neighbor: "") == .empty)
+        #expect(move(.unrecognized("later_move"), neighbor: "b") == .empty)
+    }
+
+    @Test func aDecidedRowTakesTheLatestContestedFlag() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [row(id: "a")]), subjects: [fact("a")], bridges: [])
+        flow.mapRest()
+        flow.setTarget(subjectID: "a", token: "handle:e1")
+        var contested = row(id: "a")
+        contested.contested = true
+        flow.merge(proposal(rows: [contested], revision: 4), subjects: [fact("a")])
+        let a = flow.rows.first { $0.subjectID == "a" }
+        #expect(a?.target.handleID == "e1")
+        #expect(a?.decided == true)
+        #expect(a?.contested == true)
+    }
+
+    @Test func anAnchorRowIsNeverContested() {
+        var a = row(id: "a")
+        a.contested = true
+        a.moveReason = .neighborPlaced
+        a.moveNeighborSubjectID = "b"
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [a]), subjects: [fact("a", anchor: true)], bridges: [])
+        let anchor = flow.rows.first { $0.subjectID == "a" }
+        #expect(anchor?.anchor == true)
+        #expect(anchor?.contested == false)
+        #expect(anchor?.move == nil)
+    }
+
     @Test func reasonCodesParseThroughTheWireVocabulary() {
         let wire: [(String, PromoteReasonCode)] = [
             ("via", .via), ("decided", .decided), ("agrees", .agrees), ("weak", .weak), ("taken", .taken),

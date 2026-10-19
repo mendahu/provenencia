@@ -80,6 +80,12 @@ struct PromoteFlow: Equatable, Sendable {
             )
         }
 
+        /// Why settling released an earlier pair of this row; nil when it did not.
+        init?(move proposal: CatalogPromoteGraphAlignmentRow) {
+            guard let moveReason = proposal.moveReason else { return nil }
+            self.init(code: moveReason, propertyKey: "", propertyOrigin: "", neighborID: proposal.moveNeighborSubjectID)
+        }
+
         init(_ alt: CatalogPromoteGraphAlignmentAlternative) {
             self.init(
                 code: alt.reason,
@@ -153,6 +159,10 @@ struct PromoteFlow: Equatable, Sendable {
         /// The row the proposal says this one may duplicate.
         var proposedDuplicateOf: String?
         var duplicateNote: DuplicateNote?
+        /// A comparison behind this row's pair conflicts, whatever its band; the page marks it.
+        var contested = false
+        /// Why settling released an earlier pair of this row in this proposal. Not `updated`, which compares with the previous proposal.
+        var move: Reason? = nil
         var id: String { subjectID }
 
         /// The selected record's band and why. Skip, New, and an empty menu show nothing.
@@ -515,6 +525,8 @@ struct PromoteFlow: Equatable, Sendable {
                 kept.argument = draftedArgument(lines)
             }
             kept.conflictNote = proposal.conflictWithFixed ? proposal.alternatives.first?.handleRef : nil
+            kept.contested = proposal.contested
+            kept.move = Reason(move: proposal)
             kept.proposedDuplicateOf = duplicateOf(proposal)
             return kept
         }
@@ -527,7 +539,8 @@ struct PromoteFlow: Equatable, Sendable {
             target: drafted, menu: menu, comparisons: proposal.comparisons,
             pins: draftedPins(lines), confidenceGradeID: nil, argument: draftedArgument(lines),
             decided: false, updated: updated, conflictNote: nil,
-            proposedDuplicateOf: duplicateOf(proposal), duplicateNote: nil
+            proposedDuplicateOf: duplicateOf(proposal), duplicateNote: nil,
+            contested: proposal.contested, move: Reason(move: proposal)
         )
     }
 
