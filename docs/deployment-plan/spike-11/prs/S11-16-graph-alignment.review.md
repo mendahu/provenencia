@@ -111,3 +111,9 @@ A fresh reviewer checked the refresh against the branch: Ready with changes.
 - **F-4 · minor:** stale test comments. **Fixed:** D-13 names the rewording.
 - **F-5 · minor:** "unbanded" not asserted. **Fixed:** case renamed "offered as weak".
 - **F-6 · minor:** T-4 now pins the surname-only case.
+
+## Refresh — STEP-4 stop (2026-10-19)
+
+The implementer stopped at STEP-4. D-7 set `via` on any existing candidate a placed neighbor points at. In `TestPartOfChainIsStrongWithoutADecision` the state is placed first and relabels the city's and country's own toponym candidates as `via`. D-13 pins that test's reasons (`agrees` / toponym).
+
+**Answer:** To user → limit the clause to a fixed receiving row. An unfixed row's existing candidate keeps its own reason; a nominated (new) candidate still gets `via`; a fixed row still gets `via` on its candidates (D-8). The implementer ran this variant: `core/graphalign`, `core/database/promotealign` and `api/ffi/handlers` all pass. This narrows review X-1's answer to fixed rows.
