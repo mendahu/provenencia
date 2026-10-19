@@ -3,9 +3,12 @@ package graphalign
 import (
 	"bytes"
 	"container/heap"
+	"slices"
 	"sort"
 
-	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/propertycompare"
+	"github.com/mendahu/provenencia/core/subjectcompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // Align proposes a handle, New, or Skip for every primary Subject on layer,
@@ -19,7 +22,7 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg *Config) Pr
 	st.seed()
 	st.walk()
 	// Property matches that clear the bar seed the same walk. Candidates
-	// Rank only recorded are not anchors, and a pair this walk refuses
+	// only recorded are not anchors, and a pair this walk refuses
 	// does not propagate further.
 	anchored := st.assignedIDs()
 	st.fallbackUnreachable()
@@ -35,7 +38,7 @@ type state struct {
 	layer Layer
 	canon Canon
 	stats Stats
-	metas []match.PropertyMeta
+	metas subjectcompare.Metas
 
 	subjects map[string]*Subject
 	handles  map[string]*Handle
@@ -60,7 +63,7 @@ type state struct {
 	queue candHeap
 	seen  map[string]bool // subject|handle already accepted or rejected for queue
 
-	kindCands map[string][]match.Candidate // candidatesOfKind, per kind
+	kindCands map[string][]Handle // handlesOfKind, per kind
 }
 
 // A link is one end's view of an edge; fromEnd is true at the edge's first
@@ -90,7 +93,7 @@ type scoredCand struct {
 	handleID    []byte
 	ref         string
 	score       float64
-	eval        match.Evaluation
+	result      subjectcompare.Result
 	edge        float64
 	viaNeighbor []byte
 	viaSig      EdgeSignature
@@ -114,7 +117,7 @@ func newState(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg Config) 
 		lostTo:      map[string]string{},
 		best:        map[string][]scoredCand{},
 		seen:        map[string]bool{},
-		kindCands:   map[string][]match.Candidate{},
+		kindCands:   map[string][]Handle{},
 	}
 	for i := range layer.Subjects {
 		s := &layer.Subjects[i]
@@ -282,21 +285,20 @@ func (st *state) supports(subjectID, handleID, neighbor []byte) bool {
 	return false
 }
 
-func (st *state) evaluate(a, b match.Values) match.Evaluation {
-	return match.Evaluate(a, b, st.metas, st.cfg.Value)
+func (st *state) evaluate(kind string, a, b subjectcompare.Values) subjectcompare.Result {
+	return subjectcompare.Compare(vocabkey.SubjectType(kind), a, b, st.metas, st.cfg.Subject, st.cfg.Value)
 }
 
 func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
 	s := st.subjects[string(subjectID)]
-	ev := st.evaluate(s.Values, h.Values)
-	node := propertyPoints(&ev, st.cfg)
-	edge := EdgePoints(st.edgeFacts(subjectID, h.ID), node, st.cfg)
-	sc := ScoreCandidate(ev, edge, s.Provenance, st.cfg)
+	r := st.evaluate(s.Kind, s.Values, h.Values)
+	edge := EdgePoints(st.edgeFacts(subjectID, h.ID), r.Evidence, st.cfg)
+	sc := ScoreCandidate(r, edge, s.Provenance)
 	return scoredCand{
 		handleID: append([]byte(nil), h.ID...),
 		ref:      h.Ref,
 		score:    sc.Score,
-		eval:     sc.Eval,
+		result:   sc.Result,
 		edge:     sc.Edge,
 	}
 }
@@ -359,8 +361,7 @@ func (st *state) nodeScore(subjectID, handleID []byte) float64 {
 	if s == nil || h == nil {
 		return 0
 	}
-	ev := st.evaluate(s.Values, h.Values)
-	return propertyPoints(&ev, st.cfg)
+	return st.evaluate(s.Kind, s.Values, h.Values).Evidence
 }
 
 func (st *state) walk() {
@@ -395,8 +396,8 @@ func (st *state) accept(subjectID, handleID []byte, score float64) bool {
 	return true
 }
 
-// fallbackUnreachable handles Subjects no anchor reached. Property-only Rank
-// picks each one's candidates; each is scored by the same pairwise path the
+// fallbackUnreachable handles Subjects no anchor reached. Candidates picks
+// each one's handles on its own properties; each is scored by the same pairwise path the
 // walk uses. Assignment is best-first, so a contest over one handle goes to
 // the stronger match. propagateNew then walks from the pairs this pass
 // accepts. refineOneHop rescores the recorded set; the band published for
@@ -411,12 +412,11 @@ func (st *state) fallbackUnreachable() {
 		if _, decided := st.held[sk]; decided {
 			continue
 		}
-		profile, ok := match.DefaultProfile(s.Kind)
-		if !ok {
+		if _, ok := st.cfg.Subject.Weights[vocabkey.SubjectType(s.Kind)]; !ok {
 			continue
 		}
-		for _, m := range match.Rank(profile, st.cfg.Value, s.Values, st.candidatesOfKind(s.Kind), st.cfg.AlternativeLimit) {
-			h := st.handles[string(m.EntityID)]
+		for _, cand := range Candidates(s.Kind, s.Values, st.handlesOfKind(s.Kind), st.metas, st.cfg, st.cfg.AlternativeLimit) {
+			h := st.handles[string(cand.ID)]
 			sc := st.scoreCandidate(s.ID, h)
 			st.recordBest(sk, sc)
 			heap.Push(&queue, queueItem{
@@ -476,7 +476,7 @@ func (st *state) refineOneHop() {
 	st.rescoreBest()
 }
 
-// rescoreBest scores the candidates Rank and the walk already recorded,
+// rescoreBest scores the candidates the fallback and the walk already recorded,
 // against the mapping as it stands, and replaces their earlier scores: a
 // score that leaned on a neighbor's old handle drops when that neighbor
 // moves. A candidate keeps the neighbor that nominated it only while that
@@ -612,25 +612,23 @@ func (st *state) scoreFixed() {
 	}
 }
 
-// candidatesOfKind lists the canon handles of one kind in a stable order,
-// built once per kind.
-func (st *state) candidatesOfKind(kind string) []match.Candidate {
-	if cands, ok := st.kindCands[kind]; ok {
-		return cands
+// handlesOfKind lists the canon handles of one kind in a stable order, built
+// once per kind.
+func (st *state) handlesOfKind(kind string) []Handle {
+	if hs, ok := st.kindCands[kind]; ok {
+		return hs
 	}
-	var out []match.Candidate
+	var out []Handle
 	for i := range st.canon.Handles {
-		h := &st.canon.Handles[i]
-		if h.Kind != kind {
-			continue
+		if h := st.canon.Handles[i]; h.Kind == kind {
+			out = append(out, h)
 		}
-		out = append(out, match.Candidate{EntityID: h.ID, Ref: h.Ref, Values: h.Values})
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Ref != out[j].Ref {
 			return out[i].Ref < out[j].Ref
 		}
-		return bytes.Compare(out[i].EntityID, out[j].EntityID) < 0
+		return bytes.Compare(out[i].ID, out[j].ID) < 0
 	})
 	st.kindCands[kind] = out
 	return out
@@ -648,12 +646,12 @@ func (st *state) proposal() Proposal {
 			sc := st.pickScore(sk, hid)
 			if h != nil {
 				row.HandleRef = h.Ref
-				if len(sc.eval.Comparisons) == 0 {
-					sc.eval = st.evaluate(s.Values, h.Values)
+				if len(sc.result.Properties) == 0 {
+					sc.result = st.evaluate(s.Kind, s.Values, h.Values)
 				}
 			}
 			row.Score = sc.score
-			row.Comparisons = comparisonsFrom(sc.eval, st.cfg)
+			row.Comparisons = comparisonsFrom(sc.result, s.Kind, st.metas, st.cfg.Subject)
 			switch {
 			case st.fixedSet[sk]:
 				row.Reason = ReasonDecided
@@ -690,7 +688,7 @@ func (st *state) proposal() Proposal {
 				if best.score >= st.cfg.WeakScore {
 					row.Assessment = st.band(best.score)
 				}
-			} else if subjectHasValues(s) {
+			} else if st.subjectHasValues(s) {
 				row.Target = TargetNew
 				row.Reason = ReasonNoMatch
 			} else {
@@ -768,9 +766,8 @@ func (st *state) alikeNew(a, b *Subject) bool {
 	if disagree {
 		return false
 	}
-	ev := st.evaluate(a.Values, b.Values)
-	node := propertyPoints(&ev, st.cfg)
-	return ScoreCandidate(ev, EdgePoints(facts, node, st.cfg), 1, st.cfg).Score >= st.cfg.AcceptScore
+	r := st.evaluate(a.Kind, a.Values, b.Values)
+	return ScoreCandidate(r, EdgePoints(facts, r.Evidence, st.cfg), 1).Score >= st.cfg.AcceptScore
 }
 
 // newPairFacts compares the layer neighbors of two subjects. A signature only
@@ -848,8 +845,8 @@ func (st *state) neighborsMatch(a, b []byte) bool {
 	if sa == nil || sb == nil || sa.Kind != sb.Kind {
 		return false
 	}
-	ev := st.evaluate(sa.Values, sb.Values)
-	return ScoreCandidate(ev, 0, 1, st.cfg).Score >= st.cfg.AcceptScore
+	r := st.evaluate(sa.Kind, sa.Values, sb.Values)
+	return ScoreCandidate(r, 0, 1).Score >= st.cfg.AcceptScore
 }
 
 // pairNode is the property total for two subjects, one of them compared with
@@ -859,34 +856,34 @@ func (st *state) pairNode(a, b []byte) float64 {
 	if sa == nil || sb == nil {
 		return 0
 	}
-	ev := st.evaluate(sa.Values, sb.Values)
-	return propertyPoints(&ev, st.cfg)
+	return st.evaluate(sa.Kind, sa.Values, sb.Values).Evidence
 }
 
-// strongestAgreement is the agreeing or resembling Property that added the
-// most weight.
-func strongestAgreement(cs []Comparison) match.Property {
-	var top match.Property
+// strongestAgreement is the agreeing or resembling property that added the
+// most points. A derived property (the lifespan) is never named: it counts in
+// the score but has no copy on the page.
+func strongestAgreement(cs []Comparison) vocabkey.PropertyKey {
+	var top vocabkey.PropertyKey
 	best := 0.0
 	for _, c := range cs {
-		if (c.Outcome == match.OutcomeAgree || c.Outcome == match.OutcomePartial) && c.Weight > best {
-			top, best = c.Property, c.Weight
+		if c.Derived {
+			continue
+		}
+		if (c.Result.Outcome == propertycompare.OutcomeAgree || c.Result.Outcome == propertycompare.OutcomePartial) && c.Points > best {
+			top, best = c.Key, c.Points
 		}
 	}
 	return top
 }
 
-func comparisonsFrom(ev match.Evaluation, cfg Config) []Comparison {
-	out := make([]Comparison, 0, len(ev.Comparisons))
-	for _, pc := range ev.Comparisons {
-		outcome, weight := ScoreSimilarity(pc.Similarity, pc.Comparable, pc.Cardinality, pc.Property, pc.ValueType, cfg)
+// comparisonsFrom lists one Comparison per lead property r compared.
+func comparisonsFrom(r subjectcompare.Result, kind string, metas subjectcompare.Metas, rules subjectcompare.Rules) []Comparison {
+	out := make([]Comparison, 0, len(r.Properties))
+	for _, pr := range r.Properties {
 		out = append(out, Comparison{
-			Property:  pc.Property,
-			Outcome:   outcome,
-			ValueType: pc.ValueType,
-			Weight:    weight,
-			Probe:     pc.Probe,
-			Candidate: pc.Candidate,
+			PropertyResult: pr,
+			ValueType:      metas[pr.Key].ValueType,
+			Derived:        rules.Derived(vocabkey.SubjectType(kind), pr.Key),
 		})
 	}
 	return out
@@ -918,6 +915,7 @@ func (st *state) bestNonAssigned(sk string, except []byte) *scoredCand {
 }
 
 func (st *state) alts(sk string, except []byte) []Alternative {
+	kind := st.subjects[sk].Kind
 	limit := st.cfg.AlternativeLimit
 	if limit <= 0 {
 		limit = 3
@@ -927,7 +925,7 @@ func (st *state) alts(sk string, except []byte) []Alternative {
 		if except != nil && bytes.Equal(sc.handleID, except) {
 			continue
 		}
-		out = append(out, st.alternative(sc))
+		out = append(out, st.alternative(sc, kind))
 		if len(out) >= limit {
 			break
 		}
@@ -938,7 +936,7 @@ func (st *state) alts(sk string, except []byte) []Alternative {
 // alternative is one selectable record: its band, and the sentence that
 // explains that band. A via walk wins; otherwise the strongest agreeing
 // property; otherwise there was too little to name.
-func (st *state) alternative(sc scoredCand) Alternative {
+func (st *state) alternative(sc scoredCand, kind string) Alternative {
 	alt := Alternative{
 		HandleID:   append([]byte(nil), sc.handleID...),
 		Ref:        sc.ref,
@@ -955,16 +953,28 @@ func (st *state) alternative(sc scoredCand) Alternative {
 	if alt.Assessment == AssessNone {
 		return alt
 	}
-	prop := strongestAgreement(comparisonsFrom(sc.eval, st.cfg))
-	if prop.Key != "" {
+	prop := strongestAgreement(comparisonsFrom(sc.result, kind, st.metas, st.cfg.Subject))
+	if prop != "" {
 		alt.Reason = ReasonAgrees
 		alt.ReasonProperty = prop
 	}
 	return alt
 }
 
-func subjectHasValues(s *Subject) bool {
-	return s.Values.HasPositive()
+// subjectHasValues reports whether the Subject records anything matching
+// reads: a positive value under a lead property the profile builder does not
+// derive.
+func (st *state) subjectHasValues(s *Subject) bool {
+	kind := vocabkey.SubjectType(s.Kind)
+	for key, vs := range s.Values {
+		if _, ok := st.cfg.Subject.Lead(kind, key); !ok || st.cfg.Subject.Derived(kind, key) {
+			continue
+		}
+		if slices.ContainsFunc(vs, propertycompare.Value.Positive) {
+			return true
+		}
+	}
+	return false
 }
 
 func (st *state) band(score float64) Assessment {

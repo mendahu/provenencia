@@ -1,6 +1,7 @@
 # S11-13 — Migrate Promote scoring onto subject compare
 
-**Status:** Planned
+**Status:** Landed in [#487](https://github.com/mendahu/provenencia/pull/487) (2026-10-18)
+**Landed:** Ported tests whose fixtures leaned on the old plain scale were reshaped to keep their intent, each a listed change of §1: `TestSeedFromNewlyFixedIntoUnpromoted` passes fan-out stats (an undated event type now earns 0.5); `TestNewEventsDisagreeWhenTheirParticipantsDo` dates its events (two undated events are under the weak band); `TestPartialNamesAreWeak` fixes the sex-mismatch pair so the row is scored (seeding no longer offers a name agreement with a sex conflict); `TestRowReasons` takes its `weak` case from a neighbor-reached event under the accept bar, and the surname-only look-alike case now reads `no_match`; `TestRankLoserDoesNotNominate` is renamed `TestCandidateLoserDoesNotNominate`; `TestProposeOverlappingBoundShowsTheDateAndResembles` uses a residence instead of a birth (two births "before" different dates rule the person out through the lifespan); `TestProposeJudgesAgainstTheMajority` caches the stray name as `outvoted` instead of `kept` (a handle holds only its conclusion). AC-4.6 is a new case of `TestProposePromoteGraphAlignment` with two look-alike handles. `layerValues` skips Observations that carry a value Subject. STEP-2, STEP-3 and STEP-4 are one commit (D-17). Otherwise none.
 **Spike / slice:** Spike 11 · Slice 3 — Property, Subject and entity compare
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the wire, the page and its copy are unchanged; the derived lifespan stays off the sheet until S11-20, D-6)

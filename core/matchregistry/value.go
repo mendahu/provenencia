@@ -41,7 +41,7 @@ func defaultValue() valuecompare.Rules {
 			},
 		},
 		Names: valuecompare.NameRules{
-			// graphalign's name PropertyScale.Floor.
+			// carried from graphalign's name scale floor.
 			NearMinimum: 0.75,
 			// match.DefaultNames affinities.
 			UntypedAffinity: 0.8,
@@ -86,7 +86,7 @@ func defaultValue() valuecompare.Rules {
 		Dates: valuecompare.DateRules{
 			// DefaultDates.Tolerance: civil years apart that still resemble.
 			Tolerance: 2,
-			// graphalign ValueTypeScale["date"].Floor: no floor.
+			// carried from graphalign's date scale: no floor.
 			NearMinimum: 0,
 			// DefaultDates.MissingDay: same month, a day missing on one side.
 			MissingDay: 0.9,

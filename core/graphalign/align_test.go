@@ -2,55 +2,85 @@ package graphalign_test
 
 import (
 	"bytes"
+	"maps"
 	"math"
+	"slices"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/graphalign"
-	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertycompare"
+	"github.com/mendahu/provenencia/core/propertycompare/propertycomparetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/subjectcompare"
+	"github.com/mendahu/provenencia/core/subjectcompare/subjectcomparetest"
+	"github.com/mendahu/provenencia/core/subjectprofile"
+	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 func id(s string) []byte { return []byte(s) }
 
-func textProp(key, text string) (match.Property, match.Value) {
-	p := match.Property{Key: key, Origin: "provenencia"}
-	return p, match.Value{Text: text, HasText: true}
+func textProp(key, text string) (vocabkey.PropertyKey, propertycompare.Value) {
+	return vocabkey.PropertyKey(key), propertycomparetest.Text(text)
 }
 
-func termProp(key, term string) (match.Property, match.Value) {
-	p := match.Property{Key: key, Origin: "provenencia"}
-	return p, match.Value{Term: term}
+func dateProp(year int) (vocabkey.PropertyKey, propertycompare.Value) {
+	return vocabkey.PropertyDate, propertycomparetest.Date(datevaluetest.YMD(year, 0, 0))
 }
 
-func vals(pairs ...any) match.Values {
-	out := match.Values{}
+func termProp(key, term string) (vocabkey.PropertyKey, propertycompare.Value) {
+	return vocabkey.PropertyKey(key), propertycomparetest.Term(term)
+}
+
+func vals(pairs ...any) subjectcompare.Values {
+	out := subjectcompare.Values{}
 	for i := 0; i+1 < len(pairs); i += 2 {
-		p := pairs[i].(match.Property)
-		v := pairs[i+1].(match.Value)
+		p := pairs[i].(vocabkey.PropertyKey)
+		v := pairs[i+1].(propertycompare.Value)
 		out[p] = append(out[p], v)
 	}
 	return out
 }
 
-func personMetas() []match.PropertyMeta {
-	return []match.PropertyMeta{
-		{Property: match.Property{Key: "name", Origin: "provenencia"}, ValueType: propertymeta.ValueTypeText},
-		{Property: match.Property{Key: "sex_at_birth", Origin: "provenencia"}, ValueType: propertymeta.ValueTypeTerm},
+func metasOf(valueTypes map[vocabkey.PropertyKey]string) subjectcompare.Metas {
+	out := subjectcompare.Metas{}
+	for k, t := range valueTypes {
+		out[k] = propertymeta.Meta{ValueType: t, Cardinality: propertymeta.CardinalitySingle}
 	}
+	return out
 }
 
-func placeMetas() []match.PropertyMeta {
-	return []match.PropertyMeta{
-		{Property: match.Property{Key: "toponym", Origin: "provenencia"}, ValueType: propertymeta.ValueTypeText},
-	}
+func personMetas() subjectcompare.Metas {
+	return metasOf(map[vocabkey.PropertyKey]string{
+		vocabkey.PropertyName:       propertymeta.ValueTypeText,
+		vocabkey.PropertySexAtBirth: propertymeta.ValueTypeTerm,
+	})
 }
 
-func eventMetas() []match.PropertyMeta {
-	return []match.PropertyMeta{
-		{Property: match.Property{Key: "event_type", Origin: "provenencia"}, ValueType: propertymeta.ValueTypeTerm},
+func placeMetas() subjectcompare.Metas {
+	return metasOf(map[vocabkey.PropertyKey]string{
+		vocabkey.PropertyToponym: propertymeta.ValueTypeText,
+	})
+}
+
+func eventMetas() subjectcompare.Metas {
+	return metasOf(map[vocabkey.PropertyKey]string{
+		vocabkey.PropertyEventType: propertymeta.ValueTypeTerm,
+		vocabkey.PropertyDate:      propertymeta.ValueTypeDate,
+	})
+}
+
+// mergeMetas is the union of metas.
+func mergeMetas(ms ...subjectcompare.Metas) subjectcompare.Metas {
+	out := subjectcompare.Metas{}
+	for _, m := range ms {
+		maps.Copy(out, m)
 	}
+	return out
 }
 
 func partSig(role, neighborKind, typeTerm string) graphalign.EdgeSignature {
@@ -92,7 +122,7 @@ func TestSeedFromAlreadyPromotedNeighbor(t *testing.T) {
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: vals(np, nv)},
 		},
 		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
-		Metas:   append(personMetas(), eventMetas()...),
+		Metas:   mergeMetas(personMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
 		Handles: []graphalign.Handle{
@@ -128,7 +158,7 @@ func TestSeedFromNewlyFixedIntoUnpromoted(t *testing.T) {
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: vals(np, nv)},
 		},
 		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
-		Metas:   append(personMetas(), eventMetas()...),
+		Metas:   mergeMetas(personMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
 		Handles: []graphalign.Handle{
@@ -138,7 +168,8 @@ func TestSeedFromNewlyFixedIntoUnpromoted(t *testing.T) {
 		Edges: []graphalign.CanonEdge{{From: perH, To: evH, Signature: sig}},
 	}
 	fixed := []graphalign.Fixed{{SubjectID: perSub, HandleID: perH}}
-	p := graphalign.Align(layer, canon, graphalign.Stats{}, fixed, nil)
+	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
+	p := graphalign.Align(layer, canon, stats, fixed, nil)
 	row := rowBySubject(p, evSub)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, evH) {
 		t.Fatalf("event from fixed person: %+v", row)
@@ -193,7 +224,7 @@ func TestOneAgreeingPropertyStaysAWeakMatch(t *testing.T) {
 	row := rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), orphan)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known) ||
 		row.Assessment != graphalign.AssessMedium || row.Reason != graphalign.ReasonAgrees ||
-		row.ReasonProperty.Key != "toponym" || math.Abs(row.Score-3) > 1e-9 {
+		row.ReasonProperty != vocabkey.PropertyToponym || math.Abs(row.Score-3) > 1e-9 {
 		t.Fatalf("same toponym: %+v", row)
 	}
 	if row.Score >= graphalign.DefaultConfig().StrongScore {
@@ -202,7 +233,7 @@ func TestOneAgreeingPropertyStaysAWeakMatch(t *testing.T) {
 
 	// Without the toponym scale, the text weight (2) is a weak match.
 	cfg := graphalign.DefaultConfig()
-	delete(cfg.PropertyScale, match.Property{Key: "toponym", Origin: "provenencia"})
+	cfg.Subject.Weights[vocabkey.Place][vocabkey.PropertyToponym] = subjectcompare.Weights{Agree: 2, Conflict: 3}
 	row = rowBySubject(graphalign.Align(layer, canon, stats, nil, &cfg), orphan)
 	if row.Assessment != graphalign.AssessWeak {
 		t.Fatalf("toponym without the registry weight: %+v", row)
@@ -238,16 +269,16 @@ func TestSpellingVariantIsAWeakerTextMatch(t *testing.T) {
 	row := rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), orphan)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known) ||
 		row.Assessment != graphalign.AssessWeak || row.Reason != graphalign.ReasonAgrees ||
-		row.ReasonProperty.Key != "toponym" ||
+		row.ReasonProperty != vocabkey.PropertyToponym ||
 		row.Score < cfg.WeakScore || row.Score >= cfg.MediumScore {
 		t.Fatalf("spelling variant: %+v", row)
 	}
 	var partial bool
 	for _, c := range row.Comparisons {
-		if c.Property.Key != "toponym" {
+		if c.Key != vocabkey.PropertyToponym {
 			continue
 		}
-		if c.Outcome != match.OutcomePartial {
+		if c.Result.Outcome != propertycompare.OutcomePartial {
 			t.Fatalf("comparison %+v", c)
 		}
 		partial = true
@@ -258,7 +289,7 @@ func TestSpellingVariantIsAWeakerTextMatch(t *testing.T) {
 
 	// Without the toponym scale, the text weight × the resemblance stays under weak. The toponym scale is what makes a spelling variant clear the bar.
 	bare := graphalign.DefaultConfig()
-	delete(bare.PropertyScale, match.Property{Key: "toponym", Origin: "provenencia"})
+	bare.Subject.Weights[vocabkey.Place][vocabkey.PropertyToponym] = subjectcompare.Weights{Agree: 2, Conflict: 3}
 	row = rowBySubject(graphalign.Align(layer, canon, stats, nil, &bare), orphan)
 	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
 		t.Fatalf("spelling variant without the registry weight: %+v", row)
@@ -277,7 +308,7 @@ func TestSpellingVariantIsAWeakerTextMatch(t *testing.T) {
 }
 
 func TestOrphanFallsBackToPropertyOnlyOrSkip(t *testing.T) {
-	// Place orphans use toponym + text value compare in Rank (names need namevalues).
+	// Place orphans use toponym + text value compare in Candidates (names need namevalues).
 	orphan := id("s-orphan")
 	known := id("h-known")
 	n, v := textProp("toponym", "UniqueZebraTown")
@@ -335,7 +366,7 @@ func TestConfigOverrideWithoutEditingRegistry(t *testing.T) {
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: vals(np, nv)},
 		},
 		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
-		Metas:   append(personMetas(), eventMetas()...),
+		Metas:   mergeMetas(personMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
 		Handles: []graphalign.Handle{
@@ -347,9 +378,9 @@ func TestConfigOverrideWithoutEditingRegistry(t *testing.T) {
 	fixed := []graphalign.Fixed{{SubjectID: evSub, HandleID: evH}}
 	p := graphalign.Align(layer, canon, graphalign.Stats{}, fixed, &cfg)
 	row := rowBySubject(p, perSub)
-	// Structure path refused; Rank may still assign the same person.
+	// Structure path refused; the fallback may still assign the same person.
 	if row.Target == graphalign.TargetHandle && bytes.Equal(row.HandleID, perH) {
-		// Rank fallback is OK
+		// the fallback is OK
 		return
 	}
 	if row.Target == graphalign.TargetHandle {
@@ -406,7 +437,7 @@ func TestGracieObituaryGolden(t *testing.T) {
 			{A: gracie, B: child1, Signature: childSig},
 			{A: gracie, B: child2, Signature: childSig},
 		},
-		Metas: append(append(personMetas(), eventMetas()...), placeMetas()...),
+		Metas: mergeMetas(personMetas(), eventMetas(), placeMetas()),
 	}
 	canon := graphalign.Canon{
 		Handles: []graphalign.Handle{
@@ -479,37 +510,52 @@ func TestGracieObituaryGolden(t *testing.T) {
 	}
 }
 
-func nameVals(given, surname string) match.Values {
-	p := match.Property{Key: "name", Origin: "provenencia"}
-	return match.Values{p: {{Name: &namevalue.Value{
+// nameOf is a name property value.
+func nameOf(n *namevalue.Value) propertycompare.Value {
+	return propertycompare.Value{Value: valuecompare.Value{Name: n}}
+}
+
+// propResult is the result for one lead property of a subject compare.
+func propResult(t *testing.T, r subjectcompare.Result, key vocabkey.PropertyKey) subjectcompare.PropertyResult {
+	t.Helper()
+	for _, p := range r.Properties {
+		if p.Key == key {
+			return p
+		}
+	}
+	t.Fatalf("no result for %s", key)
+	return subjectcompare.PropertyResult{}
+}
+
+func nameVals(given, surname string) subjectcompare.Values {
+	p := vocabkey.PropertyKey(vocabkey.PropertyName)
+	return subjectcompare.Values{p: {nameOf(&namevalue.Value{
 		Form: given + " " + surname,
 		Parts: []namevalue.Part{
 			{Idx: 0, Type: namevalue.PartTypeGiven, Value: given},
 			{Idx: 1, Type: namevalue.PartTypeSurname, Value: surname},
 		},
-	}}}}
+	})}}
 }
 
 // surnameVals is a name with a surname part and nothing else.
-func surnameVals(surname string) match.Values {
-	p := match.Property{Key: "name", Origin: "provenencia"}
-	return match.Values{p: {{Name: &namevalue.Value{
+func surnameVals(surname string) subjectcompare.Values {
+	p := vocabkey.PropertyKey(vocabkey.PropertyName)
+	return subjectcompare.Values{p: {nameOf(&namevalue.Value{
 		Form:  surname,
 		Parts: []namevalue.Part{{Idx: 0, Type: namevalue.PartTypeSurname, Value: surname}},
-	}}}}
+	})}}
 }
 
-func nameMetas() []match.PropertyMeta {
-	return []match.PropertyMeta{
-		{Property: match.Property{Key: "name", Origin: "provenencia"}, ValueType: propertymeta.ValueTypeName},
-	}
+func nameMetas() subjectcompare.Metas {
+	return metasOf(map[vocabkey.PropertyKey]string{vocabkey.PropertyName: propertymeta.ValueTypeName})
 }
 
 func TestUnreachableFallbackScoresOnTheWalkScale(t *testing.T) {
 	tests := []struct {
 		name       string
-		probe      match.Values
-		handle     match.Values
+		probe      subjectcompare.Values
+		handle     subjectcompare.Values
 		wantTarget graphalign.Target
 		wantAssess graphalign.Assessment
 		wantReason graphalign.Reason
@@ -548,11 +594,11 @@ func TestPartialNamesAreWeak(t *testing.T) {
 	sur := func(i int, v string) namevalue.Part {
 		return namevalue.Part{Idx: i, Type: namevalue.PartTypeSurname, Value: v}
 	}
-	full := func(parts ...namevalue.Part) match.Values {
-		p := match.Property{Key: "name", Origin: "provenencia"}
-		return match.Values{p: {{Name: &namevalue.Value{Parts: parts}}}}
+	full := func(parts ...namevalue.Part) subjectcompare.Values {
+		p := vocabkey.PropertyKey(vocabkey.PropertyName)
+		return subjectcompare.Values{p: {nameOf(&namevalue.Value{Parts: parts})}}
 	}
-	alignOne := func(probe, handle match.Values) graphalign.Row {
+	alignOne := func(probe, handle subjectcompare.Values) graphalign.Row {
 		s, h := id("s"), id("h")
 		return rowBySubject(graphalign.Align(
 			graphalign.Layer{Subjects: []graphalign.Subject{{ID: s, Ref: "SUB", Kind: "person", Values: probe}}, Metas: nameMetas()},
@@ -580,10 +626,10 @@ func TestPartialNamesAreWeak(t *testing.T) {
 	}
 	// The stored forms disagree. The parts are what match: surname first on
 	// the certificate, given name first on the new subject.
-	withForm := func(base match.Values, form string) match.Values {
-		out := match.Values{}
+	withForm := func(base subjectcompare.Values, form string) subjectcompare.Values {
+		out := subjectcompare.Values{}
 		for k, vs := range base {
-			cp := append([]match.Value(nil), vs...)
+			cp := append([]propertycompare.Value(nil), vs...)
 			if cp[0].Name != nil {
 				n := *cp[0].Name
 				n.Form = form
@@ -602,14 +648,14 @@ func TestPartialNamesAreWeak(t *testing.T) {
 		t.Fatalf("parts James / certificate parts: %+v, james score %.3f", certificate, james.Score)
 	}
 
-	sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
-	metas := append(nameMetas(), match.PropertyMeta{Property: sex, ValueType: propertymeta.ValueTypeTerm})
-	withSex := func(base match.Values, term string) match.Values {
-		out := match.Values{}
+	sex := vocabkey.PropertyKey(vocabkey.PropertySexAtBirth)
+	metas := mergeMetas(nameMetas(), metasOf(map[vocabkey.PropertyKey]string{sex: propertymeta.ValueTypeTerm}))
+	withSex := func(base subjectcompare.Values, term string) subjectcompare.Values {
+		out := subjectcompare.Values{}
 		for k, v := range base {
 			out[k] = v
 		}
-		out[sex] = []match.Value{{Term: term}}
+		out[sex] = []propertycompare.Value{propertycomparetest.Term(term)}
 		return out
 	}
 	probe := full(given(0, "James"), sur(1, "Robins"))
@@ -618,7 +664,7 @@ func TestPartialNamesAreWeak(t *testing.T) {
 	mismatch := rowBySubject(graphalign.Align(
 		graphalign.Layer{Subjects: []graphalign.Subject{{ID: s, Ref: "SUB", Kind: "person", Values: withSex(probe, "female")}}, Metas: metas},
 		graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: withSex(handle, "male")}}},
-		graphalign.Stats{}, nil, nil,
+		graphalign.Stats{}, []graphalign.Fixed{{SubjectID: s, HandleID: h}}, nil,
 	), s)
 	if diff := james.Score - mismatch.Score; diff < 0.99 || diff > 1.01 {
 		t.Fatalf("sex mismatch subtracted %.3f, want 1 (name %.3f, with sex %.3f)", diff, james.Score, mismatch.Score)
@@ -626,9 +672,9 @@ func TestPartialNamesAreWeak(t *testing.T) {
 }
 
 func TestMissingGivenOrPrefixIsNotANameConflict(t *testing.T) {
-	name := match.Property{Key: "name", Origin: "provenencia"}
-	parts := func(ps ...namevalue.Part) match.Values {
-		return match.Values{name: {{Name: &namevalue.Value{Parts: ps}}}}
+	name := vocabkey.PropertyKey(vocabkey.PropertyName)
+	parts := func(ps ...namevalue.Part) subjectcompare.Values {
+		return subjectcompare.Values{name: {nameOf(&namevalue.Value{Parts: ps})}}
 	}
 	mrs := parts(
 		namevalue.Part{Idx: 0, Type: namevalue.PartTypePrefix, Value: "Mrs."},
@@ -639,34 +685,35 @@ func TestMissingGivenOrPrefixIsNotANameConflict(t *testing.T) {
 		namevalue.Part{Idx: 1, Type: namevalue.PartTypeSurname, Value: "Robins"},
 	)
 	cfg := graphalign.DefaultConfig()
-	ev := match.Evaluate(mrs, marion, nameMetas(), cfg.Value)
-	sc := graphalign.ScoreCandidate(ev, 0, 1, cfg)
-	c := sc.Eval.Comparisons[0]
+	r := subjectcompare.Compare(vocabkey.Person, mrs, marion, nameMetas(), cfg.Subject, cfg.Value)
+	sc := graphalign.ScoreCandidate(r, 0, 1)
+	nameRes := propResult(t, sc.Result, vocabkey.PropertyName).Result
+	c := nameRes.Speaking.Result
 	// The title is ignored. Marion exists only on one side, so the name is a
 	// resemblance: the surnames earn 2·F of 2·F + G1.
 	want := 2 * 1.5 / (2*1.5 + 1)
-	if c.Outcome != match.OutcomePartial || math.Abs(c.Similarity-want) > 1e-9 {
-		t.Fatalf("Mrs. Robins / Marion Robins: outcome %s similarity %.4f, want partial %.4f", c.Outcome, c.Similarity, want)
+	if o := nameRes.Outcome; o != propertycompare.OutcomePartial || math.Abs(c.Similarity-want) > 1e-9 {
+		t.Fatalf("Mrs. Robins / Marion Robins: outcome %s similarity %.4f, want partial %.4f", o, c.Similarity, want)
 	}
-	if math.Abs(sc.Score-cfg.PropertyScale[name].Weight*want) > 1e-9 || sc.Score >= cfg.MediumScore {
+	if math.Abs(sc.Score-cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree*want) > 1e-9 || sc.Score >= cfg.MediumScore {
 		t.Fatalf("surname with a one-sided given name scored %.4f, want the name weight times %.2f under medium", sc.Score, want)
 	}
 
 	differ := graphalign.ScoreCandidate(
-		match.Evaluate(nameVals("Mary", "Robins"), nameVals("James", "Robins"), nameMetas(), cfg.Value),
-		0, 1, cfg,
+		subjectcompare.Compare(vocabkey.Person, nameVals("Mary", "Robins"), nameVals("James", "Robins"), nameMetas(), cfg.Subject, cfg.Value),
+		0, 1,
 	)
-	if differ.Eval.Comparisons[0].Outcome != match.OutcomeConflict || differ.Score >= 0 {
-		t.Fatalf("different given names: outcome %s score %.3f", differ.Eval.Comparisons[0].Outcome, differ.Score)
+	if o := propResult(t, differ.Result, vocabkey.PropertyName).Result.Outcome; o != propertycompare.OutcomeConflict || differ.Score >= 0 {
+		t.Fatalf("different given names: outcome %s score %.3f", o, differ.Score)
 	}
 }
 
 func TestSexAgreementAloneStaysUnderWeak(t *testing.T) {
-	sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
-	meta := []match.PropertyMeta{{Property: sex, ValueType: propertymeta.ValueTypeTerm}}
-	male := match.Values{sex: {{Term: "male"}}}
-	ev := match.Evaluate(male, male, meta, graphalign.DefaultConfig().Value)
-	sc := graphalign.ScoreCandidate(ev, 0, 1, graphalign.DefaultConfig())
+	sex := vocabkey.PropertyKey(vocabkey.PropertySexAtBirth)
+	meta := metasOf(map[vocabkey.PropertyKey]string{sex: propertymeta.ValueTypeTerm})
+	male := subjectcompare.Values{sex: {propertycomparetest.Term("male")}}
+	cfg := graphalign.DefaultConfig()
+	sc := graphalign.ScoreCandidate(subjectcompare.Compare(vocabkey.Person, male, male, meta, cfg.Subject, cfg.Value), 0, 1)
 	if sc.Score < 0.59 || sc.Score > 0.61 || sc.Score >= graphalign.DefaultConfig().WeakScore {
 		t.Fatalf("sex alone scored %.3f", sc.Score)
 	}
@@ -684,7 +731,7 @@ func TestSexAgreementAloneStaysUnderWeak(t *testing.T) {
 func TestContestedHandleIsDecidedTheSameEveryRun(t *testing.T) {
 	tests := []struct {
 		name   string
-		a, b   match.Values
+		a, b   subjectcompare.Values
 		winner string
 	}{
 		{name: "equal claims go to the first ref", a: nameVals("John", "Smith"), b: nameVals("John", "Smith"), winner: "s-a"},
@@ -692,19 +739,19 @@ func TestContestedHandleIsDecidedTheSameEveryRun(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
-			male := match.Value{Term: "male"}
+			sex := vocabkey.PropertyKey(vocabkey.PropertySexAtBirth)
+			male := propertycomparetest.Term("male")
 			b := tt.b
 			if tt.winner == "s-b" {
-				b = match.Values{}
+				b = subjectcompare.Values{}
 				for k, v := range tt.b {
 					b[k] = v
 				}
-				b[sex] = []match.Value{male}
+				b[sex] = []propertycompare.Value{male}
 			}
 			handle := nameVals("John", "Smith")
-			handle[sex] = []match.Value{male}
-			metas := append(nameMetas(), match.PropertyMeta{Property: sex, ValueType: propertymeta.ValueTypeTerm})
+			handle[sex] = []propertycompare.Value{male}
+			metas := mergeMetas(nameMetas(), metasOf(map[vocabkey.PropertyKey]string{sex: propertymeta.ValueTypeTerm}))
 			layer := graphalign.Layer{
 				Subjects: []graphalign.Subject{
 					{ID: id("s-a"), Ref: "PER-A", Kind: "person", Values: tt.a},
@@ -765,7 +812,7 @@ func TestExactNameCreditsTheNeighborOnce(t *testing.T) {
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: nameVals("Ann", "Ames")},
 		},
 		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
-		Metas:   append(nameMetas(), eventMetas()...),
+		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
 		Handles: []graphalign.Handle{
@@ -778,7 +825,7 @@ func TestExactNameCreditsTheNeighborOnce(t *testing.T) {
 	fixed := []graphalign.Fixed{{SubjectID: perSub, HandleID: perH}}
 	row := rowBySubject(graphalign.Align(layer, canon, stats, fixed, nil), evSub)
 	cfg := graphalign.DefaultConfig()
-	name := cfg.PropertyScale[match.Property{Key: "name", Origin: "provenencia"}].Weight
+	name := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree
 	want := cfg.EdgeSupportLow + cfg.NeighborCreditLow*name
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, evH) ||
 		math.Abs(row.Score-want) > 1e-9 || row.Assessment != graphalign.AssessWeak {
@@ -795,7 +842,7 @@ func TestHighFanOutNameCreditStaysUnderTheBar(t *testing.T) {
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: nameVals("Ann", "Ames")},
 		},
 		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
-		Metas:   append(nameMetas(), eventMetas()...),
+		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
 		Handles: []graphalign.Handle{
@@ -808,7 +855,7 @@ func TestHighFanOutNameCreditStaysUnderTheBar(t *testing.T) {
 	fixed := []graphalign.Fixed{{SubjectID: perSub, HandleID: perH}}
 	row := rowBySubject(graphalign.Align(layer, canon, stats, fixed, nil), evSub)
 	cfg := graphalign.DefaultConfig()
-	name := cfg.PropertyScale[match.Property{Key: "name", Origin: "provenencia"}].Weight
+	name := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree
 	want := cfg.EdgeSupportHigh + cfg.NeighborCreditHigh*name
 	if row.Target == graphalign.TargetHandle || math.Abs(row.Score-want) > 1e-9 || row.Score >= cfg.AcceptScore {
 		t.Fatalf("event %+v, want a suggestion at %.2f", row, want)
@@ -824,7 +871,7 @@ func TestConflictingNeighborLowersTheScore(t *testing.T) {
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: nameVals("Mary", "Robins")},
 		},
 		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
-		Metas:   append(nameMetas(), eventMetas()...),
+		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
 		Handles: []graphalign.Handle{
@@ -837,7 +884,7 @@ func TestConflictingNeighborLowersTheScore(t *testing.T) {
 	fixed := []graphalign.Fixed{{SubjectID: perSub, HandleID: perH}}
 	row := rowBySubject(graphalign.Align(layer, canon, stats, fixed, nil), evSub)
 	cfg := graphalign.DefaultConfig()
-	penalty := cfg.PropertyScale[match.Property{Key: "name", Origin: "provenencia"}].Contradiction
+	penalty := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Conflict
 	want := cfg.EdgeSupportLow + cfg.NeighborCreditLow*(-penalty)
 	if row.Target == graphalign.TargetHandle || math.Abs(row.Score-want) > 1e-9 || row.Score >= cfg.EdgeSupportLow {
 		t.Fatalf("event %+v, want %.2f, under one edge's support", row, want)
@@ -855,7 +902,7 @@ func hasAlt(row graphalign.Row, handle []byte) bool {
 
 func TestAcceptedPropertyMatchNominatesItsNeighbor(t *testing.T) {
 	// Two names clear the bar. The third subject does not: its only property
-	// is a shared term, under that kind's Rank minimum. Both accepted handles
+	// is a shared term, under the weak band. Both accepted handles
 	// bridge to it, and both canon edges share that bridge's signature, so
 	// the walk nominates the neighbor. The score counts both edges and a
 	// fraction of each neighbor's name. A canon neighbor on a different
@@ -875,7 +922,7 @@ func TestAcceptedPropertyMatchNominatesItsNeighbor(t *testing.T) {
 			{A: a, B: mid, Signature: sig},
 			{A: b, B: mid, Signature: sig},
 		},
-		Metas: append(nameMetas(), eventMetas()...),
+		Metas: mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
 		Handles: []graphalign.Handle{
@@ -894,8 +941,8 @@ func TestAcceptedPropertyMatchNominatesItsNeighbor(t *testing.T) {
 	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1, other.Key(): 1}}
 	row := rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), mid)
 	cfg := graphalign.DefaultConfig()
-	term := cfg.ValueTypeScale["term"].Weight
-	name := cfg.PropertyScale[match.Property{Key: "name", Origin: "provenencia"}].Weight
+	term := cfg.Subject.Weights[vocabkey.Event][vocabkey.PropertyEventType].Agree
+	name := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree
 	want := term + 2*(cfg.EdgeSupportLow+cfg.NeighborCreditLow*name)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, hMid) ||
 		math.Abs(row.Score-want) > 1e-9 || hasAlt(row, hWrong) {
@@ -903,8 +950,8 @@ func TestAcceptedPropertyMatchNominatesItsNeighbor(t *testing.T) {
 	}
 }
 
-func TestRankLoserDoesNotNominate(t *testing.T) {
-	// The exact name wins the row. Anne still clears Rank, and only that
+func TestCandidateLoserDoesNotNominate(t *testing.T) {
+	// The exact name wins the row. Anne is still a candidate, and only that
 	// handle bridges to the third subject. Walking the loser would nominate
 	// it; walking the winner must not.
 	sig := partSig("subject", "event", "gathering")
@@ -912,14 +959,14 @@ func TestRankLoserDoesNotNominate(t *testing.T) {
 	win, lose, hMid := id("h-win"), id("h-lose"), id("h-mid")
 	et, etv := termProp("event_type", "gathering")
 	lesser := nameVals("Ann", "Ames")
-	lesser[match.Property{Key: "name", Origin: "provenencia"}][0].Name.Parts[0].Value = "Anne"
+	lesser[vocabkey.PropertyName][0].Name.Parts[0].Value = "Anne"
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{
 			{ID: person, Ref: "PER-A", Kind: "person", Values: nameVals("Ann", "Ames")},
 			{ID: mid, Ref: "EVT-M", Kind: "event", Values: vals(et, etv)},
 		},
 		Bridges: []graphalign.Bridge{{A: person, B: mid, Signature: sig}},
-		Metas:   append(nameMetas(), eventMetas()...),
+		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
 		Handles: []graphalign.Handle{
@@ -975,7 +1022,7 @@ func TestNeighborCreditStopsAtOneHop(t *testing.T) {
 	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
 	p := graphalign.Align(layer, canon, stats, nil, nil)
 	cfg := graphalign.DefaultConfig()
-	name := cfg.PropertyScale[match.Property{Key: "name", Origin: "provenencia"}].Weight
+	name := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree
 	midWant := cfg.EdgeSupportLow + cfg.NeighborCreditLow*name
 	midRow := rowBySubject(p, mid)
 	if midRow.Target != graphalign.TargetHandle || !bytes.Equal(midRow.HandleID, hm) ||
@@ -1067,7 +1114,7 @@ func TestDecidedRowTheNeighborsContradict(t *testing.T) {
 			{ID: id("s-birth"), Ref: "EVT-S", Kind: "event", Values: vals(et, etv)},
 		},
 		Bridges: []graphalign.Bridge{{A: id("s-person"), B: id("s-birth"), Signature: sig}},
-		Metas:   append(nameMetas(), eventMetas()...),
+		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
 		Handles: []graphalign.Handle{
@@ -1140,11 +1187,12 @@ func TestNewEventsDisagreeWhenTheirParticipantsDo(t *testing.T) {
 	part := partSig("subject", "person", "")
 	place := graphalign.EdgeSignature{BridgeType: "location", RoleOrType: "took_place_in", NeighborKind: "place"}
 	et, residence := termProp("event_type", "residence")
+	dp, dv := dateProp(1850)
 	hatP, hatV := textProp("toponym", "Medicine Hat")
 	calP, calV := textProp("toponym", "Calgary")
 	base := []graphalign.Subject{
-		{ID: id("e-a"), Ref: "EVT-A", Kind: "event", Values: vals(et, residence)},
-		{ID: id("e-b"), Ref: "EVT-B", Kind: "event", Values: vals(et, residence)},
+		{ID: id("e-a"), Ref: "EVT-A", Kind: "event", Values: vals(et, residence, dp, dv)},
+		{ID: id("e-b"), Ref: "EVT-B", Kind: "event", Values: vals(et, residence, dp, dv)},
 		{ID: id("p-paty"), Ref: "PER-A", Kind: "person", Values: nameVals("Paty", "Robins")},
 		{ID: id("p-sandra"), Ref: "PER-B", Kind: "person", Values: nameVals("Sandra", "Robins")},
 	}
@@ -1192,7 +1240,7 @@ func TestNewEventsDisagreeWhenTheirParticipantsDo(t *testing.T) {
 			layer := graphalign.Layer{
 				Subjects: tt.subjects,
 				Bridges:  tt.bridges,
-				Metas:    append(nameMetas(), append(eventMetas(), placeMetas()...)...),
+				Metas:    mergeMetas(nameMetas(), eventMetas(), placeMetas()),
 			}
 			p := graphalign.Align(layer, graphalign.Canon{}, graphalign.Stats{}, nil, nil)
 			for _, sub := range []string{"e-a", "e-b"} {
@@ -1206,7 +1254,7 @@ func TestNewEventsDisagreeWhenTheirParticipantsDo(t *testing.T) {
 }
 
 func TestRowReasons(t *testing.T) {
-	nameKey := match.Property{Key: "name", Origin: "provenencia"}
+	nameKey := vocabkey.PropertyKey(vocabkey.PropertyName)
 	sig := relSig("spouse")
 	tests := []struct {
 		name     string
@@ -1217,7 +1265,7 @@ func TestRowReasons(t *testing.T) {
 		fixed    []graphalign.Fixed
 		subject  string
 		want     graphalign.Reason
-		wantProp match.Property
+		wantProp vocabkey.PropertyKey
 	}{
 		{
 			name:    "a property-only match names the agreeing property",
@@ -1226,10 +1274,25 @@ func TestRowReasons(t *testing.T) {
 			subject: "s-a", want: graphalign.ReasonAgrees, wantProp: nameKey,
 		},
 		{
-			name:    "a candidate below the bar is weak",
+			name: "a neighbor-reached candidate below the bar is weak",
+			layer: []graphalign.Subject{
+				{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")},
+				{ID: id("s-e"), Ref: "E", Kind: "event", Values: vals(termProp("event_type", "residence"))},
+			},
+			handles: []graphalign.Handle{
+				{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+				{ID: id("h-e"), Ref: "EVT-1", Kind: "event", Values: vals(termProp("event_type", "residence"))},
+			},
+			bridges: []graphalign.Bridge{{A: id("s-a"), B: id("s-e"), Signature: partSig("subject", "event", "residence")}},
+			edges:   []graphalign.CanonEdge{{From: id("h-a"), To: id("h-e"), Signature: partSig("subject", "event", "residence")}},
+			fixed:   []graphalign.Fixed{{SubjectID: id("s-a"), HandleID: id("h-a")}},
+			subject: "s-e", want: graphalign.ReasonWeak,
+		},
+		{
+			name:    "a surname-only look-alike is not offered",
 			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
 			handles: []graphalign.Handle{{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: surnameVals("Ames")}},
-			subject: "s-a", want: graphalign.ReasonWeak,
+			subject: "s-a", want: graphalign.ReasonNoMatch,
 		},
 		{
 			name:    "no candidate is no match",
@@ -1265,7 +1328,7 @@ func TestRowReasons(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			layer := graphalign.Layer{Subjects: tt.layer, Bridges: tt.bridges, Metas: nameMetas()}
+			layer := graphalign.Layer{Subjects: tt.layer, Bridges: tt.bridges, Metas: mergeMetas(nameMetas(), eventMetas())}
 			canon := graphalign.Canon{Handles: tt.handles, Edges: tt.edges}
 			row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, tt.fixed, nil), id(tt.subject))
 			if row.Reason != tt.want || row.ReasonProperty != tt.wantProp {
@@ -1321,7 +1384,7 @@ func TestPartOfChainIsStrongWithoutADecision(t *testing.T) {
 		row := rowBySubject(p, pair.sub)
 		if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, pair.handle) ||
 			row.Assessment != graphalign.AssessStrong || row.Score < cfg.StrongScore ||
-			row.Reason != graphalign.ReasonAgrees || row.ReasonProperty.Key != "toponym" {
+			row.Reason != graphalign.ReasonAgrees || row.ReasonProperty != vocabkey.PropertyToponym {
 			t.Fatalf("%s: %+v", pair.sub, row)
 		}
 	}
@@ -1380,8 +1443,8 @@ func TestPartOfDoesNotFileADifferentToponym(t *testing.T) {
 			{ID: parent, Ref: "CPL-A", Kind: "place", Values: vals(pn, pv)},
 		},
 		Bridges: []graphalign.Bridge{{A: child, B: parent, Signature: sig}},
-		Metas: []match.PropertyMeta{{
-			Property: cn, ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalityMultiple,
+		Metas: subjectcompare.Metas{cn: {
+			ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalityMultiple,
 		}},
 	}
 	canon := graphalign.Canon{
@@ -1503,8 +1566,8 @@ func TestDirectedRelationshipsMatchFromTheSameEnd(t *testing.T) {
 // refinement moves the neighbor to another handle: the score is rescored, not
 // kept at its old high, and the row no longer reads "via" that neighbor.
 func TestRefinementDropsSupportFromAMovedNeighbor(t *testing.T) {
-	merge := func(vs ...match.Values) match.Values {
-		out := match.Values{}
+	merge := func(vs ...subjectcompare.Values) subjectcompare.Values {
+		out := subjectcompare.Values{}
 		for _, v := range vs {
 			for k, x := range v {
 				out[k] = append(out[k], x...)
@@ -1515,7 +1578,7 @@ func TestRefinementDropsSupportFromAMovedNeighbor(t *testing.T) {
 	sp, female := termProp("sex_at_birth", "female")
 	_, male := termProp("sex_at_birth", "male")
 	fem, mal := vals(sp, female), vals(sp, male)
-	metas := append(nameMetas(), personMetas()[1])
+	metas := mergeMetas(nameMetas(), metasOf(map[vocabkey.PropertyKey]string{vocabkey.PropertySexAtBirth: propertymeta.ValueTypeTerm}))
 	spouse, sibling := relSig("spouse"), relSig("sibling")
 
 	ann, husband, carl, dora := id("s-ann"), id("s-husband"), id("s-carl"), id("s-dora")
@@ -1608,7 +1671,7 @@ func TestNewDuplicateCheckComparesDirectedNeighborsByEnd(t *testing.T) {
 // A record that gives sex at birth as "unknown" says nothing about sex: an
 // exact name still matches a handle of either sex.
 func TestUnknownSexIsNoEvidence(t *testing.T) {
-	merge := func(a, b match.Values) match.Values {
+	merge := func(a, b subjectcompare.Values) subjectcompare.Values {
 		for k, v := range b {
 			a[k] = append(a[k], v...)
 		}
@@ -1620,7 +1683,7 @@ func TestUnknownSexIsNoEvidence(t *testing.T) {
 	s, h := id("s-john"), id("h-john")
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{{ID: s, Ref: "S-J", Kind: "person", Values: merge(nameVals("John", "Smith"), vals(sp, unknown))}},
-		Metas:    append(nameMetas(), personMetas()[1]),
+		Metas:    mergeMetas(nameMetas(), metasOf(map[vocabkey.PropertyKey]string{vocabkey.PropertySexAtBirth: propertymeta.ValueTypeTerm})),
 	}
 	canon := graphalign.Canon{Handles: []graphalign.Handle{
 		{ID: h, Ref: "PER-1", Kind: "person", Values: merge(nameVals("John", "Smith"), vals(sp, male))},
@@ -1630,42 +1693,19 @@ func TestUnknownSexIsNoEvidence(t *testing.T) {
 		t.Fatalf("target=%s score=%.2f, want John's handle", r.Target, r.Score)
 	}
 	for _, c := range r.Comparisons {
-		if c.Property.Key == "sex_at_birth" && c.Outcome != match.OutcomeUnknown {
-			t.Fatalf("sex_at_birth outcome %s, want unknown", c.Outcome)
+		if c.Key == vocabkey.PropertySexAtBirth && c.Result.Outcome != propertycompare.OutcomeUnknown {
+			t.Fatalf("sex_at_birth outcome %s, want unknown", c.Result.Outcome)
 		}
-	}
-}
-
-func TestScoreSimilarityWeightedCredit(t *testing.T) {
-	cfg := graphalign.DefaultConfig()
-	nameProp := match.Property{Key: "name", Origin: "provenencia"}
-	for _, tt := range []struct {
-		name       string
-		similarity float64
-		outcome    match.Outcome
-		points     float64
-	}{
-		{"a weighted minority match is partial", 0.5, match.OutcomePartial, 1.25},
-		{"a heavier minority is partial", 0.8, match.OutcomePartial, 2.0},
-		{"the leader is an agreement", 1, match.OutcomeAgree, 2.5},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			outcome, points := graphalign.ScoreSimilarity(tt.similarity, true, propertymeta.CardinalitySingle, nameProp, propertymeta.ValueTypeName, cfg)
-			if outcome != tt.outcome || math.Abs(points-tt.points) > 1e-9 {
-				t.Fatalf("got %v %.4f, want %v %.4f", outcome, points, tt.outcome, tt.points)
-			}
-		})
 	}
 }
 
 func TestSparseNameAndBirthDate(t *testing.T) {
 	// A person with only a name and a birth date files on the person whose
 	// name and birth match, not on a look-alike born in another year.
-	date := match.Property{Key: "date", Origin: "provenencia"}
-	year := func(y int) match.Value { return match.Value{Date: datevaluetest.YMD(y, 0, 0)} }
+	date := vocabkey.PropertyKey(vocabkey.PropertyDate)
+	year := func(y int) propertycompare.Value { return propertycomparetest.Date(datevaluetest.YMD(y, 0, 0)) }
 	et, birth := termProp("event_type", "birth")
-	metas := append(nameMetas(), eventMetas()...)
-	metas = append(metas, match.PropertyMeta{Property: date, ValueType: propertymeta.ValueTypeDate})
+	metas := mergeMetas(nameMetas(), eventMetas())
 	sig := partSig("subject", "event", "birth")
 	per, ev := id("s-person"), id("s-event")
 	layer := graphalign.Layer{
@@ -1693,8 +1733,8 @@ func TestSparseNameAndBirthDate(t *testing.T) {
 	p := graphalign.Align(layer, canon, stats, nil, nil)
 
 	cfg := graphalign.DefaultConfig()
-	name := cfg.PropertyScale[match.Property{Key: "name", Origin: "provenencia"}].Weight
-	event := cfg.ValueTypeScale["term"].Weight + cfg.ValueTypeScale["date"].Weight
+	name := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree
+	event := cfg.Subject.Weights[vocabkey.Event][vocabkey.PropertyEventType].Agree + cfg.Subject.Weights[vocabkey.Event][vocabkey.PropertyDate].Agree
 	tests := []struct {
 		name    string
 		subject []byte
@@ -1712,5 +1752,184 @@ func TestSparseNameAndBirthDate(t *testing.T) {
 				t.Fatalf("row %+v, want %s strong at %.2f", row, tt.handle, tt.score)
 			}
 		})
+	}
+}
+
+// eventVals is an event of one type in one year.
+func eventVals(eventType string, year int) subjectcompare.Values {
+	et, tv := termProp("event_type", eventType)
+	dp, dv := dateProp(year)
+	return vals(et, tv, dp, dv)
+}
+
+// withLife copies v and sets its person lifespan keys from life events.
+func withLife(v subjectcompare.Values, events ...subjectprofile.LifeEvent) subjectcompare.Values {
+	out := subjectcompare.Values{}
+	maps.Copy(out, v)
+	life := subjectprofile.ForSubject(subjectprofile.Subject{Life: events}, matchregistry.Default().Subject.Lifespans[vocabkey.Person])
+	maps.Copy(out, life)
+	return out
+}
+
+// lifeIn is a life event of the person as its subject, dated to one year.
+func lifeIn(eventType vocabkey.EventType, year int) subjectprofile.LifeEvent {
+	return subjectprofile.LifeEvent{
+		EventType: eventType,
+		Role:      vocabkey.RoleSubject,
+		Dates:     []datevalue.Value{*datevaluetest.YMD(year, 0, 0)},
+	}
+}
+
+func TestBirthIsNeverProposedOnADeath(t *testing.T) {
+	metas := subjectcomparetest.Metas()
+	t.Run("AC-1.2", func(t *testing.T) {
+		s, h := id("s-event"), id("h-event")
+		layer := graphalign.Layer{
+			Subjects: []graphalign.Subject{{ID: s, Ref: "EVT-S", Kind: "event", Values: eventVals("birth", 1850)}},
+			Metas:    metas,
+		}
+		canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "EVT-1", Kind: "event", Values: eventVals("death", 1850)}}}
+		row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil), s)
+		if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch || len(row.Alternatives) != 0 {
+			t.Fatalf("birth against a death: %+v", row)
+		}
+	})
+	t.Run("AC-1.3", func(t *testing.T) {
+		sig := partSig("subject", "event", "birth")
+		p, e, hp, hd := id("s-person"), id("s-event"), id("h-person"), id("h-death")
+		layer := graphalign.Layer{
+			Subjects: []graphalign.Subject{
+				{ID: p, Ref: "PER-S", Kind: "person", Values: vals(nameProp("Ann Ames"))},
+				{ID: e, Ref: "EVT-S", Kind: "event", Values: eventVals("birth", 1850)},
+			},
+			Bridges: []graphalign.Bridge{{A: p, B: e, Signature: sig}},
+			Metas:   metas,
+		}
+		canon := graphalign.Canon{
+			Handles: []graphalign.Handle{
+				{ID: hp, Ref: "PER-1", Kind: "person", Values: vals(nameProp("Ann Ames"))},
+				{ID: hd, Ref: "EVT-1", Kind: "event", Values: eventVals("death", 1850)},
+			},
+			Edges: []graphalign.CanonEdge{{From: hp, To: hd, Signature: sig}},
+		}
+		fixed := []graphalign.Fixed{{SubjectID: p, HandleID: hp}}
+		row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, fixed, nil), e)
+		if row.Target != graphalign.TargetSkip || row.Assessment != graphalign.AssessNone || row.Reason != graphalign.ReasonWeak {
+			t.Fatalf("birth under a death's signature: %+v", row)
+		}
+		if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, hd) || row.Alternatives[0].Assessment != graphalign.AssessNone {
+			t.Fatalf("alternatives %+v, want the death with no band", row.Alternatives)
+		}
+	})
+	t.Run("AC-1.8", func(t *testing.T) {
+		s, h := id("s-event"), id("h-event")
+		et, bv := termProp("event_type", "birth")
+		layer := graphalign.Layer{
+			Subjects: []graphalign.Subject{{ID: s, Ref: "EVT-S", Kind: "event", Values: vals(et, bv)}},
+			Metas:    metas,
+		}
+		canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "EVT-1", Kind: "event", Values: vals(et, bv)}}}
+		row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil), s)
+		if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch {
+			t.Fatalf("undated birth against an undated birth: %+v", row)
+		}
+	})
+}
+
+// nameProp is a Western name property pair for a form.
+func nameProp(form string) (vocabkey.PropertyKey, propertycompare.Value) {
+	return vocabkey.PropertyName, propertycomparetest.Name(form)
+}
+
+func TestLifespanRulesOutAPerson(t *testing.T) {
+	metas := subjectcomparetest.Metas()
+	probe := func(deathYear int) subjectcompare.Values {
+		return withLife(vals(nameProp("James Robins")), lifeIn(vocabkey.EventDeath, deathYear))
+	}
+	handle := withLife(vals(nameProp("James Robins")), lifeIn(vocabkey.EventBirth, 1850))
+	align := func(values subjectcompare.Values) graphalign.Row {
+		s, h := id("s-person"), id("h-person")
+		layer := graphalign.Layer{Subjects: []graphalign.Subject{{ID: s, Ref: "PER-S", Kind: "person", Values: values}}, Metas: metas}
+		canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: handle}}}
+		return rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil), s)
+	}
+	t.Run("AC-1.4", func(t *testing.T) {
+		row := align(probe(1840))
+		if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch {
+			t.Fatalf("died before the handle was born: %+v", row)
+		}
+	})
+	t.Run("AC-1.5", func(t *testing.T) {
+		row := align(probe(1920))
+		if row.Target != graphalign.TargetHandle || row.Assessment != graphalign.AssessWeak || math.Abs(row.Score-2.6) > 1e-9 {
+			t.Fatalf("a consistent lifespan: %+v", row)
+		}
+		var found int
+		for _, c := range row.Comparisons {
+			if c.Key != vocabkey.PropertyLifespan {
+				continue
+			}
+			found++
+			if c.Result.Outcome != propertycompare.OutcomeAgree || math.Abs(c.Points-0.1) > 1e-9 || !c.Derived {
+				t.Fatalf("lifespan comparison %+v", c)
+			}
+		}
+		if found != 1 {
+			t.Fatalf("%d lifespan comparisons, want 1", found)
+		}
+		if row.ReasonProperty != vocabkey.PropertyName {
+			t.Fatalf("reason property %q, want name: the lifespan is never named", row.ReasonProperty)
+		}
+	})
+}
+
+func TestGenderPoolsWithSex(t *testing.T) {
+	s, h := id("s-person"), id("h-person")
+	name, nv := nameProp("Mary Robins")
+	gp, gv := termProp("gender", "male")
+	sp, sv := termProp("sex_at_birth", "male")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{{ID: s, Ref: "PER-S", Kind: "person", Values: vals(name, nv, gp, gv)}},
+		Metas:    subjectcomparetest.Metas(),
+	}
+	canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: vals(name, nv, sp, sv)}}}
+	row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil), s)
+	if row.Target != graphalign.TargetHandle || row.Assessment != graphalign.AssessMedium || math.Abs(row.Score-3.1) > 1e-9 {
+		t.Fatalf("gender against sex: %+v", row)
+	}
+	var keys []vocabkey.PropertyKey
+	for _, c := range row.Comparisons {
+		keys = append(keys, c.Key)
+		if c.Key == vocabkey.PropertySexAtBirth && c.Result.Outcome != propertycompare.OutcomeAgree {
+			t.Fatalf("sex_at_birth outcome %s, want agree", c.Result.Outcome)
+		}
+	}
+	if want := []vocabkey.PropertyKey{vocabkey.PropertyLifespan, vocabkey.PropertyName, vocabkey.PropertySexAtBirth}; !slices.Equal(keys, want) {
+		t.Fatalf("comparison keys %v, want %v", keys, want)
+	}
+}
+
+func TestEventPeriodStandsForTheDate(t *testing.T) {
+	s, h := id("s-event"), id("h-event")
+	et, rv := termProp("event_type", "residence")
+	sd, sdv := vocabkey.PropertyKey(vocabkey.PropertyStartDate), propertycomparetest.Date(datevaluetest.YMD(1850, 0, 0))
+	ed, edv := vocabkey.PropertyKey(vocabkey.PropertyEndDate), propertycomparetest.Date(datevaluetest.YMD(1860, 0, 0))
+	dp, dv := dateProp(1855)
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{{ID: s, Ref: "EVT-S", Kind: "event", Values: vals(et, rv, sd, sdv, ed, edv)}},
+		Metas:    subjectcomparetest.Metas(),
+	}
+	canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "EVT-1", Kind: "event", Values: vals(et, rv, dp, dv)}}}
+	fixed := []graphalign.Fixed{{SubjectID: s, HandleID: h}}
+	row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, fixed, nil), s)
+	var keys []vocabkey.PropertyKey
+	for _, c := range row.Comparisons {
+		keys = append(keys, c.Key)
+		if c.Key == vocabkey.PropertyDate && c.Result.Outcome != propertycompare.OutcomePartial {
+			t.Fatalf("date outcome %s, want partial", c.Result.Outcome)
+		}
+	}
+	if want := []vocabkey.PropertyKey{vocabkey.PropertyDate, vocabkey.PropertyEventType}; !slices.Equal(keys, want) {
+		t.Fatalf("comparison keys %v, want %v", keys, want)
 	}
 }

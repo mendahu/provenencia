@@ -266,3 +266,67 @@ func TestCompare(t *testing.T) {
 		})
 	}
 }
+
+func TestPoints(t *testing.T) {
+	w := subjectcompare.Weights{Agree: 2.5, Conflict: 3}
+	for _, c := range []struct {
+		name string
+		out  propertycompare.Outcome
+		sim  float64
+		want float64
+	}{
+		{"agree", propertycompare.OutcomeAgree, 0.4, 2.5},
+		{"partial", propertycompare.OutcomePartial, 0.75, 1.875},
+		{"conflict", propertycompare.OutcomeConflict, 0, -3},
+		{"unknown", propertycompare.OutcomeUnknown, 0, 0},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if got := subjectcompare.Points(c.out, c.sim, w); !near(got, c.want) {
+				t.Errorf("Points = %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestDerived(t *testing.T) {
+	rules := matchregistry.Default().Subject
+	for _, c := range []struct {
+		kind vocabkey.SubjectType
+		key  vocabkey.PropertyKey
+		want bool
+	}{
+		{vocabkey.Person, vocabkey.PropertyLifespan, true},
+		{vocabkey.Person, vocabkey.PropertyLifespanSpan, true},
+		{vocabkey.Person, name, false},
+		{vocabkey.Event, vocabkey.PropertyLifespan, false},
+	} {
+		if got := rules.Derived(c.kind, c.key); got != c.want {
+			t.Errorf("Derived(%s, %s) = %v, want %v", c.kind, c.key, got, c.want)
+		}
+	}
+}
+
+func TestLead(t *testing.T) {
+	rules := matchregistry.Default().Subject
+	for _, c := range []struct {
+		kind vocabkey.SubjectType
+		key  vocabkey.PropertyKey
+		want vocabkey.PropertyKey
+		ok   bool
+	}{
+		{vocabkey.Person, name, name, true},
+		{vocabkey.Person, gender, sex, true},
+		{vocabkey.Event, start, date, true},
+		{vocabkey.Event, end, date, true},
+		{vocabkey.Person, vocabkey.PropertyLifespan, vocabkey.PropertyLifespan, true},
+		{vocabkey.Person, vocabkey.PropertyLifespanSpan, "", false},
+		{vocabkey.Person, vocabkey.PropertyKey("occupation"), "", false},
+		{vocabkey.Event, name, "", false},
+		{vocabkey.SubjectType("source"), name, "", false},
+	} {
+		got, ok := rules.Lead(c.kind, c.key)
+		if got != c.want || ok != c.ok {
+			t.Errorf("Lead(%s, %s) = %q, %v; want %q, %v", c.kind, c.key, got, ok, c.want, c.ok)
+		}
+	}
+}

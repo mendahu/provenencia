@@ -11,8 +11,8 @@ func defaultSubject() subjectcompare.Rules {
 	return subjectcompare.Rules{
 		Weights: map[vocabkey.SubjectType]map[vocabkey.PropertyKey]subjectcompare.Weights{
 			vocabkey.Person: {
-				vocabkey.PropertyName:       {Agree: 2.5, Conflict: 3},  // graphalign's name scale; the walk reads it until S11-13
-				vocabkey.PropertySexAtBirth: {Agree: 0.6, Conflict: 1},  // graphalign's sex / gender scale; pools gender; the walk reads it until S11-13
+				vocabkey.PropertyName:       {Agree: 2.5, Conflict: 3},  // carried from graphalign's name scale
+				vocabkey.PropertySexAtBirth: {Agree: 0.6, Conflict: 1},  // carried from graphalign's sex / gender scale; pools gender
 				vocabkey.PropertyLifespan:   {Agree: 0.1, Conflict: 20}, // estimate: near zero, the dates count through their segments; impossible together never recovers
 			},
 			vocabkey.Event: {

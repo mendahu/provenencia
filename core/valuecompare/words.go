@@ -15,7 +15,7 @@ import (
 // misspelling is.
 
 // NormalizeForm ignores case, punctuation, and whitespace differences: the
-// name sort key, and the text core/match tokenizes. Dashes
+// name sort key and the text that text value compare reads. Dashes
 // and slashes separate words ("Smith-Jones" reads as "smith jones"); other
 // punctuation is dropped, so an apostrophe joins ("O'Brien" reads as
 // "obrien", the same as "OBrien").

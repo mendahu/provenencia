@@ -113,8 +113,8 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 			Score:                r.Score,
 			Assessment:           string(r.Assessment),
 			Reason:               string(r.Reason),
-			ReasonPropertyKey:    r.ReasonProperty.Key,
-			ReasonPropertyOrigin: r.ReasonProperty.Origin,
+			ReasonPropertyKey:    string(r.ReasonProperty),
+			ReasonPropertyOrigin: productOrigin(r.ReasonProperty),
 			ConflictWithFixed:    r.Flags.ConflictWithFixed,
 			PossibleDuplicate:    r.Flags.PossibleDuplicate,
 			DuplicateOfSubjectId: uuidString(r.Flags.DuplicateOf),
@@ -126,8 +126,8 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 		}
 		for _, ex := range r.Exhibits {
 			cmp := &engine.PromoteGraphAlignmentComparison{
-				PropertyKey:           ex.Property.Key,
-				PropertyOrigin:        ex.Property.Origin,
+				PropertyKey:           ex.PropertyKey,
+				PropertyOrigin:        ex.PropertyOrigin,
 				Outcome:               string(ex.Outcome),
 				ValueType:             ex.ValueType,
 				Pinned:                ex.Pinned,
@@ -156,8 +156,8 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 				Score:                a.Score,
 				Assessment:           string(a.Assessment),
 				Reason:               string(a.Reason),
-				ReasonPropertyKey:    a.ReasonProperty.Key,
-				ReasonPropertyOrigin: a.ReasonProperty.Origin,
+				ReasonPropertyKey:    string(a.ReasonProperty),
+				ReasonPropertyOrigin: productOrigin(a.ReasonProperty),
 				ViaNeighborSubjectId: uuidString(a.ViaNeighbor),
 			}
 			switch r.Kind {
@@ -195,4 +195,13 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 		out.Rows = append(out.Rows, row)
 	}
 	return out, nil
+}
+
+// productOrigin is the origin a reason property's key goes out with: subject
+// compare leads are product properties, and an empty key has no origin.
+func productOrigin(key vocabkey.PropertyKey) string {
+	if key == "" {
+		return ""
+	}
+	return vocabkey.OriginProvenencia
 }

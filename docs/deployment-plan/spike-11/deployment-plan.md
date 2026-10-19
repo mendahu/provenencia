@@ -100,7 +100,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-11 | Subject profile and entity compare | 3 | `subjectprofile.Build`: strict profile, denied as negatives, `Excluding` | — | S11-10, S10-66 | [plan](prs/S11-11-subject-profile.md) | Landed #476 |
 | S11-12 | Lifespan for people | 3 | Profile builder derives a lifespan; subject compare checks it | — | S11-11 | [plan](prs/S11-12-lifespan.md) | Landed #480 |
 | S11-24 | Delete frequency weighting | 3 | `Stats.ValueFreq`, m / u priors, frequency scales and their benchmark go | — | S11-05 | [plan](prs/S11-24-delete-frequency.md) | Landed #483 |
-| S11-13 | Migrate Promote scoring onto subject compare | 3 | Property scoring, seeding, duplicate rows; values loader moves; delete `core/match`, `core/database/matching` | — | S11-12, S11-24 | [plan](prs/S11-13-promote-subject-compare.md) | Planned |
+| S11-13 | Migrate Promote scoring onto subject compare | 3 | Property scoring, seeding, duplicate rows; values loader moves; delete `core/match`, `core/database/matching` | — | S11-12, S11-24 | [plan](prs/S11-13-promote-subject-compare.md) | Landed #487 |
 | S11-14 | Segment compare | 4 | `segmentcompare`, typed bridge keys, birth / death cardinality, one-hop credit | — | S11-13 | — | Scoped |
 | S11-15 | Shortlist index | 4 | Key → handles per kind on `graphcache`; registry shortlist keys | — | S11-13 | — | Scoped |
 | S11-16 | Rewrite graph alignment | 4 | Layer 6 procedure, bands from evidence, accept bar; old walk and registry deleted | — | S11-14, S11-15 | — | Scoped |
@@ -348,7 +348,7 @@ Also builds `core/subjectcompare`'s `invariants_test.go` lead groups (`kindGroup
 
 #### S11-15 — Shortlist index
 
-**Ships.** A key → handles map per kind on `graphcache`, built with `valuecompare.Key` from the registry's shortlist keys (person name words, not initials; event type + year bucket; toponym). It reuses `graphcache`'s stats slot (`Stats` / `SetStats` / `statsOK`, renamed), dropped on a handle commit like today.
+**Ships.** A key → handles map per kind on `graphcache`, built with `valuecompare.Key` from the registry's shortlist keys (person name words, not initials; event type + year bucket; toponym). It reuses `graphcache`'s stats slot (`Stats` / `SetStats` / `statsOK`, renamed), dropped on a handle commit like today. When the shortlist replaces the kind scan in `graphalign.Candidates`, the Promote profiler (`core/database/promotealign/profiles.go`, `profiler.profile`) loads and builds life events only for shortlisted handles (and the fixed and BFS-reached ones), not for every handle of the kind. S11-13 profiles every person and their events per repropose (PRF-1 in its ship log: warm repropose 40 to 160 ms on the 20k-person fixture).
 **Not this PR.** Using it in the walk (S11-16). A coarse misspelling key (open; [decided 2026-10-17](comparison-layers.md#decided-on-2026-10-17)).
 **Check.** "J. Robins" shortlists every handle with `robins`; aliases share a key; no `Same` / `Equivalent` pair is missed (property test).
 **Context.** [Layer 6 procedure](comparison-layers.md#layer-6-procedure) step 1; [vocabulary](comparison-layers.md#vocabulary-finding-candidates).
@@ -378,14 +378,14 @@ Also builds `core/subjectcompare`'s `invariants_test.go` lead groups (`kindGroup
 
 #### S11-19 — Claim evidence query
 
-**Ships.** A Go query from a row's target and its neighbors' targets: property lines per member through property compare, identical values collapsed, relationship lines through segment compare with bundles, the registry evidence section (pin defaults, defining properties), wording keys from cause codes.
+**Ships.** A Go query from a row's target and its neighbors' targets: property lines per member through property compare, identical values collapsed, relationship lines through segment compare with bundles, the registry evidence section (pin defaults, defining properties), wording keys from cause codes. A line's points come from `subjectcompare.Points` given the property's `propertycompare.Result`: reshape `Points` (or add one helper beside it) so no caller reads the speaking similarity itself, and drop `Compare`'s inline partial arithmetic and `promotealign`'s private `similarity` (S11-13 MNT-3). The Source side's Observations come from the Source graph through `promotealign`'s `decode`, the one row decoder, not a second SQL read like `loadExhibitObservations` (S11-13 MNT-4).
 **Not this PR.** The RPC, Apply defaults and Swift (S11-25). If the plan finds the pin tables can't hold one incoming Observation against many member Observations, a migration PR is cut ahead of it.
 **Check.** Five named members give one collapsed name line of five; a matching birth gives one relationship line whose bundle holds every Observation behind it.
 **Context.** [`claim-evidence.md`](claim-evidence.md); [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §9.
 
 #### S11-25 — Claim evidence RPC and pin policy
 
-**Ships.** A lazy per-row RPC over S11-19's query. Apply computes default pins in Go for rows whose sheet was never opened. Swift's pin drafting (`PromoteFlow.swift` `draftedPins`, `draftedArgument`, `kept.pins`) moves onto the RPC. `PromoteGraphAlignmentRow.comparisons` (field 9), `attachExhibits`, `pairExhibits`, `withRowLines` and `refLine` are deleted. Pins write one incoming Observation against many member Observations; Done backfills every member's claim.
+**Ships.** A lazy per-row RPC over S11-19's query. Apply computes default pins in Go for rows whose sheet was never opened. Swift's pin drafting (`PromoteFlow.swift` `draftedPins`, `draftedArgument`, `kept.pins`) moves onto the RPC. `PromoteGraphAlignmentRow.comparisons` (field 9), `attachExhibits`, `pairExhibits`, `withRowLines` and `refLine` are deleted. Pins write one incoming Observation against many member Observations; Done backfills every member's claim. Deleting `pairExhibits` also retires its compare-before-`Compatible` loop (S11-13 PRF-2) and the pin-test helper `obs` in `exhibits_pin_test.go` that copies how `exhibitObs` is built (S11-13 MNT-5); any pin test that survives builds its values through the production constructor.
 **Not this PR.** The new sheet layout (S11-20); the shipped sheet reads the new lines unchanged in shape.
 **Check.** Done on a row never opened pins its matching lines; opening the sheet shows the same defaults; every member's claim is backfilled.
 **Context.** Rule "The pin policy has one owner, in Go"; [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md).

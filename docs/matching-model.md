@@ -207,6 +207,7 @@ These are identifiers or catalog data, not tunables, and have no row: the vocabu
 | `DefaultNames.GivenOnlyFactor`, `SuffixConflict` | A surname or first given name left over on both sides, and a generation conflict, are `Different` (S11-03) |
 | `DefaultNames.Frequency`, `FrequencyDiscount`, `FrequencyMinPeople`; `graphalign` `MPrior`, `UPrior`, frequency `ValueTypeScale` entries | Frequency weighting is descoped |
 | `graphalign` `PropertyAgreement` | Frequency weighting is descoped; the toponym bonus is folded into `subject.Weights.place.toponym.Agree` |
+| `graphalign` `PropertyScale`, `ValueTypeScale` (weight and contradiction per property and per value type) | Promote scores properties with `subject.Weights` (S11-13); a property with no weight there scores nothing |
 | `graphalign` `FanOutLowMax`, `FanOutUnknown` | Replaced by declared cardinality |
 | `graphalign` `ValueTypeScale` floors other than date, `PropertyScale` sex / gender `Floor` 1 | Replaced by relation outcomes and the `Near` minimum |
 | `graphalign` `DefaultConfig.ConflictPenalty` | Value carried into `subject.Weights.event.date.Conflict` and `subject.Weights.place.toponym.Conflict`; its second role, the conflict-with-decision margin, is replaced by the contested marker and the settle margin |

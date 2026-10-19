@@ -103,18 +103,19 @@ func Compare(kind vocabkey.SubjectType, a, b Values, metas Metas, rules Rules, v
 			res = propertycompare.Compare(side(kind, key, a, rules), side(kind, key, b, rules), metas[key], value)
 		}
 		pr := PropertyResult{Key: key, Result: res}
+		var sim float64
+		if res.Outcome == propertycompare.OutcomePartial {
+			sim = res.Speaking.Result.Similarity
+		}
+		pr.Points = Points(res.Outcome, sim, w)
 		switch res.Outcome {
 		case propertycompare.OutcomeAgree:
-			pr.Points = w.Agree
 			counted += w.Agree
 			score += w.Agree
 		case propertycompare.OutcomePartial:
-			s := res.Speaking.Result.Similarity
-			pr.Points = w.Agree * s
 			counted += w.Agree
-			score += w.Agree * s
+			score += w.Agree * sim
 		case propertycompare.OutcomeConflict:
-			pr.Points = -w.Conflict
 			counted += w.Conflict
 		}
 		out.Evidence += pr.Points
@@ -124,4 +125,50 @@ func Compare(kind vocabkey.SubjectType, a, b Values, metas Metas, rules Rules, v
 		out.Similarity = score / counted
 	}
 	return out
+}
+
+// Points is what one lead property adds to Evidence: an agree earns the agree
+// weight, a partial the agree weight × similarity, a conflict loses the
+// conflict penalty, and an unknown counts for nothing.
+func Points(outcome propertycompare.Outcome, similarity float64, w Weights) float64 {
+	switch outcome {
+	case propertycompare.OutcomeAgree:
+		return w.Agree
+	case propertycompare.OutcomePartial:
+		return w.Agree * similarity
+	case propertycompare.OutcomeConflict:
+		return -w.Conflict
+	}
+	return 0
+}
+
+// Derived reports whether key is a property the profile builder derives for
+// the kind: a lifespan's lead or its Span. A derived property has no catalog
+// row.
+func (r Rules) Derived(kind vocabkey.SubjectType, key vocabkey.PropertyKey) bool {
+	for lead, l := range r.Lifespans[kind] {
+		if key == lead || key == l.Span {
+			return true
+		}
+	}
+	return false
+}
+
+// Lead returns the lead property a property counts under for the kind: the
+// property itself when it is weighted, else the first lead, in ascending key
+// order, that pools it or reads it as a period end. A lifespan's Span is in
+// neither, so it has no lead.
+func (r Rules) Lead(kind vocabkey.SubjectType, key vocabkey.PropertyKey) (vocabkey.PropertyKey, bool) {
+	if _, ok := r.Weights[kind][key]; ok {
+		return key, true
+	}
+	for _, lead := range slices.Sorted(maps.Keys(r.Weights[kind])) {
+		if slices.Contains(r.Pools[kind][lead].With, key) {
+			return lead, true
+		}
+		if p, ok := r.Periods[kind][lead]; ok && (p.Start == key || p.End == key) {
+			return lead, true
+		}
+	}
+	return "", false
 }

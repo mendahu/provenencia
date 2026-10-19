@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-13 — Migrate Promote scoring onto subject compare
+
+**Landed 2026-10-18** in [#487](https://github.com/mendahu/provenencia/pull/487). Promote now judges a Source Subject against a handle with entity compare: each side is built once per proposal (the handle from its conclusion, displayed values positive and denied values negative; a person with the dated events they take part in), and every property scores its subject section weight. A birth is never filed on a death, a person who died before the Subject was born is never proposed, and sex at birth and gender compare as one. A handle is offered only when its own properties reach the weak band. Event types now earn 0.5 and cost 20. The lifespan counts but is not shown until S11-20. `core/match` and `core/database/matching` are gone.
+
 ## S11-24 — Delete frequency weighting
 
 **Landed 2026-10-18** in [#483](https://github.com/mendahu/provenencia/pull/483). Promote no longer weighs a value by how common it is in the catalog. Every property scores a plain weight from the walk's registry: 2 for each value type and 3 for a toponym, so an exact toponym alone is still medium and a sparse name and birth date still files strong. `Stats.ValueFreq`, the priors, the lift to the accept bar and the value-frequency scan are gone; the fan-out scan stays until S11-14.
