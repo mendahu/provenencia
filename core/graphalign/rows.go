@@ -10,6 +10,14 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
+// contested reports whether a comparison behind the pair conflicts, whatever
+// its band (RowFlags.Contested).
+func (c *cand) contested() bool {
+	return c.result.Conflicts() || slices.ContainsFunc(c.links, func(l segmentcompare.Result) bool {
+		return l.Outcome == propertycompare.OutcomeConflict
+	})
+}
+
 func (st *state) proposal() Proposal {
 	var rows []Row
 	for _, s := range st.sortedSubjects() {
@@ -21,12 +29,6 @@ func (st *state) proposal() Proposal {
 			row.Target = TargetHandle
 			row.HandleID = append([]byte(nil), hid...)
 			sc := st.cands[sk][string(hid)]
-			if sc == nil {
-				sc = &cand{handleID: append([]byte(nil), hid...)}
-				if h != nil {
-					st.score(sk, h, sc)
-				}
-			}
 			reported = sc
 			if h != nil {
 				row.HandleRef = h.Ref
@@ -85,9 +87,7 @@ func (st *state) proposal() Proposal {
 			}
 		}
 		if reported != nil {
-			row.Flags.Contested = reported.result.Conflicts() || slices.ContainsFunc(reported.links, func(l segmentcompare.Result) bool {
-				return l.Outcome == propertycompare.OutcomeConflict
-			})
+			row.Flags.Contested = reported.contested()
 		}
 		if from, ok := st.releasedFrom[sk]; ok && !(row.Target == TargetHandle && bytes.Equal(row.HandleID, from)) {
 			mv := st.move[sk]

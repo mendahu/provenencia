@@ -62,11 +62,11 @@ type state struct {
 	move         map[string]Move
 }
 
-// An adjLink is one end's view of an edge: the neighbor, the bridge's key read
-// from this end, and its key read from the neighbor's.
+// An adjLink is one end's view of an edge: the neighbor and the bridge's key
+// read from this end.
 type adjLink struct {
-	neighbor  []byte
-	key, back vocabkey.BridgeKey
+	neighbor []byte
+	key      vocabkey.BridgeKey
 }
 
 // A cand is one Subject's candidate handle and its latest score. Every
@@ -122,13 +122,13 @@ func newState(layer Layer, canon Canon, fixed []Fixed, cfg Config) *state {
 	}
 	for _, b := range layer.Bridges {
 		a, c := string(b.A), string(b.B)
-		st.layerAdj[a] = append(st.layerAdj[a], adjLink{neighbor: b.B, key: b.KeyA, back: b.KeyB})
-		st.layerAdj[c] = append(st.layerAdj[c], adjLink{neighbor: b.A, key: b.KeyB, back: b.KeyA})
+		st.layerAdj[a] = append(st.layerAdj[a], adjLink{neighbor: b.B, key: b.KeyA})
+		st.layerAdj[c] = append(st.layerAdj[c], adjLink{neighbor: b.A, key: b.KeyB})
 	}
 	for _, e := range canon.Edges {
 		f, t := string(e.From), string(e.To)
-		st.canonAdj[f] = append(st.canonAdj[f], adjLink{neighbor: e.To, key: e.KeyFrom, back: e.KeyTo})
-		st.canonAdj[t] = append(st.canonAdj[t], adjLink{neighbor: e.From, key: e.KeyTo, back: e.KeyFrom})
+		st.canonAdj[f] = append(st.canonAdj[f], adjLink{neighbor: e.To, key: e.KeyFrom})
+		st.canonAdj[t] = append(st.canonAdj[t], adjLink{neighbor: e.From, key: e.KeyTo})
 	}
 	for _, f := range fixed {
 		sk, hk := string(f.SubjectID), string(f.HandleID)
@@ -287,6 +287,28 @@ func (st *state) placedOf(subjectID []byte) ([]byte, bool) {
 	return h, ok
 }
 
+// markDirty queues a placed Subject for the settle pass. A fixed Subject is
+// never marked, and the first mark of a round wins (D-7).
+func (st *state) markDirty(nk string, m mark) {
+	if st.fixedSet[nk] {
+		return
+	}
+	if _, ok := st.dirty[nk]; !ok {
+		st.dirty[nk] = m
+	}
+}
+
+// corresponding is the canon links of hid that correspond to link.
+func (st *state) corresponding(link adjLink, hid []byte) []adjLink {
+	var out []adjLink
+	for _, ce := range st.canonAdj[string(hid)] {
+		if segmentcompare.Corresponds(link.key, ce.key) {
+			out = append(out, ce)
+		}
+	}
+	return out
+}
+
 // place puts s on h and tells its neighbors. Each canon neighbor of h through
 // a corresponding link becomes a candidate of the layer neighbor of its kind,
 // at any score, with s as the one that nominated it. A neighbor that is
@@ -311,10 +333,7 @@ func (st *state) place(sk string, hid []byte) {
 			continue
 		}
 		_, nPlaced := st.placed[nk]
-		for _, ce := range st.canonAdj[string(hid)] {
-			if !segmentcompare.Corresponds(link.key, ce.key) {
-				continue
-			}
+		for _, ce := range st.corresponding(link, hid) {
 			g := st.handles[string(ce.neighbor)]
 			if g == nil || g.Kind != ns.Kind {
 				continue
@@ -333,9 +352,7 @@ func (st *state) place(sk string, hid []byte) {
 		}
 		done[nk] = true
 		if nPlaced {
-			if _, ok := st.dirty[nk]; !ok {
-				st.dirty[nk] = mark{reason: reason, neighbor: s.ID}
-			}
+			st.markDirty(nk, mark{reason: reason, neighbor: s.ID})
 		} else {
 			st.rescore(nk, true)
 		}
@@ -365,11 +382,7 @@ func (st *state) release(sk string, why mark) {
 			continue
 		}
 		if _, ok := st.placed[nk]; ok {
-			if !st.fixedSet[nk] {
-				if _, ok := st.dirty[nk]; !ok {
-					st.dirty[nk] = mark{reason: ReasonNeighborReleased, neighbor: []byte(sk)}
-				}
-			}
+			st.markDirty(nk, mark{reason: ReasonNeighborReleased, neighbor: []byte(sk)})
 			continue
 		}
 		st.rescore(nk, true)
@@ -468,8 +481,8 @@ func (st *state) supports(subjectID, handleID, neighbor []byte) bool {
 		if !bytes.Equal(link.neighbor, neighbor) {
 			continue
 		}
-		for _, ce := range st.canonAdj[string(handleID)] {
-			if segmentcompare.Corresponds(link.key, ce.key) && bytes.Equal(ce.neighbor, g) {
+		for _, ce := range st.corresponding(link, handleID) {
+			if bytes.Equal(ce.neighbor, g) {
 				return true
 			}
 		}
@@ -499,7 +512,6 @@ func (st *state) evaluate(kind string, a, b subjectcompare.Values) subjectcompar
 // no corresponding canon link, has no result.
 func (st *state) segments(subjectID []byte, h *Handle, own float64, placedOf func(subjectID []byte) ([]byte, bool)) []segmentcompare.Result {
 	var out []segmentcompare.Result
-	canon := st.canonAdj[string(h.ID)]
 	for _, link := range st.layerAdj[string(subjectID)] {
 		ns := st.subjects[string(link.neighbor)]
 		if ns == nil {
@@ -511,11 +523,7 @@ func (st *state) segments(subjectID []byte, h *Handle, own float64, placedOf fun
 		hid, isPlaced := placedOf(link.neighbor)
 		if !isPlaced {
 			var best *segmentcompare.Result
-			for i := range canon {
-				ce := &canon[i]
-				if !segmentcompare.Corresponds(link.key, ce.key) {
-					continue
-				}
+			for _, ce := range st.corresponding(link, h.ID) {
 				nh := st.handles[string(ce.neighbor)]
 				if nh == nil || nh.Kind != ns.Kind {
 					continue
@@ -523,7 +531,7 @@ func (st *state) segments(subjectID []byte, h *Handle, own float64, placedOf fun
 				if _, held := st.owner[string(ce.neighbor)]; held {
 					continue
 				}
-				r := st.compareSegments(link, ns, *ce, nh, segmentcompare.Unplaced, own)
+				r := st.compareSegments(link, ns, ce, nh, segmentcompare.Unplaced, own)
 				if best == nil || r.Evidence > best.Evidence {
 					best = &r
 				}
@@ -534,11 +542,9 @@ func (st *state) segments(subjectID []byte, h *Handle, own float64, placedOf fun
 			continue
 		}
 		var together, apart *adjLink
-		for i := range canon {
-			ce := &canon[i]
-			if !segmentcompare.Corresponds(link.key, ce.key) {
-				continue
-			}
+		cor := st.corresponding(link, h.ID)
+		for i := range cor {
+			ce := &cor[i]
 			if bytes.Equal(ce.neighbor, hid) {
 				together = ce
 				break
