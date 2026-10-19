@@ -73,7 +73,7 @@ One pure function, called on open and after every decision:
 ```go
 // Align proposes a handle, New or Skip for every primary Subject on one
 // Evidence layer (graph alignment), holding the fixed pairs as given.
-func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg *Config) Proposal // nil cfg: DefaultConfig()
+func Align(layer Layer, canon Canon, fixed []Fixed, cfg *Config) Proposal // nil cfg: DefaultConfig()
 ```
 
 | Input | Holds |

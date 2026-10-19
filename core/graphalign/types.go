@@ -1,6 +1,6 @@
 // Package graphalign proposes a handle, New, or Skip for every primary
 // Subject on one Evidence layer (S9-41). Pure: no catalog I/O. S9-42 loads
-// Layer / Canon / Stats and calls Align.
+// Layer / Canon and calls Align.
 package graphalign
 
 import (
