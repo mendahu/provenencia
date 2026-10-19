@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`, `.cursor/rules/name-values.mdc`
 **Context:** [`docs/conclusion-reconciliation.md`](../../../conclusion-reconciliation.md) §7 (grouping policy), §7.2; [S11-06 plan](S11-06-migrate-reconciler.md); working rules "The reconciler keeps its own decisions", "High tolerance for churn"
 **Planned:** 2026-10-19 against `main` @ `84a9b31`
-**Review:** [`S11-28-alias-fold.review.md`](S11-28-alias-fold.review.md) — Fits with changes / Not ready → fixed, 1 round
+**Review:** [`S11-28-alias-fold.review.md`](S11-28-alias-fold.review.md) — Fits with changes / Not ready → fixed, 4 rounds
 
 ### Implementer — read this first
 
@@ -30,7 +30,7 @@
 
 ## 1. Objective
 
-A Person whose records say *Chris Robins* and *Christopher Robins* shows one given name, *Christopher*, on the Persons list and the Person page. Today the reconciler keeps both (`given: [Christopher, Chris]`) because S11-06 decided that an alias never folds. The user asked (2026-10-19) that the product nickname and abbreviation tables fold a nickname into the formal name it stands for, the way an initial folds into the name it begins. The direction comes from the data: each product set has a head name followed by names that stand for it, and this PR adds a reviewed list of the heads that are themselves nicknames (*Chris*, *Bill*, *Jim*), so a nickname folds into a formal name and two formal names never fold (user, 2026-10-19).
+A Person whose records say *Chris Robins* and *Christopher Robins* shows one given name, *Christopher*, on the Persons list and the Person page. Today the reconciler keeps both (`given: [Christopher, Chris]`) because S11-06 decided that an alias never folds. The user asked (2026-10-19) that the product nickname and abbreviation tables fold a nickname into the formal name it stands for, the way an initial folds into the name it begins. The direction comes from the data: each product set has a head name followed by names that stand for it, and the set's head is the name kept. Where the list pairs two names both ways (*Bill* / *William*), a reviewed table says which to keep (user, 2026-10-19).
 
 **Why now.** Dogfood: every Person recorded once by a nickname and once by a formal name reads as two given names.
 
@@ -51,7 +51,7 @@ A Person whose records say *Chris Robins* and *Christopher Robins* shows one giv
 | AC-1.7 | `given=Ann\|surname=Bill` and `given=Ann\|surname=William` (an alias set holds both) | Unchanged: the same result as without aliases; a surname never alias-folds |
 | AC-1.8 | Two nicknames of one formal name: `given=Chris\|surname=Robins` and `given=Kit\|surname=Robins` (set `{christopher, chris, kit}`) | Unchanged: the same result as without aliases; neither is the other's formal name |
 | AC-1.9 | A nickname longer than its formal name: `given=Ebbie\|surname=Robins` and `given=Abel\|surname=Robins` (set `{abel, ebbie}`) | One value `given=Abel\|surname=Robins`, members {1,2}, merged |
-| AC-1.10 | Two formal names in one set: `given=Allan\|surname=Robins` and `given=Allen\|surname=Robins` (sets `{allan, allen}` and `{allen, allan}`, neither head marked a nickname) | Unchanged: the same result as without aliases |
+| AC-1.10 | A pair listed both ways and not directed: `given=Allan\|surname=Robins` and `given=Allen\|surname=Robins` (sets `{allan, allen}` and `{allen, allan}`) | Unchanged: the same result as without aliases |
 
 **US-2.** As the engine, the reconciler cache reads the product alias tables, so that the fold happens on every catalog and the cache changes only when `CacheVersion` does.
 
@@ -60,15 +60,15 @@ A Person whose records say *Chris Robins* and *Christopher Robins* shows one giv
 | AC-2.1 | A catalog with two Observations naming the same person *Chris Robins* and *Christopher Robins*, joined in one entity | `autoreconciler` writes one displayed name `Christopher Robins` |
 | AC-2.2 | `autoreconciler.CacheVersion` | `18`; a cache written at 17 rebuilds on open |
 | AC-2.3 | `core/database/promotealign/profiles.go` builds its profiler | `reconcile` is `autoreconciler.ValueRules`, the cache's value, so a future `Options.Excluding` re-reconcile folds as the cache does (no caller passes `Excluding` today: `profiles.go:269` passes `Options{}`) |
-| AC-2.4 | The product seed with `nicknameHeads`, under `autoreconciler.ValueRules` | Fold to the formal name alone: *Bill* + *William* → *William*; *Jamie* + *James* → *James*; *Tony* + *Anthony* → *Anthony*; *Kit* + *Christopher* → *Christopher*. Both stay: *William* + *Wilma*; *John* + *Ivan*; *Peter* + *Patrick*; *Mary* + *Marion*; *Ann* + *Anna*; *Allan* + *Allen* |
-| AC-2.5 | `nicknameHeads` | Every entry is the head of a set in `nicknameSets`, appears inside another set, and is listed once; `nicknameSets` itself is unchanged from the planning base |
+| AC-2.4 | The product seed and `nicknameDirections`, under `autoreconciler.ValueRules` | Fold to one name: *Bill* + *William* → *William*; *Jamie* + *James* → *James*; *Tony* + *Anthony* → *Anthony*; *Kit* + *Christopher* → *Christopher*; *Steve* + *Stephen* → *Stephen*; *Ralph* + *Raphael* → *Raphael*. Both stay: *Allan* + *Allen*; *John* + *Jon*; *Chris* + *Kit*; *John* + *Peter* |
+| AC-2.5 | `nicknameDirections` | Every pair is listed both ways in `nicknameSets`; together with Appendix A's 36 kept pairs it covers every two-way pair (144); `nicknameSets` is unchanged from the planning base |
 
 ## 3. Scope
 
 | In | Covered by |
 | --- | --- |
-| `valuecompare.AliasTable.FormalFirst` and `HeadNicknames`, `AliasIndex.Expands`; `nameModule.fold` accepts an alias or abbreviation pair whose `into` word is a formal name heading a set that holds the `from` nickname | STEP-1, AC-1.1 – AC-1.10 |
-| `nicknameHeads` *(new)*: the 152 set heads that are nicknames (Appendix A); both product tables marked `FormalFirst` | STEP-2, AC-2.4, AC-2.5 |
+| `valuecompare.AliasTable.FormalFirst` and `Directions`, `AliasIndex.Expands`; `nameModule.fold` accepts an alias or abbreviation pair the list pairs toward the `into` name | STEP-1, AC-1.1 – AC-1.10 |
+| `nicknameDirections` *(new)*: which name a fold keeps for the 108 directed two-way pairs (Appendix A); both product tables marked `FormalFirst` | STEP-2, AC-2.4, AC-2.5 |
 | `autoreconciler.ValueRules` (exported) carries the product alias tables; `CacheVersion` 18; `promotealign` profiles read it | STEP-2, AC-2.1, AC-2.2, AC-2.3 |
 | `Compatible` follows the new fold (it calls `fold`); its alias test flips | STEP-1, T-3 |
 | Docs: grouping policy and §7.2 fold rule, `names.go` header, `subjectprofile.Build` comment, `add-match-rule` skill | STEP-3 |
@@ -93,7 +93,7 @@ A Person whose records say *Chris Robins* and *Christopher Robins* shows one giv
 | Cache version | `core/database/autoreconciler/autoreconciler.go` `CacheVersion` | 17, with a changelog comment above it |
 | Promote profiles | `core/database/promotealign/profiles.go` profiler constructor (`reconcile: matchregistry.Default().Value`, line 169); `core/subjectprofile/subjectprofile.go` `Build` doc comment ("pass matchregistry.Default().Value, as the cache does") | A second copy of the cache's rules. `promotealign` already imports `autoreconciler` (checked with `go list -deps`) |
 | Skill text | `.agents/skills/add-match-rule/SKILL.md`, bullets "The profile builder" and "The reconciler composes value compare" | Say the cache and `Build` callers pass `matchregistry.Default().Value` |
-| Product alias seed | `core/database/namealiases/registry.go` `productAliasTables`, `AliasTables`; `nicknames_seed.go` `nicknameSets` | The abbreviations and nicknames tables, roles given / nick / untyped. Each set is a head followed by names that stand for it (abbreviations: `{james, jas}`; nicknames: `{christopher, chris, kit}`, `{abel, ab, abe, eb, ebbie}`). The head is not always formal: 406 of the 1,232 heads also appear inside other sets, some as nicknames (`{bill, billy, fred, robert, william, willie}`), some as names in their own right (`{wilma, billiewilhelm, william}`, `{ivan, john}`) |
+| Product alias seed | `core/database/namealiases/registry.go` `productAliasTables`, `AliasTables`; `nicknames_seed.go` `nicknameSets` | The abbreviations and nicknames tables, roles given / nick / untyped. Each set is a head followed by names that stand for it (abbreviations: `{james, jas}`; nicknames: `{christopher, chris, kit}`, `{abel, ab, abe, eb, ebbie}`). 144 pairs are listed both ways (`{bill, …, william, …}` and `{william, …, bill, …}`) |
 | Alias index | `core/valuecompare/aliases.go` `AliasTable`, `AliasIndex`, `NewAliasIndex`, `Hit` | Sets are unordered token maps; nothing records a formal name. Catalog `Load` returns tokens ordered alphabetically |
 | Western roles | `core/matchregistry/value.go` `Names.Western.PartRoles` | `given` → given, `nick` → nick, `surname` → family, `undetermined` and `""` → untyped |
 | Tests | `core/autoreconcile/names_test.go` `TestReconcileNames` (group "fold"), `TestReconcileNamesWords` ("an accent-folded pair never folds"); `modules_test.go` `TestCompatibleIgnoresAliases`; `core/database/autoreconciler/autoreconciler_test.go` `TestReconciledNames` | `testRules` (in `autoreconcile_test.go`) has no aliases. `TestCompatibleIgnoresAliases` asserts Jim Robins is not compatible with James Kenneth Robins |
@@ -106,10 +106,10 @@ Value compare's output for the cases, checked at the planning base with the prod
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | A unit folds into another when `Compare(from, into)` is `Contains` with `Broader == SideA`, or `Equivalent`; every pair is `Same`, cause `initial`, or an alias pair (cause `alias` or `abbreviation`) for which `Aliases.Expands(from word, into word, role)` holds; and at least one pair is not `Same` | The data says which name is formal (user, 2026-10-19: "we control that data"); `Equivalent` covers a unit with no unpaired words, `Contains` one with extra words | Shorter folds into longer — wrong for *Abel* / *Ebbie*, *James* / *Jamie*, *Michael* / *Mike* |
-| D-1a | `valuecompare.AliasTable` gains `FormalFirst bool` *(new)*: each set's first token is its head; and `HeadNicknames []string` *(new)*: heads that are nicknames, not formal names. `NewAliasIndex` records each set's head (`aliasSet.head`, the first token's `AliasToken`, only when `FormalFirst`) and an index-wide `formal map[string]bool` = every `FormalFirst` head minus every table's `HeadNicknames` (keyed with `AliasToken`). `AliasIndex.Expands(from, into string, role NameRole) bool` *(new)*: `formal[into] && !formal[from]` and a set that allows `role` has `head == into` and holds `from`. Catalog `Load` sets neither field | A nickname folds only into a formal name that lists it; two formal names never fold (*William* / *Wilma*, *John* / *Ivan*), so a set head that upstream lists inside another set cannot drag a real name with it (review R3-1) | Trusting every first token as formal — 712 one-way pairs between heads fold real names together (*William* → *Wilma*); curating the sets themselves — changes matching for new catalogs (R3-2) |
-| D-1b | `nicknameHeads` in `core/database/namealiases/nickname_heads.go` *(new)* is Appendix A's nickname list, as written; the nicknames table sets `FormalFirst: true, HeadNicknames: nicknameHeads`; the abbreviations table `FormalFirst: true`. `nicknameSets` is not edited | User call (2026-10-19): curate which of the 406 dual-role heads are nicknames; the user reviews Appendix A on the PR | Curating the 144 two-way pairs by editing sets — fixed only a slice and changed matching |
-| D-2 | Two nicknames of one formal name (*Chris* / *Kit*), two formal names (*Allan* / *Allen*, *Ann* / *Anna*, *Frank* / *Francis*) and a nickname that no set headed by the other name holds do not fold | Neither is the other's formal name; both stay, as today | Alphabetical tie-break — arbitrary |
+| D-1 | A unit folds into another when `Compare(from, into)` is `Contains` with `Broader == SideA`, or `Equivalent`; every pair is `Same`, cause `initial`, or an alias pair (cause `alias` or `abbreviation`) for which `Aliases.Expands(from word, into word, role)` holds; and at least one pair is not `Same`. Whether either name is "real" does not matter: two names the list pairs fold, and a name alone never folds | User rule (2026-10-19). The direction comes from the data; `Equivalent` covers a unit with no unpaired words, `Contains` one with extra words | Shorter folds into longer — wrong for *Abel* / *Ebbie*, *James* / *Jamie*; a reviewed list of formal names — the user ruled it out: formality is not the question |
+| D-1a | `valuecompare.AliasTable` gains `FormalFirst bool` *(new)*: each set's first token is its head; and `Directions []AliasDirection` *(new)*, `type AliasDirection struct{ Formal, Nickname string }` *(new)*: for a pair whose sets each hold the other, the name a fold keeps. `NewAliasIndex` records each set's head (`aliasSet.head`, the first token's `AliasToken`, only when `FormalFirst`) and an index-wide `prefer map[[2]string]bool` keyed `{Formal, Nickname}` through `AliasToken`. `AliasIndex.Expands(from, into string, role NameRole) bool` *(new)*: let `forward` be "a set that allows `role`, headed by `into`, holds `from`" and `reverse` "a set that allows `role`, headed by `from`, holds `into`"; return `forward && (!reverse \|\| prefer[{into, from}])`. Catalog `Load` sets neither field | The head of a set that holds the other name is kept; only pairs the list gives both ways need a recorded choice | Trusting every head blindly — two-way pairs (*Bill* / *William*) would fold either way; editing `nicknameSets` — changes matching for new catalogs (review R3-2) |
+| D-1b | `nicknameDirections` in `core/database/namealiases/nickname_directions.go` *(new)* is Appendix A's directed list as written (for example `{Formal: "william", Nickname: "bill"}`); the nicknames table sets `FormalFirst: true, Directions: nicknameDirections`; the abbreviations table `FormalFirst: true`. `nicknameSets` is not edited | User call (2026-10-19): curate the two-way pairs in the PR; the user reviews Appendix A | Editing the sets — changes matching |
+| D-2 | Two nicknames of one name (*Chris* / *Kit*: no set headed by either holds the other), a two-way pair not in `Directions` (*Allan* / *Allen*), and unpaired names do not fold | The list gives no direction; both stay, as today | Alphabetical tie-break — arbitrary |
 | D-3 | `role := m.rules.Names.Western.Role(typ)`; `Aliases.Expands(from, into, role)` carries the role check; `fold` does not call `Hit`. The product tables allow given, nick and untyped, so `given`, `nick`, `undetermined` and untyped parts alias-fold; `surname` (family) and the others never do | Which roles may use an alias table is already data (`AliasTable.Roles`); the module names no role (review M-1, R3-3) | Hard-coding given / nick in the module; indexing `PartRoles` directly — `NamePattern.Role` is the one lookup (M-6) |
 | D-4 | Both nickname and abbreviation tables fold | User call (2026-10-19): "Just Christopher", nicknames and abbreviations both fold | Nicknames only |
 | D-5 | The folded name disappears from the displayed value; it is not turned into a `nick` part | User call (2026-10-19); matches how an initial folds | Showing *Christopher "Chris"* — a name no source wrote |
@@ -127,15 +127,15 @@ Value compare's output for the cases, checked at the planning base with the prod
 | `valuerules.Product()` *(new)* | func | `valuerules.Load` (catalog rules) | Same assembly from the product seed instead of catalog rows; sits beside `Load` |
 | `namealiases.ProductTables()` *(new)* | func | `namealiases.AliasTables()` (seed + registered) | Product seed only (D-6) |
 | `TestProductAliasTablesPinCacheVersion` *(new)* | test | `TestKnobInventoryMatchesRegistry` (a drift guard) | Fails when the product seed changes without a `CacheVersion` bump |
-| `AliasTable.FormalFirst`, `AliasTable.HeadNicknames`, `aliasSet.head`, `AliasIndex.formal`, `AliasIndex.Expands` *(new)* | fields, method | `AliasIndex.Hit` | `Hit` answers "same set"; `Expands` adds the direction, on the same index |
-| `nicknameHeads` in `core/database/namealiases/nickname_heads.go` *(new)* | data | `nicknameSets` (`nicknames_seed.go`) | Kept beside the upstream seed, not edited into it, so the seed stays a clean copy of upstream |
-| `TestNicknameHeadsAreDualRoleHeads` *(new, `core/database/namealiases/registry_test.go`)* | test | `TestSharedNicknameDoesNotMergeCanonicalNames` | Guards AC-2.5 |
+| `AliasTable.FormalFirst`, `AliasTable.Directions`, `AliasDirection`, `aliasSet.head`, `AliasIndex.prefer`, `AliasIndex.Expands` *(new)* | fields, type, method | `AliasIndex.Hit` | `Hit` answers "same set"; `Expands` adds the direction, on the same index |
+| `nicknameDirections` in `core/database/namealiases/nickname_directions.go` *(new)* | data | `nicknameSets` (`nicknames_seed.go`) | Kept beside the upstream seed, not edited into it |
+| `TestNicknameDirectionsCoverTwoWayPairs` *(new, `core/database/namealiases/registry_test.go`)* | test | `TestSharedNicknameDoesNotMergeCanonicalNames` | Guards AC-2.5 |
 | `aliasRules` *(new, test var in `names_test.go`)* | helper | the inline index in `TestCompatibleIgnoresAliases` | Moves that table to one var both tests use |
 | `autoreconciler.ValueRules` *(exported rename of `valueRules`)* | var | `valueRules`; `promotealign` `matchregistry.Default().Value` | One value for both reconciler callers |
 
 **Builds on.** S11-06's fold in `nameModule`; value compare's `Detail.Parts` causes; `AliasIndex` and the tables' `Roles`; the seed's formal-first convention; `NamePattern.Role`; `valuerules` as the one place rules are assembled.
 **Deletes.** The "an accent fold or an alias never folds" sentence in `names.go` and in §7 and §7.2 of `conclusion-reconciliation.md`; replaced in STEP-3. The map's working rule was amended at planning. The inline alias table in `TestCompatibleIgnoresAliases`.
-**Next adds.** An alias editor that stores heads and nickname marks in the catalog sets `FormalFirst` / `HeadNicknames` on loaded tables; nothing else changes.
+**Next adds.** An alias editor that stores heads and directions in the catalog sets `FormalFirst` / `Directions` on loaded tables; nothing else changes.
 
 ### Schema
 
@@ -145,12 +145,12 @@ None — no catalog change.
 
 | Package | Change |
 | --- | --- |
-| `core/valuecompare` (`aliases.go`) | D-1a: `FormalFirst`, `HeadNicknames` on `AliasTable`; `head` on `aliasSet`; `formal` on `AliasIndex`; `func (a AliasIndex) Expands(from, into string, role NameRole) bool` *(new)*. Tests in `words_test.go`: T-8 |
+| `core/valuecompare` (`aliases.go`) | D-1a: `FormalFirst`, `Directions` on `AliasTable`; `AliasDirection`; `head` on `aliasSet`; `prefer` on `AliasIndex`; `func (a AliasIndex) Expands(from, into string, role NameRole) bool` *(new)*. Tests in `words_test.go`: T-8 |
 | `core/autoreconcile` (`names.go`) | `fold(typ string, from, into unit) bool` reads `typ`. Sketch below. Header comment "Fold" bullet rewritten (STEP-3 text) |
-| `core/database/namealiases` (`registry.go`, `nickname_heads.go` *(new)*) | Nicknames table `FormalFirst: true, HeadNicknames: nicknameHeads`; abbreviations table `FormalFirst: true`; `nicknameHeads` per D-1b. `func ProductTables() []valuecompare.AliasTable` *(new)*: a copy of `productAliasTables`. Comments that say scoring never reads the in-code list (package doc in `namealiases.go`; `productAliasTables`, `aliasTables`, `AliasTables` in `registry.go`) now say: "Matching reads the catalog rows; the reconciler cache reads the product seed through `valuerules.Product`." |
+| `core/database/namealiases` (`registry.go`, `nickname_directions.go` *(new)*) | Nicknames table `FormalFirst: true, Directions: nicknameDirections`; abbreviations table `FormalFirst: true`; `nicknameDirections` per D-1b. `func ProductTables() []valuecompare.AliasTable` *(new)*: a copy of `productAliasTables`. Comments that say scoring never reads the in-code list (package doc in `namealiases.go`; `productAliasTables`, `aliasTables`, `AliasTables` in `registry.go`) now say: "Matching reads the catalog rows; the reconciler cache reads the product seed through `valuerules.Product`." |
 | `core/database/valuerules` (`valuerules.go`) | `func Product() valuecompare.Rules` *(new)*: `matchregistry.Default().Value` with `Names.Aliases = valuecompare.NewAliasIndex(namealiases.ProductTables(), rules.Words)`; doc: "the shipped registry and the product alias seed, never a catalog's own rows or name formats; the reconciler cache reads it" |
 | `core/database/promotealign` (`profiles.go`) | `reconcile: autoreconciler.ValueRules`; drop the `matchregistry` import if it becomes unused |
-| `core/database/autoreconciler` (`autoreconciler.go`, `truth.go`) | `var ValueRules = valuerules.Product()` (renamed from `valueRules`; both call sites updated); `CacheVersion = 18` with D-8's line. `autoreconciler_test.go`: `TestProductAliasTablesPinCacheVersion` *(new)*: a pinned pair `{CacheVersion: 18, Hash: "<hex>"}`: the test fails when the SHA-256 of the sorted product tables (key, kind, roles, sorted sets) differs from `Hash`, or when `CacheVersion` differs from the pinned version, so re-pinning means writing the new version beside the new hash; on a hash mismatch the message says "the product alias seed changed: bump autoreconciler.CacheVersion and re-pin this hash" |
+| `core/database/autoreconciler` (`autoreconciler.go`, `truth.go`) | `var ValueRules = valuerules.Product()` (renamed from `valueRules`; both call sites updated); `CacheVersion = 18` with D-8's line. `autoreconciler_test.go`: `TestProductAliasTablesPinCacheVersion` *(new)*: a pinned pair `{CacheVersion: 18, Hash: "<hex>"}`: the test fails when the SHA-256 of the product tables as T-7 lists them differs from `Hash`, or when `CacheVersion` differs from the pinned version, so re-pinning means writing the new version beside the new hash; on a hash mismatch the message says "the product alias seed changed: bump autoreconciler.CacheVersion and re-pin this hash" |
 
 ```go
 func (m nameModule) fold(typ string, from, into unit) bool {
@@ -179,8 +179,9 @@ func (m nameModule) fold(typ string, from, into unit) bool {
 }
 
 
-// Expands: from stands for into. A set that allows role has into as its
-// formal name and holds from, and no such set says the reverse.
+// Expands: a fold keeps into over from. A set that allows role, headed by
+// into, holds from; when a set headed by from also holds into, the table's
+// Directions must name into as the one kept.
 func (a AliasIndex) Expands(from, into string, role NameRole) bool {
 	forward, reverse := false, false
 	for _, i := range a.byToken[from] {
@@ -188,10 +189,10 @@ func (a AliasIndex) Expands(from, into string, role NameRole) bool {
 		if !set.roles[role] || !set.tokens[into] {
 			continue
 		}
-		forward = forward || set.formal == into
-		reverse = reverse || set.formal == from
+		forward = forward || set.head == into
+		reverse = reverse || set.head == from
 	}
-	return forward && !reverse
+	return forward && (!reverse || a.prefer[[2]string{into, from}])
 }
 ```
 
@@ -213,17 +214,17 @@ None —.
 
 **STEP-1 — Fold aliases of given names into their formal names**
 Files: `core/valuecompare/aliases.go`, `core/valuecompare/words_test.go`, `core/autoreconcile/names.go`, `core/autoreconcile/names_test.go`, `core/autoreconcile/modules_test.go`. Skill: `add-match-rule` (no knob; read it for the layer rules).
-Do: implement D-1, D-1a, D-2, D-3 per the sketch; add T-8. Add `aliasRules` (product `matchregistry.Default().Value` with a `NewAliasIndex` over two `FormalFirst` tables: nickname `{christopher, chris, kit}`, `{christina, chris}`, `{william, bill}`, `{james, jim}`, `{abel, ebbie}`, `{allan, allen}`, `{allen, allan}`, `{chris, kris}` with `HeadNicknames: [chris]`; abbreviation `{william, wm}`; roles given / nick / untyped). Add `TestReconcileNamesAliases` *(new)* with T-1's rows, in the shape of `TestReconcileNames` (`in`, `want []cl`, `state`, `reasons`). Rename `TestCompatibleIgnoresAliases` to `TestCompatibleFoldsAliases` and flip it per D-7, reading `aliasRules`.
+Do: implement D-1, D-1a, D-2, D-3 per the sketch; add T-8. Add `aliasRules` (product `matchregistry.Default().Value` with a `NewAliasIndex` over two `FormalFirst` tables: nickname `{christopher, chris, kit}`, `{christina, chris}`, `{william, bill}`, `{james, jim}`, `{abel, ebbie}`, `{allan, allen}`, `{allen, allan}`; abbreviation `{william, wm}`; roles given / nick / untyped). Add `TestReconcileNamesAliases` *(new)* with T-1's rows, in the shape of `TestReconcileNames` (`in`, `want []cl`, `state`, `reasons`). Rename `TestCompatibleIgnoresAliases` to `TestCompatibleFoldsAliases` and flip it per D-7, reading `aliasRules`.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/valuecompare/ ./core/autoreconcile/` passes, including the untouched `TestReconcileNamesWords` row "an accent-folded pair never folds".
 
 **STEP-2 — The reconciler cache reads the product alias tables with their formal names**
-Files: `core/database/namealiases/nickname_heads.go` *(new)*, `core/database/namealiases/registry_test.go`, `core/database/namealiases/registry.go`, `core/database/namealiases/namealiases.go` (comment), `core/database/valuerules/valuerules.go`, `core/database/autoreconciler/autoreconciler.go`, `core/database/autoreconciler/truth.go`, `core/database/autoreconciler/autoreconciler_test.go`, `core/database/promotealign/profiles.go`.
-Do: add `nicknameHeads` per D-1b, copying Appendix A's nickname list exactly; set `FormalFirst` (and `HeadNicknames` on the nicknames table); add T-9. Add `namealiases.ProductTables` and `valuerules.Product`; rename `valueRules` to `ValueRules` and set it; `profiles.go` passes it; `CacheVersion` 18 (D-6, D-8). Add T-4's subtest, T-7 and T-10.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/autoreconciler/ ./core/database/namealiases/ ./core/database/valuerules/ ./core/database/promotealign/ ./core/subjectprofile/` passes; `go build ./...` succeeds.
+Files: `core/database/namealiases/nickname_directions.go` *(new)*, `core/database/namealiases/registry_test.go`, `core/database/namealiases/registry.go`, `core/database/namealiases/namealiases.go` (comment), `core/database/valuerules/valuerules.go`, `core/database/autoreconciler/autoreconciler.go`, `core/database/autoreconciler/truth.go`, `core/database/autoreconciler/autoreconciler_test.go`, `core/database/promotealign/profiles.go`, `core/database/conclusionheaders/conclusionheaders_test.go`, `api/ffi/handlers/conclusion_headers_test.go`, `api/ffi/handlers/conclusion_detail_test.go`.
+Do: add `nicknameDirections` per D-1b, copying Appendix A's directed list exactly; set `FormalFirst` (and `Directions` on the nicknames table); add T-9. Add `namealiases.ProductTables` and `valuerules.Product`; rename `valueRules` to `ValueRules` and set it; `profiles.go` passes it; `CacheVersion` 18 (D-6, D-8). Add T-4's subtest, T-7 and T-10; update T-11's fixtures.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/autoreconciler/ ./core/database/namealiases/ ./core/database/valuerules/ ./core/database/promotealign/ ./core/subjectprofile/ ./core/database/conclusionheaders/ ./api/ffi/...` passes; `go build ./...` succeeds.
 
 **STEP-3 — Docs**
-Files: `core/autoreconcile/names.go` (header "Fold" bullet), `docs/conclusion-reconciliation.md` (line 132 grouping policy; line 167 §7.2 Fold bullet), `core/subjectprofile/subjectprofile.go` (`Build` comment: "pass autoreconciler.ValueRules, as the cache does"), `.agents/skills/add-match-rule/SKILL.md` (the two bullets "The profile builder" and "The reconciler composes value compare": the cache and `Build` callers pass `autoreconciler.ValueRules` = `valuerules.Product()`, the shipped registry plus the product alias seed, never catalog data; and the `valuerules.Load` line names `Product` as the reconciler's exception), `.agents/skills/add-seeded-vocabulary/SKILL.md` and `docs/seeded-vocabulary.md` §4.5 ("Scoring reads these rows and no in-code list" → "Matching reads these rows; the reconciler cache reads the product seed, so a seed edit bumps `CacheVersion`. Each product set is a head and the names that stand for it (`FormalFirst`); `nicknameHeads` marks the heads that are nicknames (S11-28)"; the skill's "Scoring reads the catalog only" line gets the same change), `core/autoreconcile/names.go` "Format-agnostic" bullet and `docs/conclusion-reconciliation.md` §7.2 "Format-agnostic" bullet (add: "A type's role in the name format decides only whether an alias table applies (§7.2 Fold)."), `nameUnit.compareValue` comment (the role is re-read for the alias check), `docs/deployment-plan/spike-11/deployment-plan.md` (map row; the working rule was amended at planning), `docs/deployment-plan/spike-11/completed.md`, this plan.
-Do: in the `names.go` header and the §7.2 Fold bullet, replace "An accent fold or an alias never folds (`[Jose]` stays beside `[José, Kenneth]`)." with: "A nickname or abbreviation folds into the formal name it stands for, as the product alias seed lists it (*Chris* → *Christopher*, *Wm* → *William*, *Ebbie* → *Abel*; decided 2026-10-19, S11-28). Two nicknames of one name, or two formal names, never fold. An alias applies only to the part roles its table allows; the product tables cover given names and nicknames, so a surname never alias-folds. An accent fold never folds (`[Jose]` stays beside `[José, Kenneth]`)." In the §7 grouping policy (line 132), replace "`Equivalent` (an accent fold, an alias) never groups or folds" with "`Equivalent` (an accent fold, an alias) never groups; it folds only through an alias of a given name (§7.2)". Then the Definition of done.
+Files: `core/autoreconcile/names.go` (header "Fold" bullet), `docs/conclusion-reconciliation.md` (line 132 grouping policy; line 167 §7.2 Fold bullet), `core/subjectprofile/subjectprofile.go` (`Build` comment: "pass autoreconciler.ValueRules, as the cache does"), `.agents/skills/add-match-rule/SKILL.md` (the two bullets "The profile builder" and "The reconciler composes value compare": the cache and `Build` callers pass `autoreconciler.ValueRules` = `valuerules.Product()`, the shipped registry plus the product alias seed, never catalog data; and the `valuerules.Load` line names `Product` as the reconciler's exception), `.agents/skills/add-seeded-vocabulary/SKILL.md` and `docs/seeded-vocabulary.md` §4.5 ("Scoring reads these rows and no in-code list" → "Matching reads these rows; the reconciler cache reads the product seed, so a seed edit bumps `CacheVersion`. Each product set is a head and the names that stand for it (`FormalFirst`); `nicknameDirections` says which name a fold keeps where the list pairs two names both ways (S11-28)"; the skill's "Scoring reads the catalog only" line gets the same change), `core/autoreconcile/names.go` "Format-agnostic" bullet and `docs/conclusion-reconciliation.md` §7.2 "Format-agnostic" bullet (add: "A type's role in the name format decides only whether an alias table applies (§7.2 Fold)."), `nameUnit.compareValue` comment (the role is re-read for the alias check), `docs/deployment-plan/spike-11/deployment-plan.md` (map row; the working rule was amended at planning), `docs/deployment-plan/spike-11/completed.md`, this plan.
+Do: in the `names.go` header and the §7.2 Fold bullet, replace "An accent fold or an alias never folds (`[Jose]` stays beside `[José, Kenneth]`)." with: "A nickname or abbreviation folds into the formal name it stands for, as the product alias seed lists it (*Chris* → *Christopher*, *Wm* → *William*, *Ebbie* → *Abel*; decided 2026-10-19, S11-28). A name alone never folds, and a pair the list gives both ways folds only as `nicknameDirections` says. An alias applies only to the part roles its table allows; the product tables cover given names and nicknames, so a surname never alias-folds. An accent fold never folds (`[Jose]` stays beside `[José, Kenneth]`)." In the §7 grouping policy (line 132), replace "`Equivalent` (an accent fold, an alias) never groups or folds" with "`Equivalent` (an accent fold, an alias) never groups; it folds only through an alias pair of given names (§7.2)". In the same paragraph, "fold on `Contains`" becomes "fold on `Contains`, or on an alias pair (§7.2)". In §7.2 Fold, the first sentence's "every word they pair is the same word or an initial of it" becomes "every word they pair is the same word, an initial of it, or a name the alias list pairs toward it". Then the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-11/prs/S11-28-alias-fold.md` reports no errors; links resolve.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period ("Fold a nickname into the given name it stands for.").
@@ -235,14 +236,15 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-1 | Go | `core/autoreconcile/names_test.go` `TestReconcileNamesAliases` *(new)* | Folding rows AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.9 with the members, parts and state in §2 and reasons `kept`; AC-1.4 also run with its input reversed, same result. "Unchanged" rows AC-1.5, AC-1.6, AC-1.7, AC-1.8, AC-1.10 assert that `Reconcile` under `aliasRules` equals `Reconcile` under `testRules` on the same input (values, members, state, reasons). AC-1.7 uses the `{william, bill}` set on surnames | AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, AC-1.8, AC-1.9, AC-1.10, D-1 – D-5 |
 | T-3 | Go | `core/autoreconcile/modules_test.go` `TestCompatibleFoldsAliases` *(renamed)* | With `aliasRules`: Jim Robins vs James Kenneth Robins → compatible, and their whole-name `Compare` is still `Contains`; Jose Robins vs José Robins → not compatible | D-7 |
 | T-6 | Go | `core/database/promotealign` (existing profile tests) | Pass unchanged with `reconcile: autoreconciler.ValueRules` | AC-2.3, D-6 (no behavior to observe until a caller passes `Excluding`; the check is the code reading `ValueRules`) |
-| T-7 | Go | `core/database/autoreconciler/autoreconciler_test.go` `TestProductAliasTablesPinCacheVersion` *(new)* | The hash of `namealiases.ProductTables()` (key, kind, sorted roles, `FormalFirst`, sorted `HeadNicknames`, each set as its head then the rest sorted) equals the pinned constant | D-6, AC-2.2 |
-| T-8 | Go | `core/valuecompare/words_test.go` `TestAliasIndexExpands` *(new)* | `FormalFirst` table `{christopher, chris, kit}`, `{chris, kris}`, `{abel, ebbie}`, `{ebbie, eb}`, `{wilma, william}`, `{william, bill}`, `{allan, allen}`, `{allen, allan}` with `HeadNicknames: [chris, ebbie]`: `Expands(chris, christopher, given)` true; reverse false; `(kit, christopher)` true; `(chris, kit)` false; `(kris, chris)` false; `(ebbie, abel)` true; `(william, wilma)` false; `(bill, william)` true; `(allan, allen)` and reverse false; role family → false; the same table without `FormalFirst` → all false | D-1a, D-2 |
-| T-9 | Go | `core/database/namealiases/registry_test.go` `TestNicknameHeadsAreDualRoleHeads` *(new)* | Every `nicknameHeads` entry heads a set in `nicknameSets`, appears inside another set, and is unique; `len(nicknameHeads) == 152`; `len(nicknameSets) == 1232` | AC-2.5, D-1b |
-| T-10 | Go | `core/database/autoreconciler/autoreconciler_test.go` `TestValueRulesFoldNicknamesOnly` *(new)* | `autoreconcile.Reconcile(ValueRules, name, …)` on each of AC-2.4's ten pairs (surname Robins, one record each) → the formal name alone for the four folding pairs; both names for the six others | AC-2.4 |
+| T-7 | Go | `core/database/autoreconciler/autoreconciler_test.go` `TestProductAliasTablesPinCacheVersion` *(new)* | The hash of `namealiases.ProductTables()` (key, kind, sorted roles, `FormalFirst`, sorted `Directions`, each set as its head then the rest sorted) equals the pinned constant | D-6, AC-2.2 |
+| T-8 | Go | `core/valuecompare/words_test.go` `TestAliasIndexExpands` *(new)* | `FormalFirst` table `{christopher, chris, kit}`, `{chris, kris}`, `{abel, ebbie}`, `{wilma, william}`, `{william, bill}`, `{bill, william}`, `{allan, allen}`, `{allen, allan}` with `Directions: [{william, bill}]`: `Expands(chris, christopher, given)` true; reverse false; `(kit, christopher)` true; `(chris, kit)` false; `(kris, chris)` true; `(ebbie, abel)` true; `(william, wilma)` true; `(bill, william)` true; `(william, bill)` false; `(allan, allen)` and reverse false; role family → false; the same table without `FormalFirst` → all false | D-1a, D-2 |
+| T-9 | Go | `core/database/namealiases/registry_test.go` `TestNicknameDirectionsCoverTwoWayPairs` *(new)* | Each `nicknameDirections` pair is listed both ways in `nicknameSets`; the two-way pairs in `nicknameSets` are exactly `nicknameDirections` plus `keptTwoWay` (a test var copied from Appendix A's kept list); `len(nicknameDirections) == 108`; `len(nicknameSets) == 1232` | AC-2.5, D-1b |
+| T-10 | Go | `core/database/autoreconciler/autoreconciler_test.go` `TestValueRulesFoldNicknamesOnly` *(new)* | `autoreconcile.Reconcile(ValueRules, name, …)` on each of AC-2.4's ten pairs (surname Robins, one record each) → one name for the six folding pairs; both names for the four others | AC-2.4 |
 | T-4 | Go | `core/database/autoreconciler/autoreconciler_test.go` `TestReconciledNames` (new subtest "a nickname folds into the given name it stands for", shaped like "an initial expands into the full name") | `nameIn(a, f.props["name"], "given=Chris\|surname=Robins")` and `nameIn(b, f.props["name"], "given=Christopher\|surname=Robins")`, joined → one name row, `Support` 2, parts `given=Christopher\|surname=Robins` | AC-2.1, D-6 |
+| T-11 | Go | Existing tests that merge *James* and *Jim* (Jim now folds into James): `core/database/autoreconciler/autoreconciler_test.go` `TestReconciledValues` (~line 409) and `TestRebuildEqualsUpkeep_Scenarios` join scenario (~line 1304); `core/database/conclusionheaders/conclusionheaders_test.go` (~line 155); `api/ffi/handlers/conclusion_headers_test.go` (~lines 123, 447); `api/ffi/handlers/conclusion_detail_test.go` (~line 75) | In each fixture feeding these assertions, the given name `Jim` becomes `Kenneth` (not in any alias set); expected forms become `James Kenneth Robins`, sort keys `james kenneth robins`; comments that say "Jim is a different given name" say "Kenneth". No other assertion changes | AC-2.1, D-1 |
 | T-5 | Go | `core/database/autoreconciler/autoreconciler_test.go` (existing check at the `StoredVersion(db)` call, line 1113 at the base) | Unchanged test; passes with `CacheVersion` 18 | AC-2.2 |
 
-Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `TestReconcileNamesInvariants` (runs under `testRules`, so alias folds are not in it; T-1's reversed AC-1.4 row covers order), `core/database/promotealign` tests that count exhibits through `Compatible`. A `promotealign` expectation may change only where the changed count comes from an alias pair now agreeing; list each in the PR.
+Must stay green: everything `scripts/check-pr.sh` runs. T-11's files change only as T-11 says. Most likely to break: `TestReconcileNamesInvariants` (runs under `testRules`, so alias folds are not in it; T-1's reversed AC-1.4 row covers order), `core/database/promotealign` tests that count exhibits through `Compatible`. A `promotealign` expectation may change only where the changed count comes from an alias pair now agreeing; list each in the PR.
 
 ## 9. Definition of done
 
@@ -271,17 +273,18 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 
 | Risk | Mitigation |
 | --- | --- |
-| A head is on the wrong list (Appendix A) | The user reviews Appendix A on the plan PR before implementation; a fix is one word in `nicknameHeads` plus a `CacheVersion` bump (T-7 fails until then) |
+| A two-way pair is directed the wrong way (Appendix A) | The user reviews Appendix A on the plan PR; a fix is one entry in `nicknameDirections` plus a `CacheVersion` bump (T-7 fails until then) |
+| A one-way pair keeps a surprising name (*William* + *Wilma* → *Wilma*) | Accepted by the user's rule (2026-10-19): both names must be on one person; a fix is one entry in `nicknameDirections` with a reverse set, or a data edit later |
 | Order dependence when one short name aliases two longer ones | AC-1.4 uses the pipeline's existing best-supported rule; `TestReconcileNamesInvariants` guards order |
 
 **Stop and report if:**
 
-- A word in Appendix A's nickname list is not a head in `nicknameSets` at your base, or `nicknameSets` no longer has 1,232 sets.
+- A pair in Appendix A is not listed both ways in `nicknameSets` at your base, or `nicknameSets` no longer has 1,232 sets.
 
 - `valuecompare.Compare` on `Chris` / `Christopher` does not return `Equivalent` with one pair of cause `alias` at your base.
 - `TestReconcileNamesInvariants` fails after STEP-1 and the failure is not one of T-1's new expectations.
 - Importing `namealiases` from `autoreconciler` creates an import cycle.
-- A test outside `core/autoreconcile`, `core/database/autoreconciler`, `core/database/promotealign` and `core/subjectprofile` changes result.
+- A test outside `core/autoreconcile`, `core/database/autoreconciler`, `core/database/promotealign`, `core/subjectprofile` and T-11's named assertions changes result.
 - A `promotealign` test changes for a reason other than an alias pair now agreeing.
 
 ## 12. Open questions
@@ -293,44 +296,162 @@ None.
 **Title:** S11-28 — Fold a nickname into the given name it stands for
 **Body:** objective in one sentence; what shipped against US-1 and US-2; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-28-alias-fold.md`.
 
-## Appendix A — Set heads that are nicknames
+## Appendix A — Pairs the list records both ways
 
-`nicknameSets` has 1,232 sets, one per head name. 1,020 names only ever appear inside sets; they are nicknames by definition. 406 heads also appear inside other sets. The planner sorted those 406 by hand at the planning base: a head is a **nickname** when it is a short form (*Chris*, *Bill*, *Jim*); it stays **formal** when it is a name in its own right, even if it can also shorten another name (*Ann*, *Ella*, *Frank*, *Harry*, *Jack*, *Eliza*). Two formal names never fold into each other. The user reviews both lists on the plan PR.
+The fold rule (D-1) is the user's (2026-10-19): two given names on one person that the alias list pairs fold together; a name alone never folds. When a set headed by one name holds the other, the head is kept (*Chris* → *Christopher*, *Ralph* → *Raphael*, *William* → *Wilma*). For the pairs below, each name heads a set that holds the other, so the list alone cannot say which to keep. The planner chose by hand where the longer name is not the formal one (*Jamie* → *James*, *Mike* → *Michael*, *Frankie* → *Frank*, *Annie* → *Ann* / *Anna*, *Debbie* → *Debra*, *Jessie* → *Jane* / *Janet*, *Harry* → *Henry*). The directed list is `nicknameDirections`; the kept list is only a test fixture (`keptTwoWay`). `nicknameSets` is not edited. The user reviews this appendix on the plan PR.
 
-**Nicknames — `nicknameHeads` (152)**
+144 two-way pairs at `84a9b31`: 108 get a direction, 36 stay two-way.
+
+**Directed** — `formal ← nickname`. Remove the formal name from every set headed by the nickname:
 
 ```text
-alex annie bab babs barbie barney bart bea becca beck ben benjy berney bert bess bessie beth biddie
-bill billy bob bobby brad carrie cassie cathy charlie chet chick chris christy cindy cliff con dan
-danny dave debbie debby dicey dick don dotty ebbie eddie eddy ellie essy fran francie frankie fred
-gertie gum gus jamie jennie jerry jim jimmie jody joe joey josey judy kate katy kenny kim kit kris
-kristy larry lexi lib lil lindy lizzie lonzo lotta lou maddy madie manda mandy manny marge margie
-marv mat matt max merv mick mike minnie missy mitch mitzi mitzie monty nelle nellie newt obie ollie
-ossy patsy patty peggy pete philly prudy ray reggie rich rick ricky ron ronny sam sandy sue susie
-tabby tammie tammy tasha ted terry tess thad theo thom tim tina tisha tom tony tricia trish trix
-trudy vic vicki wally will willie winnie winny zach zack
+adela ← della
+adelaide ← della
+amanda ← mandy
+ann ← annie
+anna ← annie
+anthony ← tony
+arabella ← bella
+barbara ← babs
+barbara ← barbie
+barnabas ← barney
+bartholomew ← bart
+beatrice ← bea
+isabella ← bella
+benjamin ← benjy
+elizabeth ← beth
+robert ← bill
+william ← bill
+robert ← billy
+william ← billy
+robert ← bob
+bradford ← brad
+carolann ← carol
+caroline ← carol
+cassandra ← sandra
+catherine ← cathy
+cathleen ← cathy
+charles ← charlie
+chester ← chet
+christina ← tina
+cinderella ← cindy
+clarissa ← clara
+clifford ← cliff
+cordelia ← delia
+daniel ← danny
+deborah ← debbie
+debra ← debbie
+fidelia ← delia
+delilah ← della
+richard ← dick
+elizabeth ← eliza
+emanuel ← manuel
+florence ← flora
+francine ← francie
+francis ← frankie
+frank ← frankie
+geraldine ← jerry
+gertrude ← gertie
+gertrude ← trudy
+harold ← harry
+henry ← harry
+james ← jamie
+jane ← jessie
+janet ← jessie
+josophine ← josey
+judith ← judy
+julia ← julie
+kenneth ← kenny
+lamont ← monty
+laurence ← larry
+lawrence ← larry
+louise ← lois
+louis ← lou
+lucas ← luke
+lucinda ← lucy
+mehitabel ← mabel
+madeline ← maddy
+madelyn ← maddy
+madeline ← madie
+madelyn ← madie
+manuel ← manny
+margaret ← marge
+margaretta ← marge
+marjorie ← margie
+marvin ← marv
+mary ← mitzi
+melissa ← missy
+mervin ← merv
+michael ← mike
+wilhelmina ← minnie
+mitchell ← mitch
+newton ← newt
+obediah ← obie
+oliver ← ollie
+patricia ← patty
+patricia ← trish
+prudence ← prudy
+raymond ← ray
+reginald ← reggie
+ronald ← ronny
+sandra ← sandy
+susan ← sue
+tabitha ← tabby
+tammie ← tammy
+terence ← terry
+teresa ← tess
+teresa ← tessa
+theresa ← tess
+theresa ← tessa
+thaddeus ← thad
+theodore ← theo
+thomas ← thom
+thomas ← tom
+victor ← vic
+victoria ← vicki
+wilbur ← will
+william ← willie
+winnifred ← winnie
+winnifred ← winny
 ```
 
-**Kept formal (254)** — for review only; not stored anywhere:
+**Kept two-way** — spelling variants, translations, and nicknames of the same third name. Both sets stay as they are, so these never fold:
 
 ```text
-ada adela adelaide adele adeline agnes aileen alan albert alexander allan allen amanda amelia amos
-andrew ann anna anne anselm anthony ara arabella august barbara barnabas barrett bartholomew
-beatrice bella benjamin bradford brady briana brianna bryant callie carla carol carolann caroline
-casey casper cassandra catherine cathleen cecilia charles charlotte chester christina cinderella
-clara clare clarissa clement clifford cole cordelia dahl daniel deborah debra delbert delia delilah
-della dennis derick dorothea edwin eileen elaine elbert eleanor eliza elizabeth ella ellen eloise
-elouise elsie emanuel emily emma emmanuel eric erick ernest ernestine erwin esther eunice eva
-fidelia flora florence francine francis frank freda frederick frieda george georgia geraldine
-gertrude gwen hailey hannah harold harry haylee hayley helen heloise henry hester ian inez irving
-irwin isabella jack jacob james jane janet jasper jean jessie joan john johnathan johnathon jon
-jonathan jonathon josephine josophine judith julia julie june karla kayla kendrick kenneth kimberley
-kimberly lamont laura laurence lawrence lena lenora leo lilly lily linda lisa lois louis louise
-lucas lucinda lucy luke mabel mac mack madeline madelyn manuel margaret margaretta maria mariah
-marie marion marjorie marvin mary maud maureen may megan mehitabel melissa mervin michael minerva
-mitchell monte moses nathan newton nichole nicole nora obediah oliver orilla orlando patricia peter
-philadelphia phoebe prudence rachael raymond reba reginald richard robert rodger roger roland ronald
-rosa rose rosemarie sandra scott selma shaun shawn sophia stacey stacie stacy steve susan sybill
-tabitha terence teresa tessa thaddeus theodore theresa thomas valerie vernon victor victoria waldo
-wendy wilber wilbur wilhelmina william wilma winnifred
+agnes ↔ inez
+allan ↔ allen
+amos ↔ moses
+anselm ↔ selma
+bess ↔ bessie
+carla ↔ karla
+casper ↔ jasper
+chris ↔ kris
+ellen ↔ helen
+eloise ↔ heloise
+erwin ↔ irwin
+esther ↔ hester
+hailey ↔ haylee
+hailey ↔ hayley
+haylee ↔ hayley
+ian ↔ john
+jane ↔ jean
+jim ↔ jimmie
+joe ↔ joey
+john ↔ jon
+johnathan ↔ johnathon
+johnathan ↔ jonathan
+johnathan ↔ jonathon
+johnathon ↔ jonathan
+johnathon ↔ jonathon
+jonathan ↔ jonathon
+kimberley ↔ kimberly
+lil ↔ lilly
+lil ↔ lily
+lilly ↔ lily
+marie ↔ mary
+orlando ↔ roland
+rodger ↔ roger
+shaun ↔ shawn
+stacey ↔ stacie
+zach ↔ zack
 ```

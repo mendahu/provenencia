@@ -1,13 +1,13 @@
 # Review — S11-28 Fold a nickname into the given name it stands for
 
 **Verdict:** Fits with changes — Not ready → fixed in round 1; round 2 Ready
-**Rounds:** 3. **Reviewers:** maintainability (opus), executability (sonnet)
+**Rounds:** 4. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 - None. Product calls were asked before planning (2026-10-19): shorter folds into longer, nicknames and abbreviations both fold, the folded name disappears.
 
 ## Writer's own calls
-- Direction by rune length because the catalog stores no canonical token per alias set; *Abel* / *Ebbie* folds the wrong way (needs both on one person). Canonical tokens are parked in `docs/ideas/international-names.md`.
+- Direction (user rule, 2026-10-19): two given names the alias list pairs fold; the set's head is kept; for the 144 pairs listed both ways, `nicknameDirections` (Appendix A, 108 directed, 36 never fold) decides. One-way pairs keep the head even when both are real names (*William* + *Wilma* → *Wilma*).
 - The reconciler reads the **product seed** of alias tables, not a catalog's rows, so the cache still changes only with `CacheVersion`; a guard test pins the seed to the version.
 - `Compatible` (Promote exhibits) follows the fold, so *Jim* / *James* now counts as agreeing there.
 - Which part types alias-fold is decided by the alias tables' roles: given, nick and untyped (`undetermined`, untyped parts). Surnames never.
@@ -82,3 +82,22 @@ The user asked that the direction come from data we control, not word length. Th
 
 ### R3-4 · nit · `aliases_test.go`; AC order
 **Answer:** Fixed.
+
+## Round 4
+
+Reviewer (opus, both lenses), on the nickname-heads version. Verdict: Not ready.
+
+### R4-1 · blocker · §6 `Expands` sketch was the old design
+**Answer:** Fixed — sketch matches D-1a (head, `prefer`).
+
+### R4-2 · blocker · Existing *James* + *Jim* assertions break in packages outside the stop-condition list
+**Answer:** Fixed — T-11 names each assertion and swaps *Jim* for *Kenneth*; stop condition allows them.
+
+### R4-3 · major · Real names among the 1,020 nickname-only names fold into other names (Ralph → Raphael, Carl → Charles)
+**Answer:** To user. The user ruled (2026-10-19): two given names the list pairs fold regardless of whether either is a "real" name; a name alone never folds. This dropped the nickname-heads list: the head of a set holding the other name is kept, and only the 144 two-way pairs need a recorded direction (Appendix A, as data beside the seed).
+
+### R4-4 · major · Steve, Jon on the formal list
+**Answer:** Moot — that list is gone. *Steve* + *Stephen* folds (one-way pair); AC-2.4.
+
+### Minors
+**Answer:** Fixed — hash description points to T-7; STEP-3 rewrites the grouping-policy and §7.2 Fold first sentences; header round count; Writer's own calls updated.

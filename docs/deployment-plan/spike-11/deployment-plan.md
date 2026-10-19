@@ -112,7 +112,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-26 | Connections file by their ends | 6 | Drop the bridge switch-off: `SkipBridgeIDs`, `skip_bridge_ids`, the `skip` parameters | — | — | — | Scoped |
 | S11-27 | Connection subrows on Promote | 6 | Each connection as a subrow of a row it joins, its state from its ends; the panel and toggles go | S11-D1 | S11-26, S11-D1 | — | Scoped |
 | S11-21 | Large-Source performance check | 7 | 100-Subject benchmark; memoize only if it fails | — | S11-16 | — | Scoped |
-| S11-28 | Fold a nickname into its given name | 2 | Reconciler folds a nickname or abbreviation into its formal name, using a reviewed list of nickname heads; cache reads the product alias tables | — | S11-06 | [plan](prs/S11-28-alias-fold.md) | Planned |
+| S11-28 | Fold a nickname into its given name | 2 | Reconciler folds a nickname or abbreviation into its formal name, keeping the set's head; a reviewed table directs two-way pairs; cache reads the product alias tables | — | S11-06 | [plan](prs/S11-28-alias-fold.md) | Planned |
 | S11-29 | Quote nicknames and add former surnames | 2 | Nicknames in quotes everywhere; `former_surname` part type in parentheses, italic on the Person titles | — | — | [plan](prs/S11-29-name-display.md) | Planned |
 | S11-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
@@ -433,7 +433,7 @@ Asked by the user on 2026-10-19, after S11-06. Planned as two PRs, with no migra
 
 #### S11-28 — Fold a nickname into its given name
 
-**Ships.** The name module folds a given-name or nickname unit into another when every word pair is the same, an initial, or a nickname or abbreviation of the other side's formal name (*Chris* → *Christopher*, *Wm* → *William*, *Ebbie* → *Abel*). A reviewed list marks which product set heads are themselves nicknames (*Chris*, *Bill*, *Jim*); two formal names never fold. The upstream nickname seed is not edited. The reconciler cache reads the product alias tables; `CacheVersion` 18.
+**Ships.** The name module folds a given-name or nickname unit into another when every word pair is the same, an initial, or a nickname or abbreviation of the other side's formal name (*Chris* → *Christopher*, *Wm* → *William*, *Ebbie* → *Abel*). Two given names the list pairs fold, keeping the set's head; for the 144 pairs listed both ways a reviewed table says which to keep. The upstream nickname seed is not edited. The reconciler cache reads the product alias tables; `CacheVersion` 18.
 **Not this PR.** Storing the formal name in the catalog; reading a catalog's own alias rows; display changes (S11-29).
 **Check.** A Person recorded as *Chris Robins* and *Christopher Robins* shows *Christopher Robins*.
 **Context.** [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §7.2; rule "The reconciler keeps its own decisions".
