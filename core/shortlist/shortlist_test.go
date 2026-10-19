@@ -134,6 +134,9 @@ func TestLookup(t *testing.T) {
 		{"open probe date", "AC-1.6", plain, vocabkey.Event,
 			append(slices.Clone(events), event(6, "birth", bef(1800))),
 			event(0, "birth", aft(1860)), []byte{1, 2, 3, 6}},
+		{"huge range probe", "AC-2.2", plain, vocabkey.Event,
+			append(slices.Clone(events), event(6, "birth", datevaluetest.Between(1, 0, 0, 10_000_000, 0, 0))),
+			event(0, "birth", datevaluetest.Between(1, 0, 0, 10_000_000, 0, 0)), []byte{1, 2, 3, 6}},
 		{"no date to look up", "AC-1.7", plain, vocabkey.Event, events, event(0, "birth", nil), nil},
 		{"no lead of the kind", "AC-1.7", plain, vocabkey.Person,
 			[]entry{person(1, "James Robins")},
@@ -218,6 +221,16 @@ func TestKeys(t *testing.T) {
 		index, _ := keys(vocabkey.Event, event(0, "birth", datevaluetest.YMD(1, 0, 0)).v, r.Alignment.Shortlist)
 		if !slices.Contains(index, "t:birth|-1") {
 			t.Errorf("keys %q lack the bucket below zero", index)
+		}
+	})
+	t.Run("huge range keys as open", func(t *testing.T) {
+		huge := event(0, "birth", datevaluetest.Between(1, 0, 0, 10_000_000, 0, 0))
+		index, lookup := keys(vocabkey.Event, huge.v, r.Alignment.Shortlist)
+		if len(index) >= 10 || len(lookup) >= 10 {
+			t.Fatalf("keys = %d, %d; want fewer than 10 each", len(index), len(lookup))
+		}
+		if !slices.Contains(index, "t:birth|wide") {
+			t.Errorf("index %q lacks the wide key", index)
 		}
 	})
 	t.Run("sorted and unique", func(t *testing.T) {

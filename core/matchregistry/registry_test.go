@@ -49,6 +49,9 @@ func TestShortlistSection(t *testing.T) {
 	if rules.YearBucket <= 0 {
 		t.Errorf("YearBucket = %d, want > 0", rules.YearBucket)
 	}
+	if rules.MaxBuckets <= 0 {
+		t.Errorf("MaxBuckets = %d, want > 0", rules.MaxBuckets)
+	}
 	check := func(kind vocabkey.SubjectType, lead vocabkey.PropertyKey) {
 		t.Helper()
 		if _, ok := reg.Subject.Weights[kind][lead]; !ok {

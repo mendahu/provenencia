@@ -24,6 +24,7 @@ func defaultAlignment() Alignment {
 			// decided: comparison-layers layer 6 procedure
 			vocabkey.Event: {Type: vocabkey.PropertyEventType, Date: vocabkey.PropertyDate},
 		},
-		YearBucket: 2, // estimate: the date tolerance, so a Near date shares a bucket
+		YearBucket: 2,   // estimate: the date tolerance, so a Near date shares a bucket
+		MaxBuckets: 100, // estimate: two centuries at YearBucket 2; a wider reach keys as open
 	}}
 }

@@ -23,6 +23,9 @@ type Rules struct {
 	Dated map[vocabkey.SubjectType]Dated
 	// YearBucket is the years per bucket.
 	YearBucket int
+	// MaxBuckets is the most buckets a date may key; a wider reach keys as an
+	// open one, so a hostile range cannot make a million keys.
+	MaxBuckets int
 }
 
 // Dated is a kind keyed by a type term and the year buckets of a date.
@@ -58,7 +61,7 @@ func positive(kind vocabkey.SubjectType, lead vocabkey.PropertyKey, v subjectcom
 //
 // Word leads key every word key of every positive value, the same on both
 // sides. A dated kind keys its type tokens with the year buckets its date can
-// still be Near to: a closed reach is filed under each bucket it covers and
+// still be Near to (a reach wider than MaxBuckets counts as open): a closed reach is filed under each bucket it covers and
 // looked up under each, an open one meets every closed one through "wide" and
 // "any" keys. An event with no type is filed under every type, and a probe
 // with no type meets every event.
@@ -88,6 +91,9 @@ func Keys(kind vocabkey.SubjectType, v subjectcompare.Values, metas subjectcompa
 			lo, hi, open, ok := valuecompare.YearReach(date.Value, value)
 			if !ok {
 				continue
+			}
+			if !open && floorDiv(hi, r.YearBucket)-floorDiv(lo, r.YearBucket)+1 > r.MaxBuckets {
+				open = true
 			}
 			for _, k := range indexTypes {
 				base := datePrefix + k + "|"
