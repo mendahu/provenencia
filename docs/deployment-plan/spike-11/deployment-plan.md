@@ -68,7 +68,7 @@ These are the calls for this spike. PR plans treat them as binding.
 - **Frequency weighting is gone**, for names, event types and toponyms ([frequency](comparison-layers.md#frequency)).
 - **One match registry** ([match registry](comparison-layers.md#match-registry)): `core/matchregistry`, one file per section (value, subject, segment, alignment, evidence), typed keys, each layer gets its section as an argument. Catalog data (aliases, name patterns) is passed in; data-model facts (cardinality, term flags, bridge kinds) stay in the catalog. A guard test fails on numeric literals other than 0 and 1 in layer packages; another fails when the knob inventory drifts from the registry.
 - **`core/database/matching` is deleted.** `ForSubject` and `ForEntity` have no callers outside tests; merge hints are rebuilt on subject compare over two profiles when their UI exists. Its one live function, `SubjectsValues` (called from `promotealign/layer.go`), is replaced in S11-13 by the loader that feeds `subjectprofile`, which reads the layer's Observations from the cached Source graph.
-- **The reconciler keeps its own decisions** and builds them on value compare. Grouping policy (user, 2026-10-17, S11-06): values group on `Same` and fold on `Contains`; `Equivalent` (an accent fold, an alias) never groups; text never folds; the reconciler reads `ABT` as a range, as matching does.
+- **The reconciler keeps its own decisions** and builds them on value compare. Grouping policy (user, 2026-10-17, S11-06): values group on `Same` and fold on `Contains`; `Equivalent` (an accent fold, an alias) never groups; a nickname or abbreviation folds into the formal name the product seed gives it (user, 2026-10-19, S11-28), and an accent fold never folds; text never folds; the reconciler reads `ABT` as a range, as matching does.
 - **Pure value types and kinds come first.** The date and name value structs, their display helpers, the name part-type registry, and the value-type and cardinality constants move out of `core/database` into pure packages (S11-22), and primary Subject kinds get one home (S11-23), before any layer is built. No layer defines its own copy.
 - **One matching skill, grown with the layers.** S11-02 adds a skill (working name `add-match-rule`) for the steps every change repeats: the knob in its registry section, its inventory row, contract tests, the guard list entry. S11-10, S11-14 and S11-16 extend it. Each migration PR also updates the domain docs and idea files it makes false (`matching.md`, `promote-graph-alignment.md`, `conclusion-reconciliation.md`, `seeded-vocabulary.md`, `ideas/daitch-mokotoff.md`, `ideas/archive/name-matching-enhancements.md`).
 - **One guard, not one per package.** The purity and numeric-literal checks are one repo-walking test (like `core/writes/begin_test.go` `TestBeginOnlyInDatabaseAndWrites`) with a list of layer packages; each layer PR adds its line.
@@ -103,7 +103,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-13 | Migrate Promote scoring onto subject compare | 3 | Property scoring, seeding, duplicate rows; values loader moves; delete `core/match`, `core/database/matching` | — | S11-12, S11-24 | [plan](prs/S11-13-promote-subject-compare.md) | Landed #487 |
 | S11-14 | Segment compare | 4 | `segmentcompare`, typed bridge keys, birth / death cardinality, one-hop credit | — | S11-13 | [plan](prs/S11-14-segment-compare.md) | Landed #493 |
 | S11-15 | Shortlist index | 4 | Key → handles per kind on `graphcache`; registry shortlist keys | — | S11-13 | [plan](prs/S11-15-shortlist-index.md) | Landed #497 |
-| S11-16 | Rewrite graph alignment | 4 | Layer 6 procedure, bands from evidence, accept bar; old walk and registry deleted | — | S11-14, S11-15 | — | Scoped |
+| S11-16 | Rewrite graph alignment | 4 | Layer 6 procedure, bands from evidence, accept bar; old walk and registry deleted | — | S11-14, S11-15 | [plan](prs/S11-16-graph-alignment.md) | Planned |
 | S11-17 | Contested flag through FFI | 4 | Proposal rows carry contested and move reasons to Swift | — | S11-16 | — | Scoped |
 | S11-18 | Contested marker on Promote rows | 4 | The marker on the page | S11-D1 | S11-17, S11-D1 | — | Scoped |
 | S11-19 | Claim evidence query | 5 | Go query: member lines, collapse, relationship bundles; registry evidence section | — | S11-16 | — | Scoped |
@@ -112,6 +112,8 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-26 | Connections file by their ends | 6 | Drop the bridge switch-off: `SkipBridgeIDs`, `skip_bridge_ids`, the `skip` parameters | — | — | — | Scoped |
 | S11-27 | Connection subrows on Promote | 6 | Each connection as a subrow of a row it joins, its state from its ends; the panel and toggles go | S11-D1 | S11-26, S11-D1 | — | Scoped |
 | S11-21 | Large-Source performance check | 7 | 100-Subject benchmark; memoize only if it fails | — | S11-16 | — | Scoped |
+| S11-28 | Fold a nickname into its given name | 2 | Reconciler folds a nickname or abbreviation into its formal name, keeping the set's head; a reviewed table directs two-way pairs; cache reads the product alias tables | — | S11-06 | [plan](prs/S11-28-alias-fold.md) | Planned |
+| S11-29 | Quote nicknames and add former surnames | 2 | Nicknames in quotes everywhere; `former_surname` part type in parentheses, italic on the Person titles | — | — | [plan](prs/S11-29-name-display.md) | Planned |
 | S11-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -356,7 +358,7 @@ Also builds `core/subjectcompare`'s `invariants_test.go` lead groups (`kindGroup
 #### S11-16 — Rewrite graph alignment
 
 **Ships.** `graphalign.Align` follows the layer 6 procedure: shortlist and nominate, top K with ties, one queue, segments around accepted pairs, dirty-pair settling with reasons, bands from evidence, the accept bar. Contested is a `RowFlags` field and move reasons are `Reason` codes; the plan decides whether `ConflictWithFixed` is subsumed. Grows the registry alignment section S11-15 opened, and moves its type into `graphalign`. Delete the old walk, fallback, `refineOneHop` and `core/graphalign/registry.go`. [`promote-graph-alignment.md`](../../promote-graph-alignment.md) and the matching skill are updated.
-Segment compare learns unplaced neighbors (entity compare decides), and a bridge's own properties (place relationship dates) through subject compare if a golden needs them (moved from S11-14, 2026-10-19).
+Segment compare learns unplaced neighbors (entity compare decides). A bridge's own properties (place relationship dates) are not compared: no golden needs them (planning, 2026-10-19). Candidates gate on similarity (user, 2026-10-19).
 **Not this PR.** FFI and UI for contested (S11-17, S11-18). Memoization (S11-21).
 **Check.** The invariants hold (order, decided rows, re-run, start-independence); name + birth date proposes strong; a decision moves only its neighborhood.
 **Context.** [Layer 6 procedure](comparison-layers.md#layer-6-procedure), [bands](comparison-layers.md#bands).
@@ -424,3 +426,21 @@ Likeness comparisons show the two crops, which S10-36 was to add in Spike 10; pi
 **Not this PR.** Anything the benchmark doesn't need.
 **Check.** The benchmark passes; the PR says whether memoization was needed.
 **Context.** [Layer 6 procedure](comparison-layers.md#layer-6-procedure) step 6.
+
+### Slice 2 follow-ups — Names on the Person page
+
+Asked by the user on 2026-10-19, after S11-06. Planned as two PRs, with no migration for existing catalogs.
+
+#### S11-28 — Fold a nickname into its given name
+
+**Ships.** The name module folds a given-name or nickname unit into another when every word pair is the same, an initial, or a nickname or abbreviation of the other side's formal name (*Chris* → *Christopher*, *Wm* → *William*, *Ebbie* → *Abel*). Two given names the list pairs fold, keeping the set's head; for the 143 pairs listed both ways a reviewed table says which to keep. The upstream nickname seed is not edited. The reconciler cache reads the product alias tables; `CacheVersion` 18.
+**Not this PR.** Storing the formal name in the catalog; reading a catalog's own alias rows; display changes (S11-29).
+**Check.** A Person recorded as *Chris Robins* and *Christopher Robins* shows *Christopher Robins*.
+**Context.** [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §7.2; rule "The reconciler keeps its own decisions".
+
+#### S11-29 — Quote nicknames and add former surnames
+
+**Ships.** Nickname parts display in curly quotes. A `former_surname` product part type (role `family`, after the nickname in both Western orders) displays in parentheses, with the surname italic on the Persons list row and the Person page title.
+**Not this PR.** Migrating existing catalogs; italics on other surfaces.
+**Check.** *James “Jake” Robins*; *Jones, Mary (Smith)* with *Smith* italic.
+**Context.** [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §4; [`ideas/international-names.md`](../../ideas/international-names.md).
