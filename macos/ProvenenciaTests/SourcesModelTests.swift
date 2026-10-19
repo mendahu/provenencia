@@ -363,6 +363,42 @@ struct SourcesModelTests {
     }
 
     /// A write's activity moves the row in the Updated sort without a reload.
+    @Test func hiddenListRepublishesCountAfterReload() async {
+        let store = FakeStore()
+        let counts = CatalogCounts(projectDir: projectDir, store: store)
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "Album", typeID: "t1", ref: "SRC-0001")],
+            types: [photoType()],
+            catalogCounts: counts
+        )
+        await warmLists(model, session: session)
+        #expect(counts.sources == 1)
+
+        // The list is hidden: a write marks it stale instead of reloading it.
+        store.sourcesByProject[projectDir]?.append(
+            source(id: "s2", title: "Deed", typeID: "t1", ref: "SRC-0002")
+        )
+        session.apply(.createdSource)
+
+        // Coming back reloads it. The cached `.ready` value must not be republished.
+        model.warmListQueries()
+        guard let handle: QueryHandle<[CatalogSource]> = session.queryHandle(
+            SourcesModel.sourcesListKey(for: session)
+        ) else {
+            Issue.record("sources handle missing")
+            return
+        }
+        counts.publishSources(7)
+        model.syncCatalogCountsIfLoaded(handle)
+        #expect(counts.sources == 7)
+
+        await waitForQuery(handle)
+        model.syncCatalogCountsIfLoaded(handle)
+        #expect(model.sources.count == 2)
+        #expect(counts.sources == 2)
+    }
+
     @Test func writeActivityMovesTheRowInTheUpdatedSort() async {
         let (model, session) = makeModel(
             sources: [
