@@ -83,4 +83,4 @@ Reviewers: MNT (had a Fix-now blocker and majors). Not sent: CON (no findings), 
 Round 2 verdict: Clean. No round-2 blockers, so no Fix plan 2.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: PRF-1 (S11-21 scope, `70f26d69`), PRF-2 (S11-21), MNT-13 (dead `h != nil` guard), MNT-8–12 nits, coverage-aware similarity idea · to user: STEP-3 one-property candidates (a), STEP-4 D-7 `via` fixed-only (a), PRF-1 deferred · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: PRF-1 (S11-21 scope, `70f26d69`), PRF-2 (S11-21), MNT-13 (dead `h != nil` guard), MNT-8–12 nits, coverage-aware similarity idea · to user: STEP-3 one-property candidates (a), STEP-4 D-7 `via` fixed-only (a), PRF-1 deferred · CON miss: none
