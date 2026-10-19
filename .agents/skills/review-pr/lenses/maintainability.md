@@ -70,7 +70,8 @@ code to it. Special-casing where an entry belongs is a patch.
 
 Also the reverse: if this is the **third** hand-rolled list of the same kind of
 thing (three `switch kind` blocks that must stay in step), the better shape is
-a registry. Propose it, usually as a preparatory PR.
+a registry. Propose it in this PR (`Fit: this PR`) when the PR adds an entry to
+the list or touches one of the copies; ship-pr fixes those on the same pass.
 
 ### Q3. Is the change at the layer that owns the concern?
 
@@ -110,7 +111,8 @@ a registry. Propose it, usually as a preparatory PR.
 
 - Code that copies an existing function, view, query, or test and tweaks it:
   name both. Second copy → it must have a reason to diverge. Third → extract,
-  in this PR if small, else a preparatory PR.
+  in this PR (`Fit: this PR`) when the PR adds or touches a copy, across every
+  package that holds one. A plan Out line that deferred it does not change the Fit.
 - UI: a feature-private control that re-solves an interaction a `PV*` already
   owns (hover, press, selected, disabled, hit area, tooltip, AT traits) is a
   near-copy even when it is a `private func`. Judge by what the user can do,
@@ -223,8 +225,8 @@ A better shape is not automatically this change's job. Pick one and say it:
 
 | Fit | When |
 | --- | --- |
-| **This PR** | Same files, a few more steps, the PR stays one reviewable behavior |
-| **Preparatory PR** | A refactor that makes this one simple. A map change; the user decides |
+| **This PR** | Same files, a few more steps, the PR stays one reviewable behavior. Also any extract-and-dedupe refactor (helper, registry, fixture) whose copies or list this PR adds to or touches, even across other packages |
+| **Preparatory PR** | A reshape a researcher would see, or one that needs a product call. The user decides |
 | **Log it** | Real debt this change does not touch or worsen. An idea file. Not this PR |
 
 Do not widen a PR silently.
@@ -312,4 +314,4 @@ The shape to copy. Names in the example are illustrative.
 `core/database/sourcegraphprogress` already returns; read the counts from that
 query and drop the Swift loop." Or: "This is the third `switch subjectKind`
 that maps a kind to a mark; add the mark to the subject-kind registry instead
-(preparatory PR)."
+(this PR)."

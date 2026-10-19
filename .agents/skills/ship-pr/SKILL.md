@@ -168,14 +168,29 @@ Every finding gets exactly one decision, written in the ship log.
 
 | Decision | When |
 | --- | --- |
-| **Fix now** | Verified blocker or major whose Fit is this PR. A defect in code this PR adds or changes, whatever later PR would first reach it. A minor only when the fix plan already touches that file and the change is a few lines |
-| **Follow-up** | Fit is a preparatory PR or an idea, for code this PR does not add, change, or make worse; a Reshape; minors not fixed now. Goes to the PR body's follow-up list, and to `docs/ideas/` or the map if the user agrees |
+| **Fix now** | Verified blocker or major whose Fit is this PR. A defect in code this PR adds or changes, whatever later PR would first reach it. A **same-pass cleanup** (below), whatever its severity and whatever Fit the reviewer wrote. A minor or a stale comment in a file this PR adds or changes |
+| **Later PR** | The finding belongs to a PR already on the map (copy for a code that S#-NN surfaces, a check S#-NN's DoD needs). Write it into that PR's plan now (its Scope, Strings or DoD), or into its map scope entry when it has no plan yet, and name where in the ship log. No user approval needed |
+| **Follow-up** | Fit is an idea, for code this PR does not add, change, or make worse; a Reshape. Goes to the PR body's follow-up list, and to `docs/ideas/` or the map if the user agrees |
 | **Rejected** | Refuted, out of the plan's scope with no harm, or contradicted by a Decision or working rule. One line of evidence |
 | **To user** | Contradicts a plan Decision, an AC, or a working rule but looks right; a product call; two lenses that disagree and the code cannot settle it. Pauses the loop |
 | **Logged** | Nits. Copy each reviewer's one-line **Nits** list into the ship log under the round's table, as is: no row each, no evidence |
 
+**Same-pass cleanups.** A maintainability finding of the shape "extract the
+shared helper, registry, or fixture and move the copies onto it" is **Fix now**
+when this PR adds, changes, or copies again any one of those copies, or adds an
+entry to the hand-rolled list. Do it on this PR, across every package that
+holds a copy, even ones the PR did not otherwise touch, and even when the
+plan's Out line or a Decision deferred it to "a preparatory PR" or an idea
+file: those lines recorded the debt, they do not ask for a second PR. The
+review exists to catch these and close them in the same pass. Note the Out
+line or Decision it supersedes in the fix plan and the plan's Landed note. Take
+it **To user** only when the refactor changes behavior a researcher can see or
+needs a product call. A cleanup whose copies this PR does not touch at all is
+a Follow-up.
+
 A finding that contradicts the plan is never fixed by quietly changing the
-plan. The plan's Decisions bind the orchestrator too.
+plan. The plan's Decisions bind the orchestrator too, except where the
+same-pass cleanup rule above supersedes a deferral.
 
 **Re-rate before you decide.** A reviewer's severity is a floor to check, not
 a ceiling. Raise it when the finding is rated down for a reason
@@ -245,7 +260,7 @@ Reviewers: CON, MNT, SEC+PRF. Skipped: UX (no `macos/App/**`, strings, or error 
 | ID | Lens | Severity | Title | Decision | Evidence / reason |
 | --- | --- | --- | --- | --- | --- |
 | CON-1 | CON | blocker | … | Fix now → F-1 | verified: <how> |
-| MNT-3 | MNT | major | … | Follow-up | preparatory PR; to user |
+| MNT-3 | MNT | major | … | Follow-up | idea file; copies untouched by this PR |
 | SEC-2 | SEC | major | … | Rejected | `objectpath.Validate` already guards this, line 31 |
 
 Nits (logged): `MNT-5 · core/x/y.go:42 · rename …` · `CON-4 · …`
