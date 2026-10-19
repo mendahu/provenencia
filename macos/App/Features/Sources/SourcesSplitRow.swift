@@ -35,6 +35,7 @@ struct SourcesSplitRow: View {
     var countsLoading: Bool = false
     var onOpenPage: () -> Void
     var onOpenGraph: () -> Void
+    var onCopy: () -> Void
 
     private var updatedAt: String { source.updated.at }
 
@@ -97,6 +98,16 @@ struct SourcesSplitRow: View {
             in: .current
         )))
         .accessibilityIdentifier("sources.row.\(source.id).page")
+        .pvRightClickMenu(
+            accessibilityIdentifier: "sources.row.\(source.id).menu",
+            items: [
+                PVActionMenuItem(
+                    title: L10n.Sources.copySourceEntry,
+                    accessibilityIdentifier: "sources.row.\(source.id).copy",
+                    action: onCopy
+                ),
+            ]
+        )
     }
 
     @ViewBuilder
