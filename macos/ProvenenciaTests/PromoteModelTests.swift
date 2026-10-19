@@ -8,14 +8,6 @@ struct PromoteModelTests {
     private let projectDir = "/tmp/promote-model.provenencia"
     private let sourceID = "src-1"
 
-    private func waitUntil(_ condition: () -> Bool) async -> Bool {
-        for _ in 0..<200 {
-            if condition() { return true }
-            try? await Task.sleep(nanoseconds: 10_000_000)
-        }
-        return condition()
-    }
-
     private func subject(_ id: String, ref: String, label: String) -> CatalogSubject {
         CatalogSubject(id: id, ref: ref, sourceID: sourceID, subjectTypeID: "type-person", label: label, description: "")
     }

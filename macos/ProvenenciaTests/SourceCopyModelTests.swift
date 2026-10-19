@@ -247,14 +247,6 @@ struct SourceCopyModelTests {
         #expect(loadedModel.loadState == .ready)
     }
 
-    private func waitUntil(_ condition: () -> Bool) async -> Bool {
-        for _ in 0..<200 {
-            if condition() { return true }
-            try? await Task.sleep(nanoseconds: 10_000_000)
-        }
-        return condition()
-    }
-
     @Test func copyRecountsThroughSession() async {
         let store = makeStore()
         let (model, session) = await loaded(store)

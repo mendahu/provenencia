@@ -14,3 +14,13 @@ func waitForQuery<Value>(_ handle: QueryHandle<Value>) async {
         waited += step
     }
 }
+
+/// Polls `condition` every 10 ms for up to two seconds; true once it holds.
+@MainActor
+func waitUntil(_ condition: () -> Bool) async -> Bool {
+    for _ in 0..<200 {
+        if condition() { return true }
+        try? await Task.sleep(nanoseconds: 10_000_000)
+    }
+    return condition()
+}

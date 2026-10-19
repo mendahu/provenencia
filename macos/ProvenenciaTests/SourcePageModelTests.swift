@@ -1208,14 +1208,6 @@ struct SourcePageModelTests {
         #expect(model.notes.pendingDelete == nil)
     }
 
-    private func waitUntil(_ condition: () -> Bool) async -> Bool {
-        for _ in 0..<200 {
-            if condition() { return true }
-            try? await Task.sleep(nanoseconds: 10_000_000)
-        }
-        return condition()
-    }
-
     @Test func confirmDeleteSourceRecountsThroughSession() async {
         let store = makeStore()
         store.sourcesByProject[projectDir]?.append(

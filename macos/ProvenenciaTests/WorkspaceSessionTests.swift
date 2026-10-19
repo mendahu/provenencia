@@ -1054,14 +1054,6 @@ struct WorkspaceSessionTests {
         #expect(session.graphCamera(for: "src-a") != session.graphCamera(for: "src-b"))
     }
 
-    private func waitUntil(_ condition: () -> Bool) async -> Bool {
-        for _ in 0..<200 {
-            if condition() { return true }
-            try? await Task.sleep(nanoseconds: 10_000_000)
-        }
-        return condition()
-    }
-
     @Test func applyRunsNavCountsHookForTriggers() async {
         let session = makeSession()
         var calls = 0
