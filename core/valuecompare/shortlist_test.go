@@ -3,6 +3,7 @@ package valuecompare_test
 import (
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/datevalue"
@@ -45,6 +46,7 @@ func slDate(d *datevalue.Value) valuecompare.Value {
 
 func TestWordKeys(t *testing.T) {
 	rules := billRules()
+	billKey := rules.Names.Aliases.SetKeys("bill")[0]
 	whole := func(v valuecompare.Value) string {
 		k, ok := valuecompare.Key(v, valuecompare.Equivalent, rules)
 		if !ok {
@@ -62,8 +64,8 @@ func TestWordKeys(t *testing.T) {
 		{name: "initial is no key", v: slName("J. Robins"), want: []string{whole(slName("J. Robins")), "w:robins"}},
 		{name: "folded word", v: slName("José Robins"), has: []string{"w:jose", "w:robins"}},
 		{name: "generation word", v: slGeneration(), has: []string{"w:john", "w:smith"}, not: []string{"w:jr"}},
-		{name: "alias set", v: slName("Bill"), has: []string{"a:bill bill"}},
-		{name: "text words", v: slText("New York"), has: []string{"w:new", "w:york"}, not: []string{"a:bill bill"}},
+		{name: "alias set", v: slName("Bill"), has: []string{"a:" + billKey}},
+		{name: "text words", v: slText("New York"), has: []string{"w:new", "w:york"}, not: []string{"a:" + billKey}},
 		{name: "integer", v: valuecompare.Value{Type: propertymeta.ValueTypeInteger, Integer: 4}},
 		{name: "empty name", v: valuecompare.Value{Type: propertymeta.ValueTypeName, NamePattern: valuecompare.WesternPattern}},
 	}
@@ -154,11 +156,15 @@ func TestAliasSetKeys(t *testing.T) {
 		{Key: "a", Kind: valuecompare.AliasNickname, Roles: given, Sets: [][]string{{"chris", "christine"}}},
 		{Key: "b", Kind: valuecompare.AliasNickname, Roles: given, Sets: [][]string{{"chris", "christopher"}}},
 	}, w)
-	if got, want := idx.SetKeys("chris"), []string{"a chris", "b chris"}; !slices.Equal(got, want) {
-		t.Errorf("SetKeys(chris) = %q, want %q", got, want)
+	chris := idx.SetKeys("chris")
+	if len(chris) != 2 {
+		t.Fatalf("SetKeys(chris) = %q, want one key per table", chris)
 	}
-	if got, want := idx.SetKeys("christine"), []string{"a chris"}; !slices.Equal(got, want) {
-		t.Errorf("SetKeys(christine) = %q, want %q", got, want)
+	if got := idx.SetKeys("christine"); len(got) != 1 || !slices.Contains(chris, got[0]) {
+		t.Errorf("SetKeys(christine) = %q, want one of %q", got, chris)
+	}
+	if got := idx.SetKeys("christopher"); len(got) != 1 || !slices.Contains(chris, got[0]) || slices.Equal(got, idx.SetKeys("christine")) {
+		t.Errorf("SetKeys(christopher) = %q, want the other table's key of %q", got, chris)
 	}
 	if got := (valuecompare.AliasIndex{}).SetKeys("chris"); got != nil {
 		t.Errorf("zero index SetKeys = %q, want nil", got)
@@ -188,6 +194,26 @@ func TestAliasSetKeysDoNotGrowWithTheSet(t *testing.T) {
 	}
 	if other := idx.SetKeys("zed"); slices.Equal(other, first) {
 		t.Errorf("words of two sets share key %q", other)
+	}
+}
+
+func TestAliasSetKeysDoNotGrowWithTheTokenOrTableKey(t *testing.T) {
+	w := matchregistry.Default().Value.Words
+	given := []valuecompare.NameRole{valuecompare.RoleGiven}
+	long := strings.Repeat("x", 4096)
+	idx := valuecompare.NewAliasIndex([]valuecompare.AliasTable{
+		{Key: long, Kind: valuecompare.AliasNickname, Roles: given, Sets: [][]string{{long + "a", long + "b"}}},
+	}, w)
+	first, second := idx.SetKeys(long+"a"), idx.SetKeys(long+"b")
+	for _, keys := range [][]string{first, second} {
+		for _, k := range keys {
+			if len(k) >= 64 {
+				t.Errorf("key is %d bytes, want under 64", len(k))
+			}
+		}
+	}
+	if len(first) != 1 || !slices.Equal(first, second) {
+		t.Errorf("two words of one set keys = %q, %q; want the same single key", first, second)
 	}
 }
 

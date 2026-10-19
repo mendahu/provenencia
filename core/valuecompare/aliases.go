@@ -1,6 +1,8 @@
 package valuecompare
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"slices"
 	"sort"
 )
@@ -35,11 +37,12 @@ type aliasSet struct {
 	tokens map[string]bool
 	roles  map[NameRole]bool
 	kind   AliasKind
-	// key is the table key and the set's smallest token, joined by one space.
-	// It is bounded by the table key and one token, not by the set: a key holding
-	// every token would be copied for each word of a set with thousands. Tokens
-	// of one set share it, so two words that Hit share it; a set sharing a
-	// smallest token with another set of its table only makes a wider shortlist.
+	// key is the first 16 bytes of sha256(table key, 0x00, smallest token),
+	// hex-encoded. It is a fixed size however long the table key or a token is,
+	// and not the set's tokens: a key holding every token would be copied for each
+	// word of a set with thousands. Tokens of one set share it, so two words that
+	// Hit share it. A collision, or a set sharing a smallest token with another
+	// set of its table, only makes a wider shortlist.
 	key string
 }
 
@@ -80,10 +83,16 @@ func NewAliasIndex(tables []AliasTable, w WordRules) AliasIndex {
 				sorted = append(sorted, token)
 			}
 			sort.Strings(sorted)
-			idx.sets = append(idx.sets, aliasSet{tokens: tokens, roles: roles, kind: table.Kind, key: table.Key + " " + sorted[0]})
+			idx.sets = append(idx.sets, aliasSet{tokens: tokens, roles: roles, kind: table.Kind, key: aliasSetKey(table.Key, sorted[0])})
 		}
 	}
 	return idx
+}
+
+// aliasSetKey is the fixed-size key of a set: see aliasSet.key.
+func aliasSetKey(tableKey, smallest string) string {
+	sum := sha256.Sum256([]byte(tableKey + "\x00" + smallest))
+	return hex.EncodeToString(sum[:16])
 }
 
 // Hit reports whether one set holds both tokens and allows both roles, and
@@ -98,8 +107,8 @@ func (a AliasIndex) Hit(x, y string, rx, ry NameRole) (AliasKind, bool) {
 	return "", false
 }
 
-// SetKeys is the key of every set that holds token (an AliasToken): its table
-// key and smallest token, joined by one space. Roles are ignored, so a shortlist may
+// SetKeys is the key of every set that holds token (an AliasToken): a
+// fixed-size digest of its table key and smallest token. Roles are ignored, so a shortlist may
 // include more than Hit allows. Sorted, no duplicates; nil for the zero index.
 // Sets do not chain, so no word key can join two words of a set, but a set can
 // be a key: two words that Hit share it.
