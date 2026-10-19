@@ -11,10 +11,6 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// seedCandidateLimit is the number of candidates kept per unfixed Subject.
-// The walk itself has no hop limit.
-const seedCandidateLimit = 5
-
 // loadCanon reads the open catalog's graph: fixed anchors, the candidates of
 // each unfixed Subject (graphalign.Candidates over the handles the shortlist
 // index offers it), then every link those handles have. Link order is
@@ -28,6 +24,7 @@ func loadCanon(g *graphcache.Graph, prof *profiler, layer graphalign.Layer, fixe
 	handles := map[string]*graphcache.Node{}
 	kinds := map[string]string{}
 	var seeds [][]byte
+	candidates := map[string][][]byte{}
 	add := func(id []byte) error {
 		if len(id) != 16 {
 			return nil
@@ -82,7 +79,8 @@ func loadCanon(g *graphcache.Graph, prof *profiler, layer graphalign.Layer, fixe
 			return graphalign.Canon{}, err
 		}
 		for i, s := range todo {
-			for _, h := range graphalign.Candidates(s.Kind, s.Values, shortlisted[i], layer.Metas, cfg, seedCandidateLimit) {
+			for _, h := range graphalign.Candidates(s.Kind, s.Values, shortlisted[i], layer.Metas, cfg) {
+				candidates[string(s.ID)] = append(candidates[string(s.ID)], h.ID)
 				if err := add(h.ID); err != nil {
 					return graphalign.Canon{}, err
 				}
@@ -167,7 +165,7 @@ func loadCanon(g *graphcache.Graph, prof *profiler, layer graphalign.Layer, fixe
 	if err := prof.profile(nodes); err != nil {
 		return graphalign.Canon{}, err
 	}
-	out := graphalign.Canon{Edges: edges}
+	out := graphalign.Canon{Edges: edges, Candidates: candidates}
 	for id, n := range handles {
 		out.Handles = append(out.Handles, graphalign.Handle{
 			ID: append([]byte(nil), n.ID...), Ref: n.Ref, Kind: kinds[id], Values: prof.values(n.ID),

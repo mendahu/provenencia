@@ -6,7 +6,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/datevalue"
-	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/subjectprofile"
@@ -30,7 +30,7 @@ func dateObs(id, key string, d *datevalue.Value) exhibitObs {
 func TestOverlappingBoundsAreSimilarAndUnpinned(t *testing.T) {
 	incoming := dateObs("in", vocabkey.PropertyStartDate, befDate(2001, 3, 31))
 	member := dateObs("mem", vocabkey.PropertyStartDate, befDate(1985, 2, 1))
-	lines := pairExhibits([]exhibitObs{incoming}, nil, vocabkey.Event, []exhibitObs{member}, graphalign.DefaultConfig())
+	lines := pairExhibits([]exhibitObs{incoming}, nil, vocabkey.Event, []exhibitObs{member}, matchregistry.Default().AlignConfig())
 	if len(lines) != 1 {
 		t.Fatalf("lines %+v", lines)
 	}
@@ -48,7 +48,7 @@ func TestDisjointDatesConflict(t *testing.T) {
 	incoming := dateObs("in", vocabkey.PropertyStartDate, befDate(1985, 2, 1))
 	year := 2001
 	member := dateObs("mem", vocabkey.PropertyStartDate, &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year})
-	lines := pairExhibits([]exhibitObs{incoming}, nil, vocabkey.Event, []exhibitObs{member}, graphalign.DefaultConfig())
+	lines := pairExhibits([]exhibitObs{incoming}, nil, vocabkey.Event, []exhibitObs{member}, matchregistry.Default().AlignConfig())
 	if len(lines) != 1 || lines[0].Outcome != propertycompare.OutcomeConflict || lines[0].Pinned || lines[0].Weight != -3 {
 		t.Fatalf("disjoint %+v, want an unpinned conflict weighing -3", lines)
 	}
@@ -57,7 +57,7 @@ func TestDisjointDatesConflict(t *testing.T) {
 // A line weighs what its property counts in the Subject's score: its lead's
 // weight, or nothing for a property the subject section does not weigh.
 func TestExhibitWeightIsTheLeadWeight(t *testing.T) {
-	cfg := graphalign.DefaultConfig()
+	cfg := matchregistry.Default().AlignConfig()
 	t.Run("a property the subject section does not weigh", func(t *testing.T) {
 		text := autoreconcile.Value{Text: "Great Fire", HasText: true}
 		in := obs("in", "event_name", propertymeta.ValueTypeText, text)

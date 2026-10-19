@@ -1,7 +1,5 @@
 # Provenencia — Promote Graph Alignment
 
-> **Spike 11 replaces §4.1, §5, §6 and §12.** The target model is [matching-model.md](matching-model.md); until then those sections describe the running code.
-
 ## Status
 
 **Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). Renamed from “Promote alignment” to **Promote graph alignment** (2026-10-07) so the name names the graph-to-graph proposal, not property-only matching. It replaced the per-Property compare checklist and the per-Subject walk; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3–§5.4 now state its model rules. How we got here, and the directions we turned down: [`ideas/archive/promote-matching.md`](ideas/archive/promote-matching.md). Matching today: [`matching.md`](matching.md).
@@ -73,7 +71,7 @@ One pure function, called on open and after every decision:
 ```go
 // Align proposes a handle, New or Skip for every primary Subject on one
 // Evidence layer (graph alignment), holding the fixed pairs as given.
-func Align(layer Layer, canon Canon, fixed []Fixed, cfg *Config) Proposal // nil cfg: DefaultConfig()
+func Align(layer Layer, canon Canon, fixed []Fixed, cfg Config) Proposal
 ```
 
 | Input | Holds |
@@ -93,48 +91,20 @@ func Align(layer Layer, canon Canon, fixed []Fixed, cfg *Config) Proposal // nil
 
 ## 4.1 Abstraction, composition, and tunables
 
-> Superseded in Spike 11; see [matching-model.md](matching-model.md).
-
-**Goal:** code that is well abstracted, strongly separated by concern, and highly composable. Graph alignment must not become a monolith that embeds sameness logic, catalog I/O, and UI drafting in one place.
-
-**Compose smaller pure units upward:**
-
-| Layer | Responsibility | Does not |
-| --- | --- | --- |
-| **Pairwise evaluation** | Given two sides, return entity compare's evidence and one outcome per lead property (`subjectcompare.Compare`). `Compatible` is sameness for reconciliation and pins, not the score | Walk the graph, load the catalog, choose New/Skip for a whole layer |
-| **Candidates** ([`matching.md`](matching.md)) | List the handles a Subject is offered on its own properties: entity compare evidence at least the weak band (`graphalign.Candidates`) | Know Evidence bridges, fixed anchors, or propagation |
-| **Graph alignment** (`Align`) | Seed, priority walk, one-to-one, propagate structural support; call pairwise evaluation on each candidate; fall back to property-only matching when unreachable | Own a second “are these the same?” implementation; talk to SQLite |
-| **Catalog adapter** (S9-42) | Build `Layer` / `Canon`, call `Align`, map the proposal to FFI | Contain scoring or walk policy |
-| **Promote page** (S9-44) | Present rows, decisions, Done | Reimplement alignment |
-
-Alignment **orchestrates**; entity compare **judges a pair**. Alignment calls it for every pair it scores, adding edge terms when neighbors are already mapped. Candidates and the walk read the same evidence.
-
-**Package boundary:** graph alignment is **its own module**, not folded into Promote UI or FFI handlers. Config for the walk and scorer lives in **one registry file** in that pure package (same idea as matching’s `registry.go`): every tunable dogfood will tweak —
-
-- accept / strong / weak / Skip score bands and the conflict penalty;
-- propagation knobs (queue behaviour, how neighbor support accumulates, one-to-one refusal margins);
-- any other weights that decide “is this the best candidate to promote?”
-
-Pairwise / matching tunables stay in matching’s registry; alignment’s registry holds walk and band knobs. Do not scatter magic numbers through the walk.
-
-Defaults ship for the obituary golden and table tests. Real tuning is **empirical**: file a batch of Sources, watch proposals, change the registry, re-run. Unit tests lock invariants and regressions; they cannot replace merging real graphs. Learned weights from accepts/rejects (§10) stay later; the registries are the hand-tuned front door until then.
-
-`Align` takes an explicit config (or reads the package default) so tests can pin values without editing the registry file.
+`core/graphalign` composes the matching layers: entity compare judges a pair, segment compare judges a link, and `Align` walks, places and settles. It talks to no database and reads its numbers from the registry's alignment section (`graphalign.Rules`, filled in `core/matchregistry/alignment.go`); no layer imports the registry. The catalog adapter (`core/database/promotealign`) builds `Layer` and `Canon` and calls `Align`; the Promote page presents rows. Every tunable and its start is in the [knob inventory](matching-model.md#knob-inventory).
 
 ---
 
 # 5. Walking: best-first propagation
 
-> Superseded in Spike 11; see [matching-model.md](matching-model.md).
-
 This is collective entity resolution: graph alignment by propagation (cf. PARIS, similarity flooding). The walk is **best-first, not recursive**. A depth-first walk commits to whatever it reaches first; a priority queue lets the strongest matches settle first, so the weaker ones are decided with the most context.
 
-1. **Seed.** For each fixed pair (s, H): look at each bridge between `s` and an unmapped neighbor `t` on the layer, from whichever end `s` is on. An undirected key (spouse) corresponds either way; a directed one (parent of, part of) corresponds only from the same end, so a parent maps to a parent (§ Direction). For each corresponding edge from H to a handle G in `canon`, push the candidate (t, G).
-2. **Pop the best-scoring candidate.** Accept it if it clears the threshold and keeps the graph alignment **one-to-one**: within one layer, a handle takes at most one Subject.
-3. **Propagate.** The accepted pair becomes an anchor. Push its neighbors' candidates, and add **support** to queued candidates that are consistent with it. A candidate's score rises as more of its neighbors map consistently. That's the "the structure lines up" evidence.
-4. **Repeat** until the queue is empty.
-5. **Unreachable Subjects** (nothing reaches them from an anchor) fall back to property-only matching: `graphalign.Candidates` picks their candidates, and each is scored by the same pairwise path the walk uses. They are assigned best-first across the layer, so a contest over one handle goes to the stronger match. Below the threshold, the core proposes Skip (New when there is no candidate at all), and the page starts the row unset. Each pair this pass accepts then seeds the same walk as a fixed anchor, so a neighbor that was never a candidate can still be nominated. A candidate recorded but not accepted is not an anchor. The walk records a nominated handle even when its score stays under the accept bar; only an accepted pair propagates further.
-6. **One-hop refinement.** With that mapping in hand, every recorded candidate is scored again. A layer neighbor adds edge support when its mapped handle is this candidate's canonical neighbor under the same key: the segment support, plus a registry fraction of that neighbor's evidence. Unfixed rows are reassigned from those scores. Each pass replaces the scores it read, so support from a neighbor that moved to another handle is dropped rather than kept at its old high, and a "via" reason stays only while that neighbor still supports the candidate. The pass repeats until the mapping stops changing, at most one round per subject, and scores once more if the rounds run out. The fraction is of the neighbor's properties alone, so a city receives its parent's toponym points and does not receive the parent's credit from the country. The published band is this score: a toponym alone stays medium, and a corresponding `part_of` lifts it to strong. Decided rows are rescored afterward, so a neighbor that contradicts a decision can still raise a warning.
+1. **Handles.** A Subject's handles come from its shortlist or from a link to an accepted pair. The loader shortlists by cheap keys and `graphalign.Candidates` keeps the handles at least half alike (similarity 0.5), the best K by similarity and every handle tied with the K-th, up to the tie cap. `Align` runs no shortlist of its own; it reads the loader's lists (`Canon.Candidates`). A handle reached through a corresponding link of an accepted pair is nominated at any score.
+2. **One queue.** Every fixed pair is placed first. Each candidate is scored (entity compare, then the segments around it) and enters one best-first queue. A pair is popped best first, and placed when it clears the accept bar and its handle is free (one-to-one: within one layer a handle takes at most one Subject). A handle another Subject holds records who took it, so a loser can read `taken`.
+3. **Unplaced neighbors.** A link whose neighbor is not placed yet is judged by entity compare on the neighbor's own properties: alike counts as lined up, a differing one counts against the pair from the start, and an unsure one adds nothing. Once the neighbor is placed on that canon neighbor the same number follows, so a score does not depend on which pair the walk placed first.
+4. **Placing a pair** nominates the handles its links point at for the neighbors, re-scores the neighbors that are not placed, and marks the placed ones dirty. A candidate a free neighbor already had keeps its own reason; only a fixed row's existing candidate gains the nominating `via`, so a decided row has the handles its neighbors point at.
+5. **Settling.** When the queue empties, only dirty pairs are re-scored. A pair is released when it falls under the accept bar or a free rival leads it by the settle margin; the released Subjects walk again. At most `SettleRounds` rounds. A released Subject that ends on another handle carries a move reason (`neighbor_placed`, `neighbor_moved`, `neighbor_released`) and the neighbor behind it. A fixed pair is never released. Every score is replaced, never kept higher, so support from a neighbor that moved is dropped and a "via" reason stays only while that neighbor still supports the pair.
+6. **Rows.** A row's band is its evidence against `Alignment.Bands`. A row is **contested** when any comparison behind its reported pair conflicts, whatever its band. A candidate that cleared no bar comes back Skip with the candidate as an alternative (New only when there is no candidate at all); a decided row whose neighbors point at a handle that leads by the settle margin is flagged `ConflictWithFixed`.
 
 The work is about (Subjects + bridges) × candidates × log: well under a millisecond at obituary scale.
 
@@ -151,13 +121,11 @@ A layer is **one Source’s Subjects**, not one connected component. *Map the re
 | Unpromoted | Promoted | Same mechanism, other direction (e.g. open Promote on a new person whose event neighbor was filed earlier). |
 | Promoted | Promoted | Not an identity proposal for those rows. It is a **missing / unfiled relationship**: the Evidence bridge exists and both ends are handles, so §9.1 files the canonical association (shown on the page as a connection that will be filed; the researcher can switch it off). |
 
-**Orphans and disconnected islands** are expected. A primary Subject with no bridges, or a cluster that shares no path with any fixed/promoted anchor, is **unreachable** (§5 step 5): property-only matching only; a match below the bar comes back Skip, never New, and a row with no match starts unset on the page. Structure-backed scoring never assumes a path from the entry card to every row.
+**Orphans and disconnected islands** are expected. A primary Subject with no bridges, or a cluster that shares no path with any fixed/promoted anchor, is **unreachable** (§5 step 1): property-only matching only; a match below the bar comes back Skip, never New, and a row with no match starts unset on the page. Structure-backed scoring never assumes a path from the entry card to every row.
 
 ---
 
 # 6. Scoring
-
-> Superseded in Spike 11; see [matching-model.md](matching-model.md).
 
 Nothing names a Property or a relationship. Every weight comes from metadata or from data.
 
@@ -169,7 +137,7 @@ Nothing names a Property or a relationship. Every weight comes from metadata or 
 
 **Edge comparisons.**
 - A bridge is read as a typed **key** (`vocabkey.BridgeKey`): bridge type, term in canonical direction, the end it is read from (empty for a symmetric link between two Subjects of one type), and the event type on a participation. An example: `participation·subject·person·birth`. A term and its inverse read as the one that sorts first with the ends swapped, so "Mary parent of John" and "John child of Mary" give the same key from the same end, and a spouse never corresponds to a sibling. Two links correspond when their keys are equal (`segmentcompare.Corresponds`).
-- A corresponding mapped neighbor is compared by segment compare (`core/segmentcompare`), with no fan-out. The segment section of the registry declares which links are one-cardinality: subject of a birth and subject of a death, from both ends. A one-cardinality link whose neighbor lines up earns `OneSupport + OneCredit × neighborEvidence` (1.5 + 0.5 ×); one whose neighbor is already placed on another handle loses `OneConflict` (3). Every other link earns `OtherSupport + OtherCredit ×` the neighbor's evidence (0.25 + 0.25 ×) and is silent when the neighbor is placed elsewhere. `neighborEvidence` is the pairwise total for that pair; its own links stay out, so credit stops at one hop. A negative total subtracts.
+- A corresponding neighbor is compared by segment compare (`core/segmentcompare`), with no fan-out. The segment section of the registry declares which links are one-cardinality: subject of a birth and subject of a death, from both ends. A one-cardinality link whose neighbor lines up earns `OneSupport + OneCredit × neighborEvidence` (1.5 + 0.5 ×); one whose neighbor is already placed on another handle loses `OneConflict` (3), and one whose neighbor is not placed yet is judged by entity compare on the neighbor's own properties (`Unplaced`: alike earns as above, a differing neighbor loses `OneConflict`, an unsure one adds nothing). Weights: [knob inventory](matching-model.md#knob-inventory). Every other link earns `OtherSupport + OtherCredit ×` the neighbor's evidence (0.25 + 0.25 ×) and is silent when the neighbor is placed elsewhere. `neighborEvidence` is the pairwise total for that pair; its own links stay out, so credit stops at one hop. A negative total subtracts.
 - A **gate**, looked up by key, can require the candidate's own evidence before support is added, and can cancel a factor of that evidence when the same-end neighbor is a different handle. A key with no gate does neither. The shipped `part_of` gates both require evidence of 2 (the accept bar). The part end also cancels with factor 1, so a shared parent does not file a different toponym, and the same toponym under a different parent falls below the accept bar. The whole end does not cancel: a whole has many parts, and cancelling it while its part is still settling never lets the chain agree. `succeeded_by` and location have no gate.
 
 ---
@@ -182,7 +150,7 @@ There are no database calls during the walk. Everything it reads is loaded first
 2. **Seed handles:**
    - the fixed pairs;
    - the handles of already-promoted Subjects;
-   - the top 5 (`seedCandidateLimit`) property-only candidates of each unpromoted Subject, ranked over the handles the shortlist index offers (`core/shortlist`, built by `loadShortlist`), not every handle of the kind.
+   - the candidates `graphalign.Candidates` keeps for each unpromoted Subject (`alignment.MinSimilarity`, the best `TopK`, ties up to `TieCap`; see the knob inventory in [`matching-model.md`](matching-model.md)), passed to `Align` in `Canon.Candidates`, ranked over the handles the shortlist index offers (`core/shortlist`, built by `loadShortlist`), not every handle of the kind.
 3. **Walk the in-memory catalog graph** from the seeds through every link to a person, event or place, with no hop limit. A node not yet in memory loads in one batched read per wave of the walk; a warm one costs nothing. Handles carry their cached auto-reconciled values.
 Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count follows the waves of the walk, not the size of the layer or the catalog.
 
@@ -254,7 +222,7 @@ Spike 9 was replanned around this on 2026-10-06. The close note is [`deployment-
 
 # 11. Open questions
 
-- **Thresholds and bands:** all live in the graph-alignment config registry (§4.1). The walk has no depth limit; the only size knob is the seed count (`seedCandidateLimit` in promotealign). Initial values from the obituary golden; refine by dogfooding whole Sources, not by guessing in isolation.
+- **Thresholds and bands:** all live in the registry's alignment section (`core/matchregistry/alignment.go`, §4.1). The walk has no depth limit; the size knobs are `TopK` and `TieCap`. Initial values from the obituary golden; refine by dogfooding whole Sources, not by guessing in isolation.
 - ~~**Places at several grains:**~~ **Decided 2026-10-07:** fold Locations that share a `part_of` graph into one chain; unrealted Places stay competing values and reconcile ([`conclusion-reconciliation.md`](conclusion-reconciliation.md) §11.1). No place-nature Property this spike.
 - **Typed name parts:** a name entered as one form ("Gracie Gray Gates (Frickleton)") weakens name comparison. Is that a composer nudge, or a parsing step?
 - **Naming:** what is the "map the rest of this graph" action called?
@@ -264,25 +232,10 @@ Spike 9 was replanned around this on 2026-10-06. The close note is [`deployment-
 
 # 12. Implementation status
 
-> Superseded in Spike 11; see [matching-model.md](matching-model.md).
-
-As built at the end of Spike 9 slice 9 (S9-41 – S9-44 and the review fixes stacked on them). Read this before assuming a section above is in the code.
-
-**Built as designed**
-
-- One pure `core/graphalign.Align` over entity compare (`core/subjectcompare`), with every walk and band tunable in `core/graphalign/registry.go`. Deterministic: subjects, the queue, and candidate lists all break ties by ref, then id.
-- Best-first walk, one-to-one, propagation: an accepted anchor re-scores the candidates it reaches, so support accumulates as neighbors map. Edge support counts each corresponding neighbor once.
-- Directed terms (parent, part of, …) correspond only from the same end. Whether a term is directed is the catalog's `property_terms.directed`, not a list in code.
-- The loader reads link kinds from `connectrules`, and one builder (`linkOf`) keys both sides, so a layer key and a canon key cannot drift.
-- Decided rows (handle, New, Skip) are held. Warnings: a held handle its neighbors contradict (`ConflictWithFixed`); a row that lost a handle to another row; two held rows on one handle; two New rows that match each other.
-- Rows carry reason codes (`via`, `decided`, `agrees`, `weak`, `taken`, `no_match`, `empty`); the page words them.
-- Done is one transaction with the stale check, one-hop pins (§9), and bridge filing with switch-offs (§9.1).
-
-**Differs from the text above**
+§5 and §6 describe the built walk (Spike 11, S11-16). What differs:
 
 - **Query count (§7):** every read is batched (`sqlbatch`), and the canon comes from the in-memory graph, so a warm proposal reads only the layer, the fixed rows, the shortlist index if a handle or vocabulary commit dropped it (one read of every person, event and place node), and exhibits. Cold, the graph loads one batch per wave of the walk.
 - **Properties compared (§6):** only the lead properties of the registry's subject section, with their pools and periods, not every Property both sides carry.
 - **Provenance (§6):** not applied. Every Subject's provenance is 1; credibility, transcription certainty, and member claim confidence don't scale comparisons yet.
 - **Bridge kinds in the loaders:** the layer loader lists its hops (participation, location, relationship, part of, succeeded by) in code. The canon follows every link the graph holds for a `connectrules` bridge, as pins and filing do.
-- **Fallback islands:** an accepted property match seeds the same walk as a fixed anchor. A candidate that was not accepted does not. One-hop refinement still does not add handles; it only rescores candidates the walk or the fallback already recorded.
 - **Exhibit values:** a date travels as a structured value. The Mac client formats it with `DateValueDisplay` for the user's locale. The display string is the portable fallback (`Before 2001-03-31`).

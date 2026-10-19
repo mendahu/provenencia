@@ -6,6 +6,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/matchregistry"
 )
 
 // LayerBridges exposes the bridges the loader reads for one Source.
@@ -18,7 +19,7 @@ func LayerBridges(c *database.Catalog, sourceID []byte) ([]graphalign.Bridge, er
 	if err != nil {
 		return nil, err
 	}
-	cfg := graphalign.DefaultConfig()
+	cfg := matchregistry.Default().AlignConfig()
 	cfg.Value = rules
 	terms, err := loadTerms(c.Graph())
 	if err != nil {

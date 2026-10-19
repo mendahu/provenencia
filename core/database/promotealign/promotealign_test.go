@@ -28,6 +28,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/ref"
@@ -615,7 +616,7 @@ func TestPartOfChainIsAStrongMatch(t *testing.T) {
 	f.placeRel(srcB, artB, state2, country2, "part_of")
 
 	prop := f.propose(srcB.ID, nil)
-	cfg := graphalign.DefaultConfig()
+	cfg := matchregistry.Default().AlignConfig()
 	for _, pair := range []struct {
 		sub    subjects.Subject
 		handle []byte
@@ -626,7 +627,7 @@ func TestPartOfChainIsAStrongMatch(t *testing.T) {
 	} {
 		row := rowFor(prop, pair.sub.ID)
 		if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, pair.handle) ||
-			row.Assessment != graphalign.AssessStrong || row.Score < cfg.StrongScore {
+			row.Assessment != graphalign.AssessStrong || row.Score < cfg.Alignment.Bands.Strong {
 			t.Fatalf("%s: %+v", pair.sub.Ref, row)
 		}
 	}
@@ -662,10 +663,10 @@ func TestShorterStructuredNameIsAWeakMatch(t *testing.T) {
 			srcB, artB := f.newSource("Census")
 			again := f.person(srcB, artB, tc.short)
 			row := rowFor(f.propose(srcB.ID, nil), again.ID)
-			cfg := graphalign.DefaultConfig()
+			cfg := matchregistry.Default().AlignConfig()
 			if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known.Entity.ID) ||
 				row.Assessment != graphalign.AssessWeak ||
-				row.Score < cfg.WeakScore || row.Score >= cfg.MediumScore {
+				row.Score < cfg.Alignment.Bands.Weak || row.Score >= cfg.Alignment.Bands.Medium {
 				t.Fatalf("%s row %+v, want %s as a weak match", tc.short, row, known.Entity.Ref)
 			}
 			var saw bool
@@ -920,9 +921,9 @@ func TestProposeExtraGivenNamesAreAWeakMatch(t *testing.T) {
 	noteSrc, noteArt := f.newSource("Note")
 	probe := withGender(noteSrc, noteArt, "Jake Robins")
 	row := rowFor(f.propose(noteSrc.ID, nil), probe.ID)
-	cfg := graphalign.DefaultConfig()
+	cfg := matchregistry.Default().AlignConfig()
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, handle) ||
-		row.Assessment != graphalign.AssessWeak || row.Score < cfg.WeakScore || row.Score >= cfg.MediumScore ||
+		row.Assessment != graphalign.AssessWeak || row.Score < cfg.Alignment.Bands.Weak || row.Score >= cfg.Alignment.Bands.Medium ||
 		math.Abs(row.Score-(2.5*0.75+0.6)) > 1e-9 {
 		t.Fatalf("Jake Robins: target %s assessment %s score %.4f", row.Target, row.Assessment, row.Score)
 	}
@@ -1434,5 +1435,49 @@ func TestProposeColdIndexBuildsNoUnshortlistedLife(t *testing.T) {
 	slices.Sort(want)
 	if !slices.Equal(got, want) {
 		t.Fatalf("profiled %v, want only %v", got, want)
+	}
+}
+
+// A same-name, same-birth record whose sex conflicts still files strongly on
+// the links, and is marked contested for the conflict.
+func TestProposeMarksAConflictingRowContested(t *testing.T) {
+	f := newFixture(t)
+	sexed := func(src sources.Source, art artifacts.Artifact, sex string) (subjects.Subject, subjects.Subject) {
+		p := f.person(src, art, "Ann Ames")
+		f.cite(art, p, observations.Input{
+			PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", sex).ID,
+		})
+		b := f.datedBirth(src, art, 1817)
+		f.participation(src, art, p, b, "subject")
+		return p, b
+	}
+	pF, bF := sexed(f.source, f.artifact, "female")
+	annH := f.promote(pF).Entity.ID
+	f.promote(bF)
+
+	src, art := f.newSource("Register")
+	pM, bM := sexed(src, art, "male")
+	got := f.propose(src.ID, nil)
+	person, birth := rowFor(got, pM.ID), rowFor(got, bM.ID)
+	if person.Target != graphalign.TargetHandle || !bytes.Equal(person.HandleID, annH) ||
+		person.Assessment != graphalign.AssessStrong || !person.Flags.Contested {
+		t.Fatalf("person row %+v, want the female Ann Ames, strong and contested", person)
+	}
+	if birth.Target != graphalign.TargetHandle || birth.Assessment != graphalign.AssessStrong || birth.Flags.Contested {
+		t.Fatalf("birth row %+v, want strong and not contested", birth)
+	}
+}
+
+// A name one letter off is not shortlisted, so it is never scored against the
+// filed person: the row is New.
+func TestProposeDoesNotCompareAnUnshortlistedHandle(t *testing.T) {
+	f := newFixture(t)
+	f.promote(f.person(f.source, f.artifact, "Robins"))
+
+	src, art := f.newSource("Register")
+	robnis := f.person(src, art, "Robnis")
+	row := rowFor(f.propose(src.ID, nil), robnis.ID)
+	if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch || len(row.Alternatives) != 0 {
+		t.Fatalf("Robnis row %+v, want New with no_match and no alternatives", row)
 	}
 }

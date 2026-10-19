@@ -8,14 +8,15 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// Candidates are the handles a Subject is offered on its own properties:
-// entity compare evidence at least the weak band. Seeding passes it shortlisted
-// handles (S11-15); top K replaces the limit (S11-16).
+// Candidates are the shortlisted handles a Subject is compared with:
+// similarity at least MinSimilarity, the best TopK by similarity, and every
+// handle tied with the TopK-th, up to TieCap. Evidence decides everything
+// after.
 //
-// It returns the handles of kind whose evidence against values is at least
-// cfg.WeakScore, best first: evidence, then similarity, then Ref, then ID.
-// At most limit; all when limit <= 0.
-func Candidates(kind string, values subjectcompare.Values, handles []Handle, metas subjectcompare.Metas, cfg Config, limit int) []Handle {
+// It returns the handles of kind in that order: similarity (high first), then
+// evidence (high first), then Ref, then ID. Nominated handles never pass
+// through it.
+func Candidates(kind string, values subjectcompare.Values, handles []Handle, metas subjectcompare.Metas, cfg Config) []Handle {
 	type scored struct {
 		h          Handle
 		evidence   float64
@@ -27,29 +28,31 @@ func Candidates(kind string, values subjectcompare.Values, handles []Handle, met
 			continue
 		}
 		r := subjectcompare.Compare(vocabkey.SubjectType(kind), values, h.Values, metas, cfg.Subject, cfg.Value)
-		if r.Evidence < cfg.WeakScore {
+		if r.Similarity < cfg.Alignment.MinSimilarity {
 			continue
 		}
 		found = append(found, scored{h, r.Evidence, r.Similarity})
 	}
 	sort.SliceStable(found, func(i, j int) bool {
 		a, b := found[i], found[j]
-		if a.evidence != b.evidence {
-			return a.evidence > b.evidence
-		}
 		if a.similarity != b.similarity {
 			return a.similarity > b.similarity
+		}
+		if a.evidence != b.evidence {
+			return a.evidence > b.evidence
 		}
 		if a.h.Ref != b.h.Ref {
 			return a.h.Ref < b.h.Ref
 		}
 		return bytes.Compare(a.h.ID, b.h.ID) < 0
 	})
-	if limit > 0 && len(found) > limit {
-		found = found[:limit]
+	keep := min(cfg.Alignment.TopK, len(found))
+	for keep > 0 && keep < len(found) && found[keep].similarity == found[keep-1].similarity {
+		keep++
 	}
+	keep = min(keep, cfg.Alignment.TieCap)
 	var out []Handle
-	for _, f := range found {
+	for _, f := range found[:keep] {
 		out = append(out, f.h)
 	}
 	return out

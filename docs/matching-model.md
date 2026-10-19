@@ -37,7 +37,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 3. **Subject compare, Gracie.** `subject.Weights.person.name.Agree` is 2.5. Both sides also derive a lifespan from their birth: window 1 May 1901 to 1 May 2011, span 1 May 1901; each span lies in the other's window, so `subject.Weights.person.lifespan.Agree` 0.1 counts. Her own evidence is 2.5 + 0.1 = 2.6.
 4. **Subject compare, the birth.** Event type agrees: `subject.Weights.event.event_type.Agree` 0.5. The date agrees: `subject.Weights.event.date.Agree` 2. The birth's own evidence is 0.5 + 2 = 2.5.
 5. **Segment compare.** Gracie is the subject of the birth, and `segment.One` holds `participation·subject·birth`, so a matching neighbor earns `segment.OneSupport` 1.5 plus `segment.OneCredit` 0.5 of the birth's own evidence: 1.5 + 0.5 × 2.5 = 2.75.
-6. **Graph alignment.** Total evidence is 2.6 + 2.75 = 5.35. That clears `alignment.AcceptBar` (2), so the walk places the pair, and it is at least `alignment.Bands.Strong` (4), so the band is strong. Nothing conflicted, so the row is not contested.
+6. **Graph alignment.** Total evidence is 2.6 + 2.75 = 5.35. That clears `alignment.AcceptBar` (2), so the walk places the pair, and it is at least `alignment.Bands.Strong` (4), so the band is strong. Its linked birth was not placed yet when the pair was first scored; entity compare found it alike, so the link counted from the start. Nothing conflicted, so the row is not contested.
 
 ## Glossary
 
@@ -176,6 +176,7 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `segment.OtherCredit` | 0.25 | `graphalign` `NeighborCreditHigh` | Share of the neighbor's evidence passed on, other links |
 | `segment.One` | `participation·subject·birth`, `participation·subject·death` | decided 2026-10-17, both ends 2026-10-19 | Links where a differing neighbor conflicts, from either end |
 | `segment.OneConflict` | 3 | estimate: a differing birth or death is as strong as a differing name or date (`subject.Weights.person.name.Conflict`) | Points lost when a one-cardinality link's neighbor is placed elsewhere |
+| `segment.UnplacedAlike` | 2 | estimate: the accept bar, a neighbor that could be placed on its own properties | Least neighbor evidence for an unplaced neighbor to count as lined up |
 | `segment.Gates.place_relationship·part_of·from.MinOwnEvidence` | 2 | `graphalign` `SignatureScale` `part_of` from-end `MinNode` | The part's own evidence needed before `part_of` support counts |
 | `segment.Gates.place_relationship·part_of·from.ConflictFactor` | 1 | `graphalign` `SignatureScale` `part_of` from-end `ConflictFactor` | A different parent cancels the part's own evidence |
 | `segment.Gates.place_relationship·part_of·to.MinOwnEvidence` | 2 | `graphalign` `SignatureScale` `part_of` to-end `MinNode` | The whole's own evidence needed before `part_of` support counts |
@@ -184,6 +185,7 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `alignment.Bands.Strong` | 4 | `graphalign` `StrongScore` | Strong band from this evidence |
 | `alignment.Bands.Medium` | 3 | `graphalign` `MediumScore` | Medium band |
 | `alignment.Bands.Weak` | 2 | `graphalign` `WeakScore` | Weak band; below is no match |
+| `alignment.MinSimilarity` | 0.5 | estimate: at least half alike; a name with a sex conflict is 0.71, a birth against a death 0.09 | Least similarity for a shortlisted handle to be a candidate |
 | `alignment.TopK` | 5 | `promotealign` `seedCandidateLimit` | Candidates kept per Subject after shortlisting |
 | `alignment.TieCap` | 20 | estimate: room for a common name's ties without unbounded work | Most candidates kept when ties pass K |
 | `alignment.Alternatives` | 3 | `graphalign` `AlternativeLimit` | Alternatives shown per row |
@@ -213,6 +215,9 @@ These are identifiers or catalog data, not tunables, and have no row: the vocabu
 | `graphalign` `FanOutLowMax`, `FanOutUnknown`, the fan-out scan (`Stats.FanOut`, `sqlFanOut`) | Replaced by declared cardinality (`segment.One`) |
 | `graphalign` `SignatureScale` | Became `segment.Gates` |
 | `graphalign` `ValueTypeScale` floors other than date, `PropertyScale` sex / gender `Floor` 1 | Replaced by relation outcomes and the `Near` minimum |
+| `graphalign` `DefaultConfig` (S11-16: the registry's `AlignConfig` replaces it) | The walk's numbers are `graphalign.Rules`, filled in the registry's alignment section |
+| `promotealign` `seedCandidateLimit` | Became `alignment.TopK` |
+| `graphalign` `AlternativeLimit` | Became `alignment.Alternatives` |
 | `graphalign` `DefaultConfig.ConflictPenalty` | Value carried into `subject.Weights.event.date.Conflict` and `subject.Weights.place.toponym.Conflict`; its second role, the conflict-with-decision margin, is replaced by the contested marker and the settle margin |
 | `graphalign` `mFor` fallback 0.85, `uOr` fallback 0.1 | Frequency weighting is descoped |
 | `DefaultProfile` `start_date` / `end_date` features | Replaced by the `date` period in `subject.Periods.event.date` |

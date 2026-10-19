@@ -93,6 +93,8 @@ func TestCompare(t *testing.T) {
 	york := subjectcompare.Values{vocabkey.PropertyToponym: {pt.Text("York")}}
 	spouse := vocabkey.BridgeKey{Type: vocabkey.BridgeRelationship, Term: "spouse"}
 	sibling := vocabkey.BridgeKey{Type: vocabkey.BridgeRelationship, Term: "sibling"}
+	ann := subjectcompare.Values{vocabkey.PropertyName: {pt.Name("Ann Ames")}}
+	bob := subjectcompare.Values{vocabkey.PropertyName: {pt.Name("John Smith")}}
 
 	tests := []struct {
 		name     string
@@ -114,6 +116,11 @@ func TestCompare(t *testing.T) {
 		{"AC-2.7", seg(from, vocabkey.Place, york), seg(from, vocabkey.Place, york), segmentcompare.Together, 1.9, propertycompare.OutcomeUnknown, segmentcompare.CauseGated, 0, 3},
 		{"AC-2.8", seg(from, vocabkey.Place, york), seg(from, vocabkey.Place, york), segmentcompare.Together, 3, propertycompare.OutcomeAgree, "", 1, 3},
 		{"AC-2.9", seg(from, vocabkey.Place, york), seg(from, vocabkey.Place, york), segmentcompare.Apart, 3, propertycompare.OutcomeConflict, segmentcompare.CausePlacedApart, -3, 0},
+		{"unplaced alike", seg(birthP, vocabkey.Event, event("birth", 1817)), seg(birthP, vocabkey.Event, event("birth", 1817)), segmentcompare.Unplaced, 2.5, propertycompare.OutcomeAgree, "", 2.75, 2.5},
+		{"unplaced differs", seg(birthP, vocabkey.Event, event("birth", 1817)), seg(birthP, vocabkey.Event, event("birth", 1830)), segmentcompare.Unplaced, 2.5, propertycompare.OutcomeConflict, segmentcompare.CauseUnplacedDiffers, -3, -2.5},
+		{"unplaced unsure", seg(birthP, vocabkey.Event, event("birth", 1817)), seg(birthP, vocabkey.Event, event("birth", 0)), segmentcompare.Unplaced, 2.5, propertycompare.OutcomeUnknown, segmentcompare.CauseUnplacedUnsure, 0, 0.5},
+		{"unplaced spouse differs", seg(spouse, vocabkey.Person, ann), seg(spouse, vocabkey.Person, bob), segmentcompare.Unplaced, 2.5, propertycompare.OutcomeUnknown, segmentcompare.CauseUnplacedDiffers, 0, -3},
+		{"unplaced gated", seg(from, vocabkey.Place, york), seg(from, vocabkey.Place, york), segmentcompare.Unplaced, 1, propertycompare.OutcomeUnknown, segmentcompare.CauseGated, 0, 3},
 		{"AC-2.10", seg(to, vocabkey.Place, york), seg(to, vocabkey.Place, york), segmentcompare.Apart, 3, propertycompare.OutcomeUnknown, segmentcompare.CausePlacedApart, 0, 0},
 	}
 	for _, tc := range tests {
