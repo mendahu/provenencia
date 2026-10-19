@@ -77,10 +77,23 @@ Reviewers: MNT (had a Fix-now blocker and majors). Not sent: CON (no findings), 
 | MNT-2 | MNT | (round 1) | Stale §4 / §7 | Resolved | `promote-graph-alignment.md:74`, `:153` |
 | MNT-3 | MNT | (round 1) | Skill names `WeakScore` | Resolved | SKILL.md:34 |
 | MNT-4–7 | MNT | (round 1 minors) | Dead branch/field, markDirty, contested, corresponding | Resolved (orchestrator read F-3 and the round-2 reviewer confirmed) | `markDirty`, `corresponding`, `(*cand).contested` each once |
-| MNT-13 | MNT | minor | Kept `h != nil` guard in `proposal` is also dead | Logged (follow-up) | a placed handle always comes from `st.handles`; reviewer's minor check |
+| MNT-13 | MNT | minor | Kept `h != nil` guard in `proposal` is also dead | Fixed in round 3 (user asked) → F-4 | a placed handle always comes from `st.handles`; reviewer's minor check |
 | PRF-2 | PRF (outside MNT) | minor | `corresponding` allocates a slice per call in `segments` | Follow-up (S11-21) | orchestrator overlay bench, births=30: fix head 3.09–3.22 s, 3.30 GB, 28.2M allocs vs round-1 head 3.68–3.94 s, 3.07 GB, 27.6M allocs; +7% bytes, no time regression |
 
 Round 2 verdict: Clean. No round-2 blockers, so no Fix plan 2.
 
 ## Result
-Gate PASS · CI green · open: none · follow-ups: PRF-1 (S11-21 scope, `70f26d69`), PRF-2 (S11-21), MNT-13 (dead `h != nil` guard), MNT-8–12 nits, coverage-aware similarity idea · to user: STEP-3 one-property candidates (a), STEP-4 D-7 `via` fixed-only (a), PRF-1 deferred · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: PRF-1 (S11-21 scope, `70f26d69`), PRF-2 (S11-21), MNT-8–12 nits, coverage-aware similarity idea · to user: STEP-3 one-property candidates (a), STEP-4 D-7 `via` fixed-only (a), PRF-1 deferred · CON miss: none
+
+## Round 3 — user request (2026-10-19)
+The user asked to resolve MNT-13 on this PR and update from main. Merged `origin/main` (S12-03, #498) cleanly into the branch.
+
+### Fix plan 3
+**F-4 — Drop the dead `h != nil` guard in `proposal`** (from MNT-13)
+Files: `core/graphalign/rows.go`.
+Failing test first: none (no behavior change).
+Do: in `proposal`, set `row.HandleRef = st.handles[string(hid)].Ref` directly and drop the `h` local and its `if h != nil` guard. A placed handle always comes from `st.handles`: `newState` places a fixed pair only when its handle exists, and `walk` places only popped candidates of known handles. If `h` is read anywhere else in that branch, index it directly the same way.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/graphalign/... ./core/database/promotealign/ ./api/ffi/handlers/` passes; scripts/check-pr.sh PASS.
+
+## Round 3 — fix
+Head `775ea038`. Gate PASS against the new base `3bd08621` (orchestrator run). F-4 done: one line, no behavior change. Not re-reviewed: it removes a dead guard the round-2 reviewer had already traced.
