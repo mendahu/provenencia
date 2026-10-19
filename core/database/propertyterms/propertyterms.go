@@ -226,10 +226,10 @@ func Update(tx *database.Tx, userID, id []byte, label, description string) (Term
 
 	fields := map[string]rowchange.FieldDiff{}
 	if existing.Label != label {
-		fields["label"] = rowchange.FieldDiff{Old: nullJSON(existing.Label), New: nullJSON(label)}
+		fields["label"] = rowchange.FieldDiff{Old: database.NullString(existing.Label), New: database.NullString(label)}
 	}
 	if existing.Description != description {
-		fields["description"] = rowchange.FieldDiff{Old: nullJSON(existing.Description), New: nullJSON(description)}
+		fields["description"] = rowchange.FieldDiff{Old: database.NullString(existing.Description), New: database.NullString(description)}
 	}
 	if len(fields) == 0 {
 		return existing, nil, nil
@@ -421,11 +421,4 @@ func propertyTermsLocked(tx *sql.Tx, propertyID []byte) (bool, error) {
 		return false, err
 	}
 	return key == KeyPlaceRelationshipType, nil
-}
-
-func nullJSON(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }

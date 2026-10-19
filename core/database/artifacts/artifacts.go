@@ -105,7 +105,7 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Artifact, []rowchan
 	idBytes := id[:]
 
 	artRef, err := database.InsertWithRef(database.Minter(ref.PrefixArtifact), func(storedRef string) error {
-		_, err := tx.Exec(sqlInsert, idBytes, storedRef, in.SourceID, nullBlob(in.FileID), in.Label, database.NullString(in.Description))
+		_, err := tx.Exec(sqlInsert, idBytes, storedRef, in.SourceID, database.NullBlob(in.FileID), in.Label, database.NullString(in.Description))
 		return err
 	})
 	if errors.Is(err, database.ErrRefsExhausted) {
@@ -197,13 +197,13 @@ func Update(tx *database.Tx, userID []byte, a Artifact) ([]rowchange.Change, err
 		fields["label"] = rowchange.FieldDiff{Old: prev.Label, New: a.Label}
 	}
 	if prev.Description != a.Description {
-		fields["description"] = rowchange.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(a.Description)}
+		fields["description"] = rowchange.FieldDiff{Old: database.NullString(prev.Description), New: database.NullString(a.Description)}
 	}
 	if len(fields) == 0 {
 		return nil, nil
 	}
 
-	if _, err := tx.Exec(sqlUpdate, nullBlob(a.FileID), a.Label, database.NullString(a.Description), a.ID); err != nil {
+	if _, err := tx.Exec(sqlUpdate, database.NullBlob(a.FileID), a.Label, database.NullString(a.Description), a.ID); err != nil {
 		return nil, mapConstraint(err)
 	}
 	return []rowchange.Change{{
@@ -440,20 +440,6 @@ func requireFile(tx *sql.Tx, fileID []byte) error {
 		return ErrInvalid
 	}
 	return err
-}
-
-func nullBlob(b []byte) any {
-	if len(b) == 0 {
-		return nil
-	}
-	return b
-}
-
-func nullJSON(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 func copyBlob(b []byte) []byte {

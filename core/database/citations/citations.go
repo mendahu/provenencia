@@ -325,10 +325,10 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 		fields["locator_json"] = rowchange.FieldDiff{Old: prev.LocatorJSON, New: in.LocatorJSON}
 	}
 	if prev.Transcription != in.Transcription {
-		fields["transcription"] = rowchange.FieldDiff{Old: emptyAsNil(prev.Transcription), New: emptyAsNil(in.Transcription)}
+		fields["transcription"] = rowchange.FieldDiff{Old: database.NullString(prev.Transcription), New: database.NullString(in.Transcription)}
 	}
 	if prev.Label != in.Label {
-		fields["label"] = rowchange.FieldDiff{Old: emptyAsNil(prev.Label), New: emptyAsNil(in.Label)}
+		fields["label"] = rowchange.FieldDiff{Old: database.NullString(prev.Label), New: database.NullString(in.Label)}
 	}
 	if prev.TranscriptionUncertain != in.TranscriptionUncertain {
 		fields["transcription_uncertain"] = rowchange.FieldDiff{
@@ -338,8 +338,8 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 	}
 	if prev.TranscriptionNote != in.TranscriptionNote {
 		fields["transcription_note"] = rowchange.FieldDiff{
-			Old: emptyAsNil(prev.TranscriptionNote),
-			New: emptyAsNil(in.TranscriptionNote),
+			Old: database.NullString(prev.TranscriptionNote),
+			New: database.NullString(in.TranscriptionNote),
 		}
 	}
 	if len(fields) == 0 {
@@ -377,13 +377,6 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 			Action:     rowchange.ActionUpdate,
 			Fields:     fields,
 		}}, nil
-}
-
-func emptyAsNil(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 // Delete erases a Citation when no Observation remains. Notes CASCADE.

@@ -143,8 +143,8 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 			"source_id":       database.UUIDJSON(in.SourceID),
 			"graph_id":        database.UUIDJSON(graphID),
 			"subject_type_id": database.UUIDJSON(in.SubjectTypeID),
-			"label":           nullJSON(in.Label),
-			"description":     nullJSON(in.Description),
+			"label":           database.NullString(in.Label),
+			"description":     database.NullString(in.Description),
 		}),
 	}
 	return Subject{
@@ -180,10 +180,10 @@ func Update(tx *database.Tx, userID, id []byte, label, description string) ([]ro
 
 	fields := map[string]rowchange.FieldDiff{}
 	if prev.Label != label {
-		fields["label"] = rowchange.FieldDiff{Old: nullJSON(prev.Label), New: nullJSON(label)}
+		fields["label"] = rowchange.FieldDiff{Old: database.NullString(prev.Label), New: database.NullString(label)}
 	}
 	if prev.Description != description {
-		fields["description"] = rowchange.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(description)}
+		fields["description"] = rowchange.FieldDiff{Old: database.NullString(prev.Description), New: database.NullString(description)}
 	}
 	if len(fields) == 0 {
 		return nil, nil
@@ -355,13 +355,6 @@ func requireTypePrefix(tx *sql.Tx, typeID []byte) (string, error) {
 		return "", ErrInvalid
 	}
 	return prefix, nil
-}
-
-func nullJSON(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 // linkedHandles are accepted handles of Subjects this one points at.

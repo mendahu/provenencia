@@ -307,11 +307,11 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 			polarity,
 			database.NullString(resolved.Text),
 			nullInt64(resolved.Integer),
-			nullBlob(resolved.DateID),
-			nullBlob(resolved.NameID),
-			nullBlob(resolved.SubjectID),
-			nullBlob(resolved.TermID),
-			nullBlob(resolved.DepictionID),
+			database.NullBlob(resolved.DateID),
+			database.NullBlob(resolved.NameID),
+			database.NullBlob(resolved.SubjectID),
+			database.NullBlob(resolved.TermID),
+			database.NullBlob(resolved.DepictionID),
 		)
 		return err
 	})
@@ -333,7 +333,7 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 			"subject_id":         database.UUIDJSON(in.SubjectID),
 			"property_id":        database.UUIDJSON(in.PropertyID),
 			"polarity":           polarity,
-			"value_text":         emptyAsNil(resolved.Text),
+			"value_text":         database.NullString(resolved.Text),
 			"value_integer":      nullInt64(resolved.Integer),
 			"value_date_id":      database.UUIDJSON(resolved.DateID),
 			"value_name_id":      database.UUIDJSON(resolved.NameID),
@@ -748,13 +748,6 @@ func nullInt64(p *int64) any {
 	return *p
 }
 
-func nullBlob(b []byte) any {
-	if len(b) == 0 {
-		return nil
-	}
-	return b
-}
-
 func mapConstraint(err error) error {
 	if database.IsConstraintViolation(err) {
 		return ErrInvalid
@@ -769,9 +762,9 @@ func dateUpdateChange(prev, next datevalue.Value) *rowchange.Change {
 			fields[key] = rowchange.FieldDiff{Old: old, New: new}
 		}
 	}
-	add("kind", emptyAsNil(prev.Kind), emptyAsNil(next.Kind))
-	add("qualifier", emptyAsNil(prev.Qualifier), emptyAsNil(next.Qualifier))
-	add("calendar", emptyAsNil(prev.Calendar), emptyAsNil(next.Calendar))
+	add("kind", database.NullString(prev.Kind), database.NullString(next.Kind))
+	add("qualifier", database.NullString(prev.Qualifier), database.NullString(next.Qualifier))
+	add("calendar", database.NullString(prev.Calendar), database.NullString(next.Calendar))
 	add("start_year", intPtrAny(prev.StartYear), intPtrAny(next.StartYear))
 	add("start_month", intPtrAny(prev.StartMonth), intPtrAny(next.StartMonth))
 	add("start_day", intPtrAny(prev.StartDay), intPtrAny(next.StartDay))
@@ -779,7 +772,7 @@ func dateUpdateChange(prev, next datevalue.Value) *rowchange.Change {
 	add("start_minute", intPtrAny(prev.StartMinute), intPtrAny(next.StartMinute))
 	add("start_second", intPtrAny(prev.StartSecond), intPtrAny(next.StartSecond))
 	add("start_millisecond", intPtrAny(prev.StartMillisecond), intPtrAny(next.StartMillisecond))
-	add("start_tz", emptyAsNil(prev.StartTZ), emptyAsNil(next.StartTZ))
+	add("start_tz", database.NullString(prev.StartTZ), database.NullString(next.StartTZ))
 	add("end_year", intPtrAny(prev.EndYear), intPtrAny(next.EndYear))
 	add("end_month", intPtrAny(prev.EndMonth), intPtrAny(next.EndMonth))
 	add("end_day", intPtrAny(prev.EndDay), intPtrAny(next.EndDay))
@@ -787,8 +780,8 @@ func dateUpdateChange(prev, next datevalue.Value) *rowchange.Change {
 	add("end_minute", intPtrAny(prev.EndMinute), intPtrAny(next.EndMinute))
 	add("end_second", intPtrAny(prev.EndSecond), intPtrAny(next.EndSecond))
 	add("end_millisecond", intPtrAny(prev.EndMillisecond), intPtrAny(next.EndMillisecond))
-	add("end_tz", emptyAsNil(prev.EndTZ), emptyAsNil(next.EndTZ))
-	add("phrase", emptyAsNil(prev.Phrase), emptyAsNil(next.Phrase))
+	add("end_tz", database.NullString(prev.EndTZ), database.NullString(next.EndTZ))
+	add("phrase", database.NullString(prev.Phrase), database.NullString(next.Phrase))
 	if len(fields) == 0 {
 		return nil
 	}
@@ -841,7 +834,7 @@ func namePartsJSON(parts []namevalue.Part) []map[string]any {
 		out[i] = map[string]any{
 			"idx":   p.Idx,
 			"value": p.Value,
-			"type":  emptyAsNil(p.Type),
+			"type":  database.NullString(p.Type),
 		}
 	}
 	return out
@@ -850,9 +843,9 @@ func namePartsJSON(parts []namevalue.Part) []map[string]any {
 func dateValueMap(id []byte, v datevalue.Value) map[string]any {
 	return map[string]any{
 		"id":                database.UUIDJSON(id),
-		"kind":              emptyAsNil(v.Kind),
-		"qualifier":         emptyAsNil(v.Qualifier),
-		"calendar":          emptyAsNil(v.Calendar),
+		"kind":              database.NullString(v.Kind),
+		"qualifier":         database.NullString(v.Qualifier),
+		"calendar":          database.NullString(v.Calendar),
 		"start_year":        intPtrAny(v.StartYear),
 		"start_month":       intPtrAny(v.StartMonth),
 		"start_day":         intPtrAny(v.StartDay),
@@ -860,7 +853,7 @@ func dateValueMap(id []byte, v datevalue.Value) map[string]any {
 		"start_minute":      intPtrAny(v.StartMinute),
 		"start_second":      intPtrAny(v.StartSecond),
 		"start_millisecond": intPtrAny(v.StartMillisecond),
-		"start_tz":          emptyAsNil(v.StartTZ),
+		"start_tz":          database.NullString(v.StartTZ),
 		"end_year":          intPtrAny(v.EndYear),
 		"end_month":         intPtrAny(v.EndMonth),
 		"end_day":           intPtrAny(v.EndDay),
@@ -868,8 +861,8 @@ func dateValueMap(id []byte, v datevalue.Value) map[string]any {
 		"end_minute":        intPtrAny(v.EndMinute),
 		"end_second":        intPtrAny(v.EndSecond),
 		"end_millisecond":   intPtrAny(v.EndMillisecond),
-		"end_tz":            emptyAsNil(v.EndTZ),
-		"phrase":            emptyAsNil(v.Phrase),
+		"end_tz":            database.NullString(v.EndTZ),
+		"phrase":            database.NullString(v.Phrase),
 	}
 }
 
@@ -888,9 +881,9 @@ func dateCreateChange(id []byte, v datevalue.Value) rowchange.Change {
 		Action:     rowchange.ActionCreate,
 		Fields: rowchange.FullRow(map[string]any{
 			"id":                database.UUIDJSON(id),
-			"kind":              emptyAsNil(v.Kind),
-			"qualifier":         emptyAsNil(v.Qualifier),
-			"calendar":          emptyAsNil(v.Calendar),
+			"kind":              database.NullString(v.Kind),
+			"qualifier":         database.NullString(v.Qualifier),
+			"calendar":          database.NullString(v.Calendar),
 			"start_year":        intPtrAny(v.StartYear),
 			"start_month":       intPtrAny(v.StartMonth),
 			"start_day":         intPtrAny(v.StartDay),
@@ -898,7 +891,7 @@ func dateCreateChange(id []byte, v datevalue.Value) rowchange.Change {
 			"start_minute":      intPtrAny(v.StartMinute),
 			"start_second":      intPtrAny(v.StartSecond),
 			"start_millisecond": intPtrAny(v.StartMillisecond),
-			"start_tz":          emptyAsNil(v.StartTZ),
+			"start_tz":          database.NullString(v.StartTZ),
 			"end_year":          intPtrAny(v.EndYear),
 			"end_month":         intPtrAny(v.EndMonth),
 			"end_day":           intPtrAny(v.EndDay),
@@ -906,8 +899,8 @@ func dateCreateChange(id []byte, v datevalue.Value) rowchange.Change {
 			"end_minute":        intPtrAny(v.EndMinute),
 			"end_second":        intPtrAny(v.EndSecond),
 			"end_millisecond":   intPtrAny(v.EndMillisecond),
-			"end_tz":            emptyAsNil(v.EndTZ),
-			"phrase":            emptyAsNil(v.Phrase),
+			"end_tz":            database.NullString(v.EndTZ),
+			"phrase":            database.NullString(v.Phrase),
 		}),
 	}
 }
@@ -918,7 +911,7 @@ func nameCreateChange(id []byte, v namevalue.Value) rowchange.Change {
 		parts[i] = map[string]any{
 			"idx":   p.Idx,
 			"value": p.Value,
-			"type":  emptyAsNil(p.Type),
+			"type":  database.NullString(p.Type),
 		}
 	}
 	return rowchange.Change{

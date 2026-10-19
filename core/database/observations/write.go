@@ -265,7 +265,7 @@ func observationRowMap(o Observation) map[string]any {
 		"subject_id":         database.UUIDJSON(o.SubjectID),
 		"property_id":        database.UUIDJSON(o.PropertyID),
 		"polarity":           o.Polarity,
-		"value_text":         emptyAsNil(o.ValueText),
+		"value_text":         database.NullString(o.ValueText),
 		"value_integer":      integer,
 		"value_date_id":      database.UUIDJSON(o.ValueDateID),
 		"value_name_id":      database.UUIDJSON(o.ValueNameID),

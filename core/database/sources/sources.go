@@ -199,7 +199,7 @@ func SetCover(tx *database.Tx, userID, sourceID []byte, mode string, primaryArti
 	if prev.CoverMode == mode && bytes.Equal(prev.PrimaryArtifactID, primaryArtifactID) {
 		return prev, nil, nil
 	}
-	if _, err := tx.Exec(sqlSetCover, mode, nullBlob(primaryArtifactID), sourceID); err != nil {
+	if _, err := tx.Exec(sqlSetCover, mode, database.NullBlob(primaryArtifactID), sourceID); err != nil {
 		return Source{}, nil, mapConstraint(err)
 	}
 	fields := map[string]rowchange.FieldDiff{
@@ -261,7 +261,7 @@ func Update(tx *database.Tx, userID []byte, s Source) ([]rowchange.Change, error
 		fields["title"] = rowchange.FieldDiff{Old: prev.Title, New: s.Title}
 	}
 	if prev.Description != s.Description {
-		fields["description"] = rowchange.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(s.Description)}
+		fields["description"] = rowchange.FieldDiff{Old: database.NullString(prev.Description), New: database.NullString(s.Description)}
 	}
 	if len(fields) == 0 {
 		return nil, nil
@@ -497,24 +497,6 @@ func requireRasterCoverArtifact(c *database.Catalog, sourceID, artifactID []byte
 		return ErrInvalid
 	}
 	return nil
-}
-
-func nullBlob(b []byte) any {
-	if len(b) == 0 {
-		return nil
-	}
-	return b
-}
-
-func nullJSON(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func isUniqueConflict(err error) bool {
-	return database.IsUniqueConflict(err)
 }
 
 func mapConstraint(err error) error {

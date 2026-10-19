@@ -274,13 +274,13 @@ func Update(tx *database.Tx, id []byte, label, description, iconKey string) (Typ
 	}
 	fields := map[string]rowchange.FieldDiff{}
 	if existing.Label != label {
-		fields["label"] = rowchange.FieldDiff{Old: nullJSON(existing.Label), New: nullJSON(label)}
+		fields["label"] = rowchange.FieldDiff{Old: database.NullString(existing.Label), New: database.NullString(label)}
 	}
 	if existing.Description != description {
-		fields["description"] = rowchange.FieldDiff{Old: nullJSON(existing.Description), New: nullJSON(description)}
+		fields["description"] = rowchange.FieldDiff{Old: database.NullString(existing.Description), New: database.NullString(description)}
 	}
 	if existing.IconKey != normalizedIcon {
-		fields["icon_key"] = rowchange.FieldDiff{Old: nullJSON(existing.IconKey), New: nullJSON(normalizedIcon)}
+		fields["icon_key"] = rowchange.FieldDiff{Old: database.NullString(existing.IconKey), New: database.NullString(normalizedIcon)}
 	}
 	if len(fields) == 0 {
 		return existing, nil, nil
@@ -437,11 +437,4 @@ func lookupTx(tx *sql.Tx, key, origin string) (Type, error) {
 		&t.ID, &t.Key, &t.Origin, &t.Label, &t.Description, &t.IconKey,
 	)
 	return t, err
-}
-
-func nullJSON(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }

@@ -66,11 +66,11 @@ func updateOne(tx *database.Tx, citationID []byte, prev Observation, in Input) (
 		polarity,
 		database.NullString(resolved.Text),
 		nullInt64(resolved.Integer),
-		nullBlob(resolved.DateID),
-		nullBlob(resolved.NameID),
-		nullBlob(resolved.SubjectID),
-		nullBlob(resolved.TermID),
-		nullBlob(resolved.DepictionID),
+		database.NullBlob(resolved.DateID),
+		database.NullBlob(resolved.NameID),
+		database.NullBlob(resolved.SubjectID),
+		database.NullBlob(resolved.TermID),
+		database.NullBlob(resolved.DepictionID),
 		prev.ID,
 		citationID,
 	); err != nil {
@@ -152,7 +152,7 @@ func observationUpdateChange(prev, next Observation) *rowchange.Change {
 		fields["polarity"] = rowchange.FieldDiff{Old: prev.Polarity, New: next.Polarity}
 	}
 	if prev.ValueText != next.ValueText {
-		fields["value_text"] = rowchange.FieldDiff{Old: emptyAsNil(prev.ValueText), New: emptyAsNil(next.ValueText)}
+		fields["value_text"] = rowchange.FieldDiff{Old: database.NullString(prev.ValueText), New: database.NullString(next.ValueText)}
 	}
 	if prev.HasInteger != next.HasInteger || (next.HasInteger && prev.ValueInteger != next.ValueInteger) {
 		var old, new any
@@ -220,13 +220,6 @@ func stringsTrimPolarity(polarity string) string {
 		return PolarityPositive
 	}
 	return polarity
-}
-
-func emptyAsNil(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 func insertObservationNote(tx *sql.Tx, observationID []byte, body string) error {

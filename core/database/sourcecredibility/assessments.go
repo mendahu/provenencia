@@ -143,8 +143,8 @@ func Upsert(tx *database.Tx, userID []byte, in UpsertInput) (Assessment, []rowch
 		}
 		if argChanged {
 			fields["argument"] = rowchange.FieldDiff{
-				Old: nullJSON(prev.Argument),
-				New: nullJSON(in.Argument),
+				Old: database.NullString(prev.Argument),
+				New: database.NullString(in.Argument),
 			}
 		}
 	}
@@ -181,13 +181,6 @@ func requireSource(tx *sql.Tx, sourceID []byte) error {
 		return ErrInvalid
 	}
 	return err
-}
-
-func nullJSON(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 func mapConstraint(err error) error {

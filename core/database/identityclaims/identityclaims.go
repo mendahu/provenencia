@@ -132,7 +132,7 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Claim, rowchange.Change, error) {
 	}
 	idBytes := id[:]
 	if _, err := tx.Exec(sqlInsert, idBytes, in.SubjectID, in.EntityID, subjectTypeID,
-		in.Status, nullBytes(in.ConfidenceGradeID), database.NullString(in.Argument)); err != nil {
+		in.Status, database.NullBlob(in.ConfidenceGradeID), database.NullString(in.Argument)); err != nil {
 		return Claim{}, rowchange.Change{}, mapInsert(tx, err, in.EntityID, subjectTypeID)
 	}
 
@@ -272,11 +272,4 @@ func statusOK(s string) bool {
 		return true
 	}
 	return false
-}
-
-func nullBytes(b []byte) any {
-	if len(b) == 0 {
-		return nil
-	}
-	return b
 }

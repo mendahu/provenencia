@@ -157,7 +157,7 @@ func Set(tx *database.Tx, userID []byte, in Input) (Row, []rowchange.Change, err
 		EntityID:   row.ID,
 		Action:     rowchange.ActionUpdate,
 		Fields: map[string]rowchange.FieldDiff{
-			"value_text": {Old: nullJSON(prev.ValueText), New: nullJSON(in.ValueText)},
+			"value_text": {Old: database.NullString(prev.ValueText), New: database.NullString(in.ValueText)},
 		},
 	}}, nil
 }
@@ -677,13 +677,6 @@ func requireSource(tx *sql.Tx, sourceID []byte) error {
 		return ErrInvalid
 	}
 	return err
-}
-
-func nullJSON(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 func mapConstraint(err error) error {
