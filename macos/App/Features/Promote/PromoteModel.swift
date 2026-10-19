@@ -222,6 +222,8 @@ final class PromoteModel {
         case .taken: return L10n.string(L10n.Promote.reasonTaken)
         case .noMatch: return L10n.string(L10n.Promote.reasonNoMatch)
         case .empty: return L10n.string(L10n.Promote.reasonEmpty)
+        // Worded in S11-18; no row reason is a move reason.
+        case .neighborPlaced, .neighborMoved, .neighborReleased: return L10n.string(L10n.Promote.reasonEmpty)
         }
     }
 

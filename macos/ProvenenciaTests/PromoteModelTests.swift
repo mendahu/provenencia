@@ -32,7 +32,7 @@ struct PromoteModelTests {
     private func row(_ id: String, handleID: String, assessment: String = "strong") -> CatalogPromoteGraphAlignmentRow {
         CatalogPromoteGraphAlignmentRow(
             subjectID: id, kind: "person", target: "handle", handleID: handleID, handleRef: "PER-\(handleID)",
-            score: 5, assessment: assessment, reason: "agrees", reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia",
+            score: 5, assessment: assessment, reason: .agrees, reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia",
             comparisons: [
                 CatalogPromoteGraphAlignmentComparison(
                     propertyKey: "name", propertyOrigin: "provenencia", outcome: "agree", valueType: "name",
@@ -207,7 +207,7 @@ struct PromoteModelTests {
             CatalogProperty(id: "p-name", key: "name", origin: "provenencia", label: "Full name", description: "", valueType: "name"),
         ]
         var viaA = row("b", handleID: "e2")
-        viaA.reason = "via"
+        viaA.reason = .via
         viaA.viaNeighborSubjectID = "a"
         store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), viaA])]
         let model = model(store: store, subjectID: "a")

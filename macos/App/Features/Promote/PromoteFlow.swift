@@ -38,6 +38,12 @@ struct PromoteFlow: Equatable, Sendable {
     enum Reason: Equatable, Sendable {
         /// Reached from this neighbor row once it was matched.
         case via(neighborID: String)
+        /// Settling put this row's pair here because of this neighbor.
+        case neighborPlaced(neighborID: String)
+        /// Settling moved this row's pair because of this neighbor.
+        case neighborMoved(neighborID: String)
+        /// Settling released this row's pair because of this neighbor.
+        case neighborReleased(neighborID: String)
         /// Filed before this page opened.
         case filed
         /// The researcher's choice, held as given.
@@ -50,15 +56,18 @@ struct PromoteFlow: Equatable, Sendable {
         case noMatch
         case empty
 
-        init(code: String, propertyKey: String, propertyOrigin: String, viaNeighborID: String) {
+        init(code: PromoteReasonCode, propertyKey: String, propertyOrigin: String, neighborID: String) {
             switch code {
-            case "via" where !viaNeighborID.isEmpty: self = .via(neighborID: viaNeighborID)
-            case "decided": self = .decided
-            case "agrees": self = .agrees(key: propertyKey, origin: propertyOrigin)
-            case "weak": self = .weak
-            case "taken": self = .taken
-            case "no_match": self = .noMatch
-            default: self = .empty
+            case .via where !neighborID.isEmpty: self = .via(neighborID: neighborID)
+            case .neighborPlaced where !neighborID.isEmpty: self = .neighborPlaced(neighborID: neighborID)
+            case .neighborMoved where !neighborID.isEmpty: self = .neighborMoved(neighborID: neighborID)
+            case .neighborReleased where !neighborID.isEmpty: self = .neighborReleased(neighborID: neighborID)
+            case .decided: self = .decided
+            case .agrees: self = .agrees(key: propertyKey, origin: propertyOrigin)
+            case .weak: self = .weak
+            case .taken: self = .taken
+            case .noMatch: self = .noMatch
+            case .via, .neighborPlaced, .neighborMoved, .neighborReleased, .empty, .unrecognized: self = .empty
             }
         }
 
@@ -67,7 +76,7 @@ struct PromoteFlow: Equatable, Sendable {
                 code: row.reason,
                 propertyKey: row.reasonPropertyKey,
                 propertyOrigin: row.reasonPropertyOrigin,
-                viaNeighborID: row.viaNeighborSubjectID
+                neighborID: row.viaNeighborSubjectID
             )
         }
 
@@ -76,7 +85,7 @@ struct PromoteFlow: Equatable, Sendable {
                 code: alt.reason,
                 propertyKey: alt.reasonPropertyKey,
                 propertyOrigin: alt.reasonPropertyOrigin,
-                viaNeighborID: alt.viaNeighborSubjectID
+                neighborID: alt.viaNeighborSubjectID
             )
         }
     }

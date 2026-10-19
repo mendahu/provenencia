@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/objectpath"
@@ -247,6 +248,13 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 				string(autoreconcile.ReasonNoEvidence), string(autoreconcile.ReasonAgainst)),
 		},
 		{
+			name: "promote reasons", path: swiftVocabulary, enum: "PromoteReasonCode", re: wireCase,
+			want: sorted(string(graphalign.ReasonVia), string(graphalign.ReasonDecided), string(graphalign.ReasonAgrees),
+				string(graphalign.ReasonWeak), string(graphalign.ReasonTaken), string(graphalign.ReasonNoMatch),
+				string(graphalign.ReasonEmpty), string(graphalign.ReasonNeighborPlaced), string(graphalign.ReasonNeighborMoved),
+				string(graphalign.ReasonNeighborReleased)),
+		},
+		{
 			name: "date qualifiers", path: swiftVocabulary, enum: "DateQualifier", re: staticLet,
 			want: sorted(datevalue.QualifierABT, datevalue.QualifierBEF, datevalue.QualifierAFT),
 		},
@@ -292,7 +300,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		})
 	}
 	t.Run("states and reasons tolerate a value this build doesn't know", func(t *testing.T) {
-		for _, enum := range []string{"ReconciledState", "ReconcilerReason"} {
+		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteReasonCode"} {
 			if !unrecogniz.MatchString(swiftEnumBody(t, swiftVocabulary, enum)) {
 				t.Fatalf("%s has no unrecognized case", enum)
 			}
