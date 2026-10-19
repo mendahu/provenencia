@@ -2,6 +2,8 @@ package effects
 
 import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
@@ -151,5 +153,24 @@ func TestPropertyUsage(t *testing.T) {
 				t.Errorf("usesProperty = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestEvidenceGraphsFlag pins which tables flag the graph list, and that a
+// None entry cannot.
+func TestEvidenceGraphsFlag(t *testing.T) {
+	var got []string
+	for table, eff := range registry {
+		if eff.EvidenceGraphs {
+			got = append(got, table)
+		}
+	}
+	sort.Strings(got)
+	want := []string{"evidence_graph_artifacts", "evidence_graphs"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("tables with EvidenceGraphs = %v, want %v", got, want)
+	}
+	if err := (Effect{None: true, EvidenceGraphs: true}).validate("x"); err == nil {
+		t.Fatal("a None entry with EvidenceGraphs validated")
 	}
 }
