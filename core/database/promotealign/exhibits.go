@@ -2,6 +2,8 @@ package promotealign
 
 import (
 	"database/sql"
+	"strconv"
+	"strings"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/connectrules"
@@ -12,19 +14,22 @@ import (
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
-	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertymeta"
-	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/subjectcompare"
+	"github.com/mendahu/provenencia/core/subjectprofile"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 type exhibitObs struct {
-	id          []byte
-	subjectID   []byte
-	prop        match.Property
-	valueType   string
-	cardinality string
-	source      string
-	value       match.Value
+	id, subjectID []byte
+	key, origin   string // the Observation's property
+	valueType     string
+	cardinality   string
+	source        string
+	termLabel     string
+	auto          autoreconcile.Value
+	value         propertycompare.Value
 }
 
 // attachExhibits fills pin lines on handle rows. The Subject's own records
@@ -36,6 +41,18 @@ type exhibitObs struct {
 func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop *graphalign.Proposal, cfg graphalign.Config, namePattern string) error {
 	if prop == nil || len(prop.Rows) == 0 {
 		return nil
+	}
+	vocab, err := g.Vocabulary()
+	if err != nil {
+		return err
+	}
+	termLabels := map[string]string{}
+	for _, t := range vocab.Terms {
+		termLabels[t.PropertyKey+"|"+t.Key] = t.Label
+	}
+	kindOf := map[string]vocabkey.SubjectType{}
+	for _, s := range layer.Subjects {
+		kindOf[string(s.ID)] = vocabkey.SubjectType(s.Kind)
 	}
 	neighbors := map[string][][]byte{}
 	for _, b := range layer.Bridges {
@@ -156,16 +173,16 @@ func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop
 
 		for _, plan := range plans {
 			r := &prop.Rows[plan.idx]
-			exhibits := pairExhibits(bySubject[string(r.SubjectID)], nil, collect(plan.own), cfg)
+			exhibits := pairExhibits(bySubject[string(r.SubjectID)], nil, vocabkey.SubjectType(r.Kind), collect(plan.own), cfg)
 			for _, np := range plan.neighbors {
-				exhibits = append(exhibits, pairExhibits(bySubject[string(np.neighbor)], np.neighbor, collect(np.sides), cfg)...)
+				exhibits = append(exhibits, pairExhibits(bySubject[string(np.neighbor)], np.neighbor, kindOf[string(np.neighbor)], collect(np.sides), cfg)...)
 			}
 			r.Exhibits = exhibits
 		}
 	}
 	for i := range prop.Rows {
 		r := &prop.Rows[i]
-		r.Exhibits = withRowLines(r.Exhibits, r.Comparisons)
+		r.Exhibits = withRowLines(r.Exhibits, r.Comparisons, rowLabeler(termLabels, vocabkey.SubjectType(r.Kind), cfg.Subject))
 	}
 	return nil
 }
@@ -176,117 +193,184 @@ func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop
 // Property the row judges a conflict that the own-record exhibits do not
 // already show as one: the majority disagreeing with a minority value, or a
 // negative Observation, which the member picker never pairs. These lines
-// carry no Observation, so they cannot be pinned.
-func withRowLines(exhibits []graphalign.Exhibit, comparisons []graphalign.Comparison) []graphalign.Exhibit {
+// carry no Observation, so they cannot be pinned. A derived comparison (the
+// lifespan) has no copy yet and gets no line (S11-20).
+func withRowLines(exhibits []graphalign.Exhibit, comparisons []graphalign.Comparison, label func(graphalign.Comparison, propertycompare.Value) string) []graphalign.Exhibit {
 	none := len(exhibits) == 0
 	for _, c := range comparisons {
+		if c.Derived {
+			continue
+		}
 		if none {
-			if c.Outcome == match.OutcomeUnknown {
+			if c.Result.Outcome == propertycompare.OutcomeUnknown {
 				continue
 			}
 		} else {
-			if c.Outcome != match.OutcomeConflict {
+			if c.Result.Outcome != propertycompare.OutcomeConflict {
 				continue
 			}
 			shown := false
 			for _, ex := range exhibits {
-				shown = shown || len(ex.GroupSubjectID) == 0 && ex.Property == c.Property && ex.Outcome == match.OutcomeConflict
+				shown = shown || len(ex.GroupSubjectID) == 0 && ex.PropertyOrigin == vocabkey.OriginProvenencia &&
+					ex.PropertyKey == string(c.Key) && ex.Outcome == propertycompare.OutcomeConflict
 			}
 			if shown {
 				continue
 			}
 		}
-		exhibits = append(exhibits, refLine(c))
+		if line, ok := refLine(c, label); ok {
+			exhibits = append(exhibits, line)
+		}
 	}
 	return exhibits
 }
 
 // refLine is the sheet line for one row comparison: its two values and dates,
-// with no Observation behind either.
-func refLine(c graphalign.Comparison) graphalign.Exhibit {
-	return graphalign.Exhibit{
-		Property:         c.Property,
-		Outcome:          c.Outcome,
-		ValueType:        c.ValueType,
-		Weight:           c.Weight,
-		IncomingDisplay:  c.Probe.Label,
-		IncomingDate:     cloneDate(c.Probe.Date),
-		IncomingNegative: c.Probe.Negative,
-		MemberDisplay:    c.Candidate.Label,
-		MemberDate:       cloneDate(c.Candidate.Date),
+// with no Observation behind either. A comparison with no speaking pair has
+// no values to show.
+func refLine(c graphalign.Comparison, label func(graphalign.Comparison, propertycompare.Value) string) (graphalign.Exhibit, bool) {
+	sp := c.Result.Speaking
+	if sp == nil {
+		return graphalign.Exhibit{}, false
 	}
+	return graphalign.Exhibit{
+		PropertyKey:      string(c.Key),
+		PropertyOrigin:   vocabkey.OriginProvenencia,
+		Outcome:          c.Result.Outcome,
+		ValueType:        c.ValueType,
+		Weight:           c.Points,
+		IncomingDisplay:  label(c, sp.A),
+		IncomingDate:     cloneDate(sp.A.Date),
+		IncomingNegative: sp.A.Negative,
+		MemberDisplay:    label(c, sp.B),
+		MemberDate:       cloneDate(sp.B.Date),
+	}, true
+}
+
+// rowLabeler words a ref line's values. A term shows its catalog label: the
+// lead property's, else each pooled property's in order, else its key.
+func rowLabeler(termLabels map[string]string, kind vocabkey.SubjectType, rules subjectcompare.Rules) func(graphalign.Comparison, propertycompare.Value) string {
+	return func(c graphalign.Comparison, v propertycompare.Value) string {
+		var label string
+		if v.Type == propertymeta.ValueTypeTerm {
+			props := append([]vocabkey.PropertyKey{c.Key}, rules.Pools[kind][c.Key].With...)
+			for _, p := range props {
+				if l, ok := termLabels[string(p)+"|"+v.Term]; ok {
+					label = l
+					break
+				}
+			}
+		}
+		return valueLabel(v, label)
+	}
+}
+
+// valueLabel is a value as text for the sheet. termLabel is a term's catalog
+// label; without one a term reads as its key.
+func valueLabel(v propertycompare.Value, termLabel string) string {
+	switch v.Type {
+	case propertymeta.ValueTypeName:
+		if v.Name == nil {
+			return ""
+		}
+		if v.Name.Form != "" {
+			return v.Name.Form
+		}
+		parts := make([]string, 0, len(v.Name.Parts))
+		for _, p := range v.Name.Parts {
+			parts = append(parts, p.Value)
+		}
+		return strings.Join(parts, " ")
+	case propertymeta.ValueTypeDate:
+		if v.Date == nil {
+			return ""
+		}
+		return datevalue.CompactDisplay(*v.Date)
+	case propertymeta.ValueTypeTerm:
+		if termLabel != "" {
+			return termLabel
+		}
+		return v.Term
+	case propertymeta.ValueTypeInteger:
+		return strconv.FormatInt(v.Integer, 10)
+	}
+	return v.Text
 }
 
 // pairExhibits pairs each incoming record with the closest record on the
 // same Property. A same-value pair (Compatible) is preferred and pinned.
-// The line's outcome and weight come from the promote scale. neighbor is
-// nil for the Subject's own records and names the layer neighbor for a
-// one-hop group.
-func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs, cfg graphalign.Config) []graphalign.Exhibit {
+// The line's outcome comes from property compare, and its weight is what the
+// record's property counts in the Subject's score (zero for a property the
+// subject section does not weigh). neighbor is nil for the Subject's own
+// records and names the layer neighbor for a one-hop group; kind is the
+// Subject type of whichever Subject the incoming records are on.
+func pairExhibits(incoming []exhibitObs, neighbor []byte, kind vocabkey.SubjectType, memberObs []exhibitObs, cfg graphalign.Config) []graphalign.Exhibit {
 	var out []graphalign.Exhibit
 	for _, in := range incoming {
-		if in.valueType == "" || in.valueType == "subject" {
+		if in.valueType == "" || in.valueType == propertymeta.ValueTypeSubject {
 			continue
 		}
+		meta := propertymeta.Meta{ValueType: in.valueType, Cardinality: in.cardinality}
 		var chosen *exhibitObs
+		var chosenRes propertycompare.Result
 		var sim float64
-		var comparable bool
 		pinned := false
 		for i := range memberObs {
 			mem := &memberObs[i]
-			if mem.prop != in.prop || mem.valueType != in.valueType {
+			if mem.key != in.key || mem.origin != in.origin || mem.valueType != in.valueType {
 				continue
 			}
-			if exhibitCompatible(cfg.Value, in.valueType, in.value, mem.value) {
-				chosen = mem
-				pinned = true
-				sim, comparable = match.Compare(cfg.Value, in.valueType, in.value, mem.value)
+			res := propertycompare.Compare([]propertycompare.Value{in.value}, []propertycompare.Value{mem.value}, meta, cfg.Value)
+			if autoreconcile.Compatible(cfg.Value, in.valueType, in.auto, mem.auto) {
+				chosen, chosenRes, pinned = mem, res, true
+				sim = similarity(res)
 				break
 			}
-			s, ok := match.Compare(cfg.Value, in.valueType, in.value, mem.value)
-			if !ok {
+			if res.Outcome == propertycompare.OutcomeUnknown {
 				continue
 			}
-			if chosen == nil || s > sim {
-				chosen = mem
-				sim = s
-				comparable = true
+			if s := similarity(res); chosen == nil || s > sim {
+				chosen, chosenRes, sim = mem, res, s
 			}
 		}
-		if chosen == nil {
+		if chosen == nil || chosenRes.Outcome == propertycompare.OutcomeUnknown {
 			continue
 		}
-		if pinned && !comparable {
-			sim, comparable = 1, true
-		}
-		card := in.cardinality
-		if card == "" {
-			card = propertymeta.CardinalitySingle
-		}
-		outcome, weight := graphalign.ScoreSimilarity(sim, comparable, card, in.prop, in.valueType, cfg)
-		if outcome == match.OutcomeUnknown {
-			continue
+		var weight float64
+		if in.origin == vocabkey.OriginProvenencia {
+			if lead, ok := cfg.Subject.Lead(kind, vocabkey.PropertyKey(in.key)); ok {
+				weight = subjectcompare.Points(chosenRes.Outcome, sim, cfg.Subject.Weights[kind][lead])
+			}
 		}
 		out = append(out, graphalign.Exhibit{
-			Property:  in.prop,
-			Outcome:   outcome,
-			ValueType: in.valueType,
+			PropertyKey:    in.key,
+			PropertyOrigin: in.origin,
+			Outcome:        chosenRes.Outcome,
+			ValueType:      in.valueType,
 			// Compatible prefers the pair. A conflict is shown and left
 			// unpinned; the sheet says a disagreement is not evidence.
-			Pinned:                pinned && outcome == match.OutcomeAgree,
+			Pinned:                pinned && chosenRes.Outcome == propertycompare.OutcomeAgree,
 			Weight:                weight,
 			GroupSubjectID:        append([]byte(nil), neighbor...),
 			IncomingObservationID: append([]byte(nil), in.id...),
-			IncomingDisplay:       in.value.Label(),
+			IncomingDisplay:       valueLabel(in.value, in.termLabel),
 			IncomingSource:        in.source,
 			IncomingDate:          cloneDate(in.value.Date),
 			MemberObservationID:   append([]byte(nil), chosen.id...),
-			MemberDisplay:         chosen.value.Label(),
+			MemberDisplay:         valueLabel(chosen.value, chosen.termLabel),
 			MemberSource:          chosen.source,
 			MemberDate:            cloneDate(chosen.value.Date),
 		})
 	}
 	return out
+}
+
+// similarity is the speaking pair's similarity; 0 when no pair spoke.
+func similarity(r propertycompare.Result) float64 {
+	if r.Speaking == nil {
+		return 0
+	}
+	return r.Speaking.Result.Similarity
 }
 
 func cloneDate(d *datevalue.Value) *datevalue.Value {
@@ -295,10 +379,6 @@ func cloneDate(d *datevalue.Value) *datevalue.Value {
 	}
 	c := *d
 	return &c
-}
-
-func exhibitCompatible(rules valuecompare.Rules, valueType string, a, b match.Value) bool {
-	return autoreconcile.Compatible(rules, valueType, a.Auto(), b.Auto())
 }
 
 // acceptedMembers maps each handle to its accepted member Subjects, in claim
@@ -380,7 +460,7 @@ func bridgeNeighbors(q Querier, from, toward [][]byte) (map[string][][]byte, err
 
 func loadExhibitObservations(q Querier, subjectIDs [][]byte, namePattern string) ([]exhibitObs, error) {
 	query := `SELECT o.id, o.subject_id, p.key, p.origin, p.value_type, p.cardinality,
-			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, t.key, t.label, COALESCE(t.neutral, 0), src.title
+			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_term_id, t.key, t.label, COALESCE(t.neutral, 0), src.title
 		FROM observations o
 		JOIN properties p ON p.id = o.property_id
 		JOIN citations c ON c.id = o.citation_id
@@ -397,21 +477,18 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte, namePattern string)
 	err := sqlbatch.Query(q, query, `)`, nil, subjectIDs, func(rows *sql.Rows) error {
 		var (
 			p                     pending
-			valueType             string
 			text, term, termLabel sql.NullString
 			integer               sql.NullInt64
+			termID                []byte
 		)
-		if err := rows.Scan(&p.o.id, &p.o.subjectID, &p.o.prop.Key, &p.o.prop.Origin, &valueType, &p.o.cardinality,
-			&text, &integer, &p.dateID, &p.nameID, &term, &termLabel, &p.o.value.Neutral, &p.o.source); err != nil {
+		if err := rows.Scan(&p.o.id, &p.o.subjectID, &p.o.key, &p.o.origin, &p.o.valueType, &p.o.cardinality,
+			&text, &integer, &p.dateID, &p.nameID, &termID, &term, &termLabel, &p.o.auto.Neutral, &p.o.source); err != nil {
 			return err
 		}
-		p.o.valueType = valueType
-		p.o.value = match.Value{
-			Text: text.String, HasText: text.Valid,
-			Integer: integer.Int64, HasInteger: integer.Valid,
-			Term: term.String, Neutral: p.o.value.Neutral,
-			TermLabel: termLabel.String,
-		}
+		p.o.termLabel = termLabel.String
+		p.o.auto.Text, p.o.auto.HasText = text.String, text.Valid
+		p.o.auto.Integer, p.o.auto.HasInteger = integer.Int64, integer.Valid
+		p.o.auto.TermID, p.o.auto.TermKey = termID, term.String
 		all = append(all, p)
 		if len(p.dateID) > 0 {
 			dateIDs = append(dateIDs, p.dateID)
@@ -436,12 +513,13 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte, namePattern string)
 	out := make([]exhibitObs, 0, len(all))
 	for _, p := range all {
 		if d, ok := dates[string(p.dateID)]; ok {
-			p.o.value.Date = &d
+			p.o.auto.Date = &d
 		}
 		if n, ok := names[string(p.nameID)]; ok {
-			p.o.value.Name = &n
-			p.o.value.NamePattern = namePattern
+			p.o.auto.Name = &n
 		}
+		p.o.value = subjectprofile.Value(p.o.auto, false, namePattern)
+		p.o.value.Type = p.o.valueType
 		out = append(out, p.o)
 	}
 	return out, nil

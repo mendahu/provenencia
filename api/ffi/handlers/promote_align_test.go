@@ -132,6 +132,46 @@ func TestProposePromoteGraphAlignment(t *testing.T) {
 			},
 			want: &engine.ProposePromoteGraphAlignmentResponse{},
 		},
+		{
+			// Two look-alike handles, so the row has a reason property and so
+			// does its alternative; each goes out as a product property.
+			name: "reason properties go out as product properties",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, typeID := subjectFixture(t)
+				for range 2 {
+					_, handleSubject := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
+					promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: handleSubject})
+				}
+				sourceID, _ := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
+				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, SourceId: sourceID}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.ProposePromoteGraphAlignmentResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				var named int
+				check := func(what, key, origin string) {
+					switch {
+					case key == "" && origin != "":
+						t.Fatalf("%s: origin %q without a key", what, origin)
+					case key != "" && origin != vocabkey.OriginProvenencia:
+						t.Fatalf("%s: key %q has origin %q, want %q", what, key, origin, vocabkey.OriginProvenencia)
+					case key != "":
+						named++
+					}
+				}
+				for _, row := range resp.GetRows() {
+					check("row", row.GetReasonPropertyKey(), row.GetReasonPropertyOrigin())
+					for _, alt := range row.GetAlternatives() {
+						check("alternative", alt.GetReasonPropertyKey(), alt.GetReasonPropertyOrigin())
+					}
+				}
+				if named < 2 {
+					t.Fatalf("%d reason properties in %+v, want the row's and an alternative's", named, resp.GetRows())
+				}
+			},
+		},
 	})
 }
 

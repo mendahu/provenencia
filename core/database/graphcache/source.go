@@ -72,17 +72,6 @@ type SourceMember struct {
 	Kind      string
 }
 
-// SourceBridge is one evidence bridge between two primary subjects. The
-// align layer builds an edge signature from these fields.
-type SourceBridge struct {
-	A, B             []byte
-	BridgeType       string
-	Term             string
-	NeighborKind     string
-	NeighborTypeTerm string
-	Directed         bool
-}
-
 // SourceEdge is one hop on the Source, kept so an event title can be chosen
 // from the stored observations.
 type SourceEdge struct {
@@ -97,7 +86,6 @@ type SourceGraph struct {
 	Subjects     []SourceSubject
 	Observations []SourceObservation
 	Members      []SourceMember
-	Bridges      []SourceBridge
 	EventPeople  []SourceEdge
 	EventPlaces  []SourceEdge
 }

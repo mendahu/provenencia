@@ -3,20 +3,21 @@ package graphalign
 import (
 	"testing"
 
-	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/propertycompare/propertycomparetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/subjectcompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // A row whose handle has no recorded score is scored against that handle,
 // not handed the strong band.
 func TestPickScoreScoresAMissingPick(t *testing.T) {
-	occupation := match.Property{Key: "occupation", Origin: "provenencia"}
-	vals := func(s string) match.Values {
-		return match.Values{occupation: {{Text: s, HasText: true}}}
+	vals := func(s string) subjectcompare.Values {
+		return subjectcompare.Values{vocabkey.PropertyName: {propertycomparetest.Text(s)}}
 	}
 	layer := Layer{
 		Subjects: []Subject{{ID: []byte("s"), Ref: "S", Kind: "person", Values: vals("miller")}},
-		Metas:    []match.PropertyMeta{{Property: occupation, ValueType: propertymeta.ValueTypeText}},
+		Metas:    subjectcompare.Metas{vocabkey.PropertyName: {ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalitySingle}},
 	}
 	canon := Canon{Handles: []Handle{
 		{ID: []byte("same"), Ref: "A", Kind: "person", Values: vals("miller")},

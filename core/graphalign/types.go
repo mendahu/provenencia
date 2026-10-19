@@ -5,7 +5,9 @@ package graphalign
 
 import (
 	"github.com/mendahu/provenencia/core/datevalue"
-	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/propertycompare"
+	"github.com/mendahu/provenencia/core/subjectcompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // EdgeSignature identifies corresponding bridges on the layer and edges on
@@ -46,7 +48,7 @@ type Subject struct {
 	ID         []byte
 	Ref        string
 	Kind       string // person, event, place
-	Values     match.Values
+	Values     subjectcompare.Values
 	Provenance float64 // scales node scores; 1 is default, below 1 weakens
 }
 
@@ -61,7 +63,7 @@ type Handle struct {
 	ID     []byte
 	Ref    string
 	Kind   string
-	Values match.Values
+	Values subjectcompare.Values
 }
 
 // CanonEdge is one filed association hop between handles.
@@ -74,7 +76,7 @@ type CanonEdge struct {
 type Layer struct {
 	Subjects []Subject
 	Bridges  []Bridge
-	Metas    []match.PropertyMeta
+	Metas    subjectcompare.Metas
 }
 
 // Canon is the part of the canonical graph reachable from the seed handles.
@@ -118,17 +120,17 @@ const (
 	AssessNone   Assessment = "none"
 )
 
-// Comparison is one Property outcome on the chosen (or top) candidate: an
-// input to the score. Pins come from Exhibit, which pairs Observations.
+// Comparison is one lead property's outcome on the chosen (or top) candidate:
+// an input to the score. Key, Result (Outcome, Cause, Speaking: A the
+// Subject's value, B the handle's) and Points come from subject compare. Pins
+// come from Exhibit, which pairs Observations.
 type Comparison struct {
-	Property  match.Property
-	Outcome   match.Outcome
+	subjectcompare.PropertyResult
+	// ValueType is the lead's catalog value type; empty when Derived.
 	ValueType string
-	// Weight is the points this outcome added (negative for a conflict).
-	Weight float64
-	// Probe and Candidate are the two values behind the outcome; a conflict
-	// the exhibits did not show is shown from these.
-	Probe, Candidate match.ValueRef
+	// Derived: the lead is a property the profile builder derives (a person's
+	// lifespan), with no catalog row.
+	Derived bool
 }
 
 // Via is the layer edge that seeded this row's handle, when the walk
@@ -143,8 +145,9 @@ type Via struct {
 // neighbor for a one-hop record. Displays are values (term labels for
 // terms), not copy.
 type Exhibit struct {
-	Property              match.Property
-	Outcome               match.Outcome
+	PropertyKey           string
+	PropertyOrigin        string
+	Outcome               propertycompare.Outcome
 	ValueType             string
 	Pinned                bool
 	Weight                float64
@@ -184,7 +187,7 @@ type Alternative struct {
 	Score          float64
 	Assessment     Assessment
 	Reason         Reason // via, agrees, or weak
-	ReasonProperty match.Property
+	ReasonProperty vocabkey.PropertyKey
 	ViaNeighbor    []byte
 }
 
@@ -214,7 +217,7 @@ type Row struct {
 	Exhibits     []Exhibit
 	Reason       Reason
 	// ReasonProperty is the agreeing Property behind ReasonAgrees.
-	ReasonProperty match.Property
+	ReasonProperty vocabkey.PropertyKey
 	Via            *Via
 	Flags          RowFlags
 }

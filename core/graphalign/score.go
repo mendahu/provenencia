@@ -1,40 +1,27 @@
 package graphalign
 
-import "github.com/mendahu/provenencia/core/match"
+import "github.com/mendahu/provenencia/core/subjectcompare"
 
 // Scored is the pairwise + edge result ScoreCandidate returns.
 type Scored struct {
-	Score float64
-	Edge  float64
-	Eval  match.Evaluation
+	Score  float64
+	Edge   float64
+	Result subjectcompare.Result
 }
 
-// ScoreCandidate combines a pairwise Evaluation with edge support into one
-// score. Align and any future caller share this path. provenance scales the
-// total (≤0 treated as 1). edge is EdgePoints over the corresponding links.
-func ScoreCandidate(ev match.Evaluation, edge, provenance float64, cfg Config) Scored {
-	total := propertyPoints(&ev, cfg)
+// ScoreCandidate combines a pair's entity compare result with edge support
+// into one score. Align and any future caller share this path. provenance
+// scales the total (≤0 treated as 1). edge is EdgePoints over the
+// corresponding links.
+func ScoreCandidate(r subjectcompare.Result, edge, provenance float64) Scored {
 	if provenance <= 0 {
 		provenance = 1
 	}
 	return Scored{
-		Score: (total + edge) * provenance,
-		Edge:  edge,
-		Eval:  ev,
+		Score:  (r.Evidence + edge) * provenance,
+		Edge:   edge,
+		Result: r,
 	}
-}
-
-// propertyPoints is the pairwise total. It writes each comparison's outcome.
-// Callers that credit a neighbor use this and leave that neighbor's links out.
-func propertyPoints(ev *match.Evaluation, cfg Config) float64 {
-	var total float64
-	for i := range ev.Comparisons {
-		pc := &ev.Comparisons[i]
-		outcome, points := ScoreSimilarity(pc.Similarity, pc.Comparable, pc.Cardinality, pc.Property, pc.ValueType, cfg)
-		pc.Outcome = outcome
-		total += points
-	}
-	return total
 }
 
 // EdgeFact is one mapped neighbor under a signature. A match carries the
@@ -72,36 +59,4 @@ func EdgePoints(facts []EdgeFact, nodeScore float64, cfg Config) float64 {
 		}
 	}
 	return total
-}
-
-// ScoreSimilarity looks up the scale for a property and applies it. The
-// scale is registry data; this function does not name a property or a value
-// type beyond using them as lookup keys.
-func ScoreSimilarity(similarity float64, comparable bool, cardinality string, property match.Property, valueType string, cfg Config) (match.Outcome, float64) {
-	return ApplyScale(similarity, comparable, cardinality, cfg.resolvedScale(property, valueType))
-}
-
-// ApplyScale turns one similarity into an outcome and points. The outcome is
-// match.OutcomeOf; an agreement or partial earns Weight × similarity, a
-// conflict costs Contradiction, unknown nothing. It has no property names,
-// value types, or catalog lookups.
-func ApplyScale(similarity float64, comparable bool, cardinality string, scale Scale) (match.Outcome, float64) {
-	similarity = min(similarity, 1)
-	outcome := match.OutcomeOf(similarity, comparable, cardinality)
-	switch outcome {
-	case match.OutcomeAgree, match.OutcomePartial:
-		return outcome, scale.Weight * similarity
-	case match.OutcomeConflict:
-		return outcome, -scale.Contradiction
-	}
-	return outcome, 0
-}
-
-// resolvedScale is the property's scale, else its value type's, else the zero scale.
-func (c Config) resolvedScale(property match.Property, valueType string) Scale {
-	scale, ok := c.PropertyScale[property]
-	if !ok && c.ValueTypeScale != nil {
-		scale = c.ValueTypeScale[valueType]
-	}
-	return scale
 }

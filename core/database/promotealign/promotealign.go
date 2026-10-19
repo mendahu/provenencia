@@ -46,7 +46,14 @@ func Propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 		return graphalign.Proposal{}, 0, err
 	}
 
-	layer, primary, err := loadLayer(c.Graph(), q, sourceID)
+	rules, namePattern, err := valuerules.Load(c.Graph(), q)
+	if err != nil {
+		return graphalign.Proposal{}, 0, err
+	}
+	cfg := graphalign.DefaultConfig()
+	cfg.Value = rules
+
+	layer, primary, err := loadLayer(c.Graph(), q, sourceID, cfg, namePattern)
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
@@ -59,21 +66,15 @@ func Propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 		return graphalign.Proposal{}, 0, err
 	}
 
-	rules, namePattern, err := valuerules.Load(c.Graph(), q)
-	if err != nil {
-		return graphalign.Proposal{}, 0, err
-	}
 	stats, err := loadStats(c)
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
-	canon, err := loadCanon(c.Graph(), q, layer, anchors, rules, namePattern)
+	canon, err := loadCanon(c.Graph(), layer, anchors, cfg, namePattern)
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
 
-	cfg := graphalign.DefaultConfig()
-	cfg.Value = rules
 	prop := graphalign.Align(layer, canon, stats, anchors, &cfg)
 	if err := attachExhibits(q, c.Graph(), layer, &prop, cfg, namePattern); err != nil {
 		return graphalign.Proposal{}, 0, err
