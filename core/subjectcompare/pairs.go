@@ -8,11 +8,10 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// side is the values one Subject offers for a lead property: the lead's own,
-// then each pooled property's in list order, or, when the lead has a period
-// and the Subject has no positive lead value, the lead's own and the period
-// built from its start and end. It copies; it never appends to values.
-func side(kind vocabkey.SubjectType, lead vocabkey.PropertyKey, values Values, rules Rules) []propertycompare.Value {
+// Side is the values Compare reads for lead on one Subject: the lead's own,
+// its pooled properties', or, when the lead has a period and no positive value,
+// the period built from its start and end. It copies.
+func Side(kind vocabkey.SubjectType, lead vocabkey.PropertyKey, values Values, rules Rules) []propertycompare.Value {
 	out := slices.Clone(values[lead])
 	for _, with := range rules.Pools[kind][lead].With {
 		out = append(out, values[with]...)

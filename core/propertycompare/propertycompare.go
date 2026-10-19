@@ -159,11 +159,18 @@ func Compare(a, b []Value, meta propertymeta.Meta, rules valuecompare.Rules) Res
 	return out
 }
 
+// Typed is v with its value type set from meta, the one typing rule: Compare
+// types every value as the property's value type.
+func Typed(v Value, meta propertymeta.Meta) Value {
+	v.Type = meta.ValueType
+	return v
+}
+
 // split sets each value's type, drops neutral values into out.Excluded and
 // returns the rest in input order with the count of positive ones.
 func split(values []Value, side valuecompare.Side, meta propertymeta.Meta, rules valuecompare.Rules, out *Result) (kept []keyed, positives int) {
 	for _, v := range values {
-		v.Type = meta.ValueType
+		v = Typed(v, meta)
 		if v.Neutral {
 			out.Excluded = append(out.Excluded, Excluded{Side: side, Value: v, Reason: ExcludeNeutral})
 			continue
