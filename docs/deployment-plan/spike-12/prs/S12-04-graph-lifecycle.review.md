@@ -1,11 +1,11 @@
 # Review — S12-04 Graph lifecycle
 
 **Verdict:** Fits with changes — Ready with changes. No executability blocker; maintainability blocker M-1 and major M-2 are to the user.
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
-- **M-1:** Put the last-graph rule in `deleteimpact` as an extra gate beside `edge_locked`, so `GetDeleteImpact` and `Delete` agree and S12-11 needs no Swift copy of the rule. This rewords the working rule "Refusals are of two kinds". Recommendation: yes (plan §12 question 1).
-- **M-2:** `Update` takes the graph's links too (nil = unchanged), saved in one write with the name, so S12-12's form makes one call and a refused unlink rolls the whole edit back. Recommendation: yes (plan §12 question 2).
+- **M-1** (answered 2026-10-19: shared check). The last graph is a `deleteimpact` extra gate `last_graph`; the map's working rule "Refusals are of two kinds" was reworded.
+- **M-2** (answered 2026-10-19: one write). `Update` carries the full link set (empty = unchanged).
 
 ## Writer's own calls
 - Graph names are not unique per Source and have no length cap (D-6).
@@ -23,11 +23,11 @@
 **Plan:** D-10 private gate; Out row to S12-11; Risk row.
 **Codebase:** `deleteimpact` `GateEdgeLocked` / `GateOriginLocked`, `Impact`'s `isEdgeObservation` check, `Codes.EdgeLocked`; `add-catalog-delete`: "Preview and write share one function".
 **Better shape:** `GateLastGraph` checked by `Impact` before inbound collection, through a per-kind extra-gate list; `Codes.LastGraph`; proto value and copy in S12-05.
-**Answer:** To user — it rewords a map working rule. Recommended yes; plan §12 question 1 lists every edit it makes.
+**Answer:** To user → user chose the shared check (2026-10-19). Fixed — D-15 (one per-kind `extraGates` list; `GateLastGraph`; `Codes.LastGraph`), D-10 has no private gate, AC-4.2 and T-5 check the gate, T-8 checks `Refuse`; the S12-11 Out and Risk rows are gone; S12-05's scope gains the proto value and recipe copy; working rule reworded.
 
 ### M-2 · major · `Update` gives S12-12's "edit its name and links" no slot
 **Better shape:** `UpdateInput.ArtifactIDs`, nil = unchanged; link additions first, then unlink removals, in one write.
-**Answer:** To user — it shapes S12-05's RPC and S12-12's save. Recommended yes; plan §12 question 2.
+**Answer:** To user → user chose one write (2026-10-19). Fixed — D-7 diffs `UpdateInput.ArtifactIDs` (empty = unchanged, since proto3 cannot tell nil from empty) against the stored links, links additions then unlinks removals; AC-3.5 – AC-3.8 and T-3 cover it; S12-12's map scope says it saves through one `Update`.
 
 ### M-3 · major · The graph row's audit field map would be built twice, with different formatting
 **Answer:** Fixed — D-10 adds `graphFields(g Graph)` beside `linkFields`; `insert` and `Delete` both use it. Codebase fit and Deletes updated.
