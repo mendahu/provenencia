@@ -1,19 +1,19 @@
 # S11-15 — Shortlist index
 
-**Status:** Blocked — on S11-13 (planned, not landed: STEP-0 redoes §4 against its code)
+**Status:** Blocked — on review-plan round 2 (refreshed on S11-13's code)
 **Spike / slice:** Spike 11 · Slice 4 — Segments and graph alignment
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: an engine index; the wire, the page and its copy are unchanged)
 **Board:** —
-**Depends on:** S11-13 (Planned, [plan](S11-13-promote-subject-compare.md); not landed). Runs in parallel with S11-14; STEP-0 records which landing order happened and D-9 says what each order means. Branch from `main` after S11-13 merges
+**Depends on:** S11-13 (landed [#487](https://github.com/mendahu/provenencia/pull/487); [plan](S11-13-promote-subject-compare.md) and its **Landed** note, which changes nothing this plan reads; its [ship log](S11-13-promote-subject-compare.ship.md) PRF-1, the user's call that this PR loads life events only for shortlisted handles). S11-14 is not landed at the planning base (`loadStats` and `graphalign.Stats` exist); STEP-0 checks again and D-9 says what each order means. Branch from `main`
 **Blocks:** S11-16
 **Branch:** `s11-15-shortlist-index`
 **Version bump:** none — Spike 11 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-match-rule`](../../../../.agents/skills/add-match-rule/SKILL.md) ("Add a knob", "Add a layer package", "Add a comparer")
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`
 **Context:** [Layer 6 procedure](../comparison-layers.md#layer-6-procedure) step 1; [Vocabulary: finding candidates](../comparison-layers.md#vocabulary-finding-candidates); [Decided on 2026-10-17](../comparison-layers.md#decided-on-2026-10-17) (misspellings: start simple); [Match registry](../comparison-layers.md#match-registry); [`docs/matching-model.md`](../../../matching-model.md) glossary and knob inventory (`alignment.Shortlist.*`); working rules "Pure means the package builds and tests with no build tags", "A normalized `Key` per value type", "One match registry", "One guard, not one per package", "One matching skill, grown with the layers", "Registry numbers: carry over, then estimate"; [S11-01 ship log](S11-01-matching-model.ship.md) follow-up PRF-1 (the event shortlist bucket grows with the catalog)
-**Planned:** 2026-10-19 against `main` @ `6ecfd88` (S11-13's plan merged, its code not yet). Draft: §4 rows marked *(S11-13)* describe S11-13's plan, not code
-**Review:** [`S11-15-shortlist-index.review.md`](S11-15-shortlist-index.review.md) — round 1: Fits with changes / Not ready; findings answered; round 2 at STEP-0
+**Planned:** 2026-10-19 against `main` @ `6191fc8` (S11-13 merged); refreshed from the draft of the same day against `6ecfd88`
+**Review:** [`S11-15-shortlist-index.review.md`](S11-15-shortlist-index.review.md) — round 1 (draft): Fits with changes / Not ready, findings answered; round 2: pending
 
 ### Implementer — read this first
 
@@ -32,7 +32,7 @@
 
 Promote stops comparing a Source Subject against every handle of its kind. A pure index maps shortlist keys to handles, per kind: a person's name words (not initials), an event's type with the year buckets its date can still be near, a place's toponym words. Layer 1 makes every key, so shortlisting and comparison agree on "the same", and layer 3's reader picks the values, so a period counts as the `date` it stands for. Seeding looks a Subject's keys up and scores only the handles that come back. The index is built once per catalog state, kept in `graphcache`'s stats slot (renamed the match index), and dropped with a handle commit, as the stats are today.
 
-**Why now.** After S11-13, `loadCanon` profiles every handle of a kind and runs `graphalign.Candidates` over all of them on each proposal: the work grows with the catalog, not the Source (dogfood bar 3, "fast"). S11-16's layer 6 walk starts from a shortlist ("shortlist → score, keep top K"); this PR gives it one. PRF-1 asked the event bucket to be bounded: D-5 bounds it by year.
+**Why now.** Since S11-13, `loadCanon` profiles every handle of a kind, every person with the events they take part in, and runs `graphalign.Candidates` over all of them on each proposal: the work grows with the catalog, not the Source (dogfood bar 3, "fast"). S11-13's review measured it on the 20k-person `bulkCanon` fixture: a warm repropose went from 40 to 160 ms and 49 to 181 MB (ship log PRF-1), and the user deferred the fix to this PR with the note that life events load only for shortlisted handles, plus the fixed and BFS-reached ones. S11-16's layer 6 walk starts from a shortlist ("shortlist → score, keep top K"); this PR gives it one. PRF-1 asked the event bucket to be bounded: D-5 bounds it by year.
 
 **What changes for the researcher** (the design, not regressions):
 - A handle that shares no shortlist key with the Subject is not seeded, even when S11-13's full scan would have reached the weak band: a name whose only likeness is a misspelling ("Robnis" against "Robins", no shared word), an initials-only name against a full one ("J. R." against "James Robins"), a toponym that differs only by a misspelling. This is the 2026-10-17 decision "accept the gap; links catch most of it". The walk still reaches such a handle through a mapped neighbor, and the fallback still scores every canon handle (unchanged, S11-16).
@@ -75,6 +75,8 @@ Catalog tests in `core/database/promotealign` with the existing `fixture`.
 | AC-3.1 | Sources A and B each hold person "Ann Ames". Propose B (nothing promoted: index built, empty); promote A's person; propose B again | Second proposal: B's person targets A's person handle (the handle commit dropped the index) |
 | AC-3.2 | `TestProposeQueryCountDoesNotGrowWithTheLayer`, and the same test run a second time on the warm catalog (T-9) | 2 and 6 people take the same number of queries, cold and warm |
 | AC-3.3 | Every existing `core/database/promotealign` and `api/ffi/handlers` Promote test | Passes with no expected value changed |
+| AC-3.5 | Cold proposal of a Source whose one person shares no key with the catalog's people | The proposal reads no participation of those people: the query count does not grow with them (T-12) |
+| AC-3.6 | Warm repropose on the 20k-person `bulkCanon` fixture | The PR reports ns/op and heap on `main` and on the branch (T-13); S11-21 sets the budget |
 | AC-3.4 | `graphcache` with a stored match index; `SetAliasTables`; a commit that names a handle; `Drop`; a vocabulary-only commit | The first three leave `MatchIndex()` reporting false; the vocabulary-only commit leaves it true |
 
 ## 3. Scope
@@ -102,7 +104,7 @@ Catalog tests in `core/database/promotealign` with the existing `fixture`.
 
 ## 4. Current state
 
-Rows marked *(S11-13)* are S11-13's plan, not code at the planning base. STEP-0 checks each against the merged S11-13.
+Verified at `6191fc8`.
 
 | Area | Where | Today |
 | --- | --- | --- |
@@ -117,12 +119,13 @@ Rows marked *(S11-13)* are S11-13's plan, not code at the planning base. STEP-0 
 | Inventory guard | `core/matchregistry/inventory_test.go` `notYetBuilt` (`"segment."`, `"alignment."`, `"evidence."`), `TestKnobInventoryMatchesRegistry`, `registryKeys` | |
 | Purity guard | `core/matchregistry/guard_test.go` `layerPackages` | No `core/shortlist` row |
 | Knob inventory | `docs/matching-model.md` §Knob inventory rows `alignment.Shortlist.YearBucket` (2), `alignment.Shortlist.person`, `.event`, `.place`; glossary rows "shortlisting", "shortlist key", "shortlisted handle" | Written in S11-01 before the shape existed; D-11 replaces the three kind rows |
-| Walk config | `core/graphalign/registry.go` `DefaultConfig` (the package's only import of `matchregistry`), `Config` (`WeakScore` 2); *(S11-13)* `Config.Subject` | |
-| Candidates | *(S11-13; (new) at the planning base)* `core/graphalign/candidates.go` `Candidates(kind, values, handles, metas, cfg, limit)`; its doc says "Shortlisting replaces the scan (S11-15)" | |
-| Fallback | *(S11-13)* `core/graphalign/align.go` `fallbackUnreachable` over `st.handlesOfKind` | Unchanged by this PR |
-| Seeding | *(S11-13)* `core/database/promotealign/canon.go` `loadCanon(g, layer, fixed, cfg, namePattern)`: per kind, `profiler.profile` on every `g.Kind` node, then `graphalign.Candidates(…, seedCandidateLimit)` per unfixed Subject; `Canon.Handles` built after the BFS with `ID`, `Ref`, `Kind`, `Values` | The scan this PR replaces |
-| Profiler | *(S11-13; (new) at the planning base)* `core/database/promotealign/profiles.go` `profiler` (holds the graph, properties, terms, metas, `types`, the subject section, the name pattern, `done`), `profile(nodes)`, `values(id)`; `canon.go` `typeByKey`, `typeKey` | |
+| Walk config | `core/graphalign/registry.go` `DefaultConfig` (the package's only import of `matchregistry`), `Config` (`WeakScore` 2); `Config.Subject` | |
+| Candidates | `core/graphalign/candidates.go` `Candidates(kind, values, handles, metas, cfg, limit)`; its doc says "Shortlisting replaces the scan (S11-15)" | |
+| Fallback | `core/graphalign/align.go` `fallbackUnreachable` over `st.handlesOfKind` | Unchanged by this PR |
+| Seeding | `core/database/promotealign/canon.go` `loadCanon(g, layer, fixed, cfg, namePattern)`: `newProfiler`; for each unfixed Subject of a kind in `cfg.Subject.Weights`, `kindHandles[s.Kind]` is built once per kind from `g.Kind(types[s.Kind])`, `prof.profile(nodes)`, and a `graphalign.Handle{ID, Ref, Kind, Values: prof.values(n.ID)}` per unmerged node; then `graphalign.Candidates(s.Kind, s.Values, hs, layer.Metas, cfg, seedCandidateLimit)` and `add(h.ID)` | The scan this PR replaces |
+| Profiler | `core/database/promotealign/profiles.go` `profiler{g, props, terms, metas, types, rules, reconcile, namePattern, done}`, `newProfiler`, `kind(n)`, `profile(nodes)` (for a kind with a lifespan: `g.Follow(n.ID, hopPersonToEvent)` per node, one `g.Nodes` for the events, events built first), `build(n)` (reads `n.Values` into `subjectprofile.Property` per product property, adds `Life` from built events, then `subjectprofile.Build(e, p.metas, p.reconcile, p.rules.Lifespans[kind], subjectprofile.Options{})`), `values(id)`; `canon.go` `typeByKey`, `typeKey` | A person's profile always loads and builds their events |
 | Stats slot | `core/database/graphcache/graph.go` `Graph.stats`, `statsOK`, `Stats()`, `SetStats`, `ResetStatsForTest`, `clear`; `commit.go` (a commit naming handles clears `statsOK` and `stats`); `SetAliasTables` (does not drop it) | `any`-typed slot |
+| Benchmark | `core/database/promotealign/bench_test.go` `BenchmarkProposeColdHub`, `bulkCanon` (20k persons, 30k events, each person the subject of a birth) | Cold only; S11-13's reviewer timed warm reproposes on the same fixture |
 | Stats use | `core/database/promotealign/stats.go` `loadStats` (`cached.(graphalign.Stats)`), `cloneStats`, `computeStats`; `export_test.go` (wraps `loadStats`); `promotealign.go` `Propose` calls `loadStats` | Only caller of the slot. S11-14 deletes fan-out (map review K-10) |
 | Kind index | `core/database/graphcache/graph.go` `kinds`, `kindSet`, `Kind`; `load.go` patches them in place on a commit | The in-place precedent S11-21 would follow |
 | Search | `core/database/searchindex` (`catalog_search_fts`, `catalog_search_fts_trigram`); `core/search/fts.go` `mergeFuzzyShortlist` | A token → entity map in SQL with its own normalization, kept apart on purpose ([reuse inventory](../comparison-layers.md#reuse-across-the-app), "Search's fuzzy ranker… stays") |
@@ -148,7 +151,7 @@ Rows marked *(S11-13)* are S11-13's plan, not code at the planning base. STEP-0 
 | D-10 | **Registry section.** `core/matchregistry/alignment.go` *(new)*: `type Alignment struct{ Shortlist shortlist.Rules }`, doc "Alignment is layer 6's section. It is declared here only until S11-16 deletes `core/graphalign/registry.go`, which is what keeps `graphalign` from declaring it; S11-16 replaces it with a layer-owned type and adds the walk's knobs." `defaultAlignment()`: `Words` person → `[name]`, place → `[toponym]` (comment `// decided: comparison-layers layer 6 procedure`); `Dated` event → `{Type: event_type, Date: date}` (same comment); `YearBucket: 2` (comment `// estimate: the date tolerance, so a Near date shares a bucket`). `Registry` gains `Alignment Alignment`, set in `Default()`. `graphalign.Config` gains `Shortlist shortlist.Rules` (after `Subject`, doc "Shortlist is the registry's shortlist keys. DefaultConfig holds the registry's."), set in `DefaultConfig` from `matchregistry.Default().Alignment.Shortlist` | One registry (working rule); `Config` already carries `Value` and `Subject` the same way; S11-16 inherits a named slot | A `Registry.Shortlist` field — the design puts shortlist keys in the alignment section, which S11-16 grows |
 | D-11 | **Inventory.** In `docs/matching-model.md`, the rows `alignment.Shortlist.person`, `.event`, `.place` become `alignment.Shortlist.Words` (Start: person `name`, place `toponym`; Source: decided ([`comparison-layers.md`](../comparison-layers.md#layer-6-procedure)); Changes: "Leads whose words key a Subject"), `alignment.Shortlist.Dated.event.Type` (`event_type`; same source; "The term keyed with each year bucket"), `alignment.Shortlist.Dated.event.Date` (`date`; same source; "The date whose reach is bucketed; a period stands for it"); `alignment.Shortlist.YearBucket` stays. In `inventory_test.go`, `notYetBuilt`'s `"alignment."` becomes `"alignment.AcceptBar"`, `"alignment.Bands."`, `"alignment.TopK"`, `"alignment.TieCap"`, `"alignment.Alternatives"`, `"alignment.SettleMargin"`, `"alignment.SettleRounds"`. `guard_test.go` gains `{"core/shortlist", true}`; `.cursor/rules/match-rules.mdc` gains `core/shortlist/**` beside the other layer globs | The guard needs a row per field and a prefix only for what has not landed | Keeping `"alignment."` — it matches the new field and fails the guard |
 | D-12 | **One staleness rule: drop on change.** The match index slot is dropped where stats are today (a commit naming handles, `Drop`) and also by `SetAliasTables`, which changes the alias sets `WordKeys` reads. Nothing else is compared. The `nameformats` package doc gains one sentence: "A future writer of the catalog's default name format must drop the graph's match index: shortlist keys read its part roles." | Every input the keys read changes only through a path that drops the slot; the one input with no runtime writer gets a line where its first writer will look | A stored name pattern compared on each proposal — guards a write that does not exist and misses a role change under the same key |
-| D-13 | **Build once, then look up in one pass.** `loadShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config, value valuecompare.Rules) (*shortlist.Index, error)` *(new, `index.go`)*: `matchIndexOf(g).shortlist` when non-nil; otherwise `shortlist.NewIndex(cfg.Shortlist, cfg.Subject, value, p.metas)`, and for each kind in `cfg.Shortlist.Words` or `cfg.Shortlist.Dated`, in sorted order, whose `p.types` entry is 16 bytes, every `g.Kind` node is profiled (`p.profile`) and `Add`ed with `p.values(n.ID)`; the result is stored (D-9). Metas and types come from the profiler only. `loadCanon`'s seed step: one pass collects `Lookup(kind, s.Values)` for every unfixed Subject of a kind with `cfg.Subject.Weights`; one `g.Nodes` call loads the union; one `p.profile` call profiles the present, unmerged nodes; then each Subject gets `graphalign.Candidates(s.Kind, s.Values, handles, layer.Metas, cfg, seedCandidateLimit)` over its own looked-up ids, each a `graphalign.Handle{ID, Ref: n.Ref, Kind: s.Kind, Values: p.values(id)}`, sorted by `Ref` then `ID` bytes. An id with no node, or a merged node, is skipped | Warm proposals profile only shortlisted handles, with one node load and one profile batch however many Subjects; the cold build costs what S11-13's scan costs today | Indexing from raw rows — keys must come from the displayed values the profile holds; a load per Subject — grows with the layer |
+| D-13 | **Build once, then look up in one pass.** `loadShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*shortlist.Index, error)` *(new, `index.go`)*: `matchIndexOf(g).shortlist` when non-nil; otherwise `shortlist.NewIndex(cfg.Shortlist, cfg.Subject, cfg.Value, p.metas)`, and for each kind in `cfg.Shortlist.Words` or `cfg.Shortlist.Dated`, in sorted order, whose `p.types` entry is 16 bytes, every unmerged `g.Kind` node is `Add`ed with `p.keyValues(n)`; the result is stored (D-9). Metas and types come from the profiler only. **Keys need no life** (no shortlist lead is derived, T-6), so the build loads and builds no life event: `profiler.entity(n *graphcache.Node) (subjectprofile.Entity, error)` *(new)* is `build`'s property loop moved out (no `Life`); `build` calls it and adds `Life` as today; `profiler.keyValues(n *graphcache.Node) (subjectcompare.Values, error)` *(new)* is `subjectprofile.Build(entity, p.metas, p.reconcile, nil, subjectprofile.Options{})`, not stored in `done` (a `done` entry is a full profile). `loadCanon`'s seed step: one pass collects `Lookup(kind, s.Values)` for every unfixed Subject of a kind with `cfg.Subject.Weights`; one `g.Nodes` call loads the union; one `p.profile` call profiles the present, unmerged nodes; then each Subject gets `graphalign.Candidates(s.Kind, s.Values, handles, layer.Metas, cfg, seedCandidateLimit)` over its own looked-up ids, each a `graphalign.Handle{ID, Ref: n.Ref, Kind: s.Kind, Values: p.values(id)}`, sorted by `Ref` then `ID` bytes. An id with no node, or a merged node, is skipped | Full profiles, life events included, are built only for shortlisted, fixed and BFS-reached handles (the user's PRF-1 note); warm proposals do one node load and one profile batch however many Subjects; the cold build reads every node of the indexed kinds once per handle commit, with no life | Indexing from raw rows — keys must come from the displayed values the profile holds; a load per Subject — grows with the layer |
 | D-14 | **Candidates keeps its signature.** Its doc's "Shortlisting replaces the scan (S11-15)" becomes "Seeding passes it shortlisted handles (S11-15); top K replaces the limit (S11-16)." `fallbackUnreachable` keeps calling it with `st.handlesOfKind` | The fallback reads only the canon set, which the seeds and the BFS bound; S11-16 rewrites it | Shortlisting the fallback now — S11-16 deletes it |
 | D-15 | **Docs and skill.** `docs/matching-model.md`: D-11's rows; glossary "shortlist key" gains "made by layer 1 (`valuecompare.WordKeys`, `YearReach`) and indexed by `core/shortlist`". `comparison-layers.md` layer 6 step 1: append "**Built in S11-15** (`core/shortlist`): word keys for person names and toponyms, type and year bucket for events; seeding reads it, the walk from S11-16." and change "place, toponym" to "place, toponym words". `docs/promote-graph-alignment.md`: the sentence "Stats are cached on the catalog's graph and dropped by any commit that names a handle." becomes "Stats and the shortlist index are cached on the catalog's graph as its match index and dropped by any commit that names a handle." `.agents/skills/add-match-rule/SKILL.md`: `core/shortlist` added to the description's package list and to the Check command; under "Rules that hold everywhere", "**Shortlist keys come from layer 1.** `WordKeys` and `YearReach` make them; `core/shortlist` only buckets and indexes. A lead whose agree weight alone can reach `WeakScore` needs a shortlist entry (`TestUnkeyedEvidenceStaysUnderTheWeakBand`)."; a new section "Add a shortlist key": "1. Add the lead to `Words` or a kind to `Dated` in `core/matchregistry/alignment.go` *(new)*. 2. Add its inventory row (`alignment.Shortlist.Words`, `alignment.Shortlist.Dated.<kind>.Type` / `.Date`). 3. A value type the lead uses implements `wordKeys` or has a `YearReach`; extend T-2's or T-4's corpus."; "Add a comparer" gains step 6: "A type that shortlists by words implements `wordKeys`; add forms to `TestWordKeysShareOnSameOrEquivalent`." Map: the S11-16 scope entry's "Registry alignment section." becomes "Grows the registry alignment section S11-15 opened, and moves its type into `graphalign`." | Working rule "One matching skill, grown with the layers"; the next agent adding a lead finds the rule before T-6 fails | — |
 
@@ -248,10 +251,10 @@ None — no user-facing copy.
 
 ## 7. Steps
 
-**STEP-0 — Rebase the draft on S11-13 (the planner's step)**
-Files: this plan, its review log.
-Do: after S11-13 merges, the planner reads its **Landed** note and redoes every §4 row marked *(S11-13)* (`rg -n 'func Candidates|func \(p \*profiler\)|seedCandidateLimit|handlesOfKind' core/graphalign core/database/promotealign`), records whether S11-14 has landed (`rg -n 'func loadStats|type Stats struct|func \(g \*Graph\) Stats' core` — no hits means it has), updates **Planned**, runs review-plan round 2, and sets status `Planned`. The implementer starts at STEP-1 only on a `Planned` plan.
-Check: every *(S11-13)* symbol resolves with `rg`; the S11-14 order is written under **Depends on**.
+**STEP-0 — Which order S11-14 landed in**
+Files: none.
+Do: run `rg -n 'func loadStats|type Stats struct|func \(g \*Graph\) Stats' core`. Hits mean S11-14 has not landed: use D-9's first shape. No hits mean it has: use D-9's "If S11-14 landed first" shape.
+Check: the PR description names the shape used.
 
 **STEP-1 — Keys in value compare**
 Files: `core/valuecompare/shortlist.go` *(new)*, `aliases.go`, `date.go`, `core/valuecompare/shortlist_test.go` *(new)*. Skill: `add-match-rule` ("Add a comparer" for the shape).
@@ -275,12 +278,12 @@ Check: `go test ./core/matchregistry/... ./core/graphalign/...` passes; `TestKno
 
 **STEP-5 — The match index slot**
 Files: `core/database/graphcache/graph.go`, `commit.go`, `graph_test.go`, `core/database/nameformats` (package doc file), `core/database/promotealign/stats.go` → `index.go`, `export_test.go`, `promotealign.go`.
-Do: D-9 (the branch STEP-0 recorded), D-12. `matchIndex` with `stats` only so far. Rename every caller; afterwards `rg -n 'ResetStatsForTest|SetStats|\.Stats\(\)' --type go` prints nothing. T-8.
+Do: D-9 (the shape STEP-0 found), D-12. `matchIndex` with `stats` only so far. Rename every caller; afterwards `rg -n 'ResetStatsForTest|SetStats|\.Stats\(\)' --type go` prints nothing. T-8.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/graphcache/ ./core/database/promotealign/` passes.
 
 **STEP-6 — Seed from the index**
-Files: `core/database/promotealign/index.go` *(new)* (from STEP-5), `canon.go`, `promotealign_test.go`.
-Do: D-13. `matchIndex` gains `shortlist`. T-9, T-10; the existing suites stay green (AC-3.3).
+Files: `core/database/promotealign/index.go` *(new)* (from STEP-5), `canon.go`, `profiles.go`, `promotealign_test.go`, `bench_test.go`.
+Do: D-13 (`entity`, `keyValues`, `loadShortlist`, the seed pass). `matchIndex` gains `shortlist`. T-9, T-10, T-12, T-13; the existing suites stay green (AC-3.3).
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/promotealign/ ./api/ffi/handlers/` passes with no expected value changed; `rg -n 'g\.Kind\(' core/database/promotealign` lists `loadShortlist` and no line in `loadCanon`.
 
 **STEP-7 — Docs**
@@ -304,6 +307,8 @@ Commits: one per step from STEP-1, each subject one full imperative sentence ("L
 | T-8 | Go | `core/database/graphcache/graph_test.go` `TestMatchIndexDrops` *(new)* | Store a value; `SetAliasTables(nil)` → `MatchIndex()` false; store; commit naming a handle → false; store; `Drop` → false; store; vocabulary-only commit → true | AC-3.4, D-12 |
 | T-9 | Go | `core/database/promotealign/promotealign_test.go` `TestProposeSeesAHandlePromotedAfterTheIndexWasBuilt` *(new)* | AC-3.1 | AC-3.1, D-13 |
 | T-10 | Go | `core/database/promotealign/promotealign_test.go` `TestProposeQueryCountStaysFlatWhenWarm` *(new)*, `TestProposeQueryCountDoesNotGrowWithTheLayer` (unchanged) | The existing test's two Sources (2 and 6 people), each proposed twice with no commit between; the second proposals' counts are equal to each other | AC-3.2, D-13 |
+| T-12 | Go | `core/database/promotealign/promotealign_test.go` `TestProposeColdIndexBuildsNoUnshortlistedLife` *(new)* | Two catalogs, one with 2 and one with 6 promoted persons named "Unrelated 1" … each the subject of a dated birth; a Source with one person "Zed Zane"; `Graph().Drop()` then one counted `Propose` on each → equal query counts (the index build follows no participation; S11-13's scan followed one per person) | AC-3.5, D-13 |
+| T-13 | Go | `core/database/promotealign/bench_test.go` `BenchmarkProposeWarmHub` *(new)* | `BenchmarkProposeColdHub`'s fixture; one untimed `Propose`, then timed `Propose` calls with no `Drop` → reported, not gated: ns/op and `heap-B` on `main` and on the branch, in the PR description | AC-3.6, D-13 |
 | T-11 | Go | Every existing test in `core/database/promotealign`, `api/ffi/handlers` and `core/graphalign` | Unchanged → pass with no expected value edited | AC-3.3 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `TestProposeQueryCountDoesNotGrowWithTheLayer`, `TestKnobInventoryMatchesRegistry`, the purity guard.
@@ -335,13 +340,14 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 | Risk | Mitigation |
 | --- | --- |
 | A key misses a pair the scan found, and a test moves | T-2 and T-4 hold the guarantee at layer 1; T-7 holds that a keyless pair cannot reach the weak band; AC-3.3 keeps every catalog test unchanged |
-| The cold build profiles every handle, as the S11-13 scan does on each proposal | Built once per handle commit; S11-21 measures it |
+| The cold build reads every person, event and place node after each handle commit | No life is built (D-13); cached until the next commit; S11-21 sets the budget with T-13's numbers |
 | A wide date's `any` key is the whole dated type | Only open-ended probes read it; closed dates read their own buckets |
 | A wide closed range (`BET 1700 AND 1900`) adds about a hundred bucket keys | Rare; bounded by the range; S11-21 measures it |
 
 **Stop and report if:**
 
 - STEP-1 is reached on a plan whose status is not `Planned`.
+- T-12's counts differ for a reason other than life loading (name the query that grows).
 - Any expected value in `core/database/promotealign`, `api/ffi/handlers` or `core/graphalign` tests changes.
 - T-2 or T-4 finds a related pair with no shared key or overlapping reach under D-2 / D-4 as written.
 - T-7 fails under `matchregistry.Default()` (a kind could reach the weak band with no key).
@@ -351,7 +357,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 
 ## 12. Open questions
 
-None. The status is Blocked only on S11-13 landing.
+None.
 
 ## 13. PR
 
