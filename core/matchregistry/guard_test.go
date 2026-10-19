@@ -60,7 +60,8 @@ func TestLayerPackages(t *testing.T) {
 // imports, directly or through another package of the module, anything under
 // core/database. Following only non-test imports, it also fails when a numbers
 // layer reaches core/matchregistry, and when a package other than
-// core/subjectprofile reaches core/autoreconcile.
+// core/subjectprofile reaches core/autoreconcile. It is one walker with three
+// rules (D-11).
 func checkPure(t *testing.T, root, dir string, numbers bool) {
 	ctx := build.Default
 	ctx.BuildTags = nil
@@ -74,57 +75,52 @@ func checkPure(t *testing.T, root, dir string, numbers bool) {
 	if len(pkg.IgnoredGoFiles) > 0 {
 		t.Errorf("%s has files that build only with a tag or a platform: %s", dir, strings.Join(pkg.IgnoredGoFiles, ", "))
 	}
-	visited := map[string]bool{}
-	var walk func(pkg *build.Package, chain []string)
-	walk = func(pkg *build.Package, chain []string) {
-		imports := slices.Concat(pkg.Imports, pkg.TestImports, pkg.XTestImports)
-		for _, imp := range imports {
-			if !strings.HasPrefix(imp, modulePath) || visited[imp] {
-				continue
+	// One walker, three rules (D-11). The catalog rule holds on every hop; the
+	// registry and autoreconcile rules hold only along production imports.
+	// visited is keyed by import path and prodOnly, so a package first reached
+	// through a test import is walked again through a production one.
+	type visit struct {
+		imp      string
+		prodOnly bool
+	}
+	visited := map[visit]bool{}
+	var walk func(pkg *build.Package, chain []string, prodOnly bool)
+	walk = func(pkg *build.Package, chain []string, prodOnly bool) {
+		step := func(imp string, prodOnly bool) {
+			key := visit{imp, prodOnly}
+			if !strings.HasPrefix(imp, modulePath) || visited[key] {
+				return
 			}
-			visited[imp] = true
+			visited[key] = true
 			next := append(slices.Clone(chain), imp)
 			rest := strings.TrimPrefix(imp, modulePath)
 			if rest == "core/database" || strings.HasPrefix(rest, "core/database/") {
 				t.Errorf("%s reaches the catalog: %s", dir, strings.Join(next, " -> "))
-				continue
+				return
+			}
+			if prodOnly && numbers && rest == "core/matchregistry" {
+				t.Errorf("%s is a numbers layer and reaches the registry: %s", dir, strings.Join(next, " -> "))
+				return
+			}
+			if prodOnly && rest == "core/autoreconcile" && dir != "core/subjectprofile" {
+				t.Errorf("%s reaches core/autoreconcile: %s", dir, strings.Join(next, " -> "))
+				return
 			}
 			dep, err := ctx.ImportDir(filepath.Join(root, rest), 0)
 			if err != nil {
 				t.Errorf("%s: reading %s: %v", dir, imp, err)
-				continue
+				return
 			}
-			walk(dep, next)
+			walk(dep, next, prodOnly)
 		}
-	}
-	walk(pkg, []string{modulePath + dir})
-
-	seen := map[string]bool{}
-	var walkBuild func(pkg *build.Package, chain []string)
-	walkBuild = func(pkg *build.Package, chain []string) {
 		for _, imp := range pkg.Imports {
-			if !strings.HasPrefix(imp, modulePath) || seen[imp] {
-				continue
-			}
-			seen[imp] = true
-			next := append(slices.Clone(chain), imp)
-			rest := strings.TrimPrefix(imp, modulePath)
-			if numbers && rest == "core/matchregistry" {
-				t.Errorf("%s is a numbers layer and reaches the registry: %s", dir, strings.Join(next, " -> "))
-				continue
-			}
-			if rest == "core/autoreconcile" && dir != "core/subjectprofile" {
-				t.Errorf("%s reaches core/autoreconcile: %s", dir, strings.Join(next, " -> "))
-				continue
-			}
-			dep, err := ctx.ImportDir(filepath.Join(root, rest), 0)
-			if err != nil {
-				continue
-			}
-			walkBuild(dep, next)
+			step(imp, prodOnly)
+		}
+		for _, imp := range slices.Concat(pkg.TestImports, pkg.XTestImports) {
+			step(imp, false)
 		}
 	}
-	walkBuild(pkg, []string{modulePath + dir})
+	walk(pkg, []string{modulePath + dir}, true)
 }
 
 // checkNumbers fails on every numeric literal in a non-test file other than 0
