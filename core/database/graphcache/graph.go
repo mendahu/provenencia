@@ -100,8 +100,7 @@ type Member struct {
 
 // Link is one association seen from this node. AssociationRef is the sort
 // key, then the neighbor's ref. FromEnd is true when this node is the
-// association's first endpoint. Directed and InverseKey are copied off the
-// term row at load; the edge signature is built later, at the feature edge.
+// association's first endpoint.
 type Link struct {
 	Neighbor                 []byte
 	NeighborRef              string
@@ -112,8 +111,6 @@ type Link struct {
 	DisambiguationPropertyID []byte
 	TermID                   []byte
 	TermKey                  string
-	InverseKey               string
-	Directed                 bool
 	NeighborTypeID           []byte
 	BridgeTypeKey            string
 	NeighborTypeKey          string
@@ -235,8 +232,9 @@ func (g *Graph) Kind(typeID []byte) ([]*Node, error) {
 	return out, nil
 }
 
-// Stats returns the cached scan. A commit that names handles, and a structure
-// drop, clear it. A vocabulary-only write does not.
+// Stats returns the cached catalog-wide scan a feature stores in this slot. A
+// commit that names handles, and a structure drop, clear it. A vocabulary-only
+// write does not. Nothing fills it until S11-15.
 func (g *Graph) Stats() (any, bool) {
 	if g == nil || !g.statsOK {
 		return nil, false
@@ -264,7 +262,7 @@ func (g *Graph) SetAliasTables(tables any) {
 	g.aliasesOK = true
 }
 
-// SetStats stores a scan until the next handle commit or drop.
+// SetStats stores a catalog-wide scan until the next handle commit or drop.
 func (g *Graph) SetStats(stats any) {
 	if g == nil {
 		return

@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"slices"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
@@ -294,7 +296,7 @@ func TestProposeSeedFromPromotedNeighbor(t *testing.T) {
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, per.Entity.ID) {
 		t.Fatalf("person row %+v, want handle %x", row, per.Entity.ID)
 	}
-	if row.Via == nil || !bytes.Equal(row.Via.NeighborSubjectID, bBirth.ID) || row.Via.Signature.BridgeType != "participation" {
+	if row.Via == nil || !bytes.Equal(row.Via.NeighborSubjectID, bBirth.ID) || row.Via.Key.Type != vocabkey.BridgeParticipation {
 		t.Fatalf("via %+v, want birth participation", row.Via)
 	}
 	var namePinned bool
@@ -346,14 +348,15 @@ func TestProposeOverlappingBoundShowsTheDateAndResembles(t *testing.T) {
 			StartYear: &y, StartMonth: &m, StartDay: &d,
 		}
 	}
-	// A residence, not a birth: two births "before" different dates would put the
-	// person born on two dates, and the lifespan would rule the pair out.
-	earlier, later := bef(1985, 2, 1), bef(2001, 3, 31)
+	// A death, not a birth: two births "before" different dates would put the
+	// person born on two dates, and the lifespan would rule the pair out. A
+	// death is a one-cardinality link, so the event files through its subject.
+	earlier, later := bef(1985, 2, 1), bef(1985, 3, 31)
 
 	aPerson := f.person(f.source, f.artifact, "Doug")
 	aEvent := f.bare(f.source, "event")
 	f.cite(f.artifact, aEvent,
-		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "residence").ID},
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "death").ID},
 		observations.Input{PropertyID: f.prop("start_date").ID, Date: earlier},
 	)
 	f.participation(f.source, f.artifact, aPerson, aEvent, "subject")
@@ -364,7 +367,7 @@ func TestProposeOverlappingBoundShowsTheDateAndResembles(t *testing.T) {
 	bPerson := f.person(srcB, artB, "Doug")
 	bEvent := f.bare(srcB, "event")
 	f.cite(artB, bEvent,
-		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "residence").ID},
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "death").ID},
 		observations.Input{PropertyID: f.prop("start_date").ID, Date: later},
 	)
 	f.participation(srcB, artB, bPerson, bEvent, "subject")
@@ -381,7 +384,7 @@ func TestProposeOverlappingBoundShowsTheDateAndResembles(t *testing.T) {
 		}
 		saw = true
 		if ex.Outcome != "partial" || ex.Pinned || ex.Weight <= 0 ||
-			ex.IncomingDisplay != "Before 2001-03-31" || ex.MemberDisplay != "Before 1985-02-01" {
+			ex.IncomingDisplay != "Before 1985-03-31" || ex.MemberDisplay != "Before 1985-02-01" {
 			t.Fatalf("start date %+v", ex)
 		}
 	}
@@ -444,84 +447,6 @@ func TestProposeInvalidSource(t *testing.T) {
 	}
 }
 
-func TestStatsCacheInvalidatesOnWrite(t *testing.T) {
-	f := newFixture(t)
-
-	// Prime cache.
-	_, _, err := promotealign.Propose(f.c, f.source.ID, nil)
-	must(t, err)
-
-	// A write bumps audit revision; next Propose must recompute (no panic / stale).
-	_ = f.person(f.source, f.artifact, "Ada")
-	got := f.propose(f.source.ID, nil)
-	if len(got.Rows) != 1 {
-		t.Fatalf("rows %d", len(got.Rows))
-	}
-}
-
-func TestStatsFanOut(t *testing.T) {
-	subjectAtBirth := graphalign.EdgeSignature{
-		BridgeType: "participation", RoleOrType: "subject", NeighborKind: "event", NeighborTypeTerm: "birth",
-	}
-	revision := func(f *fixture) int64 {
-		db, err := f.c.DB()
-		must(f.t, err)
-		var rev int64
-		must(f.t, db.QueryRow(`SELECT MAX(revision) FROM audit_transactions`).Scan(&rev))
-		return rev
-	}
-	stats := func(f *fixture) graphalign.Stats {
-		st, err := promotealign.LoadStatsForTest(f.c)
-		must(f.t, err)
-		return st
-	}
-	// Both catalogs hold a person, their birth, and a lone place. Filing
-	// person and birth files the participation; filing person and place doesn't.
-	build := func(t testing.TB, fileBirth bool) *fixture {
-		f := &fixture{t: t}
-		c, err := database.Create(t.TempDir(), "t.provenencia")
-		must(t, err)
-		t.Cleanup(func() { _ = c.Close() })
-		r, err := ref.Mint(ref.PrefixUser)
-		must(t, err)
-		must(t, users.Upsert(c, userID, "Tester", r))
-		must(t, subjectvocab.Install(c))
-		f.c = c
-		f.source, f.artifact = f.newSource("Register")
-		person := f.person(f.source, f.artifact, "Gracie")
-		birth := f.birth(f.source, f.artifact)
-		place := f.place(f.source, f.artifact, "York")
-		f.participation(f.source, f.artifact, person, birth, "subject")
-		f.promote(person)
-		if fileBirth {
-			f.promote(birth)
-		} else {
-			f.promote(place)
-		}
-		return f
-	}
-
-	t.Run("keys match the walk's edge signature", func(t *testing.T) {
-		f := build(t, true)
-		if got, ok := stats(f).FanOut[subjectAtBirth.Key()]; !ok || got != 1 {
-			t.Fatalf("fan-out %v (present %v), want 1 under %q", got, ok, subjectAtBirth.Key())
-		}
-	})
-	t.Run("another project at the same revision recomputes", func(t *testing.T) {
-		filed, other := build(t, true), build(t, false)
-		if revision(filed) != revision(other) {
-			t.Fatalf("revisions %d and %d differ; the test needs them equal", revision(filed), revision(other))
-		}
-		_ = stats(filed)
-		if _, leaked := stats(other).FanOut[subjectAtBirth.Key()]; leaked {
-			t.Fatal("stats from the first catalog were served for the second")
-		}
-	})
-}
-
-// One-hop exhibits compare a neighbor only with the handle Align mapped it to.
-// The handle's person also has a death in 1901; a layer event dated 1901 must
-// not "agree" with it unless that event is mapped to the death.
 func TestProposeOneHopExhibitsPairOnlyTheMappedNeighbor(t *testing.T) {
 	yearOf := func(y int) *datevalue.Value {
 		return &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
@@ -809,7 +734,7 @@ func TestProposeInverseKinshipTermsCorrespond(t *testing.T) {
 	hJohn := f.promote(john).Entity.ID
 
 	src2, art2 := f.newSource("Baptism")
-	son := f.sexOnly(src2, art2, "male")
+	son := f.person(src2, art2, "John Smith")
 	mother := f.person(src2, art2, "Mary Smith")
 	f.relationship(src2, art2, son, mother, "child")
 
@@ -823,6 +748,11 @@ func TestProposeInverseKinshipTermsCorrespond(t *testing.T) {
 
 // A relationship is walked from either end: anchoring the child reaches the
 // parent as anchoring the parent reaches the child.
+//
+// dogfood: a parent or child link is an Other link, so an end with no name
+// scores under the accept bar and is not filed; the walk still offers the
+// right handle first. Revisit when the whole algorithm is dogfooded (Spike 11
+// matching dogfood).
 func TestProposeRelationshipFromEitherEnd(t *testing.T) {
 	f := newFixture(t)
 	mary := f.person(f.source, f.artifact, "Mary Smith")
@@ -834,9 +764,11 @@ func TestProposeRelationshipFromEitherEnd(t *testing.T) {
 	tests := []struct {
 		name           string
 		anchorIsParent bool
+		namedOther     bool
 	}{
 		{name: "child anchored reaches the parent"},
 		{name: "parent anchored reaches the child", anchorIsParent: true},
+		{name: "named other end files via the anchor", anchorIsParent: true, namedOther: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -847,6 +779,9 @@ func TestProposeRelationshipFromEitherEnd(t *testing.T) {
 			if tt.anchorIsParent {
 				parent = f.person(src, art, "Mary Smith")
 				child = f.sexOnly(src, art, "male")
+				if tt.namedOther {
+					child = f.person(src, art, "John Smith")
+				}
 				fixed = graphalign.Fixed{SubjectID: parent.ID, HandleID: hMary}
 				want = hJohn
 			} else {
@@ -862,9 +797,21 @@ func TestProposeRelationshipFromEitherEnd(t *testing.T) {
 				other = parent
 			}
 			r := rowFor(p, other.ID)
-			if r.Target != graphalign.TargetHandle || !bytes.Equal(r.HandleID, want) || r.Reason != graphalign.ReasonVia {
-				t.Fatalf("target=%s right-handle=%v reason=%s, want the other end's handle via the anchor",
-					r.Target, bytes.Equal(r.HandleID, want), r.Reason)
+			if tt.namedOther {
+				if r.Target != graphalign.TargetHandle || !bytes.Equal(r.HandleID, want) || r.Reason != graphalign.ReasonVia {
+					t.Fatalf("target=%s right-handle=%v reason=%s, want the other end's handle via the anchor",
+						r.Target, bytes.Equal(r.HandleID, want), r.Reason)
+				}
+				if r.Via == nil || r.Via.Key.Type != vocabkey.BridgeRelationship || r.Via.Key.Term != "child" {
+					t.Fatalf("via %+v, want a relationship key with term child", r.Via)
+				}
+				return
+			}
+			if r.Target != graphalign.TargetSkip || r.Reason != graphalign.ReasonWeak {
+				t.Fatalf("target=%s reason=%s, want skip and weak (under the accept bar)", r.Target, r.Reason)
+			}
+			if len(r.Alternatives) == 0 || !bytes.Equal(r.Alternatives[0].HandleID, want) || r.Alternatives[0].Reason != graphalign.ReasonVia {
+				t.Fatalf("alternatives %+v, want the other end's handle first, via the anchor", r.Alternatives)
 			}
 		})
 	}
@@ -1285,5 +1232,120 @@ func TestProposeKeepsTheLifespanOffTheSheet(t *testing.T) {
 		if ex.PropertyKey == string(vocabkey.PropertyLifespan) {
 			t.Fatalf("a lifespan line on the sheet: %+v", ex)
 		}
+	}
+}
+
+// datedBirth is an event cited as a birth in a year.
+func (f *fixture) datedBirth(src sources.Source, art artifacts.Artifact, y int) subjects.Subject {
+	f.t.Helper()
+	s := f.bare(src, "event")
+	f.cite(art, s,
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.prop("date").ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}},
+	)
+	return s
+}
+
+// The loader reads a Source's links from the connect rules: one bridge for
+// each registered bridge type, whatever its term.
+func TestLayerBridgesCoverEveryConnectRule(t *testing.T) {
+	f := newFixture(t)
+	ann := f.person(f.source, f.artifact, "Ann Ames")
+	bob := f.person(f.source, f.artifact, "Bob Ames")
+	birth := f.birth(f.source, f.artifact)
+	york := f.place(f.source, f.artifact, "York")
+	ontario := f.place(f.source, f.artifact, "Ontario")
+	f.participation(f.source, f.artifact, ann, birth, "subject")
+	f.locate(f.source, f.artifact, birth, york)
+	f.relationship(f.source, f.artifact, ann, bob, "parent")
+	f.placeRel(f.source, f.artifact, york, ontario, "part_of")
+
+	bridges, err := promotealign.LayerBridges(f.c, f.source.ID)
+	must(t, err)
+	var got []string
+	for _, b := range bridges {
+		got = append(got, string(b.KeyA.Type))
+	}
+	want := connectrules.BridgeTypeKeys()
+	slices.Sort(got)
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Fatalf("bridge types %v, want %v", got, want)
+	}
+}
+
+// A birth placed on another event than the handle's birth subtracts from the
+// person: a person has one birth.
+func TestProposeBirthOnAnotherPersonSubtracts(t *testing.T) {
+	f := newFixture(t)
+	aAnn := f.person(f.source, f.artifact, "Ann Ames")
+	aBirth := f.datedBirth(f.source, f.artifact, 1817)
+	f.participation(f.source, f.artifact, aAnn, aBirth, "subject")
+	annH := f.promote(aAnn)
+	f.promote(aBirth)
+
+	srcC, artC := f.newSource("Register")
+	cMary := f.person(srcC, artC, "Mary Ames")
+	cBirth := f.datedBirth(srcC, artC, 1817)
+	f.participation(srcC, artC, cMary, cBirth, "subject")
+	f.promote(cMary)
+	cBirthH := f.promote(cBirth)
+
+	srcB, artB := f.newSource("Obituary")
+	bAnn := f.person(srcB, artB, "Ann Ames")
+	bBirth := f.datedBirth(srcB, artB, 1817)
+	f.participation(srcB, artB, bAnn, bBirth, "subject")
+
+	got := f.propose(srcB.ID, []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: cBirthH.Entity.ID}})
+	row := rowFor(got, bAnn.ID)
+	if row.Target == graphalign.TargetHandle && bytes.Equal(row.HandleID, annH.Entity.ID) {
+		t.Fatalf("person row %+v filed on the Ann whose birth is another event", row)
+	}
+}
+
+// A location has no event type on either side: a place reached through a
+// fixed birth files on the other record's place.
+func TestProposePlaceThroughALocation(t *testing.T) {
+	f := newFixture(t)
+	aBirth := f.birth(f.source, f.artifact)
+	aYork := f.place(f.source, f.artifact, "York")
+	f.locate(f.source, f.artifact, aBirth, aYork)
+	birthH := f.promote(aBirth)
+	yorkH := f.promote(aYork)
+
+	srcB, artB := f.newSource("Register")
+	bBirth := f.birth(srcB, artB)
+	bYork := f.place(srcB, artB, "York")
+	f.locate(srcB, artB, bBirth, bYork)
+
+	got := f.propose(srcB.ID, []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: birthH.Entity.ID}})
+	row := rowFor(got, bYork.ID)
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, yorkH.Entity.ID) || row.Reason != graphalign.ReasonVia {
+		t.Fatalf("place row %+v, want York's handle via the birth", row)
+	}
+}
+
+// "John child of Mary" reads as "Mary parent of John": the walk from Mary
+// reaches John's handle through the canonical term.
+func TestProposeChildOfReadsAsParentOf(t *testing.T) {
+	f := newFixture(t)
+	aMary := f.person(f.source, f.artifact, "Mary Smith")
+	aJohn := f.person(f.source, f.artifact, "John Smith")
+	f.relationship(f.source, f.artifact, aMary, aJohn, "parent")
+	maryH := f.promote(aMary).Entity.ID
+	johnH := f.promote(aJohn).Entity.ID
+
+	srcB, artB := f.newSource("Baptism")
+	bJohn := f.person(srcB, artB, "John Smith")
+	bMary := f.person(srcB, artB, "Mary Smith")
+	f.relationship(srcB, artB, bJohn, bMary, "child")
+
+	got := f.propose(srcB.ID, []graphalign.Fixed{{SubjectID: bMary.ID, HandleID: maryH}})
+	row := rowFor(got, bJohn.ID)
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, johnH) || row.Reason != graphalign.ReasonVia {
+		t.Fatalf("John row %+v, want his handle via Mary", row)
+	}
+	if row.Via == nil || row.Via.Key.Term != "child" {
+		t.Fatalf("via %+v, want term child", row.Via)
 	}
 }

@@ -314,11 +314,9 @@ func bridgeEndpoints(b connectrules.Bridge, selfKey, otherKey string) bool {
 }
 
 type termMark struct {
-	propID     []byte
-	termID     []byte
-	key        string
-	inverseKey string
-	directed   bool
+	propID []byte
+	termID []byte
+	key    string
 }
 
 func (g *Graph) finishLinks(raws []linkRaw, assocIDs [][]byte) (map[string][]Link, error) {
@@ -349,8 +347,6 @@ func (g *Graph) finishLinks(raws []linkRaw, assocIDs [][]byte) (map[string][]Lin
 			DisambiguationPropertyID: cloneID(mark.propID),
 			TermID:                   cloneID(mark.termID),
 			TermKey:                  mark.key,
-			InverseKey:               mark.inverseKey,
-			Directed:                 mark.directed,
 			NeighborTypeID:           cloneID(r.neighborType),
 			BridgeTypeKey:            r.bridgeKey,
 			NeighborTypeKey:          r.neighborTypeKey,
@@ -373,8 +369,7 @@ func (g *Graph) disambiguation(assocIDs [][]byte) (map[string]termMark, error) {
 	if len(assocIDs) == 0 {
 		return out, nil
 	}
-	head := `SELECT r.entity_id, r.property_id, r.value_term_id, COALESCE(t.key, ''),
-			COALESCE(t.inverse_key, ''), COALESCE(t.directed, 0), p.key
+	head := `SELECT r.entity_id, r.property_id, r.value_term_id, COALESCE(t.key, ''), p.key
 		FROM ` + g.valueTable + ` r
 		JOIN properties p ON p.id = r.property_id
 		LEFT JOIN property_terms t ON t.id = r.value_term_id
@@ -383,9 +378,8 @@ func (g *Graph) disambiguation(assocIDs [][]byte) (map[string]termMark, error) {
 	err := sqlbatch.Query(g, head, `)
 		ORDER BY r.entity_id, t.key`, nil, assocIDs, func(rows *sql.Rows) error {
 		var entityID, propID, termID []byte
-		var key, inverse, propKey string
-		var directed int
-		if err := rows.Scan(&entityID, &propID, &termID, &key, &inverse, &directed, &propKey); err != nil {
+		var key, propKey string
+		if err := rows.Scan(&entityID, &propID, &termID, &key, &propKey); err != nil {
 			return err
 		}
 		mk := string(entityID) + "|" + propKey
@@ -394,7 +388,7 @@ func (g *Graph) disambiguation(assocIDs [][]byte) (map[string]termMark, error) {
 		}
 		out[mk] = termMark{
 			propID: cloneID(propID), termID: cloneID(termID),
-			key: key, inverseKey: inverse, directed: directed != 0,
+			key: key,
 		}
 		return nil
 	})

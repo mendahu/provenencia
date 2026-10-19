@@ -40,6 +40,21 @@ const (
 	PropertyEndDate    = "end_date"
 	PropertyToponym    = "toponym"
 	PropertyLikeness   = "likeness"
+
+	PropertyPerson    = "person"
+	PropertyEvent     = "event"
+	PropertyPlace     = "place"
+	PropertyRelatedTo = "related_to"
+	PropertyFrom      = "from"
+	PropertyTo        = "to"
+)
+
+// Bridge types: the seeded Subject types that join two primary Subjects.
+const (
+	BridgeParticipation     = "participation"
+	BridgeRelationship      = "relationship"
+	BridgeLocation          = "location"
+	BridgePlaceRelationship = "place_relationship"
 )
 
 // EventType is an event_type term key, typed for registry rules.
@@ -55,6 +70,35 @@ const (
 	EventBurial EventType = "burial"
 	RoleSubject Role      = "subject"
 )
+
+// BridgeTerm is a bridge's disambiguation term key: a participation role, a
+// relationship type or a place relationship type, typed for registry rules.
+type BridgeTerm string
+
+// TermPartOf is the place relationship type of a place within a larger one.
+const TermPartOf BridgeTerm = "part_of"
+
+// BridgeKey is one bridge read from one end: its bridge type, its term in
+// canonical direction, the endpoint Property of the end it is read from (empty
+// for a symmetric link between two Subjects of one type), and the type of the
+// event on a participation.
+type BridgeKey struct {
+	Type      SubjectType
+	Term      BridgeTerm
+	End       PropertyKey
+	EventType EventType
+}
+
+// String joins the non-empty fields with a middle dot, in field order.
+func (k BridgeKey) String() string {
+	parts := make([]string, 0, 4)
+	for _, f := range []string{string(k.Type), string(k.Term), string(k.End), string(k.EventType)} {
+		if f != "" {
+			parts = append(parts, f)
+		}
+	}
+	return strings.Join(parts, "·")
+}
 
 // Derived Property keys the profile builder adds (never seeded).
 const (

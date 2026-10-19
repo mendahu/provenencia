@@ -7,18 +7,19 @@ import (
 	"sort"
 
 	"github.com/mendahu/provenencia/core/propertycompare"
+	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // Align proposes a handle, New, or Skip for every primary Subject on layer,
 // holding fixed pairs as anchors. cfg nil uses DefaultConfig().
-func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg *Config) Proposal {
+func Align(layer Layer, canon Canon, fixed []Fixed, cfg *Config) Proposal {
 	c := DefaultConfig()
 	if cfg != nil {
 		c = *cfg
 	}
-	st := newState(layer, canon, stats, fixed, c)
+	st := newState(layer, canon, fixed, c)
 	st.seed()
 	st.walk()
 	// Property matches that clear the bar seed the same walk. Candidates
@@ -37,15 +38,14 @@ type state struct {
 	cfg   Config
 	layer Layer
 	canon Canon
-	stats Stats
 	metas subjectcompare.Metas
 
 	subjects map[string]*Subject
 	handles  map[string]*Handle
 	// undirected neighbors on the layer: subjectID → []neighborID
-	layerAdj map[string][]layerLink
-	// canon adjacency: handleID → []canonLink
-	canonAdj map[string][]canonLink
+	layerAdj map[string][]adjLink
+	// canon adjacency: handleID → []adjLink
+	canonAdj map[string][]adjLink
 
 	// mapping subjectID → handleID for fixed + accepted
 	assigned map[string][]byte
@@ -66,27 +66,11 @@ type state struct {
 	kindCands map[string][]Handle // handlesOfKind, per kind
 }
 
-// A link is one end's view of an edge; fromEnd is true at the edge's first
-// endpoint (Bridge.A, CanonEdge.From).
-type layerLink struct {
-	neighbor []byte
-	sig      EdgeSignature
-	fromEnd  bool
-}
-
-type canonLink struct {
-	neighbor []byte
-	sig      EdgeSignature
-	fromEnd  bool
-}
-
-// corresponds reports whether a canon link can stand for a layer link: same
-// signature, and for a directed term, seen from the same end.
-func corresponds(l layerLink, c canonLink) bool {
-	if c.sig.Key() != l.sig.Key() {
-		return false
-	}
-	return !(l.sig.Directed || c.sig.Directed) || l.fromEnd == c.fromEnd
+// An adjLink is one end's view of an edge: the neighbor, the bridge's key read
+// from this end, and its key read from the neighbor's.
+type adjLink struct {
+	neighbor  []byte
+	key, back vocabkey.BridgeKey
 }
 
 type scoredCand struct {
@@ -96,20 +80,19 @@ type scoredCand struct {
 	result      subjectcompare.Result
 	edge        float64
 	viaNeighbor []byte
-	viaSig      EdgeSignature
+	viaKey      vocabkey.BridgeKey
 }
 
-func newState(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg Config) *state {
+func newState(layer Layer, canon Canon, fixed []Fixed, cfg Config) *state {
 	st := &state{
 		cfg:         cfg,
 		layer:       layer,
 		canon:       canon,
-		stats:       stats,
 		metas:       layer.Metas,
 		subjects:    map[string]*Subject{},
 		handles:     map[string]*Handle{},
-		layerAdj:    map[string][]layerLink{},
-		canonAdj:    map[string][]canonLink{},
+		layerAdj:    map[string][]adjLink{},
+		canonAdj:    map[string][]adjLink{},
 		assigned:    map[string][]byte{},
 		fixedSet:    map[string]bool{},
 		handleOwner: map[string]string{},
@@ -129,13 +112,13 @@ func newState(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg Config) 
 	}
 	for _, b := range layer.Bridges {
 		a, c := string(b.A), string(b.B)
-		st.layerAdj[a] = append(st.layerAdj[a], layerLink{neighbor: b.B, sig: b.Signature, fromEnd: true})
-		st.layerAdj[c] = append(st.layerAdj[c], layerLink{neighbor: b.A, sig: b.Signature})
+		st.layerAdj[a] = append(st.layerAdj[a], adjLink{neighbor: b.B, key: b.KeyA, back: b.KeyB})
+		st.layerAdj[c] = append(st.layerAdj[c], adjLink{neighbor: b.A, key: b.KeyB, back: b.KeyA})
 	}
 	for _, e := range canon.Edges {
 		f, t := string(e.From), string(e.To)
-		st.canonAdj[f] = append(st.canonAdj[f], canonLink{neighbor: e.To, sig: e.Signature, fromEnd: true})
-		st.canonAdj[t] = append(st.canonAdj[t], canonLink{neighbor: e.From, sig: e.Signature})
+		st.canonAdj[f] = append(st.canonAdj[f], adjLink{neighbor: e.To, key: e.KeyFrom, back: e.KeyTo})
+		st.canonAdj[t] = append(st.canonAdj[t], adjLink{neighbor: e.From, key: e.KeyTo, back: e.KeyFrom})
 	}
 	for _, f := range fixed {
 		sk, hk := string(f.SubjectID), string(f.HandleID)
@@ -195,26 +178,26 @@ func (st *state) pushFromAnchor(subjectID, handleID []byte) {
 			continue
 		}
 		for _, ce := range st.canonAdj[string(handleID)] {
-			if !corresponds(link, ce) {
+			if !segmentcompare.Corresponds(link.key, ce.key) {
 				continue
 			}
 			h := st.handles[string(ce.neighbor)]
 			if h == nil || h.Kind != ns.Kind {
 				continue
 			}
-			st.enqueue(ns.ID, h, link.sig, subjectID)
+			st.enqueue(ns.ID, h, link.key, subjectID)
 		}
 	}
 }
 
-func (st *state) enqueue(subjectID []byte, h *Handle, via EdgeSignature, viaNeighbor []byte) {
+func (st *state) enqueue(subjectID []byte, h *Handle, via vocabkey.BridgeKey, viaNeighbor []byte) {
 	key := string(subjectID) + "|" + string(h.ID)
 	if st.seen[key] {
 		return
 	}
 	sc := st.scoreCandidate(subjectID, h)
 	sc.viaNeighbor = append([]byte(nil), viaNeighbor...)
-	sc.viaSig = via
+	sc.viaKey = via
 	st.recordBest(string(subjectID), sc)
 	heap.Push(&st.queue, queueItem{
 		subjectID: append([]byte(nil), subjectID...),
@@ -237,7 +220,7 @@ func (st *state) recordBest(sk string, sc scoredCand) {
 				// Rescoring raises the number and keeps that path.
 				if len(sc.viaNeighbor) == 0 && len(list[i].viaNeighbor) > 0 {
 					sc.viaNeighbor = append([]byte(nil), list[i].viaNeighbor...)
-					sc.viaSig = list[i].viaSig
+					sc.viaKey = list[i].viaKey
 				}
 				list[i] = sc
 			}
@@ -277,7 +260,7 @@ func (st *state) supports(subjectID, handleID, neighbor []byte) bool {
 			continue
 		}
 		for _, ce := range st.canonAdj[string(handleID)] {
-			if corresponds(link, ce) && bytes.Equal(ce.neighbor, g) {
+			if segmentcompare.Corresponds(link.key, ce.key) && bytes.Equal(ce.neighbor, g) {
 				return true
 			}
 		}
@@ -292,7 +275,7 @@ func (st *state) evaluate(kind string, a, b subjectcompare.Values) subjectcompar
 func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
 	s := st.subjects[string(subjectID)]
 	r := st.evaluate(s.Kind, s.Values, h.Values)
-	edge := EdgePoints(st.edgeFacts(subjectID, h.ID), r.Evidence, st.cfg)
+	edge := st.segments(subjectID, h, r.Evidence)
 	sc := ScoreCandidate(r, edge, s.Provenance)
 	return scoredCand{
 		handleID: append([]byte(nil), h.ID...),
@@ -303,65 +286,66 @@ func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
 	}
 }
 
-// edgeFacts lists one fact per mapped layer neighbor. A canon edge that
-// corresponds and lands on that neighbor is support, with the signature
-// scale's MinNode copied on. A corresponding edge that lands on a different
-// handle is a mismatch, with ConflictFactor copied on. No same-end neighbor
-// is nothing: a missing neighbor is not a disagreement. The scale is looked
-// up by ScaleKey; a missing entry is the zero value. NeighborNode is
-// that pair's properties only, so a later hop cannot inherit this neighbor's
-// own links. A match and a mismatch for the same link record the match.
-func (st *state) edgeFacts(subjectID, handleID []byte) []EdgeFact {
-	var facts []EdgeFact
-	sk := string(subjectID)
-	for _, link := range st.layerAdj[sk] {
-		nk := string(link.neighbor)
-		hid, ok := st.assigned[nk]
+// segments sums what each mapped layer neighbor's link adds to the pair of
+// subjectID and h, whose own evidence is own. Each link of the Subject stands
+// on its own: the first canon link of h that corresponds and lands on the
+// neighbor's handle is compared together; failing that, the first that
+// corresponds is compared apart; none adds nothing. A neighbor not yet mapped
+// adds nothing: a missing neighbor is not a disagreement.
+func (st *state) segments(subjectID []byte, h *Handle, own float64) float64 {
+	var total float64
+	canon := st.canonAdj[string(h.ID)]
+	for _, link := range st.layerAdj[string(subjectID)] {
+		hid, ok := st.assigned[string(link.neighbor)]
 		if !ok {
 			continue
 		}
-		scale := st.cfg.SignatureScale[link.sig.ScaleKey(link.fromEnd)]
-		matched := false
-		other := false
-		for _, ce := range st.canonAdj[string(handleID)] {
-			if !corresponds(link, ce) {
+		ns := st.subjects[string(link.neighbor)]
+		if ns == nil {
+			continue
+		}
+		var together, apart *adjLink
+		for i := range canon {
+			ce := &canon[i]
+			if !segmentcompare.Corresponds(link.key, ce.key) {
 				continue
 			}
 			if bytes.Equal(ce.neighbor, hid) {
-				matched = true
+				together = ce
 				break
 			}
-			other = true
-		}
-		if matched {
-			fan, found := st.stats.FanOut[link.sig.Key()]
-			if !found {
-				fan = st.cfg.FanOutUnknown
+			if apart == nil {
+				apart = ce
 			}
-			facts = append(facts, EdgeFact{
-				FanOut: fan, NeighborNode: st.nodeScore(link.neighbor, hid),
-				MinNode: scale.MinNode,
-			})
+		}
+		placed, ce := segmentcompare.Together, together
+		if ce == nil {
+			placed, ce = segmentcompare.Apart, apart
+		}
+		if ce == nil {
 			continue
 		}
-		if other {
-			facts = append(facts, EdgeFact{
-				ConflictFactor: scale.ConflictFactor, Mismatch: true,
-			})
+		nh := st.handles[string(ce.neighbor)]
+		if nh == nil {
+			continue
 		}
+		total += st.compareSegments(link, ns, *ce, nh, placed, own).Evidence
 	}
-	return facts
+	return total
 }
 
-// nodeScore is the pairwise total for an already mapped neighbor. It does
-// not call edgeFacts.
-func (st *state) nodeScore(subjectID, handleID []byte) float64 {
-	s := st.subjects[string(subjectID)]
-	h := st.handles[string(handleID)]
-	if s == nil || h == nil {
-		return 0
-	}
-	return st.evaluate(s.Kind, s.Values, h.Values).Evidence
+// compareSegments is layer 5 on one layer link and one canon link.
+func (st *state) compareSegments(l adjLink, ns *Subject, ce adjLink, nh *Handle, placed segmentcompare.Placement, own float64) segmentcompare.Result {
+	return st.compare(l.key, ns.Kind, ns.Values, ce.key, nh.Kind, nh.Values, placed, own)
+}
+
+// compare is the one call to layer 5: two segments, each a key, the neighbor's
+// kind and its values.
+func (st *state) compare(keyA vocabkey.BridgeKey, kindA string, valuesA subjectcompare.Values, keyB vocabkey.BridgeKey, kindB string, valuesB subjectcompare.Values, placed segmentcompare.Placement, own float64) segmentcompare.Result {
+	return segmentcompare.Compare(
+		segmentcompare.Segment{Key: keyA, NeighborKind: vocabkey.SubjectType(kindA), Neighbor: valuesA},
+		segmentcompare.Segment{Key: keyB, NeighborKind: vocabkey.SubjectType(kindB), Neighbor: valuesB},
+		placed, own, st.metas, st.cfg.Segment, st.cfg.Subject, st.cfg.Value)
 }
 
 func (st *state) walk() {
@@ -500,7 +484,7 @@ func (st *state) rescoreBest() []queueItem {
 			sc := st.scoreCandidate(s.ID, h)
 			if len(cand.viaNeighbor) > 0 && st.supports(s.ID, h.ID, cand.viaNeighbor) {
 				sc.viaNeighbor = cand.viaNeighbor
-				sc.viaSig = cand.viaSig
+				sc.viaKey = cand.viaKey
 			}
 			fresh = append(fresh, sc)
 		}
@@ -594,9 +578,8 @@ func (st *state) scoreFixed() {
 			}
 			// canonAdj[g] is seen from the neighbor's end, so compare the
 			// neighbor's view of this link.
-			fromNeighbor := layerLink{neighbor: s.ID, sig: link.sig, fromEnd: !link.fromEnd}
 			for _, ce := range st.canonAdj[string(g)] {
-				if !corresponds(fromNeighbor, ce) || bytes.Equal(ce.neighbor, hid) {
+				if !segmentcompare.Corresponds(link.back, ce.key) || bytes.Equal(ce.neighbor, hid) {
 					continue
 				}
 				h := st.handles[string(ce.neighbor)]
@@ -605,7 +588,7 @@ func (st *state) scoreFixed() {
 				}
 				sc := st.scoreCandidate(s.ID, h)
 				sc.viaNeighbor = append([]byte(nil), link.neighbor...)
-				sc.viaSig = link.sig
+				sc.viaKey = link.key
 				st.recordBest(sk, sc)
 			}
 		}
@@ -659,7 +642,7 @@ func (st *state) proposal() Proposal {
 				row.Reason = ReasonVia
 				row.Via = &Via{
 					NeighborSubjectID: append([]byte(nil), sc.viaNeighbor...),
-					Signature:         sc.viaSig,
+					Key:               sc.viaKey,
 				}
 			default:
 				row.Reason = ReasonAgrees
@@ -759,104 +742,65 @@ func (st *state) flagAlikeNewRows(rows []Row) {
 }
 
 // alikeNew reports whether two New subjects score as one entity. Properties
-// are scored as usual. Each signature both have neighbors for adds one link
+// are scored as usual. Each link key both have neighbors for adds one link
 // when a neighbor matches, and rejects the pair when none do.
 func (st *state) alikeNew(a, b *Subject) bool {
-	facts, disagree := st.newPairFacts(a.ID, b.ID)
+	r := st.evaluate(a.Kind, a.Values, b.Values)
+	segs, disagree := st.newPairSegments(a, b, r.Evidence)
 	if disagree {
 		return false
 	}
-	r := st.evaluate(a.Kind, a.Values, b.Values)
-	return ScoreCandidate(r, EdgePoints(facts, r.Evidence, st.cfg), 1).Score >= st.cfg.AcceptScore
+	return ScoreCandidate(r, segs, 1).Score >= st.cfg.AcceptScore
 }
 
-// newPairFacts compares the layer neighbors of two subjects. A signature only
-// one of them has stays out. A signature both have disagrees when no neighbor
-// pair is the same subject or clears the accept bar on its own properties.
-// A directed signature groups by end as well: a man's son and another man's
-// father are not neighbors to compare.
-func (st *state) newPairFacts(a, b []byte) ([]EdgeFact, bool) {
-	gb := map[string][][]byte{}
-	for _, link := range st.layerAdj[string(b)] {
-		k := pairGroup(link)
-		gb[k] = append(gb[k], link.neighbor)
+// newPairSegments compares the layer neighbors of two subjects, whose own
+// evidence is own. A key only one of them has stays out. A key both have
+// disagrees when no neighbor pair is the same subject or clears the accept bar
+// on its own properties. A directed key carries its end, so a man's son and
+// another man's father are not neighbors to compare. It returns the sum of
+// the best segment evidence per key.
+func (st *state) newPairSegments(a, b *Subject, own float64) (float64, bool) {
+	gb := map[vocabkey.BridgeKey][]adjLink{}
+	for _, link := range st.layerAdj[string(b.ID)] {
+		gb[link.key] = append(gb[link.key], link)
 	}
-	seen := map[string]bool{}
-	var facts []EdgeFact
-	for _, linkA := range st.layerAdj[string(a)] {
-		group := pairGroup(linkA)
-		if seen[group] {
+	seen := map[vocabkey.BridgeKey]bool{}
+	var total float64
+	for _, linkA := range st.layerAdj[string(a.ID)] {
+		if seen[linkA.key] {
 			continue
 		}
-		nb := gb[group]
+		nb := gb[linkA.key]
 		if len(nb) == 0 {
 			continue
 		}
-		seen[group] = true
-		var na [][]byte
-		for _, link := range st.layerAdj[string(a)] {
-			if pairGroup(link) == group {
-				na = append(na, link.neighbor)
-			}
-		}
+		seen[linkA.key] = true
 		best, ok := 0.0, false
-		for _, naID := range na {
-			for _, nbID := range nb {
-				if !st.neighborsMatch(naID, nbID) {
+		for _, la := range st.layerAdj[string(a.ID)] {
+			if la.key != linkA.key {
+				continue
+			}
+			for _, lb := range nb {
+				same := bytes.Equal(la.neighbor, lb.neighbor)
+				sa, sb := st.subjects[string(la.neighbor)], st.subjects[string(lb.neighbor)]
+				if sa == nil || sb == nil || (!same && sa.Kind != sb.Kind) {
 					continue
 				}
-				if node := st.pairNode(naID, nbID); !ok || node > best {
-					best, ok = node, true
+				res := st.compare(la.key, sa.Kind, sa.Values, lb.key, sb.Kind, sb.Values, segmentcompare.Together, own)
+				if !same && res.Neighbor.Evidence < st.cfg.AcceptScore {
+					continue
+				}
+				if !ok || res.Evidence > best {
+					best, ok = res.Evidence, true
 				}
 			}
 		}
 		if !ok {
-			return nil, true
+			return 0, true
 		}
-		fan, found := st.stats.FanOut[linkA.sig.Key()]
-		if !found {
-			fan = st.cfg.FanOutUnknown
-		}
-		scale := st.cfg.SignatureScale[linkA.sig.ScaleKey(linkA.fromEnd)]
-		facts = append(facts, EdgeFact{FanOut: fan, NeighborNode: best, MinNode: scale.MinNode})
+		total += best
 	}
-	return facts, false
-}
-
-// pairGroup is the signature key, and for a directed signature the end the
-// row sits on, so two rows compare only neighbors in the same role.
-func pairGroup(l layerLink) string {
-	if !l.sig.Directed {
-		return l.sig.Key()
-	}
-	if l.fromEnd {
-		return l.sig.Key() + "|from"
-	}
-	return l.sig.Key() + "|to"
-}
-
-// neighborsMatch is the same subject, or two subjects whose properties clear
-// the accept bar. It does not look at their links.
-func (st *state) neighborsMatch(a, b []byte) bool {
-	if bytes.Equal(a, b) {
-		return true
-	}
-	sa, sb := st.subjects[string(a)], st.subjects[string(b)]
-	if sa == nil || sb == nil || sa.Kind != sb.Kind {
-		return false
-	}
-	r := st.evaluate(sa.Kind, sa.Values, sb.Values)
-	return ScoreCandidate(r, 0, 1).Score >= st.cfg.AcceptScore
-}
-
-// pairNode is the property total for two subjects, one of them compared with
-// itself when they are the same subject.
-func (st *state) pairNode(a, b []byte) float64 {
-	sa, sb := st.subjects[string(a)], st.subjects[string(b)]
-	if sa == nil || sb == nil {
-		return 0
-	}
-	return st.evaluate(sa.Kind, sa.Values, sb.Values).Evidence
+	return total, false
 }
 
 // strongestAgreement is the agreeing or resembling property that added the

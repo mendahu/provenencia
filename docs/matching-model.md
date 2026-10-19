@@ -36,7 +36,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 2. **Property compare.** Name: relation `Same` on a single-value property, so the outcome is agree.
 3. **Subject compare, Gracie.** `subject.Weights.person.name.Agree` is 2.5. Both sides also derive a lifespan from their birth: window 1 May 1901 to 1 May 2011, span 1 May 1901; each span lies in the other's window, so `subject.Weights.person.lifespan.Agree` 0.1 counts. Her own evidence is 2.5 + 0.1 = 2.6.
 4. **Subject compare, the birth.** Event type agrees: `subject.Weights.event.event_type.Agree` 0.5. The date agrees: `subject.Weights.event.date.Agree` 2. The birth's own evidence is 0.5 + 2 = 2.5.
-5. **Segment compare.** Gracie is the subject of the birth, and `segment.Cardinality.birth` is `one`, so a matching neighbor earns `segment.OneSupport` 1.5 plus `segment.OneCredit` 0.5 of the birth's own evidence: 1.5 + 0.5 × 2.5 = 2.75.
+5. **Segment compare.** Gracie is the subject of the birth, and `segment.One` holds `participation·subject·birth`, so a matching neighbor earns `segment.OneSupport` 1.5 plus `segment.OneCredit` 0.5 of the birth's own evidence: 1.5 + 0.5 × 2.5 = 2.75.
 6. **Graph alignment.** Total evidence is 2.6 + 2.75 = 5.35. That clears `alignment.AcceptBar` (2), so the walk places the pair, and it is at least `alignment.Bands.Strong` (4), so the band is strong. Nothing conflicted, so the row is not contested.
 
 ## Glossary
@@ -174,11 +174,12 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `segment.OneCredit` | 0.5 | `graphalign` `NeighborCreditLow` | Share of the neighbor's own evidence passed on, one-cardinality |
 | `segment.OtherSupport` | 0.25 | `graphalign` `EdgeSupportHigh` | Points for any other matching link |
 | `segment.OtherCredit` | 0.25 | `graphalign` `NeighborCreditHigh` | Share of the neighbor's evidence passed on, other links |
-| `segment.PartOf.From.MinOwnEvidence` | 2 | `graphalign` `SignatureScale` `part_of` from-end `MinNode` | The part's own evidence needed before `part_of` support counts |
-| `segment.PartOf.To.MinOwnEvidence` | 2 | `graphalign` `SignatureScale` `part_of` to-end `MinNode` | The whole's own evidence needed before `part_of` support counts |
-| `segment.PartOf.From.ConflictFactor` | 1 | `graphalign` `SignatureScale` `part_of` from-end `ConflictFactor` | A different parent cancels the part's own evidence |
-| `segment.Cardinality.birth` | `one` | decided (working rule on segment compare) | Participation · subject · birth is one per person |
-| `segment.Cardinality.death` | `one` | decided (working rule on segment compare) | Participation · subject · death is one per person |
+| `segment.One` | `participation·subject·birth`, `participation·subject·death` | decided 2026-10-17, both ends 2026-10-19 | Links where a differing neighbor conflicts, from either end |
+| `segment.OneConflict` | 3 | estimate: a differing birth or death is as strong as a differing name or date (`subject.Weights.person.name.Conflict`) | Points lost when a one-cardinality link's neighbor is placed elsewhere |
+| `segment.Gates.place_relationship·part_of·from.MinOwnEvidence` | 2 | `graphalign` `SignatureScale` `part_of` from-end `MinNode` | The part's own evidence needed before `part_of` support counts |
+| `segment.Gates.place_relationship·part_of·from.ConflictFactor` | 1 | `graphalign` `SignatureScale` `part_of` from-end `ConflictFactor` | A different parent cancels the part's own evidence |
+| `segment.Gates.place_relationship·part_of·to.MinOwnEvidence` | 2 | `graphalign` `SignatureScale` `part_of` to-end `MinNode` | The whole's own evidence needed before `part_of` support counts |
+| `segment.Gates.place_relationship·part_of·to.ConflictFactor` | 0 | decided: the whole's end had no conflict factor | A different whole is silent |
 | `alignment.AcceptBar` | 2 | `graphalign` `AcceptScore` | Least evidence for the walk to place a pair |
 | `alignment.Bands.Strong` | 4 | `graphalign` `StrongScore` | Strong band from this evidence |
 | `alignment.Bands.Medium` | 3 | `graphalign` `MediumScore` | Medium band |
@@ -208,7 +209,8 @@ These are identifiers or catalog data, not tunables, and have no row: the vocabu
 | `DefaultNames.Frequency`, `FrequencyDiscount`, `FrequencyMinPeople`; `graphalign` `MPrior`, `UPrior`, frequency `ValueTypeScale` entries | Frequency weighting is descoped |
 | `graphalign` `PropertyAgreement` | Frequency weighting is descoped; the toponym bonus is folded into `subject.Weights.place.toponym.Agree` |
 | `graphalign` `PropertyScale`, `ValueTypeScale` (weight and contradiction per property and per value type) | Promote scores properties with `subject.Weights` (S11-13); a property with no weight there scores nothing |
-| `graphalign` `FanOutLowMax`, `FanOutUnknown` | Replaced by declared cardinality |
+| `graphalign` `FanOutLowMax`, `FanOutUnknown`, the fan-out scan (`Stats.FanOut`, `sqlFanOut`) | Replaced by declared cardinality (`segment.One`) |
+| `graphalign` `SignatureScale` | Became `segment.Gates` |
 | `graphalign` `ValueTypeScale` floors other than date, `PropertyScale` sex / gender `Floor` 1 | Replaced by relation outcomes and the `Near` minimum |
 | `graphalign` `DefaultConfig.ConflictPenalty` | Value carried into `subject.Weights.event.date.Conflict` and `subject.Weights.place.toponym.Conflict`; its second role, the conflict-with-decision margin, is replaced by the contested marker and the settle margin |
 | `graphalign` `mFor` fallback 0.85, `uOr` fallback 0.1 | Frequency weighting is descoped |

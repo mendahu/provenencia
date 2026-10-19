@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-14 — Segment compare
+
+**Landed 2026-10-19** in [#493](https://github.com/mendahu/provenencia/pull/493). Promote judges each link with segment compare. A link is a typed key, so a spouse never stands for a sibling and a parent link reads the same from either record. Subject of a birth or a death is one per person and one per event: a birth placed on a different event, or on a different person, subtracts 3. Every other link earns the same small support whatever the catalog holds; the fan-out scan is gone.
+
 ## S11-13 — Migrate Promote scoring onto subject compare
 
 **Landed 2026-10-18** in [#487](https://github.com/mendahu/provenencia/pull/487). Promote now judges a Source Subject against a handle with entity compare: each side is built once per proposal (the handle from its conclusion, displayed values positive and denied values negative; a person with the dated events they take part in), and every property scores its subject section weight. A birth is never filed on a death, a person who died before the Subject was born is never proposed, and sex at birth and gender compare as one. A handle is offered only when its own properties reach the weak band. Event types now earn 0.5 and cost 20. The lifespan counts but is not shown until S11-20. `core/match` and `core/database/matching` are gone.
