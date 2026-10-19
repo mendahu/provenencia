@@ -3,6 +3,7 @@ package graphalign
 import (
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/segmentcompare"
+	"github.com/mendahu/provenencia/core/shortlist"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
@@ -25,6 +26,7 @@ func DefaultConfig() Config {
 		WeakScore:        2.0,
 		ConflictPenalty:  3.0, // margin for ConflictWithFixed (S11-16)
 		Subject:          reg.Subject,
+		Shortlist:        reg.Alignment.Shortlist,
 		AlternativeLimit: 3,
 		Segment:          reg.Segment,
 	}
@@ -45,6 +47,9 @@ type Config struct {
 	// Subject is the registry's subject section: what each property counts.
 	// DefaultConfig holds the registry's.
 	Subject subjectcompare.Rules
+	// Shortlist is the registry's shortlist keys. DefaultConfig holds the
+	// registry's.
+	Shortlist shortlist.Rules
 	// Segment is the registry's segment section: what a link counts.
 	// DefaultConfig holds the registry's.
 	Segment segmentcompare.Rules

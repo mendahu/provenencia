@@ -67,3 +67,27 @@ func TestCandidates(t *testing.T) {
 		}
 	})
 }
+
+// A pair that shares no shortlist key is never offered, so the evidence a kind
+// can earn on leads that are not keyed must stay under the weak band.
+func TestUnkeyedEvidenceStaysUnderTheWeakBand(t *testing.T) {
+	cfg := graphalign.DefaultConfig()
+	for kind, leads := range cfg.Subject.Weights {
+		keyed := map[vocabkey.PropertyKey]bool{}
+		for _, lead := range cfg.Shortlist.Words[kind] {
+			keyed[lead] = true
+		}
+		if d, ok := cfg.Shortlist.Dated[kind]; ok {
+			keyed[d.Date] = true
+		}
+		var most float64
+		for lead, w := range leads {
+			if !keyed[lead] {
+				most += w.Agree
+			}
+		}
+		if most >= cfg.WeakScore {
+			t.Errorf("%s: unkeyed leads can earn %.2f, want under %.2f", kind, most, cfg.WeakScore)
+		}
+	}
+}
