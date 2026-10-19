@@ -1,7 +1,7 @@
 # Ship log — S11-14 Segment compare
 
 **Plan:** [`S11-14-segment-compare.md`](S11-14-segment-compare.md) · **Branch:** `s11-14-segment-compare` · **PR:** #493
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `97ea282e` (local, not pushed; STEP-4/5 uncommitted in the working tree). Gate not run.
@@ -70,3 +70,15 @@ Check: promotealign tests pass, including `TestLayerBridgesCoverEveryConnectRule
 Files: `core/graphalign/align.go`.
 Do: merge `layerLink` and `canonLink` into one unexported type; in `scoreFixed` compare `link.back` directly and drop `fromNeighbor`.
 Check: `go test ./core/graphalign/...`; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `5d73271e`. Gate (orchestrator) PASS against `0dfd85fb`. F-1 to F-6 done; read by the orchestrator, all **Resolved** (no Fix-now blocker or major, so no round 2):
+- CON-1 Resolved: `types.go` package doc and `promote-graph-alignment.md:76` match `Align(layer, canon, fixed, cfg)`.
+- CON-2 Resolved: AC-4.4's grep prints nothing; the `Gates` comments read "graphalign's old part_of scale".
+- MNT-1 Resolved: one `st.compare` helper; `compareSegments` and `newPairSegments` call it.
+- MNT-2 Resolved: `Propose` loads terms once and passes them to `loadLayer` and `loadCanon`.
+- MNT-3 Resolved: `eventEndpoint` beside `linkOf`; both sides use it; no fall-through to `e.To` for a bridge with no event end.
+- MNT-4 Resolved: one `adjLink` type; `fromNeighbor` gone.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: SEC-note (`loadTerms` same-key collision across origins, pre-existing), the D-11 dogfood marks (parent/child and burial weights) · to user: D-11 (c) stop — answered 2026-10-19 · CON miss: none
