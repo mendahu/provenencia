@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/promotealign"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
 const (
@@ -16,12 +18,19 @@ const (
 	benchHubs    = 5
 )
 
+// benchName is the name of person i: a given name from a pool of 200 and a
+// surname from a pool of 2000, so a probe shares a word with a few dozen.
+func benchName(i int) string {
+	return fmt.Sprintf("Given%d Surname%d", i%200, i%2000)
+}
+
 // BenchmarkProposeColdHub times a cold proposal against a catalog of about
 // 20k persons, 30k events, and a few hub places, and reports the heap afterward.
 func BenchmarkProposeColdHub(b *testing.B) {
 	f := newFixture(b)
 	city := f.place(f.source, f.artifact, "Hub")
 	hub := f.promote(city).Entity.ID
+	f.person(f.source, f.artifact, benchName(7))
 	db, err := f.c.DB()
 	must(b, err)
 	must(b, bulkCanon(db, hub))
@@ -42,12 +51,14 @@ func BenchmarkProposeColdHub(b *testing.B) {
 }
 
 // BenchmarkProposeWarmHub times a repeat proposal on BenchmarkProposeColdHub's
-// catalog, with no drop between, and reports the heap afterward. Reported, not
-// gated.
+// catalog, with no drop between, and reports the heap afterward. The Source
+// holds one unfixed named person, so each proposal looks up the shortlist index
+// and the first one builds it. Reported, not gated.
 func BenchmarkProposeWarmHub(b *testing.B) {
 	f := newFixture(b)
 	city := f.place(f.source, f.artifact, "Hub")
 	hub := f.promote(city).Entity.ID
+	f.person(f.source, f.artifact, benchName(7))
 	db, err := f.c.DB()
 	must(b, err)
 	must(b, bulkCanon(db, hub))
@@ -64,6 +75,27 @@ func BenchmarkProposeWarmHub(b *testing.B) {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 	b.ReportMetric(float64(ms.HeapAlloc), "heap-B")
+}
+
+// BenchmarkProposeAfterCommit times a proposal that follows a handle commit,
+// so each one rebuilds the shortlist index. Reported, not gated.
+func BenchmarkProposeAfterCommit(b *testing.B) {
+	f := newFixture(b)
+	city := f.place(f.source, f.artifact, "Hub")
+	hub := f.promote(city).Entity.ID
+	f.person(f.source, f.artifact, benchName(7))
+	db, err := f.c.DB()
+	must(b, err)
+	must(b, bulkCanon(db, hub))
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		f.promote(f.person(f.source, f.artifact, fmt.Sprintf("Added%d Person", i)))
+		b.StartTimer()
+		_, _, err := promotealign.Propose(f.c, f.source.ID, nil)
+		must(b, err)
+	}
 }
 
 func benchID(n int) []byte {
@@ -119,6 +151,10 @@ func bulkCanon(db *sql.DB, hub []byte) error {
 	if err != nil {
 		return err
 	}
+	nameP, err := idOf("properties", "name")
+	if err != nil {
+		return err
+	}
 	var roleTerm, birthTerm []byte
 	if err := db.QueryRow(`SELECT t.id FROM property_terms t JOIN properties p ON p.id = t.property_id
 		WHERE p.key = 'role' AND p.origin = 'provenencia' AND t.key = 'subject'`).Scan(&roleTerm); err != nil {
@@ -150,6 +186,14 @@ func bulkCanon(db *sql.DB, hub []byte) error {
 	}
 	defer val.Close()
 
+	nameVal, err := tx.Prepare(`INSERT INTO auto_reconciler_values
+		(entity_id, property_id, rank, value_name, support, against, reason)
+		VALUES (?, ?, 1, ?, 1, 0, 'kept')`)
+	if err != nil {
+		return err
+	}
+	defer nameVal.Close()
+
 	hubs := make([][]byte, benchHubs)
 	hubs[0] = hub
 	for i := 1; i < benchHubs; i++ {
@@ -166,6 +210,13 @@ func bulkCanon(db *sql.DB, hub []byte) error {
 			return err
 		}
 		persons[i] = id
+		name, err := valuecodec.MarshalName(*namevaluetest.Western(benchName(i)))
+		if err != nil {
+			return err
+		}
+		if _, err := nameVal.Exec(id, nameP, name); err != nil {
+			return err
+		}
 	}
 	for i := 0; i < benchEvents; i++ {
 		event := benchID(100000 + i)

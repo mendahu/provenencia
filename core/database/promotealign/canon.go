@@ -72,18 +72,20 @@ func loadCanon(g *graphcache.Graph, prof *profiler, layer graphalign.Layer, fixe
 		}
 		todo = append(todo, s)
 	}
-	ix, err := loadShortlist(g, prof, cfg)
-	if err != nil {
-		return graphalign.Canon{}, err
-	}
-	shortlisted, err := seedHandles(g, prof, ix, todo)
-	if err != nil {
-		return graphalign.Canon{}, err
-	}
-	for i, s := range todo {
-		for _, h := range graphalign.Candidates(s.Kind, s.Values, shortlisted[i], layer.Metas, cfg, seedCandidateLimit) {
-			if err := add(h.ID); err != nil {
-				return graphalign.Canon{}, err
+	if len(todo) > 0 {
+		ix, err := loadShortlist(g, prof, cfg)
+		if err != nil {
+			return graphalign.Canon{}, err
+		}
+		shortlisted, err := seedHandles(g, prof, ix, todo)
+		if err != nil {
+			return graphalign.Canon{}, err
+		}
+		for i, s := range todo {
+			for _, h := range graphalign.Candidates(s.Kind, s.Values, shortlisted[i], layer.Metas, cfg, seedCandidateLimit) {
+				if err := add(h.ID); err != nil {
+					return graphalign.Canon{}, err
+				}
 			}
 		}
 	}

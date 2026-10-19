@@ -271,6 +271,25 @@ func rowFor(p graphalign.Proposal, subjectID []byte) graphalign.Row {
 	return graphalign.Row{}
 }
 
+// A Source whose only Subject is fixed has nothing to seed, so Propose does not
+// read every node to build the shortlist index.
+func TestProposeWithOnlyFixedSubjectsBuildsNoIndex(t *testing.T) {
+	f := newFixture(t)
+	aPerson := f.person(f.source, f.artifact, "Gracie")
+	per := f.promote(aPerson)
+	srcB, artB := f.newSource("Obituary")
+	bPerson := f.person(srcB, artB, "Gracie")
+
+	f.propose(srcB.ID, []graphalign.Fixed{{SubjectID: bPerson.ID, HandleID: per.Entity.ID}})
+	if _, ok := f.c.Graph().MatchIndex(); ok {
+		t.Error("Propose built the match index with no Subject to seed")
+	}
+	f.propose(srcB.ID, nil)
+	if _, ok := f.c.Graph().MatchIndex(); !ok {
+		t.Error("Propose with an unfixed Subject did not build the match index")
+	}
+}
+
 // Seed from an already-promoted birth: the unpromoted person on a new Source
 // should accept the matching Gracie handle through the participation edge.
 func TestProposeSeedFromPromotedNeighbor(t *testing.T) {
