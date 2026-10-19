@@ -1,9 +1,10 @@
 # Review — S11-15 Shortlist index
 
-**Document:** [`S11-15-shortlist-index.md`](S11-15-shortlist-index.md) (Draft, Blocked on S11-13)
+**Document:** [`S11-15-shortlist-index.md`](S11-15-shortlist-index.md)
 **Round 1:** 2026-10-19 — maintainability (fresh context): Fits with changes; executability (fresh context, dry run): Not ready
-**Round 2:** due at the plan's STEP-0, once S11-13 has landed and the *(S11-13)* rows are redone against code
-**Verdict so far:** every round-1 finding answered; no blocker open; no To user item
+**Refresh:** 2026-10-19, after S11-13 landed (#487): §4 verified at `6191fc8`; D-13 builds index keys with no life (the user's PRF-1 call in the S11-13 ship log)
+**Round 2:** 2026-10-19 — maintainability: Fits with changes, no new blocker; executability: Ready with changes
+**Verdict:** Fits / Ready. No blocker open; no To user item. Status Planned
 
 ## Maintainability
 
@@ -55,7 +56,7 @@
 **Answer:** Fixed. D-2: a word with no `AliasToken` adds no alias key; aliases read from `r.Names.Aliases`; text adds no alias key. §2 Conventions spells the `bill` table and how it reaches the rules.
 
 ### X-5 · minor · `loadShortlist` repeats what the profiler holds
-**Answer:** Fixed. D-13: `loadShortlist(g, p, cfg, value)`; metas and types come from the profiler only.
+**Answer:** Fixed. D-13: `loadShortlist(g, p, cfg)` (refreshed: the value rules come from `cfg.Value`); metas and types come from the profiler only.
 
 ### X-6 · minor · Warm-path cost not covered
 **Answer:** Fixed. D-13: one lookup pass, one `g.Nodes`, one `profile` for all Subjects; T-10 `TestProposeQueryCountStaysFlatWhenWarm`.
@@ -64,3 +65,32 @@
 **Answer:** Fixed. D-11 gives each inventory row's cells; D-15 anchors the `promote-graph-alignment.md` edit by its sentence; T-7 says "the kind's `Dated.Date` lead"; STEP-6's check names the expected `g.Kind(` hit; T-7 lives in `core/graphalign/candidates_test.go`, listed in STEP-4. The seeding `Handle` fields are named in D-13.
 
 **Not checkable now (from the dry run):** the S11-14 plan does not exist yet, and the base comparison waits for S11-13's code. Both are STEP-0's job.
+
+## Round 2
+
+### M-8 (re-check) · The S11-21 scope entry does not name the rebuild it receives
+**Answer:** Fixed. D-15 adds a sentence to the S11-21 scope entry (cold rebuild timing; dirty-id path if over budget); STEP-7 and the DoD list it.
+
+### R2-M-1 · minor · T-12 cannot fail on `main` (also R2-X-2, major)
+**Answer:** Fixed. `Follow` reads cached links and node loads are batched, so query counts cannot see life loading. AC-3.5 / T-12 now assert which nodes the profiler fully built, through a `propose` seam and `ProfiledRefsForTest` (D-13).
+
+### R2-M-2 · minor · "No shortlist lead is derived" is not tested
+**Answer:** Fixed. T-6 asserts no shortlist lead is a `Lifespans` lead; the skill's "Add a shortlist key" says so.
+
+### R2-M-3 · minor · Codebase fit omits `profiler.entity` / `keyValues`
+**Answer:** Fixed. New Codebase fit row, with `propose` and the test seam.
+
+### R2-X-1 · major · A dated event with no `event_type` reaches the weak band on its date and shares no key
+**Answer:** Fixed. D-7 adds type tokens: an untyped event indexes under `""` and `*`, a typed one under its type and `*`; a typed probe looks up its type and `""`, an untyped probe `*`. AC-1.10 covers both directions.
+
+### R2-X-3 · minor · Small inconsistencies
+**Answer:** Fixed. AC-3.2 cites T-10; AC-3.4 and T-11 reordered; the `date: bef(…)` wrapper is in Conventions.
+
+### R2-X-4 · minor · Stale local `main`
+**Answer:** Fixed. **Depends on** says branch from and compare with `origin/main`.
+
+### R2-X-5 · minor · Status gate
+**Answer:** Fixed. Status is Planned after this round.
+
+### R2-X-6, R2-X-7 · Not runnable here; `Candidates` still scans the canon set
+**Answer:** Noted. `check-pr.sh` runs in CI and on the implementer's machine; the fallback scan stays by D-14.
