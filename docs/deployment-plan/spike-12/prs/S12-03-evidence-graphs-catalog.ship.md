@@ -1,7 +1,7 @@
 # Ship log — S12-03 Evidence graphs in the catalog
 
 **Plan:** [`S12-03-evidence-graphs-catalog.md`](S12-03-evidence-graphs-catalog.md) · **Branch:** `s12-03-evidence-graphs-catalog` · **PR:** #498
-**State:** fixing 3
+**State:** ready
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s12-03`, branched from `origin/main` @ `84a9b318`.
 
@@ -55,9 +55,6 @@ Reviewers: SEC+PRF (PRF-1), MNT (MNT-3). Scope `686c8e29...e9cd7580`. Not sent: 
 | MNT-3 | MNT | major | (round 1) skill names `ReconcileOnOpen` | Resolved | `add-catalog-ref/SKILL.md:74,88-89` match `session.go:49-55` and `docs/catalog-refs.md:112` |
 
 New blockers: none. MNT note (not raised): the mint-and-retry loop now appears twice in `evidencegraphs.go` (`insert`, `EnsureRefs`); the "One ref mint loop" follow-up (MNT-2) should cover the backfill path too.
-
-## Result
-Gate PASS · CI pending · open: none · follow-ups: MNT-1, MNT-2 (incl. the backfill copy), MNT-4, MNT-5, UX-1, UX-2, SEC-1 · to user: PRF-1 (answered: override D-15, fixed) · CON miss: none
 
 ## Round 2 — user re-decision (2026-10-19)
 User: "For MNT1 and MNT2, let's just implement those on this PR … MNT4 and MNT5, same as 1 and 2. … UX1 and UX2, you should write those into the scope for those PRs." `ship-pr` now carries this as the **Same-pass cleanups** rule and the **Later PR** decision (`7029cef8`).
@@ -165,3 +162,9 @@ MNT-9, MNT-10, MNT-11, MNT-12: Resolved.
 Files: `core/database/{metadatafields,properties,propertyterms,sourcetypes,subjecttypes}`.
 Do: at each `var desc any` / `if … == "" { desc = nil } else { desc = … }` block, delete the block and pass `database.NullString(<x>)` in the `Exec`. Leave `propertyterms`' trimmed `InverseKey`, `audit.go:55`, `observations/write.go:257` (different rules).
 Check: `grep -rn "desc = nil" core --include='*.go'` prints nothing; `go test ./core/...` passes; scripts/check-pr.sh PASS. Orchestrator verifies; no further review round.
+
+## Round 4 — fix (Fix plan 4)
+Head `df4e2cd7`. Gate PASS (orchestrator run; uncached `go test ./core/... ./api/...` ok). F-10 done; `grep -rn "desc = nil" core` prints nothing. MNT-17: **Resolved** (orchestrator read of the diff: 13 blocks → `database.NullString`, 5 files, −91/+13).
+
+## Result
+Gate PASS · CI pending · open: none · fixed on this PR: PRF-1, MNT-1, MNT-2, MNT-3, MNT-4, MNT-5, MNT-9, MNT-10, MNT-11, MNT-12, MNT-17, CON-R2-1 · later PR: UX-1, UX-2 (S12-05), MNT-8 (S12-04), UX-3 (S12-11) · follow-ups: SEC-1, MNT-13 · to user: PRF-1 (override D-15), MNT-1/2/4/5 (fix here) · CON miss: none · rounds: 4 review (rounds 3–4 user-requested)
