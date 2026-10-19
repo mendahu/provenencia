@@ -22,10 +22,12 @@ type Registry struct {
 	Subject subjectcompare.Rules
 	// Segment is layer 5: what a matching or differing link counts.
 	Segment segmentcompare.Rules
+	// Alignment is layer 6: how Promote finds and walks to candidates.
+	Alignment Alignment
 }
 
 // Default is the shipped registry. Each call builds new slices and maps, so a
 // caller that changes its copy changes no one else's.
 func Default() Registry {
-	return Registry{Value: defaultValue(), Subject: defaultSubject(), Segment: defaultSegment()}
+	return Registry{Value: defaultValue(), Subject: defaultSubject(), Segment: defaultSegment(), Alignment: defaultAlignment()}
 }
