@@ -153,8 +153,8 @@ private struct ListContent: View {
 - `warmListQueries()` calls `session.query(key)` — **only** from `.task`, actions, or tests.
 - Display arrays read `session.queryHandle(key)?.value ?? []`.
 - CRUD: `session.apply(CatalogMutation…)` only. Optional `setQueryValue` overlay; never `query` after `apply`.
-- `syncCatalogCounts()` when list handle reaches `.ready` (sidebar badges).
-- A mutation that changes a sidebar count is listed in `CatalogQueryRegistry.navCountTriggers`; `WorkspaceSession.apply` recounts after it. Features never call `CatalogCounts.refreshAll()`. Publish from a list only on load: the list may be hidden or still reloading when a write returns.
+- Sidebar badges: the list view publishes with `.onSettled(handle) { model.syncCatalogCounts() }`, which runs on appear and on each `revision` bump while `handle.isSettled` (`.ready`, not refetching). Never on `onChange(of: status)`: a stale refetch stays `.ready`, so its reload is `.ready → .ready`.
+- A mutation that changes a sidebar count is listed in `CatalogQueryRegistry.navCountTriggers`; `WorkspaceSession.apply` recounts after it. Features never call `CatalogCounts.refreshAll()`. Publish from a list only on load, never after its own write: the list may be hidden or still reloading when a write returns.
 
 **Master–detail selection** (fields/types): `reconcileSelection(for:)` on
 `onChange(of: navigation.currentLocation)` + `onChange(of: handle.status/value)` —

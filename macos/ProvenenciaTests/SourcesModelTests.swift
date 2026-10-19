@@ -390,12 +390,11 @@ struct SourcesModelTests {
             return
         }
         #expect(handle.isFetching)
-        counts.publishSources(7)
-        model.syncCatalogCountsIfLoaded(handle)
-        #expect(counts.sources == 7)
+        #expect(!handle.isSettled)
 
         await waitForQuery(handle)
-        model.syncCatalogCountsIfLoaded(handle)
+        #expect(handle.isSettled)
+        model.syncCatalogCounts()
         #expect(model.sources.count == 2)
         #expect(counts.sources == 2)
     }

@@ -257,7 +257,6 @@ final class MetadataModel {
                 body: L10n.Metadata.toastDeletedBody(label: field.label),
                 tone: .success
             )
-            syncCatalogCounts()
         }
     }
 
@@ -292,7 +291,6 @@ final class MetadataModel {
                     body: L10n.Metadata.toastAddedBody(label: created.label, key: created.key),
                     tone: .success
                 )
-                syncCatalogCounts()
                 return WorkspaceLocation(
                     section: .metadata,
                     fieldId: created.id,
@@ -326,6 +324,9 @@ final class MetadataModel {
         }
     }
 
+    /// Publishes the count of a settled list to the sidebar. The view calls it
+    /// through `onSettled`: a refetch keeps the cached `.ready` value, which
+    /// may be stale.
     func syncCatalogCounts() {
         catalogCounts?.publishMetadata(.from(fields))
     }

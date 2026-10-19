@@ -250,6 +250,7 @@
 		07D60E0FE9704E4723AE18DD /* PVLogoMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11ADAF744C32587CD34CDD23 /* PVLogoMark.swift */; };
 		080D24179717B185C273478D /* PVField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16D4D3531F81FABFCDDE4F84 /* PVField.swift */; };
 		13208FE0B57739DECCA156C7 /* WorkspaceChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B33345A1FE839C1516B4FC /* WorkspaceChrome.swift */; };
+		AA0000000000000000000A15 /* QueryHandleSettled.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000A14 /* QueryHandleSettled.swift */; };
 		14A19539FB0D86BB050EC437 /* WorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8F65C4577481FF5F505271F /* WorkspaceView.swift */; };
 		1538A09B7711459456E31FCD /* PVRadius.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B7FCE6BAF87CC79B6907492 /* PVRadius.swift */; };
 		210C39BBEED71061425C528F /* PVElevation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A63753F8D90991976A28F13 /* PVElevation.swift */; };
@@ -684,6 +685,7 @@
 		A1B2C3D4E5F60718293A4B5C /* WindowDragRegion.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WindowDragRegion.swift; sourceTree = "<group>"; };
 		7F69681C808F487B9BD6E7AA /* WindowSizing.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WindowSizing.swift; sourceTree = "<group>"; };
 		A5B33345A1FE839C1516B4FC /* WorkspaceChrome.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceChrome.swift; sourceTree = "<group>"; };
+		AA0000000000000000000A14 /* QueryHandleSettled.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QueryHandleSettled.swift; sourceTree = "<group>"; };
 		AA0000000000000000000010 /* ProvenenciaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProvenenciaApp.swift; sourceTree = "<group>"; };
 		AA0000000000000000000011 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000012 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -989,6 +991,7 @@
 				AA000000000000000000042F /* WorkspaceDestinationHost.swift */,
 				D8F65C4577481FF5F505271F /* WorkspaceView.swift */,
 				A5B33345A1FE839C1516B4FC /* WorkspaceChrome.swift */,
+				AA0000000000000000000A14 /* QueryHandleSettled.swift */,
 			);
 			name = Workspace;
 			path = Workspace;
@@ -2087,6 +2090,7 @@
 				AA0000000000000000000483 /* EvidenceSubjectKindStyle.swift in Sources */,
 				14A19539FB0D86BB050EC437 /* WorkspaceView.swift in Sources */,
 				13208FE0B57739DECCA156C7 /* WorkspaceChrome.swift in Sources */,
+				AA0000000000000000000A15 /* QueryHandleSettled.swift in Sources */,
 				840A56FF5DC13597C1DFDDF9 /* TrafficLights.swift in Sources */,
 				B2C3D4E5F60718293A4B5C6D /* WindowDragRegion.swift in Sources */,
 				327D9751467546DCB56EC478 /* WindowSizing.swift in Sources */,
