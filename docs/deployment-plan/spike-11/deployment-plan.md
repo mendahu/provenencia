@@ -62,7 +62,7 @@ These are the calls for this spike. PR plans treat them as binding.
 - **Subject compare returns similarity (0–1) and evidence (points)** ([layer 3](comparison-layers.md#layer-3-subject-comparison)). Similarity weighs a conflict by its penalty. No knockout flag: a decisive conflict (event type) is a large penalty. Pairs compared together: sex at birth with gender; `date` with `start_date` / `end_date`.
 - **Entity compare is against the reconciled conclusion** ([entities](comparison-layers.md#entities-compare-against-the-conclusion)). The profile is strict: displayed values positive, denied values negative, nothing else. `subjectprofile.Build` also takes `Options.Excluding`, a list of members to leave out.
 - **Lifespan is for people only** ([lifespan](comparison-layers.md#lifespan-a-derived-property-for-people)): a window and a span from every dated event the person takes part in (user, 2026-10-18); a span outside the other side's window is a large conflict, agreement weighs almost nothing.
-- **Segment compare is one hop and pure** ([segments](comparison-layers.md#segments-layer-5-and-graph-alignment-layer-6)). Only subject-of-birth and subject-of-death are declared one-cardinality; a differing neighbor there subtracts. Neighbor credit travels one hop; chains come from the walk.
+- **Segment compare is one hop and pure** ([segments](comparison-layers.md#segments-layer-5-and-graph-alignment-layer-6)). Only subject-of-birth and subject-of-death are declared one-cardinality, from both ends (user, 2026-10-19); a differing neighbor there subtracts. Neighbor credit travels one hop; chains come from the walk.
 - **Graph alignment follows the layer 6 procedure** ([procedure](comparison-layers.md#layer-6-procedure)): shortlist → score, keep top K with ties → one queue → segments around accepted pairs → settle dirty pairs. The answer doesn't depend on where the walk starts.
 - **Bands come from evidence** ([bands](comparison-layers.md#bands)): similarity only gates candidates and gives the first sort. The accept bar is its own setting. A conflict shows a contested marker; it never caps the band.
 - **Frequency weighting is gone**, for names, event types and toponyms ([frequency](comparison-layers.md#frequency)).
@@ -101,7 +101,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-12 | Lifespan for people | 3 | Profile builder derives a lifespan; subject compare checks it | — | S11-11 | [plan](prs/S11-12-lifespan.md) | Landed #480 |
 | S11-24 | Delete frequency weighting | 3 | `Stats.ValueFreq`, m / u priors, frequency scales and their benchmark go | — | S11-05 | [plan](prs/S11-24-delete-frequency.md) | Landed #483 |
 | S11-13 | Migrate Promote scoring onto subject compare | 3 | Property scoring, seeding, duplicate rows; values loader moves; delete `core/match`, `core/database/matching` | — | S11-12, S11-24 | [plan](prs/S11-13-promote-subject-compare.md) | Landed #487 |
-| S11-14 | Segment compare | 4 | `segmentcompare`, typed bridge keys, birth / death cardinality, one-hop credit | — | S11-13 | — | Scoped |
+| S11-14 | Segment compare | 4 | `segmentcompare`, typed bridge keys, birth / death cardinality, one-hop credit | — | S11-13 | [plan](prs/S11-14-segment-compare.md) | Blocked — on S11-13 |
 | S11-15 | Shortlist index | 4 | Key → handles per kind on `graphcache`; registry shortlist keys | — | S11-13 | — | Scoped |
 | S11-16 | Rewrite graph alignment | 4 | Layer 6 procedure, bands from evidence, accept bar; old walk and registry deleted | — | S11-14, S11-15 | — | Scoped |
 | S11-17 | Contested flag through FFI | 4 | Proposal rows carry contested and move reasons to Swift | — | S11-16 | — | Scoped |
@@ -341,8 +341,8 @@ Also builds `core/subjectcompare`'s `invariants_test.go` lead groups (`kindGroup
 
 #### S11-14 — Segment compare
 
-**Ships.** `core/segmentcompare`: neighbor by entity compare, bridge by subject compare on its properties plus direction and inverse terms; typed `BridgeKey`; registry segment section (subject of birth / death is one-cardinality, neighbor credit one hop, link support). The layer loader reads link kinds from `connectrules` instead of a list in code. Output carries value refs for the evidence bundle. Fan-out goes: `Stats.FanOut`, `promotealign/stats.go`'s `addFanOut` / `sqlFanOut`, `FanOutUnknown`. Extends the matching skill.
-**Not this PR.** The walk (S11-16).
+**Ships.** `core/segmentcompare`: neighbor by entity compare, the bridge as a typed `BridgeKey` (role or relationship term, direction and inverse terms, event type); registry segment section (subject of birth / death is one-cardinality from both ends, user 2026-10-19; neighbor credit one hop, link support). The layer loader reads link kinds from `connectrules` instead of a list in code. Output carries value refs for the evidence bundle. Fan-out goes: `Stats.FanOut`, `promotealign/stats.go`'s `addFanOut` / `sqlFanOut`, `FanOutUnknown`. Extends the matching skill.
+**Not this PR.** The walk (S11-16). Comparing a bridge's own properties (place relationship dates) through subject compare (S11-16; user, 2026-10-19).
 **Check.** A spouse never corresponds to a sibling; parent ↔ child corresponds with ends swapped; differing births subtract; differing residences are unknown.
 **Context.** [Segments](comparison-layers.md#segments-layer-5-and-graph-alignment-layer-6).
 
@@ -356,6 +356,7 @@ Also builds `core/subjectcompare`'s `invariants_test.go` lead groups (`kindGroup
 #### S11-16 — Rewrite graph alignment
 
 **Ships.** `graphalign.Align` follows the layer 6 procedure: shortlist and nominate, top K with ties, one queue, segments around accepted pairs, dirty-pair settling with reasons, bands from evidence, the accept bar. Contested is a `RowFlags` field and move reasons are `Reason` codes; the plan decides whether `ConflictWithFixed` is subsumed. Registry alignment section. Delete the old walk, fallback, `refineOneHop` and `core/graphalign/registry.go`. [`promote-graph-alignment.md`](../../promote-graph-alignment.md) and the matching skill are updated.
+Segment compare learns unplaced neighbors (entity compare decides), and a bridge's own properties (place relationship dates) through subject compare if a golden needs them (moved from S11-14, 2026-10-19).
 **Not this PR.** FFI and UI for contested (S11-17, S11-18). Memoization (S11-21).
 **Check.** The invariants hold (order, decided rows, re-run, start-independence); name + birth date proposes strong; a decision moves only its neighborhood.
 **Context.** [Layer 6 procedure](comparison-layers.md#layer-6-procedure), [bands](comparison-layers.md#bands).
