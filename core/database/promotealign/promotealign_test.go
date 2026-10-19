@@ -1437,3 +1437,47 @@ func TestProposeColdIndexBuildsNoUnshortlistedLife(t *testing.T) {
 		t.Fatalf("profiled %v, want only %v", got, want)
 	}
 }
+
+// A same-name, same-birth record whose sex conflicts still files strongly on
+// the links, and is marked contested for the conflict.
+func TestProposeMarksAConflictingRowContested(t *testing.T) {
+	f := newFixture(t)
+	sexed := func(src sources.Source, art artifacts.Artifact, sex string) (subjects.Subject, subjects.Subject) {
+		p := f.person(src, art, "Ann Ames")
+		f.cite(art, p, observations.Input{
+			PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", sex).ID,
+		})
+		b := f.datedBirth(src, art, 1817)
+		f.participation(src, art, p, b, "subject")
+		return p, b
+	}
+	pF, bF := sexed(f.source, f.artifact, "female")
+	annH := f.promote(pF).Entity.ID
+	f.promote(bF)
+
+	src, art := f.newSource("Register")
+	pM, bM := sexed(src, art, "male")
+	got := f.propose(src.ID, nil)
+	person, birth := rowFor(got, pM.ID), rowFor(got, bM.ID)
+	if person.Target != graphalign.TargetHandle || !bytes.Equal(person.HandleID, annH) ||
+		person.Assessment != graphalign.AssessStrong || !person.Flags.Contested {
+		t.Fatalf("person row %+v, want the female Ann Ames, strong and contested", person)
+	}
+	if birth.Target != graphalign.TargetHandle || birth.Assessment != graphalign.AssessStrong || birth.Flags.Contested {
+		t.Fatalf("birth row %+v, want strong and not contested", birth)
+	}
+}
+
+// A name one letter off is not shortlisted, so it is never scored against the
+// filed person: the row is New.
+func TestProposeDoesNotCompareAnUnshortlistedHandle(t *testing.T) {
+	f := newFixture(t)
+	f.promote(f.person(f.source, f.artifact, "Robins"))
+
+	src, art := f.newSource("Register")
+	robnis := f.person(src, art, "Robnis")
+	row := rowFor(f.propose(src.ID, nil), robnis.ID)
+	if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch || len(row.Alternatives) != 0 {
+		t.Fatalf("Robnis row %+v, want New with no_match and no alternatives", row)
+	}
+}
