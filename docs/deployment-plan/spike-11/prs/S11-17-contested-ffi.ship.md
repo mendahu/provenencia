@@ -45,4 +45,4 @@ Head `962b9037`. Gate PASS (orchestrator ran it). F-1 done: `TestProposeNegative
 Not run: round 1 had no Fix-now blocker or major.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: MNT-4 · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: MNT-4 · to user: — · CON miss: none
