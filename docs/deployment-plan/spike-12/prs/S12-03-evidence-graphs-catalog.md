@@ -1,7 +1,7 @@
 # S12-03 — Evidence graphs in the catalog
 
 **Status:** Landed in [#498](https://github.com/mendahu/provenencia/pull/498) (2026-10-19)
-**Landed:** One difference. D-15: `evidencegraphs.EnsureRefs` runs the backfill in one transaction with the `insert` retry on a ref collision (`maxRefRetries`, then `ErrInvalid`), per user override of D-15 in review round 1; the Decision text above still says "no retry".
+**Landed:** Differences. (1) Review round 2 superseded the Out line "One set of catalog-wide list flags" and D-5's bool shape, by user re-decision: `effects.List` (`ListVocabulary`, `ListPropertyUsage`, `ListEvidenceGraphs`), `Effect.Lists` / `Effect.ListsOnField` and `Set.Lists` / `Set.Has` replace the `Vocabulary`, `PropertyUsage` and `EvidenceGraphs` bools; `WriteEffects` drops `vocabulary` and `property_usage` for `repeated string lists = 13`; Swift's `CatalogWriteEffects.lists` holds `CatalogList` values. (2) D-15: `evidencegraphs.EnsureRefs` runs the backfill in one transaction with the `insert` retry on a ref collision (`maxRefRetries`, then `ErrInvalid`), per user override of D-15 in review round 1; the Decision text above still says "no retry".
 **Spike / slice:** Spike 12 · Slice 2 — Graphs in the catalog
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: schema, one Go package and the create paths; no FFI, no Swift)

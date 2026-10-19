@@ -90,7 +90,7 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !set.EvidenceGraphs {
+	if !set.Has(effects.ListEvidenceGraphs) {
 		t.Fatal("graph and link changes did not flag the graph list")
 	}
 	if len(set.SourceScopes) != 1 || !bytes.Equal(set.SourceScopes[0], src.ID) {
@@ -127,7 +127,7 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
-		if got.EvidenceGraphs {
+		if got.Has(effects.ListEvidenceGraphs) {
 			t.Fatalf("%s flagged the graph list", name)
 		}
 	}

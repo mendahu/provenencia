@@ -874,7 +874,7 @@ struct CatalogQueryRegistryTests {
             handles: ["e1"],
             sources: ["s1"],
             citationSources: ["s1"],
-            propertyUsage: true,
+            lists: [.propertyUsage],
             headerHandles: ["e2"]
         ), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),

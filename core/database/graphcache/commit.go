@@ -20,7 +20,7 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 	}
 	g.applyActivity(c)
 	set := c.Effects
-	if set.Vocabulary {
+	if set.Has(effects.ListVocabulary) {
 		g.DropLabels()
 		g.vocabOK = false
 		g.vocab = Vocabulary{}

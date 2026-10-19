@@ -1,6 +1,8 @@
 package effects
 
 import (
+	"slices"
+
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 )
@@ -24,8 +26,27 @@ type SearchIDs struct {
 	IDs  [][]byte
 }
 
+// List names a catalog-wide list a write changed: one the app caches whole
+// and a row change cannot be patched into. The values are the wire keys
+// (WriteEffects.lists) and Swift's CatalogList raw values.
+type List string
+
+const (
+	// ListVocabulary: a vocabulary label (source type, metadata field,
+	// subject type, Property, Property term) changed.
+	ListVocabulary List = "vocabulary"
+	// ListPropertyUsage: an Observation was created, deleted, or moved to
+	// another Property, so the Properties workspace's usedBy counts changed.
+	ListPropertyUsage List = "property_usage"
+	// ListEvidenceGraphs: a graph or link row was written.
+	ListEvidenceGraphs List = "evidence_graphs"
+)
+
+// Lists is every catalog-wide list, in the order Set.Lists reports them.
+var Lists = []List{ListVocabulary, ListPropertyUsage, ListEvidenceGraphs}
+
 // Set is what a batch of changes touches. Empty Handles or Search means that
-// job has nothing to do. Vocabulary and Structure are catalog-wide.
+// job has nothing to do. Lists and Structure are the catalog-wide fields.
 type Set struct {
 	Handles [][]byte
 	// Sources are the Sources whose graph changed (Effect.Source): what the
@@ -34,9 +55,6 @@ type Set struct {
 	// CitationSources are the Sources whose citation reads (citation counts,
 	// citations by artifact) a change moves (Effect.CitationSource).
 	CitationSources [][]byte
-	// PropertyUsage is set when an Observation was created, deleted, or moved
-	// to another Property: the Properties workspace's usedBy counts changed.
-	PropertyUsage bool
 	// SourceScopes are the Sources whose last activity a change moves
 	// (Effect.SourceScope), the audit source scope.
 	SourceScopes [][]byte
@@ -44,10 +62,11 @@ type Set struct {
 	// batch moves (Effect.HandleScope); Handles is the recompute set.
 	HandleScopes [][]byte
 	Search       []SearchIDs
-	Vocabulary   bool
-	// EvidenceGraphs is set when a graph or link row was written: the graph list changed.
-	EvidenceGraphs bool
-	Structure      bool
+	// Lists are the catalog-wide lists the batch changed, deduped, in the
+	// order of Lists.
+	Lists []List
+	// Structure is set when the graph cache drops whole; it is not a list.
+	Structure bool
 	// HeaderDeps are handles whose stored rows read Handles. Run fills this
 	// from the walk RecomputeTx already did. HeaderDepsWalked says that walk
 	// happened, including when it found nobody, so a commit drops those rows
@@ -68,9 +87,6 @@ type Effect struct {
 	// citations by artifact) load the table. A table neither loads leaves it
 	// empty.
 	CitationSource Path
-	// PropertyUsage marks a table whose creates, deletes, and property_id
-	// edits move the Properties workspace's usedBy counts.
-	PropertyUsage bool
 	// SourceScope is the Source whose last activity (audit source scope) this
 	// change moves.
 	SourceScope Path
@@ -79,11 +95,23 @@ type Effect struct {
 	// change moves; Handles is the recompute set.
 	HandleScope Path
 	Search      []SearchDoc
-	Vocabulary  bool
-	// EvidenceGraphs marks a table whose rows are graphs or links: the graph list changed.
-	EvidenceGraphs bool
-	Structure      Path
-	None           bool
+	// Lists are the catalog-wide lists a change to the table moves.
+	Lists []List
+	// ListsOnField, when set, narrows an update: it moves Lists only if it
+	// writes this field. Creates and deletes always move them.
+	ListsOnField string
+	Structure    Path
+	None         bool
+}
+
+// Has reports whether the batch changed the list.
+func (s Set) Has(l List) bool {
+	for _, got := range s.Lists {
+		if got == l {
+			return true
+		}
+	}
+	return false
 }
 
 // Handle queries mirror autoreconciler. They stay here so the registry can
@@ -138,16 +166,16 @@ func ownedValue(entity, col string) Effect {
 	}
 }
 
-// usesProperty reports whether the change moves the Properties workspace's
-// usedBy counts.
-func (e Effect) usesProperty(ch rowchange.Change) bool {
-	if !e.PropertyUsage {
+// movesLists reports whether the change moves the entry's Lists: always for
+// a create or delete, and for an update only when it writes ListsOnField.
+func (e Effect) movesLists(ch rowchange.Change) bool {
+	if len(e.Lists) == 0 {
 		return false
 	}
-	if ch.Action != rowchange.ActionUpdate {
+	if ch.Action != rowchange.ActionUpdate || e.ListsOnField == "" {
 		return true
 	}
-	_, ok := ch.Fields["property_id"]
+	_, ok := ch.Fields[e.ListsOnField]
 	return ok
 }
 
@@ -204,7 +232,8 @@ var registry = map[string]Effect{
 		Entity:         "observation",
 		Source:         up("citation_id", "artifact_id", "source_id"),
 		CitationSource: up("citation_id", "artifact_id", "source_id"),
-		PropertyUsage:  true,
+		Lists:          []List{ListPropertyUsage},
+		ListsOnField:   "property_id",
 		SourceScope:    up("citation_id", "artifact_id", "source_id"),
 		Handles:        observationMembers,
 		HandleScope:    observationMembers,
@@ -216,14 +245,14 @@ var registry = map[string]Effect{
 	},
 	"subjects": {Entity: "subject", Source: field("source_id"), SourceScope: field("source_id")},
 	"evidence_graphs": {
-		Entity:         "evidence_graph",
-		SourceScope:    field("source_id"),
-		EvidenceGraphs: true,
+		Entity:      "evidence_graph",
+		SourceScope: field("source_id"),
+		Lists:       []List{ListEvidenceGraphs},
 	},
 	"evidence_graph_artifacts": {
-		Entity:         "evidence_graph_artifact",
-		SourceScope:    up("graph_id", "source_id"),
-		EvidenceGraphs: true,
+		Entity:      "evidence_graph_artifact",
+		SourceScope: up("graph_id", "source_id"),
+		Lists:       []List{ListEvidenceGraphs},
 	},
 	"files": {
 		Entity:      "file",
@@ -234,27 +263,27 @@ var registry = map[string]Effect{
 	"name_values":      ownedValue("name_value", "value_name_id"),
 	"depiction_values": ownedValue("depiction_value", "value_depiction_id"),
 	"source_types": {
-		Entity:     "source_type",
-		Vocabulary: true,
+		Entity: "source_type",
+		Lists:  []List{ListVocabulary},
 		Search: []SearchDoc{
 			{Kind: DocSourceType, Path: self()},
 			{Kind: DocSource, Path: inbound("sources", "source_type_id")},
 		},
 	},
 	"source_metadata_fields": {
-		Entity:     "metadata_field",
-		Vocabulary: true,
-		Search:     []SearchDoc{{Kind: DocMetadataField, Path: self()}},
+		Entity: "metadata_field",
+		Lists:  []List{ListVocabulary},
+		Search: []SearchDoc{{Kind: DocMetadataField, Path: self()}},
 	},
-	"subject_types": {Vocabulary: true},
+	"subject_types": {Lists: []List{ListVocabulary}},
 	"properties": {
-		Entity:     "property",
-		Vocabulary: true,
-		Handles:    onField("cardinality", sqlPath(sqlHandlesForProperty)),
+		Entity:  "property",
+		Lists:   []List{ListVocabulary},
+		Handles: onField("cardinality", sqlPath(sqlHandlesForProperty)),
 	},
 	"property_terms": {
-		Entity:     "property_term",
-		Vocabulary: true,
+		Entity: "property_term",
+		Lists:  []List{ListVocabulary},
 		// A neutral term reconciles differently, so the handles that observe
 		// it are recomputed.
 		Handles: onField("neutral", sqlPath(sqlHandlesForTerm)),
@@ -347,10 +376,18 @@ func (e Effect) validate(table string) error {
 				return errf("%s: None entry still has effects", table)
 			}
 		}
-		if len(e.Search) > 0 || e.Vocabulary || e.EvidenceGraphs {
+		if len(e.Search) > 0 || len(e.Lists) > 0 {
 			return errf("%s: None entry still has effects", table)
 		}
 		return nil
+	}
+	for _, l := range e.Lists {
+		if !slices.Contains(Lists, l) {
+			return errf("%s: undeclared list %q", table, l)
+		}
+	}
+	if e.ListsOnField != "" && len(e.Lists) == 0 {
+		return errf("%s: ListsOnField without Lists", table)
 	}
 	for _, p := range e.paths() {
 		if p.zero() {

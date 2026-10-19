@@ -66,7 +66,7 @@ func AllNone(changes []rowchange.Change) (bool, error) {
 }
 
 // Resolve is the whole effect of a batch: evidence sources, source scopes, handles, search documents,
-// and whether vocabulary labels or structure changed.
+// the catalog-wide lists that changed, and whether structure changed.
 func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 	if tx == nil {
 		return Set{}, errf("effects: nil tx")
@@ -75,17 +75,17 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 	var set Set
 	search := map[string][][]byte{}
 	var searchOrder []string
+	listed := map[List]bool{}
 	for _, ch := range changes {
 		table, ok := entityTable[ch.EntityType]
 		if !ok {
 			return Set{}, errf("effects: no entry for %s", ch.EntityType)
 		}
 		eff := registry[table]
-		if eff.Vocabulary {
-			set.Vocabulary = true
-		}
-		if eff.EvidenceGraphs {
-			set.EvidenceGraphs = true
+		if eff.movesLists(ch) {
+			for _, l := range eff.Lists {
+				listed[l] = true
+			}
 		}
 		w := &walk{q: tx, ch: ch, ghosts: ghosts, table: table}
 		var err error
@@ -96,9 +96,6 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 		set.CitationSources, err = appendPath(w, table, eff.CitationSource, set.CitationSources)
 		if err != nil {
 			return Set{}, err
-		}
-		if eff.usesProperty(ch) {
-			set.PropertyUsage = true
 		}
 		set.SourceScopes, err = appendPath(w, table, eff.SourceScope, set.SourceScopes)
 		if err != nil {
@@ -133,6 +130,11 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 				searchOrder = append(searchOrder, doc.Kind)
 			}
 			search[doc.Kind] = appendIDs(search[doc.Kind], ids)
+		}
+	}
+	for _, l := range Lists {
+		if listed[l] {
+			set.Lists = append(set.Lists, l)
 		}
 	}
 	for _, kind := range searchOrder {

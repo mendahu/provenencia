@@ -63,3 +63,15 @@ func TestWriteEffectsProto(t *testing.T) {
 		})
 	}
 }
+
+func TestWriteEffectsProtoLists(t *testing.T) {
+	got := writeEffectsProto(writes.Result{Effects: effects.Set{
+		Lists: []effects.List{effects.ListVocabulary, effects.ListEvidenceGraphs},
+	}})
+	if want := []string{"vocabulary", "evidence_graphs"}; !reflect.DeepEqual(got.GetLists(), want) {
+		t.Fatalf("Lists = %v, want %v", got.GetLists(), want)
+	}
+	if got := writeEffectsProto(writes.Result{}); got.GetLists() != nil {
+		t.Fatalf("empty set Lists = %v", got.GetLists())
+	}
+}

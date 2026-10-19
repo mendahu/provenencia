@@ -417,7 +417,7 @@ Rules the schema and `core/database/evidencegraphs` hold today:
 - A new Subject joins its Source's graph through `evidencegraphs.SoleGraphTx`, the one bridge until a Subject can name its graph.
 - A new Artifact is linked to every graph of its Source, or to the graphs in `CreateInput.GraphIDs`. A graph of another Source, an unknown id or a repeated id is `evidencegraphs.invalid` and the whole write rolls back.
 - `Link` refuses an Artifact of another Source. `Unlink` is refused while a Citation on the Artifact has an Observation on a Subject of that graph (`evidencegraphs.artifact_in_use`) and when it is the graph's only link (`evidencegraphs.last_artifact`). Linking a linked pair and unlinking an unlinked pair change nothing.
-- A graph is part of its Source's record and a link row is part of both ends: their deletes are audited and released with the Source or Artifact ([`catalog-deletes.md`](catalog-deletes.md)). Both audit under the Source's scope and flag the graph list (`effects.Set.EvidenceGraphs`).
+- A graph is part of its Source's record and a link row is part of both ends: their deletes are audited and released with the Source or Artifact ([`catalog-deletes.md`](catalog-deletes.md)). Both audit under the Source's scope and flag the graph list (`effects.ListEvidenceGraphs` in `effects.Set.Lists`).
 
 ---
 

@@ -53,6 +53,19 @@ enum CatalogMutation: Sendable, Equatable {
     case createdPropertyTerm(propertyId: String)
 }
 
+/// A catalog-wide list a write changed. The raw values are Go's
+/// `effects.List` wire keys (`WriteEffects.lists`); a key this build does not
+/// know is dropped when the effects are decoded.
+enum CatalogList: String, Sendable, CaseIterable {
+    /// A vocabulary label changed.
+    case vocabulary = "vocabulary"
+    /// An Observation was created, deleted, or moved to another Property, so
+    /// the Properties workspace's `usedBy` counts changed.
+    case propertyUsage = "property_usage"
+    /// A graph or link row was written.
+    case evidenceGraphs = "evidence_graphs"
+}
+
 /// Handles and Sources a write reported. The session drops those cached
 /// reads and patches the rows whose last activity it moved.
 struct CatalogWriteEffects: Sendable, Equatable {
@@ -63,10 +76,9 @@ struct CatalogWriteEffects: Sendable, Equatable {
     /// Sources whose citation reads moved: citation counts and citations by
     /// artifact. A Subject edit is in `sources` and not here.
     var citationSources: [String] = []
-    /// An Observation was created, deleted, or moved to another Property, so
-    /// the Properties workspace's `usedBy` counts changed.
-    var propertyUsage = false
-    var vocabulary = false
+    /// Catalog-wide lists this write changed. Each is a cached read the write
+    /// cannot patch row by row; see `CatalogQueryRegistry.invalidations(for:project:)`.
+    var lists: Set<CatalogList> = []
     var structure = false
     var headerHandles: [String] = []
     /// Handles whose last-updated time this write moved. The session patches

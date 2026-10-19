@@ -286,8 +286,8 @@ struct CatalogQueryRegistry: Sendable {
 
     /// Cache effects of one write's reported handles and Sources. Each read
     /// follows what feeds it: the Source graph per `sources`, the citation
-    /// reads per `citationSources`, the Properties workspace on `propertyUsage`,
-    /// vocabulary, or structure. Handle scopes invalidate nothing: they move
+    /// reads per `citationSources`, the catalog-wide lists per `lists`, and the
+    /// Properties workspace on structure. Handle scopes invalidate nothing: they move
     /// through `lastUpdatedPatch`.
     func invalidations(for effects: CatalogWriteEffects, project: ProjectKey) -> [CatalogQueryInvalidation] {
         var out: [CatalogQueryInvalidation] = []
@@ -300,14 +300,13 @@ struct CatalogQueryRegistry: Sendable {
         if !effects.citationSources.isEmpty {
             out.append(.allCached(.citationsByArtifact))
         }
-        if effects.propertyUsage {
-            out.append(.key(.propertiesWorkspace(project: project)))
+        var listed = CatalogList.allCases.filter { effects.lists.contains($0) }
+            .flatMap { Self.invalidations(for: $0, project: project) }
+        if effects.structure {
+            listed.append(.key(.propertiesWorkspace(project: project)))
         }
-        if effects.vocabulary || effects.structure {
-            let workspace = CatalogQueryInvalidation.key(.propertiesWorkspace(project: project))
-            if !out.contains(workspace) {
-                out.append(workspace)
-            }
+        for invalidation in listed where !out.contains(invalidation) {
+            out.append(invalidation)
         }
         if !effects.touchedHandles.isEmpty {
             out.append(.key(.personsList(project: project)))
@@ -318,6 +317,17 @@ struct CatalogQueryRegistry: Sendable {
             out.append(.key(.conclusionDetail(project: project, entityId: entityID)))
         }
         return out
+    }
+
+    /// The cached reads one catalog-wide list feeds.
+    static func invalidations(for list: CatalogList, project: ProjectKey) -> [CatalogQueryInvalidation] {
+        switch list {
+        case .vocabulary, .propertyUsage:
+            return [.key(.propertiesWorkspace(project: project))]
+        case .evidenceGraphs:
+            // S12-05 adds the graph list's key here.
+            return []
+        }
     }
 
     /// The deduped union of what a write's effects reported and what its

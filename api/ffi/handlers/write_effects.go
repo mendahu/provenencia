@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -12,8 +13,7 @@ func writeEffectsProto(res writes.Result) *engine.WriteEffects {
 		Sources:         idStrings(set.Sources),
 		SourceScopes:    idStrings(set.SourceScopes),
 		CitationSources: idStrings(set.CitationSources),
-		PropertyUsage:   set.PropertyUsage,
-		Vocabulary:      set.Vocabulary,
+		Lists:           listStrings(set.Lists),
 		Structure:       set.Structure,
 		HeaderHandles:   idStrings(set.HeaderDeps),
 		HandleScopes:    idStrings(set.HandleScopes),
@@ -31,6 +31,17 @@ func idStrings(ids [][]byte) []string {
 		if s := uuidString(id); s != "" {
 			out = append(out, s)
 		}
+	}
+	return out
+}
+
+func listStrings(lists []effects.List) []string {
+	if len(lists) == 0 {
+		return nil
+	}
+	out := make([]string, len(lists))
+	for i, l := range lists {
+		out[i] = string(l)
 	}
 	return out
 }

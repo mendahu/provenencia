@@ -1,12 +1,13 @@
 package effects
 
 import (
-	"github.com/mendahu/provenencia/core/database/rowchange"
 	"reflect"
+	"slices"
 	"sort"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 )
 
 // TestEveryNonSkipTableHasAnEntry checks the registry against catalogmodel.
@@ -65,7 +66,7 @@ func TestGradeTablesHaveNoHandles(t *testing.T) {
 		if !ok {
 			t.Fatalf("missing %s", name)
 		}
-		if !eff.None || !eff.Handles.zero() || eff.Vocabulary {
+		if !eff.None || !eff.Handles.zero() || len(eff.Lists) > 0 {
 			t.Fatalf("%s should be an empty effect, got %+v", name, eff)
 		}
 	}
@@ -77,7 +78,7 @@ func hasWork(e Effect) bool {
 			return true
 		}
 	}
-	return len(e.Search) > 0 || e.Vocabulary
+	return len(e.Search) > 0 || len(e.Lists) > 0
 }
 
 // TestSourceEvidenceIsNotActivity pins which tables move a Source's evidence
@@ -149,8 +150,8 @@ func TestPropertyUsage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := registry[tt.table].usesProperty(tt.ch); got != tt.want {
-				t.Errorf("usesProperty = %v, want %v", got, tt.want)
+			if got := registry[tt.table].movesLists(tt.ch); got != tt.want {
+				t.Errorf("movesLists = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -161,7 +162,7 @@ func TestPropertyUsage(t *testing.T) {
 func TestEvidenceGraphsFlag(t *testing.T) {
 	var got []string
 	for table, eff := range registry {
-		if eff.EvidenceGraphs {
+		if slices.Contains(eff.Lists, ListEvidenceGraphs) {
 			got = append(got, table)
 		}
 	}
@@ -170,7 +171,13 @@ func TestEvidenceGraphsFlag(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("tables with EvidenceGraphs = %v, want %v", got, want)
 	}
-	if err := (Effect{None: true, EvidenceGraphs: true}).validate("x"); err == nil {
-		t.Fatal("a None entry with EvidenceGraphs validated")
+	if err := (Effect{None: true, Lists: []List{ListEvidenceGraphs}}).validate("x"); err == nil {
+		t.Fatal("a None entry with Lists validated")
+	}
+	if err := (Effect{Lists: []List{"nope"}}).validate("x"); err == nil {
+		t.Fatal("an undeclared list validated")
+	}
+	if err := (Effect{ListsOnField: "property_id"}).validate("x"); err == nil {
+		t.Fatal("ListsOnField without Lists validated")
 	}
 }

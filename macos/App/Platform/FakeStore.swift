@@ -2368,7 +2368,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 }
             }
         }
-        return (subject, citation, observations, CatalogWriteEffects(sources: [sourceID], citationSources: [sourceID], propertyUsage: true))
+        return (subject, citation, observations, CatalogWriteEffects(sources: [sourceID], citationSources: [sourceID], lists: [.propertyUsage]))
     }
 
     private static func floorDiv(_ a: Int64, _ b: Int64) -> Int64 {
@@ -2473,7 +2473,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         )
         return (written, {
             let owner = withState { owningSource(ofCitation: citationID).map { [$0] } ?? [] }
-            return CatalogWriteEffects(sources: owner, citationSources: owner, propertyUsage: true)
+            return CatalogWriteEffects(sources: owner, citationSources: owner, lists: [.propertyUsage])
         }())
     }
 
@@ -2594,7 +2594,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 bumpSource(sourceID, evidence: true)
             }
             pinsByObservation[observationID] = nil
-            return CatalogWriteEffects(sources: owners, citationSources: owners, propertyUsage: true)
+            return CatalogWriteEffects(sources: owners, citationSources: owners, lists: [.propertyUsage])
         }
     }
 
