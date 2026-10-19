@@ -74,6 +74,13 @@ type Result struct {
 	Properties []PropertyResult // one per lead property, ascending key
 }
 
+// Conflicts reports whether any property comparison conflicts.
+func (r Result) Conflicts() bool {
+	return slices.ContainsFunc(r.Properties, func(p PropertyResult) bool {
+		return p.Result.Outcome == propertycompare.OutcomeConflict
+	})
+}
+
 // PropertyResult is layer 2's verdict on one lead property and what it added.
 type PropertyResult struct {
 	Key    vocabkey.PropertyKey // the lead property

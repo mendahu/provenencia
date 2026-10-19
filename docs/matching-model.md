@@ -176,6 +176,7 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `segment.OtherCredit` | 0.25 | `graphalign` `NeighborCreditHigh` | Share of the neighbor's evidence passed on, other links |
 | `segment.One` | `participation·subject·birth`, `participation·subject·death` | decided 2026-10-17, both ends 2026-10-19 | Links where a differing neighbor conflicts, from either end |
 | `segment.OneConflict` | 3 | estimate: a differing birth or death is as strong as a differing name or date (`subject.Weights.person.name.Conflict`) | Points lost when a one-cardinality link's neighbor is placed elsewhere |
+| `segment.UnplacedAlike` | 2 | estimate: the accept bar, a neighbor that could be placed on its own properties | Least neighbor evidence for an unplaced neighbor to count as lined up |
 | `segment.Gates.place_relationship·part_of·from.MinOwnEvidence` | 2 | `graphalign` `SignatureScale` `part_of` from-end `MinNode` | The part's own evidence needed before `part_of` support counts |
 | `segment.Gates.place_relationship·part_of·from.ConflictFactor` | 1 | `graphalign` `SignatureScale` `part_of` from-end `ConflictFactor` | A different parent cancels the part's own evidence |
 | `segment.Gates.place_relationship·part_of·to.MinOwnEvidence` | 2 | `graphalign` `SignatureScale` `part_of` to-end `MinNode` | The whole's own evidence needed before `part_of` support counts |

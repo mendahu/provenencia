@@ -23,6 +23,8 @@ func defaultSegment() segmentcompare.Rules {
 		OneConflict:  3,    // estimate: a differing birth or death is as strong as a differing name or date (subject.Weights.person.name.Conflict)
 		OtherSupport: 0.25, // carried from graphalign EdgeSupportHigh
 		OtherCredit:  0.25, // carried from graphalign NeighborCreditHigh
+		// estimate: the accept bar, a neighbor that could be placed on its own properties
+		UnplacedAlike: 2,
 		Gates: map[vocabkey.BridgeKey]segmentcompare.Gate{
 			// carried from graphalign's old part_of scale, from end
 			partOf(vocabkey.PropertyFrom): {MinOwnEvidence: 2, ConflictFactor: 1},

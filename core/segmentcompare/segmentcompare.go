@@ -29,6 +29,9 @@ const (
 	Together Placement = "together"
 	// Apart: the layer neighbor is placed on another handle.
 	Apart Placement = "apart"
+	// Unplaced: the layer neighbor is placed nowhere yet: entity compare
+	// decides.
+	Unplaced Placement = "unplaced"
 )
 
 // Cause is why a segment adds nothing or subtracts; empty when it supports.
@@ -38,6 +41,8 @@ const (
 	CauseNotCorresponding Cause = "not_corresponding"
 	CauseGated            Cause = "gated"
 	CausePlacedApart      Cause = "placed_apart"
+	CauseUnplacedDiffers  Cause = "unplaced_differs"
+	CauseUnplacedUnsure   Cause = "unplaced_unsure"
 )
 
 // Gate is a per-key condition on a link: a minimum own evidence before
@@ -66,6 +71,9 @@ type Rules struct {
 	// factor of own evidence lost when placed apart; a missing key is the
 	// zero gate.
 	Gates map[vocabkey.BridgeKey]Gate
+	// UnplacedAlike is the least neighbor evidence for an unplaced neighbor
+	// to count as lined up.
+	UnplacedAlike float64
 }
 
 // Result is what Compare decides about one pair of segments.
@@ -73,7 +81,7 @@ type Result struct {
 	Outcome  propertycompare.Outcome
 	Cause    Cause
 	Evidence float64
-	Neighbor subjectcompare.Result // layer 3's verdict on the neighbors; zero unless placed together
+	Neighbor subjectcompare.Result // layer 3's verdict on the neighbors; zero when placed apart
 }
 
 // Compare says what one research segment adds to a pair, given the layer
@@ -83,7 +91,9 @@ type Result struct {
 // of own evidence; any other link is unknown. Placed together, the neighbors
 // are compared by layer 3 and the link earns its support plus its credit of
 // the neighbor's evidence, unless a gate wants more own evidence than the
-// pair has.
+// pair has. Unplaced, the neighbors are compared by layer 3 too: a neighbor
+// with at least UnplacedAlike evidence counts as placed together, one with
+// negative evidence as placed apart, and any other adds nothing.
 func Compare(a, b Segment, placed Placement, own float64, metas subjectcompare.Metas, rules Rules, subject subjectcompare.Rules, value valuecompare.Rules) Result {
 	if !Corresponds(a.Key, b.Key) {
 		return Result{Outcome: propertycompare.OutcomeUnknown, Cause: CauseNotCorresponding}
@@ -93,17 +103,23 @@ func Compare(a, b Segment, placed Placement, own float64, metas subjectcompare.M
 	both.End = ""
 	one := slices.Contains(rules.One, both)
 	if placed == Apart {
-		out := Result{Outcome: propertycompare.OutcomeUnknown, Cause: CausePlacedApart}
-		if one {
-			out.Evidence -= rules.OneConflict
-		}
-		out.Evidence -= g.ConflictFactor * own
-		if one || g.ConflictFactor > 0 {
-			out.Outcome = propertycompare.OutcomeConflict
-		}
+		out := apart(one, g, own, rules)
+		out.Cause = CausePlacedApart
 		return out
 	}
-	out := Result{Neighbor: subjectcompare.Compare(a.NeighborKind, a.Neighbor, b.Neighbor, metas, subject, value)}
+	neighbor := subjectcompare.Compare(a.NeighborKind, a.Neighbor, b.Neighbor, metas, subject, value)
+	if placed == Unplaced {
+		switch {
+		case neighbor.Evidence >= rules.UnplacedAlike:
+		case neighbor.Evidence < 0:
+			out := apart(one, g, own, rules)
+			out.Cause, out.Neighbor = CauseUnplacedDiffers, neighbor
+			return out
+		default:
+			return Result{Outcome: propertycompare.OutcomeUnknown, Cause: CauseUnplacedUnsure, Neighbor: neighbor}
+		}
+	}
+	out := Result{Neighbor: neighbor}
 	if g.MinOwnEvidence > 0 && own < g.MinOwnEvidence {
 		out.Outcome, out.Cause = propertycompare.OutcomeUnknown, CauseGated
 		return out
@@ -114,11 +130,23 @@ func Compare(a, b Segment, placed Placement, own float64, metas subjectcompare.M
 	}
 	out.Evidence = support + credit*out.Neighbor.Evidence
 	out.Outcome = propertycompare.OutcomeAgree
-	for _, p := range out.Neighbor.Properties {
-		if p.Result.Outcome == propertycompare.OutcomeConflict {
-			out.Outcome = propertycompare.OutcomePartial
-			break
-		}
+	if out.Neighbor.Conflicts() {
+		out.Outcome = propertycompare.OutcomePartial
+	}
+	return out
+}
+
+// apart scores a link whose neighbor is somewhere else: a one-cardinality link
+// loses OneConflict and a gated key loses its factor of own evidence. The
+// caller sets Cause and Neighbor.
+func apart(one bool, g Gate, own float64, rules Rules) Result {
+	out := Result{Outcome: propertycompare.OutcomeUnknown}
+	if one {
+		out.Evidence -= rules.OneConflict
+	}
+	out.Evidence -= g.ConflictFactor * own
+	if one || g.ConflictFactor > 0 {
+		out.Outcome = propertycompare.OutcomeConflict
 	}
 	return out
 }
