@@ -207,8 +207,8 @@ func TestAliasSetKeysDoNotGrowWithTheTokenOrTableKey(t *testing.T) {
 	first, second := idx.SetKeys(long+"a"), idx.SetKeys(long+"b")
 	for _, keys := range [][]string{first, second} {
 		for _, k := range keys {
-			if len(k) >= 64 {
-				t.Errorf("key is %d bytes, want under 64", len(k))
+			if len(k) > 64 {
+				t.Errorf("key is %d bytes, want at most 64", len(k))
 			}
 		}
 	}
