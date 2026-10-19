@@ -267,8 +267,8 @@ func (g *Graph) SetAliasTables(tables any) {
 	g.aliasesOK = true
 }
 
-// SetMatchIndex stores the match index until the next handle commit, alias
-// table load or drop.
+// SetMatchIndex stores the match index until the next handle commit,
+// vocabulary commit, alias table load or drop.
 func (g *Graph) SetMatchIndex(index any) {
 	if g == nil {
 		return
