@@ -362,7 +362,7 @@ struct SourcesModelTests {
         #expect(model.sources.first?.coverMode == "type_icon")
     }
 
-    /// A write's activity moves the row in the Updated sort without a reload.
+    /// A hidden list publishes its count only once its reload lands, not from the stale cached rows.
     @Test func hiddenListRepublishesCountAfterReload() async {
         let store = FakeStore()
         let counts = CatalogCounts(projectDir: projectDir, store: store)
@@ -389,6 +389,7 @@ struct SourcesModelTests {
             Issue.record("sources handle missing")
             return
         }
+        #expect(handle.isFetching)
         counts.publishSources(7)
         model.syncCatalogCountsIfLoaded(handle)
         #expect(counts.sources == 7)
@@ -399,6 +400,7 @@ struct SourcesModelTests {
         #expect(counts.sources == 2)
     }
 
+    /// A write's activity moves the row in the Updated sort without a reload.
     @Test func writeActivityMovesTheRowInTheUpdatedSort() async {
         let (model, session) = makeModel(
             sources: [
