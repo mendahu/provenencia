@@ -404,6 +404,8 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 **Built in S11-11.** `subjectprofile.Build(entity, metas, rules, opts)` reads each Property's auto-reconciled values: values the reconciler displays become positives, values with reason `denied` negatives, and the rest are left out. A Property with nothing left is absent. The output is `subjectcompare.Values`, so entity compare is `Build` then `subjectcompare.Compare`, and entity against entity is `Compare` on two profiles. `Options.Excluding` runs `autoreconcile.Reconcile` again on each Property those members recorded, without their candidates. `subjectprofile.ForSubject` builds a plain Subject's side from its own Observations through the same conversion. A negative Observation that denies no positive value leaves no reconciled value, so it is not in the profile. Reconciliation Claims, when they ship, are laid over the profile as a replacing list.
 
+**Migrated in S11-13.** Promote scores every candidate with entity compare. `promotealign` builds each Source Subject's side with `ForSubject` from the Source's own Observations and life events, and each handle's with `Build` from the cache and its participations, once per proposal; `graphalign` runs `subjectcompare.Compare` for every pair it scores, the duplicate-New check included. A handle is a candidate when its own properties reach the weak band (`graphalign.Candidates`, user 2026-10-18). The lifespan counts but is not shown until S11-20. `core/match` and `core/database/matching` are deleted.
+
 ## Frequency
 
 **Decided:** frequency is not a comparison. Layers 1 and 2 never read catalog statistics.
@@ -460,7 +462,7 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 | 1 value compare | Promote, `Rank`, the reconciler's grouping and pins, place-chain date windows (`conclusionheaders`) | Term dedupe ("godfather" vs "god-father", `term-management.md`), gazetteer lookup, Daitch–Mokotoff tier, international names |
 | 2 property compare | Promote sheet exhibits (replacing `pairExhibits`), reconciler checks | Whether provisional values count (`possible-values.md`) |
 | 3 subject compare | Duplicate New rows (`alikeNew`), merge hints (entity vs entity = two profiles) | Gazetteer place matching, duplicate Subjects while entering a Source |
-| 4 entity compare | Promote candidates, Subject suggestions (`matching.ForSubject`) | Weak-claim review (`identity-claim-review.md`), share-package import (`share-packages.md`) |
+| 4 entity compare | Promote candidates (S11-13) | Weak-claim review (`identity-claim-review.md`), share-package import (`share-packages.md`) |
 
 **Small changes that widen reach:**
 - **A normalized key per value type** beside `Compare`: `valuecompare.Key(v, level)`, where `level` is `Same` or `Equivalent`. Two values have the same key exactly when `Compare` says that relation. One function then serves reconciler grouping, search index dedupe, term dedupe and sort-independent equality, instead of the six text rules there are today.
@@ -475,8 +477,8 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 | `autoreconcile` `textKey`, `termKey`, `dateKey`, `subsumes` / `partFits`, `IsInitial`, `SpellingSimilarity`, `EditDistance`, `NormalizeForm`, `DateEnds` and windows (`DateEnds` and windows moved in S11-04) | Value compare (the reconciler imports it) — done in S11-06 |
 | `autoreconcile.Compatible` | Value compare's relation, under the reconciler's own grouping policy (rule 7) — done in S11-06 |
 | `promotealign.pairExhibits` (its own pairing; ignores negatives and cardinality) | Property compare's speaking pair |
-| `match/pairs.go` leaders and weighting (`weigh`, `pairValues`) | The strict profile; negatives and cardinality move to property compare |
-| `graphalign` `alikeNew`, `pairNode` (property part) | Subject compare |
+| `match/pairs.go` leaders and weighting (`weigh`, `pairValues`) | The strict profile; negatives and cardinality move to property compare — done in S11-13 |
+| `graphalign` `alikeNew`, `pairNode` (property part) | Subject compare — done in S11-13 |
 | `conclusionheaders` `laterStart` / `earlierEnd` (year only, while reconciliation uses days) | Value compare's date windows |
 | ~~`autoreconciler.hasValue`~~ — done in S10-52: `autoreconcile.Carries` | One function |
 | `Stats.ValueFreq`, `countNameWords` | Removed (frequency descoped) |
@@ -488,7 +490,7 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 
 **Found in passing (fixed in this spike):**
 - `match.indexAliases` doesn't normalize alias tokens. That's latent: only the lowercase product seed writes tables today. It matters once user or plugin tables exist; `Key` fixes it.
-- Text equality disagreed across six places (reconciler, match, search scoring, FTS, header sort, frequency stats). After S11-07 the reconciler, search scoring and the term duplicate check share `Key` (`valuecompare.TextKey`), and `core/match` goes in S11-13. FTS and the header sort (`SortKey`, ordering only) keep their own rules on purpose.
+- Text equality disagreed across six places (reconciler, match, search scoring, FTS, header sort, frequency stats). After S11-07 the reconciler, search scoring and the term duplicate check share `Key` (`valuecompare.TextKey`), and `core/match` went in S11-13. FTS and the header sort (`SortKey`, ordering only) keep their own rules on purpose.
 
 ## What moves where in today's code
 

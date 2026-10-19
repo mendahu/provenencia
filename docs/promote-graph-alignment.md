@@ -102,13 +102,13 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg *Config) Pr
 
 | Layer | Responsibility | Does not |
 | --- | --- | --- |
-| **Pairwise evaluation** | Given two sides’ values, return a comparer similarity per property. The promote scale turns that into agree / partial / conflict / unknown and points. `Compatible` is sameness for reconciliation and pins, not the score | Walk the graph, load the catalog, choose New/Skip for a whole layer |
-| **Property-only matching** ([`matching.md`](matching.md)) | Rank one probe against many handles by looping the pairwise unit with a profile (`Rank`) | Know Evidence bridges, fixed anchors, or propagation |
+| **Pairwise evaluation** | Given two sides, return entity compare's evidence and one outcome per lead property (`subjectcompare.Compare`). `Compatible` is sameness for reconciliation and pins, not the score | Walk the graph, load the catalog, choose New/Skip for a whole layer |
+| **Candidates** ([`matching.md`](matching.md)) | List the handles a Subject is offered on its own properties: entity compare evidence at least the weak band (`graphalign.Candidates`) | Know Evidence bridges, fixed anchors, or propagation |
 | **Graph alignment** (`Align`) | Seed, priority walk, one-to-one, propagate structural support; call pairwise evaluation on each candidate; fall back to property-only matching when unreachable | Own a second “are these the same?” implementation; talk to SQLite |
 | **Catalog adapter** (S9-42) | Build `Layer` / `Canon` / `Stats`, call `Align`, map the proposal to FFI | Contain scoring or walk policy |
 | **Promote page** (S9-44) | Present rows, decisions, Done | Reimplement alignment |
 
-Alignment **orchestrates**; matching / pairwise evaluation **judges a pair**. Alignment must not call only today’s bulk `Rank` API for every hop — that API is “score against the catalog.” It calls the **pairwise** unit (with edge terms when neighbors are already mapped). `Rank` and the promote score share `match.Compare` and keep their own scales, so a menu point total is not a promote score.
+Alignment **orchestrates**; entity compare **judges a pair**. Alignment calls it for every pair it scores, adding edge terms when neighbors are already mapped. Candidates and the walk read the same evidence.
 
 **Package boundary:** graph alignment is **its own module**, not folded into Promote UI or FFI handlers. Config for the walk and scorer lives in **one registry file** in that pure package (same idea as matching’s `registry.go`): every tunable dogfood will tweak —
 
@@ -135,7 +135,7 @@ This is collective entity resolution: graph alignment by propagation (cf. PARIS,
 2. **Pop the best-scoring candidate.** Accept it if it clears the threshold and keeps the graph alignment **one-to-one**: within one layer, a handle takes at most one Subject.
 3. **Propagate.** The accepted pair becomes an anchor. Push its neighbors' candidates, and add **support** to queued candidates that are consistent with it. A candidate's score rises as more of its neighbors map consistently. That's the "the structure lines up" evidence.
 4. **Repeat** until the queue is empty.
-5. **Unreachable Subjects** (nothing reaches them from an anchor) fall back to property-only matching: `core/match` `Rank` picks their candidates, and each is scored by the same pairwise path the walk uses. They are assigned best-first across the layer, so a contest over one handle goes to the stronger match. Below the threshold, the core proposes Skip (New when there is no candidate at all), and the page starts the row unset. Each pair this pass accepts then seeds the same walk as a fixed anchor, so a neighbor that never cleared `Rank` can still be nominated. A candidate `Rank` recorded but did not accept is not an anchor. The walk records a nominated handle even when its score stays under the accept bar; only an accepted pair propagates further.
+5. **Unreachable Subjects** (nothing reaches them from an anchor) fall back to property-only matching: `graphalign.Candidates` picks their candidates, and each is scored by the same pairwise path the walk uses. They are assigned best-first across the layer, so a contest over one handle goes to the stronger match. Below the threshold, the core proposes Skip (New when there is no candidate at all), and the page starts the row unset. Each pair this pass accepts then seeds the same walk as a fixed anchor, so a neighbor that was never a candidate can still be nominated. A candidate recorded but not accepted is not an anchor. The walk records a nominated handle even when its score stays under the accept bar; only an accepted pair propagates further.
 6. **One-hop refinement.** With that mapping in hand, every recorded candidate is scored again. A layer neighbor adds edge support when its mapped handle is this candidate's canonical neighbor under the same signature: the fan-out bonus, plus a registry fraction of that neighbor's property score. Unfixed rows are reassigned from those scores. Each pass replaces the scores it read, so support from a neighbor that moved to another handle is dropped rather than kept at its old high, and a "via" reason stays only while that neighbor still supports the candidate. The pass repeats until the mapping stops changing, at most one round per subject, and scores once more if the rounds run out. The fraction is of the neighbor's properties alone, so a city receives its parent's toponym points and does not receive the parent's credit from the country. The published band is this score: a toponym alone stays medium, and a corresponding low-fan-out `part_of` lifts it to strong. Decided rows are rescored afterward, so a neighbor that contradicts a decision can still raise a warning.
 
 The work is about (Subjects + bridges) × candidates × log: well under a millisecond at obituary scale.
@@ -163,15 +163,7 @@ A layer is **one Source’s Subjects**, not one connected component. *Map the re
 
 Nothing names a Property or a relationship. Every weight comes from metadata or from data.
 
-**Node comparisons.** The score does not name a property. For each property both sides carry, `match.Compare` returns a similarity from value compare (the same one `Rank` uses; `Rank`'s point total stays its own). A registry scale turns that similarity into points:
-
-- A positive similarity contributes `weight × similarity`; 1 agrees, less is partial. A comparable 0 conflicts for a single-value property and is unknown for a multiple-value one.
-- Unknown (nothing to compare) is 0.
-
-The scale is looked up by property, then by value type. A property added later is another entry.
-
-- **Plain scales** (text, terms, dates, integers, unless a property replaces them): weight 2, contradiction 3. A lone exact agreement is 2, the accept bar and the weak bar. Toponym has its own scale, weight 3, so an exact toponym alone is medium and short of strong until an edge adds support. A partial is the weight times the similarity, so a one-letter toponym typo is weak.
-- **Fixed scales** are not lifted. Name: weight 2.5, contradiction 3. An identical name is 2.5, still under medium. A name with words on one side only is a partial (`Jake Robins` against `James Kenneth Jake Robins` is 2.5 × 0.75); a different first given name or surname on each side conflicts (value compare's `Different`). Sex at birth and gender: weight 0.6, contradiction 1. Agreement is a small nudge. A mismatch subtracts 1. A neutral term (`property_terms.neutral`, seeded on unknown and indeterminate) is not comparable, so it neither agrees nor conflicts; matching, Rank and the reconciler read the same flag.
+**Node comparisons.** The score does not name a property. Entity compare (`subjectcompare.Compare` on the two sides' profiles) runs layer 2 on each lead property in the registry's subject section and returns evidence in points: agree earns the agree weight, partial the agree weight × similarity, conflict loses the conflict penalty, unknown counts nothing. Weights are in the [knob inventory](matching-model.md#knob-inventory): name 2.5 / 3, sex at birth (with gender) 0.6 / 1, toponym 3 / 3, event type 0.5 / 20, date 2 / 3, a person's lifespan 0.1 / 20. A property the subject section does not list scores nothing. A neutral term is no evidence.
 
 `autoreconcile.Compatible` is sameness for reconciliation and for pins. A partial name can make the row weak without being pinned. A line is pinned only when the values are the same.
 
@@ -285,7 +277,7 @@ As built at the end of Spike 9 slice 9 (S9-41 – S9-44 and the review fixes sta
 
 **Built as designed**
 
-- One pure `core/graphalign.Align` over `core/match.Evaluate`, with every walk and band tunable in `core/graphalign/registry.go`. Deterministic: subjects, the queue, and candidate lists all break ties by ref, then id.
+- One pure `core/graphalign.Align` over entity compare (`core/subjectcompare`), with every walk and band tunable in `core/graphalign/registry.go`. Deterministic: subjects, the queue, and candidate lists all break ties by ref, then id.
 - Best-first walk, one-to-one, propagation: an accepted anchor re-scores the candidates it reaches, so support accumulates as neighbors map. Edge support counts each corresponding neighbor once.
 - Directed terms (parent, part of, …) correspond only from the same end. Whether a term is directed is the catalog's `property_terms.directed`, not a list in code.
 - Fan-out is measured per bridge from `connectrules`, keyed exactly like the edge signatures. Stats are cached on the catalog's graph and dropped by any commit that names a handle.
@@ -296,8 +288,8 @@ As built at the end of Spike 9 slice 9 (S9-41 – S9-44 and the review fixes sta
 **Differs from the text above**
 
 - **Query count (§7):** every read is batched (`sqlbatch`), and the canon comes from the in-memory graph, so a warm proposal reads only the layer, the fixed rows, stats if a commit dropped them, and exhibits. Cold, the graph loads one batch per wave of the walk.
-- **Properties compared (§6):** only the Properties in each kind's `core/match` default profile (name and sex; event type and dates; toponym), not every Property both sides carry.
+- **Properties compared (§6):** only the lead properties of the registry's subject section, with their pools and periods, not every Property both sides carry.
 - **Provenance (§6):** not applied. Every Subject's provenance is 1; credibility, transcription certainty, and member claim confidence don't scale comparisons yet.
 - **Bridge kinds in the loaders:** the layer loader lists its hops (participation, location, relationship, part of, succeeded by) in code. The canon follows every link the graph holds for a `connectrules` bridge, as pins and filing do.
-- **Fallback islands:** an accepted property match seeds the same walk as a fixed anchor. A `Rank` loser does not. One-hop refinement still does not add handles; it only rescores candidates the walk or `Rank` already recorded.
+- **Fallback islands:** an accepted property match seeds the same walk as a fixed anchor. A candidate that was not accepted does not. One-hop refinement still does not add handles; it only rescores candidates the walk or the fallback already recorded.
 - **Exhibit values:** a date travels as a structured value. The Mac client formats it with `DateValueDisplay` for the user's locale. The display string is the portable fallback (`Before 2001-03-31`).
