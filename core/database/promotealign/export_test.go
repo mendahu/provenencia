@@ -18,7 +18,11 @@ func LayerBridges(c *database.Catalog, sourceID []byte) ([]graphalign.Bridge, er
 	}
 	cfg := graphalign.DefaultConfig()
 	cfg.Value = rules
-	layer, _, err := loadLayer(c.Graph(), db, sourceID, cfg, namePattern)
+	terms, err := loadTerms(c.Graph())
+	if err != nil {
+		return nil, err
+	}
+	layer, _, err := loadLayer(c.Graph(), db, sourceID, cfg, namePattern, terms)
 	if err != nil {
 		return nil, err
 	}

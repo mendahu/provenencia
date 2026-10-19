@@ -20,17 +20,13 @@ const seedCandidateLimit = 5
 // every link those handles have. Link order is association ref, then the
 // neighbor's ref, which is the order the walk used to break ties. Every
 // handle's profile is built once, after the walk has collected them.
-func loadCanon(g *graphcache.Graph, layer graphalign.Layer, fixed []graphalign.Fixed, cfg graphalign.Config, namePattern string) (graphalign.Canon, error) {
+func loadCanon(g *graphcache.Graph, layer graphalign.Layer, fixed []graphalign.Fixed, cfg graphalign.Config, namePattern string, terms segmentcompare.Terms) (graphalign.Canon, error) {
 	prof, err := newProfiler(g, layer.Metas, cfg.Subject, namePattern)
 	if err != nil {
 		return graphalign.Canon{}, err
 	}
 	props := prof.props
 	types := prof.types
-	terms, err := loadTerms(g)
-	if err != nil {
-		return graphalign.Canon{}, err
-	}
 
 	handles := map[string]*graphcache.Node{}
 	kinds := map[string]string{}
@@ -211,11 +207,14 @@ func canonKeys(self []byte, selfKind string, n *graphcache.Node, l graphcache.Li
 	// The event type comes from whichever end is an event; linkOf alone
 	// decides whether the key keeps it.
 	var eventType string
-	switch {
-	case selfKind == vocabkey.Event:
-		eventType = keptTerm(n, props, neighborTypeProperty[vocabkey.Event])
-	case l.NeighborTypeKey == vocabkey.Event:
-		eventType = keptTerm(neighbor, props, neighborTypeProperty[vocabkey.Event])
+	if first, has := eventEndpoint(b); has {
+		// The first endpoint is the edge's from end; self is that end when
+		// the link was filed from it.
+		if first == l.FromEnd {
+			eventType = keptTerm(n, props, neighborTypeProperty[vocabkey.Event])
+		} else {
+			eventType = keptTerm(neighbor, props, neighborTypeProperty[vocabkey.Event])
+		}
 	}
 	keyFrom = segmentcompare.Key(linkOf(b, l.TermKey, eventType, true), terms)
 	keyTo = segmentcompare.Key(linkOf(b, l.TermKey, eventType, false), terms)

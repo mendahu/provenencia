@@ -30,7 +30,7 @@ type participation struct {
 // loadLayer builds the Evidence layer from a loaded Source. Each primary
 // Subject's side is built here, once, with the profile builder; property
 // metas stay a catalog read, since they are not part of one Source.
-func loadLayer(g *graphcache.Graph, q Querier, sourceID []byte, cfg graphalign.Config, namePattern string) (graphalign.Layer, map[string]primarySubject, error) {
+func loadLayer(g *graphcache.Graph, q Querier, sourceID []byte, cfg graphalign.Config, namePattern string, terms segmentcompare.Terms) (graphalign.Layer, map[string]primarySubject, error) {
 	if g == nil {
 		return graphalign.Layer{}, nil, promote.ErrInvalid
 	}
@@ -58,7 +58,7 @@ func loadLayer(g *graphcache.Graph, q Querier, sourceID []byte, cfg graphalign.C
 		primary[string(s.ID)] = primarySubject{id: append([]byte(nil), s.ID...), ref: s.Ref, kind: s.TypeKey}
 		byKind[s.TypeKey] = append(byKind[s.TypeKey], append([]byte(nil), s.ID...))
 	}
-	bridges, participations, err := loadLayerBridges(g, q, sourceID, primary, byKind)
+	bridges, participations, err := loadLayerBridges(q, sourceID, primary, byKind, terms)
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
@@ -120,11 +120,7 @@ var hopPersonToEvent = hops.MustHop(vocabkey.BridgeParticipation, vocabkey.Prope
 // loadLayerBridges walks every bridge connectrules registers, with any term,
 // and keys each edge from both ends. It also returns the participations whose
 // ends are both primary, which the lifespans read.
-func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary map[string]primarySubject, byKind map[string][][]byte) ([]graphalign.Bridge, []participation, error) {
-	terms, err := loadTerms(g)
-	if err != nil {
-		return nil, nil, err
-	}
+func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubject, byKind map[string][][]byte, terms segmentcompare.Terms) ([]graphalign.Bridge, []participation, error) {
 	var out []graphalign.Bridge
 	var parts []participation
 	seen := map[seenEdge]bool{}
@@ -152,14 +148,15 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 		}
 		// The event type comes from whichever end is an event; linkOf alone
 		// decides whether the key keeps it.
+		eventFirst, hasEvent := eventEndpoint(b)
 		eventEnd := func(e canonicalgraph.Edge) []byte {
-			if b.Endpoints[0].TypeKey == vocabkey.Event {
+			if eventFirst {
 				return e.From
 			}
 			return e.To
 		}
 		var eventTypes map[string]string
-		if b.Endpoints[0].TypeKey == vocabkey.Event || b.Endpoints[1].TypeKey == vocabkey.Event {
+		if hasEvent {
 			ids := make([][]byte, len(edges))
 			for i, e := range edges {
 				ids[i] = eventEnd(e)
@@ -178,7 +175,10 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 			if !aOK || !bOK {
 				continue
 			}
-			eventType := eventTypes[string(eventEnd(e))]
+			var eventType string
+			if hasEvent {
+				eventType = eventTypes[string(eventEnd(e))]
+			}
 			keyA := segmentcompare.Key(linkOf(b, term, eventType, true), terms)
 			keyB := segmentcompare.Key(linkOf(b, term, eventType, false), terms)
 			ek := edgeSeenKey(e.From, e.To, keyA, keyB)

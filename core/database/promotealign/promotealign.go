@@ -53,7 +53,11 @@ func Propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 	cfg := graphalign.DefaultConfig()
 	cfg.Value = rules
 
-	layer, primary, err := loadLayer(c.Graph(), q, sourceID, cfg, namePattern)
+	terms, err := loadTerms(c.Graph())
+	if err != nil {
+		return graphalign.Proposal{}, 0, err
+	}
+	layer, primary, err := loadLayer(c.Graph(), q, sourceID, cfg, namePattern, terms)
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
@@ -66,7 +70,7 @@ func Propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 		return graphalign.Proposal{}, 0, err
 	}
 
-	canon, err := loadCanon(c.Graph(), layer, anchors, cfg, namePattern)
+	canon, err := loadCanon(c.Graph(), layer, anchors, cfg, namePattern, terms)
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}

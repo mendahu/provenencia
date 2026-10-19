@@ -61,6 +61,19 @@ func linkOf(b connectrules.Bridge, term, eventType string, firstEnd bool) segmen
 	return l
 }
 
+// eventEndpoint says which end of a bridge is an event: first when it is the
+// bridge's first endpoint, and ok false when neither is. It is the one rule
+// for where a link reads its event type, for the layer and the canon alike.
+func eventEndpoint(b connectrules.Bridge) (first, ok bool) {
+	switch {
+	case b.Endpoints[0].TypeKey == vocabkey.Event:
+		return true, true
+	case b.Endpoints[1].TypeKey == vocabkey.Event:
+		return false, true
+	}
+	return false, false
+}
+
 // seenEdge identifies one edge, whichever end listed it, by its ends and the
 // key it reads from each.
 type seenEdge struct {
