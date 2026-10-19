@@ -88,9 +88,9 @@ func Build(e Entity, metas subjectcompare.Metas, reconcile valuecompare.Rules, l
 		for _, v := range vals {
 			switch {
 			case v.Displayed():
-				profile = append(profile, value(v.Value, false, e.NamePattern))
+				profile = append(profile, Value(v.Value, false, e.NamePattern))
 			case v.Reason == autoreconcile.ReasonDenied:
-				profile = append(profile, value(v.Value, true, e.NamePattern))
+				profile = append(profile, Value(v.Value, true, e.NamePattern))
 			}
 		}
 		if len(profile) > 0 {
@@ -127,7 +127,7 @@ func ForSubject(s Subject, lifespans map[vocabkey.PropertyKey]subjectcompare.Lif
 	out := subjectcompare.Values{}
 	for key, cs := range s.Values {
 		for _, c := range cs {
-			out[key] = append(out[key], value(c.Value, c.Negative, s.NamePattern))
+			out[key] = append(out[key], Value(c.Value, c.Negative, s.NamePattern))
 		}
 	}
 	addLifespans(out, s.Life, lifespans)
@@ -212,10 +212,10 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 	return propertycompare.Value{Value: valuecompare.Value{Date: &w}}, propertycompare.Value{Value: valuecompare.Value{Date: &sp}}, true
 }
 
-// value is the one conversion from the reconciler's value to layer 2's. Type
+// Value is the one conversion from the reconciler's value to layer 2's. Type
 // and Ref stay empty: layer 2 sets the type from the meta. Name and Date are
 // shared with v.
-func value(v autoreconcile.Value, negative bool, namePattern string) propertycompare.Value {
+func Value(v autoreconcile.Value, negative bool, namePattern string) propertycompare.Value {
 	out := propertycompare.Value{
 		Value: valuecompare.Value{
 			Text:    v.Text,
