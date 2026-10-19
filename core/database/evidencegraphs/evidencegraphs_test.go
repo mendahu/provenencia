@@ -497,3 +497,34 @@ func TestMembership(t *testing.T) {
 		t.Fatalf("after Unlink %v %v", ok, err)
 	}
 }
+
+func TestEnsureRefs(t *testing.T) {
+	f := newFixture(t)
+	a, _ := f.createSource(t, "Census 1881")
+	b, _ := f.createSource(t, "Parish register")
+	keep := graphRows(t, f.c, b.ID)[0].ref
+	db, err := f.c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE evidence_graphs SET ref = NULL WHERE source_id = ?`, a.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := evidencegraphs.EnsureRefs(f.c); err != nil {
+		t.Fatal(err)
+	}
+	minted := graphRows(t, f.c, a.ID)[0].ref
+	if !ref.Valid(minted) || !strings.HasPrefix(minted, "GPH-") {
+		t.Fatalf("minted ref %q", minted)
+	}
+	if got := graphRows(t, f.c, b.ID)[0].ref; got != keep {
+		t.Fatalf("existing ref changed %q -> %q", keep, got)
+	}
+	if err := evidencegraphs.EnsureRefs(f.c); err != nil {
+		t.Fatal(err)
+	}
+	if got := graphRows(t, f.c, a.ID)[0].ref; got != minted {
+		t.Fatalf("second call changed ref %q -> %q", minted, got)
+	}
+}
