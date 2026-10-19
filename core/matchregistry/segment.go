@@ -24,9 +24,9 @@ func defaultSegment() segmentcompare.Rules {
 		OtherSupport: 0.25, // carried from graphalign EdgeSupportHigh
 		OtherCredit:  0.25, // carried from graphalign NeighborCreditHigh
 		Gates: map[vocabkey.BridgeKey]segmentcompare.Gate{
-			// carried from graphalign SignatureScale part_of, from end
+			// carried from graphalign's old part_of scale, from end
 			partOf(vocabkey.PropertyFrom): {MinOwnEvidence: 2, ConflictFactor: 1},
-			// carried from graphalign SignatureScale part_of, to end; decided: the whole's end had no conflict factor
+			// carried from graphalign's old part_of scale, to end; decided: the whole's end had no conflict factor
 			partOf(vocabkey.PropertyTo): {MinOwnEvidence: 2, ConflictFactor: 0},
 		},
 	}
