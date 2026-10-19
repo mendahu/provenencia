@@ -1171,10 +1171,10 @@ func TestProposeRowWithoutExhibitsShowsValues(t *testing.T) {
 	}
 }
 
-func birthEvent(f *fixture, src sources.Source, art artifacts.Artifact, year int, polarity string) subjects.Subject {
+func datedEvent(f *fixture, src sources.Source, art artifacts.Artifact, eventType string, year int, polarity string) subjects.Subject {
 	b := f.bare(src, "event")
 	f.cite(art, b,
-		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", eventType).ID},
 		observations.Input{PropertyID: f.prop("date").ID, Polarity: polarity,
 			Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &year}},
 	)
@@ -1194,11 +1194,11 @@ func dateLine(t *testing.T, row graphalign.Row) graphalign.Exhibit {
 
 func TestProposeEventWithoutExhibitsShowsDates(t *testing.T) {
 	f := newFixture(t)
-	handle := f.promote(birthEvent(f, f.source, f.artifact, 1890, "")).Entity.ID
+	handle := f.promote(datedEvent(f, f.source, f.artifact, "birth", 1890, "")).Entity.ID
 	f.provisionalOnly(handle)
 
 	src, art := f.newSource("Obituary")
-	incoming := birthEvent(f, src, art, 1890, "")
+	incoming := datedEvent(f, src, art, "birth", 1890, "")
 	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
 	ex := dateLine(t, row)
 	if ex.IncomingDate == nil || ex.MemberDate == nil || ex.Pinned {
@@ -1213,13 +1213,77 @@ func TestProposeEventWithoutExhibitsShowsDates(t *testing.T) {
 
 func TestProposeNegativeDateConflictLine(t *testing.T) {
 	f := newFixture(t)
-	handle := f.promote(birthEvent(f, f.source, f.artifact, 1890, "")).Entity.ID
+	handle := f.promote(datedEvent(f, f.source, f.artifact, "birth", 1890, "")).Entity.ID
 
 	src, art := f.newSource("Obituary")
-	incoming := birthEvent(f, src, art, 1890, observations.PolarityNegative)
+	incoming := datedEvent(f, src, art, "birth", 1890, observations.PolarityNegative)
 	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
 	ex := dateLine(t, row)
 	if ex.Outcome != propertycompare.OutcomeConflict || !ex.IncomingNegative || ex.IncomingDate == nil || ex.MemberDate == nil {
 		t.Fatalf("date line %+v", ex)
+	}
+}
+
+// lifeFixture is a person "James Robins" on the first Source, the subject of a
+// dated death and promoted with it, and the same-named person on a second
+// Source, the subject of a birth in 1850.
+func lifeFixture(t *testing.T, deathYear int) (f *fixture, handle []byte, src sources.Source, person subjects.Subject) {
+	t.Helper()
+	f = newFixture(t)
+	aPerson := f.person(f.source, f.artifact, "James Robins")
+	aDeath := datedEvent(f, f.source, f.artifact, "death", deathYear, "")
+	f.participation(f.source, f.artifact, aPerson, aDeath, "subject")
+	handle = f.promote(aPerson).Entity.ID
+	f.promote(aDeath)
+
+	src, art := f.newSource("Letter")
+	person = f.person(src, art, "James Robins")
+	bBirth := datedEvent(f, src, art, "birth", 1850, "")
+	f.participation(src, art, person, bBirth, "subject")
+	return f, handle, src, person
+}
+
+// The slice check: a person who died before the Subject was born is never
+// proposed for them, and one who could be them is.
+func TestProposeLifespanFromLifeEvents(t *testing.T) {
+	t.Run("AC-3.1", func(t *testing.T) {
+		f, _, src, person := lifeFixture(t, 1840)
+		row := rowFor(f.propose(src.ID, nil), person.ID)
+		if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch {
+			t.Fatalf("a man who died in 1840 for a man born in 1850: %+v", row)
+		}
+	})
+	t.Run("AC-3.2", func(t *testing.T) {
+		f, handle, src, person := lifeFixture(t, 1920)
+		row := rowFor(f.propose(src.ID, nil), person.ID)
+		if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, handle) ||
+			row.Assessment != graphalign.AssessWeak || math.Abs(row.Score-2.6) > 1e-9 {
+			t.Fatalf("a man who died in 1920 for a man born in 1850: %+v, want the handle at weak 2.6", row)
+		}
+	})
+}
+
+// The lifespan counts in the row's score and comparisons but has no copy yet,
+// so no sheet line carries it.
+func TestProposeKeepsTheLifespanOffTheSheet(t *testing.T) {
+	f, handle, src, person := lifeFixture(t, 1840)
+	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: person.ID, HandleID: handle}}), person.ID)
+	var lifespans int
+	for _, c := range row.Comparisons {
+		if c.Key != vocabkey.PropertyLifespan {
+			continue
+		}
+		lifespans++
+		if c.Result.Outcome != propertycompare.OutcomeConflict || c.Points != -20 || !c.Derived {
+			t.Fatalf("lifespan comparison %+v", c)
+		}
+	}
+	if lifespans != 1 {
+		t.Fatalf("%d lifespan comparisons in %+v, want 1", lifespans, row.Comparisons)
+	}
+	for _, ex := range row.Exhibits {
+		if ex.PropertyKey == string(vocabkey.PropertyLifespan) {
+			t.Fatalf("a lifespan line on the sheet: %+v", ex)
+		}
 	}
 }
