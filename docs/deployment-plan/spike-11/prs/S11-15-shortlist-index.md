@@ -5,7 +5,7 @@
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: an engine index; the wire, the page and its copy are unchanged)
 **Board:** —
-**Depends on:** S11-13 (landed [#487](https://github.com/mendahu/provenencia/pull/487); [plan](S11-13-promote-subject-compare.md) and its **Landed** note, which changes nothing this plan reads; its [ship log](S11-13-promote-subject-compare.ship.md) PRF-1, the user's call that this PR loads life events only for shortlisted handles). S11-14 is not landed at the planning base (`loadStats` and `graphalign.Stats` exist); STEP-0 checks again and D-9 says what each order means. Branch from `origin/main` (fetch first; compare it, not a stale local `main`, with **Planned**)
+**Depends on:** S11-13 (landed [#487](https://github.com/mendahu/provenencia/pull/487); [plan](S11-13-promote-subject-compare.md) and its **Landed** note, which changes nothing this plan reads; its [ship log](S11-13-promote-subject-compare.ship.md) PRF-1, the user's call that this PR loads life events only for shortlisted handles). S11-14 is not landed at the planning base (`loadStats` and `graphalign.Stats` exist) but is Planned ([plan](S11-14-segment-compare.md), #491): it deletes `stats.go`, `loadStats` and `LoadStatsForTest`, adds `LayerBridges` to `export_test.go`, rewrites `loadCanon`'s edge loop (`canonKeys`), and leaves `graphcache`'s stats slot for this PR with only its doc comment corrected; STEP-0 checks again and D-9 says what each order means. Branch from `origin/main` (fetch first; compare it, not a stale local `main`, with **Planned**)
 **Blocks:** S11-16
 **Branch:** `s11-15-shortlist-index`
 **Version bump:** none — Spike 11 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
@@ -127,7 +127,7 @@ Verified at `6191fc8`.
 | Profiler | `core/database/promotealign/profiles.go` `profiler{g, props, terms, metas, types, rules, reconcile, namePattern, done}`, `newProfiler`, `kind(n)`, `profile(nodes)` (for a kind with a lifespan: `g.Follow(n.ID, hopPersonToEvent)` per node, one `g.Nodes` for the events, events built first), `build(n)` (reads `n.Values` into `subjectprofile.Property` per product property, adds `Life` from built events, then `subjectprofile.Build(e, p.metas, p.reconcile, p.rules.Lifespans[kind], subjectprofile.Options{})`), `values(id)`; `canon.go` `typeByKey`, `typeKey` | A person's profile always loads and builds their events |
 | Stats slot | `core/database/graphcache/graph.go` `Graph.stats`, `statsOK`, `Stats()`, `SetStats`, `ResetStatsForTest`, `clear`; `commit.go` (a commit naming handles clears `statsOK` and `stats`); `SetAliasTables` (does not drop it) | `any`-typed slot |
 | Benchmark | `core/database/promotealign/bench_test.go` `BenchmarkProposeColdHub`, `bulkCanon` (20k persons, 30k events, each person the subject of a birth) | Cold only; S11-13's reviewer timed warm reproposes on the same fixture |
-| Stats use | `core/database/promotealign/stats.go` `loadStats` (`cached.(graphalign.Stats)`), `cloneStats`, `computeStats`; `export_test.go` (wraps `loadStats`); `promotealign.go` `Propose` calls `loadStats` | Only caller of the slot. S11-14 deletes fan-out (map review K-10) |
+| Stats use | `core/database/promotealign/stats.go` `loadStats` (`cached.(graphalign.Stats)`), `cloneStats`, `computeStats`; `export_test.go` (wraps `loadStats`); `promotealign.go` `Propose` calls `loadStats` | Only caller of the slot. S11-14 deletes fan-out and `stats.go` (map review K-10; [S11-14 plan](S11-14-segment-compare.md) §3 Out: "S11-15 renames and reuses it") |
 | Kind index | `core/database/graphcache/graph.go` `kinds`, `kindSet`, `Kind`; `load.go` patches them in place on a commit | The in-place precedent S11-21 would follow |
 | Search | `core/database/searchindex` (`catalog_search_fts`, `catalog_search_fts_trigram`); `core/search/fts.go` `mergeFuzzyShortlist` | A token → entity map in SQL with its own normalization, kept apart on purpose ([reuse inventory](../comparison-layers.md#reuse-across-the-app), "Search's fuzzy ranker… stays") |
 | Aliases warm | `core/database/namealiases/namealiases.go` `Warm` → `g.SetAliasTables`; `Invalidate` | Tables change only through `Warm` |
@@ -280,7 +280,7 @@ Check: `go test ./core/matchregistry/... ./core/graphalign/...` passes; `TestKno
 
 **STEP-5 — The match index slot**
 Files: `core/database/graphcache/graph.go`, `commit.go`, `graph_test.go`, `core/database/nameformats` (package doc file), `core/database/promotealign/stats.go` → `index.go`, `export_test.go`, `promotealign.go`.
-Do: D-9 (the shape STEP-0 found), D-12. `matchIndex` with `stats` only so far. Rename every caller; afterwards `rg -n 'ResetStatsForTest|SetStats|\.Stats\(\)' --type go` prints nothing. T-8.
+Do: D-9 (the shape STEP-0 found), D-12. If S11-14 landed first, `stats.go` is gone: create `index.go` with `matchIndex` holding `shortlist` only, keep `export_test.go`'s `LayerBridges`, and rename the slot from the doc comment S11-14 left. `matchIndex` with `stats` only so far. Rename every caller; afterwards `rg -n 'ResetStatsForTest|SetStats|\.Stats\(\)' --type go` prints nothing. T-8.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/graphcache/ ./core/database/promotealign/` passes.
 
 **STEP-6 — Seed from the index**
