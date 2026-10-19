@@ -14,6 +14,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -26,6 +27,62 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
+
+func defaultGraphID(t *testing.T, c *database.Catalog, sourceID []byte) []byte {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var id []byte
+	if err := db.QueryRow(`SELECT id FROM evidence_graphs WHERE source_id = ?`, sourceID).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// createChanges creates an Artifact and returns the changes of that write.
+func createChanges(t *testing.T, c *database.Catalog, in CreateInput) (Artifact, []rowchange.Change, error) {
+	t.Helper()
+	var changes []rowchange.Change
+	a, err := writes.Call(c, writes.Op{Action: "create_artifact", UserID: []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}},
+		func(tx *database.Tx) (Artifact, []rowchange.Change, error) {
+			a, ch, err := Create(tx, []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}, in)
+			changes = ch
+			return a, ch, err
+		})
+	return a, changes, err
+}
+
+func changeKinds(changes []rowchange.Change) []string {
+	var out []string
+	for _, ch := range changes {
+		out = append(out, ch.EntityType+" "+string(ch.Action))
+	}
+	return out
+}
+
+func linkedGraphs(t *testing.T, c *database.Catalog, artifactID []byte) [][]byte {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := db.Query(`SELECT graph_id FROM evidence_graph_artifacts WHERE artifact_id = ? ORDER BY graph_id`, artifactID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var out [][]byte
+	for rows.Next() {
+		var id []byte
+		if err := rows.Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		out = append(out, id)
+	}
+	return out
+}
 
 func TestArtifacts(t *testing.T) {
 	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
@@ -115,6 +172,62 @@ func TestArtifacts(t *testing.T) {
 		name string
 		run  func(t *testing.T, c *database.Catalog)
 	}{
+		{
+			name: "create links to the Default graph when GraphIDs is empty or names it",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				src := mustSource(t, c)
+				graph := defaultGraphID(t, c, src.ID)
+				for name, ids := range map[string][][]byte{"empty": nil, "named": {graph}} {
+					a, changes, err := createChanges(t, c, CreateInput{SourceID: src.ID, Label: "Scan " + name, GraphIDs: ids})
+					if err != nil {
+						t.Fatalf("%s: %v", name, err)
+					}
+					if got := changeKinds(changes); len(got) != 2 || got[0] != "artifact create" || got[1] != "evidence_graph_artifact create" {
+						t.Fatalf("%s: changes %v", name, got)
+					}
+					if links := linkedGraphs(t, c, a.ID); len(links) != 1 || !bytes.Equal(links[0], graph) {
+						t.Fatalf("%s: links %x", name, links)
+					}
+				}
+			},
+		},
+		{
+			name: "create refuses graphs it cannot link and writes nothing",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				src := mustSource(t, c)
+				typeID, err := sourcetypes.Lookup(c, "book", vocabkey.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				other, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+					return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID.ID, Title: "Other"})
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				graph := defaultGraphID(t, c, src.ID)
+				unknown := make([]byte, 16)
+				unknown[0] = 9
+				bad := map[string][][]byte{
+					"another Source": {defaultGraphID(t, c, other.ID)},
+					"unknown":        {unknown},
+					"malformed":      {graph[:15]},
+					"repeated":       {graph, graph},
+				}
+				before := artifactCount(t, c)
+				for name, ids := range bad {
+					_, _, err := createChanges(t, c, CreateInput{SourceID: src.ID, Label: "Scan", GraphIDs: ids})
+					if !errors.Is(err, evidencegraphs.ErrInvalid) {
+						t.Fatalf("%s: got %v", name, err)
+					}
+					if artifactCount(t, c) != before {
+						t.Fatalf("%s: artifact survived the refusal", name)
+					}
+				}
+			},
+		},
 		{
 			name: "create fileless and get by ref",
 			run: func(t *testing.T, c *database.Catalog) {
@@ -554,6 +667,30 @@ func TestArtifactDelete(t *testing.T) {
 	if err := runDelete(c, userID, make([]byte, 16)); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("missing %v", err)
 	}
+
+	t.Run("releases its graph links", func(t *testing.T) {
+		linked, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Linked"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(linkedGraphs(t, c, linked.ID)) != 1 {
+			t.Fatal("create did not link")
+		}
+		var got []rowchange.Change
+		if _, err := writes.Call(c, writes.Op{Action: "delete_artifact", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := Delete(tx, userID, linked.ID)
+			got = changes
+			return struct{}{}, changes, err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if kinds := changeKinds(got); len(kinds) != 2 || kinds[0] != "evidence_graph_artifact delete" || kinds[1] != "artifact delete" {
+			t.Fatalf("changes %v", kinds)
+		}
+		if len(linkedGraphs(t, c, linked.ID)) != 0 {
+			t.Fatal("link row left")
+		}
+	})
 }
 
 func TestArtifactDeletePurgesDisk(t *testing.T) {

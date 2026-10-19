@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/ref"
@@ -66,6 +67,9 @@ type CreateInput struct {
 	FileID      []byte // nil/empty = fileless
 	Label       string
 	Description string
+	// GraphIDs are the graphs of the Source the Artifact is linked to on
+	// create. Empty = every graph of the Source.
+	GraphIDs [][]byte
 }
 
 // Create inserts an Artifact and mints ART-…. The caller records the returned
@@ -131,19 +135,24 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Artifact, []rowchan
 	if in.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: nil, New: in.Description}
 	}
+	linked, err := evidencegraphs.LinkArtifact(tx, userID, in.SourceID, idBytes, in.GraphIDs)
+	if err != nil {
+		return Artifact{}, nil, err
+	}
+	changes := append([]rowchange.Change{{
+		EntityType: "artifact",
+		EntityID:   append([]byte(nil), idBytes...),
+		Action:     rowchange.ActionCreate,
+		Fields:     fields,
+	}}, linked...)
 	return Artifact{
-			ID:          append([]byte(nil), idBytes...),
-			Ref:         artRef,
-			SourceID:    append([]byte(nil), in.SourceID...),
-			FileID:      copyBlob(in.FileID),
-			Label:       in.Label,
-			Description: in.Description,
-		}, []rowchange.Change{{
-			EntityType: "artifact",
-			EntityID:   append([]byte(nil), idBytes...),
-			Action:     rowchange.ActionCreate,
-			Fields:     fields,
-		}}, nil
+		ID:          append([]byte(nil), idBytes...),
+		Ref:         artRef,
+		SourceID:    append([]byte(nil), in.SourceID...),
+		FileID:      copyBlob(in.FileID),
+		Label:       in.Label,
+		Description: in.Description,
+	}, changes, nil
 }
 
 // Update patches label, description, and/or first-attach file_id. The caller
@@ -242,6 +251,10 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		return nil, err
 	}
 
+	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindArtifact, id)
+	if err != nil {
+		return nil, err
+	}
 	snap, err := deleteimpact.SnapshotOwned(tx.Tx, catalogmodel.KindArtifact, id)
 	if err != nil {
 		return nil, err
@@ -266,12 +279,12 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if existing.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: existing.Description, New: nil}
 	}
-	return []rowchange.Change{{
+	return append(released, rowchange.Change{
 		EntityType: "artifact",
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionDelete,
 		Fields:     fields,
-	}}, nil
+	}), nil
 }
 
 // Get returns an Artifact by id, or sql.ErrNoRows.
