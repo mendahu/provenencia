@@ -224,10 +224,10 @@ func listArtifactsProto(c *database.Catalog, sourceID []byte) ([]*engine.Artifac
 
 func artifactProto(c *database.Catalog, a artifacts.Artifact) (*engine.Artifact, error) {
 	out := &engine.Artifact{
-		Id:          uuidString(a.ID),
+		Id:          database.UUIDString(a.ID),
 		Ref:         a.Ref,
-		SourceId:    uuidString(a.SourceID),
-		FileId:      uuidString(a.FileID),
+		SourceId:    database.UUIDString(a.SourceID),
+		FileId:      database.UUIDString(a.FileID),
 		Label:       a.Label,
 		Description: a.Description,
 	}

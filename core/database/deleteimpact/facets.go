@@ -3,6 +3,7 @@ package deleteimpact
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/files"
@@ -190,10 +191,15 @@ func buildFacetReleases() []facetRelease {
 			col{"id", colUUID}, col{"observation_id", colUUID}, col{"body", colText}),
 		rowFacet(catalogmodel.KindCitation, "citation_notes", "citation_id", "citation_note", "id",
 			col{"id", colUUID}, col{"citation_id", colUUID}, col{"body", colText}),
+		// A link is audited under its graph's id, like the graph's own create.
+		rowFacet(catalogmodel.KindArtifact, "evidence_graph_artifacts", "artifact_id", "evidence_graph_artifact", "graph_id",
+			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
 
 		// --- Source ---------------------------------------------------------
 		rowFacet(catalogmodel.KindSource, "source_notes", "source_id", "source_note", "id",
 			col{"id", colUUID}, col{"source_id", colUUID}, col{"body", colText}),
+		rowFacet(catalogmodel.KindSource, "evidence_graphs", "source_id", "evidence_graph", "id",
+			col{"id", colUUID}, col{"ref", colText}, col{"source_id", colUUID}, col{"name", colText}, col{"description", colText}),
 		rowFacet(catalogmodel.KindSource, "source_metadata", "source_id", "source_metadata", "id",
 			col{"id", colUUID}, col{"source_id", colUUID}, col{"field_id", colUUID}, col{"value_text", colText}),
 		rowFacet(catalogmodel.KindSource, "source_credibility_assessments", "source_id", "source_credibility_assessment", "id",
@@ -280,12 +286,12 @@ func releaseClaim(tx *sql.Tx, claimID []byte) (released, error) {
 		EntityID:   id,
 		Action:     rowchange.ActionDelete,
 		Fields: rowchange.DeletedRow(map[string]any{
-			"id":                  uuidJSON(id),
-			"subject_id":          uuidJSON(subjectID),
-			"entity_id":           uuidJSON(entityID),
-			"subject_type_id":     uuidJSON(typeID),
+			"id":                  database.UUIDJSON(id),
+			"subject_id":          database.UUIDJSON(subjectID),
+			"entity_id":           database.UUIDJSON(entityID),
+			"subject_type_id":     database.UUIDJSON(typeID),
 			"status":              status,
-			"confidence_grade_id": uuidJSON(gradeID),
+			"confidence_grade_id": database.UUIDJSON(gradeID),
 			"argument":            nullStringJSON(argument),
 		}),
 	})
@@ -327,8 +333,8 @@ func pinRelease(q string) func(*sql.Tx, []byte) (released, error) {
 				EntityID:   p.claimID,
 				Action:     rowchange.ActionDelete,
 				Fields: rowchange.DeletedRow(map[string]any{
-					"identity_claim_id": uuidJSON(p.claimID),
-					"observation_id":    uuidJSON(p.observationID),
+					"identity_claim_id": database.UUIDJSON(p.claimID),
+					"observation_id":    database.UUIDJSON(p.observationID),
 				}),
 			})
 		}
@@ -398,19 +404,19 @@ func eraseObservation(tx *sql.Tx, id []byte) (released, error) {
 		EntityID:   obsID,
 		Action:     rowchange.ActionDelete,
 		Fields: rowchange.DeletedRow(map[string]any{
-			"id":                 uuidJSON(obsID),
+			"id":                 database.UUIDJSON(obsID),
 			"ref":                ref,
-			"citation_id":        uuidJSON(citationID),
-			"subject_id":         uuidJSON(subjectID),
-			"property_id":        uuidJSON(propertyID),
+			"citation_id":        database.UUIDJSON(citationID),
+			"subject_id":         database.UUIDJSON(subjectID),
+			"property_id":        database.UUIDJSON(propertyID),
 			"polarity":           polarity,
 			"value_text":         nullStringJSON(text),
 			"value_integer":      integerJSON,
-			"value_date_id":      uuidJSON(dateID),
-			"value_name_id":      uuidJSON(nameID),
-			"value_subject_id":   uuidJSON(valueSubjectID),
-			"value_term_id":      uuidJSON(termID),
-			"value_depiction_id": uuidJSON(depictionID),
+			"value_date_id":      database.UUIDJSON(dateID),
+			"value_name_id":      database.UUIDJSON(nameID),
+			"value_subject_id":   database.UUIDJSON(valueSubjectID),
+			"value_term_id":      database.UUIDJSON(termID),
+			"value_depiction_id": database.UUIDJSON(depictionID),
 		}),
 	})
 	return out, nil
@@ -512,7 +518,7 @@ func colJSON(kind colKind, v any) any {
 	switch kind {
 	case colUUID:
 		b, _ := v.([]byte)
-		return uuidJSON(b)
+		return database.UUIDJSON(b)
 	case colText:
 		switch s := v.(type) {
 		case string:
@@ -530,13 +536,6 @@ func colJSON(kind colKind, v any) any {
 		}
 	}
 	return v
-}
-
-func uuidJSON(id []byte) any {
-	if s := uuidString(id); s != "" {
-		return s
-	}
-	return nil
 }
 
 func nullStringJSON(s sql.NullString) any {

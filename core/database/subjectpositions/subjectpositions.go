@@ -8,7 +8,6 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -57,7 +56,7 @@ func Set(tx *database.Tx, subjectID []byte, gridX, gridY int64) (Position, []row
 	}
 	action := rowchange.ActionCreate
 	fields := map[string]rowchange.FieldDiff{
-		"subject_id": {New: uuidString(subjectID)},
+		"subject_id": {New: database.UUIDString(subjectID)},
 		"grid_x":     {New: gridX},
 		"grid_y":     {New: gridY},
 	}
@@ -166,19 +165,11 @@ func Clear(tx *database.Tx, subjectID []byte) ([]rowchange.Change, error) {
 		EntityID:   append([]byte(nil), subjectID...),
 		Action:     rowchange.ActionDelete,
 		Fields: rowchange.DeletedRow(map[string]any{
-			"subject_id": uuidString(subjectID),
+			"subject_id": database.UUIDString(subjectID),
 			"grid_x":     prev.GridX,
 			"grid_y":     prev.GridY,
 		}),
 	}}, nil
-}
-
-func uuidString(id []byte) string {
-	parsed, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return parsed.String()
 }
 
 type rowScanner interface {

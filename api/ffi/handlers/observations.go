@@ -340,19 +340,19 @@ func optionalID(s string) ([]byte, error) {
 
 func observationProto(o observations.Observation) *engine.Observation {
 	return &engine.Observation{
-		Id:               uuidString(o.ID),
+		Id:               database.UUIDString(o.ID),
 		Ref:              o.Ref,
-		CitationId:       uuidString(o.CitationID),
-		SubjectId:        uuidString(o.SubjectID),
-		PropertyId:       uuidString(o.PropertyID),
+		CitationId:       database.UUIDString(o.CitationID),
+		SubjectId:        database.UUIDString(o.SubjectID),
+		PropertyId:       database.UUIDString(o.PropertyID),
 		Polarity:         o.Polarity,
 		ValueText:        o.ValueText,
 		ValueInteger:     optionalInt64(o.HasInteger, o.ValueInteger),
-		ValueDateId:      uuidString(o.ValueDateID),
-		ValueNameId:      uuidString(o.ValueNameID),
-		ValueSubjectId:   uuidString(o.ValueSubjectID),
-		ValueTermId:      uuidString(o.ValueTermID),
-		ValueDepictionId: uuidString(o.ValueDepictionID),
+		ValueDateId:      database.UUIDString(o.ValueDateID),
+		ValueNameId:      database.UUIDString(o.ValueNameID),
+		ValueSubjectId:   database.UUIDString(o.ValueSubjectID),
+		ValueTermId:      database.UUIDString(o.ValueTermID),
+		ValueDepictionId: database.UUIDString(o.ValueDepictionID),
 	}
 }
 
@@ -416,11 +416,11 @@ func listedWritten(c *database.Catalog, citationID []byte, written []observation
 	}
 	byID := make(map[string]observations.Listed, len(listed))
 	for _, l := range listed {
-		byID[uuidString(l.ID)] = l
+		byID[database.UUIDString(l.ID)] = l
 	}
 	rows := make([]observations.Listed, 0, len(written))
 	for _, o := range written {
-		if l, ok := byID[uuidString(o.ID)]; ok {
+		if l, ok := byID[database.UUIDString(o.ID)]; ok {
 			rows = append(rows, l)
 		}
 	}

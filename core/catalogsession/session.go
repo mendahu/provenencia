@@ -14,6 +14,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/searchindex"
@@ -41,25 +42,33 @@ func key(projectDir string) (string, error) {
 	return filepath.Clean(projectDir), nil
 }
 
+// ReconcileOnOpen runs the open-time repairs of a catalog, in order: refs for
+// rows a format step added without one, the project uuid, then the derived
+// caches. onboarding.createCatalog, onboarding's OpenCatalog and Do all call
+// it, so the next repair is one line here. It does not close c.
+func ReconcileOnOpen(c *database.Catalog) error {
+	if err := users.EnsureRefs(c); err != nil {
+		return err
+	}
+	if err := evidencegraphs.EnsureRefs(c); err != nil {
+		return err
+	}
+	if err := project.EnsureUUID(c); err != nil {
+		return err
+	}
+	// The cache first: the search index's handle documents read it.
+	if err := autoreconciler.EnsureCatalog(c); err != nil {
+		return err
+	}
+	return searchindex.EnsureCatalog(c)
+}
+
 func openResearcher(projectDir string) (*database.Catalog, error) {
 	c, err := database.Open(projectDir)
 	if err != nil {
 		return nil, err
 	}
-	if err := users.EnsureRefs(c); err != nil {
-		_ = c.Close()
-		return nil, err
-	}
-	if err := project.EnsureUUID(c); err != nil {
-		_ = c.Close()
-		return nil, err
-	}
-	// The cache first: the search index's handle documents read it.
-	if err := autoreconciler.EnsureCatalog(c); err != nil {
-		_ = c.Close()
-		return nil, err
-	}
-	if err := searchindex.EnsureCatalog(c); err != nil {
+	if err := ReconcileOnOpen(c); err != nil {
 		_ = c.Close()
 		return nil, err
 	}

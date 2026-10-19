@@ -15,6 +15,7 @@ func TestMint(t *testing.T) {
 		{name: "const", prefix: PrefixUser},
 		{name: "lower", prefix: "usr"},
 		{name: "src", prefix: PrefixSource},
+		{name: "evidence graph", prefix: PrefixEvidenceGraph},
 		{name: "short", prefix: "US", wantErr: ErrInvalidPrefix},
 		{name: "long", prefix: "USER", wantErr: ErrInvalidPrefix},
 		{name: "digits", prefix: "US1", wantErr: ErrInvalidPrefix},
@@ -105,6 +106,7 @@ func TestValidatePrefix(t *testing.T) {
 		{name: "reserved artifact", prefix: "ART", wantErr: ErrReservedPrefix},
 		{name: "reserved citation", prefix: "CIT", wantErr: ErrReservedPrefix},
 		{name: "reserved observation", prefix: "OBS", wantErr: ErrReservedPrefix},
+		{name: "reserved evidence graph", prefix: "GPH", wantErr: ErrReservedPrefix},
 		{name: "reserved lowercase", prefix: "src", wantErr: ErrReservedPrefix},
 		{name: "blank", prefix: "  ", wantErr: ErrInvalidPrefix},
 	}

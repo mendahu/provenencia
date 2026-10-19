@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -307,6 +308,38 @@ func TestSourceScopes(t *testing.T) {
 					if err := runArtifactUpdate(s.c, scopeUserID, art); err != nil {
 						t.Fatal(err)
 					}
+				})
+			},
+		},
+		{
+			name: "graph link and unlink",
+			run: func(t *testing.T, s scopeSeed) {
+				second, err := runArtifactCreate(s.c, scopeUserID, artifacts.CreateInput{SourceID: s.a.ID, Label: "Second"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				linkWrite := func(action string, fn func(tx *database.Tx, graphID []byte) ([]rowchange.Change, error)) {
+					t.Helper()
+					if _, err := writes.Call(s.c, writes.Op{Action: action, UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						graphID, err := evidencegraphs.SoleGraphTx(tx.Tx, s.a.ID)
+						if err != nil {
+							return struct{}{}, nil, err
+						}
+						changes, err := fn(tx, graphID)
+						return struct{}{}, changes, err
+					}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				s.bumpsA(t, func() {
+					linkWrite("unlink_artifact", func(tx *database.Tx, graphID []byte) ([]rowchange.Change, error) {
+						return evidencegraphs.Unlink(tx, scopeUserID, graphID, second.ID)
+					})
+				})
+				s.bumpsA(t, func() {
+					linkWrite("link_artifact", func(tx *database.Tx, graphID []byte) ([]rowchange.Change, error) {
+						return evidencegraphs.Link(tx, scopeUserID, graphID, second.ID)
+					})
 				})
 			},
 		},

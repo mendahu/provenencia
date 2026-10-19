@@ -87,7 +87,7 @@ The exact `ON DELETE` classes and `catalogmodel` buckets are set by the schema P
 
 ### Migration
 
-One `Default` graph per existing Source, with the Source's id as its id; its `GPH-` ref is minted in Go when the project next opens. Every Subject moves into its Source's Default graph, and every Artifact is linked to it. Positions are keyed by Subject, so the canvas looks the same. Existing projects look unchanged.
+One `Default` graph per existing Source, with an id of its own; its `GPH-` ref is minted in Go when the project next opens. Every Subject moves into its Source's Default graph, and every Artifact is linked to it. Positions are keyed by Subject, so the canvas looks the same. Existing projects look unchanged.
 
 ## Not this spike
 

@@ -150,7 +150,7 @@ Searched: `writeEffectsProto` callers, `mapWriteEffects`, `bumpSource`, `refresh
 
 **Builds on.** `writeEffectsProto` (Go), `GoStore.mapWriteEffects`, `FakeStore.bumpSource`, `WorkspaceSession.apply(_:_:)` and its graph-progress refresh, the registry's `.createdSource` invalidations and `conclusionTriggers` shape, `WorkspaceView`'s `onLocationCommit` wiring, `CatalogCounts.refreshAll`.
 **Deletes.** The "or create" in the `syncCatalogCounts()` and `publishSources` doc comments. The hand insert into the Sources list in `SourcesModel.create()` (seven lines); the manual `nextAuditRevision` bump in `FakeStore.createSource` and the duplicated insert tail in `FakeStore.copySource` (both go through `insertSource`); the `syncCatalogCounts()` call in `create()`; Promote's `refreshAll()` line and its `catalogCounts` parameter through `PromoteModel`, `PromoteView`, the host and two test calls; `createSource` from the "report no effects" lists in `docs/macos-client-patterns.md` and `add-workspace-place`.
-**Next adds.** S12-03 makes `sources.Create` mint a Default graph in the same write. The new `evidence_graphs` row's effect (`Set.EvidenceGraphs`, S12-03 / S12-05) then reaches Add Source through these effects with no Add Source code, as working rule "The graph list has its own effect" expects for Copy Source.
+**Next adds.** S12-03 makes `sources.Create` mint a Default graph in the same write. The new `evidence_graphs` row's effect (list key `evidence_graphs` in `Set.Lists`, S12-03 / S12-05) then reaches Add Source through these effects with no Add Source code, as working rule "The graph list has its own effect" expects for Copy Source.
 
 ### Schema
 

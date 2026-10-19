@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"strings"
 
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -80,8 +81,8 @@ func depictionCreateChange(id []byte, v depictionvalue.Value) rowchange.Change {
 
 func depictionValueMap(id []byte, v depictionvalue.Value) map[string]any {
 	return map[string]any{
-		"id":            uuidJSON(id),
+		"id":            database.UUIDJSON(id),
 		"region_json":   v.RegionJSON,
-		"image_file_id": uuidJSON(v.ImageFileID),
+		"image_file_id": database.UUIDJSON(v.ImageFileID),
 	}
 }

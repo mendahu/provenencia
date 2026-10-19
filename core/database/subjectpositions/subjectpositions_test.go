@@ -1,15 +1,16 @@
-package subjectpositions
+package subjectpositions_test
 
 import (
 	"database/sql"
 	"errors"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/database/subjectpositions"
+	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -58,18 +59,15 @@ func TestSubjectPositions(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		db, err := c.DB()
+		sub, _, err := writes.Run(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				SourceID: sourceID, SubjectTypeID: person.ID, Label: label,
+			}, nil)
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		id := uuid.New()
-		if _, err := db.Exec(
-			`INSERT INTO subjects (id, ref, source_id, subject_type_id, label) VALUES (?, ?, ?, ?, ?)`,
-			id[:], "CPR-"+label, sourceID, person.ID, label,
-		); err != nil {
-			t.Fatal(err)
-		}
-		return id[:]
+		return sub.ID
 	}
 	auditCount := func(t *testing.T, c *database.Catalog) int {
 		t.Helper()
@@ -95,8 +93,8 @@ func TestSubjectPositions(t *testing.T) {
 				src := mustSource(t, c, "Deed")
 				sub := mustPerson(t, c, src.ID, "Alice")
 				before := auditCount(t, c)
-				p, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
-					return Set(tx, sub, -3, 7)
+				p, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+					return subjectpositions.Set(tx, sub, -3, 7)
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -104,7 +102,7 @@ func TestSubjectPositions(t *testing.T) {
 				if p.GridX != -3 || p.GridY != 7 {
 					t.Fatalf("%+v", p)
 				}
-				got, err := Get(c, sub)
+				got, err := subjectpositions.Get(c, sub)
 				if err != nil || got.GridX != -3 || got.GridY != 7 {
 					t.Fatalf("%v %+v", err, got)
 				}
@@ -119,17 +117,17 @@ func TestSubjectPositions(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c, "Deed")
 				sub := mustPerson(t, c, src.ID, "Alice")
-				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
-					return Set(tx, sub, 1, 1)
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+					return subjectpositions.Set(tx, sub, 1, 1)
 				}); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
-					return Set(tx, sub, 2, 3)
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+					return subjectpositions.Set(tx, sub, 2, 3)
 				}); err != nil {
 					t.Fatal(err)
 				}
-				got, err := Get(c, sub)
+				got, err := subjectpositions.Get(c, sub)
 				if err != nil || got.GridX != 2 || got.GridY != 3 {
 					t.Fatalf("%v %+v", err, got)
 				}
@@ -152,29 +150,29 @@ func TestSubjectPositions(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c, "Deed")
 				sub := mustPerson(t, c, src.ID, "Alice")
-				_, err := Get(c, sub)
+				_, err := subjectpositions.Get(c, sub)
 				if !errors.Is(err, sql.ErrNoRows) {
 					t.Fatalf("got %v", err)
 				}
-				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
-					return Set(tx, sub, 0, 0)
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+					return subjectpositions.Set(tx, sub, 0, 0)
 				}); err != nil {
 					t.Fatal(err)
 				}
 				before := auditCount(t, c)
 				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-					changes, err := Clear(tx, sub)
+					changes, err := subjectpositions.Clear(tx, sub)
 					return struct{}{}, changes, err
 				}); err != nil {
 					t.Fatal(err)
 				}
 				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-					changes, err := Clear(tx, sub)
+					changes, err := subjectpositions.Clear(tx, sub)
 					return struct{}{}, changes, err
 				}); err != nil {
 					t.Fatal(err)
 				}
-				_, err = Get(c, sub)
+				_, err = subjectpositions.Get(c, sub)
 				if !errors.Is(err, sql.ErrNoRows) {
 					t.Fatalf("got %v", err)
 				}
@@ -192,22 +190,22 @@ func TestSubjectPositions(t *testing.T) {
 				a1 := mustPerson(t, c, srcA.ID, "A1")
 				a2 := mustPerson(t, c, srcA.ID, "A2")
 				b1 := mustPerson(t, c, srcB.ID, "B1")
-				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
-					return Set(tx, a1, 1, 0)
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+					return subjectpositions.Set(tx, a1, 1, 0)
 				}); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.
 
 					// a2 stays unplaced
 					Change, error) {
-					return Set(tx, b1, 9, 9)
+					return subjectpositions.Set(tx, b1, 9, 9)
 				}); err != nil {
 					t.Fatal(err)
 				}
 
 				_ = a2
-				list, err := ListBySource(c, srcA.ID)
+				list, err := subjectpositions.ListBySource(c, srcA.ID)
 				if err != nil || len(list) != 1 || string(list[0].SubjectID) != string(a1) {
 					t.Fatalf("%v %+v", err, list)
 				}
@@ -218,14 +216,14 @@ func TestSubjectPositions(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				missing := make([]byte, 16)
 				missing[0] = 1
-				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
-					return Set(tx, missing, 0, 0)
-				}); !errors.Is(err, ErrInvalid) {
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+					return subjectpositions.Set(tx, missing, 0, 0)
+				}); !errors.Is(err, subjectpositions.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
-				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
-					return Set(tx, []byte{1}, 0, 0)
-				}); !errors.Is(err, ErrInvalid) {
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+					return subjectpositions.Set(tx, []byte{1}, 0, 0)
+				}); !errors.Is(err, subjectpositions.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -236,8 +234,8 @@ func TestSubjectPositions(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c, "Deed")
 				sub := mustPerson(t, c, src.ID, "Alice")
-				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
-					return Set(tx, sub, 4, -1)
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+					return subjectpositions.Set(tx, sub, 4, -1)
 				}); err != nil {
 					t.Fatal(err)
 				}
@@ -250,11 +248,11 @@ func TestSubjectPositions(t *testing.T) {
 					t.Fatal(err)
 				}
 				defer reopened.Close()
-				got, err := Get(reopened, sub)
+				got, err := subjectpositions.Get(reopened, sub)
 				if err != nil || got.GridX != 4 || got.GridY != -1 {
 					t.Fatalf("%v %+v", err, got)
 				}
-				list, err := ListBySource(reopened, src.ID)
+				list, err := subjectpositions.ListBySource(reopened, src.ID)
 				if err != nil || len(list) != 1 {
 					t.Fatalf("%v len=%d", err, len(list))
 				}

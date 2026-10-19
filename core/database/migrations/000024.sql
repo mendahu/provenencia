@@ -2,7 +2,7 @@
 -- Seeded term rows come from subjectvocab.Install at create time (not SQL INSERTs).
 -- SQLite cannot ALTER CHECK; recreate properties with the expanded value_type set.
 
-PRAGMA foreign_keys=OFF;
+-- migrate: foreign_keys off
 
 CREATE TABLE properties__new (
 	id          BLOB PRIMARY KEY,
@@ -39,5 +39,3 @@ CREATE TABLE property_terms (
 
 	UNIQUE (property_id, key, origin)
 ) STRICT;
-
-PRAGMA foreign_keys=ON;

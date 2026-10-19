@@ -874,7 +874,7 @@ struct CatalogQueryRegistryTests {
             handles: ["e1"],
             sources: ["s1"],
             citationSources: ["s1"],
-            propertyUsage: true,
+            lists: [.propertyUsage],
             headerHandles: ["e2"]
         ), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
@@ -1172,6 +1172,37 @@ struct CatalogQueryRegistryTests {
         await waitForFetchComplete(workspaceHandle)
         #expect(workspaceHandle.value?.source.sourceTypeID == "t2")
         #expect(workspaceHandle.value?.metadata.count == 1)
+    }
+
+    private struct ListCase: CustomTestStringConvertible, Sendable {
+        let name: String
+        let lists: Set<CatalogList>
+        let structure: Bool
+        let propertiesInvalidations: Int
+
+        var testDescription: String { name }
+    }
+
+    nonisolated private static let listCases: [ListCase] = [
+        ListCase(name: "vocabulary", lists: [.vocabulary], structure: false, propertiesInvalidations: 1),
+        ListCase(name: "property usage", lists: [.propertyUsage], structure: false, propertiesInvalidations: 1),
+        ListCase(
+            name: "vocabulary and property usage", lists: [.vocabulary, .propertyUsage],
+            structure: false, propertiesInvalidations: 1
+        ),
+        ListCase(name: "structure alone", lists: [], structure: true, propertiesInvalidations: 1),
+        ListCase(name: "vocabulary and structure", lists: [.vocabulary], structure: true, propertiesInvalidations: 1),
+        ListCase(name: "evidence graphs alone", lists: [.evidenceGraphs], structure: false, propertiesInvalidations: 0),
+    ]
+
+    @Test(arguments: listCases)
+    private func listInvalidations(_ tc: ListCase) {
+        let project = ProjectKey(projectDir: projectDir)
+        let got = CatalogQueryRegistry.standard.invalidations(
+            for: CatalogWriteEffects(lists: tc.lists, structure: tc.structure),
+            project: project
+        )
+        #expect(got.filter { $0 == .key(.propertiesWorkspace(project: project)) }.count == tc.propertiesInvalidations)
     }
 
     @Test func navCountTriggersAreSourceAndPromoteWrites() {

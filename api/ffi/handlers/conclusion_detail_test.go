@@ -31,7 +31,7 @@ func personEntityID(t *testing.T, dir, ref string) string {
 		if err := db.QueryRow(`SELECT id FROM canonical_entities WHERE ref = ?`, ref).Scan(&raw); err != nil {
 			return err
 		}
-		id = uuidString(raw)
+		id = database.UUIDString(raw)
 		return nil
 	}); err != nil {
 		t.Fatal(err)
@@ -131,7 +131,7 @@ func TestConclusionValueProtoCoversEveryKind(t *testing.T) {
 		}},
 		{"term", conclusiondetails.Value{TermID: term, TermKey: "male", TermLabel: "Male"}, func(v *engine.ConclusionValue) bool {
 			tm := v.GetTerm()
-			return tm.GetId() == uuidString(term) && tm.GetKey() == "male" && tm.GetLabel() == "Male"
+			return tm.GetId() == database.UUIDString(term) && tm.GetKey() == "male" && tm.GetLabel() == "Male"
 		}},
 		{"date", conclusiondetails.Value{Date: &datevalue.Value{Kind: "point", Calendar: "gregorian", StartYear: &year}}, func(v *engine.ConclusionValue) bool {
 			return v.GetDate().GetStartYear() == 1890
@@ -170,7 +170,7 @@ func TestConclusionDetailProtoCarriesVoteArtifactAndMembers(t *testing.T) {
 	}
 	got := conclusionDetailProto(d)
 	o := got.Fields[0].Outcomes[0]
-	if got.GetMemberCount() != 4 || o.GetArtifactId() != uuidString(artifact) || o.GetVoteSupport() != 2 || o.GetVoteTotal() != 3 {
+	if got.GetMemberCount() != 4 || o.GetArtifactId() != database.UUIDString(artifact) || o.GetVoteSupport() != 2 || o.GetVoteTotal() != 3 {
 		t.Fatalf("%+v", got)
 	}
 }

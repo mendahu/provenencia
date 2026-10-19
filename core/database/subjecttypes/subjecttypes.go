@@ -117,13 +117,7 @@ func Upsert(c *database.Catalog, t Type) ([]byte, error) {
 		return nil, err
 	}
 
-	var desc any
-	if t.Description == "" {
-		desc = nil
-	} else {
-		desc = t.Description
-	}
-	if _, err := db.Exec(sqlUpsert, id, t.Key, t.Origin, t.Label, desc, t.RefPrefix, t.CandidateRefPrefix); err != nil {
+	if _, err := db.Exec(sqlUpsert, id, t.Key, t.Origin, t.Label, database.NullString(t.Description), t.RefPrefix, t.CandidateRefPrefix); err != nil {
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil

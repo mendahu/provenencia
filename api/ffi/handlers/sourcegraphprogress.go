@@ -56,7 +56,7 @@ func GetSourceGraphProgress(in []byte) ([]byte, error) {
 
 func protoProgress(row sourcegraphprogress.Progress) *engine.SourceGraphProgress {
 	return &engine.SourceGraphProgress{
-		SourceId:         uuidString(row.SourceID),
+		SourceId:         database.UUIDString(row.SourceID),
 		SubjectCount:     row.SubjectCount,
 		ObservationCount: row.ObservationCount,
 		PrimaryCount:     row.PrimaryCount,

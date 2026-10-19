@@ -245,9 +245,9 @@ func DeleteCitation(in []byte) ([]byte, error) {
 
 func citationProto(c citations.Citation) *engine.Citation {
 	return &engine.Citation{
-		Id:                     uuidString(c.ID),
+		Id:                     database.UUIDString(c.ID),
 		Ref:                    c.Ref,
-		ArtifactId:             uuidString(c.ArtifactID),
+		ArtifactId:             database.UUIDString(c.ArtifactID),
 		LocatorJson:            c.LocatorJSON,
 		Transcription:          c.Transcription,
 		Label:                  c.Label,

@@ -105,10 +105,10 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 
 	for _, r := range prop.Rows {
 		row := &engine.PromoteGraphAlignmentRow{
-			SubjectId:            uuidString(r.SubjectID),
+			SubjectId:            database.UUIDString(r.SubjectID),
 			Kind:                 r.Kind,
 			Target:               string(r.Target),
-			HandleId:             uuidString(r.HandleID),
+			HandleId:             database.UUIDString(r.HandleID),
 			HandleRef:            r.HandleRef,
 			Score:                r.Score,
 			Assessment:           string(r.Assessment),
@@ -117,10 +117,10 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 			ReasonPropertyOrigin: productOrigin(r.ReasonProperty),
 			ConflictWithFixed:    r.Flags.ConflictWithFixed,
 			PossibleDuplicate:    r.Flags.PossibleDuplicate,
-			DuplicateOfSubjectId: uuidString(r.Flags.DuplicateOf),
+			DuplicateOfSubjectId: database.UUIDString(r.Flags.DuplicateOf),
 		}
 		if r.Via != nil {
-			row.ViaNeighborSubjectId = uuidString(r.Via.NeighborSubjectID)
+			row.ViaNeighborSubjectId = database.UUIDString(r.Via.NeighborSubjectID)
 			row.ViaBridgeType = string(r.Via.Key.Type)
 			row.ViaRole = string(r.Via.Key.Term)
 		}
@@ -132,12 +132,12 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 				ValueType:             ex.ValueType,
 				Pinned:                ex.Pinned,
 				Weight:                ex.Weight,
-				GroupSubjectId:        uuidString(ex.GroupSubjectID),
-				IncomingObservationId: uuidString(ex.IncomingObservationID),
+				GroupSubjectId:        database.UUIDString(ex.GroupSubjectID),
+				IncomingObservationId: database.UUIDString(ex.IncomingObservationID),
 				IncomingDisplay:       ex.IncomingDisplay,
 				IncomingNegative:      ex.IncomingNegative,
 				IncomingSource:        ex.IncomingSource,
-				MemberObservationId:   uuidString(ex.MemberObservationID),
+				MemberObservationId:   database.UUIDString(ex.MemberObservationID),
 				MemberDisplay:         ex.MemberDisplay,
 				MemberSource:          ex.MemberSource,
 			}
@@ -151,14 +151,14 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 		}
 		for _, a := range r.Alternatives {
 			alt := &engine.PromoteGraphAlignmentAlternative{
-				HandleId:             uuidString(a.HandleID),
+				HandleId:             database.UUIDString(a.HandleID),
 				HandleRef:            a.Ref,
 				Score:                a.Score,
 				Assessment:           string(a.Assessment),
 				Reason:               string(a.Reason),
 				ReasonPropertyKey:    string(a.ReasonProperty),
 				ReasonPropertyOrigin: productOrigin(a.ReasonProperty),
-				ViaNeighborSubjectId: uuidString(a.ViaNeighbor),
+				ViaNeighborSubjectId: database.UUIDString(a.ViaNeighbor),
 			}
 			switch r.Kind {
 			case vocabkey.Person:

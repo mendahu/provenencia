@@ -58,6 +58,7 @@ An earlier design used an infix marker (`PER-C-7KD45`) so one prefix could serve
 | `ART` | artifacts |
 | `CIT` | citations |
 | `OBS` | observations |
+| `GPH` | evidence graphs (`evidence_graphs`; backfilled rows get theirs from `evidencegraphs.EnsureRefs` at open) |
 
 **Subject type prefixes** come from `subject_types`, two per row (see [`seeded-vocabulary.md`](seeded-vocabulary.md) §3.1): `ref_prefix` for canonical entities (`PER`, `EVT`, `PLC`, `REL`, `PTN`, `LOC`, `SRN`, …) and `candidate_ref_prefix` for Subjects (`CPR`, `CEV`, `CPL`, `CRL`, `CPA`, `CLO`, `CSR`, …). None of them may collide with the reserved catalog set above, or with each other across either column.
 
@@ -108,7 +109,7 @@ ref TEXT NOT NULL,
 
 - Assign `ref` in the domain `Upsert` / insert path via `ref.Mint(prefix)`.
 - Reject empty / malformed refs (`ref.Validate`) before write.
-- Backfill nullable legacy columns in Go after migrate (see `users.EnsureRefs`), not with unstable SQL placeholders.
+- Backfill nullable legacy columns in Go after migrate (see `users.EnsureRefs` and `evidencegraphs.EnsureRefs`, both run by `catalogsession.ReconcileOnOpen`), not with unstable SQL placeholders.
 
 Install-local identity mirrors the contributor ref in `identity.json` (`ref` field) so the same `USR-…` is reused across projects on one Mac.
 

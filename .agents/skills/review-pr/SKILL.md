@@ -72,7 +72,7 @@ at the end under **Outside my lens**, one line each. The orchestrator routes it.
 **Problem:** what goes wrong, for whom, when.
 **Evidence:** the code, the trace from input to failure, the command and its output, or the failing test.
 **Fix:** what to change. Name the existing code to reuse when there is one.
-**Fit:** this PR | follow-up (preparatory PR, idea file)
+**Fit:** this PR | later PR (S#-NN) | follow-up (idea file)
 **Confidence:** high | medium | low
 ```
 

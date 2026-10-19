@@ -352,7 +352,7 @@ func DeleteMetadataField(in []byte) ([]byte, error) {
 
 func sourceTypeProto(t sourcetypes.Type) *engine.SourceType {
 	return &engine.SourceType{
-		Id:                  uuidString(t.ID),
+		Id:                  database.UUIDString(t.ID),
 		Key:                 t.Key,
 		Origin:              t.Origin,
 		Label:               t.Label,
@@ -365,7 +365,7 @@ func sourceTypeProto(t sourcetypes.Type) *engine.SourceType {
 
 func metadataFieldProto(f metadatafields.Field) *engine.MetadataField {
 	return &engine.MetadataField{
-		Id:          uuidString(f.ID),
+		Id:          database.UUIDString(f.ID),
 		Key:         f.Key,
 		Origin:      f.Origin,
 		Label:       f.Label,

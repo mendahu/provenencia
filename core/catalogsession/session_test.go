@@ -9,7 +9,9 @@ import (
 
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/onboarding"
+	"github.com/mendahu/provenencia/core/ref"
 )
 
 func TestDo(t *testing.T) {
@@ -138,6 +140,27 @@ func TestDo(t *testing.T) {
 				err := catalogsession.Do("  ", func(*database.Catalog) error { return nil })
 				if !errors.Is(err, database.ErrNotAProject) {
 					t.Fatalf("got %v want %v", err, database.ErrNotAProject)
+				}
+			},
+		},
+		{
+			name: "open mints missing graph refs",
+			run: func(t *testing.T, _ string) {
+				c, err := database.Create(t.TempDir(), "graphs.provenencia")
+				if err != nil {
+					t.Fatal(err)
+				}
+				dir := c.Dir()
+				sourceID := evidencegraphstest.SeedRefless(t, c)
+				t.Cleanup(func() { _ = catalogsession.Close(dir) })
+				err = catalogsession.Do(dir, func(c *database.Catalog) error {
+					if got := evidencegraphstest.Ref(t, c, sourceID); !ref.Valid(got) {
+						t.Errorf("graph ref %q", got)
+					}
+					return nil
+				})
+				if err != nil {
+					t.Fatal(err)
 				}
 			},
 		},

@@ -560,11 +560,13 @@ CREATE TABLE subjects (
     id              BLOB PRIMARY KEY,
     ref             TEXT UNIQUE NOT NULL,      -- e.g. CPR-7KD45
     source_id       BLOB NOT NULL REFERENCES sources(id),
+    graph_id        BLOB NOT NULL,
     subject_type_id BLOB NOT NULL REFERENCES subject_types(id),
     label           TEXT,
     description     TEXT,
 
-    UNIQUE (id, subject_type_id)
+    UNIQUE (id, subject_type_id),
+    FOREIGN KEY (graph_id, source_id) REFERENCES evidence_graphs(id, source_id)
 ) STRICT;
 ```
 
@@ -581,6 +583,8 @@ For Subjects of type `source`, `source_id` has a stronger meaning: it identifies
 Subjects deliberately contain little domain data. A person's name, an Event's date, a Place's name, or a Participation's role belongs in cited Observations rather than fixed subject columns.
 
 `description` is an optional short summary of the subject itself. Subjects do not have a multi-note table; researcher commentary about interpreted assertions belongs on the supporting Observations and can be aggregated from `observation_notes` when a subject-centric view is needed.
+
+`graph_id` is the Evidence graph the Subject belongs to ([`source-layer-data-model.md`](source-layer-data-model.md) § 7.1). A Subject belongs to one graph and never moves. The composite key `(graph_id, source_id)` keeps the graph on the Subject's home Source. `subjects.Create` takes the graph from `evidencegraphs.SoleGraphTx` while every Source has one graph.
 
 A subject can therefore be sparse. Creating a `person` subject does not require knowing a name, date, or any other property.
 

@@ -781,7 +781,7 @@ struct WorkspaceSessionTests {
         #expect(!properties.isFetching && !counts.isFetching)
 
         session.apply(CatalogWriteEffects(
-            sources: ["s1"], citationSources: ["s1"], propertyUsage: true
+            sources: ["s1"], citationSources: ["s1"], lists: [.propertyUsage]
         ))
         #expect(properties.isFetching)
         #expect(counts.isFetching)
@@ -834,7 +834,7 @@ struct WorkspaceSessionTests {
         #expect(fields.value?.properties.first?.usedBy == 2)
 
         store.propertiesByProject[projectDir]?[0].usedBy = 1
-        session.apply(CatalogWriteEffects(sources: ["s1"], citationSources: ["s1"], propertyUsage: true))
+        session.apply(CatalogWriteEffects(sources: ["s1"], citationSources: ["s1"], lists: [.propertyUsage]))
 
         let _: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         await waitForFetchComplete(fields)

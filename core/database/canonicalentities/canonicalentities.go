@@ -36,7 +36,6 @@ const (
 	sqlCountByTypeKey = `SELECT COUNT(*) FROM canonical_entities e
 		JOIN subject_types st ON st.id = e.subject_type_id
 		WHERE st.key = ? AND st.origin = 'provenencia' AND e.merged_into_id IS NULL`
-	maxRefRetries = 8
 )
 
 // Entity is one canonical_entities row.
@@ -92,22 +91,15 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Entity, rowchange.Change, error) {
 	}
 	idBytes := id[:]
 
-	var entityRef string
-	for attempt := 0; attempt < maxRefRetries; attempt++ {
-		entityRef, err = ref.Mint(prefix)
-		if err != nil {
-			return Entity{}, rowchange.Change{}, err
-		}
-		_, err = tx.Exec(sqlInsert, idBytes, in.SubjectTypeID, entityRef, nullStr(in.Argument), nullStr(in.Label))
-		if err == nil {
-			break
-		}
-		if !database.IsUniqueConflict(err) {
-			return Entity{}, rowchange.Change{}, mapConstraint(err)
-		}
+	entityRef, err := database.InsertWithRef(database.Minter(prefix), func(storedRef string) error {
+		_, err := tx.Exec(sqlInsert, idBytes, in.SubjectTypeID, storedRef, database.NullString(in.Argument), database.NullString(in.Label))
+		return err
+	})
+	if errors.Is(err, database.ErrRefsExhausted) {
+		return Entity{}, rowchange.Change{}, ErrInvalid
 	}
 	if err != nil {
-		return Entity{}, rowchange.Change{}, ErrInvalid
+		return Entity{}, rowchange.Change{}, mapConstraint(err)
 	}
 
 	change := rowchange.Change{
@@ -116,10 +108,10 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Entity, rowchange.Change, error) {
 		Action:     rowchange.ActionCreate,
 		Fields: rowchange.FullRow(map[string]any{
 			"id":              id.String(),
-			"subject_type_id": uuidJSON(in.SubjectTypeID),
+			"subject_type_id": database.UUIDJSON(in.SubjectTypeID),
 			"ref":             entityRef,
-			"argument":        nullStr(in.Argument),
-			"label":           nullStr(in.Label),
+			"argument":        database.NullString(in.Argument),
+			"label":           database.NullString(in.Label),
 			"merged_into_id":  nil,
 		}),
 	}
@@ -299,27 +291,9 @@ func SetPreferredLikeness(tx *database.Tx, userID, entityID, observationID []byt
 		EntityID:   append([]byte(nil), entityID...),
 		Action:     rowchange.ActionUpdate,
 		Fields: map[string]rowchange.FieldDiff{
-			"preferred_likeness_observation_id": {Old: uuidJSON(prev), New: uuidJSON(observationID)},
+			"preferred_likeness_observation_id": {Old: database.UUIDJSON(prev), New: database.UUIDJSON(observationID)},
 		},
 	}}, nil
-}
-
-func nullStr(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func uuidJSON(id []byte) any {
-	if len(id) != 16 {
-		return nil
-	}
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return nil
-	}
-	return u.String()
 }
 
 func mapConstraint(err error) error {

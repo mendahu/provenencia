@@ -2,7 +2,7 @@
 -- Backfill any NULL or blank titles before enforcing NOT NULL.
 -- SQLite cannot ALTER COLUMN; recreate the table with FKs off.
 
-PRAGMA foreign_keys=OFF;
+-- migrate: foreign_keys off
 
 UPDATE sources
 SET title = 'Untitled'
@@ -21,5 +21,3 @@ SELECT id, ref, source_type_id, title, description FROM sources;
 
 DROP TABLE sources;
 ALTER TABLE sources__new RENAME TO sources;
-
-PRAGMA foreign_keys=ON;

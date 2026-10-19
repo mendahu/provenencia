@@ -147,8 +147,8 @@ func Insert(tx *sql.Tx, f File) error {
 		sqlInsert,
 		f.ID,
 		f.ChecksumSHA256,
-		nullStr(f.OriginalFilename),
-		nullStr(f.MediaType),
+		database.NullString(f.OriginalFilename),
+		database.NullString(f.MediaType),
 		f.ByteSize,
 	)
 	if err != nil {
@@ -163,7 +163,7 @@ func UpdateOriginalFilename(tx *sql.Tx, id []byte, name string) error {
 		return ErrInvalid
 	}
 	name = strings.TrimSpace(name)
-	res, err := tx.Exec(sqlUpdateFilename, nullStr(name), id)
+	res, err := tx.Exec(sqlUpdateFilename, database.NullString(name), id)
 	if err != nil {
 		return mapConstraint(err)
 	}
@@ -206,13 +206,6 @@ func scanFile(row interface{ Scan(dest ...any) error }) (File, error) {
 		return File{}, err
 	}
 	return f, nil
-}
-
-func nullStr(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 func isLowerHex(s string) bool {
