@@ -499,32 +499,96 @@ func TestMembership(t *testing.T) {
 }
 
 func TestEnsureRefs(t *testing.T) {
-	f := newFixture(t)
-	a, _ := f.createSource(t, "Census 1881")
-	b, _ := f.createSource(t, "Parish register")
-	keep := graphRows(t, f.c, b.ID)[0].ref
-	db, err := f.c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := db.Exec(`UPDATE evidence_graphs SET ref = NULL WHERE source_id = ?`, a.ID); err != nil {
-		t.Fatal(err)
-	}
+	t.Run("mints missing refs", func(t *testing.T) {
+		f := newFixture(t)
+		a, _ := f.createSource(t, "Census 1881")
+		b, _ := f.createSource(t, "Parish register")
+		keep := graphRows(t, f.c, b.ID)[0].ref
+		db, err := f.c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(`UPDATE evidence_graphs SET ref = NULL WHERE source_id = ?`, a.ID); err != nil {
+			t.Fatal(err)
+		}
 
-	if err := evidencegraphs.EnsureRefs(f.c); err != nil {
-		t.Fatal(err)
-	}
-	minted := graphRows(t, f.c, a.ID)[0].ref
-	if !ref.Valid(minted) || !strings.HasPrefix(minted, "GPH-") {
-		t.Fatalf("minted ref %q", minted)
-	}
-	if got := graphRows(t, f.c, b.ID)[0].ref; got != keep {
-		t.Fatalf("existing ref changed %q -> %q", keep, got)
-	}
-	if err := evidencegraphs.EnsureRefs(f.c); err != nil {
-		t.Fatal(err)
-	}
-	if got := graphRows(t, f.c, a.ID)[0].ref; got != minted {
-		t.Fatalf("second call changed ref %q -> %q", minted, got)
-	}
+		if err := evidencegraphs.EnsureRefs(f.c); err != nil {
+			t.Fatal(err)
+		}
+		minted := graphRows(t, f.c, a.ID)[0].ref
+		if !ref.Valid(minted) || !strings.HasPrefix(minted, "GPH-") {
+			t.Fatalf("minted ref %q", minted)
+		}
+		if got := graphRows(t, f.c, b.ID)[0].ref; got != keep {
+			t.Fatalf("existing ref changed %q -> %q", keep, got)
+		}
+		if err := evidencegraphs.EnsureRefs(f.c); err != nil {
+			t.Fatal(err)
+		}
+		if got := graphRows(t, f.c, a.ID)[0].ref; got != minted {
+			t.Fatalf("second call changed ref %q -> %q", minted, got)
+		}
+	})
+
+	t.Run("retries a ref collision", func(t *testing.T) {
+		f := newFixture(t)
+		a, _ := f.createSource(t, "Census 1881")
+		b, _ := f.createSource(t, "Parish register")
+		keep := graphRows(t, f.c, a.ID)[0].ref
+		db, err := f.c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(`UPDATE evidence_graphs SET ref = NULL WHERE source_id = ?`, b.ID); err != nil {
+			t.Fatal(err)
+		}
+		calls := 0
+		restore := evidencegraphs.SetMintRef(func() (string, error) {
+			calls++
+			if calls == 1 {
+				return keep, nil
+			}
+			return ref.Mint(ref.PrefixEvidenceGraph)
+		})
+		t.Cleanup(restore)
+
+		if err := evidencegraphs.EnsureRefs(f.c); err != nil {
+			t.Fatal(err)
+		}
+		got := graphRows(t, f.c, b.ID)[0].ref
+		if !ref.Valid(got) || !strings.HasPrefix(got, "GPH-") || got == keep {
+			t.Fatalf("minted ref %q after a collision with %q", got, keep)
+		}
+		if calls != 2 {
+			t.Fatalf("mint calls = %d, want 2", calls)
+		}
+		if after := graphRows(t, f.c, a.ID)[0].ref; after != keep {
+			t.Fatalf("existing ref changed %q -> %q", keep, after)
+		}
+	})
+
+	t.Run("exhausted retries roll back", func(t *testing.T) {
+		f := newFixture(t)
+		a, _ := f.createSource(t, "Census 1881")
+		b, _ := f.createSource(t, "Parish register")
+		c, _ := f.createSource(t, "Will")
+		keep := graphRows(t, f.c, a.ID)[0].ref
+		db, err := f.c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(`UPDATE evidence_graphs SET ref = NULL WHERE source_id IN (?, ?)`, b.ID, c.ID); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(evidencegraphs.SetMintRef(func() (string, error) { return keep, nil }))
+
+		if err := evidencegraphs.EnsureRefs(f.c); !errors.Is(err, evidencegraphs.ErrInvalid) {
+			t.Fatalf("err = %v, want ErrInvalid", err)
+		}
+		for _, id := range [][]byte{b.ID, c.ID} {
+			if got := graphRows(t, f.c, id)[0].ref; got != "" {
+				t.Fatalf("ref %q left after rollback", got)
+			}
+		}
+	})
 }

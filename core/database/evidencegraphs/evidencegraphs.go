@@ -69,6 +69,9 @@ func CreateDefault(tx *database.Tx, sourceID []byte) (Graph, []rowchange.Change,
 	return g, []rowchange.Change{change}, nil
 }
 
+// mintRef is the ref source for new graphs; tests replace it to force a collision.
+var mintRef = func() (string, error) { return ref.Mint(ref.PrefixEvidenceGraph) }
+
 func insert(tx *sql.Tx, sourceID []byte, name, description string) (Graph, rowchange.Change, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
@@ -78,7 +81,7 @@ func insert(tx *sql.Tx, sourceID []byte, name, description string) (Graph, rowch
 
 	var graphRef string
 	for attempt := 0; attempt < maxRefRetries; attempt++ {
-		graphRef, err = ref.Mint(ref.PrefixEvidenceGraph)
+		graphRef, err = mintRef()
 		if err != nil {
 			return Graph{}, rowchange.Change{}, err
 		}
@@ -336,7 +339,8 @@ func LinkArtifact(tx *database.Tx, userID, sourceID, artifactID []byte, graphIDs
 }
 
 // EnsureRefs mints GPH-… refs for any evidence_graphs row missing one: the
-// graphs the format migration backfilled. Unaudited, like users.EnsureRefs.
+// graphs the format migration backfilled. Unaudited, like users.EnsureRefs, but
+// in one transaction with insert's retry on a ref collision.
 func EnsureRefs(c *database.Catalog) error {
 	db, err := c.DB()
 	if err != nil {
@@ -358,16 +362,31 @@ func EnsureRefs(c *database.Catalog) error {
 	if err := rows.Err(); err != nil {
 		return err
 	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 	for _, id := range need {
-		r, err := ref.Mint(ref.PrefixEvidenceGraph)
-		if err != nil {
-			return err
+		var setErr error
+		for attempt := 0; attempt < maxRefRetries; attempt++ {
+			r, err := mintRef()
+			if err != nil {
+				return err
+			}
+			_, setErr = tx.Exec(sqlSetRef, r, id)
+			if setErr == nil {
+				break
+			}
+			if !database.IsUniqueConflict(setErr) {
+				return setErr
+			}
 		}
-		if _, err := db.Exec(sqlSetRef, r, id); err != nil {
-			return err
+		if setErr != nil {
+			return ErrInvalid
 		}
 	}
-	return nil
+	return tx.Commit()
 }
 
 func nullStr(s string) any {
