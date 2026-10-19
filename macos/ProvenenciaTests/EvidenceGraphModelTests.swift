@@ -9,18 +9,6 @@ struct EvidenceGraphModelTests {
     private let sourceID = "src-1"
     private let personTypeID = "type-person"
 
-    private func waitUntil(
-        timeout: Duration = .seconds(5),
-        _ predicate: () -> Bool
-    ) async -> Bool {
-        let deadline = ContinuousClock.now + timeout
-        while ContinuousClock.now < deadline {
-            if predicate() { return true }
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        return predicate()
-    }
-
     private func makeStore() -> FakeStore {
         let store = FakeStore()
         store.subjectTypesByProject[projectDir] = [
@@ -689,7 +677,7 @@ struct EvidenceGraphModelTests {
             documentDelta: CGSize(width: 160, height: 0)
         )
         let olderWrite = model.lastPositionWrite
-        try #require(await waitUntil { store.heldSetSubjectPositionCount == 1 })
+        try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 1 })
         _ = model.commitDrag(
             subjectID: "s1",
             originGridX: 5,
@@ -697,7 +685,7 @@ struct EvidenceGraphModelTests {
             documentDelta: CGSize(width: 160, height: 0)
         )
         let newerWrite = model.lastPositionWrite
-        try #require(await waitUntil { store.heldSetSubjectPositionCount == 2 })
+        try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 2 })
         // Settle the older write (fails) before the newer one (succeeds).
         store.releaseSetSubjectPosition()
         await olderWrite?.value
@@ -746,7 +734,7 @@ struct EvidenceGraphModelTests {
             documentDelta: CGSize(width: 160, height: 0)
         )
         let olderWrite = model.lastPositionWrite
-        try #require(await waitUntil { store.heldSetSubjectPositionCount == 1 })
+        try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 1 })
         _ = model.commitDrag(
             subjectID: "s1",
             originGridX: 5,
@@ -754,7 +742,7 @@ struct EvidenceGraphModelTests {
             documentDelta: CGSize(width: 160, height: 0)
         )
         let newerWrite = model.lastPositionWrite
-        try #require(await waitUntil { store.heldSetSubjectPositionCount == 2 })
+        try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 2 })
         // Settle the older write (succeeds) before the newer one (fails).
         store.releaseSetSubjectPosition()
         await olderWrite?.value
@@ -1656,7 +1644,7 @@ struct EvidenceGraphModelTests {
         _ = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "s-james")
         model.session.apply(.promotedSubject(sourceId: sourceID))
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
-        let loaded = await waitUntil {
+        let loaded = await waitUntil(timeout: .seconds(5)) {
             let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
             return handle?.value?.memberships.first?.subjectID == "s-james"
         }
@@ -1680,7 +1668,7 @@ struct EvidenceGraphModelTests {
         #expect(store.recordedCalls.contains("unpromoteSubject id=s-james"))
         #expect(model.pendingUnpromote == nil)
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
-        let refreshed = await waitUntil {
+        let refreshed = await waitUntil(timeout: .seconds(5)) {
             let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
             let ids = Set(handle?.value?.memberships.map(\.subjectID) ?? [])
             return !ids.contains("s-james")
@@ -1746,7 +1734,7 @@ struct EvidenceGraphModelTests {
         #expect(model.openHandle(subjectID: "s-james") == nil)
         try? await promoteJames(store, model)
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
-        let loaded = await waitUntil {
+        let loaded = await waitUntil(timeout: .seconds(5)) {
             let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
             return handle?.value?.memberships.first?.name != nil
         }
@@ -1790,7 +1778,7 @@ struct EvidenceGraphModelTests {
         )
         model.session.apply(.promotedSubject(sourceId: sourceID))
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
-        let loaded = await waitUntil {
+        let loaded = await waitUntil(timeout: .seconds(5)) {
             let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
             return handle?.value?.memberships.contains { $0.subjectID == "s-fire" && $0.kind == "event" } == true
         }
@@ -1812,7 +1800,7 @@ struct EvidenceGraphModelTests {
         let (store, model) = await promotableModel()
         try await promoteJames(store, model)
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
-        let reloaded = await waitUntil {
+        let reloaded = await waitUntil(timeout: .seconds(5)) {
             let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
             return handle?.value?.memberships.first?.subjectID == "s-james"
         }
