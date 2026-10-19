@@ -41,6 +41,31 @@ func BenchmarkProposeColdHub(b *testing.B) {
 	b.ReportMetric(float64(heap), "heap-B")
 }
 
+// BenchmarkProposeWarmHub times a repeat proposal on BenchmarkProposeColdHub's
+// catalog, with no drop between, and reports the heap afterward. Reported, not
+// gated.
+func BenchmarkProposeWarmHub(b *testing.B) {
+	f := newFixture(b)
+	city := f.place(f.source, f.artifact, "Hub")
+	hub := f.promote(city).Entity.ID
+	db, err := f.c.DB()
+	must(b, err)
+	must(b, bulkCanon(db, hub))
+	_, _, err = promotealign.Propose(f.c, f.source.ID, nil)
+	must(b, err)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _, err := promotealign.Propose(f.c, f.source.ID, nil)
+		must(b, err)
+	}
+	b.StopTimer()
+	runtime.GC()
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	b.ReportMetric(float64(ms.HeapAlloc), "heap-B")
+}
+
 func benchID(n int) []byte {
 	var id [16]byte
 	id[0] = 0xB0

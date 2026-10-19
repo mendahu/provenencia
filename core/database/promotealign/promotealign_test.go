@@ -666,32 +666,21 @@ func TestShorterStructuredNameIsAWeakMatch(t *testing.T) {
 	}
 }
 
-func TestSpellingVariantToponymIsAWeakMatch(t *testing.T) {
+// "Provenance" shares no word with "Provenanced", so the shortlist never offers
+// the handle: the accepted gap for a spelling-only toponym (S11-15).
+// dogfood: Spike 11 matching dogfood: if spelling-only names or toponyms go
+// unmatched there, revisit the coarse misspelling key (one more prefix in
+// valuecompare's wordKeys).
+func TestSpellingOnlyToponymIsNotShortlisted(t *testing.T) {
 	f := newFixture(t)
-	named := f.promote(f.place(f.source, f.artifact, "Provenanced"))
+	f.promote(f.place(f.source, f.artifact, "Provenanced"))
 	f.promote(f.place(f.source, f.artifact, "Leeds"))
 
 	srcB, artB := f.newSource("Gazetteer")
 	again := f.place(srcB, artB, "Provenance")
 	row := rowFor(f.propose(srcB.ID, nil), again.ID)
-	cfg := graphalign.DefaultConfig()
-	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, named.Entity.ID) ||
-		row.Assessment != graphalign.AssessWeak ||
-		row.Score < cfg.WeakScore || row.Score >= cfg.MediumScore {
-		t.Fatalf("provenance row %+v, want %s as a weak match", row, named.Entity.Ref)
-	}
-	var saw bool
-	for _, ex := range row.Exhibits {
-		if ex.PropertyKey != "toponym" {
-			continue
-		}
-		saw = true
-		if ex.Outcome != "partial" || ex.Pinned {
-			t.Fatalf("toponym exhibit %+v", ex)
-		}
-	}
-	if !saw {
-		t.Fatal("missing toponym exhibit")
+	if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch {
+		t.Fatalf("provenance row %+v, want a new handle with no_match", row)
 	}
 }
 
@@ -1347,5 +1336,84 @@ func TestProposeChildOfReadsAsParentOf(t *testing.T) {
 	}
 	if row.Via == nil || row.Via.Key.Term != "child" {
 		t.Fatalf("via %+v, want term child", row.Via)
+	}
+}
+
+// The shortlist index is built on the first proposal and dropped by a handle
+// commit, so a handle promoted afterwards is found.
+func TestProposeSeesAHandlePromotedAfterTheIndexWasBuilt(t *testing.T) {
+	f := newFixture(t)
+	a := f.person(f.source, f.artifact, "Ann Ames")
+	srcB, artB := f.newSource("Obituary")
+	b := f.person(srcB, artB, "Ann Ames")
+
+	first := rowFor(f.propose(srcB.ID, nil), b.ID)
+	if first.Target != graphalign.TargetNew {
+		t.Fatalf("with nothing promoted the row is %+v, want a new handle", first)
+	}
+	known := f.promote(a)
+	second := rowFor(f.propose(srcB.ID, nil), b.ID)
+	if second.Target != graphalign.TargetHandle || !bytes.Equal(second.HandleID, known.Entity.ID) {
+		t.Fatalf("after promoting, the row is %+v, want %s", second, known.Entity.Ref)
+	}
+}
+
+// A warm proposal takes the same number of queries however many people the
+// layer holds.
+func TestProposeQueryCountStaysFlatWhenWarm(t *testing.T) {
+	queries := func(people int) int {
+		f := newFixture(t)
+		srcB, artB := f.newSource("Obituary")
+		for i := 0; i < people; i++ {
+			name := fmt.Sprintf("Person %c", 'A'+i)
+			p := f.person(f.source, f.artifact, name)
+			b := f.birth(f.source, f.artifact)
+			f.participation(f.source, f.artifact, p, b, "subject")
+			f.promote(p)
+			f.promote(b)
+			pb := f.person(srcB, artB, name)
+			bb := f.birth(srcB, artB)
+			f.participation(srcB, artB, pb, bb, "subject")
+		}
+		_, _, err := promotealign.Propose(f.c, srcB.ID, nil)
+		must(t, err)
+		n := 0
+		f.c.Graph().SetQueryCounterForTest(func() { n++ })
+		_, _, err = promotealign.Propose(f.c, srcB.ID, nil)
+		must(t, err)
+		return n
+	}
+	small, large := queries(2), queries(6)
+	t.Logf("%d queries per warm proposal", small)
+	if small != large {
+		t.Fatalf("2 people took %d warm queries, 6 took %d; a read grew with the layer", small, large)
+	}
+}
+
+// A cold proposal profiles only the handles the shortlist offers, and the ones
+// the walk reaches from them: not the life of every person in the catalog.
+func TestProposeColdIndexBuildsNoUnshortlistedLife(t *testing.T) {
+	f := newFixture(t)
+	ann := f.person(f.source, f.artifact, "Ann Ames")
+	annBirth := f.datedBirth(f.source, f.artifact, 1850)
+	f.participation(f.source, f.artifact, ann, annBirth, "subject")
+	annH, annBirthH := f.promote(ann), f.promote(annBirth)
+	for i := 1; i <= 6; i++ {
+		p := f.person(f.source, f.artifact, fmt.Sprintf("Unrelated %d", i))
+		b := f.datedBirth(f.source, f.artifact, 1900+i)
+		f.participation(f.source, f.artifact, p, b, "subject")
+		f.promote(p)
+		f.promote(b)
+	}
+	srcB, artB := f.newSource("Obituary")
+	f.person(srcB, artB, "Ann Ames")
+
+	f.c.Graph().Drop()
+	got, err := promotealign.ProfiledRefsForTest(f.c, srcB.ID)
+	must(t, err)
+	want := []string{annH.Entity.Ref, annBirthH.Entity.Ref}
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Fatalf("profiled %v, want only %v", got, want)
 	}
 }

@@ -26,60 +26,72 @@ type Querier interface {
 // load time, the stamp Done sends back. An unknown or empty sourceID is
 // promote.ErrInvalid. A graph read error is returned instead of a proposal.
 func Propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (graphalign.Proposal, int64, error) {
+	prop, rev, _, err := propose(c, sourceID, fixed)
+	return prop, rev, err
+}
+
+// propose is Propose, and the profiler it used, for a test that reads which
+// handles were profiled. The profiler is nil when the Source has no Subject to
+// place.
+func propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (graphalign.Proposal, int64, *profiler, error) {
 	if c == nil || len(sourceID) != 16 {
-		return graphalign.Proposal{}, 0, promote.ErrInvalid
+		return graphalign.Proposal{}, 0, nil, promote.ErrInvalid
 	}
 	db, err := c.DB()
 	if err != nil {
-		return graphalign.Proposal{}, 0, err
+		return graphalign.Proposal{}, 0, nil, err
 	}
 	q := Querier(db)
 	var rev int64
 	if err := q.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev); err != nil {
-		return graphalign.Proposal{}, 0, err
+		return graphalign.Proposal{}, 0, nil, err
 	}
 	var exists int
 	if err := q.QueryRow(`SELECT 1 FROM sources WHERE id = ?`, sourceID).Scan(&exists); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return graphalign.Proposal{}, 0, promote.ErrInvalid
+			return graphalign.Proposal{}, 0, nil, promote.ErrInvalid
 		}
-		return graphalign.Proposal{}, 0, err
+		return graphalign.Proposal{}, 0, nil, err
 	}
 
 	rules, namePattern, err := valuerules.Load(c.Graph(), q)
 	if err != nil {
-		return graphalign.Proposal{}, 0, err
+		return graphalign.Proposal{}, 0, nil, err
 	}
 	cfg := graphalign.DefaultConfig()
 	cfg.Value = rules
 
 	terms, err := loadTerms(c.Graph())
 	if err != nil {
-		return graphalign.Proposal{}, 0, err
+		return graphalign.Proposal{}, 0, nil, err
 	}
 	layer, primary, err := loadLayer(c.Graph(), q, sourceID, cfg, namePattern, terms)
 	if err != nil {
-		return graphalign.Proposal{}, 0, err
+		return graphalign.Proposal{}, 0, nil, err
 	}
 	if len(layer.Subjects) == 0 {
-		return graphalign.Proposal{Rows: nil}, rev, nil
+		return graphalign.Proposal{Rows: nil}, rev, nil, nil
 	}
 
 	anchors, err := mergeFixed(q, sourceID, primary, fixed)
 	if err != nil {
-		return graphalign.Proposal{}, 0, err
+		return graphalign.Proposal{}, 0, nil, err
 	}
 
-	canon, err := loadCanon(c.Graph(), layer, anchors, cfg, namePattern, terms)
+	prof, err := newProfiler(c.Graph(), layer.Metas, cfg.Subject, namePattern)
 	if err != nil {
-		return graphalign.Proposal{}, 0, err
+		return graphalign.Proposal{}, 0, nil, err
+	}
+	canon, err := loadCanon(c.Graph(), prof, layer, anchors, cfg, terms)
+	if err != nil {
+		return graphalign.Proposal{}, 0, nil, err
 	}
 
 	prop := graphalign.Align(layer, canon, anchors, &cfg)
 	if err := attachExhibits(q, c.Graph(), layer, &prop, cfg, namePattern); err != nil {
-		return graphalign.Proposal{}, 0, err
+		return graphalign.Proposal{}, 0, nil, err
 	}
-	return prop, rev, nil
+	return prop, rev, prof, nil
 }
 
 // mergeFixed validates caller fixed pairs and adds already-promoted Subjects

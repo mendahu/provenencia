@@ -16,15 +16,12 @@ import (
 const seedCandidateLimit = 5
 
 // loadCanon reads the open catalog's graph: fixed anchors, the candidates of
-// each unfixed Subject (graphalign.Candidates over its kind's handles), then
-// every link those handles have. Link order is association ref, then the
-// neighbor's ref, which is the order the walk used to break ties. Every
-// handle's profile is built once, after the walk has collected them.
-func loadCanon(g *graphcache.Graph, layer graphalign.Layer, fixed []graphalign.Fixed, cfg graphalign.Config, namePattern string, terms segmentcompare.Terms) (graphalign.Canon, error) {
-	prof, err := newProfiler(g, layer.Metas, cfg.Subject, namePattern)
-	if err != nil {
-		return graphalign.Canon{}, err
-	}
+// each unfixed Subject (graphalign.Candidates over the handles the shortlist
+// index offers it), then every link those handles have. Link order is
+// association ref, then the neighbor's ref, which is the order the walk used to
+// break ties. Every handle's profile is built once: the shortlisted ones
+// together, the ones the walk reaches after it.
+func loadCanon(g *graphcache.Graph, prof *profiler, layer graphalign.Layer, fixed []graphalign.Fixed, cfg graphalign.Config, terms segmentcompare.Terms) (graphalign.Canon, error) {
 	props := prof.props
 	types := prof.types
 
@@ -65,7 +62,7 @@ func loadCanon(g *graphcache.Graph, layer graphalign.Layer, fixed []graphalign.F
 	for _, f := range fixed {
 		fixedSubjects[string(f.SubjectID)] = true
 	}
-	kindHandles := map[string][]graphalign.Handle{}
+	var todo []graphalign.Subject
 	for _, s := range layer.Subjects {
 		if fixedSubjects[string(s.ID)] {
 			continue
@@ -73,26 +70,18 @@ func loadCanon(g *graphcache.Graph, layer graphalign.Layer, fixed []graphalign.F
 		if _, ok := cfg.Subject.Weights[vocabkey.SubjectType(s.Kind)]; !ok {
 			continue
 		}
-		hs, ok := kindHandles[s.Kind]
-		if !ok {
-			if typeID := types[s.Kind]; len(typeID) == 16 {
-				nodes, err := g.Kind(typeID)
-				if err != nil {
-					return graphalign.Canon{}, err
-				}
-				if err := prof.profile(nodes); err != nil {
-					return graphalign.Canon{}, err
-				}
-				for _, n := range nodes {
-					if n.Merged {
-						continue
-					}
-					hs = append(hs, graphalign.Handle{ID: n.ID, Ref: n.Ref, Kind: s.Kind, Values: prof.values(n.ID)})
-				}
-			}
-			kindHandles[s.Kind] = hs
-		}
-		for _, h := range graphalign.Candidates(s.Kind, s.Values, hs, layer.Metas, cfg, seedCandidateLimit) {
+		todo = append(todo, s)
+	}
+	ix, err := loadShortlist(g, prof, cfg)
+	if err != nil {
+		return graphalign.Canon{}, err
+	}
+	shortlisted, err := seedHandles(g, prof, ix, todo)
+	if err != nil {
+		return graphalign.Canon{}, err
+	}
+	for i, s := range todo {
+		for _, h := range graphalign.Candidates(s.Kind, s.Values, shortlisted[i], layer.Metas, cfg, seedCandidateLimit) {
 			if err := add(h.ID); err != nil {
 				return graphalign.Canon{}, err
 			}
