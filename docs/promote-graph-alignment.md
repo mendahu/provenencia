@@ -104,7 +104,7 @@ func Align(layer Layer, canon Canon, fixed []Fixed, cfg *Config) Proposal // nil
 | **Pairwise evaluation** | Given two sides, return entity compare's evidence and one outcome per lead property (`subjectcompare.Compare`). `Compatible` is sameness for reconciliation and pins, not the score | Walk the graph, load the catalog, choose New/Skip for a whole layer |
 | **Candidates** ([`matching.md`](matching.md)) | List the handles a Subject is offered on its own properties: entity compare evidence at least the weak band (`graphalign.Candidates`) | Know Evidence bridges, fixed anchors, or propagation |
 | **Graph alignment** (`Align`) | Seed, priority walk, one-to-one, propagate structural support; call pairwise evaluation on each candidate; fall back to property-only matching when unreachable | Own a second “are these the same?” implementation; talk to SQLite |
-| **Catalog adapter** (S9-42) | Build `Layer` / `Canon` / `Stats`, call `Align`, map the proposal to FFI | Contain scoring or walk policy |
+| **Catalog adapter** (S9-42) | Build `Layer` / `Canon`, call `Align`, map the proposal to FFI | Contain scoring or walk policy |
 | **Promote page** (S9-44) | Present rows, decisions, Done | Reimplement alignment |
 
 Alignment **orchestrates**; entity compare **judges a pair**. Alignment calls it for every pair it scores, adding edge terms when neighbors are already mapped. Candidates and the walk read the same evidence.
@@ -182,7 +182,7 @@ There are no database calls during the walk. Everything it reads is loaded first
 2. **Seed handles:**
    - the fixed pairs;
    - the handles of already-promoted Subjects;
-   - the top 5 (`seedCandidateLimit`) property-only candidates of each unpromoted Subject, ranked over the kind's handles from the graph (`g.Kind`).
+   - the top 5 (`seedCandidateLimit`) property-only candidates of each unpromoted Subject, ranked over the handles the shortlist index offers (`core/shortlist`, built by `loadShortlist`), not every handle of the kind.
 3. **Walk the in-memory catalog graph** from the seeds through every link to a person, event or place, with no hop limit. A node not yet in memory loads in one batched read per wave of the walk; a warm one costs nothing. Handles carry their cached auto-reconciled values.
 Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count follows the waves of the walk, not the size of the layer or the catalog.
 
@@ -193,7 +193,7 @@ Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count foll
 # 8. Caching and decisions
 
 - **Decisions live in the page's draft:** the Swift row list (suggested or decided, target, sheet toggles, claim fields). They're sent as `fixed` on every call and never stored.
-- **Loads read the catalog's in-memory graph** (`graphcache`), which keeps handles, Source graphs and stats between calls, so re-runs after decisions skip loading. Each commit drops what it touched (its effects), not a whole revision.
+- **Loads read the catalog's in-memory graph** (`graphcache`), which keeps handles, Source graphs and the match index between calls, so re-runs after decisions skip loading. Each commit drops what it touched (its effects), not a whole revision.
 - **The match index** (the shortlist index) is cached on the graph and dropped by any commit that names a handle, and by new alias tables; a vocabulary-only write keeps it.
 
 ---
@@ -280,7 +280,7 @@ As built at the end of Spike 9 slice 9 (S9-41 – S9-44 and the review fixes sta
 
 **Differs from the text above**
 
-- **Query count (§7):** every read is batched (`sqlbatch`), and the canon comes from the in-memory graph, so a warm proposal reads only the layer, the fixed rows, stats if a commit dropped them, and exhibits. Cold, the graph loads one batch per wave of the walk.
+- **Query count (§7):** every read is batched (`sqlbatch`), and the canon comes from the in-memory graph, so a warm proposal reads only the layer, the fixed rows, the shortlist index if a handle or vocabulary commit dropped it (one read of every person, event and place node), and exhibits. Cold, the graph loads one batch per wave of the walk.
 - **Properties compared (§6):** only the lead properties of the registry's subject section, with their pools and periods, not every Property both sides carry.
 - **Provenance (§6):** not applied. Every Subject's provenance is 1; credibility, transcription certainty, and member claim confidence don't scale comparisons yet.
 - **Bridge kinds in the loaders:** the layer loader lists its hops (participation, location, relationship, part of, succeeded by) in code. The canon follows every link the graph holds for a `connectrules` bridge, as pins and filing do.
