@@ -102,7 +102,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-24 | Delete frequency weighting | 3 | `Stats.ValueFreq`, m / u priors, frequency scales and their benchmark go | — | S11-05 | [plan](prs/S11-24-delete-frequency.md) | Landed #483 |
 | S11-13 | Migrate Promote scoring onto subject compare | 3 | Property scoring, seeding, duplicate rows; values loader moves; delete `core/match`, `core/database/matching` | — | S11-12, S11-24 | [plan](prs/S11-13-promote-subject-compare.md) | Landed #487 |
 | S11-14 | Segment compare | 4 | `segmentcompare`, typed bridge keys, birth / death cardinality, one-hop credit | — | S11-13 | [plan](prs/S11-14-segment-compare.md) | Planned |
-| S11-15 | Shortlist index | 4 | Key → handles per kind on `graphcache`; registry shortlist keys | — | S11-13 | — | Scoped |
+| S11-15 | Shortlist index | 4 | Key → handles per kind on `graphcache`; registry shortlist keys | — | S11-13 | [plan](prs/S11-15-shortlist-index.md) | Blocked — on S11-13 |
 | S11-16 | Rewrite graph alignment | 4 | Layer 6 procedure, bands from evidence, accept bar; old walk and registry deleted | — | S11-14, S11-15 | — | Scoped |
 | S11-17 | Contested flag through FFI | 4 | Proposal rows carry contested and move reasons to Swift | — | S11-16 | — | Scoped |
 | S11-18 | Contested marker on Promote rows | 4 | The marker on the page | S11-D1 | S11-17, S11-D1 | — | Scoped |
@@ -348,8 +348,8 @@ Also builds `core/subjectcompare`'s `invariants_test.go` lead groups (`kindGroup
 
 #### S11-15 — Shortlist index
 
-**Ships.** A key → handles map per kind on `graphcache`, built with `valuecompare.Key` from the registry's shortlist keys (person name words, not initials; event type + year bucket; toponym). It reuses `graphcache`'s stats slot (`Stats` / `SetStats` / `statsOK`, renamed), dropped on a handle commit like today. When the shortlist replaces the kind scan in `graphalign.Candidates`, the Promote profiler (`core/database/promotealign/profiles.go`, `profiler.profile`) loads and builds life events only for shortlisted handles (and the fixed and BFS-reached ones), not for every handle of the kind. S11-13 profiles every person and their events per repropose (PRF-1 in its ship log: warm repropose 40 to 160 ms on the 20k-person fixture).
-**Not this PR.** Using it in the walk (S11-16). A coarse misspelling key (open; [decided 2026-10-17](comparison-layers.md#decided-on-2026-10-17)).
+**Ships.** A key → handles map per kind (`core/shortlist`), built with value compare's keys from the registry's shortlist keys (person name words, not initials; event type + year bucket; toponym words). It reuses `graphcache`'s stats slot (`Stats` / `SetStats` / `statsOK`, renamed), dropped on a handle commit like today. Promote's seeding looks handles up in it instead of scanning the kind. When the shortlist replaces the kind scan in `graphalign.Candidates`, the Promote profiler (`core/database/promotealign/profiles.go`, `profiler.profile`) loads and builds life events only for shortlisted handles (and the fixed and BFS-reached ones), not for every handle of the kind. S11-13 profiles every person and their events per repropose (PRF-1 in its ship log: warm repropose 40 to 160 ms on the 20k-person fixture).
+**Not this PR.** Using it in the walk's fallback and queue (S11-16). A coarse misspelling key (open; [decided 2026-10-17](comparison-layers.md#decided-on-2026-10-17)).
 **Check.** "J. Robins" shortlists every handle with `robins`; aliases share a key; no `Same` / `Equivalent` pair is missed (property test).
 **Context.** [Layer 6 procedure](comparison-layers.md#layer-6-procedure) step 1; [vocabulary](comparison-layers.md#vocabulary-finding-candidates).
 
