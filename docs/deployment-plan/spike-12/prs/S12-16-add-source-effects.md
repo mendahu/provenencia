@@ -1,6 +1,6 @@
 # S12-16 — Add Source reports its effects
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 12 · Slice 1 — Copy Source
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the Add Source form, toast and list rows look and behave as they do today)
@@ -14,7 +14,7 @@
 **Runs on:** macOS with `protoc`, `protoc-gen-go`, `protoc-gen-swift` and Xcode (D-10)
 **Context:** [S12-01 plan review M-9](S12-01-copy-source-engine.review.md), working rule "One title and type form, one Artifact checklist"; [`docs/macos-client-patterns.md`](../../../macos-client-patterns.md) cache rules 3 and 4
 **Planned:** 2026-10-19 against `main` @ `6ecfd88` (S12-02 merged in #485)
-**Review:** — (not reviewed yet)
+**Review:** [`S12-16-add-source-effects.review.md`](S12-16-add-source-effects.review.md) — Fits with changes / Ready with changes → fixed, 1 round
 
 ### Implementer — read this first
 
@@ -52,7 +52,7 @@ Add Source and Copy Source refresh the Sources list the same way. Today Copy Sou
 | --- | --- | --- |
 | AC-2.1 | `CreateSource` RPC with a valid type and title "Passport" | The response's `effects.revision` > 0 and `effects.source_scopes` contains the new Source's id |
 | AC-2.2 | The Sources list is on screen with "Deed" cached. A second Source "Will" is put into the store behind the session's back. I add "Family album" | The cached list holds all three, "Will" included. Only a reload from the store can bring "Will" in, so the list was refreshed by the session, not by a hand insert |
-| AC-2.3 | Read `SourcesModel.create()` after the PR | It calls `session.apply(effects, .createdSource)` and contains no `setQueryValue` and no `queryHandle(listKey)` patch |
+| AC-2.3 | Read `SourcesModel.create()` after the PR | It calls `session.apply(effects, .createdSource)` then `await catalogCounts?.refreshAll()`, and contains no `setQueryValue` and no `queryHandle(listKey)` patch |
 
 ## 3. Scope
 
@@ -60,14 +60,14 @@ Add Source and Copy Source refresh the Sources list the same way. Today Copy Sou
 | --- | --- |
 | `CreateSourceResponse` gains `WriteEffects effects = 2`; `handlers.CreateSource` fills it with `writeEffectsProto(res)` | STEP-1, STEP-2, AC-2.1 |
 | `GenealogyStore.createSource` returns `(CatalogSource, CatalogWriteEffects)`, in the protocol, `GoStore`, `FakeStore` and the test `ThrowingStore` | STEP-3, AC-2.2 |
-| `SourcesModel.create()` applies the effects with `.createdSource`, drops the `setQueryValue` insert, and publishes the sidebar count after the list reload | STEP-4, AC-1.1, AC-2.2, AC-2.3 |
+| `SourcesModel.create()` applies the effects with `.createdSource`, drops the `setQueryValue` insert, and recounts the sidebar with `catalogCounts?.refreshAll()` | STEP-4, AC-1.1, AC-2.2, AC-2.3 |
 | The two docs that list `createSource` as a write that reports no effects | STEP-5 |
 
 | Out | Home |
 | --- | --- |
 | Any change to the Add Source form or toast | not planned (map scope entry) |
 | `updateSource`, `setSourceCover`, `deleteSource` reporting effects | not planned (they keep their mutation kinds per `docs/macos-client-patterns.md` rule 3) |
-| The sidebar Sources count after Copy Source: it stays at the old number until the next workspace open, because `SourcesListView` publishes the count on `sourcesHandle.status` changes and a stale reload keeps status `.ready` (found while planning, not run) | raised to the user 2026-10-19 as a separate fix; not this PR |
+| The sidebar Sources count after Copy Source: it stays at the old number until the next workspace open, because `SourcesListView` publishes the count on `sourcesHandle.status` changes and a stale reload keeps status `.ready` (found while planning, not run) | raised to the user 2026-10-19 as a separate fix: pass `CatalogCounts` into `SourceCopyModel` and call `await catalogCounts?.refreshAll()` after its `apply`, the D-7 line; not this PR |
 | Copy Source from a Sources list row | S12-17 |
 
 ## 4. Current state
@@ -89,6 +89,7 @@ Add Source and Copy Source refresh the Sources list the same way. Today Copy Sou
 | Registry | `macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift` `specs` | `sourcesList` invalidates on `.createdSource`, `.deletedSource`; `sourceTypesList` also invalidates on `.createdSource` (`usedBy`) |
 | Place | `macos/App/Features/Workspace/Session/PlaceRegistry.swift` `.sourcesList` spec | Query keys: `sourcesList`, `sourceTypesList`, `sourceGraphProgress`. Add Source opens only from `SourcesListView`, so the list key is visible when `create()` runs |
 | View | `macos/App/Features/Sources/SourcesListView.swift` | `onConfirm` awaits `model.create()` then `navigation.go(to: SourcesListNavigation.pageLocation(for: created))`, which unmounts the list. Publishes the count `onAppear` and on `sourcesHandle.status` → `.ready` |
+| Counts | `macos/App/Features/Catalog/CatalogCounts.swift` `publishSources`, `refreshAll`; `macos/App/Features/Promote/PromoteModel.swift` | `publishSources` writes a count the model already holds; `refreshAll` recounts through `workspaceNavCounts` for a write with no loaded list to publish from. Promote calls `session.apply(…)` then `await catalogCounts?.refreshAll()`. `SourcesModel` holds `catalogCounts: CatalogCounts?`. `FakeStore.workspaceNavCounts` counts `sourcesByProject` |
 | Docs | `docs/macos-client-patterns.md` rule 3 (line 87); `.agents/skills/add-workspace-place/SKILL.md` (line 172) | Both name `createSource` among the writes that report no `WriteEffects` |
 | Tests | `api/ffi/handlers/sources_test.go` `TestCreateSourceAndWorkspace` case "creates source" | Checks title, description, audit action `create_source`, workspace read. No effects check. `TestCopySource` case "copies a source with its Artifact" checks `resp.Effects.GetRevision() <= 0 \|\| !slices.Contains(resp.Effects.GetSourceScopes(), …)` |
 | Tests | `macos/ProvenenciaTests/SourcesModelTests.swift` `createReturnsSourceAndPublishesCount` | Warms lists with no visible location, creates, expects `sources.count == 1`, `counts.sources == 1`, toast set. Passes today only because of the hand insert: with no visible key `.createdSource` just marks the list stale |
@@ -104,10 +105,10 @@ Add Source and Copy Source refresh the Sources list the same way. Today Copy Sou
 | D-2 | Handler: `out = &engine.CreateSourceResponse{Source: sp, Effects: writeEffectsProto(res)}`. Nothing else in `CreateSource` changes | `CopySource` precedent | Building effects by hand — `writeEffectsProto` is the one mapper |
 | D-3 | `GenealogyStore.createSource` keeps its parameters and returns `(CatalogSource, CatalogWriteEffects)`. Doc comment: "Creates a Source in one audited write and returns it with the write's effects." | Matches `copySource`; a tuple is the store's convention for writes with effects | A new struct — no other store write uses one |
 | D-4 | `GoStore.createSource` returns `(Self.mapSource(resp.source), Self.mapWriteEffects(resp.effects))` | `copySource` precedent | — |
-| D-5 | `FakeStore.createSource` mints the source with no `updated` argument, appends it, then `let effects = bumpSource(source.id, evidence: false)` and returns the stored row (`sourcesByProject[projectDir]?.first { $0.id == source.id } ?? source`) with `effects`. All of it runs inside the one existing `withState { … }` block. `bumpSource` cannot return `.empty` here, because the row was just appended; the `?? source` fallback only satisfies the optional. The manual `nextAuditRevision` lines go | `bumpSource` already sets `updated` and returns `sourceScopes: [id]` with a revision, as the engine does for a `sources` insert (`SourceScope: self()`, no evidence) | Building `CatalogWriteEffects` inline — a second copy of `bumpSource` |
+| D-5 | `FakeStore` gains one private `insertSource(_ source: CatalogSource, projectDir: String, evidence: Bool) -> (CatalogSource, CatalogWriteEffects)` *(new)*: append to `sourcesByProject[projectDir, default: []]`, `let effects = bumpSource(source.id, evidence: evidence)`, return `(sourcesByProject[projectDir]?.first { $0.id == source.id } ?? source, effects)`. Callers run it inside their existing `withState { … }` block. `createSource` mints the row with no `updated` argument and returns `insertSource(source, projectDir: projectDir, evidence: false)`; its manual `nextAuditRevision` lines go. `copySource` replaces its own append / `bumpSource` / `stored` lookup (its last three statements) with `insertSource(copy, projectDir: projectDir, evidence: !chosen.isEmpty)`. `bumpSource` cannot return `.empty` there, because the row was just appended; `?? source` only satisfies the optional | `bumpSource` already sets `updated` and returns `sourceScopes: [id]` with a revision, as the engine does for a `sources` insert (`SourceScope: self()`, no evidence). One insert path in the fake mirrors the engine, where Copy goes through `sources.Create`; S12-03's Default graph then has one place to go in the fake | Two near-copies of append + bump + lookup in `createSource` and `copySource` (review M-2) |
 | D-6 | `ThrowingStore.createSource` in `OnboardingModelTests.swift` changes only its return type | Conformance | — |
-| D-7 | `SourcesModel.create()` after the store call: `let (created, effects) = try await store.createSource(…)`; `session.apply(effects, .createdSource)`; `let _: [CatalogSource]? = await session.readyValue(Self.sourcesListKey(for: session))`; `syncCatalogCounts()`; then the form state, toast and return as today. The `listKey` / `queryHandle` / `rows.insert` / `setQueryValue` block is deleted | The list is on screen when Add Source runs, so `apply` starts its reload; waiting for it lets `syncCatalogCounts()` read the real count before `SourcesListView` navigates away and unmounts (the view's own `status` hook never fires after a stale reload). One local SQLite list read; the form's Create stays disabled while `isSaving` | Dropping `syncCatalogCounts()` — the sidebar count would lag until the list is next shown. Publishing `sources.count + 1` — a guess the reload already answers. Fixing the view's count hook — that is the Copy count defect (Out) and does not help here, because the view unmounts before the reload lands |
-| D-8 | When the list key is not on screen (no caller does this today), `readyValue` returns nil and `syncCatalogCounts()` publishes the cached count. No special case | Matches Copy, which leaves a hidden list stale | Forcing a load of a hidden list — the registry's `whenHidden: .markStale` says not to |
+| D-7 | `SourcesModel.create()` after the store call: `let (created, effects) = try await store.createSource(…)`; `session.apply(effects, .createdSource)`; `await catalogCounts?.refreshAll()`; then the form state, toast and return as today. The `listKey` / `queryHandle` / `rows.insert` / `setQueryValue` block and the `syncCatalogCounts()` call inside `create()` are deleted (`syncCatalogCounts()` itself stays: `SourcesListView` calls it on appear and on load) | `apply` refreshes the list from the registry; the sidebar count is recounted the way Promote recounts after its write (`PromoteModel`, `CatalogCounts.refreshAll` doc: writes with no loaded list to publish from). It works whether or not the list is on screen, so every Source create (Add, Copy, S12-17) can use the same line | Waiting on `session.readyValue(sourcesListKey)` then `syncCatalogCounts()` — works only while the list is on screen, a third count path (review M-1). Publishing `sources.count + 1` — a guess. Keeping `syncCatalogCounts()` in `create()` — it reads the list before the reload lands |
+| D-8 | A failed `refreshAll()` sets `catalogCounts.lastRefreshError` and leaves the badges as they were; `create()` still succeeds, closes the form, sets the toast and returns the Source. No extra handling | Same as Promote; the create already committed | Failing the create, or a second toast — the write succeeded |
 | D-9 | Tests: Go extends the existing "creates source" case; Swift changes `createReturnsSourceAndPublishesCount` to put the list on screen first and adds one test, `createRefreshesListThroughSession` *(new)*. No `FakeStore` call counter | The planted-row check (AC-2.2) proves a reload without a new test hook | A `listSources` call counter on `FakeStore` — new fake state for one test |
 | D-10 | The PR is built on the macOS dev machine `scripts/check-pr.sh` targets, with `protoc`, `protoc-gen-go`, `protoc-gen-swift` and Xcode installed. STEP-1 regenerates `engine.pb.go` before STEP-2, because T-1 reads `created.Effects`, which does not compile until then. Generated files come only from `./scripts/generate-proto.sh` | Generated code is committed; a hand edit drifts from the generator (S12-01 D-16) | Hand-editing `engine.pb.go` / `engine.pb.swift`; running STEP-2 before STEP-1 |
 
@@ -118,12 +119,13 @@ Add Source and Copy Source refresh the Sources list the same way. Today Copy Sou
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
 | `CreateSourceResponse.effects` *(new field)* | proto field | `CopySourceResponse.effects`, `IngestArtifactFileResponse.effects` | Reuses `WriteEffects`; only the field is new |
+| `FakeStore.insertSource` *(new)* | helper | `FakeStore.copySource` tail, `bumpSource` | It is that tail, lifted so `createSource` and `copySource` share it (D-5) |
 | `SourcesModelTests.createRefreshesListThroughSession` *(new)* | test | `SourceCopyModelTests.copyRefreshesSourcesList` | That one tests a hidden list; this one a visible list. Reuses `makeModel`, `warmLists`, `waitForQuery` |
 
-Searched: `writeEffectsProto` callers, `mapWriteEffects`, `bumpSource`, `readyValue` callers, `setQueryValue` callers in `Features/Sources`.
+Searched: `writeEffectsProto` callers, `mapWriteEffects`, `bumpSource`, `refreshAll` and `publishSources` callers, `setQueryValue` callers in `Features/Sources`.
 
-**Builds on.** `writeEffectsProto` (Go), `GoStore.mapWriteEffects`, `FakeStore.bumpSource`, `WorkspaceSession.apply(_:_:)` and `readyValue`, the registry's `.createdSource` invalidations.
-**Deletes.** The hand insert into the Sources list in `SourcesModel.create()` (seven lines); the manual `nextAuditRevision` bump in `FakeStore.createSource`; `createSource` from the "report no effects" lists in `docs/macos-client-patterns.md` and `add-workspace-place`.
+**Builds on.** `writeEffectsProto` (Go), `GoStore.mapWriteEffects`, `FakeStore.bumpSource`, `WorkspaceSession.apply(_:_:)`, the registry's `.createdSource` invalidations, `CatalogCounts.refreshAll` (the Promote recount).
+**Deletes.** The hand insert into the Sources list in `SourcesModel.create()` (seven lines); the manual `nextAuditRevision` bump in `FakeStore.createSource` and the duplicated insert tail in `FakeStore.copySource` (both go through `insertSource`); the `syncCatalogCounts()` call in `create()`; `createSource` from the "report no effects" lists in `docs/macos-client-patterns.md` and `add-workspace-place`.
 **Next adds.** S12-03 makes `sources.Create` mint a Default graph in the same write. The new `evidence_graphs` row's effect (`Set.EvidenceGraphs`, S12-03 / S12-05) then reaches Add Source through these effects with no Add Source code, as working rule "The graph list has its own effect" expects for Copy Source.
 
 ### Schema
@@ -155,12 +157,11 @@ let (created, effects) = try await store.createSource(
     description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
 )
 session.apply(effects, .createdSource)
-let _: [CatalogSource]? = await session.readyValue(Self.sourcesListKey(for: session))
-syncCatalogCounts()
+await catalogCounts?.refreshAll()
 // isAdding / errors / toast / return as today
 ```
 
-States: unchanged. A failed list reload after a successful create leaves the old rows (the session keeps a stale value on failure) and the count unchanged; the create still succeeds and navigates.
+States: unchanged. A failed list reload after a successful create leaves the old rows (the session keeps a stale value on failure); a failed recount leaves the badge (D-8). The create still succeeds and navigates.
 
 ### Strings
 
@@ -186,7 +187,7 @@ Check: the Xcode build of the `Provenencia` scheme succeeds (`xcodebuild build` 
 **STEP-4 — Add Source applies the effects**
 Files: `macos/App/Features/Sources/SourcesModel.swift`, `macos/ProvenenciaTests/SourcesModelTests.swift`. Skills: `add-workspace-place`, `add-swift-test`.
 Do: D-7, D-8. Change T-2; add T-3.
-Check: `rg -n "setQueryValue|rows.insert" macos/App/Features/Sources/SourcesModel.swift` prints nothing; `xcodebuild test` (ProvenenciaTests) passes `SourcesModelTests`, `SourceCopyModelTests`, `CatalogQueryRegistryTests`, `OnboardingModelTests`.
+Check: `rg -n "setQueryValue|rows.insert" macos/App/Features/Sources/SourcesModel.swift` prints nothing; `rg -n "refreshAll" macos/App/Features/Sources/SourcesModel.swift` prints the one D-7 line; `xcodebuild test` (ProvenenciaTests) passes `SourcesModelTests`, `SourceCopyModelTests`, `CatalogQueryRegistryTests`, `OnboardingModelTests`.
 
 **STEP-5 — Docs**
 Files: `docs/macos-client-patterns.md`, `.agents/skills/add-workspace-place/SKILL.md`, `docs/deployment-plan/spike-12/completed.md`, `docs/deployment-plan/spike-12/deployment-plan.md` (map row), this plan (status).
@@ -236,14 +237,13 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `S
 
 | Risk | Mitigation |
 | --- | --- |
-| Waiting for the list reload holds the form a moment longer | One local list read; `isSaving` keeps Create disabled, so no double submit |
+| The recount holds the form a moment longer | One local `workspaceNavCounts` read, as after Promote; `isSaving` keeps Create disabled, so no double submit |
 | The new row's place in the list changes (the hand insert put it first) | The list view sorts by `settings.sort` (`visibleSources`), so the insert position never reached the screen |
 | A Go test elsewhere compares a whole `CreateSourceResponse` with `proto.Equal` | Stop condition below |
 
 **Stop and report if:**
 
 - `SourcesModel.create()` is no longer the only caller of `store.createSource` (`rg -n "\.createSource\(" macos/App`).
-- Add Source can open where the Sources list key is not on screen (`rg -n "openAdd\(\)" macos/App/Features/Sources/SourcesListView.swift` and any other `SourcesModel.openAdd` caller), so D-7's wait would not see a reload.
 - T-3 fails because "Will" is missing after the create: the list did not reload on `.createdSource`, so the registry row in §4 is not true.
 - A Go test fails because it compares a full `CreateSourceResponse` (`proto.Equal` or a `want` bytes match) and would need a changed expectation outside `sources_test.go`.
 - `./scripts/generate-proto.sh` cannot run where you are (no `protoc`, `protoc-gen-go` or `protoc-gen-swift`), or Xcode is missing for STEP-3 / STEP-4. Do not hand-edit generated files; report the Go evidence you have.
