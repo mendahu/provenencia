@@ -947,7 +947,8 @@ func TestAcceptedPropertyMatchNominatesItsNeighbor(t *testing.T) {
 	// bridge to it, and both canon edges share that bridge's signature, so
 	// the walk nominates the neighbor. The score counts both edges and a
 	// fraction of each neighbor's name. A canon neighbor on a different
-	// signature is not a suggestion.
+	// signature is not nominated: it is offered only on its own properties,
+	// with no support.
 	sig := partLink("subject", "gathering")
 	other := partLink("subject", "other")
 	a, b, mid := id("s-a"), id("s-b"), id("s-mid")
@@ -985,8 +986,13 @@ func TestAcceptedPropertyMatchNominatesItsNeighbor(t *testing.T) {
 	name := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree
 	want := term + 2*(cfg.Segment.OtherSupport+cfg.Segment.OtherCredit*name)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, hMid) ||
-		math.Abs(row.Score-want) > 1e-9 || hasAlt(row, hWrong) {
+		math.Abs(row.Score-want) > 1e-9 {
 		t.Fatalf("nominated neighbor %+v, want %s at %.4f", row, hMid, want)
+	}
+	if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, hWrong) ||
+		len(row.Alternatives[0].ViaNeighbor) != 0 || row.Alternatives[0].Assessment != graphalign.AssessNone ||
+		math.Abs(row.Alternatives[0].Score-term) > 1e-9 {
+		t.Fatalf("alternatives %+v, want only %s on its own properties at %.4f", row.Alternatives, hWrong, term)
 	}
 }
 
@@ -1021,9 +1027,17 @@ func TestCandidateLoserDoesNotNominate(t *testing.T) {
 	if personRow.Target != graphalign.TargetHandle || !bytes.Equal(personRow.HandleID, win) || !hasAlt(personRow, lose) {
 		t.Fatalf("winner %+v, want %s with %s still suggested", personRow, win, lose)
 	}
+	// The person is placed on PER-1, so the gathering link to PER-9 is apart
+	// and adds nothing: EVT-1 is offered only on its own properties.
 	row := rowBySubject(p, mid)
-	if row.Target == graphalign.TargetHandle || hasAlt(row, hMid) {
+	term := matchregistry.Default().AlignConfig().Subject.Weights[vocabkey.Event][vocabkey.PropertyEventType].Agree
+	if row.Target != graphalign.TargetSkip || row.Reason != graphalign.ReasonWeak || row.Via != nil {
 		t.Fatalf("loser nominated a neighbor: %+v", row)
+	}
+	if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, hMid) ||
+		len(row.Alternatives[0].ViaNeighbor) != 0 || row.Alternatives[0].Assessment != graphalign.AssessNone ||
+		math.Abs(row.Alternatives[0].Score-term) > 1e-9 {
+		t.Fatalf("alternatives %+v, want only %s on its own properties at %.4f", row.Alternatives, hMid, term)
 	}
 }
 
@@ -1328,10 +1342,10 @@ func TestRowReasons(t *testing.T) {
 			subject: "s-e", want: graphalign.ReasonWeak,
 		},
 		{
-			name:    "a surname-only look-alike is not offered",
+			name:    "a surname-only look-alike is offered as weak",
 			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
 			handles: []graphalign.Handle{{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: surnameVals("Ames")}},
-			subject: "s-a", want: graphalign.ReasonNoMatch,
+			subject: "s-a", want: graphalign.ReasonWeak,
 		},
 		{
 			name:    "no candidate is no match",
@@ -1824,7 +1838,8 @@ func TestBirthIsNeverProposedOnADeath(t *testing.T) {
 		}
 		canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "EVT-1", Kind: "event", Values: vals(et, bv)}}}
 		row := rowBySubject(graphalign.Align(layer, canon, nil, matchregistry.Default().AlignConfig()), s)
-		if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch {
+		if row.Target != graphalign.TargetSkip || row.Reason != graphalign.ReasonWeak || row.Assessment != graphalign.AssessNone ||
+			len(row.Alternatives) == 0 || !bytes.Equal(row.Alternatives[0].HandleID, h) || row.Alternatives[0].Assessment != graphalign.AssessNone {
 			t.Fatalf("undated birth against an undated birth: %+v", row)
 		}
 	})

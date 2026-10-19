@@ -395,7 +395,7 @@ func (st *state) fallbackUnreachable() {
 		if _, ok := st.cfg.Subject.Weights[vocabkey.SubjectType(s.Kind)]; !ok {
 			continue
 		}
-		for _, cand := range Candidates(s.Kind, s.Values, st.handlesOfKind(s.Kind), st.metas, st.cfg, st.cfg.Alignment.Alternatives) {
+		for _, cand := range Candidates(s.Kind, s.Values, st.handlesOfKind(s.Kind), st.metas, st.cfg) {
 			h := st.handles[string(cand.ID)]
 			sc := st.scoreCandidate(s.ID, h)
 			st.recordBest(sk, sc)
