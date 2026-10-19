@@ -25,14 +25,11 @@ func (st *state) proposal() Proposal {
 		row := Row{SubjectID: append([]byte(nil), s.ID...), Kind: s.Kind}
 		var reported *cand
 		if hid, ok := st.placed[sk]; ok {
-			h := st.handles[string(hid)]
 			row.Target = TargetHandle
 			row.HandleID = append([]byte(nil), hid...)
 			sc := st.cands[sk][string(hid)]
 			reported = sc
-			if h != nil {
-				row.HandleRef = h.Ref
-			}
+			row.HandleRef = st.handles[string(hid)].Ref
 			row.Score = sc.score
 			row.Comparisons = comparisonsFrom(sc.result, s.Kind, st.metas, st.cfg.Subject)
 			via, viaKey := st.viaOf(sk, sc)
