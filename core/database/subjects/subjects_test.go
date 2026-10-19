@@ -1,6 +1,7 @@
 package subjects
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -20,6 +21,19 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
+
+func defaultGraphID(t *testing.T, c *database.Catalog, sourceID []byte) []byte {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var id []byte
+	if err := db.QueryRow(`SELECT id FROM evidence_graphs WHERE source_id = ?`, sourceID).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
 
 func TestSubjects(t *testing.T) {
 	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
@@ -90,6 +104,55 @@ func TestSubjects(t *testing.T) {
 		name string
 		run  func(t *testing.T, c *database.Catalog)
 	}{
+		{
+			name: "create joins the Source's graph",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				mustSubjectTypes(t, c)
+				src := mustSource(t, c)
+				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				want := defaultGraphID(t, c, src.ID)
+				var created []rowchange.Change
+				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					s, changes, err := Create(tx, userID, CreateInput{
+						SourceID: src.ID, SubjectTypeID: person.ID, Label: "Alice",
+					}, nil)
+					created = changes
+					return s, changes, err
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(s.GraphID, want) {
+					t.Fatalf("created graph %x want %x", s.GraphID, want)
+				}
+				got, err := Get(c, s.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(got.GraphID, want) {
+					t.Fatalf("read graph %x want %x", got.GraphID, want)
+				}
+				if len(created) == 0 || created[0].Fields["graph_id"].New == nil {
+					t.Fatalf("create change lacks graph_id: %+v", created)
+				}
+				var deleted []rowchange.Change
+				if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := Delete(tx, userID, s.ID)
+					deleted = changes
+					return struct{}{}, changes, err
+				}); err != nil {
+					t.Fatal(err)
+				}
+				last := deleted[len(deleted)-1]
+				if last.EntityType != "subject" || last.Fields["graph_id"].Old == nil {
+					t.Fatalf("delete change lacks graph_id: %+v", last)
+				}
+			},
+		},
 		{
 			name: "create rejects empty user id",
 			run: func(t *testing.T, c *database.Catalog) {

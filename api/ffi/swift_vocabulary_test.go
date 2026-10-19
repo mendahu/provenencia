@@ -13,6 +13,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
@@ -35,6 +36,7 @@ const (
 	swiftValueKinds = "../../macos/App/Platform/InterpretationValueKinds.swift"
 	swiftMarks      = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
 	swiftGraphKinds = "../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift"
+	swiftCatalogMut = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
 
 	swiftRegionGeometry = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
 	swiftProjectFiles   = "../../macos/App/Platform/ProjectFiles.swift"
@@ -199,6 +201,7 @@ var (
 	staticLet   = regexp.MustCompile(`static let \w+ = "([^"]*)"`)
 	rawCase     = regexp.MustCompile(`(?m)^\s+case (\w+)\s*$`)
 	unrecogniz  = regexp.MustCompile(`case unrecognized\(String\)`)
+	listCase    = regexp.MustCompile(`case \w+ = "([a-z_]+)"`)
 	subjectMark = regexp.MustCompile(`case \w+ = "(subject_[a-z_]+)"`)
 )
 
@@ -211,6 +214,16 @@ func subjectMarkSymbols() []string {
 		out = append(out, info.Presentation.IconSymbol)
 	}
 	sort.Strings(out)
+	return out
+}
+
+// listStrings is every effects.List wire key; Swift's CatalogList decodes
+// WriteEffects.lists with them.
+func listStrings() []string {
+	var out []string
+	for _, l := range effects.Lists {
+		out = append(out, string(l))
+	}
 	return out
 }
 
@@ -245,6 +258,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		{
 			name: "primary kinds", path: swiftGraphKinds, enum: "EvidencePrimaryKind", re: rawCase,
 			want: sorted(vocabkey.PrimaryKinds()...),
+		},
+		{
+			name: "catalog-wide lists", path: swiftCatalogMut, enum: "CatalogList", re: listCase,
+			want: sorted(listStrings()...),
 		},
 		{
 			name: "subject marks", path: swiftMarks, enum: "PVMarkKey", re: subjectMark,

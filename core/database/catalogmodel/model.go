@@ -34,6 +34,8 @@ const (
 	// KindIdentityClaim parents facet releases (its pins) only; claims have no
 	// ref and no delete of their own yet.
 	KindIdentityClaim Kind = "identity_claim"
+	// KindEvidenceGraph is registered for its inbound probe; delete path in S12-04.
+	KindEvidenceGraph Kind = "evidence_graph"
 )
 
 // Bucket tags one table or one live FK.
@@ -105,6 +107,8 @@ var Tables = []Table{
 	{Name: "source_type_metadata_fields", Bucket: BucketFacet},
 	{Name: "citation_notes", Bucket: BucketFacet},
 	{Name: "observation_notes", Bucket: BucketFacet},
+	{Name: "evidence_graphs", PK: "id", Kind: KindEvidenceGraph, Bucket: BucketFacet},
+	{Name: "evidence_graph_artifacts", Bucket: BucketFacet},
 	{Name: "subject_positions", Bucket: BucketFacet},
 	{Name: "subject_type_properties", Bucket: BucketFacet},
 	{Name: "name_value_parts", Bucket: BucketFacet},
@@ -166,6 +170,10 @@ var FKs = []FK{
 
 	{From: "subjects", Column: "source_id", To: "sources", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{From: "subjects", Column: "subject_type_id", To: "subject_types", OnDelete: "NO ACTION", Bucket: BucketResource},
+	{From: "subjects", Column: "graph_id", FromCols: []string{"graph_id", "source_id"}, To: "evidence_graphs", OnDelete: "NO ACTION", Bucket: BucketResource},
+	{From: "evidence_graphs", Column: "source_id", To: "sources", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
+	{From: "evidence_graph_artifacts", Column: "graph_id", To: "evidence_graphs", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
+	{From: "evidence_graph_artifacts", Column: "artifact_id", To: "artifacts", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 	{From: "subject_positions", Column: "subject_id", To: "subjects", OnDelete: "CASCADE", Bucket: BucketFacet},
 	{From: "subject_type_properties", Column: "subject_type_id", To: "subject_types", OnDelete: "CASCADE", Bucket: BucketFacet},
 	{From: "subject_type_properties", Column: "property_id", To: "properties", OnDelete: "CASCADE", Bucket: BucketFacet},

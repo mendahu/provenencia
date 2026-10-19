@@ -111,13 +111,7 @@ func Upsert(c *database.Catalog, f Field) ([]byte, error) {
 	} else if len(id) != 16 {
 		return nil, ErrInvalid
 	}
-	var desc any
-	if f.Description == "" {
-		desc = nil
-	} else {
-		desc = f.Description
-	}
-	if _, err := db.Exec(sqlUpsert, id, f.Key, f.Origin, f.Label, f.DataType, desc); err != nil {
+	if _, err := db.Exec(sqlUpsert, id, f.Key, f.Origin, f.Label, f.DataType, database.NullString(f.Description)); err != nil {
 		return nil, err
 	}
 	if err := searchindex.ReprojectMetadataField(db, id); err != nil {
@@ -155,13 +149,7 @@ func Create(tx *database.Tx, label, dataType, description string) (Field, []rowc
 		return Field{}, nil, err
 	}
 	id := uid[:]
-	var desc any
-	if description == "" {
-		desc = nil
-	} else {
-		desc = description
-	}
-	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, dataType, desc); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, dataType, database.NullString(description)); err != nil {
 		return Field{}, nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
@@ -214,21 +202,15 @@ func Update(tx *database.Tx, id []byte, label, dataType, description string) (Fi
 	}
 	fields := map[string]rowchange.FieldDiff{}
 	if existing.Label != label {
-		fields["label"] = rowchange.FieldDiff{Old: nullJSON(existing.Label), New: nullJSON(label)}
+		fields["label"] = rowchange.FieldDiff{Old: database.NullString(existing.Label), New: database.NullString(label)}
 	}
 	if existing.Description != description {
-		fields["description"] = rowchange.FieldDiff{Old: nullJSON(existing.Description), New: nullJSON(description)}
+		fields["description"] = rowchange.FieldDiff{Old: database.NullString(existing.Description), New: database.NullString(description)}
 	}
 	if len(fields) == 0 {
 		return existing, nil, nil
 	}
-	var desc any
-	if description == "" {
-		desc = nil
-	} else {
-		desc = description
-	}
-	if _, err := tx.Exec(sqlUpdate, label, desc, id); err != nil {
+	if _, err := tx.Exec(sqlUpdate, label, database.NullString(description), id); err != nil {
 		return Field{}, nil, err
 	}
 	got, err := getByIDTx(tx.Tx, id)
@@ -390,7 +372,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		return nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
-		"id":        {Old: uuidString(id), New: nil},
+		"id":        {Old: database.UUIDString(id), New: nil},
 		"key":       {Old: prev.Key, New: nil},
 		"origin":    {Old: prev.Origin, New: nil},
 		"label":     {Old: prev.Label, New: nil},
@@ -425,20 +407,4 @@ func lookupTx(tx *sql.Tx, key, origin string) (Field, error) {
 		&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description,
 	)
 	return f, err
-}
-
-func uuidString(id []byte) string {
-	if len(id) != 16 {
-		return ""
-	}
-	var u uuid.UUID
-	copy(u[:], id)
-	return u.String()
-}
-
-func nullJSON(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }

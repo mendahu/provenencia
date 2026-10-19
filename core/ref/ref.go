@@ -16,19 +16,21 @@ const tokenLen = 5
 
 // Reserved catalog / contributor prefixes (not used as a Node Type prefix).
 const (
-	PrefixUser        = "USR"
-	PrefixSource      = "SRC"
-	PrefixArtifact    = "ART"
-	PrefixCitation    = "CIT"
-	PrefixObservation = "OBS"
+	PrefixUser          = "USR"
+	PrefixSource        = "SRC"
+	PrefixArtifact      = "ART"
+	PrefixCitation      = "CIT"
+	PrefixObservation   = "OBS"
+	PrefixEvidenceGraph = "GPH"
 )
 
 var reservedPrefixes = map[string]struct{}{
-	PrefixUser:        {},
-	PrefixSource:      {},
-	PrefixArtifact:    {},
-	PrefixCitation:    {},
-	PrefixObservation: {},
+	PrefixUser:          {},
+	PrefixSource:        {},
+	PrefixArtifact:      {},
+	PrefixCitation:      {},
+	PrefixObservation:   {},
+	PrefixEvidenceGraph: {},
 }
 
 var (

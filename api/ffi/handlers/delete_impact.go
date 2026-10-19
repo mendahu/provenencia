@@ -59,7 +59,7 @@ func groupsToProto(groups []deleteimpact.Group) []*engine.DeleteImpactGroup {
 		}
 		for _, item := range g.Listed {
 			pg.Listed = append(pg.Listed, &engine.DeleteImpactListed{
-				Id:       uuidString(item.ID),
+				Id:       database.UUIDString(item.ID),
 				Ref:      item.Ref,
 				Title:    item.Title,
 				Location: locationFromImpact(item.Location),

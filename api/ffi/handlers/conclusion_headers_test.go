@@ -274,7 +274,7 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		entityID = uuidString(p.Entity.ID)
+		entityID = database.UUIDString(p.Entity.ID)
 		return nil
 	}); err != nil {
 		t.Fatal(err)
@@ -367,7 +367,7 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		entityID = uuidString(p.Entity.ID)
+		entityID = database.UUIDString(p.Entity.ID)
 		return nil
 	}); err != nil {
 		t.Fatal(err)
@@ -430,7 +430,7 @@ func TestListSubjectMembershipsCarriesAutoReconciledName(t *testing.T) {
 		if err := db.QueryRow(`SELECT source_id FROM subjects LIMIT 1`).Scan(&id); err != nil {
 			return err
 		}
-		sourceID = uuidString(id)
+		sourceID = database.UUIDString(id)
 		return nil
 	}); err != nil {
 		t.Fatal(err)
@@ -475,7 +475,7 @@ func TestLifeFactsProtoCarriesIdentities(t *testing.T) {
 			if got.GetEvent().GetRef() != tt.wantEvent {
 				t.Fatalf("event %+v", got.GetEvent())
 			}
-			if tt.wantEvent != "" && got.GetEvent().GetId() != uuidString(event.ID) {
+			if tt.wantEvent != "" && got.GetEvent().GetId() != database.UUIDString(event.ID) {
 				t.Fatalf("event id %q", got.GetEvent().GetId())
 			}
 			var placeRef string
@@ -508,7 +508,7 @@ func eventSourceID(t *testing.T, dir string) string {
 			JOIN subject_types st ON st.id = s.subject_type_id AND st.key = 'event' LIMIT 1`).Scan(&id); err != nil {
 			return err
 		}
-		sourceID = uuidString(id)
+		sourceID = database.UUIDString(id)
 		return nil
 	}); err != nil {
 		t.Fatal(err)

@@ -1,6 +1,7 @@
 # S12-03 — Evidence graphs in the catalog
 
-**Status:** Planned
+**Status:** Landed in [#498](https://github.com/mendahu/provenencia/pull/498) (2026-10-19)
+**Landed:** Differences. (1) Review round 2 superseded the Out line "One set of catalog-wide list flags" and D-5's bool shape, by user re-decision: `effects.List` (`ListVocabulary`, `ListPropertyUsage`, `ListEvidenceGraphs`), `Effect.Lists` / `Effect.ListsOnField` and `Set.Lists` / `Set.Has` replace the `Vocabulary`, `PropertyUsage` and `EvidenceGraphs` bools; `WriteEffects` drops `vocabulary` and `property_usage` for `repeated string lists = 13`; Swift's `CatalogWriteEffects.lists` holds `CatalogList` values. (2) Review round 2 also superseded the Out line "One ref-mint-and-insert helper and one `uuidJSON`" and D-8's copy, by user re-decision: `database.InsertWithRef` / `Minter` / `MaxRefRetries` / `ErrRefsExhausted` (`core/database/refinsert.go`) are the one mint-and-insert loop for `sources`, `artifacts`, `citations`, `observations`, `subjects`, `canonicalentities` and `evidencegraphs` (insert and backfill); `database.UUIDString`, `UUIDJSON` (`uuid.go`), `NullString` and `NullBlob` (`null.go`, was `nullblob.go`) replace the per-package copies, including the renamed binders `nullJSON`, `emptyAsNil`, `nullBlob`, `nullBytes` and the FFI handlers' `uuidString`. `datevalues` and `audit` keep their `nullIfEmpty`, which trims whitespace. (3) D-15: `evidencegraphs.EnsureRefs` runs the backfill in one transaction with the `insert` retry on a ref collision (`database.MaxRefRetries` through `database.InsertWithRef`, then `ErrInvalid` on `database.ErrRefsExhausted`), per user override of D-15 in review round 1; the Decision text above still says "no retry". (4) Fix round 7, by user decision, superseded D-1's `id = source_id`: every `Default` graph the migration makes gets a fresh UUIDv7 from a `uuid7()` SQL function (`core/database/driver.go`, registered on every connection through the `provenencia_sqlite3` driver `openDBURI` opens), and the artifact link and `subjects` copy take the graph by scalar subquery on `source_id`; `TestSchemaCallsNoAppFunction` keeps `uuid7(` out of the stored schema.
 **Spike / slice:** Spike 12 · Slice 2 — Graphs in the catalog
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: schema, one Go package and the create paths; no FFI, no Swift)
@@ -210,7 +211,8 @@ Migration `core/database/migrations/000055.sql` *(new)*:
 -- S12-03: Evidence graphs. A Source holds one or more graphs; each Subject
 -- belongs to one graph of its Source (the composite key keeps it on its home
 -- Source). Artifacts and graphs are linked many-to-many. Every existing Source
--- gets a Default graph whose id is the Source's id; its GPH- ref is minted in
+-- gets a Default graph with a fresh UUIDv7 id from uuid7() (Landed 4; was the
+-- Source's id); its GPH- ref is minted in
 -- Go at open (evidencegraphs.EnsureRefs). Every Subject moves into it and every
 -- Artifact is linked to it.
 

@@ -5,9 +5,10 @@ package citations
 import (
 	"database/sql"
 	"errors"
+	"strings"
+
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
@@ -87,8 +88,6 @@ ORDER BY cid, MIN(oid)`
 	sqlCitationSource = `SELECT a.source_id FROM citations c
 		INNER JOIN artifacts a ON a.id = c.artifact_id
 		WHERE c.id = ?`
-
-	maxRefRetries = 8
 )
 
 // Citation is one citations row.
@@ -198,32 +197,25 @@ func InsertWithObservationsTx(
 		uncertain = 1
 	}
 
-	var citRef string
-	for attempt := 0; attempt < maxRefRetries; attempt++ {
-		citRef, err = ref.Mint(ref.PrefixCitation)
-		if err != nil {
-			return CreateResult{}, nil, err
-		}
-		_, err = tx.Exec(
+	citRef, err := database.InsertWithRef(database.Minter(ref.PrefixCitation), func(storedRef string) error {
+		_, err := tx.Exec(
 			sqlInsert,
 			idBytes,
-			citRef,
+			storedRef,
 			in.ArtifactID,
 			in.LocatorJSON,
-			nullIfEmpty(in.Transcription),
-			nullIfEmpty(in.Label),
+			database.NullString(in.Transcription),
+			database.NullString(in.Label),
 			uncertain,
-			nullIfEmpty(in.TranscriptionNote),
+			database.NullString(in.TranscriptionNote),
 		)
-		if err == nil {
-			break
-		}
-		if !database.IsUniqueConflict(err) {
-			return CreateResult{}, nil, mapConstraint(err)
-		}
+		return err
+	})
+	if errors.Is(err, database.ErrRefsExhausted) {
+		return CreateResult{}, nil, ErrInvalid
 	}
 	if err != nil {
-		return CreateResult{}, nil, ErrInvalid
+		return CreateResult{}, nil, mapConstraint(err)
 	}
 
 	changes := []rowchange.Change{{
@@ -233,12 +225,12 @@ func InsertWithObservationsTx(
 		Fields: rowchange.FullRow(map[string]any{
 			"id":                      id.String(),
 			"ref":                     citRef,
-			"artifact_id":             uuidJSON(in.ArtifactID),
+			"artifact_id":             database.UUIDJSON(in.ArtifactID),
 			"locator_json":            in.LocatorJSON,
-			"transcription":           nullIfEmpty(in.Transcription),
-			"label":                   nullIfEmpty(in.Label),
+			"transcription":           database.NullString(in.Transcription),
+			"label":                   database.NullString(in.Label),
 			"transcription_uncertain": in.TranscriptionUncertain,
-			"transcription_note":      nullIfEmpty(in.TranscriptionNote),
+			"transcription_note":      database.NullString(in.TranscriptionNote),
 		}),
 	}}
 
@@ -333,10 +325,10 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 		fields["locator_json"] = rowchange.FieldDiff{Old: prev.LocatorJSON, New: in.LocatorJSON}
 	}
 	if prev.Transcription != in.Transcription {
-		fields["transcription"] = rowchange.FieldDiff{Old: emptyAsNil(prev.Transcription), New: emptyAsNil(in.Transcription)}
+		fields["transcription"] = rowchange.FieldDiff{Old: database.NullString(prev.Transcription), New: database.NullString(in.Transcription)}
 	}
 	if prev.Label != in.Label {
-		fields["label"] = rowchange.FieldDiff{Old: emptyAsNil(prev.Label), New: emptyAsNil(in.Label)}
+		fields["label"] = rowchange.FieldDiff{Old: database.NullString(prev.Label), New: database.NullString(in.Label)}
 	}
 	if prev.TranscriptionUncertain != in.TranscriptionUncertain {
 		fields["transcription_uncertain"] = rowchange.FieldDiff{
@@ -346,8 +338,8 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 	}
 	if prev.TranscriptionNote != in.TranscriptionNote {
 		fields["transcription_note"] = rowchange.FieldDiff{
-			Old: emptyAsNil(prev.TranscriptionNote),
-			New: emptyAsNil(in.TranscriptionNote),
+			Old: database.NullString(prev.TranscriptionNote),
+			New: database.NullString(in.TranscriptionNote),
 		}
 	}
 	if len(fields) == 0 {
@@ -362,10 +354,10 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 		sqlUpdate,
 		prev.ArtifactID,
 		in.LocatorJSON,
-		nullIfEmpty(in.Transcription),
-		nullIfEmpty(in.Label),
+		database.NullString(in.Transcription),
+		database.NullString(in.Label),
 		uncertain,
-		nullIfEmpty(in.TranscriptionNote),
+		database.NullString(in.TranscriptionNote),
 		citationID,
 	); err != nil {
 		return Citation{}, nil, err
@@ -385,13 +377,6 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 			Action:     rowchange.ActionUpdate,
 			Fields:     fields,
 		}}, nil
-}
-
-func emptyAsNil(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 // Delete erases a Citation when no Observation remains. Notes CASCADE.
@@ -428,9 +413,9 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		return nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
-		"id":          {Old: uuidString(id), New: nil},
+		"id":          {Old: database.UUIDString(id), New: nil},
 		"ref":         {Old: prev.Ref, New: nil},
-		"artifact_id": {Old: uuidString(prev.ArtifactID), New: nil},
+		"artifact_id": {Old: database.UUIDString(prev.ArtifactID), New: nil},
 	}
 	if prev.LocatorJSON != "" {
 		fields["locator_json"] = rowchange.FieldDiff{Old: prev.LocatorJSON, New: nil}
@@ -652,32 +637,6 @@ func scanListedRow(row rowScanner) (ListedCitation, error) {
 	}
 	listed.TranscriptionUncertain = uncertain != 0
 	return listed, nil
-}
-
-func nullIfEmpty(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func uuidString(id []byte) string {
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
-}
-
-func uuidJSON(id []byte) any {
-	if len(id) != 16 {
-		return nil
-	}
-	s := uuidString(id)
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 func mapConstraint(err error) error {

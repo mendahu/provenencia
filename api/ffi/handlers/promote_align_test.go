@@ -72,7 +72,7 @@ func personOnNewSource(t *testing.T, dir, userID, typeID, sexKey, polarity strin
 				{SubjectID: s.ID, PropertyID: sex.ID, ValueTermID: term.ID, Polarity: polarity},
 			})
 		})
-		sourceID, subjectID = uuidString(src.ID), uuidString(s.ID)
+		sourceID, subjectID = database.UUIDString(src.ID), database.UUIDString(s.ID)
 		return err
 	}); err != nil {
 		t.Fatal(err)

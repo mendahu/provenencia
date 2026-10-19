@@ -5042,7 +5042,6 @@ type WriteEffects struct {
 	Handles []string               `protobuf:"bytes,1,rep,name=handles,proto3" json:"handles,omitempty"`
 	// Sources whose graph changed: what the Source graph and graph progress load.
 	Sources       []string `protobuf:"bytes,2,rep,name=sources,proto3" json:"sources,omitempty"`
-	Vocabulary    bool     `protobuf:"varint,4,opt,name=vocabulary,proto3" json:"vocabulary,omitempty"`
 	Structure     bool     `protobuf:"varint,5,opt,name=structure,proto3" json:"structure,omitempty"`
 	HeaderHandles []string `protobuf:"bytes,6,rep,name=header_handles,json=headerHandles,proto3" json:"header_handles,omitempty"`
 	// Handles whose last-updated revision this write moved. Swift patches those
@@ -5059,9 +5058,9 @@ type WriteEffects struct {
 	// Sources whose citation reads (citation counts, citations by artifact) this
 	// write moved.
 	CitationSources []string `protobuf:"bytes,11,rep,name=citation_sources,json=citationSources,proto3" json:"citation_sources,omitempty"`
-	// An Observation was created, deleted, or moved to another Property, so the
-	// Properties workspace's usedBy counts changed.
-	PropertyUsage bool `protobuf:"varint,12,opt,name=property_usage,json=propertyUsage,proto3" json:"property_usage,omitempty"`
+	// Catalog-wide lists this write changed: effects.List values ("vocabulary",
+	// "property_usage", "evidence_graphs"). Swift drops the reads that show each.
+	Lists         []string `protobuf:"bytes,13,rep,name=lists,proto3" json:"lists,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5108,13 +5107,6 @@ func (x *WriteEffects) GetSources() []string {
 		return x.Sources
 	}
 	return nil
-}
-
-func (x *WriteEffects) GetVocabulary() bool {
-	if x != nil {
-		return x.Vocabulary
-	}
-	return false
 }
 
 func (x *WriteEffects) GetStructure() bool {
@@ -5166,11 +5158,11 @@ func (x *WriteEffects) GetCitationSources() []string {
 	return nil
 }
 
-func (x *WriteEffects) GetPropertyUsage() bool {
+func (x *WriteEffects) GetLists() []string {
 	if x != nil {
-		return x.PropertyUsage
+		return x.Lists
 	}
-	return false
+	return nil
 }
 
 type IngestArtifactFileRequest struct {
@@ -18126,13 +18118,10 @@ const file_engine_proto_rawDesc = "" +
 	"\vcitation_id\x18\x03 \x01(\tR\n" +
 	"citationId\"W\n" +
 	"\x16DeleteCitationResponse\x12=\n" +
-	"\aeffects\x18\x01 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\x86\x03\n" +
+	"\aeffects\x18\x01 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xe1\x02\n" +
 	"\fWriteEffects\x12\x18\n" +
 	"\ahandles\x18\x01 \x03(\tR\ahandles\x12\x18\n" +
-	"\asources\x18\x02 \x03(\tR\asources\x12\x1e\n" +
-	"\n" +
-	"vocabulary\x18\x04 \x01(\bR\n" +
-	"vocabulary\x12\x1c\n" +
+	"\asources\x18\x02 \x03(\tR\asources\x12\x1c\n" +
 	"\tstructure\x18\x05 \x01(\bR\tstructure\x12%\n" +
 	"\x0eheader_handles\x18\x06 \x03(\tR\rheaderHandles\x12#\n" +
 	"\rhandle_scopes\x18\a \x03(\tR\fhandleScopes\x12\x1a\n" +
@@ -18141,8 +18130,8 @@ const file_engine_proto_rawDesc = "" +
 	"revisionAt\x12#\n" +
 	"\rsource_scopes\x18\n" +
 	" \x03(\tR\fsourceScopes\x12)\n" +
-	"\x10citation_sources\x18\v \x03(\tR\x0fcitationSources\x12%\n" +
-	"\x0eproperty_usage\x18\f \x01(\bR\rpropertyUsageJ\x04\b\x03\x10\x04\"\x8a\x01\n" +
+	"\x10citation_sources\x18\v \x03(\tR\x0fcitationSources\x12\x14\n" +
+	"\x05lists\x18\r \x03(\tR\x05listsJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\f\x10\r\"\x8a\x01\n" +
 	"\x19IngestArtifactFileRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +

@@ -87,7 +87,7 @@ func conclusionDetailProto(d conclusiondetails.Detail) *engine.ConclusionDetail 
 	out := &engine.ConclusionDetail{Entity: canonicalEntityProto(d.Entity), MemberCount: int32(d.MemberCount)}
 	for _, f := range d.Fields {
 		pf := &engine.ConclusionField{
-			PropertyId:  uuidString(f.PropertyID),
+			PropertyId:  database.UUIDString(f.PropertyID),
 			PropertyKey: f.PropertyKey,
 			Label:       f.Label,
 			ValueType:   f.ValueType,
@@ -112,18 +112,18 @@ func conclusionDetailProto(d conclusiondetails.Detail) *engine.ConclusionDetail 
 
 func reconcilerOutcomeProto(o conclusiondetails.Outcome) *engine.ReconcilerOutcomeDetail {
 	po := &engine.ReconcilerOutcomeDetail{
-		ObservationId:          uuidString(o.ObservationID),
+		ObservationId:          database.UUIDString(o.ObservationID),
 		ObservationRef:         o.ObservationRef,
 		Reason:                 o.Reason,
 		ValueRank:              int32(o.ValueRank),
 		Recorded:               conclusionValueProto(o.Recorded),
-		SubjectId:              uuidString(o.SubjectID),
+		SubjectId:              database.UUIDString(o.SubjectID),
 		SubjectRef:             o.SubjectRef,
-		CitationId:             uuidString(o.CitationID),
-		ArtifactId:             uuidString(o.ArtifactID),
+		CitationId:             database.UUIDString(o.CitationID),
+		ArtifactId:             database.UUIDString(o.ArtifactID),
 		VoteSupport:            int32(o.Vote.Support),
 		VoteTotal:              int32(o.Vote.Of),
-		SourceId:               uuidString(o.SourceID),
+		SourceId:               database.UUIDString(o.SourceID),
 		SourceTitle:            o.SourceTitle,
 		CredibilityKey:         o.CredibilityKey,
 		TranscriptionUncertain: o.Provenance.Uncertain,
@@ -132,7 +132,7 @@ func reconcilerOutcomeProto(o conclusiondetails.Outcome) *engine.ReconcilerOutco
 		ClaimConfidenceOffset:  int32(o.Provenance.ClaimConfidence),
 	}
 	if len(o.DeniedBy) > 0 {
-		po.DeniedByObservationId = uuidString(o.DeniedBy)
+		po.DeniedByObservationId = database.UUIDString(o.DeniedBy)
 	}
 	return po
 }
@@ -145,7 +145,7 @@ func conclusionValueProto(v conclusiondetails.Value) *engine.ConclusionValue {
 		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Date{Date: valuecodec.DateToProto(*v.Date)}}
 	case len(v.TermID) > 0:
 		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Term{Term: &engine.ConclusionTerm{
-			Id: uuidString(v.TermID), Key: v.TermKey, Label: v.TermLabel,
+			Id: database.UUIDString(v.TermID), Key: v.TermKey, Label: v.TermLabel,
 		}}}
 	case v.HasInteger:
 		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Integer{Integer: v.Integer}}

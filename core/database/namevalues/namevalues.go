@@ -99,7 +99,7 @@ func InsertTx(tx *sql.Tx, v namevalue.Value) ([]byte, error) {
 			idBytes,
 			p.Idx,
 			p.Value,
-			nullIfEmpty(p.Type),
+			database.NullString(p.Type),
 		); err != nil {
 			return nil, err
 		}
@@ -148,7 +148,7 @@ func UpdateTx(tx *sql.Tx, id []byte, v namevalue.Value) error {
 			id,
 			p.Idx,
 			p.Value,
-			nullIfEmpty(p.Type),
+			database.NullString(p.Type),
 		); err != nil {
 			return err
 		}
@@ -264,11 +264,4 @@ func LookupManyTx(db interface {
 		return nil, err
 	}
 	return out, nil
-}
-
-func nullIfEmpty(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }

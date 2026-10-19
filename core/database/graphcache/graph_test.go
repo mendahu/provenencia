@@ -464,7 +464,7 @@ func TestMatchIndexDrops(t *testing.T) {
 	}
 	t.Run("vocabulary commit", func(t *testing.T) {
 		g.SetMatchIndex("index")
-		if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 2}, Effects: effects.Set{Vocabulary: true}}); err != nil {
+		if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 2}, Effects: effects.Set{Lists: []effects.List{effects.ListVocabulary}}}); err != nil {
 			t.Fatal(err)
 		}
 		if stored() {

@@ -26,10 +26,6 @@ S12-01 adds `database.Querier` (`Query` + `QueryRow`, in `core/database/tx.go`) 
 
 S12-02 added `macos/ProvenenciaTests/QueryHandleWaiting.swift` (`waitForQuery`, which also waits out a refetch). `MetadataModelTests`, `PropertiesModelTests` and `SourceTypesModelTests` still keep a private `waitForQuery`; move them onto it.
 
-## One ref mint loop
+## Trimmed empty-string binder
 
-Seven table packages mint a ref and insert with the same loop: a package `maxRefRetries = 8`, `ref.Mint`, and a retry on `database.IsUniqueConflict` (`sources`, `artifacts`, `citations`, `observations`, `subjects`, `canonicalentities`, and `evidencegraphs` from S12-03). Eight copy `uuidJSON` (the same seven plus `identityclaims` and `deleteimpact`). A `ref`-side helper that takes the prefix and an insert func, and a `rowchange.UUID(id)`, would give a ref rule one home. Raised by the S12-03 plan review (M-5).
-
-## Catalog-wide list flags
-
-`effects.Effect` and `effects.Set` carry one bool per catalog-wide list: `Vocabulary`, `PropertyUsage`, and `EvidenceGraphs` from S12-03. Each is a Set field, an Effect field, a line in `Resolve`, a check in `validate`, a `WriteEffects` field and a Swift invalidation. One set of list keys on `Effect` and `Set`, with one wire field and one `CatalogQueryRegistry` mapping, would make the next list a registry entry. Raised by the S12-03 plan review (M-6).
+`datevalues.nullIfEmpty` and `audit.nullIfEmpty` are identical: each trims whitespace and binds an empty result as NULL. `database.NullString` does not trim, so they stay local. Add `database.NullTrimmed` and move both onto it when a third caller needs the trim.

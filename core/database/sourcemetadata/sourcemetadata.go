@@ -143,7 +143,7 @@ func Set(tx *database.Tx, userID []byte, in Input) (Row, []rowchange.Change, err
 	if prev.ValueText == in.ValueText {
 		return prev, nil, nil
 	}
-	if _, err := tx.Exec(sqlUpdate, nullStr(in.ValueText), prev.ID); err != nil {
+	if _, err := tx.Exec(sqlUpdate, database.NullString(in.ValueText), prev.ID); err != nil {
 		return Row{}, nil, mapConstraint(err)
 	}
 	row := Row{
@@ -157,7 +157,7 @@ func Set(tx *database.Tx, userID []byte, in Input) (Row, []rowchange.Change, err
 		EntityID:   row.ID,
 		Action:     rowchange.ActionUpdate,
 		Fields: map[string]rowchange.FieldDiff{
-			"value_text": {Old: nullJSON(prev.ValueText), New: nullJSON(in.ValueText)},
+			"value_text": {Old: database.NullString(prev.ValueText), New: database.NullString(in.ValueText)},
 		},
 	}}, nil
 }
@@ -175,7 +175,7 @@ func insertValueTx(tx *sql.Tx, sourceID []byte, field metadatafields.Field, valu
 		return Row{}, rowchange.Change{}, err
 	}
 	idBytes := id[:]
-	if _, err := tx.Exec(sqlInsert, idBytes, sourceID, field.ID, nullStr(normalized)); err != nil {
+	if _, err := tx.Exec(sqlInsert, idBytes, sourceID, field.ID, database.NullString(normalized)); err != nil {
 		return Row{}, rowchange.Change{}, mapConstraint(err)
 	}
 	row := Row{
@@ -186,8 +186,8 @@ func insertValueTx(tx *sql.Tx, sourceID []byte, field metadatafields.Field, valu
 	}
 	fields := map[string]rowchange.FieldDiff{
 		"id":        {Old: nil, New: id.String()},
-		"source_id": {Old: nil, New: uuidString(sourceID)},
-		"field_id":  {Old: nil, New: uuidString(field.ID)},
+		"source_id": {Old: nil, New: database.UUIDString(sourceID)},
+		"field_id":  {Old: nil, New: database.UUIDString(field.ID)},
 	}
 	if normalized != "" {
 		fields["value_text"] = rowchange.FieldDiff{Old: nil, New: normalized}
@@ -265,8 +265,8 @@ func CreateAll(tx *database.Tx, userID, sourceID []byte, values []Input, layout 
 			EntityID:   append([]byte(nil), l.FieldID...),
 			Action:     rowchange.ActionCreate,
 			Fields: map[string]rowchange.FieldDiff{
-				"source_id":  {Old: nil, New: uuidString(sourceID)},
-				"field_id":   {Old: nil, New: uuidString(l.FieldID)},
+				"source_id":  {Old: nil, New: database.UUIDString(sourceID)},
+				"field_id":   {Old: nil, New: database.UUIDString(l.FieldID)},
 				"sort_order": {Old: nil, New: l.SortOrder},
 				"dismissed":  {Old: nil, New: l.Dismissed},
 			},
@@ -297,9 +297,9 @@ func Clear(tx *database.Tx, userID, sourceID, fieldID []byte) ([]rowchange.Chang
 		return nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
-		"id":        {Old: uuidString(prev.ID), New: nil},
-		"source_id": {Old: uuidString(prev.SourceID), New: nil},
-		"field_id":  {Old: uuidString(prev.FieldID), New: nil},
+		"id":        {Old: database.UUIDString(prev.ID), New: nil},
+		"source_id": {Old: database.UUIDString(prev.SourceID), New: nil},
+		"field_id":  {Old: database.UUIDString(prev.FieldID), New: nil},
 	}
 	if prev.ValueText != "" {
 		fields["value_text"] = rowchange.FieldDiff{Old: prev.ValueText, New: nil}
@@ -367,8 +367,8 @@ func DismissSuggestion(tx *database.Tx, userID, sourceID, fieldID []byte) ([]row
 		EntityID:   fieldID,
 		Action:     action,
 		Fields: map[string]rowchange.FieldDiff{
-			"source_id": {Old: uuidString(sourceID), New: uuidString(sourceID)},
-			"field_id":  {Old: uuidString(fieldID), New: uuidString(fieldID)},
+			"source_id": {Old: database.UUIDString(sourceID), New: database.UUIDString(sourceID)},
+			"field_id":  {Old: database.UUIDString(fieldID), New: database.UUIDString(fieldID)},
 			"dismissed": {Old: oldDismissed, New: true},
 		},
 	}}, nil
@@ -429,8 +429,8 @@ func Reorder(tx *database.Tx, userID, sourceID []byte, fieldIDs [][]byte) ([]row
 			EntityID:   fieldID,
 			Action:     action,
 			Fields: map[string]rowchange.FieldDiff{
-				"source_id":  {Old: uuidString(sourceID), New: uuidString(sourceID)},
-				"field_id":   {Old: uuidString(fieldID), New: uuidString(fieldID)},
+				"source_id":  {Old: database.UUIDString(sourceID), New: database.UUIDString(sourceID)},
+				"field_id":   {Old: database.UUIDString(fieldID), New: database.UUIDString(fieldID)},
 				"sort_order": {Old: oldOrder, New: i},
 			},
 		})
@@ -677,28 +677,6 @@ func requireSource(tx *sql.Tx, sourceID []byte) error {
 		return ErrInvalid
 	}
 	return err
-}
-
-func nullStr(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func nullJSON(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func uuidString(id []byte) string {
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
 }
 
 func mapConstraint(err error) error {

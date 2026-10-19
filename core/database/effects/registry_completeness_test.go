@@ -1,10 +1,13 @@
 package effects
 
 import (
-	"github.com/mendahu/provenencia/core/database/rowchange"
+	"reflect"
+	"slices"
+	"sort"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 )
 
 // TestEveryNonSkipTableHasAnEntry checks the registry against catalogmodel.
@@ -63,7 +66,7 @@ func TestGradeTablesHaveNoHandles(t *testing.T) {
 		if !ok {
 			t.Fatalf("missing %s", name)
 		}
-		if !eff.None || !eff.Handles.zero() || eff.Vocabulary {
+		if !eff.None || !eff.Handles.zero() || len(eff.Lists) > 0 {
 			t.Fatalf("%s should be an empty effect, got %+v", name, eff)
 		}
 	}
@@ -75,7 +78,7 @@ func hasWork(e Effect) bool {
 			return true
 		}
 	}
-	return len(e.Search) > 0 || e.Vocabulary
+	return len(e.Search) > 0 || len(e.Lists) > 0
 }
 
 // TestSourceEvidenceIsNotActivity pins which tables move a Source's evidence
@@ -95,6 +98,8 @@ func TestSourceEvidenceIsNotActivity(t *testing.T) {
 		{"source_metadata", false, true, false},
 		{"source_metadata_layout", false, true, false},
 		{"source_credibility_assessments", false, true, false},
+		{"evidence_graphs", false, true, false},
+		{"evidence_graph_artifacts", false, true, false},
 		{"files", false, true, false},
 		{"citation_notes", false, true, false},
 		{"observation_notes", false, true, false},
@@ -126,9 +131,9 @@ func TestSourceEvidenceIsNotActivity(t *testing.T) {
 	}
 }
 
-// TestPropertyUsage pins when an Observation change moves the Properties
+// TestPropertyUsageList pins when an Observation change moves the Properties
 // workspace's usedBy counts: a create, a delete, or a property_id edit.
-func TestPropertyUsage(t *testing.T) {
+func TestPropertyUsageList(t *testing.T) {
 	text := map[string]rowchange.FieldDiff{"value_text": {Old: "a", New: "b"}}
 	prop := map[string]rowchange.FieldDiff{"property_id": {Old: []byte{1}, New: []byte{2}}}
 	tests := []struct {
@@ -145,9 +150,34 @@ func TestPropertyUsage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := registry[tt.table].usesProperty(tt.ch); got != tt.want {
-				t.Errorf("usesProperty = %v, want %v", got, tt.want)
+			if got := registry[tt.table].movesLists(tt.ch); got != tt.want {
+				t.Errorf("movesLists = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestEvidenceGraphsList pins which tables move the graph list, and that a
+// None entry cannot.
+func TestEvidenceGraphsList(t *testing.T) {
+	var got []string
+	for table, eff := range registry {
+		if slices.Contains(eff.Lists, ListEvidenceGraphs) {
+			got = append(got, table)
+		}
+	}
+	sort.Strings(got)
+	want := []string{"evidence_graph_artifacts", "evidence_graphs"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("tables with ListEvidenceGraphs = %v, want %v", got, want)
+	}
+	if err := (Effect{None: true, Lists: []List{ListEvidenceGraphs}}).validate("x"); err == nil {
+		t.Fatal("a None entry with Lists validated")
+	}
+	if err := (Effect{Lists: []List{"nope"}}).validate("x"); err == nil {
+		t.Fatal("an undeclared list validated")
+	}
+	if err := (Effect{ListsOnField: "property_id"}).validate("x"); err == nil {
+		t.Fatal("ListsOnField without Lists validated")
 	}
 }

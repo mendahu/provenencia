@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/objectpath"
@@ -242,7 +241,7 @@ func ReprojectSource(q Querier, sourceID []byte) error {
 		WHERE s.id = ?`, sourceID,
 	).Scan(&ref, &title, &description, &typeLabel, &typeIcon)
 	if err == sql.ErrNoRows {
-		return Delete(q, KindSource, uuidString(sourceID))
+		return Delete(q, KindSource, database.UUIDString(sourceID))
 	}
 	if err != nil {
 		return err
@@ -339,7 +338,7 @@ func ReprojectSource(q Querier, sourceID []byte) error {
 	secondary := strings.TrimSpace(strings.TrimSpace(description) + " " + strings.TrimSpace(typeLabel))
 	return Upsert(q, Document{
 		Kind:                    KindSource,
-		EntityID:                uuidString(sourceID),
+		EntityID:                database.UUIDString(sourceID),
 		DisplayRef:              ref,
 		DisplayTitle:            title,
 		DisplaySubtitle:         typeLabel,
@@ -362,14 +361,14 @@ func ReprojectSourceType(q Querier, typeID []byte) error {
 		SELECT key, label, COALESCE(description, ''), icon_key FROM source_types WHERE id = ?`, typeID,
 	).Scan(&key, &label, &description, &iconKey)
 	if err == sql.ErrNoRows {
-		return Delete(q, KindSourceType, uuidString(typeID))
+		return Delete(q, KindSourceType, database.UUIDString(typeID))
 	}
 	if err != nil {
 		return err
 	}
 	return Upsert(q, Document{
 		Kind:            KindSourceType,
-		EntityID:        uuidString(typeID),
+		EntityID:        database.UUIDString(typeID),
 		DisplayTitle:    label,
 		DisplaySubtitle: key,
 		DisplayIconKey:  strings.TrimSpace(iconKey),
@@ -388,14 +387,14 @@ func ReprojectMetadataField(q Querier, fieldID []byte) error {
 		SELECT key, label, COALESCE(description, '') FROM source_metadata_fields WHERE id = ?`, fieldID,
 	).Scan(&key, &label, &description)
 	if err == sql.ErrNoRows {
-		return Delete(q, KindMetadataField, uuidString(fieldID))
+		return Delete(q, KindMetadataField, database.UUIDString(fieldID))
 	}
 	if err != nil {
 		return err
 	}
 	return Upsert(q, Document{
 		Kind:            KindMetadataField,
-		EntityID:        uuidString(fieldID),
+		EntityID:        database.UUIDString(fieldID),
 		DisplayTitle:    label,
 		DisplaySubtitle: key,
 		Title:           label,
@@ -573,13 +572,4 @@ func objectsRelPath(checksumHex, mediaType string) (string, error) {
 		return "", fmt.Errorf("searchindex: bad checksum for object path")
 	}
 	return p, nil
-}
-
-func uuidString(id []byte) string {
-	if len(id) != 16 {
-		return ""
-	}
-	var u uuid.UUID
-	copy(u[:], id)
-	return u.String()
 }

@@ -345,7 +345,7 @@ func TestPropertyTermRun(t *testing.T) {
 
 func assertTermEffects(t *testing.T, res writes.Result) {
 	t.Helper()
-	if res.Revision == 0 || !res.Effects.Vocabulary || res.Effects.Structure || len(res.Effects.Handles) != 0 || len(res.Effects.Search) != 0 {
+	if res.Revision == 0 || !res.Effects.Has(effects.ListVocabulary) || res.Effects.Structure || len(res.Effects.Handles) != 0 || len(res.Effects.Search) != 0 {
 		t.Fatalf("rev %d effects %+v", res.Revision, res.Effects)
 	}
 }

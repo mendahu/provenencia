@@ -120,9 +120,9 @@ func credibilityAssessmentProto(c *database.Catalog, a sourcecredibility.Assessm
 		return nil, err
 	}
 	return &engine.SourceCredibilityAssessment{
-		Id:         uuidString(a.ID),
-		SourceId:   uuidString(a.SourceID),
-		GradeId:    uuidString(a.CredibilityGradeID),
+		Id:         database.UUIDString(a.ID),
+		SourceId:   database.UUIDString(a.SourceID),
+		GradeId:    database.UUIDString(a.CredibilityGradeID),
 		GradeKey:   g.Key,
 		GradeLabel: g.Label,
 		Argument:   a.Argument,
@@ -131,7 +131,7 @@ func credibilityAssessmentProto(c *database.Catalog, a sourcecredibility.Assessm
 
 func credibilityGradeProto(g sourcecredibilitygrades.Grade) *engine.SourceCredibilityGrade {
 	return &engine.SourceCredibilityGrade{
-		Id:        uuidString(g.ID),
+		Id:        database.UUIDString(g.ID),
 		Key:       g.Key,
 		Origin:    g.Origin,
 		Label:     g.Label,

@@ -290,7 +290,7 @@ func GetPropertiesWorkspace(in []byte) ([]byte, error) {
 			if err != nil {
 				return err
 			}
-			group := &engine.SubjectTypePropertiesGroup{SubjectTypeId: uuidString(typ.ID)}
+			group := &engine.SubjectTypePropertiesGroup{SubjectTypeId: database.UUIDString(typ.ID)}
 			for _, b := range bindings {
 				group.Properties = append(group.Properties, &engine.SubjectTypeProperty{
 					Property:  propertyProto(b.Property),
@@ -313,7 +313,7 @@ func GetPropertiesWorkspace(in []byte) ([]byte, error) {
 
 func propertyProto(p properties.Property) *engine.Property {
 	return &engine.Property{
-		Id:          uuidString(p.ID),
+		Id:          database.UUIDString(p.ID),
 		Key:         p.Key,
 		Origin:      p.Origin,
 		Label:       p.Label,

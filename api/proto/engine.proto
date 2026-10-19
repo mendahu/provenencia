@@ -620,8 +620,7 @@ message WriteEffects {
   repeated string handles = 1;
   // Sources whose graph changed: what the Source graph and graph progress load.
   repeated string sources = 2;
-  reserved 3;
-  bool vocabulary = 4;
+  reserved 3, 4, 12;
   bool structure = 5;
   repeated string header_handles = 6;
   // Handles whose last-updated revision this write moved. Swift patches those
@@ -638,9 +637,9 @@ message WriteEffects {
   // Sources whose citation reads (citation counts, citations by artifact) this
   // write moved.
   repeated string citation_sources = 11;
-  // An Observation was created, deleted, or moved to another Property, so the
-  // Properties workspace's usedBy counts changed.
-  bool property_usage = 12;
+  // Catalog-wide lists this write changed: effects.List values ("vocabulary",
+  // "property_usage", "evidence_graphs"). Swift drops the reads that show each.
+  repeated string lists = 13;
 }
 
 message IngestArtifactFileRequest {

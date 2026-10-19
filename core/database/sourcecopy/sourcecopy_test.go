@@ -316,6 +316,37 @@ func snap(t *testing.T, c *database.Catalog, id []byte) snapshot {
 	}
 }
 
+// graphLinks returns the one graph of a Source and the Artifact ids linked to it.
+func graphLinks(t *testing.T, c *database.Catalog, sourceID []byte) ([]byte, []string) {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var graph []byte
+	if err := db.QueryRow(`SELECT id FROM evidence_graphs WHERE source_id = ?`, sourceID).Scan(&graph); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := db.Query(`SELECT artifact_id FROM evidence_graph_artifacts WHERE graph_id = ?`, graph)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var linked []string
+	for rows.Next() {
+		var id []byte
+		if err := rows.Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		linked = append(linked, string(id))
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(linked)
+	return graph, linked
+}
+
 func TestCopy(t *testing.T) {
 	allParts := func(orig sources.Source, arts []artifacts.Artifact) CopyInput {
 		return CopyInput{
@@ -332,9 +363,29 @@ func TestCopy(t *testing.T) {
 			name: "all parts",
 			run: func(t *testing.T) {
 				c, userID, orig, arts := seedObituary(t)
+				origGraph, origLinks := graphLinks(t, c, orig.ID)
 				cp, err := runCopy(c, userID, allParts(orig, arts))
 				if err != nil {
 					t.Fatal(err)
+				}
+				copyGraph, copyLinks := graphLinks(t, c, cp.ID)
+				if bytes.Equal(copyGraph, origGraph) {
+					t.Fatal("copy shares the original's graph")
+				}
+				wantLinks := []string{}
+				copied, err := artifacts.ListBySource(c, cp.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, a := range copied {
+					wantLinks = append(wantLinks, string(a.ID))
+				}
+				sort.Strings(wantLinks)
+				if len(wantLinks) != 2 || !reflect.DeepEqual(copyLinks, wantLinks) {
+					t.Fatalf("copy links %x want %x", copyLinks, wantLinks)
+				}
+				if g, l := graphLinks(t, c, orig.ID); !bytes.Equal(g, origGraph) || !reflect.DeepEqual(l, origLinks) {
+					t.Fatalf("original graph links changed: %x %x", g, l)
 				}
 				if cp.Ref == orig.Ref || cp.Ref == "" || bytes.Equal(cp.ID, orig.ID) {
 					t.Fatalf("ref/id %q %q", cp.Ref, orig.Ref)
