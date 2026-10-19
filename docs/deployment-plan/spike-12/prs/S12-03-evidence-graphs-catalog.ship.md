@@ -1,7 +1,7 @@
 # Ship log — S12-03 Evidence graphs in the catalog
 
 **Plan:** [`S12-03-evidence-graphs-catalog.md`](S12-03-evidence-graphs-catalog.md) · **Branch:** `s12-03-evidence-graphs-catalog` · **PR:** #498
-**State:** ready
+**State:** fixing 7
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s12-03`, branched from `origin/main` @ `84a9b318`.
 
@@ -219,6 +219,26 @@ Check: the extended test passes; every real migration still loads (Create/Open t
 
 ## Round 6 — fix (Fix plan 6)
 Head `671a21b3`. Gate PASS; CI vet command clean; uncached `go test ./core/... ./api/...` ok. F-13 done (extended `TestParseMigrationsForeignKeys` red first on the trailing-space directive). Lone `END;` not refused (indistinguishable from a trigger body's), as the fix plan allowed; skill and comment say so. MNT-18, MNT-19: **Resolved** (orchestrator read of `scanDirectives` and `transactionControl`).
+
+
+## User decision — migrated graph ids (2026-10-19)
+Manual check showed backfilled Default graphs share their Source's id (D-1). User: a shared value breaks the point of a UUID, and generating UUIDv7 in SQLite keeps coming up. Decision: register a Go-backed `uuid7()` SQL function on every catalog connection and use it in this migration. Supersedes D-1's `id = source_id` (D-2's fresh-id rule now covers migrated graphs too). Refs stay minted in Go with retry (a SQL `INSERT … SELECT` cannot retry a UNIQUE collision; see PRF-1).
+
+### Fix plan 7
+
+**F-14 — A `uuid7()` SQL function on every catalog connection; migrated graphs get their own ids**
+Files: `core/database/driver.go`, `core/database/catalog.go`, `core/database/sqlite_cgo.go` / `sqlite_nocgo.go` only if the build split needs it, new `core/database/driver_test.go`, `core/database/migrations/000055.sql`, `core/database/sqlbatch/sqlbatch_test.go` (if it should use the driver), `.agents/skills/add-catalog-migration/SKILL.md`, `docs/source-layer-data-model.md`, `docs/deployment-plan/spike-12/source-structure.md`, `docs/deployment-plan/spike-12/deployment-plan.md`, the plan's Landed note. Skill: `add-catalog-migration`.
+Failing tests first:
+- `TestUUID7Function` *(new)* — on a connection from `openDBURI(":memory:"-style uri)`, `SELECT uuid7(), uuid7()` returns two different 16-byte blobs; each parses with `uuid.FromBytes` and has `Version() == 7` and the RFC 4122 variant. Red: no such function.
+- `TestSchemaCallsNoAppFunction` *(new)* — after `Create`, no row of `sqlite_schema` has `sql` containing `uuid7(` (case-insensitive). Passes at once; it guards the rule below.
+Do:
+- `driver.go`: `const driverName = "provenencia_sqlite3"`; in `init`, `sql.Register(driverName, &sqlite3.SQLiteDriver{ConnectHook: registerFunctions})`; `registerFunctions(conn *sqlite3.SQLiteConn) error` calls `conn.RegisterFunc("uuid7", newUUID7, false)` (not pure, so SQLite calls it per row); `newUUID7() ([]byte, error)` returns `uuid.NewV7()` bytes. Keep the `!cgo` build compiling as today (put the cgo-only parts behind the existing tag split if needed).
+- `catalog.go`: `openDBURI` opens `driverName`. Leave `sqlbatch_test.go`'s plain `sqlite3` unless it runs migrations.
+- `000055.sql`: `INSERT INTO evidence_graphs (id, source_id, name) SELECT uuid7(), id, 'Default' FROM sources;` The link backfill and the `subjects__new` copy take the graph by scalar subquery, `(SELECT g.id FROM evidence_graphs g WHERE g.source_id = <row>.source_id)` — not a JOIN, so an orphan row fails `NOT NULL` and the step rolls back instead of silently dropping it. Update the header comment (each Default gets a fresh UUIDv7 from `uuid7()`).
+- Skill `add-catalog-migration`: a backfill that needs ids calls `uuid7()` (registered in `driver.go`); never use it in the stored schema (defaults, triggers, views, CHECK) — other tools opening the file have no such function; `TestSchemaCallsNoAppFunction` enforces it. Prefer it over a nullable column filled at open (the `project.uuid` / `EnsureUUID` pattern).
+- Docs: `source-structure.md` migration section, `source-layer-data-model.md`, the spike map, and the plan's Landed note no longer say a Default graph's id is its Source's id. `grep -rn "Source's id as its id\|whose id is the Source\|id = source_id" docs core .agents` (leave ship/review logs and the plan's Decision rows, which the Landed note supersedes).
+- Per `no-migration-tests`, no upgrade test; the manual check covers migrated data.
+Check: both tests pass; Create/Open tests and `TestPragmaHonesty` pass; scripts/check-pr.sh PASS.
 
 ## Result
 Gate PASS · CI pending (re-run after `main` merge and F-11) · open: none · fixed on this PR: PRF-1, SEC-1, MNT-1, MNT-2, MNT-3, MNT-4, MNT-5, MNT-9, MNT-10, MNT-11, MNT-12, MNT-17, MNT-18, MNT-19, CON-R2-1 · later PR: UX-1, UX-2 (S12-05), MNT-8 (S12-04), UX-3 (S12-11) · follow-ups: MNT-13 · to user: PRF-1 (override D-15), MNT-1/2/4/5 (fix here), migration backfill (keep), `migrate` (fix here) · CON miss: none · CI miss: S11-15 merged into `main` with a test using a field this PR removed; local gate runs against the branch only
