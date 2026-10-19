@@ -1,7 +1,7 @@
 # Ship log — S12-03 Evidence graphs in the catalog
 
 **Plan:** [`S12-03-evidence-graphs-catalog.md`](S12-03-evidence-graphs-catalog.md) · **Branch:** `s12-03-evidence-graphs-catalog` · **PR:** #498
-**State:** fixing 2
+**State:** fixing 3
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s12-03`, branched from `origin/main` @ `84a9b318`.
 
@@ -111,3 +111,41 @@ Head `dee13d99`. Gate PASS (orchestrator run; uncached `go test ./core/... ./api
 
 ## Round 3 — review (user-requested scope)
 Reviewers: CON (Sonnet), MNT, UX (`macos/App/**`), SEC+PRF (`api/ffi/**`, `core/database/**`). Scope `2d4208e6...dee13d99`. Beyond the two-round cap because the user added this work to the PR; blockers only.
+
+UX: clean. SEC+PRF: clean (PRF-1 re-checked, still resolved). CON: clean, 1 minor. MNT: changes needed.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-9 | MNT | blocker | 15 renamed private copies of `NullString` / `NullBlob` (`nullJSON`, `emptyAsNil`, `nullBlob`, `nullBytes`) | Fix now → F-6 | verified: `grep -rnE "^func \w+\((s\|b) (string\|\[\]byte)\) any \{" core` lists them; every package is in this PR's diff. F-4 searched by name, not by body |
+| MNT-10 | MNT | blocker | `api/ffi/handlers.uuidString` copies `database.UUIDString` | Fix now → F-7 | verified: `handlers/catalog.go:41`; package already imports `core/database` and is in this PR's diff (`write_effects.go`) |
+| MNT-11 | MNT | major | `add-catalog-model` skill lists the removed `Vocabulary` / `PropertyUsage` / `EvidenceGraphs` fields | Fix now → F-8 | verified: `.agents/skills/add-catalog-model/SKILL.md:26` |
+| MNT-12 | MNT | major | `sources.isUniqueConflict` is dead after F-4 | Fix now → F-6 | verified: `sources.go:516`, no caller |
+| CON-R2-1 | CON | minor | No Swift test for each `CatalogList` key, `structure`, and dedupe in the rewritten invalidation loop | Fix now → F-9 | code this PR rewrote (`CatalogQueryRegistry.swift`); old tests never covered vocabulary/structure |
+| MNT-13 | MNT | nit→minor | `datevalues` and `audit` trimming `nullIfEmpty` are copies of each other | Follow-up | neither package is in this PR's diff (same-pass rule: copies untouched → follow-up); log in `docs/ideas/shared-list-helpers.md` |
+
+Nits (ride along, files in this fix plan): `CON-R2-2 · registry_completeness_test.go:160 · "tables with EvidenceGraphs" message; TestEvidenceGraphsFlag / TestPropertyUsage names → list wording` · `MNT-14 · session_test.go:10, ready_test.go:8 · fold evidencegraphstest import into the module group` · `MNT-15 · plan Landed note (3) says maxRefRetries` · `MNT-16 · add-catalog-ref step 3: say users.EnsureRefs is the small-table, no-retry exception`
+
+### Fix plan 3
+
+**F-6 — Every empty-value binder goes through `database.NullString` / `NullBlob`** (from MNT-9, MNT-12)
+Files: `core/database/{artifacts,sources,sourcemetadata,propertyterms,properties,metadatafields,sourcetypes,sourcecredibility,subjects,citations,observations,identityclaims}`.
+Failing test first: none (mechanical; existing package tests cover the bindings).
+Do: replace every call of `nullJSON` and `emptyAsNil` with `database.NullString`, and of `nullBlob` and `nullBytes` with `database.NullBlob`; delete the private funcs. Delete `sources.isUniqueConflict` (no caller). Keep `datevalues.nullIfEmpty` and `audit.nullIfEmpty` (they trim). Search by body, not name: `grep -rnE "^func \w+\((s|b) (string|\[\]byte)\) any \{" core api --include='*.go' | grep -v _test` must print only `database/null.go` (two lines), `datevalues.go` and `audit.go`.
+Check: that grep; `go test ./core/...` passes; scripts/check-pr.sh PASS.
+
+**F-7 — FFI handlers use `database.UUIDString`** (from MNT-10)
+Files: `api/ffi/handlers/*.go` (non-test and test where they call it).
+Failing test first: none (mechanical rename).
+Do: replace every `uuidString(` in `api/ffi/handlers` with `database.UUIDString(`, delete `handlers.uuidString` (`catalog.go:41`). Then `grep -rnE "^func \w+\(\w+ \[\]byte\) (string|any) \{" core api --include='*.go' | grep -v _test` must print only `core/database/uuid.go` (two lines) and `null.go`'s `NullBlob`; report any other hit and move it too if its body is the same.
+Check: `go test ./api/...` passes; scripts/check-pr.sh PASS.
+
+**F-8 — Skills and plan say what the code now does** (from MNT-11, MNT-15, MNT-16)
+Files: `.agents/skills/add-catalog-model/SKILL.md`, `.agents/skills/add-catalog-ref/SKILL.md`, `docs/deployment-plan/spike-12/prs/S12-03-evidence-graphs-catalog.md` (Landed note), `docs/ideas/shared-list-helpers.md`.
+Do: `add-catalog-model` step 6 lists `Effect`'s fields as they are now (`Lists`, `ListsOnField` in place of the three bools) and points to `effects/README.md` for adding a catalog-wide list. `add-catalog-ref` step 3 says `users.EnsureRefs` is the small-table exception with no retry; tables that grow with the catalog backfill through `database.InsertWithRef`. Landed note (3): `database.MaxRefRetries` through `InsertWithRef`, not `maxRefRetries`; note (2) lists the renamed binders F-6 removed. Add a short "Trimmed empty-string binder" entry to the ideas file for MNT-13. `grep -rn "Vocabulary bool\|PropertyUsage\b\|EvidenceGraphs bool\|maxRefRetries\|nullJSON\|emptyAsNil" .agents docs` and fix what is false (leave historical ship/review logs).
+Check: scripts/check-pr.sh PASS.
+
+**F-9 — One Swift table test over the list keys** (from CON-R2-1, CON-R2-2, MNT-14)
+Files: `macos/ProvenenciaTests/CatalogQueryRegistryTests.swift`; ride-along: `core/database/effects/registry_completeness_test.go` and the effects tests named in CON-R2-2; `core/catalogsession/session_test.go`, `core/onboarding/ready_test.go`. Skill: `add-swift-test`.
+Failing test first: `CatalogQueryRegistryTests` `listInvalidations` *(new, parameterized)* — `[.vocabulary]`, `[.propertyUsage]`, `[.vocabulary, .propertyUsage]`, `structure: true` alone, and `[.vocabulary]` + `structure: true` each give exactly one `.propertiesWorkspace` invalidation; `[.evidenceGraphs]` alone gives none. Show it red once by breaking the dedupe locally, then restore.
+Do: add the test. Ride along: reword the "tables with EvidenceGraphs" failure message and rename `TestEvidenceGraphsFlag` / `TestPropertyUsage` to list wording (`TestEvidenceGraphsList`, `TestPropertyUsageList`); fold the `evidencegraphstest` import into the module import group in both test files.
+Check: the new test passes; scripts/check-pr.sh PASS.
