@@ -3,7 +3,6 @@ package valuecompare
 import (
 	"slices"
 	"sort"
-	"strings"
 )
 
 // AliasKind is abbreviation or nickname. Both score the alias credit.
@@ -36,7 +35,12 @@ type aliasSet struct {
 	tokens map[string]bool
 	roles  map[NameRole]bool
 	kind   AliasKind
-	key    string // the tokens sorted and joined by one space
+	// key is the table key and the set's smallest token, joined by one space.
+	// It is bounded by the table key and one token, not by the set: a key holding
+	// every token would be copied for each word of a set with thousands. Tokens
+	// of one set share it, so two words that Hit share it; a set sharing a
+	// smallest token with another set of its table only makes a wider shortlist.
+	key string
 }
 
 // AliasToken is the one rule for what an alias token is: the comparison token
@@ -76,7 +80,7 @@ func NewAliasIndex(tables []AliasTable, w WordRules) AliasIndex {
 				sorted = append(sorted, token)
 			}
 			sort.Strings(sorted)
-			idx.sets = append(idx.sets, aliasSet{tokens: tokens, roles: roles, kind: table.Kind, key: strings.Join(sorted, " ")})
+			idx.sets = append(idx.sets, aliasSet{tokens: tokens, roles: roles, kind: table.Kind, key: table.Key + " " + sorted[0]})
 		}
 	}
 	return idx
@@ -94,8 +98,8 @@ func (a AliasIndex) Hit(x, y string, rx, ry NameRole) (AliasKind, bool) {
 	return "", false
 }
 
-// SetKeys is the key of every set that holds token (an AliasToken): its tokens
-// sorted and joined by one space. Roles are ignored, so a shortlist may
+// SetKeys is the key of every set that holds token (an AliasToken): its table
+// key and smallest token, joined by one space. Roles are ignored, so a shortlist may
 // include more than Hit allows. Sorted, no duplicates; nil for the zero index.
 // Sets do not chain, so no word key can join two words of a set, but a set can
 // be a key: two words that Hit share it.

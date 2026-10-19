@@ -1,6 +1,7 @@
 package valuecompare_test
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 
@@ -165,14 +166,40 @@ func TestAliasSetKeys(t *testing.T) {
 		{Key: "a", Kind: valuecompare.AliasNickname, Roles: given, Sets: [][]string{{"chris", "christine"}}},
 		{Key: "b", Kind: valuecompare.AliasNickname, Roles: given, Sets: [][]string{{"chris", "christopher"}}},
 	}, w)
-	if got, want := idx.SetKeys("chris"), []string{"chris christine", "chris christopher"}; !slices.Equal(got, want) {
+	if got, want := idx.SetKeys("chris"), []string{"a chris", "b chris"}; !slices.Equal(got, want) {
 		t.Errorf("SetKeys(chris) = %q, want %q", got, want)
 	}
-	if got, want := idx.SetKeys("christine"), []string{"chris christine"}; !slices.Equal(got, want) {
+	if got, want := idx.SetKeys("christine"), []string{"a chris"}; !slices.Equal(got, want) {
 		t.Errorf("SetKeys(christine) = %q, want %q", got, want)
 	}
 	if got := (valuecompare.AliasIndex{}).SetKeys("chris"); got != nil {
 		t.Errorf("zero index SetKeys = %q, want nil", got)
+	}
+}
+
+func TestAliasSetKeysDoNotGrowWithTheSet(t *testing.T) {
+	w := matchregistry.Default().Value.Words
+	given := []valuecompare.NameRole{valuecompare.RoleGiven}
+	big := make([]string, 1000)
+	for i := range big {
+		big[i] = fmt.Sprintf("name%04d", i)
+	}
+	idx := valuecompare.NewAliasIndex([]valuecompare.AliasTable{
+		{Key: "t", Kind: valuecompare.AliasNickname, Roles: given, Sets: [][]string{big, {"zed", "zeddie"}}},
+	}, w)
+	first, last := idx.SetKeys("name0000"), idx.SetKeys("name0999")
+	for _, keys := range [][]string{first, last, idx.SetKeys("zeddie")} {
+		for _, k := range keys {
+			if len(k) >= 128 {
+				t.Errorf("key is %d bytes, want under 128", len(k))
+			}
+		}
+	}
+	if !slices.Equal(first, last) || len(first) != 1 {
+		t.Errorf("two words of one set keys = %q, %q; want the same single key", first, last)
+	}
+	if other := idx.SetKeys("zed"); slices.Equal(other, first) {
+		t.Errorf("words of two sets share key %q", other)
 	}
 }
 
