@@ -123,3 +123,28 @@ Head `a6712343` (commits `cd170431`, `200062dd`, `a6712343`). Gate (orchestrator
 
 ## Result
 Gate PASS · CI green · open: none · follow-ups: PRF-1 (S11-21), PRF-3 (S11-21), PRF-4, SEC-3 · to user: toponym-gap call (resolved), Fix plan 2 approval (resolved) · CON miss: CON-x (vocabulary commit kept the match index; raised by MNT and PRF in round 1)
+
+## Round 3 — user-requested follow-ups
+**User call (2026-10-19):** implement PRF-4 and SEC-3 on this PR (were Follow-up). No review round; the orchestrator reads the commits.
+
+### Fix plan 3
+
+**F-9 — A table's sets are a list, not slots by `set_idx`** (from SEC-3)
+Files: `core/database/namealiases/namealiases.go`, `core/database/namealiases/namealiases_test.go`.
+Failing test first: `TestLoadHugeSetIndex` — insert one `name_alias_members` row with `set_idx` 2,000,000,000 (and one set at 0) in a seeded test catalog; `Load` returns without allocating per index: the table has exactly the stored sets, in `set_idx` order, and no empty ones.
+Do: in `Load`, replace `make([][]string, max+1)` and `Sets[idx] = tokens` with the sets in ascending `set_idx` order (sort the map's keys, append each). No caller reads a position as a `set_idx`: `valuecompare.NewAliasIndex` ranges the sets and skips empty ones; `add.go` reads `set_idx` from the table itself (`loadMemberSets`). Update `Load`'s doc and the `AliasTable.Sets` doc if either says positions are `set_idx`.
+Check: the test passes; existing `namealiases` and `valuecompare` alias tests pass; scripts/check-pr.sh PASS.
+
+**F-10 — Dedupe event types before keying dates** (from PRF-4)
+Files: `core/shortlist/shortlist.go`, `core/shortlist/shortlist_test.go`.
+Failing test first: `TestKeys/repeated type keys once` — an event with `event_type` term(birth) three times and one date: its index and lookup keys equal those of the same event with birth once. (A count assertion on the pre-`sortedUnique` slice is not reachable; assert equality of output, and keep the change itself to the dedupe.)
+Do: after collecting `types` in `Keys`, sort and compact them (`slices.Sort`, `slices.Compact`) before building `indexTypes`/`lookupTypes`.
+Check: tests pass; scripts/check-pr.sh PASS.
+
+## Round 3 — fix
+Head `b245aee6` (commits `d66b2a22`, `b245aee6`). Gate (orchestrator) PASS against `219a3b83`. Read by the orchestrator:
+- SEC-3 **Resolved**: `Load` sorts the `set_idx` keys and appends; no slot per index. `TestLoadHugeSetIndex` red first (killed after 62 s allocating), now passes. `add.go` reads `set_idx` from the table, unaffected.
+- PRF-4 **Resolved**: `slices.Sort` + `slices.Compact` on `types` in `Keys`. The F-10 test passed before the change (output was already deduped by `sortedUnique`; the saving is internal work), so it guards behavior only; the change applied as the fix plan named it.
+
+## Result (final)
+Gate PASS · CI see PR · open: none · follow-ups: PRF-1 (S11-21 scope), PRF-3 (S11-21 scope) · fixed on user request: PRF-4, SEC-3 · CON miss: CON-x
