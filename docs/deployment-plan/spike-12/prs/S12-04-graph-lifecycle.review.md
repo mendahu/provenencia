@@ -75,3 +75,14 @@
 **Answer:** Fixed — the Branch line says to branch from the commit that adds this plan.
 
 Smaller points: D-2 now says `list` closes the first query's rows before the second. "A copy of `in.ArtifactIDs`" is a new outer slice holding the caller's ids, as `Graph` copies elsewhere; left as written.
+
+## Round 2
+
+Maintainability (opus): round-1 answers hold; D-7 sound. One new blocker.
+
+### M-9 · blocker · `extraGates` becomes a second per-kind gate list beside `originRules`
+**Plan:** D-15 added a gate list beside `originRules` and kept `originGate` as a separate step; STEP-8's docs would call it "one per-kind list".
+**Codebase:** `deleteimpact/register.go` `originRules` / `originRuleFor`; `impact.go` `originGate`; `docs/catalog-deletes.md` § Policy item 3 already names `origin_locked` an extra gate.
+**Answer:** Fixed — D-15's `extraGateList` (`sync.OnceValue`) holds edge-locked, last-graph and one `originHolds(r)` entry per `originRules` row; `originGate` and `originRuleFor` go; `Impact` has one loop. STEP-5 runs `TestImpactGates` green on the edge and origin entries first. STEP-8 also fixes the `add-catalog-delete` checklist and `Delete` sketch lines that describe extra gates as domain-side checks.
+
+Minor (not numbered): §6's `UpdateInput` sketch lacked `ArtifactIDs` — Fixed. D-7 reads one graph's links through the Source's `list` — accepted at today's sizes.
