@@ -71,7 +71,7 @@ One pure function, called on open and after every decision:
 ```go
 // Align proposes a handle, New or Skip for every primary Subject on one
 // Evidence layer (graph alignment), holding the fixed pairs as given.
-func Align(layer Layer, canon Canon, fixed []Fixed, cfg *Config) Proposal // nil cfg: DefaultConfig()
+func Align(layer Layer, canon Canon, fixed []Fixed, cfg Config) Proposal
 ```
 
 | Input | Holds |
@@ -150,7 +150,7 @@ There are no database calls during the walk. Everything it reads is loaded first
 2. **Seed handles:**
    - the fixed pairs;
    - the handles of already-promoted Subjects;
-   - the top 5 (`seedCandidateLimit`) property-only candidates of each unpromoted Subject, ranked over the handles the shortlist index offers (`core/shortlist`, built by `loadShortlist`), not every handle of the kind.
+   - the candidates `graphalign.Candidates` keeps for each unpromoted Subject (`alignment.MinSimilarity`, the best `TopK`, ties up to `TieCap`; see the knob inventory in [`matching-model.md`](matching-model.md)), passed to `Align` in `Canon.Candidates`, ranked over the handles the shortlist index offers (`core/shortlist`, built by `loadShortlist`), not every handle of the kind.
 3. **Walk the in-memory catalog graph** from the seeds through every link to a person, event or place, with no hop limit. A node not yet in memory loads in one batched read per wave of the walk; a warm one costs nothing. Handles carry their cached auto-reconciled values.
 Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count follows the waves of the walk, not the size of the layer or the catalog.
 
