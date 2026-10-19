@@ -2,7 +2,7 @@
 
 **Status:** Landed in [#497](https://github.com/mendahu/provenencia/pull/497) (2026-10-19)
 
-**Landed 2026-10-19.** Differences from the plan: S11-14 had landed, so D-9's "landed first" shape was used (the stats slot was renamed; `matchIndex` holds only the shortlist). `TestSpellingVariantToponymIsAWeakMatch` became `TestSpellingOnlyToponymIsNotShortlisted` (user call under §5). The warm benchmark on the 20k fixture is slower and heavier than main (70 ms and 99 MB against 52 ms and 19 MB) because the index reads every person, event and place node once; S11-21 sets the budget.
+**Landed 2026-10-19.** Differences from the plan: S11-14 had landed, so D-9's "landed first" shape was used (the stats slot was renamed; `matchIndex` holds only the shortlist). `TestSpellingVariantToponymIsAWeakMatch` became `TestSpellingOnlyToponymIsNotShortlisted` (user call under §5). The warm benchmark on the 20k fixture is slower and heavier than main (70 ms and 99 MB against 52 ms and 19 MB) because the index reads every person, event and place node once; S11-21 sets the budget. D-12's drop rule also covers vocabulary commits: the keys read term keys and metas, so a vocabulary commit drops the match index as well as a handle commit.
 **Spike / slice:** Spike 11 · Slice 4 — Segments and graph alignment
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: an engine index; the wire, the page and its copy are unchanged)

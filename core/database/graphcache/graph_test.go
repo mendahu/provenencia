@@ -462,13 +462,15 @@ func TestMatchIndexDrops(t *testing.T) {
 	if stored() {
 		t.Error("Drop left the match index")
 	}
-	g.SetMatchIndex("index")
-	if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 2}, Effects: effects.Set{Vocabulary: true}}); err != nil {
-		t.Fatal(err)
-	}
-	if !stored() {
-		t.Error("a vocabulary-only commit dropped the match index")
-	}
+	t.Run("vocabulary commit", func(t *testing.T) {
+		g.SetMatchIndex("index")
+		if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 2}, Effects: effects.Set{Vocabulary: true}}); err != nil {
+			t.Fatal(err)
+		}
+		if stored() {
+			t.Error("a vocabulary-only commit left the match index")
+		}
+	})
 	g.ResetMatchIndexForTest()
 	if stored() {
 		t.Error("ResetMatchIndexForTest left the match index")

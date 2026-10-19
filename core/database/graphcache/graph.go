@@ -235,7 +235,8 @@ func (g *Graph) Kind(typeID []byte) ([]*Node, error) {
 
 // MatchIndex returns the match index: what Promote derives from the whole
 // catalog, stored in this slot by a feature. A commit that names handles, a
-// structure drop and SetAliasTables clear it. A vocabulary-only write does not.
+// vocabulary commit, a structure drop and SetAliasTables clear it: its keys
+// read term keys and metas as well as handles.
 func (g *Graph) MatchIndex() (any, bool) {
 	if g == nil || !g.matchIndexOK {
 		return nil, false
