@@ -1,7 +1,7 @@
 # Review — S11-28 Fold a nickname into the given name it stands for
 
 **Verdict:** Fits with changes — Not ready → fixed in round 1; round 2 Ready
-**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
+**Rounds:** 3. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 - None. Product calls were asked before planning (2026-10-19): shorter folds into longer, nicknames and abbreviations both fold, the folded name disappears.
@@ -65,3 +65,20 @@ Reviewer (opus, both lenses): no new blockers; every round-1 answer accepted, M-
 - AC-2.3 had no observable test (`Excluding` has no caller) — AC reworded to the code fact; T-6 says so.
 - D-7 overstated exhibit agreement (exhibits read catalog alias rows) — reworded.
 - T-7 re-pin did not force a bump — pins `(CacheVersion, hash)` together.
+
+## Round 3 (after the user changed the fold direction, 2026-10-19)
+
+The user asked that the direction come from data we control, not word length. The first revision curated the 144 pairs listed both ways in the seed. A fresh reviewer (opus, both lenses) found:
+
+### R3-1 · blocker · A set's first word is not always formal
+712 one-way pairs between set heads would fold real names together (*William* → *Wilma*, *John* → *Ivan*, *Peter* → *Patrick*).
+**Answer:** To user, then fixed. The user chose to curate which of the 406 dual-role heads are nicknames. D-1a now folds only a nickname into a formal name; two formal names never fold. Appendix A lists 152 nickname heads and 254 kept formal; AC-2.4 / T-10 include the negative pairs.
+
+### R3-2 · major · Editing the seed removed 46 alias pairs from new catalogs
+**Answer:** Fixed. `nicknameSets` is no longer edited; `nicknameHeads` sits beside it, so matching is unchanged.
+
+### R3-3 · minor · D-3 and the sketch disagreed on the role check
+**Answer:** Fixed. D-3: `Expands` carries the role check; `fold` does not call `Hit`.
+
+### R3-4 · nit · `aliases_test.go`; AC order
+**Answer:** Fixed.
