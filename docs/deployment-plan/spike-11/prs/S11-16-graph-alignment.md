@@ -1,6 +1,8 @@
 # S11-16 — Rewrite graph alignment
 
-**Status:** Planned
+**Status:** Landed in [#501](https://github.com/mendahu/provenencia/pull/501) (2026-10-19)
+
+**Landed 2026-10-19.** Differences from the plan: D-7 was built as refreshed (a candidate a neighbor already has gets `via` only when that neighbor is fixed). Expected values D-13 let change: `TestBirthIsNeverProposedOnADeath/AC-1.8` (Skip `weak`), `TestCandidateLoserDoesNotNominate`, `TestAcceptedPropertyMatchNominatesItsNeighbor` and `TestRowReasons` (a surname-only look-alike is offered as weak), all in STEP-3 (D-4); no other target, band, reason or `Via` changed. `BenchmarkProposeColdHub`: main 1.62 s/op, 986 MB/op; branch 1.55 s/op, 906 MB/op. The AC-4.4 `rg` and STEP-4's `rg` print nothing.
 **Spike / slice:** Spike 11 · Slice 4 — Segments and graph alignment
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: an engine rewrite; the wire, the page and its copy are unchanged, and the contested marker's chrome is S11-18 behind S11-D1)

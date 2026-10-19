@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-16 — Rewrite graph alignment
+
+**Landed 2026-10-19** in [#501](https://github.com/mendahu/provenencia/pull/501). Promote's graph alignment is the layer 6 procedure. A Subject is compared only with handles its shortlist offered (at least half alike, the best five by similarity and every tie up to twenty) or that a placed pair's links point at; every candidate enters one best-first queue; a link whose neighbor is not placed yet is judged by entity compare, so a differing birth counts against a look-alike from the first pass. A placed pair re-scores only its neighbors, and when the queue empties only the pairs whose neighbors moved are settled again, each move carrying a reason. A row gets its band from its evidence and a contested flag when any comparison conflicts; neither the flag nor the move reaches the page until S11-17. The walk's numbers are the registry's alignment section, and the three old passes and `core/graphalign/registry.go` are gone.
+
 ## S11-15 — Shortlist index
 
 **Landed 2026-10-19** in [#497](https://github.com/mendahu/provenencia/pull/497). Promote no longer scores a Source Subject against every handle of its kind. A pure index (`core/shortlist`) maps a person's name words, an event's type with the year buckets its date can still be near, and a place's toponym words to handles; value compare makes every key, so shortlisting never misses a pair it calls the same. The index is built once per catalog state, holds no life events, and is dropped with a handle commit or new alias tables. A name or toponym that differs only by a misspelling, with no shared word, is no longer offered; the walk still reaches it through a mapped neighbor.
