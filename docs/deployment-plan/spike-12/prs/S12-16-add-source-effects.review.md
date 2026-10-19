@@ -65,3 +65,33 @@ S12-17 ([#488](https://github.com/mendahu/provenencia/pull/488)) landed after ro
 
 ### X-8 · nit · D-5 does not say how `createSource` mints the row
 **Answer:** Logged — it compiles as written (`updated` defaults to `CatalogActivity()`).
+
+## Round 3 — added scope: the sidebar count after Copy and Source delete (user, 2026-10-19)
+
+The user folded the Copy Source / Source delete count lag (the round-2 Out row) into this PR. The first draft recounted at each call site (`refreshAll()` in `SourceCopyModel.copy()` and `SourcePageModel.confirmResourceDelete()`, `CatalogCounts` threaded through `SourceCopyModel`, `SourcePageModel`, `SourcePageView` and the host). Both reviewers ran on that draft.
+
+### M-7 · blocker · Four hand-written recounts after `apply`; the session should own "this mutation moves a sidebar count"
+**Plan:** D-7, D-11 – D-13, STEP-5 put `await catalogCounts?.refreshAll()` after `apply` in four features and drilled `CatalogCounts` into three more inits.
+**Codebase:** `WorkspaceSession.apply` ("Features only call `apply`; they do not … tell sibling views to refresh") already runs a mutation-keyed derived refresh (`graphProgressSource(of:)`); `CatalogQueryRegistry.conclusionTriggers` is a declared mutation set; `WorkspaceView.init` builds both the session and `CatalogCounts` and wires `onLocationCommit` the same way. `.deletedSubject` writes in `EvidenceGraphModel` and `CitationComposerModel` hold no `CatalogCounts` and do not recount. No view reads `@Environment(CatalogCounts.self)`, though `WorkspaceView` injects it.
+**Better shape:** `CatalogQueryRegistry.navCountTriggers`; a `WorkspaceSession.onNavCountsMoved` hook run at the end of `apply`; `WorkspaceView` wires it to `refreshAll()`; Promote drops its line.
+**Answer:** To user → answered 2026-10-19: session hook, Promote included. Fixed — D-7, D-8, D-11 – D-15, §2 US-3, §3, §4 (Copy model, Source page, Counts, Workspace, Session, Registry), §6, STEP-5, T-2 – T-8, §10 steps 5–8, Risks, Stop conditions; map row and scope entry. The `.deletedSubject` count question and the unused environment injection are Out rows.
+
+### X-9 · major · T-7 named a `private` `StoreBoom`
+**Answer:** Moot — the reshape replaced that test; T-6 uses a control mutation instead of a throwing store.
+
+### X-10 · minor · T-4 / T-6 / T-7 helper details (`loaded` passes through `makeModel`; `makeStore` takes no extra Source; no Artifact fixture named)
+**Answer:** Fixed where still relevant — T-7 uses `loaded(makeStore())` and sets the hook on the returned session; T-8 builds its session inline and appends the second Source itself.
+
+## Writer's own calls (round 3)
+- The hook is fire-and-forget (D-15), like graph progress; the badge moves a moment after the write rather than before navigation.
+- `navCountTriggers` is exactly `.createdSource`, `.deletedSource`, `.promotedSubject`: the three writes that recount or should recount today. `.deletedSubject` is left out until someone confirms it moves a count.
+- The hook lives on the session, wired by `WorkspaceView`; the session holds no `CatalogCounts`.
+
+## Round 4 — dry run of the reshaped design
+
+Executability (sonnet) re-ran on the session-hook design. Verdict: Ready with changes; no blocker. Every symbol, signature and test setup checked out, including Swift 5 mode with complete strict concurrency for the hook closure and `Task { await recount() }`.
+
+### X-11 · major · The STEP-5 `rg` check and stop condition 1 match doc comments
+**Answer:** Fixed — both now match calls only (`rg -n "await \w+\??\.refreshAll\(\)" macos/App`) and say comment mentions are expected.
+
+**Verdict after round 4:** Fits — Ready. No open blocker; the one To user item (M-7) is answered. Plan status stays Planned.
