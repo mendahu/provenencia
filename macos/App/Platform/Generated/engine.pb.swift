@@ -5062,6 +5062,26 @@ public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentRow: @unche
     set {_uniqueStorage()._reasonPropertyOrigin = newValue}
   }
 
+  /// A comparison behind the pair this row reports conflicts, whatever its
+  /// band. The page marks it.
+  public var contested: Bool {
+    get {_storage._contested}
+    set {_uniqueStorage()._contested = newValue}
+  }
+
+  /// A graphalign.Reason move code, set when settling released an earlier
+  /// pair of this row. Empty when no move.
+  public var moveReason: String {
+    get {_storage._moveReason}
+    set {_uniqueStorage()._moveReason = newValue}
+  }
+
+  /// With move_reason: the layer neighbor that caused the move.
+  public var moveNeighborSubjectID: String {
+    get {_storage._moveNeighborSubjectID}
+    set {_uniqueStorage()._moveNeighborSubjectID = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Header: Equatable, Sendable {
@@ -15303,7 +15323,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentAlternative: Sw
 
 nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentRow: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PromoteGraphAlignmentRow"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subject_id\0\u{1}kind\0\u{1}target\0\u{3}handle_id\0\u{3}handle_ref\0\u{1}score\0\u{1}assessment\0\u{2}\u{2}comparisons\0\u{1}alternatives\0\u{3}conflict_with_fixed\0\u{3}possible_duplicate\0\u{1}person\0\u{1}event\0\u{1}place\0\u{3}via_neighbor_subject_id\0\u{3}via_bridge_type\0\u{3}via_role\0\u{3}duplicate_of_subject_id\0\u{1}reason\0\u{3}reason_property_key\0\u{3}reason_property_origin\0\u{c}\u{8}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subject_id\0\u{1}kind\0\u{1}target\0\u{3}handle_id\0\u{3}handle_ref\0\u{1}score\0\u{1}assessment\0\u{2}\u{2}comparisons\0\u{1}alternatives\0\u{3}conflict_with_fixed\0\u{3}possible_duplicate\0\u{1}person\0\u{1}event\0\u{1}place\0\u{3}via_neighbor_subject_id\0\u{3}via_bridge_type\0\u{3}via_role\0\u{3}duplicate_of_subject_id\0\u{1}reason\0\u{3}reason_property_key\0\u{3}reason_property_origin\0\u{1}contested\0\u{3}move_reason\0\u{3}move_neighbor_subject_id\0\u{c}\u{8}\u{1}")
 
   fileprivate class _StorageClass {
     var _subjectID: String = String()
@@ -15325,6 +15345,9 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentRow: SwiftProto
     var _reason: String = String()
     var _reasonPropertyKey: String = String()
     var _reasonPropertyOrigin: String = String()
+    var _contested: Bool = false
+    var _moveReason: String = String()
+    var _moveNeighborSubjectID: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -15354,6 +15377,9 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentRow: SwiftProto
       _reason = source._reason
       _reasonPropertyKey = source._reasonPropertyKey
       _reasonPropertyOrigin = source._reasonPropertyOrigin
+      _contested = source._contested
+      _moveReason = source._moveReason
+      _moveNeighborSubjectID = source._moveNeighborSubjectID
     }
   }
 
@@ -15429,6 +15455,9 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentRow: SwiftProto
         case 20: try { try decoder.decodeSingularStringField(value: &_storage._reason) }()
         case 21: try { try decoder.decodeSingularStringField(value: &_storage._reasonPropertyKey) }()
         case 22: try { try decoder.decodeSingularStringField(value: &_storage._reasonPropertyOrigin) }()
+        case 23: try { try decoder.decodeSingularBoolField(value: &_storage._contested) }()
+        case 24: try { try decoder.decodeSingularStringField(value: &_storage._moveReason) }()
+        case 25: try { try decoder.decodeSingularStringField(value: &_storage._moveNeighborSubjectID) }()
         default: break
         }
       }
@@ -15510,6 +15539,15 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentRow: SwiftProto
       if !_storage._reasonPropertyOrigin.isEmpty {
         try visitor.visitSingularStringField(value: _storage._reasonPropertyOrigin, fieldNumber: 22)
       }
+      if _storage._contested != false {
+        try visitor.visitSingularBoolField(value: _storage._contested, fieldNumber: 23)
+      }
+      if !_storage._moveReason.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._moveReason, fieldNumber: 24)
+      }
+      if !_storage._moveNeighborSubjectID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._moveNeighborSubjectID, fieldNumber: 25)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -15538,6 +15576,9 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentRow: SwiftProto
         if _storage._reason != rhs_storage._reason {return false}
         if _storage._reasonPropertyKey != rhs_storage._reasonPropertyKey {return false}
         if _storage._reasonPropertyOrigin != rhs_storage._reasonPropertyOrigin {return false}
+        if _storage._contested != rhs_storage._contested {return false}
+        if _storage._moveReason != rhs_storage._moveReason {return false}
+        if _storage._moveNeighborSubjectID != rhs_storage._moveNeighborSubjectID {return false}
         return true
       }
       if !storagesAreEqual {return false}

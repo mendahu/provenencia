@@ -1497,6 +1497,14 @@ message PromoteGraphAlignmentRow {
   string reason = 20;
   string reason_property_key = 21;
   string reason_property_origin = 22;
+  // A comparison behind the pair this row reports conflicts, whatever its
+  // band. The page marks it.
+  bool contested = 23;
+  // A graphalign.Reason move code, set when settling released an earlier
+  // pair of this row. Empty when no move.
+  string move_reason = 24;
+  // With move_reason: the layer neighbor that caused the move.
+  string move_neighbor_subject_id = 25;
 }
 
 message ProposePromoteGraphAlignmentResponse {

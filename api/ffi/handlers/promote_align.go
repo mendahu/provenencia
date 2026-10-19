@@ -116,6 +116,7 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 			ReasonPropertyKey:    string(r.ReasonProperty),
 			ReasonPropertyOrigin: productOrigin(r.ReasonProperty),
 			ConflictWithFixed:    r.Flags.ConflictWithFixed,
+			Contested:            r.Flags.Contested,
 			PossibleDuplicate:    r.Flags.PossibleDuplicate,
 			DuplicateOfSubjectId: database.UUIDString(r.Flags.DuplicateOf),
 		}
@@ -123,6 +124,10 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 			row.ViaNeighborSubjectId = database.UUIDString(r.Via.NeighborSubjectID)
 			row.ViaBridgeType = string(r.Via.Key.Type)
 			row.ViaRole = string(r.Via.Key.Term)
+		}
+		if r.Move != nil {
+			row.MoveReason = string(r.Move.Reason)
+			row.MoveNeighborSubjectId = database.UUIDString(r.Move.NeighborSubjectID)
 		}
 		for _, ex := range r.Exhibits {
 			cmp := &engine.PromoteGraphAlignmentComparison{

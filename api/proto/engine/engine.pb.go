@@ -11799,8 +11799,16 @@ type PromoteGraphAlignmentRow struct {
 	Reason               string `protobuf:"bytes,20,opt,name=reason,proto3" json:"reason,omitempty"`
 	ReasonPropertyKey    string `protobuf:"bytes,21,opt,name=reason_property_key,json=reasonPropertyKey,proto3" json:"reason_property_key,omitempty"`
 	ReasonPropertyOrigin string `protobuf:"bytes,22,opt,name=reason_property_origin,json=reasonPropertyOrigin,proto3" json:"reason_property_origin,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// A comparison behind the pair this row reports conflicts, whatever its
+	// band. The page marks it.
+	Contested bool `protobuf:"varint,23,opt,name=contested,proto3" json:"contested,omitempty"`
+	// A graphalign.Reason move code, set when settling released an earlier
+	// pair of this row. Empty when no move.
+	MoveReason string `protobuf:"bytes,24,opt,name=move_reason,json=moveReason,proto3" json:"move_reason,omitempty"`
+	// With move_reason: the layer neighbor that caused the move.
+	MoveNeighborSubjectId string `protobuf:"bytes,25,opt,name=move_neighbor_subject_id,json=moveNeighborSubjectId,proto3" json:"move_neighbor_subject_id,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *PromoteGraphAlignmentRow) Reset() {
@@ -11989,6 +11997,27 @@ func (x *PromoteGraphAlignmentRow) GetReasonPropertyKey() string {
 func (x *PromoteGraphAlignmentRow) GetReasonPropertyOrigin() string {
 	if x != nil {
 		return x.ReasonPropertyOrigin
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentRow) GetContested() bool {
+	if x != nil {
+		return x.Contested
+	}
+	return false
+}
+
+func (x *PromoteGraphAlignmentRow) GetMoveReason() string {
+	if x != nil {
+		return x.MoveReason
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentRow) GetMoveNeighborSubjectId() string {
+	if x != nil {
+		return x.MoveNeighborSubjectId
 	}
 	return ""
 }
@@ -18680,7 +18709,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x16reason_property_origin\x18\n" +
 	" \x01(\tR\x14reasonPropertyOrigin\x125\n" +
 	"\x17via_neighbor_subject_id\x18\v \x01(\tR\x14viaNeighborSubjectIdB\b\n" +
-	"\x06header\"\xe3\a\n" +
+	"\x06header\"\xdb\b\n" +
 	"\x18PromoteGraphAlignmentRow\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x12\n" +
@@ -18707,7 +18736,11 @@ const file_engine_proto_rawDesc = "" +
 	"\x17duplicate_of_subject_id\x18\x13 \x01(\tR\x14duplicateOfSubjectId\x12\x16\n" +
 	"\x06reason\x18\x14 \x01(\tR\x06reason\x12.\n" +
 	"\x13reason_property_key\x18\x15 \x01(\tR\x11reasonPropertyKey\x124\n" +
-	"\x16reason_property_origin\x18\x16 \x01(\tR\x14reasonPropertyOriginB\b\n" +
+	"\x16reason_property_origin\x18\x16 \x01(\tR\x14reasonPropertyOrigin\x12\x1c\n" +
+	"\tcontested\x18\x17 \x01(\bR\tcontested\x12\x1f\n" +
+	"\vmove_reason\x18\x18 \x01(\tR\n" +
+	"moveReason\x127\n" +
+	"\x18move_neighbor_subject_id\x18\x19 \x01(\tR\x15moveNeighborSubjectIdB\b\n" +
 	"\x06headerJ\x04\b\b\x10\t\"\x87\x01\n" +
 	"$ProposePromoteGraphAlignmentResponse\x12C\n" +
 	"\x04rows\x18\x01 \x03(\v2/.provenencia.engine.v1.PromoteGraphAlignmentRowR\x04rows\x12\x1a\n" +

@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -111,6 +112,93 @@ func TestProposeNegativeConflictLine(t *testing.T) {
 		}
 	}
 	t.Fatalf("no sex_at_birth conflict line in %+v", resp.GetRows())
+}
+
+// The contested flag reaches the response at any band: a negative Observation
+// against a filed positive one conflicts whether the row is skipped, fixed or
+// (with a positive Observation) not contested at all.
+func TestProposeSendsContested(t *testing.T) {
+	type fixture struct {
+		polarity string
+		fix      bool
+	}
+	cases := []struct {
+		name       string
+		fixture    fixture
+		wantTarget string
+		wantReason string
+		wantFlag   bool
+	}{
+		{"negative, unfixed", fixture{observations.PolarityNegative, false}, "skip", "weak", true},
+		{"negative, fixed", fixture{observations.PolarityNegative, true}, "handle", "decided", true},
+		{"positive", fixture{observations.PolarityPositive, false}, "handle", "agrees", false},
+	}
+	var tests []rpcTest
+	for _, tc := range cases {
+		var incoming string
+		tests = append(tests, rpcTest{
+			name: tc.name,
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, typeID := subjectFixture(t)
+				_, handleSubject := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
+				handle := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: handleSubject})
+				var sourceID string
+				sourceID, incoming = personOnNewSource(t, dir, userID, typeID, "male", tc.fixture.polarity)
+				req := &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, SourceId: sourceID}
+				if tc.fixture.fix {
+					req.Fixed = []*engine.PromoteGraphAlignmentFixed{{SubjectId: incoming, HandleId: handle.Entity.GetId()}}
+				}
+				return req
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.ProposePromoteGraphAlignmentResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				for _, row := range resp.GetRows() {
+					if row.GetSubjectId() != incoming {
+						continue
+					}
+					if row.GetTarget() != tc.wantTarget || row.GetReason() != tc.wantReason || row.GetContested() != tc.wantFlag {
+						t.Fatalf("row target %q reason %q contested %v; want %q %q %v",
+							row.GetTarget(), row.GetReason(), row.GetContested(), tc.wantTarget, tc.wantReason, tc.wantFlag)
+					}
+					return
+				}
+				t.Fatalf("no row for incoming subject %s in %+v", incoming, resp.GetRows())
+			},
+		})
+	}
+	runRPC(t, ProposePromoteGraphAlignment, tests)
+}
+
+// A row whose earlier pair was released carries the move's reason and the
+// neighbor that caused it; a row without a move carries neither.
+func TestProposalProtoSendsMove(t *testing.T) {
+	dir, _, _, _ := subjectFixture(t)
+	a, b, n := uuid.New(), uuid.New(), uuid.New()
+	prop := graphalign.Proposal{Rows: []graphalign.Row{
+		{SubjectID: a[:], Target: graphalign.TargetSkip, Move: &graphalign.Move{Reason: graphalign.ReasonNeighborPlaced, NeighborSubjectID: n[:]}},
+		{SubjectID: b[:], Target: graphalign.TargetSkip},
+	}}
+	var resp *engine.ProposePromoteGraphAlignmentResponse
+	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
+		var err error
+		resp, err = proposalProto(c, prop)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	rows := resp.GetRows()
+	if len(rows) != 2 {
+		t.Fatalf("rows %d", len(rows))
+	}
+	if rows[0].GetMoveReason() != "neighbor_placed" || rows[0].GetMoveNeighborSubjectId() != n.String() {
+		t.Fatalf("moved row %+v", rows[0])
+	}
+	if rows[1].GetMoveReason() != "" || rows[1].GetMoveNeighborSubjectId() != "" {
+		t.Fatalf("plain row %+v", rows[1])
+	}
 }
 
 func TestProposePromoteGraphAlignment(t *testing.T) {
