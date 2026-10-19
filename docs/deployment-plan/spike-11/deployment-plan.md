@@ -372,7 +372,7 @@ Segment compare learns unplaced neighbors (entity compare decides). A bridge's o
 
 #### S11-18 — Contested marker on Promote rows
 
-**Ships.** The contested marker beside the band, as S11-D1 draws it, with L10n copy. It words the three move reasons in the row's "Updated · <reason>" line, naming the neighbor (`PromoteFlow.Row.move`, S11-17).
+**Ships.** The contested marker beside the band, as S11-D1 draws it, with L10n copy. It words the three move reasons, naming the neighbor (`PromoteFlow.Row.move`, S11-17). A move is settled within one proposal and `Row.updated` is a change between proposals, so S11-D1 decides where a move shows: in the "Updated · <reason>" line, on its own, or both.
 **Not this PR.** The evidence sheet (S11-20).
 **Check.** A row with a conflict shows contested at any band; a clean row does not; a row that moved says which neighbor moved it.
 **Context.** S11-D1; [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).

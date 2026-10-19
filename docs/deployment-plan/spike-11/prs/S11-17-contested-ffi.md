@@ -5,7 +5,7 @@
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the wire and Swift's parsing only; the contested marker and the move-reason copy are S11-18 behind S11-D1)
 **Board:** —
-**Depends on:** S11-16 ([#501](https://github.com/mendahu/provenencia/pull/501), branch `s11-16-graph-alignment`, shipped with green CI, not merged at planning). Branch from `origin/main` once #501 is merged (fetch first)
+**Depends on:** S11-16 ([#501](https://github.com/mendahu/provenencia/pull/501), branch `s11-16-graph-alignment`, shipped with green CI, not merged at planning). That branch already records S11-16 as landed in its own docs (`completed.md`, its plan, the map row), written ahead of the merge; the merge into `main` is the fact that counts. Do not start until `git log origin/main` contains #501's merge and `core/graphalign/rows.go` on `origin/main` sets `Flags.Contested`. Then branch from `origin/main` (fetch first), redo §4 against it, and set this plan's status to `In progress`
 **Blocks:** S11-18
 **Branch:** `s11-17-contested-ffi`
 **Version bump:** none — Spike 11 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/ffi-handlers.mdc`, `.cursor/rules/go-tests.mdc`
 **Context:** [Bands](../comparison-layers.md#bands) ("A contested marker, not a cap"), [Layer 6 procedure](../comparison-layers.md#layer-6-procedure) step 5 ("Each move has a reason"), [`docs/matching-model.md`](../../../matching-model.md) (glossary: contested); working rules "One wire vocabulary", "High tolerance for churn"; [S11-16 plan](S11-16-graph-alignment.md) D-9 (move reasons) and its **Next adds**
 **Planned:** 2026-10-19 against `s11-16-graph-alignment` @ `920fa2a` (S11-16's shipped tip; `main` @ `3bd0862` does not have it yet). Draft: redo §4 against `main` once #501 merges
-**Review:** — (not reviewed yet)
+**Review:** [`S11-17-contested-ffi.review.md`](S11-17-contested-ffi.review.md) — round 1: Fits with changes / Not ready, findings answered; round 2 pending
 
 ### Implementer — read this first
 
@@ -57,10 +57,10 @@ S11-16 gave every Promote row a contested flag (a comparison behind the reported
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-3.1 | `load` a proposal with row `a` (`contested` true, `moveReason` `neighbor_moved`, `moveNeighborSubjectID` `b`) and row `b` (clean) | `a.contested` true, `a.move` `Move(reason: .neighborMoved, neighborID: "b")`; `b.contested` false, `b.move` nil |
+| AC-3.1 | `load` a proposal with row `a` (`contested` true, `moveReason` `.neighborMoved`, `moveNeighborSubjectID` `b`) and row `b` (clean) | `a.contested` true, `a.move` `.neighborMoved(neighborID: "b")`; `b.contested` false, `b.move` nil |
 | AC-3.2 | Row `a` decided on `e1`; `merge` a proposal where `a` is `contested` true | `a` keeps target `e1` and `decided`; `a.contested` true |
 | AC-3.3 | A filed (anchor) Subject whose proposal row is `contested` true | The anchor row: `contested` false, `move` nil |
-| AC-3.4 | `moveReason` `""` with `moveNeighborSubjectID` `b`; then `moveReason` `neighbor_released` with `moveNeighborSubjectID` `""` | `move` nil; `move` `Move(reason: .neighborReleased, neighborID: "")` |
+| AC-3.4 | `moveReason` nil with `moveNeighborSubjectID` `b`; then `moveReason` `.neighborReleased` with `moveNeighborSubjectID` `""`; then `moveReason` `.unrecognized("later_move")` | `move` nil; `move` `.neighborReleased(neighborID: "")`; `move` `.empty` |
 
 **US-4.** As a contributor, a reason code renamed on one side fails a Go test.
 
@@ -68,8 +68,8 @@ S11-16 gave every Promote row a contested flag (a comparison behind the reported
 | --- | --- | --- |
 | AC-4.1 | `TestSwiftVocabularyMatchesGo` reads `enum PromoteReasonCode` in `ConclusionVocabulary.swift` | Its wire cases equal the ten `graphalign.Reason` constants: `via`, `decided`, `agrees`, `weak`, `taken`, `no_match`, `empty`, `neighbor_placed`, `neighbor_moved`, `neighbor_released` |
 | AC-4.2 | `PromoteReasonCode(wire: "later_code")`; `PromoteReasonCode(wire: "no_match")` | `.unrecognized("later_code")`; `.noMatch` |
-| AC-4.3 | `PromoteFlow.Reason(code: c, …)` for each code the page already knew, and for `neighbor_placed` and `later_code` | The same case as today (`via` with an empty neighbor → `.empty`); `.empty`; `.empty` |
-| AC-4.4 | `rg '"(via\|decided\|agrees\|weak\|taken\|no_match)"' macos/App/Features/Promote` | No match |
+| AC-4.3 | `PromoteFlow.Reason(code: c, …)` for each code the page already knew, for `.neighborPlaced` with neighbor `n`, and for `.unrecognized("later_code")` | The same case as today (`.via` with an empty neighbor → `.empty`); `.neighborPlaced(neighborID: "n")`; `.empty` |
+| AC-4.4 | The search in STEP-3's check, for reason literals under `macos/App` and `macos/ProvenenciaTests` outside `ConclusionVocabulary.swift` | No match |
 
 ## 3. Scope
 
@@ -77,21 +77,20 @@ S11-16 gave every Promote row a contested flag (a comparison behind the reported
 | --- | --- |
 | `PromoteGraphAlignmentRow` fields `contested`, `move_reason`, `move_neighbor_subject_id`; regenerated Go and Swift (D-1) | STEP-1 |
 | `proposalProto` sends them (D-2) | STEP-2, AC-1.1, AC-1.2, AC-1.3, AC-2.1, AC-2.2 |
-| `PromoteReasonCode` *(new)* in `ConclusionVocabulary.swift`; `PromoteFlow.Reason` parses through it (D-3, D-4) | STEP-3, AC-4.2, AC-4.3, AC-4.4 |
+| `PromoteReasonCode` *(new)* in `ConclusionVocabulary.swift` (D-3); `PromoteFlow.Reason` gains three move cases and takes a typed code (D-4) | STEP-3, STEP-6, AC-4.2, AC-4.3, AC-4.4 |
 | Go drift guard row for `PromoteReasonCode` (D-5) | STEP-4, AC-4.1 |
-| `CatalogPromoteGraphAlignmentRow` fields and the `GoStore` mapping (D-6) | STEP-5 |
-| `PromoteFlow.Row.contested`, `PromoteFlow.Row.move`, `PromoteFlow.Move` *(new)* (D-7) | STEP-6, AC-3.1, AC-3.2, AC-3.3, AC-3.4 |
+| `CatalogPromoteGraphAlignmentRow` and `CatalogPromoteGraphAlignmentAlternative` reason fields typed, new row fields, the `GoStore` mapping, `FakeStore` and test literals typed (D-6, D-8) | STEP-3, AC-4.4 |
+| `PromoteFlow.Row.contested`, `PromoteFlow.Row.move` *(new)* (D-7) | STEP-5, STEP-6, AC-3.1, AC-3.2, AC-3.3, AC-3.4 |
 | Docs the PR makes false (STEP-7) | STEP-7 |
 
 | Out | Home |
 | --- | --- |
 | The contested marker beside the band, its copy and accessibility label | S11-18 (behind S11-D1) |
-| Wording move reasons in the "Updated · <reason>" line (`PromoteModel.reasonText`, `L10n.Promote.updatedDetail`) | S11-18 (user decision 2026-10-19; its scope entry says so) |
+| Wording move reasons (`PromoteModel.reasonText` cases beyond the interim of D-4), and deciding where a move shows: a move is settled within one proposal, while `Row.updated` is a change between proposals | S11-18 with S11-D1 (user decision 2026-10-19; its scope entry says so) |
 | Value and segment cause codes (`valuecompare.Cause`, `segmentcompare.Cause`) on the wire and in Swift | S11-25, with the evidence lines that word them (user decision 2026-10-19; its scope entry says so). The S11-14 plan's **Next adds** line naming S11-17 is superseded |
 | A contested flag on alternatives (`graphalign.Alternative` has none) | Not planned — the marker is per row (comparison-layers §Bands) |
 | `FakeStore` producing contested rows or moves | Not planned — S11-18 sets the fields on fake rows in its own tests when it needs them |
-| `FakeStore`'s literal reason strings (`"decided"`, `"empty"`) | Not planned — the fake plays Go's side of the wire and writes wire strings, as it writes `"handle"` and `"strong"` (D-8) |
-| Moving `target` and `assessment` codes into `ConclusionVocabulary.swift` | Not planned for Spike 11 — the map scopes reason codes only; a later PR that touches them adds a guard row the same way |
+| Moving Promote's `target`, `assessment` and comparison `outcome` codes into `ConclusionVocabulary.swift` (`PromoteFlow.swift` literals `"handle"`, `"new"`, `"skip"`, `"conflict"`; `PromoteFlow.Assessment`) | S12-09 (Promote per graph rewrites the same Promote code; maintainability review M-5) |
 | `ConflictWithFixed` changes | Not this PR — S11-16 kept it |
 
 ## 4. Current state
@@ -106,17 +105,19 @@ Verified at `920fa2a` (`s11-16-graph-alignment`). Every `core/graphalign` row be
 | Proto | `api/proto/engine.proto` `PromoteGraphAlignmentRow` (fields 1–22, `reserved 8`) | No contested or move field. Highest field number 22 |
 | Handler | `api/ffi/handlers/promote_align.go` `proposalProto(c, prop)` | Builds each `engine.PromoteGraphAlignmentRow` from `graphalign.Row`; copies `Flags.ConflictWithFixed`, `PossibleDuplicate`, `DuplicateOf`, `Via`; drops `Flags.Contested` and `Move` |
 | Handler tests | `api/ffi/handlers/promote_align_test.go` `personOnNewSource`, `TestProposeNegativeConflictLine`, `TestProposePromoteGraphAlignment`; `subjects_test.go` `subjectFixture`; `promote_test.go` `promoteOK`; `harness_test.go` `runRPC`, `marshalProto` | `personOnNewSource(…, "male", PolarityNegative)` against a filed positive `male` handle yields a conflicting sex-at-birth comparison. Probe at planning: unfixed → skip / weak / Contested true; fixed → handle / decided / Contested true; positive → handle / agrees / Contested false. A `Move` cannot be produced from a handler fixture cheaply; `core/graphalign/align_test.go` `TestSettlingMovesAPairAndSaysWhy` covers it in the engine |
-| Swift wire row | `macos/App/Platform/GenealogyStore.swift` `CatalogPromoteGraphAlignmentRow` | `reason`, `viaNeighborSubjectID`, … as `String` with `""` defaults; no contested or move |
+| Swift wire row | `macos/App/Platform/GenealogyStore.swift` `CatalogPromoteGraphAlignmentRow`, `CatalogPromoteGraphAlignmentAlternative` | `reason`, `viaNeighborSubjectID`, … as `String` with `""` defaults; no contested or move |
 | Swift mapping | `macos/App/Platform/GoStore.swift` `proposePromoteGraphAlignment` (the `resp.rows.map` at about L853) | Maps every row field by name; nothing to map for contested or move |
 | Swift fake | `macos/App/Platform/FakeStore.swift` `proposePromoteGraphAlignment` (about L1515–L1575) | Builds rows with `reason: "decided"` / `"empty"`; relies on default arguments for fields it does not set |
 | Reason parsing | `macos/App/Features/Promote/PromoteFlow.swift` `PromoteFlow.Reason.init(code:propertyKey:propertyOrigin:viaNeighborID:)` | `switch code` on string literals `"via"` (only with a neighbor), `"decided"`, `"agrees"`, `"weak"`, `"taken"`, `"no_match"`; `default: .empty`. `.filed` is Swift-only (anchor rows), never on the wire |
+| Reason wording | `macos/App/Features/Promote/PromoteModel.swift` `reasonText(_:on:)` | Exhaustive `switch` over `PromoteFlow.Reason`; `.via` resolves the neighbor's name, ref and bridge phrase. `PromoteView.swift` shows `L10n.Promote.updatedDetail(model.reasonText(for: row))` only when `row.updated` |
+| Test literals | `PromoteFlowTests.swift` (the `row(…)` helper and about six tests), `PromoteModelTests.swift` (helper, `reasonsAreWordedWithLabelsAndRefs`) | Set `reason` on wire rows and alternatives as strings (`"agrees"`, `"taken"`, `"weak"`, `"decided"`, `"via"`) |
 | Flow row | `PromoteFlow.swift` `PromoteFlow.Row`; `makeRow(_:fact:previous:orders:)` | Three construction paths: anchor (`fact.anchor`), decided keep (`previous.decided`, refreshes `assessment`, `reason`, `conflictNote`, `proposedDuplicateOf`), fresh. No contested or move |
 | Vocabulary | `macos/App/Platform/ConclusionVocabulary.swift` | `ReconciledState`, `ReconcilerReason` (with `case unrecognized(String)` and `init(wire:)`), seeded keys, `DateQualifier`. Header: "Spell these values only here" |
 | Drift guard | `api/ffi/swift_vocabulary_test.go` `TestSwiftVocabularyMatchesGo`, regex `wireCase` (`case "([a-z_]*)": self = `), subtest "states and reasons tolerate a value this build doesn't know" | Rows for field states and outcome reasons; none for Promote reasons |
 | Swift tests | `macos/ProvenenciaTests/PromoteFlowTests.swift` helpers `proposal(rows:revision:)`, `row(id:target:handleID:assessment:pinned:)`, `fact(_:anchor:handleID:)`; `decidedRowsSurviveAReproposal`; `PromoteModelTests.swift` `reasonsAreWordedWithLabelsAndRefs` | Pass reasons as wire strings into `CatalogPromoteGraphAlignmentRow` (correct: that struct is the wire shape) |
 | Docs | `docs/deployment-plan/spike-11/comparison-layers.md` §Layer 6 "Built in S11-16" paragraph | "…the wire carries neither until S11-17." |
 
-**Precedent.** `edb419f1` ("promote: typed reasons and labels instead of English and keys") put `reason` on `PromoteGraphAlignmentRow` and parsed it in Swift: proto field, `proposalProto` line, `CatalogPromoteGraphAlignmentRow` field with a `""` default, `GoStore` mapping, `PromoteFlow.Reason`. Copy that path field by field. Do not copy its string switch in `PromoteFlow.swift`; parse through `PromoteReasonCode` (D-4). For the Swift enum and its guard row, copy `ReconcilerReason` and the "outcome reasons" row of `TestSwiftVocabularyMatchesGo`.
+**Precedent.** `edb419f1` ("promote: typed reasons and labels instead of English and keys") put `reason` on `PromoteGraphAlignmentRow` and carried it to Swift: proto field, `proposalProto` line, `CatalogPromoteGraphAlignmentRow` field, `GoStore` mapping, `PromoteFlow.Reason`. Copy that path field by field, except where the code is parsed. For that, copy the reconciler: `ReconcilerReason` in `ConclusionVocabulary.swift`, typed fields `CatalogReconciledValue.reason` and `CatalogReconcilerOutcome.reason` in `GenealogyStore.swift`, and `ReconcilerReason(wire:)` called in `GoStore.swift`. For the guard row, copy the "outcome reasons" row of `TestSwiftVocabularyMatchesGo`.
 
 ## 5. Decisions
 
@@ -125,11 +126,11 @@ Verified at `920fa2a` (`s11-16-graph-alignment`). Every `core/graphalign` row be
 | D-1 | **Wire.** `PromoteGraphAlignmentRow` gains `bool contested = 23;` ("a comparison behind the pair this row reports conflicts, whatever its band; the page marks it"), `string move_reason = 24;` ("set when settling released an earlier pair of this row: neighbor_placed, neighbor_moved, neighbor_released; empty otherwise"), `string move_neighbor_subject_id = 25;` ("with move_reason: the layer neighbor that caused it"). No new message | Matches the row's flat style (`via_neighbor_subject_id`, `via_bridge_type`, `duplicate_of_subject_id`); an empty reason is "no move", as an empty `via_neighbor_subject_id` is "not via" | A `PromoteGraphAlignmentMove` message — a second shape for the same kind of fact on one row; reusing `reason` (field 20) for a move — loses `via` / `agrees`, which the page words (S11-16 D-9) |
 | D-2 | **Handler.** In `proposalProto`, the row literal gains `Contested: r.Flags.Contested`; after the `r.Via` block, `if r.Move != nil { row.MoveReason = string(r.Move.Reason); row.MoveNeighborSubjectId = uuidString(r.Move.NeighborSubjectID) }` | One place builds rows; same shape as the `Via` copy | A helper function — two lines |
 | D-3 | **Swift wire enum.** `enum PromoteReasonCode: Sendable, Equatable` *(new)* in `ConclusionVocabulary.swift`, after `ReconcilerReason`, doc "Why a Promote row reads as it does, and why settling moved it (`graphalign.Reason`). The page words the typed cases." Cases in Go's order: `via`, `decided`, `agrees`, `weak`, `taken`, `noMatch`, `empty`, `neighborPlaced`, `neighborMoved`, `neighborReleased`, `unrecognized(String)` (doc "A code this build doesn't know"). `init(wire:)` with one `case "<code>": self = .<case>` line per code and `default: self = .unrecognized(wire)`. One enum for both row and move reasons | Go has one `Reason` type whose move reasons "extend Reason" (S11-16 D-9, working rule "One wire vocabulary"); one Swift enum mirrors one Go type and one guard row checks it. The `case "x": self = ` shape is what `wireCase` reads | Two Swift enums (row reasons, move reasons) — two guard rows for one Go type; a `String` raw-value enum — `rawCase` / `wireCase` would not read it the same way, and `ReconcilerReason` is the house shape |
-| D-4 | **PromoteFlow.Reason parses through the code.** `init(code:propertyKey:propertyOrigin:viaNeighborID:)` switches on `PromoteReasonCode(wire: code)`: `.via` → `.via(neighborID:)` when `viaNeighborID` is not empty, else `.empty`; `.decided`, `.agrees`, `.weak`, `.taken`, `.noMatch` → their cases as today; every other case (`.empty`, the three move codes, `.unrecognized`) → `.empty`. `PromoteFlow.Reason` keeps every case, including Swift-only `.filed`. Its signature and the two convenience `init`s are unchanged | Behavior is today's, and no reason string literal stays in `PromoteFlow.swift` ("Spell these values only here") | Deleting `PromoteFlow.Reason` in favour of `PromoteReasonCode` — `.via` and `.agrees` carry payloads and `.filed` is not a wire code; changing the signature — touches every test helper |
+| D-4 | **PromoteFlow.Reason takes the typed code and gains move cases.** `PromoteFlow.Reason` gains `.neighborPlaced(neighborID: String)`, `.neighborMoved(neighborID: String)`, `.neighborReleased(neighborID: String)` after `.via`. `init(code:propertyKey:propertyOrigin:viaNeighborID:)` becomes `init(code: PromoteReasonCode, propertyKey: String, propertyOrigin: String, neighborID: String)`: `.via` → `.via(neighborID:)` when `neighborID` is not empty, else `.empty`; `.decided`, `.agrees`, `.weak`, `.taken`, `.noMatch` → their cases as today; the three move codes → the matching move case with `neighborID`; `.empty` and `.unrecognized` → `.empty`. The row and alternative convenience `init`s pass `viaNeighborSubjectID` as `neighborID`. `PromoteModel.reasonText(_:on:)` gets one interim arm, `case .neighborPlaced, .neighborMoved, .neighborReleased: return L10n.string(L10n.Promote.reasonEmpty)`, with the comment "Worded in S11-18; no row reason is a move reason." `.filed` stays Swift-only | One reason type and one wording switch on the page: S11-18 replaces one interim arm, the compiler lists every move case, and the move cases reuse `.via`'s neighbor naming (maintainability review M-1). The interim arm is unreachable: Go sends move codes only in `move_reason` | A separate `PromoteFlow.Move` carrying `PromoteReasonCode` — S11-18 would need a second switch with a `default` and a copy of the neighbor lookup; new L10n strings now — copy is S11-18 (Out) |
 | D-5 | **Guard.** `TestSwiftVocabularyMatchesGo` gains a row `name: "promote reasons", path: swiftVocabulary, enum: "PromoteReasonCode", re: wireCase` whose `want` is `sorted(...)` of the ten `string(graphalign.Reason…)` constants, written out like the "outcome reasons" row. The "tolerate a value this build doesn't know" subtest's list gains `"PromoteReasonCode"` | Same guard as `ReconcilerReason`; `graphalign` has no list function and adding one only for a test is new API | An `AllReasons()` in `graphalign` — production code for a test; reading the Go constants by reflection — the house test lists constants |
-| D-6 | **Swift wire row.** `CatalogPromoteGraphAlignmentRow` gains, after `viaRole`: `var contested: Bool = false` (doc "A comparison behind the reported pair conflicts, whatever the band"), `var moveReason: String = ""` (doc "neighbor_placed, neighbor_moved, neighbor_released when settling moved this row; empty otherwise"), `var moveNeighborSubjectID: String = ""`. `GoStore` maps `r.contested`, `r.moveReason`, `r.moveNeighborSubjectID` (the generated names for D-1). Strings stay strings here | This struct is the wire shape; every other code field on it is a `String` parsed by `PromoteFlow`. Defaults keep `FakeStore` and every test helper compiling unchanged | Typing `moveReason` as `PromoteReasonCode?` here — the struct would parse while every sibling field does not |
-| D-7 | **Flow row.** `PromoteFlow.Move: Equatable, Sendable` *(new)*, doc "Why settling moved this row's suggestion, for the Updated line": `var reason: PromoteReasonCode`, `var neighborID: String`. `PromoteFlow.Row` gains `var contested = false` (doc "A comparison behind this row's pair conflicts, whatever its band; the page marks it") and `var move: Move? = nil` (doc "Set when settling released this row's earlier suggestion"), declared after `duplicateNote` so the memberwise init keeps working where they are omitted. A `private static func move(_ proposal: CatalogPromoteGraphAlignmentRow) -> Move?` returns nil when `moveReason` is empty, else `Move(reason: PromoteReasonCode(wire: proposal.moveReason), neighborID: proposal.moveNeighborSubjectID)`. In `makeRow`: the anchor path leaves both at their defaults; the decided-keep path sets `kept.contested = proposal.contested` and `kept.move = move(proposal)` next to `kept.conflictNote`; the fresh path passes `contested: proposal.contested, move: move(proposal)` | S11-18 reads `row.contested` and `row.move` and needs nothing else from the wire. Refreshing on the decided path keeps contested true to the latest proposal, as `assessment` is. An anchor row is filed and not proposed | Leaving `PromoteFlow` alone until S11-18 — S11-18 would then also change the wire path, which the map gives this PR; keeping an unrecognized move code out of `move` — S11-18 words the fallback, and dropping it here hides a drift |
-| D-8 | **`FakeStore` unchanged.** It keeps writing wire strings into `CatalogPromoteGraphAlignmentRow` | The fake plays Go; the rule "spell these only here" covers code that reads the wire, and `PromoteFlowTests` / `PromoteModelTests` write wire strings for the same reason | Making `FakeStore` build strings from `PromoteReasonCode` — needs a `wire` getter nothing else uses |
+| D-6 | **Swift wire row parses in the store.** On `CatalogPromoteGraphAlignmentRow`, `reason` becomes `PromoteReasonCode = .empty`; new after `viaRole`: `var contested: Bool = false` (doc "A comparison behind the reported pair conflicts, whatever the band"), `var moveReason: PromoteReasonCode? = nil` (doc "A move reason when settling released an earlier pair of this row in this proposal; nil otherwise"), `var moveNeighborSubjectID: String = ""`. On `CatalogPromoteGraphAlignmentAlternative`, `reason` becomes `PromoteReasonCode = .empty`. The doc comment on `reason` becomes "A row reason, worded by the page." `GoStore` maps `reason: PromoteReasonCode(wire: r.reason)`, `contested: r.contested`, `moveReason: r.moveReason.isEmpty ? nil : PromoteReasonCode(wire: r.moveReason)`, `moveNeighborSubjectID: r.moveNeighborSubjectID`, and the alternative's `reason: PromoteReasonCode(wire: a.reason)` | Copies where `ReconcilerReason` is parsed: `CatalogReconciledValue.reason: ReconcilerReason` and `GoStore`'s `ReconcilerReason(wire:)` calls (maintainability review M-2). Wire codes become types in one layer, so no feature or test spells them. Doc comments name the type, not the codes, so a new code leaves no stale comment (M-4) | Strings on the wire row parsed in `PromoteFlow` — a second place codes are parsed, and `FakeStore` and tests keep the literals |
+| D-7 | **Flow row.** `PromoteFlow.Row` gains `var contested = false` (doc "A comparison behind this row's pair conflicts, whatever its band; the page marks it") and `var move: Reason? = nil` (doc "Why settling released an earlier pair of this row in this proposal. Not `updated`, which compares with the previous proposal"), declared after `duplicateNote` so the memberwise init keeps working where they are omitted. A `private static func move(_ proposal: CatalogPromoteGraphAlignmentRow) -> Reason?` returns nil when `moveReason` is nil, else `Reason(code: moveReason, propertyKey: "", propertyOrigin: "", neighborID: proposal.moveNeighborSubjectID)`. In `makeRow`: the anchor path leaves both at their defaults; the decided-keep path sets `kept.contested = proposal.contested` and `kept.move = move(proposal)` next to `kept.conflictNote`; the fresh path passes `contested: proposal.contested, move: move(proposal)` | S11-18 reads `row.contested` and `row.move` and needs nothing else from the wire. Refreshing on the decided path keeps contested true to the latest proposal, as `assessment` is. An anchor row is filed and not proposed. An unrecognized move code becomes `.empty`, as an unrecognized row reason does | Leaving `PromoteFlow` alone until S11-18 — S11-18 would then also change the wire path, which the map gives this PR; tying `move` to `updated` — they measure different things (maintainability review M-3) |
+| D-8 | **Literals become typed cases.** `FakeStore.proposePromoteGraphAlignment` writes `reason: .decided` (twice) and `reason: .empty`. `PromoteFlowTests` and `PromoteModelTests` write typed cases where they set `reason` (`.agrees`, `.via`, `.taken`, `.weak`, `.decided`) on wire rows and alternatives | Follows from D-6; afterwards no Promote reason code is spelled outside `ConclusionVocabulary.swift` (AC-4.4) | — |
 | D-9 | **Tests.** Go: a new table-driven `TestProposeSendsContested` through `runRPC` (`reqFn` builds the AC-1 fixtures with `personOnNewSource`; `after` finds the incoming Subject's row by id and checks `target`, `reason`, `contested`), and `TestProposalProtoSendsMove` calling `proposalProto` directly inside `withProjectCatalog` on a `subjectFixture` project with a literal `graphalign.Proposal` (rows with `Target` skip and no handle, so no header lookup hits). Swift: new `@Test`s in `PromoteFlowTests.swift`; `PromoteReasonCode` cases tested there too | The handler can produce contested from real data (probe in §4); a move needs a settle that a handler fixture cannot reach cheaply, and the engine already tests it (`TestSettlingMovesAPairAndSaysWhy`), so the handler test covers only the copy | A handler fixture that forces a release — needs several people and links for a two-line copy; a `GoStore` test — no Swift test calls `GoStore` (it needs the dylib) |
 
 ## 6. Design
@@ -139,15 +140,15 @@ Verified at `920fa2a` (`s11-16-graph-alignment`). Every `core/graphalign` row be
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
 | `PromoteGraphAlignmentRow.contested`, `.move_reason`, `.move_neighbor_subject_id` *(new)* | proto fields | `PromoteGraphAlignmentRow` `conflict_with_fixed`, `via_neighbor_subject_id` | Extends that message (D-1) |
-| `PromoteReasonCode` *(new)* | Swift enum | `ConclusionVocabulary.swift` `ReconcilerReason`; `PromoteFlow.Reason` | `ReconcilerReason` is the reconciler's vocabulary; `PromoteFlow.Reason` carries payloads and a Swift-only case (D-3, D-4). Searched `ConclusionVocabulary.swift`, `rg 'enum .*Reason' macos/App` |
-| `PromoteFlow.Move` *(new)* | Swift struct | `PromoteFlow.DuplicateNote`, `PromoteFlow.Reason.via(neighborID:)` | A move is a reason plus a neighbor, like `.via`, but a separate fact from the row's reason (D-7) |
+| `PromoteReasonCode` *(new)* | Swift enum | `ConclusionVocabulary.swift` `ReconcilerReason`; `PromoteFlow.Reason` | `ReconcilerReason` is the reconciler's vocabulary; `PromoteFlow.Reason` carries payloads and a Swift-only case, so it stays the page's type and `PromoteReasonCode` is parse-only, as `ReconcilerReason` is (D-3, D-4). Searched `ConclusionVocabulary.swift`, `rg 'enum .*Reason' macos/App` |
 | `PromoteFlow.Row.contested`, `.move` *(new)* | Swift fields | `Row.conflictNote`, `Row.updated` | Different facts: `conflictNote` is `ConflictWithFixed`, `updated` is Swift's own target diff |
+| `PromoteFlow.Reason.neighborPlaced`, `.neighborMoved`, `.neighborReleased` *(new)* | Swift enum cases | `PromoteFlow.Reason.via(neighborID:)` | Extends the page's one reason type (D-4) |
 | `PromoteFlow.move(_:)` *(new)* | Swift func | `PromoteFlow.duplicateOf(_:)` | Same shape (proposal row → optional), different field |
 | `TestProposeSendsContested`, `TestProposalProtoSendsMove` *(new)* | Go tests | `TestProposeNegativeConflictLine`, `TestProposePromoteGraphAlignment` | Reuse their helpers; new assertions |
 
 **Builds on.** `add-ffi-handler` (proto → regenerate → handler → `runRPC` test); the wire-vocabulary guard in `swift_vocabulary_test.go`; precedent `edb419f1`.
-**Deletes.** The six reason string literals in `PromoteFlow.Reason.init(code:…)`. The sentence "the wire carries neither until S11-17" in `comparison-layers.md`.
-**Next adds.** S11-18 reads `row.contested` for the marker and switches on `row.move?.reason` for the "Updated · <reason>" copy. A new graphalign reason is one Go constant, one `PromoteReasonCode` case and line, and one entry in the D-5 row. S11-25 adds cause codes to `ConclusionVocabulary.swift` the same way.
+**Deletes.** Every Promote reason string literal in `macos/App` and `macos/ProvenenciaTests` outside `ConclusionVocabulary.swift`: the six in `PromoteFlow.Reason.init`, three in `FakeStore`, about ten in `PromoteFlowTests` and `PromoteModelTests`. The sentence "the wire carries neither until S11-17" in `comparison-layers.md`.
+**Next adds.** S11-18 reads `row.contested` for the marker and replaces D-4's interim `reasonText` arm with the three move sentences, naming the neighbor as `.via` does. A new graphalign reason is one Go constant, one `PromoteReasonCode` case and line, one entry in the D-5 row, and one `PromoteFlow.Reason` case the compiler then asks `reasonText` for. S11-25 adds cause codes to `ConclusionVocabulary.swift` and parses them in `GoStore` the same way.
 
 ### Schema
 
@@ -181,9 +182,9 @@ No view change. Model and platform changes only:
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
 | Wire vocabulary | `PromoteReasonCode` *(new)* | `macos/App/Platform/ConclusionVocabulary.swift` | D-3 |
-| Wire row | `CatalogPromoteGraphAlignmentRow` | `macos/App/Platform/GenealogyStore.swift` | D-6 |
-| Mapping | `GoStore.proposePromoteGraphAlignment` | `macos/App/Platform/GoStore.swift` | D-6 |
-| Flow | `PromoteFlow.Reason`, `PromoteFlow.Row`, `PromoteFlow.Move` *(new)* | `macos/App/Features/Promote/PromoteFlow.swift` | D-4, D-7 |
+| Wire row | `CatalogPromoteGraphAlignmentRow`, `CatalogPromoteGraphAlignmentAlternative` | `macos/App/Platform/GenealogyStore.swift` | D-6 |
+| Mapping | `GoStore.proposePromoteGraphAlignment`; `FakeStore.proposePromoteGraphAlignment` | `macos/App/Platform/GoStore.swift`, `FakeStore.swift` | D-6, D-8 |
+| Flow | `PromoteFlow.Reason`, `PromoteFlow.Row`; `PromoteModel.reasonText` interim arm | `macos/App/Features/Promote/PromoteFlow.swift`, `PromoteModel.swift` | D-4, D-7 |
 
 States: not applicable (no UI). Accessibility: none (S11-18).
 
@@ -200,27 +201,27 @@ Check: `git diff --stat` shows the proto and both generated files; `CGO_ENABLED=
 
 **STEP-2 — Handler sends contested and move**
 Files: `api/ffi/handlers/promote_align.go`, `api/ffi/handlers/promote_align_test.go`. Skill: `add-ffi-handler`; rule `.cursor/rules/go-tests.mdc`.
-Do: D-2. Add T-1 and T-2 (D-9).
+Do: D-2. Add T-1 and T-2 (D-9). T-1: copy `TestProposeNegativeConflictLine`'s setup (`personOnNewSource` for the handle Subject, `promoteOK`, `personOnNewSource` for the incoming Subject; both are "Mary Smith" because the helper names them so). Each table row's `reqFn` assigns the incoming Subject id to a variable declared in that row's scope, and its `after` reads it. The fixed row sends `Fixed: []*engine.PromoteGraphAlignmentFixed{{SubjectId: incoming, HandleId: handle.Entity.GetId()}}`. T-2: `a, b, n := uuid.New(), uuid.New(), uuid.New()`; `graphalign.Proposal{Rows: []graphalign.Row{{SubjectID: a[:], Target: graphalign.TargetSkip, Move: &graphalign.Move{Reason: graphalign.ReasonNeighborPlaced, NeighborSubjectID: n[:]}}, {SubjectID: b[:], Target: graphalign.TargetSkip}}}`; expect `n.String()`.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/handlers/ -run 'TestPropose'` passes.
 
-**STEP-3 — Swift reason codes**
-Files: `macos/App/Platform/ConclusionVocabulary.swift`, `macos/App/Features/Promote/PromoteFlow.swift`. Skill: —.
-Do: D-3, then D-4.
-Check: AC-4.4's `rg` finds nothing; the app target builds; `PromoteModelTests` `reasonsAreWordedWithLabelsAndRefs` passes unchanged.
+**STEP-3 — Swift reason codes, typed in the store**
+Files: `macos/App/Platform/ConclusionVocabulary.swift`, `macos/App/Platform/GenealogyStore.swift`, `macos/App/Platform/GoStore.swift`, `macos/App/Platform/FakeStore.swift`, `macos/App/Features/Promote/PromoteFlow.swift`, `macos/App/Features/Promote/PromoteModel.swift`, `macos/ProvenenciaTests/PromoteFlowTests.swift`, `macos/ProvenenciaTests/PromoteModelTests.swift`. Skill: `add-swift-test`.
+Do: D-3; D-6 (all of it: typed `reason` fields, the three new row fields and the `GoStore` mapping); D-4; D-8. These land together because the typed fields and the typed `Reason.init` do not build apart.
+Check: `rg -n '"(via|decided|agrees|weak|taken|no_match|empty|neighbor_placed|neighbor_moved|neighbor_released)"' macos/App macos/ProvenenciaTests -g '!Generated/**' -g '!ConclusionVocabulary.swift'` lists no line that is a Promote reason (AC-4.4; an unrelated `"empty"` elsewhere is not one, so read each hit); `xcodebuild test` passes `PromoteFlowTests` and `PromoteModelTests` with only D-8's literal changes.
 
 **STEP-4 — Go guard over the Swift enum**
 Files: `api/ffi/swift_vocabulary_test.go`.
 Do: D-5. Import `github.com/mendahu/provenencia/core/graphalign`.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/ -run TestSwiftVocabularyMatchesGo` passes. Then rename `case "taken"` to `case "took"` in the Swift file, rerun, see it fail with the "promote reasons" subtest, and revert.
 
-**STEP-5 — Swift wire row and mapping**
-Files: `macos/App/Platform/GenealogyStore.swift`, `macos/App/Platform/GoStore.swift`.
-Do: D-6.
-Check: the app target builds (`xcodebuild build` through `scripts/check-pr.sh`'s Xcode step, or Xcode).
+**STEP-5 — Flow row fields**
+Files: `macos/App/Features/Promote/PromoteFlow.swift`.
+Do: D-7.
+Check: the app target builds; `xcodebuild test` passes `PromoteFlowTests` and `PromoteModelTests`.
 
-**STEP-6 — Flow row fields and Swift tests**
-Files: `macos/App/Features/Promote/PromoteFlow.swift`, `macos/ProvenenciaTests/PromoteFlowTests.swift`. Skill: `add-swift-test`.
-Do: D-7. Add T-4, T-5 and T-6. The `row(…)` helper stays as is; set `contested`, `moveReason`, `moveNeighborSubjectID` on the returned value in each test.
+**STEP-6 — Swift tests**
+Files: `macos/ProvenenciaTests/PromoteFlowTests.swift`. Skill: `add-swift-test`.
+Do: add T-4, T-5 and T-6. For AC-3.2, decide row `a` as `decidedRowsSurviveAReproposal` does: `load`, `mapRest()`, `setTarget(subjectID: "a", token: "handle:e1")`, then `merge`. The `row(…)` helper stays as is; set `contested`, `moveReason`, `moveNeighborSubjectID` on the returned value in each test.
 Check: `xcodebuild test` (the command in `scripts/check-pr.sh`) passes `PromoteFlowTests` and `PromoteModelTests`.
 
 **STEP-7 — Docs**
@@ -228,7 +229,7 @@ Files: `docs/deployment-plan/spike-11/comparison-layers.md`, `completed.md`, `de
 Do: in `comparison-layers.md`, replace "the wire carries neither until S11-17." with "S11-17 sends both on `PromoteGraphAlignmentRow` (`contested`, `move_reason`, `move_neighbor_subject_id`); S11-18 shows them." The S11-17, S11-18 and S11-25 scope entries were updated at planning; do not edit them. The rest per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-11/prs/S11-17-contested-ffi.md` reports no errors; links resolve.
 
-Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Send each Promote row's contested flag and move reason to the app.").
+Commits: four. (1) STEP-1 + STEP-2, "Send each Promote row's contested flag and move reason to the app." (2) STEP-3 + STEP-4, "Parse Promote's reason codes once, in the wire vocabulary, under the Go drift guard." (3) STEP-5 + STEP-6, "Keep each Promote row's contested flag and move in the flow." (4) STEP-7, "Record S11-17 in the docs." The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Send each Promote row's contested flag and move reason to the app.").
 
 ## 8. Tests
 
@@ -276,12 +277,13 @@ Nothing changes on the page; the check is that nothing broke.
 
 **Stop and report if:**
 
+- `protoc`, `protoc-gen-go`, `protoc-gen-swift` or `xcodebuild` is missing. This PR is built on macOS, where `scripts/check-pr.sh` runs; do not hand-edit generated files, and do not report Swift tests as passing without running them.
 - `graphalign.RowFlags.Contested`, `graphalign.Row.Move` or the three move reason constants are missing or named differently on `main` after #501 merges.
 - `PromoteGraphAlignmentRow` already uses field number 23, 24 or 25.
 - T-1's negative fixture does not produce `Contested` true at the handler (the §4 probe no longer holds).
 - `TestSwiftVocabularyMatchesGo` cannot read `PromoteReasonCode` with `wireCase` without changing the regex.
 - Any existing Swift or Go test needs a behavior change (not a new field) to pass.
-- Making a test pass needs a view, L10n or `FakeStore` change (Out).
+- Making a test pass needs a view or L10n change beyond D-4's interim arm (Out).
 
 ## 12. Open questions
 
