@@ -1,7 +1,7 @@
 # Ship log — S12-03 Evidence graphs in the catalog
 
 **Plan:** [`S12-03-evidence-graphs-catalog.md`](S12-03-evidence-graphs-catalog.md) · **Branch:** `s12-03-evidence-graphs-catalog` · **PR:** #498
-**State:** ready
+**State:** fixing 2
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s12-03`, branched from `origin/main` @ `84a9b318`.
 
@@ -58,3 +58,50 @@ New blockers: none. MNT note (not raised): the mint-and-retry loop now appears t
 
 ## Result
 Gate PASS · CI pending · open: none · follow-ups: MNT-1, MNT-2 (incl. the backfill copy), MNT-4, MNT-5, UX-1, UX-2, SEC-1 · to user: PRF-1 (answered: override D-15, fixed) · CON miss: none
+
+## Round 2 — user re-decision (2026-10-19)
+User: "For MNT1 and MNT2, let's just implement those on this PR … MNT4 and MNT5, same as 1 and 2. … UX1 and UX2, you should write those into the scope for those PRs." `ship-pr` now carries this as the **Same-pass cleanups** rule and the **Later PR** decision (`7029cef8`).
+
+| ID | New decision | Where |
+| --- | --- | --- |
+| MNT-1 | Fix now → F-3 (supersedes plan Out line "One set of catalog-wide list flags…" and D-5's bool shape) | |
+| MNT-2 (+ round-2 MNT note: backfill copy) | Fix now → F-4 (supersedes Out line "One ref-mint-and-insert helper and one `uuidJSON`" and D-8's copy) | |
+| MNT-4 | Fix now → F-5 | |
+| MNT-5 | Fix now → folded into F-3 (the comment is rewritten with the field) | |
+| UX-1, UX-2 | Later PR | S12-05 map entry, Ships and Check (`7543f40e`) |
+| MNT-8 (nit) | Later PR | S12-04 map entry (`defaultGraphID` copies move onto `List`) |
+| UX-3 (nit) | Later PR | S12-11 map entry (the `Default` label) |
+| CON-1, MNT-6, MNT-7 (nits) | Fix now, ride along (files in this fix plan) | F-3, F-4, F-5 |
+| SEC-1 | Follow-up (unchanged: `migrate.go`, no copy this PR touches) | |
+
+### Fix plan 2
+
+**F-3 — One declared set of catalog-wide list keys, on `effects`, the wire and Swift** (from MNT-1, MNT-5, CON-1)
+Files: `core/database/effects/{registry.go,resolve.go,README.md}` and its tests (`registry_completeness_test.go`, `evidence_graphs_test.go`, any test reading `Set.Vocabulary` / `Set.PropertyUsage` / `Set.EvidenceGraphs`), `core/database/graphcache/commit.go`, `api/proto/engine.proto` + regenerated `api/proto/engine/engine.pb.go` and `macos/App/Platform/Generated/engine.pb.swift` (`scripts/generate-proto.sh`), `api/ffi/handlers/write_effects.go` (+ its test), `macos/App/Features/Workspace/Session/{CatalogMutation.swift,CatalogQueryRegistry.swift}`, `macos/App/Platform/{GoStore.swift,FakeStore.swift}`, the Swift tests that build `CatalogWriteEffects(propertyUsage:/vocabulary:)`. Skills: `add-ffi-handler`, `add-swift-test`.
+Failing test first: `effects.TestResolveLists` *(new)* — a batch with a `subject_types` change and an `evidence_graphs` change resolves `Set.Lists == [ListVocabulary, ListEvidenceGraphs]`; an `observations` update that does not write `property_id` adds no list, one that does adds `ListPropertyUsage`. Red: `Set.Lists` does not exist (compile failure counts).
+Do:
+- In `effects`: `type List string` with `ListVocabulary = "vocabulary"`, `ListPropertyUsage = "property_usage"`, `ListEvidenceGraphs = "evidence_graphs"`, and one declared `var Lists = []List{…}` in that order. On `Effect`, replace `Vocabulary`, `PropertyUsage`, `EvidenceGraphs bool` with `Lists []List` and `ListsOnField string` ("when set, an update moves `Lists` only if it writes this field; creates and deletes always do"); `observations` gets `Lists: []List{ListPropertyUsage}, ListsOnField: "property_id"` (today's `usesProperty` rule, now general: rename it `movesLists`). On `Set`, replace the three bools with `Lists []List` (deduped, in declared order) and `func (s Set) Has(l List) bool`. `Resolve` merges lists in one place. `validate`: a `None` entry has no `Lists` (this also closes the drift where `PropertyUsage` was not checked), every listed key is declared, `ListsOnField` needs `Lists`. Rewrite the `Set` doc comment: `Lists` and `Structure` are the catalog-wide fields (MNT-5). `Structure` stays its own field (it is a graph-cache drop, not a list).
+- `graphcache.OnCommit`: `set.Has(effects.ListVocabulary)`.
+- Wire: in `WriteEffects`, remove `bool vocabulary = 4` and `bool property_usage = 12`, add `reserved 4, 12;` and `repeated string lists = 13;` ("catalog-wide lists this write changed: `effects.List` values"). `write_effects.go` copies `set.Lists` as strings. `structure` stays.
+- Swift: `enum CatalogList: String, Sendable { case vocabulary; case propertyUsage = "property_usage"; case evidenceGraphs = "evidence_graphs" }`; `CatalogWriteEffects` replaces `propertyUsage` / `vocabulary` with `var lists: Set<CatalogList> = []`; `GoStore.mapWriteEffects` decodes with `compactMap(CatalogList.init(rawValue:))` (unknown keys ignored). `CatalogQueryRegistry` gets one mapping `static func invalidations(for list: CatalogList, project: ProjectKey) -> [CatalogQueryInvalidation]` (`vocabulary`, `propertyUsage` → `propertiesWorkspace`; `evidenceGraphs` → `[]` with a comment that S12-05 adds the graph list key), and `invalidations(for:project:)` loops `effects.lists` through it, keeping today's dedupe and `structure` → `propertiesWorkspace`. `FakeStore` writes `lists: [.propertyUsage]`.
+- If `api/ffi/swift_vocabulary_test.go`'s pair reader can read a Swift enum's raw values, add a pair that checks `CatalogList` against `effects.Lists`; otherwise say so in the report.
+- Ride along: regroup the imports in `registry_completeness_test.go` (CON-1).
+- Docs: `effects/README.md`; working rule "The graph list has its own effect" in `docs/deployment-plan/spike-12/deployment-plan.md` (S12-03 sets list key `evidence_graphs`; S12-05 adds one `CatalogQueryRegistry` list-key line); remove the "Catalog-wide list flags" section from `docs/ideas/shared-list-helpers.md`; the plan's Landed note records that review superseded the Out line and D-5's bool. `grep -rn "Set.Vocabulary\|Set.PropertyUsage\|Set.EvidenceGraphs\|propertyUsage\b" docs .agents` and fix what is now false.
+Check: `TestResolveLists` passes; the existing effects, graphcache, write-effects handler and Swift `CatalogQueryRegistry` tests pass unchanged in meaning; scripts/check-pr.sh PASS.
+
+**F-4 — One ref-mint-and-insert helper and one home for the UUID and empty-string binders** (from MNT-2, the round-2 MNT note, MNT-6)
+Files: new `core/database/refinsert.go` and `core/database/uuid.go` (+ tests); `core/database/nullblob.go`; every package below. Skill: `add-catalog-ref`.
+Failing test first: `database.TestInsertWithRef` *(new)* — an insert func that returns a UNIQUE conflict twice then nil returns the third minted ref; one that always conflicts returns `database.ErrRefsExhausted` after `MaxRefRetries` calls; a non-conflict error returns at once, unchanged. Red: the helper does not exist.
+Do:
+- `core/database`: `const MaxRefRetries = 8`; `var ErrRefsExhausted = errors.New("database: ref retries exhausted")`; `func Minter(prefix string) func() (string, error)` (wraps `ref.Mint(prefix)`); `func InsertWithRef(mint func() (string, error), insert func(ref string) error) (string, error)` — mint, insert, retry on `IsUniqueConflict`, return a mint error or a non-conflict error at once. Move every loop onto it: `sources`, `artifacts`, `citations`, `observations`, `subjects`, `canonicalentities`, and `evidencegraphs` (`insert` and the `EnsureRefs` backfill; its `mintRef` seam becomes `var mintRef = database.Minter(ref.PrefixEvidenceGraph)`). Each caller keeps exactly today's error mapping: `errors.Is(err, database.ErrRefsExhausted)` → that package's current exhaustion error, anything else → its current mapping. Delete each package's `maxRefRetries`.
+- `core/database/uuid.go`: `func UUIDString(id []byte) string` ("" unless a 16-byte UUID) and `func UUIDJSON(id []byte) any` (nil unless a 16-byte UUID). Move every private `uuidString` and `uuidJSON` in `core/database/**` (non-test) onto them: `artifacts`, `canonicalentities`, `citations`, `deleteimpact` (`facets.go`, `kinds.go`), `evidencegraphs`, `identityclaims`, `metadatafields`, `observations`, `properties`, `propertyterms`, `searchindex`, `sourcecredibility`, `sourcemetadata`, `sources`, `sourcetypes`, `subjectpositions`, `subjects`. If a copy behaves differently for a non-16-byte id and a test depends on it, keep the test's meaning and say which in the report.
+- `NullString(s string) any` (nil when empty) beside `NullBlob`; rename `nullblob.go` to `null.go`. Move every private `nullStr` / `nullIfEmpty` with that body onto it: `artifacts`, `audit`, `canonicalentities`, `citations`, `datevalues`, `evidencegraphs`, `files`, `identityclaims`, `namevalues`, `observations`, `sourcecredibility`, `sourcemetadata`, `sources`, `subjects`. Leave `deleteimpact.nullStringJSON` (different input).
+- Ride along: in `evidencegraphs.LinkArtifact`, drop the 16-byte check that `checkLink` repeats and keep only the repeated-id check (MNT-6).
+- Docs: `add-catalog-ref` skill (the mint loop is `database.InsertWithRef`); remove "One ref mint loop" from `docs/ideas/shared-list-helpers.md`; the plan's Landed note records that review superseded the Out line and D-8's copy.
+Check: `TestInsertWithRef` passes; every existing package test passes (`TestEnsureRefs` 3/3 included); `grep -rn "maxRefRetries\|^func uuidJSON\|^func uuidString\|^func nullStr\|^func nullIfEmpty" core --include='*.go' | grep -v _test` prints nothing; scripts/check-pr.sh PASS.
+
+**F-5 — One graph-ref fixture, one test of the repair list** (from MNT-4, MNT-7)
+Files: new `core/database/evidencegraphs/evidencegraphstest/evidencegraphstest.go` (the `observationstest` pattern), `core/catalogsession/session_test.go`, `core/onboarding/ready_test.go`, `core/catalogsession/session.go` (comment only).
+Failing test first: none (test-only move); the moved tests must still go red if `ReconcileOnOpen` drops `evidencegraphs.EnsureRefs` — check that once by commenting the line out locally, and say so in the report.
+Do: move `seedGraphRefless` and `graphRef` into `evidencegraphstest` as exported helpers (`SeedRefless(t, c)`, `Ref(t, c, id)`); both test files call them and their private copies go. Keep T-15 and T-16 (they check two openers' wiring). Ride along: the `session.go` comment names `onboarding.createCatalog` instead of "Create" (MNT-7).
+Check: `TestDo`, `TestOpenCatalogMintsGraphRefs` pass; scripts/check-pr.sh PASS.
