@@ -43,9 +43,9 @@ type state struct {
 	subjects map[string]*Subject
 	handles  map[string]*Handle
 	// undirected neighbors on the layer: subjectID → []neighborID
-	layerAdj map[string][]layerLink
-	// canon adjacency: handleID → []canonLink
-	canonAdj map[string][]canonLink
+	layerAdj map[string][]adjLink
+	// canon adjacency: handleID → []adjLink
+	canonAdj map[string][]adjLink
 
 	// mapping subjectID → handleID for fixed + accepted
 	assigned map[string][]byte
@@ -66,14 +66,9 @@ type state struct {
 	kindCands map[string][]Handle // handlesOfKind, per kind
 }
 
-// A link is one end's view of an edge: the neighbor, the bridge's key read
+// An adjLink is one end's view of an edge: the neighbor, the bridge's key read
 // from this end, and its key read from the neighbor's.
-type layerLink struct {
-	neighbor  []byte
-	key, back vocabkey.BridgeKey
-}
-
-type canonLink struct {
+type adjLink struct {
 	neighbor  []byte
 	key, back vocabkey.BridgeKey
 }
@@ -96,8 +91,8 @@ func newState(layer Layer, canon Canon, fixed []Fixed, cfg Config) *state {
 		metas:       layer.Metas,
 		subjects:    map[string]*Subject{},
 		handles:     map[string]*Handle{},
-		layerAdj:    map[string][]layerLink{},
-		canonAdj:    map[string][]canonLink{},
+		layerAdj:    map[string][]adjLink{},
+		canonAdj:    map[string][]adjLink{},
 		assigned:    map[string][]byte{},
 		fixedSet:    map[string]bool{},
 		handleOwner: map[string]string{},
@@ -117,13 +112,13 @@ func newState(layer Layer, canon Canon, fixed []Fixed, cfg Config) *state {
 	}
 	for _, b := range layer.Bridges {
 		a, c := string(b.A), string(b.B)
-		st.layerAdj[a] = append(st.layerAdj[a], layerLink{neighbor: b.B, key: b.KeyA, back: b.KeyB})
-		st.layerAdj[c] = append(st.layerAdj[c], layerLink{neighbor: b.A, key: b.KeyB, back: b.KeyA})
+		st.layerAdj[a] = append(st.layerAdj[a], adjLink{neighbor: b.B, key: b.KeyA, back: b.KeyB})
+		st.layerAdj[c] = append(st.layerAdj[c], adjLink{neighbor: b.A, key: b.KeyB, back: b.KeyA})
 	}
 	for _, e := range canon.Edges {
 		f, t := string(e.From), string(e.To)
-		st.canonAdj[f] = append(st.canonAdj[f], canonLink{neighbor: e.To, key: e.KeyFrom, back: e.KeyTo})
-		st.canonAdj[t] = append(st.canonAdj[t], canonLink{neighbor: e.From, key: e.KeyTo, back: e.KeyFrom})
+		st.canonAdj[f] = append(st.canonAdj[f], adjLink{neighbor: e.To, key: e.KeyFrom, back: e.KeyTo})
+		st.canonAdj[t] = append(st.canonAdj[t], adjLink{neighbor: e.From, key: e.KeyTo, back: e.KeyFrom})
 	}
 	for _, f := range fixed {
 		sk, hk := string(f.SubjectID), string(f.HandleID)
@@ -309,7 +304,7 @@ func (st *state) segments(subjectID []byte, h *Handle, own float64) float64 {
 		if ns == nil {
 			continue
 		}
-		var together, apart *canonLink
+		var together, apart *adjLink
 		for i := range canon {
 			ce := &canon[i]
 			if !segmentcompare.Corresponds(link.key, ce.key) {
@@ -340,10 +335,16 @@ func (st *state) segments(subjectID []byte, h *Handle, own float64) float64 {
 }
 
 // compareSegments is layer 5 on one layer link and one canon link.
-func (st *state) compareSegments(link layerLink, ns *Subject, ce canonLink, nh *Handle, placed segmentcompare.Placement, own float64) segmentcompare.Result {
+func (st *state) compareSegments(l adjLink, ns *Subject, ce adjLink, nh *Handle, placed segmentcompare.Placement, own float64) segmentcompare.Result {
+	return st.compare(l.key, ns.Kind, ns.Values, ce.key, nh.Kind, nh.Values, placed, own)
+}
+
+// compare is the one call to layer 5: two segments, each a key, the neighbor's
+// kind and its values.
+func (st *state) compare(keyA vocabkey.BridgeKey, kindA string, valuesA subjectcompare.Values, keyB vocabkey.BridgeKey, kindB string, valuesB subjectcompare.Values, placed segmentcompare.Placement, own float64) segmentcompare.Result {
 	return segmentcompare.Compare(
-		segmentcompare.Segment{Key: link.key, NeighborKind: vocabkey.SubjectType(ns.Kind), Neighbor: ns.Values},
-		segmentcompare.Segment{Key: ce.key, NeighborKind: vocabkey.SubjectType(nh.Kind), Neighbor: nh.Values},
+		segmentcompare.Segment{Key: keyA, NeighborKind: vocabkey.SubjectType(kindA), Neighbor: valuesA},
+		segmentcompare.Segment{Key: keyB, NeighborKind: vocabkey.SubjectType(kindB), Neighbor: valuesB},
 		placed, own, st.metas, st.cfg.Segment, st.cfg.Subject, st.cfg.Value)
 }
 
@@ -577,9 +578,8 @@ func (st *state) scoreFixed() {
 			}
 			// canonAdj[g] is seen from the neighbor's end, so compare the
 			// neighbor's view of this link.
-			fromNeighbor := layerLink{neighbor: s.ID, key: link.back}
 			for _, ce := range st.canonAdj[string(g)] {
-				if !segmentcompare.Corresponds(fromNeighbor.key, ce.key) || bytes.Equal(ce.neighbor, hid) {
+				if !segmentcompare.Corresponds(link.back, ce.key) || bytes.Equal(ce.neighbor, hid) {
 					continue
 				}
 				h := st.handles[string(ce.neighbor)]
@@ -760,7 +760,7 @@ func (st *state) alikeNew(a, b *Subject) bool {
 // another man's father are not neighbors to compare. It returns the sum of
 // the best segment evidence per key.
 func (st *state) newPairSegments(a, b *Subject, own float64) (float64, bool) {
-	gb := map[vocabkey.BridgeKey][]layerLink{}
+	gb := map[vocabkey.BridgeKey][]adjLink{}
 	for _, link := range st.layerAdj[string(b.ID)] {
 		gb[link.key] = append(gb[link.key], link)
 	}
@@ -786,10 +786,7 @@ func (st *state) newPairSegments(a, b *Subject, own float64) (float64, bool) {
 				if sa == nil || sb == nil || (!same && sa.Kind != sb.Kind) {
 					continue
 				}
-				res := segmentcompare.Compare(
-					segmentcompare.Segment{Key: la.key, NeighborKind: vocabkey.SubjectType(sa.Kind), Neighbor: sa.Values},
-					segmentcompare.Segment{Key: lb.key, NeighborKind: vocabkey.SubjectType(sb.Kind), Neighbor: sb.Values},
-					segmentcompare.Together, own, st.metas, st.cfg.Segment, st.cfg.Subject, st.cfg.Value)
+				res := st.compare(la.key, sa.Kind, sa.Values, lb.key, sb.Kind, sb.Values, segmentcompare.Together, own)
 				if !same && res.Neighbor.Evidence < st.cfg.AcceptScore {
 					continue
 				}
