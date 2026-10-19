@@ -36,7 +36,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 2. **Property compare.** Name: relation `Same` on a single-value property, so the outcome is agree.
 3. **Subject compare, Gracie.** `subject.Weights.person.name.Agree` is 2.5. Both sides also derive a lifespan from their birth: window 1 May 1901 to 1 May 2011, span 1 May 1901; each span lies in the other's window, so `subject.Weights.person.lifespan.Agree` 0.1 counts. Her own evidence is 2.5 + 0.1 = 2.6.
 4. **Subject compare, the birth.** Event type agrees: `subject.Weights.event.event_type.Agree` 0.5. The date agrees: `subject.Weights.event.date.Agree` 2. The birth's own evidence is 0.5 + 2 = 2.5.
-5. **Segment compare.** Gracie is the subject of the birth, and `segment.Cardinality.birth` is `one`, so a matching neighbor earns `segment.OneSupport` 1.5 plus `segment.OneCredit` 0.5 of the birth's own evidence: 1.5 + 0.5 × 2.5 = 2.75.
+5. **Segment compare.** Gracie is the subject of the birth, and `segment.One` holds `participation·subject·birth`, so a matching neighbor earns `segment.OneSupport` 1.5 plus `segment.OneCredit` 0.5 of the birth's own evidence: 1.5 + 0.5 × 2.5 = 2.75.
 6. **Graph alignment.** Total evidence is 2.6 + 2.75 = 5.35. That clears `alignment.AcceptBar` (2), so the walk places the pair, and it is at least `alignment.Bands.Strong` (4), so the band is strong. Nothing conflicted, so the row is not contested.
 
 ## Glossary
@@ -209,7 +209,8 @@ These are identifiers or catalog data, not tunables, and have no row: the vocabu
 | `DefaultNames.Frequency`, `FrequencyDiscount`, `FrequencyMinPeople`; `graphalign` `MPrior`, `UPrior`, frequency `ValueTypeScale` entries | Frequency weighting is descoped |
 | `graphalign` `PropertyAgreement` | Frequency weighting is descoped; the toponym bonus is folded into `subject.Weights.place.toponym.Agree` |
 | `graphalign` `PropertyScale`, `ValueTypeScale` (weight and contradiction per property and per value type) | Promote scores properties with `subject.Weights` (S11-13); a property with no weight there scores nothing |
-| `graphalign` `FanOutLowMax`, `FanOutUnknown` | Replaced by declared cardinality |
+| `graphalign` `FanOutLowMax`, `FanOutUnknown`, the fan-out scan (`Stats.FanOut`, `sqlFanOut`) | Replaced by declared cardinality (`segment.One`) |
+| `graphalign` `SignatureScale` | Became `segment.Gates` |
 | `graphalign` `ValueTypeScale` floors other than date, `PropertyScale` sex / gender `Floor` 1 | Replaced by relation outcomes and the `Near` minimum |
 | `graphalign` `DefaultConfig.ConflictPenalty` | Value carried into `subject.Weights.event.date.Conflict` and `subject.Weights.place.toponym.Conflict`; its second role, the conflict-with-decision margin, is replaced by the contested marker and the settle margin |
 | `graphalign` `mFor` fallback 0.85, `uOr` fallback 0.1 | Frequency weighting is descoped |
