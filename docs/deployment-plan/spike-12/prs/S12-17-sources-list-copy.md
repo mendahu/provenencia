@@ -1,7 +1,7 @@
 # S12-17 — Copy Source from the Sources list
 
 **Status:** Landed in [#488](https://github.com/mendahu/provenencia/pull/488) (2026-10-18)
-**Landed:** No code differs from the plan. One behavior note: the disabled Clear region row now has `index: nil`, as D-2's `PVActionMenuRows` specifies; before, it kept index 0, which no code used for a disabled row. Manual check §10 steps 1-11 are left to the user.
+**Landed:** One difference, at the user's request after review (round 1 UX-1): against D-8, the Source cover gets one new string, `sources.page.thumbnailImageLabel` ("Source cover"), as its VoiceOver label while it shows an Artifact image (it read "No preview"), and the cover drops its `.accessibilityHint`, which promised right-click options even when the actions rotor is empty; the `thumbnailMenuHint` tooltip stays. One behavior note: the disabled Clear region row now has `index: nil`, as D-2's `PVActionMenuRows` specifies; before, it kept index 0, which no code used for a disabled row. Manual check §10 steps 1-11 are left to the user.
 **Spike / slice:** Spike 12 · Slice 1 — Copy Source
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S12-D6](../design/archive/S12-D6-sources-list-copy.md), board agreed 2026-10-18

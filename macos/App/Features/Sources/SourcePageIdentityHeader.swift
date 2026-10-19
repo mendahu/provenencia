@@ -45,9 +45,11 @@ struct SourcePageIdentityHeader: View {
             mediaType: identityCover.mediaType,
             originalFilename: identityCover.originalFilename,
             typeIconKey: identityCover.typeIconKey,
-            size: 72
+            size: 72,
+            imageLabel: L10n.string(L10n.Sources.thumbnailImageLabel)
         )
-        .accessibilityHint(L10n.string(L10n.Sources.thumbnailMenuHint))
+        // No VoiceOver hint: the actions rotor lists the menu's items, and the
+        // type-icon cover has none to promise.
         .accessibilityIdentifier("sources.page.cover")
         .pvRightClickMenu(
             title: L10n.Sources.thumbnailMenuTitle,

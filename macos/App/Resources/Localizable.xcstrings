@@ -8862,8 +8862,20 @@
         }
       }
     },
+    "sources.page.thumbnailImageLabel": {
+      "comment": "Accessibility label of the Source identity cover thumbnail while it shows an Artifact image",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source cover"
+          }
+        }
+      }
+    },
     "sources.page.thumbnailMenuHint": {
-      "comment": "Accessibility hint on the Source identity cover thumbnail",
+      "comment": "Hover tooltip on the Source identity cover thumbnail",
       "extractionState": "manual",
       "localizations": {
         "en": {

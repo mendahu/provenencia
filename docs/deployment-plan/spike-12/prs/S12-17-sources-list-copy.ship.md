@@ -18,7 +18,7 @@ Verdicts: CON changes needed · MNT clean · UX clean · SEC+PRF clean.
 | --- | --- | --- | --- | --- | --- |
 | CON-1 (+ MNT outside-lens) | CON | major | The plan has no **Landed** note | Fix now → F-1 | verified: `rg Landed` on the plan finds only the Status line; the DoD and STEP-6 require the note (S12-02 L4 shape) |
 | MNT-1 | MNT | minor | README says every right-click menu is `.pvRightClickMenu`; the toolbar's Back/Forward history menu is a separate anchored right-click path | Fix now → F-2 (rides along: a line this PR adds, in a docs fix round) | verified: `README.md` L161; `WorkspaceToolbar.swift` L511–530 `PVRightClickCatcher` + `PVContextMenuPanel` on `HistoryJumpMenuModel` |
-| UX-1 | UX | minor | Source cover is read as "No preview" while it shows an image, and now carries a VoiceOver action | Follow-up | predates this PR (`coverThumbnail` passes no `imageLabel`; `CachedThumbnail.swift` L58–63); the fix needs a new string, against D-8 |
+| UX-1 | UX | minor | Source cover is read as "No preview" while it shows an image, and now carries a VoiceOver action | Follow-up → fixed in this PR at the user's request (see After round 2) | predates this PR (`coverThumbnail` passes no `imageLabel`; `CachedThumbnail.swift` L58–63); the fix needs a new string, against D-8 |
 | MNT (outside lens → UX) | UX | minor | Type-to-select can highlight the disabled Clear region row | Follow-up | unchanged from before this PR: `keyboardTitles` keeps every slot, as the old hand-written array did |
 | MNT-2 | MNT | nit | `pvContextMenu` doc says `keyboardTitles` are "of a right-click menu" | Fix now → F-2 (same docs commit, one word) | `PVContextMenu.swift` L277 |
 | MNT-3 | MNT | nit | README says "one VoiceOver action per item"; only enabled items get one | Fix now → F-2 | `README.md` L161 |
@@ -47,4 +47,7 @@ Reviewers: CON only (the only lens with a Fix-now major). Scope `ad0968db...9aac
 Verdict: CON clean. CON-1 **Resolved**. No new findings.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: UX-1 (cover read as "No preview"), Clear-menu type-select on a disabled row · to user: — · CON miss: none
+Gate PASS · CI pending · open: none · follow-ups: Clear-menu type-select on a disabled row; toolbar history menu onto `PVActionMenuRows` · to user: — · CON miss: none
+
+## After round 2 — user request
+The user asked for UX-1 to be done in this session, so the orchestrator fixed it on this branch: `coverThumbnail` passes `imageLabel: L10n.string(L10n.Sources.thumbnailImageLabel)` (new string "Source cover"), and the cover's `.accessibilityHint` is dropped (the `.help` tooltip stays; the hint string's comment now says tooltip). Gate PASS. Not re-reviewed: one label, one removed modifier, one catalog entry. Recorded in the plan's Landed note.
