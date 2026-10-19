@@ -5,9 +5,9 @@
 **View:** Sources list — a row's right-click menu with Copy…
 **Implements later as:** PR **S12-17**
 **Depends on:** S12-D1 (the Copy Source form this menu opens), S12-02
-**Related:** [`../source-structure.md`](../source-structure.md#copy-source) (the design), [`../deployment-plan.md`](../deployment-plan.md) working rule "Entry points". S12-D5 (Sources list graph accordion, S12-14) later puts graph sub-rows under each row.
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** [`../source-structure.md`](../../source-structure.md#copy-source) (the design), [`../deployment-plan.md`](../../deployment-plan.md) working rule "Entry points". S12-D5 (Sources list graph accordion, S12-14) later puts graph sub-rows under each row.
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -124,4 +124,4 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 ## 7. Handoff
 
-When the board is agreed: move this brief to the spike's `design/archive` folder, update [`README.md`](README.md), and plan S12-17 with `plan-pr`.
+When the board is agreed: move this brief to the spike's `design/archive` folder, update [`README.md`](../README.md), and plan S12-17 with `plan-pr`.

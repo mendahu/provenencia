@@ -110,7 +110,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | S12-01 | Copy Source engine | 1 | `core/database/sourcecopy` (draft read, create from draft) and FFI `CopySource` | — | — | [Plan](prs/S12-01-copy-source-engine.md) | Landed #478 |
 | S12-02 | Copy Source form | 1 | The Copy… form, reusing Add Source's title and type fields; Copy… on the Source page | S12-D1 | S12-01, S12-D1 | [Plan](prs/S12-02-copy-source-form.md) | Landed #485 |
-| S12-17 | Copy Source from the Sources list | 1 | Copy… in a Sources list row's context menu opens the S12-02 form | S12-D6 | S12-02, S12-D6 | [Plan](prs/S12-17-sources-list-copy.md) | Planned |
+| S12-17 | Copy Source from the Sources list | 1 | Copy… in a Sources list row's context menu opens the S12-02 form; kit action menu items and `pvRightClickMenu`, with the cover, portrait and Clear menus moved onto them | S12-D6 | S12-02, S12-D6 | [Plan](prs/S12-17-sources-list-copy.md) | Landed #488 |
 | S12-16 | Add Source reports its effects | 1 | `CreateSourceResponse` gains `WriteEffects`; Add Source applies them with `.createdSource` and drops its Sources list write-through, as Copy Source does | — | S12-02 | — | Scoped |
 | S12-03 | Evidence graphs in the catalog | 2 | Tables, `subjects.graph_id`, `GPH` refs (`EnsureRefs`), Default backfill; `evidencegraphs` reads, link writer and `SoleGraphTx`; Source create mints Default; Artifact create links | — | — | — | Scoped |
 | S12-04 | Graph lifecycle | 2 | `evidencegraphs` `List` (the one read), create, update, delete with their refusals | — | S12-03 | — | Scoped |
@@ -228,7 +228,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-17 — Copy Source from the Sources list
 
-**Ships.** A right-click menu with Copy… on a Sources list row's page zone and the row's accessibility action, opening the S12-02 form for that Source (`SourcesModel.copying` / `openCopy`, one `.sourceCopyDialog` line).
+**Ships.** A right-click menu with Copy… on a Sources list row's page zone and the row's accessibility action, opening the S12-02 form for that Source (`SourcesModel.copying` / `openCopy`, one `.sourceCopyDialog` line), and the kit's `PVActionMenuItem` / `pvRightClickMenu`, with the Source cover, Person portrait and Citation composer Clear menus moved onto them.
 **Not this PR.** Other row menu items; any change to the form.
 **Check.** The bar's Copy Source outcome from a Sources list row's context menu.
 **Context.** Working rule "Entry points"; brief S12-D6; `add-ui-component`, `add-localized-string`. After S12-02, which builds the form.

@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-17 — Copy Source from the Sources list
+
+**Landed 2026-10-18** in [#488](https://github.com/mendahu/provenencia/pull/488). A researcher can right-click a Sources list row's page zone, choose Copy…, and get the Copy Source form for that Source; saving opens the copy's page. The kit gains action menu items (`PVActionMenuItem`, `PVActionMenuRows`) and `pvRightClickMenu`, which adds a right-click menu's state, trigger and one VoiceOver action per item. The Source cover and Person portrait menus moved onto `pvRightClickMenu` (the cover now offers Revert to default to VoiceOver), and the Citation composer Clear menu onto the items layer.
+
 ## S12-02 — Copy Source form
 
 **Landed 2026-10-18** in [#485](https://github.com/mendahu/provenencia/pull/485). A researcher can choose Copy… in a Source page's header (now Jump to graph, Copy, Delete) and get a form with the Add Source title and type fields, prefilled `Copy of <title>` and the original's type. Description, Metadata and Credibility are checked unless the original has none, and an Artifact checklist with All Artifacts lets them drop any Artifact. Saving makes the copy through `copySource` and opens its page, with no toast. A failed copy keeps every choice and a failed read of the original's parts offers Read again. Add Source, Copy Source and the Source page type editor now share one title and type form: errors show as you edit and Create is disabled while the form is invalid. Artifacts share one display title and fileless-icon rule, and `PVSkeletonBar` is lifted from the list skeleton. Copy from a Sources list row is S12-17.

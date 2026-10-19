@@ -1,9 +1,9 @@
 # S12-17 — Copy Source from the Sources list
 
-**Status:** Planned
+**Status:** Landed in [#488](https://github.com/mendahu/provenencia/pull/488) (2026-10-18)
 **Spike / slice:** Spike 12 · Slice 1 — Copy Source
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S12-D6](../design/S12-D6-sources-list-copy.md), board agreed 2026-10-18
+**Brief:** [S12-D6](../design/archive/S12-D6-sources-list-copy.md), board agreed 2026-10-18
 **Board:** [Claude Design — Sources List](https://claude.ai/design/p/118d2eb7-3b46-4912-a688-09ec7b0070fa?via=share), file `Sources List Frame.dc.html`, presets `rowmenu` (the one-item menu open on a row) and `copied` (the copy as the top row). If you cannot open it, §6 macOS describes the frames in words; build from §6
 **Depends on:** S12-02 ([plan](S12-02-copy-source-form.md), landed in #485), S12-D6 (agreed)
 **Blocks:** —

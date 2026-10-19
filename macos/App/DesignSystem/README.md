@@ -158,6 +158,7 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Field | `Components/Field/PVField.swift` |
 | Input | `Components/Input/PVInput.swift` |
 | Select | `Components/Select/PVSelect.swift` (native popup contract on `PVContextMenu`; see "The Select contract" below) |
+| ContextMenu | `Components/ContextMenu/PVContextMenu.swift`, `PVActionMenu.swift` (action menus are `PVActionMenuItem` lists: a right-click menu is one `.pvRightClickMenu`, which adds the state, the trigger and one VoiceOver action per item; a button-opened menu draws `PVActionMenuRows` inside `.pvContextMenu`, with `keyboardTitles` from `PVActionMenuItem.keyboardTitles`; `PVSelect` uses `.pvContextMenu` directly) |
 | Toast | `Components/Toast/PVToast.swift` |
 | LogoMark | `Components/LogoMark/PVLogoMark.swift` |
 | SidebarNav | `Components/SidebarNav/PVSidebarNav.swift` (added for the S2-01 workspace chrome; ports that board's revised `collapsed`-capable `SidebarNav.jsx`); an item's icon is a `PVGlyph`, a symbol or a mark (S10-19) |
@@ -361,7 +362,7 @@ VoiceOver will likely say **button** (or “adjustable”) rather than
 “pop-up button”. Same honesty bar as `PVTable` not claiming a table grid.
 
 Not `PVComboBox` (filter-as-you-type), not `PVContextMenu` action menus
-(click-to-open overflow / right-click), and not segmented `PVChip` groups.
+(`PVActionMenuItem` lists, button-opened or `.pvRightClickMenu`), and not segmented `PVChip` groups.
 Date-value calendar / month and `PVTable.filterMenu` remount on
 `PVSelect`. Do not add a second popup-select kit.
 
