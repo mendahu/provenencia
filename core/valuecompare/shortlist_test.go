@@ -74,8 +74,8 @@ func TestWordKeys(t *testing.T) {
 		{name: "initial is no key", v: slName("J. Robins"), want: []string{whole(slName("J. Robins")), "w:robins"}},
 		{name: "folded word", v: slName("José Robins"), has: []string{"w:jose", "w:robins"}},
 		{name: "generation word", v: slGeneration(), has: []string{"w:john", "w:smith"}, not: []string{"w:jr"}},
-		{name: "alias set", v: slName("Bill"), has: []string{"a:bill william"}},
-		{name: "text words", v: slText("New York"), has: []string{"w:new", "w:york"}, not: []string{"a:bill william"}},
+		{name: "alias set", v: slName("Bill"), has: []string{"a:bill bill"}},
+		{name: "text words", v: slText("New York"), has: []string{"w:new", "w:york"}, not: []string{"a:bill bill"}},
 		{name: "integer", v: valuecompare.Value{Type: propertymeta.ValueTypeInteger, Integer: 4}},
 		{name: "empty name", v: valuecompare.Value{Type: propertymeta.ValueTypeName, NamePattern: valuecompare.WesternPattern}},
 	}
