@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"slices"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
@@ -1230,5 +1232,120 @@ func TestProposeKeepsTheLifespanOffTheSheet(t *testing.T) {
 		if ex.PropertyKey == string(vocabkey.PropertyLifespan) {
 			t.Fatalf("a lifespan line on the sheet: %+v", ex)
 		}
+	}
+}
+
+// datedBirth is an event cited as a birth in a year.
+func (f *fixture) datedBirth(src sources.Source, art artifacts.Artifact, y int) subjects.Subject {
+	f.t.Helper()
+	s := f.bare(src, "event")
+	f.cite(art, s,
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.prop("date").ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}},
+	)
+	return s
+}
+
+// The loader reads a Source's links from the connect rules: one bridge for
+// each registered bridge type, whatever its term.
+func TestLayerBridgesCoverEveryConnectRule(t *testing.T) {
+	f := newFixture(t)
+	ann := f.person(f.source, f.artifact, "Ann Ames")
+	bob := f.person(f.source, f.artifact, "Bob Ames")
+	birth := f.birth(f.source, f.artifact)
+	york := f.place(f.source, f.artifact, "York")
+	ontario := f.place(f.source, f.artifact, "Ontario")
+	f.participation(f.source, f.artifact, ann, birth, "subject")
+	f.locate(f.source, f.artifact, birth, york)
+	f.relationship(f.source, f.artifact, ann, bob, "parent")
+	f.placeRel(f.source, f.artifact, york, ontario, "part_of")
+
+	bridges, err := promotealign.LayerBridges(f.c, f.source.ID)
+	must(t, err)
+	var got []string
+	for _, b := range bridges {
+		got = append(got, string(b.KeyA.Type))
+	}
+	want := connectrules.BridgeTypeKeys()
+	slices.Sort(got)
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Fatalf("bridge types %v, want %v", got, want)
+	}
+}
+
+// A birth placed on another event than the handle's birth subtracts from the
+// person: a person has one birth.
+func TestProposeBirthOnAnotherPersonSubtracts(t *testing.T) {
+	f := newFixture(t)
+	aAnn := f.person(f.source, f.artifact, "Ann Ames")
+	aBirth := f.datedBirth(f.source, f.artifact, 1817)
+	f.participation(f.source, f.artifact, aAnn, aBirth, "subject")
+	annH := f.promote(aAnn)
+	f.promote(aBirth)
+
+	srcC, artC := f.newSource("Register")
+	cMary := f.person(srcC, artC, "Mary Ames")
+	cBirth := f.datedBirth(srcC, artC, 1817)
+	f.participation(srcC, artC, cMary, cBirth, "subject")
+	f.promote(cMary)
+	cBirthH := f.promote(cBirth)
+
+	srcB, artB := f.newSource("Obituary")
+	bAnn := f.person(srcB, artB, "Ann Ames")
+	bBirth := f.datedBirth(srcB, artB, 1817)
+	f.participation(srcB, artB, bAnn, bBirth, "subject")
+
+	got := f.propose(srcB.ID, []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: cBirthH.Entity.ID}})
+	row := rowFor(got, bAnn.ID)
+	if row.Target == graphalign.TargetHandle && bytes.Equal(row.HandleID, annH.Entity.ID) {
+		t.Fatalf("person row %+v filed on the Ann whose birth is another event", row)
+	}
+}
+
+// A location has no event type on either side: a place reached through a
+// fixed birth files on the other record's place.
+func TestProposePlaceThroughALocation(t *testing.T) {
+	f := newFixture(t)
+	aBirth := f.birth(f.source, f.artifact)
+	aYork := f.place(f.source, f.artifact, "York")
+	f.locate(f.source, f.artifact, aBirth, aYork)
+	birthH := f.promote(aBirth)
+	yorkH := f.promote(aYork)
+
+	srcB, artB := f.newSource("Register")
+	bBirth := f.birth(srcB, artB)
+	bYork := f.place(srcB, artB, "York")
+	f.locate(srcB, artB, bBirth, bYork)
+
+	got := f.propose(srcB.ID, []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: birthH.Entity.ID}})
+	row := rowFor(got, bYork.ID)
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, yorkH.Entity.ID) || row.Reason != graphalign.ReasonVia {
+		t.Fatalf("place row %+v, want York's handle via the birth", row)
+	}
+}
+
+// "John child of Mary" reads as "Mary parent of John": the walk from Mary
+// reaches John's handle through the canonical term.
+func TestProposeChildOfReadsAsParentOf(t *testing.T) {
+	f := newFixture(t)
+	aMary := f.person(f.source, f.artifact, "Mary Smith")
+	aJohn := f.person(f.source, f.artifact, "John Smith")
+	f.relationship(f.source, f.artifact, aMary, aJohn, "parent")
+	maryH := f.promote(aMary).Entity.ID
+	johnH := f.promote(aJohn).Entity.ID
+
+	srcB, artB := f.newSource("Baptism")
+	bJohn := f.person(srcB, artB, "John Smith")
+	bMary := f.person(srcB, artB, "Mary Smith")
+	f.relationship(srcB, artB, bJohn, bMary, "child")
+
+	got := f.propose(srcB.ID, []graphalign.Fixed{{SubjectID: bMary.ID, HandleID: maryH}})
+	row := rowFor(got, bJohn.ID)
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, johnH) || row.Reason != graphalign.ReasonVia {
+		t.Fatalf("John row %+v, want his handle via Mary", row)
+	}
+	if row.Via == nil || row.Via.Key.Term != "child" {
+		t.Fatalf("via %+v, want term child", row.Via)
 	}
 }
