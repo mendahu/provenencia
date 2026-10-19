@@ -143,7 +143,7 @@ Each module answers three questions:
 
 A depiction's value is its image File; the loader reads it through `depictionvalue.Readable`, and the cache stores it as `value_image_file_id`. `likeness` is `multiple`, so a person's images form a gallery, built from the records whose own outcome is `kept` or `weak` ([conclusion layer §6](conclusion-layer-data-model.md#6-canonical_entities)). The Person page lists no depiction field.
 
-The same *same value* test (`autoreconcile.Compatible`) decides which Promote comparisons are pinned ([`promote-graph-alignment.md`](promote-graph-alignment.md) §6), so a pin and a Person page never disagree about whether two values match. Scoring uses value compare's similarity, so a partial resemblance can raise a match without being pinned.
+The same *same value* test (`autoreconcile.Compatible`) decides which Promote comparisons are pinned ([`matching-model.md`](matching-model.md)), so a pin and a Person page never disagree about whether two values match. Scoring uses value compare's similarity, so a partial resemblance can raise a match without being pinned.
 
 ## 7.1 Dates
 

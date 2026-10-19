@@ -17,10 +17,10 @@ func defaultSubject() subjectcompare.Rules {
 			},
 			vocabkey.Event: {
 				vocabkey.PropertyEventType: {Agree: 0.5, Conflict: 20}, // estimate: generic alone; a birth is never a death
-				vocabkey.PropertyDate:      {Agree: 2, Conflict: 3},    // estimate: the cold-start ln(0.85 / 0.1) S11-24 removed, rounded; ConflictPenalty
+				vocabkey.PropertyDate:      {Agree: 2, Conflict: 3},    // estimate: the cold-start ln(0.85 / 0.1) S11-24 removed, rounded; carried from graphalign ConflictPenalty
 			},
 			vocabkey.Place: {
-				vocabkey.PropertyToponym: {Agree: 3, Conflict: 3}, // estimate: the cold-start + toponym bonus S11-24 removed, rounded; ConflictPenalty
+				vocabkey.PropertyToponym: {Agree: 3, Conflict: 3}, // estimate: the cold-start + toponym bonus S11-24 removed, rounded; carried from graphalign ConflictPenalty
 			},
 		},
 		Pools: map[vocabkey.SubjectType]map[vocabkey.PropertyKey]subjectcompare.Pool{

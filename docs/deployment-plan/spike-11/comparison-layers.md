@@ -25,7 +25,7 @@ Packages: layer 1 is **value compare** (`core/valuecompare`), and layer 2 is **p
 | 3 | **Subject comparison** | How alike are these two Subjects on their own values? | Decided in shape (§ Layer 3) |
 | 4 | **Entity comparison** | Does this Subject belong with this entity? | Built in S11-11 (§ Entities): subject comparison against the entity's reconciled conclusion |
 | 5 | **Segment comparison** | Does this neighbor, through this bridge, line up? | Decided in shape (§ Segments) |
-| 6 | **Graph alignment** | Which handle is each Subject on the layer? | Decided in shape (§ Layer 6 procedure) |
+| 6 | **Graph alignment** | Which handle is each Subject on the layer? | Built in S11-16 (§ Layer 6 procedure) |
 
 Layers 1–3 are **discrete**: one thing against one thing. An entity is a group of Subjects, so comparing against one is one-to-many. Layer 4 turns that back into one-to-one by comparing against the group's conclusion.
 
@@ -320,7 +320,8 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 **A segment** is two primary Subjects joined by a bridge: primary – bridge – primary. Segment comparison compares a segment on the layer with one in the research graph:
 - **The neighbor** by entity comparison (layer 4).
-- **The bridge** as a typed key: its role or relationship term in canonical direction, the end it is read from, and the event type on a participation. A term and its inverse correspond with the ends swapped. Its own properties (dates) are compared in S11-16 if a golden needs them.
+- **The bridge** as a typed key: its role or relationship term in canonical direction, the end it is read from, and the event type on a participation. A term and its inverse correspond with the ends swapped. Its own properties (dates) are not compared: no golden needs them.
+- **Placement:** `Together` (the layer neighbor is placed on this research neighbor), `Apart` (placed elsewhere) or `Unplaced` (not placed yet: entity compare on the neighbor decides, with causes `unplaced_differs` and `unplaced_unsure`).
 - **Output:** outcome (match, partial, conflict, unknown), similarity, evidence, detail. No walking, no decisions.
 
 **A segment behaves like a property whose value is a neighbor,** with the same cardinality rule as property comparison:
@@ -348,6 +349,8 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 4. **Accept, then compare segments around the pair only.** Pop the best pair; accept it if it clears the accept bar and keeps one-to-one. On accept, run segment comparison (layer 5) for each layer neighbor of the Subject against each corresponding research neighbor of the handle: degree × degree, a handful. Re-score and re-queue what changed; skip stale queue entries by version.
 5. **Settle dirty pairs.** A pair is dirty when a neighbor was placed, moved or released after it was scored. When the queue empties, re-score only dirty pairs. A pair that falls under the bar, or that a rival beats by the settle margin, is released and re-queued, which makes its neighbors dirty. Changes ripple only as far as they reach. A round cap is the safety net. This replaces today's refinement loop (`refineOneHop`), which re-scores everything each round. Each move has a reason ("Alice moved because Gracie was placed"), which feeds the page's "updated because…" mark.
 6. **Remember results across re-runs: last, and only if a test shows it's needed.** Layers 1–4 are pure in (Subject values, handle values), and a decision changes placements, not values, so their results could be memoized while the Promote page is open. This is the final step of the plan, gated by a performance test on a large Source. No pre-optimizing: if the test passes without it, it isn't built. If built, an invariant checks that cached and uncached runs give identical proposals.
+
+**Built in S11-16.** `graphalign.Align(layer, canon, fixed, cfg)` is the procedure: the loader fills `Canon.Candidates` through `graphalign.Candidates` (similarity at least `MinSimilarity`, the best `TopK`, every tie at the cutoff up to `TieCap`); `place` nominates the handles a placed pair's links point at and marks placed neighbors dirty; `settle` re-scores only dirty pairs and releases a pair under the bar or led by a free rival by the settle margin, at most `SettleRounds` times. A link whose neighbor is not placed yet is segment compare's `Unplaced`. Rows carry `Flags.Contested` and `Row.Move` with the move reasons `neighbor_placed`, `neighbor_moved` and `neighbor_released`; the wire carries neither until S11-17.
 
 **Registry knobs this adds:** shortlist keys per kind, K, the accept bar, the settle margin and round cap.
 

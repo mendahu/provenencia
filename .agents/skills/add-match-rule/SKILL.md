@@ -4,7 +4,7 @@ description: >-
   Adds or changes a Provenencia matching layer rule: a registry knob, a value
   comparer, a relation, cause or unit code, or a new layer package
   (core/valuecompare, core/propertycompare, core/subjectcompare,
-  core/subjectprofile, core/segmentcompare, core/shortlist, core/matchregistry). Use when adding a number the
+  core/subjectprofile, core/segmentcompare, core/shortlist, core/graphalign, core/matchregistry). Use when adding a number the
   matching algorithm tunes, a comparer for a value type, a Relation or Cause
   code, a Subject property weight, pool or period, an entity profile rule, a
   layer package, or a row in the matching-model.md knob inventory.
@@ -20,7 +20,7 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 
 ## Rules that hold everywhere
 
-- **Layers are pure.** No catalog, no I/O, no build tags. A layer package never imports `core/database`, directly or through another package, and never imports `core/matchregistry`; only `core/subjectprofile` imports `core/autoreconcile`, to turn its output into a profile.
+- **Layers are pure.** No catalog, no I/O, no build tags. A layer package never imports `core/database`, directly or through another package, and never imports `core/matchregistry` (`TestLayerPackages` walks every non-test import chain); only `core/subjectprofile` imports `core/autoreconcile`, to turn its output into a profile.
 - **Types live in the layer, values in the registry.** The layer declares its `Rules` groups (field types and doc comments, no numbers). `core/matchregistry` declares `Registry` and the numbers, with a comment on each saying where it came from. A layer takes its section as an argument.
 - **`matchregistry.Default()` builds fresh slices and maps** on each call. A test overrides a section by editing its own copy.
 - **Numbers only in `matchregistry`.** A layer package marked `numbers` in `layerPackages` may hold no numeric literal other than 0 and 1. A fact that is not a tunable (a calendar fact) goes in its pure value package.
@@ -29,7 +29,8 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 - **Layer 2 (`core/propertycompare`) reads relations, never numbers.** `Compare` takes the `value` section and has no section of its own; the outcome comes from the speaking pair's relation through `outcomeOf`, and relations rank with `valuecompare.Stronger`, the one relation order. A value carries only `Negative` and `Neutral` beside its layer 1 value: support, standing and denied are turned into positives and negatives by the profile builder before they reach it.
 - **Layer 3 (`core/subjectcompare`) turns outcomes into points.** It reads only the lead properties in `subject.Weights` for the kind; agree earns the agree weight, partial agree weight × similarity, conflict loses the penalty and weighs it in similarity. Registry maps are keyed by `vocabkey.SubjectType` and `vocabkey.PropertyKey`, written as `vocabkey` constants, never as string literals; no other package declares a key type. Value type and cardinality come from the catalog as `Metas`, never from the registry; a derived property's meta is fixed beside the rule that reads it (the lifespan's date meta). `subjectcompare.Points` is what one property adds to evidence, for the score and the sheet alike. `Rules.Lead` maps a pooled or period property to its lead. `Rules.Derived` names a lead with no catalog row (the lifespan); a new derived property is declared in the registry, not detected from a missing meta. Tests build values with `propertycomparetest` and metas with `subjectcomparetest.Metas`. `subject.Lifespans` declares a lifespan lead (the window) and its `Span`; `Compare` checks each side's span against the other's window, and a lifespan's agree means consistent, whatever partial relation spoke.
 - **The profile builder (`core/subjectprofile`) turns the reconciler's output into a Subject.** `Build` keeps a Property's displayed values (`ReconciledValue.Displayed`) as positives and its denied values as negatives, and leaves everything else out; `ForSubject` turns a Subject's own Observations into positives and negatives through the same conversion. Layer 3 compares either like any Subject, so entity compare is `Build` then `subjectcompare.Compare`. `Options.Excluding` reconciles each Property those members recorded again without their candidates. Callers pass `Build` `matchregistry.Default().Value`, the rules the cache was built with. The builder reads `subject.Lifespans` (passed in) to build a person's window and span from its life events.
-- **Layer 5 (`core/segmentcompare`) scores one link.** Keys come from `Key` with the catalog's `Terms`; correspondence is `Corresponds` and nothing else. `One` (keys with an empty `End`, each holding from both ends) and `Gates` (per end) are keyed by `vocabkey.BridgeKey`. Placement (`Together` or `Apart`) comes from layer 6; the neighbor's evidence comes through layer 3. Tests build terms with `segmentcomparetest.Terms`.
+- **Layer 5 (`core/segmentcompare`) scores one link.** Keys come from `Key` with the catalog's `Terms`; correspondence is `Corresponds` and nothing else. `One` (keys with an empty `End`, each holding from both ends) and `Gates` (per end) are keyed by `vocabkey.BridgeKey`. Placement (`Together`, `Apart` or `Unplaced`) comes from layer 6; the neighbor's evidence comes through layer 3. Tests build terms with `segmentcomparetest.Terms`.
+- **Layer 6 (`core/graphalign`) walks and decides.** Candidates come from the shortlist through `Candidates` or from a link to a placed pair; scores are replaced, never kept higher; placement is `Together`, `Apart` or `Unplaced`; bands, contested and moves are row output. Its section is `graphalign.Rules`.
 - **Shortlist keys come from layer 1.** `WordKeys` and `YearReach` make them; `core/shortlist` only buckets and indexes. A lead whose agree weight alone can reach `WeakScore` needs a shortlist entry (`TestUnkeyedEvidenceStaysUnderTheWeakBand`).
 - **A doubled weight is written `w + w`.** The numbers guard allows no literal 2 in a layer package.
 - **Dates compute similarity through `falloff`.** Calendar facts (days in a month, day numbers, the year line) live in `core/datevalue/calendar.go`, not in the layer. The window algebra is `valuecompare.Window` (`core/valuecompare/datewindow.go`): `Overlaps`, `Contains`, `Intersect` as methods, and `AboutEnds` with `EndsWindow` to read a date as compared. `ShiftYears` is the year move on an end (then `boundEnd` places it); do not move years by hand.
@@ -38,7 +39,7 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 
 ## Add a knob
 
-1. Add the field and a doc comment saying what it changes to the layer's `Rules` group (`core/valuecompare/rules.go`).
+1. Add the field and a doc comment saying what it changes to the layer's `Rules` group (`core/valuecompare/rules.go`; `core/graphalign/rules.go` for a walk knob).
 2. Set the value in `core/matchregistry/<section>.go` with a comment naming its source.
 3. Add a row to the knob inventory in [`docs/matching-model.md`](../../../docs/matching-model.md) (key, start, source, changes). The key is the dotted path of the field.
 4. When the group's layer has landed, delete its prefix from `notYetBuilt` in `core/matchregistry/inventory_test.go`. `TestKnobInventoryMatchesRegistry` fails on a field with no row, a row with no field, and a prefix that still matches.
@@ -72,6 +73,8 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 
 A relation, a relation cause or a unit is layer 1's: add the constant in `core/valuecompare/valuecompare.go`, a new relation also in `relationOrder` at its strength, its outcome in `propertycompare.outcomeOf` and whether a negative contradicts it in `contradicts` (`TestEveryRelationHasAnOutcome` fails until both are decided), and a cause to the cause list in `comparison-layers.md` §Detail. An outcome cause or an exclude reason is layer 2's: add it in `core/propertycompare/propertycompare.go` and to `comparison-layers.md` §Layer 2 Output. A segment cause is layer 5's: add it in `core/segmentcompare` and to the layer 5 output list in `comparison-layers.md` §Segments. Codes are strings; they reach the wire and UI copy later.
 
+A move reason is layer 6's: a `Reason` constant in `core/graphalign/types.go`.
+
 ## Add a link rule
 
 A one-cardinality link is a `One` key, and a gate a `Gates` entry, in `core/matchregistry/segment.go`, each with a source comment. Add its inventory row named by the key's `String()` (`segment.Gates.place_relationship·part_of·from.MinOwnEvidence`), make sure `TestSegmentSectionMatchesSeed` passes, and add a `TestCompare` row in `core/segmentcompare`.
@@ -83,7 +86,7 @@ Add a row to `layerPackages` in `core/matchregistry/guard_test.go`, with `number
 ## Check
 
 ```
-go test ./core/valuecompare/... ./core/propertycompare/... ./core/subjectcompare/... ./core/subjectprofile/... ./core/segmentcompare/... ./core/shortlist/... ./core/matchregistry/...
+go test ./core/valuecompare/... ./core/propertycompare/... ./core/subjectcompare/... ./core/subjectprofile/... ./core/segmentcompare/... ./core/shortlist/... ./core/graphalign/... ./core/matchregistry/...
 ```
 
 and `CGO_ENABLED=1 go test -tags fts5 ./core/database/subjectvocab/` after a subject section change.
