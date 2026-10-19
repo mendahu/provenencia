@@ -25,6 +25,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`text-quote-locators.md`](text-quote-locators.md)
 - [`audio-video-sources.md`](audio-video-sources.md)
 - [`shared-list-helpers.md`](shared-list-helpers.md) — one list of graph mutations (the other two items are in Spike 11)
+- [`settled-list-count-publish.md`](settled-list-count-publish.md) — Properties badge is off by one after create or delete; one publish-on-settled rule for Sources, Properties and Metadata
 - [`depictions-and-likenesses.md`](depictions-and-likenesses.md) — leftovers after Spike 10 (other keys, signature, transparent crop, Windows PDF draw)
 - [`international-names.md`](international-names.md) — leftovers after Spike 10 (other name patterns, transliteration, calendars)
 - [`daitch-mokotoff.md`](daitch-mokotoff.md) — phonetic tier descoped from Spike 10 (S10-26)
@@ -37,6 +38,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
 - [`possible-values.md`](possible-values.md)
 - [`term-management.md`](term-management.md) — one place to manage terms, including relationship direction and inverses
+- [`relationships-from-shared-events.md`](relationships-from-shared-events.md) — two spouses in one marriage mean a spouse relationship; matching, family trees and person pages should read both shapes as one fact
 
 ## Archived
 
