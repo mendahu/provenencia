@@ -257,6 +257,7 @@ struct PVContextMenuItem: View {
 extension View {
     /// Right-click / Ctrl-click target that opens `state` at the click point
     /// (local to this view).
+    /// Feature code uses `.pvRightClickMenu`.
     func pvContextMenuTrigger(_ state: Binding<PVContextMenuState>) -> some View {
         overlay {
             PVRightClickCatcher { point in
@@ -270,11 +271,10 @@ extension View {
     /// above every SwiftUI sibling — forms, meta cards, scroll content — without
     /// per-call-site `zIndex` workarounds.
     ///
-    /// Attach this to the view whose local coordinates match `state.origin`
-    /// (the trigger for `PVSelect`, or a larger ancestor for right-click menus
-    /// so the click point and panel share a coordinate space).
+    /// Attach this to the view whose local coordinates match `state.origin`: the
+    /// trigger view. Right-click menus use `.pvRightClickMenu`, which does this.
     ///
-    /// `keyboardTitles` are the row titles of a right-click menu; when set
+    /// `keyboardTitles` are the row titles of an action menu; when set
     /// (with `keyboard`), the keyboard is reset on each open. Leave nil when the
     /// caller seeds its own highlight (`PVSelect`).
     func pvContextMenu<Content: View>(

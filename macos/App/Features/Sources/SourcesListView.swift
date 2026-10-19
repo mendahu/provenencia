@@ -107,6 +107,7 @@ private struct SourcesListContent: View {
         ) {
             addForm
         }
+        .sourceCopyDialog($model.copying)
         .task(id: model.isAdding) {
             guard model.isAdding else { return }
             model.refreshTypes()
@@ -324,7 +325,8 @@ private struct SourcesListContent: View {
                                         if let location = SourcesListNavigation.graphLocation(for: source) {
                                             navigation.go(to: location)
                                         }
-                                    }
+                                    },
+                                    onCopy: { model.openCopy(source) }
                                 )
                                 .id(source.id)
                             }
@@ -434,7 +436,8 @@ private struct SourcesSplitRowProgress: View {
                 if let location = SourcesListNavigation.graphLocation(for: source) {
                     navigation.go(to: location)
                 }
-            }
+            },
+            onCopy: { model.openCopy(source) }
         )
     }
 }

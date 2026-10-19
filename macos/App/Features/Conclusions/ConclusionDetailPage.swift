@@ -362,9 +362,6 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
     let summary: (Content) -> Summary
     let portrait: ConclusionPortraitModel?
 
-    @State private var portraitMenu = PVContextMenuState()
-    @State private var portraitKeyboard = PVContextMenuKeyboard.inactive
-
     /// PDP-11: the menu exists only while the lead is not the earliest.
     private var showsPortraitMenu: Bool { portrait != nil && content.thumbnail.offersEarliest }
 
@@ -394,26 +391,6 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
             }
             .padding(.top, PVSpacing.space6)
         }
-        // Menu on the row (not the 120pt thumb) so the click origin shares
-        // the panel's coordinate space, as on the Source header.
-        .pvContextMenu(
-            $portraitMenu,
-            keyboard: $portraitKeyboard,
-            keyboardTitles: [L10n.string(L10n.Conclusions.useEarliestLikeness)]
-        ) {
-            PVContextMenuPanel(
-                title: L10n.Conclusions.portraitMenuTitle,
-                accessibilityIdentifier: "persons.detail.portrait.menu"
-            ) {
-                PVContextMenuItem(
-                    L10n.Conclusions.useEarliestLikeness,
-                    index: 0,
-                    accessibilityIdentifier: "persons.detail.portrait.useEarliest"
-                ) {
-                    Task { await portrait?.useEarliest() }
-                }
-            }
-        }
     }
 
     @ViewBuilder
@@ -429,12 +406,20 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
         )
         if showsPortraitMenu {
             thumb
-                .pvContextMenuTrigger($portraitMenu)
+                .pvRightClickMenu(
+                    title: L10n.Conclusions.portraitMenuTitle,
+                    accessibilityIdentifier: "persons.detail.portrait.menu",
+                    items: [
+                        PVActionMenuItem(
+                            title: L10n.Conclusions.useEarliestLikeness,
+                            accessibilityIdentifier: "persons.detail.portrait.useEarliest"
+                        ) {
+                            Task { await portrait?.useEarliest() }
+                        },
+                    ]
+                )
                 .help(L10n.string(L10n.Conclusions.portraitMenuHint))
                 .accessibilityHint(L10n.string(L10n.Conclusions.portraitMenuHint))
-                .accessibilityAction(named: Text(L10n.Conclusions.useEarliestLikeness)) {
-                    Task { await portrait?.useEarliest() }
-                }
                 .accessibilityIdentifier("persons.detail.portrait")
         } else {
             thumb

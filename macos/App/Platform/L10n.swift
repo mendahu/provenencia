@@ -6291,10 +6291,16 @@ enum L10n {
             comment: "Context menu title on the Source identity cover"
         )
 
+        static let thumbnailImageLabel = LocalizedStringResource(
+            "sources.page.thumbnailImageLabel",
+            defaultValue: "Source cover",
+            comment: "Accessibility label of the Source identity cover thumbnail while it shows an Artifact image"
+        )
+
         static let thumbnailMenuHint = LocalizedStringResource(
             "sources.page.thumbnailMenuHint",
             defaultValue: "Right-click for thumbnail options",
-            comment: "Accessibility hint on the Source identity cover thumbnail"
+            comment: "Hover tooltip on the Source identity cover thumbnail"
         )
 
         static let thumbnailRevertToDefault = LocalizedStringResource(

@@ -83,6 +83,8 @@ final class SourcesModel {
     }
 
     var isAdding = false
+    /// The Copy Source form while it is open.
+    var copying: SourceCopyModel?
     var draft = Draft(sourceTypeID: "", title: "")
     var typeError: String?
     var titleError: String?
@@ -346,6 +348,11 @@ final class SourcesModel {
     /// Ensures the type pool query is warm for the Add Source dialog.
     func refreshTypes() {
         let _: QueryHandle<[CatalogSourceType]> = session.query(Self.sourceTypesListKey(for: session))
+    }
+
+    /// Opens the Copy Source form for a row's Source.
+    func openCopy(_ source: CatalogSource) {
+        copying = SourceCopyModel(original: source, session: session, userID: userID, store: store)
     }
 
     func openAdd() {
