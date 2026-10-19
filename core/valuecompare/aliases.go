@@ -1,5 +1,11 @@
 package valuecompare
 
+import (
+	"slices"
+	"sort"
+	"strings"
+)
+
 // AliasKind is abbreviation or nickname. Both score the alias credit.
 type AliasKind string
 
@@ -30,6 +36,7 @@ type aliasSet struct {
 	tokens map[string]bool
 	roles  map[NameRole]bool
 	kind   AliasKind
+	key    string // the tokens sorted and joined by one space
 }
 
 // AliasToken is the one rule for what an alias token is: the comparison token
@@ -64,7 +71,12 @@ func NewAliasIndex(tables []AliasTable, w WordRules) AliasIndex {
 			for token := range tokens {
 				idx.byToken[token] = append(idx.byToken[token], len(idx.sets))
 			}
-			idx.sets = append(idx.sets, aliasSet{tokens: tokens, roles: roles, kind: table.Kind})
+			sorted := make([]string, 0, len(tokens))
+			for token := range tokens {
+				sorted = append(sorted, token)
+			}
+			sort.Strings(sorted)
+			idx.sets = append(idx.sets, aliasSet{tokens: tokens, roles: roles, kind: table.Kind, key: strings.Join(sorted, " ")})
 		}
 	}
 	return idx
@@ -80,4 +92,18 @@ func (a AliasIndex) Hit(x, y string, rx, ry NameRole) (AliasKind, bool) {
 		}
 	}
 	return "", false
+}
+
+// SetKeys is the key of every set that holds token (an AliasToken): its tokens
+// sorted and joined by one space. Roles are ignored, so a shortlist may
+// include more than Hit allows. Sorted, no duplicates; nil for the zero index.
+// Sets do not chain, so no word key can join two words of a set, but a set can
+// be a key: two words that Hit share it.
+func (a AliasIndex) SetKeys(token string) []string {
+	var out []string
+	for _, i := range a.byToken[token] {
+		out = append(out, a.sets[i].key)
+	}
+	sort.Strings(out)
+	return slices.Compact(out)
 }
