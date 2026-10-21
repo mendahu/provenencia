@@ -437,7 +437,7 @@ func TestHeaderDependentsIncludeChildPlaces(t *testing.T) {
 	must(t, err)
 	deps, err := conclusionheaders.HeaderDependents(db, [][]byte{ontarioID})
 	must(t, err)
-	if !hasID(deps, torontoID) {
+	if !database.ContainsBlobID(deps, torontoID) {
 		t.Fatalf("parent dependents missing child: %d", len(deps))
 	}
 }

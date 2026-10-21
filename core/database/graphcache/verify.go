@@ -3,6 +3,7 @@ package graphcache
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"sort"
 )
 
@@ -260,14 +261,8 @@ func linkEndpoints(self []byte, l Link, rows []TruthRow) bool {
 			ids = append(ids, row.EntityID)
 		}
 	}
-	return hasID(ids, self) && hasID(ids, l.Neighbor)
-}
-
-func hasID(ids [][]byte, id []byte) bool {
-	for _, cur := range ids {
-		if sameID(cur, id) {
-			return true
-		}
+	has := func(id []byte) bool {
+		return slices.ContainsFunc(ids, func(cur []byte) bool { return sameID(cur, id) })
 	}
-	return false
+	return has(self) && has(l.Neighbor)
 }

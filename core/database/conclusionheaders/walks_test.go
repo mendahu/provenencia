@@ -309,23 +309,23 @@ func TestCanonicalWalks(t *testing.T) {
 	must(t, err)
 	deps, err := conclusionheaders.HeaderDependents(db, [][]byte{yorkID})
 	must(t, err)
-	if !hasID(deps, birthID) || !hasID(deps, fireID) || !hasID(deps, jamesID) || hasID(deps, deathID) {
+	if !database.ContainsBlobID(deps, birthID) || !database.ContainsBlobID(deps, fireID) || !database.ContainsBlobID(deps, jamesID) || database.ContainsBlobID(deps, deathID) {
 		t.Fatalf("place dependents missing birth/fire/james or included the death")
 	}
 	// The witness is not a subject of the birth, so the place walk does not reach them.
 	fromJames, err := conclusionheaders.HeaderDependents(db, [][]byte{jamesID})
 	must(t, err)
-	if !hasID(fromJames, birthID) || !hasID(fromJames, deathID) || !hasID(fromJames, marriageID) || !hasID(fromJames, censusID) {
+	if !database.ContainsBlobID(fromJames, birthID) || !database.ContainsBlobID(fromJames, deathID) || !database.ContainsBlobID(fromJames, marriageID) || !database.ContainsBlobID(fromJames, censusID) {
 		t.Fatal("person dependents missed an event")
 	}
-	if hasID(fromJames, yorkID) || hasID(fromJames, baptismID) {
+	if database.ContainsBlobID(fromJames, yorkID) || database.ContainsBlobID(fromJames, baptismID) {
 		t.Fatal("person walk reached a place or someone else's event")
 	}
 	// James's header embeds his birth's date: a change to the birth must
 	// reach him. The witness is not a subject, so they are not reached.
 	fromBirth, err := conclusionheaders.HeaderDependents(db, [][]byte{birthID})
 	must(t, err)
-	if !hasID(fromBirth, jamesID) || hasID(fromBirth, birthID) || hasID(fromBirth, yorkID) {
+	if !database.ContainsBlobID(fromBirth, jamesID) || database.ContainsBlobID(fromBirth, birthID) || database.ContainsBlobID(fromBirth, yorkID) {
 		t.Fatalf("event dependents %d: missing James, or included the event or its place", len(fromBirth))
 	}
 }
@@ -384,15 +384,6 @@ func sameSet(got, want []string) bool {
 		}
 	}
 	return true
-}
-
-func hasID(ids [][]byte, id []byte) bool {
-	for _, got := range ids {
-		if bytes.Equal(got, id) {
-			return true
-		}
-	}
-	return false
 }
 
 // Two surviving births are a disagreement: the header counts them and leads

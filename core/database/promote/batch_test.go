@@ -1,7 +1,6 @@
 package promote_test
 
 import (
-	"bytes"
 	"database/sql"
 	"errors"
 	"reflect"
@@ -210,15 +209,6 @@ func yearDate(y int) *datevalue.Value {
 	return &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
 }
 
-func containsID(ids [][]byte, id []byte) bool {
-	for _, x := range ids {
-		if bytes.Equal(x, id) {
-			return true
-		}
-	}
-	return false
-}
-
 func TestSaveBatchFilesBothEndsOnce(t *testing.T) {
 	f := newBatchFixture(t)
 	person := f.bare("person")
@@ -425,7 +415,7 @@ func TestSaveBatchOneHopPin(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if !containsID(pins, incoming[0].ID) || !containsID(pins, member) {
+				if !database.ContainsBlobID(pins, incoming[0].ID) || !database.ContainsBlobID(pins, member) {
 					t.Fatalf("claim %x pins %d, want both dates", claimID, len(pins))
 				}
 			}
