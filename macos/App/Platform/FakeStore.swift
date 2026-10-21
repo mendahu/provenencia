@@ -630,7 +630,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func createArtifact(
-        projectDir _: String,
+        projectDir: String,
         userID _: String,
         sourceID: String,
         fileID: String,
@@ -649,14 +649,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 file: nil
             )
             artifactsBySource[sourceID, default: []].append(art)
-            for (project, var graphs) in evidenceGraphsByProject {
-                for i in graphs.indices where graphs[i].sourceID == sourceID
-                    && (graphIDs.isEmpty || graphIDs.contains(graphs[i].id))
-                {
-                    graphs[i].artifactIDs.append(art.id)
-                }
-                evidenceGraphsByProject[project] = graphs
+            var graphs = evidenceGraphsByProject[projectDir] ?? []
+            for i in graphs.indices where graphs[i].sourceID == sourceID
+                && (graphIDs.isEmpty || graphIDs.contains(graphs[i].id))
+            {
+                graphs[i].artifactIDs.append(art.id)
             }
+            evidenceGraphsByProject[projectDir] = graphs
             var effects = bumpSource(sourceID, evidence: true)
             effects.lists.insert(.evidenceGraphs)
             return (art, effects)

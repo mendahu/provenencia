@@ -38,6 +38,19 @@ struct EvidenceGraphStoreTests {
         #expect(store.heldCatalogProjectDir == projectDir)
     }
 
+    @Test func createArtifactLinksOnlyItsProjectsGraphs() async throws {
+        let store = seededStore()
+        let otherDir = "/tmp/other-evidence-graphs.provenencia"
+        store.evidenceGraphsByProject[projectDir] = [graph("g1", name: "Default", artifacts: [])]
+        store.evidenceGraphsByProject[otherDir] = [graph("g2", name: "Default", artifacts: [])]
+        let (art, _) = try await store.createArtifact(
+            projectDir: projectDir, userID: userID, sourceID: sourceID,
+            fileID: "f1", label: "Page 1", description: "", graphIDs: []
+        )
+        #expect(store.evidenceGraphsByProject[projectDir]?.first?.artifactIDs == [art.id])
+        #expect(store.evidenceGraphsByProject[otherDir]?.first?.artifactIDs == [])
+    }
+
     @Test func writesReportTheGraphList() async throws {
         let store = seededStore()
         let expected: Set<CatalogList> = [.evidenceGraphs]
