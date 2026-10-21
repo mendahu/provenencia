@@ -53,7 +53,10 @@ type Subject struct {
 
 // CreateInput is the mutable fields for a new Subject.
 type CreateInput struct {
-	SourceID      []byte
+	SourceID []byte
+	// GraphID is the Evidence graph the Subject joins. Empty means the
+	// Source's sole graph (SoleGraphTx).
+	GraphID       []byte
 	SubjectTypeID []byte
 	Label         string
 	Description   string
@@ -107,9 +110,17 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 	if err := requireSource(tx, in.SourceID); err != nil {
 		return Subject{}, rowchange.Change{}, err
 	}
-	graphID, err := evidencegraphs.SoleGraphTx(tx, in.SourceID)
-	if err != nil {
-		return Subject{}, rowchange.Change{}, err
+	graphID := in.GraphID
+	switch len(graphID) {
+	case 16:
+	case 0:
+		var err error
+		graphID, err = evidencegraphs.SoleGraphTx(tx, in.SourceID)
+		if err != nil {
+			return Subject{}, rowchange.Change{}, err
+		}
+	default:
+		return Subject{}, rowchange.Change{}, ErrInvalid
 	}
 	prefix, err := requireTypePrefix(tx, in.SubjectTypeID)
 	if err != nil {

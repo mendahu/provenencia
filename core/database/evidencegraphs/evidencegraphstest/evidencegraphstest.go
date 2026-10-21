@@ -68,3 +68,18 @@ func SoleGraph(t *testing.T, c *database.Catalog, sourceID []byte) evidencegraph
 	}
 	return graphs[0]
 }
+
+// Create makes a second graph of a Source linked to the given Artifacts and
+// fails the test on error.
+func Create(t testing.TB, c *database.Catalog, userID, sourceID []byte, name string, artifactIDs ...[]byte) evidencegraphs.Graph {
+	t.Helper()
+	g, err := writes.Call(c, writes.Op{Action: "create_evidence_graph", UserID: userID}, func(tx *database.Tx) (evidencegraphs.Graph, []rowchange.Change, error) {
+		return evidencegraphs.Create(tx, userID, evidencegraphs.CreateInput{
+			SourceID: sourceID, Name: name, ArtifactIDs: artifactIDs,
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return g
+}

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	_ "github.com/mendahu/provenencia/core/database/sourcefill"
@@ -54,6 +55,16 @@ func TestSubjects(t *testing.T) {
 			t.Fatal(err)
 		}
 		return src
+	}
+	mustArtifact := func(t *testing.T, c *database.Catalog, sourceID []byte) artifacts.Artifact {
+		t.Helper()
+		a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID}, func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, artifacts.CreateInput{SourceID: sourceID, Label: "Scan"})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return a
 	}
 	mustSubjectTypes := func(t *testing.T, c *database.Catalog) {
 		t.Helper()
@@ -138,6 +149,94 @@ func TestSubjects(t *testing.T) {
 				last := deleted[len(deleted)-1]
 				if last.EntityType != "subject" || last.Fields["graph_id"].Old == nil {
 					t.Fatalf("delete change lacks graph_id: %+v", last)
+				}
+			},
+		},
+		{
+			name: "graph id given",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				mustSubjectTypes(t, c)
+				src := mustSource(t, c)
+				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				art := mustArtifact(t, c, src.ID)
+				jones := evidencegraphstest.Create(t, c, userID, src.ID, "Jones", art.ID)
+				var created []rowchange.Change
+				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					s, changes, err := Create(tx, userID, CreateInput{
+						SourceID: src.ID, GraphID: jones.ID, SubjectTypeID: person.ID, Label: "Ben",
+					}, nil)
+					created = changes
+					return s, changes, err
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(s.GraphID, jones.ID) {
+					t.Fatalf("created graph %x want %x", s.GraphID, jones.ID)
+				}
+				got, err := Get(c, s.ID)
+				if err != nil || !bytes.Equal(got.GraphID, jones.ID) {
+					t.Fatalf("read graph %x want %x (%v)", got.GraphID, jones.ID, err)
+				}
+				if len(created) == 0 || created[0].Fields["graph_id"].New != database.UUIDJSON(jones.ID) {
+					t.Fatalf("create change graph_id: %+v", created)
+				}
+			},
+		},
+		{
+			name: "graph of another source",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				mustSubjectTypes(t, c)
+				srcA := mustSource(t, c)
+				typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+					Key: "census", Origin: vocabkey.OriginProvenencia, Label: "Census",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				srcB, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+					return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Other"})
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				other := evidencegraphstest.SoleGraph(t, c, srcB.ID)
+				_, err = writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					return Create(tx, userID, CreateInput{
+						SourceID: srcA.ID, GraphID: other.ID, SubjectTypeID: person.ID, Label: "X",
+					}, nil)
+				})
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v want ErrInvalid", err)
+				}
+			},
+		},
+		{
+			name: "graph id wrong length",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				mustSubjectTypes(t, c)
+				src := mustSource(t, c)
+				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, err = writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					return Create(tx, userID, CreateInput{
+						SourceID: src.ID, GraphID: []byte{1, 2, 3}, SubjectTypeID: person.ID, Label: "X",
+					}, nil)
+				})
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v want ErrInvalid", err)
 				}
 			},
 		},
