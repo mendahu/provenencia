@@ -1,7 +1,7 @@
 # Ship log — S12-04 Graph lifecycle
 
 **Plan:** [`S12-04-graph-lifecycle.md`](S12-04-graph-lifecycle.md) · **Branch:** `s12-04-graph-lifecycle` · **PR:** #505
-**State:** fixing 1
+**State:** review 2
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s12-04`, branched from `origin/main` @ `9cf8e33c`.
 
@@ -45,3 +45,10 @@ Check: scripts/check-pr.sh PASS (plan-docs).
 Files: `core/database/evidencegraphs/evidencegraphs.go:74`, `core/database/deleteimpact/impact_test.go:818-822`.
 Do: `ArtifactIDs` comment → "linked Artifacts: by Artifact ref from List, in input order from Create". In `TestImpactEvidenceGraph`, replace the inline `List` + length check with `def := evidencegraphstest.SoleGraph(t, c, src.ID)`. Update D-1's comment quote in the plan's Landed note as a deviation alongside F-1's.
 Check: `go test -tags fts5 ./core/database/deleteimpact/` passes; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `5d7a4bdb`. Gate PASS (orchestrator run; the implementer saw one flaky `GraphCanvasEdgeGeometryTests.bottomApproachEndsUnderTheBridgeFill` failure with no Swift change, green on rerun). F-1 done (`TestListQueryPlan` red first on `SCAN evidence_graphs` / `SCAN l`). F-2 done; deviation: `graphcache` cannot import `database` (`database/catalog.go` imports `graphcache`), so its `hasID` became an inline `slices.ContainsFunc` over its own `sameID`. F-3, F-4 done. Landed note records the D-2 SQL and D-1 comment changes.
+MNT-3, MNT-4 (minors): Resolved — read in `5d7a4bdb` (comment at `evidencegraphs.go`, `SoleGraph` in `impact_test.go`).
+
+## Round 2 — review
+Reviewers: MNT (MNT-1, MNT-2), SEC+PRF (PRF-1). Scope `beb8be43...5d7a4bdb`.
