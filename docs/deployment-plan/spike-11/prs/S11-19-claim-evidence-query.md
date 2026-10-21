@@ -424,3 +424,59 @@ None. Review M-4 was answered by the user on 2026-10-21: S11-20 owns the engine 
 
 **Title:** S11-19 — Claim evidence query
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-19-claim-evidence-query.md`.
+
+## 14. Amendment — reads through the graph cache (user, 2026-10-21)
+
+Asked by the user after round 2 of the ship log: the query and the `Propose` setup it shares read through the graph cache now, not at a later performance review. These Decisions are binding like §5. Where one supersedes an earlier line, it says so. Steps STEP-9 to STEP-14 run after STEP-8. Commit one behavior per step.
+
+### Decisions
+
+| ID | Decision | Supersedes |
+| --- | --- | --- |
+| D-17 | **One in-memory Source walk.** `func (g *Graph) WalkSource(sg SourceGraph, h hops.Hop, from [][]byte) ([]SourceEdge, error)` in `core/database/graphcache/source.go`. It resolves property, type and term keys through `g.Vocabulary()` and has `canonicalgraph.WalkSource`'s semantics exactly: a bridge Subject on `sg` of type `h.Bridge()`, a positive from-endpoint Observation naming a `from` Subject, a positive to-endpoint Observation naming a Subject on `sg`, and, when `h.Filter()` is set, a positive filter Observation with that term. Each edge appears once (DISTINCT), and the order is `walk`'s. `SourceEdge` gains `Association []byte` and `AssociationRef string`. `SourceLoader` becomes `func(g *Graph, sourceID []byte) (SourceGraph, error)`, so that `sourcefill.loadTitleEdges` walks the Subjects and Observations it has just loaded. `promotealign.loadLayerBridges` walks `g.Source(sourceID)`, and `observedTerms` reads the disambiguation terms from the same graph's Observations. `canonicalgraph.WalkSource`, `sourceQuery`, the `sqlSource*` constants and `WalkSourceSQL` are deleted. | `loadLayerBridges`' SQL walk (§4) |
+| D-18 | **Handle checks through the cache.** `checkFixed` reads `g.Node(handle)`. A nil or `Merged` node is `promote.ErrInvalid`, and the kind is the vocabulary type key of `SubjectTypeID`. It takes the graph instead of a `Querier`. `mergeFixed`'s promoted anchors come from `g.Source(sourceID).Members` (accepted claims with their handles), not SQL. | D-3's SQL in `checkFixed` and `mergeFixed` |
+| D-19 | **The Source graph knows its title and whether it exists.** `SourceGraph` gains `Title string` and `Found bool`, which `sourcefill.loadSource` reads from `sources`. `checkSource` already compares the whole graph. The effects registry's `"sources"` entry gains `Source: self()`, so a title edit drops the cached graph. `loadInputs` reads `g.Source` and returns `promote.ErrInvalid` when the graph is not `Found`, replacing its `SELECT 1 FROM sources`. | `loadInputs`' existence query |
+| D-20 | **Member Source ids come from the cache.** `graphcache.Member` gains `SourceID []byte`, which `loadMembers` reads by joining `subjects`. A Subject never changes Source, and a commit reloads the node anyway. The evidence reader takes each member's Source, and each bridge Subject's Source (as members of the association node), from `Node.Members`. It takes titles from `g.Source(id).Title`. `subjects.SourcesOf`, `subjects.SourceOf`, `TestSourcesOf` and `evidenceReader.sourcesOf` are deleted. | D-16; D-8's rejected alternative `graphcache.Member.SourceID` |
+| D-21 | **Per-Source memo.** `func (g *Graph) SourceMemo(id []byte, key string) (any, bool)` and `SetSourceMemo(id []byte, key string, v any)` in `graphcache`. A memo is held only while its Source is loaded. `dropSources`, `Drop`, a vocabulary change (`effects.ListVocabulary`) and `SetAliasTables` clear it. `loadInputs` memoizes `loadLayer`'s `(Layer, primary)` under the key `"promotealign.layer\x00" + namePattern`. `evidenceReader.memberValues` memoizes each Subject's member `subjectcompare.Values` under `"promotealign.members\x00" + namePattern`, as a map by Subject id that is filled when a Subject is missing. A memoized value is never mutated: `Align`, `Build` and every reader take it read-only, and a test proves this (T-19). | The S11-21 map line added for PRF-3 |
+| D-22 | **Profiles live as long as the match index.** The profiler's `done` map moves into `matchIndex` as `profiles`, keyed by handle id, with the `namePattern` it was built with: a different pattern starts an empty map. It is dropped wherever the match index is (a handle commit, a vocabulary change, `SetAliasTables`). Every handle commit drops it, so a lifespan read from events cannot go stale. `newProfiler` takes it from `matchIndexOf(g)` and stores it back with `SetMatchIndex`. | — |
+| D-23 | **Value rules.** If a name-format write reaches a graph drop in `OnCommit` today (find the path from `nameformats`' writes through `effects`), memoize `valuerules.Load`'s result on the graph with the alias tables' lifetime, cleared by that drop as well. If no such drop exists, leave `valuerules.Load` per call and say so in the report. Do not add an effect for it. | — |
+
+### Acceptance criteria
+
+- **AC-4.1** Opening `Evidence` twice for one row, with no commit between, issues no catalog query on the second call. This is measured with `Graph.SetQueryCounterForTest`.
+- **AC-4.2** `Propose` twice on one Source, with no commit between, issues no query on the second call apart from the shortlist index's first build.
+- **AC-4.3** `Evidence` and `Propose` return the same output, cold and warm, and after a commit that changes a member, a title, or a handle, the output follows the commit.
+- **AC-4.4** Every existing test in `promotealign`, `sourcefill`, `sourceeventtitles`, `graphcache`, `canonicalgraph` and `claimevidence` passes with unchanged expectations.
+
+### Tests
+
+| ID | Where | Name | Proves |
+| --- | --- | --- | --- |
+| T-17 | `core/database/graphcache` | `TestWalkSourceMatchesSQL` *(new, written before D-17 deletes the SQL)* | On the sourcefill fixtures, plus a fixture with a disambiguated bridge, a negative endpoint, and a to-end on another Source, the in-memory walk equals `canonicalgraph.WalkSource` edge for edge, in order. Keep the expected edges as literals once the SQL is gone |
+| T-18 | `core/database/promotealign` | `TestEvidenceWarmIssuesNoQuery`, `TestProposeWarmIssuesNoQuery` | AC-4.1, AC-4.2 |
+| T-19 | `core/database/promotealign` | `TestMemoFollowsCommit` | AC-4.3. Subtests: a member's Observation edited, a Source retitled, a handle merged, and the name format changed (only if D-23 memoizes). Each compares the warm output with a fresh catalog's |
+| T-20 | `core/database/graphcache` | `TestSourceMemoDroppedWithSource` | D-21: a Source drop, `Drop`, a vocabulary change and `SetAliasTables` each clear the memo |
+| T-21 | `core/database/sourcefill` | `TestRetitleDropsSourceGraph` | D-19: `sources.Update` drops the cached graph, and the next read has the new title. An unknown id reads `Found == false` |
+| T-22 | `core/database/graphcache` | the existing Verify tests cover `Member.SourceID` | D-20. Add a case if Verify compares node members field by field |
+
+### Steps
+
+- **STEP-9 (D-17):** T-17 first, against the SQL. Then `Graph.WalkSource`, the loader signature, `loadTitleEdges`, `loadLayerBridges` and `observedTerms`. Then delete the SQL walk. Check: T-17 and AC-4.4.
+- **STEP-10 (D-19):** `Title`, `Found`, the registry path, and `loadInputs`. Check: T-21.
+- **STEP-11 (D-18):** `checkFixed` and `mergeFixed`. Check: `TestEvidenceInvalidRequest` and the `Propose` invalid-input tests, unchanged.
+- **STEP-12 (D-20):** `Member.SourceID`, the reader, and the deletions. Check: `rg -n "SourcesOf|sourcesOf" core` prints nothing; AC-4.4.
+- **STEP-13 (D-21, D-22, D-23):** memo slots and their callers. Check: T-18, T-19, T-20.
+- **STEP-14:** docs. Update `docs/matching-model.md` or `comparison-layers.md` where they describe how Promote reads (one sentence: layers, profiles and member values are memoized on the graph cache and dropped on commit), the Landed note, and the ship log. Check: `check-plan-docs.py` clean.
+
+### Stop conditions
+
+- `loadLayer`'s output depends on anything beyond the Source graph, the vocabulary, terms, alias tables, `namePattern` and the static registry. Name it and stop before memoizing it.
+- T-17 shows the SQL and in-memory walks differ on a case the semantics above do not settle.
+- Changing the `SourceLoader` signature breaks a caller outside `sourcefill` and `graphcache`.
+- A memoized value turns out to be mutated by a reader, and making the reader read-only would change its output.
+
+### Moved to other PRs
+
+- **S11-25:** Apply's default pins run this query once per row, and a test shows Apply over a page builds the layer once.
+- **S11-21:** times cold and warm runs of `Evidence` and `Propose`, row by row.
+- **S11-31** *(new)*: an eviction cap on loaded Source graphs and their memos.

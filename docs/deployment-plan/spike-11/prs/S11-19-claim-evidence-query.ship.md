@@ -1,7 +1,7 @@
 # Ship log — S11-19 Claim evidence query
 
 **Plan:** [`S11-19-claim-evidence-query.md`](S11-19-claim-evidence-query.md) · **Branch:** `s11-19-claim-evidence-query` · **PR:** #513
-**State:** ready
+**State:** fixing 3 — user scope change
 
 ## Round 0 — implement
 Base `main` @ `9ca7472e`. Head `8262d21e`. Gate PASS (orchestrator rerun). Report deviations (also in the plan's Landed note):
@@ -89,3 +89,29 @@ No round-2 blockers; no Fix plan 2. `origin/main` unchanged since the branch was
 
 ## Result
 Gate PASS · CI green · open: none · follow-ups: PRF-3 (in S11-21 scope) · to user: — · CON miss: none
+
+## Round 3 — user scope change (2026-10-21)
+After the PR was ready, the user asked for the query and `Propose`'s shared setup to read through the graph cache in this PR, "not at the performance review at the end". The orchestrator mapped five gaps:
+- the SQL walk of the layer;
+- SQL in `checkFixed` and `mergeFixed`;
+- SQL in `SourcesOf` and for titles;
+- profiles rebuilt on every call;
+- the layer rebuilt on every call.
+
+These became plan §14 (D-17 to D-23, AC-4.x, T-17 to T-22, STEP-9 to STEP-14).
+- PRF-3 moved from S11-21 back into this PR, as D-21. S11-21 now measures the memos.
+- S11-25 gains the check that Apply reuses the memos.
+- New S11-31 bounds the Source cache (eviction).
+
+The user asked for this work, so review round 3 is user-authorized.
+
+### Fix plan 3
+Implement plan §14, STEP-9 to STEP-14, in order, with each step's check and the stop conditions listed there.
+
+**F-7 — In-memory Source walk** (STEP-9, D-17). Failing test first: T-17 against the SQL.
+**F-8 — Source title and existence in the cache** (STEP-10, D-19). Failing test first: T-21.
+**F-9 — Handle checks and anchors through the cache** (STEP-11, D-18). Check: invalid-input tests unchanged.
+**F-10 — Member Source ids in the cache** (STEP-12, D-20). Check: `rg -n "SourcesOf|sourcesOf" core` prints nothing.
+**F-11 — Memos: per-Source layer and member values, profiles, value rules** (STEP-13, D-21 to D-23). Failing tests first: T-18, T-19, T-20.
+**F-12 — Docs and Landed note** (STEP-14).
+Check for all: scripts/check-pr.sh PASS.
