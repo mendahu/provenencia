@@ -40,6 +40,10 @@ const (
 		WHERE ? IS NULL OR g.source_id = ?
 		ORDER BY a.ref COLLATE NOCASE, a.id`
 
+	sqlGet = `SELECT id, COALESCE(ref, ''), source_id, name, COALESCE(description, '')
+		FROM evidence_graphs WHERE id = ?`
+	sqlUpdate = `UPDATE evidence_graphs SET name = ?, description = ? WHERE id = ?`
+
 	sqlSubjectGraph = `SELECT graph_id FROM subjects WHERE id = ?`
 	sqlIsLinked     = `SELECT 1 FROM evidence_graph_artifacts WHERE graph_id = ? AND artifact_id = ?`
 	sqlLinkSources  = `SELECT g.source_id, a.source_id FROM evidence_graphs g, artifacts a
@@ -178,6 +182,108 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Graph, []rowchange.
 		g.ArtifactIDs = append(g.ArtifactIDs, append([]byte(nil), id...))
 	}
 	return g, changes, nil
+}
+
+// UpdateInput is the input of Update.
+type UpdateInput struct {
+	Name        string
+	Description string
+	ArtifactIDs [][]byte // empty = links unchanged; otherwise the full set of linked Artifacts
+}
+
+// Update saves a graph's name, description and linked Artifacts in one write.
+// Artifacts are linked before others are unlinked, so a swap never leaves the
+// graph with no link. Any refusal returns its error unchanged, and the write
+// rolls back the whole edit.
+func Update(tx *database.Tx, userID, graphID []byte, in UpdateInput) ([]rowchange.Change, error) {
+	in.Name = strings.TrimSpace(in.Name)
+	in.Description = strings.TrimSpace(in.Description)
+	if tx == nil || len(graphID) != 16 || in.Name == "" {
+		return nil, ErrInvalid
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return nil, err
+	}
+	if err := requireDistinct(in.ArtifactIDs); err != nil {
+		return nil, err
+	}
+	g, err := getTx(tx.Tx, graphID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrInvalid
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var changes []rowchange.Change
+	fields := map[string]rowchange.FieldDiff{}
+	if g.Name != in.Name {
+		fields["name"] = rowchange.FieldDiff{Old: g.Name, New: in.Name}
+	}
+	if g.Description != in.Description {
+		fields["description"] = rowchange.FieldDiff{Old: database.NullString(g.Description), New: database.NullString(in.Description)}
+	}
+	if len(fields) > 0 {
+		if _, err := tx.Exec(sqlUpdate, in.Name, database.NullString(in.Description), graphID); err != nil {
+			return nil, mapConstraint(err)
+		}
+		changes = append(changes, rowchange.Change{
+			EntityType: "evidence_graph",
+			EntityID:   append([]byte(nil), graphID...),
+			Action:     rowchange.ActionUpdate,
+			Fields:     fields,
+		})
+	}
+
+	if len(in.ArtifactIDs) == 0 {
+		return changes, nil
+	}
+	graphs, err := list(tx.Tx, g.SourceID)
+	if err != nil {
+		return nil, err
+	}
+	var stored [][]byte
+	for _, x := range graphs {
+		if bytes.Equal(x.ID, graphID) {
+			stored = x.ArtifactIDs
+		}
+	}
+	for _, id := range in.ArtifactIDs {
+		if containsID(stored, id) {
+			continue
+		}
+		ch, err := Link(tx, userID, graphID, id)
+		if err != nil {
+			return nil, err
+		}
+		changes = append(changes, ch...)
+	}
+	for _, id := range stored {
+		if containsID(in.ArtifactIDs, id) {
+			continue
+		}
+		ch, err := Unlink(tx, userID, graphID, id)
+		if err != nil {
+			return nil, err
+		}
+		changes = append(changes, ch...)
+	}
+	return changes, nil
+}
+
+func containsID(ids [][]byte, id []byte) bool {
+	for _, x := range ids {
+		if bytes.Equal(x, id) {
+			return true
+		}
+	}
+	return false
+}
+
+// getTx loads one graph row; sql.ErrNoRows when there is none. It does not fill
+// ArtifactIDs.
+func getTx(tx *sql.Tx, id []byte) (Graph, error) {
+	return scanGraph(tx.QueryRow(sqlGet, id))
 }
 
 // requireDistinct refuses a repeated id.

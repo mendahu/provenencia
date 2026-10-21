@@ -854,3 +854,163 @@ func TestCreate(t *testing.T) {
 		}
 	})
 }
+
+// updateGraph runs Update in one write.
+func (f fixture) updateGraph(t *testing.T, graphID []byte, in evidencegraphs.UpdateInput) ([]rowchange.Change, error) {
+	t.Helper()
+	return run(t, f.c, func(tx *database.Tx) ([]rowchange.Change, error) {
+		return evidencegraphs.Update(tx, userID, graphID, in)
+	})
+}
+
+func graphByID(t *testing.T, c *database.Catalog, sourceID, id []byte) evidencegraphs.Graph {
+	t.Helper()
+	for _, g := range mustList(t, c, sourceID) {
+		if bytes.Equal(g.ID, id) {
+			return g
+		}
+	}
+	t.Fatalf("graph %x not listed", id)
+	return evidencegraphs.Graph{}
+}
+
+func TestUpdate(t *testing.T) {
+	f := newFixture(t)
+	s, _ := f.createSource(t, "Census 1881")
+	other, _ := f.createSource(t, "Parish register")
+	def := evidencegraphstest.SoleGraph(t, f.c, s.ID).ID
+	a1 := f.newArtifact(t, s, "Page 1")
+	a2 := f.newArtifact(t, s, "Page 2")
+	foreign := f.newArtifact(t, other, "Page 9")
+	f.link(t, def, a1)
+	unknown := make([]byte, 16)
+	unknown[0] = 9
+
+	t.Run("rename", func(t *testing.T) {
+		ch, err := f.updateGraph(t, def, evidencegraphs.UpdateInput{Name: "Smith household"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(ch) != 1 || ch[0].EntityType != "evidence_graph" || ch[0].Action != rowchange.ActionUpdate || !bytes.Equal(ch[0].EntityID, def) {
+			t.Fatalf("changes %+v", ch)
+		}
+		if len(ch[0].Fields) != 1 || ch[0].Fields["name"].Old != "Default" || ch[0].Fields["name"].New != "Smith household" {
+			t.Fatalf("fields %+v", ch[0].Fields)
+		}
+		if g := graphByID(t, f.c, s.ID, def); g.Name != "Smith household" || len(g.ArtifactIDs) != 1 {
+			t.Fatalf("graph %+v", g)
+		}
+	})
+
+	t.Run("description", func(t *testing.T) {
+		ch, err := f.updateGraph(t, def, evidencegraphs.UpdateInput{Name: "Smith household", Description: " Pages 4–6 "})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(ch) != 1 || len(ch[0].Fields) != 1 || ch[0].Fields["description"].Old != nil || ch[0].Fields["description"].New != "Pages 4–6" {
+			t.Fatalf("changes %+v", ch)
+		}
+		ch, err = f.updateGraph(t, def, evidencegraphs.UpdateInput{Name: "Smith household", Description: ""})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(ch) != 1 || ch[0].Fields["description"].Old != "Pages 4–6" || ch[0].Fields["description"].New != nil {
+			t.Fatalf("changes %+v", ch)
+		}
+	})
+
+	t.Run("unchanged is no change", func(t *testing.T) {
+		ch, err := f.updateGraph(t, def, evidencegraphs.UpdateInput{Name: "  Smith household ", Description: "  "})
+		if err != nil || ch != nil {
+			t.Fatalf("got %v %+v", err, ch)
+		}
+	})
+
+	t.Run("rename with no Artifact ids keeps the links", func(t *testing.T) {
+		ch, err := f.updateGraph(t, def, evidencegraphs.UpdateInput{Name: "Smith again"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(ch) != 1 || ch[0].EntityType != "evidence_graph" {
+			t.Fatalf("changes %v", changeKinds(ch))
+		}
+		if g := graphByID(t, f.c, s.ID, def); len(g.ArtifactIDs) != 1 || !bytes.Equal(g.ArtifactIDs[0], a1) {
+			t.Fatalf("links %x", g.ArtifactIDs)
+		}
+	})
+
+	jones, _, err := f.createGraph(t, evidencegraphs.CreateInput{SourceID: s.ID, Name: "Jones", ArtifactIDs: [][]byte{a1}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	refused := []struct {
+		name string
+		id   []byte
+		in   evidencegraphs.UpdateInput
+	}{
+		{"empty name", jones.ID, evidencegraphs.UpdateInput{Name: " "}},
+		{"unknown graph", unknown, evidencegraphs.UpdateInput{Name: "X"}},
+		{"short graph id", jones.ID[:15], evidencegraphs.UpdateInput{Name: "X"}},
+		{"Artifact of another Source", jones.ID, evidencegraphs.UpdateInput{Name: "Renamed", ArtifactIDs: [][]byte{a1, foreign}}},
+		{"unknown Artifact", jones.ID, evidencegraphs.UpdateInput{Name: "Renamed", ArtifactIDs: [][]byte{a1, unknown}}},
+		{"repeated Artifact", jones.ID, evidencegraphs.UpdateInput{Name: "Renamed", ArtifactIDs: [][]byte{a1, a1}}},
+	}
+	for _, tt := range refused {
+		t.Run(tt.name, func(t *testing.T) {
+			before := graphByID(t, f.c, s.ID, jones.ID)
+			if _, err := f.updateGraph(t, tt.id, tt.in); !errors.Is(err, evidencegraphs.ErrInvalid) {
+				t.Fatalf("got %v", err)
+			}
+			if after := graphByID(t, f.c, s.ID, jones.ID); !reflect.DeepEqual(before, after) {
+				t.Fatalf("graph changed: %+v -> %+v", before, after)
+			}
+		})
+	}
+	t.Run("empty user id", func(t *testing.T) {
+		_, err := run(t, f.c, func(tx *database.Tx) ([]rowchange.Change, error) {
+			return evidencegraphs.Update(tx, nil, jones.ID, evidencegraphs.UpdateInput{Name: "X"})
+		})
+		if !errors.Is(err, evidencegraphs.ErrInvalid) {
+			t.Fatalf("got %v", err)
+		}
+	})
+
+	t.Run("swapping an Artifact links before it unlinks", func(t *testing.T) {
+		ch, err := f.updateGraph(t, jones.ID, evidencegraphs.UpdateInput{Name: "Jones", ArtifactIDs: [][]byte{a2}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := []string{"evidence_graph_artifact create", "evidence_graph_artifact delete"}; !reflect.DeepEqual(changeKinds(ch), want) {
+			t.Fatalf("changes %v", changeKinds(ch))
+		}
+		if got := ch[0].Fields["artifact_id"].New; got != uuid.UUID(a2).String() {
+			t.Fatalf("link %v", got)
+		}
+		if got := ch[1].Fields["artifact_id"].Old; got != uuid.UUID(a1).String() {
+			t.Fatalf("unlink %v", got)
+		}
+		if g := graphByID(t, f.c, s.ID, jones.ID); len(g.ArtifactIDs) != 1 || !bytes.Equal(g.ArtifactIDs[0], a2) {
+			t.Fatalf("links %x", g.ArtifactIDs)
+		}
+	})
+
+	t.Run("a refused unlink rolls back the rename", func(t *testing.T) {
+		g := newFixture(t)
+		src, _ := g.createSource(t, "Register")
+		graph := evidencegraphstest.SoleGraph(t, g.c, src.ID).ID
+		b1 := g.newArtifact(t, src, "Page 1")
+		b2 := g.newArtifact(t, src, "Page 2")
+		g.link(t, graph, b1)
+		g.link(t, graph, b2)
+		g.subjectAndCitation(t, src, b1)
+		_, err := g.updateGraph(t, graph, evidencegraphs.UpdateInput{Name: "Smith household", ArtifactIDs: [][]byte{b2}})
+		if !errors.Is(err, evidencegraphs.ErrArtifactInUse) {
+			t.Fatalf("got %v", err)
+		}
+		got := graphByID(t, g.c, src.ID, graph)
+		if got.Name != evidencegraphs.DefaultName || len(got.ArtifactIDs) != 2 {
+			t.Fatalf("graph %+v", got)
+		}
+	})
+}
