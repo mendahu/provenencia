@@ -89,6 +89,8 @@ type SourceEdge struct {
 // SourceGraph is one loaded Source.
 type SourceGraph struct {
 	SourceID     []byte
+	Title        string
+	Found        bool
 	Subjects     []SourceSubject
 	Observations []SourceObservation
 	Members      []SourceMember

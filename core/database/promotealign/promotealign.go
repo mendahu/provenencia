@@ -100,12 +100,12 @@ func loadInputs(c *database.Catalog, sourceID []byte) (inputs, error) {
 		return inputs{}, err
 	}
 	q := Querier(db)
-	var exists int
-	if err := q.QueryRow(`SELECT 1 FROM sources WHERE id = ?`, sourceID).Scan(&exists); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return inputs{}, promote.ErrInvalid
-		}
+	sg, err := c.Graph().Source(sourceID)
+	if err != nil {
 		return inputs{}, err
+	}
+	if !sg.Found {
+		return inputs{}, promote.ErrInvalid
 	}
 
 	rules, namePattern, err := valuerules.Load(c.Graph(), q)

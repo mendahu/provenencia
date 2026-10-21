@@ -189,6 +189,7 @@ var observers = chain(
 var registry = map[string]Effect{
 	"sources": {
 		Entity:      "source",
+		Source:      self(),
 		SourceScope: self(),
 		Search:      []SearchDoc{{Kind: DocSource, Path: self()}},
 	},

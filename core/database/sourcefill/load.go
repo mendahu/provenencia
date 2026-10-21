@@ -5,6 +5,7 @@ package sourcefill
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -24,6 +25,10 @@ func init() {
 
 func loadSource(g *graphcache.Graph, sourceID []byte) (graphcache.SourceGraph, error) {
 	q := graphcache.Querier(g)
+	title, found, err := loadSourceTitle(q, sourceID)
+	if err != nil {
+		return graphcache.SourceGraph{}, err
+	}
 	subjects, err := loadSourceSubjects(q, sourceID)
 	if err != nil {
 		return graphcache.SourceGraph{}, err
@@ -41,12 +46,24 @@ func loadSource(g *graphcache.Graph, sourceID []byte) (graphcache.SourceGraph, e
 		return graphcache.SourceGraph{}, err
 	}
 	return graphcache.SourceGraph{
+		Title:        title,
+		Found:        found,
 		Subjects:     subjects,
 		Observations: observations,
 		Members:      members,
 		EventPeople:  people,
 		EventPlaces:  places,
 	}, nil
+}
+
+// loadSourceTitle reads the Source's title, and whether the Source exists.
+func loadSourceTitle(q graphcache.Querier, sourceID []byte) (string, bool, error) {
+	var title string
+	err := q.QueryRow(`SELECT title FROM sources WHERE id = ?`, sourceID).Scan(&title)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
+	}
+	return title, err == nil, err
 }
 
 func loadSourceSubjects(q graphcache.Querier, sourceID []byte) ([]graphcache.SourceSubject, error) {
