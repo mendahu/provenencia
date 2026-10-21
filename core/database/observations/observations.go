@@ -257,9 +257,9 @@ func requireSameGraph(tx *sql.Tx, citationID, subjectID, valueSubjectID []byte, 
 		return nil
 	}
 	if !edge {
-		var key, origin string
-		if err := tx.QueryRow(sqlSubjectTypeKey, valueSubjectID).Scan(&key, &origin); err != nil {
-			return mapMissing(err)
+		key, origin, err := subjectTypeKeyTx(tx, valueSubjectID)
+		if err != nil {
+			return err
 		}
 		if origin == vocabkey.OriginProvenencia {
 			if info, ok := subjectvocab.TypeByKey(key); ok && info.Role == subjectvocab.RoleReification {
@@ -268,6 +268,15 @@ func requireSameGraph(tx *sql.Tx, citationID, subjectID, valueSubjectID []byte, 
 		}
 	}
 	return ErrOtherGraph
+}
+
+// subjectTypeKeyTx reads a Subject's type key and origin; a missing Subject is
+// ErrInvalid.
+func subjectTypeKeyTx(tx *sql.Tx, subjectID []byte) (key, origin string, err error) {
+	if err := tx.QueryRow(sqlSubjectTypeKey, subjectID).Scan(&key, &origin); err != nil {
+		return "", "", mapMissing(err)
+	}
+	return key, origin, nil
 }
 
 // mapMissing turns a missing row into ErrInvalid.
@@ -311,11 +320,8 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 	if err != nil {
 		return Observation{}, nil, err
 	}
-	var typeKey, typeOrigin string
-	if err := tx.QueryRow(sqlSubjectTypeKey, in.SubjectID).Scan(&typeKey, &typeOrigin); err != nil {
-		if err == sql.ErrNoRows {
-			return Observation{}, nil, ErrInvalid
-		}
+	typeKey, _, err := subjectTypeKeyTx(tx, in.SubjectID)
+	if err != nil {
 		return Observation{}, nil, err
 	}
 	_, edge := connectrules.Edge(typeKey, prop.Key)
