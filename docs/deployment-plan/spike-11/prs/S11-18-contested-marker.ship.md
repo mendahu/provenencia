@@ -1,7 +1,7 @@
 # Ship log — S11-18 Contested marker on Promote rows
 
 **Plan:** [`S11-18-contested-marker.md`](S11-18-contested-marker.md) · **Branch:** `s11-18-contested-marker` · **PR:** #507
-**State:** review 2
+**State:** ready
 
 ## Round 0 — implement
 Head `e25fb56a`. Gate PASS (orchestrator ran `scripts/check-pr.sh` against `d214e663`; 1236 Swift tests). Report deviations: the code is one commit, not one per behavior; the first docs commit `c76d9e0b` used a Status form plan-docs rejects and was pushed before its gate, fixed in `e25fb56a`; the PR body is shorter than §13 (rewritten at finish); no Landed note (no difference from the plan). Manual check (§10) not run.
@@ -53,3 +53,10 @@ Minors checked by the orchestrator: UX-1 **Resolved** (`PromoteModel.reasonText`
 
 ## Round 2 — review
 Reviewers: MNT (had Fix-now majors MNT-1, MNT-2). Scope `e25fb56a...a64615b9`. Not sent: CON, UX (minors only, checked above), SEC+PRF (no findings).
+
+MNT: MNT-1 **Resolved** (`PromoteFlow.row(_:)`; one move arm), MNT-2 **Resolved** (`noteDuplicates` reads `Target.handleRef`). No new blockers. No Fix plan 2.
+
+Nits (logged): `MNT-4 · PromoteFlowTests.swift:103 and ~20 more, PromoteModelTests.swift:100-103, :166 · older tests still use flow.rows.first instead of flow.row(_:)`
+
+## Result
+Gate PASS · CI pending at ready · open: none · follow-ups: none · to user: — · CON miss: none
