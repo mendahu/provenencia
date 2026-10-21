@@ -1,7 +1,7 @@
 # Ship log — S11-18 Contested marker on Promote rows
 
 **Plan:** [`S11-18-contested-marker.md`](S11-18-contested-marker.md) · **Branch:** `s11-18-contested-marker` · **PR:** #507
-**State:** fixing 1
+**State:** review 2
 
 ## Round 0 — implement
 Head `e25fb56a`. Gate PASS (orchestrator ran `scripts/check-pr.sh` against `d214e663`; 1236 Swift tests). Report deviations: the code is one commit, not one per behavior; the first docs commit `c76d9e0b` used a Status form plan-docs rejects and was pushed before its gate, fixed in `e25fb56a`; the PR body is shorter than §13 (rewritten at finish); no Landed note (no difference from the plan). Manual check (§10) not run.
@@ -46,3 +46,10 @@ Check: XT `PromoteModelTests` passes with the same assertions.
 Files: `docs/deployment-plan/spike-11/prs/S11-18-contested-marker.md`.
 Do: under the Status line, add `**Landed:**` listing the differences from the plan: F-1 adds `PromoteFlow.row(_:)` and moves every row lookup onto it; the placed and moved sentences fall back to "after a connected row changed" when the neighbor has no record (UX-1), beyond D-5; F-2 moves `noteDuplicates` onto `Target.handleRef`, superseding D-6's "not touched" for those two sites; remove the "Logged, not done" sentence from §6 Next adds. Code is one commit, not one per behavior.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-11/prs/S11-18-contested-marker.md` reports no errors.
+
+## Round 1 — fix
+Head `a64615b9`. Gate PASS (orchestrator). F-1 – F-4 done. F-1's new assertions failed first against `65f29c07` ("after Ada → CPR-A was matched"), then passed. Deviations: the test retargets through `model.setTarget` (the flow's `rows` is `private(set)`); F-1 and F-3 share a commit; orchestrator moved the Landed note back inside the plan header (`a64615b9`).
+Minors checked by the orchestrator: UX-1 **Resolved** (`PromoteModel.reasonText` placed/moved arms read `neighbor.target.handleRef` with the `reasonMoveUnknown` fallback); CON-1 **Resolved** (Landed note under Status); CON-N1 **Resolved** (`loadedAdaAndBea`).
+
+## Round 2 — review
+Reviewers: MNT (had Fix-now majors MNT-1, MNT-2). Scope `e25fb56a...a64615b9`. Not sent: CON, UX (minors only, checked above), SEC+PRF (no findings).
