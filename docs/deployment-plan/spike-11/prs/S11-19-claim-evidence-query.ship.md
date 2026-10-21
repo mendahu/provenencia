@@ -1,7 +1,7 @@
 # Ship log — S11-19 Claim evidence query
 
 **Plan:** [`S11-19-claim-evidence-query.md`](S11-19-claim-evidence-query.md) · **Branch:** `s11-19-claim-evidence-query` · **PR:** #513
-**State:** fixing 4
+**State:** ready
 
 ## Round 0 — implement
 Base `main` @ `9ca7472e`. Head `8262d21e`. Gate PASS (orchestrator rerun). Report deviations (also in the plan's Landed note):
@@ -87,9 +87,6 @@ Nits (logged): `MNT-9 · evidence.go:225-231 · members is a one-caller wrapper 
 
 No round-2 blockers; no Fix plan 2. `origin/main` unchanged since the branch was cut (`9ca7472e`).
 
-## Result
-Gate PASS · CI green · open: none · follow-ups: PRF-3 (in S11-21 scope) · to user: — · CON miss: none
-
 ## Round 3 — user scope change (2026-10-21)
 After the PR was ready, the user asked for the query and `Propose`'s shared setup to read through the graph cache in this PR, "not at the performance review at the end". The orchestrator mapped five gaps:
 - the SQL walk of the layer;
@@ -171,3 +168,22 @@ Do: `"sources"` → `Source: onField("title", self())`. Create and delete still 
 Check: the tests pass; `TestSourceEvidenceIsNotActivity` updated only if its expectation is per-field; scripts/check-pr.sh PASS.
 
 Nits riding along (implementer's call): MNT-5, MNT-6, MNT-8.
+
+## Round 4 — fix
+Head `cbda6bf3`. Gate PASS (orchestrator rerun). F-13 to F-17 done, and nits MNT-5, MNT-6 and MNT-8 rode along. Deviations: F-17 tests a description-only edit and no cover change, because a real cover change needs an Artifact with a file. The plan's T-17 row still names the test by its old name, `TestWalkSourceMatchesSQL`.
+
+## Round 4 — review
+Reviewer: MNT (it had the round-3 blocker and major). CON and SEC+PRF were not sent back: CON had only a minor, deferred, and PRF-1 (r3) was a minor that the orchestrator read in `4f4acf4e` and marked **Resolved**. F-15 and F-16 were confirmed by MNT. Scope `b79f37c2...cbda6bf3`.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-1 (r3) | MNT | blocker | (round 3) | Resolved | `promotealign.go:201-205` uses `typeByKey`/`typeKey` |
+| MNT-2 (r3) | MNT | major | (round 3) | Resolved | `catalog-queries.mdc:17`; S12-06 Ships |
+| MNT-3, MNT-4, PRF-1 (r3) | — | minor | (round 3) | Resolved | `keep()` sole writer; `dropDerived()`; `onField("title", self())` |
+
+Nits (logged): `MNT-11 · sourcefill/load_test.go:85-110 · shared Source catalog setup helper` · `MNT-12 · graphcache/graph.go:310 · LoadedSourceForTest has no nil guard` · `MNT-13 · load_test.go:82 · no cover-change case`
+
+No round-4 blockers. `origin/main` unchanged since the branch was cut (`9ca7472e`).
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: CON-1 r3 (in S11-21 scope), eviction (new S11-31), Apply memo check (S11-25), Source walk per graph (S12-06) · to user: — · CON miss: none
