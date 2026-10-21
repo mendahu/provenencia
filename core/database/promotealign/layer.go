@@ -46,8 +46,9 @@ type layerMemo struct {
 func loadLayerMemo(g *graphcache.Graph, sourceID []byte, cfg graphalign.Config, namePattern string, terms segmentcompare.Terms) (graphalign.Layer, map[string]primarySubject, error) {
 	key := layerMemoKey + namePattern
 	if v, ok := g.SourceMemo(sourceID, key); ok {
-		m := v.(layerMemo)
-		return m.layer, m.primary, nil
+		if m, ok := v.(layerMemo); ok {
+			return m.layer, m.primary, nil
+		}
 	}
 	layer, primary, err := loadLayer(g, sourceID, cfg, namePattern, terms)
 	if err != nil {

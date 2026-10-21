@@ -41,7 +41,7 @@ func loadSource(g *graphcache.Graph, sourceID []byte) (graphcache.SourceGraph, e
 	if err != nil {
 		return graphcache.SourceGraph{}, err
 	}
-	people, places, err := loadTitleEdges(g, graphcache.SourceGraph{SourceID: sourceID, Subjects: subjects, Observations: observations}, subjects)
+	people, places, err := loadTitleEdges(g, graphcache.SourceGraph{SourceID: sourceID, Subjects: subjects, Observations: observations})
 	if err != nil {
 		return graphcache.SourceGraph{}, err
 	}
@@ -202,9 +202,9 @@ func loadSourceMembers(q graphcache.Querier, sourceID []byte) ([]graphcache.Sour
 	return out, rows.Err()
 }
 
-func loadTitleEdges(g *graphcache.Graph, sg graphcache.SourceGraph, subjects []graphcache.SourceSubject) ([]graphcache.SourceEdge, []graphcache.SourceEdge, error) {
+func loadTitleEdges(g *graphcache.Graph, sg graphcache.SourceGraph) ([]graphcache.SourceEdge, []graphcache.SourceEdge, error) {
 	var events [][]byte
-	for _, s := range subjects {
+	for _, s := range sg.Subjects {
 		if s.TypeKey == vocabkey.Event && s.TypeOrigin == vocabkey.OriginProvenencia {
 			events = append(events, s.ID)
 		}
