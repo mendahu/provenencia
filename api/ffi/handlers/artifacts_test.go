@@ -224,11 +224,15 @@ func TestCreateArtifactGraphIDs(t *testing.T) {
 		return graphs
 	}
 
-	chosen := f.createArtifact(t, f.sourceID, "Chosen", []string{second})
+	chosenResp := f.createArtifactResp(t, f.sourceID, "Chosen", []string{second})
+	assertGraphEffects(t, chosenResp.GetEffects())
+	chosen := chosenResp.GetArtifact().GetId()
 	if got := linkedTo(chosen); !slices.Equal(got, []string{"Jones"}) {
 		t.Fatalf("chosen graph only: %v", got)
 	}
-	every := f.createArtifact(t, f.sourceID, "Every", nil)
+	everyResp := f.createArtifactResp(t, f.sourceID, "Every", nil)
+	assertGraphEffects(t, everyResp.GetEffects())
+	every := everyResp.GetArtifact().GetId()
 	if got := linkedTo(every); !slices.Equal(got, []string{"Default", "Jones"}) {
 		t.Fatalf("every graph: %v", got)
 	}

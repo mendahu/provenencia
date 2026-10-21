@@ -65,11 +65,16 @@ func newGraphFixture(t *testing.T) graphFixture {
 
 func (f graphFixture) createArtifact(t *testing.T, sourceID, label string, graphIDs []string) string {
 	t.Helper()
+	return f.createArtifactResp(t, sourceID, label, graphIDs).GetArtifact().GetId()
+}
+
+func (f graphFixture) createArtifactResp(t *testing.T, sourceID, label string, graphIDs []string) *engine.CreateArtifactResponse {
+	t.Helper()
 	var art engine.CreateArtifactResponse
 	mustRPC(t, CreateArtifact, &engine.CreateArtifactRequest{
 		ProjectDir: f.dir, UserId: f.userID, SourceId: sourceID, Label: label, GraphIds: graphIDs,
 	}, &art)
-	return art.GetArtifact().GetId()
+	return &art
 }
 
 // otherSource makes a second Source with one Artifact and returns both ids.
