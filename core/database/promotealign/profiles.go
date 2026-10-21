@@ -140,7 +140,8 @@ func lifeEvent(event subjectcompare.Values, role vocabkey.Role) subjectprofile.L
 }
 
 // profiler builds handle profiles from the canon graph, each once for as long
-// as the graph's match index lives. done is the index's profile map.
+// as the graph's match index lives. done is the index's profile map. A caller
+// keeps the profiles with keep(); nothing else stores them.
 type profiler struct {
 	g           *graphcache.Graph
 	props       map[string]graphcache.VocabProperty
@@ -183,8 +184,13 @@ func newProfiler(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectc
 
 // keep stores this profiler's profiles in the graph's match index, creating the
 // index slot when there is none. The profiles then live as long as the index.
+// A map already stored for this name pattern is this profiler's own, so it is
+// left alone.
 func (p *profiler) keep() {
 	m := matchIndexOf(p.g)
+	if m.profiles != nil && m.profilesPattern == p.namePattern {
+		return
+	}
 	m.profiles, m.profilesPattern = p.done, p.namePattern
 	p.g.SetMatchIndex(m)
 }

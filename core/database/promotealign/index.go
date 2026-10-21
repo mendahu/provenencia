@@ -78,8 +78,8 @@ func loadShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*sh
 		}
 	}
 	m.shortlist = ix
-	m.profiles, m.profilesPattern = p.done, p.namePattern
 	g.SetMatchIndex(m)
+	p.keep()
 	return ix, nil
 }
 
