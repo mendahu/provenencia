@@ -2521,7 +2521,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Citations in this evidence graph use that artifact, so it stays linked."
+            "value": "Citations in this evidence graph still use an artifact you removed, so it stays linked."
           }
         }
       }

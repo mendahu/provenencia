@@ -9666,7 +9666,7 @@ enum L10n {
         )
         static let evidenceGraphsArtifactInUse = LocalizedStringResource(
             "error.evidencegraphs.artifact_in_use",
-            defaultValue: "Citations in this evidence graph use that artifact, so it stays linked.",
+            defaultValue: "Citations in this evidence graph still use an artifact you removed, so it stays linked.",
             comment: "FFI error evidencegraphs.artifact_in_use"
         )
         static let evidenceGraphsLastArtifact = LocalizedStringResource(

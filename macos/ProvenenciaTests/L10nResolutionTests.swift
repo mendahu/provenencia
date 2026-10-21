@@ -84,7 +84,7 @@ struct L10nResolutionTests {
         let unknown = L10n.Errors.message(code: "internal.unknown")
         let expected = [
             "evidencegraphs.invalid": "That evidence graph isn’t valid.",
-            "evidencegraphs.artifact_in_use": "Citations in this evidence graph use that artifact, so it stays linked.",
+            "evidencegraphs.artifact_in_use": "Citations in this evidence graph still use an artifact you removed, so it stays linked.",
             "evidencegraphs.last_artifact": "An evidence graph needs at least one artifact.",
             "evidencegraphs.in_use": "This evidence graph still has subjects.",
             "evidencegraphs.last_graph": "A source keeps at least one evidence graph.",

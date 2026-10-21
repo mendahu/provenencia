@@ -288,7 +288,7 @@ States: none on screen. Accessibility: none (no view).
 L10n keys *(new)*, all in `macos/App/Platform/L10n.swift` and `macos/App/Resources/Localizable.xcstrings`:
 
 - `L10n.Errors.evidenceGraphsInvalid` — `error.evidencegraphs.invalid` = "That evidence graph isn’t valid."
-- `L10n.Errors.evidenceGraphsArtifactInUse` — `error.evidencegraphs.artifact_in_use` = "Citations in this evidence graph use that artifact, so it stays linked."
+- `L10n.Errors.evidenceGraphsArtifactInUse` — `error.evidencegraphs.artifact_in_use` = "Citations in this evidence graph still use an artifact you removed, so it stays linked."
 - `L10n.Errors.evidenceGraphsLastArtifact` — `error.evidencegraphs.last_artifact` = "An evidence graph needs at least one artifact."
 - `L10n.Errors.evidenceGraphsInUse` — `error.evidencegraphs.in_use` = "This evidence graph still has subjects."
 - `L10n.Errors.evidenceGraphsLastGraph` — `error.evidencegraphs.last_graph` = "A source keeps at least one evidence graph."
