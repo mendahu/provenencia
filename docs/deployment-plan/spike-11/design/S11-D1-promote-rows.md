@@ -6,6 +6,7 @@
 **Implements later as:** PR **S11-18** (contested marker, move reasons) and PR **S11-27** (connection subrows)
 **Depends on:** S11-17 (landed [#504](https://github.com/mendahu/provenencia/pull/504): rows carry `contested` and `move`); S11-26 (connections file by their ends) before S11-27 ships
 **Related:** [`../promote-connection-subrows.md`](../promote-connection-subrows.md) (the subrow idea and its design questions), [`../comparison-layers.md`](../comparison-layers.md#bands) (bands and contested), [`../../../promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3. S11-D2 later redraws the evidence sheet the row opens.
+**Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), agreed 2026-10-20. Frames 14–15 gate S11-18, 16–19 gate S11-27 (see §8)
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
 **Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
 
@@ -171,3 +172,20 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 ## 7. Handoff
 
 When the board is agreed: record the board link in the S11-18 plan's **Board** line, move this brief to the spike's design archive folder when S11-27 (the last PR it gates) lands, update [`README.md`](README.md), and move S11-18 from `Blocked — on board S11-D1` to `Planned` with `plan-pr`.
+
+---
+
+## 8. Board notes (agreed 2026-10-20)
+
+Checked against `Promote flow.dc.html`. Where the board differs from this brief, the board wins and the gated plan copies it.
+
+| Frame | Requirement | The board |
+| --- | --- | --- |
+| 14, 15 | CM-1 – CM-6 | As written. Badge icon is the kit triangle (`PVSymbol.warning`). |
+| 14, 15, 06 | Updated caption | Drawn in the info ink (`--info-fg`, `PVColor.infoForeground`), not secondary text. S11-18 D-10. |
+| 17 | CS-3 | "+N connections" sits on its own line under the row (indented to the name column), not after the badges. Its VoiceOver label is "N connections hosted on other rows". The highlight lasts about 1.6 s on `surface-selected`. |
+| 16 – 18 | CS-1 | The subrow list has a thin left rule (`border-subtle`) at the note indent, and VoiceOver names it "Connections hosted by <row name>". |
+| 18 | CS-2 | A both-ends-one-record subrow shows its sentence with an empty state column and the compact warning Callout under it. |
+| 18 | CS-4 | The other end is named inline after its name: "Harold Gates, already filed" / ", not on this page". A connection with neither end a row on the page is not shown. |
+| 19 | CS-9 | The footer reads "File N · Skip N · N unselected · N connections", leaving out a zero Skip or unselected part. Today's Swift summary has no unselected part; S11-27 decides it with its plan. |
+

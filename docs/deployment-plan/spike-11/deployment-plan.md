@@ -105,7 +105,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-15 | Shortlist index | 4 | Key → handles per kind on `graphcache`; registry shortlist keys | — | S11-13 | [plan](prs/S11-15-shortlist-index.md) | Landed #497 |
 | S11-16 | Rewrite graph alignment | 4 | Layer 6 procedure, bands from evidence, accept bar; old walk and registry deleted | — | S11-14, S11-15 | [plan](prs/S11-16-graph-alignment.md) | Landed #501 |
 | S11-17 | Contested flag through FFI | 4 | Proposal rows carry contested and move reasons to Swift | — | S11-16 | [plan](prs/S11-17-contested-ffi.md) | Landed #504 |
-| S11-18 | Contested marker on Promote rows | 4 | The marker on the page | [S11-D1](design/S11-D1-promote-rows.md) | S11-17, S11-D1 | [plan](prs/S11-18-contested-marker.md) | Blocked — on board S11-D1 |
+| S11-18 | Contested marker on Promote rows | 4 | The marker on the page | [S11-D1](design/S11-D1-promote-rows.md) | S11-17, S11-D1 | [plan](prs/S11-18-contested-marker.md) | Planned |
 | S11-19 | Claim evidence query | 5 | Go query: member lines, collapse, relationship bundles; registry evidence section | — | S11-16 | — | Scoped |
 | S11-25 | Claim evidence RPC and pin policy | 5 | Lazy per-row RPC; Go default pins at Apply; Swift drafting moves onto it; proposal field 9 and `attachExhibits` removed | — | S11-19 | — | Scoped |
 | S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy, with likeness lines as two crops | S11-D2 | S11-25, S11-D2, S10-54 | — | Scoped |
@@ -120,7 +120,7 @@ These are the calls for this spike. PR plans treat them as binding.
 
 | Brief | View | Gates | Notes |
 | --- | --- | --- | --- |
-| [S11-D1](design/S11-D1-promote-rows.md) | Promote page — rows | **S11-18**, **S11-27** | Brief written 2026-10-20, board not agreed. Contested marker beside the band; move reasons in the Updated caption; connections as subrows of the rows they join, answering the [design questions](promote-connection-subrows.md#open-questions-for-design) |
+| [S11-D1](design/S11-D1-promote-rows.md) | Promote page — rows | **S11-18**, **S11-27** | Board agreed 2026-10-20 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share)). Contested marker beside the band; move reasons in the Updated caption; connections as subrows of the rows they join, answering the [design questions](promote-connection-subrows.md#open-questions-for-design) |
 | S11-D2 | Promote page — evidence sheet | **S11-20** | Whole sheet: "why suggested" summary, property sections, relationship lines, collapsed members, likeness crops (from Spike 10's S10-D13), copy |
 
 ## Slices

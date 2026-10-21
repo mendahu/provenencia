@@ -1,10 +1,10 @@
 # S11-18 — Contested marker on Promote rows
 
-**Status:** Blocked — on board S11-D1
+**Status:** Planned
 **Spike / slice:** Spike 11 · Slice 4 — Segments and graph alignment
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S11-D1](../design/S11-D1-promote-rows.md) §4.1 (CM-1 – CM-6), board not agreed yet
-**Board:** the S11-D1 Claude Design board, read through the Claude Design tools; its link is recorded here when the user agrees the board. If you cannot open it, §6 macOS describes the frames in words; build from §6
+**Brief:** [S11-D1](../design/S11-D1-promote-rows.md) §4.1 (CM-1 – CM-6), board agreed 2026-10-20
+**Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), file `Promote flow.dc.html`, frames **14** "Contested, grouped by assessment" and **15** "After deciding Bill" (S11-18's; frame 06 repeats the move captions). Frames 16–19 are S11-27's. If you cannot open it, §6 macOS describes the frames in words; build from §6
 **Depends on:** S11-17 (landed [#504](https://github.com/mendahu/provenencia/pull/504)), S11-D1 (board)
 **Blocks:** —
 **Branch:** `s11-18-contested-marker`
@@ -12,8 +12,8 @@
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** —
 **Context:** [bands](../comparison-layers.md#bands) ("A conflict shows a contested marker; it never caps the band"); [`promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3.1; [S11-17 plan](S11-17-contested-ffi.md) D-4, D-7 (the fields this PR reads) and its Out lines; working rules "Bands come from evidence", "One wire vocabulary"
-**Planned:** 2026-10-20 against `main` @ `9cf8e33c`
-**Review:** [`S11-18-contested-marker.review.md`](S11-18-contested-marker.review.md) — round 1: Fits with changes / Not ready (blocked on board) → fixed; board still open
+**Planned:** 2026-10-20 against `main` @ `9cf8e33c`; refreshed 2026-10-20 against the agreed board (`main` unchanged)
+**Review:** [`S11-18-contested-marker.review.md`](S11-18-contested-marker.review.md) — round 1: Fits with changes / Not ready → fixed; round 2 (after the board): Fits / Ready with changes → fixed, no blocker open
 
 ### Implementer — read this first
 
@@ -59,11 +59,13 @@ A Promote row whose comparisons include a conflict says so: a **Contested** badg
 | AC-2.4 | A move whose neighbor ID is not a row on the page | "Updated · after a connected row changed" (D-5) |
 | AC-2.5 | Row Updated with `move = nil`, reason via Ada | Caption as today: "Updated · via Ada → PER-e1" (CM-6) |
 | AC-2.6 | Row not Updated with a move | No caption (CM-6; today's `if row.updated` guard) |
+| AC-2.7 | Any Updated row | The caption is drawn in the info ink (`PVColor.infoForeground`), not the secondary text color (D-10) |
 
 ## 3. Scope
 
 | In | Covered by |
 | --- | --- |
+| Updated caption in the info ink (board frames 14, 15) | D-10, STEP-4 |
 | Contested badge in the assessment column, only with a selection readout (CM-1, CM-2, CM-3) | D-1, D-3, STEP-1, STEP-4, AC-1.1 – AC-1.4 |
 | Changing the target clears contested and move until the next proposal | D-2, STEP-1, AC-1.5 |
 | VoiceOver label with "contested" (CM-4) | D-4, STEP-2, STEP-3, STEP-4, AC-1.6 |
@@ -105,13 +107,14 @@ A Promote row whose comparisons include a conflict says so: a **Contested** badg
 | --- | --- | --- | --- |
 | D-1 | **The readout carries contested.** `PromoteFlow.SelectionReadout` gains `var contested = false`, declared after `reason` so the existing `SelectionReadout(assessment:reason:)` literals in `PromoteFlowTests` keep compiling (doc "The proposal says this pair conflicts somewhere; the page marks it beside the band"). `Row.selectionReadout` sets it from `row.contested`. The view reads `readout.contested`; nothing else reads `row.contested` | The marker shows exactly when the band shows (user, 2026-10-20: "only with a handle"); the readout is the one place that decides that, and `draftTarget` makes the readout's handle the pair Go's contested describes (§4). One computed value is testable in `PromoteFlowTests` without a view | A `row.contested && row.selectionReadout != nil` check in the view — the rule would live in a view and go untested; showing it on Skip rows — user chose not to |
 | D-2 | **A retarget clears contested and move.** In `PromoteFlow.setTarget`, inside `if next != rows[index].target`, beside the `comparisons` and `pins` resets, set `rows[index].contested = false` and `rows[index].move = nil`. Change the comment to: "The lines, pins and contested flag compared the old target; the next proposal drafts them for this one." | `contested` describes the old pair once the target changes; the re-proposal refreshes it (decided-keep path, S11-17 D-7), as it re-drafts the lines | Leaving the old flag until the re-proposal — the badge would sit on a record it does not describe |
-| D-3 | **Marker.** In `PromoteAlignmentRow`'s assessment `Button` label, right after the band `PVBadge`: `if readout.contested { PVBadge(L10n.Promote.contested, tone: .danger, icon: .warning).accessibilityIdentifier("promote.row.\(row.ref).contested") }`. No other layout change: `PVBadge` is `fixedSize`, and the reason `Text` is already `lineLimit(1)`, so the reason truncates first (CM-3) | Brief inventory: "Contested mark — Badge, not a new control and not a Chip"; danger keeps it apart from the Weak band's warning tone | A glyph-only badge (`init(icon:label:)`) — CM-1 draws text; a Callout under the row — the brief puts it on the assessment line |
+| D-3 | **Marker.** In `PromoteAlignmentRow`'s assessment `Button` label, right after the band `PVBadge`: `if readout.contested { PVBadge(L10n.Promote.contested, tone: .danger, icon: .warning) }`, with no accessibility identifier (the button's label folds its children, and no test reads one). No other layout change: `PVBadge` is `fixedSize`, and the reason `Text` is already `lineLimit(1)`, so the reason truncates first (CM-3) | Brief inventory: "Contested mark — Badge, not a new control and not a Chip"; danger keeps it apart from the Weak band's warning tone | A glyph-only badge (`init(icon:label:)`) — CM-1 draws text; a Callout under the row — the brief puts it on the assessment line |
 | D-4 | **VoiceOver: contested changes the spoken band, not the sentence.** `L10n.Promote.assessment(_ a: PromoteFlow.Assessment) -> LocalizedStringResource` *(new)*, beside `L10n.Promote.outcome(_:)`, switches to the existing `assessmentStrong` / `assessmentMedium` / `assessmentWeak` / `assessmentNone`; it replaces `private enum PromoteAssessmentCopy` in `PromoteView.swift`, whose four call sites move onto it and which is deleted. `PromoteModel.assessmentText(_ readout: PromoteFlow.SelectionReadout) -> String` *(new)*, beside `reasonText`, returns `L10n.Promote.assessmentContested(L10n.string(L10n.Promote.assessment(readout.assessment)))` *(new key, "%@, contested")* when `readout.contested`, else `L10n.string(L10n.Promote.assessment(readout.assessment))`. The row button's label stays `L10n.Promote.evidenceFor(name:assessment:reason:)`, now with `assessment: model.assessmentText(readout)`. The sheet subtitle keeps the plain band (Out). The Contested badge gets no accessibility modifier: an explicit `.accessibilityLabel` on the button replaces its children's, as the band badge relies on today | One place decides how a contested band is spoken; S11-20 switches `sheetSubtitle` to `assessmentText` with no new key (maintainability review M-2). The band wording moves out of a file-private view enum the model and tests cannot reach (M-1); `outcome(_:)` is the precedent | A second full sentence `evidenceForContested` — S11-20 would double `sheetSubtitle` the same way; appending ", contested" in the view — word order is the translator's, and untestable |
 | D-5 | **Move sentences.** `reasonText(_:on:)` replaces the interim arm and its comment with three arms. With the neighbor found (D-6): `.neighborPlaced` → `L10n.Promote.neighborPlaced(neighbor:ref:)` *(new)* "after %1$@ → %2$@ was matched"; `.neighborMoved` → `L10n.Promote.neighborMoved(neighbor:ref:)` *(new)* "after %1$@ moved to %2$@"; `.neighborReleased` → `L10n.Promote.neighborReleased(neighbor:)` *(new)* "after %@ was unmatched". Neighbor not a row on the page: all three → `L10n.Promote.reasonMoveUnknown` *(new)* "after a connected row changed". No bridge phrase | Brief CM-5 copy. The sentences fill `updatedDetail`'s `%@`, giving "Updated · after Ada moved to PER-e1". A move neighbor is a layer Subject, so it is a row; the fallback mirrors `.via`'s `reasonVia` for the case it is not | Reusing the via phrase with the role — the brief's sentences have none; a separate move switch — S11-17 D-4 put moves in `Reason` so there is one switch |
 | D-6 | **A row's shown ref lives in the flow.** `PromoteFlow.Target.handleRef: String?` *(new)*, beside `handleID` (`if case .handle(_, let ref, _) = self { return ref }`). `PromoteFlow.Row.shownRef: String` *(new)*, doc "The ref the page names this row by: its record's when it has one, else its Source ref", `target.handleRef ?? ref`. In `reasonText`, `.via` and D-5's arms find the neighbor with `flow.rows.first { $0.subjectID == neighborID }` and name it by `.name` and `.shownRef`; `.via` keeps its phrase lookup and its `reasonVia` fallback. The other `if case .handle(_, let ref, _)` sites (`noteDuplicates`, `targetColumn`) are not touched | The "which ref names a row" rule is written once, in the flow, where S11-27 builds subrow sentences that name ends the same way (review M-3) | A private `neighborNaming` tuple in `PromoteModel` — S11-27 would copy it into the flow; copying the lookup into each move arm |
 | D-7 | **Caption reason in the flow.** `PromoteFlow.Row.captionReason: Reason` *(new)*, beside `selectionReadout`, doc "What the Updated caption words: the move when settling moved this row, else its reason", `move ?? reason`. `PromoteModel.reasonText(for:)` is deleted; the caption calls `model.reasonText(row.captionReason, on: row)`; `if row.updated` stays the guard | User, 2026-10-20: the move shows in the Updated line, replacing the reason, and only there (CM-5, CM-6). Both "which reason shows" rules sit in `PromoteFlow`, testable there, and the model keeps one wording function (review M-4) | Renaming the forwarder to `updatedReasonText(for:)` — a second wording entry point; a second caption line — user chose the Updated line |
-| D-8 | **Copy comes from the agreed board.** §6 Strings is the brief's copy. If the agreed board words CM-1, CM-4 or CM-5 differently, the plan refresh (before `Planned`) copies the board's words into §6 and AC-1.6 / AC-2.x | The brief is not the board; the board is agreed before this plan leaves Blocked | Implementing against the brief's copy when the board differs |
+| D-8 | **Copy and layout are the agreed board's.** Board frames 14–15 word and place everything as §6 says: band badge, then Contested (danger, triangle icon), then the italic reason, in one button; VoiceOver "Evidence for Aida Davies: Strong, contested, via Gracie → PER-7KD45 (child of)"; captions "Updated · after Bill Davies moved to PER-8BD77" and "Updated · after Bill Davies → PER-8BD77 was matched" (frame 06). Board sample reasons that join two neighbors ("via Gracie (child of) and Bill → PER-8BD77 (wife of)") are mock data, not copy this PR adds | Checked against the board file 2026-10-20 | — |
 | D-9 | **Tests are Swift Testing on flow and model**, in the existing suites; no view or UI test. Rows get `contested` and `moveReason` set directly on `CatalogPromoteGraphAlignmentRow`, as S11-17's tests do | Every rule in this PR is in `PromoteFlow`, `PromoteModel` or `L10n` (D-1, D-2, D-4, D-5, D-6, D-7); the view only places a badge | A `FakeStore` knob for contested — S11-17 Out |
+| D-10 | **The Updated caption takes the info ink.** The caption `Text` under the row changes `.foregroundStyle(PVColor.textSecondary)` to `.foregroundStyle(PVColor.infoForeground)`; font, italic and indent stay. This applies to every Updated caption, moved or not | The agreed board draws the caption in `--info-fg` (frames 06, 14, 15), tying it to the Updated badge's info tone; `PVColor.infoForeground` is that token in Swift | Keeping `textSecondary` — the board changed it |
 
 ## 6. Design
 
@@ -151,11 +154,11 @@ From the S11-D1 inventory (§6 of the brief), the rows this PR touches:
 | Promote row | snowflake, Extend | `macos/App/Features/Promote/PromoteView.swift` `PromoteAlignmentRow` | Contested badge in the assessment button (D-3); label's `assessment:` from `model.assessmentText` (D-4); caption from `row.captionReason` (D-7) |
 | Contested mark | `PVBadge(_:tone:icon:)`, `.danger`, `.warning` | `macos/App/DesignSystem/Components/Badge/PVBadge.swift` | Instance; no new kit piece |
 | Band, Updated, Decided marks | `PVBadge` | same | Unchanged |
-| Updated caption | snowflake, Extend | `PromoteAlignmentRow` | Same type, indent and guard |
+| Updated caption | snowflake, Extend | `PromoteAlignmentRow` | Same type, indent and guard; the text may be a move sentence (D-7); the ink is `PVColor.infoForeground` (D-10) |
 
-Frames in words (S11-D1 §5 frames 1 and 2): a row's assessment column reads, left to right, the band badge, the Contested badge (red tint, triangle icon, caps "CONTESTED"), the italic reason, a chevron. A clean row has no second badge. Mary's Updated row has the blue Updated badge in the badge column and, under the row at the note indent, the italic caption "Updated · after John Smith moved to PER-7QH3D".
+Frames in words (board frames 14 and 15): grouped by assessment, Strong shows a clean "Gracie Gray Gates (Frickleton)" row (green Strong badge, italic reason "name, birth and death agree") and a contested "Aida Davies" row (Strong, then a red CONTESTED badge with a triangle icon, then the reason). Medium shows a contested Residence row; Weak shows a contested "Jean Gates" row whose long reason truncates with an ellipsis while both badges stay whole. Rows set to New or Skip, and unselected rows, show nothing in the column. After Bill is moved to PER-8BD77, Aida has the blue Updated badge in the right column and, under the row at the note indent, the italic caption in the info ink "Updated · after Bill Davies moved to PER-8BD77"; the Home row is Updated with no move and its caption keeps its reason.
 
-States: no empty, loading or error state is added; while a re-proposal is in flight a retargeted row shows no Contested badge (D-2). Large: the badge is fixed-size; the reason truncates. Accessibility: D-4; the badge's identifier `promote.row.<ref>.contested`.
+States: no empty, loading or error state is added; while a re-proposal is in flight a retargeted row shows no Contested badge (D-2). Large: the badge is fixed-size; the reason truncates. Accessibility: D-4; the badge has no identifier of its own (D-3).
 
 ### Strings
 
@@ -185,17 +188,17 @@ Check: XT with `PromoteFlowTests` passes.
 
 **STEP-2 — Strings**
 Files: `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`. Skill: `add-localized-string`.
-Do: the six keys in §6 Strings, beside `updatedDetail` and `evidenceFor` in `L10n.Promote`, and `L10n.Promote.assessment(_:)` (D-4) beside `outcome(_:)`. In `Localizable.xcstrings`, insert each entry where the file's existing key order puts it.
+Do: the six keys in §6 Strings, beside `updatedDetail` and `evidenceFor` in `L10n.Promote`, and `L10n.Promote.assessment(_:)` (D-4) beside `outcome(_:)`. In `Localizable.xcstrings` (insertion order, not sorted), put the two `promote.row.*` entries after `promote.row.evidenceFor` and the four `promote.reason.*` entries after `promote.reason.empty`.
 Check: the app builds (XT with `PromoteModelTests` passes); `rg -c '"promote\.(row\.contested|row\.assessmentContested|reason\.neighbor(Placed|Moved|Released)|reason\.moveUnknown)"' macos/App/Resources/Localizable.xcstrings` prints 6; `python3 scripts/check-localizable-xcstrings.py` passes.
 
 **STEP-3 — Wording**
 Files: `macos/App/Features/Promote/PromoteModel.swift`, `macos/ProvenenciaTests/PromoteModelTests.swift`.
-Do: D-4's `assessmentText`, D-5, D-6's use in `reasonText`, and delete `reasonText(for:)` (D-7). In `reasonsAreWordedWithLabelsAndRefs`, `model.reasonText(for: x)` becomes `model.reasonText(x.captionReason, on: x)`. Add T-4, T-6.
+Do: D-4's `assessmentText`, D-5, D-6's use in `reasonText`. Add T-4, T-6. Leave `reasonText(for:)` in place: the view still calls it until STEP-4.
 Check: XT with `PromoteModelTests` passes; `rg -n "Worded in S11-18" macos/App` prints nothing.
 
 **STEP-4 — Row view**
 Files: `macos/App/Features/Promote/PromoteView.swift`. Skill: `add-ui-component`.
-Do: D-3 in `PromoteAlignmentRow`; in its `.accessibilityLabel`, pass `assessment: model.assessmentText(readout)` to `evidenceFor`; the caption calls `model.reasonText(row.captionReason, on: row)`. Move the four `PromoteAssessmentCopy.title(x)` call sites (section titles, the band badge, the label's old argument, `sheetSubtitle`) onto `L10n.Promote.assessment(x)` and delete `PromoteAssessmentCopy` (D-4). Nothing else in the file changes.
+Do: delete `PromoteModel.reasonText(for:)` (D-7); in `reasonsAreWordedWithLabelsAndRefs`, `model.reasonText(for: x)` becomes `model.reasonText(x.captionReason, on: x)`. D-3 in `PromoteAlignmentRow`; in its `.accessibilityLabel`, pass `assessment: model.assessmentText(readout)` to `evidenceFor`; the caption calls `model.reasonText(row.captionReason, on: row)` with `PVColor.infoForeground` (D-10). Move the four `PromoteAssessmentCopy.title(x)` call sites (section titles, the band badge, the label's old argument, `sheetSubtitle`) onto `L10n.Promote.assessment(x)` and delete `PromoteAssessmentCopy` (D-4). Nothing else in the file changes.
 Check: XT with `PromoteModelTests` and `PromoteFlowTests` passes (the app builds); `rg -n "reasonText\(for:|PromoteAssessmentCopy" macos` prints nothing.
 
 **STEP-5 — Docs**
@@ -212,11 +215,11 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-1 | Swift | `macos/ProvenenciaTests/PromoteFlowTests.swift` `aContestedRowShowsContestedInItsReadout` *(new)* | Build with the file's `row(id:target:handleID:assessment:pinned:)` and set fields after the call. `a = row(id: "a")`, `a.contested = true`; `b = row(id: "b", handleID: "e3")`, `b.handleRef = "PER-3"` (clean); `c = row(id: "c", target: "skip", handleID: "", assessment: "weak")`, `c.contested = true`, `c.alternatives[0].assessment = "weak"` (its alternative is the helper's `e2`). `load` with facts a, b, c. Expect a's `selectionReadout?.contested == true`, b's `== false`, c's readout `== PromoteFlow.SelectionReadout(assessment: .weak, reason: .empty, contested: true)` (the alternative's reason defaults to `.empty`), with `c.target.handleID == "e2"` | AC-1.1, AC-1.2, AC-1.3, D-1 |
 | T-2 | Swift | same file · `aContestedRowWithoutAHandleShowsNoReadout` *(new)* | Each row has `contested = true`, set after `row(...)`: `row(id: "n", target: "new", handleID: "")` (drafts New); `row(id: "t", target: "skip", handleID: "", assessment: "medium")` with `reason = .taken` (drafts unset); `row(id: "z", target: "skip", handleID: "", assessment: "none")` (drafts unset); `row(id: "x")` loaded with `fact("x", anchor: true)`. Expect `selectionReadout == nil` for each | AC-1.4, D-1 |
 | T-3 | Swift | same file · `retargetingClearsContestedAndMoveUntilTheNextProposal` *(new)* | Load a (handle e1, `contested = true`, `moveReason = .neighborMoved`, neighbor b) and b; `mapRest()`; `setTarget(subjectID: "a", token: "handle:e2")` (the helper's alternative, so the target changes) → a's `contested == false`, `move == nil`. Then `merge` a proposal with `row(id: "a", handleID: "e2")`, `contested = true` → a's `target.handleID == "e2"` and `contested == true` | AC-1.5, D-2 |
-| T-4 | Swift | `macos/ProvenenciaTests/PromoteModelTests.swift` `movesAreWordedNamingTheNeighbor` *(new)* | Subjects Ada (a, handle e1) and Bea (b, handle e2); after `load()`: `reasonText(.neighborPlaced(neighborID: "a"), on: bea) == L10n.Promote.neighborPlaced(neighbor: "Ada", ref: "PER-e1")`; `.neighborMoved` → `neighborMoved(neighbor: "Ada", ref: "PER-e1")`; `.neighborReleased` → `neighborReleased(neighbor: "Ada")`; `.neighborMoved(neighborID: "zz")` → `L10n.string(L10n.Promote.reasonMoveUnknown)` | AC-2.1, AC-2.2, AC-2.3, AC-2.4, D-5, D-6 |
+| T-4 | Swift | `macos/ProvenenciaTests/PromoteModelTests.swift` `movesAreWordedNamingTheNeighbor` *(new)* | Setup as `reasonsAreWordedWithLabelsAndRefs` (`subject`, `store(subjects:)`, the `Full name` property, `store.promoteProposals`, `model(store:subjectID:)`, `await model.load()`). Subjects Ada (a, handle e1) and Bea (b, handle e2); after `load()`: `reasonText(.neighborPlaced(neighborID: "a"), on: bea) == L10n.Promote.neighborPlaced(neighbor: "Ada", ref: "PER-e1")`; `.neighborMoved` → `neighborMoved(neighbor: "Ada", ref: "PER-e1")`; `.neighborReleased` → `neighborReleased(neighbor: "Ada")`; `.neighborMoved(neighborID: "zz")` → `L10n.string(L10n.Promote.reasonMoveUnknown)` | AC-2.1, AC-2.2, AC-2.3, AC-2.4, D-5, D-6 |
 | T-5 | Swift | `macos/ProvenenciaTests/PromoteFlowTests.swift` `theCaptionReasonIsTheMoveWhenThereIsOne` *(new)* | `a = row(id: "a")` with `moveReason = .neighborMoved`, `moveNeighborSubjectID = "b"`; `b = row(id: "b", handleID: "e3")`. After `load`: a's `captionReason == .neighborMoved(neighborID: "b")`; b's `captionReason == b.reason`. Shown ref: a's `shownRef == "PER-1"` (its handle ref); after `setTarget(subjectID: "a", token: "skip")`, a's `shownRef == "CPR-a"` | AC-2.5, D-6, D-7 |
-| T-6 | Swift | `macos/ProvenenciaTests/PromoteModelTests.swift` `theContestedBandIsSpoken` *(new)* | Ada on e1 strong with `contested = true`: `assessmentText(ada.selectionReadout!) == L10n.Promote.assessmentContested(L10n.string(L10n.Promote.assessment(.strong)))`; with `contested = false`: `== L10n.string(L10n.Promote.assessment(.strong))` | AC-1.6, D-4 |
+| T-6 | Swift | `macos/ProvenenciaTests/PromoteModelTests.swift` `theContestedBandIsSpoken` *(new)* | Setup as T-4 with one proposal holding `row("a", handleID: "e1")` with `contested = true` and `row("b", handleID: "e2")` clean; one `load()`. Ada: `assessmentText(ada.selectionReadout!) == L10n.Promote.assessmentContested(L10n.string(L10n.Promote.assessment(.strong)))`; Bea: `assessmentText(bea.selectionReadout!) == L10n.string(L10n.Promote.assessment(.strong))` | AC-1.6, D-4 |
 
-AC-2.6 is today's `if row.updated` guard, unchanged (STEP-4) and checked in §10 step 3. AC-1.1's order and tones are checked in §10 step 1.
+AC-2.6 is today's `if row.updated` guard, unchanged (STEP-4) and checked in §10 step 3, as is AC-2.7. AC-1.1's order and tones are checked in §10 step 1.
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `PromoteModelTests` (the deleted forwarder) and `PromoteFlowTests` (the readout's new field in any `SelectionReadout(…)` literal; `rg -n "SelectionReadout(" macos` finds them).
 
@@ -241,27 +244,27 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 
 1. Open a project with a filed person "Mary Smith" (sex at birth Male). Add a Source with a person "Mary Smith" whose sex at birth is recorded as Female. Open Promote on that Subject. See: the row on Mary Smith's record with its band, then a red **Contested** badge, then the reason. The other rows show no Contested badge.
 2. On that row, pick New. See: the assessment column and the badge go. Pick Mary Smith's record again. See: after the re-proposal, the Contested badge is back.
-3. On any page, decide a row so another suggested row changes target. See: the changed row shows Updated and a caption "Updated · …". With the default registry a settling move is rare, so the caption usually reads the via or agrees reason; T-5 is the evidence for the move sentence, named in the PR body.
+3. On any page, decide a row so another suggested row changes target. See: the changed row shows Updated and a blue-ink caption "Updated · " followed by its reason (AC-2.7). With the default registry a settling move is rare, so the caption usually reads the via or agrees reason; T-5 is the evidence for the move sentence, named in the PR body.
 4. With VoiceOver on, focus the contested row's assessment. Hear "Evidence for Mary Smith: Strong, contested, …" (or its band).
 
 ## 11. Risks and stop conditions
 
 | Risk | Mitigation |
 | --- | --- |
-| The agreed board words or places the marker differently from the brief | D-8: the plan refresh copies the board before `Planned` |
+| The board and the plan drift on a later board edit | §6 describes frames 14–15 in words; build from §6 |
 | A row shows Contested on a record the proposal did not compare | D-1 ties it to the readout; T-1 covers the Weak draft-on-alternative case |
 
 **Stop and report if:**
 
 - `draftTarget` drafts a handle other than the proposal's handle or its first alternative for a row Go marks contested (the readout would describe a pair `contested` does not).
 - `Row.contested` or `Row.move` is not set as §4 says (`makeRow`'s fresh and decided-keep paths).
-- The agreed board puts the marker outside the assessment button, or shows a move outside the Updated caption (D-3, D-7 would not hold).
+- The board's frames 14–15 show something §6 does not describe (D-8 lists what they show).
 - Any step needs a Go, proto or `FakeStore` change.
 - XT or `scripts/check-pr.sh` cannot run in your environment: report it; do not mark a step's check done without its output.
 
 ## 12. Open questions
 
-1. **Is the S11-D1 board agreed?** Recommended: draw it in Claude Design from [`S11-D1-promote-rows.md`](../design/S11-D1-promote-rows.md), then refresh this plan (D-8), record the board link, and run `review-plan`.
+None.
 
 ## 13. PR
 
