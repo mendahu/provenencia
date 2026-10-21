@@ -15,19 +15,23 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/depictionvalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 var (
 	ErrInvalid    = apperr.New(apperr.CodeObservationsInvalid, apperr.KindUser)
 	ErrEdgeLocked = apperr.New(apperr.CodeObservationsEdgeLocked, apperr.KindConflict)
 	ErrInUse      = apperr.New(apperr.CodeObservationsInUse, apperr.KindConflict)
+	ErrOtherGraph = apperr.New(apperr.CodeObservationsOtherGraph, apperr.KindUser)
 )
 
 // InsertOptions controls engine-locked edge Observation writes.
@@ -49,7 +53,7 @@ const (
 
 	sqlCitationExists = `SELECT 1 FROM citations WHERE id = ?`
 	sqlSubjectType    = `SELECT subject_type_id FROM subjects WHERE id = ?`
-	sqlSubjectTypeKey = `SELECT t.key FROM subjects s
+	sqlSubjectTypeKey = `SELECT t.key, t.origin FROM subjects s
 		JOIN subject_types t ON t.id = s.subject_type_id
 		WHERE s.id = ?`
 	sqlGetRow = `SELECT id, ref, citation_id, subject_id, property_id, polarity,
@@ -59,7 +63,7 @@ const (
 	sqlListNotesByObservation = `SELECT id, body FROM observation_notes WHERE observation_id = ? ORDER BY rowid`
 	sqlDeleteNote             = `DELETE FROM observation_notes WHERE id = ?`
 	sqlDeleteObservationByID  = `DELETE FROM observations WHERE id = ?`
-	sqlSubjectExists          = `SELECT 1 FROM subjects WHERE id = ?`
+	sqlCitationArtifact       = `SELECT artifact_id FROM citations WHERE id = ?`
 	sqlBindingExists          = `SELECT 1 FROM subject_type_properties WHERE subject_type_id = ? AND property_id = ?`
 	sqlTermOnProperty         = `SELECT 1 FROM property_terms WHERE id = ? AND property_id = ?`
 	sqlPropertyGet            = `SELECT id, key, origin, label, COALESCE(description, ''), value_type
@@ -222,16 +226,53 @@ type resolvedValue struct {
 	ValueChanges []rowchange.Change
 }
 
-// requireSubjectSource rejects an observation whose subject is homed to a
-// different Source than the citation's artifact. Value subjects are not checked.
-func requireSubjectSource(tx *sql.Tx, citationID, subjectID []byte) error {
-	var one int
-	err := tx.QueryRow(`SELECT 1
-		FROM subjects s
-		JOIN citations c ON c.id = ?
-		JOIN artifacts a ON a.id = c.artifact_id AND a.source_id = s.source_id
-		WHERE s.id = ?`, citationID, subjectID).Scan(&one)
-	if err == sql.ErrNoRows {
+// requireSameGraph refuses an Observation whose Subject, Subject value, or
+// Citation Artifact is not in, or linked to, the Subject's Evidence graph.
+// A product reification (a source Subject) may be the value of a non-edge
+// row in any graph.
+func requireSameGraph(tx *sql.Tx, citationID, subjectID, valueSubjectID []byte, edge bool) error {
+	graph, err := evidencegraphs.SubjectGraphTx(tx, subjectID)
+	if err != nil {
+		return mapMissing(err)
+	}
+	var artifactID []byte
+	if err := tx.QueryRow(sqlCitationArtifact, citationID).Scan(&artifactID); err != nil {
+		return mapMissing(err)
+	}
+	linked, err := evidencegraphs.IsLinkedTx(tx, graph, artifactID)
+	if err != nil {
+		return mapMissing(err)
+	}
+	if !linked {
+		return ErrOtherGraph
+	}
+	if len(valueSubjectID) == 0 {
+		return nil
+	}
+	valueGraph, err := evidencegraphs.SubjectGraphTx(tx, valueSubjectID)
+	if err != nil {
+		return mapMissing(err)
+	}
+	if bytes.Equal(valueGraph, graph) {
+		return nil
+	}
+	if !edge {
+		var key, origin string
+		if err := tx.QueryRow(sqlSubjectTypeKey, valueSubjectID).Scan(&key, &origin); err != nil {
+			return mapMissing(err)
+		}
+		if origin == vocabkey.OriginProvenencia {
+			if info, ok := subjectvocab.TypeByKey(key); ok && info.Role == subjectvocab.RoleReification {
+				return nil
+			}
+		}
+	}
+	return ErrOtherGraph
+}
+
+// mapMissing turns a missing row into ErrInvalid.
+func mapMissing(err error) error {
+	if errors.Is(err, sql.ErrNoRows) || errors.Is(err, evidencegraphs.ErrInvalid) {
 		return ErrInvalid
 	}
 	return err
@@ -251,10 +292,6 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 	if len(in.SubjectID) != 16 || len(in.PropertyID) != 16 {
 		return Observation{}, nil, ErrInvalid
 	}
-	if err := requireSubjectSource(tx, citationID, in.SubjectID); err != nil {
-		return Observation{}, nil, err
-	}
-
 	var subjectTypeID []byte
 	if err := tx.QueryRow(sqlSubjectType, in.SubjectID).Scan(&subjectTypeID); err != nil {
 		if err == sql.ErrNoRows {
@@ -274,19 +311,23 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 	if err != nil {
 		return Observation{}, nil, err
 	}
-	var typeKey string
-	if err := tx.QueryRow(sqlSubjectTypeKey, in.SubjectID).Scan(&typeKey); err != nil {
+	var typeKey, typeOrigin string
+	if err := tx.QueryRow(sqlSubjectTypeKey, in.SubjectID).Scan(&typeKey, &typeOrigin); err != nil {
 		if err == sql.ErrNoRows {
 			return Observation{}, nil, ErrInvalid
 		}
 		return Observation{}, nil, err
 	}
-	if _, ok := connectrules.Edge(typeKey, prop.Key); ok && !opts.AllowEdgeRows {
+	_, edge := connectrules.Edge(typeKey, prop.Key)
+	if edge && !opts.AllowEdgeRows {
 		return Observation{}, nil, ErrEdgeLocked
 	}
 
 	resolved, err := resolveValue(tx, citationID, prop.ValueType, in, nil)
 	if err != nil {
+		return Observation{}, nil, err
+	}
+	if err := requireSameGraph(tx, citationID, in.SubjectID, resolved.SubjectID, edge); err != nil {
 		return Observation{}, nil, err
 	}
 
@@ -473,13 +514,6 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 	case propertymeta.ValueTypeSubject:
 		if len(in.ValueSubjectID) != 16 || hasOtherScalars(in, "subject") {
 			return resolvedValue{}, ErrInvalid
-		}
-		var one int
-		if err := tx.QueryRow(sqlSubjectExists, in.ValueSubjectID).Scan(&one); err != nil {
-			if err == sql.ErrNoRows {
-				return resolvedValue{}, ErrInvalid
-			}
-			return resolvedValue{}, err
 		}
 		return resolvedValue{SubjectID: in.ValueSubjectID}, nil
 	case propertymeta.ValueTypeTerm:

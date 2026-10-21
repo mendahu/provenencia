@@ -32,10 +32,6 @@ func updateOne(tx *database.Tx, citationID []byte, prev Observation, in Input) (
 	if len(in.SubjectID) != 16 || len(in.PropertyID) != 16 {
 		return Observation{}, nil, ErrInvalid
 	}
-	if err := requireSubjectSource(tx.Tx, citationID, in.SubjectID); err != nil {
-		return Observation{}, nil, err
-	}
-
 	var subjectTypeID []byte
 	if err := tx.QueryRow(sqlSubjectType, in.SubjectID).Scan(&subjectTypeID); err != nil {
 		if err == sql.ErrNoRows {
@@ -56,6 +52,9 @@ func updateOne(tx *database.Tx, citationID []byte, prev Observation, in Input) (
 	}
 	resolved, err := resolveValue(tx.Tx, citationID, prop.ValueType, in, &prev)
 	if err != nil {
+		return Observation{}, nil, err
+	}
+	if err := requireSameGraph(tx.Tx, citationID, in.SubjectID, resolved.SubjectID, false); err != nil {
 		return Observation{}, nil, err
 	}
 
