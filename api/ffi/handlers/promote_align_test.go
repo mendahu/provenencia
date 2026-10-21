@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
@@ -14,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -80,26 +82,11 @@ func personOnNewSource(t *testing.T, dir, userID, typeID, sexKey, polarity strin
 	return sourceID, subjectID
 }
 
-// A row-level conflict from a negative Observation reaches the response as a
-// comparison line that names the incoming value as negative and cannot be
-// pinned.
-func TestProposeNegativeConflictLine(t *testing.T) {
-	dir, userID, _, typeID := subjectFixture(t)
-	_, handleSubject := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
-	handle := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: handleSubject})
-	sourceID, incoming := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityNegative)
-
-	out, err := ProposePromoteGraphAlignment(marshalProto(t, &engine.ProposePromoteGraphAlignmentRequest{
-		ProjectDir: dir, SourceId: sourceID,
-		Fixed: []*engine.PromoteGraphAlignmentFixed{{SubjectId: incoming, HandleId: handle.Entity.GetId()}},
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var resp engine.ProposePromoteGraphAlignmentResponse
-	if err := proto.Unmarshal(out, &resp); err != nil {
-		t.Fatal(err)
-	}
+// requireNegativeConflictLine fails unless some row carries a sex_at_birth
+// conflict comparison that is negative, unpinned and has no incoming
+// Observation id.
+func requireNegativeConflictLine(t *testing.T, resp *engine.ProposePromoteGraphAlignmentResponse) {
+	t.Helper()
 	for _, row := range resp.GetRows() {
 		for _, c := range row.GetComparisons() {
 			if c.GetPropertyKey() == "sex_at_birth" && c.GetOutcome() == "conflict" {
@@ -111,6 +98,96 @@ func TestProposeNegativeConflictLine(t *testing.T) {
 		}
 	}
 	t.Fatalf("no sex_at_birth conflict line in %+v", resp.GetRows())
+}
+
+// The contested flag reaches the response at any band: a negative Observation
+// against a filed positive one conflicts whether the row is skipped, fixed or
+// (with a positive Observation) not contested at all. The fixed negative case
+// also covers the comparison line: the conflict names the incoming value as
+// negative and cannot be pinned.
+func TestProposeSendsContested(t *testing.T) {
+	cases := []struct {
+		name       string
+		polarity   string
+		fix        bool
+		wantTarget string
+		wantReason string
+		wantFlag   bool
+	}{
+		{"negative, unfixed", observations.PolarityNegative, false, "skip", "weak", true},
+		{"negative, fixed", observations.PolarityNegative, true, "handle", "decided", true},
+		{"positive", observations.PolarityPositive, false, "handle", "agrees", false},
+	}
+	var tests []rpcTest
+	for _, tc := range cases {
+		var incoming string
+		tests = append(tests, rpcTest{
+			name: tc.name,
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, typeID := subjectFixture(t)
+				_, handleSubject := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
+				handle := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: handleSubject})
+				var sourceID string
+				sourceID, incoming = personOnNewSource(t, dir, userID, typeID, "male", tc.polarity)
+				req := &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, SourceId: sourceID}
+				if tc.fix {
+					req.Fixed = []*engine.PromoteGraphAlignmentFixed{{SubjectId: incoming, HandleId: handle.Entity.GetId()}}
+				}
+				return req
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.ProposePromoteGraphAlignmentResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				for _, row := range resp.GetRows() {
+					if row.GetSubjectId() != incoming {
+						continue
+					}
+					if row.GetTarget() != tc.wantTarget || row.GetReason() != tc.wantReason || row.GetContested() != tc.wantFlag {
+						t.Fatalf("row target %q reason %q contested %v; want %q %q %v",
+							row.GetTarget(), row.GetReason(), row.GetContested(), tc.wantTarget, tc.wantReason, tc.wantFlag)
+					}
+					if tc.fix && tc.polarity == observations.PolarityNegative {
+						requireNegativeConflictLine(t, &resp)
+					}
+					return
+				}
+				t.Fatalf("no row for incoming subject %s in %+v", incoming, resp.GetRows())
+			},
+		})
+	}
+	runRPC(t, ProposePromoteGraphAlignment, tests)
+}
+
+// A row whose earlier pair was released carries the move's reason and the
+// neighbor that caused it; a row without a move carries neither.
+func TestProposalProtoSendsMove(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	dir, _, _, _ := subjectFixture(t)
+	a, b, n := uuid.New(), uuid.New(), uuid.New()
+	prop := graphalign.Proposal{Rows: []graphalign.Row{
+		{SubjectID: a[:], Target: graphalign.TargetSkip, Move: &graphalign.Move{Reason: graphalign.ReasonNeighborPlaced, NeighborSubjectID: n[:]}},
+		{SubjectID: b[:], Target: graphalign.TargetSkip},
+	}}
+	var resp *engine.ProposePromoteGraphAlignmentResponse
+	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
+		var err error
+		resp, err = proposalProto(c, prop)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	rows := resp.GetRows()
+	if len(rows) != 2 {
+		t.Fatalf("rows %d", len(rows))
+	}
+	if rows[0].GetMoveReason() != "neighbor_placed" || rows[0].GetMoveNeighborSubjectId() != n.String() {
+		t.Fatalf("moved row %+v", rows[0])
+	}
+	if rows[1].GetMoveReason() != "" || rows[1].GetMoveNeighborSubjectId() != "" {
+		t.Fatalf("plain row %+v", rows[1])
+	}
 }
 
 func TestProposePromoteGraphAlignment(t *testing.T) {

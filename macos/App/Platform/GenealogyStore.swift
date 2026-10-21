@@ -290,8 +290,8 @@ struct CatalogPromoteGraphAlignmentAlternative: Sendable, Equatable {
     var place: CatalogPlaceHeader?
     /// strong, medium, weak, none — this record's own band.
     var assessment: String = ""
-    /// via, agrees, or weak. The page words it.
-    var reason: String = ""
+    /// A row reason, worded by the page.
+    var reason: PromoteReasonCode = .empty
     var reasonPropertyKey: String = ""
     var reasonPropertyOrigin: String = ""
     var viaNeighborSubjectID: String = ""
@@ -306,8 +306,8 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     var handleRef: String
     var score: Double
     var assessment: String
-    /// via, decided, agrees, weak, taken, no_match, empty — worded by the page.
-    var reason: String = ""
+    /// A row reason, worded by the page.
+    var reason: PromoteReasonCode = .empty
     /// With reason agrees: the Property that agrees most.
     var reasonPropertyKey: String = ""
     var reasonPropertyOrigin: String = ""
@@ -320,6 +320,11 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     var viaNeighborSubjectID: String = ""
     var viaBridgeType: String = ""
     var viaRole: String = ""
+    /// A comparison behind the reported pair conflicts, whatever the band.
+    var contested: Bool = false
+    /// A move reason when settling released an earlier pair of this row in this proposal; nil otherwise.
+    var moveReason: PromoteReasonCode? = nil
+    var moveNeighborSubjectID: String = ""
     var person: CatalogPersonHeader?
     var event: CatalogEventHeader?
     var place: CatalogPlaceHeader?

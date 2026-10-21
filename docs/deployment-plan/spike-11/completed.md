@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-17 — Contested flag through FFI
+
+**Landed 2026-10-19** in [#504](https://github.com/mendahu/provenencia/pull/504). Each Promote proposal row now carries whether a comparison behind its pair conflicts (`contested`, at any band) and, when settling released an earlier pair, the move's reason and the neighbor that caused it. Swift parses both into `PromoteFlow.Row.contested` and `.move`; the page looks and reads as before, and S11-18 draws the marker and words the moves. Promote's reason codes now live in `PromoteReasonCode` in `ConclusionVocabulary.swift`, parsed once in `GoStore`, and `TestSwiftVocabularyMatchesGo` fails when Go and Swift drift.
+
 ## S11-16 — Rewrite graph alignment
 
 **Landed 2026-10-19** in [#501](https://github.com/mendahu/provenencia/pull/501). Promote's graph alignment is the layer 6 procedure. A Subject is compared only with handles its shortlist offered (at least half alike, the best five by similarity and every tie up to twenty) or that a placed pair's links point at; every candidate enters one best-first queue; a link whose neighbor is not placed yet is judged by entity compare, so a differing birth counts against a look-alike from the first pass. A placed pair re-scores only its neighbors, and when the queue empties only the pairs whose neighbors moved are settled again, each move carrying a reason. A row gets its band from its evidence and a contested flag when any comparison conflicts; neither the flag nor the move reaches the page until S11-17. The walk's numbers are the registry's alignment section, and the three old passes and `core/graphalign/registry.go` are gone.

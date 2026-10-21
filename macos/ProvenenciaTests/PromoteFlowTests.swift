@@ -22,7 +22,7 @@ struct PromoteFlowTests {
             handleRef: "PER-1",
             score: 5,
             assessment: assessment,
-            reason: "agrees", reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia",
+            reason: .agrees, reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia",
             comparisons: [
                 CatalogPromoteGraphAlignmentComparison(
                     propertyKey: "name",
@@ -149,12 +149,12 @@ struct PromoteFlowTests {
         let winner = row(id: "a", handleID: "e1", assessment: "weak")
         for band in ["weak", "medium", "strong"] {
             var loser = row(id: "b", target: "skip", handleID: "", assessment: band)
-            loser.reason = "taken"
+            loser.reason = .taken
             loser.comparisons = []
             loser.possibleDuplicate = true
             loser.duplicateOfSubjectID = "a"
             loser.alternatives = [
-                CatalogPromoteGraphAlignmentAlternative(handleID: "e1", handleRef: "PER-1", score: 2.5, assessment: band, reason: "agrees"),
+                CatalogPromoteGraphAlignmentAlternative(handleID: "e1", handleRef: "PER-1", score: 2.5, assessment: band, reason: .agrees),
             ]
             var flow = PromoteFlow(entryID: "a")
             flow.mappedRest = true
@@ -170,12 +170,12 @@ struct PromoteFlowTests {
     /// opens on it; only a no-match stays empty.
     @Test func aWeakCandidateBelowTheBarStartsSelected() {
         var below = row(id: "a", target: "skip", handleID: "", assessment: "weak")
-        below.reason = "weak"
+        below.reason = .weak
         below.comparisons = []
         below.alternatives = [
             CatalogPromoteGraphAlignmentAlternative(
                 handleID: "e9", handleRef: "PER-9", score: 1,
-                assessment: "weak", reason: "weak"
+                assessment: "weak", reason: .weak
             ),
         ]
         var flow = PromoteFlow(entryID: "a")
@@ -196,7 +196,7 @@ struct PromoteFlowTests {
         chosen.alternatives = [
             CatalogPromoteGraphAlignmentAlternative(
                 handleID: "e2", handleRef: "PER-2", score: 2.5,
-                assessment: "weak", reason: "agrees",
+                assessment: "weak", reason: .agrees,
                 reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia"
             ),
         ]
@@ -222,7 +222,7 @@ struct PromoteFlowTests {
         flow.setTarget(subjectID: "a", token: "handle:e2")
         var rescored = row(id: "a", handleID: "e2", assessment: "medium")
         rescored.handleRef = "PER-2"
-        rescored.reason = "decided"
+        rescored.reason = .decided
         flow.merge(proposal(rows: [rescored], revision: 4), subjects: [fact("a")])
         #expect(flow.rows.first?.selectionReadout == PromoteFlow.SelectionReadout(
             assessment: .medium, reason: .agrees(key: "name", origin: "provenencia")
@@ -274,6 +274,85 @@ struct PromoteFlowTests {
         #expect(ada?.target.handleID == "e2")
         #expect(bea?.updated == true)
         #expect(bea?.decided == false)
+    }
+
+    @Test func aContestedRowAndItsMoveReachTheFlow() {
+        var a = row(id: "a")
+        a.contested = true
+        a.moveReason = .neighborMoved
+        a.moveNeighborSubjectID = "b"
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [a, row(id: "b", handleID: "e2")]), subjects: [fact("a"), fact("b")], bridges: [])
+        let rowA = flow.rows.first { $0.subjectID == "a" }
+        let rowB = flow.rows.first { $0.subjectID == "b" }
+        #expect(rowA?.contested == true)
+        #expect(rowA?.move == .neighborMoved(neighborID: "b"))
+        #expect(rowB?.contested == false)
+        #expect(rowB?.move == nil)
+
+        func move(_ code: PromoteReasonCode?, neighbor: String) -> PromoteFlow.Reason? {
+            var r = row(id: "a")
+            r.moveReason = code
+            r.moveNeighborSubjectID = neighbor
+            return PromoteFlow.Reason(move: r)
+        }
+        #expect(move(nil, neighbor: "b") == nil)
+        #expect(move(.neighborReleased, neighbor: "") == .empty)
+        #expect(move(.unrecognized("later_move"), neighbor: "b") == .empty)
+    }
+
+    @Test func aDecidedRowTakesTheLatestContestedFlag() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [row(id: "a")]), subjects: [fact("a")], bridges: [])
+        flow.mapRest()
+        flow.setTarget(subjectID: "a", token: "handle:e1")
+        var contested = row(id: "a")
+        contested.contested = true
+        flow.merge(proposal(rows: [contested], revision: 4), subjects: [fact("a")])
+        let a = flow.rows.first { $0.subjectID == "a" }
+        #expect(a?.target.handleID == "e1")
+        #expect(a?.decided == true)
+        #expect(a?.contested == true)
+    }
+
+    @Test func anAnchorRowIsNeverContested() {
+        var a = row(id: "a")
+        a.contested = true
+        a.moveReason = .neighborPlaced
+        a.moveNeighborSubjectID = "b"
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [a]), subjects: [fact("a", anchor: true)], bridges: [])
+        let anchor = flow.rows.first { $0.subjectID == "a" }
+        #expect(anchor?.anchor == true)
+        #expect(anchor?.contested == false)
+        #expect(anchor?.move == nil)
+    }
+
+    @Test func reasonCodesParseThroughTheWireVocabulary() {
+        let wire: [(String, PromoteReasonCode)] = [
+            ("via", .via), ("decided", .decided), ("agrees", .agrees), ("weak", .weak), ("taken", .taken),
+            ("no_match", .noMatch), ("empty", .empty), ("neighbor_placed", .neighborPlaced),
+            ("neighbor_moved", .neighborMoved), ("neighbor_released", .neighborReleased),
+        ]
+        for (code, expected) in wire {
+            #expect(PromoteReasonCode(wire: code) == expected)
+        }
+        #expect(PromoteReasonCode(wire: "later_code") == .unrecognized("later_code"))
+
+        func reason(_ code: PromoteReasonCode, neighbor: String = "") -> PromoteFlow.Reason {
+            PromoteFlow.Reason(code: code, propertyKey: "name", propertyOrigin: "provenencia", neighborID: neighbor)
+        }
+        #expect(reason(.via, neighbor: "n") == .via(neighborID: "n"))
+        #expect(reason(.via) == .empty)
+        #expect(reason(.decided) == .decided)
+        #expect(reason(.agrees) == .agrees(key: "name", origin: "provenencia"))
+        #expect(reason(.weak) == .weak)
+        #expect(reason(.taken) == .taken)
+        #expect(reason(.noMatch) == .noMatch)
+        #expect(reason(.empty) == .empty)
+        #expect(reason(.neighborPlaced, neighbor: "n") == .neighborPlaced(neighborID: "n"))
+        #expect(reason(.neighborPlaced) == .empty)
+        #expect(reason(.unrecognized("later_code")) == .empty)
     }
 
     @Test func doneSendsPinsAndASwitchedOffBridge() {

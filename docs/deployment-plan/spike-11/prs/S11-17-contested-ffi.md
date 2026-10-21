@@ -1,6 +1,8 @@
 # S11-17 — Contested flag through FFI
 
-**Status:** Planned
+**Status:** Landed in [#504](https://github.com/mendahu/provenencia/pull/504) (2026-10-19)
+
+**Landed 2026-10-19.** Differences from the plan: the branch is `s11-17-contested-ffi-impl`, because `s11-17-contested-ffi` is the stale branch of the merged plan PR #502 (user decision). Nothing else.
 **Spike / slice:** Spike 11 · Slice 4 — Segments and graph alignment
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the wire and Swift's parsing only; the contested marker and the move-reason copy are S11-18 behind S11-D1)

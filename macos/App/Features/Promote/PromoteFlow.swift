@@ -38,6 +38,12 @@ struct PromoteFlow: Equatable, Sendable {
     enum Reason: Equatable, Sendable {
         /// Reached from this neighbor row once it was matched.
         case via(neighborID: String)
+        /// Settling put this row's pair here because of this neighbor.
+        case neighborPlaced(neighborID: String)
+        /// Settling moved this row's pair because of this neighbor.
+        case neighborMoved(neighborID: String)
+        /// Settling released this row's pair because of this neighbor.
+        case neighborReleased(neighborID: String)
         /// Filed before this page opened.
         case filed
         /// The researcher's choice, held as given.
@@ -50,15 +56,18 @@ struct PromoteFlow: Equatable, Sendable {
         case noMatch
         case empty
 
-        init(code: String, propertyKey: String, propertyOrigin: String, viaNeighborID: String) {
+        init(code: PromoteReasonCode, propertyKey: String, propertyOrigin: String, neighborID: String) {
             switch code {
-            case "via" where !viaNeighborID.isEmpty: self = .via(neighborID: viaNeighborID)
-            case "decided": self = .decided
-            case "agrees": self = .agrees(key: propertyKey, origin: propertyOrigin)
-            case "weak": self = .weak
-            case "taken": self = .taken
-            case "no_match": self = .noMatch
-            default: self = .empty
+            case .via where !neighborID.isEmpty: self = .via(neighborID: neighborID)
+            case .neighborPlaced where !neighborID.isEmpty: self = .neighborPlaced(neighborID: neighborID)
+            case .neighborMoved where !neighborID.isEmpty: self = .neighborMoved(neighborID: neighborID)
+            case .neighborReleased where !neighborID.isEmpty: self = .neighborReleased(neighborID: neighborID)
+            case .decided: self = .decided
+            case .agrees: self = .agrees(key: propertyKey, origin: propertyOrigin)
+            case .weak: self = .weak
+            case .taken: self = .taken
+            case .noMatch: self = .noMatch
+            case .via, .neighborPlaced, .neighborMoved, .neighborReleased, .empty, .unrecognized: self = .empty
             }
         }
 
@@ -67,8 +76,14 @@ struct PromoteFlow: Equatable, Sendable {
                 code: row.reason,
                 propertyKey: row.reasonPropertyKey,
                 propertyOrigin: row.reasonPropertyOrigin,
-                viaNeighborID: row.viaNeighborSubjectID
+                neighborID: row.viaNeighborSubjectID
             )
+        }
+
+        /// Why settling released an earlier pair of this row; nil when it did not.
+        init?(move proposal: CatalogPromoteGraphAlignmentRow) {
+            guard let moveReason = proposal.moveReason else { return nil }
+            self.init(code: moveReason, propertyKey: "", propertyOrigin: "", neighborID: proposal.moveNeighborSubjectID)
         }
 
         init(_ alt: CatalogPromoteGraphAlignmentAlternative) {
@@ -76,7 +91,7 @@ struct PromoteFlow: Equatable, Sendable {
                 code: alt.reason,
                 propertyKey: alt.reasonPropertyKey,
                 propertyOrigin: alt.reasonPropertyOrigin,
-                viaNeighborID: alt.viaNeighborSubjectID
+                neighborID: alt.viaNeighborSubjectID
             )
         }
     }
@@ -144,6 +159,10 @@ struct PromoteFlow: Equatable, Sendable {
         /// The row the proposal says this one may duplicate.
         var proposedDuplicateOf: String?
         var duplicateNote: DuplicateNote?
+        /// A comparison behind this row's pair conflicts, whatever its band; the page marks it.
+        var contested = false
+        /// Why settling released an earlier pair of this row in this proposal. Not `updated`, which compares with the previous proposal.
+        var move: Reason? = nil
         var id: String { subjectID }
 
         /// The selected record's band and why. Skip, New, and an empty menu show nothing.
@@ -506,6 +525,8 @@ struct PromoteFlow: Equatable, Sendable {
                 kept.argument = draftedArgument(lines)
             }
             kept.conflictNote = proposal.conflictWithFixed ? proposal.alternatives.first?.handleRef : nil
+            kept.contested = proposal.contested
+            kept.move = Reason(move: proposal)
             kept.proposedDuplicateOf = duplicateOf(proposal)
             return kept
         }
@@ -518,7 +539,8 @@ struct PromoteFlow: Equatable, Sendable {
             target: drafted, menu: menu, comparisons: proposal.comparisons,
             pins: draftedPins(lines), confidenceGradeID: nil, argument: draftedArgument(lines),
             decided: false, updated: updated, conflictNote: nil,
-            proposedDuplicateOf: duplicateOf(proposal), duplicateNote: nil
+            proposedDuplicateOf: duplicateOf(proposal), duplicateNote: nil,
+            contested: proposal.contested, move: Reason(move: proposal)
         )
     }
 

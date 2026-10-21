@@ -868,7 +868,7 @@ struct GoStore: GenealogyStore {
                 handleRef: r.handleRef,
                 score: r.score,
                 assessment: r.assessment,
-                reason: r.reason,
+                reason: PromoteReasonCode(wire: r.reason),
                 reasonPropertyKey: r.reasonPropertyKey,
                 reasonPropertyOrigin: r.reasonPropertyOrigin,
                 comparisons: r.comparisons.map { c in
@@ -913,7 +913,7 @@ struct GoStore: GenealogyStore {
                         event: altEvent,
                         place: altPlace,
                         assessment: a.assessment,
-                        reason: a.reason,
+                        reason: PromoteReasonCode(wire: a.reason),
                         reasonPropertyKey: a.reasonPropertyKey,
                         reasonPropertyOrigin: a.reasonPropertyOrigin,
                         viaNeighborSubjectID: a.viaNeighborSubjectID
@@ -925,6 +925,9 @@ struct GoStore: GenealogyStore {
                 viaNeighborSubjectID: r.viaNeighborSubjectID,
                 viaBridgeType: r.viaBridgeType,
                 viaRole: r.viaRole,
+                contested: r.contested,
+                moveReason: r.moveReason.isEmpty ? nil : PromoteReasonCode(wire: r.moveReason),
+                moveNeighborSubjectID: r.moveNeighborSubjectID,
                 person: person,
                 event: event,
                 place: place
