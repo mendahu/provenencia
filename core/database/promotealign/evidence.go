@@ -2,7 +2,10 @@ package promotealign
 
 import (
 	"bytes"
+	"maps"
+	"slices"
 
+	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/claimevidence"
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
@@ -104,6 +107,7 @@ func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence,
 	}
 	nodes := []*graphcache.Node{handleNode}
 	var wanted [][]byte
+	nodeOf := map[string]*graphcache.Node{} // neighbor's handle node, by layer neighbor
 	for _, n := range order {
 		if len(layerLinks[string(n)]) == 0 {
 			continue
@@ -114,6 +118,7 @@ func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence,
 			return claimevidence.Evidence{}, err
 		}
 		nodes = append(nodes, hn)
+		nodeOf[string(n)] = hn
 	}
 	if err := q.prof.profile(nodes); err != nil {
 		return claimevidence.Evidence{}, err
@@ -126,18 +131,19 @@ func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence,
 	var neighbors []claimevidence.Neighbor
 	for _, n := range wanted {
 		hid := placed[string(n)]
-		hn, err := g.Node(hid)
-		if err != nil {
-			return claimevidence.Evidence{}, err
-		}
+		hn := nodeOf[string(n)]
 		if hn == nil {
 			continue
 		}
-		nm, err := q.members(hid)
+		canon, err := q.canonLinks(handleNode, hn)
 		if err != nil {
 			return claimevidence.Evidence{}, err
 		}
-		canon, err := q.canonLinks(handleNode, hn)
+		all, err := acceptedMembers(g, [][]byte{hid})
+		if err != nil {
+			return claimevidence.Evidence{}, err
+		}
+		nm, err := q.memberValues(bridgedOnly(all[string(hid)], canon))
 		if err != nil {
 			return claimevidence.Evidence{}, err
 		}
@@ -200,6 +206,20 @@ func (r *evidenceReader) sourcesOf(ids [][]byte) error {
 	return nil
 }
 
+// bridgedOnly keeps, in order, the Subjects some link's bridge reaches as its
+// neighbor end. The evidence reads only those members of a neighbor entity.
+func bridgedOnly(ids [][]byte, links []claimevidence.CanonLink) [][]byte {
+	var out [][]byte
+	for _, id := range ids {
+		if slices.ContainsFunc(links, func(l claimevidence.CanonLink) bool {
+			return slices.ContainsFunc(l.Bridges, func(b claimevidence.Bridge) bool { return bytes.Equal(b.Neighbor, id) })
+		}) {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
 // members are the accepted members of an entity, in claim order, each with its
 // values as its own Source records them.
 func (r *evidenceReader) members(entity []byte) ([]claimevidence.Member, error) {
@@ -207,9 +227,35 @@ func (r *evidenceReader) members(entity []byte) ([]claimevidence.Member, error) 
 	if err != nil {
 		return nil, err
 	}
-	subjectIDs := ids[string(entity)]
+	return r.memberValues(ids[string(entity)])
+}
+
+// memberValues reads the listed Subjects as members, in the order given. Each
+// Source is read once, for all of its listed Subjects.
+func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Member, error) {
 	if err := r.sourcesOf(subjectIDs); err != nil {
 		return nil, err
+	}
+	bySource := map[string]map[string]bool{}
+	for _, id := range subjectIDs {
+		if src, ok := r.sources[string(id)]; ok {
+			if bySource[string(src.SourceID)] == nil {
+				bySource[string(src.SourceID)] = map[string]bool{}
+			}
+			bySource[string(src.SourceID)][string(id)] = true
+		}
+	}
+	valuesOf := map[string]map[vocabkey.PropertyKey][]autoreconcile.Candidate{}
+	for source, set := range bySource {
+		sg, err := r.g.Source([]byte(source))
+		if err != nil {
+			return nil, err
+		}
+		cands, err := layerValues(sg, set, r.prof.props, r.prof.terms)
+		if err != nil {
+			return nil, err
+		}
+		maps.Copy(valuesOf, cands)
 	}
 	var out []claimevidence.Member
 	for _, id := range subjectIDs {
@@ -217,19 +263,11 @@ func (r *evidenceReader) members(entity []byte) ([]claimevidence.Member, error) 
 		if !ok {
 			continue
 		}
-		sg, err := r.g.Source(src.SourceID)
-		if err != nil {
-			return nil, err
-		}
-		cands, err := layerValues(sg, map[string]bool{string(id): true}, r.prof.props, r.prof.terms)
-		if err != nil {
-			return nil, err
-		}
 		out = append(out, claimevidence.Member{
 			Subject: bytes.Clone(id),
 			Source:  bytes.Clone(src.SourceID),
 			Values: subjectprofile.ForSubject(subjectprofile.Subject{
-				Values: cands[string(id)], NamePattern: r.in.namePattern,
+				Values: valuesOf[string(id)], NamePattern: r.in.namePattern,
 			}, nil),
 		})
 	}
@@ -285,15 +323,27 @@ func (r *evidenceReader) bridges(l graphcache.Link) ([]claimevidence.Bridge, err
 	if !l.FromEnd {
 		memberEnd, neighborEnd = neighborEnd, memberEnd
 	}
+	obsOf := map[string][]graphcache.SourceObservation{} // by bridge Subject
+	read := map[string]bool{}                            // Sources walked
+	for _, id := range subjectIDs {
+		src, ok := r.sources[string(id)]
+		if !ok || read[string(src.SourceID)] {
+			continue
+		}
+		read[string(src.SourceID)] = true
+		sg, err := r.g.Source(src.SourceID)
+		if err != nil {
+			return nil, err
+		}
+		for _, o := range sg.Observations {
+			obsOf[string(o.SubjectID)] = append(obsOf[string(o.SubjectID)], o)
+		}
+	}
 	var out []claimevidence.Bridge
 	for _, id := range subjectIDs {
 		src, ok := r.sources[string(id)]
 		if !ok {
 			continue
-		}
-		sg, err := r.g.Source(src.SourceID)
-		if err != nil {
-			return nil, err
 		}
 		b := claimevidence.Bridge{Subject: bytes.Clone(id), Source: bytes.Clone(src.SourceID)}
 		ambiguous := false
@@ -303,10 +353,7 @@ func (r *evidenceReader) bridges(l graphcache.Link) ([]claimevidence.Bridge, err
 			}
 			*into = bytes.Clone(v)
 		}
-		for _, o := range sg.Observations {
-			if !bytes.Equal(o.SubjectID, id) {
-				continue
-			}
+		for _, o := range obsOf[string(id)] {
 			b.Observations = append(b.Observations, bytes.Clone(o.ID))
 			if len(o.ValueSubjectID) == 0 || o.Polarity != observations.PolarityPositive {
 				continue

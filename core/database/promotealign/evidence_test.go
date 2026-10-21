@@ -412,3 +412,39 @@ func TestEvidenceBridgeEndpoints(t *testing.T) {
 		})
 	}
 }
+
+// A neighbor entity's members are read only when a filed bridge reaches them.
+func TestEvidenceLoadsOnlyBridgedNeighborMembers(t *testing.T) {
+	a, b, c := bytes.Repeat([]byte{1}, 16), bytes.Repeat([]byte{2}, 16), bytes.Repeat([]byte{3}, 16)
+	links := []claimevidence.CanonLink{{Bridges: []claimevidence.Bridge{{Neighbor: c}, {Neighbor: a}}}, {}}
+	got := promotealign.BridgedOnly([][]byte{a, b, c}, links)
+	if len(got) != 2 || !bytes.Equal(got[0], a) || !bytes.Equal(got[1], c) {
+		t.Errorf("bridgedOnly = %x, want [a c] in member order", got)
+	}
+	if got := promotealign.BridgedOnly([][]byte{a, b}, nil); len(got) != 0 {
+		t.Errorf("no links: bridgedOnly = %x, want none", got)
+	}
+
+	// A second, unbridged birth in the neighbor entity changes nothing.
+	f := newFixture(t)
+	_, _, personHandle, birthHandle := f.filedBirth(f.source, f.artifact, "John Smith", 1817, nil, nil)
+	f.join(f.datedBirth(f.source, f.artifact, 1900), birthHandle)
+	srcB, artB := f.newSource("Obituary")
+	bPerson := f.person(srcB, artB, "John Smith")
+	bBirth := f.datedBirth(srcB, artB, 1817)
+	f.participation(srcB, artB, bPerson, bBirth, "subject")
+	e := f.evidence(promotealign.EvidenceRequest{
+		SourceID: srcB.ID, SubjectID: bPerson.ID, HandleID: personHandle,
+		Neighbors: []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: birthHandle}},
+	})
+	if len(e.Relationships) != 1 || len(e.Relationships[0].Members) != 1 {
+		t.Fatalf("relationships = %+v, want one with one bundle", e.Relationships)
+	}
+	for _, s := range e.Relationships[0].Sections {
+		for _, l := range s.Lines {
+			if len(l.Members) != 1 {
+				t.Errorf("%s line pins %d members, want only the bridged birth", s.Key, len(l.Members))
+			}
+		}
+	}
+}

@@ -52,3 +52,6 @@ func ProfiledRefsForTest(c *database.Catalog, sourceID []byte) ([]string, error)
 	slices.Sort(refs)
 	return refs, nil
 }
+
+// BridgedOnly exposes the filter that limits a neighbor entity's read members.
+var BridgedOnly = bridgedOnly
