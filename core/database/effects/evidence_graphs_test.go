@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -79,7 +80,7 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, artChanges, err := artifacts.Create(tx, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Page"})
+	srcArt, artChanges, err := artifacts.Create(tx, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Page"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,6 +99,39 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 	}
 	if len(set.Sources) != 0 {
 		t.Fatalf("graph and link rows moved Source evidence: %x", set.Sources)
+	}
+
+	// Graph writes flag the list and scope their Source. A rename resolves from
+	// the live row; a delete resolves after its rows are gone.
+	jones, _, err := evidencegraphs.Create(tx, userID, evidencegraphs.CreateInput{
+		SourceID: src.ID, Name: "Jones", ArtifactIDs: [][]byte{srcArt.ID},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	renameChanges, err := evidencegraphs.Update(tx, userID, jones.ID, evidencegraphs.UpdateInput{Name: "Jones household"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	renameSet, err := effects.Resolve(tx.Tx, renameChanges)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deleteChanges, err := evidencegraphs.Delete(tx, userID, jones.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deleteSet, err := effects.Resolve(tx.Tx, deleteChanges)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, got := range map[string]effects.Set{"graph rename": renameSet, "graph delete": deleteSet} {
+		if !got.Has(effects.ListEvidenceGraphs) {
+			t.Fatalf("%s did not flag the graph list", name)
+		}
+		if len(got.SourceScopes) != 1 || !bytes.Equal(got.SourceScopes[0], src.ID) {
+			t.Fatalf("%s source scopes %x", name, got.SourceScopes)
+		}
 	}
 
 	_, subjChanges, err := subjects.Create(tx, userID, subjects.CreateInput{

@@ -427,7 +427,7 @@ func resolveEndpoint(tx *sql.Tx, obs map[string][]obsValue, propertyKey string) 
 		if err != nil {
 			return nil, false, err
 		}
-		if !containsID(resolved, id) {
+		if !database.ContainsBlobID(resolved, id) {
 			resolved = append(resolved, append([]byte(nil), id...))
 		}
 	}
@@ -444,15 +444,6 @@ func firstTerm(obs map[string][]obsValue, propertyKey string) []byte {
 		}
 	}
 	return nil
-}
-
-func containsID(ids [][]byte, id []byte) bool {
-	for _, existing := range ids {
-		if bytes.Equal(existing, id) {
-			return true
-		}
-	}
-	return false
 }
 
 func findAssociation(tx *sql.Tx, typeKey string, ends []endpoint, termKey string, termID []byte, symmetric bool) ([]byte, error) {

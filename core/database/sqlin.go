@@ -1,6 +1,10 @@
 package database
 
-import "strings"
+import (
+	"bytes"
+	"slices"
+	"strings"
+)
 
 // UniqueBlobIDs returns distinct 16-byte identifiers in first-seen order.
 func UniqueBlobIDs(ids [][]byte) [][]byte {
@@ -35,4 +39,9 @@ func BlobArgs(ids [][]byte) []any {
 		args[i] = id
 	}
 	return args
+}
+
+// ContainsBlobID reports whether ids holds id.
+func ContainsBlobID(ids [][]byte, id []byte) bool {
+	return slices.ContainsFunc(ids, func(x []byte) bool { return bytes.Equal(x, id) })
 }

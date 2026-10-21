@@ -26,6 +26,13 @@ func TestRefuse(t *testing.T) {
 	if err := Refuse(Report{Gate: GateNotFound}, codes); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("not_found %v", err)
 	}
+	last := errors.New("last")
+	if err := Refuse(Report{Gate: GateLastGraph}, Codes{LastGraph: last, InUse: inUse}); !errors.Is(err, last) {
+		t.Fatalf("last graph %v", err)
+	}
+	if err := Refuse(Report{Gate: GateLastGraph}, Codes{InUse: inUse}); !errors.Is(err, inUse) {
+		t.Fatalf("last graph fallback %v", err)
+	}
 	if err := Refuse(Report{Gate: GateOriginLocked}, Codes{InUse: inUse}); !errors.Is(err, inUse) {
 		t.Fatalf("origin fallback %v", err)
 	}

@@ -34,7 +34,7 @@ const (
 	// KindIdentityClaim parents facet releases (its pins) only; claims have no
 	// ref and no delete of their own yet.
 	KindIdentityClaim Kind = "identity_claim"
-	// KindEvidenceGraph is registered for its inbound probe; delete path in S12-04.
+	// KindEvidenceGraph is one Evidence graph of a Source.
 	KindEvidenceGraph Kind = "evidence_graph"
 )
 

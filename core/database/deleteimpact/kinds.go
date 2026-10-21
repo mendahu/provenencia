@@ -15,6 +15,7 @@ const (
 	GateEdgeLocked   Gate = "edge_locked"
 	GateInfra        Gate = "infra"
 	GateOriginLocked Gate = "origin_locked"
+	GateLastGraph    Gate = "last_graph"
 )
 
 const (

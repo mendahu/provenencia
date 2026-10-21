@@ -46,8 +46,8 @@ Every facet `CASCADE` FK is registered as `facet` and classified:
 - [ ] Resource inbound edges have count + list probes; owned outbound is declared `BucketOwnedOutbound` in `catalogmodel` (a row child registers `PK`); no `deleteimpact` code
 - [ ] Title + location projectors registered on the blocker kind (domain package)
 - [ ] Proto kind / via keys; recipe L10n heading (unknown via still renders)
-- [ ] Domain `Delete`: load → extra gates → Impact in the same tx → connection facets if any → `SnapshotOwned` if owned outbound → DELETE parent → `ReleaseSnapshot` → audit / FTS
-- [ ] Extra gates: domain `Delete` missing row → `ErrInvalid`; `GetDeleteImpact` missing → `not_found`; `edge_locked` / infra / `origin_locked` via Impact + `Refuse`
+- [ ] Domain `Delete`: load → Impact in the same tx (extra gates are `Impact` gates) → connection facets if any → `SnapshotOwned` if owned outbound → DELETE parent → `ReleaseSnapshot` → audit / FTS
+- [ ] Extra gates: domain `Delete` missing row → `ErrInvalid`; `GetDeleteImpact` missing → `not_found`; `edge_locked` / `last_graph` / infra / `origin_locked` are `Impact` gates mapped by `Refuse`; a new per-kind gate is one `extraGateList` entry in `core/database/deleteimpact/register.go`
 - [ ] Bridge `subjects.Delete` releases connection facets (loop `connectrules.All()` endpoints + `Disambiguation` matching property origin; do not hard-code `role` / `relationship_type`) before the parent; other `observations.Delete` stays `edge_locked`
 - [ ] FFI: GetDeleteImpact returns the report; Delete* refuse is a generic in_use / extra-gate code (no report on Error, no apperr ref params)
 - [ ] Audit + searchindex stay in the domain package
@@ -66,7 +66,7 @@ Every facet `CASCADE` FK is registered as `facet` and classified:
 func Delete(c *database.Catalog, userID, id []byte) error {
     // load row — missing → ErrInvalid (do not run Impact as empty)
     // begin tx
-    // extra gates (edge_locked, infra, …) before Impact when they are not already Impact gates
+    // extra gates (edge_locked, last_graph, origin_locked, …) are Impact gates: Refuse maps them
     report, err := deleteimpact.Impact(tx, catalogmodel.KindCitation, id)
     if err != nil { return err }
     if err := deleteimpact.Refuse(report, deleteimpact.Codes{

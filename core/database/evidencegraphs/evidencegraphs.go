@@ -6,10 +6,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -21,12 +24,34 @@ var (
 	ErrInvalid       = apperr.New(apperr.CodeEvidenceGraphsInvalid, apperr.KindUser)
 	ErrArtifactInUse = apperr.New(apperr.CodeEvidenceGraphsArtifactInUse, apperr.KindUser)
 	ErrLastArtifact  = apperr.New(apperr.CodeEvidenceGraphsLastArtifact, apperr.KindUser)
+	// ErrInUse is returned by Delete while Subjects belong to the graph.
+	ErrInUse = apperr.New(apperr.CodeEvidenceGraphsInUse, apperr.KindConflict)
+	// ErrLastGraph: a Source keeps at least one graph.
+	ErrLastGraph = apperr.New(apperr.CodeEvidenceGraphsLastGraph, apperr.KindUser)
 )
 
 const (
 	sqlInsert = `INSERT INTO evidence_graphs (id, ref, source_id, name, description)
 		VALUES (?, ?, ?, ?, ?)`
-	sqlGraphIDs = `SELECT id FROM evidence_graphs WHERE source_id = ? ORDER BY id`
+	// The per-Source and project-wide reads share their columns and order; the
+	// per-Source form filters on source_id directly so it seeks
+	// evidence_graphs_source_id_idx.
+	sqlListSelect = `SELECT id, COALESCE(ref, ''), source_id, name, COALESCE(description, '')
+		FROM evidence_graphs`
+	sqlListOrder    = ` ORDER BY name COLLATE NOCASE, ref, id`
+	sqlList         = sqlListSelect + sqlListOrder
+	sqlListBySource = sqlListSelect + ` WHERE source_id = ?` + sqlListOrder
+	sqlLinksSelect  = `SELECT l.graph_id, l.artifact_id FROM evidence_graphs g
+		JOIN evidence_graph_artifacts l ON l.graph_id = g.id
+		JOIN artifacts a ON a.id = l.artifact_id`
+	sqlLinksOrder        = ` ORDER BY a.ref COLLATE NOCASE, a.id`
+	sqlListLinks         = sqlLinksSelect + sqlLinksOrder
+	sqlListLinksBySource = sqlLinksSelect + ` WHERE g.source_id = ?` + sqlLinksOrder
+
+	sqlGet = `SELECT id, COALESCE(ref, ''), source_id, name, COALESCE(description, '')
+		FROM evidence_graphs WHERE id = ?`
+	sqlDelete = `DELETE FROM evidence_graphs WHERE id = ?`
+	sqlUpdate = `UPDATE evidence_graphs SET name = ?, description = ? WHERE id = ?`
 
 	sqlSubjectGraph = `SELECT graph_id FROM subjects WHERE id = ?`
 	sqlIsLinked     = `SELECT 1 FROM evidence_graph_artifacts WHERE graph_id = ? AND artifact_id = ?`
@@ -52,6 +77,271 @@ type Graph struct {
 	SourceID    []byte
 	Name        string
 	Description string
+	ArtifactIDs [][]byte // linked Artifacts: by Artifact ref from List, in input order from Create
+}
+
+// List returns the graphs of one Source, or of the whole project when sourceID
+// is empty, by name (case-insensitive), each with its linked Artifact ids by
+// Artifact ref. An unknown Source has no graphs.
+func List(c *database.Catalog, sourceID []byte) ([]Graph, error) {
+	if len(sourceID) != 0 && len(sourceID) != 16 {
+		return nil, ErrInvalid
+	}
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	return list(tx, sourceID)
+}
+
+// list is the one read of graph rows, shared by List and the package's writes.
+func list(tx *sql.Tx, sourceID []byte) ([]Graph, error) {
+	if len(sourceID) != 0 && len(sourceID) != 16 {
+		return nil, ErrInvalid
+	}
+	graphQuery, linkQuery := sqlList, sqlListLinks
+	var args []any
+	if len(sourceID) != 0 {
+		graphQuery, linkQuery = sqlListBySource, sqlListLinksBySource
+		args = []any{sourceID}
+	}
+	rows, err := tx.Query(graphQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Graph
+	for rows.Next() {
+		g, err := scanGraph(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, g)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	index := make(map[string]int, len(out))
+	for i, g := range out {
+		index[string(g.ID)] = i
+	}
+	links, err := tx.Query(linkQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer links.Close()
+	for links.Next() {
+		var graphID, artifactID []byte
+		if err := links.Scan(&graphID, &artifactID); err != nil {
+			return nil, err
+		}
+		if i, ok := index[string(graphID)]; ok {
+			out[i].ArtifactIDs = append(out[i].ArtifactIDs, artifactID)
+		}
+	}
+	return out, links.Err()
+}
+
+// scanGraph scans the columns sqlList and sqlGet select.
+func scanGraph(row interface{ Scan(dest ...any) error }) (Graph, error) {
+	var g Graph
+	err := row.Scan(&g.ID, &g.Ref, &g.SourceID, &g.Name, &g.Description)
+	return g, err
+}
+
+// CreateInput is the input of Create.
+type CreateInput struct {
+	SourceID    []byte
+	Name        string
+	Description string
+	ArtifactIDs [][]byte // at least one, each an Artifact of SourceID
+}
+
+// Create inserts a graph of a Source and links the given Artifacts to it. Names
+// need not be unique. Any refusal leaves nothing behind once the write rolls
+// back.
+func Create(tx *database.Tx, userID []byte, in CreateInput) (Graph, []rowchange.Change, error) {
+	in.Name = strings.TrimSpace(in.Name)
+	in.Description = strings.TrimSpace(in.Description)
+	if tx == nil || len(in.SourceID) != 16 || in.Name == "" || len(in.ArtifactIDs) == 0 {
+		return Graph{}, nil, ErrInvalid
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return Graph{}, nil, err
+	}
+	if err := requireDistinct(in.ArtifactIDs); err != nil {
+		return Graph{}, nil, err
+	}
+	g, change, err := insert(tx.Tx, in.SourceID, in.Name, in.Description)
+	if err != nil {
+		return Graph{}, nil, err
+	}
+	changes := []rowchange.Change{change}
+	for _, id := range in.ArtifactIDs {
+		ch, err := Link(tx, userID, g.ID, id)
+		if err != nil {
+			return Graph{}, nil, err
+		}
+		changes = append(changes, ch...)
+	}
+	for _, id := range in.ArtifactIDs {
+		g.ArtifactIDs = append(g.ArtifactIDs, append([]byte(nil), id...))
+	}
+	return g, changes, nil
+}
+
+// Delete deletes a graph that is not its Source's last and has no Subjects,
+// releasing its links. Deleteimpact's report decides, so the delete preview and
+// this write agree.
+func Delete(tx *database.Tx, userID, graphID []byte) ([]rowchange.Change, error) {
+	if tx == nil || len(graphID) != 16 {
+		return nil, ErrInvalid
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return nil, err
+	}
+	g, err := getTx(tx.Tx, graphID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrInvalid
+	}
+	if err != nil {
+		return nil, err
+	}
+	report, err := deleteimpact.Impact(tx.Tx, catalogmodel.KindEvidenceGraph, graphID)
+	if err != nil {
+		return nil, err
+	}
+	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
+		InUse: ErrInUse, LastGraph: ErrLastGraph, NotFound: ErrInvalid,
+	}); err != nil {
+		return nil, err
+	}
+	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindEvidenceGraph, graphID)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(sqlDelete, graphID); err != nil {
+		return nil, err
+	}
+	return append(released, rowchange.Change{
+		EntityType: "evidence_graph",
+		EntityID:   append([]byte(nil), graphID...),
+		Action:     rowchange.ActionDelete,
+		Fields:     rowchange.DeletedRow(graphFields(g)),
+	}), nil
+}
+
+// UpdateInput is the input of Update.
+type UpdateInput struct {
+	Name        string
+	Description string
+	ArtifactIDs [][]byte // empty = links unchanged; otherwise the full set of linked Artifacts
+}
+
+// Update saves a graph's name, description and linked Artifacts in one write.
+// Artifacts are linked before others are unlinked, so a swap never leaves the
+// graph with no link. Any refusal returns its error unchanged, and the write
+// rolls back the whole edit.
+func Update(tx *database.Tx, userID, graphID []byte, in UpdateInput) ([]rowchange.Change, error) {
+	in.Name = strings.TrimSpace(in.Name)
+	in.Description = strings.TrimSpace(in.Description)
+	if tx == nil || len(graphID) != 16 || in.Name == "" {
+		return nil, ErrInvalid
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return nil, err
+	}
+	if err := requireDistinct(in.ArtifactIDs); err != nil {
+		return nil, err
+	}
+	g, err := getTx(tx.Tx, graphID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrInvalid
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var changes []rowchange.Change
+	fields := map[string]rowchange.FieldDiff{}
+	if g.Name != in.Name {
+		fields["name"] = rowchange.FieldDiff{Old: g.Name, New: in.Name}
+	}
+	if g.Description != in.Description {
+		fields["description"] = rowchange.FieldDiff{Old: database.NullString(g.Description), New: database.NullString(in.Description)}
+	}
+	if len(fields) > 0 {
+		if _, err := tx.Exec(sqlUpdate, in.Name, database.NullString(in.Description), graphID); err != nil {
+			return nil, mapConstraint(err)
+		}
+		changes = append(changes, rowchange.Change{
+			EntityType: "evidence_graph",
+			EntityID:   append([]byte(nil), graphID...),
+			Action:     rowchange.ActionUpdate,
+			Fields:     fields,
+		})
+	}
+
+	if len(in.ArtifactIDs) == 0 {
+		return changes, nil
+	}
+	graphs, err := list(tx.Tx, g.SourceID)
+	if err != nil {
+		return nil, err
+	}
+	var stored [][]byte
+	for _, x := range graphs {
+		if bytes.Equal(x.ID, graphID) {
+			stored = x.ArtifactIDs
+		}
+	}
+	for _, id := range in.ArtifactIDs {
+		if database.ContainsBlobID(stored, id) {
+			continue
+		}
+		ch, err := Link(tx, userID, graphID, id)
+		if err != nil {
+			return nil, err
+		}
+		changes = append(changes, ch...)
+	}
+	for _, id := range stored {
+		if database.ContainsBlobID(in.ArtifactIDs, id) {
+			continue
+		}
+		ch, err := Unlink(tx, userID, graphID, id)
+		if err != nil {
+			return nil, err
+		}
+		changes = append(changes, ch...)
+	}
+	return changes, nil
+}
+
+// getTx loads one graph row; sql.ErrNoRows when there is none. It does not fill
+// ArtifactIDs.
+func getTx(tx *sql.Tx, id []byte) (Graph, error) {
+	return scanGraph(tx.QueryRow(sqlGet, id))
+}
+
+// requireDistinct refuses a repeated id.
+func requireDistinct(ids [][]byte) error {
+	seen := map[string]bool{}
+	for _, id := range ids {
+		if seen[string(id)] {
+			return ErrInvalid
+		}
+		seen[string(id)] = true
+	}
+	return nil
 }
 
 // CreateDefault inserts the Default graph of a new Source. Its only caller is
@@ -88,25 +378,31 @@ func insert(tx *sql.Tx, sourceID []byte, name, description string) (Graph, rowch
 		return Graph{}, rowchange.Change{}, mapConstraint(err)
 	}
 
-	change := rowchange.Change{
-		EntityType: "evidence_graph",
-		EntityID:   append([]byte(nil), idBytes...),
-		Action:     rowchange.ActionCreate,
-		Fields: rowchange.FullRow(map[string]any{
-			"id":          id.String(),
-			"ref":         graphRef,
-			"source_id":   database.UUIDJSON(sourceID),
-			"name":        name,
-			"description": database.NullString(description),
-		}),
-	}
-	return Graph{
+	g := Graph{
 		ID:          append([]byte(nil), idBytes...),
 		Ref:         graphRef,
 		SourceID:    append([]byte(nil), sourceID...),
 		Name:        name,
 		Description: description,
-	}, change, nil
+	}
+	change := rowchange.Change{
+		EntityType: "evidence_graph",
+		EntityID:   append([]byte(nil), idBytes...),
+		Action:     rowchange.ActionCreate,
+		Fields:     rowchange.FullRow(graphFields(g)),
+	}
+	return g, change, nil
+}
+
+// graphFields is the audit field map of a graph row, for its create and delete.
+func graphFields(g Graph) map[string]any {
+	return map[string]any{
+		"id":          database.UUIDJSON(g.ID),
+		"ref":         database.NullString(g.Ref),
+		"source_id":   database.UUIDJSON(g.SourceID),
+		"name":        g.Name,
+		"description": database.NullString(g.Description),
+	}
 }
 
 // SoleGraphTx returns the id of the one graph of a Source.
@@ -116,36 +412,18 @@ func SoleGraphTx(tx *sql.Tx, sourceID []byte) ([]byte, error) {
 	if tx == nil || len(sourceID) != 16 {
 		return nil, ErrInvalid
 	}
-	ids, err := graphIDsTx(tx, sourceID)
+	graphs, err := list(tx, sourceID)
 	if err != nil {
 		return nil, err
 	}
-	switch len(ids) {
+	switch len(graphs) {
 	case 0:
 		return nil, ErrInvalid
 	case 1:
-		return ids[0], nil
+		return graphs[0].ID, nil
 	default:
 		return nil, fmt.Errorf("evidencegraphs: source %x has more than one graph", sourceID)
 	}
-}
-
-// graphIDsTx is the one per-Source graph-id read.
-func graphIDsTx(tx *sql.Tx, sourceID []byte) ([][]byte, error) {
-	rows, err := tx.Query(sqlGraphIDs, sourceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		out = append(out, id)
-	}
-	return out, rows.Err()
 }
 
 // SubjectGraphTx returns the graph a Subject belongs to.
@@ -304,18 +582,16 @@ func LinkArtifact(tx *database.Tx, userID, sourceID, artifactID []byte, graphIDs
 		return nil, ErrInvalid
 	}
 	if len(graphIDs) == 0 {
-		var err error
-		graphIDs, err = graphIDsTx(tx.Tx, sourceID)
+		graphs, err := list(tx.Tx, sourceID)
 		if err != nil {
 			return nil, err
 		}
+		for _, g := range graphs {
+			graphIDs = append(graphIDs, g.ID)
+		}
 	} else {
-		seen := map[string]bool{}
-		for _, id := range graphIDs {
-			if seen[string(id)] {
-				return nil, ErrInvalid
-			}
-			seen[string(id)] = true
+		if err := requireDistinct(graphIDs); err != nil {
+			return nil, err
 		}
 	}
 	var changes []rowchange.Change

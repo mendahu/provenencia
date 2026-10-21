@@ -49,7 +49,7 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 	must(t, err)
 	deps, err := conclusionheaders.HeaderDependents(db, [][]byte{countryID})
 	must(t, err)
-	if !hasID(deps, townID) || !hasID(deps, birthID) || !hasID(deps, personID) {
+	if !database.ContainsBlobID(deps, townID) || !database.ContainsBlobID(deps, birthID) || !database.ContainsBlobID(deps, personID) {
 		t.Fatalf("country dependents missing the town, the birth, or the person (%d ids)", len(deps))
 	}
 
@@ -127,7 +127,7 @@ func TestBirthBecomingMarriageDropsThePerson(t *testing.T) {
 
 	deps, err := conclusionheaders.HeaderDependents(db, [][]byte{birthID})
 	must(t, err)
-	if !hasID(deps, personID) {
+	if !database.ContainsBlobID(deps, personID) {
 		t.Fatal("a marriage that was a birth did not reach its subject")
 	}
 	after := personHeader(t, f, personID)

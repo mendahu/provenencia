@@ -417,6 +417,8 @@ Rules the schema and `core/database/evidencegraphs` hold today:
 - A new Subject joins its Source's graph through `evidencegraphs.SoleGraphTx`, the one bridge until a Subject can name its graph.
 - A new Artifact is linked to every graph of its Source, or to the graphs in `CreateInput.GraphIDs`. A graph of another Source, an unknown id or a repeated id is `evidencegraphs.invalid` and the whole write rolls back.
 - `Link` refuses an Artifact of another Source. `Unlink` is refused while a Citation on the Artifact has an Observation on a Subject of that graph (`evidencegraphs.artifact_in_use`) and when it is the graph's only link (`evidencegraphs.last_artifact`). Linking a linked pair and unlinking an unlinked pair change nothing.
+- `List` is the one read of graphs: full rows with their linked Artifact ids, by name (case-insensitive), for one Source or the whole project. `Create` needs a name and at least one Artifact of the Source, linked through `Link`. Name and description are editable and names need not be unique. `Update` saves the name, description and the full set of linked Artifacts in one write: Artifacts are linked before others are unlinked, and any refusal rolls back the whole edit.
+- `Delete` refuses a Source's last graph (`deleteimpact` gate `last_graph`, code `evidencegraphs.last_graph`) and a graph with Subjects (`evidencegraphs.in_use`), and releases the graph's links, audited.
 - A graph is part of its Source's record and a link row is part of both ends: their deletes are audited and released with the Source or Artifact ([`catalog-deletes.md`](catalog-deletes.md)). Both audit under the Source's scope and flag the graph list (`effects.ListEvidenceGraphs` in `effects.Set.Lists`).
 
 ---
