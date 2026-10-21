@@ -80,7 +80,7 @@ struct L10nResolutionTests {
         #expect(ContinuousClock.now - start < .milliseconds(250))
     }
 
-    @Test func evidenceGraphErrorsHaveCopy() {
+    @Test func errorCodesHaveCopy() {
         let unknown = L10n.Errors.message(code: "internal.unknown")
         let expected = [
             "evidencegraphs.invalid": "That evidence graph isn’t valid.",
@@ -88,6 +88,7 @@ struct L10nResolutionTests {
             "evidencegraphs.last_artifact": "An evidence graph needs at least one artifact.",
             "evidencegraphs.in_use": "This evidence graph still has subjects.",
             "evidencegraphs.last_graph": "A source keeps at least one evidence graph.",
+            "observations.other_graph": "That subject or artifact is in another evidence graph.",
         ]
         for (code, sentence) in expected {
             let message = L10n.Errors.message(code: code)

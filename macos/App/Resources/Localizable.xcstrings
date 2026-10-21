@@ -3210,6 +3210,18 @@
         }
       }
     },
+    "error.observations.other_graph": {
+      "comment": "FFI error observations.other_graph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That subject or artifact is in another evidence graph."
+          }
+        }
+      }
+    },
     "error.onboarding.blank_name": {
       "comment": "FFI error onboarding.blank_name",
       "extractionState": "manual",
