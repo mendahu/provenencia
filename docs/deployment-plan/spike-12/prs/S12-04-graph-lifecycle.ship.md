@@ -62,4 +62,4 @@ Reviewers: MNT (MNT-1, MNT-2), SEC+PRF (PRF-1). Scope `beb8be43...5d7a4bdb`.
 No new findings in either lens. No Fix plan 2.
 
 ## Result
-Gate PASS (`1e1c2434`; `main` unmoved at `9cf8e33c`) · CI <pending> · open: none · follow-ups: none · later PR: UX-1 → S12-05 scope entry · to user: PRF-1 (answered: fix on this PR, 2026-10-20) · CON miss: none
+Gate PASS (`1e1c2434`; `main` unmoved at `9cf8e33c`) · CI green · open: none · follow-ups: none · later PR: UX-1 → S12-05 scope entry · to user: PRF-1 (answered: fix on this PR, 2026-10-20) · CON miss: none
