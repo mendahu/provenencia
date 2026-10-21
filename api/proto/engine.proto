@@ -112,6 +112,13 @@ enum Method {
   METHOD_UNPROMOTE_SUBJECT = 100;
   METHOD_SET_PREFERRED_LIKENESS = 101;
   METHOD_COPY_SOURCE = 102;
+  METHOD_LIST_EVIDENCE_GRAPHS = 103;
+  METHOD_CREATE_EVIDENCE_GRAPH = 104;
+  METHOD_UPDATE_EVIDENCE_GRAPH = 105;
+  METHOD_DELETE_EVIDENCE_GRAPH = 106;
+  METHOD_LINK_EVIDENCE_GRAPH_ARTIFACT = 107;
+  METHOD_UNLINK_EVIDENCE_GRAPH_ARTIFACT = 108;
+  METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT = 109;
 }
 
 message PingRequest {
@@ -440,6 +447,98 @@ message CopySourceResponse {
   WriteEffects effects = 2;
 }
 
+message EvidenceGraph {
+  string id = 1;
+  string ref = 2;
+  string source_id = 3;
+  string name = 4;
+  string description = 5;
+  repeated string artifact_ids = 6; // by Artifact ref from List; in request order from Create
+}
+
+message ListEvidenceGraphsRequest {
+  string project_dir = 1;
+}
+
+message ListEvidenceGraphsResponse {
+  repeated EvidenceGraph graphs = 1;
+}
+
+message CreateEvidenceGraphRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string source_id = 3;
+  string name = 4;
+  string description = 5;
+  repeated string artifact_ids = 6; // at least one
+}
+
+message CreateEvidenceGraphResponse {
+  EvidenceGraph graph = 1;
+  WriteEffects effects = 2;
+}
+
+message UpdateEvidenceGraphRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string graph_id = 3;
+  string name = 4;
+  string description = 5;
+  repeated string artifact_ids = 6; // empty = links unchanged; otherwise the full set
+}
+
+message UpdateEvidenceGraphResponse {
+  WriteEffects effects = 1;
+}
+
+message DeleteEvidenceGraphRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string graph_id = 3;
+}
+
+message DeleteEvidenceGraphResponse {
+  WriteEffects effects = 1;
+}
+
+message LinkEvidenceGraphArtifactRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string graph_id = 3;
+  string artifact_id = 4;
+}
+
+message LinkEvidenceGraphArtifactResponse {
+  WriteEffects effects = 1;
+}
+
+message UnlinkEvidenceGraphArtifactRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string graph_id = 3;
+  string artifact_id = 4;
+}
+
+message UnlinkEvidenceGraphArtifactResponse {
+  WriteEffects effects = 1;
+}
+
+// Which of the Artifacts a graph edit removes are used by the graph's Citations.
+message GetEvidenceGraphUnlinkImpactRequest {
+  string project_dir = 1;
+  string graph_id = 2;
+  repeated string artifact_ids = 3;
+}
+
+message EvidenceGraphUnlinkBlock {
+  string artifact_id = 1;
+  DeleteImpactGroup citations = 2;
+}
+
+message GetEvidenceGraphUnlinkImpactResponse {
+  repeated EvidenceGraphUnlinkBlock blocked = 1;
+}
+
 message UpdateSourceRequest {
   string project_dir = 1;
   string user_id = 2;
@@ -572,6 +671,7 @@ message CreateArtifactRequest {
   string file_id = 4; // empty = fileless
   string description = 5;
   string label = 6; // required
+  repeated string graph_ids = 7; // empty = every graph of the Source
 }
 
 message CreateArtifactResponse {
@@ -2058,6 +2158,7 @@ enum DeleteImpactGate {
   DELETE_IMPACT_GATE_EDGE_LOCKED = 4;
   DELETE_IMPACT_GATE_INFRA = 5;
   DELETE_IMPACT_GATE_ORIGIN_LOCKED = 6;
+  DELETE_IMPACT_GATE_LAST_GRAPH = 7;
 }
 
 message GetDeleteImpactRequest {
