@@ -1,6 +1,6 @@
 # S11-19 — Claim evidence query
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 11 · Slice 5 — Claim evidence
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a Go query with no caller on the wire; the RPC is S11-25 and the sheet S11-20)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`, `.cursor/rules/catalog-session.mdc`
 **Context:** [`claim-evidence.md`](../claim-evidence.md) (whole: Separate from matching, Lines, Writing pins, Evidence through relationships); [Match registry](../comparison-layers.md#match-registry) (`evidence.go` row); [Detail](../comparison-layers.md#detail) (value refs); [`docs/matching-model.md`](../../../matching-model.md) knob inventory rows `evidence.*`; [`promote-graph-alignment.md`](../../../promote-graph-alignment.md) §9; working rules "Build, then migrate", "High tolerance for churn", "A separate, lazy query per row", "Lines", "Relationships", "The pin policy has one owner, in Go", "One match registry", "One guard, not one per package", "One matching skill, grown with the layers"; S11-13 ship log MNT-3 and MNT-4
 **Planned:** 2026-10-21 against `main` @ `e169b71`
-**Review:** [`S11-19-claim-evidence-query.review.md`](S11-19-claim-evidence-query.review.md) — round 1: Fits with changes / Not ready; findings fixed; M-4 answered by the user
+**Review:** [`S11-19-claim-evidence-query.review.md`](S11-19-claim-evidence-query.review.md) — 2 rounds: Fits with changes / Not ready, every finding fixed; M-4 answered by the user
 
 ### Implementer — read this first
 
@@ -55,12 +55,13 @@ Conventions. `name(f)` is `propertycomparetest.Name(f)`, `term(k)` is `propertyc
 | AC-1.7 | Incoming negative `name` "John Smith" (the record denies it); member "John Smith" | One line: outcome conflict, property cause `negative`, not pinnable |
 | AC-1.8 | Incoming `gender` `man`; member `sex_at_birth` `male` | One line in section `sex_at_birth` (the lead): outcome agree, checked; `Line.Property` is `gender`; points `subject.Weights.person.sex_at_birth.Agree` |
 | AC-1.9 | Event; incoming `start_date` 1817; member `start_date` 1817 and `date` 1817 | One line in section `date`: the incoming `start_date` against the member's `start_date`, relation `same`, checked, points `subject.Weights.event.date.Agree` = 2; the member's `date` is not compared with it (D-6) |
-| AC-1.10 | Person; incoming `occupation` (a property with no lead) "farmer"; member "farmer" | Section `occupation`, one checked line, points 0 |
+| AC-1.10 | Event; incoming `event_name` (a property with no lead; text, single in `subjectcomparetest.Metas()`) "Baptism of John"; member "Baptism of John" | Section `event_name`, one checked line, points 0 |
+| AC-1.12 | Event; incoming `date` 1817; member with only `start_date` 1817 and `end_date` 1817 (no `date`) | No line: the speaking member value is the period `Side` builds, which names no Observation (D-5) |
 | AC-1.11 | Person; incoming values include a derived lifespan (no ref) | No line for it (D-5) |
 
 **US-2.** As the engine, I bundle a corresponding relationship into one line, so a researcher can say "they have a matching birth event" and check what is behind it.
 
-`promotealign.Evidence(c, req)` (D-3) on a catalog built with the `promotealign_test.go` fixture.
+AC-2.1–AC-2.6 hold for `claimevidence.Build` (D-12) in table tests with hand-built inputs, and end to end for `promotealign.Evidence(c, req)` (D-3) on a catalog built with the `promotealign_test.go` fixture.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
@@ -87,11 +88,11 @@ Conventions. `name(f)` is `propertycomparetest.Name(f)`, `term(k)` is `propertyc
 | --- | --- |
 | `propertycompare.Result.Similarity` *(new)*; `subjectcompare.Points` takes a `propertycompare.Result`; `Compare` builds score from `Points`; `promotealign`'s private `similarity` deleted | STEP-1, AC-3.1–AC-3.3 |
 | `subjectprofile.ForSubject` sets each value's `Ref` to its Observation id | STEP-1, T-13 |
-| `core/claimevidence` *(new)*: pure types, `Rules`, `Sections`, line state, collapse; on the guard list and the match rule globs | STEP-2, STEP-3, AC-1.1–AC-1.11 |
-| Registry `evidence` section: `Registry.Evidence`, `core/matchregistry/evidence.go` *(new)*; `notYetBuilt` loses `"evidence."` | STEP-2, T-4 |
+| `core/claimevidence` *(new)*: pure types, `Rules`, `Sections`, `Build` (lines, relationships, bundles), line state, collapse; on the guard list and the match rule globs | STEP-2, STEP-3, STEP-6, AC-1.1–AC-1.12, AC-2.1–AC-2.6 |
+| Registry `evidence` section: `Registry.Evidence`, `core/matchregistry/evidence.go` *(new)*; `notYetBuilt` loses `"evidence."`; inventory row `evidence.Defining.event` renamed `evidence.Defining` | STEP-2, T-4 |
 | `graphalign.Bridge.Associations` *(new)*; `layerValues` takes a set of Subject ids; `loadInputs` and `checkFixed` *(new)* shared by `propose` and the query | STEP-4 |
 | `subjects.SourcesOf` *(new)* | STEP-5 |
-| `promotealign.Evidence` *(new)*: property lines, relationships with bundles, validation | STEP-5, STEP-6, STEP-7, AC-2.1–AC-2.8 |
+| `promotealign.Evidence` *(new)*: the reads behind `Build`, and validation | STEP-5, STEP-7, AC-2.1–AC-2.8 |
 | Docs: `add-match-rule`, `claim-evidence.md` status, `matching-model.md`, the map, an idea line for review M-6 | STEP-8 |
 
 | Out | Home |
@@ -133,7 +134,7 @@ Verified at `e169b71`.
 | Pools and periods | `core/subjectcompare/pairs.go` `Side`; `subjectcompare.go` `Rules.Lead` | `Side`: a lead's own values, pooled values (terms mapped by `Pool.Terms`), or a period from start and end when no positive lead value. `Lead`: the lead a property counts under, for a weighted, pooled or period-end property; `false` otherwise |
 | Segment compare | `core/segmentcompare/segmentcompare.go` `Compare`, `Segment{Key, NeighborKind, Neighbor}`, `Result{Outcome, Cause, Evidence, Neighbor}`; `key.go` `Corresponds` | `Compare(a, b, placed, own, metas, rules, subject, value)`: agree, or partial when the neighbors conflict; unknown when not corresponding or gated (`own` below `Gate.MinOwnEvidence`) |
 | Registry | `core/matchregistry/registry.go` `Registry`, `Default` | Sections `Value`, `Subject`, `Segment`, `Alignment`. No `Evidence` |
-| Inventory guard | `core/matchregistry/inventory_test.go` `notYetBuilt`, `TestKnobInventoryMatchesRegistry` | `notYetBuilt = {"evidence."}` keeps `docs/matching-model.md` rows `evidence.Checked`, `evidence.Pinnable`, `evidence.Defining.event` legal with no field |
+| Inventory guard | `core/matchregistry/inventory_test.go` `notYetBuilt`, `TestKnobInventoryMatchesRegistry` | `notYetBuilt = {"evidence."}` keeps `docs/matching-model.md` rows `evidence.Checked`, `evidence.Pinnable`, `evidence.Defining.event` legal with no field. `registryKeys` expands a map only when its element is a struct or a map, so a `map[SubjectType][]PropertyKey` is one leaf (precedent: row `alignment.Shortlist.Words`) |
 | Layer guard | `core/matchregistry/guard_test.go` `layerPackages`, `TestLayerPackages` | Purity and numeric-literal checks over non-test files of listed packages |
 | Pin tables | `core/database/migrations/000032.sql`, `000033.sql` `identity_claim_evidence`; `core/database/identityclaims/pins.go` `PinTx`; `core/database/promote/promote.go` `pinPairs` | See **What stays** |
 | Tests | `core/subjectcompare/subjectcompare_test.go` `TestPoints`; `core/database/promotealign/promotealign_test.go` `newFixture`, `newSource`, `person`, `birth`, `datedBirth`, `participation`, `relationship`, `join`, `promote`, `propose` | `TestPoints` calls the old signature |
@@ -144,19 +145,19 @@ Verified at `e169b71`.
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | A new pure package, `core/claimevidence`, holds the evidence types, `Rules`, `Sections` and the line policy. The loader is `core/database/promotealign/evidence.go` *(new)*. `claimevidence` is on `layerPackages` with `numbers: true` and in `match-rules.mdc` globs. Its tests are an external `claimevidence_test` package and may import `matchregistry` | The policy is the view's own ([`claim-evidence.md`](../claim-evidence.md#separate-from-matching)) and the registry must name its `Rules` type without a cycle, as for every section. Pure means table tests without build tags | In `promotealign` — needs `-tags fts5` to test pure policy, and the registry cannot import it. In `graphalign` — layer 6 decides placement; evidence is a separate view |
-| D-2 | `claimevidence.Rules{Checked, Pinnable []valuecompare.Relation; Defining map[vocabkey.SubjectType][]vocabkey.PropertyKey}`. `matchregistry.Default().Evidence`: Checked `Same`, `Equivalent`; Pinnable `Contains`, `Overlaps`, `Near`; Defining event: `event_type`. The inventory rows exist; delete `"evidence."` from `notYetBuilt` | The keys must be the rows' (`evidence.Checked`, `evidence.Pinnable`, `evidence.Defining.event`); a slice of relations and a map of slices are leaves the inventory walk reads that way | A per-relation struct — renames every row |
-| D-3 | Entry point `func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence, error)` *(new)*, `EvidenceRequest{SourceID, SubjectID, HandleID []byte; Neighbors []graphalign.Fixed}` *(new)*. Setup is `loadInputs(c, sourceID) (inputs, error)` *(new)*, moved out of `propose` (the 16-byte and `sources` checks, `valuerules.Load`, `cfg`, `namePattern`, `loadTerms`, `loadLayer`; `inputs{q, cfg, namePattern, terms, layer, primary}`), and both call it. `checkFixed(q, primary, f) (graphalign.Fixed, error)` *(new)* is `mergeFixed`'s loop body; `mergeFixed` calls it. `Evidence` runs `checkFixed` on `{SubjectID, HandleID}` (an empty handle is `promote.ErrInvalid`) and on every `Neighbors` entry, and adds no anchors. A neighbor with Target New or Skip, or whose Subject is not a layer neighbor of the row's Subject, contributes nothing | Inputs are the page's, not matching internals ([`claim-evidence.md`](../claim-evidence.md#separate-from-matching)). One copy of setup and of the input rules (review M-3). `graphalign.Fixed` already says "Subject on handle, or New, or Skip" | A new `Target` struct — a copy of `Fixed`. Calling `mergeFixed` — it adds promoted Subjects the request did not name (AC-2.4) |
+| D-1 | A new pure package, `core/claimevidence`, holds the evidence types, `Rules` and every line and relationship rule: `Sections` and `Build` (D-12, D-13). The loader, `core/database/promotealign/evidence.go` *(new)*, only reads: inputs, profiles, members, Source graphs, titles, and canon links keyed by `canonKeys`. `claimevidence` is on `layerPackages` with `numbers: true` and in `match-rules.mdc` globs. Its tests are an external `claimevidence_test` package and may import `matchregistry` | The policy is the view's own ([`claim-evidence.md`](../claim-evidence.md#separate-from-matching)) and the registry must name its `Rules` type without a cycle, as for every section. Pure means table tests without build tags | In `promotealign` — needs `-tags fts5` to test pure policy, and the registry cannot import it. In `graphalign` — layer 6 decides placement; evidence is a separate view |
+| D-2 | `claimevidence.Rules{Checked, Pinnable []valuecompare.Relation; Defining map[vocabkey.SubjectType][]vocabkey.PropertyKey}`. `matchregistry.Default().Evidence`: Checked `Same`, `Equivalent`; Pinnable `Contains`, `Overlaps`, `Near`; Defining event: `event_type`. Delete `"evidence."` from `notYetBuilt`, and rename the row `evidence.Defining.event` to `evidence.Defining` in `docs/matching-model.md` (start value "event `event_type`") | The inventory walk reads a slice and a map of slices as one leaf each (`registryKeys`; row `alignment.Shortlist.Words`), so the keys are `evidence.Checked`, `evidence.Pinnable`, `evidence.Defining` | A per-relation struct — renames every row |
+| D-3 | Entry point `func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence, error)` *(new)*, `EvidenceRequest{SourceID, SubjectID, HandleID []byte; Neighbors []graphalign.Fixed}` *(new)*. Setup is `loadInputs(c, sourceID) (inputs, error)` *(new)*, moved out of `propose` (the 16-byte and `sources` checks, `valuerules.Load`, `cfg`, `namePattern`, `loadTerms`, `loadLayer`; `inputs{q, cfg, namePattern, terms, layer, primary}`), and both call it; the `MAX(revision)` read stays in `propose`; a nil `c` is `promote.ErrInvalid`. `checkFixed(q, primary, f) (graphalign.Fixed, error)` *(new)* is `mergeFixed`'s loop body; `mergeFixed` calls it. `Evidence` runs `checkFixed` on `{SubjectID, HandleID}` (an empty handle is `promote.ErrInvalid`) and on every `Neighbors` entry, and adds no anchors. A neighbor with Target New or Skip, or whose Subject is not a layer neighbor of the row's Subject, contributes nothing | Inputs are the page's, not matching internals ([`claim-evidence.md`](../claim-evidence.md#separate-from-matching)). One copy of setup and of the input rules (review M-3). `graphalign.Fixed` already says "Subject on handle, or New, or Skip" | A new `Target` struct — a copy of `Fixed`. Calling `mergeFixed` — it adds promoted Subjects the request did not name (AC-2.4) |
 | D-4 | `propertycompare.Result.Similarity() float64` *(new)*: the speaking pair's similarity, 0 when `Speaking` is nil. `subjectcompare.Points(res propertycompare.Result, w Weights) float64`: agree `w.Agree`, partial `w.Agree × res.Similarity()`, conflict `−w.Conflict`, unknown 0. `Compare` sets `pr.Points = Points(res, w)`, adds `max(pr.Points, 0)` to `score`, and keeps its `counted` switch. `pairExhibits` calls `res.Similarity()` and the new `Points`; `promotealign.similarity` is deleted | The scope entry and S11-13 MNT-3: one place reads the speaking similarity. The method lives on the type that owns the speaking pair | A second helper beside `Points` — leaves `pairExhibits` reading the field |
-| D-5 | `claimevidence.Sections(kind, incoming subjectcompare.Values, members []Member, metas subjectcompare.Metas, rules Rules, subject subjectcompare.Rules, value valuecompare.Rules) []Section`. For each incoming value with a non-empty `Ref` (positive or negative; a derived value has no ref and gives no line), for each member, one `propertycompare.Compare` call with the incoming value as side A (D-6) gives the line; an unknown outcome gives no line. The member Observation is the speaking pair's `Detail.RefB` | One line per member per property ([Lines](../claim-evidence.md#lines)); comparisons use layer 2 only, never `Compatible` or Promote's scores | Comparing with the entity's profile — loses which member agrees |
+| D-5 | `claimevidence.Sections(kind, incoming subjectcompare.Values, members []Member, metas subjectcompare.Metas, rules Rules, subject subjectcompare.Rules, value valuecompare.Rules) []Section`. For each incoming value with a non-empty `Ref` (positive or negative; a derived value has no ref and gives no line), for each member, one `propertycompare.Compare` call with the incoming value as side A (D-6) gives the line; an unknown outcome gives no line, and so does a speaking pair whose `Detail.RefB` is empty (a period `Side` built, AC-1.12). The member Observation is the speaking pair's `Detail.RefB` | One line per member per property ([Lines](../claim-evidence.md#lines)); comparisons use layer 2 only, never `Compatible` or Promote's scores | Comparing with the entity's profile — loses which member agrees |
 | D-6 | What an incoming value of property p is compared with, and under which section, meta and weight. Let `lead, ok := subject.Lead(kind, p)`. (a) `ok` and p is the lead or in `subject.Pools[kind][lead].With`: both sides are `subjectcompare.Side(kind, lead, …)` (incoming: `Values{p: {v}}`; member: its `Values`), meta `metas[lead]`. (b) `ok` and p is a period end (`subject.Periods[kind][lead].Start` or `.End`): the member's `Values[p]` only, meta `metas[p]`. (c) not `ok`: the member's `Values[p]`, meta `metas[p]`. The section key is `lead` in (a) and (b), p in (c); weight `subject.Weights[kind][lead]` in (a) and (b), none in (c). A p with no `metas` entry gives no line | `Side` is the one place pooled terms are mapped (S11-30). A period built by `Side` is synthetic and has no `Ref`, so it cannot name a member Observation | Building periods per member — the line would pin no Observation |
-| D-7 | Line state, `rules` applied to the speaking relation: checked when the outcome is agree and the relation is in `Checked`; pinnable when checked, or when the outcome is partial and the relation is in `Pinnable`. A conflict (relation `Different`, or property cause `negative` or `cardinality`) is shown, not pinnable. Points: `subjectcompare.Points(res, weight)` with D-6's weight, else 0 | The table in [Lines](../claim-evidence.md#lines); points from the one helper (D-4) | Reading similarity in the view |
-| D-8 | One value shape. `ForSubject` sets each built value's `Ref` to `c.ObservationID`; lifespan values keep an empty `Ref`. `layerValues(sg, subjects map[string]bool, props, terms)` takes the Subject ids to read; `loadLayer` passes its primary ids. The incoming side is the row Subject's `graphalign.Subject.Values` from `loadLayer`. A member side is `ForSubject(subjectprofile.Subject{Values: layerValues(memberSource, {member}, …)[member], NamePattern: namePattern}, nil)`. Member Source ids and titles come from `subjects.SourcesOf` (D-16) | One conversion path, one decode of the row's Source, one type fewer (review M-1); value refs are how the layers name an Observation ([Detail](../comparison-layers.md#detail)); no second Observation read (S11-13 MNT-4) | A `Record` type beside `Values`. `loadExhibitObservations`. `graphcache.Member.SourceID` — a cache shape change for one reader |
+| D-7 | Line state, `rules` applied to the speaking relation: checked when the outcome is agree and the relation is in `Checked`; pinnable when checked, or when the outcome is partial and the relation is in `Pinnable`. A conflict (relation `Different`, or property cause `negative`) is shown, not pinnable. Points: `subjectcompare.Points(res, weight)` with D-6's weight, else 0 | The table in [Lines](../claim-evidence.md#lines); points from the one helper (D-4) | Reading similarity in the view |
+| D-8 | One value shape. `ForSubject` sets each built value's `Ref` to `c.ObservationID`; lifespan values keep an empty `Ref`. `layerValues(sg, subjects map[string]bool, props, terms)` takes the Subject ids to read; `loadLayer` passes its primary ids. The incoming side is the row Subject's `graphalign.Subject.Values` from `loadLayer`. A member side is `ForSubject(subjectprofile.Subject{Values: layerValues(memberSource, {member}, prof.props, prof.terms)[member], NamePattern: namePattern}, nil)`, with the profiler's `props` and `terms`. Member Source ids and titles come from `subjects.SourcesOf` (D-16) | One conversion path, one decode of the row's Source, one type fewer (review M-1); value refs are how the layers name an Observation ([Detail](../comparison-layers.md#detail)); no second Observation read (S11-13 MNT-4) | A `Record` type beside `Values`. `loadExhibitObservations`. `graphcache.Member.SourceID` — a cache shape change for one reader |
 | D-9 | Members are the handle's accepted members (`acceptedMembers`), in claim id order; provisional members are left out | Today's rule, and pins backfill onto accepted claims only (`promote.pairClaim`) | Provisional members — a pin could not backfill |
 | D-10 | Collapse: within a section, lines with the same incoming `Ref`, relation and value cause, whose member values have the same `valuecompare.Key(memberValue.Value, valuecompare.Same, value)`, are one line whose `Members` lists each member in member order. A value with no key (`ok` false) does not collapse | "Identical value" is the Same key by the working rule "A normalized `Key` per value type"; `Key` and `Compare` say `Same` together | Comparing display text — the six text rules S11-07 retired |
 | D-11 | Order. Sections by ascending key; lines by incoming `Ref` bytes, then by the first member's claim order. Relationships: keys in `segment.One` (End cleared) first, then by `BridgeKey.String()`, then by the layer neighbor's ref | Deterministic, testable output. The sheet's own order is S11-D2's | Hand-listing "core" relationships here — a list S11-D2 has not drawn |
-| D-12 | Relationships. For each `layer.Bridges` entry with the row's Subject at one end and, at the other, a neighbor S′ whose request target is handle H′: the layer key is the one read from the row Subject's end (`KeyA` when it is `A`). Every link in `g.Node(H).Links` to H′ whose key from H's end (`canonKeys`: `keyFrom` when H is `from`) `Corresponds` to it is a corresponding link. One `Relationship` per (S′, layer key) that has a corresponding link: `segmentcompare.Compare(Segment{key, S′ kind, S′'s layer Values}, Segment{key, H′ kind, profiler.values(H′)}, Together, own, …)` where `own` is `subjectcompare.Compare(kind, row Subject's layer Values, profiler.values(H), …).Evidence`. `Relationship.Outcome`, `Cause` copy the result; `Points` is `Result.Evidence`; agree → checked and pinnable; partial → pinnable; unknown → no relationship | [Evidence through relationships](../claim-evidence.md#evidence-through-relationships): a section exists only when the segments correspond; segment compare decides. The page placed the neighbor, so the placement is `Together`; the gate reads own evidence | Every bridge between members, as `bridgeNeighbors` — the spouse-meets-sibling defect |
-| D-13 | Bundles. Incoming: every Observation in the row's Source graph whose `SubjectID` is one of the layer bridge's `Associations`, plus S′'s Observations of a property in `rules.Defining[S′ kind]`. Members: for each corresponding link, each accepted member b of `g.Node(link.Association)`; b's Observations from b's Source graph; b's endpoint Observations (`ValueSubjectID`) must name an accepted member m of H and an accepted member n of H′, else b is skipped; the bundle is b's Observations plus n's defining Observations, `Bundle{Member: m, Neighbor: n, Source: b's Source}`. The relationship's sections are `Sections(S′ kind, S′'s layer Values without defining properties, a Member per distinct n, …)` | The registry rule "a segment's bundle is all of its bridge's Observations plus the neighbor kind's defining properties". Lines under it compare this birth with that birth only | Bundling the neighbor's other properties — they are their own checkable lines |
+| D-12 | Relationships are decided in `claimevidence.Build(kind, row subjectcompare.Values, handle subjectcompare.Values, members []Member, neighbors []Neighbor, metas, rules Rules, segment segmentcompare.Rules, subject subjectcompare.Rules, value valuecompare.Rules) Evidence` *(new)*, which also returns `Sections(kind, row, members, …)`. A `Neighbor` *(new)* is one layer neighbor S′ the request places on handle H′: `Subject`, `Kind`, `Values` (S′'s layer values), `Handle` (H′'s profile), `Members` (H′'s accepted members as `Member`), `Layer []LayerLink` (each `layer.Bridges` entry between the row Subject and S′: the key from the row Subject's end, `KeyA` when it is `A`, and its `Associations`), `Canon []CanonLink` (each link in `g.Node(H).Links` to H′: the key from H's end by `canonKeys`, `keyFrom` when H is `from`, and its member bridges as `Bridge{Subject, Source, Member, Neighbor []byte; Observations [][]byte}`, Member and Neighbor read from the bridge's endpoint Observations). For each distinct layer key with a `CanonLink` that `segmentcompare.Corresponds`: one `Relationship`, state from `segmentcompare.Compare(Segment{key, S′ kind, S′ Values}, Segment{key, H′ kind, Handle}, Together, own, …)`, `own` = `subjectcompare.Compare(kind, row, handle, …).Evidence`; `Outcome`, `Cause` copied, `Points` = `Result.Evidence`; agree → checked and pinnable; partial → pinnable; unknown → none | One package owns every line and relationship rule (review M-7); the policy is table-testable without a catalog. [Evidence through relationships](../claim-evidence.md#evidence-through-relationships): a relationship exists only when the segments correspond; the page placed the neighbor, so `Together` | Correspondence and state in the loader — policy split across two packages. Every bridge between members, as `bridgeNeighbors` — the spouse-meets-sibling defect |
+| D-13 | Bundles, in `Build`. Incoming: the row Source's Observations on the layer link's `Associations` (the loader passes them on `LayerLink.Observations`) plus the refs of S′'s values of a property in `rules.Defining[S′ kind]`. Members: a `Bridge` of a corresponding `CanonLink` whose `Member` is in `members` and whose `Neighbor` is in `Neighbor.Members`, else skipped; its bundle is the bridge's `Observations` plus the refs of that neighbor member's defining values, `Bundle{Member, Neighbor, Source}`. The relationship's sections are `Sections(S′ kind, S′ Values without defining properties, the neighbor members its bundles name, …)` | The registry rule "a segment's bundle is all of its bridge's Observations plus the neighbor kind's defining properties". Lines under it compare this birth with that birth only | Bundling the neighbor's other properties — they are their own checkable lines |
 | D-14 | `graphalign.Bridge.Associations [][]byte` *(new)*: the bridge Subjects behind the edge, an opaque field the layers never read, documented as `Value.Ref` is. `loadLayerBridges` appends the association to the existing `Bridge` when `edgeSeenKey` was seen, instead of skipping | One owner for a bridge's facts; no side table, no discarded return on `Propose` (review M-2) | A fourth `loadLayer` return — a map `propose` throws away |
 | D-15 | Wording: a line carries its relation, value cause (`valuecompare.Cause`) and property cause (`propertycompare.Cause`); a relationship carries its segment cause (`segmentcompare.Cause`). No separate wording-key vocabulary | [Wording](../claim-evidence.md#wording): lines are built from relation and `Detail.Cause`; S11-25 parses these codes in `ConclusionVocabulary.swift`. Every row of the wording table has its code (`fold`, `alias`, `precision`, `missing_part`, `spelling`, `gap`) | A Go `Wording` code set — a second vocabulary to mirror in Swift |
 | D-16 | `subjects.SourcesOf(q sqlbatch.Querier, ids [][]byte) (map[string]SourceOf, error)` *(new)* in `core/database/subjects/sources.go` *(new)*, `SourceOf{SourceID []byte; Title string}`: one `sqlbatch.Query` over `subjects JOIN sources`. `Evidence.Sources map[string]string` holds the title of every Source a line, pin or bundle names, keyed by Source id as a string | Reads of `subjects` live in `core/database/subjects` (review M-5); titles are display data the pure package does not read | A title on each `Pin` — repeats it per line. SQL in `promotealign` |
@@ -170,7 +171,8 @@ Verified at `e169b71`.
 | `core/claimevidence` *(new)* | package | `core/database/promotealign/exhibits.go` | Needs build tags and a database import; the registry cannot name its types |
 | `claimevidence.Rules` *(new)* | type | `segmentcompare.Rules` | Each section's type lives with the code that reads it |
 | `claimevidence.Member`, `Pin`, `Line`, `Section`, `Bundle`, `Relationship`, `Evidence` *(new)* | types | `graphalign.Exhibit` | `Exhibit` is one pair per incoming value with display strings; S11-25 deletes it with field 9. Values stay `subjectcompare.Values` |
-| `claimevidence.Sections` *(new)* | func | `pairExhibits` | Replaces its pairing in S11-25; built on `propertycompare.Compare` and `subjectcompare.Side` |
+| `claimevidence.Sections`, `Build` *(new)* | funcs | `pairExhibits`; `graphalign` `state.segments` | Replace the pairing in S11-25; built on `propertycompare.Compare`, `subjectcompare.Side`, `segmentcompare.Compare` |
+| `claimevidence.Neighbor`, `LayerLink`, `CanonLink`, `Bridge` *(new)* | types | `graphalign.Bridge`, `CanonEdge` | Carry Observation ids and members per side, which the walk's types do not |
 | `propertycompare.Result.Similarity` *(new)* | method | `promotealign.similarity` | Moves it to the type's owner; the copy is deleted |
 | `graphalign.Bridge.Associations` *(new)* | field | `valuecompare.Value.Ref` | Same opaque-ref pattern for a segment |
 | `matchregistry` `defaultEvidence`, `Registry.Evidence` *(new)* | func, field | `defaultSegment` | The section file the registry design names (`evidence.go`) |
@@ -255,16 +257,45 @@ type Relationship struct {
 type Evidence struct {
 	Sections      []Section
 	Relationships []Relationship
-	Sources       map[string]string // Source id → title
+	Sources       map[string]string // Source id → title; the loader fills it
 }
+
+type LayerLink struct {
+	Key          vocabkey.BridgeKey // from the row Subject's end
+	Observations [][]byte           // on the layer bridge Subjects
+}
+
+type Bridge struct {
+	Subject, Source, Member, Neighbor []byte
+	Observations                      [][]byte
+}
+
+type CanonLink struct {
+	Key     vocabkey.BridgeKey // from the handle's end
+	Bridges []Bridge           // the association's accepted bridge Subjects
+}
+
+type Neighbor struct {
+	Subject []byte
+	Kind    vocabkey.SubjectType
+	Values  subjectcompare.Values // the layer neighbor's
+	Handle  subjectcompare.Values // its handle's profile
+	Members []Member              // its handle's accepted members
+	Layer   []LayerLink
+	Canon   []CanonLink
+}
+
+func Build(kind vocabkey.SubjectType, row, handle subjectcompare.Values, members []Member, neighbors []Neighbor,
+	metas subjectcompare.Metas, rules Rules, segment segmentcompare.Rules, subject subjectcompare.Rules,
+	value valuecompare.Rules) Evidence
 
 func Sections(kind vocabkey.SubjectType, incoming subjectcompare.Values, members []Member, metas subjectcompare.Metas,
 	rules Rules, subject subjectcompare.Rules, value valuecompare.Rules) []Section
 ```
 
-`claimevidence` imports `propertycompare`, `subjectcompare`, `segmentcompare` (for `Cause` only), `valuecompare`, `vocabkey`, the standard library. No numeric literal other than 0 and 1 in non-test files.
+`claimevidence` imports `propertycompare`, `subjectcompare`, `segmentcompare`, `valuecompare`, `vocabkey`, the standard library. No numeric literal other than 0 and 1 in non-test files.
 
-`promotealign.Evidence` flow: `loadInputs` → `checkFixed` on the row and each neighbor (D-3) → `newProfiler`, `profile` for H and every H′ → `acceptedMembers` for H and every H′ → `subjects.SourcesOf` for every member → `g.Source` per member Source → member sides (D-8) → `Sections` for the row → relationships and bundles (D-12, D-13; `SourcesOf` again for member bridges) → `Evidence.Sources`. Catalog and cache errors are returned as is.
+`promotealign.Evidence` flow, reads only: `loadInputs` → `checkFixed` on the row and each neighbor (D-3) → `newProfiler`, `profile` for H and every H′ → `acceptedMembers` for H, every H′ and every link's association → `subjects.SourcesOf` for every member and member bridge → `g.Source` per Source → member sides (D-8), `LayerLink`s, `CanonLink`s with `Bridge`s → `claimevidence.Build` → `Evidence.Sources`. Catalog and cache errors are returned as is.
 
 ### FFI
 
@@ -286,7 +317,7 @@ Do: D-4; D-8's `ForSubject` change. Update `TestPoints` (T-1); add T-2 and T-13.
 Check: `go test ./core/propertycompare/... ./core/subjectcompare/... ./core/subjectprofile/... ./core/graphalign/...` passes; `rg -n "Speaking\.Result\.Similarity" core --glob '!*_test.go'` prints only `core/propertycompare/propertycompare.go`; `rg -n "func similarity" core/database/promotealign` prints nothing.
 
 **STEP-2 — The package and its registry section**
-Files: `core/claimevidence/claimevidence.go` *(new)* (package doc: the claim evidence view's policy, pure; `Rules`, the types), `core/matchregistry/registry.go`, `core/matchregistry/evidence.go` *(new)*, `core/matchregistry/evidence_test.go` *(new)*, `core/matchregistry/inventory_test.go`, `core/matchregistry/guard_test.go`, `.cursor/rules/match-rules.mdc`. Skill: `add-match-rule`.
+Files: `core/claimevidence/claimevidence.go` *(new)* (package doc: the claim evidence view's policy, pure; `Rules`, the types), `core/matchregistry/registry.go`, `core/matchregistry/evidence.go` *(new)*, `core/matchregistry/evidence_test.go` *(new)*, `core/matchregistry/inventory_test.go`, `core/matchregistry/guard_test.go`, `.cursor/rules/match-rules.mdc`, `docs/matching-model.md` (row `evidence.Defining`). Skill: `add-match-rule`.
 Do: D-1, D-2. Add `{"core/claimevidence", true}` to `layerPackages`; add `core/claimevidence/**` to the rule's globs; delete `"evidence."` from `notYetBuilt`.
 Check: `go test ./core/claimevidence/... ./core/matchregistry/...` passes, `TestKnobInventoryMatchesRegistry` and `TestLayerPackages` included.
 
@@ -302,13 +333,13 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/promotealign/... ./core
 
 **STEP-5 — Source lookup and the row's own lines**
 Files: `core/database/subjects/sources.go` *(new)*, `core/database/subjects/subjects_test.go`, `core/database/promotealign/evidence.go` *(new)*, `core/database/promotealign/evidence_test.go` *(new)*. Skill: `use-catalog-session`.
-Do: D-16; `Evidence` with D-3's validation, D-8, D-9, the row's `Sections` and `Evidence.Sources`; no relationships yet.
+Do: D-16; `Evidence` with D-3's validation, D-8, D-9, `Build` with no neighbors, and `Evidence.Sources`. Tests are in package `promotealign_test`, beside the fixture.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/subjects/... ./core/database/promotealign/...` passes; T-5, T-10, T-14 pass.
 
 **STEP-6 — Relationships and bundles**
-Files: `core/database/promotealign/evidence.go` *(new)* (STEP-5), `core/database/promotealign/evidence_test.go` *(new)* (STEP-5). Skill: `use-catalog-session`.
-Do: D-12, D-13, D-11's relationship order. Use `canonKeys` and `segmentcompare.Corresponds`; never call `bridgeNeighbors`, `loadExhibitObservations` or `autoreconcile.Compatible`.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/promotealign/...` passes; T-6, T-7, T-9 pass.
+Files: `core/claimevidence/build.go` *(new)*, `core/claimevidence/build_test.go` *(new)*, `core/database/promotealign/evidence.go` *(new)* (STEP-5), `core/database/promotealign/evidence_test.go` *(new)* (STEP-5). Skill: `add-match-rule`, `use-catalog-session`.
+Do: `Build` per D-12, D-13 and D-11's relationship order, with T-16 first; then the loader fills `Neighbor`s with `canonKeys` and calls `Build`. Never call `bridgeNeighbors`, `loadExhibitObservations` or `autoreconcile.Compatible`.
+Check: `go test ./core/claimevidence/...` passes with no build tags; `CGO_ENABLED=1 go test -tags fts5 ./core/database/promotealign/...` passes; T-6, T-7, T-9, T-16 pass.
 
 **STEP-7 — Neighbors the page did not map**
 Files: `core/database/promotealign/evidence_test.go` *(new)* (STEP-5).
@@ -328,8 +359,8 @@ Commits: one per step, STEP-6 and STEP-7 together. The subject is one full imper
 | --- | --- | --- | --- | --- |
 | T-1 | Go | `core/subjectcompare/subjectcompare_test.go` `TestPoints` | Results agree / partial 0.75 / conflict / unknown → 2.5 / 1.875 / −3 / 0 | AC-3.1, D-4 |
 | T-2 | Go | `core/propertycompare/propertycompare_test.go` `TestResultSimilarity` *(new)* | Zero result → 0; speaking similarity 0.75 → 0.75 | AC-3.2 |
-| T-3 | Go | `core/claimevidence/sections_test.go` `TestSections` *(new)*, table-driven | Each AC-1.x row → its sections, lines, state, members, points | AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, AC-1.8, AC-1.9, AC-1.10, AC-1.11, D-5, D-6, D-7, D-10 |
-| T-4 | Go | `core/matchregistry/evidence_test.go` `TestEvidenceSection` *(new)* | `Default().Evidence` → Checked `same`, `equivalent`; Pinnable `contains`, `overlaps`, `near`; Defining event `event_type`; Checked and Pinnable disjoint | D-2 |
+| T-3 | Go | `core/claimevidence/sections_test.go` `TestSections` *(new)*, table-driven | Each AC-1.x row → its sections, lines, state, members, points | AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, AC-1.8, AC-1.9, AC-1.10, AC-1.11, AC-1.12, D-5, D-6, D-7, D-10 |
+| T-4 | Go | `core/matchregistry/evidence_test.go` `TestEvidenceSection` *(new)*; `inventory_test.go` `TestKnobInventoryMatchesRegistry` | `Default().Evidence` → Checked `same`, `equivalent`; Pinnable `contains`, `overlaps`, `near`; Defining event `event_type`; Checked and Pinnable disjoint; the inventory test passes with row `evidence.Defining` | D-2 |
 | T-5 | Go | `core/database/promotealign/evidence_test.go` `TestEvidenceCollapsesFiveNamedMembers` *(new)* | Handle with five accepted "John Smith" members; Source person "John Smith" → one `name` line with five pins | AC-1.1, D-8, slice Check |
 | T-6 | Go | same file `TestEvidenceBundlesAMatchingBirth` *(new)* | AC-2.1, AC-2.2 as subtests | AC-2.1, AC-2.2, D-12, D-13, slice Check |
 | T-7 | Go | same file `TestEvidenceSpouseNeverMeetsSibling` *(new)* | AC-2.3 | AC-2.3 |
@@ -337,9 +368,10 @@ Commits: one per step, STEP-6 and STEP-7 together. The subject is one full imper
 | T-9 | Go | same file `TestEvidenceRelationshipBundles` *(new)* | AC-2.5 (two bundles), AC-2.6 (no dates, no section) | AC-2.5, AC-2.6 |
 | T-10 | Go | same file `TestEvidenceInvalidRequest` *(new)* | AC-2.7 rows → `promote.ErrInvalid` | AC-2.7, D-3 |
 | T-11 | Go | `core/matchregistry/guard_test.go` `TestLayerPackages` | Lists `core/claimevidence`; passes | D-1 |
-| T-12 | Go | `core/claimevidence/invariants_test.go` `TestSectionsInvariants` *(new)*, fixed seed | Random names and dates over 3–6 members: reordering members reorders only `Members`; adding a member with no values changes nothing; every pin names a ref the member holds; no line is both a conflict and pinnable | D-5, D-7, D-10 |
+| T-12 | Go | `core/claimevidence/invariants_test.go` `TestSectionsInvariants` *(new)*, fixed seed | Random names and dates over 3–6 members: reordering members reorders only `Members`, and lines tied on the incoming `Ref`; adding a member with no values changes nothing; every pin names a ref the member holds; no line is both a conflict and pinnable | D-5, D-7, D-10 |
 | T-13 | Go | `core/subjectprofile/subjectprofile_test.go` `TestForSubjectEchoesObservationRefs` *(new)* | Candidates with ids → each value's `Ref` is its id; a lifespan value's `Ref` is empty | D-8 |
 | T-14 | Go | `core/database/subjects/subjects_test.go` `TestSourcesOf` *(new)*; `evidence_test.go` `TestEvidenceNamesEverySource` *(new)* | Two Subjects on two Sources → each id maps to its Source and title; AC-2.8 | AC-2.8, D-16 |
+| T-16 | Go | `core/claimevidence/build_test.go` `TestBuild` *(new)*, table-driven | Hand-built `Neighbor`s for AC-2.1–AC-2.6: birth agree with bundle ids; birth 1830 partial; sibling key against spouse key → none; no neighbor → none; two bridges → two bundles; a bridge whose `Member` is not in `members` → skipped; no dates → relationship with no section | AC-2.1, AC-2.2, AC-2.3, AC-2.4, AC-2.5, AC-2.6, D-12, D-13 |
 | T-15 | Go | `core/subjectcompare/...`, `core/graphalign/...`, `core/database/promotealign/...` existing tests | Unchanged expectations → pass | AC-3.3, D-3, D-4, D-14 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `core/subjectcompare` and `core/graphalign` (D-4), `promotealign_test.go` (D-3, D-14), `subjectprofile` tests (D-8), `TestKnobInventoryMatchesRegistry` (D-2).
@@ -349,7 +381,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 ```
 - [ ] Every AC in §2 is true: test name for each
 - [ ] Every T-# in §8 exists and passes
-- [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests, catalog and plan-doc checks)
+- [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests, catalog and plan-doc checks); on a host without Xcode, report the Go and plan-doc steps and say Xcode was not run
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings — none: no copy
 - [ ] UI matches the brief inventory — none: no UI
@@ -379,7 +411,7 @@ None — no UI and no RPC; nothing in the app changes until S11-25. The reviewer
 - `identity_claim_evidence`'s primary key is not `(identity_claim_id, observation_id)` at your base.
 - A filed association's node `Members` are not its bridge Subjects (D-13 cannot find member bundles).
 - A member's `SourceGraph.Observations` lacks a member bridge's endpoint Observations (`ValueSubjectID`).
-- `TestKnobInventoryMatchesRegistry` needs a row name other than `evidence.Checked`, `evidence.Pinnable`, `evidence.Defining.event`.
+- `TestKnobInventoryMatchesRegistry` needs a row name other than `evidence.Checked`, `evidence.Pinnable`, `evidence.Defining`.
 - A non-test file in `core/claimevidence` needs an import under `core/database` or of `core/matchregistry`.
 
 ## 12. Open questions

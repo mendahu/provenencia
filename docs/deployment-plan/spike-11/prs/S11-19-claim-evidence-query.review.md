@@ -24,8 +24,21 @@ Maintainability: **Fits with changes**. Executability: **Not ready** (X-1, X-2 b
 | X-8 | major | Association node members unverified; map keyed by private type | **Fixed.** Current state row (`identityclaims.fileBridge`); map removed by M-2 |
 | X-9 | minor | Key on `.Value`, side A, missing meta, invariants test, doc path, commit grouping | **Fixed.** D-5, D-6, D-10, T-12, STEP-8 paths, commit line |
 
-Round 2: not run yet. Round 1 had blockers, and every blocker is fixed; round 2 runs on the revised plan.
+## Round 2 (2026-10-21)
+
+Fresh reviewers with the plan and this log. Both confirmed every round-1 answer. Maintainability: **Fits with changes**. Executability: **Not ready** (X-10, X-11 blockers).
+
+| ID | Severity | Finding | Answer |
+| --- | --- | --- | --- |
+| M-7 | blocker | Relationship and bundle policy sits in the loader, not in `claimevidence` | **Fixed.** D-1, D-12, D-13: `claimevidence.Build` with `Neighbor`, `LayerLink`, `CanonLink`, `Bridge` inputs owns correspondence, segment state, the endpoint rule and the defining split; the loader only reads. STEP-6 and T-16 |
+| X-10 | blocker | `evidence.Defining.event` cannot match the inventory walk, which reads a map of slices as one leaf | **Fixed.** D-2 and STEP-2 rename the row `evidence.Defining` (precedent `alignment.Shortlist.Words`); T-4 and §11 updated |
+| X-11 | blocker | AC-1.10's `occupation` is not in `subjectcomparetest.Metas()` | **Fixed.** AC-1.10 uses `event_name`, in the fixture and unweighted |
+| X-12 | major | A period `Side` builds leaves `RefB` empty | **Fixed.** D-5: no line; AC-1.12 |
+| X-13 | minor | T-12 contradicts D-11's tie order | **Fixed.** T-12 allows lines tied on the incoming `Ref` to reorder |
+| X-14 | minor | `cardinality` conflict never reaches a line | **Fixed.** Removed from D-7 |
+| X-15 | minor | Test package, `layerValues` arguments, revision read, nil catalog, bridge dedupe index | **Fixed.** STEP-5, D-8, D-3; the dedupe index is left to the implementer as derivable |
+| — | — | `check-pr.sh` needs Xcode | **Fixed.** DoD says how to report on a host without Xcode |
 
 ## Verdict
 
-Pending round 2.
+Two rounds done. No open blocker; M-4 answered by the user. Plan **Planned**.
