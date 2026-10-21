@@ -110,7 +110,7 @@ func line(p vocabkey.PropertyKey, v propertycompare.Value, res propertycompare.R
 		PropertyCause: res.Cause,
 		Relation:      sp.Result.Relation,
 		Cause:         sp.Detail.Cause,
-		Members:       []Pin{{Subject: m.Subject, Observation: sp.Detail.RefB, Source: m.Source}},
+		Members:       []Pin{{Subject: m.Subject, Observation: sp.Detail.RefB, Source: m.Source, Value: sp.B}},
 	}
 	if r.weighted {
 		l.Points = subjectcompare.Points(res, r.weights)

@@ -36,7 +36,11 @@ type Member struct {
 }
 
 // Pin is one member Observation a line would pin, and where it came from.
-type Pin struct{ Subject, Observation, Source []byte }
+// Value is the member's value the Observation holds.
+type Pin struct {
+	Subject, Observation, Source []byte
+	Value                        propertycompare.Value
+}
 
 // Line is one incoming Observation against the members that say something
 // about the same property.
@@ -64,14 +68,16 @@ type Section struct {
 // bridge between a member and a member of the neighbor's entity.
 type Bundle struct {
 	Member, Neighbor, Source []byte
+	Bridge                   []byte // the member's filed bridge Subject
 	Observations             [][]byte
 }
 
 // Relationship is one link of the row's Subject that corresponds, through
 // segment compare, to a link between the entity's members and its neighbor's.
 type Relationship struct {
-	Key      vocabkey.BridgeKey // from the row Subject's end
-	Neighbor []byte             // the layer neighbor
+	Key      vocabkey.BridgeKey   // from the row Subject's end
+	Neighbor []byte               // the layer neighbor
+	Kind     vocabkey.SubjectType // the neighbor's kind
 	Outcome  propertycompare.Outcome
 	Cause    segmentcompare.Cause
 	Points   float64 // segment evidence
@@ -84,6 +90,7 @@ type Relationship struct {
 
 // Evidence is everything the sheet shows for one row.
 type Evidence struct {
+	Kind          vocabkey.SubjectType // the row's kind
 	Sections      []Section
 	Relationships []Relationship
 	Sources       map[string]string // Source id → title; the loader fills it
