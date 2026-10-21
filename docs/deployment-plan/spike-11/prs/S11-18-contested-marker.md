@@ -1,6 +1,8 @@
 # S11-18 — Contested marker on Promote rows
 
 **Status:** Landed in [#507](https://github.com/mendahu/provenencia/pull/507) (2026-10-21)
+
+**Landed:** the code is one commit, not one per behavior. Round 1 differences from the plan: `PromoteFlow.row(_:)` is new and every row lookup by Subject reads it; the placed and moved sentences fall back to "after a connected row changed" when the neighbor has no record to name (beyond D-5), so a Source ref is never named as the matched record; `noteDuplicates` reads `Target.handleRef`, superseding D-6's "not touched" for those two sites.
 **Spike / slice:** Spike 11 · Slice 4 — Segments and graph alignment
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S11-D1](../design/S11-D1-promote-rows.md) §4.1 (CM-1 – CM-6), board agreed 2026-10-20
@@ -131,7 +133,7 @@ A Promote row whose comparisons include a conflict says so: a **Contested** badg
 
 **Builds on.** `PVBadge` (kit), `PromoteFlow.Reason`'s move cases and `PromoteReasonCode` (S11-17), `reasonText`'s one switch, `add-localized-string`.
 **Deletes.** The interim arm and its comment `// Worded in S11-18; no row reason is a move reason.` in `PromoteModel.reasonText(_:on:)`; `PromoteModel.reasonText(for:)`; `private enum PromoteAssessmentCopy` in `PromoteView.swift`.
-**Next adds.** S11-27 adds subrows and the "+N connections" Button to `PromoteAlignmentRow` (S11-D1 CS-1 – CS-9) and names ends by `Row.shownRef`. S11-20 speaks the sheet's band through `assessmentText` and names neighbor groups by `shownRef` (noted on its scope). A new move reason is one `Reason` case the compiler asks `reasonText` to word, plus one string. Logged, not done: `noteDuplicates` and `targetColumn` could read `Target.handleRef`.
+**Next adds.** S11-27 adds subrows and the "+N connections" Button to `PromoteAlignmentRow` (S11-D1 CS-1 – CS-9) and names ends by `Row.shownRef`. S11-20 speaks the sheet's band through `assessmentText` and names neighbor groups by `shownRef` (noted on its scope). A new move reason is one `Reason` case the compiler asks `reasonText` to word, plus one string.
 
 ### Schema
 
