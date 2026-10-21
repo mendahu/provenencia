@@ -16,6 +16,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var sourcesByProject: [String: [CatalogSource]] = [:]
     var notesBySource: [String: [CatalogSourceNote]] = [:]
     var artifactsBySource: [String: [CatalogArtifact]] = [:]
+    /// Every Evidence graph of a project. Tests seed this directly; the fake does
+    /// not mint a Default graph for a new Source.
+    var evidenceGraphsByProject: [String: [CatalogEvidenceGraph]] = [:]
+    /// What `getEvidenceGraphUnlinkImpact` returns, filtered to the Artifacts asked.
+    var unlinkImpactBlocks: [CatalogEvidenceGraphUnlinkBlock] = []
     var credibilityBySource: [String: CatalogCredibilityAssessment] = [:]
     var credibilityGradesByProject: [String: [CatalogCredibilityGrade]] = [:]
     var sourceTypesByProject: [String: [CatalogSourceType]] = [:]
@@ -512,6 +517,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             sourcesByProject[projectDir] = (sourcesByProject[projectDir] ?? []).filter { $0.id != sourceID }
             notesBySource[sourceID] = nil
             artifactsBySource[sourceID] = nil
+            for (project, graphs) in evidenceGraphsByProject {
+                evidenceGraphsByProject[project] = graphs.filter { $0.sourceID != sourceID }
+            }
             subjectsBySource[sourceID] = nil
             metadataBySource[sourceID] = nil
             credibilityBySource[sourceID] = nil
@@ -627,7 +635,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         sourceID: String,
         fileID: String,
         label: String,
-        description: String
+        description: String,
+        graphIDs: [String]
     ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
         return withState {
             let art = CatalogArtifact(
@@ -640,7 +649,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 file: nil
             )
             artifactsBySource[sourceID, default: []].append(art)
-            return (art, bumpSource(sourceID, evidence: true))
+            for (project, var graphs) in evidenceGraphsByProject {
+                for i in graphs.indices where graphs[i].sourceID == sourceID
+                    && (graphIDs.isEmpty || graphIDs.contains(graphs[i].id))
+                {
+                    graphs[i].artifactIDs.append(art.id)
+                }
+                evidenceGraphsByProject[project] = graphs
+            }
+            var effects = bumpSource(sourceID, evidence: true)
+            effects.lists.insert(.evidenceGraphs)
+            return (art, effects)
         }
     }
 
@@ -676,6 +695,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 artifactsBySource[sourceID] = arts.filter { $0.id != artifactID }
                 effects = bumpSource(sourceID, evidence: true)
             }
+            for (project, var graphs) in evidenceGraphsByProject {
+                for i in graphs.indices {
+                    graphs[i].artifactIDs.removeAll { $0 == artifactID }
+                }
+                evidenceGraphsByProject[project] = graphs
+            }
             for (project, var sources) in sourcesByProject {
                 for i in sources.indices where sources[i].primaryArtifactID == artifactID {
                     sources[i].primaryArtifactID = ""
@@ -687,6 +712,124 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             citationsByID = citationsByID.filter { $0.value.artifactID != artifactID }
             return effects
         }
+    }
+
+    func listEvidenceGraphs(projectDir: String) async throws -> [CatalogEvidenceGraph] {
+        withState {
+            markCatalogSessionHeld(projectDir)
+            return (evidenceGraphsByProject[projectDir] ?? []).sorted {
+                let order = $0.name.localizedCaseInsensitiveCompare($1.name)
+                return order == .orderedSame ? $0.ref < $1.ref : order == .orderedAscending
+            }
+        }
+    }
+
+    func createEvidenceGraph(
+        projectDir: String,
+        userID _: String,
+        sourceID: String,
+        name: String,
+        description: String,
+        artifactIDs: [String]
+    ) async throws -> (CatalogEvidenceGraph, CatalogWriteEffects) {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, !artifactIDs.isEmpty else { throw StoreBoom.boom }
+            let graph = CatalogEvidenceGraph(
+                id: UUID().uuidString.lowercased(),
+                ref: "GPH-FAKE1",
+                sourceID: sourceID,
+                name: trimmed,
+                description: description,
+                artifactIDs: artifactIDs
+            )
+            evidenceGraphsByProject[projectDir, default: []].append(graph)
+            return (graph, Self.graphEffects)
+        }
+    }
+
+    func updateEvidenceGraph(
+        projectDir: String,
+        userID _: String,
+        graphID: String,
+        name: String,
+        description: String,
+        artifactIDs: [String]
+    ) async throws -> CatalogWriteEffects {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let idx = evidenceGraphsByProject[projectDir]?.firstIndex(where: { $0.id == graphID }) else {
+                throw StoreBoom.boom
+            }
+            evidenceGraphsByProject[projectDir]?[idx].name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            evidenceGraphsByProject[projectDir]?[idx].description = description
+            if !artifactIDs.isEmpty {
+                evidenceGraphsByProject[projectDir]?[idx].artifactIDs = artifactIDs
+            }
+            return Self.graphEffects
+        }
+    }
+
+    func deleteEvidenceGraph(projectDir: String, userID _: String, graphID: String) async throws -> CatalogWriteEffects {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard evidenceGraphsByProject[projectDir]?.contains(where: { $0.id == graphID }) == true else {
+                throw StoreBoom.boom
+            }
+            evidenceGraphsByProject[projectDir]?.removeAll { $0.id == graphID }
+            return Self.graphEffects
+        }
+    }
+
+    func linkEvidenceGraphArtifact(
+        projectDir: String,
+        userID _: String,
+        graphID: String,
+        artifactID: String
+    ) async throws -> CatalogWriteEffects {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let idx = evidenceGraphsByProject[projectDir]?.firstIndex(where: { $0.id == graphID }) else {
+                throw StoreBoom.boom
+            }
+            if evidenceGraphsByProject[projectDir]?[idx].artifactIDs.contains(artifactID) == false {
+                evidenceGraphsByProject[projectDir]?[idx].artifactIDs.append(artifactID)
+            }
+            return Self.graphEffects
+        }
+    }
+
+    func unlinkEvidenceGraphArtifact(
+        projectDir: String,
+        userID _: String,
+        graphID: String,
+        artifactID: String
+    ) async throws -> CatalogWriteEffects {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let idx = evidenceGraphsByProject[projectDir]?.firstIndex(where: { $0.id == graphID }) else {
+                throw StoreBoom.boom
+            }
+            evidenceGraphsByProject[projectDir]?[idx].artifactIDs.removeAll { $0 == artifactID }
+            return Self.graphEffects
+        }
+    }
+
+    func getEvidenceGraphUnlinkImpact(
+        projectDir: String,
+        graphID _: String,
+        artifactIDs: [String]
+    ) async throws -> [CatalogEvidenceGraphUnlinkBlock] {
+        withState {
+            markCatalogSessionHeld(projectDir)
+            return artifactIDs.compactMap { id in unlinkImpactBlocks.first { $0.artifactID == id } }
+        }
+    }
+
+    /// Every graph write reports the graph list, as Go does.
+    private static var graphEffects: CatalogWriteEffects {
+        CatalogWriteEffects(lists: [.evidenceGraphs])
     }
 
     func ingestArtifactFile(

@@ -18,6 +18,8 @@ enum CatalogQueryKey: Hashable, Sendable {
     case propertyTerms(project: ProjectKey, propertyId: String)
     case citationsByArtifact(project: ProjectKey, artifactId: String)
     case sourceGraphProgress(project: ProjectKey)
+    /// Every Evidence graph of the project with its linked Artifact ids (S12-05).
+    case evidenceGraphsList(project: ProjectKey)
     /// Every Person header, composed from the auto-reconciler cache (S9-07).
     case personsList(project: ProjectKey)
     /// Every Event header, composed from the auto-reconciler cache (S9-22).
@@ -45,6 +47,7 @@ enum CatalogQueryKey: Hashable, Sendable {
         case propertyTerms
         case citationsByArtifact
         case sourceGraphProgress
+        case evidenceGraphsList
         case personsList
         case eventsList
         case placesList
@@ -81,6 +84,8 @@ enum CatalogQueryKey: Hashable, Sendable {
             return .citationsByArtifact
         case .sourceGraphProgress:
             return .sourceGraphProgress
+        case .evidenceGraphsList:
+            return .evidenceGraphsList
         case .personsList:
             return .personsList
         case .eventsList:
@@ -108,6 +113,7 @@ enum CatalogQueryKey: Hashable, Sendable {
              .propertyTerms(let project, _),
              .citationsByArtifact(let project, _),
              .sourceGraphProgress(let project),
+             .evidenceGraphsList(let project),
              .personsList(let project),
              .eventsList(let project),
              .placesList(let project),

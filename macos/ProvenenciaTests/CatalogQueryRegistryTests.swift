@@ -1179,20 +1179,21 @@ struct CatalogQueryRegistryTests {
         let lists: Set<CatalogList>
         let structure: Bool
         let propertiesInvalidations: Int
+        let graphListInvalidations: Int
 
         var testDescription: String { name }
     }
 
     nonisolated private static let listCases: [ListCase] = [
-        ListCase(name: "vocabulary", lists: [.vocabulary], structure: false, propertiesInvalidations: 1),
-        ListCase(name: "property usage", lists: [.propertyUsage], structure: false, propertiesInvalidations: 1),
+        ListCase(name: "vocabulary", lists: [.vocabulary], structure: false, propertiesInvalidations: 1, graphListInvalidations: 0),
+        ListCase(name: "property usage", lists: [.propertyUsage], structure: false, propertiesInvalidations: 1, graphListInvalidations: 0),
         ListCase(
             name: "vocabulary and property usage", lists: [.vocabulary, .propertyUsage],
-            structure: false, propertiesInvalidations: 1
+            structure: false, propertiesInvalidations: 1, graphListInvalidations: 0
         ),
-        ListCase(name: "structure alone", lists: [], structure: true, propertiesInvalidations: 1),
-        ListCase(name: "vocabulary and structure", lists: [.vocabulary], structure: true, propertiesInvalidations: 1),
-        ListCase(name: "evidence graphs alone", lists: [.evidenceGraphs], structure: false, propertiesInvalidations: 0),
+        ListCase(name: "structure alone", lists: [], structure: true, propertiesInvalidations: 1, graphListInvalidations: 0),
+        ListCase(name: "vocabulary and structure", lists: [.vocabulary], structure: true, propertiesInvalidations: 1, graphListInvalidations: 0),
+        ListCase(name: "evidence graphs alone", lists: [.evidenceGraphs], structure: false, propertiesInvalidations: 0, graphListInvalidations: 1),
     ]
 
     @Test(arguments: listCases)
@@ -1203,6 +1204,21 @@ struct CatalogQueryRegistryTests {
             project: project
         )
         #expect(got.filter { $0 == .key(.propertiesWorkspace(project: project)) }.count == tc.propertiesInvalidations)
+        #expect(got.filter { $0 == .key(.evidenceGraphsList(project: project)) }.count == tc.graphListInvalidations)
+    }
+
+    @Test func evidenceGraphsListLoadsFromStore() async throws {
+        let store = FakeStore()
+        let graph = CatalogEvidenceGraph(
+            id: "g1", ref: "GPH-AAAAA", sourceID: "s1", name: "Default", description: "", artifactIDs: ["a1"]
+        )
+        store.evidenceGraphsByProject[projectDir] = [graph]
+        let session = makeSession(store: store)
+        let handle: QueryHandle<[CatalogEvidenceGraph]> = session.query(
+            .evidenceGraphsList(project: session.projectKey)
+        )
+        await waitForFetchComplete(handle)
+        #expect(handle.value == [graph])
     }
 
     @Test func navCountTriggersAreSourceAndPromoteWrites() {

@@ -107,6 +107,8 @@ enum PVDeleteImpactCopy {
             return (L10n.DeleteImpact.gateOriginLockedTitle, L10n.string(L10n.DeleteImpact.gateOriginLockedBody))
         case .infra:
             return (L10n.DeleteImpact.gateInfraTitle, L10n.string(L10n.DeleteImpact.gateInfraBody))
+        case .lastGraph:
+            return (L10n.DeleteImpact.gateLastGraphTitle, L10n.string(L10n.DeleteImpact.gateLastGraphBody))
         }
     }
 
@@ -139,13 +141,6 @@ enum PVDeleteImpactControls {
 
     static func showsDestructiveAction(_ report: CatalogDeleteImpact) -> Bool {
         report.allowed
-    }
-
-    static func isExtraGate(_ gate: CatalogDeleteImpactGate) -> Bool {
-        switch gate {
-        case .ok, .inbound: false
-        case .notFound, .edgeLocked, .infra, .originLocked: true
-        }
     }
 
     @MainActor

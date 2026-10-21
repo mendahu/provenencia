@@ -84,15 +84,25 @@ struct PVDeleteImpactCopyTests {
     }
 
     @Test func extraGatesHaveNoDestructiveButtonAndNoInventedList() {
-        for gate in [CatalogDeleteImpactGate.notFound, .edgeLocked, .originLocked, .infra] {
+        let extraGates = CatalogDeleteImpactGate.allCases.filter {
+            PVDeleteImpactCopy.extraGate(for: $0, ref: "CIT-7KD45") != nil
+        }
+        #expect(Set(extraGates) == [.notFound, .edgeLocked, .originLocked, .infra, .lastGraph])
+        for gate in extraGates {
             let report = CatalogDeleteImpact(allowed: false, gate: gate, groups: [])
             #expect(!PVDeleteImpactControls.showsDestructiveAction(report))
-            #expect(PVDeleteImpactControls.isExtraGate(gate))
             #expect(report.groups.isEmpty)
-            #expect(PVDeleteImpactCopy.extraGate(for: gate, ref: "CIT-7KD45") != nil)
         }
         #expect(PVDeleteImpactCopy.extraGate(for: .ok, ref: "CIT-7KD45") == nil)
         #expect(PVDeleteImpactCopy.extraGate(for: .inbound, ref: "CIT-7KD45") == nil)
+    }
+
+    @Test func lastGraphGateCopy() throws {
+        let report = CatalogDeleteImpact(allowed: false, gate: .lastGraph, groups: [])
+        #expect(!PVDeleteImpactControls.showsDestructiveAction(report))
+        let gate = try #require(PVDeleteImpactCopy.extraGate(for: .lastGraph, ref: "GPH-7KD45"))
+        #expect(L10n.string(gate.title) == "This is the source’s only evidence graph")
+        #expect(gate.body == "A source keeps at least one evidence graph. Add another graph before you delete this one.")
     }
 
     @Test func voiceOverNamesEraseVersusBlocked() {
@@ -138,6 +148,10 @@ struct PVDeleteImpactCopyTests {
             ("property_terms.property_id", "property_term", 2, "2 terms belong to this property"),
             ("observations.value_term_id", "observation", 1, "1 observation uses this term"),
             ("artifacts.file_id", "artifact", 1, "1 artifact uses this file"),
+            ("subjects.graph_id", "subject", 1, "This graph has 1 subject"),
+            ("subjects.graph_id", "subject", 3, "This graph has 3 subjects"),
+            ("evidencegraphs.artifact_in_use", "citation", 1, "1 citation in this graph uses this artifact"),
+            ("evidencegraphs.artifact_in_use", "citation", 2, "2 citations in this graph use this artifact"),
         ]
         for item in cases {
             #expect(PVDeleteImpactCopy.isKnownVia(item.0))
