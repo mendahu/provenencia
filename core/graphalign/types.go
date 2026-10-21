@@ -4,6 +4,8 @@
 package graphalign
 
 import (
+	"bytes"
+
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
@@ -27,6 +29,18 @@ type Bridge struct {
 	// read them; the loader sets them and the claim evidence query reads them
 	// back, as it does a value's Ref.
 	Associations [][]byte
+}
+
+// From reads the bridge from one end: the Subject at the other end and the
+// bridge as seen from id. ok is false when id is neither end.
+func (b Bridge) From(id []byte) (other []byte, key vocabkey.BridgeKey, ok bool) {
+	switch {
+	case bytes.Equal(b.A, id):
+		return b.B, b.KeyA, true
+	case bytes.Equal(b.B, id):
+		return b.A, b.KeyB, true
+	}
+	return nil, vocabkey.BridgeKey{}, false
 }
 
 // Handle is one canonical entity in the prefetched canon neighborhood.

@@ -78,14 +78,8 @@ func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence,
 	// Layer links of the row Subject, by layer neighbor.
 	layerLinks := map[string][]claimevidence.LayerLink{}
 	for _, b := range in.layer.Bridges {
-		var other []byte
-		var key vocabkey.BridgeKey
-		switch {
-		case bytes.Equal(b.A, row.SubjectID):
-			other, key = b.B, b.KeyA
-		case bytes.Equal(b.B, row.SubjectID):
-			other, key = b.A, b.KeyB
-		default:
+		other, key, ok := b.From(row.SubjectID)
+		if !ok {
 			continue
 		}
 		link := claimevidence.LayerLink{Key: key}

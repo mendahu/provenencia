@@ -121,9 +121,10 @@ func newState(layer Layer, canon Canon, fixed []Fixed, cfg Config) *state {
 		st.handles[string(h.ID)] = h
 	}
 	for _, b := range layer.Bridges {
-		a, c := string(b.A), string(b.B)
-		st.layerAdj[a] = append(st.layerAdj[a], adjLink{neighbor: b.B, key: b.KeyA})
-		st.layerAdj[c] = append(st.layerAdj[c], adjLink{neighbor: b.A, key: b.KeyB})
+		for _, end := range [][]byte{b.A, b.B} {
+			other, key, _ := b.From(end)
+			st.layerAdj[string(end)] = append(st.layerAdj[string(end)], adjLink{neighbor: other, key: key})
+		}
 	}
 	for _, e := range canon.Edges {
 		f, t := string(e.From), string(e.To)
