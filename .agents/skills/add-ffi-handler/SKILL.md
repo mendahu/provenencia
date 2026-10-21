@@ -15,6 +15,7 @@ description: >-
 1. Add the enum value and messages in [`api/proto/engine.proto`](../../../api/proto/engine.proto). Run `./scripts/generate-proto.sh` and commit generated Go + Swift.
 2. Add `Method…` next to the other constants in `dispatch.go` and one `case` that calls `handlers.<Name>`.
 3. Implement `func <Name>(in []byte) ([]byte, error)` in `api/ffi/handlers/<name>.go` (copy ping/identity/onboarding).
+   Parse a repeated id field with `parseIDs`.
 4. Test in `api/ffi/handlers/<name>_test.go` with **`runRPC`** from `harness_test.go`. Do **not** put a large `run func(*testing.T)` in the table.
 
 `dispatch_test.go` stays router-only (unspecified / unknown method).

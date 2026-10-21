@@ -96,6 +96,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 2. Register the table and its FKs with [`add-catalog-model`](../add-catalog-model/SKILL.md). In the same PR, add probes, projectors, and facet releases in `core/database/deleteimpact`. A table that owns a File or a value row declares its FKs as `BucketOwnedOutbound` (and a `PK` on a row child) in `catalogmodel` and adds no `deleteimpact` code; its `Delete` calls the release, which schedules the purge, and an update that swaps an owned child calls `deleteimpact.ReleaseReplaced` for the old one. A composite FK registers once, under its leading column, with the full tuple in `FromCols`.
 3. If researchers can delete the row, add `Delete` in the domain package using the pattern above.
 4. If this spike has no UI, still register + cut over any existing `Delete`.
+5. A domain invariant's refusal (a link, not a row delete) gets a preflight that returns a `deleteimpact.Group` through `ListedGroup`, from the same query the write refuses on; its via is named for the refusal code.
 
 ## UI
 

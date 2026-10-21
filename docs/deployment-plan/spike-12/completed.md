@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-05 — Graph RPCs and graph list
+
+**Landed 2026-10-21** in [#511](https://github.com/mendahu/provenencia/pull/511). The app can reach every Evidence graph operation the engine has: list every graph of the project, create, edit and delete a graph, link and unlink an Artifact, and create an Artifact linked to chosen graphs (`graph_ids`; none means every graph of its Source). The graph list is one cached read, `evidenceGraphsList`, that any write reporting the `evidence_graphs` list refreshes. `GetEvidenceGraphUnlinkImpact` names, for each Artifact an edit would unlink, the graph's Citations that use it, through the new `deleteimpact.ListedGroup`. The five `evidencegraphs.*` codes have their own copy, the `last_graph` delete gate reaches Swift, and a graph delete preview reads "This graph has N subjects". No view reads these yet; nothing changes for researchers.
+
 ## S12-04 — Graph lifecycle
 
 **Landed 2026-10-20** in [#505](https://github.com/mendahu/provenencia/pull/505). The engine can list, create, edit and delete Evidence graphs. `evidencegraphs.List` is the one read of graph rows (full rows with their linked Artifact ids, by name, for a Source or the project); `Create` links a new graph to chosen Artifacts; `Update` saves name, description and linked Artifacts in one write. `Delete` goes through `deleteimpact`: a graph with Subjects is blocked by the inbound probe and a Source's last graph by a new `last_graph` extra gate, which joins `edge_locked` and `origin_locked` in one per-kind `extraGateList`. No RPC or screen calls these yet; nothing changes for researchers.

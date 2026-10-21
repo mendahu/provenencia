@@ -1,6 +1,9 @@
 # S12-05 — Graph RPCs and graph list
 
-**Status:** Planned
+**Status:** Landed in [#511](https://github.com/mendahu/provenencia/pull/511) (2026-10-21)
+**Landed:** Two differences from the plan.
+- **`TestProvenenciaCall`'s unknown method.** `api/libprovenencia/call_test.go` used method 103 as its unknown method; 103 is now `ListEvidenceGraphs`, so the case uses 9999.
+- **Handler tests (D-16).** They call the handlers through a small `rpc` / `mustRPC` helper in `evidence_graphs_test.go` instead of `runRPC` tables, because each case builds several dependent calls; `TestListEvidenceGraphs` keeps the bad-proto case.
 **Spike / slice:** Spike 12 · Slice 2 — Graphs in the catalog
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: RPCs, store methods, one query key and error and delete-confirm copy; no view changes)
