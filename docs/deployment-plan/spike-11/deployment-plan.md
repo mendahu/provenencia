@@ -46,7 +46,7 @@ These are the calls for this spike. PR plans treat them as binding.
 ### Spike-wide
 
 - **High tolerance for churn.** No one uses the app yet. No adapters, shims, wrappers, feature flags, deprecated aliases or kept-for-now paths. Migration PRs move every caller and delete the old code in the same PR. Behavior may change where the design says so; goldens are updated, not preserved. Catalog shapes matching used to need may be reshaped or dropped.
-- **Build, then migrate.** A build PR adds a layer and its registry section with its own tests. The next PR moves every caller onto it and deletes what it replaces. Between the two, the old code may call the new layer (for example `pairExhibits` uses value compare after S11-05 and is deleted in S11-19); nothing gets a compatibility layer.
+- **Build, then migrate.** A build PR adds a layer and its registry section with its own tests. The next PR moves every caller onto it and deletes what it replaces. Between the two, the old code may call the new layer (for example `pairExhibits` uses value compare after S11-05 and is deleted in S11-25); nothing gets a compatibility layer.
 - **Sparse data first.** Core properties and links (person name and sex; event type and date; place name; subject of a birth or death, parent / child, spouse, place part of place) carry most weight; secondary ones only reinforce and never outweigh a core conflict. The obituary golden plus sparse cases (name + birth date, or less) are each layer PR's acceptance tests. A person's birth date lives on the birth event, so the commonest sparse match (same name, same birth date) is half subject compare and half one link; both halves must be solid alone. Invariant: an agreeing secondary property never lowers a score and never turns a core conflict into a match.
 - **Registry numbers: carry over, then estimate.** Each layer PR carries over today's value where the knob exists (name agree 2.5 / conflict 3, sex 0.6 / 1, accept bar 2, bands 4 / 3 / 2, link support 1.5 and credit 0.5 for one-cardinality links). New knobs start from an estimate written in the knob inventory with its reasoning. No tuning beyond the goldens and sparse cases; numbers are adjusted as we review.
 - **The test suite is deferred.** Only each layer's unit tests and invariants ship in this spike for now ([`comparison-layers.md`](comparison-layers.md) Tests sections).
@@ -106,9 +106,9 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-16 | Rewrite graph alignment | 4 | Layer 6 procedure, bands from evidence, accept bar; old walk and registry deleted | — | S11-14, S11-15 | [plan](prs/S11-16-graph-alignment.md) | Landed #501 |
 | S11-17 | Contested flag through FFI | 4 | Proposal rows carry contested and move reasons to Swift | — | S11-16 | [plan](prs/S11-17-contested-ffi.md) | Landed #504 |
 | S11-18 | Contested marker on Promote rows | 4 | The marker on the page | [S11-D1](design/S11-D1-promote-rows.md) | S11-17, S11-D1 | [plan](prs/S11-18-contested-marker.md) | Landed #507 |
-| S11-19 | Claim evidence query | 5 | Go query: member lines, collapse, relationship bundles; registry evidence section | — | S11-16 | — | Scoped |
+| S11-19 | Claim evidence query | 5 | Go query: member lines, collapse, relationship bundles; registry evidence section | — | S11-16 | [plan](prs/S11-19-claim-evidence-query.md) | Planned |
 | S11-25 | Claim evidence RPC and pin policy | 5 | Lazy per-row RPC; Go default pins at Apply; Swift drafting moves onto it; proposal field 9 and `attachExhibits` removed | — | S11-19 | — | Scoped |
-| S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy, with likeness lines as two crops | S11-D2 | S11-25, S11-D2, S10-54 | — | Scoped |
+| S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy, with likeness lines as two crops | S11-D2 | S11-25, S11-D2, S10-54 (landed #433) | — | Scoped |
 | S11-26 | Connections file by their ends | 6 | Drop the bridge switch-off: `SkipBridgeIDs`, `skip_bridge_ids`, the `skip` parameters | — | — | — | Scoped |
 | S11-27 | Connection subrows on Promote | 6 | Each connection as a subrow of a row it joins, its state from its ends; the panel and toggles go | S11-D1 | S11-26, S11-D1 | — | Scoped |
 | S11-21 | Large-Source performance check | 7 | 100-Subject benchmark; memoize only if it fails | — | S11-16 | — | Scoped |
@@ -397,12 +397,12 @@ Segment compare learns unplaced neighbors (entity compare decides). A bridge's o
 #### S11-20 — Claim evidence sheet
 
 **Ships.** The Promote sheet as S11-D2 draws it: "why suggested" summary, then "What's the evidence that this record is <entity>?", property sections, relationship lines with their checkboxes, expandable collapsed lines; all copy through L10n.
-**Not this PR.** Engine (S11-19).
+**Not this PR.** Engine (S11-19), except the lines S11-19's query leaves out (user, 2026-10-21): this PR adds the lifespan line (a derived line with no pin) and likeness lines (a section pairing depiction Observations) to `core/claimevidence` and its loader; S10-54 (depiction values over the FFI) landed in #433.
 Likeness comparisons show the two crops, which S10-36 was to add in Spike 10; pinning one writes the same kind of pin a name pin writes.
 **Naming and band (from S11-18 review M-2, M-6).** The sheet's subtitle speaks the band through `PromoteModel.assessmentText`, so a contested row reads "Strong, contested"; neighbor groups name a row by `PromoteFlow.Row.shownRef`, as the row reasons do.
 **Lifespan (from S11-12 review, carried by S11-13).** Word the person's lifespan line (`Comparison.Derived`), and where a person has no lifespan because their own dated events contradict each other (S11-12 D-12), say so instead of leaving it out silently.
 **Check.** The sheet reads as sentences; no "Through <name>"; checking a relationship line pins it; two people with a likeness show both images.
-**Context.** S11-D2; [wording](claim-evidence.md#wording); Spike 10 S10-54 (depiction values over the FFI) lands first.
+**Context.** S11-D2; [wording](claim-evidence.md#wording); Spike 10 S10-54 (depiction values over the FFI) landed in #433.
 
 ### Slice 3 follow-up — Sex and gender
 
