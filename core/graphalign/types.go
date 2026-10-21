@@ -23,6 +23,10 @@ type Subject struct {
 type Bridge struct {
 	A, B       []byte
 	KeyA, KeyB vocabkey.BridgeKey // the bridge read from A's end and from B's
+	// Associations are the bridge Subjects behind the edge. The layers never
+	// read them; the loader sets them and the claim evidence query reads them
+	// back, as it does a value's Ref.
+	Associations [][]byte
 }
 
 // Handle is one canonical entity in the prefetched canon neighborhood.

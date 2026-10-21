@@ -87,14 +87,15 @@ func reconciled(row graphcache.Value, terms map[string]graphcache.VocabTerm) (au
 	}, nil
 }
 
-// layerValues is each primary Subject's own product Observations, both
-// polarities, by property key and in Observation id order.
-func layerValues(sg graphcache.SourceGraph, primary map[string]primarySubject, props map[string]graphcache.VocabProperty, terms map[string]graphcache.VocabTerm) (map[string]map[vocabkey.PropertyKey][]autoreconcile.Candidate, error) {
+// layerValues is each listed Subject's own product Observations, both
+// polarities, by property key and in Observation id order. subjects is the set
+// of Subject ids to read.
+func layerValues(sg graphcache.SourceGraph, subjects map[string]bool, props map[string]graphcache.VocabProperty, terms map[string]graphcache.VocabTerm) (map[string]map[vocabkey.PropertyKey][]autoreconcile.Candidate, error) {
 	obs := slices.Clone(sg.Observations)
 	slices.SortStableFunc(obs, func(a, b graphcache.SourceObservation) int { return bytes.Compare(a.ID, b.ID) })
 	out := map[string]map[vocabkey.PropertyKey][]autoreconcile.Candidate{}
 	for _, o := range obs {
-		if _, ok := primary[string(o.SubjectID)]; !ok || len(o.ValueSubjectID) > 0 {
+		if !subjects[string(o.SubjectID)] || len(o.ValueSubjectID) > 0 {
 			continue
 		}
 		prop, ok := props[string(o.PropertyID)]

@@ -1,6 +1,8 @@
 package promotealign
 
 import (
+	"bytes"
+	"slices"
 	"sort"
 
 	"github.com/mendahu/provenencia/core/connectrules"
@@ -62,7 +64,11 @@ func loadLayer(g *graphcache.Graph, q Querier, sourceID []byte, cfg graphalign.C
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
-	candidates, err := layerValues(sg, primary, props, vocab.TermsByID())
+	ids := make(map[string]bool, len(primary))
+	for id := range primary {
+		ids[id] = true
+	}
+	candidates, err := layerValues(sg, ids, props, vocab.TermsByID())
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
@@ -123,7 +129,7 @@ var hopPersonToEvent = hops.MustHop(vocabkey.BridgeParticipation, vocabkey.Prope
 func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubject, byKind map[string][][]byte, terms segmentcompare.Terms) ([]graphalign.Bridge, []participation, error) {
 	var out []graphalign.Bridge
 	var parts []participation
-	seen := map[seenEdge]bool{}
+	seen := map[seenEdge]int{} // the edge's index in out
 	for _, b := range connectrules.Bridges() {
 		if len(b.Endpoints) != 2 || len(byKind[b.Endpoints[0].TypeKey]) == 0 {
 			continue
@@ -182,12 +188,16 @@ func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubj
 			keyA := segmentcompare.Key(linkOf(b, term, eventType, true), terms)
 			keyB := segmentcompare.Key(linkOf(b, term, eventType, false), terms)
 			ek := edgeSeenKey(e.From, e.To, keyA, keyB)
-			if seen[ek] {
+			if at, ok := seen[ek]; ok {
+				if !slices.ContainsFunc(out[at].Associations, func(a []byte) bool { return bytes.Equal(a, e.Association) }) {
+					out[at].Associations = append(out[at].Associations, bytes.Clone(e.Association))
+				}
 				continue
 			}
-			seen[ek] = true
+			seen[ek] = len(out)
 			out = append(out, graphalign.Bridge{
 				A: append([]byte(nil), e.From...), B: append([]byte(nil), e.To...), KeyA: keyA, KeyB: keyB,
+				Associations: [][]byte{bytes.Clone(e.Association)},
 			})
 		}
 	}
