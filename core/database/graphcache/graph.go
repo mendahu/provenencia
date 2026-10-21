@@ -157,20 +157,26 @@ func mustTableName(name string) string {
 	panic("graphcache: catalog model missing " + name)
 }
 
+// dropDerived empties what features derive from the graph and its vocabulary
+// and aliases: the Source memos and the match index.
+func (g *Graph) dropDerived() {
+	g.memos = map[string]map[string]any{}
+	g.matchIndexOK = false
+	g.matchIndex = nil
+}
+
 func (g *Graph) clear() {
 	g.nodes = map[string]*Node{}
 	g.holders = map[string][][]byte{}
 	g.kinds = map[string][][]byte{}
 	g.kindOn = map[string]bool{}
 	g.kindSet = map[string]map[string]bool{}
-	g.matchIndexOK = false
-	g.matchIndex = nil
+	g.dropDerived()
 	g.vocabOK = false
 	g.vocab = Vocabulary{}
 	g.displays = map[string]any{}
 	g.details = map[string]any{}
 	g.sources = map[string]SourceGraph{}
-	g.memos = map[string]map[string]any{}
 	g.labelsOK = false
 	g.labels = nil
 	g.activity = map[string]map[string]effects.Activity{}
@@ -268,9 +274,7 @@ func (g *Graph) SetAliasTables(tables any) {
 	if g == nil {
 		return
 	}
-	g.memos = map[string]map[string]any{}
-	g.matchIndexOK = false
-	g.matchIndex = nil
+	g.dropDerived()
 	g.aliases = tables
 	g.aliasesOK = true
 }
@@ -300,6 +304,12 @@ func (g *Graph) SetQueryCounterForTest(fn func()) {
 		return
 	}
 	g.count = fn
+}
+
+// LoadedSourceForTest reports whether a Source's graph is loaded.
+func (g *Graph) LoadedSourceForTest(id []byte) bool {
+	_, ok := g.sources[string(id)]
+	return ok
 }
 
 // LoadedForTest reports whether id is in the node map.

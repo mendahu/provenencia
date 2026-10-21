@@ -153,11 +153,11 @@ type walkCase struct {
 	want [][3]string
 }
 
-// TestWalkSourceMatchesSQL walks the Evidence graph of one Source in memory.
+// TestWalkSourceEdges walks the Evidence graph of one Source in memory.
 // Its expected edges are literals: the edges canonicalgraph.WalkSource's SQL
 // returned for this fixture before it was deleted (checked equal, edge for edge
 // and in order, when the in-memory walk landed).
-func TestWalkSourceMatchesSQL(t *testing.T) {
+func TestWalkSourceEdges(t *testing.T) {
 	f := newWalkFixture(t)
 	james, mary := f.subject(f.src, "james", "person"), f.subject(f.src, "mary", "person")
 	infant, witness := f.subject(f.src, "infant", "person"), f.subject(f.src, "witness", "person")
