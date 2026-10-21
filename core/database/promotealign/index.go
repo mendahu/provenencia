@@ -10,13 +10,19 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/shortlist"
+	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // matchIndex is what Promote derives from the whole catalog and keeps in the
-// graph's match index slot. A nil field is not built yet.
+// graph's match index slot. A nil field is not built yet. profiles are the
+// handle profiles built so far, by handle id, under namePattern: a profile
+// reads the handle's values and the events it takes part in, so it lives as
+// long as the index does, and every handle commit drops both.
 type matchIndex struct {
-	shortlist *shortlist.Index
+	shortlist       *shortlist.Index
+	profiles        map[string]subjectcompare.Values
+	profilesPattern string
 }
 
 // matchIndexOf is the stored match index, or the zero value when none is.
@@ -72,6 +78,7 @@ func loadShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*sh
 		}
 	}
 	m.shortlist = ix
+	m.profiles, m.profilesPattern = p.done, p.namePattern
 	g.SetMatchIndex(m)
 	return ix, nil
 }

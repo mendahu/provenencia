@@ -28,6 +28,35 @@ type participation struct {
 	role          string
 }
 
+// layerMemoKey is the Source memo key of a built layer, with the name pattern
+// it was built under after it.
+const layerMemoKey = "promotealign.layer\x00"
+
+// layerMemo is a layer and its primary Subjects, as one Source memo.
+type layerMemo struct {
+	layer   graphalign.Layer
+	primary map[string]primarySubject
+}
+
+// loadLayerMemo is the Source's layer: the one memoized on its graph, or
+// loadLayer's, memoized. The layer reads the Source graph, the vocabulary, the
+// terms, the name pattern and the static registry, and the memo is dropped with
+// the Source, a vocabulary change and new alias tables. A reader never changes
+// a layer, so every caller shares it.
+func loadLayerMemo(g *graphcache.Graph, sourceID []byte, cfg graphalign.Config, namePattern string, terms segmentcompare.Terms) (graphalign.Layer, map[string]primarySubject, error) {
+	key := layerMemoKey + namePattern
+	if v, ok := g.SourceMemo(sourceID, key); ok {
+		m := v.(layerMemo)
+		return m.layer, m.primary, nil
+	}
+	layer, primary, err := loadLayer(g, sourceID, cfg, namePattern, terms)
+	if err != nil {
+		return graphalign.Layer{}, nil, err
+	}
+	g.SetSourceMemo(sourceID, key, layerMemo{layer: layer, primary: primary})
+	return layer, primary, nil
+}
+
 // loadLayer builds the Evidence layer from a loaded Source. Each primary
 // Subject's side is built here, once, with the profile builder; property
 // metas stay a catalog read, since they are not part of one Source.

@@ -24,6 +24,7 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 		g.DropLabels()
 		g.vocabOK = false
 		g.vocab = Vocabulary{}
+		g.memos = map[string]map[string]any{}
 		g.matchIndexOK = false
 		g.matchIndex = nil
 	}

@@ -125,8 +125,36 @@ func (g *Graph) dropSources(ids [][]byte) {
 	for _, id := range ids {
 		if len(id) == 16 {
 			delete(g.sources, string(id))
+			delete(g.memos, string(id))
 		}
 	}
+}
+
+// SourceMemo returns what a feature stored for a loaded Source under key. It is
+// held only while the Source is loaded: a commit that names the Source, Drop, a
+// vocabulary commit and SetAliasTables clear it. A memoized value is shared, so
+// every reader treats it as read-only.
+func (g *Graph) SourceMemo(id []byte, key string) (any, bool) {
+	if g == nil {
+		return nil, false
+	}
+	v, ok := g.memos[string(id)][key]
+	return v, ok
+}
+
+// SetSourceMemo stores a feature's value for a loaded Source under key. A
+// Source that is not loaded keeps nothing.
+func (g *Graph) SetSourceMemo(id []byte, key string, v any) {
+	if g == nil {
+		return
+	}
+	if _, loaded := g.sources[string(id)]; !loaded {
+		return
+	}
+	if g.memos[string(id)] == nil {
+		g.memos[string(id)] = map[string]any{}
+	}
+	g.memos[string(id)][key] = v
 }
 
 // WalkSource follows h through one Source's Evidence graph from each Subject

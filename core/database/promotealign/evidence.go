@@ -2,10 +2,8 @@ package promotealign
 
 import (
 	"bytes"
-	"maps"
 	"slices"
 
-	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/claimevidence"
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
@@ -122,6 +120,7 @@ func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence,
 	if err := q.prof.profile(nodes); err != nil {
 		return claimevidence.Evidence{}, err
 	}
+	q.prof.keep()
 
 	members, err := q.members(row.HandleID)
 	if err != nil {
@@ -223,8 +222,23 @@ func (r *evidenceReader) members(entity []byte) ([]claimevidence.Member, error) 
 	return r.memberValues(ids)
 }
 
+// membersMemoKey is the Source memo key of the member values already built for
+// a Source's Subjects, with the name pattern they were built under after it.
+const membersMemoKey = "promotealign.members\x00"
+
+// memberMemo is a Source's memoized member values by Subject id, filled as
+// Subjects are read. The values are shared and never changed.
+func (r *evidenceReader) memberMemo(source []byte, key string) (map[string]subjectcompare.Values, bool) {
+	v, ok := r.g.SourceMemo(source, key)
+	if !ok {
+		return nil, false
+	}
+	m, ok := v.(map[string]subjectcompare.Values)
+	return m, ok
+}
+
 // memberValues reads the listed Subjects as members, in the order given. Each
-// Source is read once, for all of its listed Subjects.
+// Source is read once, for the Subjects of it not memoized yet.
 func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Member, error) {
 	bySource := map[string]map[string]bool{}
 	for _, id := range subjectIDs {
@@ -235,17 +249,41 @@ func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Memb
 			bySource[string(src)][string(id)] = true
 		}
 	}
-	valuesOf := map[string]map[vocabkey.PropertyKey][]autoreconcile.Candidate{}
+	key := membersMemoKey + r.in.namePattern
+	valuesOf := map[string]subjectcompare.Values{}
 	for source, set := range bySource {
-		sg, err := r.g.Source([]byte(source))
-		if err != nil {
-			return nil, err
+		memo, _ := r.memberMemo([]byte(source), key)
+		var missing map[string]bool
+		for id := range set {
+			if _, ok := memo[id]; !ok {
+				if missing == nil {
+					missing = map[string]bool{}
+				}
+				missing[id] = true
+			}
 		}
-		cands, err := layerValues(sg, set, r.prof.props, r.prof.terms)
-		if err != nil {
-			return nil, err
+		if len(missing) > 0 {
+			sg, err := r.g.Source([]byte(source))
+			if err != nil {
+				return nil, err
+			}
+			cands, err := layerValues(sg, missing, r.prof.props, r.prof.terms)
+			if err != nil {
+				return nil, err
+			}
+			if memo == nil {
+				memo = map[string]subjectcompare.Values{}
+			}
+			for id := range missing {
+				memo[id] = subjectprofile.ForSubject(subjectprofile.Subject{
+					Values: cands[id], NamePattern: r.in.namePattern,
+				}, nil)
+			}
+			r.g.SetSourceMemo([]byte(source), key, memo)
 		}
-		maps.Copy(valuesOf, cands)
+		for id := range set {
+			valuesOf[id] = memo[id]
+		}
 	}
 	var out []claimevidence.Member
 	for _, id := range subjectIDs {
@@ -256,9 +294,7 @@ func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Memb
 		out = append(out, claimevidence.Member{
 			Subject: bytes.Clone(id),
 			Source:  bytes.Clone(src),
-			Values: subjectprofile.ForSubject(subjectprofile.Subject{
-				Values: valuesOf[string(id)], NamePattern: r.in.namePattern,
-			}, nil),
+			Values:  valuesOf[string(id)],
 		})
 	}
 	return out, nil

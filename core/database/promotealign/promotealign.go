@@ -119,7 +119,7 @@ func loadInputs(c *database.Catalog, sourceID []byte) (inputs, error) {
 	if err != nil {
 		return inputs{}, err
 	}
-	layer, primary, err := loadLayer(c.Graph(), sourceID, cfg, namePattern, terms)
+	layer, primary, err := loadLayerMemo(c.Graph(), sourceID, cfg, namePattern, terms)
 	if err != nil {
 		return inputs{}, err
 	}
