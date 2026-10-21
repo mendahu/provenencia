@@ -999,3 +999,90 @@ func testCatalog(t *testing.T) (*database.Catalog, []byte) {
 	}
 	return c, userID
 }
+
+func TestListedGroup(t *testing.T) {
+	c, userID := testCatalog(t)
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []deleteimpact.Listed
+	for i := 0; i < 25; i++ {
+		res, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID: art.ID, LocatorJSON: testLocator,
+			}, nil)
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows = append(rows, deleteimpact.Listed{ID: res.Citation.ID, Ref: res.Citation.Ref})
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	t.Run("three rows are projected", func(t *testing.T) {
+		g, err := deleteimpact.ListedGroup(tx, "x.via", catalogmodel.KindCitation, rows[:3])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if g.Via != "x.via" || g.Kind != catalogmodel.KindCitation || g.Total != 3 || len(g.Listed) != 3 {
+			t.Fatalf("%+v", g)
+		}
+		for i, l := range g.Listed {
+			if l.Ref != rows[i].Ref || string(l.ID) != string(rows[i].ID) {
+				t.Fatalf("row %d: %+v", i, l)
+			}
+			if l.Title == "" || l.Location.SourceSurface != "citationComposer" || l.Location.CitationID != idString(rows[i].ID) {
+				t.Fatalf("row %d projection: %+v", i, l)
+			}
+		}
+	})
+	t.Run("more than the cap lists the first 20", func(t *testing.T) {
+		g, err := deleteimpact.ListedGroup(tx, "x.via", catalogmodel.KindCitation, rows)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if g.Total != 25 || len(g.Listed) != 20 {
+			t.Fatalf("total %d listed %d", g.Total, len(g.Listed))
+		}
+		for i, l := range g.Listed {
+			if l.Ref != rows[i].Ref {
+				t.Fatalf("row %d out of order: %q want %q", i, l.Ref, rows[i].Ref)
+			}
+		}
+	})
+	t.Run("empty", func(t *testing.T) {
+		g, err := deleteimpact.ListedGroup(tx, "x.via", catalogmodel.KindCitation, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if g.Total != 0 || len(g.Listed) != 0 || g.Via != "x.via" {
+			t.Fatalf("%+v", g)
+		}
+	})
+	t.Run("nil tx", func(t *testing.T) {
+		if _, err := deleteimpact.ListedGroup(nil, "x.via", catalogmodel.KindCitation, rows); !errors.Is(err, deleteimpact.ErrInvalid) {
+			t.Fatalf("got %v", err)
+		}
+	})
+}

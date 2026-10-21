@@ -111,3 +111,24 @@ func collectGroups(tx *sql.Tx, edges []inboundEdge, id []byte) ([]Group, error) 
 	}
 	return groups, nil
 }
+
+// ListedGroup shapes rows a domain read found into one report group, projected
+// and capped as Impact lists inbound rows. Callers pass rows with ID and Ref
+// set, from the query that found them.
+func ListedGroup(tx *sql.Tx, via string, kind catalogmodel.Kind, rows []Listed) (Group, error) {
+	if tx == nil {
+		return Group{}, ErrInvalid
+	}
+	g := Group{Via: via, Kind: kind, Total: len(rows)}
+	for i, r := range rows {
+		if i == listedCap {
+			break
+		}
+		listed, err := projectListed(tx, kind, probeRow{ID: r.ID, Ref: r.Ref})
+		if err != nil {
+			return Group{}, err
+		}
+		g.Listed = append(g.Listed, listed)
+	}
+	return g, nil
+}
