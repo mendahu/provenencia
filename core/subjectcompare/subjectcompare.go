@@ -160,21 +160,42 @@ func (r Rules) Derived(kind vocabkey.SubjectType, key vocabkey.PropertyKey) bool
 	return false
 }
 
+// Role is how a property counts under its lead.
+type Role int
+
+const (
+	// RoleLead is a weighted property: it is its own lead.
+	RoleLead Role = iota
+	// RolePooled is a property a lead pools its values with.
+	RolePooled
+	// RolePeriodEnd is the start or end a lead reads as a period.
+	RolePeriodEnd
+)
+
+// Role returns the lead property a property counts under for the kind and how
+// it counts: a weighted property is its own lead, else the first lead, in
+// ascending key order, that pools it or reads it as a period end. A
+// lifespan's Span is in neither, so it has no lead.
+func (r Rules) Role(kind vocabkey.SubjectType, key vocabkey.PropertyKey) (vocabkey.PropertyKey, Role, bool) {
+	if _, ok := r.Weights[kind][key]; ok {
+		return key, RoleLead, true
+	}
+	for _, lead := range slices.Sorted(maps.Keys(r.Weights[kind])) {
+		if slices.Contains(r.Pools[kind][lead].With, key) {
+			return lead, RolePooled, true
+		}
+		if p, ok := r.Periods[kind][lead]; ok && (p.Start == key || p.End == key) {
+			return lead, RolePeriodEnd, true
+		}
+	}
+	return "", RoleLead, false
+}
+
 // Lead returns the lead property a property counts under for the kind: the
 // property itself when it is weighted, else the first lead, in ascending key
 // order, that pools it or reads it as a period end. A lifespan's Span is in
 // neither, so it has no lead.
 func (r Rules) Lead(kind vocabkey.SubjectType, key vocabkey.PropertyKey) (vocabkey.PropertyKey, bool) {
-	if _, ok := r.Weights[kind][key]; ok {
-		return key, true
-	}
-	for _, lead := range slices.Sorted(maps.Keys(r.Weights[kind])) {
-		if slices.Contains(r.Pools[kind][lead].With, key) {
-			return lead, true
-		}
-		if p, ok := r.Periods[kind][lead]; ok && (p.Start == key || p.End == key) {
-			return lead, true
-		}
-	}
-	return "", false
+	lead, _, ok := r.Role(kind, key)
+	return lead, ok
 }

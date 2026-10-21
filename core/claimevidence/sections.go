@@ -32,12 +32,12 @@ type route struct {
 // counts under the lead; any other property has a section of its own and no
 // weight.
 func routeOf(kind vocabkey.SubjectType, p vocabkey.PropertyKey, subject subjectcompare.Rules) route {
-	lead, ok := subject.Lead(kind, p)
+	lead, role, ok := subject.Role(kind, p)
 	if !ok {
 		return route{section: p, meta: p}
 	}
 	r := route{lead: lead, section: lead, weighted: true, weights: subject.Weights[kind][lead]}
-	if period, has := subject.Periods[kind][lead]; has && (p == period.Start || p == period.End) && p != lead {
+	if role == subjectcompare.RolePeriodEnd {
 		r.meta = p
 		return r
 	}
