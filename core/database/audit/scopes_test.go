@@ -344,6 +344,39 @@ func TestSourceScopes(t *testing.T) {
 			},
 		},
 		{
+			name: "graph create, rename and delete",
+			run: func(t *testing.T, s scopeSeed) {
+				var jones evidencegraphs.Graph
+				s.bumpsA(t, func() {
+					got, err := writes.Call(s.c, writes.Op{Action: "create_evidence_graph", UserID: scopeUserID}, func(tx *database.Tx) (evidencegraphs.Graph, []rowchange.Change, error) {
+						return evidencegraphs.Create(tx, scopeUserID, evidencegraphs.CreateInput{
+							SourceID: s.a.ID, Name: "Jones", ArtifactIDs: [][]byte{s.artifact.ID},
+						})
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+					jones = got
+				})
+				s.bumpsA(t, func() {
+					if _, err := writes.Call(s.c, writes.Op{Action: "update_evidence_graph", UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						changes, err := evidencegraphs.Update(tx, scopeUserID, jones.ID, evidencegraphs.UpdateInput{Name: "Jones household"})
+						return struct{}{}, changes, err
+					}); err != nil {
+						t.Fatal(err)
+					}
+				})
+				s.bumpsA(t, func() {
+					if _, err := writes.Call(s.c, writes.Op{Action: "delete_evidence_graph", UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						changes, err := evidencegraphs.Delete(tx, scopeUserID, jones.ID)
+						return struct{}{}, changes, err
+					}); err != nil {
+						t.Fatal(err)
+					}
+				})
+			},
+		},
+		{
 			name: "subject create, edit, delete",
 			run: func(t *testing.T, s scopeSeed) {
 				var subj subjects.Subject
