@@ -2,6 +2,7 @@ package promotealign_test
 
 import (
 	"bytes"
+	"database/sql"
 	"errors"
 	"testing"
 
@@ -353,5 +354,61 @@ func TestEvidenceNamesEverySource(t *testing.T) {
 		if e.Sources[id] != title {
 			t.Errorf("Sources[%x] = %q, want %q", id, e.Sources[id], title)
 		}
+	}
+}
+
+// A filed bridge gives a bundle only when each end is one positive Observation
+// naming one Subject. The catalog's writes refuse the other shapes, so the
+// test rewrites the filed bridge's endpoint rows.
+func TestEvidenceBridgeEndpoints(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		bundles int
+		mutate  func(t *testing.T, db *sql.DB, f *fixture, person, event, other subjects.Subject)
+	}{
+		{"a positive single-valued bridge gives a bundle", 2, func(*testing.T, *sql.DB, *fixture, subjects.Subject, subjects.Subject, subjects.Subject) {}},
+		{"a neighbor end that is not positive gives no bundle", 1, func(t *testing.T, db *sql.DB, f *fixture, _, event, _ subjects.Subject) {
+			_, err := db.Exec(`UPDATE observations SET polarity = 'negative' WHERE value_subject_id = ? AND property_id = ?`, event.ID, f.prop("event").ID)
+			must(t, err)
+		}},
+		{"a member end that names two Subjects gives no bundle", 1, func(t *testing.T, db *sql.DB, f *fixture, person, _, other subjects.Subject) {
+			_, err := db.Exec(`INSERT INTO observations (id, ref, citation_id, subject_id, property_id, polarity, value_subject_id)
+				SELECT x'ffffffffffffffffffffffffffffffff', 'OBS-' || hex(randomblob(5)), citation_id, subject_id, property_id, polarity, ?
+				FROM observations WHERE value_subject_id = ? AND property_id = ?`, other.ID, person.ID, f.prop("person").ID)
+			must(t, err)
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFixture(t)
+			// The rewritten bridge is filed before anything reads the Source into
+			// the graph; a second, good one keeps the link between the entities.
+			p := f.person(f.source, f.artifact, "John Smith")
+			b := f.datedBirth(f.source, f.artifact, 1817)
+			other := f.person(f.source, f.artifact, "Jane Doe")
+			f.participation(f.source, f.artifact, p, b, "subject")
+			db, err := f.c.DB()
+			must(t, err)
+			tc.mutate(t, db, f, p, b, other)
+			_, _, personHandle, birthHandle := f.filedBirth(f.source, f.artifact, "John Smith", 1817, nil, nil)
+			f.join(p, personHandle)
+			f.join(b, birthHandle)
+
+			srcB, artB := f.newSource("Obituary")
+			bPerson := f.person(srcB, artB, "John Smith")
+			bBirth := f.datedBirth(srcB, artB, 1817)
+			f.participation(srcB, artB, bPerson, bBirth, "subject")
+
+			e := f.evidence(promotealign.EvidenceRequest{
+				SourceID: srcB.ID, SubjectID: bPerson.ID, HandleID: personHandle,
+				Neighbors: []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: birthHandle}},
+			})
+			got := 0
+			for _, r := range e.Relationships {
+				got += len(r.Members)
+			}
+			if got != tc.bundles {
+				t.Errorf("bundles = %d, want %d: %+v", got, tc.bundles, e.Relationships)
+			}
+		})
 	}
 }

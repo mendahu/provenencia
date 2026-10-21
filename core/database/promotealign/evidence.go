@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/graphalign"
@@ -264,8 +265,9 @@ func (r *evidenceReader) canonLinks(from, to *graphcache.Node) ([]claimevidence.
 
 // bridges are the accepted bridge Subjects on a link's association, each with
 // the two Subjects it joins (read from its endpoint Observations, in the
-// order of the link's end) and every Observation on it. A bridge that does not
-// record both ends is left out.
+// order of the link's end) and every Observation on it. An end is read from a
+// positive Observation only; an end that names two different Subjects is
+// unresolved, and a bridge that does not record both ends is left out.
 func (r *evidenceReader) bridges(l graphcache.Link) ([]claimevidence.Bridge, error) {
 	spec, ok := connectrules.LookupBridge(l.BridgeTypeKey)
 	if !ok || len(spec.Endpoints) != 2 {
@@ -294,22 +296,29 @@ func (r *evidenceReader) bridges(l graphcache.Link) ([]claimevidence.Bridge, err
 			return nil, err
 		}
 		b := claimevidence.Bridge{Subject: bytes.Clone(id), Source: bytes.Clone(src.SourceID)}
+		ambiguous := false
+		end := func(into *[]byte, v []byte) {
+			if len(*into) > 0 && !bytes.Equal(*into, v) {
+				ambiguous = true
+			}
+			*into = bytes.Clone(v)
+		}
 		for _, o := range sg.Observations {
 			if !bytes.Equal(o.SubjectID, id) {
 				continue
 			}
 			b.Observations = append(b.Observations, bytes.Clone(o.ID))
-			if len(o.ValueSubjectID) == 0 {
+			if len(o.ValueSubjectID) == 0 || o.Polarity != observations.PolarityPositive {
 				continue
 			}
 			switch r.prof.props[string(o.PropertyID)].Key {
 			case memberEnd:
-				b.Member = bytes.Clone(o.ValueSubjectID)
+				end(&b.Member, o.ValueSubjectID)
 			case neighborEnd:
-				b.Neighbor = bytes.Clone(o.ValueSubjectID)
+				end(&b.Neighbor, o.ValueSubjectID)
 			}
 		}
-		if len(b.Member) == 0 || len(b.Neighbor) == 0 {
+		if ambiguous || len(b.Member) == 0 || len(b.Neighbor) == 0 {
 			continue
 		}
 		out = append(out, b)
