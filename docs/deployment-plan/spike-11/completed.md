@@ -4,7 +4,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 
 ## S11-19 — Claim evidence query
 
-**In review** in [#513](https://github.com/mendahu/provenencia/pull/513). A Promote row's claim evidence now has its own Go query, `promotealign.Evidence`, with no caller on the wire yet. Every accepted member of the target entity gets its own line per property, members with an identical value collapse into one line, and a link that corresponds through segment compare is one relationship that bundles every Observation behind it. Which lines are pinnable and which start checked is the registry's new `evidence` section (`core/claimevidence`); a line's points come from the one `subjectcompare.Points` helper. The sheet and the RPC follow in S11-25 and S11-20.
+**In review** in [#513](https://github.com/mendahu/provenencia/pull/513). A Promote row's claim evidence now has its own Go query, `promotealign.Evidence`, with no caller on the wire yet. Every accepted member of the target entity gets its own line per property, members with an identical value collapse into one line, and a link that corresponds through segment compare is one relationship that bundles every Observation behind it. Which lines are pinnable and which start checked is the registry's new `evidence` section (`core/claimevidence`); a line's points come from the one `subjectcompare.Points` helper. The sheet and the RPC follow in S11-25 and S11-20. The query and Promote's setup read through the graph cache: a Source's Subjects, Observations, title and members, its in-memory bridge walk, and the layer and member values built from them, which are memoized and dropped on commit.
 
 ## S11-30 — Gender meets sex at birth in its own words
 
