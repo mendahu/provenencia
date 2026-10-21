@@ -1,7 +1,7 @@
 # Ship log — S12-05 Graph RPCs and graph list
 
 **Plan:** [`S12-05-graph-rpcs.md`](S12-05-graph-rpcs.md) · **Branch:** `s12-05-graph-rpcs` · **PR:** #511
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `74dda084`. Gate PASS (orchestrator re-ran `scripts/check-pr.sh` against `e169b711`). Report deviations:
@@ -61,3 +61,20 @@ Check: the test passes; scripts/check-pr.sh PASS.
 Files: `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, plan §6 Strings via the Landed note. Skill: `add-localized-string`.
 Do: change the English value of `L10n.Errors.evidenceGraphsArtifactInUse` to "Citations in this evidence graph still use an artifact you removed, so it stays linked." The code stays plain, with no params (D-12).
 Check: `evidenceGraphErrorsHaveCopy` passes; `python3 scripts/check-localizable-xcstrings.py` OK; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `1e3331ba`. Gate PASS (orchestrator re-ran). F-1 through F-6 done. F-1, F-2, F-5 and F-6 each went red first; F-3 passed on arrival, as a guard.
+Deviation: F-6 also updated the `L10nResolutionTests` expectation. The Landed note records the D-11 Spec correction, the `artifact_in_use` copy change, and that `graphFixture` wraps `citationFixture`.
+
+## Round 2 — review
+Reviewers: CON, MNT, SEC+PRF (each had a Fix-now blocker or major). UX not re-sent: UX-1 was a minor.
+UX-1 **Resolved**: `L10n.swift:9669` and `Localizable.xcstrings:2524` now read "Citations in this evidence graph still use an artifact you removed, so it stays linked." The code is still plain.
+CON-1, MNT-1, MNT-2, PRF-1 and F-5 (FakeStore scoping) are each **Resolved**, as reported by their round-2 reviewers; all three verdicts are Clean. No new blockers, so there is no Fix plan 2.
+
+Nits (logged): `MNT-6 · S12-05-graph-rpcs.md Landed note · D-16 line still names evidence_graphs_test.go as the helper location before saying harness_test.go` · `CON-2 · unchanged`
+
+## Result
+Gate PASS at `1e3331ba` · `origin/main` unchanged since the branch was cut (`e169b711`) · CI pending · open: none ·
+to user: MNT-1, PRF-1 (D-11 corrections) and UX-1 (§6 copy), all answered 2026-10-21 and fixed ·
+follow-ups: UX-2 (last-graph gate preview), UX-3 (S12-12 inline validation), MNT-3, MNT-4, MNT-5 (logged nits) ·
+CON miss: none (MNT-1 came from D-11's false premise; the code matched the plan, so conformance had nothing to miss)
