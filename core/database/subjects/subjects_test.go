@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	_ "github.com/mendahu/provenencia/core/database/sourcefill"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -21,19 +22,6 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
-
-func defaultGraphID(t *testing.T, c *database.Catalog, sourceID []byte) []byte {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var id []byte
-	if err := db.QueryRow(`SELECT id FROM evidence_graphs WHERE source_id = ?`, sourceID).Scan(&id); err != nil {
-		t.Fatal(err)
-	}
-	return id
-}
 
 func TestSubjects(t *testing.T) {
 	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
@@ -114,7 +102,7 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				want := defaultGraphID(t, c, src.ID)
+				want := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 				var created []rowchange.Change
 				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					s, changes, err := Create(tx, userID, CreateInput{

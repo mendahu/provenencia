@@ -1,12 +1,12 @@
-// Package evidencegraphstest builds the catalog an open-time graph-ref repair
-// test needs: a Source whose Default graph has no ref, as a catalog the format
-// migration backfilled looks before its first open.
+// Package evidencegraphstest holds shared Evidence graph fixtures: a catalog
+// whose Default graph has no ref, and a Source's one graph.
 package evidencegraphstest
 
 import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -55,16 +55,16 @@ func SeedRefless(t *testing.T, c *database.Catalog) []byte {
 	return src.ID
 }
 
-// Ref is the ref of a Source's graph, or "" when it has none.
-func Ref(t *testing.T, c *database.Catalog, sourceID []byte) string {
+// SoleGraph is the one graph of a Source; the test fails if it has none or
+// more than one. A graph with no ref reads Ref "".
+func SoleGraph(t *testing.T, c *database.Catalog, sourceID []byte) evidencegraphs.Graph {
 	t.Helper()
-	db, err := c.DB()
+	graphs, err := evidencegraphs.List(c, sourceID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var r string
-	if err := db.QueryRow(`SELECT COALESCE(ref, '') FROM evidence_graphs WHERE source_id = ?`, sourceID).Scan(&r); err != nil {
-		t.Fatal(err)
+	if len(graphs) != 1 {
+		t.Fatalf("source %x has %d graphs, want 1", sourceID, len(graphs))
 	}
-	return r
+	return graphs[0]
 }

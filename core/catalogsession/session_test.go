@@ -154,7 +154,7 @@ func TestDo(t *testing.T) {
 				sourceID := evidencegraphstest.SeedRefless(t, c)
 				t.Cleanup(func() { _ = catalogsession.Close(dir) })
 				err = catalogsession.Do(dir, func(c *database.Catalog) error {
-					if got := evidencegraphstest.Ref(t, c, sourceID); !ref.Valid(got) {
+					if got := evidencegraphstest.SoleGraph(t, c, sourceID).Ref; !ref.Valid(got) {
 						t.Errorf("graph ref %q", got)
 					}
 					return nil

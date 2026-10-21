@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -24,19 +25,6 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
-
-func defaultGraphID(t *testing.T, c *database.Catalog, sourceID []byte) []byte {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var id []byte
-	if err := db.QueryRow(`SELECT id FROM evidence_graphs WHERE source_id = ?`, sourceID).Scan(&id); err != nil {
-		t.Fatal(err)
-	}
-	return id
-}
 
 func TestCreateCitedBridge(t *testing.T) {
 	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
@@ -200,7 +188,7 @@ func TestCreateCitedBridge(t *testing.T) {
 		if got.Ref == "" {
 			t.Fatal("missing bridge ref")
 		}
-		if !bytes.Equal(got.GraphID, defaultGraphID(t, s.c, s.source.ID)) {
+		if !bytes.Equal(got.GraphID, evidencegraphstest.SoleGraph(t, s.c, s.source.ID).ID) {
 			t.Fatalf("bridge graph %x is not the Source's Default graph", got.GraphID)
 		}
 		pos, err := subjectpositions.Get(s.c, res.Subject.ID)

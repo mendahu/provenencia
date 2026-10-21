@@ -30,7 +30,14 @@ var (
 const (
 	sqlInsert = `INSERT INTO evidence_graphs (id, ref, source_id, name, description)
 		VALUES (?, ?, ?, ?, ?)`
-	sqlGraphIDs = `SELECT id FROM evidence_graphs WHERE source_id = ? ORDER BY id`
+	sqlList = `SELECT id, COALESCE(ref, ''), source_id, name, COALESCE(description, '')
+		FROM evidence_graphs WHERE ? IS NULL OR source_id = ?
+		ORDER BY name COLLATE NOCASE, ref, id`
+	sqlListLinks = `SELECT l.graph_id, l.artifact_id FROM evidence_graph_artifacts l
+		JOIN evidence_graphs g ON g.id = l.graph_id
+		JOIN artifacts a ON a.id = l.artifact_id
+		WHERE ? IS NULL OR g.source_id = ?
+		ORDER BY a.ref COLLATE NOCASE, a.id`
 
 	sqlSubjectGraph = `SELECT graph_id FROM subjects WHERE id = ?`
 	sqlIsLinked     = `SELECT 1 FROM evidence_graph_artifacts WHERE graph_id = ? AND artifact_id = ?`
@@ -56,6 +63,79 @@ type Graph struct {
 	SourceID    []byte
 	Name        string
 	Description string
+	ArtifactIDs [][]byte // linked Artifacts, by Artifact ref; filled by List and Create
+}
+
+// List returns the graphs of one Source, or of the whole project when sourceID
+// is empty, by name (case-insensitive), each with its linked Artifact ids by
+// Artifact ref. An unknown Source has no graphs.
+func List(c *database.Catalog, sourceID []byte) ([]Graph, error) {
+	if len(sourceID) != 0 && len(sourceID) != 16 {
+		return nil, ErrInvalid
+	}
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	return list(tx, sourceID)
+}
+
+// list is the one read of graph rows, shared by List and the package's writes.
+func list(tx *sql.Tx, sourceID []byte) ([]Graph, error) {
+	if len(sourceID) != 0 && len(sourceID) != 16 {
+		return nil, ErrInvalid
+	}
+	filter := database.NullBlob(sourceID)
+	rows, err := tx.Query(sqlList, filter, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Graph
+	for rows.Next() {
+		g, err := scanGraph(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, g)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	index := make(map[string]int, len(out))
+	for i, g := range out {
+		index[string(g.ID)] = i
+	}
+	links, err := tx.Query(sqlListLinks, filter, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer links.Close()
+	for links.Next() {
+		var graphID, artifactID []byte
+		if err := links.Scan(&graphID, &artifactID); err != nil {
+			return nil, err
+		}
+		if i, ok := index[string(graphID)]; ok {
+			out[i].ArtifactIDs = append(out[i].ArtifactIDs, artifactID)
+		}
+	}
+	return out, links.Err()
+}
+
+// scanGraph scans the columns sqlList and sqlGet select.
+func scanGraph(row interface{ Scan(dest ...any) error }) (Graph, error) {
+	var g Graph
+	err := row.Scan(&g.ID, &g.Ref, &g.SourceID, &g.Name, &g.Description)
+	return g, err
 }
 
 // CreateDefault inserts the Default graph of a new Source. Its only caller is
@@ -120,36 +200,18 @@ func SoleGraphTx(tx *sql.Tx, sourceID []byte) ([]byte, error) {
 	if tx == nil || len(sourceID) != 16 {
 		return nil, ErrInvalid
 	}
-	ids, err := graphIDsTx(tx, sourceID)
+	graphs, err := list(tx, sourceID)
 	if err != nil {
 		return nil, err
 	}
-	switch len(ids) {
+	switch len(graphs) {
 	case 0:
 		return nil, ErrInvalid
 	case 1:
-		return ids[0], nil
+		return graphs[0].ID, nil
 	default:
 		return nil, fmt.Errorf("evidencegraphs: source %x has more than one graph", sourceID)
 	}
-}
-
-// graphIDsTx is the one per-Source graph-id read.
-func graphIDsTx(tx *sql.Tx, sourceID []byte) ([][]byte, error) {
-	rows, err := tx.Query(sqlGraphIDs, sourceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		out = append(out, id)
-	}
-	return out, rows.Err()
 }
 
 // SubjectGraphTx returns the graph a Subject belongs to.
@@ -308,10 +370,12 @@ func LinkArtifact(tx *database.Tx, userID, sourceID, artifactID []byte, graphIDs
 		return nil, ErrInvalid
 	}
 	if len(graphIDs) == 0 {
-		var err error
-		graphIDs, err = graphIDsTx(tx.Tx, sourceID)
+		graphs, err := list(tx.Tx, sourceID)
 		if err != nil {
 			return nil, err
+		}
+		for _, g := range graphs {
+			graphIDs = append(graphIDs, g.ID)
 		}
 	} else {
 		seen := map[string]bool{}

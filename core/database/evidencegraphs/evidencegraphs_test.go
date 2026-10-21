@@ -3,6 +3,8 @@ package evidencegraphs_test
 import (
 	"bytes"
 	"errors"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -206,15 +209,6 @@ func TestSoleGraphTx(t *testing.T) {
 
 const pageLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
 
-func defaultGraphID(t *testing.T, c *database.Catalog, sourceID []byte) []byte {
-	t.Helper()
-	g := graphRows(t, c, sourceID)
-	if len(g) != 1 {
-		t.Fatalf("graphs %d", len(g))
-	}
-	return g[0].id
-}
-
 // run runs fn as one write and returns the changes it produced.
 func run(t *testing.T, c *database.Catalog, fn func(tx *database.Tx) ([]rowchange.Change, error)) ([]rowchange.Change, error) {
 	t.Helper()
@@ -309,7 +303,7 @@ func TestLink(t *testing.T) {
 	f := newFixture(t)
 	src, _ := f.createSource(t, "Census 1881")
 	other, _ := f.createSource(t, "Parish register")
-	graph := defaultGraphID(t, f.c, src.ID)
+	graph := evidencegraphstest.SoleGraph(t, f.c, src.ID).ID
 	a := f.newArtifact(t, src, "Page 1")
 	foreign := f.newArtifact(t, other, "Page 9")
 	unknown := make([]byte, 16)
@@ -381,7 +375,7 @@ func TestLink(t *testing.T) {
 func TestUnlink(t *testing.T) {
 	f := newFixture(t)
 	src, _ := f.createSource(t, "Census 1881")
-	graph := defaultGraphID(t, f.c, src.ID)
+	graph := evidencegraphstest.SoleGraph(t, f.c, src.ID).ID
 	a1 := f.newArtifact(t, src, "Page 1")
 	a2 := f.newArtifact(t, src, "Page 2")
 	f.link(t, graph, a1)
@@ -428,7 +422,7 @@ func TestUnlink(t *testing.T) {
 func TestMembership(t *testing.T) {
 	f := newFixture(t)
 	src, _ := f.createSource(t, "Census 1881")
-	graph := defaultGraphID(t, f.c, src.ID)
+	graph := evidencegraphstest.SoleGraph(t, f.c, src.ID).ID
 	a := f.newArtifact(t, src, "Page 1")
 	b := f.newArtifact(t, src, "Page 2")
 	f.link(t, graph, a)
@@ -589,6 +583,151 @@ func TestEnsureRefs(t *testing.T) {
 			if got := graphRows(t, f.c, id)[0].ref; got != "" {
 				t.Fatalf("ref %q left after rollback", got)
 			}
+		}
+	})
+}
+
+// artifactRef reads an Artifact's ref.
+func artifactRef(t *testing.T, c *database.Catalog, id []byte) string {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var r string
+	if err := db.QueryRow(`SELECT ref FROM artifacts WHERE id = ?`, id).Scan(&r); err != nil {
+		t.Fatal(err)
+	}
+	return r
+}
+
+// byArtifactRef sorts Artifact ids by their refs, case-insensitively.
+func byArtifactRef(t *testing.T, c *database.Catalog, ids ...[]byte) [][]byte {
+	t.Helper()
+	out := append([][]byte(nil), ids...)
+	sort.Slice(out, func(i, j int) bool {
+		return strings.ToLower(artifactRef(t, c, out[i])) < strings.ToLower(artifactRef(t, c, out[j]))
+	})
+	return out
+}
+
+func sameIDs(a, b [][]byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if !bytes.Equal(a[i], b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func graphNames(gs []evidencegraphs.Graph) []string {
+	var out []string
+	for _, g := range gs {
+		out = append(out, g.Name)
+	}
+	return out
+}
+
+// insertGraph adds a graph row by SQL and returns its id.
+func insertGraph(t *testing.T, c *database.Catalog, sourceID []byte, name string) []byte {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := uuid.NewV7()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO evidence_graphs (id, source_id, name) VALUES (?, ?, ?)`, id[:], sourceID, name); err != nil {
+		t.Fatal(err)
+	}
+	return id[:]
+}
+
+func TestList(t *testing.T) {
+	f := newFixture(t)
+	s, _ := f.createSource(t, "Census 1881")
+	other, _ := f.createSource(t, "Parish register")
+	db, err := f.c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE evidence_graphs SET name = 'Archive' WHERE source_id = ?`, other.ID); err != nil {
+		t.Fatal(err)
+	}
+	jones := insertGraph(t, f.c, s.ID, "Jones")
+	insertGraph(t, f.c, s.ID, "smith")
+	b := f.newArtifact(t, s, "B")
+	a := f.newArtifact(t, s, "A")
+	f.link(t, jones, b)
+	f.link(t, jones, a)
+
+	unknown := make([]byte, 16)
+	unknown[0] = 9
+	tests := []struct {
+		name      string
+		sourceID  []byte
+		wantNames []string
+		wantErr   error
+	}{
+		{name: "one Source, case-insensitive by name", sourceID: s.ID, wantNames: []string{"Default", "Jones", "smith"}},
+		{name: "the whole project", sourceID: nil, wantNames: []string{"Archive", "Default", "Jones", "smith"}},
+		{name: "empty id is the whole project", sourceID: []byte{}, wantNames: []string{"Archive", "Default", "Jones", "smith"}},
+		{name: "another Source", sourceID: other.ID, wantNames: []string{"Archive"}},
+		{name: "unknown Source", sourceID: unknown, wantNames: nil},
+		{name: "short id", sourceID: unknown[:15], wantErr: evidencegraphs.ErrInvalid},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := evidencegraphs.List(f.c, tt.sourceID)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("got %v want %v", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if names := graphNames(got); !reflect.DeepEqual(names, tt.wantNames) {
+				t.Fatalf("names %v want %v", names, tt.wantNames)
+			}
+			for _, g := range got {
+				if len(g.ID) != 16 || len(g.SourceID) != 16 {
+					t.Fatalf("graph %q ids %x %x", g.Name, g.ID, g.SourceID)
+				}
+				if g.Name == "Jones" {
+					if want := byArtifactRef(t, f.c, a, b); !sameIDs(g.ArtifactIDs, want) {
+						t.Fatalf("Jones links %x want %x", g.ArtifactIDs, want)
+					}
+				} else if g.ArtifactIDs != nil {
+					t.Fatalf("%s links %x", g.Name, g.ArtifactIDs)
+				}
+			}
+		})
+	}
+
+	t.Run("fields", func(t *testing.T) {
+		got, err := evidencegraphs.List(f.c, other.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(got) != 1 || !ref.Valid(got[0].Ref) || got[0].Description != "" || !bytes.Equal(got[0].SourceID, other.ID) {
+			t.Fatalf("got %+v", got)
+		}
+	})
+
+	t.Run("closed catalog", func(t *testing.T) {
+		g := newFixture(t)
+		if err := g.c.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := evidencegraphs.List(g.c, nil); !errors.Is(err, database.ErrClosed) {
+			t.Fatalf("got %v", err)
 		}
 	})
 }

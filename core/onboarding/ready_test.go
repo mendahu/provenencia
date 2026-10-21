@@ -287,7 +287,7 @@ func TestOpenCatalogMintsGraphRefs(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer reopened.Close()
-	if got := evidencegraphstest.Ref(t, reopened, sourceID); !ref.Valid(got) {
+	if got := evidencegraphstest.SoleGraph(t, reopened, sourceID).Ref; !ref.Valid(got) {
 		t.Fatalf("graph ref %q", got)
 	}
 }

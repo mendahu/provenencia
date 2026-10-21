@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -27,19 +28,6 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
-
-func defaultGraphID(t *testing.T, c *database.Catalog, sourceID []byte) []byte {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var id []byte
-	if err := db.QueryRow(`SELECT id FROM evidence_graphs WHERE source_id = ?`, sourceID).Scan(&id); err != nil {
-		t.Fatal(err)
-	}
-	return id
-}
 
 // createChanges creates an Artifact and returns the changes of that write.
 func createChanges(t *testing.T, c *database.Catalog, in CreateInput) (Artifact, []rowchange.Change, error) {
@@ -177,7 +165,7 @@ func TestArtifacts(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSource(t, c)
-				graph := defaultGraphID(t, c, src.ID)
+				graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 				for name, ids := range map[string][][]byte{"empty": nil, "named": {graph}} {
 					a, changes, err := createChanges(t, c, CreateInput{SourceID: src.ID, Label: "Scan " + name, GraphIDs: ids})
 					if err != nil {
@@ -207,11 +195,11 @@ func TestArtifacts(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				graph := defaultGraphID(t, c, src.ID)
+				graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 				unknown := make([]byte, 16)
 				unknown[0] = 9
 				bad := map[string][][]byte{
-					"another Source": {defaultGraphID(t, c, other.ID)},
+					"another Source": {evidencegraphstest.SoleGraph(t, c, other.ID).ID},
 					"unknown":        {unknown},
 					"malformed":      {graph[:15]},
 					"repeated":       {graph, graph},
