@@ -376,7 +376,7 @@ struct PromoteView: View {
         let anchors = model.flow.mappedRest ? model.flow.rows.filter(\.anchor) : []
         if model.flow.group == .assessment {
             return [PromoteFlow.Assessment.strong, .medium, .weak, .none].map { band in
-                section(band.rawValue, PromoteAssessmentCopy.title(band), working.filter { $0.assessment == band }, [])
+                section(band.rawValue, L10n.Promote.assessment(band), working.filter { $0.assessment == band }, [])
             }.filter { !$0.rows.isEmpty }
         }
         return [
@@ -487,7 +487,10 @@ private struct PromoteAlignmentRow: View {
                     if let readout = row.selectionReadout {
                         Button { model.openSheet(row.subjectID) } label: {
                             HStack(spacing: PVSpacing.space3) {
-                                PVBadge(PromoteAssessmentCopy.title(readout.assessment), tone: badgeTone(readout.assessment))
+                                PVBadge(L10n.Promote.assessment(readout.assessment), tone: badgeTone(readout.assessment))
+                                if readout.contested {
+                                    PVBadge(L10n.Promote.contested, tone: .danger, icon: .warning)
+                                }
                                 Text(verbatim: model.reasonText(readout.reason, on: row))
                                     .font(PVFont.body(size: PVTypeScale.caption))
                                     .italic()
@@ -502,7 +505,7 @@ private struct PromoteAlignmentRow: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityLabel(Text(verbatim: L10n.Promote.evidenceFor(
                             name: row.name,
-                            assessment: L10n.string(PromoteAssessmentCopy.title(readout.assessment)),
+                            assessment: model.assessmentText(readout),
                             reason: model.reasonText(readout.reason, on: row)
                         )))
                         .accessibilityIdentifier("promote.row.\(row.ref).evidence")
@@ -520,10 +523,10 @@ private struct PromoteAlignmentRow: View {
                 .frame(width: PromoteLayout.badgeColumn, alignment: .trailing)
             }
             if row.updated {
-                Text(verbatim: L10n.Promote.updatedDetail(model.reasonText(for: row)))
+                Text(verbatim: L10n.Promote.updatedDetail(model.reasonText(row.captionReason, on: row)))
                     .font(PVFont.body(size: PVTypeScale.caption))
                     .italic()
-                    .foregroundStyle(PVColor.textSecondary)
+                    .foregroundStyle(PVColor.infoForeground)
                     .padding(.leading, PromoteLayout.noteIndent)
             }
             if let ref = row.conflictNote {
@@ -746,7 +749,7 @@ private struct PromoteEvidenceSheet: View {
     private var sheetSubtitle: Text? {
         guard let readout = row.selectionReadout else { return nil }
         return Text(verbatim: L10n.Promote.sheetSubtitle(
-            assessment: L10n.string(PromoteAssessmentCopy.title(readout.assessment)),
+            assessment: L10n.string(L10n.Promote.assessment(readout.assessment)),
             reason: model.reasonText(readout.reason, on: row)
         ))
     }
@@ -904,17 +907,6 @@ private enum PromoteLayout {
     static let weightColumn: CGFloat = 64
     /// Notes under a row start where its name does.
     static let noteIndent = kindTile + columnGap
-}
-
-private enum PromoteAssessmentCopy {
-    static func title(_ assessment: PromoteFlow.Assessment) -> LocalizedStringResource {
-        switch assessment {
-        case .strong: L10n.Promote.assessmentStrong
-        case .medium: L10n.Promote.assessmentMedium
-        case .weak: L10n.Promote.assessmentWeak
-        case .none: L10n.Promote.assessmentNone
-        }
-    }
 }
 
 private struct PromoteKindTile: View {

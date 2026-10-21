@@ -214,8 +214,35 @@ struct PromoteModelTests {
         await model.load()
         let ada = model.flow.rows.first { $0.subjectID == "a" }!
         let bea = model.flow.rows.first { $0.subjectID == "b" }!
-        #expect(model.reasonText(for: ada) == L10n.Promote.agreesOn(property: "Full name"))
-        #expect(model.reasonText(for: bea) == L10n.Promote.viaNeighbor(neighbor: "Ada", ref: "PER-e1"))
+        #expect(model.reasonText(ada.captionReason, on: ada) == L10n.Promote.agreesOn(property: "Full name"))
+        #expect(model.reasonText(bea.captionReason, on: bea) == L10n.Promote.viaNeighbor(neighbor: "Ada", ref: "PER-e1"))
+    }
+
+    @Test func movesAreWordedNamingTheNeighbor() async {
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
+        let store = store(subjects: subjects)
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e2")])]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        let bea = model.flow.rows.first { $0.subjectID == "b" }!
+        #expect(model.reasonText(.neighborPlaced(neighborID: "a"), on: bea) == L10n.Promote.neighborPlaced(neighbor: "Ada", ref: "PER-e1"))
+        #expect(model.reasonText(.neighborMoved(neighborID: "a"), on: bea) == L10n.Promote.neighborMoved(neighbor: "Ada", ref: "PER-e1"))
+        #expect(model.reasonText(.neighborReleased(neighborID: "a"), on: bea) == L10n.Promote.neighborReleased(neighbor: "Ada"))
+        #expect(model.reasonText(.neighborMoved(neighborID: "zz"), on: bea) == L10n.string(L10n.Promote.reasonMoveUnknown))
+    }
+
+    @Test func theContestedBandIsSpoken() async {
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
+        let store = store(subjects: subjects)
+        var contested = row("a", handleID: "e1")
+        contested.contested = true
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [contested, row("b", handleID: "e2")])]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        let ada = model.flow.rows.first { $0.subjectID == "a" }!
+        let bea = model.flow.rows.first { $0.subjectID == "b" }!
+        #expect(model.assessmentText(ada.selectionReadout!) == L10n.Promote.assessmentContested(L10n.string(L10n.Promote.assessment(.strong))))
+        #expect(model.assessmentText(bea.selectionReadout!) == L10n.string(L10n.Promote.assessment(.strong)))
     }
 
     @Test func leaveGuardAsksOnlyAfterAManualChange() async {

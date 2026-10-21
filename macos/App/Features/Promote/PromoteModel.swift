@@ -197,18 +197,13 @@ final class PromoteModel {
 
     func keepPromoting() { flow.cancelLeave() }
 
-    func reasonText(for row: PromoteFlow.Row) -> String {
-        reasonText(row.reason, on: row)
-    }
-
     func reasonText(_ reason: PromoteFlow.Reason, on row: PromoteFlow.Row) -> String {
         switch reason {
         case .via(let neighborID):
             guard let neighbor = flow.rows.first(where: { $0.subjectID == neighborID }) else {
                 return L10n.string(L10n.Promote.reasonVia)
             }
-            let ref: String
-            if case .handle(_, let handleRef, _) = neighbor.target { ref = handleRef } else { ref = neighbor.ref }
+            let ref = neighbor.shownRef
             let phrase = flow.bridges.first { bridge in
                 Set([bridge.endA, bridge.endB]) == Set([row.subjectID, neighborID])
             }?.phrase ?? ""
@@ -222,9 +217,28 @@ final class PromoteModel {
         case .taken: return L10n.string(L10n.Promote.reasonTaken)
         case .noMatch: return L10n.string(L10n.Promote.reasonNoMatch)
         case .empty: return L10n.string(L10n.Promote.reasonEmpty)
-        // Worded in S11-18; no row reason is a move reason.
-        case .neighborPlaced, .neighborMoved, .neighborReleased: return L10n.string(L10n.Promote.reasonEmpty)
+        case .neighborPlaced(let neighborID):
+            guard let neighbor = flow.rows.first(where: { $0.subjectID == neighborID }) else {
+                return L10n.string(L10n.Promote.reasonMoveUnknown)
+            }
+            return L10n.Promote.neighborPlaced(neighbor: neighbor.name, ref: neighbor.shownRef)
+        case .neighborMoved(let neighborID):
+            guard let neighbor = flow.rows.first(where: { $0.subjectID == neighborID }) else {
+                return L10n.string(L10n.Promote.reasonMoveUnknown)
+            }
+            return L10n.Promote.neighborMoved(neighbor: neighbor.name, ref: neighbor.shownRef)
+        case .neighborReleased(let neighborID):
+            guard let neighbor = flow.rows.first(where: { $0.subjectID == neighborID }) else {
+                return L10n.string(L10n.Promote.reasonMoveUnknown)
+            }
+            return L10n.Promote.neighborReleased(neighbor: neighbor.name)
         }
+    }
+
+    /// The band as the row's button speaks it: "Strong", or "Strong, contested".
+    func assessmentText(_ readout: PromoteFlow.SelectionReadout) -> String {
+        let band = L10n.string(L10n.Promote.assessment(readout.assessment))
+        return readout.contested ? L10n.Promote.assessmentContested(band) : band
     }
 
     /// The catalog label for a Property, or its key when the snapshot lacks it.

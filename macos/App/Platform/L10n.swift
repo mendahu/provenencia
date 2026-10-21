@@ -1349,6 +1349,28 @@ enum L10n {
         static func evidenceFor(name: String, assessment: String, reason: String) -> String {
             L10n.format(LocalizedStringResource("promote.row.evidenceFor", defaultValue: "Evidence for %1$@: %2$@, %3$@", comment: "VoiceOver label for the button that opens a row's evidence; 1 = subject name, 2 = assessment, 3 = reason"), name, assessment, reason)
         }
+        static let contested = LocalizedStringResource("promote.row.contested", defaultValue: "Contested", comment: "Badge beside a Promote row's band when a comparison behind its pair conflicts")
+        static func assessmentContested(_ assessment: String) -> String {
+            L10n.format(LocalizedStringResource("promote.row.assessmentContested", defaultValue: "%@, contested", comment: "Spoken band of a contested Promote row, inside the evidence button label; argument is the band name (\"Strong\")"), assessment)
+        }
+        static func assessment(_ assessment: PromoteFlow.Assessment) -> LocalizedStringResource {
+            switch assessment {
+            case .strong: assessmentStrong
+            case .medium: assessmentMedium
+            case .weak: assessmentWeak
+            case .none: assessmentNone
+            }
+        }
+        static func neighborPlaced(neighbor: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource("promote.reason.neighborPlaced", defaultValue: "after %1$@ → %2$@ was matched", comment: "Why a row moved on the last proposal: a neighbor was matched; 1 = neighbor name, 2 = its ref. Follows \"Updated · \""), neighbor, ref)
+        }
+        static func neighborMoved(neighbor: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource("promote.reason.neighborMoved", defaultValue: "after %1$@ moved to %2$@", comment: "Why a row moved: a neighbor was matched to another record; 1 = neighbor name, 2 = its new ref. Follows \"Updated · \""), neighbor, ref)
+        }
+        static func neighborReleased(neighbor: String) -> String {
+            L10n.format(LocalizedStringResource("promote.reason.neighborReleased", defaultValue: "after %@ was unmatched", comment: "Why a row moved: a neighbor lost its match; argument is the neighbor name. Follows \"Updated · \""), neighbor)
+        }
+        static let reasonMoveUnknown = LocalizedStringResource("promote.reason.moveUnknown", defaultValue: "after a connected row changed", comment: "Why a row moved, when the neighbor is not on the page. Follows \"Updated · \"")
         static func outcome(_ outcome: String) -> LocalizedStringResource {
             switch outcome {
             case "agree": LocalizedStringResource("promote.sheet.agrees", defaultValue: "Agrees", comment: "A comparison that agrees")
