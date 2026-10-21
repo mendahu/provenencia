@@ -173,8 +173,11 @@ struct CatalogQueryRegistry: Sendable {
             kind: .evidenceGraphsList,
             stalePolicy: .sessionFresh,
             // Graph and link writes report the `evidence_graphs` list in
-            // `WriteEffects`; a Source delete releases its graphs the same way.
-            invalidateOn: []
+            // `WriteEffects`; `deleteSource` reports none, so `.deletedSource` drops it.
+            invalidateOn: [.deletedSource],
+            // A visible key still revalidates (`WorkspaceSession.apply(invalidations:)`);
+            // a hidden list just goes stale until it is shown again.
+            whenHidden: .markStale
         ),
         Spec(
             kind: .personsList,

@@ -828,6 +828,7 @@ struct CatalogQueryRegistryTests {
             .key(.sourceTypesList(project: project)),
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
             .key(.sourceGraph(project: project, sourceId: "s1")),
+            .key(.evidenceGraphsList(project: project)),
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
             .key(.placesList(project: project)),
@@ -1219,6 +1220,17 @@ struct CatalogQueryRegistryTests {
         )
         await waitForFetchComplete(handle)
         #expect(handle.value == [graph])
+    }
+
+    @Test func deletedSourceInvalidatesEvidenceGraphsList() {
+        let project = ProjectKey(projectDir: projectDir)
+        let got = CatalogQueryRegistry.standard.invalidations(by: .deletedSource(id: "s1"), project: project)
+        #expect(got.contains(.key(.evidenceGraphsList(project: project))))
+    }
+
+    @Test func evidenceGraphsListMarksStaleWhenHidden() {
+        let project = ProjectKey(projectDir: projectDir)
+        #expect(CatalogQueryRegistry.standard.hiddenPolicy(.evidenceGraphsList(project: project)) == .markStale)
     }
 
     @Test func navCountTriggersAreSourceAndPromoteWrites() {
