@@ -87,14 +87,15 @@ func reconciled(row graphcache.Value, terms map[string]graphcache.VocabTerm) (au
 	}, nil
 }
 
-// layerValues is each primary Subject's own product Observations, both
-// polarities, by property key and in Observation id order.
-func layerValues(sg graphcache.SourceGraph, primary map[string]primarySubject, props map[string]graphcache.VocabProperty, terms map[string]graphcache.VocabTerm) (map[string]map[vocabkey.PropertyKey][]autoreconcile.Candidate, error) {
+// layerValues is each listed Subject's own product Observations, both
+// polarities, by property key and in Observation id order. subjects is the set
+// of Subject ids to read.
+func layerValues(sg graphcache.SourceGraph, subjects map[string]bool, props map[string]graphcache.VocabProperty, terms map[string]graphcache.VocabTerm) (map[string]map[vocabkey.PropertyKey][]autoreconcile.Candidate, error) {
 	obs := slices.Clone(sg.Observations)
 	slices.SortStableFunc(obs, func(a, b graphcache.SourceObservation) int { return bytes.Compare(a.ID, b.ID) })
 	out := map[string]map[vocabkey.PropertyKey][]autoreconcile.Candidate{}
 	for _, o := range obs {
-		if _, ok := primary[string(o.SubjectID)]; !ok || len(o.ValueSubjectID) > 0 {
+		if !subjects[string(o.SubjectID)] || len(o.ValueSubjectID) > 0 {
 			continue
 		}
 		prop, ok := props[string(o.PropertyID)]
@@ -138,7 +139,9 @@ func lifeEvent(event subjectcompare.Values, role vocabkey.Role) subjectprofile.L
 	return le
 }
 
-// profiler builds handle profiles from the canon graph, each once.
+// profiler builds handle profiles from the canon graph, each once for as long
+// as the graph's match index lives. done is the index's profile map. A caller
+// keeps the profiles with keep(); nothing else stores them.
 type profiler struct {
 	g           *graphcache.Graph
 	props       map[string]graphcache.VocabProperty
@@ -164,11 +167,32 @@ func newProfiler(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectc
 	if err != nil {
 		return nil, err
 	}
+	// Profiles are kept with the match index, for one name pattern at a time:
+	// this profiler shares the index's map when it has one for this pattern,
+	// and starts its own otherwise. keep stores a map into the index.
+	m := matchIndexOf(g)
+	done := m.profiles
+	if done == nil || m.profilesPattern != namePattern {
+		done = map[string]subjectcompare.Values{}
+	}
 	return &profiler{
 		g: g, props: props, terms: vocab.TermsByID(), metas: metas, types: types, rules: rules,
 		reconcile: matchregistry.Default().Value, namePattern: namePattern,
-		done: map[string]subjectcompare.Values{},
+		done: done,
 	}, nil
+}
+
+// keep stores this profiler's profiles in the graph's match index, creating the
+// index slot when there is none. The profiles then live as long as the index.
+// A map already stored for this name pattern is this profiler's own, so it is
+// left alone.
+func (p *profiler) keep() {
+	m := matchIndexOf(p.g)
+	if m.profiles != nil && m.profilesPattern == p.namePattern {
+		return
+	}
+	m.profiles, m.profilesPattern = p.done, p.namePattern
+	p.g.SetMatchIndex(m)
 }
 
 func (p *profiler) kind(n *graphcache.Node) vocabkey.SubjectType {

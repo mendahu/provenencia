@@ -1,12 +1,16 @@
 package graphcache
 
 import (
+	"bytes"
 	"fmt"
+	"sort"
+
+	"github.com/mendahu/provenencia/core/hops"
 )
 
 // SourceLoader fills one Source. sourcefill registers it. The graph does
 // not import that package.
-type SourceLoader func(q Querier, sourceID []byte) (SourceGraph, error)
+type SourceLoader func(g *Graph, sourceID []byte) (SourceGraph, error)
 
 // SourceCheck reloads one stored Source and compares the whole graph.
 // sourcefill registers it.
@@ -75,14 +79,18 @@ type SourceMember struct {
 // SourceEdge is one hop on the Source, kept so an event title can be chosen
 // from the stored observations.
 type SourceEdge struct {
-	From  []byte
-	To    []byte
-	ToRef string
+	From           []byte
+	Association    []byte
+	AssociationRef string
+	To             []byte
+	ToRef          string
 }
 
 // SourceGraph is one loaded Source.
 type SourceGraph struct {
 	SourceID     []byte
+	Title        string
+	Found        bool
 	Subjects     []SourceSubject
 	Observations []SourceObservation
 	Members      []SourceMember
@@ -117,6 +125,157 @@ func (g *Graph) dropSources(ids [][]byte) {
 	for _, id := range ids {
 		if len(id) == 16 {
 			delete(g.sources, string(id))
+			delete(g.memos, string(id))
 		}
 	}
+}
+
+// SourceMemo returns what a feature stored for a loaded Source under key. It is
+// held only while the Source is loaded: a commit that names the Source, Drop, a
+// vocabulary commit and SetAliasTables clear it. A memoized value is shared, so
+// every reader treats it as read-only.
+func (g *Graph) SourceMemo(id []byte, key string) (any, bool) {
+	if g == nil {
+		return nil, false
+	}
+	v, ok := g.memos[string(id)][key]
+	return v, ok
+}
+
+// SetSourceMemo stores a feature's value for a loaded Source under key. A
+// Source that is not loaded keeps nothing.
+func (g *Graph) SetSourceMemo(id []byte, key string, v any) {
+	if g == nil {
+		return
+	}
+	if _, loaded := g.sources[string(id)]; !loaded {
+		return
+	}
+	if g.memos[string(id)] == nil {
+		g.memos[string(id)] = map[string]any{}
+	}
+	g.memos[string(id)][key] = v
+}
+
+// WalkSource follows h through one Source's Evidence graph from each Subject
+// in from, in memory: Association is the bridge Subject. A bridge Subject is
+// one of the hop's bridge type on sg. It cites a from Subject on the hop's
+// from-endpoint property and a Subject on sg on its to-endpoint property,
+// both positively, and the filter term on the filter property when the hop
+// has one. Each edge appears once, ordered by from Subject id, then the
+// bridge's ref, then the to Subject's ref. A name the vocabulary does not
+// know reaches nothing.
+func (g *Graph) WalkSource(sg SourceGraph, h hops.Hop, from [][]byte) ([]SourceEdge, error) {
+	if h.Bridge() == "" {
+		return nil, fmt.Errorf("graphcache: zero Hop")
+	}
+	v, err := g.Vocabulary()
+	if err != nil {
+		return nil, err
+	}
+	var bridgeType []byte
+	for _, t := range v.Types {
+		if t.Key == h.Bridge() && t.Origin == h.Origin() {
+			bridgeType = t.ID
+		}
+	}
+	propID := func(key string) []byte {
+		for _, p := range v.Properties {
+			if p.Key == key && p.Origin == h.Origin() {
+				return p.ID
+			}
+		}
+		return nil
+	}
+	fromProp, toProp := propID(h.From()), propID(h.To())
+	if len(bridgeType) == 0 || len(fromProp) == 0 || len(toProp) == 0 {
+		return nil, nil
+	}
+	var filterProp []byte
+	filterTerms := map[string]bool{}
+	filterKey, termKey, filtered := h.Filter()
+	if filtered {
+		if filterProp = propID(filterKey); len(filterProp) == 0 {
+			return nil, nil
+		}
+		for _, t := range v.Terms {
+			if t.Key == termKey && t.Origin == h.Origin() {
+				filterTerms[string(t.ID)] = true
+			}
+		}
+	}
+
+	wanted := make(map[string]bool, len(from))
+	for _, id := range from {
+		wanted[string(id)] = true
+	}
+	subjects := make(map[string]SourceSubject, len(sg.Subjects))
+	for _, s := range sg.Subjects {
+		subjects[string(s.ID)] = s
+	}
+	// What each bridge Subject cites, positively.
+	type cited struct {
+		tos      [][]byte
+		filtered bool
+	}
+	bridges := map[string]*cited{}
+	type reach struct{ from, bridge []byte }
+	var reaches []reach
+	for _, o := range sg.Observations {
+		if o.Polarity != "positive" {
+			continue
+		}
+		s, ok := subjects[string(o.SubjectID)]
+		if !ok || !bytes.Equal(s.SubjectTypeID, bridgeType) {
+			continue
+		}
+		c := bridges[string(o.SubjectID)]
+		if c == nil {
+			c = &cited{}
+			bridges[string(o.SubjectID)] = c
+		}
+		switch {
+		case bytes.Equal(o.PropertyID, fromProp) && wanted[string(o.ValueSubjectID)]:
+			reaches = append(reaches, reach{from: o.ValueSubjectID, bridge: o.SubjectID})
+		case bytes.Equal(o.PropertyID, toProp) && len(o.ValueSubjectID) > 0:
+			if _, on := subjects[string(o.ValueSubjectID)]; on {
+				c.tos = append(c.tos, o.ValueSubjectID)
+			}
+		}
+		if filtered && bytes.Equal(o.PropertyID, filterProp) && filterTerms[string(o.TermID)] {
+			c.filtered = true
+		}
+	}
+	var out []SourceEdge
+	seen := map[string]bool{}
+	for _, r := range reaches {
+		c := bridges[string(r.bridge)]
+		if filtered && !c.filtered {
+			continue
+		}
+		bridge := subjects[string(r.bridge)]
+		for _, to := range c.tos {
+			k := string(r.from) + "\x00" + string(r.bridge) + "\x00" + string(to)
+			if seen[k] {
+				continue
+			}
+			seen[k] = true
+			dst := subjects[string(to)]
+			out = append(out, SourceEdge{
+				From: bytes.Clone(r.from), Association: bytes.Clone(r.bridge), AssociationRef: bridge.Ref,
+				To: bytes.Clone(to), ToRef: dst.Ref,
+			})
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		a, b := out[i], out[j]
+		if c := bytes.Compare(a.From, b.From); c != 0 {
+			return c < 0
+		}
+		if a.AssociationRef != b.AssociationRef {
+			return a.AssociationRef < b.AssociationRef
+		}
+		return a.ToRef < b.ToRef
+	})
+	return out, nil
 }

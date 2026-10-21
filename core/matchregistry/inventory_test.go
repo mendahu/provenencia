@@ -12,9 +12,7 @@ import (
 
 // notYetBuilt are the prefixes of inventory rows whose registry fields land
 // with their layer. The layer's PR deletes its prefixes.
-var notYetBuilt = []string{
-	"evidence.",
-}
+var notYetBuilt = []string{}
 
 // catalogData are registry fields that hold catalog data passed in at run
 // time, never tunables. They get no inventory row; each is named under "Not

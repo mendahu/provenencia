@@ -93,7 +93,7 @@ func TestSourceEvidenceIsNotActivity(t *testing.T) {
 		activity bool
 		citation bool // CitationSource: the citation reads load it
 	}{
-		{"sources", false, true, false},
+		{"sources", true, true, false},
 		{"source_notes", false, true, false},
 		{"source_metadata", false, true, false},
 		{"source_metadata_layout", false, true, false},

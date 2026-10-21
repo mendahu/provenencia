@@ -14,4 +14,4 @@ Follow the project skill `.agents/skills/add-catalog-query/SKILL.md`.
 - Official resource / vocab `Delete` goes through `deleteimpact` — see `.agents/skills/add-catalog-delete/SKILL.md` and `.cursor/rules/catalog-deletes.mdc`.
 - Researcher callers obtain `*database.Catalog` from `catalogsession.Do` / FFI `withProjectCatalog`, not open-per-call. See `.agents/skills/use-catalog-session/SKILL.md`.
 - An open-catalog read of the canonical graph follows a `hops.Hop` with `graphcache.Graph.Follow`. Do not hand-write the association join in SQL; the bridge shape lives in the connectrules registry.
-- `canonicalgraph.Walk` stays for dependent discovery and for any walk that must see rows the cache has not loaded, including inside a write. `WalkSource` stays for one Source.
+- `canonicalgraph.Walk` stays for dependent discovery and for any walk that must see rows the cache has not loaded, including inside a write. One Source's Evidence graph is walked in memory with `graphcache.Graph.WalkSource` on its loaded `SourceGraph`.

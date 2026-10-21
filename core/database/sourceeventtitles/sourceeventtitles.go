@@ -5,52 +5,26 @@
 // canonical Event headers use, so a card and the Event it is promoted to
 // title themselves by one matrix.
 //
-// Set-based: a fixed number of queries for the whole Source.
+// It reads the loaded Source graph and issues no query.
 package sourceeventtitles
 
 import (
-	"database/sql"
+	"slices"
 	"sort"
 	"strings"
 
-	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/eventtitle"
-	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
-
-// Querier is *sql.Tx or *sql.DB.
-type Querier interface {
-	Query(query string, args ...any) (*sql.Rows, error)
-}
 
 // Title is one Event Subject's chosen title.
 type Title struct {
 	SubjectID []byte
 	Plan      eventtitle.Plan
 }
-
-const (
-	sqlEvents = `SELECT s.id, s.ref, COALESCE(s.label, '')
-		FROM subjects s
-		JOIN subject_types st ON st.id = s.subject_type_id AND st.key = 'event' AND st.origin = 'provenencia'
-		WHERE s.source_id = ?
-		ORDER BY s.ref`
-
-	// The positive Observations a title reads, first-cited (by ref) first.
-	sqlNaming = `SELECT o.subject_id, p.key, o.value_text, o.value_name_id, COALESCE(t.key, ''), COALESCE(t.label, '')
-		FROM observations o
-		JOIN subjects s ON s.id = o.subject_id AND s.source_id = ?
-		JOIN properties p ON p.id = o.property_id AND p.origin = 'provenencia'
-			AND p.key IN ('event_name', 'event_type', 'name', 'toponym')
-		LEFT JOIN property_terms t ON t.id = o.value_term_id
-		WHERE o.polarity = 'positive'
-		ORDER BY o.ref`
-)
 
 type naming struct {
 	text     string
@@ -62,56 +36,6 @@ type naming struct {
 type titledEvent struct {
 	id         []byte
 	ref, label string
-}
-
-// ForSource returns a title for every Event Subject on the Source, by ref.
-func ForSource(q Querier, sourceID []byte) ([]Title, error) {
-	var events []titledEvent
-	rows, err := q.Query(sqlEvents, sourceID)
-	if err != nil {
-		return nil, err
-	}
-	for rows.Next() {
-		var e titledEvent
-		if err := rows.Scan(&e.id, &e.ref, &e.label); err != nil {
-			_ = rows.Close()
-			return nil, err
-		}
-		events = append(events, e)
-	}
-	err = rows.Err()
-	_ = rows.Close()
-	if err != nil || len(events) == 0 {
-		return nil, err
-	}
-
-	first, err := firstNamings(q, sourceID)
-	if err != nil {
-		return nil, err
-	}
-	ids := make([][]byte, len(events))
-	for i, e := range events {
-		ids[i] = e.id
-	}
-	people, err := canonicalgraph.WalkSource(q, sourceID, hops.SubjectsOfEvent, ids)
-	if err != nil {
-		return nil, err
-	}
-	places, err := canonicalgraph.WalkSource(q, sourceID, hops.PlacesOfEvent, ids)
-	if err != nil {
-		return nil, err
-	}
-	var nameIDs [][]byte
-	for _, e := range people {
-		if n, ok := first[key(e.To, vocabkey.PropertyName)]; ok {
-			nameIDs = append(nameIDs, n.nameID)
-		}
-	}
-	names, err := namevalues.LookupManyTx(q, nameIDs)
-	if err != nil {
-		return nil, err
-	}
-	return assemble(events, first, people, places, names), nil
 }
 
 // FromStored chooses titles from a loaded Source. Term labels are applied
@@ -146,14 +70,7 @@ func FromStored(sg graphcache.SourceGraph, propKey map[string]string, terms map[
 			first[k] = n
 		}
 	}
-	people := make([]canonicalgraph.Edge, len(sg.EventPeople))
-	for i, e := range sg.EventPeople {
-		people[i] = canonicalgraph.Edge{From: e.From, To: e.To, ToRef: e.ToRef}
-	}
-	places := make([]canonicalgraph.Edge, len(sg.EventPlaces))
-	for i, e := range sg.EventPlaces {
-		places[i] = canonicalgraph.Edge{From: e.From, To: e.To, ToRef: e.ToRef}
-	}
+	places := slices.Clone(sg.EventPlaces)
 	names := map[string]namevalue.Value{}
 	for _, o := range sg.Observations {
 		if len(o.Name) == 0 || len(o.NameID) == 0 {
@@ -165,10 +82,10 @@ func FromStored(sg graphcache.SourceGraph, propKey map[string]string, terms map[
 		}
 		names[string(o.NameID)] = n
 	}
-	return assemble(events, first, people, places, names)
+	return assemble(events, first, sg.EventPeople, places, names)
 }
 
-func assemble(events []titledEvent, first map[string]naming, people, places []canonicalgraph.Edge, names map[string]namevalue.Value) []Title {
+func assemble(events []titledEvent, first map[string]naming, people, places []graphcache.SourceEdge, names map[string]namevalue.Value) []Title {
 	peopleOf := map[string][]eventtitle.Subject{}
 	seen := map[string]bool{}
 	for _, e := range people {
@@ -223,34 +140,4 @@ func assemble(events []titledEvent, first map[string]naming, people, places []ca
 
 func key(subjectID []byte, propertyKey string) string {
 	return string(subjectID) + "\x00" + propertyKey
-}
-
-// firstNamings is the first-cited usable value of each naming Property for
-// every Subject on the Source.
-func firstNamings(q Querier, sourceID []byte) (map[string]naming, error) {
-	rows, err := q.Query(sqlNaming, sourceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := map[string]naming{}
-	for rows.Next() {
-		var (
-			subjectID, nameID []byte
-			propertyKey       string
-			text              sql.NullString
-			n                 naming
-		)
-		if err := rows.Scan(&subjectID, &propertyKey, &text, &nameID, &n.termKey, &n.termText); err != nil {
-			return nil, err
-		}
-		n.text = strings.TrimSpace(text.String)
-		n.nameID = append([]byte(nil), nameID...)
-		usable := n.text != "" || len(n.nameID) > 0 || n.termKey != ""
-		k := key(subjectID, propertyKey)
-		if _, done := out[k]; usable && !done {
-			out[k] = n
-		}
-	}
-	return out, rows.Err()
 }

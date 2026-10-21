@@ -38,6 +38,9 @@ type Graph struct {
 	displays map[string]any
 	details  map[string]any
 	sources  map[string]SourceGraph
+	// memos are what a feature derives from one loaded Source, by source id
+	// and then its own key. A Source's graph and memos go together.
+	memos    map[string]map[string]any
 	labels   any
 	labelsOK bool
 	alt      Querier
@@ -93,9 +96,12 @@ type Value struct {
 	Against     int
 }
 
-// Member is one accepted or provisional identity claim.
+// Member is one accepted or provisional identity claim. SourceID is the Source
+// the claimed Subject is on. A Subject never changes Source, and a commit that
+// names the handle reloads the node.
 type Member struct {
 	SubjectID []byte
+	SourceID  []byte
 	Accepted  bool
 }
 
@@ -151,14 +157,21 @@ func mustTableName(name string) string {
 	panic("graphcache: catalog model missing " + name)
 }
 
+// dropDerived empties what features derive from the graph and its vocabulary
+// and aliases: the Source memos and the match index.
+func (g *Graph) dropDerived() {
+	g.memos = map[string]map[string]any{}
+	g.matchIndexOK = false
+	g.matchIndex = nil
+}
+
 func (g *Graph) clear() {
 	g.nodes = map[string]*Node{}
 	g.holders = map[string][][]byte{}
 	g.kinds = map[string][][]byte{}
 	g.kindOn = map[string]bool{}
 	g.kindSet = map[string]map[string]bool{}
-	g.matchIndexOK = false
-	g.matchIndex = nil
+	g.dropDerived()
 	g.vocabOK = false
 	g.vocab = Vocabulary{}
 	g.displays = map[string]any{}
@@ -256,13 +269,12 @@ func (g *Graph) AliasTables() (any, bool) {
 
 // SetAliasTables stores abbreviation and nickname tables until the catalog
 // closes. A nil slice is a warm catalog with no rows. Drop does not clear this.
-// The match index reads the alias sets, so new tables drop it.
+// The match index and Source memos read the alias sets, so new tables drop them.
 func (g *Graph) SetAliasTables(tables any) {
 	if g == nil {
 		return
 	}
-	g.matchIndexOK = false
-	g.matchIndex = nil
+	g.dropDerived()
 	g.aliases = tables
 	g.aliasesOK = true
 }
@@ -294,6 +306,12 @@ func (g *Graph) SetQueryCounterForTest(fn func()) {
 	g.count = fn
 }
 
+// LoadedSourceForTest reports whether a Source's graph is loaded.
+func (g *Graph) LoadedSourceForTest(id []byte) bool {
+	_, ok := g.sources[string(id)]
+	return ok
+}
+
 // LoadedForTest reports whether id is in the node map.
 func (g *Graph) LoadedForTest(id []byte) bool {
 	if g == nil {
@@ -311,6 +329,19 @@ func (g *Graph) CorruptRefForTest(id []byte) {
 	}
 	cp := *n
 	cp.Ref = n.Ref + "-corrupt"
+	g.nodes[string(id)] = &cp
+}
+
+// CorruptMemberSourceForTest replaces the Source of a loaded node's first
+// member so Verify can fail a test.
+func (g *Graph) CorruptMemberSourceForTest(id []byte) {
+	n := g.nodes[string(id)]
+	if n == nil || len(n.Members) == 0 {
+		return
+	}
+	cp := *n
+	cp.Members = append([]Member(nil), n.Members...)
+	cp.Members[0].SourceID = make([]byte, 16)
 	g.nodes[string(id)] = &cp
 }
 

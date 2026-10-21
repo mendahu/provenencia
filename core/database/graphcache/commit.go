@@ -24,8 +24,7 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 		g.DropLabels()
 		g.vocabOK = false
 		g.vocab = Vocabulary{}
-		g.matchIndexOK = false
-		g.matchIndex = nil
+		g.dropDerived()
 	}
 	if set.Structure {
 		g.Drop()

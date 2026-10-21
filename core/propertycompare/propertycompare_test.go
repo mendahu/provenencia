@@ -226,3 +226,13 @@ func permutations(vs []V) [][]V {
 	}
 	return out
 }
+
+func TestResultSimilarity(t *testing.T) {
+	if got := (propertycompare.Result{}).Similarity(); got != 0 {
+		t.Errorf("zero Result Similarity = %v, want 0", got)
+	}
+	r := propertycompare.Result{Speaking: &propertycompare.SpeakingPair{Result: valuecompare.Result{Similarity: 0.75}}}
+	if got := r.Similarity(); got != 0.75 {
+		t.Errorf("Similarity = %v, want 0.75", got)
+	}
+}

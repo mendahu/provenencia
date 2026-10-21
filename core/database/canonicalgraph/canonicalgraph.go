@@ -3,9 +3,8 @@
 //
 // A hop is declared in core/hops. Walk follows it through the canonical
 // graph (handles, through association handles whose endpoint values the
-// auto-reconciler kept). WalkSource follows it through one Source's Evidence
-// graph (Subjects, through bridge Subjects' positive endpoint Observations).
-// Each is a fixed number of indexed queries.
+// auto-reconciler kept) in a fixed number of indexed queries. A Source's
+// Evidence graph is walked in memory by graphcache.Graph.WalkSource.
 package canonicalgraph
 
 import (
@@ -55,28 +54,6 @@ WHERE a.rank = 1 AND a.reason = 'kept'
 	AND a.value_entity_id IN (`
 )
 
-// One Source's bridge Subject cites the from-Subject on its from-endpoint
-// and a Subject on its to-endpoint, both positively, as it does the filter
-// term when there is one. a reads observations(value_subject_id); b and f
-// read observations(subject_id).
-const (
-	sqlSourceSelect = `SELECT DISTINCT a.value_subject_id, a.subject_id, bs.ref, b.value_subject_id, dst.ref
-FROM observations a
-JOIN subjects bs ON bs.id = a.subject_id AND bs.source_id = ?
-	AND bs.subject_type_id = (SELECT id FROM subject_types WHERE key = ? AND origin = ?)
-JOIN observations b ON b.subject_id = a.subject_id AND b.polarity = 'positive'
-	AND b.property_id = (SELECT id FROM properties WHERE key = ? AND origin = ?)
-JOIN subjects dst ON dst.id = b.value_subject_id AND dst.source_id = bs.source_id`
-	sqlSourceFilter = `
-JOIN observations f ON f.subject_id = a.subject_id AND f.polarity = 'positive'
-	AND f.property_id = (SELECT id FROM properties WHERE key = ? AND origin = ?)
-JOIN property_terms ft ON ft.id = f.value_term_id AND ft.key = ? AND ft.origin = ?`
-	sqlSourceWhere = `
-WHERE a.polarity = 'positive'
-	AND a.property_id = (SELECT id FROM properties WHERE key = ? AND origin = ?)
-	AND a.value_subject_id IN (`
-)
-
 // hopQuery is the canonical walk up to its IN list, and the arguments before
 // the ids.
 func hopQuery(h hops.Hop) (string, []any) {
@@ -91,19 +68,6 @@ func hopQuery(h hops.Hop) (string, []any) {
 	return query, args
 }
 
-// sourceQuery is the Evidence graph walk up to its IN list.
-func sourceQuery(h hops.Hop, sourceID []byte) (string, []any) {
-	query := sqlSourceSelect
-	args := []any{sourceID, h.Bridge(), h.Origin(), h.To(), h.Origin()}
-	if key, term, ok := h.Filter(); ok {
-		query += sqlSourceFilter
-		args = append(args, key, h.Origin(), term, h.Origin())
-	}
-	query += sqlSourceWhere
-	args = append(args, h.From(), h.Origin())
-	return query, args
-}
-
 // Walk follows h through the canonical graph from each handle, ordered by
 // from-handle, then association ref, then to-handle ref.
 func Walk(q Querier, h hops.Hop, from [][]byte) ([]Edge, error) {
@@ -111,16 +75,6 @@ func Walk(q Querier, h hops.Hop, from [][]byte) ([]Edge, error) {
 		return nil, fmt.Errorf("canonicalgraph: zero Hop")
 	}
 	query, args := hopQuery(h)
-	return walk(q, query, args, from)
-}
-
-// WalkSource follows h through one Source's Evidence graph from each
-// Subject: Association is the bridge Subject. Same order as Walk.
-func WalkSource(q Querier, sourceID []byte, h hops.Hop, from [][]byte) ([]Edge, error) {
-	if h.Bridge() == "" {
-		return nil, fmt.Errorf("canonicalgraph: zero Hop")
-	}
-	query, args := sourceQuery(h, sourceID)
 	return walk(q, query, args, from)
 }
 

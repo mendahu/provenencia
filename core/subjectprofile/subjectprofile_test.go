@@ -1,10 +1,12 @@
 package subjectprofile_test
 
 import (
+	"bytes"
 	"errors"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -239,5 +241,27 @@ func TestForSubject(t *testing.T) {
 				t.Errorf("got %s, want %s", g, tc.want)
 			}
 		})
+	}
+}
+
+func TestForSubjectEchoesObservationRefs(t *testing.T) {
+	cands := []autoreconcile.Candidate{
+		{ObservationID: []byte{0x01}, Value: term("male")},
+		{ObservationID: []byte{0x02}, Value: term("female"), Negative: true},
+	}
+	rules := matchregistry.Default().Subject.Lifespans[vocabkey.Person]
+	got := subjectprofile.ForSubject(subjectprofile.Subject{
+		Values: map[vocabkey.PropertyKey][]autoreconcile.Candidate{sex: cands},
+		Life: []subjectprofile.LifeEvent{{
+			EventType: vocabkey.EventBirth, Role: vocabkey.RoleSubject, Dates: []datevalue.Value{*datevaluetest.YMD(1850, 0, 0)},
+		}},
+	}, rules)
+	if vs := got[sex]; len(vs) != 2 || !bytes.Equal(vs[0].Ref, []byte{0x01}) || !bytes.Equal(vs[1].Ref, []byte{0x02}) {
+		t.Errorf("refs = %+v", vs)
+	}
+	for _, key := range []vocabkey.PropertyKey{vocabkey.PropertyLifespan, vocabkey.PropertyLifespanSpan} {
+		if vs := got[key]; len(vs) != 1 || len(vs[0].Ref) != 0 {
+			t.Errorf("%s = %+v, want one value with no ref", key, vs)
+		}
 	}
 }

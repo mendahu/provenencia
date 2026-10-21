@@ -24,6 +24,7 @@ type VocabTerm struct {
 	ID          []byte
 	PropertyKey string
 	Key         string
+	Origin      string
 	Label       string
 	Directed    bool
 	InverseKey  string
@@ -103,7 +104,7 @@ func (g *Graph) loadVocabulary() (Vocabulary, error) {
 	}
 	_ = types.Close()
 
-	terms, err := g.query(`SELECT t.id, p.key, t.key, t.label, t.directed, COALESCE(t.inverse_key, ''), t.neutral
+	terms, err := g.query(`SELECT t.id, p.key, t.key, t.origin, t.label, t.directed, COALESCE(t.inverse_key, ''), t.neutral
 		FROM property_terms t
 		JOIN properties p ON p.id = t.property_id`)
 	if err != nil {
@@ -112,7 +113,7 @@ func (g *Graph) loadVocabulary() (Vocabulary, error) {
 	for terms.Next() {
 		var t VocabTerm
 		var directed, neutral int
-		if err := terms.Scan(&t.ID, &t.PropertyKey, &t.Key, &t.Label, &directed, &t.InverseKey, &neutral); err != nil {
+		if err := terms.Scan(&t.ID, &t.PropertyKey, &t.Key, &t.Origin, &t.Label, &directed, &t.InverseKey, &neutral); err != nil {
 			_ = terms.Close()
 			return Vocabulary{}, err
 		}

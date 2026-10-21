@@ -265,8 +265,8 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-06 — Graph isolation
 
-**Ships.** `requireSameGraph` in `observations` insert and update replaces `requireSubjectSource` and also checks the subject value and the Citation's Artifact link; `connect.CreateCitedBridge` drops its duplicate checks and takes the bridge Subject's graph from its endpoints; `canonicalgraph`'s walk joins on `graph_id` (no signature change).
-**Not this PR.** Re-keying the walk's callers (S12-07, S12-09).
+**Ships.** `requireSameGraph` in `observations` insert and update replaces `requireSubjectSource` and also checks the subject value and the Citation's Artifact link; `connect.CreateCitedBridge` drops its duplicate checks and takes the bridge Subject's graph from its endpoints; `canonicalgraph`'s walk joins on `graph_id` (no signature change). One Source's walk is no longer SQL: S11-19 moved it in memory (`graphcache.Graph.WalkSource` over a loaded `SourceGraph`), and it becomes per graph when S12-07 keys `SourceGraph` by Evidence graph.
+**Not this PR.** Re-keying the walk's callers (S12-07, S12-09), including the in-memory Source walk.
 **Check.** Go tests: each refusal with a user-kind error code; a same-graph write still succeeds.
 **Context.** Working rule "Graphs are fully isolated". Today value subjects are not checked (`observations.go`, "Value subjects are not checked").
 

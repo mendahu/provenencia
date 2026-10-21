@@ -1,6 +1,6 @@
 # Claim Evidence
 
-**Status:** requirements, being scoped (2026-10-17). Part of [Spike 11](README.md), after the matching algorithm is re-implemented ([`comparison-layers.md`](comparison-layers.md)). Today's model: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 (assessment sheet) and §9 (pins).
+**Status:** requirements; the query is built in S11-19 (`core/claimevidence`, `promotealign.Evidence`), the RPC is S11-25 (2026-10-21). Part of [Spike 11](README.md), after the matching algorithm is re-implemented ([`comparison-layers.md`](comparison-layers.md)). Today's model: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 (assessment sheet) and §9 (pins).
 
 ## Why
 
@@ -95,5 +95,5 @@ The researcher wants to say "these are the same person because they have a match
 
 ## Open questions
 
-- **Where a bundle's pins land.** On the person's claim (with backfill onto each member's claim), as today. The neighbor event gets its own claim and pins from its own row; duplicates across claims are accepted on purpose (§9).
+- **Where a bundle's pins land.** On the person's claim (with backfill onto each member's claim), as today. The neighbor event gets its own claim and pins from its own row; duplicates across claims are accepted on purpose (§9). Answered for the schema by S11-19: `identity_claim_evidence` is keyed `(identity_claim_id, observation_id)` and stores no incoming-to-member pairing, so one incoming Observation pins against many members' Observations and no migration is needed.
 
