@@ -52,7 +52,7 @@ The app can reach every Evidence graph operation the engine has: list every grap
 | --- | --- | --- |
 | AC-2.1 | `CreateEvidenceGraph` on Source A, name ` Jones `, description `Household 12`, `artifact_ids` = [A's page 1] | Response `graph` has a `GPH-` ref, name `Jones`, description `Household 12`, `artifact_ids` = [page 1]; `ListEvidenceGraphs` shows it |
 | AC-2.2 | `CreateEvidenceGraph` with no `artifact_ids`, or with Source B's Artifact | Error code `evidencegraphs.invalid`; no graph added |
-| AC-2.3 | `UpdateEvidenceGraph` on `Jones`: name `Jones family`, `artifact_ids` = [page 2] | Graph renamed, linked to page 2 only; one write |
+| AC-2.3 | `UpdateEvidenceGraph` on `Jones`: name `Jones family`, `artifact_ids` = [page 2] | Graph renamed, linked to page 2 only; the response's `effects.revision` is one revision above the create's |
 | AC-2.4 | Default graph linked to pages 1 and 2; a Citation on page 1 has an Observation on a Default Subject; `UpdateEvidenceGraph` on Default with name `Household` and `artifact_ids` = [page 2] | Error code `evidencegraphs.artifact_in_use`; name and links unchanged |
 | AC-2.5 | `DeleteEvidenceGraph` on a Source's only graph | Error code `evidencegraphs.last_graph` |
 | AC-2.6 | `DeleteEvidenceGraph` on a non-last graph with a Subject | Error code `evidencegraphs.in_use` |
@@ -220,7 +220,7 @@ message EvidenceGraph {
   string source_id = 3;
   string name = 4;
   string description = 5;
-  repeated string artifact_ids = 6; // by Artifact ref
+  repeated string artifact_ids = 6; // by Artifact ref from List; in request order from Create
 }
 
 message ListEvidenceGraphsRequest { string project_dir = 1; }
@@ -292,7 +292,7 @@ L10n keys *(new)*, all in `macos/App/Platform/L10n.swift` and `macos/App/Resourc
 - `viaFormats["subjects.graph_id"]` — `deleteImpact.via.subjectsGraphId` = one "This graph has %lld subject", other "This graph has %lld subjects"
 - `viaFormats["evidence_graph_artifacts.citations"]` — `deleteImpact.via.graphArtifactCitations` = one "%lld citation in this graph uses this artifact", other "%lld citations in this graph use this artifact"
 
-Comments follow the neighbors: "FFI error evidencegraphs.invalid", "Extra-gate title for last_graph", "Inbound heading for subjects.graph_id; argument is how many". Removed: none.
+Comments: "FFI error <code>" for each error; "Extra-gate title for last_graph", "Extra-gate body for last_graph"; "Inbound heading for subjects.graph_id; argument is how many"; "Heading over the Citations that keep an Artifact linked to a graph; argument is how many". Removed: none.
 
 ## 7. Steps
 
@@ -318,7 +318,7 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./api/...` passes.
 
 **STEP-5 — Swift store**
 Files: `macos/App/Platform/GenealogyStore.swift`, `macos/App/Platform/GoStore.swift`, `macos/App/Platform/CoreInvoke.swift`, `macos/App/DesignSystem/Recipes/DeleteImpact/PVDeleteImpact.swift`, `macos/App/Features/Sources/SourceArtifactsSection.swift`, `macos/ProvenenciaTests/OnboardingModelTests.swift`. Skill: `add-swift-test` (for `ThrowingStore`).
-Do: models and methods (D-10), `CoreMethod` constants, `createArtifact(graphIDs:)` and its call site, `CatalogDeleteImpactGate.lastGraph` with its `GoStore` and recipe arms (D-9; the copy keys land in STEP-8, so add them to `L10n.DeleteImpact` here with the §6 English defaults), `ThrowingStore` (D-15). `FakeStore` gets compiling stubs that `throw StoreBoom.boom` until STEP-6.
+Do: models and methods (D-10), `CoreMethod` constants, `createArtifact(graphIDs:)` and its call site, `CatalogDeleteImpactGate.lastGraph` with its `GoStore` and recipe arms (D-9; the copy keys land in STEP-8, so add them to `L10n.DeleteImpact` here with the §6 English defaults), `ThrowingStore` (D-15). `FakeStore.createArtifact` gains the `graphIDs` parameter and ignores it until STEP-6; the seven new `FakeStore` methods are stubs that `throw StoreBoom.boom` until STEP-6. `check-localizable-xcstrings.py` may fail on the two gate keys until STEP-8 adds their catalog entries.
 Check: `xcodebuild build` (the `scripts/check-pr.sh` Xcode command without `test`) succeeds on macOS.
 
 **STEP-6 — FakeStore graphs**
@@ -328,7 +328,7 @@ Check: `xcodebuild test` with `-only-testing:ProvenenciaTests/EvidenceGraphStore
 
 **STEP-7 — Graph list key**
 Files: `macos/App/Features/Workspace/Session/CatalogQueryKey.swift`, `macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift`, `macos/App/Features/Workspace/Session/WorkspaceSession.swift`, `macos/ProvenenciaTests/CatalogQueryRegistryTests.swift`. Skill: `add-workspace-place` (§3 only).
-Do: D-11; update the "evidence graphs alone" `listInvalidations` case and write T-13.
+Do: D-11. In `CatalogQueryKey.swift`: the case, the `Kind` case, the `kind` arm and the `project` arm. In `CatalogQueryRegistry.swift`: the `Spec` directly after the `sourceGraphProgress` spec, the loader arm, the `invalidation(kind:mutation:)` arm and the list mapping line. Write T-13.
 Check: `xcodebuild test -only-testing:ProvenenciaTests/CatalogQueryRegistryTests` passes.
 
 **STEP-8 — Copy**
@@ -337,7 +337,8 @@ Do: §6 Strings (D-12, D-13); write T-14 – T-16.
 Check: `python3 scripts/check-localizable-xcstrings.py` passes; `xcodebuild test -only-testing:ProvenenciaTests/L10nResolutionTests -only-testing:ProvenenciaTests/PVDeleteImpactTests` passes.
 
 **STEP-9 — Docs**
-Files: `docs/deployment-plan/spike-12/completed.md`, `docs/deployment-plan/spike-12/deployment-plan.md` (map row), this plan (status, Landed note), `docs/catalog-deletes.md` (§ FFI: one sentence that a link refusal's preflight is `GetEvidenceGraphUnlinkImpact`, which returns the same `DeleteImpactGroup` shape).
+Files: `docs/deployment-plan/spike-12/completed.md`, `docs/deployment-plan/spike-12/deployment-plan.md` (map row), this plan (status, Landed note), `docs/catalog-deletes.md` (§ FFI, after the "report proto is only on `GetDeleteImpact`" bullet, this bullet: "An Evidence graph unlink is refused with a plain code too; its preflight is `GetEvidenceGraphUnlinkImpact`, which returns one `DeleteImpactGroup` of Citations per blocking Artifact.").
+When: the last commit, after the draft PR is open, so its number goes in the plan's Status, the map row (`Landed #N`) and `completed.md` (a "**Landed YYYY-MM-DD** in [#N]" line linking the PR), as S12-04 did.
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-12/prs/S12-05-graph-rpcs.md` reports no errors; `scripts/check-pr.sh` prints `check-pr: PASS`.
 
@@ -347,11 +348,11 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/database/deleteimpact/impact_test.go` `TestListedGroup` *(new)* | three Citation ids → `Total` 3, three listed with refs and `citationComposer` locations; 25 ids → `Total` 25, the first 20 listed in input order; empty → `Total` 0, no rows; `KindSourceType` → `ErrInvalid`; an unknown id → `ErrInvalid` | AC-4.4, D-5 |
-| T-2 | Go | `core/database/evidencegraphs/evidencegraphs_test.go` `TestUnlinkImpact` *(new)* | AC-4.1 fixture (built with `sources.Create`, `artifacts.Create`, `subjects.Create` and a Citation write, as the file's `TestUnlink` builds its in-use case) → one block for page 1; `[page 2]` → none; a second graph linked to page 1 → none for that graph; unlinked Artifact → none; unknown graph, 15-byte id, repeated id → `ErrInvalid`; blocks follow input order | AC-4.1, AC-4.2, AC-4.3, AC-4.5, D-8 |
+| T-1 | Go | `core/database/deleteimpact/impact_test.go` `TestListedGroup` *(new)*; Citations built in a loop the way `TestImpactCitationAndSubject` builds one | three Citation ids → `Total` 3, three listed with refs and `citationComposer` locations; 25 ids → `Total` 25, the first 20 listed in input order; empty → `Total` 0, no rows; `KindSourceType` → `ErrInvalid`; an unknown id → `ErrInvalid` | AC-4.4, D-5 |
+| T-2 | Go | `core/database/evidencegraphs/evidencegraphs_test.go` `TestUnlinkImpact` *(new)* | AC-4.1 fixture (built with `sources.Create`, `artifacts.Create`, `subjects.Create` and a Citation write, as the file's `TestUnlink` builds its in-use case) → one block for page 1; `[page 2]` → none; a second graph linked to page 1 → none for that graph (fixture: `fixture.subjectAndCitation`, then `fixture.createGraph`); unlinked Artifact → none; unknown graph, 15-byte id, repeated id → `ErrInvalid`; blocks follow input order | AC-4.1, AC-4.2, AC-4.3, AC-4.5, D-8 |
 | T-3 | Go | `api/ffi/handlers/catalog_id_test.go` `TestParseIDs` *(new)* | two v7 ids → two 16-byte ids in order; empty → nil, nil; one bad → `errInvalidID` | D-6 |
 | T-4 | Go | `api/ffi/handlers/artifacts_test.go` `TestCreateArtifactGraphIDs` *(new)* | Source with a second graph (made with `CreateEvidenceGraph`): `graph_ids` [second] → linked to second only (`ListEvidenceGraphs`); none → both; another Source's graph → `evidencegraphs.ErrInvalid`, no Artifact | AC-3.1, AC-3.2, AC-3.3, D-7 |
-| T-5 | Go | `api/ffi/handlers/delete_impact_test.go` `TestGetDeleteImpactLastGraph` *(new)* | a Source's Default graph, kind `evidence_graph` → `allowed` false, gate `DELETE_IMPACT_GATE_LAST_GRAPH` | AC-5.2, D-9 |
+| T-5 | Go | `api/ffi/handlers/delete_impact_test.go` `TestGetDeleteImpactLastGraph` *(new)* | `sourceFixture` + `CreateSource`, then `ListEvidenceGraphs` for its Default graph; that graph, kind `evidence_graph` → `allowed` false, gate `DELETE_IMPACT_GATE_LAST_GRAPH` | AC-5.2, D-9 |
 | T-6 | Go | `api/ffi/handlers/evidence_graphs_test.go` `TestListEvidenceGraphs` *(new)* | AC-1.1 fixture → three rows in that order with refs, `source_id`, `artifact_ids`; bad proto → error | AC-1.1, D-2 |
 | T-7 | Go | same file `TestCreateEvidenceGraph` *(new)* | AC-2.1 → graph fields and `effects.lists` ∋ `evidence_graphs`, `revision` > 0; no Artifacts or other Source's Artifact → `evidencegraphs.ErrInvalid`; bad user id → error | AC-2.1, AC-2.2, AC-1.3, D-3 |
 | T-8 | Go | same file `TestUpdateEvidenceGraph` *(new)* | AC-2.3 on a graph made with `CreateEvidenceGraph` → name and links per `ListEvidenceGraphs`, effects; AC-2.4 → `evidencegraphs.ErrArtifactInUse`, list unchanged | AC-2.3, AC-2.4, AC-1.3 |
@@ -359,7 +360,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-10 | Go | same file `TestLinkUnlinkEvidenceGraphArtifact` *(new)* | AC-2.8 → link then unlink, each with effects; AC-2.9 → `ErrLastArtifact` | AC-2.8, AC-2.9, AC-1.3 |
 | T-11 | Go | same file `TestGetEvidenceGraphUnlinkImpact` *(new)* | AC-4.1 fixture → one `blocked` entry, `citations.via` `evidence_graph_artifacts.citations`, `kind` `citation`, `total` 1, one listed with ref; malformed graph id → `errInvalidID` | AC-4.1, D-4 |
 | T-12 | Swift | `macos/ProvenenciaTests/EvidenceGraphStoreTests.swift` `createThenListSortsByName`, `writesReportTheGraphList`, `createArtifactLinksEveryGraphWhenNoneChosen`, `unlinkImpactFiltersToAskedArtifacts` *(new)* | FakeStore: create `Smith` then `Jones` → list `Jones`, `Smith`; every write's `lists` == [.evidenceGraphs]; `createArtifact(graphIDs: [])` on a two-graph Source → linked to both, effects list `.evidenceGraphs`; seeded blocks for pages 1 and 2, asked [2] → block 2 only | AC-1.3, D-14 |
-| T-13 | Swift | `macos/ProvenenciaTests/CatalogQueryRegistryTests.swift` `listInvalidations` (case "evidence graphs alone" gains `graphListInvalidations: 1`), `evidenceGraphsListLoadsFromStore` *(new)* | effects `lists: [.evidenceGraphs]` → `.key(.evidenceGraphsList(project:))` once, no Properties key; loader returns FakeStore's seeded graphs | AC-1.2, D-11 |
+| T-13 | Swift | `macos/ProvenenciaTests/CatalogQueryRegistryTests.swift` `listInvalidations`: `ListCase` gains `let graphListInvalidations: Int`, 1 for "evidence graphs alone" and 0 for the other five cases, and the test also expects that count of `.key(.evidenceGraphsList(project: project))`; `evidenceGraphsListLoadsFromStore` *(new)* | effects `lists: [.evidenceGraphs]` → the graph list key once, no Properties key; the loader returns FakeStore's seeded graphs | AC-1.2, D-11 |
 | T-14 | Swift | `macos/ProvenenciaTests/L10nResolutionTests.swift` `evidenceGraphErrorsHaveCopy` *(new)* | each of the five codes → the §6 sentence, not the unknown default | AC-5.1, D-12 |
 | T-15 | Swift | `macos/ProvenenciaTests/PVDeleteImpactTests.swift` `extraGatesHaveNoDestructiveButtonAndNoInventedList` (adds `.lastGraph` to its loop), `lastGraphGateCopy` *(new)* | `.lastGraph` → extra gate, no destructive action, §6 title and body | AC-5.2, D-9 |
 | T-16 | Swift | same file `knownViaHeadingsMatchEngineEdges` (two new rows) | `subjects.graph_id` 1 → "This graph has 1 subject", 3 → "This graph has 3 subjects"; `evidence_graph_artifacts.citations` 1 and 2 → the §6 forms | AC-5.3, AC-5.4, D-13 |
@@ -404,7 +405,7 @@ No screen reads the new methods, so the check is that nothing visible changed an
 | `parseIDs` returning nil for an empty list changes `CopySource`, `ReorderSourceMetadata` or `ApplyPromoteGraphAlignment` | No callee distinguishes nil from empty today; their existing handler tests run in STEP-3 |
 | A new `CatalogQueryKey` case misses a switch | Swift switches over `CatalogQueryKey` and `Kind` are exhaustive; the compiler lists each |
 | `ListedGroup`'s ref read on a table without `ref` | Restricted to `BucketResource` tables, all of which have `ref` (D-5); T-1 refuses a vocab kind |
-| The Swift tests cannot run in a Linux container | Steps 5 – 8 need macOS; the implementer runs them there or reports the Xcode checks as not run, as S12-03 X-8 recorded |
+| `protoc` / `protoc-gen-go` / `protoc-gen-swift` or `xcodebuild` missing on the host | STEP-2 needs the proto tools and Steps 5 – 8 need macOS. Never hand-edit `engine.pb.go` or `engine.pb.swift`; report each Xcode check as not run rather than passed, as S12-03 X-8 recorded |
 
 **Stop and report if:**
 
@@ -413,6 +414,7 @@ No screen reads the new methods, so the check is that nothing visible changed an
 - `go list -deps ./core/database/deleteimpact` lists `evidencegraphs` (an import cycle; today `evidencegraphs` imports `deleteimpact`, not the reverse).
 - Any existing handler test changes behavior after the `parseIDs` move.
 - A method number 103 – 109 is already used in `engine.proto`.
+- `./scripts/generate-proto.sh` cannot run (no `protoc` or plugins): stop after STEP-1 and report; the generated files are never edited by hand.
 - `CatalogList.evidenceGraphs` is missing or the S12-03 comment in `CatalogQueryRegistry.invalidations(for list:)` is gone.
 - Showing a new code's copy needs a change in a view (Out).
 
