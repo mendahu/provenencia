@@ -431,7 +431,7 @@ struct PromoteView: View {
 
     private var sheetBinding: Binding<PromoteFlow.Row?> {
         Binding(
-            get: { model.flow.rows.first { $0.subjectID == model.flow.sheetSubjectID } },
+            get: { model.flow.row(model.flow.sheetSubjectID) },
             set: { model.setSheetSubject($0?.subjectID) }
         )
     }
@@ -842,7 +842,7 @@ private struct PromoteEvidenceSheet: View {
             guard !key.isEmpty else {
                 return ExhibitGroup(id: "own", title: L10n.string(L10n.Promote.ownRecords), ref: row.ref, lines: lines[key] ?? [])
             }
-            let neighbor = model.flow.rows.first { $0.subjectID == key }
+            let neighbor = model.flow.row(key)
             let name = neighbor?.name ?? L10n.string(L10n.Promote.sheetNeighbor)
             return ExhibitGroup(id: key, title: L10n.Promote.through(name), ref: neighbor?.ref ?? "", lines: lines[key] ?? [])
         }

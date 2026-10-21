@@ -295,9 +295,15 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
+    /// The row for this Subject, or nil when it is not on the page.
+    func row(_ subjectID: String?) -> Row? {
+        guard let subjectID else { return nil }
+        return rows.first { $0.subjectID == subjectID }
+    }
+
     /// The handle a subject will be, or nil when it stays unfiled.
     private func resolve(_ subjectID: String?) -> String? {
-        guard let subjectID, let row = rows.first(where: { $0.subjectID == subjectID }) else { return nil }
+        guard let subjectID, let row = row(subjectID) else { return nil }
         if row.anchor { return row.target.handleID }
         if !mappedRest && subjectID != entryID { return nil }
         switch row.target {
@@ -464,16 +470,16 @@ struct PromoteFlow: Equatable, Sendable {
         }
         for (_, indexes) in owners where indexes.count > 1 {
             for index in indexes {
-                guard case .handle(_, let ref, _) = rows[index].target else { continue }
+                guard let ref = rows[index].target.handleRef else { continue }
                 let other = indexes.first { $0 != index } ?? index
                 rows[index].duplicateNote = .sharesHandle(otherName: rows[other].name, ref: ref)
             }
         }
         for index in rows.indices where rows[index].duplicateNote == nil && !rows[index].anchor {
             guard let otherID = rows[index].proposedDuplicateOf,
-                  let other = rows.first(where: { $0.subjectID == otherID })
+                  let other = row(otherID)
             else { continue }
-            if case .handle(_, let ref, _) = other.target {
+            if let ref = other.target.handleRef {
                 rows[index].duplicateNote = .sharesHandle(otherName: other.name, ref: ref)
             } else if rows[index].target == .newKind, other.target == .newKind {
                 rows[index].duplicateNote = .alsoNew(otherName: other.name)

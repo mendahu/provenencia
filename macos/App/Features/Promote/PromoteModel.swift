@@ -200,16 +200,15 @@ final class PromoteModel {
     func reasonText(_ reason: PromoteFlow.Reason, on row: PromoteFlow.Row) -> String {
         switch reason {
         case .via(let neighborID):
-            guard let neighbor = flow.rows.first(where: { $0.subjectID == neighborID }) else {
+            guard let neighbor = flow.row(neighborID) else {
                 return L10n.string(L10n.Promote.reasonVia)
             }
-            let ref = neighbor.shownRef
             let phrase = flow.bridges.first { bridge in
                 Set([bridge.endA, bridge.endB]) == Set([row.subjectID, neighborID])
             }?.phrase ?? ""
             return phrase.isEmpty
-                ? L10n.Promote.viaNeighbor(neighbor: neighbor.name, ref: ref)
-                : L10n.Promote.via(neighbor: neighbor.name, ref: ref, role: phrase)
+                ? L10n.Promote.viaNeighbor(neighbor: neighbor.name, ref: neighbor.shownRef)
+                : L10n.Promote.via(neighbor: neighbor.name, ref: neighbor.shownRef, role: phrase)
         case .filed: return L10n.string(L10n.Promote.alreadyFiled)
         case .decided: return L10n.string(L10n.Promote.reasonDecided)
         case .agrees(let key, let origin): return L10n.Promote.agreesOn(property: propertyLabel(key: key, origin: origin))
@@ -217,21 +216,21 @@ final class PromoteModel {
         case .taken: return L10n.string(L10n.Promote.reasonTaken)
         case .noMatch: return L10n.string(L10n.Promote.reasonNoMatch)
         case .empty: return L10n.string(L10n.Promote.reasonEmpty)
-        case .neighborPlaced(let neighborID):
-            guard let neighbor = flow.rows.first(where: { $0.subjectID == neighborID }) else {
+        case .neighborPlaced(let id), .neighborMoved(let id), .neighborReleased(let id):
+            guard let neighbor = flow.row(id) else { return L10n.string(L10n.Promote.reasonMoveUnknown) }
+            switch reason {
+            case .neighborPlaced:
+                return neighbor.target.handleRef.map { L10n.Promote.neighborPlaced(neighbor: neighbor.name, ref: $0) }
+                    ?? L10n.string(L10n.Promote.reasonMoveUnknown)
+            case .neighborMoved:
+                return neighbor.target.handleRef.map { L10n.Promote.neighborMoved(neighbor: neighbor.name, ref: $0) }
+                    ?? L10n.string(L10n.Promote.reasonMoveUnknown)
+            case .neighborReleased:
+                return L10n.Promote.neighborReleased(neighbor: neighbor.name)
+            default:
+                // Only the three move reasons reach this arm.
                 return L10n.string(L10n.Promote.reasonMoveUnknown)
             }
-            return L10n.Promote.neighborPlaced(neighbor: neighbor.name, ref: neighbor.shownRef)
-        case .neighborMoved(let neighborID):
-            guard let neighbor = flow.rows.first(where: { $0.subjectID == neighborID }) else {
-                return L10n.string(L10n.Promote.reasonMoveUnknown)
-            }
-            return L10n.Promote.neighborMoved(neighbor: neighbor.name, ref: neighbor.shownRef)
-        case .neighborReleased(let neighborID):
-            guard let neighbor = flow.rows.first(where: { $0.subjectID == neighborID }) else {
-                return L10n.string(L10n.Promote.reasonMoveUnknown)
-            }
-            return L10n.Promote.neighborReleased(neighbor: neighbor.name)
         }
     }
 

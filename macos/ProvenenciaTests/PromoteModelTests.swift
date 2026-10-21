@@ -200,47 +200,56 @@ struct PromoteModelTests {
         ])
     }
 
-    @Test func reasonsAreWordedWithLabelsAndRefs() async {
+    /// Ada and Bea on one page, each placed by the given proposal rows.
+    private func loadedAdaAndBea(
+        _ ada: CatalogPromoteGraphAlignmentRow,
+        _ bea: CatalogPromoteGraphAlignmentRow,
+        properties: [CatalogProperty] = []
+    ) async -> PromoteModel {
         let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
         let store = store(subjects: subjects)
-        store.propertiesByProject[projectDir] = [
-            CatalogProperty(id: "p-name", key: "name", origin: "provenencia", label: "Full name", description: "", valueType: "name"),
-        ]
+        if !properties.isEmpty { store.propertiesByProject[projectDir] = properties }
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [ada, bea])]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        return model
+    }
+
+    @Test func reasonsAreWordedWithLabelsAndRefs() async {
         var viaA = row("b", handleID: "e2")
         viaA.reason = .via
         viaA.viaNeighborSubjectID = "a"
-        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), viaA])]
-        let model = model(store: store, subjectID: "a")
-        await model.load()
-        let ada = model.flow.rows.first { $0.subjectID == "a" }!
-        let bea = model.flow.rows.first { $0.subjectID == "b" }!
+        let model = await loadedAdaAndBea(row("a", handleID: "e1"), viaA, properties: [
+            CatalogProperty(id: "p-name", key: "name", origin: "provenencia", label: "Full name", description: "", valueType: "name"),
+        ])
+        let ada = model.flow.row("a")!
+        let bea = model.flow.row("b")!
         #expect(model.reasonText(ada.captionReason, on: ada) == L10n.Promote.agreesOn(property: "Full name"))
         #expect(model.reasonText(bea.captionReason, on: bea) == L10n.Promote.viaNeighbor(neighbor: "Ada", ref: "PER-e1"))
     }
 
     @Test func movesAreWordedNamingTheNeighbor() async {
-        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
-        let store = store(subjects: subjects)
-        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e2")])]
-        let model = model(store: store, subjectID: "a")
-        await model.load()
-        let bea = model.flow.rows.first { $0.subjectID == "b" }!
+        let model = await loadedAdaAndBea(row("a", handleID: "e1"), row("b", handleID: "e2"))
+        let bea = model.flow.row("b")!
         #expect(model.reasonText(.neighborPlaced(neighborID: "a"), on: bea) == L10n.Promote.neighborPlaced(neighbor: "Ada", ref: "PER-e1"))
         #expect(model.reasonText(.neighborMoved(neighborID: "a"), on: bea) == L10n.Promote.neighborMoved(neighbor: "Ada", ref: "PER-e1"))
         #expect(model.reasonText(.neighborReleased(neighborID: "a"), on: bea) == L10n.Promote.neighborReleased(neighbor: "Ada"))
         #expect(model.reasonText(.neighborMoved(neighborID: "zz"), on: bea) == L10n.string(L10n.Promote.reasonMoveUnknown))
+        // A neighbor with no record to name is not named by its Source ref.
+        model.setTarget(subjectID: "a", token: "skip")
+        _ = await waitUntil { !model.isProposing }
+        let unknown = L10n.string(L10n.Promote.reasonMoveUnknown)
+        #expect(model.reasonText(.neighborPlaced(neighborID: "a"), on: bea) == unknown)
+        #expect(model.reasonText(.neighborMoved(neighborID: "a"), on: bea) == unknown)
+        #expect(model.reasonText(.neighborReleased(neighborID: "a"), on: bea) == L10n.Promote.neighborReleased(neighbor: "Ada"))
     }
 
     @Test func theContestedBandIsSpoken() async {
-        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
-        let store = store(subjects: subjects)
         var contested = row("a", handleID: "e1")
         contested.contested = true
-        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [contested, row("b", handleID: "e2")])]
-        let model = model(store: store, subjectID: "a")
-        await model.load()
-        let ada = model.flow.rows.first { $0.subjectID == "a" }!
-        let bea = model.flow.rows.first { $0.subjectID == "b" }!
+        let model = await loadedAdaAndBea(contested, row("b", handleID: "e2"))
+        let ada = model.flow.row("a")!
+        let bea = model.flow.row("b")!
         #expect(model.assessmentText(ada.selectionReadout!) == L10n.Promote.assessmentContested(L10n.string(L10n.Promote.assessment(.strong))))
         #expect(model.assessmentText(bea.selectionReadout!) == L10n.string(L10n.Promote.assessment(.strong)))
     }
