@@ -156,13 +156,9 @@ func CopySource(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	artifactIDs := make([][]byte, 0, len(req.GetArtifactIds()))
-	for _, raw := range req.GetArtifactIds() {
-		id, err := parseID(raw)
-		if err != nil {
-			return nil, err
-		}
-		artifactIDs = append(artifactIDs, id)
+	artifactIDs, err := parseIDs(req.GetArtifactIds())
+	if err != nil {
+		return nil, err
 	}
 	var out *engine.CopySourceResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
@@ -575,13 +571,9 @@ func ReorderSourceMetadata(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldIDs := make([][]byte, 0, len(req.GetFieldIds()))
-	for _, id := range req.GetFieldIds() {
-		fid, err := parseID(id)
-		if err != nil {
-			return nil, err
-		}
-		fieldIDs = append(fieldIDs, fid)
+	fieldIDs, err := parseIDs(req.GetFieldIds())
+	if err != nil {
+		return nil, err
 	}
 	var out *engine.ReorderSourceMetadataResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {

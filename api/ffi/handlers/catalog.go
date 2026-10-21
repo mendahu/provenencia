@@ -38,6 +38,20 @@ func parseID(s string) ([]byte, error) {
 	return u[:], nil
 }
 
+// parseIDs parses a repeated id field; the first malformed id fails it. An
+// empty field returns nil.
+func parseIDs(raws []string) ([][]byte, error) {
+	var out [][]byte
+	for _, raw := range raws {
+		id, err := parseID(raw)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, nil
+}
+
 func unmarshalErr(op string, err error) error {
 	return fmt.Errorf("%s: unmarshal: %w", op, err)
 }

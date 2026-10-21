@@ -31,6 +31,10 @@ func CreateArtifact(in []byte) ([]byte, error) {
 			return nil, err
 		}
 	}
+	graphIDs, err := parseIDs(req.GetGraphIds())
+	if err != nil {
+		return nil, err
+	}
 	var out *engine.CreateArtifactResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		a, wrote, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
@@ -40,6 +44,7 @@ func CreateArtifact(in []byte) ([]byte, error) {
 					FileID:      fileID,
 					Label:       req.GetLabel(),
 					Description: req.GetDescription(),
+					GraphIDs:    graphIDs,
 				})
 			})
 		if err != nil {
