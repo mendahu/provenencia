@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`, `.cursor/rules/catalog-session.mdc`
 **Context:** [`claim-evidence.md`](../claim-evidence.md) (whole: Separate from matching, Lines, Writing pins, Evidence through relationships); [Match registry](../comparison-layers.md#match-registry) (`evidence.go` row); [Detail](../comparison-layers.md#detail) (value refs); [`docs/matching-model.md`](../../../matching-model.md) knob inventory rows `evidence.*`; [`promote-graph-alignment.md`](../../../promote-graph-alignment.md) §9; working rules "Build, then migrate", "High tolerance for churn", "A separate, lazy query per row", "Lines", "Relationships", "The pin policy has one owner, in Go", "One match registry", "One guard, not one per package", "One matching skill, grown with the layers"; S11-13 ship log MNT-3 and MNT-4
 **Planned:** 2026-10-21 against `main` @ `e169b71`
-**Review:** [`S11-19-claim-evidence-query.review.md`](S11-19-claim-evidence-query.review.md) — round 1: Fits with changes / Not ready; findings fixed; M-4 to user
+**Review:** [`S11-19-claim-evidence-query.review.md`](S11-19-claim-evidence-query.review.md) — round 1: Fits with changes / Not ready; findings fixed; M-4 answered by the user
 
 ### Implementer — read this first
 
@@ -101,7 +101,7 @@ Conventions. `name(f)` is `propertycomparetest.Name(f)`, `term(k)` is `propertyc
 | Deleting `attachExhibits`, `pairExhibits`, `withRowLines`, `refLine`, field 9, `bridgeNeighbors`, `loadExhibitObservations`, `exhibitObs`, the pin-test helper `obs` (S11-13 MNT-5, PRF-2) | S11-25 |
 | Swift parsing of relation and cause codes (`ConclusionVocabulary.swift`) | S11-25 |
 | Copy for lines and relationships; the "why suggested" summary; the sheet's order of sections and relationships beyond D-11's | S11-20, S11-D2 |
-| The lifespan line (`Comparison.Derived`) and likeness lines (depiction values): their engine part and their sheet | S11-20 (after S10-54), pending the user's answer to review M-4 |
+| The lifespan line (`Comparison.Derived`) and likeness lines (depiction values): their engine part and their sheet | S11-20 (user, 2026-10-21; S10-54 landed in #433) |
 | Provisional members on the sheet | not planned (D-9: accepted members only, as `acceptedMembers` today) |
 | A bridge's own property lines (dates on a place relationship): bundled, never compared | not planned ([`claim-evidence.md`](../claim-evidence.md#evidence-through-relationships)) |
 | `neighborTypeProperty` into the registry's segment section (review M-6) | [`docs/ideas/matching-test-suite.md`](../../../ideas/matching-test-suite.md) known gaps line |
@@ -384,7 +384,7 @@ None — no UI and no RPC; nothing in the app changes until S11-25. The reviewer
 
 ## 12. Open questions
 
-- **Review M-4 (to user).** Where do the lifespan line and likeness lines enter the engine? Today S11-20 is scoped "Not this PR. Engine (S11-19)", but this query drops a derived lifespan (no ref) and depiction values (`decode` reads none; value compare has no depiction comparer). Recommended: S11-20 owns their engine part (a derived line with no pin; a likeness section pairing depiction Observations), after S10-54 lands; the map's S11-20 entry says so. Alternative: reserve the types here, which designs lines S11-D2 has not drawn.
+None. Review M-4 was answered by the user on 2026-10-21: S11-20 owns the engine part of the lifespan and likeness lines.
 
 ## 13. PR
 
