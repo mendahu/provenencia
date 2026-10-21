@@ -70,6 +70,8 @@ const (
 	CodeEvidenceGraphsInvalid         = "evidencegraphs.invalid"
 	CodeEvidenceGraphsArtifactInUse   = "evidencegraphs.artifact_in_use"
 	CodeEvidenceGraphsLastArtifact    = "evidencegraphs.last_artifact"
+	CodeEvidenceGraphsInUse           = "evidencegraphs.in_use"
+	CodeEvidenceGraphsLastGraph       = "evidencegraphs.last_graph"
 	CodeSubjectsInvalid               = "subjects.invalid"
 	CodeSubjectsInUse                 = "subjects.in_use"
 	CodeSubjectPositionsInvalid       = "subjectpositions.invalid"
