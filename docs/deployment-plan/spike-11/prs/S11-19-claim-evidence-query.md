@@ -12,7 +12,7 @@
 **Skills to load:** [`add-match-rule`](../../../../.agents/skills/add-match-rule/SKILL.md) (a registry section, its inventory rows, a pure package on the guard list; this PR extends the skill), [`use-catalog-session`](../../../../.agents/skills/use-catalog-session/SKILL.md) (the loader reads `graphcache`)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`, `.cursor/rules/catalog-session.mdc`
 **Context:** [`claim-evidence.md`](../claim-evidence.md) (whole: Separate from matching, Lines, Writing pins, Evidence through relationships); [Match registry](../comparison-layers.md#match-registry) (`evidence.go` row); [Detail](../comparison-layers.md#detail) (value refs); [`docs/matching-model.md`](../../../matching-model.md) knob inventory rows `evidence.*`; [`promote-graph-alignment.md`](../../../promote-graph-alignment.md) §9; working rules "Build, then migrate", "High tolerance for churn", "A separate, lazy query per row", "Lines", "Relationships", "The pin policy has one owner, in Go", "One match registry", "One guard, not one per package", "One matching skill, grown with the layers"; S11-13 ship log MNT-3 and MNT-4
-**Planned:** 2026-10-21 against `main` @ `e169b71`
+**Planned:** 2026-10-21 against `main` @ `e169b71`; rechecked at `c2312f1` (no Current state file changed)
 **Review:** [`S11-19-claim-evidence-query.review.md`](S11-19-claim-evidence-query.review.md) — 2 rounds: Fits with changes / Not ready, every finding fixed; M-4 answered by the user
 
 ### Implementer — read this first
