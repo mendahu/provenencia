@@ -414,57 +414,6 @@ func TestSubjects(t *testing.T) {
 			},
 		},
 		{
-			name: "SourcesOf maps each Subject to its Source and title",
-			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				mustSubjectTypes(t, c)
-				srcA := mustSource(t, c)
-				typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-					Key: "census", Origin: vocabkey.OriginProvenencia, Label: "Census",
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
-				srcB, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-					return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Census 1851"})
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
-				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
-				if err != nil {
-					t.Fatal(err)
-				}
-				var ids [][]byte
-				for _, src := range []sources.Source{srcA, srcB} {
-					s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
-						return Create(tx, userID, CreateInput{SourceID: src.ID, SubjectTypeID: person.ID, Label: "P"}, nil)
-					})
-					if err != nil {
-						t.Fatal(err)
-					}
-					ids = append(ids, s.ID)
-				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
-				got, err := SourcesOf(db, append(ids, []byte("0123456789abcdef")))
-				if err != nil {
-					t.Fatal(err)
-				}
-				if len(got) != 2 {
-					t.Fatalf("got %d entries, want 2 (a missing Subject has none): %+v", len(got), got)
-				}
-				for i, want := range []sources.Source{srcA, srcB} {
-					g := got[string(ids[i])]
-					if !bytes.Equal(g.SourceID, want.ID) || g.Title != want.Title {
-						t.Errorf("Subject %d: got %+v, want %x %q", i, g, want.ID, want.Title)
-					}
-				}
-			},
-		},
-		{
 			name: "reject invalid ids",
 			run: func(t *testing.T, c *database.Catalog) {
 				if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {

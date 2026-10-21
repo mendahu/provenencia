@@ -164,22 +164,24 @@ func (g *Graph) loadValues(ids [][]byte) (map[string]map[string][]Value, error) 
 
 func (g *Graph) loadMembers(ids [][]byte) (map[string][]Member, error) {
 	out := map[string][]Member{}
-	q := `SELECT entity_id, subject_id, status FROM ` + g.claimTable + `
-		WHERE status IN ('accepted', 'provisional') AND entity_id IN (` + placeholders(len(ids)) + `)
-		ORDER BY id`
+	q := `SELECT c.entity_id, c.subject_id, s.source_id, c.status FROM ` + g.claimTable + ` c
+		JOIN subjects s ON s.id = c.subject_id
+		WHERE c.status IN ('accepted', 'provisional') AND c.entity_id IN (` + placeholders(len(ids)) + `)
+		ORDER BY c.id`
 	rows, err := g.query(q, blobArgs(ids)...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var entityID, subjectID []byte
+		var entityID, subjectID, sourceID []byte
 		var status string
-		if err := rows.Scan(&entityID, &subjectID, &status); err != nil {
+		if err := rows.Scan(&entityID, &subjectID, &sourceID, &status); err != nil {
 			return nil, err
 		}
 		out[string(entityID)] = append(out[string(entityID)], Member{
 			SubjectID: cloneID(subjectID),
+			SourceID:  cloneID(sourceID),
 			Accepted:  status == "accepted",
 		})
 	}

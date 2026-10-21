@@ -93,9 +93,12 @@ type Value struct {
 	Against     int
 }
 
-// Member is one accepted or provisional identity claim.
+// Member is one accepted or provisional identity claim. SourceID is the Source
+// the claimed Subject is on. A Subject never changes Source, and a commit that
+// names the handle reloads the node.
 type Member struct {
 	SubjectID []byte
+	SourceID  []byte
 	Accepted  bool
 }
 
@@ -311,6 +314,19 @@ func (g *Graph) CorruptRefForTest(id []byte) {
 	}
 	cp := *n
 	cp.Ref = n.Ref + "-corrupt"
+	g.nodes[string(id)] = &cp
+}
+
+// CorruptMemberSourceForTest replaces the Source of a loaded node's first
+// member so Verify can fail a test.
+func (g *Graph) CorruptMemberSourceForTest(id []byte) {
+	n := g.nodes[string(id)]
+	if n == nil || len(n.Members) == 0 {
+		return
+	}
+	cp := *n
+	cp.Members = append([]Member(nil), n.Members...)
+	cp.Members[0].SourceID = make([]byte, 16)
 	g.nodes[string(id)] = &cp
 }
 

@@ -247,7 +247,7 @@ func sameMembers(got, want []Member) error {
 		return fmt.Errorf("count %d, catalog %d", len(got), len(want))
 	}
 	for i := range got {
-		if !sameID(got[i].SubjectID, want[i].SubjectID) || got[i].Accepted != want[i].Accepted {
+		if !sameID(got[i].SubjectID, want[i].SubjectID) || !sameID(got[i].SourceID, want[i].SourceID) || got[i].Accepted != want[i].Accepted {
 			return fmt.Errorf("claim %d differs", i)
 		}
 	}

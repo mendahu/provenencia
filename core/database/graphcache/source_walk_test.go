@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -275,5 +276,34 @@ func TestWalkSourceStaysOnItsSource(t *testing.T) {
 	}
 	if _, err := g.WalkSource(sg, hops.Hop{}, nil); err == nil {
 		t.Fatal("a zero Hop was walked")
+	}
+}
+
+// T-22: a loaded handle's members carry the Source of each claimed Subject,
+// and Verify compares it.
+func TestMemberSourceID(t *testing.T) {
+	f := newWalkFixture(t)
+	james := f.subject(f.src, "james", "person")
+	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: walkUser}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, walkUser, promote.Input{SubjectID: james.ID})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := f.c.Graph()
+	g.Drop()
+	n, err := g.Node(res.Entity.ID)
+	if err != nil || n == nil || len(n.Members) != 1 {
+		t.Fatalf("node %+v, err %v", n, err)
+	}
+	if !bytes.Equal(n.Members[0].SubjectID, james.ID) || !bytes.Equal(n.Members[0].SourceID, f.src.ID) {
+		t.Fatalf("member %+v, want Subject %x on Source %x", n.Members[0], james.ID, f.src.ID)
+	}
+	if err := g.Verify(); err != nil {
+		t.Fatal(err)
+	}
+	g.CorruptMemberSourceForTest(res.Entity.ID)
+	if err := g.Verify(); err == nil {
+		t.Fatal("Verify accepted a member whose Source does not match the catalog")
 	}
 }

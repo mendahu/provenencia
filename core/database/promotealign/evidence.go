@@ -12,7 +12,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
-	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/subjectcompare"
@@ -139,11 +138,11 @@ func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence,
 		if err != nil {
 			return claimevidence.Evidence{}, err
 		}
-		all, err := acceptedMembers(g, [][]byte{hid})
+		all, err := q.accepted(hid)
 		if err != nil {
 			return claimevidence.Evidence{}, err
 		}
-		nm, err := q.memberValues(bridgedOnly(all[string(hid)], canon))
+		nm, err := q.memberValues(bridgedOnly(all, canon))
 		if err != nil {
 			return claimevidence.Evidence{}, err
 		}
@@ -161,7 +160,9 @@ func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence,
 	out := claimevidence.Build(vocabkey.SubjectType(in.primary[string(row.SubjectID)].kind), valuesOf[string(row.SubjectID)],
 		q.prof.values(row.HandleID), members, neighbors, in.layer.Metas, matchregistry.Default().Evidence,
 		in.cfg.Segment, in.cfg.Subject, in.cfg.Value)
-	out.Sources = q.titles(out)
+	if out.Sources, err = q.titles(out); err != nil {
+		return claimevidence.Evidence{}, err
+	}
 	return out, nil
 }
 
@@ -169,11 +170,10 @@ func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence,
 // their values, the Source each Subject is on, and the filed links between
 // entities. Every read is cached by the graph or kept here.
 type evidenceReader struct {
-	g       *graphcache.Graph
-	in      inputs
-	prof    *profiler
-	sources map[string]subjects.SourceOf // by Subject id
-	titleOf map[string]string            // by Source id
+	g        *graphcache.Graph
+	in       inputs
+	prof     *profiler
+	sourceOf map[string][]byte // by Subject id, from the members read so far
 }
 
 func newEvidenceReader(g *graphcache.Graph, in inputs) (*evidenceReader, error) {
@@ -181,29 +181,22 @@ func newEvidenceReader(g *graphcache.Graph, in inputs) (*evidenceReader, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &evidenceReader{g: g, in: in, prof: prof, sources: map[string]subjects.SourceOf{}, titleOf: map[string]string{}}, nil
+	return &evidenceReader{g: g, in: in, prof: prof, sourceOf: map[string][]byte{}}, nil
 }
 
-// sourcesOf fills the Source of every listed Subject not read yet.
-func (r *evidenceReader) sourcesOf(ids [][]byte) error {
-	var missing [][]byte
-	for _, id := range ids {
-		if _, ok := r.sources[string(id)]; !ok {
-			missing = append(missing, id)
-		}
-	}
-	if len(missing) == 0 {
-		return nil
-	}
-	got, err := subjects.SourcesOf(r.in.q, missing)
+// accepted are the accepted member Subjects of an entity, in claim order. It
+// remembers each one's Source, which a node's members carry.
+func (r *evidenceReader) accepted(entity []byte) ([][]byte, error) {
+	ms, err := acceptedClaims(r.g, entity)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	for id, s := range got {
-		r.sources[id] = s
-		r.titleOf[string(s.SourceID)] = s.Title
+	ids := make([][]byte, len(ms))
+	for i, m := range ms {
+		r.sourceOf[string(m.SubjectID)] = m.SourceID
+		ids[i] = m.SubjectID
 	}
-	return nil
+	return ids, nil
 }
 
 // bridgedOnly keeps, in order, the Subjects some link's bridge reaches as its
@@ -223,26 +216,23 @@ func bridgedOnly(ids [][]byte, links []claimevidence.CanonLink) [][]byte {
 // members are the accepted members of an entity, in claim order, each with its
 // values as its own Source records them.
 func (r *evidenceReader) members(entity []byte) ([]claimevidence.Member, error) {
-	ids, err := acceptedMembers(r.g, [][]byte{entity})
+	ids, err := r.accepted(entity)
 	if err != nil {
 		return nil, err
 	}
-	return r.memberValues(ids[string(entity)])
+	return r.memberValues(ids)
 }
 
 // memberValues reads the listed Subjects as members, in the order given. Each
 // Source is read once, for all of its listed Subjects.
 func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Member, error) {
-	if err := r.sourcesOf(subjectIDs); err != nil {
-		return nil, err
-	}
 	bySource := map[string]map[string]bool{}
 	for _, id := range subjectIDs {
-		if src, ok := r.sources[string(id)]; ok {
-			if bySource[string(src.SourceID)] == nil {
-				bySource[string(src.SourceID)] = map[string]bool{}
+		if src, ok := r.sourceOf[string(id)]; ok {
+			if bySource[string(src)] == nil {
+				bySource[string(src)] = map[string]bool{}
 			}
-			bySource[string(src.SourceID)][string(id)] = true
+			bySource[string(src)][string(id)] = true
 		}
 	}
 	valuesOf := map[string]map[vocabkey.PropertyKey][]autoreconcile.Candidate{}
@@ -259,13 +249,13 @@ func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Memb
 	}
 	var out []claimevidence.Member
 	for _, id := range subjectIDs {
-		src, ok := r.sources[string(id)]
+		src, ok := r.sourceOf[string(id)]
 		if !ok {
 			continue
 		}
 		out = append(out, claimevidence.Member{
 			Subject: bytes.Clone(id),
-			Source:  bytes.Clone(src.SourceID),
+			Source:  bytes.Clone(src),
 			Values: subjectprofile.ForSubject(subjectprofile.Subject{
 				Values: valuesOf[string(id)], NamePattern: r.in.namePattern,
 			}, nil),
@@ -311,12 +301,8 @@ func (r *evidenceReader) bridges(l graphcache.Link) ([]claimevidence.Bridge, err
 	if !ok || len(spec.Endpoints) != 2 {
 		return nil, nil
 	}
-	ids, err := acceptedMembers(r.g, [][]byte{l.Association})
+	subjectIDs, err := r.accepted(l.Association)
 	if err != nil {
-		return nil, err
-	}
-	subjectIDs := ids[string(l.Association)]
-	if err := r.sourcesOf(subjectIDs); err != nil {
 		return nil, err
 	}
 	memberEnd, neighborEnd := spec.Endpoints[0].PropertyKey, spec.Endpoints[1].PropertyKey
@@ -326,12 +312,12 @@ func (r *evidenceReader) bridges(l graphcache.Link) ([]claimevidence.Bridge, err
 	obsOf := map[string][]graphcache.SourceObservation{} // by bridge Subject
 	read := map[string]bool{}                            // Sources walked
 	for _, id := range subjectIDs {
-		src, ok := r.sources[string(id)]
-		if !ok || read[string(src.SourceID)] {
+		src, ok := r.sourceOf[string(id)]
+		if !ok || read[string(src)] {
 			continue
 		}
-		read[string(src.SourceID)] = true
-		sg, err := r.g.Source(src.SourceID)
+		read[string(src)] = true
+		sg, err := r.g.Source(src)
 		if err != nil {
 			return nil, err
 		}
@@ -341,11 +327,11 @@ func (r *evidenceReader) bridges(l graphcache.Link) ([]claimevidence.Bridge, err
 	}
 	var out []claimevidence.Bridge
 	for _, id := range subjectIDs {
-		src, ok := r.sources[string(id)]
+		src, ok := r.sourceOf[string(id)]
 		if !ok {
 			continue
 		}
-		b := claimevidence.Bridge{Subject: bytes.Clone(id), Source: bytes.Clone(src.SourceID)}
+		b := claimevidence.Bridge{Subject: bytes.Clone(id), Source: bytes.Clone(src)}
 		ambiguous := false
 		end := func(into *[]byte, v []byte) {
 			if len(*into) > 0 && !bytes.Equal(*into, v) {
@@ -374,12 +360,21 @@ func (r *evidenceReader) bridges(l graphcache.Link) ([]claimevidence.Bridge, err
 }
 
 // titles maps the id of every Source a pin or bundle in the evidence names to
-// its title.
-func (r *evidenceReader) titles(e claimevidence.Evidence) map[string]string {
+// its title, from the Source's cached graph.
+func (r *evidenceReader) titles(e claimevidence.Evidence) (map[string]string, error) {
 	out := map[string]string{}
+	var failed error
 	add := func(id []byte) {
-		if t, ok := r.titleOf[string(id)]; ok {
-			out[string(id)] = t
+		if _, done := out[string(id)]; done || failed != nil {
+			return
+		}
+		sg, err := r.g.Source(id)
+		if err != nil {
+			failed = err
+			return
+		}
+		if sg.Found {
+			out[string(id)] = sg.Title
 		}
 	}
 	var sections func(ss []claimevidence.Section)
@@ -399,5 +394,5 @@ func (r *evidenceReader) titles(e claimevidence.Evidence) map[string]string {
 		}
 		sections(rel.Sections)
 	}
-	return out
+	return out, failed
 }
