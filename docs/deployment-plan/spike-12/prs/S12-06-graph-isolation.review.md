@@ -1,7 +1,7 @@
 # Review — S12-06 Graph isolation
 
-**Verdict:** Fits with changes — Ready with changes (round 1)
-**Rounds:** 1 (round 2 pending: round 1 had blockers). **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 - None open. Two product calls were asked during planning and answered 2026-10-21: a `source`-typed Subject value is exempt from the graph check (D-3), and isolation gets its own code `observations.other_graph` with copy "That subject or artifact is in another evidence graph." (D-1).
@@ -70,3 +70,39 @@
 
 ### X-10 · minor · The Swift checks cannot run on Linux
 **Answer:** Fixed — STEP-7 names the fallback checks and says the Xcode boxes are reported for the user to run.
+
+## Round 2
+
+The maintainability reviewer confirmed M-1 to M-9: **Fits**, no new blockers. Its one wording note on M-3 is Fixed: STEP-8 now rewrites the whole S12-08 line, keeping List and create-Subject.
+
+The executability reviewer confirmed X-1 to X-10: **Ready with changes**, no blockers.
+
+### X-11 · major · T-3 mutates the shared walk fixture
+**Answer:** Fixed — STEP-5 appends the subtest after the index subtest and restores York's `graph_id` with `t.Cleanup`.
+
+### X-12 · minor · D-3's key read on the value Subject is not stated
+**Answer:** Fixed — D-3 names the third call and the discarded `origin`, and maps `ErrNoRows` to `ErrInvalid`.
+
+### X-13 · minor · T-4's audit read is not named
+**Answer:** Fixed — the case uses the create change's `Fields["graph_id"]`, as `TestSubjects` does.
+
+### X-14 · minor · Lint warnings
+**Answer:** Fixed — the map row links the plan (status Planned), and the path is full.
+
+### X-15 · minor · Two `source_id` paragraphs
+**Answer:** Fixed — STEP-8 names the first and keeps the second.
+
+### X-16 · minor · Length check in two places
+**Answer:** Fixed — `InsertTx` only.
+
+### X-17 · nit · Copy placement
+**Answer:** Fixed — the new copy goes after its `observations.invalid` neighbours.
+
+### X-18 · nit · STEP-3's check is narrow
+**Answer:** Logged — R-3 covers it.
+
+## Map changes
+- The S12-06 row links the plan and is Planned.
+- The S12-06 scope entry records what planning added.
+- The working rule "Graphs are fully isolated" records the reification exemption and the code.
+- STEP-8 updates the S12-08 entry when the PR lands.
