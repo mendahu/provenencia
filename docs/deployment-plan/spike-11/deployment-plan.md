@@ -105,7 +105,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-15 | Shortlist index | 4 | Key → handles per kind on `graphcache`; registry shortlist keys | — | S11-13 | [plan](prs/S11-15-shortlist-index.md) | Landed #497 |
 | S11-16 | Rewrite graph alignment | 4 | Layer 6 procedure, bands from evidence, accept bar; old walk and registry deleted | — | S11-14, S11-15 | [plan](prs/S11-16-graph-alignment.md) | Landed #501 |
 | S11-17 | Contested flag through FFI | 4 | Proposal rows carry contested and move reasons to Swift | — | S11-16 | [plan](prs/S11-17-contested-ffi.md) | Landed #504 |
-| S11-18 | Contested marker on Promote rows | 4 | The marker on the page | [S11-D1](design/S11-D1-promote-rows.md) | S11-17, S11-D1 | [plan](prs/S11-18-contested-marker.md) | Planned |
+| S11-18 | Contested marker on Promote rows | 4 | The marker on the page | [S11-D1](design/S11-D1-promote-rows.md) | S11-17, S11-D1 | [plan](prs/S11-18-contested-marker.md) | Landed #507 |
 | S11-19 | Claim evidence query | 5 | Go query: member lines, collapse, relationship bundles; registry evidence section | — | S11-16 | — | Scoped |
 | S11-25 | Claim evidence RPC and pin policy | 5 | Lazy per-row RPC; Go default pins at Apply; Swift drafting moves onto it; proposal field 9 and `attachExhibits` removed | — | S11-19 | — | Scoped |
 | S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy, with likeness lines as two crops | S11-D2 | S11-25, S11-D2, S10-54 | — | Scoped |

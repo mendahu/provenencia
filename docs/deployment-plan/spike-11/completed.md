@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-18 — Contested marker on Promote rows
+
+**Landed 2026-10-21** in [#507](https://github.com/mendahu/provenencia/pull/507). A Promote row whose pair has a conflicting comparison shows a red Contested badge beside its band, at any band, only while the row shows a selected record; picking another record clears it until the re-proposal says otherwise. When re-proposing moves a row because of a neighbor, its Updated caption now names the neighbor and what it did ("Updated · after Ada moved to PER-e1"), in the info ink. VoiceOver reads the band as "Strong, contested". `PromoteFlow` decides all of it (`SelectionReadout.contested`, `Row.captionReason`, `Row.shownRef`) and `PromoteModel.reasonText` words the three move reasons.
+
 ## S11-17 — Contested flag through FFI
 
 **Landed 2026-10-19** in [#504](https://github.com/mendahu/provenencia/pull/504). Each Promote proposal row now carries whether a comparison behind its pair conflicts (`contested`, at any band) and, when settling released an earlier pair, the move's reason and the neighbor that caused it. Swift parses both into `PromoteFlow.Row.contested` and `.move`; the page looks and reads as before, and S11-18 draws the marker and words the moves. Promote's reason codes now live in `PromoteReasonCode` in `ConclusionVocabulary.swift`, parsed once in `GoStore`, and `TestSwiftVocabularyMatchesGo` fails when Go and Swift drift.
