@@ -11,9 +11,9 @@
 **Version bump:** none — Spike 11 and 12 PRs leave `VERSION` at 0.2.0 until a release is cut, as S12-01 to S12-05 did; no schema change, so the catalog format stays 55 ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-catalog-query`](../../../../.agents/skills/add-catalog-query/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`
-**Context:** [rules](../source-structure.md#rules) ("Graphs are fully isolated"), [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) § 4 (subjects) and § 5 (`mentions`); working rules: "Graphs are fully isolated", "One bridge, one function, deleted in S12-08", "`core/database/evidencegraphs` owns graphs and links from S12-03", "High tolerance for churn", "Each PR updates the docs and skills it makes false" (S12-06 line)
+**Context:** [rules](../source-structure.md#rules) ("Graphs are fully isolated"), [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) § 4 (subjects), § 5 (`mentions`) and § 8 (invariants), [`source-layer-data-model.md`](../../../source-layer-data-model.md) § 7.1; working rules: "Graphs are fully isolated", "One bridge, one function, deleted in S12-08", "`core/database/evidencegraphs` owns graphs and links from S12-03", "High tolerance for churn", "Each PR updates the docs and skills it makes false" (S12-06 line)
 **Planned:** 2026-10-21 against `main` @ `9ca7472`
-**Review:** — (not reviewed yet)
+**Review:** [`S12-06-graph-isolation.review.md`](S12-06-graph-isolation.review.md) — round 1 answered; round 2 pending
 
 ### Implementer — read this first
 
@@ -40,20 +40,21 @@ Each Evidence graph becomes a closed box at write time. An Observation is saved 
 
 **US-1.** As a researcher, when I record an Observation, the engine refuses it unless its Subject, the Subject it points at, and its Citation's Artifact are in, or linked to, one Evidence graph. Then a graph's evidence never leaks into another graph.
 
-Fixture for every AC: Source **Census** with Artifacts **P1** and **P2**. Graph **Default** is linked to P1 only. Graph **Jones** is linked to P2 only. Subjects **Ann** (person, Default), **Ben** (person, Jones), **Wed** (event, Default). Source **Book** has graph Default, Artifact **B1**, Subject **Cert** (type `source`) and Subject **Cal** (person).
+Fixture for every AC (built per T-1's recipe). Source **Census** with Artifacts **P1** and **P2**. Census's graph **Default** is linked to P1 only. Census's graph **Jones** is linked to P2 only. Census Subjects: **Ann** (person, Default), **Ben** (person, Jones), **Wed** (event, Default), **Part** (participation, Default), **Rec** (source, Default). Source **Book** has one graph, **Book Default**, with Artifact **B1** and Subjects **Cert** (source) and **Cal** (person).
 
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-1.1 | Citation on P1, Observation `name` on Ann | Saved |
 | AC-1.2 | Citation on P1, Observation `name` on Ben | Refused `observations.other_graph`; no Citation or Observation row is left |
 | AC-1.3 | Citation on P2, Observation `name` on Ann | Refused `observations.other_graph` |
-| AC-1.4 | Citation on P1, Observation `name` on Cal (another Source) | Refused `observations.other_graph` (today `observations.invalid`) |
-| AC-1.5 | Citation on P1, an edge Observation (`AllowEdgeRows`) on a Default `participation` bridge with `person` = Ben | Refused `observations.other_graph` |
-| AC-1.6 | Citation on P1, the same edge Observation with `person` = Ann | Saved |
-| AC-1.7 | Citation on Census's P1, a Census `source` Subject, Observation `mentions` = Cert (Book's graph) | Saved (D-3) |
-| AC-1.8 | Citation on P1, Observation `mentions` = a `person` Subject of another graph | Refused `observations.other_graph` (only `source`-typed values are exempt) |
+| AC-1.4 | Citation on P1, Observation `name` on Cal (Book Default) | Refused `observations.other_graph` (today `observations.invalid`) |
+| AC-1.5 | Citation on P1, edge Observation (`AllowEdgeRows`) on Part with `person` = Ben | Refused `observations.other_graph` |
+| AC-1.6 | Citation on P1, edge Observation on Part with `person` = Ann | Saved |
+| AC-1.7 | Citation on P1, Observation `mentions` on Rec with value Cert (Book Default) | Saved (D-3) |
+| AC-1.8 | Citation on P1, Observation `mentions` on Rec with value Cal (a `person` in Book Default) | Refused `observations.other_graph` (only reification-typed values are exempt) |
 | AC-1.9 | An existing `name` Observation on Ann (Citation on P1) is updated so its Subject is Ben | Refused `observations.other_graph`; the stored row is unchanged |
 | AC-1.10 | The same Observation is updated with a new name, Subject still Ann | Saved |
+| AC-1.11 | Citation on P1, edge Observation on Part with `person` = a `source`-typed Subject of another graph | Refused `observations.other_graph` (D-3: edge rows are never exempt) |
 
 **US-2.** As a researcher, when I connect two Subjects, the bridge joins their graph, and a connection across graphs is refused.
 
@@ -69,7 +70,7 @@ Fixture for every AC: Source **Census** with Artifacts **P1** and **P2**. Graph 
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-3.1 | `WalkSource` from Birth over `PlacesOfEvent`, where the location bridge's place York was moved to a second graph of the same Source by direct SQL (a stored row from before this PR) | No edge |
-| AC-3.2 | The walk's `EXPLAIN QUERY PLAN` | No `SCAN` (the existing index test stays green) |
+| AC-3.2 | The walk's `EXPLAIN QUERY PLAN` | No `SCAN` (the existing index subtest stays green; it does not prove which index is used) |
 
 **US-4.** As a researcher, an isolation refusal reads as its reason.
 
@@ -82,21 +83,25 @@ Fixture for every AC: Source **Census** with Artifacts **P1** and **P2**. Graph 
 | In | Covered by |
 | --- | --- |
 | `apperr.CodeObservationsOtherGraph` and `observations.ErrOtherGraph` (user kind) | STEP-1, AC-1.2 |
-| `requireSameGraph` in `observations` replaces `requireSubjectSource` in insert and update. It checks the Subject's graph, the Citation Artifact's link to it, and the Subject value's graph, with the `source`-type exemption | STEP-2, AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, AC-1.8, AC-1.9, AC-1.10 |
-| `subjects.CreateInput.GraphID`: when set, the Subject is inserted into that graph; when empty, `SoleGraphTx` as today | STEP-3, AC-2.1 |
+| `subjects.CreateInput.GraphID`: when set, the Subject is inserted into that graph; when empty, `SoleGraphTx` as today | STEP-2, AC-2.1 |
+| `evidencegraphstest.Create` *(new)* test helper; `deleteimpact/impact_test.go`'s inline graph create moves onto it | STEP-2 |
+| `requireSameGraph` in `observations` replaces `requireSubjectSource` in insert and update. It checks the Subject's graph, the Citation Artifact's link to it, and the Subject value's graph, with the reification exemption for non-edge rows | STEP-3, AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, AC-1.8, AC-1.9, AC-1.10, AC-1.11 |
+| `sqlSubjectExists` in `resolveValue` is deleted; the graph read refuses a missing value Subject | STEP-3 |
 | `connect.CreateCitedBridge` drops its Source and Citation-Source checks and `CreateInput.SourceID`. The bridge takes `SourceID` and `GraphID` from the from-Subject | STEP-4, AC-2.1, AC-2.2, AC-2.3, AC-2.4 |
 | The `create_cited_bridge` handler stops parsing `source_id` | STEP-4 |
 | `citations.SourceIDTx` is deleted (connect was its only caller) | STEP-4 |
 | `canonicalgraph` `sqlSourceSelect` joins `dst` on `graph_id` | STEP-5, AC-3.1, AC-3.2 |
 | `L10n.Errors.observationsOtherGraph` and its `Localizable.xcstrings` entry | STEP-6, AC-4.1 |
-| `interpretation-layer-data-model.md` isolation text and invariants; map scope for S12-08 | STEP-8 |
+| `interpretation-layer-data-model.md` and `source-layer-data-model.md` § 7.1 isolation text; map scope for S12-08 and the working-rule doc line | STEP-8 |
 
 | Out | Home |
 | --- | --- |
-| Removing `source_id` from `CreateCitedBridgeRequest` and sending a graph id from Swift | S12-08 ("cited-bridge RPCs take a graph id") |
+| Removing `source_id` from `CreateCitedBridgeRequest` (the bridge's graph comes from its endpoints, so the RPC takes no graph id) | S12-08 |
 | Making `subjects.CreateInput.GraphID` required and deleting its `SoleGraphTx` fallback | S12-08 |
 | Re-keying `WalkSource`'s callers (`sourcefill`, `sourceeventtitles`, `promotealign`) and its `sourceID` parameter | S12-07, S12-09 |
 | Filtering the composer's Artifacts or the canvas's Subjects by graph | S12-10, S12-08 |
+| A `vocabkey` constant for the `source` type key and moving `sourcegraphprogress`'s literals onto it | not planned (D-3 reads the registry role, so this PR adds no literal) |
+| Moving `depictionSaveErrorsHaveCopy` into the shared error-copy table | not planned (it checks more than copy) |
 | Repairing stored rows that already cross Sources | not planned (every Source has one graph; R-2) |
 | A preflight that lists what is in the other graph | not planned (one plain code, as for the link refusals) |
 
@@ -104,41 +109,45 @@ Fixture for every AC: Source **Census** with Artifacts **P1** and **P2**. Graph 
 
 | Area | Where | Today |
 | --- | --- | --- |
-| Source check | `core/database/observations/observations.go` `requireSubjectSource` | Joins `subjects` → `citations` → `artifacts` on `source_id` and returns `ErrInvalid` (`observations.invalid`) on no row. It does not check the Subject value |
-| Insert | `observations.go` `insertOne` | Calls `requireSubjectSource` right after the length checks, before the binding, edge-lock and `resolveValue` steps |
-| Update | `core/database/observations/update.go` `updateOne` | Calls `requireSubjectSource(tx.Tx, …)` at the same point |
-| Subject value | `observations.go` `resolveValue`, `case propertymeta.ValueTypeSubject` | Checks only that `in.ValueSubjectID` exists (`sqlSubjectExists`) and returns it as `resolvedValue.SubjectID` |
+| Source check | `core/database/observations/observations.go` `requireSubjectSource` | Joins `subjects` → `citations` → `artifacts` on `source_id` and returns `ErrInvalid` (`observations.invalid`) on no row. It does not check the Subject value. Called only from `insertOne` and `updateOne` |
+| Insert | `observations.go` `insertOne` | Calls `requireSubjectSource` right after the length checks, before `sqlSubjectType`, the binding check, `sqlSubjectTypeKey` + `connectrules.Edge` (edge lock) and `resolveValue` |
+| Update | `core/database/observations/update.go` `updateOne` | Calls `requireSubjectSource(tx.Tx, …)` at the same point. `write.go` `Update` refuses a requested edge row before `updateOne` (`isEdgeTx`), so updates never write edge rows |
+| Subject value | `observations.go` `resolveValue`, `case propertymeta.ValueTypeSubject` | Checks only that `in.ValueSubjectID` exists (`sqlSubjectExists`, its only user) and returns it as `resolvedValue.SubjectID` |
+| Type key read | `observations.go` `sqlSubjectTypeKey`; users `insertOne` and `write.go` `isEdgeTx` | Selects `t.key` only |
 | Codes | `core/apperr/apperr.go` `CodeObservationsInvalid`, `CodeObservationsEdgeLocked`, `CodeObservationsInUse` | No isolation code |
-| Membership reads | `core/database/evidencegraphs/evidencegraphs.go` `SubjectGraphTx`, `IsLinkedTx` | Exist, with no callers outside the package's tests. S12-03 added them for this PR |
-| Second graphs | `evidencegraphs.go` `Create` | Creates a graph linked to given Artifacts. `Unlink` refuses a graph's last link |
+| Membership reads | `core/database/evidencegraphs/evidencegraphs.go` `SubjectGraphTx`, `IsLinkedTx` | Exist, with no callers outside the package's tests. `SubjectGraphTx` returns `evidencegraphs.ErrInvalid` for a missing Subject |
+| Second graphs | `evidencegraphs.go` `Create`, `Unlink` | `Create` makes a graph linked to given Artifacts. `Unlink` refuses a graph's last link |
+| Reification role | `core/database/subjectvocab/registry.go` `RoleReification`; `subjectvocab.go` `TypeByKey` | The `source` type has `Role: RoleReification`. `TypeByKey` reads the product registry. `subjectvocab` does not import `observations` |
 | Subject insert | `core/database/subjects/subjects.go` `CreateInput`, `InsertTx` | `CreateInput` has no graph. `InsertTx` calls `evidencegraphs.SoleGraphTx(tx, in.SourceID)`, which fails when a Source has two graphs |
 | Composite FK | `core/database/migrations/000055.sql` | `subjects (graph_id, source_id)` → `evidence_graphs (id, source_id)`; `foreign_keys` is on (`core/database/catalog.go`) |
 | Connect | `core/database/connect/connect.go` `CreateCitedBridge` | Refuses unless `from.SourceID` and `to.SourceID` equal `in.SourceID`. For an attached Citation it also refuses unless `citations.SourceIDTx` equals `in.SourceID`. The bridge is inserted with `subjects.InsertTx(q, CreateInput{SourceID: in.SourceID, …})` |
-| Connect input | `connect.go` `CreateInput.SourceID` | Read only by the two checks above and the bridge insert |
-| Connect callers | `api/ffi/handlers/connect.go` `CreateCitedBridge`; 30 `CreateInput{` literals: 21 `connect.CreateInput{` across 16 files (`rg -l 'connect.CreateInput\{'`) and 9 in `connect_test.go` | The handler parses `req.GetSourceId()` and passes it as `SourceID` |
+| Connect rules | `core/connectrules/connectrules.go` `productBridges` | No product bridge has a `source` endpoint. Plugins can register bridges |
+| Connect callers | `api/ffi/handlers/connect.go` `CreateCitedBridge`; test literals found by `rg -n 'connect.CreateInput\{'` and the unqualified `CreateInput{` literals in `connect_test.go` | The handler parses `req.GetSourceId()` and passes it as `SourceID` |
+| Observation writers | `rg -l 'observations.InsertManyTx\|InsertWithObservationsTx\|observations.AddToCitation\|citations.CreateWithObservations\|observations.Update\(' core api --glob '!*_test.go'` | `citations`, `connect`, `api/ffi/handlers/citations.go`, `api/ffi/handlers/observations.go`, `observationstest`. Promote writes no Observations |
 | Citation Source | `core/database/citations/citations.go` `SourceIDTx` | Only caller is `connect.go`. `SourceID` (catalog form, used by `api/ffi/handlers/citations.go`) and `sqlCitationSource` stay |
 | Citation Artifact | `citations.go` `Update`, `CitationFieldsInput` | A Citation's `artifact_id` never changes after insert, so checking at Observation write is enough |
 | Walk | `core/database/canonicalgraph/canonicalgraph.go` `sqlSourceSelect` | `JOIN subjects dst ON dst.id = b.value_subject_id AND dst.source_id = bs.source_id` |
 | `mentions` | `core/database/subjectvocab/registry.go` | `mentions` (value type subject, "Target hint: source") is bound to type `source`. `interpretation-layer-data-model.md` § 5 documents `BookSource -- mentions --> CertificateSource` across Sources |
-| Doc | `docs/interpretation-layer-data-model.md` (subjects `source_id` paragraph, `graph_id` paragraph, invariant 3) | Says cross-Source Observations remain valid, and that `subjects.Create` takes the graph only from `SoleGraphTx` |
-| Swift copy | `macos/App/Platform/L10n.swift` `L10n.Errors` (`observationsInvalid`, `message(code:)` switch); `macos/App/Resources/Localizable.xcstrings` `error.observations.invalid` | No `other_graph` copy |
-| Tests | `core/database/observations/observations_test.go` `TestObservations`; `core/database/connect/connect_test.go` `TestCreateCitedBridge`; `core/database/canonicalgraph/canonicalgraph_test.go` `TestWalkSource`; `core/database/subjects/subjects_test.go` `TestSubjects`; `macos/ProvenenciaTests/L10nResolutionTests.swift` `evidenceGraphErrorsHaveCopy` | No test writes across Sources or graphs |
+| Docs | `docs/interpretation-layer-data-model.md` (subjects `source_id` paragraph, `graph_id` paragraph, invariants 3 and 16); `docs/source-layer-data-model.md` § 7.1 bullet "A new Subject joins its Source's graph through `evidencegraphs.SoleGraphTx`" | Say cross-Source Observations remain valid, and that a Subject's graph comes only from `SoleGraphTx` |
+| Graph fixtures | `core/database/evidencegraphs/evidencegraphstest/evidencegraphstest.go` `SeedRefless`, `SoleGraph`; `core/database/deleteimpact/impact_test.go` (graph `jones`, inline `writes.Call` → `evidencegraphs.Create`) | No shared helper creates a graph |
+| Swift copy | `macos/App/Platform/L10n.swift` `L10n.Errors` (`observationsInvalid`, `message(code:)` switch); `macos/App/Resources/Localizable.xcstrings` `error.observations.invalid`; `macos/ProvenenciaTests/L10nResolutionTests.swift` `evidenceGraphErrorsHaveCopy` (a `[code: sentence]` table) | No `other_graph` copy |
+| Tests | `core/database/observations/observations_test.go` `TestObservations`; `core/database/connect/connect_test.go` `TestCreateCitedBridge`; `core/database/canonicalgraph/canonicalgraph_test.go` `TestWalkSource`; `core/database/subjects/subjects_test.go` `TestSubjects` | No test writes across Sources or graphs, and none expects `ErrInvalid` for a cross-Source write |
 
-**Precedent.** S12-05 ([#511](https://github.com/mendahu/provenencia/pull/511)) added the five `evidencegraphs.*` codes end to end. Copy its shape for one code: the `apperr` constant, the `L10n.Errors` resource, the `message(code:)` case, the `xcstrings` entry, and one `L10nResolutionTests` test. `evidencegraphs.Unlink` is the shape for a domain invariant that returns its own user-kind `apperr` error from a `…Tx` read.
+**Precedent.** S12-05 ([#511](https://github.com/mendahu/provenencia/pull/511)) added the five `evidencegraphs.*` codes end to end. Copy its shape for one code: the `apperr` constant, the `L10n.Errors` resource, the `message(code:)` case, the `xcstrings` entry, and one row in `L10nResolutionTests`. `evidencegraphs.Unlink` is the shape for a domain invariant that returns its own user-kind `apperr` error from a `…Tx` read.
 
 ## 5. Decisions
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
 | D-1 | Refusals return `observations.ErrOtherGraph` = `apperr.New(apperr.CodeObservationsOtherGraph, apperr.KindUser)`, code `observations.other_graph`. Copy: "That subject or artifact is in another evidence graph." | User, 2026-10-21. The reason is clear to the researcher and to tests | Reusing `observations.invalid` — user chose a separate code |
-| D-2 | `requireSameGraph(tx *sql.Tx, citationID, subjectID, valueSubjectID []byte) error` *(new)* in `observations.go` is the one isolation check. It reads the Subject's graph (`evidencegraphs.SubjectGraphTx`; a missing Subject is `ErrInvalid`), the Citation's `artifact_id` (no row is `ErrInvalid`), and `evidencegraphs.IsLinkedTx(graph, artifact)` (false is `ErrOtherGraph`). When `valueSubjectID` is non-empty, it reads that Subject's graph and type, and returns `ErrOtherGraph` when the graph differs, unless D-3 applies | One check owns the rule (working rule). The membership reads live in `evidencegraphs` so `observations` does not import `subjects` | A check per write path — two copies; a check in `connect` — the working rule moves it out |
-| D-3 | A Subject value whose type is `(key = 'source', origin = 'provenencia')` is exempt from the graph check | User, 2026-10-21. A `source` Subject reifies a Source; `mentions` across Sources is the documented use (§ 5) | No exemption — breaks the documented `mentions` edge |
-| D-4 | `insertOne` and `updateOne` call `requireSameGraph(tx, citationID, in.SubjectID, resolved.SubjectID)` right after `resolveValue`, and delete the `requireSubjectSource` call and function. `resolved.SubjectID` is set only for subject-valued Properties, so a stale `in.ValueSubjectID` on another type is never checked | One call checks the Subject, the Artifact and the value together. A refusal after `resolveValue` wrote a date or name row is safe: `writes.Run` rolls back the transaction | Checking before `resolveValue` with `in.ValueSubjectID` — checks a field the Property may not use; two calls — the check splits |
-| D-5 | `subjects.CreateInput` gains `GraphID []byte` *(new)*. When it has 16 bytes, `InsertTx` inserts into that graph and the composite FK refuses a graph of another Source (`mapConstraint` → `subjects.ErrInvalid`). When it is empty, `InsertTx` calls `SoleGraphTx` as today. Any other length is `ErrInvalid`. The audit row and the returned `Subject` carry the graph used | The bridge needs its endpoints' graph on a two-graph Source, where `SoleGraphTx` fails. One field is the slot S12-08 makes required. The empty case is the sanctioned `SoleGraphTx` bridge, not a new path | A second insert function `InsertInGraphTx` — a near-copy of `InsertTx`; reading the graph's Source first — the FK already enforces it |
-| D-6 | `CreateCitedBridge` deletes both `SourceID` checks and `CreateInput.SourceID`. The bridge is inserted with `SourceID: from.SourceID, GraphID: from.GraphID`. The to-endpoint and the Citation's Artifact are checked by `requireSameGraph` on the edge Observations. The handler stops parsing `req.GetSourceId()`. Every `connect.CreateInput{` literal loses its `SourceID:` line | Working rule: `connect` relies on `requireSameGraph`. A field nothing reads is dead | Keeping `SourceID` as an extra guard — a second scope check, which the rule removes |
+| D-2 | `requireSameGraph(tx *sql.Tx, citationID, subjectID, valueSubjectID []byte, edge bool) error` *(new)* in `observations.go` is the one isolation check. In order: (1) the Subject's graph by `evidencegraphs.SubjectGraphTx`; (2) the Citation's `artifact_id` by `sqlCitationArtifact`; (3) `evidencegraphs.IsLinkedTx(graph, artifact)`, false → `ErrOtherGraph`; (4) when `valueSubjectID` is non-empty, its graph by `SubjectGraphTx`, and when that differs from (1) → `ErrOtherGraph` unless D-3 applies. A missing Subject, Citation or value Subject returns `observations.ErrInvalid`: `errors.Is(err, evidencegraphs.ErrInvalid)` and `sql.ErrNoRows` both map to it | One check owns the rule (working rule). Graph membership is read only through `evidencegraphs`, so `observations` adds no second graph read and does not import `subjects` | A check per write path — two copies; a `graph_id` SQL in `observations` — a second membership read |
+| D-3 | A value Subject is exempt from step (4) when `edge` is false and its type is a product reification: origin `vocabkey.OriginProvenencia` and `subjectvocab.TypeByKey(key)` returns `Role == subjectvocab.RoleReification`. The key and origin come from `sqlSubjectTypeKey`, which now selects `t.key, t.origin`. Edge rows (bridge endpoints) are never exempt | User, 2026-10-21: keep the documented `mentions` across Sources. The registry role names the concept, so a later reification type gets it by declaring its role. Edge rows are excluded so a plugin bridge with a `source` endpoint cannot join two graphs | `t.key = 'source'` in SQL — a third copy of the literal; no exemption — breaks `mentions` |
+| D-4 | `insertOne` keeps the `connectrules.Edge` result as `edge`. `insertOne` and `updateOne` call `requireSameGraph(tx, citationID, in.SubjectID, resolved.SubjectID, edge)` right after `resolveValue` (`updateOne` passes `false`). Delete the `requireSubjectSource` call and function. Delete `sqlSubjectExists` and its read in `resolveValue`'s subject case | One call checks the Subject, the Artifact and the value together. `resolved.SubjectID` is set only for subject-valued Properties, so a stale `in.ValueSubjectID` on another type is never checked. A refusal after `resolveValue` wrote a date or name row is safe: `writes.Run` rolls back. Because the check now runs later, a write that is both cross-graph and invalid in another way returns the earlier error (`observations.invalid` for an unbound Property, `observations.edge_locked`, or a value error). No existing test changes its expected code | Checking first with `in.ValueSubjectID` — checks a field the Property may not use; two calls — the check splits |
+| D-5 | `subjects.CreateInput` gains `GraphID []byte` *(new)*. When it has 16 bytes, `InsertTx` inserts into that graph and the composite FK refuses a graph of another Source (`mapConstraint` → `subjects.ErrInvalid`). When it is empty, `InsertTx` calls `SoleGraphTx` as today. Any other length is `ErrInvalid` (in `InsertTx` and `Create`). The audit row and the returned `Subject` carry the graph used | The bridge needs its endpoints' graph on a two-graph Source, where `SoleGraphTx` fails. One field is the slot S12-08 makes required. The empty case is the sanctioned `SoleGraphTx` bridge, not a new path. `subjects.invalid` differs from `evidencegraphs.invalid` for an Artifact's wrong graph because each package reports its own input | A second insert function `InsertInGraphTx` — a near-copy of `InsertTx`; reading the graph's Source first — the FK already enforces it |
+| D-6 | `CreateCitedBridge` deletes both `SourceID` checks and `CreateInput.SourceID`. The bridge is inserted with `SourceID: from.SourceID, GraphID: from.GraphID`. The to-endpoint and the Citation's Artifact are checked by `requireSameGraph` on the edge Observations. The handler stops parsing `req.GetSourceId()` and gets a one-line comment that `source_id` is unread until S12-08 removes it. Every `connect.CreateInput{` literal, and each `CreateInput{` literal in `connect_test.go`, loses its `SourceID:` line | Working rule: `connect` relies on `requireSameGraph`. A field nothing reads is dead | Keeping `SourceID` as an extra guard — a second scope check, which the rule removes; a proto comment — needs a regenerate for a field S12-08 deletes |
 | D-7 | Delete `citations.SourceIDTx`. Keep `citations.SourceID` and `sqlCitationSource` | D-6 removes its only caller | Keeping it — dead code |
-| D-8 | In `sqlSourceSelect`, `dst.source_id = bs.source_id` becomes `dst.graph_id = bs.graph_id`. `bs.source_id = ?` and the `WalkSource` signature stay | Scope entry: "joins on `graph_id` (no signature change)". `subjects_graph_id_idx` exists; `dst` is read by primary key | Re-keying `WalkSource` to a graph id — S12-07 / S12-09 |
-| D-9 | Test fixtures make a second graph with `evidencegraphs.Create` and move a link with `evidencegraphs.Unlink`. They put Subjects into it with `subjects.Create(…, CreateInput{GraphID: …})`. Only AC-3.1 uses direct SQL (`UPDATE subjects SET graph_id = ?`), because the write path now refuses that row | Use the real write paths; direct SQL only for a row the engine can no longer write | A shared fixture helper in `evidencegraphstest` — each test needs a different shape; add one when a third package needs it |
+| D-8 | In `sqlSourceSelect`, `dst.source_id = bs.source_id` becomes `dst.graph_id = bs.graph_id`. `bs.source_id = ?` and the `WalkSource` signature stay | Scope entry: "joins on `graph_id` (no signature change)". `dst` is read by primary key | Re-keying `WalkSource` to a graph id — S12-07 / S12-09 |
+| D-9 | `evidencegraphstest.Create(t testing.TB, c *database.Catalog, userID, sourceID []byte, name string, artifactIDs ...[]byte) evidencegraphs.Graph` *(new)* wraps `writes.Call` → `evidencegraphs.Create` and fails the test on error. T-1 to T-4 use it, and `deleteimpact/impact_test.go`'s `jones` create moves onto it. Subjects go into a graph with `subjects.Create(…, CreateInput{GraphID: …})`. Only AC-3.1 uses direct SQL (`UPDATE subjects SET graph_id = ?`), because the write path now refuses that row | Four packages in this PR create a second graph; one helper, beside `SoleGraph` | Inline creates in each test — five copies |
 
 ## 6. Design
 
@@ -148,16 +157,17 @@ Fixture for every AC: Source **Census** with Artifacts **P1** and **P2**. Graph 
 | --- | --- | --- | --- |
 | `apperr.CodeObservationsOtherGraph` *(new)*, `observations.ErrOtherGraph` *(new)* | code / var | `CodeObservationsInvalid`, `evidencegraphs.ErrArtifactInUse` | User asked for its own reason (D-1); same shape |
 | `requireSameGraph` *(new)* | func | `requireSubjectSource` (deleted), `evidencegraphs.SubjectGraphTx`, `IsLinkedTx` | Replaces the old check and composes the existing membership reads |
-| `sqlValueSubjectGraph` *(new)* const in `observations.go` | SQL | `sqlSubjectTypeKey` (key only), `evidencegraphs.sqlSubjectGraph` (graph only) | One row needs the graph, key and origin together; searched `rg "t.key" core/database/observations` |
 | `sqlCitationArtifact` *(new)* const in `observations.go` | SQL | `sqlCitationExists`, `citations.GetTx` | `citations` imports `observations`, so `observations` cannot call `citations.GetTx` |
+| `sqlSubjectTypeKey` gains `t.origin` | SQL (extended) | itself | Extended, not copied; `isEdgeTx` and `insertOne` scan the extra column |
 | `subjects.CreateInput.GraphID` *(new)* | field | `artifacts.CreateInput.GraphIDs` | Same idea for one graph; the slot S12-08 makes required |
+| `evidencegraphstest.Create` *(new)* | test helper | `evidencegraphstest.SoleGraph`; inline creates in `core/database/deleteimpact/impact_test.go` | Extends the package that holds graph fixtures |
 | `L10n.Errors.observationsOtherGraph` *(new)*, `error.observations.other_graph` *(new)* | L10n key | `L10n.Errors.observationsInvalid` | New reason, same namespace |
-| `TestRequireSameGraph` *(new)* | Go test | `TestObservations` table | Its own fixture (two graphs, two Sources); the table's `mustSeed` has one graph |
-| `observationsOtherGraphHasCopy` *(new)* | Swift test | `evidenceGraphErrorsHaveCopy` | One code, same shape |
+| `TestObservationsStayInOneGraph` *(new)* | Go test | `TestObservations` table | Its own fixture (two graphs, two Sources); `TestObservations`'s `mustSeed` has one graph |
+| `errorCodesHaveCopy` (renamed from `evidenceGraphErrorsHaveCopy`) | Swift test | itself | One row added; the next code is one row |
 
-**Builds on.** `evidencegraphs` membership reads (S12-03), `evidencegraphs.Create` / `Unlink` (S12-04), the `apperr` → `L10n.Errors.message(code:)` path (S12-05), `.cursor/rules/go-tests.mdc` tables.
-**Deletes.** `observations.requireSubjectSource`; the two `SourceID` checks in `connect.CreateCitedBridge`; `connect.CreateInput.SourceID` and its `SourceID:` line in each of the 30 literals; the handler's `source_id` parse; `citations.SourceIDTx`; the comment "Value subjects are not checked".
-**Next adds.** S12-08 makes `subjects.CreateInput.GraphID` required, drops `SoleGraphTx` from `InsertTx`, and removes `CreateCitedBridgeRequest.source_id`. S12-10's composer filter and S12-13's link checkboxes rely on this check as their backstop.
+**Builds on.** `evidencegraphs` membership reads (S12-03), `evidencegraphs.Create` / `Unlink` (S12-04), `subjectvocab` roles, the `apperr` → `L10n.Errors.message(code:)` path (S12-05), `.cursor/rules/go-tests.mdc` tables.
+**Deletes.** `observations.requireSubjectSource`; `observations.sqlSubjectExists`; the two `SourceID` checks in `connect.CreateCitedBridge`; `connect.CreateInput.SourceID` and its `SourceID:` line in every literal; the handler's `source_id` parse; `citations.SourceIDTx`; the comment "Value subjects are not checked"; the inline graph create in `deleteimpact/impact_test.go`.
+**Next adds.** S12-08 makes `subjects.CreateInput.GraphID` required, drops `SoleGraphTx` from `InsertTx`, and removes `CreateCitedBridgeRequest.source_id` without adding a graph id. S12-10's composer filter and S12-13's link checkboxes rely on this check as their backstop. S12-10 to S12-13 tests reuse `evidencegraphstest.Create`.
 
 ### Schema
 
@@ -168,26 +178,25 @@ None — no catalog change. `subjects_graph_id_idx` and the composite FK exist (
 | Package | Change |
 | --- | --- |
 | `core/apperr` | `CodeObservationsOtherGraph = "observations.other_graph"` *(new)*, beside `CodeObservationsInUse` |
-| `core/database/observations` | `ErrOtherGraph` *(new)*. `requireSameGraph` *(new)* per D-2 / D-3, called per D-4. Delete `requireSubjectSource`. Imports `evidencegraphs` and `vocabkey` |
-| `core/database/subjects` | `CreateInput.GraphID` *(new)* per D-5, in `InsertTx` and `Create`'s length checks |
+| `core/database/observations` | `ErrOtherGraph` *(new)*. `requireSameGraph` *(new)* per D-2 / D-3, called per D-4. `sqlSubjectTypeKey` selects `t.key, t.origin`. Delete `requireSubjectSource` and `sqlSubjectExists`. New imports: `evidencegraphs`, `subjectvocab`, `vocabkey` |
+| `core/database/subjects` | `CreateInput.GraphID` *(new)* per D-5 |
+| `core/database/evidencegraphs/evidencegraphstest` | `Create` *(new)* per D-9 |
 | `core/database/connect` | Per D-6 |
 | `core/database/citations` | Delete `SourceIDTx` (D-7) |
-| `core/database/canonicalgraph` | `sqlSourceSelect` join per D-8; update the comment above it to say "one graph" |
+| `core/database/canonicalgraph` | `sqlSourceSelect` join per D-8; the comment above it says "one graph" |
 | `api/ffi/handlers` | `connect.go`: drop the `sourceID` parse and field (D-6) |
 
 ```go
 // requireSameGraph refuses an Observation whose Subject, Subject value, or
 // Citation Artifact is not in, or linked to, the Subject's Evidence graph.
-// A source-typed Subject value may be in any graph.
-func requireSameGraph(tx *sql.Tx, citationID, subjectID, valueSubjectID []byte) error
+// A product reification (a source Subject) may be the value of a non-edge
+// row in any graph.
+func requireSameGraph(tx *sql.Tx, citationID, subjectID, valueSubjectID []byte, edge bool) error
 
 const sqlCitationArtifact = `SELECT artifact_id FROM citations WHERE id = ?`
-const sqlValueSubjectGraph = `SELECT s.graph_id, t.key = 'source' AND t.origin = ?
-	FROM subjects s JOIN subject_types t ON t.id = s.subject_type_id
-	WHERE s.id = ?` // arg: vocabkey.OriginProvenencia
 ```
 
-Errors: `observations.other_graph` (user) → Subject not in the Citation Artifact's graphs, or Subject value in another graph (D-3 aside). `observations.invalid` → the Subject, Citation or Subject value does not exist (as today).
+Errors: `observations.other_graph` (user) → the Subject is not in a graph linked to the Citation's Artifact, or the Subject value is in another graph (D-3 aside). `observations.invalid` → the Subject, Citation or Subject value does not exist (as today).
 
 ### FFI
 
@@ -208,20 +217,20 @@ Files: `core/apperr/apperr.go`, `core/database/observations/observations.go`.
 Do: add `CodeObservationsOtherGraph` and `ErrOtherGraph` (D-1).
 Check: `CGO_ENABLED=1 go build ./...` passes.
 
-**STEP-2 — `requireSameGraph`**
-Files: `observations.go`, `update.go`, `observations_test.go`. Skill: `add-catalog-query`.
-Do: add `requireSameGraph`, `sqlCitationArtifact` and `sqlValueSubjectGraph` (D-2, D-3). In `insertOne` and `updateOne`, remove the `requireSubjectSource` call and call `requireSameGraph` right after `resolveValue` (D-4). Delete `requireSubjectSource`. Add `TestRequireSameGraph` (T-1). Its fixture uses STEP-3's `GraphID`, so write the test file first and land it with STEP-3.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/observations/...` passes after STEP-3.
+**STEP-2 — Subject into a given graph; graph fixture**
+Files: `core/database/subjects/subjects.go`, `subjects_test.go`, `core/database/evidencegraphs/evidencegraphstest/evidencegraphstest.go`, `core/database/deleteimpact/impact_test.go`.
+Do: `CreateInput.GraphID` per D-5; record `graph_id` from the graph used. Add `evidencegraphstest.Create` (D-9) and move the `jones` create in `impact_test.go` onto it. Add T-4.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/subjects/... ./core/database/deleteimpact/...` passes.
 
-**STEP-3 — Subject into a given graph**
-Files: `core/database/subjects/subjects.go`, `subjects_test.go`.
-Do: `CreateInput.GraphID` per D-5; record `graph_id` from the graph used. Add T-4.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/subjects/... ./core/database/observations/...` passes.
+**STEP-3 — `requireSameGraph`**
+Files: `observations.go`, `update.go`, `write.go`, `observations_test.go`. Skill: `add-catalog-query`.
+Do: add `requireSameGraph` and `sqlCitationArtifact` (D-2, D-3); extend `sqlSubjectTypeKey` and its two scans. In `insertOne` and `updateOne`, remove the `requireSubjectSource` call and call `requireSameGraph` right after `resolveValue` (D-4). Delete `requireSubjectSource` and `sqlSubjectExists`. Add T-1.
+Check: `rg -n 'requireSubjectSource|sqlSubjectExists' core` prints nothing. `CGO_ENABLED=1 go test -tags fts5 ./core/database/observations/...` passes.
 
 **STEP-4 — Connect relies on the check**
-Files: `core/database/connect/connect.go`, `connect_test.go`, `api/ffi/handlers/connect.go`, `core/database/citations/citations.go`, every file `rg -l 'connect.CreateInput\{'` lists, and `connect_test.go`.
+Files: `core/database/connect/connect.go`, `connect_test.go`, `api/ffi/handlers/connect.go`, `core/database/citations/citations.go`, every file `rg -l 'connect.CreateInput\{'` lists.
 Do: D-6 and D-7. Add T-2 subtests.
-Check: `rg -n 'SourceIDTx|requireSubjectSource' core api` prints nothing. `CGO_ENABLED=1 go test -tags fts5 ./core/... ./api/...` passes.
+Check: `rg -n 'SourceIDTx' core api` prints nothing. `CGO_ENABLED=1 go test -tags fts5 ./core/... ./api/...` passes.
 
 **STEP-5 — Walk joins on graph**
 Files: `core/database/canonicalgraph/canonicalgraph.go`, `canonicalgraph_test.go`.
@@ -230,32 +239,38 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/canonicalgraph/... ./co
 
 **STEP-6 — Copy**
 Files: `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `macos/ProvenenciaTests/L10nResolutionTests.swift`. Skills: `add-localized-string`, `add-swift-test`.
-Do: per Strings. Add T-5.
+Do: per Strings. Rename `evidenceGraphErrorsHaveCopy` to `errorCodesHaveCopy` and add the `observations.other_graph` row (T-5).
 Check: `python3 scripts/check-localizable-xcstrings.py` passes; the Xcode test run in `scripts/check-pr.sh` passes `L10nResolutionTests`.
 
 **STEP-7 — Full check**
 Files: none new.
-Do: run the repo check.
+Do: run the repo check. On a host without Xcode, run `gofmt -l`, `go vet ./...`, `CGO_ENABLED=1 go test -tags fts5 ./...`, `python3 scripts/check-localizable-xcstrings.py` and `python3 scripts/check-plan-docs.py`, and report the Xcode boxes as not run, for the user to run.
 Check: `scripts/check-pr.sh` prints `check-pr: PASS`.
 
 **STEP-8 — Docs**
-Files: `docs/interpretation-layer-data-model.md`, `docs/deployment-plan/spike-12/completed.md`, `docs/deployment-plan/spike-12/deployment-plan.md` (map row, S12-08 scope entry), this plan (status, Landed note).
-Do: in `interpretation-layer-data-model.md`, change the `source_id` paragraph and invariant 3 to say an Observation's Subject, Subject value and Citation Artifact share one Evidence graph, except a `source`-typed Subject value. Name `observations.requireSameGraph`. Add an invariant for it after invariant 16. Change the `graph_id` paragraph: `subjects.Create` takes `CreateInput.GraphID` when given, else `SoleGraphTx`. In the S12-08 scope entry, add "makes `subjects.CreateInput.GraphID` (S12-06) required and removes `CreateCitedBridgeRequest.source_id`". Then do the rest of the Definition of done.
+Files: `docs/interpretation-layer-data-model.md`, `docs/source-layer-data-model.md`, `docs/deployment-plan/spike-12/completed.md`, `docs/deployment-plan/spike-12/deployment-plan.md` (map row, S12-08 scope entry, working rule "Each PR updates the docs and skills it makes false"), this plan (status, Landed note).
+Do:
+- `interpretation-layer-data-model.md`: the subjects `source_id` paragraph and invariant 3 say an Observation's Subject, Subject value and Citation Artifact share one Evidence graph, except a reification Subject value on a non-edge row; name `observations.requireSameGraph`. Append invariant 24 with the same rule (no renumbering). The `graph_id` paragraph says `subjects.Create` takes `CreateInput.GraphID` when given, else `SoleGraphTx`.
+- `source-layer-data-model.md` § 7.1: rewrite the `SoleGraphTx` bullet the same way, and add one bullet for isolation pointing to `observations.requireSameGraph` and `observations.other_graph`.
+- `deployment-plan.md`: the S12-08 scope entry's "cited-bridge RPCs take a graph id" becomes "`CreateCitedBridgeRequest` drops `source_id` and takes no graph id (the bridge's graph comes from its endpoints, S12-06)", and it adds "makes `subjects.CreateInput.GraphID` (S12-06) required". The working rule's S12-06 line names both docs.
+- Then the rest of the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-12/prs/S12-06-graph-isolation.md` reports no errors; links resolve.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
 
 ## 8. Tests
 
+**T-1 fixture recipe.** One function inside the test builds the §2 fixture, in this order: `database.Create(t.TempDir(), …)`, `users.Upsert`, `subjectvocab.Install`, a source type through `sourcetypes.Upsert` (as `canonicalgraph_test.go` `newFixture` does). Sources Census and Book through `sources.Create`. Artifacts P1, P2 (Census) and B1 (Book) through `artifacts.Create`, each with no `GraphIDs`, so both link to their Source's Default. `evidencegraphstest.Create(…, census.ID, "Jones", P2.ID)`, then `evidencegraphs.Unlink(Default, P2)` inside `writes.Call`. Subjects through `subjects.Create`: Ann, Wed, Part, Rec with Census's Default id as `GraphID`; Ben with Jones's id; Cert and Cal with no `GraphID` on Book. Type ids by `subjecttypes.Lookup`, Property ids by `properties.Lookup` (`name`, `person`, `mentions`), all with `vocabkey.OriginProvenencia`. Each case writes once: `writes.Call(… "create_citation_with_observations" …)` → `citations.InsertWithObservationsTx(tx.Tx, citations.CreateInput{ArtifactID: …, LocatorJSON: validLocator}, obs, observations.InsertOptions{AllowEdgeRows: edge})`, where `edge` is true only for AC-1.5, AC-1.6 and AC-1.11. "No row left" means `citations` and `observations` row counts are as before the call. AC-1.9 and AC-1.10 save AC-1.1's row first, then call `observationstest.UpdateObservation` and re-read the row.
+
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/database/observations/observations_test.go` `TestRequireSameGraph` *(new)*, table-driven over the §2 fixture | Each AC-1.x row → saved, or `errors.Is(err, observations.ErrOtherGraph)` with no Citation or Observation row left. AC-1.5 – AC-1.8 insert through `observations.InsertManyTx` with `AllowEdgeRows: true` inside `writes.Call`. AC-1.9 / AC-1.10 use `observationstest.UpdateObservation` and re-read the row | AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, AC-1.8, AC-1.9, AC-1.10, D-2, D-3, D-4 |
-| T-2 | Go | `core/database/connect/connect_test.go` `TestCreateCitedBridge`: subtests "bridge joins its endpoints' graph", "endpoints in two graphs refused", "attached citation on an unlinked artifact refused" *(new)* | AC-2.1 → `Subject.GraphID` is Jones; AC-2.2 → `ErrOtherGraph` and `countBridges` unchanged; AC-2.3 → `ErrOtherGraph`. Existing subtests stay green | AC-2.1, AC-2.2, AC-2.3, AC-2.4, D-6 |
-| T-3 | Go | `core/database/canonicalgraph/canonicalgraph_test.go` `TestWalkSource`: subtest "a Subject in another graph is not reached" *(new)* | Second graph made with `evidencegraphs.Create`, York moved into it by `UPDATE subjects SET graph_id`, `PlacesOfEvent` from Birth → 0 edges. Existing index subtest green | AC-3.1, AC-3.2, D-8 |
-| T-4 | Go | `core/database/subjects/subjects_test.go` `TestSubjects`: cases "graph id given", "graph of another source", "graph id wrong length" *(new)* | A second graph of the Source → `Subject.GraphID` equals it; another Source's graph → `subjects.ErrInvalid`; 3 bytes → `ErrInvalid` | D-5 |
-| T-5 | Swift | `macos/ProvenenciaTests/L10nResolutionTests.swift` `observationsOtherGraphHasCopy` *(new)* | `message(code: "observations.other_graph")` equals the D-1 sentence and is not the unknown copy | AC-4.1, D-1 |
+| T-1 | Go | `core/database/observations/observations_test.go` `TestObservationsStayInOneGraph` *(new)*, table-driven over the recipe above | Each AC-1.x row → saved, or `errors.Is(err, observations.ErrOtherGraph)` with no row left | AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, AC-1.8, AC-1.9, AC-1.10, AC-1.11, D-2, D-3, D-4 |
+| T-2 | Go | `core/database/connect/connect_test.go` `TestCreateCitedBridge`: subtests "bridge joins its endpoints' graph", "endpoints in two graphs refused", "attached citation on an unlinked artifact refused" *(new)*. Each starts from `mustSeed`, adds Artifact P2, `evidencegraphstest.Create(…, "Jones", P2)`, unlinks P2 from Default, and creates Jones Subjects with `GraphID` and placements | AC-2.1 → `Subject.GraphID` is Jones; AC-2.2 → `ErrOtherGraph` and `countBridges` unchanged; AC-2.3 → `ErrOtherGraph`. Existing subtests stay green | AC-2.1, AC-2.2, AC-2.3, AC-2.4, D-6 |
+| T-3 | Go | `core/database/canonicalgraph/canonicalgraph_test.go` `TestWalkSource`: subtest "a Subject in another graph is not reached" *(new)* | `evidencegraphstest.Create(…, f.src.ID, "Second", f.art.ID)`, York moved into it by `UPDATE subjects SET graph_id = ? WHERE id = ?`, `PlacesOfEvent` from Birth → 0 edges. Existing index subtest green | AC-3.1, AC-3.2, D-8 |
+| T-4 | Go | `core/database/subjects/subjects_test.go` `TestSubjects`: cases "graph id given", "graph of another source", "graph id wrong length" *(new)* | A second graph of the Source → `Subject.GraphID` equals it and the audit row's `graph_id` matches; another Source's graph → `subjects.ErrInvalid`; 3 bytes → `ErrInvalid` | D-5 |
+| T-5 | Swift | `macos/ProvenenciaTests/L10nResolutionTests.swift` `errorCodesHaveCopy` (renamed), new row | `message(code: "observations.other_graph")` equals the D-1 sentence and is not the unknown copy | AC-4.1, D-1 |
 
-Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: the tests that build cited bridges (`core/database/autoreconciler`, `core/database/effects`, `core/database/citations/delete_test.go`, `core/database/deleteimpact/impact_test.go`, `core/database/promotealign`, `core/database/sourceeventtitles`, `api/ffi/handlers/connect_test.go`), through the `SourceID` removal.
+Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: the tests that build cited bridges (`core/database/autoreconciler`, `core/database/effects`, `core/search`, `core/database/citations/delete_test.go`, `core/database/deleteimpact/impact_test.go`, `core/database/promotealign`, `core/database/sourceeventtitles`, `api/ffi/handlers/connect_test.go`), through the `SourceID` removal.
 
 ## 9. Definition of done
 
@@ -270,7 +285,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: th
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated) — n/a, no brief
-- [ ] Domain doc updated if a rule in docs/*.md changed: interpretation-layer-data-model.md (STEP-8); S12-08 scope entry in deployment-plan.md
+- [ ] Domain doc updated if a rule in docs/*.md changed: interpretation-layer-data-model.md, source-layer-data-model.md § 7.1, and the S12-08 scope entry and working rule in deployment-plan.md (STEP-8)
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 
@@ -285,18 +300,19 @@ Two-graph refusals cannot be reached from the app until slice 4. T-1 to T-3 cove
 
 | Risk | Mitigation |
 | --- | --- |
-| R-1. A caller saves Observations whose Subject value is in another Source today, and it starts failing | Every Source has one graph, so this only refuses rows that already crossed Sources. `rg 'ValueSubjectID' core api --glob '!*_test.go'` callers are the composer, Connect and Promote. Promote writes no Observations |
+| R-1. A writer saves Observations whose Subject value is in another Source today, and it starts failing | Every Source has one graph, so this only refuses rows that already crossed Sources. The writers are the ones §4 "Observation writers" lists: the composer and observation handlers, Connect, and test helpers |
 | R-2. A stored row already crosses Sources and can no longer be updated | Accepted. The researcher deletes and re-records it. Not planned |
 | R-3. A test that builds a bridge across two Sources breaks | It now fails with `ErrOtherGraph`. Fix the fixture to use one Source; do not weaken the check |
 
 **Stop and report if:**
 
 - `requireSubjectSource` is called from anywhere other than `insertOne` and `updateOne`.
-- `observations` importing `evidencegraphs` creates an import cycle (`go build` reports `import cycle not allowed`).
+- `observations` importing `evidencegraphs` or `subjectvocab` creates an import cycle (`go build` reports `import cycle not allowed`).
 - Some code other than `connect.go` calls `citations.SourceIDTx`.
-- An existing test or caller writes a `mentions` value of a non-`source` type, or any other Subject value, across Sources on purpose (a fixture comment or doc says so).
+- An existing test or caller writes a Subject value across Sources on purpose (a fixture comment or doc says so), other than a non-edge `source`-typed value.
+- An existing test expects `observations.ErrInvalid` (or another code) for a write that now returns `ErrOtherGraph`.
 - The composite FK does not refuse a `GraphID` of another Source (T-4's second case saves a row).
-- `sqlSourceSelect` with the `graph_id` join shows a `SCAN` in T-3's index subtest.
+- `sqlSourceSelect` with the `graph_id` join shows a `SCAN` in the index subtest.
 
 ## 12. Open questions
 
