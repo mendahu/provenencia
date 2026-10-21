@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/matchregistry"
@@ -31,7 +32,8 @@ type EvidenceRequest struct {
 // the graph cache, and runs no alignment; the decisions are
 // claimevidence.Build's. An unknown Source, a row Subject that is not a primary
 // Subject on it, an empty row handle, or a row or neighbor handle that is
-// missing, merged or of another kind is promote.ErrInvalid.
+// missing, merged or of another kind, or more neighbors than the Source has
+// primary Subjects, is promote.ErrInvalid.
 func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence, error) {
 	in, err := loadInputs(c, req.SourceID)
 	if err != nil {
@@ -40,6 +42,9 @@ func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence,
 	row, err := checkFixed(in.q, in.primary, graphalign.Fixed{SubjectID: req.SubjectID, HandleID: req.HandleID})
 	if err != nil {
 		return claimevidence.Evidence{}, err
+	}
+	if len(req.Neighbors) > len(in.primary) {
+		return claimevidence.Evidence{}, promote.ErrInvalid
 	}
 	placed := map[string][]byte{} // layer neighbor → its handle
 	var order [][]byte

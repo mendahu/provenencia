@@ -152,6 +152,8 @@ func TestEvidenceInvalidRequest(t *testing.T) {
 			Neighbors: []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: missing}}}},
 		{"a neighbor handle of another kind", promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: b.ID, HandleID: handle,
 			Neighbors: []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: handle}}}},
+		{"more neighbors than primary Subjects", promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: b.ID, HandleID: handle,
+			Neighbors: []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: birthHandle}, {SubjectID: bBirth.ID, HandleID: birthHandle}, {SubjectID: bBirth.ID, HandleID: birthHandle}}}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if _, err := promotealign.Evidence(f.c, tc.req); !errors.Is(err, promote.ErrInvalid) {
