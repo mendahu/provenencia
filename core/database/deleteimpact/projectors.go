@@ -39,6 +39,8 @@ func projectKind(tx *sql.Tx, kind catalogmodel.Kind, row probeRow) (string, Loca
 		return projectArtifact(tx, row.ID, row.Ref)
 	case catalogmodel.KindSource:
 		return projectSource(tx, row.ID, row.Ref)
+	case catalogmodel.KindEvidenceGraph:
+		return projectEvidenceGraph(tx, row.ID, row.Ref)
 	case catalogmodel.KindSourceType:
 		return projectVocab(tx, `SELECT label FROM source_types WHERE id = ?`, row.ID, row.Ref, Location{
 			Section: sectionSourceTypes, TypeID: database.UUIDString(row.ID),
@@ -137,10 +139,7 @@ func projectSubject(tx *sql.Tx, id []byte, ref string) (string, Location, error)
 	if err != nil {
 		return "", Location{}, err
 	}
-	title := strings.TrimSpace(label)
-	if title == "" {
-		title = ref
-	}
+	title := titleOrRef(label, ref)
 	return title, Location{
 		Section:       sectionSources,
 		SourceID:      database.UUIDString(srcID),
@@ -226,10 +225,7 @@ func projectArtifact(tx *sql.Tx, id []byte, ref string) (string, Location, error
 	if err != nil {
 		return "", Location{}, err
 	}
-	title := strings.TrimSpace(label.String)
-	if title == "" {
-		title = ref
-	}
+	title := titleOrRef(label.String, ref)
 	return title, Location{
 		Section:       sectionSources,
 		SourceID:      database.UUIDString(srcID),
@@ -249,16 +245,35 @@ func projectSource(tx *sql.Tx, id []byte, ref string) (string, Location, error) 
 	if err != nil {
 		return "", Location{}, err
 	}
-	label := strings.TrimSpace(title.String)
-	if label == "" {
-		label = ref
-	}
+	label := titleOrRef(title.String, ref)
 	return label, Location{
 		Section:       sectionSources,
 		SourceID:      database.UUIDString(id),
 		SourceSurface: surfacePage,
 		Ref:           ref,
 		Title:         label,
+	}, nil
+}
+
+// projectEvidenceGraph opens the graph's Source page: a graph is not a place
+// of its own until S12-08.
+func projectEvidenceGraph(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
+	var name string
+	var sourceID []byte
+	err := tx.QueryRow(`SELECT name, source_id FROM evidence_graphs WHERE id = ?`, id).Scan(&name, &sourceID)
+	if err == sql.ErrNoRows {
+		return ref, Location{Section: sectionSources, SourceSurface: surfacePage, Ref: ref}, nil
+	}
+	if err != nil {
+		return "", Location{}, err
+	}
+	title := titleOrRef(name, ref)
+	return title, Location{
+		Section:       sectionSources,
+		SourceID:      database.UUIDString(sourceID),
+		SourceSurface: surfacePage,
+		Ref:           ref,
+		Title:         title,
 	}, nil
 }
 
@@ -270,11 +285,11 @@ func projectPropertyTerm(tx *sql.Tx, id []byte, ref string) (string, Location, e
 	if err != nil && err != sql.ErrNoRows {
 		return "", Location{}, err
 	}
-	return vocabTitle(label.String, ref), Location{
+	return titleOrRef(label.String, ref), Location{
 		Section:    sectionProperties,
 		PropertyID: database.UUIDString(propID),
 		Ref:        ref,
-		Title:      vocabTitle(label.String, ref),
+		Title:      titleOrRef(label.String, ref),
 	}, nil
 }
 
@@ -285,15 +300,15 @@ func projectSubjectType(tx *sql.Tx, id []byte, ref string) (string, Location, er
 	if err != nil && err != sql.ErrNoRows {
 		return "", Location{}, err
 	}
-	return vocabTitle(label.String, ref), Location{
+	return titleOrRef(label.String, ref), Location{
 		Section:        sectionProperties,
 		SubjectTypeKey: key.String,
 		Ref:            ref,
-		Title:          vocabTitle(label.String, ref),
+		Title:          titleOrRef(label.String, ref),
 	}, nil
 }
 
-func vocabTitle(label, ref string) string {
+func titleOrRef(label, ref string) string {
 	if title := strings.TrimSpace(label); title != "" {
 		return title
 	}
@@ -306,7 +321,7 @@ func projectVocab(tx *sql.Tx, q string, id []byte, ref string, loc Location) (st
 	if err != nil && err != sql.ErrNoRows {
 		return "", Location{}, err
 	}
-	title := vocabTitle(label.String, ref)
+	title := titleOrRef(label.String, ref)
 	loc.Ref = ref
 	loc.Title = title
 	return title, loc, nil

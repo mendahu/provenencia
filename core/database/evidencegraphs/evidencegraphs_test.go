@@ -12,7 +12,9 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -1011,6 +1013,140 @@ func TestUpdate(t *testing.T) {
 		got := graphByID(t, g.c, src.ID, graph)
 		if got.Name != evidencegraphs.DefaultName || len(got.ArtifactIDs) != 2 {
 			t.Fatalf("graph %+v", got)
+		}
+	})
+}
+
+func (f fixture) deleteGraph(t *testing.T, graphID []byte) ([]rowchange.Change, error) {
+	t.Helper()
+	return run(t, f.c, func(tx *database.Tx) ([]rowchange.Change, error) {
+		return evidencegraphs.Delete(tx, userID, graphID)
+	})
+}
+
+func graphImpact(t *testing.T, c *database.Catalog, graphID []byte) deleteimpact.Report {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := deleteimpact.Snapshot(db, catalogmodel.KindEvidenceGraph, graphID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return report
+}
+
+func TestDelete(t *testing.T) {
+	unknown := make([]byte, 16)
+	unknown[0] = 9
+
+	t.Run("an empty graph that is not the last", func(t *testing.T) {
+		f := newFixture(t)
+		s, _ := f.createSource(t, "Census 1881")
+		def := evidencegraphstest.SoleGraph(t, f.c, s.ID)
+		a1 := f.newArtifact(t, s, "Page 1")
+		f.link(t, def.ID, a1)
+		jones, _, err := f.createGraph(t, evidencegraphs.CreateInput{SourceID: s.ID, Name: "Jones", Description: "Pages 4", ArtifactIDs: [][]byte{a1}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if report := graphImpact(t, f.c, jones.ID); !report.Allowed || report.Gate != deleteimpact.GateOK || len(report.Groups) != 0 {
+			t.Fatalf("impact %+v", report)
+		}
+		ch, err := f.deleteGraph(t, jones.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := []string{"evidence_graph_artifact delete", "evidence_graph delete"}; !reflect.DeepEqual(changeKinds(ch), want) {
+			t.Fatalf("changes %v", changeKinds(ch))
+		}
+		fields := ch[1].Fields
+		for _, key := range []string{"id", "ref", "source_id", "name", "description"} {
+			if _, ok := fields[key]; !ok {
+				t.Fatalf("delete change lacks %q: %+v", key, fields)
+			}
+		}
+		if len(fields) != 5 || fields["name"].Old != "Jones" || fields["description"].Old != "Pages 4" || fields["ref"].Old != jones.Ref {
+			t.Fatalf("fields %+v", fields)
+		}
+		if got := mustList(t, f.c, s.ID); len(got) != 1 || !bytes.Equal(got[0].ID, def.ID) || len(got[0].ArtifactIDs) != 1 {
+			t.Fatalf("graphs %+v", got)
+		}
+		if linkedArtifacts(t, f.c, jones.ID) != 0 {
+			t.Fatal("links stayed")
+		}
+	})
+
+	t.Run("a Source's last graph", func(t *testing.T) {
+		f := newFixture(t)
+		s, _ := f.createSource(t, "Census 1881")
+		def := evidencegraphstest.SoleGraph(t, f.c, s.ID)
+		a1 := f.newArtifact(t, s, "Page 1")
+		f.link(t, def.ID, a1)
+		check := func(t *testing.T) {
+			t.Helper()
+			if _, err := f.deleteGraph(t, def.ID); !errors.Is(err, evidencegraphs.ErrLastGraph) {
+				t.Fatalf("got %v", err)
+			}
+			if got := mustList(t, f.c, s.ID); len(got) != 1 || len(got[0].ArtifactIDs) != 1 {
+				t.Fatalf("graphs %+v", got)
+			}
+			if report := graphImpact(t, f.c, def.ID); report.Allowed || report.Gate != deleteimpact.GateLastGraph || len(report.Groups) != 0 {
+				t.Fatalf("impact %+v", report)
+			}
+		}
+		t.Run("without Subjects", check)
+		f.subjectAndCitation(t, s, a1)
+		t.Run("with a Subject", check)
+	})
+
+	t.Run("a graph with Subjects", func(t *testing.T) {
+		f := newFixture(t)
+		s, _ := f.createSource(t, "Census 1881")
+		def := evidencegraphstest.SoleGraph(t, f.c, s.ID)
+		a1 := f.newArtifact(t, s, "Page 1")
+		f.link(t, def.ID, a1)
+		subject, _ := f.subjectAndCitation(t, s, a1)
+		if _, _, err := f.createGraph(t, evidencegraphs.CreateInput{SourceID: s.ID, Name: "Jones", ArtifactIDs: [][]byte{a1}}); err != nil {
+			t.Fatal(err)
+		}
+		_, err := f.deleteGraph(t, def.ID)
+		if !errors.Is(err, evidencegraphs.ErrInUse) {
+			t.Fatalf("got %v", err)
+		}
+		var ae *apperr.Error
+		if !errors.As(err, &ae) || ae.Kind() != apperr.KindConflict || len(ae.Params()) != 0 {
+			t.Fatalf("refusal %v", err)
+		}
+		if got := mustList(t, f.c, s.ID); len(got) != 2 {
+			t.Fatalf("graphs %+v", got)
+		}
+		report := graphImpact(t, f.c, def.ID)
+		if report.Allowed || report.Gate != deleteimpact.GateInbound || len(report.Groups) != 1 ||
+			report.Groups[0].Via != "subjects.graph_id" || report.Groups[0].Total != 1 ||
+			len(report.Groups[0].Listed) != 1 || report.Groups[0].Listed[0].Ref != subject.Ref {
+			t.Fatalf("impact %+v", report)
+		}
+	})
+
+	t.Run("bad input", func(t *testing.T) {
+		f := newFixture(t)
+		s, _ := f.createSource(t, "Census 1881")
+		def := evidencegraphstest.SoleGraph(t, f.c, s.ID)
+		for name, id := range map[string][]byte{"unknown": unknown, "short": def.ID[:15]} {
+			if _, err := f.deleteGraph(t, id); !errors.Is(err, evidencegraphs.ErrInvalid) {
+				t.Fatalf("%s: got %v", name, err)
+			}
+		}
+		_, err := run(t, f.c, func(tx *database.Tx) ([]rowchange.Change, error) {
+			return evidencegraphs.Delete(tx, nil, def.ID)
+		})
+		if !errors.Is(err, evidencegraphs.ErrInvalid) {
+			t.Fatalf("empty user: got %v", err)
+		}
+		if report := graphImpact(t, f.c, unknown); report.Gate != deleteimpact.GateNotFound {
+			t.Fatalf("impact %+v", report)
 		}
 	})
 }

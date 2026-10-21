@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -777,6 +778,90 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 		}
 		if got.Groups[0].Listed[0].Ref != sub.Ref {
 			t.Fatalf("listed %+v", got.Groups[0].Listed)
+		}
+	})
+}
+
+func TestImpactEvidenceGraph(t *testing.T) {
+	c, userID := testCatalog(t)
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sub, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{
+			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
+		}, nil)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	graphs, err := evidencegraphs.List(c, src.ID)
+	if err != nil || len(graphs) != 1 {
+		t.Fatalf("graphs %v %v", graphs, err)
+	}
+	def := graphs[0]
+
+	t.Run("a Source's only graph is last_graph", func(t *testing.T) {
+		got := mustImpact(t, c, catalogmodel.KindEvidenceGraph, def.ID)
+		if got.Allowed || got.Gate != deleteimpact.GateLastGraph || len(got.Groups) != 0 {
+			t.Fatalf("%+v", got)
+		}
+	})
+
+	jones, err := writes.Call(c, writes.Op{Action: "create_evidence_graph", UserID: userID}, func(tx *database.Tx) (evidencegraphs.Graph, []rowchange.Change, error) {
+		return evidencegraphs.Create(tx, userID, evidencegraphs.CreateInput{
+			SourceID: src.ID, Name: "Jones", ArtifactIDs: [][]byte{art.ID},
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("a graph with Subjects is blocked by them", func(t *testing.T) {
+		got := mustImpact(t, c, catalogmodel.KindEvidenceGraph, def.ID)
+		if got.Allowed || got.Gate != deleteimpact.GateInbound {
+			t.Fatalf("%+v", got)
+		}
+		if len(got.Groups) != 1 || got.Groups[0].Via != "subjects.graph_id" || got.Groups[0].Total != 1 {
+			t.Fatalf("groups %+v", got.Groups)
+		}
+		listed := got.Groups[0].Listed
+		if len(listed) != 1 || listed[0].Ref != sub.Ref || listed[0].Location.Section == "" {
+			t.Fatalf("listed %+v", listed)
+		}
+	})
+
+	t.Run("an empty second graph is allowed", func(t *testing.T) {
+		got := mustImpact(t, c, catalogmodel.KindEvidenceGraph, jones.ID)
+		if !got.Allowed || got.Gate != deleteimpact.GateOK || len(got.Groups) != 0 {
+			t.Fatalf("%+v", got)
+		}
+	})
+
+	t.Run("unknown graph", func(t *testing.T) {
+		got := mustImpact(t, c, catalogmodel.KindEvidenceGraph, fakeID(t))
+		if got.Allowed || got.Gate != deleteimpact.GateNotFound {
+			t.Fatalf("%+v", got)
 		}
 	})
 }

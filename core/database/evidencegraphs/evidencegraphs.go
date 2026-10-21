@@ -11,6 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -42,6 +44,7 @@ const (
 
 	sqlGet = `SELECT id, COALESCE(ref, ''), source_id, name, COALESCE(description, '')
 		FROM evidence_graphs WHERE id = ?`
+	sqlDelete = `DELETE FROM evidence_graphs WHERE id = ?`
 	sqlUpdate = `UPDATE evidence_graphs SET name = ?, description = ? WHERE id = ?`
 
 	sqlSubjectGraph = `SELECT graph_id FROM subjects WHERE id = ?`
@@ -182,6 +185,47 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Graph, []rowchange.
 		g.ArtifactIDs = append(g.ArtifactIDs, append([]byte(nil), id...))
 	}
 	return g, changes, nil
+}
+
+// Delete deletes a graph that is not its Source's last and has no Subjects,
+// releasing its links. Deleteimpact's report decides, so the delete preview and
+// this write agree.
+func Delete(tx *database.Tx, userID, graphID []byte) ([]rowchange.Change, error) {
+	if tx == nil || len(graphID) != 16 {
+		return nil, ErrInvalid
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return nil, err
+	}
+	g, err := getTx(tx.Tx, graphID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrInvalid
+	}
+	if err != nil {
+		return nil, err
+	}
+	report, err := deleteimpact.Impact(tx.Tx, catalogmodel.KindEvidenceGraph, graphID)
+	if err != nil {
+		return nil, err
+	}
+	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
+		InUse: ErrInUse, LastGraph: ErrLastGraph, NotFound: ErrInvalid,
+	}); err != nil {
+		return nil, err
+	}
+	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindEvidenceGraph, graphID)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(sqlDelete, graphID); err != nil {
+		return nil, err
+	}
+	return append(released, rowchange.Change{
+		EntityType: "evidence_graph",
+		EntityID:   append([]byte(nil), graphID...),
+		Action:     rowchange.ActionDelete,
+		Fields:     rowchange.DeletedRow(graphFields(g)),
+	}), nil
 }
 
 // UpdateInput is the input of Update.
@@ -332,25 +376,31 @@ func insert(tx *sql.Tx, sourceID []byte, name, description string) (Graph, rowch
 		return Graph{}, rowchange.Change{}, mapConstraint(err)
 	}
 
-	change := rowchange.Change{
-		EntityType: "evidence_graph",
-		EntityID:   append([]byte(nil), idBytes...),
-		Action:     rowchange.ActionCreate,
-		Fields: rowchange.FullRow(map[string]any{
-			"id":          id.String(),
-			"ref":         graphRef,
-			"source_id":   database.UUIDJSON(sourceID),
-			"name":        name,
-			"description": database.NullString(description),
-		}),
-	}
-	return Graph{
+	g := Graph{
 		ID:          append([]byte(nil), idBytes...),
 		Ref:         graphRef,
 		SourceID:    append([]byte(nil), sourceID...),
 		Name:        name,
 		Description: description,
-	}, change, nil
+	}
+	change := rowchange.Change{
+		EntityType: "evidence_graph",
+		EntityID:   append([]byte(nil), idBytes...),
+		Action:     rowchange.ActionCreate,
+		Fields:     rowchange.FullRow(graphFields(g)),
+	}
+	return g, change, nil
+}
+
+// graphFields is the audit field map of a graph row, for its create and delete.
+func graphFields(g Graph) map[string]any {
+	return map[string]any{
+		"id":          database.UUIDJSON(g.ID),
+		"ref":         database.NullString(g.Ref),
+		"source_id":   database.UUIDJSON(g.SourceID),
+		"name":        g.Name,
+		"description": database.NullString(g.Description),
+	}
 }
 
 // SoleGraphTx returns the id of the one graph of a Source.

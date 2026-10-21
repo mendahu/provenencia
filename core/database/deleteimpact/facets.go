@@ -194,6 +194,9 @@ func buildFacetReleases() []facetRelease {
 		// A link is audited under its graph's id, like the graph's own create.
 		rowFacet(catalogmodel.KindArtifact, "evidence_graph_artifacts", "artifact_id", "evidence_graph_artifact", "graph_id",
 			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
+		// A graph's links go with it, audited under its id.
+		rowFacet(catalogmodel.KindEvidenceGraph, "evidence_graph_artifacts", "graph_id", "evidence_graph_artifact", "graph_id",
+			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
 
 		// --- Source ---------------------------------------------------------
 		rowFacet(catalogmodel.KindSource, "source_notes", "source_id", "source_note", "id",
