@@ -88,4 +88,4 @@ Nits (logged): `MNT-9 · evidence.go:225-231 · members is a one-caller wrapper 
 No round-2 blockers; no Fix plan 2. `origin/main` unchanged since the branch was cut (`9ca7472e`).
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: PRF-3 (in S11-21 scope) · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: PRF-3 (in S11-21 scope) · to user: — · CON miss: none
