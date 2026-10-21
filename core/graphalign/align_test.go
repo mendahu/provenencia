@@ -1895,7 +1895,7 @@ func TestLifespanRulesOutAPerson(t *testing.T) {
 func TestGenderPoolsWithSex(t *testing.T) {
 	s, h := id("s-person"), id("h-person")
 	name, nv := nameProp("Mary Robins")
-	gp, gv := termProp("gender", "male")
+	gp, gv := termProp("gender", "man")
 	sp, sv := termProp("sex_at_birth", "male")
 	layer := graphalign.Layer{
 		Subjects: []graphalign.Subject{{ID: s, Ref: "PER-S", Kind: "person", Values: vals(name, nv, gp, gv)}},

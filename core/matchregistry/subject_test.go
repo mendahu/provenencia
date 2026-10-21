@@ -1,6 +1,7 @@
 package matchregistry
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -34,6 +35,11 @@ func TestSubjectSection(t *testing.T) {
 					t.Errorf("pooled property %s.%s has a Weights entry of its own", kind, with)
 				}
 				claim(kind, with, "pooled")
+			}
+			for with := range pool.Terms {
+				if !slices.Contains(pool.With, with) {
+					t.Errorf("pool %s.%s maps terms of %s, which it does not pool", kind, lead, with)
+				}
 			}
 		}
 	}

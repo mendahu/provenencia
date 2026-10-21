@@ -82,7 +82,7 @@ func TestEntityCompare(t *testing.T) {
 			subject: observed{sex: pos(term("female"))}, sim: 0, ev: -1,
 			check: sexResult(propertycompare.OutcomeConflict, propertycompare.CauseNegative)},
 		{name: "AC-3.4 the pool carries gender to the negative", kind: vocabkey.Person, entity: denied,
-			subject: observed{vocabkey.PropertyGender: pos(term("female"))}, sim: 0, ev: -1,
+			subject: observed{vocabkey.PropertyGender: pos(term("woman"))}, sim: 0, ev: -1,
 			check: sexResult(propertycompare.OutcomeConflict, propertycompare.CauseNegative)},
 		{name: "AC-3.5 a Subject recording another value is unknown", kind: vocabkey.Person, entity: denied,
 			subject: observed{sex: pos(term("male"))}, sim: 0, ev: 0,

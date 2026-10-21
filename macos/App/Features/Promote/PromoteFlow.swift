@@ -26,6 +26,11 @@ struct PromoteFlow: Equatable, Sendable {
             if case .handle(let id, _, _) = self { return id }
             return nil
         }
+
+        var handleRef: String? {
+            if case .handle(_, let ref, _) = self { return ref }
+            return nil
+        }
     }
 
     enum Assessment: String, Equatable, Sendable {
@@ -123,6 +128,8 @@ struct PromoteFlow: Equatable, Sendable {
     struct SelectionReadout: Equatable, Sendable {
         var assessment: Assessment
         var reason: Reason
+        /// The proposal says this pair conflicts somewhere; the page marks it beside the band.
+        var contested = false
     }
 
     struct Alternative: Equatable, Sendable, Identifiable {
@@ -169,8 +176,14 @@ struct PromoteFlow: Equatable, Sendable {
         var selectionReadout: SelectionReadout? {
             guard case .handle(let id, _, _) = target,
                   let alt = menu.first(where: { $0.id == id }) else { return nil }
-            return SelectionReadout(assessment: alt.assessment, reason: alt.reason)
+            return SelectionReadout(assessment: alt.assessment, reason: alt.reason, contested: contested)
         }
+
+        /// What the Updated caption words: the move when settling moved this row, else its reason.
+        var captionReason: Reason { move ?? reason }
+
+        /// The ref the page names this row by: its record's when it has one, else its Source ref.
+        var shownRef: String { target.handleRef ?? ref }
     }
 
     struct Bridge: Equatable, Sendable, Identifiable {
@@ -282,9 +295,15 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
+    /// The row for this Subject, or nil when it is not on the page.
+    func row(_ subjectID: String?) -> Row? {
+        guard let subjectID else { return nil }
+        return rows.first { $0.subjectID == subjectID }
+    }
+
     /// The handle a subject will be, or nil when it stays unfiled.
     private func resolve(_ subjectID: String?) -> String? {
-        guard let subjectID, let row = rows.first(where: { $0.subjectID == subjectID }) else { return nil }
+        guard let subjectID, let row = row(subjectID) else { return nil }
         if row.anchor { return row.target.handleID }
         if !mappedRest && subjectID != entryID { return nil }
         switch row.target {
@@ -321,11 +340,13 @@ struct PromoteFlow: Equatable, Sendable {
         guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }), !rows[index].anchor else { return false }
         let next = target(for: token, on: rows[index])
         if next != rows[index].target {
-            // The lines and pins compared the old target; the next proposal
-            // drafts them for this one.
+            // The lines, pins and contested flag compared the old target; the
+            // next proposal drafts them for this one.
             rows[index].target = next
             rows[index].comparisons = []
             rows[index].pins = []
+            rows[index].contested = false
+            rows[index].move = nil
             if !rows[index].argumentEdited { rows[index].argument = "" }
         }
         rows[index].decided = true
@@ -449,16 +470,16 @@ struct PromoteFlow: Equatable, Sendable {
         }
         for (_, indexes) in owners where indexes.count > 1 {
             for index in indexes {
-                guard case .handle(_, let ref, _) = rows[index].target else { continue }
+                guard let ref = rows[index].target.handleRef else { continue }
                 let other = indexes.first { $0 != index } ?? index
                 rows[index].duplicateNote = .sharesHandle(otherName: rows[other].name, ref: ref)
             }
         }
         for index in rows.indices where rows[index].duplicateNote == nil && !rows[index].anchor {
             guard let otherID = rows[index].proposedDuplicateOf,
-                  let other = rows.first(where: { $0.subjectID == otherID })
+                  let other = row(otherID)
             else { continue }
-            if case .handle(_, let ref, _) = other.target {
+            if let ref = other.target.handleRef {
                 rows[index].duplicateNote = .sharesHandle(otherName: other.name, ref: ref)
             } else if rows[index].target == .newKind, other.target == .newKind {
                 rows[index].duplicateNote = .alsoNew(otherName: other.name)

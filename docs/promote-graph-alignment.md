@@ -59,7 +59,8 @@ Every row is **suggested** (the machine filled it) or **decided**: the researche
 
 - **On open,** the only fixed points are the already-promoted rows; the clicked Subject's row is proposed like the rest.
 - **On any change,** that row becomes decided, and graph alignment re-runs over the whole page with every decided row held fixed. Suggested rows and their sheets are recomputed; decided rows are never touched. A row decided New or Skip is held too: it takes no handle and the walk doesn't pass through it.
-- **Rows whose suggestion changed** get a brief "updated" mark with the reason ("because Gracie → PER-Z").
+- **Rows whose suggestion changed** get a brief "updated" mark with the reason ("via Gracie → PER-Z"), or, when settling moved the row because of a neighbor, what that neighbor did ("after Gracie moved to PER-Z").
+- **A contested row** (a comparison behind its pair conflicts) shows a Contested mark beside its band, at any band; the band is unchanged.
 - **A decided row that the new context contradicts** keeps its choice and gets a warning. The researcher resolves it.
 
 ---

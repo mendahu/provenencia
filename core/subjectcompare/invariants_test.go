@@ -60,7 +60,7 @@ func groups(t *testing.T, kind vocabkey.SubjectType) []group {
 var propertyPools = map[vocabkey.PropertyKey][]V{
 	name:   {pt.Name("James Robins"), pt.Name("James Robbins"), pt.Name("J. Robins"), pt.Name("Mary Robins")},
 	sex:    {pt.Term("male"), pt.Term("female"), pt.Neutral(pt.Term("unknown"))},
-	gender: {pt.Term("male"), pt.Term("female"), pt.Neutral(pt.Term("unknown"))},
+	gender: {pt.Term("man"), pt.Term("woman"), pt.Term("non_binary")},
 	etype:  {pt.Term("birth"), pt.Term("death"), pt.Term("baptism")},
 	date:   {year(1817), year(1818), year(1830), pt.Date(datevaluetest.About(1817, 0, 0))},
 	start:  {year(1815), year(1816)},

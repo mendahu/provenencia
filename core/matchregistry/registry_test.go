@@ -20,6 +20,7 @@ func TestDefaultIsFresh(t *testing.T) {
 	first.Value.Names.Western.PartRoles["x"] = valuecompare.RoleFamily
 	first.Subject.Weights[vocabkey.Person][vocabkey.PropertyName] = subjectcompare.Weights{}
 	first.Subject.Pools[vocabkey.Person][vocabkey.PropertySexAtBirth].With[0] = "changed"
+	first.Subject.Pools[vocabkey.Person][vocabkey.PropertySexAtBirth].Terms[vocabkey.PropertyGender][vocabkey.GenderMan] = "changed"
 	first.Subject.Periods[vocabkey.Event][vocabkey.PropertyDate] = subjectcompare.Period{}
 	first.Subject.Lifespans[vocabkey.Person][vocabkey.PropertyLifespan].Starts[0] = subjectcompare.EventRole{}
 	if got := Default(); !reflect.DeepEqual(got, want) {

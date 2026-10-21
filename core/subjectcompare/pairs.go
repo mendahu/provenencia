@@ -9,12 +9,24 @@ import (
 )
 
 // Side is the values Compare reads for lead on one Subject: the lead's own,
-// its pooled properties', or, when the lead has a period and no positive value,
-// the period built from its start and end. It copies.
+// its pooled properties' (terms mapped into the lead's vocabulary by the
+// pool's Terms), or, when the lead has a period and no positive value, the
+// period built from its start and end. It copies.
 func Side(kind vocabkey.SubjectType, lead vocabkey.PropertyKey, values Values, rules Rules) []propertycompare.Value {
 	out := slices.Clone(values[lead])
-	for _, with := range rules.Pools[kind][lead].With {
-		out = append(out, values[with]...)
+	pool := rules.Pools[kind][lead]
+	for _, with := range pool.With {
+		terms, mapped := pool.Terms[with]
+		for _, v := range values[with] {
+			if mapped && v.Term != "" {
+				t, ok := terms[v.Term]
+				if !ok {
+					continue
+				}
+				v.Term = t
+			}
+			out = append(out, v)
+		}
 	}
 	if p, ok := rules.Periods[kind][lead]; ok && !slices.ContainsFunc(out, propertycompare.Value.Positive) {
 		if v, ok := period(values[p.Start], values[p.End]); ok {

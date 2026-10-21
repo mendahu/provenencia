@@ -24,7 +24,14 @@ func defaultSubject() subjectcompare.Rules {
 			},
 		},
 		Pools: map[vocabkey.SubjectType]map[vocabkey.PropertyKey]subjectcompare.Pool{
-			vocabkey.Person: {vocabkey.PropertySexAtBirth: {With: []vocabkey.PropertyKey{vocabkey.PropertyGender}}},
+			vocabkey.Person: {vocabkey.PropertySexAtBirth: {
+				With: []vocabkey.PropertyKey{vocabkey.PropertyGender},
+				// decided (user, 2026-10-21): a gender reads as the sex at birth it
+				// names; one with no entry (non_binary) is left out, never a conflict
+				Terms: map[vocabkey.PropertyKey]map[string]string{
+					vocabkey.PropertyGender: {vocabkey.GenderMan: vocabkey.SexMale, vocabkey.GenderWoman: vocabkey.SexFemale},
+				},
+			}},
 		},
 		Periods: map[vocabkey.SubjectType]map[vocabkey.PropertyKey]subjectcompare.Period{
 			vocabkey.Event: {vocabkey.PropertyDate: {Start: vocabkey.PropertyStartDate, End: vocabkey.PropertyEndDate}},

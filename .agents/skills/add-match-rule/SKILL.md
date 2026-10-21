@@ -48,8 +48,8 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 
 1. Add the key to `core/vocabkey` if it has none, and to the key list in `TestVocabKeysMatchSeed`. A derived key (built by the profile builder, never seeded) is not added there.
 2. Add its `Weights` (or a `Pools` / `Periods` / `Lifespans` entry under an existing weighted lead) in `core/matchregistry/subject.go`, with a source comment.
-3. Add the inventory rows: `subject.Weights.<kind>.<property>.Agree` and `.Conflict`, `subject.Pools.<kind>.<lead>.With`, or `subject.Periods.<kind>.<lead>.Start` and `.End`, or `subject.Lifespans.<kind>.<lead>.Span`, `.MaxYears`, `.Starts` and `.Ends`. A new life-fixing event is a keyed `EventRole` in `Starts` or `Ends`.
-4. If the property is new to `subjectcomparetest.Metas`, add it there. `TestSubjectSection` and `TestSubjectSectionMatchesSeed` (`core/database/subjectvocab`) fail on a key the seed does not bind to the kind, a pair whose lead has no weights, a pooled property of another value type, and a fixture meta that differs from the seed.
+3. Add the inventory rows: `subject.Weights.<kind>.<property>.Agree` and `.Conflict`, `subject.Pools.<kind>.<lead>.With` (and `.Terms.<pooled>` when the pooled property's terms differ from the lead's), or `subject.Periods.<kind>.<lead>.Start` and `.End`, or `subject.Lifespans.<kind>.<lead>.Span`, `.MaxYears`, `.Starts` and `.Ends`. A new life-fixing event is a keyed `EventRole` in `Starts` or `Ends`.
+4. If the property is new to `subjectcomparetest.Metas`, add it there. `TestSubjectSection` and `TestSubjectSectionMatchesSeed` (`core/database/subjectvocab`) fail on a key the seed does not bind to the kind, a pair whose lead has no weights, a pooled property of another value type, a pool `Terms` entry that is not a seeded term of its property, and a fixture meta that differs from the seed. A pooled term property whose keys differ from the lead's (gender `man`, sex at birth `male`) needs a `Terms` crosswalk, or every pair of its values conflicts.
 5. Add a `TestCompare` row for it in `core/subjectcompare`.
 
 ## Add a comparer

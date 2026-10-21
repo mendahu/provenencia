@@ -17409,6 +17409,54 @@
         }
       }
     },
+    "promote.reason.neighborPlaced": {
+      "comment": "Why a row moved on the last proposal: a neighbor was matched; 1 = neighbor name, 2 = its ref. Follows \"Updated · \"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "after %1$@ → %2$@ was matched"
+          }
+        }
+      }
+    },
+    "promote.reason.neighborMoved": {
+      "comment": "Why a row moved: a neighbor was matched to another record; 1 = neighbor name, 2 = its new ref. Follows \"Updated · \"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "after %1$@ moved to %2$@"
+          }
+        }
+      }
+    },
+    "promote.reason.neighborReleased": {
+      "comment": "Why a row moved: a neighbor lost its match; argument is the neighbor name. Follows \"Updated · \"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "after %@ was unmatched"
+          }
+        }
+      }
+    },
+    "promote.reason.moveUnknown": {
+      "comment": "Why a row moved, when the neighbor is not on the page. Follows \"Updated · \"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "after a connected row changed"
+          }
+        }
+      }
+    },
     "promote.row.updatedDetail": {
       "comment": "A suggested row moved on the last proposal; argument is why, e.g. via a neighbor",
       "extractionState": "manual",
@@ -17429,6 +17477,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Evidence for %1$@: %2$@, %3$@"
+          }
+        }
+      }
+    },
+    "promote.row.contested": {
+      "comment": "Badge beside a Promote row's band when a comparison behind its pair conflicts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contested"
+          }
+        }
+      }
+    },
+    "promote.row.assessmentContested": {
+      "comment": "Spoken band of a contested Promote row, inside the evidence button label; argument is the band name (\"Strong\")",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, contested"
           }
         }
       }
