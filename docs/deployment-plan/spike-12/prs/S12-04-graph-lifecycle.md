@@ -1,6 +1,7 @@
 # S12-04 — Graph lifecycle
 
-**Status:** Planned
+**Status:** Landed in [#505](https://github.com/mendahu/provenencia/pull/505) (2026-10-20)
+**Landed:** No difference from the plan.
 **Spike / slice:** Spike 12 · Slice 2 — Graphs in the catalog
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: one Go package, the delete registries and tests; no FFI, no Swift)

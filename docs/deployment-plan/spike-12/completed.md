@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-04 — Graph lifecycle
+
+**Landed 2026-10-20** in [#505](https://github.com/mendahu/provenencia/pull/505). The engine can list, create, edit and delete Evidence graphs. `evidencegraphs.List` is the one read of graph rows (full rows with their linked Artifact ids, by name, for a Source or the project); `Create` links a new graph to chosen Artifacts; `Update` saves name, description and linked Artifacts in one write. `Delete` goes through `deleteimpact`: a graph with Subjects is blocked by the inbound probe and a Source's last graph by a new `last_graph` extra gate, which joins `edge_locked` and `origin_locked` in one per-kind `extraGateList`. No RPC or screen calls these yet; nothing changes for researchers.
+
 ## S12-03 — Evidence graphs in the catalog
 
 **Landed 2026-10-19** in [#498](https://github.com/mendahu/provenencia/pull/498). The catalog (format 55) holds Evidence graphs: every Source has a Default graph with a `GPH-` ref, every Subject belongs to one graph of its Source, and Artifacts and graphs are linked many-to-many. Existing projects migrate in place, so each Source's Default graph holds its Subjects and is linked to all its Artifacts; the refs are minted when a project next opens, through one `catalogsession.ReconcileOnOpen` that create, `OpenCatalog` and `Do` share. `core/database/evidencegraphs` owns graphs and links (`Link`, `Unlink` with their refusals, `SoleGraphTx` until S12-08), and the graph list has its own `evidence_graphs` list key in `effects.Set.Lists` (with `vocabulary` and `property_usage`, one declared list set on the effects, the wire and Swift). No screen or RPC changes; nothing changes for researchers.
