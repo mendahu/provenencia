@@ -5,10 +5,10 @@ package promotealign
 import (
 	"bytes"
 	"database/sql"
-	"errors"
 	"sort"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
@@ -56,7 +56,7 @@ func propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 		return graphalign.Proposal{Rows: nil}, rev, nil, nil
 	}
 
-	anchors, err := mergeFixed(q, sourceID, primary, fixed)
+	anchors, err := mergeFixed(c.Graph(), sourceID, primary, fixed)
 	if err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}
@@ -127,13 +127,14 @@ func loadInputs(c *database.Catalog, sourceID []byte) (inputs, error) {
 }
 
 // mergeFixed validates caller fixed pairs and adds already-promoted Subjects
-// as free anchors. Caller fixed wins when both name the same Subject.
-func mergeFixed(q Querier, sourceID []byte, primary map[string]primarySubject, caller []graphalign.Fixed) ([]graphalign.Fixed, error) {
+// as free anchors, read from the Source's accepted members. Caller fixed wins
+// when both name the same Subject.
+func mergeFixed(g *graphcache.Graph, sourceID []byte, primary map[string]primarySubject, caller []graphalign.Fixed) ([]graphalign.Fixed, error) {
 	out := make([]graphalign.Fixed, 0, len(caller)+len(primary))
 	seen := map[string]bool{}
 
 	for _, f := range caller {
-		fixed, err := checkFixed(q, primary, f)
+		fixed, err := checkFixed(g, primary, f)
 		if err != nil {
 			return nil, err
 		}
@@ -141,20 +142,12 @@ func mergeFixed(q Querier, sourceID []byte, primary map[string]primarySubject, c
 		seen[string(f.SubjectID)] = true
 	}
 
-	rows, err := q.Query(`SELECT s.id, ic.entity_id
-		FROM subjects s
-		JOIN identity_claims ic ON ic.subject_id = s.id AND ic.status = 'accepted'
-		WHERE s.source_id = ?`, sourceID)
+	sg, err := g.Source(sourceID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var sid, eid []byte
-		if err := rows.Scan(&sid, &eid); err != nil {
-			return nil, err
-		}
-		sk := string(sid)
+	for _, m := range sg.Members {
+		sk := string(m.SubjectID)
 		if seen[sk] {
 			continue
 		}
@@ -162,13 +155,10 @@ func mergeFixed(q Querier, sourceID []byte, primary map[string]primarySubject, c
 			continue
 		}
 		out = append(out, graphalign.Fixed{
-			SubjectID: append([]byte(nil), sid...),
-			HandleID:  append([]byte(nil), eid...),
+			SubjectID: bytes.Clone(m.SubjectID),
+			HandleID:  bytes.Clone(m.EntityID),
 		})
 		seen[sk] = true
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 
 	// Stable order: by subject id bytes (each Subject appears once).
@@ -178,9 +168,9 @@ func mergeFixed(q Querier, sourceID []byte, primary map[string]primarySubject, c
 
 // checkFixed validates one caller pair and returns it with its ids copied: the
 // Subject must be a primary Subject of the Source; New and Skip carry no
-// handle; any other pair names a handle of 16 bytes that is unmerged and of the
-// Subject's kind. Anything else is promote.ErrInvalid.
-func checkFixed(q Querier, primary map[string]primarySubject, f graphalign.Fixed) (graphalign.Fixed, error) {
+// handle; any other pair names a handle of 16 bytes that the graph cache has
+// unmerged and of the Subject's kind. Anything else is promote.ErrInvalid.
+func checkFixed(g *graphcache.Graph, primary map[string]primarySubject, f graphalign.Fixed) (graphalign.Fixed, error) {
 	if len(f.SubjectID) != 16 {
 		return graphalign.Fixed{}, promote.ErrInvalid
 	}
@@ -201,15 +191,22 @@ func checkFixed(q Querier, primary map[string]primarySubject, f graphalign.Fixed
 	if len(f.HandleID) != 16 {
 		return graphalign.Fixed{}, promote.ErrInvalid
 	}
-	var kind string
-	err := q.QueryRow(`SELECT st.key FROM canonical_entities e
-		JOIN subject_types st ON st.id = e.subject_type_id
-		WHERE e.id = ? AND e.merged_into_id IS NULL`, f.HandleID).Scan(&kind)
-	if errors.Is(err, sql.ErrNoRows) {
-		return graphalign.Fixed{}, promote.ErrInvalid
-	}
+	n, err := g.Node(f.HandleID)
 	if err != nil {
 		return graphalign.Fixed{}, err
+	}
+	if n == nil || n.Merged {
+		return graphalign.Fixed{}, promote.ErrInvalid
+	}
+	v, err := g.Vocabulary()
+	if err != nil {
+		return graphalign.Fixed{}, err
+	}
+	var kind string
+	for _, t := range v.Types {
+		if bytes.Equal(t.ID, n.SubjectTypeID) {
+			kind = t.Key
+		}
 	}
 	if kind != ps.kind {
 		return graphalign.Fixed{}, promote.ErrInvalid

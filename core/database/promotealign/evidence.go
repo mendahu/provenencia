@@ -43,7 +43,7 @@ func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence,
 	if err != nil {
 		return claimevidence.Evidence{}, err
 	}
-	row, err := checkFixed(in.q, in.primary, graphalign.Fixed{SubjectID: req.SubjectID, HandleID: req.HandleID})
+	row, err := checkFixed(c.Graph(), in.primary, graphalign.Fixed{SubjectID: req.SubjectID, HandleID: req.HandleID})
 	if err != nil {
 		return claimevidence.Evidence{}, err
 	}
@@ -53,7 +53,7 @@ func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence,
 	placed := map[string][]byte{} // layer neighbor → its handle
 	var order [][]byte
 	for _, f := range req.Neighbors {
-		nf, err := checkFixed(in.q, in.primary, f)
+		nf, err := checkFixed(c.Graph(), in.primary, f)
 		if err != nil {
 			return claimevidence.Evidence{}, err
 		}
