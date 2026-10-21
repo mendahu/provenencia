@@ -170,6 +170,16 @@ struct CatalogQueryRegistry: Sendable {
             invalidateOn: []
         ),
         Spec(
+            kind: .evidenceGraphsList,
+            stalePolicy: .sessionFresh,
+            // Graph and link writes report the `evidence_graphs` list in
+            // `WriteEffects`; `deleteSource` reports none, so `.deletedSource` drops it.
+            invalidateOn: [.deletedSource],
+            // A visible key still revalidates (`WorkspaceSession.apply(invalidations:)`);
+            // a hidden list just goes stale until it is shown again.
+            whenHidden: .markStale
+        ),
+        Spec(
             kind: .personsList,
             stalePolicy: .sessionFresh,
             invalidateOn: CatalogQueryRegistry.conclusionTriggers,
@@ -271,6 +281,8 @@ struct CatalogQueryRegistry: Sendable {
                 map[row.sourceId] = row
             }
             return map
+        case .evidenceGraphsList(let project):
+            return try await store.listEvidenceGraphs(projectDir: project.projectDir)
         case .propertiesWorkspace(let project):
             return try await store.getPropertiesWorkspace(projectDir: project.projectDir)
         case .personsList(let project):
@@ -325,8 +337,7 @@ struct CatalogQueryRegistry: Sendable {
         case .vocabulary, .propertyUsage:
             return [.key(.propertiesWorkspace(project: project))]
         case .evidenceGraphs:
-            // S12-05 adds the graph list's key here.
-            return []
+            return [.key(.evidenceGraphsList(project: project))]
         }
     }
 
@@ -427,6 +438,8 @@ private extension CatalogQueryKey.Kind {
             return .allCached(.citationsByArtifact)
         case .sourceGraphProgress:
             return .key(.sourceGraphProgress(project: project))
+        case .evidenceGraphsList:
+            return .key(.evidenceGraphsList(project: project))
         case .personsList:
             return .key(.personsList(project: project))
         case .eventsList:

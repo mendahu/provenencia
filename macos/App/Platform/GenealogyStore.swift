@@ -88,6 +88,23 @@ struct CatalogArtifact: Sendable, Equatable {
     }
 }
 
+/// One Evidence graph: a named set of a Source's Artifacts.
+struct CatalogEvidenceGraph: Sendable, Equatable, Identifiable {
+    var id: String
+    var ref: String
+    var sourceID: String
+    var name: String
+    var description: String
+    var artifactIDs: [String]
+}
+
+/// An Artifact a graph edit would unlink that the graph's Citations still use,
+/// with those Citations shaped for the DeleteImpact recipe.
+struct CatalogEvidenceGraphUnlinkBlock: Sendable, Equatable {
+    var artifactID: String
+    var citations: CatalogDeleteImpactGroup
+}
+
 extension CatalogArtifact {
     /// The trimmed label, else the ref: the one name every list and dialog shows.
     var displayTitle: String {
@@ -127,13 +144,14 @@ struct CatalogCredibilityGrade: Sendable, Equatable, Identifiable {
     var sortOrder: Int
 }
 
-enum CatalogDeleteImpactGate: String, Sendable, Equatable {
+enum CatalogDeleteImpactGate: String, Sendable, Equatable, CaseIterable {
     case ok
     case inbound
     case notFound = "not_found"
     case edgeLocked = "edge_locked"
     case infra
     case originLocked = "origin_locked"
+    case lastGraph = "last_graph"
 }
 
 struct CatalogDeleteImpact: Sendable, Equatable {
@@ -1080,7 +1098,8 @@ protocol GenealogyStore: Sendable {
         sourceID: String,
         fileID: String,
         label: String,
-        description: String
+        description: String,
+        graphIDs: [String]
     ) async throws -> (CatalogArtifact, CatalogWriteEffects)
     func deleteArtifact(projectDir: String, userID: String, artifactID: String) async throws -> CatalogWriteEffects
     func updateArtifact(
@@ -1096,6 +1115,43 @@ protocol GenealogyStore: Sendable {
         artifactID: String,
         path: String
     ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool, effects: CatalogWriteEffects)
+    func listEvidenceGraphs(projectDir: String) async throws -> [CatalogEvidenceGraph]
+    func createEvidenceGraph(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        name: String,
+        description: String,
+        artifactIDs: [String]
+    ) async throws -> (CatalogEvidenceGraph, CatalogWriteEffects)
+    /// Empty `artifactIDs` leaves the links unchanged; otherwise it is the full set.
+    func updateEvidenceGraph(
+        projectDir: String,
+        userID: String,
+        graphID: String,
+        name: String,
+        description: String,
+        artifactIDs: [String]
+    ) async throws -> CatalogWriteEffects
+    func deleteEvidenceGraph(projectDir: String, userID: String, graphID: String) async throws -> CatalogWriteEffects
+    func linkEvidenceGraphArtifact(
+        projectDir: String,
+        userID: String,
+        graphID: String,
+        artifactID: String
+    ) async throws -> CatalogWriteEffects
+    func unlinkEvidenceGraphArtifact(
+        projectDir: String,
+        userID: String,
+        graphID: String,
+        artifactID: String
+    ) async throws -> CatalogWriteEffects
+    /// Which of `artifactIDs` a graph edit would unlink that the graph's Citations use.
+    func getEvidenceGraphUnlinkImpact(
+        projectDir: String,
+        graphID: String,
+        artifactIDs: [String]
+    ) async throws -> [CatalogEvidenceGraphUnlinkBlock]
     func listSourceCredibilityGrades(projectDir: String) async throws -> [CatalogCredibilityGrade]
     func upsertSourceCredibilityAssessment(
         projectDir: String,

@@ -3,10 +3,12 @@ package handlers
 import (
 	"errors"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/ingest"
 	"google.golang.org/protobuf/proto"
 )
@@ -207,4 +209,47 @@ func TestDeleteArtifact(t *testing.T) {
 			wantErrIs: artifacts.ErrInUse,
 		},
 	})
+}
+
+func TestCreateArtifactGraphIDs(t *testing.T) {
+	f := newGraphFixture(t)
+	second := f.createGraph(t, "Jones", f.page1).GetGraph().GetId()
+	linkedTo := func(artifactID string) []string {
+		var graphs []string
+		for _, g := range f.list(t) {
+			if slices.Contains(g.GetArtifactIds(), artifactID) {
+				graphs = append(graphs, g.GetName())
+			}
+		}
+		return graphs
+	}
+
+	chosenResp := f.createArtifactResp(t, f.sourceID, "Chosen", []string{second})
+	assertGraphEffects(t, chosenResp.GetEffects())
+	chosen := chosenResp.GetArtifact().GetId()
+	if got := linkedTo(chosen); !slices.Equal(got, []string{"Jones"}) {
+		t.Fatalf("chosen graph only: %v", got)
+	}
+	everyResp := f.createArtifactResp(t, f.sourceID, "Every", nil)
+	assertGraphEffects(t, everyResp.GetEffects())
+	every := everyResp.GetArtifact().GetId()
+	if got := linkedTo(every); !slices.Equal(got, []string{"Default", "Jones"}) {
+		t.Fatalf("every graph: %v", got)
+	}
+
+	srcB, _ := f.otherSource(t)
+	foreign := f.graphsOf(t, srcB)[0].GetId()
+	err := rpc(t, CreateArtifact, &engine.CreateArtifactRequest{
+		ProjectDir: f.dir, UserId: f.userID, SourceId: f.sourceID, Label: "Foreign", GraphIds: []string{foreign},
+	}, &engine.CreateArtifactResponse{})
+	if !errors.Is(err, evidencegraphs.ErrInvalid) {
+		t.Fatalf("another Source's graph: %v", err)
+	}
+	var arts engine.GetSourceWorkspaceResponse
+	mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: f.dir, SourceId: f.sourceID}, &arts)
+	for _, a := range arts.GetArtifacts() {
+		if a.GetLabel() == "Foreign" {
+			t.Fatal("the refused Artifact was created")
+		}
+	}
 }

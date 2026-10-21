@@ -7946,6 +7946,16 @@ enum L10n {
                 defaultValue: "%lld subjects belong to this source",
                 comment: "Inbound heading for subjects.source_id; argument is how many"
             ),
+            "subjects.graph_id": LocalizedStringResource(
+                "deleteImpact.via.subjectsGraphId",
+                defaultValue: "This graph has %lld subjects",
+                comment: "Inbound heading for subjects.graph_id; argument is how many"
+            ),
+            "evidencegraphs.artifact_in_use": LocalizedStringResource(
+                "deleteImpact.via.evidenceGraphsArtifactInUse",
+                defaultValue: "%lld citations in this graph use this artifact",
+                comment: "Heading over the Citations that keep an Artifact linked to a graph; argument is how many"
+            ),
             "citations.artifact_id": LocalizedStringResource(
                 "deleteImpact.via.citationsArtifactId",
                 defaultValue: "%lld citations are drawn from this artifact",
@@ -8026,6 +8036,17 @@ enum L10n {
             "deleteImpact.gate.originLocked.body",
             defaultValue: "Provenencia-seeded properties and terms can’t be deleted. Plugin vocabulary is removed from the plugin manager, not here.",
             comment: "Extra-gate body for origin_locked"
+        )
+
+        static let gateLastGraphTitle = LocalizedStringResource(
+            "deleteImpact.gate.lastGraph.title",
+            defaultValue: "This is the source’s only evidence graph",
+            comment: "Extra-gate title for last_graph"
+        )
+        static let gateLastGraphBody = LocalizedStringResource(
+            "deleteImpact.gate.lastGraph.body",
+            defaultValue: "A source keeps at least one evidence graph. Add another graph before you delete this one.",
+            comment: "Extra-gate body for last_graph"
         )
 
         static let gateInfraTitle = LocalizedStringResource(
@@ -9638,6 +9659,31 @@ enum L10n {
             defaultValue: "This citation still has observations.",
             comment: "FFI error citations.in_use"
         )
+        static let evidenceGraphsInvalid = LocalizedStringResource(
+            "error.evidencegraphs.invalid",
+            defaultValue: "That evidence graph isn’t valid.",
+            comment: "FFI error evidencegraphs.invalid"
+        )
+        static let evidenceGraphsArtifactInUse = LocalizedStringResource(
+            "error.evidencegraphs.artifact_in_use",
+            defaultValue: "Citations in this evidence graph still use an artifact you removed, so it stays linked.",
+            comment: "FFI error evidencegraphs.artifact_in_use"
+        )
+        static let evidenceGraphsLastArtifact = LocalizedStringResource(
+            "error.evidencegraphs.last_artifact",
+            defaultValue: "An evidence graph needs at least one artifact.",
+            comment: "FFI error evidencegraphs.last_artifact"
+        )
+        static let evidenceGraphsInUse = LocalizedStringResource(
+            "error.evidencegraphs.in_use",
+            defaultValue: "This evidence graph still has subjects.",
+            comment: "FFI error evidencegraphs.in_use"
+        )
+        static let evidenceGraphsLastGraph = LocalizedStringResource(
+            "error.evidencegraphs.last_graph",
+            defaultValue: "A source keeps at least one evidence graph.",
+            comment: "FFI error evidencegraphs.last_graph"
+        )
         static let observationsInvalid = LocalizedStringResource(
             "error.observations.invalid",
             defaultValue: "That observation isn’t valid.",
@@ -9870,6 +9916,16 @@ enum L10n {
                 return L10n.string(citationsInvalid)
             case "citations.in_use":
                 return L10n.string(citationsInUse)
+            case "evidencegraphs.invalid":
+                return L10n.string(evidenceGraphsInvalid)
+            case "evidencegraphs.artifact_in_use":
+                return L10n.string(evidenceGraphsArtifactInUse)
+            case "evidencegraphs.last_artifact":
+                return L10n.string(evidenceGraphsLastArtifact)
+            case "evidencegraphs.in_use":
+                return L10n.string(evidenceGraphsInUse)
+            case "evidencegraphs.last_graph":
+                return L10n.string(evidenceGraphsLastGraph)
             case "observations.invalid":
                 return L10n.string(observationsInvalid)
             case "observations.edge_locked":

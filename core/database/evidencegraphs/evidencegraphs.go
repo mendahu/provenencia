@@ -458,9 +458,10 @@ func IsLinkedTx(tx *sql.Tx, graphID, artifactID []byte) (bool, error) {
 	return true, nil
 }
 
-// CitationsUsingArtifactTx returns the ids of the Citations on the Artifact
-// that have at least one Observation on a Subject of the graph, ordered by ref.
-func CitationsUsingArtifactTx(tx *sql.Tx, graphID, artifactID []byte) ([][]byte, error) {
+// CitationsUsingArtifactTx returns the Citations on the Artifact that have at
+// least one Observation on a Subject of the graph, with their refs, ordered by
+// ref. Only ID and Ref are set.
+func CitationsUsingArtifactTx(tx *sql.Tx, graphID, artifactID []byte) ([]deleteimpact.Listed, error) {
 	if tx == nil || len(graphID) != 16 || len(artifactID) != 16 {
 		return nil, ErrInvalid
 	}
@@ -469,16 +470,81 @@ func CitationsUsingArtifactTx(tx *sql.Tx, graphID, artifactID []byte) ([][]byte,
 		return nil, err
 	}
 	defer rows.Close()
-	var out [][]byte
+	var out []deleteimpact.Listed
 	for rows.Next() {
-		var id []byte
-		var citationRef string
-		if err := rows.Scan(&id, &citationRef); err != nil {
+		var row deleteimpact.Listed
+		if err := rows.Scan(&row.ID, &row.Ref); err != nil {
 			return nil, err
 		}
-		out = append(out, id)
+		out = append(out, row)
 	}
 	return out, rows.Err()
+}
+
+// UnlinkVia names the preflight group of Citations that keep an Artifact
+// linked. A domain-preflight via is named for its refusal code, not an FK edge.
+const UnlinkVia = "evidencegraphs.artifact_in_use"
+
+// UnlinkBlock is one Artifact an edit would remove that the graph's Citations
+// still use, with those Citations shaped for the DeleteImpact recipe.
+type UnlinkBlock struct {
+	ArtifactID []byte
+	Citations  deleteimpact.Group
+}
+
+// UnlinkImpact reports which of the Artifacts an edit would unlink from the
+// graph are used by the graph's Citations, in the order given. An Artifact that
+// is not linked, or that no Citation uses, has no block.
+func UnlinkImpact(c *database.Catalog, graphID []byte, artifactIDs [][]byte) ([]UnlinkBlock, error) {
+	if len(graphID) != 16 {
+		return nil, ErrInvalid
+	}
+	for _, id := range artifactIDs {
+		if len(id) != 16 {
+			return nil, ErrInvalid
+		}
+	}
+	if err := requireDistinct(artifactIDs); err != nil {
+		return nil, err
+	}
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	if _, err := getTx(tx, graphID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrInvalid
+		}
+		return nil, err
+	}
+	var out []UnlinkBlock
+	for _, artifactID := range artifactIDs {
+		linked, err := IsLinkedTx(tx, graphID, artifactID)
+		if err != nil {
+			return nil, err
+		}
+		if !linked {
+			continue
+		}
+		rows, err := CitationsUsingArtifactTx(tx, graphID, artifactID)
+		if err != nil {
+			return nil, err
+		}
+		if len(rows) == 0 {
+			continue
+		}
+		group, err := deleteimpact.ListedGroup(tx, UnlinkVia, catalogmodel.KindCitation, rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, UnlinkBlock{ArtifactID: append([]byte(nil), artifactID...), Citations: group})
+	}
+	return out, nil
 }
 
 // checkLink validates the shared input of Link and Unlink: the graph and the

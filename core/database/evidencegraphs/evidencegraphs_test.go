@@ -465,8 +465,8 @@ func TestMembership(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ids) != 1 || !bytes.Equal(ids[0], cit.ID) {
-		t.Fatalf("citations %x want %x", ids, cit.ID)
+	if len(ids) != 1 || !bytes.Equal(ids[0].ID, cit.ID) || ids[0].Ref != cit.Ref {
+		t.Fatalf("citations %+v want %x %q", ids, cit.ID, cit.Ref)
 	}
 	if ids, err := evidencegraphs.CitationsUsingArtifactTx(tx, graph, b); err != nil || len(ids) != 0 {
 		t.Fatalf("other Artifact: %v %x", err, ids)
@@ -492,6 +492,83 @@ func TestMembership(t *testing.T) {
 	if ok, err := evidencegraphs.IsLinkedTx(tx2, graph, b); err != nil || ok {
 		t.Fatalf("after Unlink %v %v", ok, err)
 	}
+}
+
+func TestUnlinkImpact(t *testing.T) {
+	f := newFixture(t)
+	src, _ := f.createSource(t, "Census 1881")
+	graph := evidencegraphstest.SoleGraph(t, f.c, src.ID).ID
+	a1 := f.newArtifact(t, src, "Page 1")
+	a2 := f.newArtifact(t, src, "Page 2")
+	f.link(t, graph, a1)
+	f.link(t, graph, a2)
+	_, cit := f.subjectAndCitation(t, src, a1)
+
+	t.Run("a Citation on the graph blocks its Artifact", func(t *testing.T) {
+		blocks, err := evidencegraphs.UnlinkImpact(f.c, graph, [][]byte{a2, a1})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(blocks) != 1 || !bytes.Equal(blocks[0].ArtifactID, a1) {
+			t.Fatalf("blocks %+v", blocks)
+		}
+		g := blocks[0].Citations
+		if g.Via != evidencegraphs.UnlinkVia || g.Kind != catalogmodel.KindCitation || g.Total != 1 || len(g.Listed) != 1 {
+			t.Fatalf("group %+v", g)
+		}
+		l := g.Listed[0]
+		if !bytes.Equal(l.ID, cit.ID) || l.Ref != cit.Ref || l.Title == "" || l.Location.SourceSurface != "citationComposer" {
+			t.Fatalf("listed %+v", l)
+		}
+	})
+	t.Run("an Artifact no Citation uses has no block", func(t *testing.T) {
+		blocks, err := evidencegraphs.UnlinkImpact(f.c, graph, [][]byte{a2})
+		if err != nil || len(blocks) != 0 {
+			t.Fatalf("%+v %v", blocks, err)
+		}
+		if blocks, err := evidencegraphs.UnlinkImpact(f.c, graph, nil); err != nil || blocks != nil {
+			t.Fatalf("empty %+v %v", blocks, err)
+		}
+	})
+	t.Run("another graph's Subjects do not block", func(t *testing.T) {
+		other, _, err := f.createGraph(t, evidencegraphs.CreateInput{SourceID: src.ID, Name: "Jones", ArtifactIDs: [][]byte{a1, a2}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		blocks, err := evidencegraphs.UnlinkImpact(f.c, other.ID, [][]byte{a1})
+		if err != nil || len(blocks) != 0 {
+			t.Fatalf("%+v %v", blocks, err)
+		}
+	})
+	t.Run("an Artifact not linked has no block", func(t *testing.T) {
+		a3 := f.newArtifact(t, src, "Page 3")
+		blocks, err := evidencegraphs.UnlinkImpact(f.c, graph, [][]byte{a3})
+		if err != nil || len(blocks) != 0 {
+			t.Fatalf("%+v %v", blocks, err)
+		}
+	})
+	t.Run("bad input is invalid", func(t *testing.T) {
+		unknown := make([]byte, 16)
+		unknown[0] = 9
+		for name, call := range map[string]func() ([]evidencegraphs.UnlinkBlock, error){
+			"unknown graph": func() ([]evidencegraphs.UnlinkBlock, error) {
+				return evidencegraphs.UnlinkImpact(f.c, unknown, [][]byte{a1})
+			},
+			"short graph id": func() ([]evidencegraphs.UnlinkBlock, error) {
+				return evidencegraphs.UnlinkImpact(f.c, graph[:15], [][]byte{a1})
+			},
+			"short artifact": func() ([]evidencegraphs.UnlinkBlock, error) {
+				return evidencegraphs.UnlinkImpact(f.c, graph, [][]byte{a1[:15]})
+			},
+			"repeated id": func() ([]evidencegraphs.UnlinkBlock, error) {
+				return evidencegraphs.UnlinkImpact(f.c, graph, [][]byte{a1, a1})
+			},
+		} {
+			if _, err := call(); !errors.Is(err, evidencegraphs.ErrInvalid) {
+				t.Fatalf("%s: %v", name, err)
+			}
+		}
+	})
 }
 
 func TestEnsureRefs(t *testing.T) {

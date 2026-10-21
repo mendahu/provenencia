@@ -101,6 +101,13 @@ const (
 	MethodUnpromoteSubject                  = int32(engine.Method_METHOD_UNPROMOTE_SUBJECT)
 	MethodSetPreferredLikeness              = int32(engine.Method_METHOD_SET_PREFERRED_LIKENESS)
 	MethodCopySource                        = int32(engine.Method_METHOD_COPY_SOURCE)
+	MethodListEvidenceGraphs                = int32(engine.Method_METHOD_LIST_EVIDENCE_GRAPHS)
+	MethodCreateEvidenceGraph               = int32(engine.Method_METHOD_CREATE_EVIDENCE_GRAPH)
+	MethodUpdateEvidenceGraph               = int32(engine.Method_METHOD_UPDATE_EVIDENCE_GRAPH)
+	MethodDeleteEvidenceGraph               = int32(engine.Method_METHOD_DELETE_EVIDENCE_GRAPH)
+	MethodLinkEvidenceGraphArtifact         = int32(engine.Method_METHOD_LINK_EVIDENCE_GRAPH_ARTIFACT)
+	MethodUnlinkEvidenceGraphArtifact       = int32(engine.Method_METHOD_UNLINK_EVIDENCE_GRAPH_ARTIFACT)
+	MethodGetEvidenceGraphUnlinkImpact      = int32(engine.Method_METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT)
 	MethodListClaimConfidenceGrades         = int32(engine.Method_METHOD_LIST_CLAIM_CONFIDENCE_GRADES)
 	MethodGetConclusionDetail               = int32(engine.Method_METHOD_GET_CONCLUSION_DETAIL)
 	MethodListEventHeaders                  = int32(engine.Method_METHOD_LIST_EVENT_HEADERS)
@@ -283,6 +290,20 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.SetPreferredLikeness(in)
 	case MethodCopySource:
 		return handlers.CopySource(in)
+	case MethodListEvidenceGraphs:
+		return handlers.ListEvidenceGraphs(in)
+	case MethodCreateEvidenceGraph:
+		return handlers.CreateEvidenceGraph(in)
+	case MethodUpdateEvidenceGraph:
+		return handlers.UpdateEvidenceGraph(in)
+	case MethodDeleteEvidenceGraph:
+		return handlers.DeleteEvidenceGraph(in)
+	case MethodLinkEvidenceGraphArtifact:
+		return handlers.LinkEvidenceGraphArtifact(in)
+	case MethodUnlinkEvidenceGraphArtifact:
+		return handlers.UnlinkEvidenceGraphArtifact(in)
+	case MethodGetEvidenceGraphUnlinkImpact:
+		return handlers.GetEvidenceGraphUnlinkImpact(in)
 	case MethodListSubjectMemberships:
 		return handlers.ListSubjectMemberships(in)
 	case MethodListPersonHeaders:

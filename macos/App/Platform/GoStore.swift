@@ -371,7 +371,8 @@ struct GoStore: GenealogyStore {
         sourceID: String,
         fileID: String,
         label: String,
-        description: String
+        description: String,
+        graphIDs: [String]
     ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_CreateArtifactRequest()
         req.projectDir = projectDir
@@ -380,6 +381,7 @@ struct GoStore: GenealogyStore {
         req.fileID = fileID
         req.label = label
         req.description_p = description
+        req.graphIds = graphIDs
         let resp: Provenencia_Engine_V1_CreateArtifactResponse = try await provenenciaCall(
             method: CoreMethod.createArtifact,
             request: req
@@ -438,6 +440,129 @@ struct GoStore: GenealogyStore {
             Self.mapArtifact(resp.artifact), Self.mapFile(resp.file), resp.reused,
             Self.mapWriteEffects(resp.effects)
         )
+    }
+
+    func listEvidenceGraphs(projectDir: String) async throws -> [CatalogEvidenceGraph] {
+        var req = Provenencia_Engine_V1_ListEvidenceGraphsRequest()
+        req.projectDir = projectDir
+        let resp: Provenencia_Engine_V1_ListEvidenceGraphsResponse = try await provenenciaCall(
+            method: CoreMethod.listEvidenceGraphs,
+            request: req
+        )
+        return resp.graphs.map(Self.mapEvidenceGraph)
+    }
+
+    func createEvidenceGraph(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        name: String,
+        description: String,
+        artifactIDs: [String]
+    ) async throws -> (CatalogEvidenceGraph, CatalogWriteEffects) {
+        var req = Provenencia_Engine_V1_CreateEvidenceGraphRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.sourceID = sourceID
+        req.name = name
+        req.description_p = description
+        req.artifactIds = artifactIDs
+        let resp: Provenencia_Engine_V1_CreateEvidenceGraphResponse = try await provenenciaCall(
+            method: CoreMethod.createEvidenceGraph,
+            request: req
+        )
+        return (Self.mapEvidenceGraph(resp.graph), Self.mapWriteEffects(resp.effects))
+    }
+
+    func updateEvidenceGraph(
+        projectDir: String,
+        userID: String,
+        graphID: String,
+        name: String,
+        description: String,
+        artifactIDs: [String]
+    ) async throws -> CatalogWriteEffects {
+        var req = Provenencia_Engine_V1_UpdateEvidenceGraphRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.graphID = graphID
+        req.name = name
+        req.description_p = description
+        req.artifactIds = artifactIDs
+        let resp: Provenencia_Engine_V1_UpdateEvidenceGraphResponse = try await provenenciaCall(
+            method: CoreMethod.updateEvidenceGraph,
+            request: req
+        )
+        return Self.mapWriteEffects(resp.effects)
+    }
+
+    func deleteEvidenceGraph(projectDir: String, userID: String, graphID: String) async throws -> CatalogWriteEffects {
+        var req = Provenencia_Engine_V1_DeleteEvidenceGraphRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.graphID = graphID
+        let resp: Provenencia_Engine_V1_DeleteEvidenceGraphResponse = try await provenenciaCall(
+            method: CoreMethod.deleteEvidenceGraph,
+            request: req
+        )
+        return Self.mapWriteEffects(resp.effects)
+    }
+
+    func linkEvidenceGraphArtifact(
+        projectDir: String,
+        userID: String,
+        graphID: String,
+        artifactID: String
+    ) async throws -> CatalogWriteEffects {
+        var req = Provenencia_Engine_V1_LinkEvidenceGraphArtifactRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.graphID = graphID
+        req.artifactID = artifactID
+        let resp: Provenencia_Engine_V1_LinkEvidenceGraphArtifactResponse = try await provenenciaCall(
+            method: CoreMethod.linkEvidenceGraphArtifact,
+            request: req
+        )
+        return Self.mapWriteEffects(resp.effects)
+    }
+
+    func unlinkEvidenceGraphArtifact(
+        projectDir: String,
+        userID: String,
+        graphID: String,
+        artifactID: String
+    ) async throws -> CatalogWriteEffects {
+        var req = Provenencia_Engine_V1_UnlinkEvidenceGraphArtifactRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.graphID = graphID
+        req.artifactID = artifactID
+        let resp: Provenencia_Engine_V1_UnlinkEvidenceGraphArtifactResponse = try await provenenciaCall(
+            method: CoreMethod.unlinkEvidenceGraphArtifact,
+            request: req
+        )
+        return Self.mapWriteEffects(resp.effects)
+    }
+
+    func getEvidenceGraphUnlinkImpact(
+        projectDir: String,
+        graphID: String,
+        artifactIDs: [String]
+    ) async throws -> [CatalogEvidenceGraphUnlinkBlock] {
+        var req = Provenencia_Engine_V1_GetEvidenceGraphUnlinkImpactRequest()
+        req.projectDir = projectDir
+        req.graphID = graphID
+        req.artifactIds = artifactIDs
+        let resp: Provenencia_Engine_V1_GetEvidenceGraphUnlinkImpactResponse = try await provenenciaCall(
+            method: CoreMethod.getEvidenceGraphUnlinkImpact,
+            request: req
+        )
+        return resp.blocked.map {
+            CatalogEvidenceGraphUnlinkBlock(
+                artifactID: $0.artifactID,
+                citations: Self.mapDeleteImpactGroup($0.citations)
+            )
+        }
     }
 
     func listSourceCredibilityGrades(projectDir: String) async throws -> [CatalogCredibilityGrade] {
@@ -1869,6 +1994,7 @@ struct GoStore: GenealogyStore {
         case .edgeLocked: return .edgeLocked
         case .infra: return .infra
         case .originLocked: return .originLocked
+        case .lastGraph: return .lastGraph
         case .unspecified, .UNRECOGNIZED: return .ok
         }
     }
@@ -1946,6 +2072,17 @@ struct GoStore: GenealogyStore {
             originalFilename: f.originalFilename,
             mediaType: f.mediaType,
             byteSize: f.byteSize
+        )
+    }
+
+    private static func mapEvidenceGraph(_ g: Provenencia_Engine_V1_EvidenceGraph) -> CatalogEvidenceGraph {
+        CatalogEvidenceGraph(
+            id: g.id,
+            ref: g.ref,
+            sourceID: g.sourceID,
+            name: g.name,
+            description: g.description_p,
+            artifactIDs: g.artifactIds
         )
     }
 

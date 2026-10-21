@@ -1,6 +1,11 @@
 # S12-05 — Graph RPCs and graph list
 
-**Status:** Planned
+**Status:** Landed in [#511](https://github.com/mendahu/provenencia/pull/511) (2026-10-21)
+**Landed:** Four differences from the plan.
+- **`TestProvenenciaCall`'s unknown method.** `api/libprovenencia/call_test.go` used method 103 as its unknown method; 103 is now `ListEvidenceGraphs`, so the case uses 9999.
+- **Handler tests (D-16).** They call the handlers through a small `rpc` / `mustRPC` helper in `evidence_graphs_test.go` instead of `runRPC` tables, because each case builds several dependent calls; `TestListEvidenceGraphs` keeps the bad-proto case. The helpers live in `harness_test.go`, and `graphFixture` wraps `citationFixture` rather than copying it.
+- **Graph list registry Spec (D-11).** The Spec is `invalidateOn: [.deletedSource]` and `whenHidden: .markStale`, not `[]` and the default. `deleteSource` reports no `WriteEffects`, so the Source delete must drop the list itself; and a visible list still revalidates (`WorkspaceSession.apply(invalidations:)`), so `.markStale` only spares a hidden one. Approved 2026-10-21.
+- **`artifact_in_use` copy (§6 Strings).** `L10n.Errors.evidenceGraphsArtifactInUse` reads "Citations in this evidence graph still use an artifact you removed, so it stays linked.", so it fits one removed artifact or several (AC-2.4). Approved 2026-10-21.
 **Spike / slice:** Spike 12 · Slice 2 — Graphs in the catalog
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: RPCs, store methods, one query key and error and delete-confirm copy; no view changes)
@@ -285,7 +290,7 @@ States: none on screen. Accessibility: none (no view).
 L10n keys *(new)*, all in `macos/App/Platform/L10n.swift` and `macos/App/Resources/Localizable.xcstrings`:
 
 - `L10n.Errors.evidenceGraphsInvalid` — `error.evidencegraphs.invalid` = "That evidence graph isn’t valid."
-- `L10n.Errors.evidenceGraphsArtifactInUse` — `error.evidencegraphs.artifact_in_use` = "Citations in this evidence graph use that artifact, so it stays linked."
+- `L10n.Errors.evidenceGraphsArtifactInUse` — `error.evidencegraphs.artifact_in_use` = "Citations in this evidence graph still use an artifact you removed, so it stays linked."
 - `L10n.Errors.evidenceGraphsLastArtifact` — `error.evidencegraphs.last_artifact` = "An evidence graph needs at least one artifact."
 - `L10n.Errors.evidenceGraphsInUse` — `error.evidencegraphs.in_use` = "This evidence graph still has subjects."
 - `L10n.Errors.evidenceGraphsLastGraph` — `error.evidencegraphs.last_graph` = "A source keeps at least one evidence graph."

@@ -404,6 +404,8 @@ final class WorkspaceSession {
             let _: QueryHandle<[CatalogListedCitation]> = query(key)
         case .sourceGraphProgress:
             let _: QueryHandle<[String: SourceGraphProgress]> = query(key)
+        case .evidenceGraphsList:
+            let _: QueryHandle<[CatalogEvidenceGraph]> = query(key)
         case .personsList:
             let _: QueryHandle<[CatalogPersonHeader]> = query(key)
         case .eventsList:

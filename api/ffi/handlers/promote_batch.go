@@ -60,13 +60,9 @@ func ApplyPromoteGraphAlignment(in []byte) ([]byte, error) {
 		}
 		rows = append(rows, br)
 	}
-	var skip [][]byte
-	for _, id := range req.GetSkipBridgeIds() {
-		parsed, err := parseID(id)
-		if err != nil {
-			return nil, err
-		}
-		skip = append(skip, parsed)
+	skip, err := parseIDs(req.GetSkipBridgeIds())
+	if err != nil {
+		return nil, err
 	}
 
 	var out *engine.ApplyPromoteGraphAlignmentResponse

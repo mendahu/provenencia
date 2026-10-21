@@ -265,7 +265,8 @@ final class SourceArtifactsSection {
                 sourceID: context.sourceID,
                 fileID: "",
                 label: label,
-                description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
+                description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines),
+                graphIDs: []
             )
             if let path = draft.filePath {
                 let ingested = try await context.store.ingestArtifactFile(
