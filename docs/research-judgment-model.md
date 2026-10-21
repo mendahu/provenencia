@@ -86,7 +86,7 @@ CREATE TABLE source_credibility_assessments (
 
 There is **at most one working assessment per Source**. Changing the grade updates that row (and is audited). Grade vocabulary uses `origin` namespaces like other definition tables ([`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1).
 
-Optional later: a nullable link to the reifying `source` Node for graph navigation. Cited commentary about a Source (another Source challenges authenticity, remarks, `mentions`) continues to use Observations on the Source Node as today; that path does not replace this assessment table.
+Optional later: a nullable link to the reifying `source` Node for graph navigation. Cited commentary about a Source is written from that Source's own graph as Observations on its Source Node, and another Source refers to it only through a non-edge `mentions` (S12-06); that path does not replace this assessment table.
 
 ## 2.3 Three-point scale (separate vocabulary)
 

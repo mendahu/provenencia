@@ -578,7 +578,7 @@ CREATE TABLE subjects (
 
 `source_id` is the subject's home Source — typically the Source being interpreted when the subject was created. It exists so the application can efficiently surface Subjects that belong with a given Source during common same-source workflows. An Observation's Subject, Subject value and Citation Artifact must share one Evidence graph (the Artifact linked to it), except that a reification Subject (type `source`) may be the value of a non-edge Observation in any graph; `observations.requireSameGraph` refuses the rest with `observations.other_graph`.
 
-For Subjects of type `source`, `source_id` has a stronger meaning: it identifies the Source this subject reifies. The application should maintain at most one `source` subject per Source row. Other Sources may then make cited Observations about that subject—bare references such as “this book mentions that marriage certificate,” free-text remarks about authenticity or errors, or both—without collapsing that material into Observations about historical persons alone, and without requiring structured Source-quality columns.
+For Subjects of type `source`, `source_id` has a stronger meaning: it identifies the Source this subject reifies. The application should maintain at most one `source` subject per Source row. Another Source refers to that subject only as the value of a non-edge `mentions` Observation (“this book mentions that marriage certificate”). Observations whose Subject is another Source's `source` subject, `remark` included, are refused with `observations.other_graph`; a `remark` on a `source` subject is written from that Source's own graph. Cross-Source commentary is a preliminary idea ([`ideas/source-to-source-relationships.md`](ideas/source-to-source-relationships.md)), not supported yet. None of this requires structured Source-quality columns.
 
 Subjects deliberately contain little domain data. A person's name, an Event's date, a Place's name, or a Participation's role belongs in cited Observations rather than fixed subject columns.
 
@@ -667,14 +667,14 @@ Domain rows (Observations, and later Reconciliation Claims when term-valued) ref
 
 Interactions between `source` subjects should stay deliberately lightweight. Provenencia does not seed a fine-grained source-quality ontology (`is_authentic`, defect codes, and similar) as Observation Properties.
 
-**First-class Source credibility** — the researcher's reusable three-point trust rating of a Source — lives in `source_credibility_assessments`, not on the `sources` catalog row and not as a required Observation. Authoritative rules: [`research-judgment-model.md`](research-judgment-model.md). Cited commentary about a Source (another Source challenges authenticity, bare references, free-text remarks) continues to use Observations on the Source subject:
+**First-class Source credibility** — the researcher's reusable three-point trust rating of a Source — lives in `source_credibility_assessments`, not on the `sources` catalog row and not as a required Observation. Authoritative rules: [`research-judgment-model.md`](research-judgment-model.md). Cited commentary about a Source is written from that Source's own graph as Observations on its `source` subject; another Source refers to it only through `mentions`:
 
 ```text
 mentions   -> node   # bare source-to-source reference; target is typically a source subject
-remark     -> text   # free-text commentary about a source subject
+remark     -> text   # free-text commentary on a source subject, written from that Source's own graph
 ```
 
-A book that merely cites a marriage certificate can record `BookSource -- mentions --> CertificateSource` with no remark. A letter that challenges a certificate can add text `remark` Observations and, when needed, ordinary person-level Observations as well. Structured Properties beyond this may be added later only if a concrete workflow requires them. First-class credibility grades: §5.3.
+A book that merely cites a marriage certificate can record `BookSource -- mentions --> CertificateSource` with no remark. A letter cannot write `remark` on the certificate's `source` subject; it can record `LetterSource -- mentions --> CertificateSource` and ordinary person-level Observations in its own graph. Structured Properties beyond this may be added later only if a concrete workflow requires them. First-class credibility grades: §5.3.
 
 ## 5.2 `subject_type_properties`
 
@@ -798,15 +798,13 @@ Person subject P1
 Book Citation B1 supports a bare reference:
   SB1 -- mentions --> SC1
 
-Letter Citation L1 supports commentary and historical-world facts:
-  SC1 -- remark --> "birth certificate is fake"
-  # or, when the document is trusted but a fact is disputed:
-  SC1 -- remark --> "date of birth on certificate mistyped"
+Letter Citation L1 supports a reference and historical-world facts:
+  SL1 -- mentions --> SC1                              # SL1 reifies the letter
   P1  -- birth_date --> DateValue(2 JAN 1800)          # polarity positive
   P1  -- birth_date --> DateValue(1 JAN 1800)          # polarity negative
 ```
 
-`mentions` is a Subject-valued edge and need not say anything further about the referenced Source. `remark` is ordinary text-valued Interpretation of what a citing Source appears to say about another Source. Neither is a Source-layer column or a closed authenticity taxonomy. Historical-world Observations remain separate and independently citable.
+`mentions` is a Subject-valued, non-edge Observation and need not say anything further about the referenced Source. A `remark` on SC1 is ordinary text-valued commentary written from the certificate's own graph; the letter cannot write it under graph isolation (S12-06). Neither is a Source-layer column or a closed authenticity taxonomy. Historical-world Observations remain separate and independently citable.
 
 ---
 
