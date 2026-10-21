@@ -731,3 +731,126 @@ func TestList(t *testing.T) {
 		}
 	})
 }
+
+// createGraph runs Create in one write.
+func (f fixture) createGraph(t *testing.T, in evidencegraphs.CreateInput) (evidencegraphs.Graph, []rowchange.Change, error) {
+	t.Helper()
+	var changes []rowchange.Change
+	g, err := writes.Call(f.c, writes.Op{Action: "create_evidence_graph", UserID: userID}, func(tx *database.Tx) (evidencegraphs.Graph, []rowchange.Change, error) {
+		g, ch, err := evidencegraphs.Create(tx, userID, in)
+		changes = ch
+		return g, ch, err
+	})
+	return g, changes, err
+}
+
+func changeKinds(changes []rowchange.Change) []string {
+	var out []string
+	for _, c := range changes {
+		out = append(out, c.EntityType+" "+string(c.Action))
+	}
+	return out
+}
+
+func mustList(t *testing.T, c *database.Catalog, sourceID []byte) []evidencegraphs.Graph {
+	t.Helper()
+	got, err := evidencegraphs.List(c, sourceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
+
+func TestCreate(t *testing.T) {
+	f := newFixture(t)
+	s, _ := f.createSource(t, "Census 1881")
+	other, _ := f.createSource(t, "Parish register")
+	a1 := f.newArtifact(t, s, "Page 1")
+	a2 := f.newArtifact(t, s, "Page 2")
+	foreign := f.newArtifact(t, other, "Page 9")
+	unknown := make([]byte, 16)
+	unknown[0] = 9
+
+	t.Run("creates and links", func(t *testing.T) {
+		g, changes, err := f.createGraph(t, evidencegraphs.CreateInput{
+			SourceID: s.ID, Name: "  Jones household  ", Description: "", ArtifactIDs: [][]byte{a2, a1},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if g.Name != "Jones household" || g.Description != "" || !bytes.Equal(g.SourceID, s.ID) {
+			t.Fatalf("graph %+v", g)
+		}
+		if !ref.Valid(g.Ref) || !strings.HasPrefix(g.Ref, "GPH-") {
+			t.Fatalf("ref %q", g.Ref)
+		}
+		if id, err := uuid.FromBytes(g.ID); err != nil || id.Version() != 7 {
+			t.Fatalf("id %x: %v", g.ID, err)
+		}
+		if want := []string{"evidence_graph create", "evidence_graph_artifact create", "evidence_graph_artifact create"}; !reflect.DeepEqual(changeKinds(changes), want) {
+			t.Fatalf("changes %v", changeKinds(changes))
+		}
+		if got := changes[1].Fields["artifact_id"].New; got != uuid.UUID(a2).String() {
+			t.Fatalf("first link %v", got)
+		}
+		if got := changes[2].Fields["artifact_id"].New; got != uuid.UUID(a1).String() {
+			t.Fatalf("second link %v", got)
+		}
+		if !sameIDs(g.ArtifactIDs, [][]byte{a2, a1}) {
+			t.Fatalf("ArtifactIDs %x", g.ArtifactIDs)
+		}
+		var stored evidencegraphs.Graph
+		for _, x := range mustList(t, f.c, s.ID) {
+			if bytes.Equal(x.ID, g.ID) {
+				stored = x
+			}
+		}
+		if stored.Name != "Jones household" || stored.Description != "" || len(stored.ArtifactIDs) != 2 {
+			t.Fatalf("stored %+v", stored)
+		}
+	})
+
+	t.Run("a name that repeats is fine", func(t *testing.T) {
+		if _, _, err := f.createGraph(t, evidencegraphs.CreateInput{
+			SourceID: s.ID, Name: evidencegraphs.DefaultName, ArtifactIDs: [][]byte{a1},
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	refused := []struct {
+		name string
+		in   evidencegraphs.CreateInput
+	}{
+		{"empty name", evidencegraphs.CreateInput{SourceID: s.ID, Name: "", ArtifactIDs: [][]byte{a1}}},
+		{"blank name", evidencegraphs.CreateInput{SourceID: s.ID, Name: "   ", ArtifactIDs: [][]byte{a1}}},
+		{"no Artifacts", evidencegraphs.CreateInput{SourceID: s.ID, Name: "X"}},
+		{"repeated Artifact", evidencegraphs.CreateInput{SourceID: s.ID, Name: "X", ArtifactIDs: [][]byte{a1, a1}}},
+		{"short Artifact id", evidencegraphs.CreateInput{SourceID: s.ID, Name: "X", ArtifactIDs: [][]byte{a1[:15]}}},
+		{"Artifact of another Source", evidencegraphs.CreateInput{SourceID: s.ID, Name: "X", ArtifactIDs: [][]byte{a1, foreign}}},
+		{"unknown Artifact", evidencegraphs.CreateInput{SourceID: s.ID, Name: "X", ArtifactIDs: [][]byte{unknown}}},
+		{"unknown Source", evidencegraphs.CreateInput{SourceID: unknown, Name: "X", ArtifactIDs: [][]byte{a1}}},
+		{"short Source id", evidencegraphs.CreateInput{SourceID: s.ID[:15], Name: "X", ArtifactIDs: [][]byte{a1}}},
+	}
+	for _, tt := range refused {
+		t.Run(tt.name, func(t *testing.T) {
+			before := mustList(t, f.c, nil)
+			if _, _, err := f.createGraph(t, tt.in); !errors.Is(err, evidencegraphs.ErrInvalid) {
+				t.Fatalf("got %v", err)
+			}
+			if after := mustList(t, f.c, nil); !reflect.DeepEqual(before, after) {
+				t.Fatalf("graphs changed: %+v -> %+v", before, after)
+			}
+		})
+	}
+
+	t.Run("empty user id", func(t *testing.T) {
+		_, err := run(t, f.c, func(tx *database.Tx) ([]rowchange.Change, error) {
+			_, ch, err := evidencegraphs.Create(tx, nil, evidencegraphs.CreateInput{SourceID: s.ID, Name: "X", ArtifactIDs: [][]byte{a1}})
+			return ch, err
+		})
+		if !errors.Is(err, evidencegraphs.ErrInvalid) {
+			t.Fatalf("got %v", err)
+		}
+	})
+}

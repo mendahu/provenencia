@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
@@ -136,6 +137,59 @@ func scanGraph(row interface{ Scan(dest ...any) error }) (Graph, error) {
 	var g Graph
 	err := row.Scan(&g.ID, &g.Ref, &g.SourceID, &g.Name, &g.Description)
 	return g, err
+}
+
+// CreateInput is the input of Create.
+type CreateInput struct {
+	SourceID    []byte
+	Name        string
+	Description string
+	ArtifactIDs [][]byte // at least one, each an Artifact of SourceID
+}
+
+// Create inserts a graph of a Source and links the given Artifacts to it. Names
+// need not be unique. Any refusal leaves nothing behind once the write rolls
+// back.
+func Create(tx *database.Tx, userID []byte, in CreateInput) (Graph, []rowchange.Change, error) {
+	in.Name = strings.TrimSpace(in.Name)
+	in.Description = strings.TrimSpace(in.Description)
+	if tx == nil || len(in.SourceID) != 16 || in.Name == "" || len(in.ArtifactIDs) == 0 {
+		return Graph{}, nil, ErrInvalid
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return Graph{}, nil, err
+	}
+	if err := requireDistinct(in.ArtifactIDs); err != nil {
+		return Graph{}, nil, err
+	}
+	g, change, err := insert(tx.Tx, in.SourceID, in.Name, in.Description)
+	if err != nil {
+		return Graph{}, nil, err
+	}
+	changes := []rowchange.Change{change}
+	for _, id := range in.ArtifactIDs {
+		ch, err := Link(tx, userID, g.ID, id)
+		if err != nil {
+			return Graph{}, nil, err
+		}
+		changes = append(changes, ch...)
+	}
+	for _, id := range in.ArtifactIDs {
+		g.ArtifactIDs = append(g.ArtifactIDs, append([]byte(nil), id...))
+	}
+	return g, changes, nil
+}
+
+// requireDistinct refuses a repeated id.
+func requireDistinct(ids [][]byte) error {
+	seen := map[string]bool{}
+	for _, id := range ids {
+		if seen[string(id)] {
+			return ErrInvalid
+		}
+		seen[string(id)] = true
+	}
+	return nil
 }
 
 // CreateDefault inserts the Default graph of a new Source. Its only caller is
@@ -378,12 +432,8 @@ func LinkArtifact(tx *database.Tx, userID, sourceID, artifactID []byte, graphIDs
 			graphIDs = append(graphIDs, g.ID)
 		}
 	} else {
-		seen := map[string]bool{}
-		for _, id := range graphIDs {
-			if seen[string(id)] {
-				return nil, ErrInvalid
-			}
-			seen[string(id)] = true
+		if err := requireDistinct(graphIDs); err != nil {
+			return nil, err
 		}
 	}
 	var changes []rowchange.Change
