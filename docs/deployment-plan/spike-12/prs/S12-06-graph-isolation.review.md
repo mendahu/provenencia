@@ -106,3 +106,19 @@ The executability reviewer confirmed X-1 to X-10: **Ready with changes**, no blo
 - The S12-06 scope entry records what planning added.
 - The working rule "Graphs are fully isolated" records the reification exemption and the code.
 - STEP-8 updates the S12-08 entry when the PR lands.
+
+## Refresh — S11-19 landed (2026-10-21)
+
+S11-19 ([#513](https://github.com/mendahu/provenencia/pull/513)) deleted `canonicalgraph.WalkSource` and its SQL. One Source's walk is now `graphcache.Graph.WalkSource` over a loaded `SourceGraph`, and it reaches only Subjects on that `SourceGraph`.
+
+- **Walk change dropped.** The plan's walk change is gone: the old D-8, STEP-5, T-3, US-3 and AC-3.1–3.2. The Out row sends any walk change to S12-07.
+- **IDs renumbered:**
+  - US-4 → US-3 and AC-4.1 → AC-3.1.
+  - STEP-6–8 → STEP-5–7.
+  - T-4–5 → T-3–4.
+  - D-9 → D-8.
+- **Heads-up suggestion declined:** keeping a `graph_id` join on `canonicalgraph.Walk` alone. `Walk` reads only `auto_reconciler_values` and `canonical_entities`, which have no graph (`core/database/canonicalgraph/canonicalgraph.go` `sqlWalkSelect`).
+- **Touchpoints unchanged.** `git diff 9ca7472 10d3752` touches none of the plan's files.
+- **One new likely-to-break package.** `core/database/graphcache` `source_walk_test.go` builds same-Source bridges, so it is added to the likely-to-break list.
+- **Map conflict resolved.** The S12-06 scope entry conflicted with S11-19's edit and was rewritten: no walk change.
+- **No new decision.** No re-review was needed, because the change only removes scope.
