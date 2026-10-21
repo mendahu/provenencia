@@ -1,7 +1,7 @@
 # Ship log — S12-04 Graph lifecycle
 
 **Plan:** [`S12-04-graph-lifecycle.md`](S12-04-graph-lifecycle.md) · **Branch:** `s12-04-graph-lifecycle` · **PR:** #505
-**State:** review 2
+**State:** ready
 
 Worktree: `/Users/jakerobins/Repos/provenencia-s12-04`, branched from `origin/main` @ `9cf8e33c`.
 
@@ -52,3 +52,14 @@ MNT-3, MNT-4 (minors): Resolved — read in `5d7a4bdb` (comment at `evidencegrap
 
 ## Round 2 — review
 Reviewers: MNT (MNT-1, MNT-2), SEC+PRF (PRF-1). Scope `beb8be43...5d7a4bdb`.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-1 | MNT | major | third `containsID` copy | Resolved | one `database.ContainsBlobID` (`sqlin.go:45`); grep prints only it; `graphcache` inline over `sameID` (import cycle) |
+| MNT-2 | MNT | major | `add-catalog-query` read-transaction shape | Resolved | `SKILL.md:49`; examples match `deleteimpact.Snapshot`, `evidencegraphs.List` |
+| PRF-1 | PRF | blocker | per-Source read scans | Resolved | `sqlListBySource` / `sqlListLinksBySource`; `TestListQueryPlan` fails on any `SCAN` |
+
+No new findings in either lens. No Fix plan 2.
+
+## Result
+Gate PASS (`1e1c2434`; `main` unmoved at `9cf8e33c`) · CI <pending> · open: none · follow-ups: none · later PR: UX-1 → S12-05 scope entry · to user: PRF-1 (answered: fix on this PR, 2026-10-20) · CON miss: none
