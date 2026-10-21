@@ -102,7 +102,7 @@ func (f *walkFixture) bridge(kind string, from, to subjects.Subject, obs ...obse
 	f.t.Helper()
 	res, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: walkUser}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, walkUser, connect.CreateInput{
-			SourceID: f.src.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
+			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
 			Citation:     citations.CreateInput{ArtifactID: f.art.ID, LocatorJSON: walkLocator},
 			Observations: obs,
 		})

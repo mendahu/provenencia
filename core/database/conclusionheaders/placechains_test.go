@@ -45,7 +45,7 @@ func (f *fixture) placeRel(from, to subjects.Subject, kind string, linkStart, li
 	typeProp := f.prop("place_relationship_type").ID
 	res, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			SourceID: f.source.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: "place_relationship",
+			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: "place_relationship",
 			Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
 			Observations: []observations.Input{
 				{PropertyID: fromProp, ValueSubjectID: from.ID},

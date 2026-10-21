@@ -492,18 +492,6 @@ func SourceID(c *database.Catalog, citationID []byte) ([]byte, error) {
 	return append([]byte(nil), sourceID...), nil
 }
 
-// SourceIDTx returns the Artifact source_id for a Citation.
-func SourceIDTx(tx *sql.Tx, citationID []byte) ([]byte, error) {
-	if len(citationID) != 16 {
-		return nil, ErrInvalid
-	}
-	var sourceID []byte
-	if err := tx.QueryRow(sqlCitationSource, citationID).Scan(&sourceID); err != nil {
-		return nil, err
-	}
-	return sourceID, nil
-}
-
 // ListByArtifact returns Citations for an Artifact, each with its Observation count.
 func ListByArtifact(c *database.Catalog, artifactID []byte) ([]ListedCitation, error) {
 	db, err := c.DB()

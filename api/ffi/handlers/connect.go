@@ -22,10 +22,8 @@ func CreateCitedBridge(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	sourceID, err := parseID(req.GetSourceId())
-	if err != nil {
-		return nil, err
-	}
+	// source_id is unread: the bridge's graph comes from its endpoints (S12-08
+	// removes the field).
 	fromID, err := parseID(req.GetFromSubjectId())
 	if err != nil {
 		return nil, err
@@ -62,7 +60,6 @@ func CreateCitedBridge(in []byte) ([]byte, error) {
 		res, wrote, err := writes.Run(c, writes.Op{Action: "create_cited_bridge", UserID: userID},
 			func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 				return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-					SourceID:      sourceID,
 					FromSubjectID: fromID,
 					ToSubjectID:   toID,
 					BridgeTypeKey: req.GetBridgeTypeKey(),

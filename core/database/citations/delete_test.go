@@ -105,7 +105,7 @@ func TestCitationDeleteConnectionOnly(t *testing.T) {
 	}
 	bridge, err := writes.Call(c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			SourceID: src.ID, FromSubjectID: alice.ID, ToSubjectID: wedding.ID,
+			FromSubjectID: alice.ID, ToSubjectID: wedding.ID,
 			BridgeTypeKey: "participation",
 			Citation:      citations.CreateInput{ArtifactID: art.ID, LocatorJSON: testLocator},
 			Observations: []observations.Input{
