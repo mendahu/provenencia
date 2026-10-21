@@ -1,7 +1,7 @@
 # Ship log — S11-19 Claim evidence query
 
 **Plan:** [`S11-19-claim-evidence-query.md`](S11-19-claim-evidence-query.md) · **Branch:** `s11-19-claim-evidence-query` · **PR:** #513
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Base `main` @ `9ca7472e`. Head `8262d21e`. Gate PASS (orchestrator rerun). Report deviations (also in the plan's Landed note):
@@ -66,3 +66,26 @@ Do: add a role-returning method (e.g. `func (r Rules) Role(kind, key) (lead voca
 Check: `TestRulesRole`, `TestSections*`, all `subjectcompare` tests pass; scripts/check-pr.sh PASS.
 
 Minors riding along (optional, implementer's call, no tests): MNT-7 (keep the node from the first loop).
+
+## Round 1 — fix
+Head `2d808c8a`. Gate PASS (orchestrator rerun). F-1 to F-6 done; MNT-7 rode along. Deviations: F-1 used the planned fallback seam (`bridgedOnly`), since there is no read-count hook without touching `graphcache`. F-4's two-Subjects subtest passed before the fix; it guards the rule and the polarity subtest exercises the fix. F-3: `layer.go:199` still names `KeyA`/`KeyB`, but it constructs the `Bridge` literal and does not read it. F-6: `Role` checks pool before period end, as `Lead` does; no default-registry property is both.
+
+## Round 2 — review
+Reviewers: MNT, SEC+PRF (both had Fix-now blocker or major). CON not sent (clean in round 1). Scope `8262d21e...2d808c8a`.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| PRF-1 | PRF | blocker | (round 1) | Resolved | `bridgedOnly` trims neighbor members before values are read (`evidence.go:138-149, 211-221`) |
+| PRF-2 | PRF | major | (round 1) | Resolved | `memberValues` and `bridges` read each Source once per batch |
+| MNT-1 | MNT | major | (round 1) | Resolved | `graphalign.Bridge.From`, used by `newState` and `Evidence` |
+| MNT-2 | MNT | major | (round 1) | Resolved | positive-only endpoints; an ambiguous end drops the bridge; `TestEvidenceBridgeEndpoints` |
+| SEC-1 | SEC | minor | (round 1) | Resolved | bound at `evidence.go:50-52` (checked by orchestrator and SEC+PRF) |
+| MNT-3 | MNT | minor | (round 1) | Resolved | `subjectcompare.Rules.Role`; `routeOf` reads `RolePeriodEnd` |
+| MNT out-of-lens CON | CON | — | `newState` appends `(B, KeyA)` twice for a self-bridge `A == B` | Rejected | `connect` rejects `from == to` before writing (`connect.go`, `bytes.Equal(from.ID, to.ID)` → `ErrInvalid`), so no self-bridge reaches the layer |
+
+Nits (logged): `MNT-9 · evidence.go:225-231 · members is a one-caller wrapper beside the inline neighbor path` · `MNT-10 · subjectcompare.go:191 · Role returns RoleLead with ok=false; consider RoleNone`
+
+No round-2 blockers; no Fix plan 2. `origin/main` unchanged since the branch was cut (`9ca7472e`).
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: PRF-3 (in S11-21 scope) · to user: — · CON miss: none
