@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -815,11 +816,7 @@ func TestImpactEvidenceGraph(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	graphs, err := evidencegraphs.List(c, src.ID)
-	if err != nil || len(graphs) != 1 {
-		t.Fatalf("graphs %v %v", graphs, err)
-	}
-	def := graphs[0]
+	def := evidencegraphstest.SoleGraph(t, c, src.ID)
 
 	t.Run("a Source's only graph is last_graph", func(t *testing.T) {
 		got := mustImpact(t, c, catalogmodel.KindEvidenceGraph, def.ID)

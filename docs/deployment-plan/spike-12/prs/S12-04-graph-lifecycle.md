@@ -1,7 +1,10 @@
 # S12-04 — Graph lifecycle
 
 **Status:** Landed in [#505](https://github.com/mendahu/provenencia/pull/505) (2026-10-20)
-**Landed:** No difference from the plan.
+**Landed:** Review round 1 changed three things from the plan.
+- **D-2's SQL.** `? IS NULL OR source_id = ?` scanned every graph and link (`EXPLAIN QUERY PLAN`: `SCAN evidence_graphs`, `SCAN l`). `list` now picks one of two forms by `len(sourceID) == 0`: per Source, `WHERE source_id = ?` (links driven from `evidence_graphs g` with `g.source_id = ?`), or no `WHERE` project-wide. `sourceID` binds directly, no `NullBlob`; the forms share their column list and ORDER BY through consts. `TestListQueryPlan` guards it. Approved by the user on 2026-10-20.
+- **D-1's `ArtifactIDs` comment** reads "linked Artifacts: by Artifact ref from List, in input order from Create".
+- **Byte-id membership.** `database.ContainsBlobID` replaces the private `containsID` and `hasID` copies in `evidencegraphs`, `identityclaims`, and the `promote` and `conclusionheaders` tests. `graphcache` cannot import `database` (import cycle), so its `hasID` became an inline `slices.ContainsFunc` closure.
 **Spike / slice:** Spike 12 · Slice 2 — Graphs in the catalog
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: one Go package, the delete registries and tests; no FFI, no Swift)
