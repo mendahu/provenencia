@@ -174,7 +174,7 @@ func (w *bridgeWorld) bridge(kind string, from, to subjects.Subject, obs []obser
 	w.t.Helper()
 	res, err := writes.Call(w.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			SourceID: w.source.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
+			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
 			Citation:     citations.CreateInput{ArtifactID: w.artifact.ID, LocatorJSON: bridgeLocator},
 			Observations: obs,
 		})

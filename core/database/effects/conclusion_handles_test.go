@@ -159,7 +159,6 @@ func TestConclusionHandleSets(t *testing.T) {
 		_, _, err := writes.Run(c, writes.Op{Action: "create_cited_bridge", UserID: userID},
 			func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 				return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-					SourceID:      src.ID,
 					FromSubjectID: from.ID,
 					ToSubjectID:   to.ID,
 					Citation:      citations.CreateInput{ArtifactID: art.ID, LocatorJSON: evidenceLocator},

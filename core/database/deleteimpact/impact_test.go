@@ -14,7 +14,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
@@ -359,7 +358,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		}
 		bridge, err := writes.Call(c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 			return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-				SourceID: src.ID, FromSubjectID: alice.ID, ToSubjectID: wedding.ID,
+				FromSubjectID: alice.ID, ToSubjectID: wedding.ID,
 				BridgeTypeKey: "participation",
 				Citation:      citations.CreateInput{ArtifactID: art.ID, LocatorJSON: testLocator},
 				Observations: []observations.Input{
@@ -825,14 +824,7 @@ func TestImpactEvidenceGraph(t *testing.T) {
 		}
 	})
 
-	jones, err := writes.Call(c, writes.Op{Action: "create_evidence_graph", UserID: userID}, func(tx *database.Tx) (evidencegraphs.Graph, []rowchange.Change, error) {
-		return evidencegraphs.Create(tx, userID, evidencegraphs.CreateInput{
-			SourceID: src.ID, Name: "Jones", ArtifactIDs: [][]byte{art.ID},
-		})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	jones := evidencegraphstest.Create(t, c, userID, src.ID, "Jones", art.ID)
 
 	t.Run("a graph with Subjects is blocked by them", func(t *testing.T) {
 		got := mustImpact(t, c, catalogmodel.KindEvidenceGraph, def.ID)

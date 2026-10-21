@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -160,7 +161,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		s := mustSeed(t)
 		res, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.person.ID,
 				ToSubjectID:   s.event.ID,
 				BridgeTypeKey: "participation",
@@ -222,7 +222,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		s := mustSeed(t)
 		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.person.ID,
 				ToSubjectID:   s.personB.ID,
 				BridgeTypeKey: "relationship",
@@ -246,7 +245,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		s := mustSeed(t)
 		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.event.ID,
 				ToSubjectID:   s.place.ID,
 				BridgeTypeKey: "location",
@@ -270,7 +268,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		before := countBridges(t, s.c, "location")
 		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.person.ID,
 				ToSubjectID:   s.place.ID,
 				BridgeTypeKey: "location",
@@ -297,7 +294,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		before := countBridges(t, s.c, "participation")
 		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.person.ID,
 				ToSubjectID:   s.event.ID,
 				BridgeTypeKey: "participation",
@@ -324,7 +320,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		s := mustSeed(t)
 		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.event.ID,
 				ToSubjectID:   s.place.ID,
 				BridgeTypeKey: "location",
@@ -357,7 +352,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		res, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.event.ID,
 				ToSubjectID:   s.place.ID,
 				BridgeTypeKey: "location",
@@ -392,7 +386,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		_, err = writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.event.ID,
 				ToSubjectID:   s.place.ID,
 				BridgeTypeKey: "location",
@@ -411,6 +404,104 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 	})
 
+	// twoGraphs adds Artifact P2 and a Jones graph linked to P2 only (unlinked
+	// from Default), with a Jones person and event.
+	type twoGraph struct {
+		seed
+		p2          artifacts.Artifact
+		jones       evidencegraphs.Graph
+		jonesPerson subjects.Subject
+		jonesEvent  subjects.Subject
+	}
+	mustTwoGraphs := func(t *testing.T) twoGraph {
+		t.Helper()
+		s := mustSeed(t)
+		p2, err := runArtifactCreate(s.c, userID, artifacts.CreateInput{SourceID: s.source.ID, Label: "P2"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, jones := evidencegraphstest.Split(t, s.c, userID, s.source.ID, "Jones", p2.ID)
+		create := func(key, label string, x, y int64) subjects.Subject {
+			t.Helper()
+			typ, err := subjecttypes.Lookup(s.c, key, vocabkey.OriginProvenencia)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sub, err := writes.Call(s.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+				return subjects.Create(tx, userID, subjects.CreateInput{
+					SourceID: s.source.ID, GraphID: jones.ID, SubjectTypeID: typ.ID, Label: label,
+				}, &subjects.Placement{GridX: x, GridY: y})
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			return sub
+		}
+		return twoGraph{
+			seed: s, p2: p2, jones: jones,
+			jonesPerson: create("person", "Ben", 8, 0),
+			jonesEvent:  create("event", "Jones wedding", 10, 4),
+		}
+	}
+	bridge := func(s seed, from, to subjects.Subject, in CreateInput) (Result, error) {
+		in.FromSubjectID, in.ToSubjectID, in.BridgeTypeKey = from.ID, to.ID, "participation"
+		in.Observations = []observations.Input{
+			{PropertyID: s.personProp.ID, ValueSubjectID: s.person.ID},
+			{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
+			{PropertyID: s.roleProp.ID, ValueTermID: s.roleTerm.ID},
+		}
+		return writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
+			return CreateCitedBridge(tx, userID, in)
+		})
+	}
+
+	t.Run("bridge joins its endpoints' graph", func(t *testing.T) {
+		g := mustTwoGraphs(t)
+		s := g.seed
+		s.person, s.event = g.jonesPerson, g.jonesEvent
+		res, err := bridge(s, g.jonesPerson, g.jonesEvent, CreateInput{
+			Citation: citations.CreateInput{ArtifactID: g.p2.ID, LocatorJSON: validLocator},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(res.Subject.GraphID, g.jones.ID) || !bytes.Equal(res.Subject.SourceID, g.source.ID) {
+			t.Fatalf("bridge graph %x source %x", res.Subject.GraphID, res.Subject.SourceID)
+		}
+	})
+
+	t.Run("endpoints in two graphs refused", func(t *testing.T) {
+		g := mustTwoGraphs(t)
+		before := countBridges(t, g.c, "participation")
+		s := g.seed
+		s.event = g.jonesEvent
+		_, err := bridge(s, g.person, g.jonesEvent, CreateInput{
+			Citation: citations.CreateInput{ArtifactID: g.artifact.ID, LocatorJSON: validLocator},
+		})
+		if !errors.Is(err, observations.ErrOtherGraph) {
+			t.Fatalf("got %v want ErrOtherGraph", err)
+		}
+		if n := countBridges(t, g.c, "participation"); n != before {
+			t.Fatalf("bridges %d want %d", n, before)
+		}
+	})
+
+	t.Run("attached citation on an unlinked artifact refused", func(t *testing.T) {
+		g := mustTwoGraphs(t)
+		cited, err := writes.Call(g.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID: g.p2.ID, LocatorJSON: validLocator,
+			}, nil)
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = bridge(g.seed, g.person, g.event, CreateInput{CitationID: cited.Citation.ID})
+		if !errors.Is(err, observations.ErrOtherGraph) {
+			t.Fatalf("got %v want ErrOtherGraph", err)
+		}
+	})
+
 	t.Run("missing position invalid", func(t *testing.T) {
 		s := mustSeed(t)
 		if _, err := writes.Call(s.c, writes.Op{}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
@@ -421,7 +512,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.event.ID,
 				ToSubjectID:   s.place.ID,
 				BridgeTypeKey: "location",

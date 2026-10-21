@@ -9689,6 +9689,11 @@ enum L10n {
             defaultValue: "That observation isn’t valid.",
             comment: "FFI error observations.invalid"
         )
+        static let observationsOtherGraph = LocalizedStringResource(
+            "error.observations.other_graph",
+            defaultValue: "That subject or artifact is in another evidence graph.",
+            comment: "FFI error observations.other_graph"
+        )
 
         static let observationsEdgeLocked = LocalizedStringResource(
             "error.observations.edge_locked",
@@ -9928,6 +9933,8 @@ enum L10n {
                 return L10n.string(evidenceGraphsLastGraph)
             case "observations.invalid":
                 return L10n.string(observationsInvalid)
+            case "observations.other_graph":
+                return L10n.string(observationsOtherGraph)
             case "observations.edge_locked":
                 return L10n.string(observationsEdgeLocked)
             case "observations.in_use":

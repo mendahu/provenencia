@@ -28,7 +28,6 @@ var (
 
 // CreateInput is one durable Connect submit.
 type CreateInput struct {
-	SourceID      []byte
 	FromSubjectID []byte
 	ToSubjectID   []byte
 	BridgeTypeKey string
@@ -67,9 +66,6 @@ func CreateCitedBridge(tx *database.Tx, userID []byte, in CreateInput) (Result, 
 		return Result{}, nil, ErrInvalid
 	}
 	if bytes.Equal(from.ID, to.ID) {
-		return Result{}, nil, ErrInvalid
-	}
-	if !bytes.Equal(from.SourceID, in.SourceID) || !bytes.Equal(to.SourceID, in.SourceID) {
 		return Result{}, nil, ErrInvalid
 	}
 	fromType, err := subjecttypes.GetByIDTx(q, from.SubjectTypeID)
@@ -118,10 +114,6 @@ func CreateCitedBridge(tx *database.Tx, userID []byte, in CreateInput) (Result, 
 		if _, err := citations.GetTx(q, in.CitationID); err != nil {
 			return Result{}, nil, ErrInvalid
 		}
-		sourceID, err := citations.SourceIDTx(q, in.CitationID)
-		if err != nil || !bytes.Equal(sourceID, in.SourceID) {
-			return Result{}, nil, ErrInvalid
-		}
 	} else if err := citations.NormalizeCreateInput(&in.Citation); err != nil {
 		return Result{}, nil, err
 	}
@@ -140,7 +132,8 @@ func CreateCitedBridge(tx *database.Tx, userID []byte, in CreateInput) (Result, 
 		return Result{}, nil, ErrInvalid
 	}
 	bridge, subjectChange, err := subjects.InsertTx(q, subjects.CreateInput{
-		SourceID:      in.SourceID,
+		SourceID:      from.SourceID,
+		GraphID:       from.GraphID,
 		SubjectTypeID: bridgeType.ID,
 		Description:   in.Description,
 	})

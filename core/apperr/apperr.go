@@ -40,6 +40,7 @@ const (
 	CodeObservationsInvalid           = "observations.invalid"
 	CodeObservationsEdgeLocked        = "observations.edge_locked"
 	CodeObservationsInUse             = "observations.in_use"
+	CodeObservationsOtherGraph        = "observations.other_graph"
 	CodeSourceTypesInvalid            = "sourcetypes.invalid"
 	CodeSourceTypesInUse              = "sourcetypes.in_use"
 	CodeSourceTypesOriginLocked       = "sourcetypes.origin_locked"

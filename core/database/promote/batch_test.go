@@ -137,7 +137,7 @@ func (f *batchFixture) participation(person, event subjects.Subject) subjects.Su
 	role := f.term("role", "subject").ID
 	res, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			SourceID: f.source.ID, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
+			FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
 			Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: batchLocator},
 			Observations: []observations.Input{
 				{PropertyID: personProp, ValueSubjectID: person.ID},

@@ -1389,7 +1389,7 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			must(f.t, err)
 			bridge, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 				return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-					SourceID: f.source.ID, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
+					FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
 					Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
 					Observations: []observations.Input{
 						{PropertyID: personProp.ID, ValueSubjectID: person.ID},

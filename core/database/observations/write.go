@@ -118,11 +118,8 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 }
 
 func isEdgeTx(tx *sql.Tx, subjectID, propertyID []byte) (bool, error) {
-	var typeKey string
-	if err := tx.QueryRow(sqlSubjectTypeKey, subjectID).Scan(&typeKey); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, ErrInvalid
-		}
+	typeKey, _, err := subjectTypeKeyTx(tx, subjectID)
+	if err != nil {
 		return false, err
 	}
 	prop, err := getPropertyTx(tx, propertyID)

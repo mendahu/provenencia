@@ -257,7 +257,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	roleProp := f.prop("role").ID
 	if _, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: f.user}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, f.user, connect.CreateInput{
-			SourceID: f.source, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
+			FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
 			Citation: citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: handleLocator},
 			Observations: []observations.Input{
 				{PropertyID: personProp, ValueSubjectID: person.ID},
@@ -271,7 +271,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	placeProp := f.prop("place").ID
 	if _, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: f.user}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, f.user, connect.CreateInput{
-			SourceID: f.source, FromSubjectID: event.ID, ToSubjectID: place.ID, BridgeTypeKey: "location",
+			FromSubjectID: event.ID, ToSubjectID: place.ID, BridgeTypeKey: "location",
 			Citation: citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: handleLocator},
 			Observations: []observations.Input{
 				{PropertyID: eventProp, ValueSubjectID: event.ID},

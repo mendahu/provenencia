@@ -114,7 +114,7 @@ func (f *fixture) bridge(kind string, from, to subjects.Subject, obs ...observat
 	f.t.Helper()
 	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			SourceID: f.src.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
+			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
 			Citation:     citations.CreateInput{ArtifactID: f.art.ID, LocatorJSON: locator},
 			Observations: obs,
 		})
