@@ -1,7 +1,7 @@
 # Ship log — S11-18 Contested marker on Promote rows
 
 **Plan:** [`S11-18-contested-marker.md`](S11-18-contested-marker.md) · **Branch:** `s11-18-contested-marker` · **PR:** #507
-**State:** review 1
+**State:** fixing 1
 
 ## Round 0 — implement
 Head `e25fb56a`. Gate PASS (orchestrator ran `scripts/check-pr.sh` against `d214e663`; 1236 Swift tests). Report deviations: the code is one commit, not one per behavior; the first docs commit `c76d9e0b` used a Status form plan-docs rejects and was pushed before its gate, fixed in `e25fb56a`; the PR body is shorter than §13 (rewritten at finish); no Landed note (no difference from the plan). Manual check (§10) not run.
@@ -29,7 +29,7 @@ Failing test first: in `PromoteModelTests.movesAreWordedNamingTheNeighbor`, add:
 Do:
 - Add `func row(_ subjectID: String?) -> Row?` to `PromoteFlow`, doc "The row for this Subject, or nil when it is not on the page", beside `connectionLines`/`resolve` (non-mutating; `subjectID` nil → nil).
 - Move every `rows.first(where: { $0.subjectID == … })` / `rows.first { $0.subjectID == … }` read onto it: `PromoteFlow.resolve` (line 300), `noteDuplicates` (line 474), `PromoteView.swift:434` (`model.flow.row(model.flow.sheetSubjectID)`), `PromoteView.swift:845`, and `PromoteModel.reasonText`. The `firstIndex` sites (mutations) and `rows.filter` at line 246 stay.
-- In `reasonText`, join the three move cases into one arm `case .neighborPlaced(let id), .neighborMoved(let id), .neighborReleased(let id):` with one `guard let neighbor = flow.row(id) else { return L10n.string(L10n.Promote.reasonMoveUnknown) }`, then an inner `switch reason`: placed → `neighbor.target.handleRef.map { L10n.Promote.neighborPlaced(neighbor: neighbor.name, ref: $0) } ?? L10n.string(L10n.Promote.reasonMoveUnknown)`; moved → the same with `neighborMoved`; released → `neighborReleased(neighbor: neighbor.name)`; `default` is not allowed — list the three cases and end the inner switch with the outer's other cases unreachable via `default: return L10n.string(L10n.Promote.reasonMoveUnknown)` only if the compiler requires it, with a one-line comment why. `.via` uses `flow.row(neighborID)` and passes `neighbor.shownRef` inline (MNT-3).
+- In `reasonText`, join the three move cases into one arm `case .neighborPlaced(let id), .neighborMoved(let id), .neighborReleased(let id):` with one `guard let neighbor = flow.row(id) else { return L10n.string(L10n.Promote.reasonMoveUnknown) }`, then an inner `switch reason`: placed → `neighbor.target.handleRef.map { L10n.Promote.neighborPlaced(neighbor: neighbor.name, ref: $0) } ?? L10n.string(L10n.Promote.reasonMoveUnknown)`; moved → the same with `neighborMoved`; released → `neighborReleased(neighbor: neighbor.name)`; the inner switch ends `default: return L10n.string(L10n.Promote.reasonMoveUnknown)` with the comment `// Only the three move reasons reach this arm.` `.via` uses `flow.row(neighborID)` and passes `neighbor.shownRef` inline (MNT-3).
 Check: `rg -n -F '$0.subjectID ==' macos/App/Features/Promote` prints only the `firstIndex` lines (PromoteFlow.swift setTarget, togglePin and two siblings) and the `rows.filter` at `mapped`; XT `PromoteModelTests` and `PromoteFlowTests` pass.
 
 **F-2 — `noteDuplicates` reads `Target.handleRef`** (from MNT-2)
