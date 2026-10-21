@@ -198,16 +198,11 @@ func checkFixed(g *graphcache.Graph, primary map[string]primarySubject, f grapha
 	if n == nil || n.Merged {
 		return graphalign.Fixed{}, promote.ErrInvalid
 	}
-	v, err := g.Vocabulary()
+	types, err := typeByKey(g)
 	if err != nil {
 		return graphalign.Fixed{}, err
 	}
-	var kind string
-	for _, t := range v.Types {
-		if bytes.Equal(t.ID, n.SubjectTypeID) {
-			kind = t.Key
-		}
-	}
+	kind := typeKey(types, n.SubjectTypeID)
 	if kind != ps.kind {
 		return graphalign.Fixed{}, promote.ErrInvalid
 	}
