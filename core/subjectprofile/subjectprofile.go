@@ -120,14 +120,16 @@ func without(cs []Candidate, excluding [][]byte) ([]autoreconcile.Candidate, boo
 }
 
 // ForSubject returns a Subject's own values: each candidate positive or
-// negative as recorded, in order. Only Value and Negative are read. lifespans
-// is the registry's Subject.Lifespans for the side's kind; for each, a window
-// and a span are added when the life events give them.
+// negative as recorded, in order. Each value's Ref is its Observation id.
+// lifespans is the registry's Subject.Lifespans for the side's kind; for each,
+// a window and a span are added when the life events give them, with no Ref.
 func ForSubject(s Subject, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan) subjectcompare.Values {
 	out := subjectcompare.Values{}
 	for key, cs := range s.Values {
 		for _, c := range cs {
-			out[key] = append(out[key], Value(c.Value, c.Negative, s.NamePattern))
+			v := Value(c.Value, c.Negative, s.NamePattern)
+			v.Ref = c.ObservationID
+			out[key] = append(out[key], v)
 		}
 	}
 	addLifespans(out, s.Life, lifespans)

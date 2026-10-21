@@ -278,19 +278,21 @@ func TestCompare(t *testing.T) {
 
 func TestPoints(t *testing.T) {
 	w := subjectcompare.Weights{Agree: 2.5, Conflict: 3}
+	speaking := func(sim float64) *propertycompare.SpeakingPair {
+		return &propertycompare.SpeakingPair{Result: valuecompare.Result{Similarity: sim}}
+	}
 	for _, c := range []struct {
 		name string
-		out  propertycompare.Outcome
-		sim  float64
+		res  propertycompare.Result
 		want float64
 	}{
-		{"agree", propertycompare.OutcomeAgree, 0.4, 2.5},
-		{"partial", propertycompare.OutcomePartial, 0.75, 1.875},
-		{"conflict", propertycompare.OutcomeConflict, 0, -3},
-		{"unknown", propertycompare.OutcomeUnknown, 0, 0},
+		{"agree", propertycompare.Result{Outcome: propertycompare.OutcomeAgree, Speaking: speaking(0.4)}, 2.5},
+		{"partial", propertycompare.Result{Outcome: propertycompare.OutcomePartial, Speaking: speaking(0.75)}, 1.875},
+		{"conflict", propertycompare.Result{Outcome: propertycompare.OutcomeConflict}, -3},
+		{"unknown", propertycompare.Result{Outcome: propertycompare.OutcomeUnknown}, 0},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			if got := subjectcompare.Points(c.out, c.sim, w); !near(got, c.want) {
+			if got := subjectcompare.Points(c.res, w); !near(got, c.want) {
 				t.Errorf("Points = %v, want %v", got, c.want)
 			}
 		})

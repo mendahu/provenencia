@@ -323,13 +323,13 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, kind vocabkey.SubjectT
 			res := propertycompare.Compare([]propertycompare.Value{in.value}, []propertycompare.Value{mem.value}, meta, cfg.Value)
 			if autoreconcile.Compatible(cfg.Value, in.valueType, in.auto, mem.auto) {
 				chosen, chosenRes, pinned = mem, res, true
-				sim = similarity(res)
+				sim = res.Similarity()
 				break
 			}
 			if res.Outcome == propertycompare.OutcomeUnknown {
 				continue
 			}
-			if s := similarity(res); chosen == nil || s > sim {
+			if s := res.Similarity(); chosen == nil || s > sim {
 				chosen, chosenRes, sim = mem, res, s
 			}
 		}
@@ -339,7 +339,7 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, kind vocabkey.SubjectT
 		var weight float64
 		if in.origin == vocabkey.OriginProvenencia {
 			if lead, ok := cfg.Subject.Lead(kind, vocabkey.PropertyKey(in.key)); ok {
-				weight = subjectcompare.Points(chosenRes.Outcome, sim, cfg.Subject.Weights[kind][lead])
+				weight = subjectcompare.Points(chosenRes, cfg.Subject.Weights[kind][lead])
 			}
 		}
 		out = append(out, graphalign.Exhibit{
@@ -363,14 +363,6 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, kind vocabkey.SubjectT
 		})
 	}
 	return out
-}
-
-// similarity is the speaking pair's similarity; 0 when no pair spoke.
-func similarity(r propertycompare.Result) float64 {
-	if r.Speaking == nil {
-		return 0
-	}
-	return r.Speaking.Result.Similarity
 }
 
 func cloneDate(d *datevalue.Value) *datevalue.Value {

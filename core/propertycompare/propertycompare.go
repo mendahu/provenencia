@@ -66,6 +66,14 @@ type Result struct {
 	Excluded []Excluded    // values dropped as non-evidence, side A's then side B's
 }
 
+// Similarity is the speaking pair's similarity, 0 when no pair spoke.
+func (r Result) Similarity() float64 {
+	if r.Speaking == nil {
+		return 0
+	}
+	return r.Speaking.Result.Similarity
+}
+
 // SpeakingPair is the one pair of values that decided the outcome.
 type SpeakingPair struct {
 	A, B   Value // side A's and side B's value; one may be negative

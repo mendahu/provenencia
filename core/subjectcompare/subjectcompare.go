@@ -116,18 +116,11 @@ func Compare(kind vocabkey.SubjectType, a, b Values, metas Metas, rules Rules, v
 			res = propertycompare.Compare(Side(kind, key, a, rules), Side(kind, key, b, rules), metas[key], value)
 		}
 		pr := PropertyResult{Key: key, Result: res}
-		var sim float64
-		if res.Outcome == propertycompare.OutcomePartial {
-			sim = res.Speaking.Result.Similarity
-		}
-		pr.Points = Points(res.Outcome, sim, w)
+		pr.Points = Points(res, w)
+		score += max(pr.Points, 0)
 		switch res.Outcome {
-		case propertycompare.OutcomeAgree:
+		case propertycompare.OutcomeAgree, propertycompare.OutcomePartial:
 			counted += w.Agree
-			score += w.Agree
-		case propertycompare.OutcomePartial:
-			counted += w.Agree
-			score += w.Agree * sim
 		case propertycompare.OutcomeConflict:
 			counted += w.Conflict
 		}
@@ -143,12 +136,12 @@ func Compare(kind vocabkey.SubjectType, a, b Values, metas Metas, rules Rules, v
 // Points is what one lead property adds to Evidence: an agree earns the agree
 // weight, a partial the agree weight × similarity, a conflict loses the
 // conflict penalty, and an unknown counts for nothing.
-func Points(outcome propertycompare.Outcome, similarity float64, w Weights) float64 {
-	switch outcome {
+func Points(res propertycompare.Result, w Weights) float64 {
+	switch res.Outcome {
 	case propertycompare.OutcomeAgree:
 		return w.Agree
 	case propertycompare.OutcomePartial:
-		return w.Agree * similarity
+		return w.Agree * res.Similarity()
 	case propertycompare.OutcomeConflict:
 		return -w.Conflict
 	}
