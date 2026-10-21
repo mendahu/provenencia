@@ -77,3 +77,66 @@ func TestRetitleDropsSourceGraph(t *testing.T) {
 		t.Fatalf("unknown id found %v, title %q", sg.Found, sg.Title)
 	}
 }
+
+// TestOnlyATitleChangeDropsSourceGraph: a Source graph holds the title and
+// nothing else off the sources row, so a description edit leaves it loaded and
+// a title edit drops it.
+func TestOnlyATitleChangeDropsSourceGraph(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Tester", r); err != nil {
+		t.Fatal(err)
+	}
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := c.Graph()
+	load := func() {
+		t.Helper()
+		if _, err := g.Source(src.ID); err != nil {
+			t.Fatal(err)
+		}
+		if !g.LoadedSourceForTest(src.ID) {
+			t.Fatal("source graph not loaded")
+		}
+	}
+	update := func(s sources.Source) {
+		t.Helper()
+		if _, _, err := writes.Run(c, writes.Op{Action: "update_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			ch, err := sources.Update(tx, userID, s)
+			return s, ch, err
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	load()
+	src.Description = "Baptisms 1790 to 1820"
+	update(src)
+	if !g.LoadedSourceForTest(src.ID) {
+		t.Fatal("a description edit dropped the source graph")
+	}
+
+	src.Title = "Parish register"
+	update(src)
+	if g.LoadedSourceForTest(src.ID) {
+		t.Fatal("a title edit left the source graph loaded")
+	}
+}
