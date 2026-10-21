@@ -52,7 +52,7 @@ These are the calls for this spike. PR plans treat them as binding.
 - **Each PR updates the docs and skills it makes false.**
   - S12-01: [`source-layer-data-model.md`](../../source-layer-data-model.md) (Copy Source).
   - S12-03: `source-layer-data-model.md` and [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) (graphs, a Subject's graph); [`catalog-refs.md`](../../catalog-refs.md) and the [`add-catalog-ref`](../../../.agents/skills/add-catalog-ref/SKILL.md) prefix table (`GPH`); `core/database/effects/README.md`; [`catalog-deletes.md`](../../catalog-deletes.md).
-  - S12-06: `interpretation-layer-data-model.md` (isolation).
+  - S12-06: `interpretation-layer-data-model.md` and [`source-layer-data-model.md`](../../source-layer-data-model.md) § 7.1 (isolation).
   - S12-08: [`macos-client-patterns.md`](../../macos-client-patterns.md), [`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md), [`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md) (graph-keyed effects and keys).
   - S12-09: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) ("a layer is one Evidence graph's Subjects"), [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) (Unpromote unfiles the graph's bridges).
 
@@ -281,7 +281,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-08 — Graph id end to end
 
-**Ships.** List, create-Subject and cited-bridge RPCs take a graph id; `effects.Set`, `Effect`, `WriteEffects` and the Swift mutations carry graph ids instead of Source ids, together; `CatalogQueryKey.evidenceGraph` and the session cache are per graph; `WorkspaceLocation` carries the graph for graph and composer surfaces; existing entry points open the Source's graph. `SoleGraphTx` is deleted except Promote's use. Updates `macos-client-patterns.md`, `add-workspace-place`, `add-catalog-delete`.
+**Ships.** List and create-Subject RPCs take a graph id; `CreateCitedBridgeRequest` drops `source_id` and takes no graph id (the bridge's graph comes from its endpoints, S12-06); `subjects.CreateInput.GraphID` (S12-06) becomes required; `effects.Set`, `Effect`, `WriteEffects` and the Swift mutations carry graph ids instead of Source ids, together; `CatalogQueryKey.evidenceGraph` and the session cache are per graph; `WorkspaceLocation` carries the graph for graph and composer surfaces; existing entry points open the Source's graph. `SoleGraphTx` is deleted except Promote's use. Updates `macos-client-patterns.md`, `add-workspace-place`, `add-catalog-delete`.
 **Not this PR.** Promote (S12-09); new chrome (slice 4).
 **Check.** The canvas and composer work as before; Back / Forward and a relaunch return to the same graph.
 **Context.** Working rules "A graph is a place", "Effects are graph-keyed, in one step"; `add-workspace-location`, `add-workspace-place`, `add-ffi-handler`. The largest PR; `plan-pr` may split it along FFI and Swift if it runs past ten steps.

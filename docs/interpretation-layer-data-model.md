@@ -576,7 +576,7 @@ CREATE TABLE subjects (
 
 `subject_type_id` is immutable after insert. Correcting a wrong type means a new subject (and new `ref`), not an UPDATE of the type. The UUID remains the machine identity; the type (via `candidate_ref_prefix`) is part of the public identity encoded in `ref`.
 
-`source_id` is the subject's home Source — typically the Source being interpreted when the subject was created. It exists so the application can efficiently surface Subjects that belong with a given Source during common same-source workflows. It does not restrict which Citations or Observations may reference the subject; cross-source Observations remain valid.
+`source_id` is the subject's home Source — typically the Source being interpreted when the subject was created. It exists so the application can efficiently surface Subjects that belong with a given Source during common same-source workflows. An Observation's Subject, Subject value and Citation Artifact must share one Evidence graph (the Artifact linked to it), except that a reification Subject (type `source`) may be the value of a non-edge Observation in any graph; `observations.requireSameGraph` refuses the rest with `observations.other_graph`.
 
 For Subjects of type `source`, `source_id` has a stronger meaning: it identifies the Source this subject reifies. The application should maintain at most one `source` subject per Source row. Other Sources may then make cited Observations about that subject—bare references such as “this book mentions that marriage certificate,” free-text remarks about authenticity or errors, or both—without collapsing that material into Observations about historical persons alone, and without requiring structured Source-quality columns.
 
@@ -584,7 +584,7 @@ Subjects deliberately contain little domain data. A person's name, an Event's da
 
 `description` is an optional short summary of the subject itself. Subjects do not have a multi-note table; researcher commentary about interpreted assertions belongs on the supporting Observations and can be aggregated from `observation_notes` when a subject-centric view is needed.
 
-`graph_id` is the Evidence graph the Subject belongs to ([`source-layer-data-model.md`](source-layer-data-model.md) § 7.1). A Subject belongs to one graph and never moves. The composite key `(graph_id, source_id)` keeps the graph on the Subject's home Source. `subjects.Create` takes the graph from `evidencegraphs.SoleGraphTx` while every Source has one graph.
+`graph_id` is the Evidence graph the Subject belongs to ([`source-layer-data-model.md`](source-layer-data-model.md) § 7.1). A Subject belongs to one graph and never moves. The composite key `(graph_id, source_id)` keeps the graph on the Subject's home Source. `subjects.Create` takes `CreateInput.GraphID` when given, else the graph from `evidencegraphs.SoleGraphTx` while every Source has one graph.
 
 A subject can therefore be sparse. Creating a `person` subject does not require knowing a name, date, or any other property.
 
@@ -936,7 +936,7 @@ The current design aims to preserve these invariants:
 
 1. Every subject has exactly one Subject type. `subject_type_id` is immutable after insert.
 2. Every subject has a required `ref` of the form `{candidate_ref_prefix}-{token}`.
-3. Every subject has a home `source_id`; that home Source does not confine which Observations may target the subject.
+3. Every subject has a home `source_id`. An Observation's Subject, Subject value and Citation Artifact share one Evidence graph, except a reification Subject value on a non-edge row (`observations.requireSameGraph`).
 4. A subject of type `source` reifies the Source identified by its `source_id`; the application should keep at most one such subject per Source.
 5. Subject types and Properties are extensible persisted vocabulary with `origin` namespaces and `UNIQUE (key, origin)`, not closed application enums. A new Subject type includes a globally unique `ref_prefix` that is not a reserved catalog prefix or layer code. See [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1.
 6. Every Observation has its own stable identity and a required `OBS-…` `ref`.
@@ -957,6 +957,7 @@ The current design aims to preserve these invariants:
 21. First-class application behavior may recognize seeded `(key, origin = 'provenencia')` pairs and open values; it must not require the schema to close those vocabularies or encode every genealogical edge case.
 22. Source credibility assessments are Interpretation entities (`source_credibility_assessments`), not columns on `sources` and not Observation confidence scores.
 23. Citation transcription certainty is the boolean `transcription_uncertain` (+ optional note), media-agnostic; it is not Claim confidence.
+24. An Observation is saved only when its Subject, its Subject value and its Citation's Artifact are in, or linked to, one Evidence graph; a reification Subject (type `source`) may be the value of a non-edge row in any graph (`observations.other_graph` otherwise).
 
 ---
 
