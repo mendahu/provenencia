@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-30 — Gender meets sex at birth in its own words
+
+**In review**, stacked on S11-18. Promote compares a person's gender with a sex at birth in the sex at birth's terms: *Man* agrees with *Male* and *Woman* with *Female*, where before every such pair conflicted. The crosswalk is registry data (`subject.Pools.person.sex_at_birth.Terms.gender`); a gender it does not list, such as *Non-binary*, is left out of the comparison.
+
 ## S11-18 — Contested marker on Promote rows
 
 **Landed 2026-10-21** in [#507](https://github.com/mendahu/provenencia/pull/507). A Promote row whose pair has a conflicting comparison shows a red Contested badge beside its band, at any band, only while the row shows a selected record; picking another record clears it until the re-proposal says otherwise. When re-proposing moves a row because of a neighbor, its Updated caption now names the neighbor and what it did ("Updated · after Ada moved to PER-e1"), in the info ink; when the neighbor has no record to name, it says "after a connected row changed". VoiceOver reads the band as "Strong, contested". `PromoteFlow` decides all of it (`SelectionReadout.contested`, `Row.captionReason`, `Row.shownRef`) and `PromoteModel.reasonText` words the three move reasons.

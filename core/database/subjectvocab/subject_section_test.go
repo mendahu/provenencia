@@ -27,6 +27,10 @@ func TestSubjectSectionMatchesSeed(t *testing.T) {
 		}
 		bound[b.TypeKey][b.PropertyKey] = true
 	}
+	seededTerm := map[string]bool{}
+	for _, tm := range seedTerms {
+		seededTerm[tm.PropertyKey+"/"+tm.Key] = true
+	}
 	s := matchregistry.Default().Subject
 
 	checkKind := func(kind vocabkey.SubjectType) {
@@ -56,6 +60,16 @@ func TestSubjectSectionMatchesSeed(t *testing.T) {
 				checkBound(kind, with)
 				if valueType[string(with)] != valueType[string(lead)] {
 					t.Errorf("%s.%s pools %s of value type %q, lead is %q", kind, lead, with, valueType[string(with)], valueType[string(lead)])
+				}
+			}
+			for with, terms := range pool.Terms {
+				for from, to := range terms {
+					if !seededTerm[string(with)+"/"+from] {
+						t.Errorf("%s.%s maps %q, not a seeded %s term", kind, lead, from, with)
+					}
+					if !seededTerm[string(lead)+"/"+to] {
+						t.Errorf("%s.%s maps %s %q to %q, not a seeded %s term", kind, lead, with, from, to, lead)
+					}
 				}
 			}
 		}

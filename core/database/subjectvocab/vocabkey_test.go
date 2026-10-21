@@ -67,6 +67,10 @@ func TestVocabKeysMatchSeed(t *testing.T) {
 		{vocabkey.PropertyEventType, string(vocabkey.EventBurial)},
 		{"role", string(vocabkey.RoleSubject)},
 		{"place_relationship_type", string(vocabkey.TermPartOf)},
+		{vocabkey.PropertySexAtBirth, vocabkey.SexMale},
+		{vocabkey.PropertySexAtBirth, vocabkey.SexFemale},
+		{vocabkey.PropertyGender, vocabkey.GenderMan},
+		{vocabkey.PropertyGender, vocabkey.GenderWoman},
 	} {
 		if !terms[tc.property+"/"+tc.key] {
 			t.Errorf("vocabkey term %q is not a seeded %s term", tc.key, tc.property)

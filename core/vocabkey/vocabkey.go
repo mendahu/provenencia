@@ -69,6 +69,11 @@ const (
 	EventDeath  EventType = "death"
 	EventBurial EventType = "burial"
 	RoleSubject Role      = "subject"
+
+	SexMale     = "male"   // sex_at_birth
+	SexFemale   = "female" // sex_at_birth
+	GenderMan   = "man"    // gender
+	GenderWoman = "woman"  // gender
 )
 
 // BridgeTerm is a bridge's disambiguation term key: a participation role, a

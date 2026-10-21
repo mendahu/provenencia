@@ -19,8 +19,14 @@ type Weights struct {
 	Conflict float64 // lost on conflict; also its weight in Similarity
 }
 
-// Pool lists properties whose values join the lead's on each side.
-type Pool struct{ With []vocabkey.PropertyKey }
+// Pool lists properties whose values join the lead's on each side. Terms
+// maps a pooled property's term keys into the lead's vocabulary, so the
+// gender "man" meets the sex at birth "male"; a pooled property listed in
+// Terms drops a term it does not map, and one not listed joins unchanged.
+type Pool struct {
+	With  []vocabkey.PropertyKey
+	Terms map[vocabkey.PropertyKey]map[string]string
+}
 
 // Period reads two date properties as one range that stands for the lead on
 // a side with no positive lead value.
