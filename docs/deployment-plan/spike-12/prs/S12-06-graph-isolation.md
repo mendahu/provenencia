@@ -304,3 +304,12 @@ None.
 
 **Title:** S12-06 — Graph isolation
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-12/prs/S12-06-graph-isolation.md`.
+
+## Landed
+
+Differences from the plan:
+
+- T-1 finds Census's Default graph with `evidencegraphs.List`, not `evidencegraphstest.SoleGraph`, because that Source has two graphs there. The review round then moved it onto the new `evidencegraphstest.Split(t, c, userID, sourceID, name, artifactIDs...)` helper, which also replaces the same "new graph, then unlink from Default" setup in the `connect` tests. The audit scope test keeps its own `Unlink` and `Link` calls because it tests link and unlink writes themselves.
+- STEP-7 said the `source`-Subject paragraph in `interpretation-layer-data-model.md` stays. It was edited instead (user, 2026-10-21), along with the §5.1 commentary text, the Letter L1 example, `docs/ideas/source-to-source-relationships.md` and `docs/research-judgment-model.md`, so they say another Source cannot write `remark` on a `source` Subject; it refers to it only through a non-edge `mentions`.
+- `observations.subjectTypeKeyTx` reads a Subject's type key and origin in one place for `insertOne`, `isEdgeTx` and `requireSameGraph`; D-3 named the query shape, not this helper.
+- The manual check was not run: no two-graph path is reachable in the app until slice 4.
