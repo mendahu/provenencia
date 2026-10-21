@@ -1,6 +1,6 @@
 # S11-18 — Contested marker on Promote rows
 
-**Status:** Landed #507
+**Status:** Landed in [#507](https://github.com/mendahu/provenencia/pull/507) (2026-10-21)
 **Spike / slice:** Spike 11 · Slice 4 — Segments and graph alignment
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S11-D1](../design/S11-D1-promote-rows.md) §4.1 (CM-1 – CM-6), board agreed 2026-10-20
