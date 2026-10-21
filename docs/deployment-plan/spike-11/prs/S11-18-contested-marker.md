@@ -1,7 +1,6 @@
 # S11-18 — Contested marker on Promote rows
 
 **Status:** Landed in [#507](https://github.com/mendahu/provenencia/pull/507) (2026-10-21)
-
 **Landed:** the code is one commit, not one per behavior. Round 1 differences from the plan: `PromoteFlow.row(_:)` is new and every row lookup by Subject reads it; the placed and moved sentences fall back to "after a connected row changed" when the neighbor has no record to name (beyond D-5), so a Source ref is never named as the matched record; `noteDuplicates` reads `Target.handleRef`, superseding D-6's "not touched" for those two sites.
 **Spike / slice:** Spike 11 · Slice 4 — Segments and graph alignment
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
