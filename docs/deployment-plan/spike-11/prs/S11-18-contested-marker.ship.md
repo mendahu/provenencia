@@ -59,4 +59,4 @@ MNT: MNT-1 **Resolved** (`PromoteFlow.row(_:)`; one move arm), MNT-2 **Resolved*
 Nits (logged): `MNT-4 · PromoteFlowTests.swift:103 and ~20 more, PromoteModelTests.swift:100-103, :166 · older tests still use flow.rows.first instead of flow.row(_:)`
 
 ## Result
-Gate PASS · CI pending at ready · open: none · follow-ups: none · to user: — · CON miss: none
+Gate PASS · CI green (test, localizable) · open: none · follow-ups: none · to user: — · CON miss: none
