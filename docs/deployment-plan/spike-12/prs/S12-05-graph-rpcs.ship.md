@@ -74,7 +74,7 @@ CON-1, MNT-1, MNT-2, PRF-1 and F-5 (FakeStore scoping) are each **Resolved**, as
 Nits (logged): `MNT-6 · S12-05-graph-rpcs.md Landed note · D-16 line still names evidence_graphs_test.go as the helper location before saying harness_test.go` · `CON-2 · unchanged`
 
 ## Result
-Gate PASS at `1e3331ba` · `origin/main` unchanged since the branch was cut (`e169b711`) · CI pending · open: none ·
+Gate PASS at `1e3331ba` · `origin/main` unchanged since the branch was cut (`e169b711`) · CI green (Go tests, macOS tests at `1e3331ba`; the ship-log commit skips by path) · open: none ·
 to user: MNT-1, PRF-1 (D-11 corrections) and UX-1 (§6 copy), all answered 2026-10-21 and fixed ·
 follow-ups: UX-2 (last-graph gate preview), UX-3 (S12-12 inline validation), MNT-3, MNT-4, MNT-5 (logged nits) ·
 CON miss: none (MNT-1 came from D-11's false premise; the code matched the plan, so conformance had nothing to miss)
