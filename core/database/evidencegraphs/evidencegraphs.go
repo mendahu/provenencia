@@ -33,14 +33,20 @@ var (
 const (
 	sqlInsert = `INSERT INTO evidence_graphs (id, ref, source_id, name, description)
 		VALUES (?, ?, ?, ?, ?)`
-	sqlList = `SELECT id, COALESCE(ref, ''), source_id, name, COALESCE(description, '')
-		FROM evidence_graphs WHERE ? IS NULL OR source_id = ?
-		ORDER BY name COLLATE NOCASE, ref, id`
-	sqlListLinks = `SELECT l.graph_id, l.artifact_id FROM evidence_graph_artifacts l
-		JOIN evidence_graphs g ON g.id = l.graph_id
-		JOIN artifacts a ON a.id = l.artifact_id
-		WHERE ? IS NULL OR g.source_id = ?
-		ORDER BY a.ref COLLATE NOCASE, a.id`
+	// The per-Source and project-wide reads share their columns and order; the
+	// per-Source form filters on source_id directly so it seeks
+	// evidence_graphs_source_id_idx.
+	sqlListSelect = `SELECT id, COALESCE(ref, ''), source_id, name, COALESCE(description, '')
+		FROM evidence_graphs`
+	sqlListOrder    = ` ORDER BY name COLLATE NOCASE, ref, id`
+	sqlList         = sqlListSelect + sqlListOrder
+	sqlListBySource = sqlListSelect + ` WHERE source_id = ?` + sqlListOrder
+	sqlLinksSelect  = `SELECT l.graph_id, l.artifact_id FROM evidence_graphs g
+		JOIN evidence_graph_artifacts l ON l.graph_id = g.id
+		JOIN artifacts a ON a.id = l.artifact_id`
+	sqlLinksOrder        = ` ORDER BY a.ref COLLATE NOCASE, a.id`
+	sqlListLinks         = sqlLinksSelect + sqlLinksOrder
+	sqlListLinksBySource = sqlLinksSelect + ` WHERE g.source_id = ?` + sqlLinksOrder
 
 	sqlGet = `SELECT id, COALESCE(ref, ''), source_id, name, COALESCE(description, '')
 		FROM evidence_graphs WHERE id = ?`
@@ -71,7 +77,7 @@ type Graph struct {
 	SourceID    []byte
 	Name        string
 	Description string
-	ArtifactIDs [][]byte // linked Artifacts, by Artifact ref; filled by List and Create
+	ArtifactIDs [][]byte // linked Artifacts: by Artifact ref from List, in input order from Create
 }
 
 // List returns the graphs of one Source, or of the whole project when sourceID
@@ -98,8 +104,13 @@ func list(tx *sql.Tx, sourceID []byte) ([]Graph, error) {
 	if len(sourceID) != 0 && len(sourceID) != 16 {
 		return nil, ErrInvalid
 	}
-	filter := database.NullBlob(sourceID)
-	rows, err := tx.Query(sqlList, filter, filter)
+	graphQuery, linkQuery := sqlList, sqlListLinks
+	var args []any
+	if len(sourceID) != 0 {
+		graphQuery, linkQuery = sqlListBySource, sqlListLinksBySource
+		args = []any{sourceID}
+	}
+	rows, err := tx.Query(graphQuery, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +133,7 @@ func list(tx *sql.Tx, sourceID []byte) ([]Graph, error) {
 	for i, g := range out {
 		index[string(g.ID)] = i
 	}
-	links, err := tx.Query(sqlListLinks, filter, filter)
+	links, err := tx.Query(linkQuery, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +304,7 @@ func Update(tx *database.Tx, userID, graphID []byte, in UpdateInput) ([]rowchang
 		}
 	}
 	for _, id := range in.ArtifactIDs {
-		if containsID(stored, id) {
+		if database.ContainsBlobID(stored, id) {
 			continue
 		}
 		ch, err := Link(tx, userID, graphID, id)
@@ -303,7 +314,7 @@ func Update(tx *database.Tx, userID, graphID []byte, in UpdateInput) ([]rowchang
 		changes = append(changes, ch...)
 	}
 	for _, id := range stored {
-		if containsID(in.ArtifactIDs, id) {
+		if database.ContainsBlobID(in.ArtifactIDs, id) {
 			continue
 		}
 		ch, err := Unlink(tx, userID, graphID, id)
@@ -313,15 +324,6 @@ func Update(tx *database.Tx, userID, graphID []byte, in UpdateInput) ([]rowchang
 		changes = append(changes, ch...)
 	}
 	return changes, nil
-}
-
-func containsID(ids [][]byte, id []byte) bool {
-	for _, x := range ids {
-		if bytes.Equal(x, id) {
-			return true
-		}
-	}
-	return false
 }
 
 // getTx loads one graph row; sql.ErrNoRows when there is none. It does not fill

@@ -1150,3 +1150,39 @@ func TestDelete(t *testing.T) {
 		}
 	})
 }
+
+// TestListQueryPlan: the per-Source read seeks evidence_graphs_source_id_idx
+// instead of scanning every graph or link.
+func TestListQueryPlan(t *testing.T) {
+	f := newFixture(t)
+	s, _ := f.createSource(t, "Census 1881")
+	db, err := f.c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	graphs, links := evidencegraphs.ListSQL()
+	for name, q := range map[string]string{"graphs": graphs, "links": links} {
+		args := make([]any, strings.Count(q, "?"))
+		for i := range args {
+			args[i] = s.ID
+		}
+		rows, err := db.Query("EXPLAIN QUERY PLAN "+q, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for rows.Next() {
+			var id, parent, unused int
+			var detail string
+			if err := rows.Scan(&id, &parent, &unused, &detail); err != nil {
+				t.Fatal(err)
+			}
+			if strings.HasPrefix(detail, "SCAN") {
+				t.Errorf("%s query plan scans: %s", name, detail)
+			}
+		}
+		if err := rows.Err(); err != nil {
+			t.Fatal(err)
+		}
+		rows.Close()
+	}
+}

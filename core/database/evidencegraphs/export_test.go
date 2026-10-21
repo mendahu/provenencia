@@ -6,3 +6,6 @@ func SetMintRef(f func() (string, error)) (restore func()) {
 	mintRef = f
 	return func() { mintRef = old }
 }
+
+// ListSQL returns the graph query and the link query of the per-Source read.
+func ListSQL() (graphs, links string) { return sqlListBySource, sqlListLinksBySource }
