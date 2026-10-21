@@ -1,7 +1,7 @@
 # Review — S12-05 Graph RPCs and graph list
 
-**Verdict:** Fits with changes — Ready with changes (round 1)
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 - None.
@@ -72,3 +72,31 @@ Logged; no caller distinguishes them.
 
 ### M-9 · minor · No check that every code has copy
 **Answer:** Declined for this PR (preparatory work, not this PR's files); offered to the user as a follow-up.
+
+## Round 2
+
+Maintainability: **Fits**, no new findings; the round-1 answers hold. Two points it noted without filing them:
+- S12-12 will compute the removed set in Swift (stored minus checked), as the map's scope entry asks; Go skips unlinked Artifacts, so preview and write agree.
+- `ListedGroup` repeats `collectGroups`' six-line projection loop; both go through `projectListed` and `listedCap`. Left as is.
+
+Executability: **Ready with changes**.
+
+### X-9 · major · `isExtraGate` deleted in STEP-5 but its test edited in STEP-8
+**Answer:** Fixed — STEP-5 deletes it and rewrites the test over `allCases`; STEP-8 keeps `lastGraphGateCopy` and the via rows.
+
+### X-10 · major · STEP-5 Files omit `FakeStore.swift` and `L10n.swift`
+**Answer:** Fixed — both added, with `PVDeleteImpactTests.swift`.
+
+### X-11 · major · How Source B is made in handler tests
+**Answer:** Fixed — D-16: same project, `ListSourceTypes` → `CreateSource` → `CreateArtifact`.
+
+### X-12 · minor · Arrange order for multi-write tests
+**Answer:** Fixed — D-16: arrange with direct handler calls in the test body; `runRPC` only for the call under test.
+
+### X-13 · minor · Header status and map link
+**Answer:** Fixed — Status Planned, Review line linked, map row links the plan with status Planned.
+
+### X-14 · nit · "Last method is 102"
+**Answer:** Fixed — "highest method number".
+
+Final verdict: **Fits — Ready with changes** (all changes applied). No blocker open; nothing to the user.
