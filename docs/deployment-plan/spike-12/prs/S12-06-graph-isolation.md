@@ -1,6 +1,6 @@
 # S12-06 — Graph isolation
 
-**Status:** Planned
+**Status:** Landed in [#515](https://github.com/mendahu/provenencia/pull/515) (2026-10-21)
 **Spike / slice:** Spike 12 · Slice 2 — Graphs in the catalog
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: write-time checks in Go and one error string)

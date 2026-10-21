@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-06 — Graph isolation
+
+**Landed 2026-10-21** in [#515](https://github.com/mendahu/provenencia/pull/515). The engine now refuses an Observation whose Subject, Subject value or Citation Artifact is not in, or linked to, one Evidence graph, with its own plain message ("That subject or artifact is in another evidence graph."); a `source` Subject may still be the value of a non-edge Observation in any graph, so `mentions` crosses Sources. A cited bridge takes its graph from its endpoints, and `subjects.CreateInput.GraphID` lets a Subject join a named graph. Nothing changes for researchers until a second graph can be made.
+
 ## S12-05 — Graph RPCs and graph list
 
 **Landed 2026-10-21** in [#511](https://github.com/mendahu/provenencia/pull/511). The app can reach every Evidence graph operation the engine has: list every graph of the project, create, edit and delete a graph, link and unlink an Artifact, and create an Artifact linked to chosen graphs (`graph_ids`; none means every graph of its Source). The graph list is one cached read, `evidenceGraphsList`, that any write reporting the `evidence_graphs` list refreshes. `GetEvidenceGraphUnlinkImpact` names, for each Artifact an edit would unlink, the graph's Citations that use it, through the new `deleteimpact.ListedGroup`. The five `evidencegraphs.*` codes have their own copy, the `last_graph` delete gate reaches Swift, and a graph delete preview reads "This graph has N subjects". No view reads these yet; nothing changes for researchers.
