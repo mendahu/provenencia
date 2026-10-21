@@ -1,7 +1,7 @@
 # Ship log — S11-19 Claim evidence query
 
 **Plan:** [`S11-19-claim-evidence-query.md`](S11-19-claim-evidence-query.md) · **Branch:** `s11-19-claim-evidence-query` · **PR:** #513
-**State:** fixing 3 — user scope change
+**State:** fixing 4
 
 ## Round 0 — implement
 Base `main` @ `9ca7472e`. Head `8262d21e`. Gate PASS (orchestrator rerun). Report deviations (also in the plan's Landed note):
@@ -115,3 +115,59 @@ Implement plan §14, STEP-9 to STEP-14, in order, with each step's check and the
 **F-11 — Memos: per-Source layer and member values, profiles, value rules** (STEP-13, D-21 to D-23). Failing tests first: T-18, T-19, T-20.
 **F-12 — Docs and Landed note** (STEP-14).
 Check for all: scripts/check-pr.sh PASS.
+
+## Round 3 — fix
+Head `3ba99d2b`. Gate PASS (orchestrator rerun). F-7 to F-12 done. No stop condition fired.
+- **Not reproduced:** T-18 and T-19 passed before the memo code, once STEP-9 to STEP-12 had made every graph read cached. They are kept as guards. T-20 drove the memo.
+- **Deviations:**
+  - D-23: there is no name-format drop, so `valuerules.Load` stays per call.
+  - D-22: profiles are stored only through `profiler.keep()`, called by Evidence and `loadShortlist`. This keeps `TestProposeWithOnlyFixedSubjectsBuildsNoIndex` unchanged.
+  - AC-4.1 and AC-4.2 count graph queries only. These still run per call: the name-format read, `Propose`'s `MAX(revision)`, and `attachExhibits`' reads (S11-25 deletes those).
+  - Deleted as dead: `sourceeventtitles.ForSource` with its SQL, and `canonicalgraph.TestWalkSource` (T-17 holds its cases).
+  - `TestSourceEvidenceIsNotActivity` now expects evidence for `sources`, as D-19 requires.
+
+## Round 3 — review
+User-authorized. Reviewers: CON (Sonnet), MNT, SEC+PRF (`graphcache`, `effects`, `core/database/**`, the matching layers). Skipped: UX (no `macos/App/**`, strings, or error codes). Scope `2088073c...3ba99d2b`.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-1 (r3) | MNT | blocker | `checkFixed` scans `Vocabulary().Types` itself beside `typeByKey`/`typeKey` | Fix now → F-13 | verified: `promotealign.go:205-210` and `canon.go:230-252`; the two already differ on origin |
+| MNT-2 (r3) | MNT | major | `catalog-queries.mdc` and S12-06's Ships still name the deleted `canonicalgraph.WalkSource` | Fix now → F-14 (rule); Later PR (S12-06) | verified: `.cursor/rules/catalog-queries.mdc:17`. The orchestrator wrote the in-memory walk into S12-06's Ships and Not-this-PR lines in `spike-12/deployment-plan.md` |
+| MNT-3 (r3) | MNT | minor | `loadShortlist` copies `keep()`'s body; storing profiles depends on each caller | Fix now → F-15 | verified: `index.go:81`, `profiles.go:186-190` |
+| MNT-4 (r3) | MNT | minor | Memo and match-index resets repeated at each drop site | Fix now → F-16 | same-pass cleanup; `commit.go:27-29`, `graph.go:173, 271-273` |
+| PRF-1 (r3) | PRF | minor | Any `sources` row edit (cover, description) drops the Source graph and memos | Fix now → F-17 | verified: `registry.go:192` `Source: self()`; `onField` is the existing pattern; create and delete carry `title` in `Fields` |
+| CON-1 (r3) (+ SEC+PRF outside-lens CON) | CON | minor | AC-4.1/4.2 say "no catalog query"; tests count graph queries only; name-format reads remain | Later PR (S11-21) | D-23's fallback leaves `valuerules.Load` per call, so §14's AC wording outran its own D-23. The AC is not reworded. S11-21's scope now counts the raw queries and names the fix if over budget |
+| CON outside-lens PRF | PRF | — | An unknown Source id caches a `Found=false` graph | Rejected | small; dropped by a later create (`Source: self()` / `onField("title")` on create); eviction is S11-31 |
+
+Nits (logged): `CON-2 · memo_test.go · merge subtest fakes the commit` · `MNT-5 · sourcefill/load.go:44,205 · loadTitleEdges takes subjects twice` · `MNT-6 · layer.go:429 · unchecked assertion` · `MNT-7 · export_test.go:69-90 · MemoSnapshotForTest re-derives keys` · `MNT-8 · source_walk_test.go:160 · rename TestWalkSourceMatchesSQL` · `MNT-9 · graphcache/source.go:225 · raw "positive"` · `MNT-10 · sourceeventtitles.go:88 · assemble has one caller`
+
+### Fix plan 4
+
+**F-13 — One type-key lookup** (from MNT-1 r3)
+Files: `core/database/promotealign/promotealign.go`.
+Failing test first: none (same output for every valid input; primary Subjects are provenencia types). Existing invalid-input tests stay green.
+Do: `checkFixed` builds `typeByKey(g)` and compares `typeKey(types, n.SubjectTypeID)` with `ps.kind`; drop the inline loop over `v.Types`.
+Check: `rg -n "range v.Types" core/database/promotealign` prints only `canon.go`; scripts/check-pr.sh PASS.
+
+**F-14 — The catalog-queries rule names the in-memory walk** (from MNT-2 r3)
+Files: `.cursor/rules/catalog-queries.mdc`.
+Do: replace the `WalkSource` sentence with: "`canonicalgraph.Walk` stays for dependent discovery and for any walk that must see rows the cache has not loaded, including inside a write. One Source's Evidence graph is walked in memory with `graphcache.Graph.WalkSource` on its loaded `SourceGraph`."
+Check: `rg -n "WalkSource" .cursor docs` names no `canonicalgraph.WalkSource` outside S11-19's own plan.
+
+**F-15 — One writer of kept profiles** (from MNT-3 r3)
+Files: `core/database/promotealign/index.go`, `profiles.go`.
+Do: `loadShortlist` calls `p.keep()` instead of copying its body; `keep()` stores the map whenever the stored pattern differs or none is stored. `newProfiler`'s doc comment says a caller keeps profiles with `keep()`. Keep `TestProposeWithOnlyFixedSubjectsBuildsNoIndex` unchanged.
+Check: `rg -n "m.profiles, m.profilesPattern|profilesPattern =" core/database/promotealign` prints only `keep()`; `TestProfilesLiveWithTheMatchIndex` passes.
+
+**F-16 — One drop for derived state** (from MNT-4 r3)
+Files: `core/database/graphcache/graph.go`, `commit.go`.
+Do: a private `dropDerived()` resets the memos and the match index; the vocabulary branch of `OnCommit`, `SetAliasTables` and `clear()` call it. Other `matchIndexOK = false` sites that drop only the match index (a handle commit) stay as they are.
+Check: `TestSourceMemoDroppedWithSource` and graphcache tests pass.
+
+**F-17 — Only a title change drops the Source graph** (from PRF-1 r3)
+Files: `core/database/effects/registry.go`, `core/database/sourcefill` test.
+Failing test first: add to `TestRetitleDropsSourceGraph` (or beside it) a description-only `sources.Update` and a cover change, each asserting the graph stays loaded (`LoadedSourceForTest` or the existing hook).
+Do: `"sources"` → `Source: onField("title", self())`. Create and delete still carry `title` in `Fields`; keep a create-after-unknown-id case if one exists.
+Check: the tests pass; `TestSourceEvidenceIsNotActivity` updated only if its expectation is per-field; scripts/check-pr.sh PASS.
+
+Nits riding along (implementer's call): MNT-5, MNT-6, MNT-8.
