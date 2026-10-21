@@ -2,8 +2,8 @@
 
 Plan: [`S11-25-claim-evidence-rpc.md`](S11-25-claim-evidence-rpc.md). Lint: `check-plan-docs.py` clean before round 1.
 
-**Verdict:** round 1 — Fits with changes / Not ready; every finding answered below. Round 2 pending.
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes. Every finding fixed or declined with evidence; no blocker open.
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
@@ -16,6 +16,8 @@ Plan: [`S11-25-claim-evidence-rpc.md`](S11-25-claim-evidence-rpc.md). Lint: `che
 - **Pin ids are opaque Go strings** (`l:…`, `b:…`, D-3). Swift stores them and sends them back, and never parses them.
 - **The sheet refetches its evidence on every open** (D-13). It does not cache across opens.
 - **One new string,** the evidence error title (D-14).
+- **Term ids on evidence values are empty** (D-1 `evidenceValueProto`): the sheet words a term by its label and key only, as `ReconciledValueDisplay` does.
+- **STEP-4 to STEP-8 land as one commit** (X-19): the generator writes the Go and Swift code together.
 
 ## Round 1 (2026-10-21)
 
@@ -46,3 +48,18 @@ Maintainability: **Fits with changes** (M-1 blocker). Executability: **Not ready
 | X-10 | minor | `NewEvidenceText` did not say which origin's value type it uses | **Fixed.** D-4: origin `provenencia` only |
 | X-11 | minor | Xcode and protoc checks cannot run on Linux | **Fixed.** The DoD has the "host without Xcode" line, as S11-19 did; protoc is the implementer's existing toolchain (`generate-proto.sh`) |
 | X-12 | minor | Temptations had no Out line | **Fixed.** Out lines for `Causes()` and for `ComparisonValueDisplay`. Carrying evidence across a re-proposal is already D-12's `makeRow` rule |
+
+## Round 2 (2026-10-21)
+
+Fresh reviewers had the plan and this log. Both confirmed every round-1 answer. Maintainability: **Fits with changes** (M-12 blocker). Executability: **Ready with changes**. The executability findings are renumbered X-13 to X-19 here.
+
+| ID | Severity | Finding | Answer |
+| --- | --- | --- | --- |
+| M-12 | blocker | The new wire carried Go display strings plus per-type `date` fields, beside the existing typed `ConclusionValue` and Swift's `ReconciledValueDisplay` | **Fixed.** D-4: `EvidenceValues` returns typed values, and `valueLabel` is deleted, not moved. D-1: `evidenceValueProto`. §6: the pin has `ConclusionValue value`, the line has `ConclusionValue incoming`. D-11: `mapConclusionValue`. D-14: `ReconciledValueDisplay.string(for:)`. `ComparisonValueDisplay.swift` is deleted (D-9). Verified `conclusionValueProto`, `mapConclusionValue`, and that `ComparisonValueDisplay`'s only callers are `GoStore.swift` lines 1009 and 1016. The M-11 Out line is replaced by an S11-20 depiction-case line |
+| X-13 | major | "`valueLabel` moved unchanged" could not work on values with no `Type`; the origin filter was new | **Fixed** by M-12: `valueLabel` is gone. D-4 states that the `provenencia` filter narrows `termLabels` |
+| X-14 | major | The argument on a retarget or re-proposal was undecided | **Fixed.** D-12: `setTarget`, `makeRow` and `merge` never change `argument`. T-10 adds `aTypedArgumentSurvivesARetargetAndAReproposal` |
+| X-15 | major | `sheetEvidence` on close and on a row switch was undecided | **Fixed.** D-13: every open or close bumps the generation and resets to `.idle`. T-11 adds the close and late-answer cases |
+| X-16 | minor | The length guard and de-duplication rules were not stated after the `mergeFixed` change | **Fixed.** D-6 keeps both (S11-19's `TestEvidenceInvalidRequest` "more neighbors than primary Subjects" stays) |
+| X-17 | minor | `bundles` vs `Members`; how `sources` ids are encoded | **Fixed.** §6 mapping table and D-11 |
+| X-18 | minor | Which `promotealign_test.go` tests go was left to judgment | **Fixed.** D-9 and §4 name every test and helper, found with `rg -n Exhibits` |
+| X-19 | minor | The STEP-4 commit split fought the generator | **Fixed.** STEP-4 to STEP-8 are one commit. A new stop condition covers a host without `protoc` |
