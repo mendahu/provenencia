@@ -186,4 +186,4 @@ Nits (logged): `MNT-11 · sourcefill/load_test.go:85-110 · shared Source catalo
 No round-4 blockers. `origin/main` unchanged since the branch was cut (`9ca7472e`).
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: CON-1 r3 (in S11-21 scope), eviction (new S11-31), Apply memo check (S11-25), Source walk per graph (S12-06) · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: CON-1 r3 (in S11-21 scope), eviction (new S11-31), Apply memo check (S11-25), Source walk per graph (S12-06) · to user: — · CON miss: none
