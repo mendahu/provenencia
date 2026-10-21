@@ -1,7 +1,6 @@
 package observations_test
 
 import (
-	"bytes"
 	"database/sql"
 	"errors"
 	"io/fs"
@@ -14,7 +13,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -1374,21 +1372,7 @@ func TestObservationsStayInOneGraph(t *testing.T) {
 	newArtifact(book, "B1")
 
 	// Census Default is linked to P1 only; Jones to P2 only.
-	jones := evidencegraphstest.Create(t, c, userID, census.ID, "Jones", p2.ID)
-	graphs, err := evidencegraphs.List(c, census.ID)
-	if err != nil || len(graphs) != 2 {
-		t.Fatalf("%v %d graphs", err, len(graphs))
-	}
-	def := graphs[0]
-	if bytes.Equal(def.ID, jones.ID) {
-		def = graphs[1]
-	}
-	if _, _, err := writes.Run(c, writes.Op{Action: "unlink_artifact", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-		changes, err := evidencegraphs.Unlink(tx, userID, def.ID, p2.ID)
-		return struct{}{}, changes, err
-	}); err != nil {
-		t.Fatal(err)
-	}
+	def, jones := evidencegraphstest.Split(t, c, userID, census.ID, "Jones", p2.ID)
 
 	typeOf := func(key string) []byte {
 		ty, err := subjecttypes.Lookup(c, key, vocabkey.OriginProvenencia)

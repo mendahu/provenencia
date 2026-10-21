@@ -83,3 +83,22 @@ func Create(t testing.TB, c *database.Catalog, userID, sourceID []byte, name str
 	}
 	return g
 }
+
+// Split moves the given Artifacts out of the Source's Default graph into a new
+// graph of the given name, and returns both. The Source must have one graph
+// when it is called; the test fails on error.
+func Split(t *testing.T, c *database.Catalog, userID, sourceID []byte, name string, artifactIDs ...[]byte) (def, graph evidencegraphs.Graph) {
+	t.Helper()
+	def = SoleGraph(t, c, sourceID)
+	graph = Create(t, c, userID, sourceID, name, artifactIDs...)
+	for _, id := range artifactIDs {
+		_, _, err := writes.Run(c, writes.Op{Action: "unlink_artifact", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := evidencegraphs.Unlink(tx, userID, def.ID, id)
+			return struct{}{}, changes, err
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	return def, graph
+}

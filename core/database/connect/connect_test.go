@@ -420,14 +420,7 @@ func TestCreateCitedBridge(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		def := evidencegraphstest.SoleGraph(t, s.c, s.source.ID)
-		jones := evidencegraphstest.Create(t, s.c, userID, s.source.ID, "Jones", p2.ID)
-		if _, _, err := writes.Run(s.c, writes.Op{Action: "unlink_artifact", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			changes, err := evidencegraphs.Unlink(tx, userID, def.ID, p2.ID)
-			return struct{}{}, changes, err
-		}); err != nil {
-			t.Fatal(err)
-		}
+		_, jones := evidencegraphstest.Split(t, s.c, userID, s.source.ID, "Jones", p2.ID)
 		create := func(key, label string, x, y int64) subjects.Subject {
 			t.Helper()
 			typ, err := subjecttypes.Lookup(s.c, key, vocabkey.OriginProvenencia)
