@@ -25,7 +25,7 @@ func LayerBridges(c *database.Catalog, sourceID []byte) ([]graphalign.Bridge, er
 	if err != nil {
 		return nil, err
 	}
-	layer, _, err := loadLayer(c.Graph(), db, sourceID, cfg, namePattern, terms)
+	layer, _, err := loadLayer(c.Graph(), sourceID, cfg, namePattern, terms)
 	if err != nil {
 		return nil, err
 	}

@@ -1,11 +1,9 @@
 package promotealign
 
 import (
-	"database/sql"
 	"github.com/mendahu/provenencia/core/connectrules"
-	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -89,35 +87,32 @@ func edgeSeenKey(a, b []byte, keyA, keyB vocabkey.BridgeKey) seenEdge {
 	return seenEdge{a: string(a), b: string(b), keyA: keyA, keyB: keyB}
 }
 
-// observedTerms maps each Subject to the key of a positive Observation's
-// term on the Property (first key in order wins).
-func observedTerms(q Querier, subjectIDs [][]byte, propertyKey string) (map[string]string, error) {
-	return termsBy(q, `SELECT o.subject_id, t.key FROM observations o
-		JOIN properties p ON p.id = o.property_id AND p.key = ? AND p.origin = 'provenencia'
-		JOIN property_terms t ON t.id = o.value_term_id
-		WHERE o.polarity = 'positive' AND o.subject_id IN (`, `) ORDER BY o.subject_id, t.key`,
-		subjectIDs, propertyKey)
-}
-
-func termsBy(q Querier, head, tail string, ids [][]byte, propertyKey string) (map[string]string, error) {
+// observedTerms maps each Subject to the key of a positive Observation's term
+// on the Property, among those the Source records for the listed Subjects. The
+// first key in order wins.
+func observedTerms(sg graphcache.SourceGraph, props map[string]graphcache.VocabProperty, terms map[string]graphcache.VocabTerm, subjectIDs [][]byte, propertyKey string) map[string]string {
 	out := map[string]string{}
-	ids = database.UniqueBlobIDs(ids)
 	if propertyKey == "" {
-		return out, nil
+		return out
 	}
-	err := sqlbatch.Query(q, head, tail, []any{propertyKey}, ids, func(rows *sql.Rows) error {
-		var id []byte
-		var term string
-		if err := rows.Scan(&id, &term); err != nil {
-			return err
-		}
-		if _, ok := out[string(id)]; !ok {
-			out[string(id)] = term
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
+	want := make(map[string]bool, len(subjectIDs))
+	for _, id := range subjectIDs {
+		want[string(id)] = true
 	}
-	return out, nil
+	for _, o := range sg.Observations {
+		if o.Polarity != observations.PolarityPositive || !want[string(o.SubjectID)] || len(o.TermID) == 0 {
+			continue
+		}
+		if p, ok := props[string(o.PropertyID)]; !ok || p.Key != propertyKey || p.Origin != vocabkey.OriginProvenencia {
+			continue
+		}
+		t, ok := terms[string(o.TermID)]
+		if !ok {
+			continue
+		}
+		if cur, ok := out[string(o.SubjectID)]; !ok || t.Key < cur {
+			out[string(o.SubjectID)] = t.Key
+		}
+	}
+	return out
 }

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
@@ -23,7 +22,8 @@ func init() {
 	graphcache.SetSourceCheck(checkSource)
 }
 
-func loadSource(q graphcache.Querier, sourceID []byte) (graphcache.SourceGraph, error) {
+func loadSource(g *graphcache.Graph, sourceID []byte) (graphcache.SourceGraph, error) {
+	q := graphcache.Querier(g)
 	subjects, err := loadSourceSubjects(q, sourceID)
 	if err != nil {
 		return graphcache.SourceGraph{}, err
@@ -36,7 +36,7 @@ func loadSource(q graphcache.Querier, sourceID []byte) (graphcache.SourceGraph, 
 	if err != nil {
 		return graphcache.SourceGraph{}, err
 	}
-	people, places, err := loadTitleEdges(q, sourceID, subjects)
+	people, places, err := loadTitleEdges(g, graphcache.SourceGraph{SourceID: sourceID, Subjects: subjects, Observations: observations}, subjects)
 	if err != nil {
 		return graphcache.SourceGraph{}, err
 	}
@@ -185,7 +185,7 @@ func loadSourceMembers(q graphcache.Querier, sourceID []byte) ([]graphcache.Sour
 	return out, rows.Err()
 }
 
-func loadTitleEdges(q graphcache.Querier, sourceID []byte, subjects []graphcache.SourceSubject) ([]graphcache.SourceEdge, []graphcache.SourceEdge, error) {
+func loadTitleEdges(g *graphcache.Graph, sg graphcache.SourceGraph, subjects []graphcache.SourceSubject) ([]graphcache.SourceEdge, []graphcache.SourceEdge, error) {
 	var events [][]byte
 	for _, s := range subjects {
 		if s.TypeKey == vocabkey.Event && s.TypeOrigin == vocabkey.OriginProvenencia {
@@ -195,25 +195,15 @@ func loadTitleEdges(q graphcache.Querier, sourceID []byte, subjects []graphcache
 	if len(events) == 0 {
 		return nil, nil, nil
 	}
-	people, err := canonicalgraph.WalkSource(q, sourceID, hops.SubjectsOfEvent, events)
+	people, err := g.WalkSource(sg, hops.SubjectsOfEvent, events)
 	if err != nil {
 		return nil, nil, err
 	}
-	places, err := canonicalgraph.WalkSource(q, sourceID, hops.PlacesOfEvent, events)
+	places, err := g.WalkSource(sg, hops.PlacesOfEvent, events)
 	if err != nil {
 		return nil, nil, err
 	}
-	return sourceEdges(people), sourceEdges(places), nil
-}
-
-func sourceEdges(edges []canonicalgraph.Edge) []graphcache.SourceEdge {
-	out := make([]graphcache.SourceEdge, len(edges))
-	for i, e := range edges {
-		out[i] = graphcache.SourceEdge{
-			From: append([]byte(nil), e.From...), To: append([]byte(nil), e.To...), ToRef: e.ToRef,
-		}
-	}
-	return out
+	return people, places, nil
 }
 
 func checkSource(g *graphcache.Graph, id []byte, stored graphcache.SourceGraph) error {
