@@ -7,28 +7,7 @@ import (
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
-	"google.golang.org/protobuf/proto"
 )
-
-// rpc calls fn with req and decodes the reply into resp.
-func rpc(t *testing.T, fn func([]byte) ([]byte, error), req, resp proto.Message) error {
-	t.Helper()
-	out, err := fn(marshalProto(t, req))
-	if err != nil {
-		return err
-	}
-	if err := proto.Unmarshal(out, resp); err != nil {
-		t.Fatal(err)
-	}
-	return nil
-}
-
-func mustRPC(t *testing.T, fn func([]byte) ([]byte, error), req, resp proto.Message) {
-	t.Helper()
-	if err := rpc(t, fn, req, resp); err != nil {
-		t.Fatal(err)
-	}
-}
 
 // graphFixture is citationFixture plus a second Artifact on the same Source, a
 // Citation on the first Artifact with one Observation on the place Subject, and

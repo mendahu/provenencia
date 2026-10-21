@@ -46,6 +46,8 @@ func TestFoo(t *testing.T) {
 
 Do not unmarshal in the table row. Add a `t.Helper()` in `harness_test.go` if a side effect will be reused.
 
+`runRPC` runs the call under test; arrange steps that chain several RPCs use `mustRPC` / `rpc` (`harness_test.go`).
+
 Run `CGO_ENABLED=1 go test ./api/ffi/...`.
 
 User-visible handler failures must return `core/apperr` coded errors (sentinels or `apperr.New`). Add a matching `L10n.Errors` / String Catalog entry for any new code. `provenencia_call` status 1 encodes protobuf `Error`, not English text.
