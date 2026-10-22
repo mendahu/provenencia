@@ -224,6 +224,8 @@ struct PromoteFlow: Equatable, Sendable {
         var mark: PVMarkKey = .subjectRelationship
         var endA: String?
         var endB: String?
+        /// The kind of link this is; the evidence sheet matches a relationship to its bridge by it.
+        var kind: EvidenceBridgeKind = .relationship
         /// Already an accepted association. Hidden from the will-file list;
         /// Done does not file it again.
         var alreadyFiled: Bool = false

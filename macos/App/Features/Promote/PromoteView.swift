@@ -487,10 +487,7 @@ private struct PromoteAlignmentRow: View {
                     if let readout = row.selectionReadout {
                         Button { model.openSheet(row.subjectID) } label: {
                             HStack(spacing: PVSpacing.space3) {
-                                PVBadge(L10n.Promote.assessment(readout.assessment), tone: badgeTone(readout.assessment))
-                                if readout.contested {
-                                    PVBadge(L10n.Promote.contested, tone: .danger, icon: .warning)
-                                }
+                                PromoteReadoutBadges(readout: readout)
                                 Text(verbatim: model.reasonText(readout.reason, on: row))
                                     .font(PVFont.body(size: PVTypeScale.caption))
                                     .italic()
@@ -561,15 +558,6 @@ private struct PromoteAlignmentRow: View {
 
     private var kindMark: some View {
         PromoteKindTile(kind: row.kind, size: PromoteLayout.kindTile, markSize: 16, background: PVColor.surfaceSunken)
-    }
-
-    private func badgeTone(_ assessment: PromoteFlow.Assessment) -> PVBadgeTone {
-        switch assessment {
-        case .strong: .success
-        case .medium: .info
-        case .weak: .warning
-        case .none: .neutral
-        }
     }
 
     private var targetOptions: [PVSelectOption] {

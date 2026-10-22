@@ -241,7 +241,6 @@ private struct ConclusionDetailLikenessSection: View {
     @FocusState private var focusedID: String?
 
     private static let column: CGFloat = 120
-    private static let crop: CGFloat = 96
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -267,14 +266,12 @@ private struct ConclusionDetailLikenessSection: View {
 
     private func tileView(_ tile: ConclusionDetailLikeness) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space3) {
-            CachedThumbnail(
+            LikenessTile(
                 projectDir: projectDir,
                 relPath: tile.imageRelPath,
-                size: Self.crop,
-                fallbackMark: .subjectPerson
-            )
-            .accessibilityHidden(true)
-            .overlay {
+                caption: tile.sourceTitle,
+                captionWidth: Self.column
+            ) {
                 Button {
                     navigation.go(to: tile.location)
                 } label: {
@@ -289,14 +286,6 @@ private struct ConclusionDetailLikenessSection: View {
                 .accessibilityLabel(L10n.Conclusions.likenessTileLabel(tile.sourceTitle))
                 .accessibilityIdentifier("persons.detail.likeness.\(tile.id)")
             }
-            Text(verbatim: tile.sourceTitle)
-                .font(PVFont.body(size: PVTypeScale.caption))
-                .foregroundStyle(PVColor.textMuted)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: Self.column, alignment: .leading)
-                .help(Text(verbatim: tile.sourceTitle))
-                .accessibilityHidden(true)
             if let portrait {
                 if tile.isPortrait {
                     PVBadge(L10n.Conclusions.portraitBadge, tone: .accent, icon: .photo)

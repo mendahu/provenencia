@@ -238,10 +238,15 @@ final class PromoteModel {
 
     func keepPromoting() { flow.cancelLeave() }
 
+    /// The page row a connected Subject is, or nil when it is not on the page.
+    func neighbor(_ subjectID: String) -> PromoteFlow.Row? {
+        flow.row(subjectID)
+    }
+
     func reasonText(_ reason: PromoteFlow.Reason, on row: PromoteFlow.Row) -> String {
         switch reason {
         case .via(let neighborID):
-            guard let neighbor = flow.row(neighborID) else {
+            guard let neighbor = neighbor(neighborID) else {
                 return L10n.string(L10n.Promote.reasonVia)
             }
             let phrase = flow.bridges.first { bridge in
@@ -258,7 +263,7 @@ final class PromoteModel {
         case .noMatch: return L10n.string(L10n.Promote.reasonNoMatch)
         case .empty: return L10n.string(L10n.Promote.reasonEmpty)
         case .neighborPlaced(let id), .neighborMoved(let id), .neighborReleased(let id):
-            guard let neighbor = flow.row(id) else { return L10n.string(L10n.Promote.reasonMoveUnknown) }
+            guard let neighbor = neighbor(id) else { return L10n.string(L10n.Promote.reasonMoveUnknown) }
             switch reason {
             case .neighborPlaced:
                 return neighbor.target.handleRef.map { L10n.Promote.neighborPlaced(neighbor: neighbor.name, ref: $0) }
@@ -398,6 +403,7 @@ final class PromoteModel {
                 mark: bridge.kind.markKey,
                 endA: bridge.endpointAID,
                 endB: bridge.endpointBID,
+                kind: bridge.kind,
                 alreadyFiled: bridge.membership != nil
             )
         }
