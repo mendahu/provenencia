@@ -1,7 +1,7 @@
 # Review — S12-07 Graph-keyed reads
 
-**Verdict:** round 1: Fits with changes — Not ready; answered below, round 2 pending
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits — Ready with changes (round 2), every finding fixed
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 - None.
@@ -72,3 +72,41 @@
 
 ### X-9 · minor · Temptation
 **Answer:** Fixed — helpers renamed (D-2); the `graph.go` comments are in STEP-3.
+
+## Round 2
+
+Maintainability: every round-1 answer checked as landed; no new blocker. Verdict **Fits**. Three notes, not findings:
+1. D-11's reason for leaving `graphcache.Querier` was wrong: the blocker is an import cycle (`core/database/catalog.go` imports `graphcache`). **Answer:** Fixed — D-11 and the Out line give the cycle; STEP-10 marks `graphcache` blocked in `docs/ideas/shared-list-helpers.md`.
+2. `SoleGraph` is a read transaction and two queries (`list`), not one read. **Answer:** Fixed — D-7 and §11 say so.
+3. `graphprogress.Progress.SourceID` is set by `List` and empty from `Get`. **Answer:** Kept — the handler owns the wire's Source id until S12-08 moves the wire to graph ids; S12-14 reads rows by `GraphID`.
+
+Executability: round-1 answers checked; verdict **Ready with changes**.
+
+### X-1 · blocker · The STEP-2 and STEP-10 `rg` checks still cannot print nothing
+**Answer:** Fixed — STEP-2 uses `\b(SourceSubject|…)\b`, which leaves `loadSourceSubjects`, `TestWalkSourceEdges` and `TestAcceptedClaimsAreSourceMembers` alone; STEP-10 uses `\bSourceGraph\b`, which leaves `.mutatedSourceGraph` (S12-08) alone. The Swift test comment naming `sourceeventtitles` is an Out line for S12-08.
+
+### X-2 · major · D-8 leaves `ResolvePins` contradictory
+**Answer:** Fixed — D-8: `ResolvePins` loads `c.Graph().EvidenceGraph(in.graphID)` where it loads `sg` today; `inputs` gains no graph field.
+
+### X-3 · major · `export_test.go` `LayerBridges` not planned
+**Answer:** Fixed — D-8: `LayerBridges` keeps its Source-id signature and resolves through `SoleGraph`.
+
+### X-4 · major · `graphprogress` test changes beyond `TestSourceGraphProgress` not planned
+**Answer:** Fixed — STEP-8 names `TestPrimaryAndFiledCounts`, the fixture for each `Get` call, and how the `SourceID` assertions become `GraphID` ones.
+
+### X-5 · minor · "(new)" labels on `graphfill/load_test.go`
+**Answer:** Fixed — each mention says it is the file STEP-2 moves, not a second file (the lint needs the *(new)* marker for a path absent at the base).
+
+### X-6 · minor · Choices left in the effects tests
+**Answer:** Fixed — STEP-6 resolves the existing `linkChange` alone and names the doc comment to rewrite.
+
+### X-7 · minor · STEP-4 cannot pin behaviour "before" STEP-3; `-run` regex
+**Answer:** Fixed — the claim now says the cases pass on `main` and keep the behaviour through STEP-7 / STEP-8; the regex is `TestListSubjects|TestGetSourceGraphProgress`.
+
+### X-8 · minor · T-1's new row already exists
+**Answer:** Fixed — T-1 extends the existing table rows and the "two graphs is not ErrInvalid" subtest.
+
+### X-9 · minor · Unmade small choices
+**Answer:** Fixed — `listedFromSource` and the three Source-named tests keep their names (Out, not planned); `GetSourceGraphProgress`'s `!ok` path is `protoProgress(graphprogress.Progress{SourceID: sourceID})`; D-1 says a stored not-found graph has an empty `SourceID`.
+
+Stop: round 2 is the last round; no blocker is open and To user is empty.
