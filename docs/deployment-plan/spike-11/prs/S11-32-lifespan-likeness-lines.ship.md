@@ -68,4 +68,4 @@ Head `d931438`. Gate PASS (run by orchestrator). F-1 – F-4 done (`b3776f7`, `6
 No round 2: round 1 had no Fix-now blocker or major.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · later PR: UX-1 → S11-20 AC-5.3 · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: none · later PR: UX-1 → S11-20 AC-5.3 · to user: — · CON miss: none
