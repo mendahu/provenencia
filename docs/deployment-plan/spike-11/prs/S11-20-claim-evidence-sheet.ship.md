@@ -117,3 +117,25 @@ Head `1e948a9e`. Gate PASS (orchestrator re-ran). F-10 done as planned; diff rea
 
 ## Result (after round 3)
 Gate PASS · CI see PR · open: none · follow-ups: — · to user: — (manual check §10 not run) · CON miss: none
+
+## Round 4 — user request (2026-10-22)
+The user asked: a relationship card's heading becomes the connection as one sentence ("Marion Smith is the mother of Don Smith"), with the outcome as a badge. When the page has no bridge for the relationship, keep today's two lines. This supersedes plan **D-14**'s header shape (outcome sentence over `connectionLink`) by the user's decision; record it in the plan's Landed note.
+
+### Fix plan 4
+**F-11 — Relationship heading is the bridge sentence plus an outcome badge** (from the user)
+Files: `macos/App/Features/Promote/PromoteEvidenceDisplay.swift`, `macos/App/Features/Promote/PromoteEvidenceSheet.swift` (`EvidenceRelationshipCard.header`, `linkText`), `macos/ProvenenciaTests/PromoteEvidenceDisplayTests.swift`, the S11-20 plan's Landed note. Skill: `add-localized-string` only if a key changes.
+Failing test first: `PromoteEvidenceDisplayTests` `relationshipHeaderIsTheBridgeSentence` — with a bridge whose `sentence` is "Marion Smith is the mother of Don Smith", the header's title is that sentence, it has no second line, it shows the badge, and its spoken label is "Marion Smith is the mother of Don Smith. Agrees." (`.partial` → "… Similar."); with `bridge: nil` the title is `relationshipSentence(outcome)` ("They share a matching connection"), the second line is "with <neighbor name>" (or "with a connected record" when the name is nil), no badge, and the spoken label is today's `spokenRelationship(sentence:link:)`.
+Do: replace `PromoteEvidenceDisplay.linkText(bridge:neighborName:)` with `relationshipHeader(bridge: PromoteFlow.BridgeFact?, outcome: EvidenceOutcome, neighborName: String?) -> RelationshipHeader`, a small struct `{ title: String; subtitle: String?; showsBadge: Bool; spoken: String }`. A found bridge (from `bridge(for:row:in:)`) gives `title: bridge.sentence` (already built by `EvidenceBridgeEdgeSummary.sentence` in `PromoteModel.facts()`; never empty), `subtitle: nil`, `showsBadge: true`, `spoken: spokenRelationship(sentence: bridge.sentence, link: L10n.Promote.outcome(outcome))`. No bridge gives today's two lines and today's spoken label, no badge. In `EvidenceRelationshipCard.header`: title in the current medium `bodySmall` style; the subtitle row (`caption`, `textSecondary`) only when `subtitle != nil`; `· N records` stays on the subtitle row when there is one, and otherwise sits after the title in the title row (`caption`, `textMuted`). When `showsBadge`, put `EvidenceOutcomeBadge(outcome: relationship.outcome)` at the trailing end of the header row, so it lines up with the line badges below; align the header `HStack` `.center` when there is no subtitle, `.top` when there is. Checkbox, its identifier, its disabled rule and the card body do not change. Update the existing `linkPrefersTheBridgeElseTheNeighbor` test to the new helper (or fold it into the new test) and drop `linkText`. Keep `L10n.Promote.connectionLink` and its test: S11-27 is planned to call it. Keep `relationshipAgrees` / `relationshipSimilar` (fallback). Add one sentence to the plan's Landed note: "D-14's header shape was changed at the user's request in ship round 4: the bridge sentence with an outcome badge; the outcome sentence over 'with <name>' remains the fallback."
+Check: the new test passes; `grep -n "linkText" macos/App macos/ProvenenciaTests -r` prints nothing; scripts/check-pr.sh PASS.
+
+## Round 4 — fix
+Head `744ed015`. Gate PASS (orchestrator re-ran). F-11 done; diff read by the orchestrator. One miss in the fix plan itself: the pre-change header always drew `EvidenceOutcomeBadge`, so "no badge" in the fallback changed the fallback, which the user asked to keep as it was. → F-12.
+
+**F-12 — The fallback keeps its badge** (orchestrator, against the user's "keep the two-line fallback")
+Files: `PromoteEvidenceDisplay.swift`, `PromoteEvidenceSheet.swift`, `PromoteEvidenceDisplayTests.swift`.
+Do: the badge shows in both cases, as it did before round 4. Drop `RelationshipHeader.showsBadge` and the `if heading.showsBadge` guard; the header always ends with `EvidenceOutcomeBadge(outcome: relationship.outcome)`. Update `relationshipHeaderIsTheBridgeSentence` to drop the `showsBadge` expectations. Everything else in F-11 stays.
+Check: test passes; `grep -n showsBadge -r macos` prints nothing; scripts/check-pr.sh PASS.
+F-12 done at `da4f3ffe`; gate PASS (orchestrator re-ran); diff read: `showsBadge` gone, the badge always ends the header. No review round: user-requested copy and layout, not a finding.
+
+## Result (after round 4)
+Gate PASS · CI see PR · open: none · follow-ups: — · to user: — (manual check §10 not run) · CON miss: none
