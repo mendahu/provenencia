@@ -7,16 +7,23 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/claimevidence"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promotealign"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func (f *fixture) evidence(req promotealign.EvidenceRequest) claimevidence.Evidence {
@@ -446,5 +453,43 @@ func TestEvidenceLoadsOnlyBridgedNeighborMembers(t *testing.T) {
 				t.Errorf("%s line pins %d members, want only the bridged birth", s.Key, len(l.Members))
 			}
 		}
+	}
+}
+
+// A member of the handle may sit on any graph of its Source: the evidence reads
+// the values the member's own graph records, and names the graph's Source.
+func TestEvidenceReadsMemberGraph(t *testing.T) {
+	f := newFixture(t)
+	census, _ := f.newSource("Census 1851")
+	page2, err := runArtifactCreate(f.c, userID, artifacts.CreateInput{SourceID: census.ID, Label: "Page 2"})
+	must(t, err)
+	_, jones := evidencegraphstest.Split(t, f.c, userID, census.ID, "Jones", page2.ID)
+	st, err := subjecttypes.Lookup(f.c, "person", vocabkey.OriginProvenencia)
+	must(t, err)
+	member, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: census.ID, GraphID: jones.ID, SubjectTypeID: st.ID}, nil)
+	})
+	must(t, err)
+	f.cite(page2, member, observations.Input{PropertyID: f.prop("name").ID, Name: namevaluetest.Western("John Smith")})
+	handle := f.promote(member).Entity.ID
+
+	srcB, artB := f.newSource("Obituary")
+	incoming := f.person(srcB, artB, "John Smith")
+	e := f.evidence(promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: incoming.ID, HandleID: handle})
+
+	s := section(t, e.Sections, vocabkey.PropertyName)
+	if len(s.Lines) != 1 || len(s.Lines[0].Members) != 1 {
+		t.Fatalf("name lines %+v", s.Lines)
+	}
+	l := s.Lines[0]
+	if l.Relation != valuecompare.Same {
+		t.Errorf("relation %v, want Same: the member's own graph records John Smith", l.Relation)
+	}
+	p := l.Members[0]
+	if !bytes.Equal(p.Subject, member.ID) || !bytes.Equal(p.Source, census.ID) {
+		t.Errorf("pin %+v, want Subject %x on Source %x", p, member.ID, census.ID)
+	}
+	if got := e.Sources[string(census.ID)]; got != "Census 1851" {
+		t.Errorf("Sources[census] = %q", got)
 	}
 }

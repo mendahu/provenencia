@@ -3,6 +3,7 @@ package handlers
 import (
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"google.golang.org/protobuf/proto"
 )
@@ -87,6 +88,23 @@ func TestGetSourceGraphProgress(t *testing.T) {
 				}
 				if got.Progress.GetSubjectCount() != 0 || got.Progress.GetObservationCount() != 0 {
 					t.Fatalf("%+v", got.Progress)
+				}
+			},
+		},
+		{
+			name: "zeros with the request's id for a Source no row names",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, _ := subjectFixture(t)
+				return &engine.GetSourceGraphProgressRequest{ProjectDir: dir, SourceId: uuid.Must(uuid.NewV7()).String()}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var got engine.GetSourceGraphProgressResponse
+				if err := proto.Unmarshal(out, &got); err != nil {
+					t.Fatal(err)
+				}
+				want := &engine.SourceGraphProgress{SourceId: req.(*engine.GetSourceGraphProgressRequest).GetSourceId()}
+				if !proto.Equal(got.Progress, want) {
+					t.Fatalf("%+v, want %+v", got.Progress, want)
 				}
 			},
 		},
