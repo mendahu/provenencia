@@ -101,3 +101,19 @@ Merged `origin/main` @ `1e8a5802` (docs only: S12-08 plan). Gate PASS on the mer
 
 ## Result
 Gate PASS · CI pending · open: none · follow-ups: — · to user: — (manual check §10 not run) · CON miss: none
+
+## Round 3 — user request (2026-10-22)
+The user asked: the record subrows under an expanded line read on one line, with the value on the left and the Source aligned to the far right, so each subrow is shorter.
+
+### Fix plan 3
+**F-10 — Expanded record subrows on one line** (from the user)
+Files: `macos/App/Features/Promote/PromoteEvidenceSheet.swift` (`EvidenceMemberRow`).
+Failing test first: none (layout only; no view test target).
+Do: in `EvidenceMemberRow.content`, change the non-depiction branch from a `VStack` (value over Source title) to one row: `HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3)` with the worded value leading (`bodySmall`, `textPrimary`, `lineLimit(1)`, `truncationMode(.tail)`), a `Spacer(minLength: PVSpacing.space3)`, and the Source title trailing (`caption`, `textMuted`, `lineLimit(1)`, `truncationMode(.middle)`, `multilineTextAlignment(.trailing)`). Give the value higher `layoutPriority` so a long Source title truncates first. If there is no title, the value stands alone. Change the row's vertical padding from `PVSpacing.space3` to `PVSpacing.space2`, and align the checkbox HStack `.center` for text members so the box sits on the line's middle. The depiction branch (likeness tile with its caption) keeps its layout and `.top` alignment. Spoken label, identifiers, and the disabled rule do not change.
+Check: scripts/check-pr.sh PASS.
+
+## Round 3 — fix
+Head `1e948a9e`. Gate PASS (orchestrator re-ran). F-10 done as planned; diff read by the orchestrator (one file, `EvidenceMemberRow` only). Layout not checked by eye. No review round: a user-requested layout change, not a finding.
+
+## Result (after round 3)
+Gate PASS · CI see PR · open: none · follow-ups: — · to user: — (manual check §10 not run) · CON miss: none
