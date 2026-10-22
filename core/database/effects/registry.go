@@ -49,8 +49,9 @@ var Lists = []List{ListVocabulary, ListPropertyUsage, ListEvidenceGraphs}
 // job has nothing to do. Lists and Structure are the catalog-wide fields.
 type Set struct {
 	Handles [][]byte
-	// Sources are the Sources whose graph changed (Effect.Source): what the
-	// Source graph and graph progress load.
+	// Sources are the Sources whose Evidence graphs changed (Effect.Source):
+	// graphcache drops every loaded graph of each, and graph progress counts
+	// them.
 	Sources [][]byte
 	// CitationSources are the Sources whose citation reads (citation counts,
 	// citations by artifact) a change moves (Effect.CitationSource).
@@ -80,8 +81,9 @@ type Set struct {
 // bucket that has no effects.
 type Effect struct {
 	Entity string
-	// Source is the Source whose graph this change changes: the Source graph
-	// and graph progress load the table. A table neither loads leaves it empty.
+	// Source is the Source whose Evidence graphs this change changes: graphcache
+	// drops every loaded graph of it, and graph progress counts it. A table
+	// neither loads leaves it empty.
 	Source Path
 	// CitationSource is the Source whose citation reads (citation counts,
 	// citations by artifact) load the table. A table neither loads leaves it
@@ -247,6 +249,7 @@ var registry = map[string]Effect{
 	"subjects": {Entity: "subject", Source: field("source_id"), SourceScope: field("source_id")},
 	"evidence_graphs": {
 		Entity:      "evidence_graph",
+		Source:      field("source_id"),
 		SourceScope: field("source_id"),
 		Lists:       []List{ListEvidenceGraphs},
 	},

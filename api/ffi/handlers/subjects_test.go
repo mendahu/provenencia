@@ -3,6 +3,7 @@ package handlers
 import (
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"google.golang.org/protobuf/proto"
@@ -316,6 +317,28 @@ func TestListSubjects(t *testing.T) {
 				return &engine.ListSubjectsRequest{ProjectDir: dir, SourceId: sourceID}
 			},
 			want: &engine.ListSubjectsResponse{},
+		},
+		{
+			name: "a Source no catalog row names reads empty",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, _ := subjectFixture(t)
+				return &engine.ListSubjectsRequest{ProjectDir: dir, SourceId: uuid.Must(uuid.NewV7()).String()}
+			},
+			want: &engine.ListSubjectsResponse{},
+			after: func(t *testing.T, _ []byte, req proto.Message) {
+				r := req.(*engine.ListSubjectsRequest)
+				out, err := ListSubjectPositions(marshalProto(t, &engine.ListSubjectPositionsRequest{ProjectDir: r.GetProjectDir(), SourceId: r.GetSourceId()}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var got engine.ListSubjectPositionsResponse
+				if err := proto.Unmarshal(out, &got); err != nil {
+					t.Fatal(err)
+				}
+				if len(got.Positions) != 0 {
+					t.Fatalf("positions %+v", got.Positions)
+				}
+			},
 		},
 	})
 }

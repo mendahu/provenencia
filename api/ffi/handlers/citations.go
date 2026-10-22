@@ -119,11 +119,11 @@ func GetCitation(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		sg, err := c.Graph().Source(sourceID)
+		eg, err := sourceEvidenceGraph(c, sourceID)
 		if err != nil {
 			return err
 		}
-		rows, err := listedProtosFromSource(c, sg, citationID)
+		rows, err := listedProtosFromGraph(c, eg, citationID)
 		if err != nil {
 			return err
 		}

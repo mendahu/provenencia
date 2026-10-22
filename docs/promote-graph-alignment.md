@@ -147,7 +147,7 @@ A line is pinned only when value compare says the values are the same. A partial
 
 There are no database calls during the walk. Everything it reads is loaded first:
 
-1. **The layer:** one Source's Subjects, bridges, Observations and provenance, held on the catalog's in-memory graph (`graphcache`, `g.Source`).
+1. **The layer:** the Source's one Evidence graph's Subjects, bridges, Observations and provenance, held on the catalog's in-memory graph (`graphcache`, `g.EvidenceGraph`).
 2. **Seed handles:**
    - the fixed pairs;
    - the handles of already-promoted Subjects;
@@ -162,7 +162,7 @@ Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count foll
 # 8. Caching and decisions
 
 - **Decisions live in the page's draft:** the Swift row list (suggested or decided, target, sheet toggles, claim fields). They're sent as `fixed` on every call and never stored.
-- **Loads read the catalog's in-memory graph** (`graphcache`), which keeps handles, Source graphs and the match index between calls, so re-runs after decisions skip loading. Each commit drops what it touched (its effects), not a whole revision.
+- **Loads read the catalog's in-memory graph** (`graphcache`), which keeps handles, Evidence graphs (keyed by graph id) and the match index between calls, so re-runs after decisions skip loading. Each commit drops what it touched (its effects), not a whole revision.
 - **The match index** (the shortlist index) is cached on the graph and dropped by any commit that names a handle, by a vocabulary commit (its keys read term keys and metas), and by new alias tables.
 
 ---

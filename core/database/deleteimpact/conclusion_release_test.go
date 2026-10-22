@@ -6,6 +6,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -53,7 +54,7 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,12 +168,4 @@ func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
 	if err != nil || len(members) != 1 || string(members[0].ID) != string(ca) {
 		t.Fatalf("%v %+v", err, members)
 	}
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }

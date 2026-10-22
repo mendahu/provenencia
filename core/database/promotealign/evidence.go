@@ -71,7 +71,7 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 		at[string(f.SubjectID)] = len(named)
 		named = append(named, f)
 	}
-	merged, err := mergeFixed(g, req.SourceID, in.primary, named)
+	merged, err := mergeFixed(g, in.graphID, in.primary, named)
 	if err != nil {
 		return claimevidence.Evidence{}, err
 	}
@@ -89,12 +89,12 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 	for _, s := range in.layer.Subjects {
 		valuesOf[string(s.ID)] = s.Values
 	}
-	rowSG, err := g.Source(req.SourceID)
+	rowEG, err := g.EvidenceGraph(in.graphID)
 	if err != nil {
 		return claimevidence.Evidence{}, err
 	}
 	observationsOf := map[string][][]byte{}
-	for _, o := range rowSG.Observations {
+	for _, o := range rowEG.Observations {
 		observationsOf[string(o.SubjectID)] = append(observationsOf[string(o.SubjectID)], o.ID)
 	}
 
@@ -182,8 +182,8 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 	return out, nil
 }
 
-// acceptedClaims is a handle's accepted members, each with its Source, in
-// claim id order. A handle with no node has none.
+// acceptedClaims is a handle's accepted members, each with its Source and
+// Evidence graph, in claim id order. A handle with no node has none.
 func acceptedClaims(g *graphcache.Graph, entityID []byte) ([]graphcache.Member, error) {
 	n, err := g.Node(entityID)
 	if err != nil || n == nil {
@@ -199,13 +199,13 @@ func acceptedClaims(g *graphcache.Graph, entityID []byte) ([]graphcache.Member, 
 }
 
 // evidenceReader reads what the query needs beyond the layer: members and
-// their values, the Source each Subject is on, and the filed links between
-// entities. Every read is cached by the graph or kept here.
+// their values, the Source and graph each member Subject is on, and the filed
+// links between entities. Every read is cached by the graph or kept here.
 type evidenceReader struct {
 	g        *graphcache.Graph
 	in       inputs
 	prof     *profiler
-	sourceOf map[string][]byte // by Subject id, from the members read so far
+	memberOf map[string]graphcache.Member // by Subject id, from the members read so far
 }
 
 func newEvidenceReader(g *graphcache.Graph, in inputs) (*evidenceReader, error) {
@@ -213,11 +213,11 @@ func newEvidenceReader(g *graphcache.Graph, in inputs) (*evidenceReader, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &evidenceReader{g: g, in: in, prof: prof, sourceOf: map[string][]byte{}}, nil
+	return &evidenceReader{g: g, in: in, prof: prof, memberOf: map[string]graphcache.Member{}}, nil
 }
 
 // accepted are the accepted member Subjects of an entity, in claim order. It
-// remembers each one's Source, which a node's members carry.
+// remembers each one's Source and graph, which a node's members carry.
 func (r *evidenceReader) accepted(entity []byte) ([][]byte, error) {
 	ms, err := acceptedClaims(r.g, entity)
 	if err != nil {
@@ -225,7 +225,7 @@ func (r *evidenceReader) accepted(entity []byte) ([][]byte, error) {
 	}
 	ids := make([][]byte, len(ms))
 	for i, m := range ms {
-		r.sourceOf[string(m.SubjectID)] = m.SourceID
+		r.memberOf[string(m.SubjectID)] = m
 		ids[i] = m.SubjectID
 	}
 	return ids, nil
@@ -255,14 +255,14 @@ func (r *evidenceReader) members(entity []byte) ([]claimevidence.Member, error) 
 	return r.memberValues(ids)
 }
 
-// membersMemoKey is the Source memo key of the member values already built for
-// a Source's Subjects, with the name pattern they were built under after it.
+// membersMemoKey is the Evidence graph memo key of the member values already
+// built for a graph's Subjects, with the name pattern they were built under after it.
 const membersMemoKey = "promotealign.members\x00"
 
-// memberMemo is a Source's memoized member values by Subject id, filled as
-// Subjects are read. The values are shared and never changed.
-func (r *evidenceReader) memberMemo(source []byte, key string) (map[string]subjectcompare.Values, bool) {
-	v, ok := r.g.SourceMemo(source, key)
+// memberMemo is an Evidence graph's memoized member values by Subject id,
+// filled as Subjects are read. The values are shared and never changed.
+func (r *evidenceReader) memberMemo(graphID []byte, key string) (map[string]subjectcompare.Values, bool) {
+	v, ok := r.g.EvidenceGraphMemo(graphID, key)
 	if !ok {
 		return nil, false
 	}
@@ -271,21 +271,21 @@ func (r *evidenceReader) memberMemo(source []byte, key string) (map[string]subje
 }
 
 // memberValues reads the listed Subjects as members, in the order given. Each
-// Source is read once, for the Subjects of it not memoized yet.
+// Evidence graph is read once, for the Subjects of it not memoized yet.
 func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Member, error) {
-	bySource := map[string]map[string]bool{}
+	byGraph := map[string]map[string]bool{}
 	for _, id := range subjectIDs {
-		if src, ok := r.sourceOf[string(id)]; ok {
-			if bySource[string(src)] == nil {
-				bySource[string(src)] = map[string]bool{}
+		if m, ok := r.memberOf[string(id)]; ok {
+			if byGraph[string(m.GraphID)] == nil {
+				byGraph[string(m.GraphID)] = map[string]bool{}
 			}
-			bySource[string(src)][string(id)] = true
+			byGraph[string(m.GraphID)][string(id)] = true
 		}
 	}
 	key := membersMemoKey + r.in.namePattern
 	valuesOf := map[string]subjectcompare.Values{}
-	for source, set := range bySource {
-		memo, _ := r.memberMemo([]byte(source), key)
+	for graphID, set := range byGraph {
+		memo, _ := r.memberMemo([]byte(graphID), key)
 		var missing map[string]bool
 		for id := range set {
 			if _, ok := memo[id]; !ok {
@@ -296,11 +296,11 @@ func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Memb
 			}
 		}
 		if len(missing) > 0 {
-			sg, err := r.g.Source([]byte(source))
+			eg, err := r.g.EvidenceGraph([]byte(graphID))
 			if err != nil {
 				return nil, err
 			}
-			cands, err := layerValues(sg, missing, r.prof.props, r.prof.terms)
+			cands, err := layerValues(eg, missing, r.prof.props, r.prof.terms)
 			if err != nil {
 				return nil, err
 			}
@@ -312,7 +312,7 @@ func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Memb
 					Values: cands[id], NamePattern: r.in.namePattern,
 				}, nil)
 			}
-			r.g.SetSourceMemo([]byte(source), key, memo)
+			r.g.SetEvidenceGraphMemo([]byte(graphID), key, memo)
 		}
 		for id := range set {
 			valuesOf[id] = memo[id]
@@ -320,13 +320,13 @@ func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Memb
 	}
 	var out []claimevidence.Member
 	for _, id := range subjectIDs {
-		src, ok := r.sourceOf[string(id)]
+		m, ok := r.memberOf[string(id)]
 		if !ok {
 			continue
 		}
 		out = append(out, claimevidence.Member{
 			Subject: bytes.Clone(id),
-			Source:  bytes.Clone(src),
+			Source:  bytes.Clone(m.SourceID),
 			Values:  valuesOf[string(id)],
 		})
 	}
@@ -378,29 +378,29 @@ func (r *evidenceReader) bridges(l graphcache.Link) ([]claimevidence.Bridge, err
 	if !l.FromEnd {
 		memberEnd, neighborEnd = neighborEnd, memberEnd
 	}
-	obsOf := map[string][]graphcache.SourceObservation{} // by bridge Subject
-	read := map[string]bool{}                            // Sources walked
+	obsOf := map[string][]graphcache.EvidenceObservation{} // by bridge Subject
+	read := map[string]bool{}                              // graphs walked
 	for _, id := range subjectIDs {
-		src, ok := r.sourceOf[string(id)]
-		if !ok || read[string(src)] {
+		m, ok := r.memberOf[string(id)]
+		if !ok || read[string(m.GraphID)] {
 			continue
 		}
-		read[string(src)] = true
-		sg, err := r.g.Source(src)
+		read[string(m.GraphID)] = true
+		eg, err := r.g.EvidenceGraph(m.GraphID)
 		if err != nil {
 			return nil, err
 		}
-		for _, o := range sg.Observations {
+		for _, o := range eg.Observations {
 			obsOf[string(o.SubjectID)] = append(obsOf[string(o.SubjectID)], o)
 		}
 	}
 	var out []claimevidence.Bridge
 	for _, id := range subjectIDs {
-		src, ok := r.sourceOf[string(id)]
+		m, ok := r.memberOf[string(id)]
 		if !ok {
 			continue
 		}
-		b := claimevidence.Bridge{Subject: bytes.Clone(id), Source: bytes.Clone(src)}
+		b := claimevidence.Bridge{Subject: bytes.Clone(id), Source: bytes.Clone(m.SourceID)}
 		ambiguous := false
 		end := func(into *[]byte, v []byte) {
 			if len(*into) > 0 && !bytes.Equal(*into, v) {
@@ -429,21 +429,25 @@ func (r *evidenceReader) bridges(l graphcache.Link) ([]claimevidence.Bridge, err
 }
 
 // titles maps the id of every Source a pin or bundle in the evidence names to
-// its title, from the Source's cached graph.
+// its title, from the cached graph of the member that names it.
 func (r *evidenceReader) titles(e claimevidence.Evidence) (map[string]string, error) {
 	out := map[string]string{}
 	var failed error
-	add := func(id []byte) {
-		if _, done := out[string(id)]; done || failed != nil {
+	add := func(source, subject []byte) {
+		if _, done := out[string(source)]; done || failed != nil {
 			return
 		}
-		sg, err := r.g.Source(id)
+		m, ok := r.memberOf[string(subject)]
+		if !ok {
+			return
+		}
+		eg, err := r.g.EvidenceGraph(m.GraphID)
 		if err != nil {
 			failed = err
 			return
 		}
-		if sg.Found {
-			out[string(id)] = sg.Title
+		if eg.Found {
+			out[string(source)] = eg.SourceTitle
 		}
 	}
 	var sections func(ss []claimevidence.Section)
@@ -451,7 +455,7 @@ func (r *evidenceReader) titles(e claimevidence.Evidence) (map[string]string, er
 		for _, s := range ss {
 			for _, l := range s.Lines {
 				for _, p := range l.Members {
-					add(p.Source)
+					add(p.Source, p.Subject)
 				}
 			}
 		}
@@ -459,7 +463,7 @@ func (r *evidenceReader) titles(e claimevidence.Evidence) (map[string]string, er
 	sections(e.Sections)
 	for _, rel := range e.Relationships {
 		for _, b := range rel.Members {
-			add(b.Source)
+			add(b.Source, b.Bridge)
 		}
 		sections(rel.Sections)
 	}

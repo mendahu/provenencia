@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
@@ -92,7 +93,7 @@ func newFixture(t *testing.T) *fixture {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
 	})
 	must(t, err)
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
 	return &fixture{t: t, c: c, src: src, art: art}
 }
@@ -246,12 +247,4 @@ func sameIDs(got, want [][]byte) bool {
 		}
 	}
 	return true
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }

@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-07 — Graph-keyed reads
+
+**Landed 2026-10-22** in [#520](https://github.com/mendahu/provenencia/pull/520). The engine's Evidence graph cache, loader, Subject positions, event titles and graph progress read one Evidence graph instead of one Source, and are named for it (`graphcache.EvidenceGraph`, `graphfill`, `grapheventtitles`, `graphprogress`). Two graphs of one Source load, memoize and count apart. A write that names a Source drops every loaded graph of it, and a graph create, edit or delete now names its Source. The wire and the app do not change: each handler that takes a Source id reads that Source's one graph.
+
 ## S12-06 — Graph isolation
 
 **Landed 2026-10-21** in [#515](https://github.com/mendahu/provenencia/pull/515). The engine now refuses an Observation whose Subject, Subject value or Citation Artifact is not in, or linked to, one Evidence graph, with its own plain message ("That subject or artifact is in another evidence graph."); a `source` Subject may still be the value of a non-edge Observation in any graph, so `mentions` crosses Sources. A cited bridge takes its graph from its endpoints, and `subjects.CreateInput.GraphID` lets a Subject join a named graph. Nothing changes for researchers until a second graph can be made.

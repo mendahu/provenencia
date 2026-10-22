@@ -28,44 +28,45 @@ type participation struct {
 	role          string
 }
 
-// layerMemoKey is the Source memo key of a built layer, with the name pattern
+// layerMemoKey is the Evidence graph memo key of a built layer, with the name pattern
 // it was built under after it.
 const layerMemoKey = "promotealign.layer\x00"
 
-// layerMemo is a layer and its primary Subjects, as one Source memo.
+// layerMemo is a layer and its primary Subjects, as one Evidence graph memo.
 type layerMemo struct {
 	layer   graphalign.Layer
 	primary map[string]primarySubject
 }
 
-// loadLayerMemo is the Source's layer: the one memoized on its graph, or
-// loadLayer's, memoized. The layer reads the Source graph, the vocabulary, the
-// terms, the name pattern and the static registry, and the memo is dropped with
-// the Source, a vocabulary change and new alias tables. A reader never changes
+// loadLayerMemo is the Evidence graph's layer: the one memoized on its graph,
+// or loadLayer's, memoized. The layer reads the Evidence graph, the vocabulary,
+// the terms, the name pattern and the static registry, and the memo is dropped
+// with the graph (a commit that names its Source), a vocabulary change and new
+// alias tables. A reader never changes
 // a layer, so every caller shares it.
-func loadLayerMemo(g *graphcache.Graph, sourceID []byte, cfg graphalign.Config, namePattern string, terms segmentcompare.Terms) (graphalign.Layer, map[string]primarySubject, error) {
+func loadLayerMemo(g *graphcache.Graph, graphID []byte, cfg graphalign.Config, namePattern string, terms segmentcompare.Terms) (graphalign.Layer, map[string]primarySubject, error) {
 	key := layerMemoKey + namePattern
-	if v, ok := g.SourceMemo(sourceID, key); ok {
+	if v, ok := g.EvidenceGraphMemo(graphID, key); ok {
 		if m, ok := v.(layerMemo); ok {
 			return m.layer, m.primary, nil
 		}
 	}
-	layer, primary, err := loadLayer(g, sourceID, cfg, namePattern, terms)
+	layer, primary, err := loadLayer(g, graphID, cfg, namePattern, terms)
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
-	g.SetSourceMemo(sourceID, key, layerMemo{layer: layer, primary: primary})
+	g.SetEvidenceGraphMemo(graphID, key, layerMemo{layer: layer, primary: primary})
 	return layer, primary, nil
 }
 
-// loadLayer builds the Evidence layer from a loaded Source. Each primary
-// Subject's side is built here, once, with the profile builder; property
-// metas stay a catalog read, since they are not part of one Source.
-func loadLayer(g *graphcache.Graph, sourceID []byte, cfg graphalign.Config, namePattern string, terms segmentcompare.Terms) (graphalign.Layer, map[string]primarySubject, error) {
+// loadLayer builds the Evidence layer from a loaded Evidence graph. Each
+// primary Subject's side is built here, once, with the profile builder;
+// property metas stay a catalog read, since they are not part of one graph.
+func loadLayer(g *graphcache.Graph, graphID []byte, cfg graphalign.Config, namePattern string, terms segmentcompare.Terms) (graphalign.Layer, map[string]primarySubject, error) {
 	if g == nil {
 		return graphalign.Layer{}, nil, promote.ErrInvalid
 	}
-	sg, err := g.Source(sourceID)
+	eg, err := g.EvidenceGraph(graphID)
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
@@ -79,7 +80,7 @@ func loadLayer(g *graphcache.Graph, sourceID []byte, cfg graphalign.Config, name
 	}
 	primary := map[string]primarySubject{}
 	byKind := map[string][][]byte{}
-	for _, s := range sg.Subjects {
+	for _, s := range eg.Subjects {
 		if !vocabkey.IsPrimaryType(s.TypeKey, s.TypeOrigin) {
 			continue
 		}
@@ -89,7 +90,7 @@ func loadLayer(g *graphcache.Graph, sourceID []byte, cfg graphalign.Config, name
 		primary[string(s.ID)] = primarySubject{id: append([]byte(nil), s.ID...), ref: s.Ref, kind: s.TypeKey}
 		byKind[s.TypeKey] = append(byKind[s.TypeKey], append([]byte(nil), s.ID...))
 	}
-	bridges, participations, err := loadLayerBridges(g, sg, props, vocab.TermsByID(), primary, byKind, terms)
+	bridges, participations, err := loadLayerBridges(g, eg, props, vocab.TermsByID(), primary, byKind, terms)
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
@@ -97,7 +98,7 @@ func loadLayer(g *graphcache.Graph, sourceID []byte, cfg graphalign.Config, name
 	for id := range primary {
 		ids[id] = true
 	}
-	candidates, err := layerValues(sg, ids, props, vocab.TermsByID())
+	candidates, err := layerValues(eg, ids, props, vocab.TermsByID())
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
@@ -126,7 +127,7 @@ func loadLayer(g *graphcache.Graph, sourceID []byte, cfg graphalign.Config, name
 		}
 	}
 	var subjects []graphalign.Subject
-	for _, s := range sg.Subjects {
+	for _, s := range eg.Subjects {
 		ps, ok := primary[string(s.ID)]
 		if !ok {
 			continue
@@ -155,7 +156,7 @@ var hopPersonToEvent = hops.MustHop(vocabkey.BridgeParticipation, vocabkey.Prope
 // loadLayerBridges walks every bridge connectrules registers, with any term,
 // and keys each edge from both ends. It also returns the participations whose
 // ends are both primary, which the lifespans read.
-func loadLayerBridges(g *graphcache.Graph, sg graphcache.SourceGraph, props map[string]graphcache.VocabProperty, vocabTerms map[string]graphcache.VocabTerm, primary map[string]primarySubject, byKind map[string][][]byte, terms segmentcompare.Terms) ([]graphalign.Bridge, []participation, error) {
+func loadLayerBridges(g *graphcache.Graph, eg graphcache.EvidenceGraph, props map[string]graphcache.VocabProperty, vocabTerms map[string]graphcache.VocabTerm, primary map[string]primarySubject, byKind map[string][][]byte, terms segmentcompare.Terms) ([]graphalign.Bridge, []participation, error) {
 	var out []graphalign.Bridge
 	var parts []participation
 	seen := map[seenEdge]int{} // the edge's index in out
@@ -167,7 +168,7 @@ func loadLayerBridges(g *graphcache.Graph, sg graphcache.SourceGraph, props map[
 		if err != nil {
 			return nil, nil, err
 		}
-		edges, err := g.WalkSource(sg, hop, byKind[b.Endpoints[0].TypeKey])
+		edges, err := g.WalkEvidenceGraph(eg, hop, byKind[b.Endpoints[0].TypeKey])
 		if err != nil {
 			return nil, nil, err
 		}
@@ -177,12 +178,12 @@ func loadLayerBridges(g *graphcache.Graph, sg graphcache.SourceGraph, props map[
 		}
 		var termOf map[string]string
 		if connectrules.HasDisambiguation(b.Disambiguation) {
-			termOf = observedTerms(sg, props, vocabTerms, assocs, b.Disambiguation)
+			termOf = observedTerms(eg, props, vocabTerms, assocs, b.Disambiguation)
 		}
 		// The event type comes from whichever end is an event; linkOf alone
 		// decides whether the key keeps it.
 		eventFirst, hasEvent := eventEndpoint(b)
-		eventEnd := func(e graphcache.SourceEdge) []byte {
+		eventEnd := func(e graphcache.EvidenceEdge) []byte {
 			if eventFirst {
 				return e.From
 			}
@@ -194,7 +195,7 @@ func loadLayerBridges(g *graphcache.Graph, sg graphcache.SourceGraph, props map[
 			for i, e := range edges {
 				ids[i] = eventEnd(e)
 			}
-			eventTypes = observedTerms(sg, props, vocabTerms, ids, neighborTypeProperty[vocabkey.Event])
+			eventTypes = observedTerms(eg, props, vocabTerms, ids, neighborTypeProperty[vocabkey.Event])
 		}
 		for _, e := range edges {
 			term := termOf[string(e.Association)]

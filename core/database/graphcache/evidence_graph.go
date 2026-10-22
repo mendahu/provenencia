@@ -8,28 +8,29 @@ import (
 	"github.com/mendahu/provenencia/core/hops"
 )
 
-// SourceLoader fills one Source. sourcefill registers it. The graph does
-// not import that package.
-type SourceLoader func(g *Graph, sourceID []byte) (SourceGraph, error)
+// EvidenceGraphLoader fills one Evidence graph. graphfill registers it. The
+// graph does not import that package.
+type EvidenceGraphLoader func(g *Graph, graphID []byte) (EvidenceGraph, error)
 
-// SourceCheck reloads one stored Source and compares the whole graph.
-// sourcefill registers it.
-type SourceCheck func(g *Graph, id []byte, stored SourceGraph) error
+// EvidenceGraphCheck reloads one stored Evidence graph and compares the whole
+// graph. graphfill registers it.
+type EvidenceGraphCheck func(g *Graph, graphID []byte, stored EvidenceGraph) error
 
 var (
-	sourceLoad SourceLoader
-	sourceFn   SourceCheck
+	evidenceGraphLoad EvidenceGraphLoader
+	evidenceGraphFn   EvidenceGraphCheck
 )
 
-// SetSourceLoader registers the read that fills a Source graph.
-func SetSourceLoader(fn SourceLoader) { sourceLoad = fn }
+// SetEvidenceGraphLoader registers the read that fills an Evidence graph.
+func SetEvidenceGraphLoader(fn EvidenceGraphLoader) { evidenceGraphLoad = fn }
 
-// SetSourceCheck registers the comparison Verify runs for a loaded Source.
-func SetSourceCheck(fn SourceCheck) { sourceFn = fn }
+// SetEvidenceGraphCheck registers the comparison Verify runs for a loaded
+// Evidence graph.
+func SetEvidenceGraphCheck(fn EvidenceGraphCheck) { evidenceGraphFn = fn }
 
-// SourceSubject is one subject on a Source. TypeKey and TypeOrigin are the
+// EvidenceSubject is one subject on an Evidence graph. TypeKey and TypeOrigin are the
 // subject type's identity. Labels of vocabulary are not stored.
-type SourceSubject struct {
+type EvidenceSubject struct {
 	ID            []byte
 	SourceID      []byte
 	SubjectTypeID []byte
@@ -40,9 +41,9 @@ type SourceSubject struct {
 	TypeOrigin    string
 }
 
-// SourceObservation is one observation. Property and term labels are applied
+// EvidenceObservation is one observation on an Evidence graph. Property and term labels are applied
 // when the row is shown. Date and Name are the stored value blobs.
-type SourceObservation struct {
+type EvidenceObservation struct {
 	ID             []byte
 	Ref            string
 	CitationID     []byte
@@ -67,18 +68,18 @@ type SourceObservation struct {
 	Name                 []byte
 }
 
-// SourceMember is an accepted claim: the subject, the claim, and the handle.
+// EvidenceMember is an accepted claim on an Evidence graph: the subject, the claim, and the handle.
 // The handle's name and label are read from its node.
-type SourceMember struct {
+type EvidenceMember struct {
 	SubjectID []byte
 	ClaimID   []byte
 	EntityID  []byte
 	Kind      string
 }
 
-// SourceEdge is one hop on the Source, kept so an event title can be chosen
+// EvidenceEdge is one hop on an Evidence graph, kept so an event title can be chosen
 // from the stored observations.
-type SourceEdge struct {
+type EvidenceEdge struct {
 	From           []byte
 	Association    []byte
 	AssociationRef string
@@ -86,86 +87,94 @@ type SourceEdge struct {
 	ToRef          string
 }
 
-// SourceGraph is one loaded Source.
-type SourceGraph struct {
+// EvidenceGraph is one loaded Evidence graph. SourceID and SourceTitle are the
+// graph's Source, set by the loader; a graph whose row does not exist is not
+// Found and has no SourceID, so no Source drop removes it.
+type EvidenceGraph struct {
+	GraphID      []byte
 	SourceID     []byte
-	Title        string
+	SourceTitle  string
 	Found        bool
-	Subjects     []SourceSubject
-	Observations []SourceObservation
-	Members      []SourceMember
-	EventPeople  []SourceEdge
-	EventPlaces  []SourceEdge
+	Subjects     []EvidenceSubject
+	Observations []EvidenceObservation
+	Members      []EvidenceMember
+	EventPeople  []EvidenceEdge
+	EventPlaces  []EvidenceEdge
 }
 
-// Source returns the loaded Source, filling it on first read.
-func (g *Graph) Source(id []byte) (SourceGraph, error) {
-	if g == nil || len(id) != 16 {
-		return SourceGraph{}, fmt.Errorf("graphcache: source id is invalid")
+// EvidenceGraph returns the loaded Evidence graph, filling it on first read.
+func (g *Graph) EvidenceGraph(graphID []byte) (EvidenceGraph, error) {
+	if g == nil || len(graphID) != 16 {
+		return EvidenceGraph{}, fmt.Errorf("graphcache: evidence graph id is invalid")
 	}
-	if s, ok := g.sources[string(id)]; ok {
-		return s, nil
+	if eg, ok := g.evidenceGraphs[string(graphID)]; ok {
+		return eg, nil
 	}
-	if sourceLoad == nil {
-		return SourceGraph{}, fmt.Errorf("graphcache: source loader is not registered")
+	if evidenceGraphLoad == nil {
+		return EvidenceGraph{}, fmt.Errorf("graphcache: evidence graph loader is not registered")
 	}
-	loaded, err := sourceLoad(g, id)
+	loaded, err := evidenceGraphLoad(g, graphID)
 	if err != nil {
-		return SourceGraph{}, err
+		return EvidenceGraph{}, err
 	}
-	loaded.SourceID = append([]byte(nil), id...)
-	g.sources[string(id)] = loaded
+	loaded.GraphID = append([]byte(nil), graphID...)
+	g.evidenceGraphs[string(graphID)] = loaded
 	return loaded, nil
 }
 
-func (g *Graph) dropSources(ids [][]byte) {
-	if g == nil {
+// dropGraphsOfSources removes every loaded Evidence graph of each Source, with
+// its memos. Set.Sources names Sources until effects carry graph ids.
+func (g *Graph) dropGraphsOfSources(ids [][]byte) {
+	if g == nil || len(ids) == 0 {
 		return
 	}
-	for _, id := range ids {
-		if len(id) == 16 {
-			delete(g.sources, string(id))
-			delete(g.memos, string(id))
+	for key, eg := range g.evidenceGraphs {
+		for _, id := range ids {
+			if len(id) == 16 && bytes.Equal(eg.SourceID, id) {
+				delete(g.evidenceGraphs, key)
+				delete(g.memos, key)
+				break
+			}
 		}
 	}
 }
 
-// SourceMemo returns what a feature stored for a loaded Source under key. It is
-// held only while the Source is loaded: a commit that names the Source, Drop, a
-// vocabulary commit and SetAliasTables clear it. A memoized value is shared, so
-// every reader treats it as read-only.
-func (g *Graph) SourceMemo(id []byte, key string) (any, bool) {
+// EvidenceGraphMemo returns what a feature stored for a loaded Evidence graph
+// under key. It is held only while the graph is loaded: a commit that names
+// the graph's Source, Drop, a vocabulary commit and SetAliasTables clear it. A
+// memoized value is shared, so every reader treats it as read-only.
+func (g *Graph) EvidenceGraphMemo(graphID []byte, key string) (any, bool) {
 	if g == nil {
 		return nil, false
 	}
-	v, ok := g.memos[string(id)][key]
+	v, ok := g.memos[string(graphID)][key]
 	return v, ok
 }
 
-// SetSourceMemo stores a feature's value for a loaded Source under key. A
-// Source that is not loaded keeps nothing.
-func (g *Graph) SetSourceMemo(id []byte, key string, v any) {
+// SetEvidenceGraphMemo stores a feature's value for a loaded Evidence graph
+// under key. A graph that is not loaded keeps nothing.
+func (g *Graph) SetEvidenceGraphMemo(graphID []byte, key string, v any) {
 	if g == nil {
 		return
 	}
-	if _, loaded := g.sources[string(id)]; !loaded {
+	if _, loaded := g.evidenceGraphs[string(graphID)]; !loaded {
 		return
 	}
-	if g.memos[string(id)] == nil {
-		g.memos[string(id)] = map[string]any{}
+	if g.memos[string(graphID)] == nil {
+		g.memos[string(graphID)] = map[string]any{}
 	}
-	g.memos[string(id)][key] = v
+	g.memos[string(graphID)][key] = v
 }
 
-// WalkSource follows h through one Source's Evidence graph from each Subject
+// WalkEvidenceGraph follows h through one Evidence graph from each Subject
 // in from, in memory: Association is the bridge Subject. A bridge Subject is
-// one of the hop's bridge type on sg. It cites a from Subject on the hop's
-// from-endpoint property and a Subject on sg on its to-endpoint property,
+// one of the hop's bridge type on eg. It cites a from Subject on the hop's
+// from-endpoint property and a Subject on eg on its to-endpoint property,
 // both positively, and the filter term on the filter property when the hop
 // has one. Each edge appears once, ordered by from Subject id, then the
 // bridge's ref, then the to Subject's ref. A name the vocabulary does not
 // know reaches nothing.
-func (g *Graph) WalkSource(sg SourceGraph, h hops.Hop, from [][]byte) ([]SourceEdge, error) {
+func (g *Graph) WalkEvidenceGraph(eg EvidenceGraph, h hops.Hop, from [][]byte) ([]EvidenceEdge, error) {
 	if h.Bridge() == "" {
 		return nil, fmt.Errorf("graphcache: zero Hop")
 	}
@@ -209,8 +218,8 @@ func (g *Graph) WalkSource(sg SourceGraph, h hops.Hop, from [][]byte) ([]SourceE
 	for _, id := range from {
 		wanted[string(id)] = true
 	}
-	subjects := make(map[string]SourceSubject, len(sg.Subjects))
-	for _, s := range sg.Subjects {
+	subjects := make(map[string]EvidenceSubject, len(eg.Subjects))
+	for _, s := range eg.Subjects {
 		subjects[string(s.ID)] = s
 	}
 	// What each bridge Subject cites, positively.
@@ -221,7 +230,7 @@ func (g *Graph) WalkSource(sg SourceGraph, h hops.Hop, from [][]byte) ([]SourceE
 	bridges := map[string]*cited{}
 	type reach struct{ from, bridge []byte }
 	var reaches []reach
-	for _, o := range sg.Observations {
+	for _, o := range eg.Observations {
 		if o.Polarity != "positive" {
 			continue
 		}
@@ -246,7 +255,7 @@ func (g *Graph) WalkSource(sg SourceGraph, h hops.Hop, from [][]byte) ([]SourceE
 			c.filtered = true
 		}
 	}
-	var out []SourceEdge
+	var out []EvidenceEdge
 	seen := map[string]bool{}
 	for _, r := range reaches {
 		c := bridges[string(r.bridge)]
@@ -261,7 +270,7 @@ func (g *Graph) WalkSource(sg SourceGraph, h hops.Hop, from [][]byte) ([]SourceE
 			}
 			seen[k] = true
 			dst := subjects[string(to)]
-			out = append(out, SourceEdge{
+			out = append(out, EvidenceEdge{
 				From: bytes.Clone(r.from), Association: bytes.Clone(r.bridge), AssociationRef: bridge.Ref,
 				To: bytes.Clone(to), ToRef: dst.Ref,
 			})

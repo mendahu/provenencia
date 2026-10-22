@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -59,7 +60,7 @@ func newPinFixture(t *testing.T) *pinFixture {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
 	})
 	f.must(err)
-	f.artifact, err = runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	f.artifact, err = artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	f.must(err)
 	f.person, err = subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	f.must(err)

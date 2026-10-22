@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
@@ -81,7 +82,7 @@ func newScopeSeed(t *testing.T) scopeSeed {
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := runArtifactCreate(c, scopeUserID, artifacts.CreateInput{SourceID: a.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, scopeUserID, artifacts.CreateInput{SourceID: a.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -297,7 +298,7 @@ func TestSourceScopes(t *testing.T) {
 			run: func(t *testing.T, s scopeSeed) {
 				var art artifacts.Artifact
 				s.bumpsA(t, func() {
-					a, err := runArtifactCreate(s.c, scopeUserID, artifacts.CreateInput{SourceID: s.a.ID, Label: "Back"})
+					a, err := artifactstest.Create(s.c, scopeUserID, artifacts.CreateInput{SourceID: s.a.ID, Label: "Back"})
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -314,7 +315,7 @@ func TestSourceScopes(t *testing.T) {
 		{
 			name: "graph link and unlink",
 			run: func(t *testing.T, s scopeSeed) {
-				second, err := runArtifactCreate(s.c, scopeUserID, artifacts.CreateInput{SourceID: s.a.ID, Label: "Second"})
+				second, err := artifactstest.Create(s.c, scopeUserID, artifacts.CreateInput{SourceID: s.a.ID, Label: "Second"})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -504,7 +505,7 @@ func TestSourceScopes(t *testing.T) {
 				// artifacts exist would see sources the revision did not.
 				checkNewEffects(t, s.c)
 				for _, src := range []sources.Source{s.a, s.b} {
-					if _, err := runArtifactCreate(s.c, scopeUserID, artifacts.CreateInput{
+					if _, err := artifactstest.Create(s.c, scopeUserID, artifacts.CreateInput{
 						SourceID: src.ID, FileID: fres.File.ID, Label: "Scan",
 					}); err != nil {
 						t.Fatal(err)
@@ -676,14 +677,6 @@ func writeFile(t *testing.T, path, body string) {
 	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }
 
 func runArtifactUpdate(c *database.Catalog, userID []byte, a artifacts.Artifact) error {

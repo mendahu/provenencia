@@ -11,8 +11,8 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	_ "github.com/mendahu/provenencia/core/database/sourcefill"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -496,9 +496,10 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+				a, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					return Create(tx, userID, CreateInput{SourceID: srcA.ID, SubjectTypeID: person.ID, Label: "A"}, nil)
-				}); err != nil {
+				})
+				if err != nil {
 					t.Fatal(err)
 				}
 				if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
@@ -506,9 +507,9 @@ func TestSubjects(t *testing.T) {
 				}); err != nil {
 					t.Fatal(err)
 				}
-				sg, err := c.Graph().Source(srcA.ID)
-				if err != nil || len(sg.Subjects) != 1 || sg.Subjects[0].Label != "A" {
-					t.Fatalf("%v %+v", err, sg.Subjects)
+				eg, err := c.Graph().EvidenceGraph(a.GraphID)
+				if err != nil || len(eg.Subjects) != 1 || eg.Subjects[0].Label != "A" {
+					t.Fatalf("%v %+v", err, eg.Subjects)
 				}
 			},
 		},

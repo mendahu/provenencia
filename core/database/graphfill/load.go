@@ -1,7 +1,7 @@
-// Package sourcefill loads one Source onto the catalog graph: subjects,
+// Package graphfill loads one Evidence graph onto the catalog graph: subjects,
 // observations, members, and the edges an event title reads. Promote builds
 // its own bridge signatures when it reads the layer.
-package sourcefill
+package graphfill
 
 import (
 	"database/sql"
@@ -19,35 +19,39 @@ import (
 )
 
 func init() {
-	graphcache.SetSourceLoader(loadSource)
-	graphcache.SetSourceCheck(checkSource)
+	graphcache.SetEvidenceGraphLoader(loadEvidenceGraph)
+	graphcache.SetEvidenceGraphCheck(checkEvidenceGraph)
 }
 
-func loadSource(g *graphcache.Graph, sourceID []byte) (graphcache.SourceGraph, error) {
+func loadEvidenceGraph(g *graphcache.Graph, graphID []byte) (graphcache.EvidenceGraph, error) {
 	q := graphcache.Querier(g)
-	title, found, err := loadSourceTitle(q, sourceID)
+	sourceID, title, found, err := loadGraphSource(q, graphID)
 	if err != nil {
-		return graphcache.SourceGraph{}, err
+		return graphcache.EvidenceGraph{}, err
 	}
-	subjects, err := loadSourceSubjects(q, sourceID)
+	if !found {
+		return graphcache.EvidenceGraph{Found: false}, nil
+	}
+	subjects, err := loadGraphSubjects(q, graphID)
 	if err != nil {
-		return graphcache.SourceGraph{}, err
+		return graphcache.EvidenceGraph{}, err
 	}
-	observations, err := loadSourceObservations(q, sourceID)
+	observations, err := loadGraphObservations(q, graphID)
 	if err != nil {
-		return graphcache.SourceGraph{}, err
+		return graphcache.EvidenceGraph{}, err
 	}
-	members, err := loadSourceMembers(q, sourceID)
+	members, err := loadGraphMembers(q, graphID)
 	if err != nil {
-		return graphcache.SourceGraph{}, err
+		return graphcache.EvidenceGraph{}, err
 	}
-	people, places, err := loadTitleEdges(g, graphcache.SourceGraph{SourceID: sourceID, Subjects: subjects, Observations: observations})
+	people, places, err := loadTitleEdges(g, graphcache.EvidenceGraph{GraphID: graphID, SourceID: sourceID, Subjects: subjects, Observations: observations})
 	if err != nil {
-		return graphcache.SourceGraph{}, err
+		return graphcache.EvidenceGraph{}, err
 	}
-	return graphcache.SourceGraph{
-		Title:        title,
-		Found:        found,
+	return graphcache.EvidenceGraph{
+		SourceID:     sourceID,
+		SourceTitle:  title,
+		Found:        true,
 		Subjects:     subjects,
 		Observations: observations,
 		Members:      members,
@@ -56,30 +60,33 @@ func loadSource(g *graphcache.Graph, sourceID []byte) (graphcache.SourceGraph, e
 	}, nil
 }
 
-// loadSourceTitle reads the Source's title, and whether the Source exists.
-func loadSourceTitle(q graphcache.Querier, sourceID []byte) (string, bool, error) {
-	var title string
-	err := q.QueryRow(`SELECT title FROM sources WHERE id = ?`, sourceID).Scan(&title)
+// loadGraphSource reads the Source of an Evidence graph and its title, and
+// whether the graph exists.
+func loadGraphSource(q graphcache.Querier, graphID []byte) (sourceID []byte, title string, found bool, err error) {
+	err = q.QueryRow(`SELECT g.source_id, s.title FROM evidence_graphs g JOIN sources s ON s.id = g.source_id WHERE g.id = ?`, graphID).Scan(&sourceID, &title)
 	if errors.Is(err, sql.ErrNoRows) {
-		return "", false, nil
+		return nil, "", false, nil
 	}
-	return title, err == nil, err
+	if err != nil {
+		return nil, "", false, err
+	}
+	return append([]byte(nil), sourceID...), title, true, nil
 }
 
-func loadSourceSubjects(q graphcache.Querier, sourceID []byte) ([]graphcache.SourceSubject, error) {
+func loadGraphSubjects(q graphcache.Querier, graphID []byte) ([]graphcache.EvidenceSubject, error) {
 	rows, err := q.Query(`SELECT s.id, s.ref, s.source_id, s.subject_type_id,
 			COALESCE(s.label, ''), COALESCE(s.description, ''), st.key, st.origin
 		FROM subjects s
 		JOIN subject_types st ON st.id = s.subject_type_id
-		WHERE s.source_id = ?
-		ORDER BY s.label COLLATE NOCASE, s.ref COLLATE NOCASE`, sourceID)
+		WHERE s.graph_id = ?
+		ORDER BY s.label COLLATE NOCASE, s.ref COLLATE NOCASE`, graphID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []graphcache.SourceSubject
+	var out []graphcache.EvidenceSubject
 	for rows.Next() {
-		var s graphcache.SourceSubject
+		var s graphcache.EvidenceSubject
 		if err := rows.Scan(&s.ID, &s.Ref, &s.SourceID, &s.SubjectTypeID, &s.Label, &s.Description, &s.TypeKey, &s.TypeOrigin); err != nil {
 			return nil, err
 		}
@@ -91,7 +98,7 @@ func loadSourceSubjects(q graphcache.Querier, sourceID []byte) ([]graphcache.Sou
 	return out, rows.Err()
 }
 
-func loadSourceObservations(q graphcache.Querier, sourceID []byte) ([]graphcache.SourceObservation, error) {
+func loadGraphObservations(q graphcache.Querier, graphID []byte) ([]graphcache.EvidenceObservation, error) {
 	rows, err := q.Query(`SELECT o.id, o.ref, o.citation_id, o.subject_id, o.property_id, o.polarity,
 			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_subject_id, o.value_term_id, o.value_depiction_id,
 			dpv.region_json, dpv.image_file_id, dc.locator_json, dpf.media_type
@@ -100,16 +107,16 @@ func loadSourceObservations(q graphcache.Querier, sourceID []byte) ([]graphcache
 		LEFT JOIN depiction_values dpv ON dpv.id = o.value_depiction_id
 		LEFT JOIN citations dc ON dc.id = o.citation_id
 		LEFT JOIN files dpf ON dpf.id = dpv.image_file_id
-		WHERE s.source_id = ?
-		ORDER BY o.ref COLLATE NOCASE`, sourceID)
+		WHERE s.graph_id = ?
+		ORDER BY o.ref COLLATE NOCASE`, graphID)
 	if err != nil {
 		return nil, err
 	}
-	var out []graphcache.SourceObservation
+	var out []graphcache.EvidenceObservation
 	var dateIDs, nameIDs [][]byte
 	for rows.Next() {
 		var (
-			o                               graphcache.SourceObservation
+			o                               graphcache.EvidenceObservation
 			text                            sql.NullString
 			integer                         sql.NullInt64
 			depictionRegion                 sql.NullString
@@ -176,21 +183,21 @@ func loadSourceObservations(q graphcache.Querier, sourceID []byte) ([]graphcache
 	return out, nil
 }
 
-func loadSourceMembers(q graphcache.Querier, sourceID []byte) ([]graphcache.SourceMember, error) {
+func loadGraphMembers(q graphcache.Querier, graphID []byte) ([]graphcache.EvidenceMember, error) {
 	rows, err := q.Query(`SELECT s.id, ic.id, e.id, st.key
 		FROM subjects s
 		JOIN identity_claims ic ON ic.subject_id = s.id AND ic.status = 'accepted'
 		JOIN canonical_entities e ON e.id = ic.entity_id
 		JOIN subject_types st ON st.id = e.subject_type_id
-		WHERE s.source_id = ?
-		ORDER BY s.ref COLLATE NOCASE`, sourceID)
+		WHERE s.graph_id = ?
+		ORDER BY s.ref COLLATE NOCASE`, graphID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []graphcache.SourceMember
+	var out []graphcache.EvidenceMember
 	for rows.Next() {
-		var m graphcache.SourceMember
+		var m graphcache.EvidenceMember
 		if err := rows.Scan(&m.SubjectID, &m.ClaimID, &m.EntityID, &m.Kind); err != nil {
 			return nil, err
 		}
@@ -202,9 +209,9 @@ func loadSourceMembers(q graphcache.Querier, sourceID []byte) ([]graphcache.Sour
 	return out, rows.Err()
 }
 
-func loadTitleEdges(g *graphcache.Graph, sg graphcache.SourceGraph) ([]graphcache.SourceEdge, []graphcache.SourceEdge, error) {
+func loadTitleEdges(g *graphcache.Graph, eg graphcache.EvidenceGraph) ([]graphcache.EvidenceEdge, []graphcache.EvidenceEdge, error) {
 	var events [][]byte
-	for _, s := range sg.Subjects {
+	for _, s := range eg.Subjects {
 		if s.TypeKey == vocabkey.Event && s.TypeOrigin == vocabkey.OriginProvenencia {
 			events = append(events, s.ID)
 		}
@@ -212,25 +219,25 @@ func loadTitleEdges(g *graphcache.Graph, sg graphcache.SourceGraph) ([]graphcach
 	if len(events) == 0 {
 		return nil, nil, nil
 	}
-	people, err := g.WalkSource(sg, hops.SubjectsOfEvent, events)
+	people, err := g.WalkEvidenceGraph(eg, hops.SubjectsOfEvent, events)
 	if err != nil {
 		return nil, nil, err
 	}
-	places, err := g.WalkSource(sg, hops.PlacesOfEvent, events)
+	places, err := g.WalkEvidenceGraph(eg, hops.PlacesOfEvent, events)
 	if err != nil {
 		return nil, nil, err
 	}
 	return people, places, nil
 }
 
-func checkSource(g *graphcache.Graph, id []byte, stored graphcache.SourceGraph) error {
-	fresh, err := loadSource(g, id)
+func checkEvidenceGraph(g *graphcache.Graph, graphID []byte, stored graphcache.EvidenceGraph) error {
+	fresh, err := loadEvidenceGraph(g, graphID)
 	if err != nil {
 		return err
 	}
-	fresh.SourceID = append([]byte(nil), id...)
+	fresh.GraphID = append([]byte(nil), graphID...)
 	if !reflect.DeepEqual(stored, fresh) {
-		return fmt.Errorf("sourcefill: stored source %x does not match a fresh read", id)
+		return fmt.Errorf("graphfill: stored evidence graph %x does not match a fresh read", graphID)
 	}
 	return nil
 }

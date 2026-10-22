@@ -6,6 +6,9 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -182,7 +185,7 @@ func TestSubjectPositions(t *testing.T) {
 			},
 		},
 		{
-			name: "list by source scoped; unplaced omitted",
+			name: "list by graph scoped; unplaced omitted",
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				srcA := mustSource(t, c, "A")
@@ -205,9 +208,42 @@ func TestSubjectPositions(t *testing.T) {
 				}
 
 				_ = a2
-				list, err := subjectpositions.ListBySource(c, srcA.ID)
+				list, err := subjectpositions.ListByEvidenceGraph(c, evidencegraphstest.SoleGraph(t, c, srcA.ID).ID)
 				if err != nil || len(list) != 1 || string(list[0].SubjectID) != string(a1) {
 					t.Fatalf("%v %+v", err, list)
+				}
+			},
+		},
+		{
+			name: "list by graph separates the two graphs of one Source",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				src := mustSource(t, c, "Census")
+				ada := mustPerson(t, c, src.ID, "Ada")
+				if _, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Page 1"}); err != nil {
+					t.Fatal(err)
+				}
+				def, jones, _ := artifactstest.Split(t, c, userID, src.ID, "Jones")
+				bea := artifactstest.SubjectOn(t, c, userID, src.ID, jones.ID, "person", "Bea")
+				for _, p := range []struct {
+					id   []byte
+					x, y int64
+				}{{ada, 1, 2}, {bea.ID, 3, 4}} {
+					if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+						return subjectpositions.Set(tx, p.id, p.x, p.y)
+					}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				for _, tc := range []struct {
+					graph []byte
+					want  []byte
+					x, y  int64
+				}{{jones.ID, bea.ID, 3, 4}, {def.ID, ada, 1, 2}} {
+					list, err := subjectpositions.ListByEvidenceGraph(c, tc.graph)
+					if err != nil || len(list) != 1 || string(list[0].SubjectID) != string(tc.want) || list[0].GridX != tc.x || list[0].GridY != tc.y {
+						t.Fatalf("%v %+v", err, list)
+					}
 				}
 			},
 		},
@@ -252,7 +288,7 @@ func TestSubjectPositions(t *testing.T) {
 				if err != nil || got.GridX != 4 || got.GridY != -1 {
 					t.Fatalf("%v %+v", err, got)
 				}
-				list, err := subjectpositions.ListBySource(reopened, src.ID)
+				list, err := subjectpositions.ListByEvidenceGraph(reopened, evidencegraphstest.SoleGraph(t, reopened, src.ID).ID)
 				if err != nil || len(list) != 1 {
 					t.Fatalf("%v len=%d", err, len(list))
 				}

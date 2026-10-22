@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
@@ -207,7 +208,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -604,13 +605,13 @@ func TestSnapshotOwnedThenRelease(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	art1, err := runArtifactCreate(c, userID, artifacts.CreateInput{
+	art1, err := artifactstest.Create(c, userID, artifacts.CreateInput{
 		SourceID: src.ID, FileID: fileA, Label: "Share 1",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	art2, err := runArtifactCreate(c, userID, artifacts.CreateInput{
+	art2, err := artifactstest.Create(c, userID, artifacts.CreateInput{
 		SourceID: src.ID, FileID: fileA, Label: "Share 2",
 	})
 	if err != nil {
@@ -694,7 +695,7 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 		}
 	})
 
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -799,7 +800,7 @@ func TestImpactEvidenceGraph(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -880,7 +881,7 @@ func TestImpactAgreesWithSQLite(t *testing.T) {
 		}
 	})
 
-	if _, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"}); err != nil {
+	if _, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1006,7 +1007,7 @@ func TestListedGroup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promotealign"
@@ -189,7 +190,7 @@ func TestMemoIsNotMutated(t *testing.T) {
 	w.f.evidence(w.request())
 	w.f.propose(w.srcB.ID, nil)
 	w.f.evidence(promotealign.EvidenceRequest{SourceID: w.srcB.ID, SubjectID: w.bPerson.ID, HandleID: w.personHandle})
-	first := promotealign.MemoSnapshotForTest(w.f.c, w.srcB.ID, w.f.source.ID)
+	first := w.snapshot(t)
 	if !first.LayerOK || len(first.Layer.Subjects) == 0 || len(first.Members) == 0 {
 		t.Fatalf("nothing was memoized: %+v", first)
 	}
@@ -201,16 +202,25 @@ func TestMemoIsNotMutated(t *testing.T) {
 			t.Fatalf("a read changed the memo:\nbefore %s\nafter  %s", before, after)
 		}
 		// The same layer, not a rebuilt copy.
-		again := promotealign.MemoSnapshotForTest(w.f.c, w.srcB.ID, w.f.source.ID)
+		again := w.snapshot(t)
 		if &again.Layer.Subjects[0] != &first.Layer.Subjects[0] {
 			t.Fatal("the layer was rebuilt, not read from the memo")
 		}
 	}
 }
 
+// snapshot is the memoized layer of the incoming Source's graph and the member
+// values of the fixture Source's graph.
+func (w *warmFixture) snapshot(t *testing.T) promotealign.MemoSnapshot {
+	t.Helper()
+	return promotealign.MemoSnapshotForTest(w.f.c,
+		evidencegraphstest.SoleGraph(t, w.f.c, w.srcB.ID).ID,
+		evidencegraphstest.SoleGraph(t, w.f.c, w.f.source.ID).ID)
+}
+
 func memoJSON(t *testing.T, w *warmFixture) string {
 	t.Helper()
-	snap := promotealign.MemoSnapshotForTest(w.f.c, w.srcB.ID, w.f.source.ID)
+	snap := w.snapshot(t)
 	b, err := json.Marshal(snap)
 	if err != nil {
 		t.Fatal(err)

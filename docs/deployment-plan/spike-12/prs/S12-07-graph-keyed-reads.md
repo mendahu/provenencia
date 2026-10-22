@@ -1,6 +1,6 @@
 # S12-07 — Graph-keyed reads
 
-**Status:** Planned
+**Status:** Landed in [#520](https://github.com/mendahu/provenencia/pull/520) (2026-10-22)
 **Spike / slice:** Spike 12 · Slice 3 — Graph id end to end
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: Go reads change their key; no wire, Swift or copy change)
@@ -351,3 +351,16 @@ None.
 
 **Title:** S12-07 — Graph-keyed reads
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-12/prs/S12-07-graph-keyed-reads.md`.
+
+## Landed
+
+Differences from the plan:
+
+- STEP-2 and STEP-3 are one commit: STEP-3 cannot build part-way, and STEP-2's renames sit in the same files.
+- T-5 is a `t.Run("a Source with two graphs")` inside `TestRetitleDropsEvidenceGraph`, not a separate test.
+- AC-1.1's second Subject (Bea, with the Observation) is a place with a `toponym` text, since a text Observation is not valid on a person; the progress and Promote cases use a person with a `name` value.
+- Tests that `Split` a Source first add a second Artifact, because a graph cannot lose its last link.
+- STEP-8's `rg` check also matches `api/ffi/handlers/artifacts.go:215` (`artifacts.ListBySource`), an unrelated call that the pattern catches; it was left alone.
+- `PROVENENCIA_GRAPH_VERIFY=1` fails `TestMemoFollowsCommit/a_handle_merged` (`promotealign`), `TestCommitOfAnAssociationLoadsEndpoints` and `TestCommitReloadsASharedEndpointOnce` (`graphcache`) the same way on `main` @ `376eb9ad`; STEP-9's Verify check passes for `graphfill`.
+- The manual check was not run in the app: no two-graph path is reachable until slice 4.
+- Review round 1: a new `core/database/artifacts/artifactstest` package (`Create`, `Split`, `SubjectOn`) is the shared fixture for "a second Artifact, a split graph, a Subject on a graph" and the Artifact create, superseding §8 "no new helper". `runArtifactCreate` stays in `sources/sources_test.go` only (an in-package test of `sources`, which `evidencegraphstest` imports). `graphprogress.Get` now fills `SourceID` from the graph row.

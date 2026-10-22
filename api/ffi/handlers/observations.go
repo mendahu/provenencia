@@ -25,11 +25,11 @@ func ListObservationsBySource(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListObservationsBySourceResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		sg, err := c.Graph().Source(sourceID)
+		eg, err := sourceEvidenceGraph(c, sourceID)
 		if err != nil {
 			return err
 		}
-		rows, err := listedProtosFromSource(c, sg, nil)
+		rows, err := listedProtosFromGraph(c, eg, nil)
 		if err != nil {
 			return err
 		}

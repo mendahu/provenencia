@@ -1,12 +1,12 @@
-// Package sourceeventtitles chooses the title of every Event Subject on one
-// Source's Evidence graph, from what that Source cites: the event's own
-// event_name and event_type, the people its subject-role participations name,
-// and the places its locations name. The rule is eventtitle's, the same one
-// canonical Event headers use, so a card and the Event it is promoted to
-// title themselves by one matrix.
+// Package grapheventtitles chooses the title of every Event Subject on one
+// Evidence graph, from what that graph cites: the event's own event_name and
+// event_type, the people its subject-role participations name, and the places
+// its locations name. The rule is eventtitle's, the same one canonical Event
+// headers use, so a card and the Event it is promoted to title themselves by
+// one matrix.
 //
-// It reads the loaded Source graph and issues no query.
-package sourceeventtitles
+// It reads the loaded Evidence graph and issues no query.
+package grapheventtitles
 
 import (
 	"slices"
@@ -38,11 +38,11 @@ type titledEvent struct {
 	ref, label string
 }
 
-// FromStored chooses titles from a loaded Source. Term labels are applied
-// here; they are not stored on the Source.
-func FromStored(sg graphcache.SourceGraph, propKey map[string]string, terms map[string]struct{ Key, Label string }) []Title {
+// FromStored chooses titles from a loaded Evidence graph. Term labels are
+// applied here; they are not stored on the graph.
+func FromStored(eg graphcache.EvidenceGraph, propKey map[string]string, terms map[string]struct{ Key, Label string }) []Title {
 	var events []titledEvent
-	for _, s := range sg.Subjects {
+	for _, s := range eg.Subjects {
 		if s.TypeKey != vocabkey.Event || s.TypeOrigin != vocabkey.OriginProvenencia {
 			continue
 		}
@@ -50,7 +50,7 @@ func FromStored(sg graphcache.SourceGraph, propKey map[string]string, terms map[
 	}
 	sort.Slice(events, func(i, j int) bool { return events[i].ref < events[j].ref })
 	first := map[string]naming{}
-	for _, o := range sg.Observations {
+	for _, o := range eg.Observations {
 		if o.Polarity != "positive" {
 			continue
 		}
@@ -70,9 +70,9 @@ func FromStored(sg graphcache.SourceGraph, propKey map[string]string, terms map[
 			first[k] = n
 		}
 	}
-	places := slices.Clone(sg.EventPlaces)
+	places := slices.Clone(eg.EventPlaces)
 	names := map[string]namevalue.Value{}
-	for _, o := range sg.Observations {
+	for _, o := range eg.Observations {
 		if len(o.Name) == 0 || len(o.NameID) == 0 {
 			continue
 		}
@@ -82,10 +82,10 @@ func FromStored(sg graphcache.SourceGraph, propKey map[string]string, terms map[
 		}
 		names[string(o.NameID)] = n
 	}
-	return assemble(events, first, sg.EventPeople, places, names)
+	return assemble(events, first, eg.EventPeople, places, names)
 }
 
-func assemble(events []titledEvent, first map[string]naming, people, places []graphcache.SourceEdge, names map[string]namevalue.Value) []Title {
+func assemble(events []titledEvent, first map[string]naming, people, places []graphcache.EvidenceEdge, names map[string]namevalue.Value) []Title {
 	peopleOf := map[string][]eventtitle.Subject{}
 	seen := map[string]bool{}
 	for _, e := range people {

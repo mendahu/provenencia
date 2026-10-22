@@ -1,19 +1,22 @@
-package sourceeventtitles_test
+package grapheventtitles_test
 
 import (
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/grapheventtitles"
+	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/sourceeventtitles"
-	_ "github.com/mendahu/provenencia/core/database/sourcefill"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -62,7 +65,7 @@ func newFixture(t *testing.T) *fixture {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
 	})
 	must(t, err)
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
 	return &fixture{t: t, c: c, src: src, art: art}
 }
@@ -139,7 +142,7 @@ func (f *fixture) location(event, place subjects.Subject) {
 	)
 }
 
-func TestForSource(t *testing.T) {
+func TestForEvidenceGraph(t *testing.T) {
 	f := newFixture(t)
 	name := func(form string) observations.Input {
 		return observations.Input{PropertyID: f.prop("name"), Name: namevaluetest.Western(form)}
@@ -275,17 +278,30 @@ func TestForSource(t *testing.T) {
 		}
 	})
 
+	t.Run("one Event on each graph titles only its own graph's", func(t *testing.T) {
+		f := newFixture(t)
+		f.subject("event", "Default event")
+		_, jones, _ := artifactstest.Split(t, f.c, userID, f.src.ID, "Jones")
+		jonesEvent := artifactstest.SubjectOn(t, f.c, userID, f.src.ID, jones.ID, "event", "Jones event")
+		eg, err := f.c.Graph().EvidenceGraph(jones.ID)
+		must(t, err)
+		got := grapheventtitles.FromStored(eg, nil, nil)
+		if len(got) != 1 || string(got[0].SubjectID) != string(jonesEvent.ID) {
+			t.Fatalf("titles %+v, want one for %x", got, jonesEvent.ID)
+		}
+	})
+
 	t.Run("an empty Source has no titles", func(t *testing.T) {
-		got := sourceeventtitles.FromStored(graphcache.SourceGraph{}, nil, nil)
+		got := grapheventtitles.FromStored(graphcache.EvidenceGraph{}, nil, nil)
 		if len(got) != 0 {
 			t.Fatalf("titled %d", len(got))
 		}
 	})
 }
 
-func titlesFromStored(t *testing.T, f *fixture) []sourceeventtitles.Title {
+func titlesFromStored(t *testing.T, f *fixture) []grapheventtitles.Title {
 	t.Helper()
-	sg, err := f.c.Graph().Source(f.src.ID)
+	eg, err := f.c.Graph().EvidenceGraph(evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID)
 	must(t, err)
 	v, err := f.c.Graph().Vocabulary()
 	must(t, err)
@@ -297,7 +313,7 @@ func titlesFromStored(t *testing.T, f *fixture) []sourceeventtitles.Title {
 	for _, term := range v.Terms {
 		terms[string(term.ID)] = struct{ Key, Label string }{Key: term.Key, Label: term.Label}
 	}
-	return sourceeventtitles.FromStored(sg, propKey, terms)
+	return grapheventtitles.FromStored(eg, propKey, terms)
 }
 
 func sameSet(got, want []string) bool {
@@ -315,12 +331,4 @@ func sameSet(got, want []string) bool {
 		seen[w]--
 	}
 	return true
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }

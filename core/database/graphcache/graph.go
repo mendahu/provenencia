@@ -32,14 +32,14 @@ type Graph struct {
 
 	// displays are finished header rows keyed by handle id. details are the
 	// conclusion-detail value memos for the same ids; a drop clears both.
-	// sources are loaded Evidence graphs keyed by source id.
+	// evidenceGraphs are loaded Evidence graphs keyed by graph id.
 	// labels is the vocabulary map the rows resolve at read time. alt, when
 	// set, is the querier a one-shot graph reads instead of db (a write transaction).
-	displays map[string]any
-	details  map[string]any
-	sources  map[string]SourceGraph
-	// memos are what a feature derives from one loaded Source, by source id
-	// and then its own key. A Source's graph and memos go together.
+	displays       map[string]any
+	details        map[string]any
+	evidenceGraphs map[string]EvidenceGraph
+	// memos are what a feature derives from one loaded Evidence graph, by
+	// graph id and then its own key. A graph and its memos go together.
 	memos    map[string]map[string]any
 	labels   any
 	labelsOK bool
@@ -97,11 +97,12 @@ type Value struct {
 }
 
 // Member is one accepted or provisional identity claim. SourceID is the Source
-// the claimed Subject is on. A Subject never changes Source, and a commit that
-// names the handle reloads the node.
+// and GraphID the Evidence graph the claimed Subject is on. A Subject never
+// changes Source or graph, and a commit that names the handle reloads the node.
 type Member struct {
 	SubjectID []byte
 	SourceID  []byte
+	GraphID   []byte
 	Accepted  bool
 }
 
@@ -158,7 +159,7 @@ func mustTableName(name string) string {
 }
 
 // dropDerived empties what features derive from the graph and its vocabulary
-// and aliases: the Source memos and the match index.
+// and aliases: the Evidence graph memos and the match index.
 func (g *Graph) dropDerived() {
 	g.memos = map[string]map[string]any{}
 	g.matchIndexOK = false
@@ -176,7 +177,7 @@ func (g *Graph) clear() {
 	g.vocab = Vocabulary{}
 	g.displays = map[string]any{}
 	g.details = map[string]any{}
-	g.sources = map[string]SourceGraph{}
+	g.evidenceGraphs = map[string]EvidenceGraph{}
 	g.labelsOK = false
 	g.labels = nil
 	g.activity = map[string]map[string]effects.Activity{}
@@ -269,7 +270,7 @@ func (g *Graph) AliasTables() (any, bool) {
 
 // SetAliasTables stores abbreviation and nickname tables until the catalog
 // closes. A nil slice is a warm catalog with no rows. Drop does not clear this.
-// The match index and Source memos read the alias sets, so new tables drop them.
+// The match index and Evidence graph memos read the alias sets, so new tables drop them.
 func (g *Graph) SetAliasTables(tables any) {
 	if g == nil {
 		return
@@ -306,9 +307,9 @@ func (g *Graph) SetQueryCounterForTest(fn func()) {
 	g.count = fn
 }
 
-// LoadedSourceForTest reports whether a Source's graph is loaded.
-func (g *Graph) LoadedSourceForTest(id []byte) bool {
-	_, ok := g.sources[string(id)]
+// LoadedEvidenceGraphForTest reports whether an Evidence graph is loaded.
+func (g *Graph) LoadedEvidenceGraphForTest(graphID []byte) bool {
+	_, ok := g.evidenceGraphs[string(graphID)]
 	return ok
 }
 

@@ -11,9 +11,9 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
@@ -88,7 +88,7 @@ func TestObservations(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		art, err := runArtifactCreate(c, userID, artifacts.CreateInput{
+		art, err := artifactstest.Create(c, userID, artifacts.CreateInput{
 			SourceID: src.ID,
 			Label:    "Page scan",
 		})
@@ -1320,14 +1320,6 @@ func objectExists(t *testing.T, c *database.Catalog, f files.File) bool {
 	return err == nil
 }
 
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
-}
-
 func TestObservationsStayInOneGraph(t *testing.T) {
 	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
 	validLocator := `{"version":1,"selectors":[{"type":"page","artifact_page":3}]}`
@@ -1360,19 +1352,17 @@ func TestObservationsStayInOneGraph(t *testing.T) {
 		}
 		return src
 	}
-	newArtifact := func(src sources.Source, label string) artifacts.Artifact {
-		a, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: label})
-		if err != nil {
-			t.Fatal(err)
-		}
-		return a
-	}
 	census, book := newSource("Census"), newSource("Book")
-	p1, p2 := newArtifact(census, "P1"), newArtifact(census, "P2")
-	newArtifact(book, "B1")
+	p1, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: census.ID, Label: "P1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: book.ID, Label: "B1"}); err != nil {
+		t.Fatal(err)
+	}
 
 	// Census Default is linked to P1 only; Jones to P2 only.
-	def, jones := evidencegraphstest.Split(t, c, userID, census.ID, "Jones", p2.ID)
+	def, jones, p2 := artifactstest.Split(t, c, userID, census.ID, "Jones")
 
 	typeOf := func(key string) []byte {
 		ty, err := subjecttypes.Lookup(c, key, vocabkey.OriginProvenencia)

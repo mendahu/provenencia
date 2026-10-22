@@ -22,8 +22,9 @@ import (
 )
 
 // TestEvidenceGraphsResolve checks Resolve over the changes of real writes: a
-// graph or link row flags the graph list and scopes its Source's activity
-// without moving the Source's evidence; no other write flags the list.
+// graph or link row flags the graph list and scopes its Source's activity;
+// graph rows move their Source's evidence (the loaded graphs of the Source are
+// dropped) and link rows do not; no other write flags the list.
 func TestEvidenceGraphsResolve(t *testing.T) {
 	userID := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 	c, err := database.Create(t.TempDir(), "t.provenencia")
@@ -97,8 +98,15 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 	if len(set.SourceScopes) != 1 || !bytes.Equal(set.SourceScopes[0], src.ID) {
 		t.Fatalf("source scopes %x", set.SourceScopes)
 	}
-	if len(set.Sources) != 0 {
+	if len(set.Sources) != 1 || !bytes.Equal(set.Sources[0], src.ID) {
 		t.Fatalf("graph and link rows moved Source evidence: %x", set.Sources)
+	}
+	linkSet, err := effects.Resolve(tx.Tx, []rowchange.Change{linkChange})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !linkSet.Has(effects.ListEvidenceGraphs) || len(linkSet.Sources) != 0 {
+		t.Fatalf("a link row alone: list %v, Sources %x", linkSet.Has(effects.ListEvidenceGraphs), linkSet.Sources)
 	}
 
 	// Graph writes flag the list and scope their Source. A rename resolves from
@@ -131,6 +139,9 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 		}
 		if len(got.SourceScopes) != 1 || !bytes.Equal(got.SourceScopes[0], src.ID) {
 			t.Fatalf("%s source scopes %x", name, got.SourceScopes)
+		}
+		if len(got.Sources) != 1 || !bytes.Equal(got.Sources[0], src.ID) {
+			t.Fatalf("%s Sources %x", name, got.Sources)
 		}
 	}
 

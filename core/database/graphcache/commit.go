@@ -30,7 +30,7 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 		g.Drop()
 		return g.verifyIfSet()
 	}
-	g.dropSources(set.Sources)
+	g.dropGraphsOfSources(set.Sources)
 	ids := uniqueIDs(set.Handles)
 	if len(ids) == 0 {
 		return g.verifyIfSet()

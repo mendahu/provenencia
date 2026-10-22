@@ -157,12 +157,12 @@ func ListSubjects(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListSubjectsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		sg, err := c.Graph().Source(sourceID)
+		eg, err := sourceEvidenceGraph(c, sourceID)
 		if err != nil {
 			return err
 		}
 		out = &engine.ListSubjectsResponse{}
-		for _, s := range sg.Subjects {
+		for _, s := range eg.Subjects {
 			out.Subjects = append(out.Subjects, subjectProto(subjects.Subject{
 				ID: s.ID, Ref: s.Ref, SourceID: s.SourceID, SubjectTypeID: s.SubjectTypeID,
 				Label: s.Label, Description: s.Description,
@@ -237,11 +237,15 @@ func ListSubjectPositions(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListSubjectPositionsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := subjectpositions.ListBySource(c, sourceID)
+		out = &engine.ListSubjectPositionsResponse{}
+		graphID, ok, err := sourceGraphID(c, sourceID)
+		if err != nil || !ok {
+			return err
+		}
+		rows, err := subjectpositions.ListByEvidenceGraph(c, graphID)
 		if err != nil {
 			return err
 		}
-		out = &engine.ListSubjectPositionsResponse{}
 		for _, p := range rows {
 			out.Positions = append(out.Positions, subjectPositionProto(p))
 		}
