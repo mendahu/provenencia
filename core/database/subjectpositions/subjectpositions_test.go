@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -219,29 +220,11 @@ func TestSubjectPositions(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c, "Census")
 				ada := mustPerson(t, c, src.ID, "Ada")
-				var art artifacts.Artifact
-				for _, label := range []string{"Page 1", "Page 2"} {
-					var err error
-					art, _, err = writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID}, func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-						return artifacts.Create(tx, userID, artifacts.CreateInput{SourceID: src.ID, Label: label})
-					})
-					if err != nil {
-						t.Fatal(err)
-					}
-				}
-				def, jones := evidencegraphstest.Split(t, c, userID, src.ID, "Jones", art.ID)
-				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
-				if err != nil {
+				if _, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Page 1"}); err != nil {
 					t.Fatal(err)
 				}
-				bea, _, err := writes.Run(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-					return subjects.Create(tx, userID, subjects.CreateInput{
-						SourceID: src.ID, GraphID: jones.ID, SubjectTypeID: person.ID, Label: "Bea",
-					}, nil)
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
+				def, jones, _ := artifactstest.Split(t, c, userID, src.ID, "Jones")
+				bea := artifactstest.SubjectOn(t, c, userID, src.ID, jones.ID, "person", "Bea")
 				for _, p := range []struct {
 					id   []byte
 					x, y int64

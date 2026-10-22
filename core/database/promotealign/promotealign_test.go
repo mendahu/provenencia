@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
@@ -71,7 +72,7 @@ func newFixture(t testing.TB) *fixture {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
 	})
 	must(t, err)
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
 	return &fixture{t: t, c: c, source: src, artifact: art}
 }
@@ -84,7 +85,7 @@ func (f *fixture) newSource(title string) (sources.Source, artifacts.Artifact) {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: title})
 	})
 	must(f.t, err)
-	art, err := runArtifactCreate(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(f.t, err)
 	return src, art
 }
@@ -711,14 +712,6 @@ func TestHubPlaceProposalStaysOnTheLayer(t *testing.T) {
 	if err := f.c.Graph().Verify(); err != nil {
 		t.Fatal(err)
 	}
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }
 
 // A sex at birth the catalog flags neutral is not compared: an "unknown"

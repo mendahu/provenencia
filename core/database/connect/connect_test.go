@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
@@ -80,7 +81,7 @@ func TestCreateCitedBridge(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		art, err := runArtifactCreate(c, userID, artifacts.CreateInput{
+		art, err := artifactstest.Create(c, userID, artifacts.CreateInput{
 			SourceID: src.ID, Label: "Scan",
 		})
 		if err != nil {
@@ -416,11 +417,7 @@ func TestCreateCitedBridge(t *testing.T) {
 	mustTwoGraphs := func(t *testing.T) twoGraph {
 		t.Helper()
 		s := mustSeed(t)
-		p2, err := runArtifactCreate(s.c, userID, artifacts.CreateInput{SourceID: s.source.ID, Label: "P2"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, jones := evidencegraphstest.Split(t, s.c, userID, s.source.ID, "Jones", p2.ID)
+		_, jones, p2 := artifactstest.Split(t, s.c, userID, s.source.ID, "Jones")
 		create := func(key, label string, x, y int64) subjects.Subject {
 			t.Helper()
 			typ, err := subjecttypes.Lookup(s.c, key, vocabkey.OriginProvenencia)
@@ -553,12 +550,4 @@ func TestFloorDiv(t *testing.T) {
 	if floorDiv(-3+1+1, 2) != -1 {
 		t.Fatal("negative odd midpoint")
 	}
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }

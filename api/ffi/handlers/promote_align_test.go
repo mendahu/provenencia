@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -62,7 +63,7 @@ func personOnNewSource(t *testing.T, dir, userID, typeID, sexKey, polarity strin
 		if err != nil {
 			return err
 		}
-		art, err := runArtifactCreate(c, uid[:], artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+		art, err := artifactstest.Create(c, uid[:], artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 		if err != nil {
 			return err
 		}

@@ -57,7 +57,7 @@ func SeedRefless(t *testing.T, c *database.Catalog) []byte {
 
 // SoleGraph is the one graph of a Source; the test fails if it has none or
 // more than one. A graph with no ref reads Ref "".
-func SoleGraph(t *testing.T, c *database.Catalog, sourceID []byte) evidencegraphs.Graph {
+func SoleGraph(t testing.TB, c *database.Catalog, sourceID []byte) evidencegraphs.Graph {
 	t.Helper()
 	graphs, err := evidencegraphs.List(c, sourceID)
 	if err != nil {
@@ -87,7 +87,7 @@ func Create(t testing.TB, c *database.Catalog, userID, sourceID []byte, name str
 // Split moves the given Artifacts out of the Source's Default graph into a new
 // graph of the given name, and returns both. The Source must have one graph
 // when it is called; the test fails on error.
-func Split(t *testing.T, c *database.Catalog, userID, sourceID []byte, name string, artifactIDs ...[]byte) (def, graph evidencegraphs.Graph) {
+func Split(t testing.TB, c *database.Catalog, userID, sourceID []byte, name string, artifactIDs ...[]byte) (def, graph evidencegraphs.Graph) {
 	t.Helper()
 	def = SoleGraph(t, c, sourceID)
 	graph = Create(t, c, userID, sourceID, name, artifactIDs...)

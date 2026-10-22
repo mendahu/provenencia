@@ -6,6 +6,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
@@ -220,20 +221,7 @@ func newTwoGraphs(t *testing.T) twoGraphs {
 		}
 		return s
 	}
-	newArtifact := func(src sources.Source, label string) artifacts.Artifact {
-		a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID}, func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, artifacts.CreateInput{SourceID: src.ID, Label: label})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		return a
-	}
 	person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
-	place, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,11 +235,14 @@ func newTwoGraphs(t *testing.T) twoGraphs {
 		return s
 	}
 	f.src = newSource("Register")
-	f.page1 = newArtifact(f.src, "Page 1")
-	page2 := newArtifact(f.src, "Page 2")
-	f.def, f.jones = evidencegraphstest.Split(t, c, userID, f.src.ID, "Jones", page2.ID)
-	f.ada = newSubject(f.src, f.def.ID, person.ID, "Ada")
-	f.bea = newSubject(f.src, f.jones.ID, place.ID, "Bea")
+	f.page1, err = artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: f.src.ID, Label: "Page 1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var page2 artifacts.Artifact
+	f.def, f.jones, page2 = artifactstest.Split(t, c, userID, f.src.ID, "Jones")
+	f.ada = artifactstest.SubjectOn(t, c, userID, f.src.ID, f.def.ID, "person", "Ada")
+	f.bea = artifactstest.SubjectOn(t, c, userID, f.src.ID, f.jones.ID, "place", "Bea")
 	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)

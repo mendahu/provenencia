@@ -9,6 +9,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -114,7 +115,7 @@ func TestGraphProgress(t *testing.T) {
 		}); err != nil {
 			t.Fatal(err)
 		}
-		art, err := runArtifactCreate(c, userID, artifacts.CreateInput{
+		art, err := artifactstest.Create(c, userID, artifacts.CreateInput{
 			SourceID: worked.ID, Label: "Scan",
 		})
 		if err != nil {
@@ -218,38 +219,18 @@ func TestGraphProgress(t *testing.T) {
 
 	t.Run("two graphs of one Source count apart", func(t *testing.T) {
 		s := mustSeed(t)
-		art1, err := runArtifactCreate(s.c, userID, artifacts.CreateInput{SourceID: s.empty.ID, Label: "Page 1"})
+		art1, err := artifactstest.Create(s.c, userID, artifacts.CreateInput{SourceID: s.empty.ID, Label: "Page 1"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		art2, err := runArtifactCreate(s.c, userID, artifacts.CreateInput{SourceID: s.empty.ID, Label: "Page 2"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		def, jones := evidencegraphstest.Split(t, s.c, userID, s.empty.ID, "Jones", art2.ID)
+		def, jones, _ := artifactstest.Split(t, s.c, userID, s.empty.ID, "Jones")
 		personType, err := subjecttypes.Lookup(s.c, "person", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		placeType, err := subjecttypes.Lookup(s.c, "place", vocabkey.OriginProvenencia)
-		if err != nil {
-			t.Fatal(err)
-		}
-		newSubject := func(graphID, typeID []byte, label string) subjects.Subject {
-			t.Helper()
-			sub, err := writes.Call(s.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-				return subjects.Create(tx, userID, subjects.CreateInput{
-					SourceID: s.empty.ID, GraphID: graphID, SubjectTypeID: typeID, Label: label,
-				}, nil)
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			return sub
-		}
-		ada := newSubject(def.ID, personType.ID, "Ada")
-		newSubject(def.ID, personType.ID, "Ann")
-		newSubject(jones.ID, placeType.ID, "Hull")
+		ada := artifactstest.SubjectOn(t, s.c, userID, s.empty.ID, def.ID, "person", "Ada")
+		artifactstest.SubjectOn(t, s.c, userID, s.empty.ID, def.ID, "person", "Ann")
+		artifactstest.SubjectOn(t, s.c, userID, s.empty.ID, jones.ID, "place", "Hull")
 		db, err := s.c.DB()
 		if err != nil {
 			t.Fatal(err)
@@ -467,12 +448,4 @@ func TestPrimaryAndFiledCounts(t *testing.T) {
 			t.Fatalf("get %s %+v", src.Title, got)
 		}
 	}
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }

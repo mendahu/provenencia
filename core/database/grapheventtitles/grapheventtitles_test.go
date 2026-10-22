@@ -1,11 +1,13 @@
 package grapheventtitles_test
 
 import (
-	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"testing"
+
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/graphcache"
@@ -63,7 +65,7 @@ func newFixture(t *testing.T) *fixture {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
 	})
 	must(t, err)
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
 	return &fixture{t: t, c: c, src: src, art: art}
 }
@@ -279,15 +281,8 @@ func TestForEvidenceGraph(t *testing.T) {
 	t.Run("one Event on each graph titles only its own graph's", func(t *testing.T) {
 		f := newFixture(t)
 		f.subject("event", "Default event")
-		page2, err := runArtifactCreate(f.c, userID, artifacts.CreateInput{SourceID: f.src.ID, Label: "Page 2"})
-		must(t, err)
-		_, jones := evidencegraphstest.Split(t, f.c, userID, f.src.ID, "Jones", page2.ID)
-		st, err := subjecttypes.Lookup(f.c, "event", vocabkey.OriginProvenencia)
-		must(t, err)
-		jonesEvent, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.src.ID, GraphID: jones.ID, SubjectTypeID: st.ID, Label: "Jones event"}, nil)
-		})
-		must(t, err)
+		_, jones, _ := artifactstest.Split(t, f.c, userID, f.src.ID, "Jones")
+		jonesEvent := artifactstest.SubjectOn(t, f.c, userID, f.src.ID, jones.ID, "event", "Jones event")
 		eg, err := f.c.Graph().EvidenceGraph(jones.ID)
 		must(t, err)
 		got := grapheventtitles.FromStored(eg, nil, nil)
@@ -336,12 +331,4 @@ func sameSet(got, want []string) bool {
 		seen[w]--
 	}
 	return true
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }

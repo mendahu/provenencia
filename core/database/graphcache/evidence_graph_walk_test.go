@@ -6,6 +6,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
@@ -316,23 +317,8 @@ func TestMemberSourceAndGraph(t *testing.T) {
 	})
 	t.Run("a Split graph", func(t *testing.T) {
 		f := newWalkFixture(t)
-		second, _, err := writes.Run(f.c, writes.Op{Action: "create_artifact", UserID: walkUser}, func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, walkUser, artifacts.CreateInput{SourceID: f.src.ID, Label: "Page 2"})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, jones := evidencegraphstest.Split(t, f.c, walkUser, f.src.ID, "Jones", second.ID)
-		st, err := subjecttypes.Lookup(f.c, "person", vocabkey.OriginProvenencia)
-		if err != nil {
-			t.Fatal(err)
-		}
-		james, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: walkUser}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, walkUser, subjects.CreateInput{SourceID: f.src.ID, GraphID: jones.ID, SubjectTypeID: st.ID}, nil)
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		_, jones, _ := artifactstest.Split(t, f.c, walkUser, f.src.ID, "Jones")
+		james := artifactstest.SubjectOn(t, f.c, walkUser, f.src.ID, jones.ID, "person", "")
 		check(t, f, james, jones.ID)
 	})
 }

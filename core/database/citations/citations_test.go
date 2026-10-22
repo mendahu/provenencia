@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -71,7 +72,7 @@ func TestCitations(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		art, err := runArtifactCreate(c, userID, artifacts.CreateInput{
+		art, err := artifactstest.Create(c, userID, artifacts.CreateInput{
 			SourceID: src.ID,
 			Label:    "Scan",
 		})
@@ -481,7 +482,7 @@ func TestCitations(t *testing.T) {
 			name: "count by source",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				art2, err := runArtifactCreate(c, userID, artifacts.CreateInput{
+				art2, err := artifactstest.Create(c, userID, artifacts.CreateInput{
 					SourceID: s.artifact.SourceID,
 					Label:    "Scan 2",
 				})
@@ -643,12 +644,4 @@ func TestCitations(t *testing.T) {
 			tt.run(t)
 		})
 	}
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }
