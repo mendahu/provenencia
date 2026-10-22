@@ -71,9 +71,9 @@ func (g *Graph) Verify() error {
 			}
 		}
 	}
-	if sourceFn != nil {
-		for key, stored := range g.sources {
-			if err := sourceFn(g, []byte(key), stored); err != nil {
+	if evidenceGraphFn != nil {
+		for key, stored := range g.evidenceGraphs {
+			if err := evidenceGraphFn(g, []byte(key), stored); err != nil {
 				return err
 			}
 		}
@@ -247,7 +247,7 @@ func sameMembers(got, want []Member) error {
 		return fmt.Errorf("count %d, catalog %d", len(got), len(want))
 	}
 	for i := range got {
-		if !sameID(got[i].SubjectID, want[i].SubjectID) || !sameID(got[i].SourceID, want[i].SourceID) || got[i].Accepted != want[i].Accepted {
+		if !sameID(got[i].SubjectID, want[i].SubjectID) || !sameID(got[i].SourceID, want[i].SourceID) || !sameID(got[i].GraphID, want[i].GraphID) || got[i].Accepted != want[i].Accepted {
 			return fmt.Errorf("claim %d differs", i)
 		}
 	}

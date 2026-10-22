@@ -51,7 +51,7 @@ func ListSourceEventTitles(in []byte) ([]byte, error) {
 	}
 	out := &engine.ListSourceEventTitlesResponse{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		sg, err := c.Graph().Source(sourceID)
+		eg, err := sourceEvidenceGraph(c, sourceID)
 		if err != nil {
 			return err
 		}
@@ -71,7 +71,7 @@ func ListSourceEventTitles(in []byte) ([]byte, error) {
 		for id, info := range vocab.TermsByID() {
 			termLookup[id] = struct{ Key, Label string }{Key: info.Key, Label: info.Label}
 		}
-		for _, t := range sourceeventtitles.FromStored(sg, keys, termLookup) {
+		for _, t := range sourceeventtitles.FromStored(eg, keys, termLookup) {
 			out.Titles = append(out.Titles, &engine.SourceEventTitle{
 				SubjectId: database.UUIDString(t.SubjectID),
 				Title:     eventTitleProto(t.Plan),

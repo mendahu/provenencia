@@ -130,7 +130,7 @@ func ListSubjectMemberships(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListSubjectMembershipsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		sg, err := c.Graph().Source(sourceID)
+		eg, err := sourceEvidenceGraph(c, sourceID)
 		if err != nil {
 			return err
 		}
@@ -138,7 +138,7 @@ func ListSubjectMemberships(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		rows, err := membershipsFromSource(c.Graph(), sg, namePropertyID(props))
+		rows, err := membershipsFromGraph(c.Graph(), eg, namePropertyID(props))
 		if err != nil {
 			return err
 		}

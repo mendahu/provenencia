@@ -4,13 +4,15 @@ import (
 	"slices"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 )
 
-// LayerBridges exposes the bridges the loader reads for one Source.
+// LayerBridges exposes the bridges the loader reads for one Source's one
+// Evidence graph.
 func LayerBridges(c *database.Catalog, sourceID []byte) ([]graphalign.Bridge, error) {
 	db, err := c.DB()
 	if err != nil {
@@ -26,7 +28,11 @@ func LayerBridges(c *database.Catalog, sourceID []byte) ([]graphalign.Bridge, er
 	if err != nil {
 		return nil, err
 	}
-	layer, _, err := loadLayer(c.Graph(), sourceID, cfg, namePattern, terms)
+	graphID, err := evidencegraphs.SoleGraph(c, sourceID)
+	if err != nil {
+		return nil, err
+	}
+	layer, _, err := loadLayer(c.Graph(), graphID, cfg, namePattern, terms)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +63,7 @@ func ProfiledRefsForTest(c *database.Catalog, sourceID []byte) ([]string, error)
 // BridgedOnly exposes the filter that limits a neighbor entity's read members.
 var BridgedOnly = bridgedOnly
 
-// MemoSnapshot is what the graph holds as promotealign's Source memos.
+// MemoSnapshot is what the graph holds as promotealign's Evidence graph memos.
 type MemoSnapshot struct {
 	Layer     graphalign.Layer
 	LayerKind map[string]string // primary Subject id -> kind
@@ -65,9 +71,9 @@ type MemoSnapshot struct {
 	Members   map[string]subjectcompare.Values
 }
 
-// MemoSnapshotForTest reads the memoized layer of sourceID and the memoized
-// member values of memberSourceID, as stored. Nothing is built.
-func MemoSnapshotForTest(c *database.Catalog, sourceID, memberSourceID []byte) MemoSnapshot {
+// MemoSnapshotForTest reads the memoized layer of graphID and the memoized
+// member values of memberGraphID, as stored. Nothing is built.
+func MemoSnapshotForTest(c *database.Catalog, graphID, memberGraphID []byte) MemoSnapshot {
 	db, err := c.DB()
 	if err != nil {
 		return MemoSnapshot{}
@@ -77,7 +83,7 @@ func MemoSnapshotForTest(c *database.Catalog, sourceID, memberSourceID []byte) M
 		return MemoSnapshot{}
 	}
 	var out MemoSnapshot
-	if v, ok := c.Graph().SourceMemo(sourceID, layerMemoKey+namePattern); ok {
+	if v, ok := c.Graph().EvidenceGraphMemo(graphID, layerMemoKey+namePattern); ok {
 		m := v.(layerMemo)
 		out.Layer, out.LayerOK = m.layer, true
 		out.LayerKind = map[string]string{}
@@ -85,7 +91,7 @@ func MemoSnapshotForTest(c *database.Catalog, sourceID, memberSourceID []byte) M
 			out.LayerKind[id] = p.kind
 		}
 	}
-	if v, ok := c.Graph().SourceMemo(memberSourceID, membersMemoKey+namePattern); ok {
+	if v, ok := c.Graph().EvidenceGraphMemo(memberGraphID, membersMemoKey+namePattern); ok {
 		out.Members = v.(map[string]subjectcompare.Values)
 	}
 	return out

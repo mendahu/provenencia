@@ -9,9 +9,9 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
+	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	_ "github.com/mendahu/provenencia/core/database/sourcefill"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -368,12 +368,12 @@ func TestAcceptedClaimsAreSourceMembers(t *testing.T) {
 	mustClaim(t, f, f.jim, f.per1, identityclaims.StatusAccepted)
 	mustClaim(t, f, f.york, f.plc1, identityclaims.StatusProvisional)
 
-	sg, err := f.c.Graph().Source(f.james.SourceID)
+	eg, err := f.c.Graph().EvidenceGraph(f.james.GraphID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	bySubject := map[string][]byte{}
-	for _, m := range sg.Members {
+	for _, m := range eg.Members {
 		bySubject[string(m.SubjectID)] = m.EntityID
 	}
 	for _, s := range []subjects.Subject{f.james, f.jim} {
@@ -381,7 +381,7 @@ func TestAcceptedClaimsAreSourceMembers(t *testing.T) {
 			t.Fatalf("%s member %x", s.Label, bySubject[string(s.ID)])
 		}
 	}
-	if _, ok := bySubject[string(f.york.ID)]; ok || len(sg.Members) != 2 {
-		t.Fatalf("provisional subject listed: %+v", sg.Members)
+	if _, ok := bySubject[string(f.york.ID)]; ok || len(eg.Members) != 2 {
+		t.Fatalf("provisional subject listed: %+v", eg.Members)
 	}
 }

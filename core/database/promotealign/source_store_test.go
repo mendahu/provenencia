@@ -4,27 +4,29 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
-func TestSourceGraphSecondReadIssuesNoQueries(t *testing.T) {
+func TestEvidenceGraphSecondReadIssuesNoQueries(t *testing.T) {
 	f := newFixture(t)
+	graphID := evidencegraphstest.SoleGraph(t, f.c, f.source.ID).ID
 	s := f.person(f.source, f.artifact, "Ann Lee")
 	res := f.promote(s)
 	g := f.c.Graph()
 	g.Drop()
-	sg, err := g.Source(f.source.ID)
+	eg, err := g.EvidenceGraph(graphID)
 	must(t, err)
-	if len(sg.Members) != 1 || string(sg.Members[0].EntityID) != string(res.Entity.ID) {
-		t.Fatalf("members %+v", sg.Members)
+	if len(eg.Members) != 1 || string(eg.Members[0].EntityID) != string(res.Entity.ID) {
+		t.Fatalf("members %+v", eg.Members)
 	}
 	if _, err := g.Node(res.Entity.ID); err != nil {
 		t.Fatal(err)
 	}
 	var n int
 	g.SetQueryCounterForTest(func() { n++ })
-	again, err := g.Source(f.source.ID)
+	again, err := g.EvidenceGraph(graphID)
 	must(t, err)
 	if n != 0 {
 		t.Fatalf("second read issued %d graph queries", n)
@@ -41,16 +43,17 @@ func TestSourceGraphSecondReadIssuesNoQueries(t *testing.T) {
 
 func TestPromoteDropsTheSource(t *testing.T) {
 	f := newFixture(t)
+	graphID := evidencegraphstest.SoleGraph(t, f.c, f.source.ID).ID
 	s := f.person(f.source, f.artifact, "Ann Lee")
 	g := f.c.Graph()
 	g.Drop()
-	before, err := g.Source(f.source.ID)
+	before, err := g.EvidenceGraph(graphID)
 	must(t, err)
 	if len(before.Members) != 0 {
 		t.Fatalf("members before promote %+v", before.Members)
 	}
 	res := f.promote(s)
-	after, err := g.Source(f.source.ID)
+	after, err := g.EvidenceGraph(graphID)
 	must(t, err)
 	if len(after.Members) != 1 || string(after.Members[0].EntityID) != string(res.Entity.ID) {
 		t.Fatalf("members after promote %+v", after.Members)
@@ -59,11 +62,12 @@ func TestPromoteDropsTheSource(t *testing.T) {
 
 func TestHandleLabelDoesNotDropTheSource(t *testing.T) {
 	f := newFixture(t)
+	graphID := evidencegraphstest.SoleGraph(t, f.c, f.source.ID).ID
 	s := f.person(f.source, f.artifact, "Ann Lee")
 	res := f.promote(s)
 	g := f.c.Graph()
 	g.Drop()
-	if _, err := g.Source(f.source.ID); err != nil {
+	if _, err := g.EvidenceGraph(graphID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := g.Node(res.Entity.ID); err != nil {
@@ -83,7 +87,7 @@ func TestHandleLabelDoesNotDropTheSource(t *testing.T) {
 	must(t, err)
 	var n int
 	g.SetQueryCounterForTest(func() { n++ })
-	if _, err := g.Source(f.source.ID); err != nil {
+	if _, err := g.EvidenceGraph(graphID); err != nil {
 		t.Fatal(err)
 	}
 	if n != 0 {

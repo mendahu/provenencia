@@ -88,9 +88,9 @@ func edgeSeenKey(a, b []byte, keyA, keyB vocabkey.BridgeKey) seenEdge {
 }
 
 // observedTerms maps each Subject to the key of a positive Observation's term
-// on the Property, among those the Source records for the listed Subjects. The
-// first key in order wins.
-func observedTerms(sg graphcache.SourceGraph, props map[string]graphcache.VocabProperty, terms map[string]graphcache.VocabTerm, subjectIDs [][]byte, propertyKey string) map[string]string {
+// on the Property, among those the Evidence graph records for the listed
+// Subjects. The first key in order wins.
+func observedTerms(eg graphcache.EvidenceGraph, props map[string]graphcache.VocabProperty, terms map[string]graphcache.VocabTerm, subjectIDs [][]byte, propertyKey string) map[string]string {
 	out := map[string]string{}
 	if propertyKey == "" {
 		return out
@@ -99,7 +99,7 @@ func observedTerms(sg graphcache.SourceGraph, props map[string]graphcache.VocabP
 	for _, id := range subjectIDs {
 		want[string(id)] = true
 	}
-	for _, o := range sg.Observations {
+	for _, o := range eg.Observations {
 		if o.Polarity != observations.PolarityPositive || !want[string(o.SubjectID)] || len(o.TermID) == 0 {
 			continue
 		}

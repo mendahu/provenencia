@@ -88,7 +88,7 @@ func ResolvePins(c *database.Catalog, sourceID []byte, rows []ApplyRow) ([]promo
 	var (
 		in    inputs
 		r     *evidenceReader
-		sg    graphcache.SourceGraph
+		eg    graphcache.EvidenceGraph
 		ready bool
 	)
 	for i, row := range rows {
@@ -108,12 +108,12 @@ func ResolvePins(c *database.Catalog, sourceID []byte, rows []ApplyRow) ([]promo
 			if r, err = newEvidenceReader(c.Graph(), in); err != nil {
 				return nil, err
 			}
-			if sg, err = c.Graph().Source(sourceID); err != nil {
+			if eg, err = c.Graph().EvidenceGraph(in.graphID); err != nil {
 				return nil, err
 			}
 			ready = true
 		}
-		if slices.ContainsFunc(sg.Members, func(m graphcache.SourceMember) bool { return string(m.SubjectID) == string(row.SubjectID) }) {
+		if slices.ContainsFunc(eg.Members, func(m graphcache.EvidenceMember) bool { return string(m.SubjectID) == string(row.SubjectID) }) {
 			continue
 		}
 		req := EvidenceRequest{SourceID: sourceID, SubjectID: row.SubjectID, HandleID: row.EntityID}

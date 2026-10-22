@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -22,7 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 
-	_ "github.com/mendahu/provenencia/core/database/sourcefill"
+	_ "github.com/mendahu/provenencia/core/database/graphfill"
 )
 
 var walkUser = []byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9}
@@ -153,11 +154,11 @@ type walkCase struct {
 	want [][3]string
 }
 
-// TestWalkSourceEdges walks the Evidence graph of one Source in memory.
-// Its expected edges are literals: the edges canonicalgraph.WalkSource's SQL
+// TestWalkEvidenceGraphEdges walks one Evidence graph in memory.
+// Its expected edges are literals: the edges the SQL walk S11-19 deleted
 // returned for this fixture before it was deleted (checked equal, edge for edge
 // and in order, when the in-memory walk landed).
-func TestWalkSourceEdges(t *testing.T) {
+func TestWalkEvidenceGraphEdges(t *testing.T) {
 	f := newWalkFixture(t)
 	james, mary := f.subject(f.src, "james", "person"), f.subject(f.src, "mary", "person")
 	infant, witness := f.subject(f.src, "infant", "person"), f.subject(f.src, "witness", "person")
@@ -216,7 +217,7 @@ func TestWalkSourceEdges(t *testing.T) {
 		{name: "no from Subjects", hop: participates},
 	}
 	g := f.c.Graph()
-	sg, err := g.Source(f.src.ID)
+	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,7 +230,7 @@ func TestWalkSourceEdges(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := g.WalkSource(sg, tt.hop, ids(tt.from))
+			got, err := g.WalkEvidenceGraph(eg, tt.hop, ids(tt.from))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -252,8 +253,8 @@ func TestWalkSourceEdges(t *testing.T) {
 	}
 }
 
-// A Source's graph is walked alone: another Source's Subjects reach nothing.
-func TestWalkSourceStaysOnItsSource(t *testing.T) {
+// An Evidence graph is walked alone: another graph's Subjects reach nothing.
+func TestWalkEvidenceGraphStaysOnItsGraph(t *testing.T) {
 	f := newWalkFixture(t)
 	james, birth := f.subject(f.src, "james", "person"), f.subject(f.src, "birth", "event")
 	f.participation(james, birth, "subject")
@@ -263,47 +264,75 @@ func TestWalkSourceStaysOnItsSource(t *testing.T) {
 	}
 	other, _ := f.newSource(typeID, "Elsewhere")
 	g := f.c.Graph()
-	sg, err := g.Source(other.ID)
+	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(t, f.c, other.ID).ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	edges, err := g.WalkSource(sg, hops.EventsOfSubject, [][]byte{james.ID})
+	edges, err := g.WalkEvidenceGraph(eg, hops.EventsOfSubject, [][]byte{james.ID})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(edges) != 0 {
 		t.Fatalf("walked %d edges", len(edges))
 	}
-	if _, err := g.WalkSource(sg, hops.Hop{}, nil); err == nil {
+	if _, err := g.WalkEvidenceGraph(eg, hops.Hop{}, nil); err == nil {
 		t.Fatal("a zero Hop was walked")
 	}
 }
 
-// T-22: a loaded handle's members carry the Source of each claimed Subject,
-// and Verify compares it.
-func TestMemberSourceID(t *testing.T) {
-	f := newWalkFixture(t)
-	james := f.subject(f.src, "james", "person")
-	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: walkUser}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, walkUser, promote.Input{SubjectID: james.ID})
+// T-22: a loaded handle's members carry the Source and the Evidence graph of
+// each claimed Subject, and Verify compares them.
+func TestMemberSourceAndGraph(t *testing.T) {
+	check := func(t *testing.T, f *walkFixture, james subjects.Subject, wantGraph []byte) {
+		t.Helper()
+		res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: walkUser}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, walkUser, promote.Input{SubjectID: james.ID})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		g := f.c.Graph()
+		g.Drop()
+		n, err := g.Node(res.Entity.ID)
+		if err != nil || n == nil || len(n.Members) != 1 {
+			t.Fatalf("node %+v, err %v", n, err)
+		}
+		m := n.Members[0]
+		if !bytes.Equal(m.SubjectID, james.ID) || !bytes.Equal(m.SourceID, f.src.ID) || !bytes.Equal(m.GraphID, wantGraph) {
+			t.Fatalf("member %+v, want Subject %x on Source %x, graph %x", m, james.ID, f.src.ID, wantGraph)
+		}
+		if err := g.Verify(); err != nil {
+			t.Fatal(err)
+		}
+		g.CorruptMemberSourceForTest(res.Entity.ID)
+		if err := g.Verify(); err == nil {
+			t.Fatal("Verify accepted a member whose Source does not match the catalog")
+		}
+	}
+	t.Run("the Default graph", func(t *testing.T) {
+		f := newWalkFixture(t)
+		james := f.subject(f.src, "james", "person")
+		check(t, f, james, evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID)
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	g := f.c.Graph()
-	g.Drop()
-	n, err := g.Node(res.Entity.ID)
-	if err != nil || n == nil || len(n.Members) != 1 {
-		t.Fatalf("node %+v, err %v", n, err)
-	}
-	if !bytes.Equal(n.Members[0].SubjectID, james.ID) || !bytes.Equal(n.Members[0].SourceID, f.src.ID) {
-		t.Fatalf("member %+v, want Subject %x on Source %x", n.Members[0], james.ID, f.src.ID)
-	}
-	if err := g.Verify(); err != nil {
-		t.Fatal(err)
-	}
-	g.CorruptMemberSourceForTest(res.Entity.ID)
-	if err := g.Verify(); err == nil {
-		t.Fatal("Verify accepted a member whose Source does not match the catalog")
-	}
+	t.Run("a Split graph", func(t *testing.T) {
+		f := newWalkFixture(t)
+		second, _, err := writes.Run(f.c, writes.Op{Action: "create_artifact", UserID: walkUser}, func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, walkUser, artifacts.CreateInput{SourceID: f.src.ID, Label: "Page 2"})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, jones := evidencegraphstest.Split(t, f.c, walkUser, f.src.ID, "Jones", second.ID)
+		st, err := subjecttypes.Lookup(f.c, "person", vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		james, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: walkUser}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, walkUser, subjects.CreateInput{SourceID: f.src.ID, GraphID: jones.ID, SubjectTypeID: st.ID}, nil)
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		check(t, f, james, jones.ID)
+	})
 }

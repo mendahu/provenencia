@@ -4,7 +4,7 @@
 // A hop is declared in core/hops. Walk follows it through the canonical
 // graph (handles, through association handles whose endpoint values the
 // auto-reconciler kept) in a fixed number of indexed queries. A Source's
-// Evidence graph is walked in memory by graphcache.Graph.WalkSource.
+// Evidence graph is walked in memory by graphcache.Graph.WalkEvidenceGraph.
 package canonicalgraph
 
 import (

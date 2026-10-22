@@ -4,10 +4,11 @@ package promotealign
 
 import (
 	"bytes"
-	"database/sql"
+	"errors"
 	"sort"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/valuerules"
@@ -15,12 +16,6 @@ import (
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 )
-
-// Querier is *sql.Tx or *sql.DB.
-type Querier interface {
-	Query(query string, args ...any) (*sql.Rows, error)
-	QueryRow(query string, args ...any) *sql.Row
-}
 
 // Propose loads the Evidence layer for sourceID, walks the catalog's canonical
 // graph from the fixed anchors and each unfixed kind's top property matches,
@@ -56,7 +51,7 @@ func propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 		return graphalign.Proposal{Rows: nil}, rev, nil, nil
 	}
 
-	anchors, err := mergeFixed(c.Graph(), sourceID, primary, fixed)
+	anchors, err := mergeFixed(c.Graph(), in.graphID, primary, fixed)
 	if err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}
@@ -77,6 +72,7 @@ func propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 // inputs is what a proposal and a claim evidence query both read first: the
 // Source's Evidence layer and the rules and vocabulary it was built with.
 type inputs struct {
+	graphID     []byte
 	cfg         graphalign.Config
 	namePattern string
 	terms       segmentcompare.Terms
@@ -86,7 +82,8 @@ type inputs struct {
 
 // loadInputs checks the catalog and Source id (promote.ErrInvalid for a nil
 // catalog, an id that is not 16 bytes, or a Source that does not exist) and
-// loads the Source's layer.
+// loads the layer of the Source's one Evidence graph, until S12-09 takes the
+// graph id from the request. A Source with more than one graph is an error.
 func loadInputs(c *database.Catalog, sourceID []byte) (inputs, error) {
 	if c == nil || len(sourceID) != 16 {
 		return inputs{}, promote.ErrInvalid
@@ -95,12 +92,19 @@ func loadInputs(c *database.Catalog, sourceID []byte) (inputs, error) {
 	if err != nil {
 		return inputs{}, err
 	}
-	q := Querier(db)
-	sg, err := c.Graph().Source(sourceID)
+	var q database.Querier = db
+	graphID, err := evidencegraphs.SoleGraph(c, sourceID)
+	if errors.Is(err, evidencegraphs.ErrInvalid) {
+		return inputs{}, promote.ErrInvalid
+	}
 	if err != nil {
 		return inputs{}, err
 	}
-	if !sg.Found {
+	eg, err := c.Graph().EvidenceGraph(graphID)
+	if err != nil {
+		return inputs{}, err
+	}
+	if !eg.Found {
 		return inputs{}, promote.ErrInvalid
 	}
 
@@ -115,17 +119,17 @@ func loadInputs(c *database.Catalog, sourceID []byte) (inputs, error) {
 	if err != nil {
 		return inputs{}, err
 	}
-	layer, primary, err := loadLayerMemo(c.Graph(), sourceID, cfg, namePattern, terms)
+	layer, primary, err := loadLayerMemo(c.Graph(), graphID, cfg, namePattern, terms)
 	if err != nil {
 		return inputs{}, err
 	}
-	return inputs{cfg: cfg, namePattern: namePattern, terms: terms, layer: layer, primary: primary}, nil
+	return inputs{graphID: graphID, cfg: cfg, namePattern: namePattern, terms: terms, layer: layer, primary: primary}, nil
 }
 
 // mergeFixed validates caller fixed pairs and adds already-promoted Subjects
-// as free anchors, read from the Source's accepted members. Caller fixed wins
+// as free anchors, read from the Evidence graph's accepted members. Caller fixed wins
 // when both name the same Subject.
-func mergeFixed(g *graphcache.Graph, sourceID []byte, primary map[string]primarySubject, caller []graphalign.Fixed) ([]graphalign.Fixed, error) {
+func mergeFixed(g *graphcache.Graph, graphID []byte, primary map[string]primarySubject, caller []graphalign.Fixed) ([]graphalign.Fixed, error) {
 	out := make([]graphalign.Fixed, 0, len(caller)+len(primary))
 	seen := map[string]bool{}
 
@@ -138,11 +142,11 @@ func mergeFixed(g *graphcache.Graph, sourceID []byte, primary map[string]primary
 		seen[string(f.SubjectID)] = true
 	}
 
-	sg, err := g.Source(sourceID)
+	eg, err := g.EvidenceGraph(graphID)
 	if err != nil {
 		return nil, err
 	}
-	for _, m := range sg.Members {
+	for _, m := range eg.Members {
 		sk := string(m.SubjectID)
 		if seen[sk] {
 			continue

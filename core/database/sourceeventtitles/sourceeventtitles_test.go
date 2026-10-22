@@ -1,6 +1,7 @@
 package sourceeventtitles_test
 
 import (
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -8,12 +9,12 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourceeventtitles"
-	_ "github.com/mendahu/provenencia/core/database/sourcefill"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -276,7 +277,7 @@ func TestForSource(t *testing.T) {
 	})
 
 	t.Run("an empty Source has no titles", func(t *testing.T) {
-		got := sourceeventtitles.FromStored(graphcache.SourceGraph{}, nil, nil)
+		got := sourceeventtitles.FromStored(graphcache.EvidenceGraph{}, nil, nil)
 		if len(got) != 0 {
 			t.Fatalf("titled %d", len(got))
 		}
@@ -285,7 +286,7 @@ func TestForSource(t *testing.T) {
 
 func titlesFromStored(t *testing.T, f *fixture) []sourceeventtitles.Title {
 	t.Helper()
-	sg, err := f.c.Graph().Source(f.src.ID)
+	eg, err := f.c.Graph().EvidenceGraph(evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID)
 	must(t, err)
 	v, err := f.c.Graph().Vocabulary()
 	must(t, err)
@@ -297,7 +298,7 @@ func titlesFromStored(t *testing.T, f *fixture) []sourceeventtitles.Title {
 	for _, term := range v.Terms {
 		terms[string(term.ID)] = struct{ Key, Label string }{Key: term.Key, Label: term.Label}
 	}
-	return sourceeventtitles.FromStored(sg, propKey, terms)
+	return sourceeventtitles.FromStored(eg, propKey, terms)
 }
 
 func sameSet(got, want []string) bool {

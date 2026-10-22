@@ -157,12 +157,12 @@ func ListSubjects(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListSubjectsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		sg, err := c.Graph().Source(sourceID)
+		eg, err := sourceEvidenceGraph(c, sourceID)
 		if err != nil {
 			return err
 		}
 		out = &engine.ListSubjectsResponse{}
-		for _, s := range sg.Subjects {
+		for _, s := range eg.Subjects {
 			out.Subjects = append(out.Subjects, subjectProto(subjects.Subject{
 				ID: s.ID, Ref: s.Ref, SourceID: s.SourceID, SubjectTypeID: s.SubjectTypeID,
 				Label: s.Label, Description: s.Description,

@@ -1,9 +1,11 @@
-package sourcefill_test
+package graphfill_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -15,15 +17,15 @@ import (
 	"github.com/mendahu/provenencia/core/writes"
 
 	_ "github.com/mendahu/provenencia/core/database/autoreconciler"
-	_ "github.com/mendahu/provenencia/core/database/sourcefill"
+	_ "github.com/mendahu/provenencia/core/database/graphfill"
 )
 
 var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 
-// TestRetitleDropsSourceGraph: a Source graph knows its title, so a title
-// edit drops it and the next read has the new title. An id no Source has reads
-// as not found.
-func TestRetitleDropsSourceGraph(t *testing.T) {
+// TestRetitleDropsEvidenceGraph: an Evidence graph knows its Source's title, so
+// a title edit drops it and the next read has the new title. An id no graph has
+// reads as not found.
+func TestRetitleDropsEvidenceGraph(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
 		t.Fatal(err)
@@ -50,16 +52,17 @@ func TestRetitleDropsSourceGraph(t *testing.T) {
 		t.Fatal(err)
 	}
 	g := c.Graph()
-	read := func(id []byte) graphcache.SourceGraph {
+	graphID := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+	read := func(id []byte) graphcache.EvidenceGraph {
 		t.Helper()
-		sg, err := g.Source(id)
+		eg, err := g.EvidenceGraph(id)
 		if err != nil {
 			t.Fatal(err)
 		}
-		return sg
+		return eg
 	}
-	if sg := read(src.ID); !sg.Found || sg.Title != "Register" {
-		t.Fatalf("source graph found %v, title %q", sg.Found, sg.Title)
+	if eg := read(graphID); !eg.Found || eg.SourceTitle != "Register" || !bytes.Equal(eg.SourceID, src.ID) {
+		t.Fatalf("evidence graph found %v, title %q, source %x", eg.Found, eg.SourceTitle, eg.SourceID)
 	}
 
 	src.Title = "Parish register"
@@ -69,19 +72,19 @@ func TestRetitleDropsSourceGraph(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if sg := read(src.ID); sg.Title != "Parish register" {
-		t.Fatalf("title after the edit %q, want the new one", sg.Title)
+	if eg := read(graphID); eg.SourceTitle != "Parish register" {
+		t.Fatalf("title after the edit %q, want the new one", eg.SourceTitle)
 	}
 
-	if sg := read(make([]byte, 16)); sg.Found || sg.Title != "" {
-		t.Fatalf("unknown id found %v, title %q", sg.Found, sg.Title)
+	if eg := read(make([]byte, 16)); eg.Found || eg.SourceTitle != "" {
+		t.Fatalf("unknown id found %v, title %q", eg.Found, eg.SourceTitle)
 	}
 }
 
-// TestOnlyATitleChangeDropsSourceGraph: a Source graph holds the title and
+// TestOnlyATitleChangeDropsEvidenceGraph: an Evidence graph holds the title and
 // nothing else off the sources row, so a description edit leaves it loaded and
 // a title edit drops it.
-func TestOnlyATitleChangeDropsSourceGraph(t *testing.T) {
+func TestOnlyATitleChangeDropsEvidenceGraph(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
 		t.Fatal(err)
@@ -108,13 +111,14 @@ func TestOnlyATitleChangeDropsSourceGraph(t *testing.T) {
 		t.Fatal(err)
 	}
 	g := c.Graph()
+	graphID := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	load := func() {
 		t.Helper()
-		if _, err := g.Source(src.ID); err != nil {
+		if _, err := g.EvidenceGraph(graphID); err != nil {
 			t.Fatal(err)
 		}
-		if !g.LoadedSourceForTest(src.ID) {
-			t.Fatal("source graph not loaded")
+		if !g.LoadedEvidenceGraphForTest(graphID) {
+			t.Fatal("evidence graph not loaded")
 		}
 	}
 	update := func(s sources.Source) {
@@ -130,13 +134,13 @@ func TestOnlyATitleChangeDropsSourceGraph(t *testing.T) {
 	load()
 	src.Description = "Baptisms 1790 to 1820"
 	update(src)
-	if !g.LoadedSourceForTest(src.ID) {
-		t.Fatal("a description edit dropped the source graph")
+	if !g.LoadedEvidenceGraphForTest(graphID) {
+		t.Fatal("a description edit dropped the evidence graph")
 	}
 
 	src.Title = "Parish register"
 	update(src)
-	if g.LoadedSourceForTest(src.ID) {
-		t.Fatal("a title edit left the source graph loaded")
+	if g.LoadedEvidenceGraphForTest(graphID) {
+		t.Fatal("a title edit left the evidence graph loaded")
 	}
 }
