@@ -51,7 +51,7 @@ func propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 	if err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}
-	q, cfg, namePattern, terms, layer, primary := in.q, in.cfg, in.namePattern, in.terms, in.layer, in.primary
+	cfg, namePattern, terms, layer, primary := in.cfg, in.namePattern, in.terms, in.layer, in.primary
 	if len(layer.Subjects) == 0 {
 		return graphalign.Proposal{Rows: nil}, rev, nil, nil
 	}
@@ -71,16 +71,12 @@ func propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 	}
 
 	prop := graphalign.Align(layer, canon, anchors, cfg)
-	if err := attachExhibits(q, c.Graph(), layer, &prop, cfg, namePattern); err != nil {
-		return graphalign.Proposal{}, 0, nil, err
-	}
 	return prop, rev, prof, nil
 }
 
 // inputs is what a proposal and a claim evidence query both read first: the
 // Source's Evidence layer and the rules and vocabulary it was built with.
 type inputs struct {
-	q           Querier
 	cfg         graphalign.Config
 	namePattern string
 	terms       segmentcompare.Terms
@@ -123,7 +119,7 @@ func loadInputs(c *database.Catalog, sourceID []byte) (inputs, error) {
 	if err != nil {
 		return inputs{}, err
 	}
-	return inputs{q: q, cfg: cfg, namePattern: namePattern, terms: terms, layer: layer, primary: primary}, nil
+	return inputs{cfg: cfg, namePattern: namePattern, terms: terms, layer: layer, primary: primary}, nil
 }
 
 // mergeFixed validates caller fixed pairs and adds already-promoted Subjects

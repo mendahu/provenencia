@@ -18465,6 +18465,18 @@
         }
       }
     },
+    "promote.sheet.evidenceUnavailable": {
+      "comment": "Evidence sheet callout title when the evidence read fails",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The evidence could not be loaded"
+          }
+        }
+      }
+    },
     "citationComposer.savedBadge": {
       "comment": "Badge on the line just written",
       "extractionState": "manual",

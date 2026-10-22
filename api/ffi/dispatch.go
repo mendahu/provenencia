@@ -108,6 +108,7 @@ const (
 	MethodLinkEvidenceGraphArtifact         = int32(engine.Method_METHOD_LINK_EVIDENCE_GRAPH_ARTIFACT)
 	MethodUnlinkEvidenceGraphArtifact       = int32(engine.Method_METHOD_UNLINK_EVIDENCE_GRAPH_ARTIFACT)
 	MethodGetEvidenceGraphUnlinkImpact      = int32(engine.Method_METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT)
+	MethodGetPromoteClaimEvidence           = int32(engine.Method_METHOD_GET_PROMOTE_CLAIM_EVIDENCE)
 	MethodListClaimConfidenceGrades         = int32(engine.Method_METHOD_LIST_CLAIM_CONFIDENCE_GRADES)
 	MethodGetConclusionDetail               = int32(engine.Method_METHOD_GET_CONCLUSION_DETAIL)
 	MethodListEventHeaders                  = int32(engine.Method_METHOD_LIST_EVENT_HEADERS)
@@ -304,6 +305,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.UnlinkEvidenceGraphArtifact(in)
 	case MethodGetEvidenceGraphUnlinkImpact:
 		return handlers.GetEvidenceGraphUnlinkImpact(in)
+	case MethodGetPromoteClaimEvidence:
+		return handlers.GetPromoteClaimEvidence(in)
 	case MethodListSubjectMemberships:
 		return handlers.ListSubjectMemberships(in)
 	case MethodListPersonHeaders:

@@ -6,8 +6,6 @@ package graphalign
 import (
 	"bytes"
 
-	"github.com/mendahu/provenencia/core/datevalue"
-	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -104,12 +102,9 @@ const (
 
 // Comparison is one lead property's outcome on the chosen (or top) candidate:
 // an input to the score. Key, Result (Outcome, Cause, Speaking: A the
-// Subject's value, B the handle's) and Points come from subject compare. Pins
-// come from Exhibit, which pairs Observations.
+// Subject's value, B the handle's) and Points come from subject compare.
 type Comparison struct {
 	subjectcompare.PropertyResult
-	// ValueType is the lead's catalog value type; empty when Derived.
-	ValueType string
 	// Derived: the lead is a property the profile builder derives (a person's
 	// lifespan), with no catalog row.
 	Derived bool
@@ -120,31 +115,6 @@ type Comparison struct {
 type Via struct {
 	NeighborSubjectID []byte
 	Key               vocabkey.BridgeKey
-}
-
-// Exhibit is one pin-able observation pair the loader attaches after Align.
-// GroupSubjectID is empty for the Subject's own records and names the layer
-// neighbor for a one-hop record. Displays are values (term labels for
-// terms), not copy.
-type Exhibit struct {
-	PropertyKey           string
-	PropertyOrigin        string
-	Outcome               propertycompare.Outcome
-	ValueType             string
-	Pinned                bool
-	Weight                float64
-	GroupSubjectID        []byte
-	IncomingObservationID []byte
-	IncomingDisplay       string
-	// IncomingNegative is true when the incoming value is a negative
-	// Observation: the record says the Subject is not this value.
-	IncomingNegative    bool
-	IncomingSource      string
-	IncomingDate        *datevalue.Value
-	MemberObservationID []byte
-	MemberDisplay       string
-	MemberSource        string
-	MemberDate          *datevalue.Value
 }
 
 // Reason is why a row reads as it does. Codes, not copy: the page words them.
@@ -214,7 +184,6 @@ type Row struct {
 	Assessment   Assessment
 	Alternatives []Alternative
 	Comparisons  []Comparison
-	Exhibits     []Exhibit
 	Reason       Reason
 	// ReasonProperty is the agreeing Property behind ReasonAgrees.
 	ReasonProperty vocabkey.PropertyKey

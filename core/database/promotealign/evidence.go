@@ -182,6 +182,22 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 	return out, nil
 }
 
+// acceptedClaims is a handle's accepted members, each with its Source, in
+// claim id order. A handle with no node has none.
+func acceptedClaims(g *graphcache.Graph, entityID []byte) ([]graphcache.Member, error) {
+	n, err := g.Node(entityID)
+	if err != nil || n == nil {
+		return nil, err
+	}
+	var out []graphcache.Member
+	for _, m := range n.Members {
+		if m.Accepted {
+			out = append(out, m)
+		}
+	}
+	return out, nil
+}
+
 // evidenceReader reads what the query needs beyond the layer: members and
 // their values, the Source each Subject is on, and the filed links between
 // entities. Every read is cached by the graph or kept here.
