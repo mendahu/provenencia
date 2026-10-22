@@ -1,7 +1,7 @@
 # Ship log — S11-20 Claim evidence sheet
 
 **Plan:** [`S11-20-claim-evidence-sheet.md`](S11-20-claim-evidence-sheet.md) · **Branch:** `s11-20-claim-evidence-sheet` · **PR:** #525
-**State:** ready
+**State:** fixing 8 (user report)
 
 ## Round 0 — implement
 Head `ec0414a2`. Gate PASS (orchestrator re-ran). PR #525 (draft). Report deviations: STEP-5–9 in one commit (sheet does not build between them); `L10n.Promote.pinRelationship` removed though D-12 said "kept" (replaced by `spokenRelationship`, no reader left); extra identifier `promote.sheet.section.<relationship id>.<property>.<n>`; "Pick a record" empty state above claim fields for New rows (Frame 13 order); neighbor ref and line badge hidden from VoiceOver (carried by checkbox label); `notCompared` reuses key `promote.sheet.unknown` with text "Not compared"; §10 manual check not run.
@@ -246,3 +246,53 @@ No reviewer dispatched: `api/ffi/**` and `core/database/**` paths matched SEC+PR
 
 ## Result (after round 7)
 Gate PASS · CI see PR · open: none · follow-ups: — · to user: — (manual check §10 not run) · CON miss: none (FakeStore filled a field the real store never sent; no Swift test could see it)
+
+## Round 8 — user report (2026-10-22)
+The user saw a lifespan **Conflicts** for "bef 11 Jan 2021 here, 27 Jul 1932 – 31 Mar 2001 on the record". A death before 11 Jan 2021 fits a 2001 death.
+Root cause (orchestrator, verified in `core/subjectprofile/subjectprofile.go` `lifespan`): each date's open end is collapsed onto its closed end (`if first.Open { first = last }`). A lone `BEF 2021-01-11` death becomes the point 11 Jan 2021, so this side's span is that day, which falls outside the record's window (1932 – 2001) → conflict. The collapse is right for anchoring the window (`ShiftYears` needs a closed end) but wrong for the span and for the "date wholly outside the window" check, where an open end means the event can lie anywhere on that side. The code is S11-32's; the same builder feeds matching (`subjectcompare`), so the fix also corrects matching scores for open-ended dates.
+
+### Fix plan 8
+**F-18 — An open-ended date keeps its open end in the span** (from the user's report)
+Files: `core/subjectprofile/subjectprofile.go` (`lifespan`), `core/subjectprofile/lifespan_test.go`; `core/subjectcompare` tests if the end-to-end case sits better there. Skill: `add-match-rule` (read its rules for the layer; no new knob).
+Failing tests first (table in `lifespan_test.go`, plus one end-to-end through `subjectcompare` so the outcome, not just the span, is checked):
+- `aDeathBeforeALaterDayFitsAnEarlierDeath` — side A: death `BEF 2021-01-11` only; side B: birth 1932-07-27, death 2001-03-31 → the lifespan outcome is not conflict (the user's case).
+- `aDeathBeforeTheOtherBirthConflicts` — A: death `BEF 1931`; B: birth 1932, death 2001 → conflict.
+- `aBirthAfterTheOtherDeathConflicts` — A: birth `AFT 2002`; B: 1932 – 2001 → conflict.
+- `aBirthAfterAnEarlierYearFits` — A: birth `AFT 1900`; B: 1932 – 2001 → not conflict.
+- Existing cases (points, ranges, a date wholly outside the window, undated) keep their results.
+Do: in `lifespan`, keep each date's raw ends beside the collapsed ones. The collapsed ends still anchor the window (`spanFirst`/`spanLast` for `ShiftYears`, unchanged). The span's first end is the window's `start` when any date's raw first end is open, else `Earliest(early)`; its last end is the window's `end` when any raw last end is open, else `Latest(late)` (the events lie in the window, so the window bounds an open span). The "wholly outside the window" check uses raw ends and skips an open one (`(!rawLate.Open && rawLate.Hi < start.Lo) || (!rawEarly.Open && rawEarly.Lo > end.Hi)`). `side.First`/`side.Last` stay the dates as written. Update the function's doc comment to say how an open end is read.
+Check: new tests pass and failed first; `go test -tags fts5 ./core/...` PASS; scripts/check-pr.sh PASS. Add to the plan's Landed note: "Ship round 8: an open-ended date (BEF/AFT) keeps its open end in a lifespan's span, so 'death before 2021' fits a 2001 death."
+
+## Round 8 — fix
+Head `f7b92ee3`. Gate PASS (orchestrator re-ran). F-18 done as planned; conflict cases moved to `BEF 1900` / `AFT 2010` (Tolerance 2 reads a one-year gap as Near); AC-2.9's span string became "1730 and 1840".
+Orchestrator, reading the diff: **F-18's rule was wrong (the plan's error, not the implementer's).** Widening an open end to the window's edge loses a closed date's bound. Example: baptism 1900 + death `BEF 1980` against a record 1850 – 1870 now spans ~1790 – 1980, overlaps 1850 – 1870, and no longer conflicts, though the 1900 baptism makes it impossible. The date comparer already reads open ends natively (`EndsDate` makes `BEF`/`AFT`; `Earliest`/`Latest` skip open ends), and a lifespan conflict is "no overlap", so the span should be built from the raw ends: its first end is the earliest *closed* first end, open when none is closed; its last end likewise. → F-19.
+
+**F-19 — The span reads raw ends, open only where no date closes it** (corrects F-18)
+Files: `core/subjectprofile/subjectprofile.go`, `core/subjectprofile/entity_test.go`, `core/subjectprofile/lifespan_test.go`.
+Failing test first: `aClosedDateStillBoundsAnOpenSpan` in `TestEntityCompare` — side A: baptism 1900, death `BEF 1980`; side B: birth 1850, death 1870 → conflict (fails at `f7b92ee3`).
+Do: drop the `openFirst`/`openLast` widening to `start`/`end`. The span is `EndsDate(firstEnd, lastEnd)` where `firstEnd = Earliest(rawEarly)` (an open `DateEnd` when not ok) and `lastEnd = Latest(rawLate)` (open when not ok). Every date has at least one closed end, so at least one of the two is closed; if `EndsDate` still fails (closed first after closed last), keep today's contradicts. The window keeps the collapsed anchors, and the raw-end "wholly outside" check stays as F-18 wrote it. `side.First`/`side.Last` unchanged. Update AC-2.9's expected span to what the open span now prints (a `BEF 1840` span), and the doc comment.
+Check: all four F-18 cases and the new case pass; `go test -tags fts5 ./core/...` PASS; scripts/check-pr.sh PASS.
+F-19 done at `ee53202a`; gate PASS (orchestrator re-ran); `aClosedDateStillBoundsAnOpenSpan` failed first (span 1790–1980, agree) and passes.
+
+## Round 8 — review
+Verifier (Opus), asked to disprove the open-end rule at `ee53202a` with concrete dates against the base `fe5b79b3`. **Refuted**, one regression:
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| VER-1 | CON | blocker | Birth `BEF 1900` + death `AFT 1950` now "contradicts itself" | Fix now → F-20 | verified by the verifier's throwaway test at both commits: base span 1900–1950, agree; `ee53202a` `Earliest(rawEarly)`=1950 > `Latest(rawLate)`=1900, `EndsDate` fails → contradicts. Any BEF date earlier than any AFT date triggers it |
+| VER-2 | CON | major | A lone open date's **window** is still anchored on its collapsed end: death `BEF 1840` alone vs 1600–1650, birth `AFT 1800` alone vs 1950–2000, birth 1900 + death `AFT 1950` vs a 1990 residence all conflict though they can be one life | To user | not new (same at base, S11-32); the same family as the user's report, but changing how a window bounds a life (MaxYears from an open date) is a matching-rule call |
+
+Also verified: no pair that cannot be one life lost its conflict; undated sides unchanged; the span is read only by `subjectcompare.lifespan`; `First`/`Last` unchanged.
+
+**F-20 — An inverted closed span falls back to the collapsed ends** (from VER-1)
+Files: `core/subjectprofile/subjectprofile.go`, `core/subjectprofile/entity_test.go`.
+Failing tests first, in `TestEntityCompare`: `aBirthBeforeAndADeathAfterStillFit` — A: birth `BEF 1900`, death `AFT 1950`; B: birth 1890, death 1960 → not conflict, and A is not contradicts; `twoOpenResidencesStillFit` — A: residence `AFT 1950`, residence `BEF 1900`; same B → not conflict.
+Do: when both `firstEnd` and `lastEnd` are closed and `firstEnd.Lo > lastEnd.Hi`, build the span from the collapsed `firstClosed`/`lastClosed` (the base's span) instead of returning contradicts. Say so in the doc comment.
+Check: new tests fail first and pass; all earlier F-18/F-19 cases pass; scripts/check-pr.sh PASS.
+
+## Round 8 — fix 2
+Head `1885e198`. Gate PASS (orchestrator re-ran). F-20 done: `aBirthBeforeAndADeathAfterStillFit` and `twoOpenResidencesStillFit` failed first at `ee53202a` and pass; F-18/F-19 cases pass. VER-1 **Resolved**. Implementer slip, checked: a stray `git stash pop` touched the unrelated s12-03 stash; working tree verified clean apart from this log, both stashes still listed with their files.
+VER-2 (open dates still anchor the lifetime window) is **To user**.
+
+## Result (after round 8)
+Gate PASS · CI see PR · open: none · to user: VER-2, term origin (a user term keyed like a product term reads as the product term) · manual check §10 not run
