@@ -7,7 +7,10 @@
 // alone; IsPrimaryType takes a catalog type's key and origin.
 package vocabkey
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // Vocabulary origins. A plugin origin is "plugin:<id>"; see IsPluginOrigin.
 const (
@@ -21,6 +24,25 @@ type SubjectType string
 
 // PropertyKey is a Property key, typed for registry maps.
 type PropertyKey string
+
+// CompareByOrder ranks two Property keys against a kind's binding order: a key
+// in order before one that is not, bound keys by their index in order, the rest
+// by key. It is the one ranking for the conclusion page and the evidence
+// sheet.
+func CompareByOrder(order []PropertyKey, a, b PropertyKey) int {
+	ia, ib := slices.Index(order, a), slices.Index(order, b)
+	switch {
+	case ia >= 0 && ib >= 0:
+		if ia != ib {
+			return ia - ib
+		}
+	case ia >= 0:
+		return -1
+	case ib >= 0:
+		return 1
+	}
+	return strings.Compare(string(a), string(b))
+}
 
 // Primary Subject kinds.
 const (

@@ -30,6 +30,7 @@ import (
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // ErrNotFound is returned for an unknown or merged handle.
@@ -119,12 +120,9 @@ type Detail struct {
 }
 
 const (
-	// Property ids this handle's outcomes name, with the kind's binding order.
-	// Labels and value types come from the graph vocabulary.
-	sqlPropertyIDs = `SELECT DISTINCT ao.property_id, stp.sort_order
-		FROM auto_reconciler_outcomes ao
-		LEFT JOIN subject_type_properties stp ON stp.property_id = ao.property_id AND stp.subject_type_id = ?
-		WHERE ao.entity_id = ?`
+	// Property ids this handle's outcomes name. Labels, value types and the
+	// kind's binding order come from the graph vocabulary.
+	sqlPropertyIDs = `SELECT DISTINCT ao.property_id FROM auto_reconciler_outcomes ao WHERE ao.entity_id = ?`
 
 	sqlOutcomes = `SELECT ao.property_id, ao.observation_id, o.ref, ao.reason, ao.value_rank, ao.denied_by,
 			COALESCE(ao.vote_support, 0), COALESCE(ao.vote_total, 0),
@@ -263,20 +261,22 @@ func loadProperties(g *graphcache.Graph, q Querier, entityID, subjectTypeID []by
 	for _, p := range v.Properties {
 		props[string(p.ID)] = p
 	}
-	rows, err := q.Query(sqlPropertyIDs, subjectTypeID, entityID)
+	var order []vocabkey.PropertyKey
+	for _, t := range v.Types {
+		if string(t.ID) == string(subjectTypeID) {
+			order = v.BindingOrder()[vocabkey.SubjectType(t.Key)]
+			break
+		}
+	}
+	rows, err := q.Query(sqlPropertyIDs, entityID)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer rows.Close()
-	type row struct {
-		f     *Field
-		order sql.NullInt64
-	}
-	var got []row
+	var got []*Field
 	for rows.Next() {
 		var id []byte
-		var order sql.NullInt64
-		if err := rows.Scan(&id, &order); err != nil {
+		if err := rows.Scan(&id); err != nil {
 			return nil, nil, err
 		}
 		p, ok := props[string(id)]
@@ -287,27 +287,19 @@ func loadProperties(g *graphcache.Graph, q Querier, entityID, subjectTypeID []by
 			PropertyID: append([]byte(nil), p.ID...), PropertyKey: p.Key, Label: p.Label,
 			ValueType: p.ValueType, cardinality: p.Cardinality,
 		}
-		got = append(got, row{f: f, order: order})
+		got = append(got, f)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, nil, err
 	}
 	sort.SliceStable(got, func(i, j int) bool {
-		if got[i].order.Valid != got[j].order.Valid {
-			return got[i].order.Valid
-		}
-		if got[i].order.Valid && got[i].order.Int64 != got[j].order.Int64 {
-			return got[i].order.Int64 < got[j].order.Int64
-		}
-		return got[i].f.PropertyKey < got[j].f.PropertyKey
+		return vocabkey.CompareByOrder(order, vocabkey.PropertyKey(got[i].PropertyKey), vocabkey.PropertyKey(got[j].PropertyKey)) < 0
 	})
-	fields := make([]*Field, len(got))
 	byProp := map[string]*Field{}
-	for i := range got {
-		fields[i] = got[i].f
-		byProp[string(fields[i].PropertyID)] = fields[i]
+	for _, f := range got {
+		byProp[string(f.PropertyID)] = f
 	}
-	return fields, byProp, nil
+	return got, byProp, nil
 }
 
 func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Field) error {

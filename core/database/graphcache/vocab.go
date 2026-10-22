@@ -1,5 +1,11 @@
 package graphcache
 
+import (
+	"sort"
+
+	"github.com/mendahu/provenencia/core/vocabkey"
+)
+
 // Vocabulary is the catalog's properties, terms, subject types, and the
 // properties each type binds, in binding order.
 // A vocabulary write drops it. Structure drops the whole graph, which
@@ -16,6 +22,47 @@ type Vocabulary struct {
 type VocabBinding struct {
 	TypeID, PropertyID []byte
 	SortOrder          int
+}
+
+// BindingOrder returns, per subject type key, its bound property keys in
+// binding order: by SortOrder, then key.
+func (v Vocabulary) BindingOrder() map[vocabkey.SubjectType][]vocabkey.PropertyKey {
+	typeKey := make(map[string]vocabkey.SubjectType, len(v.Types))
+	for _, t := range v.Types {
+		typeKey[string(t.ID)] = vocabkey.SubjectType(t.Key)
+	}
+	propKey := make(map[string]vocabkey.PropertyKey, len(v.Properties))
+	for _, p := range v.Properties {
+		propKey[string(p.ID)] = vocabkey.PropertyKey(p.Key)
+	}
+	type bound struct {
+		key   vocabkey.PropertyKey
+		order int
+	}
+	by := map[vocabkey.SubjectType][]bound{}
+	for _, b := range v.Bindings {
+		tk, ok := typeKey[string(b.TypeID)]
+		pk, ok2 := propKey[string(b.PropertyID)]
+		if !ok || !ok2 {
+			continue
+		}
+		by[tk] = append(by[tk], bound{pk, b.SortOrder})
+	}
+	out := make(map[vocabkey.SubjectType][]vocabkey.PropertyKey, len(by))
+	for tk, bs := range by {
+		sort.SliceStable(bs, func(i, j int) bool {
+			if bs[i].order != bs[j].order {
+				return bs[i].order < bs[j].order
+			}
+			return bs[i].key < bs[j].key
+		})
+		keys := make([]vocabkey.PropertyKey, len(bs))
+		for i, b := range bs {
+			keys[i] = b.key
+		}
+		out[tk] = keys
+	}
+	return out
 }
 
 // VocabProperty is one properties row.

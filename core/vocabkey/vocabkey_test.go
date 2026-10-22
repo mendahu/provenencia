@@ -83,3 +83,28 @@ func TestBridgeKeyString(t *testing.T) {
 		}
 	}
 }
+
+func TestCompareByOrder(t *testing.T) {
+	order := []PropertyKey{"name", "likeness", "gender"}
+	tests := []struct {
+		a, b PropertyKey
+		want int
+	}{
+		{"name", "likeness", -1},
+		{"gender", "likeness", 1},
+		{"name", "name", 0},
+		{"gender", "alpha", -1},
+		{"alpha", "gender", 1},
+		{"alpha", "beta", -1},
+		{"beta", "alpha", 1},
+	}
+	for _, tc := range tests {
+		got := CompareByOrder(order, tc.a, tc.b)
+		if (got < 0) != (tc.want < 0) || (got > 0) != (tc.want > 0) {
+			t.Errorf("CompareByOrder(%q, %q) = %d, want sign %d", tc.a, tc.b, got, tc.want)
+		}
+	}
+	if CompareByOrder(nil, "b", "a") <= 0 {
+		t.Error("with no order, keys rank by key")
+	}
+}
