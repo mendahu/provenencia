@@ -302,4 +302,84 @@ struct PromoteEvidenceDisplayTests {
         let again = L10n.Promote.spokenLikeness(source: "Funeral card", sentence: L10n.string(L10n.Promote.lineCompareLikenesses))
         #expect(same != again)
     }
+
+    // MARK: - Round 1
+
+    @Test func bridgeBetweenIgnoresKindWhenNoneIsGiven() {
+        let participation = bridge("b-p", .participation, "john", "birth")
+        let spouse = bridge("b-r", .relationship, "birth", "john")
+        let bridges = [participation, spouse]
+        #expect(PromoteEvidenceDisplay.bridge(between: "john", and: "birth", in: bridges)?.id == "b-p")
+        #expect(PromoteEvidenceDisplay.bridge(between: "john", and: "birth", kind: nil, in: bridges.reversed())?.id == "b-r")
+        #expect(PromoteEvidenceDisplay.bridge(between: "john", and: "birth", kind: .relationship, in: bridges)?.id == "b-r")
+        #expect(PromoteEvidenceDisplay.bridge(between: "john", and: "death", in: bridges) == nil)
+    }
+
+    @Test func memberBoxIsDisabledUnderANonPinnableLine() {
+        #expect(PromoteEvidenceDisplay.memberDisabled(line: line(outcome: .conflict, relation: .different)))
+        #expect(!PromoteEvidenceDisplay.memberDisabled(line: line()))
+    }
+
+    @Test func spokenLabelOfACollapsedLineCounts() {
+        let label = PromoteEvidenceDisplay.spokenLabel(
+            property: "Name", sentence: "Same name", here: "John Smith", count: 5, member: nil
+        )
+        #expect(label == "Name. Same name, 5 records. This source: John Smith.")
+    }
+
+    @Test func spokenLabelOfOneMemberNamesItsSource() {
+        let label = PromoteEvidenceDisplay.spokenLabel(
+            property: "Name", sentence: "Same name", here: "John Smith", count: 1,
+            member: PromoteEvidenceDisplay.Member(source: "Census 1851", value: "J. Smith")
+        )
+        #expect(label == "Name. Same name. This source: John Smith. Census 1851: J. Smith.")
+    }
+
+    @Test func spokenLabelWithoutASourceTitleSpeaksTheValue() {
+        for source in [nil, ""] as [String?] {
+            let label = PromoteEvidenceDisplay.spokenLabel(
+                property: "Name", sentence: "Same name", here: "John Smith", count: 1,
+                member: PromoteEvidenceDisplay.Member(source: source, value: "J. Smith")
+            )
+            #expect(label == "Name. Same name. This source: John Smith. J. Smith.")
+            #expect(PromoteEvidenceDisplay.spokenMember(PromoteEvidenceDisplay.Member(source: source, value: "J. Smith")) == "J. Smith.")
+        }
+    }
+
+    @Test func detailPartsOfOneMemberLine() {
+        let member = PromoteEvidenceDisplay.Member(source: "Census 1851", value: "J. Smith")
+        #expect(PromoteEvidenceDisplay.detail(here: "John Smith", member: member) == "This source: John Smith · Census 1851: J. Smith")
+        #expect(PromoteEvidenceDisplay.detail(here: "John Smith", member: nil) == "This source: John Smith")
+        let untitled = PromoteEvidenceDisplay.Member(source: nil, value: "J. Smith")
+        #expect(PromoteEvidenceDisplay.detail(here: "John Smith", member: untitled) == "This source: John Smith · J. Smith")
+    }
+
+    @Test func linkPrefersTheBridgeElseTheNeighbor() {
+        var named = bridge("b", .participation, "john", "birth")
+        named.endAName = "John Smith"
+        named.endBName = "Birth of John Smith"
+        named.phrase = "subject of"
+        #expect(PromoteEvidenceDisplay.linkText(bridge: named, neighborName: "Birth") == "John Smith · subject of · Birth of John Smith")
+        var noPhrase = named
+        noPhrase.phrase = ""
+        #expect(PromoteEvidenceDisplay.linkText(bridge: noPhrase, neighborName: "Birth") == "with Birth")
+        var noEnd = named
+        noEnd.endBName = ""
+        #expect(PromoteEvidenceDisplay.linkText(bridge: noEnd, neighborName: "Birth") == "with Birth")
+        #expect(PromoteEvidenceDisplay.linkText(bridge: nil, neighborName: "Birth") == "with Birth")
+        #expect(PromoteEvidenceDisplay.linkText(bridge: nil, neighborName: nil) == "with a connected record")
+    }
+
+    @Test func nothingToCompareWhenNoLineRelationshipOrLifespan() {
+        #expect(PromoteEvidenceDisplay.hasNothingToCompare(CatalogClaimEvidence()))
+        #expect(PromoteEvidenceDisplay.hasNothingToCompare(CatalogClaimEvidence(sections: [CatalogClaimEvidenceSection(propertyKey: "name", lines: [])])))
+        #expect(!PromoteEvidenceDisplay.hasNothingToCompare(CatalogClaimEvidence(sections: [CatalogClaimEvidenceSection(propertyKey: "name", lines: [line()])])))
+        #expect(!PromoteEvidenceDisplay.hasNothingToCompare(CatalogClaimEvidence(relationships: [relationship()])))
+    }
+
+    @Test func likenessMemberWithoutTitleUsesFallback() {
+        #expect(PromoteEvidenceDisplay.likenessSource(title: "Funeral card") == "Funeral card")
+        #expect(PromoteEvidenceDisplay.likenessSource(title: nil) == "a record")
+        #expect(PromoteEvidenceDisplay.likenessSource(title: "") == "a record")
+    }
 }

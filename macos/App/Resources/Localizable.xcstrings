@@ -19075,6 +19075,42 @@
         }
       }
     },
+    "promote.sheet.spokenMemberUntitled": {
+      "comment": "VoiceOver label of one record under an expanded line whose Source has no title; the argument is its value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@."
+          }
+        }
+      }
+    },
+    "promote.sheet.spokenLineMember": {
+      "comment": "VoiceOver label of an evidence line with its one record; 1 = the line, 2 = the record",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "promote.sheet.untitledRecord": {
+      "comment": "Names a likeness record on the evidence sheet when its Source has no title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a record"
+          }
+        }
+      }
+    },
     "promote.sheet.spokenRelationship": {
       "comment": "VoiceOver label of a relationship line; 1 = sentence, 2 = the connection",
       "extractionState": "manual",

@@ -249,9 +249,7 @@ final class PromoteModel {
             guard let neighbor = neighbor(neighborID) else {
                 return L10n.string(L10n.Promote.reasonVia)
             }
-            let phrase = flow.bridges.first { bridge in
-                Set([bridge.endA, bridge.endB]) == Set([row.subjectID, neighborID])
-            }?.phrase ?? ""
+            let phrase = PromoteEvidenceDisplay.bridge(between: row.subjectID, and: neighborID, in: flow.bridges)?.phrase ?? ""
             return phrase.isEmpty
                 ? L10n.Promote.viaNeighbor(neighbor: neighbor.name, ref: neighbor.shownRef)
                 : L10n.Promote.via(neighbor: neighbor.name, ref: neighbor.shownRef, role: phrase)

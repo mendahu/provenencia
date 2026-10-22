@@ -1399,21 +1399,28 @@ enum L10n {
             value: CatalogConclusionValue
         ) -> LocalizedStringResource {
             if cause == .unjudged { return lineCompareLikenesses }
-            let isName: Bool
-            let isDate: Bool
-            let isLikeness: Bool
+            let family: ValueFamily
             switch value {
-            case .name: (isName, isDate, isLikeness) = (true, false, false)
-            case .date: (isName, isDate, isLikeness) = (false, true, false)
-            case .depiction: (isName, isDate, isLikeness) = (false, false, true)
-            default: (isName, isDate, isLikeness) = (false, false, false)
+            case .name: family = .name
+            case .date: family = .date
+            case .depiction: family = .likeness
+            default: family = .other
             }
             if propertyCause == .negative || relation == .different {
-                return isDate ? lineDifferentDates : isName ? lineDifferentNames : lineDisagrees
+                switch family {
+                case .date: return lineDifferentDates
+                case .name: return lineDifferentNames
+                case .likeness, .other: return lineDisagrees
+                }
             }
             switch relation {
             case .same:
-                return isName ? lineSameName : isDate ? lineSameDate : isLikeness ? lineSameLikeness : lineSame
+                switch family {
+                case .name: return lineSameName
+                case .date: return lineSameDate
+                case .likeness: return lineSameLikeness
+                case .other: return lineSame
+                }
             case .equivalent:
                 switch cause {
                 case .fold: return lineEquivalentFold
@@ -1429,7 +1436,7 @@ enum L10n {
                 default: return lineContainsOther
                 }
             case .overlaps:
-                return isDate ? lineOverlapsDates : lineOverlapsOther
+                return family == .date ? lineOverlapsDates : lineOverlapsOther
             case .near:
                 switch cause {
                 case .spelling: return lineNearSpelling
@@ -1438,12 +1445,13 @@ enum L10n {
                 }
             case .none:
                 return notCompared
-            case .unknown, .unrecognized:
+            case .unknown, .unrecognized, .different:
+                // `.different` was answered above, with the disagreement wording.
                 return lineSimilar
-            case .different:
-                return lineDisagrees
             }
         }
+        /// Which wording a value's type picks for a line sentence.
+        private enum ValueFamily { case name, date, likeness, other }
         static let whySuggested = LocalizedStringResource("promote.sheet.whySuggested", defaultValue: "Why this was suggested", comment: "Group name for the lines under the evidence sheet title: the Updated caption and the contested line")
         static func whySuggestedSpoken(assessment: String, reason: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.whySuggestedSpoken", defaultValue: "Why this was suggested: %1$@, %2$@", comment: "VoiceOver label of the band and Contested marks in the evidence sheet title; 1 = band, 2 = reason"), assessment, reason)
@@ -1532,6 +1540,13 @@ enum L10n {
         static func spokenMember(source: String, value: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.spokenMember", defaultValue: "%1$@: %2$@.", comment: "VoiceOver label of one record under an expanded line; 1 = its Source, 2 = its value"), source, value)
         }
+        static func spokenMemberUntitled(value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenMemberUntitled", defaultValue: "%@.", comment: "VoiceOver label of one record under an expanded line whose Source has no title; the argument is its value"), value)
+        }
+        static func spokenLineMember(line: String, member: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenLineMember", defaultValue: "%1$@ %2$@", comment: "VoiceOver label of an evidence line with its one record; 1 = the line, 2 = the record"), line, member)
+        }
+        static let untitledRecord = LocalizedStringResource("promote.sheet.untitledRecord", defaultValue: "a record", comment: "Names a likeness record on the evidence sheet when its Source has no title")
         static func spokenRelationship(sentence: String, link: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.spokenRelationship", defaultValue: "%1$@. %2$@.", comment: "VoiceOver label of a relationship line; 1 = sentence, 2 = the connection"), sentence, link)
         }
