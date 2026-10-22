@@ -373,6 +373,8 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			{"SeededSexAtBirthTerm", "sex_at_birth"},
 			{"SeededRoleTerm", "role"},
 			{"SeededEventTypeTerm", "event_type"},
+			{"SeededRelationshipTypeTerm", "relationship_type"},
+			{"SeededPlaceRelationshipTypeTerm", "place_relationship_type"},
 		} {
 			keys := matches(staticLet, swiftEnumBody(t, swiftVocabulary, tc.enum))
 			if len(keys) == 0 {

@@ -301,19 +301,52 @@ enum SeededSexAtBirthTerm {
     static let male = "male"
 }
 
-/// Seeded `role` terms the connection sentences word by name (`subjectvocab` seed).
+/// Seeded `role` terms (`subjectvocab` seed).
 enum SeededRoleTerm {
     static let subject = "subject"
+    static let father = "father"
+    static let mother = "mother"
+    static let spouse = "spouse"
+    static let child = "child"
+    static let witness = "witness"
+    static let informant = "informant"
+    static let pallbearer = "pallbearer"
 }
 
-/// Seeded `event_type` terms the connection sentences word by name.
+/// Seeded `event_type` terms.
 enum SeededEventTypeTerm {
     static let birth = "birth"
     static let death = "death"
-    static let baptism = "baptism"
     static let marriage = "marriage"
-    static let funeral = "funeral"
+    static let engagement = "engagement"
+    static let baptism = "baptism"
     static let burial = "burial"
+    static let funeral = "funeral"
+    static let census = "census"
+    static let residence = "residence"
+    static let migration = "migration"
+    static let travel = "travel"
+}
+
+/// Seeded `relationship_type` terms.
+enum SeededRelationshipTypeTerm {
+    static let spouse = "spouse"
+    static let sibling = "sibling"
+    static let cousin = "cousin"
+    static let parent = "parent"
+    static let child = "child"
+    static let grandparent = "grandparent"
+    static let grandchild = "grandchild"
+    static let pibling = "pibling"
+    static let nibling = "nibling"
+    static let guardian = "guardian"
+    static let ward = "ward"
+}
+
+/// Seeded `place_relationship_type` terms.
+enum SeededPlaceRelationshipTypeTerm {
+    static let partOf = "part_of"
+    static let succeededBy = "succeeded_by"
 }
 
 /// A DateValue qualifier (`datevalue.Qualifier*`).

@@ -2449,38 +2449,38 @@ enum L10n {
     enum PropertyTerm {
         static func resource(propertyKey: String, termKey: String) -> LocalizedStringResource? {
             switch (propertyKey, termKey) {
-            case ("event_type", "birth"): return eventTypeBirth
-            case ("event_type", "death"): return eventTypeDeath
-            case ("event_type", "marriage"): return eventTypeMarriage
-            case ("event_type", "engagement"): return eventTypeEngagement
-            case ("event_type", "baptism"): return eventTypeBaptism
-            case ("event_type", "burial"): return eventTypeBurial
-            case ("event_type", "funeral"): return eventTypeFuneral
-            case ("event_type", "census"): return eventTypeCensus
-            case ("event_type", "residence"): return eventTypeResidence
-            case ("event_type", "migration"): return eventTypeMigration
-            case ("event_type", "travel"): return eventTypeTravel
-            case ("role", "subject"): return roleSubject
-            case ("role", "father"): return roleFather
-            case ("role", "mother"): return roleMother
-            case ("role", "spouse"): return roleSpouse
-            case ("role", "child"): return roleChild
-            case ("role", "witness"): return roleWitness
-            case ("role", "informant"): return roleInformant
-            case ("role", "pallbearer"): return rolePallbearer
-            case ("relationship_type", "spouse"): return relationshipSpouse
-            case ("relationship_type", "sibling"): return relationshipSibling
-            case ("relationship_type", "cousin"): return relationshipCousin
-            case ("relationship_type", "parent"): return relationshipParent
-            case ("relationship_type", "child"): return relationshipChild
-            case ("relationship_type", "grandparent"): return relationshipGrandparent
-            case ("relationship_type", "grandchild"): return relationshipGrandchild
-            case ("relationship_type", "pibling"): return relationshipPibling
-            case ("relationship_type", "nibling"): return relationshipNibling
-            case ("relationship_type", "guardian"): return relationshipGuardian
-            case ("relationship_type", "ward"): return relationshipWard
-            case ("place_relationship_type", "part_of"): return placeRelationshipPartOf
-            case ("place_relationship_type", "succeeded_by"): return placeRelationshipSucceededBy
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.birth): return eventTypeBirth
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.death): return eventTypeDeath
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.marriage): return eventTypeMarriage
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.engagement): return eventTypeEngagement
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.baptism): return eventTypeBaptism
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.burial): return eventTypeBurial
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.funeral): return eventTypeFuneral
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.census): return eventTypeCensus
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.residence): return eventTypeResidence
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.migration): return eventTypeMigration
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.travel): return eventTypeTravel
+            case (SeededPropertyKey.role, SeededRoleTerm.subject): return roleSubject
+            case (SeededPropertyKey.role, SeededRoleTerm.father): return roleFather
+            case (SeededPropertyKey.role, SeededRoleTerm.mother): return roleMother
+            case (SeededPropertyKey.role, SeededRoleTerm.spouse): return roleSpouse
+            case (SeededPropertyKey.role, SeededRoleTerm.child): return roleChild
+            case (SeededPropertyKey.role, SeededRoleTerm.witness): return roleWitness
+            case (SeededPropertyKey.role, SeededRoleTerm.informant): return roleInformant
+            case (SeededPropertyKey.role, SeededRoleTerm.pallbearer): return rolePallbearer
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.spouse): return relationshipSpouse
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.sibling): return relationshipSibling
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.cousin): return relationshipCousin
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.parent): return relationshipParent
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.child): return relationshipChild
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.grandparent): return relationshipGrandparent
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.grandchild): return relationshipGrandchild
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.pibling): return relationshipPibling
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.nibling): return relationshipNibling
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.guardian): return relationshipGuardian
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.ward): return relationshipWard
+            case (SeededPropertyKey.placeRelationshipType, SeededPlaceRelationshipTypeTerm.partOf): return placeRelationshipPartOf
+            case (SeededPropertyKey.placeRelationshipType, SeededPlaceRelationshipTypeTerm.succeededBy): return placeRelationshipSucceededBy
             default: return nil
             }
         }
