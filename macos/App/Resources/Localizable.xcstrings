@@ -13,6 +13,30 @@
         }
       }
     },
+    "designSystem.field.optionalMarker": {
+      "comment": "Marks an optional PVField, shown muted beside its label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(optional)"
+          }
+        }
+      }
+    },
+    "designSystem.checkbox.partlyChecked": {
+      "comment": "Spoken value of a PVCheckbox that is checked for some of what it covers, not all",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "partly checked"
+          }
+        }
+      }
+    },
     "designSystem.formDialog.discardConfirm": {
       "comment": "Confirms discarding a form sheet's edits after an outside click",
       "extractionState": "manual",

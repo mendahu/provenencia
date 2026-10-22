@@ -365,6 +365,7 @@
 		B9110000000000000000000C /* PromoteModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000B /* PromoteModelTests.swift */; };
 		B9110000000000000000000E /* PromoteFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000D /* PromoteFlow.swift */; };
 		B91100000000000000000010 /* PromoteFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000F /* PromoteFlowTests.swift */; };
+		C112007CF5D40430AF417EA9 /* PromoteEvidenceDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */; };
 		B02746CAC03F94127373BB92 /* DateRowDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B052AEDEE88EFC9ED8413469 /* DateRowDisplay.swift */; };
 		B0F71D26711A163E3B415FCB /* DerivedPlace.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0628D2BFA20C5351EA2685B /* DerivedPlace.swift */; };
 		B071F1D64BED98AE2965E8AD /* PersonLifeDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B066DC6442EFA8875D71F9AE /* PersonLifeDisplay.swift */; };
@@ -769,6 +770,7 @@
 		B9110000000000000000000B /* PromoteModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteModelTests.swift; sourceTree = "<group>"; };
 		B9110000000000000000000D /* PromoteFlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlow.swift; sourceTree = "<group>"; };
 		B9110000000000000000000F /* PromoteFlowTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlowTests.swift; sourceTree = "<group>"; };
+		C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceDisplayTests.swift; sourceTree = "<group>"; };
 		B052AEDEE88EFC9ED8413469 /* DateRowDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateRowDisplay.swift; sourceTree = "<group>"; };
 		B0628D2BFA20C5351EA2685B /* DerivedPlace.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DerivedPlace.swift; sourceTree = "<group>"; };
 		B066DC6442EFA8875D71F9AE /* PersonLifeDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonLifeDisplay.swift; sourceTree = "<group>"; };
@@ -1393,6 +1395,7 @@
 				AA0000000000000000000681 /* PVTextAreaTests.swift */,
 				B9110000000000000000000B /* PromoteModelTests.swift */,
 				B9110000000000000000000F /* PromoteFlowTests.swift */,
+				C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */,
 				B0D89A265AAED569EA0CA31E /* DateRowDisplayTests.swift */,
 				B042B09EC818DE35F967C981 /* DerivedPlaceTests.swift */,
 			);
@@ -2324,6 +2327,7 @@
 				A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */,
 				B9110000000000000000000C /* PromoteModelTests.swift in Sources */,
 				B91100000000000000000010 /* PromoteFlowTests.swift in Sources */,
+				C112007CF5D40430AF417EA9 /* PromoteEvidenceDisplayTests.swift in Sources */,
 				B0E27559D6CFFEBA2093C436 /* DateRowDisplayTests.swift in Sources */,
 				B0E8631619214033F0948729 /* DerivedPlaceTests.swift in Sources */,
 			);

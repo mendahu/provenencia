@@ -783,7 +783,7 @@ private struct PropertiesCreateHost: View {
             PVField(
                 label: L10n.Properties.createLabel,
                 hint: L10n.Properties.createLabelHint,
-                required: true
+                marker: .required
             ) {
                 PVInput(
                     text: Binding(
@@ -826,7 +826,7 @@ private struct PropertiesCreateHost: View {
             PVField(
                 label: L10n.Properties.createValueType,
                 hint: L10n.Properties.createValueTypeHint,
-                required: true
+                marker: .required
             ) {
                 PVChipGroup(style: .segmented) {
                     ForEach(SubjectPropertyValueType.researcherCreatable, id: \.self) { vt in

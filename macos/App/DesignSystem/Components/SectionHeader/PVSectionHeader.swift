@@ -6,14 +6,14 @@ import SwiftUI
 /// component (the kit has no SectionHeader). Use on any detail surface
 /// that stacks titled sections (Sources, later People / Facts / etc.).
 /// Call sites own `.accessibilityIdentifier`.
-struct PVSectionHeader<Aside: View, Actions: View>: View {
-    private let title: LocalizedStringResource
+struct PVSectionHeader<Title: PVCopy, Aside: View, Actions: View>: View {
+    private let title: Title
     private let meta: String?
     private let aside: Aside
     private let actions: Actions
 
     init(
-        title: LocalizedStringResource,
+        title: Title,
         meta: String? = nil,
         @ViewBuilder aside: () -> Aside = { EmptyView() },
         @ViewBuilder actions: () -> Actions = { EmptyView() }
@@ -26,7 +26,7 @@ struct PVSectionHeader<Aside: View, Actions: View>: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
-            Text(title)
+            title.pvText
                 .font(PVFont.display(size: PVTypeScale.h3, weight: PVFontWeight.semibold))
                 .foregroundStyle(PVColor.textDisplay)
             if let meta {
@@ -61,6 +61,12 @@ struct PVSectionHeader<Aside: View, Actions: View>: View {
     }
     .padding(PVSpacing.space9)
     .background(PVColor.surfacePage)
+}
+
+#Preview("Title from a formatted String") {
+    PVSectionHeader(title: "What's the evidence that this is PER-7QH3D John Smith?" as String, meta: "4 checked")
+        .padding(PVSpacing.space9)
+        .background(PVColor.surfacePage)
 }
 
 #Preview("Aside") {

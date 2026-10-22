@@ -96,6 +96,16 @@ enum L10n {
             defaultValue: "*",
             comment: "Marks a required PVField as required, shown beside its label"
         )
+        static let optionalMarker = LocalizedStringResource(
+            "designSystem.field.optionalMarker",
+            defaultValue: "(optional)",
+            comment: "Marks an optional PVField, shown muted beside its label"
+        )
+        static let checkboxPartlyChecked = LocalizedStringResource(
+            "designSystem.checkbox.partlyChecked",
+            defaultValue: "partly checked",
+            comment: "Spoken value of a PVCheckbox that is checked for some of what it covers, not all"
+        )
 
         static let formDialogDiscardTitle = LocalizedStringResource(
             "designSystem.formDialog.discardTitle",

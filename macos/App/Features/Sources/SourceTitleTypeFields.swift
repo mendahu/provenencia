@@ -18,7 +18,7 @@ struct SourceTitleTypeFields: View {
             PVField(
                 label: L10n.Sources.formTitle,
                 error: titleError,
-                required: true
+                marker: .required
             ) {
                 PVInput(
                     text: Binding(
@@ -37,7 +37,7 @@ struct SourceTitleTypeFields: View {
             PVField(
                 label: L10n.Sources.formType,
                 error: typeError,
-                required: true
+                marker: .required
             ) {
                 PVComboBox(
                     selection: Binding(

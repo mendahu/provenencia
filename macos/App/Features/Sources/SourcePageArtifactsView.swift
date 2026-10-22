@@ -60,7 +60,7 @@ struct SourcePageArtifactsView: View {
                 label: L10n.Sources.artifactLabel,
                 hint: L10n.Sources.artifactLabelHint,
                 error: model.artifacts.draftLabelError,
-                required: true
+                marker: .required
             ) {
                 PVInput(
                     text: $model.artifacts.draft.label,
@@ -271,7 +271,7 @@ struct SourcePageArtifactsView: View {
             PVField(
                 label: L10n.Sources.artifactLabel,
                 error: model.artifacts.cardLabelError(id: art.id),
-                required: true
+                marker: .required
             ) {
                 PVInput(
                     text: labelBinding(art),

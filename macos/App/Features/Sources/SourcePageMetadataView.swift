@@ -90,7 +90,7 @@ struct SourcePageMetadataView: View {
                 label: L10n.Sources.metadataField,
                 hint: L10n.Sources.metadataFieldHint,
                 error: model.metadata.addFieldError,
-                required: true
+                marker: .required
             ) {
                 PVComboBox(
                     selection: $model.metadata.addFieldID,
@@ -109,7 +109,7 @@ struct SourcePageMetadataView: View {
                 label: L10n.Sources.metadataValue,
                 hint: L10n.Sources.metadataValueHint,
                 error: model.metadata.addValueError,
-                required: true
+                marker: .required
             ) {
             PVInput(
                 text: $model.metadata.addValue,

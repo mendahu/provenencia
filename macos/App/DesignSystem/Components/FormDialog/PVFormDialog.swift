@@ -368,11 +368,11 @@ private final class PVFormDialogOutsideClickView: NSView {
         onCancel: {}
     ) {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
-            PVField(label: "Type", required: true) {
+            PVField(label: "Type", marker: .required) {
                 Text("Photograph")
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            PVField(label: "Title", required: true) {
+            PVField(label: "Title", marker: .required) {
                 PVInput(text: .constant(""))
             }
         }
