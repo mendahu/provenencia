@@ -133,6 +133,10 @@ func TestConclusionValueProtoCoversEveryKind(t *testing.T) {
 			tm := v.GetTerm()
 			return tm.GetId() == database.UUIDString(term) && tm.GetKey() == "male" && tm.GetLabel() == "Male"
 		}},
+		{"term without an id", conclusiondetails.Value{TermKey: "male", TermLabel: "Male"}, func(v *engine.ConclusionValue) bool {
+			tm := v.GetTerm()
+			return tm != nil && tm.GetId() == "" && tm.GetKey() == "male" && tm.GetLabel() == "Male"
+		}},
 		{"date", conclusiondetails.Value{Date: &datevalue.Value{Kind: "point", Calendar: "gregorian", StartYear: &year}}, func(v *engine.ConclusionValue) bool {
 			return v.GetDate().GetStartYear() == 1890
 		}},

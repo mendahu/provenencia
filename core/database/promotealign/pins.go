@@ -8,19 +8,18 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/graphalign"
-	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // LinePinID is the id of one member Observation a line offers to pin: the
 // incoming Observation and the member's.
-func LinePinID(incoming, observation []byte) string {
-	return "l:" + database.UUIDString(incoming) + ":" + database.UUIDString(observation)
+func LinePinID(l claimevidence.Line, p claimevidence.Pin) string {
+	return "l:" + database.UUIDString(l.Incoming.Ref) + ":" + database.UUIDString(p.Observation)
 }
 
 // BundlePinID is the id of one member's side of a relationship: the neighbor,
 // the link's key and the member's bridge Subject.
-func BundlePinID(neighbor []byte, key vocabkey.BridgeKey, bridge []byte) string {
-	return "b:" + database.UUIDString(neighbor) + ":" + key.String() + ":" + database.UUIDString(bridge)
+func BundlePinID(rel claimevidence.Relationship, b claimevidence.Bundle) string {
+	return "b:" + database.UUIDString(rel.Neighbor) + ":" + rel.Key.String() + ":" + database.UUIDString(b.Bridge)
 }
 
 // PinOffer is one pin the evidence offers: the sheet shows it, Checked says
@@ -46,7 +45,7 @@ func PinOffers(e claimevidence.Evidence) []PinOffer {
 				}
 				for _, p := range l.Members {
 					out = append(out, PinOffer{
-						ID:      LinePinID(l.Incoming.Ref, p.Observation),
+						ID:      LinePinID(l, p),
 						Checked: l.Checked,
 						Set:     promote.PinSet{Member: p.Subject, Observations: [][]byte{l.Incoming.Ref, p.Observation}},
 					})
@@ -59,7 +58,7 @@ func PinOffers(e claimevidence.Evidence) []PinOffer {
 		if rel.Pinnable {
 			for _, b := range rel.Members {
 				out = append(out, PinOffer{
-					ID:      BundlePinID(rel.Neighbor, rel.Key, b.Bridge),
+					ID:      BundlePinID(rel, b),
 					Checked: rel.Checked,
 					Set:     promote.PinSet{Member: b.Member, Observations: append(slices.Clone(rel.Incoming), b.Observations...)},
 				})
@@ -89,10 +88,12 @@ func ResolvePins(c *database.Catalog, sourceID []byte, rows []ApplyRow) ([]promo
 	var (
 		in    inputs
 		r     *evidenceReader
+		sg    graphcache.SourceGraph
 		ready bool
 	)
 	for i, row := range rows {
 		out[i] = row.BatchRow
+		out[i].PinSets = nil
 		if len(row.PinIDs) > 0 && (row.DefaultPins || row.Target != promote.TargetHandle) {
 			return nil, promote.ErrInvalid
 		}
@@ -107,14 +108,12 @@ func ResolvePins(c *database.Catalog, sourceID []byte, rows []ApplyRow) ([]promo
 			if r, err = newEvidenceReader(c.Graph(), in); err != nil {
 				return nil, err
 			}
+			if sg, err = c.Graph().Source(sourceID); err != nil {
+				return nil, err
+			}
 			ready = true
 		}
-		sg, err := c.Graph().Source(sourceID)
-		if err != nil {
-			return nil, err
-		}
 		if slices.ContainsFunc(sg.Members, func(m graphcache.SourceMember) bool { return string(m.SubjectID) == string(row.SubjectID) }) {
-			out[i].PinSets = nil
 			continue
 		}
 		req := EvidenceRequest{SourceID: sourceID, SubjectID: row.SubjectID, HandleID: row.EntityID}
@@ -129,7 +128,6 @@ func ResolvePins(c *database.Catalog, sourceID []byte, rows []ApplyRow) ([]promo
 		if err != nil {
 			return nil, err
 		}
-		out[i].PinSets = nil
 		chosen := map[string]bool{}
 		for _, id := range row.PinIDs {
 			chosen[id] = true

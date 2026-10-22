@@ -2,13 +2,14 @@ package handlers
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/claimevidence"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/propertymeta"
-	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
@@ -79,7 +80,7 @@ func claimEvidenceProto(e claimevidence.Evidence, values promotealign.EvidenceVa
 		}
 		for _, b := range rel.Members {
 			r.Bundles = append(r.Bundles, &engine.PromoteClaimEvidenceBundle{
-				Id:              promotealign.BundlePinID(rel.Neighbor, rel.Key, b.Bridge),
+				Id:              promotealign.BundlePinID(rel, b),
 				MemberSubjectId: database.UUIDString(b.Member),
 				SourceId:        database.UUIDString(b.Source),
 			})
@@ -93,19 +94,9 @@ func claimEvidenceProto(e claimevidence.Evidence, values promotealign.EvidenceVa
 		out.Sources = append(out.Sources, &engine.PromoteClaimEvidenceSource{Id: database.UUIDString([]byte(id)), Title: title})
 	}
 	slices.SortFunc(out.Sources, func(a, b *engine.PromoteClaimEvidenceSource) int {
-		return compareStrings(a.GetId(), b.GetId())
+		return strings.Compare(a.GetId(), b.GetId())
 	})
 	return out
-}
-
-func compareStrings(a, b string) int {
-	switch {
-	case a < b:
-		return -1
-	case a > b:
-		return 1
-	}
-	return 0
 }
 
 // evidenceSectionsProto maps sections whose values belong to a Subject of
@@ -130,7 +121,7 @@ func evidenceSectionsProto(kind vocabkey.SubjectType, sections []claimevidence.S
 			}
 			for _, p := range l.Members {
 				line.Members = append(line.Members, &engine.PromoteClaimEvidencePin{
-					Id:                  promotealign.LinePinID(l.Incoming.Ref, p.Observation),
+					Id:                  promotealign.LinePinID(l, p),
 					MemberSubjectId:     database.UUIDString(p.Subject),
 					MemberObservationId: database.UUIDString(p.Observation),
 					SourceId:            database.UUIDString(p.Source),
@@ -147,23 +138,18 @@ func evidenceSectionsProto(kind vocabkey.SubjectType, sections []claimevidence.S
 // evidenceValueProto is a sheet value as a ConclusionValue, the one wire shape
 // for a typed value. A term has no id here: its key and label name it.
 func evidenceValueProto(v promotealign.EvidenceValue) *engine.ConclusionValue {
+	var d conclusiondetails.Value
 	switch v.Type {
 	case propertymeta.ValueTypeName:
-		if v.Value.Name != nil {
-			return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Name{Name: valuecodec.NameToProto(*v.Value.Name)}}
-		}
+		d.Name = v.Value.Name
 	case propertymeta.ValueTypeDate:
-		if v.Value.Date != nil {
-			return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Date{Date: valuecodec.DateToProto(*v.Value.Date)}}
-		}
+		d.Date = v.Value.Date
 	case propertymeta.ValueTypeTerm:
-		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Term{Term: &engine.ConclusionTerm{
-			Key: v.Value.Term, Label: v.TermLabel,
-		}}}
+		d.TermKey, d.TermLabel = v.Value.Term, v.TermLabel
 	case propertymeta.ValueTypeInteger:
-		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Integer{Integer: v.Value.Integer}}
+		d.HasInteger, d.Integer = true, v.Value.Integer
 	case propertymeta.ValueTypeText:
-		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Text{Text: v.Value.Text}}
+		d.HasText, d.Text = true, v.Value.Text
 	}
-	return &engine.ConclusionValue{}
+	return conclusionValueProto(d)
 }

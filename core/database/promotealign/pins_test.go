@@ -77,12 +77,19 @@ func TestResolvePins(t *testing.T) {
 			t.Fatalf("no offer for member %x", m.ID)
 		}
 	}
-	other := promotealign.LinePinID(incoming.ID, incoming.ID) // an id nothing offers
+	other := offers[0].ID + "x" // an id nothing offers
 
 	t.Run("a row never opened pins every checked offer", func(t *testing.T) {
 		got := f.resolve(srcB, handleRow(incoming, handle, true))
 		if !reflect.DeepEqual(got[0].PinSets, sets(offers...)) {
 			t.Fatalf("sets = %+v, want %+v", got[0].PinSets, sets(offers...))
+		}
+	})
+	t.Run("a caller's pin sets are dropped", func(t *testing.T) {
+		row := handleRow(incoming, handle, false)
+		row.PinSets = []promote.PinSet{offers[0].Set}
+		if got := f.resolve(srcB, row); len(got[0].PinSets) != 0 {
+			t.Fatalf("sets = %+v", got[0].PinSets)
 		}
 	})
 	t.Run("an opened row pins the ids it kept", func(t *testing.T) {
@@ -114,7 +121,7 @@ func TestResolvePins(t *testing.T) {
 		if line.Outcome != "conflict" || line.Pinnable {
 			t.Fatalf("line = %+v", line)
 		}
-		id := promotealign.LinePinID(line.Incoming.Ref, line.Members[0].Observation)
+		id := promotealign.LinePinID(line, line.Members[0])
 		for _, row := range []promotealign.ApplyRow{handleRow(denies, h, true), handleRow(denies, h, false, id)} {
 			if got := g.resolve(src, row); len(got[0].PinSets) != 0 {
 				t.Fatalf("sets = %+v", got[0].PinSets)
@@ -155,7 +162,7 @@ func TestResolvePinsBundlesARelationship(t *testing.T) {
 		t.Fatalf("relationships = %d", len(e.Relationships))
 	}
 	rel := e.Relationships[0]
-	bundleID := promotealign.BundlePinID(rel.Neighbor, rel.Key, rel.Members[0].Bridge)
+	bundleID := promotealign.BundlePinID(rel, rel.Members[0])
 	var bundle, date *promotealign.PinOffer
 	for i, o := range offers {
 		if !o.Checked {
