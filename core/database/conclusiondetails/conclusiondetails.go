@@ -261,13 +261,7 @@ func loadProperties(g *graphcache.Graph, q Querier, entityID, subjectTypeID []by
 	for _, p := range v.Properties {
 		props[string(p.ID)] = p
 	}
-	var order []vocabkey.PropertyKey
-	for _, t := range v.Types {
-		if string(t.ID) == string(subjectTypeID) {
-			order = v.BindingOrder()[vocabkey.SubjectType(t.Key)]
-			break
-		}
-	}
+	order := v.TypeOrder(subjectTypeID)
 	rows, err := q.Query(sqlPropertyIDs, entityID)
 	if err != nil {
 		return nil, nil, err

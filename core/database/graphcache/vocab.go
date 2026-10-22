@@ -24,13 +24,25 @@ type VocabBinding struct {
 	SortOrder          int
 }
 
-// BindingOrder returns, per subject type key, its bound property keys in
-// binding order: by SortOrder, then key.
+// BindingOrder returns, per provenencia subject type key, its bound property
+// keys in binding order. Types of other origins are left out: a key is only
+// unique within an origin.
 func (v Vocabulary) BindingOrder() map[vocabkey.SubjectType][]vocabkey.PropertyKey {
-	typeKey := make(map[string]vocabkey.SubjectType, len(v.Types))
+	out := map[vocabkey.SubjectType][]vocabkey.PropertyKey{}
 	for _, t := range v.Types {
-		typeKey[string(t.ID)] = vocabkey.SubjectType(t.Key)
+		if t.Origin != vocabkey.OriginProvenencia {
+			continue
+		}
+		if order := v.TypeOrder(t.ID); len(order) > 0 {
+			out[vocabkey.SubjectType(t.Key)] = order
+		}
 	}
+	return out
+}
+
+// TypeOrder returns the property keys bound to one subject type, by SortOrder,
+// then key.
+func (v Vocabulary) TypeOrder(typeID []byte) []vocabkey.PropertyKey {
 	propKey := make(map[string]vocabkey.PropertyKey, len(v.Properties))
 	for _, p := range v.Properties {
 		propKey[string(p.ID)] = vocabkey.PropertyKey(p.Key)
@@ -39,30 +51,26 @@ func (v Vocabulary) BindingOrder() map[vocabkey.SubjectType][]vocabkey.PropertyK
 		key   vocabkey.PropertyKey
 		order int
 	}
-	by := map[vocabkey.SubjectType][]bound{}
+	var bs []bound
 	for _, b := range v.Bindings {
-		tk, ok := typeKey[string(b.TypeID)]
-		pk, ok2 := propKey[string(b.PropertyID)]
-		if !ok || !ok2 {
+		if string(b.TypeID) != string(typeID) {
 			continue
 		}
-		by[tk] = append(by[tk], bound{pk, b.SortOrder})
-	}
-	out := make(map[vocabkey.SubjectType][]vocabkey.PropertyKey, len(by))
-	for tk, bs := range by {
-		sort.SliceStable(bs, func(i, j int) bool {
-			if bs[i].order != bs[j].order {
-				return bs[i].order < bs[j].order
-			}
-			return bs[i].key < bs[j].key
-		})
-		keys := make([]vocabkey.PropertyKey, len(bs))
-		for i, b := range bs {
-			keys[i] = b.key
+		if pk, ok := propKey[string(b.PropertyID)]; ok {
+			bs = append(bs, bound{pk, b.SortOrder})
 		}
-		out[tk] = keys
 	}
-	return out
+	sort.SliceStable(bs, func(i, j int) bool {
+		if bs[i].order != bs[j].order {
+			return bs[i].order < bs[j].order
+		}
+		return bs[i].key < bs[j].key
+	})
+	keys := make([]vocabkey.PropertyKey, len(bs))
+	for i, b := range bs {
+		keys[i] = b.key
+	}
+	return keys
 }
 
 // VocabProperty is one properties row.
