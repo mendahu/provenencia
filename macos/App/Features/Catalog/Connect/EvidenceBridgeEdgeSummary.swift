@@ -7,7 +7,8 @@ enum EvidenceBridgeEdgeSummary {
     static func phrase(for placed: SourceGraphPlacedBridge) -> String {
         ConnectionSentenceRegistry.phrase(
             kind: placed.kind,
-            term: termDisplay(kind: placed.kind, in: placed.observations)
+            term: termDisplay(kind: placed.kind, in: placed.observations),
+            termKey: termKey(kind: placed.kind, in: placed.observations)
         )
     }
 
@@ -19,13 +20,11 @@ enum EvidenceBridgeEdgeSummary {
         orders: NameFormatOrders = NameFormatOrders()
     ) -> String {
         let resolved = snapshot.bridges.first(where: { $0.id == bridge.id }) ?? bridge
-        let endpointA = noun(
-            subjectID: bridge.endpointAID ?? resolved.endpointAID,
-            snapshot: snapshot,
-            orders: orders
-        )
+        let endpointAID = bridge.endpointAID ?? resolved.endpointAID
+        let endpointBID = bridge.endpointBID ?? resolved.endpointBID
+        let endpointA = noun(subjectID: endpointAID, snapshot: snapshot, orders: orders)
         let endpointB = noun(
-            subjectID: bridge.endpointBID ?? resolved.endpointBID,
+            subjectID: endpointBID,
             snapshot: snapshot,
             orders: orders
         )
@@ -40,12 +39,8 @@ enum EvidenceBridgeEdgeSummary {
                 endpointB: endpointB,
                 term: term,
                 termKey: termKey(kind: bridge.kind, in: bridge.observations),
-                eventType: eventTypeKey(
-                    subjectID: bridge.kind == .participation
-                        ? (bridge.endpointBID ?? resolved.endpointBID)
-                        : nil,
-                    snapshot: snapshot
-                )
+                eventType: eventTypeKey(subjectID: endpointAID, snapshot: snapshot)
+                    ?? eventTypeKey(subjectID: endpointBID, snapshot: snapshot)
             ),
             fallback: wholeNameFallback(for: bridge)
         )

@@ -3823,7 +3823,7 @@
       }
     },
     "evidenceGraph.bridge.sentence.birthSubject": {
-      "comment": "Connection sentence for a person who is the subject of a birth; arguments are the person",
+      "comment": "Connection sentence for a person who is the subject of a birth; the argument is the person",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3835,7 +3835,7 @@
       }
     },
     "evidenceGraph.bridge.sentence.deathSubject": {
-      "comment": "Connection sentence for a person who is the subject of a death; arguments are the person",
+      "comment": "Connection sentence for a person who is the subject of a death; the argument is the person",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3847,7 +3847,7 @@
       }
     },
     "evidenceGraph.bridge.sentence.baptismSubject": {
-      "comment": "Connection sentence for a person who is the subject of a baptism; arguments are the person",
+      "comment": "Connection sentence for a person who is the subject of a baptism; the argument is the person",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3883,7 +3883,7 @@
       }
     },
     "evidenceGraph.bridge.sentence.burialSubject": {
-      "comment": "Connection sentence for a person who is the subject of a burial; arguments are the person",
+      "comment": "Connection sentence for a person who is the subject of a burial; the argument is the person",
       "extractionState": "manual",
       "localizations": {
         "en": {

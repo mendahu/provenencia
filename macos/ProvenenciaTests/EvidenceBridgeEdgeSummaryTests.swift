@@ -217,6 +217,49 @@ struct EvidenceBridgeEdgeSummaryTests {
         )
     }
 
+    private func titledEventSentence(eventType: String, title: String) -> String {
+        var role = observation(propertyKey: "role", valueText: "Subject", valueType: "term")
+        role.valueTermKey = "subject"
+        var typeObservation = identityObservation(
+            subjectID: "e1", propertyKey: "event_type", valueText: eventType.capitalized
+        )
+        typeObservation.valueTermKey = eventType
+        let placed = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueSubjectID: "p1"),
+            observation(propertyKey: "event", valueSubjectID: "e1"),
+            role,
+        ])
+        var event = primary(
+            id: "e1", kind: .event, label: "Working", ref: "CEV-1", observations: [typeObservation]
+        )
+        event.eventTitle = CatalogEventTitle(rule: .label, label: title)
+        let snap = snapshot(bridge: placed, subjects: [
+            primary(
+                id: "p1",
+                kind: .person,
+                label: "Don Smith",
+                ref: "CPR-1",
+                observations: [identityObservation(subjectID: "p1", propertyKey: "name", valueText: "Don Smith")]
+            ),
+            event,
+        ])
+        return EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap)
+    }
+
+    @Test func aMarriageReadsWithItsTitle() {
+        #expect(
+            titledEventSentence(eventType: "marriage", title: "Marriage of Don Smith and Marion Brown")
+                == "Don Smith married (Marriage of Don Smith and Marion Brown)"
+        )
+    }
+
+    @Test func aFuneralReadsWithItsTitle() {
+        #expect(
+            titledEventSentence(eventType: "funeral", title: "Funeral of Don Smith")
+                == "Don Smith's funeral (Funeral of Don Smith)"
+        )
+    }
+
     @Test func missingEndpointUsesStoredLabel() {
         let placed = bridge(
             kind: .participation,
