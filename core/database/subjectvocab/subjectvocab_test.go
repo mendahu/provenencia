@@ -432,7 +432,7 @@ func TestInstallSeedsEngagementTravelInterestsAndGender(t *testing.T) {
 			t.Fatalf("%s binding locked", b.Property.Key)
 		}
 	}
-	if sortByKey["gender"] != 2 || sortByKey["interests"] != 3 {
+	if sortByKey["gender"] != 3 || sortByKey["interests"] != 4 || sortByKey["likeness"] != 1 {
 		t.Fatalf("person sort orders %v", sortByKey)
 	}
 
@@ -486,7 +486,7 @@ func TestInstallSeedsLikeness(t *testing.T) {
 			sort = b.SortOrder
 		}
 	}
-	if sort != 4 {
+	if sort != 1 {
 		t.Fatalf("likeness person sort order %d", sort)
 	}
 }

@@ -1,12 +1,21 @@
 package graphcache
 
-// Vocabulary is the catalog's properties, terms, and subject types.
+// Vocabulary is the catalog's properties, terms, subject types, and the
+// properties each type binds, in binding order.
 // A vocabulary write drops it. Structure drops the whole graph, which
 // drops this with it.
 type Vocabulary struct {
 	Properties []VocabProperty
 	Terms      []VocabTerm
 	Types      []VocabType
+	Bindings   []VocabBinding
+}
+
+// VocabBinding is one subject_type_properties row: a property bound to a
+// subject type at SortOrder.
+type VocabBinding struct {
+	TypeID, PropertyID []byte
+	SortOrder          int
 }
 
 // VocabProperty is one properties row.
@@ -127,5 +136,24 @@ func (g *Graph) loadVocabulary() (Vocabulary, error) {
 		return Vocabulary{}, err
 	}
 	_ = terms.Close()
+
+	bindings, err := g.query(`SELECT subject_type_id, property_id, sort_order FROM subject_type_properties ORDER BY subject_type_id, sort_order, property_id`)
+	if err != nil {
+		return Vocabulary{}, err
+	}
+	for bindings.Next() {
+		var b VocabBinding
+		if err := bindings.Scan(&b.TypeID, &b.PropertyID, &b.SortOrder); err != nil {
+			_ = bindings.Close()
+			return Vocabulary{}, err
+		}
+		b.TypeID, b.PropertyID = cloneID(b.TypeID), cloneID(b.PropertyID)
+		v.Bindings = append(v.Bindings, b)
+	}
+	if err := bindings.Err(); err != nil {
+		_ = bindings.Close()
+		return Vocabulary{}, err
+	}
+	_ = bindings.Close()
 	return v, nil
 }

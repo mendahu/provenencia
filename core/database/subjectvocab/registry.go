@@ -183,10 +183,10 @@ var seedProperties = []seedProperty{
 // Bridge type bindings come from connectrules.BridgeBindings() at Install time.
 var seedBindings = []seedBinding{
 	{TypeKey: "person", PropertyKey: "name", SortOrder: 0, Locked: true},
-	{TypeKey: "person", PropertyKey: "sex_at_birth", SortOrder: 1},
-	{TypeKey: "person", PropertyKey: "gender", SortOrder: 2},
-	{TypeKey: "person", PropertyKey: "interests", SortOrder: 3},
-	{TypeKey: "person", PropertyKey: "likeness", SortOrder: 4, Locked: true},
+	{TypeKey: "person", PropertyKey: "likeness", SortOrder: 1, Locked: true},
+	{TypeKey: "person", PropertyKey: "sex_at_birth", SortOrder: 2},
+	{TypeKey: "person", PropertyKey: "gender", SortOrder: 3},
+	{TypeKey: "person", PropertyKey: "interests", SortOrder: 4},
 
 	{TypeKey: "event", PropertyKey: "event_type", SortOrder: 0, Locked: true},
 	{TypeKey: "event", PropertyKey: "event_name", SortOrder: 1},
