@@ -1,11 +1,11 @@
 # S11-20 — Claim evidence sheet
 
-**Status:** Blocked — on S11-25, S11-32, board S11-D2
+**Status:** Blocked — on S11-32, board S11-D2
 **Spike / slice:** Spike 11 · Slice 5 — Claim evidence
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S11-D2](../design/S11-D2-evidence-sheet.md), board not drawn
 **Board:** — (to be recorded when the board is agreed: link, frame numbers, and S11-D2 §9 board notes)
-**Depends on:** S11-25 (in progress; this draft follows [its plan](S11-25-claim-evidence-rpc.md)), S11-32 (scoped; this draft follows its [scope entry](../deployment-plan.md#s11-32--lifespan-and-likeness-evidence-lines)), S11-D2
+**Depends on:** S11-25 (landed [#517](https://github.com/mendahu/provenencia/pull/517) after this draft; STEP-0 rereads it against [its plan](S11-25-claim-evidence-rpc.md) and Landed note), S11-32 (scoped; this draft follows its [scope entry](../deployment-plan.md#s11-32--lifespan-and-likeness-evidence-lines)), S11-D2
 **Blocks:** —
 **Branch:** `s11-20-claim-evidence-sheet`
 **Version bump:** none — Spike 11 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
