@@ -169,7 +169,7 @@ The sheet answers two different questions and keeps them apart.
 | ID | Requirement |
 | --- | --- |
 | ES-15 | **Likeness.** A "Likeness" Card on a person, after Name (§2 Order). Each line shows two crops side by side, 96 pt square, this Source's on the left and the member's on the right, each captioned with its Source title. Same image: "Same likeness", Agrees, checked. Different images: "Compare these likenesses", outcome Badge "Judge by eye" (neutral), pinnable, unchecked. A crop that cannot be shown draws the person mark in the Thumbnail. Likeness lines never collapse unless the image is the same. |
-| ES-16 | **Lifespan.** A "Lifespan" Card on a person, last among the own Cards. One line, no checkbox, with a muted caption under it: "Worked out from dated events. A guide for matching, never pinned." Each side's range runs from its earliest to its latest dated event and is written as the Person page writes a span ("14 May 1817 – 2 Jun 1890"; one dated event prints one date: "1840"). Fits: "The lifespans fit: 14 May 1817 – 2 Jun 1890 here, 14 May 1817 – 2 Apr 1871 on the record", Badge Agrees. Conflict: "The lifespans don't fit: 14 May 1817 – 2 Jun 1890 here, 3 Mar 1801 – 9 Jan 1838 on the record", Badge Conflicts. One side has none: "No lifespan to compare: the record has no dated events", Badge Not compared. When neither side has a dated event, there is no Lifespan Card. Contradiction: "No lifespan for this source: its own dates contradict each other" (or "for the record"), Badge Not compared. A lifespan conflict counts as a disagreement for ES-2 and ES-4. |
+| ES-16 | **Lifespan.** A "Lifespan" Card on a person, last among the own Cards. One line, no checkbox, with a muted caption under it: "Worked out from dated events. A guide for matching, never pinned." Each side's range runs from its earliest to its latest dated event and is written as the Person page writes a span ("14 May 1817 – 2 Jun 1890"; one dated event prints one date: "1840"). Fits: "The lifespans fit: 14 May 1817 – 2 Jun 1890 here, 14 May 1817 – 2 Apr 1871 on the record", Badge Agrees. Conflict: "The lifespans don't fit: 14 May 1817 – 2 Jun 1890 here, 3 Mar 1741 – 9 Jan 1810 on the record", Badge Conflicts. One side has none: "No lifespan to compare: the record has no dated events", Badge Not compared. When neither side has a dated event, there is no Lifespan Card. Contradiction: "No lifespan for this source: its own dates contradict each other" (or "for the record"), Badge Not compared. A lifespan conflict counts as a disagreement for ES-2 and ES-4. |
 
 ### 4.5 States
 
@@ -229,7 +229,7 @@ The sheet answers two different questions and keeps them apart.
 | SRC-2T6GA | St Peter's, Leeds — marriages, 1843 |
 | SRC-7C3ZE | Smith family photograph album |
 | SRC-9K5JY | Funeral card — John Smith, 1890 |
-| SRC-4Q8MR | St John's, Wakefield — baptisms 1801 and burials 1838 |
+| SRC-4Q8MR | St John's, Wakefield — baptisms 1741 and burials 1810 |
 
 **Records already in the project.** Each member is listed with its Source and what that Source says.
 
@@ -238,7 +238,7 @@ The sheet answers two different questions and keeps them apart.
 | PER-7QH3D John Smith | 1851 Census: "John Smith", Male · 1861 Census: "John Smith", Male · 1871 Census: "J. Smith", Male · births and baptisms 1817: "John Henry Smith" · marriages 1843: "John Smith" · photograph album: "Jack Smith", likeness photo B · funeral card: "John Smith", likeness photo A |
 | PER-9B2XW Mary Smith | 1851 Census: "Mary Smith", Female · 1861 Census: "Mary Smith", Female · marriages 1843: "Mary Ames". The record concludes "Mary Smith"; "Mary Ames" is outvoted |
 | PER-3X9QV Jack Smith | a second page of the photograph album: "Jack Smith", likeness photo C. No events, no links |
-| PER-5J2NB John Smith | St John's, Wakefield: "John Smith", Male; subject of a baptism on 3 Mar 1801 and a burial on 9 Jan 1838 |
+| PER-5J2NB John Smith | St John's, Wakefield: "John Smith", Male; subject of a baptism on 3 Mar 1741 and a burial on 9 Jan 1810 |
 | EVT-4RJ9T Birth of John Smith | births and baptisms 1817: Birth, 14 May 1817; John Henry Smith is its subject |
 | EVT-6D3HM Baptism of John Smith | births and baptisms 1817: Baptism, 1 Jun 1817 |
 | EVT-2W8NC Marriage of John Smith and Mary Ames | marriages 1843: Marriage, 12 Oct 1843; John Smith and Mary Ames are its subjects |
@@ -356,9 +356,9 @@ Each frame lists the sheet from top to bottom. The count is one pin per member: 
 **Frame 10 — Person, No match, contested: a lifespan conflict.** In John Smith's row, the researcher picks PER-5J2NB.
 - Title "John Smith → PER-5J2NB John Smith". Subtitle "No match, contested · Your choice".
 - Summary with "Something below disagrees with this record."; Callout.
-- **Name**: "Same name", checked — "St John's, Wakefield — baptisms 1801 and burials 1838: John Smith".
+- **Name**: "Same name", checked — "St John's, Wakefield — baptisms 1741 and burials 1810: John Smith".
 - **Sex at birth**: "The same", checked — Male.
-- **Lifespan**: "The lifespans don't fit: 14 May 1817 – 2 Jun 1890 here, 3 Mar 1801 – 9 Jan 1838 on the record", Conflicts.
+- **Lifespan**: "The lifespans don't fit: 14 May 1817 – 2 Jun 1890 here, 3 Mar 1741 – 9 Jan 1810 on the record", Conflicts.
 - No relationships. Heading · "2 checked".
 
 **Frame 11 — A source that contradicts itself (ES-16).** As Frame 1, except that the obituary's death was transcribed "2 Jun 1809". The lifespan line reads "No lifespan for this source: its own dates contradict each other", Not compared. Everything else is as in Frame 1.
@@ -449,3 +449,4 @@ Checked against `Promote flow.dc.html` and its `EvidenceCard` component (frames 
 | E13c – E13e | ES-19, ES-20 | Both EmptyStates use the file-search icon. E13e left out the title Badges; the app shows No match with "Your choice" (§5.3). |
 | E04 | ES-3 | "15 checked" (§5.3 Frame 4 corrected from 14). |
 | E14 | ES-8 | Specimen members show the value alone, with no Source. |
+| E10 | ES-16 | The board's record was buried in 1838, which overlaps the obituary's 1817 – 1890 life, so the engine finds no conflict (S11-32 Landed note). §5.2 and §5.3 now date the record's baptism 3 Mar 1741 and burial 9 Jan 1810, so the lives do not overlap: "The lifespans don't fit: 14 May 1817 – 2 Jun 1890 here, 3 Mar 1741 – 9 Jan 1810 on the record". The frame's layout stands. |
