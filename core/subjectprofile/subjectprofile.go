@@ -159,23 +159,26 @@ func addLifespans(out subjectcompare.Values, events []LifeEvent, lifespans map[v
 
 // lifespan lays the dated events on one timeline. The span is the first to the
 // last date; an end no date closes (a lone BEF or AFT) stays open, so the span
-// reads BEF or AFT there. The window starts at the earliest Starts event, or MaxYears
-// before the first date, and ends at the latest Ends event, or MaxYears after
-// the last date. The side has a lifespan exactly when side.Missing is empty;
+// reads BEF or AFT there. The window takes its bounds from closed ends only.
+// It starts at the earliest closed start of a Starts event, else MaxYears
+// before the earliest closed start of any date, else it is open; it ends at the
+// latest closed end of an Ends event, else MaxYears after the latest closed end
+// of any date, else it is open. The side has a lifespan exactly when side.Missing is empty;
 // its First and Last are then the dates as written that set the span's ends.
 // When the open ends leave the span's two closed ends the wrong way round (a
 // BEF date earlier than an AFT date), the span is read from the collapsed ends.
 // A side with no dated event, or whose shifted end cannot be placed, is
 // undated; one whose window or span would end before it begins, or with a date
-// wholly outside the window (an open end is never outside), contradicts itself and has no lifespan.
+// wholly outside the window (an open end, of a date or of the window, is never outside), contradicts itself and has no lifespan.
 func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span propertycompare.Value, side subjectcompare.LifeSide) {
-	// early and late are each date's first and last closed end, dates the
-	// date each came from; startEarly and endLate are those of the events that
-	// fix the start and the end.
-	var early, late, startEarly, endLate []valuecompare.DateEnd
+	// early and late are each date's first and last end with an open end
+	// collapsed onto the other, dates the date each came from. They name the
+	// dates that set First and Last and are the span's fallback.
+	var early, late []valuecompare.DateEnd
 	// rawEarly and rawLate are the same ends as written, an open one still
-	// open; the span is built from them.
-	var rawEarly, rawLate []valuecompare.DateEnd
+	// open; the span and the window are built from them. startEarly and
+	// endLate are those of the events that fix the start and the end.
+	var rawEarly, rawLate, startEarly, endLate []valuecompare.DateEnd
 	var dates []datevalue.Value
 	for _, ev := range events {
 		er := subjectcompare.EventRole{EventType: ev.EventType, Role: ev.Role}
@@ -184,7 +187,8 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 			if !ok {
 				continue
 			}
-			rawEarly, rawLate = append(rawEarly, first), append(rawLate, last)
+			rawFirst, rawLast := first, last
+			rawEarly, rawLate = append(rawEarly, rawFirst), append(rawLate, rawLast)
 			if first.Open {
 				first = last
 			}
@@ -193,10 +197,10 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 			}
 			early, late, dates = append(early, first), append(late, last), append(dates, d)
 			if slices.Contains(l.Starts, er) {
-				startEarly = append(startEarly, first)
+				startEarly = append(startEarly, rawFirst)
 			}
 			if slices.Contains(l.Ends, er) {
-				endLate = append(endLate, last)
+				endLate = append(endLate, rawLast)
 			}
 		}
 	}
@@ -208,20 +212,26 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 	}
 	spanLast, _ := valuecompare.Latest(late)
 	firstClosed, lastClosed := spanFirst, spanLast
+	// The window takes each bound from closed ends only: an open end never
+	// pins it. A side no closed end bounds stays open.
 	start, ok := valuecompare.Earliest(startEarly)
 	if !ok {
-		if start, ok = valuecompare.ShiftYears(spanFirst, -l.MaxYears); !ok {
+		if first, closed := valuecompare.Earliest(rawEarly); !closed {
+			start = valuecompare.DateEnd{Open: true}
+		} else if start, ok = valuecompare.ShiftYears(first, -l.MaxYears); !ok {
 			return window, span, undated
 		}
 	}
 	end, ok := valuecompare.Latest(endLate)
 	if !ok {
-		if end, ok = valuecompare.ShiftYears(spanLast, l.MaxYears); !ok {
+		if last, closed := valuecompare.Latest(rawLate); !closed {
+			end = valuecompare.DateEnd{Open: true}
+		} else if end, ok = valuecompare.ShiftYears(last, l.MaxYears); !ok {
 			return window, span, undated
 		}
 	}
 	for i := range rawEarly {
-		if (!rawLate[i].Open && rawLate[i].Hi < start.Lo) || (!rawEarly[i].Open && rawEarly[i].Lo > end.Hi) {
+		if (!start.Open && !rawLate[i].Open && rawLate[i].Hi < start.Lo) || (!end.Open && !rawEarly[i].Open && rawEarly[i].Lo > end.Hi) {
 			return window, span, contradicts
 		}
 	}
