@@ -1,7 +1,7 @@
 # Ship log — S11-32 Lifespan and likeness evidence lines
 
 **Plan:** [`S11-32-lifespan-likeness-lines.md`](S11-32-lifespan-likeness-lines.md) · **Branch:** `s11-32-lifespan-likeness-lines` · **PR:** #523
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Base `3c2ff0d`.
@@ -61,3 +61,11 @@ Check: `rg -n '"(assign|remove)_subject_type_propert' core api` prints only `sub
 Files: `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`. Skill: `add-localized-string`.
 Do: the `promote.sheet.unknown` comment covers both meanings: nothing to compare, or two likenesses the researcher judges by eye.
 Check: `python3 scripts/check-localizable-xcstrings.py` passes; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `d931438`. Gate PASS (run by orchestrator). F-1 – F-4 done (`b3776f7`, `696cd6b`, `c79667f`, `21820fe`). Orchestrator read the fix commits: MNT-1 **Resolved** (`TypeOrder`; `BindingOrder` provenencia only; `loadProperties` has no `v.Types` walk), MNT-2 **Resolved** (`FirstLifespanLead` in both sites), MNT-3 **Resolved** (`subjectvocabtest.Assign`, `Action*` constants; the remaining literals are `unmarshalErr` RPC names and the test's independent `assertLatestAuditAction` checks), UX-2 **Resolved**. Implementer also gave S11-20's AC-5.3 (added by orchestrator in `d4fc2ce`) a T-5 row and manual step 8, which `check-plan-docs.py` required (`d931438`).
+
+No round 2: round 1 had no Fix-now blocker or major.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: none · later PR: UX-1 → S11-20 AC-5.3 · to user: — · CON miss: none
