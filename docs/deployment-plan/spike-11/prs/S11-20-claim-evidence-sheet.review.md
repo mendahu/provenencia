@@ -44,3 +44,17 @@
 
 - **Relationship wording** departs from `claim-evidence.md`'s draft ("They have a matching birth event") to "They share a matching connection — John Smith · subject of · Birth of John Smith", so one owner words every link on the page (M-3, X-2, X-3). Reverting needs labels and a directed phrase from Go in S11-32.
 - **S11-25's plan** still names S11-20 for the depiction case and lifespan and likeness lines (X-8); correct it when S11-25 lands.
+
+## User request, 2026-10-22: example data for the board
+
+The user asked for a complete, realistic example set so designers make no data calls. S11-D2 §5 now holds one research project (an 1890 obituary promoted against censuses, parish registers, an album and a funeral card), 13 frames, and specimen lines, each checked against the engine. The check corrected the draft:
+
+| Was | Now | Evidence |
+| --- | --- | --- |
+| A relationship could read "A connection disagrees" | No relationship disagrees; it matches, or is similar when the neighbor's facts disagree | `core/claimevidence/build.go` `relationships` keeps agree and partial only; `segmentcompare.Compare` gives partial when `Neighbor.Conflicts()` |
+| Lifespan sentences showed windows ("about 1815–1890") | They show spans of dated events; one date prints once; no Card when neither side has dates | A window without a birth starts `MaxYears` (110) before the first event (`subjectprofile` `lifespan`) |
+| Different toponyms could show a disagreement | No line: toponym, interests and likeness hold many values | `propertycompare` outcome table: Different on a multiple-value property is unknown |
+| A conflicting-date event row proposed at Medium | Shown as the researcher's choice, No match | Own evidence 0.5 − 3 with two 0.25 + 0.25 × evidence links stays below the accept bar 2 (`matchregistry` segment and alignment) |
+| "The same, written differently", "Matches, with less detail" drawn | Marked unreachable fallbacks | No comparer returns equivalent or contains with another cause (`valuecompare` `text.go`, `name.go`, `date.go`, `words.go`) |
+
+Plan updated to match: AC-3.3, AC-4.1 – AC-4.3, D-2, D-13, D-14, D-17, T-1, T-3, and §10 now walks the brief's frames. S11-32's entry sends spans.
