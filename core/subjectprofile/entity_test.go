@@ -53,6 +53,20 @@ func TestEntityCompare(t *testing.T) {
 			t.Error("no lifespan result")
 		}
 	}
+	lifespanNot := func(outcome propertycompare.Outcome) func(*testing.T, subjectcompare.Result) {
+		return func(t *testing.T, r subjectcompare.Result) {
+			t.Helper()
+			for _, p := range r.Properties {
+				if p.Key == vocabkey.PropertyLifespan {
+					if p.Result.Outcome == outcome {
+						t.Errorf("lifespan: got %s, want anything else", p.Result.Outcome)
+					}
+					return
+				}
+			}
+			t.Error("no lifespan result")
+		}
+	}
 	james := func(t *testing.T) subjectprofile.Entity {
 		return subjectprofile.Entity{Properties: props{
 			nameProp: property(t, nameProp, cand(1, 1, 1, name("James Robins"))),
@@ -122,6 +136,26 @@ func TestEntityCompare(t *testing.T) {
 			life:    []subjectprofile.LifeEvent{ev(birth, subjectRole, datevaluetest.YMD(1901, 5, 1))},
 			subject: jamesSubject, subjectLife: []subjectprofile.LifeEvent{ev(birth, subjectRole, datevaluetest.YMD(1901, 5, 1))}, sim: 1, ev: 2.6,
 			check: lifespanResult(propertycompare.OutcomeAgree)},
+		{name: "aDeathBeforeALaterDayFitsAnEarlierDeath", kind: vocabkey.Person, entity: james,
+			life:    []subjectprofile.LifeEvent{ev(death, subjectRole, datevaluetest.Before(2021, 1, 11))},
+			subject: jamesSubject, subjectLife: []subjectprofile.LifeEvent{
+				ev(birth, subjectRole, datevaluetest.YMD(1932, 7, 27)), ev(death, subjectRole, datevaluetest.YMD(2001, 3, 31))},
+			sim: 1, ev: 2.6, check: lifespanNot(propertycompare.OutcomeConflict)},
+		{name: "aDeathBeforeTheOtherBirthConflicts", kind: vocabkey.Person, entity: james,
+			life:    []subjectprofile.LifeEvent{ev(death, subjectRole, datevaluetest.Before(1900, 0, 0))},
+			subject: jamesSubject, subjectLife: []subjectprofile.LifeEvent{
+				ev(birth, subjectRole, datevaluetest.YMD(1932, 0, 0)), ev(death, subjectRole, datevaluetest.YMD(2001, 0, 0))},
+			sim: 2.5 / 22.5, ev: -17.5, check: lifespanResult(propertycompare.OutcomeConflict)},
+		{name: "aBirthAfterTheOtherDeathConflicts", kind: vocabkey.Person, entity: james,
+			life:    []subjectprofile.LifeEvent{ev(birth, subjectRole, datevaluetest.After(2010, 0, 0))},
+			subject: jamesSubject, subjectLife: []subjectprofile.LifeEvent{
+				ev(birth, subjectRole, datevaluetest.YMD(1932, 0, 0)), ev(death, subjectRole, datevaluetest.YMD(2001, 0, 0))},
+			sim: 2.5 / 22.5, ev: -17.5, check: lifespanResult(propertycompare.OutcomeConflict)},
+		{name: "aBirthAfterAnEarlierYearFits", kind: vocabkey.Person, entity: james,
+			life:    []subjectprofile.LifeEvent{ev(birth, subjectRole, datevaluetest.After(1900, 0, 0))},
+			subject: jamesSubject, subjectLife: []subjectprofile.LifeEvent{
+				ev(birth, subjectRole, datevaluetest.YMD(1932, 0, 0)), ev(death, subjectRole, datevaluetest.YMD(2001, 0, 0))},
+			sim: 1, ev: 2.6, check: lifespanNot(propertycompare.OutcomeConflict)},
 		{name: "AC-5.5 two negatives never meet", kind: vocabkey.Person, entity: denied,
 			subject: observed{sex: {vcand(term("female"), true)}}, sim: 0, ev: 0,
 			check: sexResult(propertycompare.OutcomeUnknown, propertycompare.CauseNoValues)},

@@ -164,12 +164,16 @@ func addLifespans(out subjectcompare.Values, events []LifeEvent, lifespans map[v
 // its First and Last are then the dates as written that set the span's ends.
 // A side with no dated event, or whose shifted end cannot be placed, is
 // undated; one whose window or span would end before it begins, or with a date
-// wholly outside the window, contradicts itself and has no lifespan.
+// wholly outside the window (an open end is never outside), contradicts itself and has no lifespan.
 func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span propertycompare.Value, side subjectcompare.LifeSide) {
 	// early and late are each date's first and last closed end, dates the
 	// date each came from; startEarly and endLate are those of the events that
 	// fix the start and the end.
 	var early, late, startEarly, endLate []valuecompare.DateEnd
+	// rawEarly and rawLate are the same ends as written, an open one still
+	// open; openFirst and openLast say any date has one.
+	var rawEarly, rawLate []valuecompare.DateEnd
+	var openFirst, openLast bool
 	var dates []datevalue.Value
 	for _, ev := range events {
 		er := subjectcompare.EventRole{EventType: ev.EventType, Role: ev.Role}
@@ -178,6 +182,8 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 			if !ok {
 				continue
 			}
+			rawEarly, rawLate = append(rawEarly, first), append(rawLate, last)
+			openFirst, openLast = openFirst || first.Open, openLast || last.Open
 			if first.Open {
 				first = last
 			}
@@ -200,6 +206,7 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 		return window, span, undated
 	}
 	spanLast, _ := valuecompare.Latest(late)
+	firstClosed, lastClosed := spanFirst, spanLast
 	start, ok := valuecompare.Earliest(startEarly)
 	if !ok {
 		if start, ok = valuecompare.ShiftYears(spanFirst, -l.MaxYears); !ok {
@@ -212,8 +219,8 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 			return window, span, undated
 		}
 	}
-	for i := range early {
-		if late[i].Hi < start.Lo || early[i].Lo > end.Hi {
+	for i := range rawEarly {
+		if (!rawLate[i].Open && rawLate[i].Hi < start.Lo) || (!rawEarly[i].Open && rawEarly[i].Lo > end.Hi) {
 			return window, span, contradicts
 		}
 	}
@@ -221,12 +228,20 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 	if !ok {
 		return window, span, contradicts
 	}
+	// An open end can lie anywhere on its side, and the events lie in the
+	// window, so the window's end bounds the span there.
+	if openFirst {
+		spanFirst = start
+	}
+	if openLast {
+		spanLast = end
+	}
 	sp, ok := valuecompare.EndsDate(spanFirst, spanLast)
 	if !ok {
 		return window, span, contradicts
 	}
-	firstAt := slices.Index(early, spanFirst)
-	lastAt := slices.Index(late, spanLast)
+	firstAt := slices.Index(early, firstClosed)
+	lastAt := slices.Index(late, lastClosed)
 	side.First, side.Last = &dates[firstAt], &dates[lastAt]
 	return propertycompare.Value{Value: valuecompare.Value{Date: &w}}, propertycompare.Value{Value: valuecompare.Value{Date: &sp}}, side
 }

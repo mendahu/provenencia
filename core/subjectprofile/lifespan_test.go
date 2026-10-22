@@ -74,8 +74,8 @@ func TestLifespanFromEvents(t *testing.T) {
 			want: "lifespan={Between 1850 and 2010}; lifespan_span={Between 1850 and 1900}"},
 		{name: "AC-2.8 the earliest birth starts the life", events: []subjectprofile.LifeEvent{ev(birth, subj, y(1852)), ev(birth, subj, y(1850))},
 			want: "lifespan={Between 1850 and 1962}; lifespan_span={Between 1850 and 1852}"},
-		{name: "AC-2.9 a death before a year ends at that year", events: []subjectprofile.LifeEvent{ev(death, subj, &bef1840)},
-			want: "lifespan={Between 1730 and 1840}; lifespan_span={Between 1840 and 1840}"},
+		{name: "AC-2.9 a death before a year ends the window there and leaves the span open", events: []subjectprofile.LifeEvent{ev(death, subj, &bef1840)},
+			want: "lifespan={Between 1730 and 1840}; lifespan_span={Between 1730 and 1840}"},
 		{name: "AC-2.10 a leap day moves to the last day of February", events: []subjectprofile.LifeEvent{ev(birth, subj, datevaluetest.YMD(1904, 2, 29))},
 			check: func(t *testing.T, p subjectcompare.Values) {
 				first, last := ends(t, p, vocabkey.PropertyLifespan)
