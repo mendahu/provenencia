@@ -1,7 +1,7 @@
 # Review — S12-08 Graph id end to end
 
-**Verdict:** Round 1: Fits with changes — Ready with changes. Round 2: pending
-**Rounds:** 1 of 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits — Ready with changes (round 2; every finding answered, no open blocker)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
@@ -140,3 +140,26 @@ Every caller already applies effects that name the Subject's graph (`subjects` �
 ### X-10 · minor · §8 and DoD wording
 
 **Answer:** Fixed. T-21 cites its STEP-3 command, and the manual check states what each Back shows.
+
+## Round 2
+
+The maintainability reviewer checked M-1 to M-11 against the plan and the code, and every answer holds, including the M-8 decline. It raised no new blockers. **Verdict: Fits.** Of its notes below blocker level, the D-11 "or" was settled: one `normalizedSurface` helper is called by both initializers. The rest are logged:
+- `WorkspaceLocation.promote(…)` stays in `PromoteModel.swift`.
+- `source_read.go` and `listedFromSource` keep their names.
+- FakeStore's `citationSources` on Subject writes predates this PR.
+
+The executability reviewer found the round-1 answers match the plan text and raised no blocker. **Verdict: Ready with changes.** Its findings were all answered:
+
+- **X-11 · major · STEP-8 `rg` hits a doc comment.** Fixed: STEP-8 rewords the `EvidenceGraphView.swift` line 6 comment.
+- **X-12 · major · A Citation with no Observation.** Fixed: D-10 has `projectCitation` take the first graph linked to the Citation's Artifact (by name), so the link still opens the composer. The `ErrNoRows` fallbacks stay as they are. T-10 is updated.
+- **X-13 · major · How the entry points get the graph list.** Fixed: D-12 adds `SourcesModel.graphLocation(for:)`, `SourcePageModel.evidenceGraphLocation` and `SourcesSplitRow.onOpenGraph: (() -> Void)?`. The zone is shown when `hasArtifact` and disabled when nil.
+- **X-14 · major · Test names break the STEP-6 `rg`.** Fixed: STEP-6 renames every test name containing `SourceGraph`, and T-13 is renamed.
+- **X-15 · minor · Search drops `graph_id`.** Fixed: STEP-4 copies `GraphID` through `core/search` and `search_catalog.go`.
+- **X-16 · minor · S12-18 scope names `SourceTx`.** Fixed in the map now, and STEP-10 verifies it.
+- **X-17 · minor · `sqlCitationSource` goes dead.** Fixed: D-2 and Deletes include it.
+- **X-18 · minor · D-11 "or".** Fixed (see above).
+- **X-19 · minor · `sourceOfGraph` project parameter.** Fixed: it scans every project.
+- **X-20 · nit · T-2 helper name.** Fixed: `Path.check(table)`.
+- **Current state count.** Fixed: 379 lines.
+
+The executability reviewer could not run `protoc` or `xcodebuild` in this container. The plan's Stop condition covers that, and the implementer runs on macOS.

@@ -117,7 +117,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S12-05 | Graph RPCs and graph list | 2 | FFI and store methods for graphs and links; `CreateArtifactRequest.graph_ids`; one project-wide graph list key | — | S12-04 | [Plan](prs/S12-05-graph-rpcs.md) | Landed #511 |
 | S12-06 | Graph isolation | 2 | One `requireSameGraph` for Observations; `connect` relies on it; the canonical walk joins on graph | — | S12-03 | [Plan](prs/S12-06-graph-isolation.md) | Landed #515 |
 | S12-07 | Graph-keyed reads | 3 | `graphcache`, loaders, positions, event titles and progress keyed and named by Evidence graph; effects stay per Source | — | S12-03, S11-14, S11-15 | [Plan](prs/S12-07-graph-keyed-reads.md) | Landed #520 |
-| S12-08 | Graph id end to end | 3 | RPCs, effects, wire and Swift mutations take graph ids together; per-graph query keys; `WorkspaceLocation` carries the graph, Promote's included; the handlers' bridge goes | — | S12-05, S12-07 | [Plan](prs/S12-08-graph-id-end-to-end.md) | Draft |
+| S12-08 | Graph id end to end | 3 | RPCs, effects, wire and Swift mutations take graph ids together; per-graph query keys; `WorkspaceLocation` carries the graph, Promote's included; the handlers' bridge goes | — | S12-05, S12-07 | [Plan](prs/S12-08-graph-id-end-to-end.md) | Planned |
 | S12-18 | A Subject needs its graph | 3 | `subjects.CreateInput.GraphID` required (Source read from the graph), `InsertTx`'s `SoleGraphTx` fallback deleted; test literals move onto graph ids | — | S12-08 | — | Scoped |
 | S12-09 | Promote per graph | 3 | Proposal, Apply, bridge filing, unpromote and the Promote RPCs per graph; `SoleGraph` / `SoleGraphTx` deleted | — | S12-08, S12-18, S11-17, S11-25, S11-26, S11-27 | — | Scoped |
 | S12-10 | Composer offers linked Artifacts | 3 | The Citation composer lists only the graph's linked Artifacts | — | S12-05, S12-08 | — | Scoped |
@@ -291,7 +291,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-18 — A Subject needs its graph
 
-**Ships.** `subjects.CreateInput.GraphID` is required and `CreateInput.SourceID` goes: `InsertTx` reads the graph's Source with `evidencegraphs.SourceTx` (S12-08) and deletes its `SoleGraphTx` fallback. The `subjects.CreateInput{` test literals (66 in about 40 files) take a graph id, through `evidencegraphstest.SoleGraph` or `artifactstest.Split`. Go only.
+**Ships.** `subjects.CreateInput.GraphID` is required and `CreateInput.SourceID` goes: `InsertTx` already reads the graph's Source with `evidencegraphs.SourceOf` when `SourceID` is empty (S12-08), so this PR deletes its `SoleGraphTx` fallback and the field. The `subjects.CreateInput{` test literals (66 in about 40 files) take a graph id, through `evidencegraphstest.SoleGraph` or `artifactstest.Split`. Go only.
 **Not this PR.** Promote (S12-09).
 **Check.** `go test` passes; `rg -n 'SoleGraphTx' core api` lists only `evidencegraphs` itself, `promotealign` (through `SoleGraph`) and tests.
 **Context.** Split from S12-08 at planning (user, 2026-10-22); working rule "One bridge, one function"; `add-catalog-query`.
