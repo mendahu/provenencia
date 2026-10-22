@@ -72,6 +72,13 @@ extension WorkspaceLocation {
 @MainActor
 @Observable
 final class PromoteModel {
+    /// Where the open sheet's evidence read stands.
+    enum SheetEvidence: Equatable {
+        case idle
+        case loading
+        case failed(String)
+    }
+
     struct PendingLeave: Identifiable, Equatable {
         let navigation: PendingNavigation
         var id: String { String(describing: navigation) }
@@ -92,6 +99,9 @@ final class PromoteModel {
     private(set) var loadError: String?
     private(set) var saveError: String?
     private(set) var proposeError: String?
+    /// The open sheet's claim evidence read: the loaded value lives on its row.
+    private(set) var sheetEvidence = SheetEvidence.idle
+    private var evidenceGeneration = 0
     /// A proposal after a decision is in flight; Done waits for it.
     private(set) var isProposing = false
     /// Bumped per proposal; only the latest one's answer is merged.
@@ -157,8 +167,8 @@ final class PromoteModel {
         Task { await repropose(generation: generation) }
     }
 
-    func togglePin(subjectID: String, comparisonID: String) {
-        flow.togglePin(subjectID: subjectID, comparisonID: comparisonID)
+    func togglePin(subjectID: String, pinIDs: [String]) {
+        flow.togglePin(subjectID: subjectID, pinIDs: pinIDs)
     }
 
     func setArgument(subjectID: String, argument: String) {
@@ -171,14 +181,45 @@ final class PromoteModel {
 
     func toggleBridge(_ id: String) { flow.toggleBridge(id) }
 
-    func openSheet(_ subjectID: String) { flow.sheetSubjectID = subjectID }
-    func closeSheet() { flow.sheetSubjectID = nil }
+    func openSheet(_ subjectID: String) { setSheetSubject(subjectID) }
+    func closeSheet() { setSheetSubject(nil) }
 
     func setGroup(_ group: PromoteFlow.Grouping) { flow.group = group }
 
     func setBridgesOpen(_ open: Bool) { flow.bridgesOpen = open }
 
-    func setSheetSubject(_ id: String?) { flow.sheetSubjectID = id }
+    /// Opens, switches or closes the sheet. A row filed on a handle reads its
+    /// claim evidence each time its sheet opens; any other row has none.
+    func setSheetSubject(_ id: String?) {
+        evidenceGeneration += 1
+        sheetEvidence = .idle
+        flow.sheetSubjectID = id
+        guard let id, let row = flow.row(id), !row.anchor, case .handle(let handleID, _, _) = row.target else { return }
+        loadEvidence(subjectID: id, handleID: handleID)
+    }
+
+    private func loadEvidence(subjectID: String, handleID: String) {
+        let generation = evidenceGeneration
+        let neighbors = flow.evidenceNeighbors(for: subjectID)
+        sheetEvidence = .loading
+        Task {
+            do {
+                let evidence = try await store.getPromoteClaimEvidence(
+                    projectDir: session.projectKey.projectDir,
+                    sourceID: entry.sourceID,
+                    subjectID: subjectID,
+                    handleID: handleID,
+                    neighbors: neighbors
+                )
+                guard generation == evidenceGeneration else { return }
+                flow.setEvidence(subjectID: subjectID, handleID: handleID, evidence: evidence)
+                sheetEvidence = .idle
+            } catch {
+                guard generation == evidenceGeneration else { return }
+                sheetEvidence = .failed(L10n.Errors.message(for: error))
+            }
+        }
+    }
 
     func done() {
         guard canFinish else { return }
@@ -257,19 +298,7 @@ final class PromoteModel {
                 isProposing = false
             }
         }
-        let fixed = flow.rows.compactMap { row -> CatalogPromoteGraphAlignmentFixed? in
-            guard row.decided else { return nil }
-            switch row.target {
-            case .handle(let id, _, _):
-                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, handleID: id)
-            case .newKind:
-                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: "new")
-            case .skip:
-                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: "skip")
-            case .unset:
-                return nil
-            }
-        }
+        let fixed = flow.fixed(for: flow.rows.filter(\.decided))
         do {
             let proposal = try await store.proposePromoteGraphAlignment(
                 projectDir: session.projectKey.projectDir,

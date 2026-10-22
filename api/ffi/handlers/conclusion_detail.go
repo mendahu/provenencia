@@ -143,10 +143,12 @@ func conclusionValueProto(v conclusiondetails.Value) *engine.ConclusionValue {
 		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Name{Name: valuecodec.NameToProto(*v.Name)}}
 	case v.Date != nil:
 		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Date{Date: valuecodec.DateToProto(*v.Date)}}
-	case len(v.TermID) > 0:
-		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Term{Term: &engine.ConclusionTerm{
-			Id: database.UUIDString(v.TermID), Key: v.TermKey, Label: v.TermLabel,
-		}}}
+	case len(v.TermID) > 0 || v.TermKey != "":
+		term := &engine.ConclusionTerm{Key: v.TermKey, Label: v.TermLabel}
+		if len(v.TermID) > 0 {
+			term.Id = database.UUIDString(v.TermID)
+		}
+		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Term{Term: term}}
 	case v.HasInteger:
 		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Integer{Integer: v.Integer}}
 	case v.HasText:

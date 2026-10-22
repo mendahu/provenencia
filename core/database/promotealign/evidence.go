@@ -40,34 +40,51 @@ func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence,
 	if err != nil {
 		return claimevidence.Evidence{}, err
 	}
-	row, err := checkFixed(c.Graph(), in.primary, graphalign.Fixed{SubjectID: req.SubjectID, HandleID: req.HandleID})
+	g := c.Graph()
+	r, err := newEvidenceReader(g, in)
+	if err != nil {
+		return claimevidence.Evidence{}, err
+	}
+	return evidence(g, in, r, req)
+}
+
+// evidence is Evidence over inputs and a reader the caller loaded, so a page
+// of rows loads once. The neighbors are the request's, de-duplicated (a
+// Subject named twice keeps its last target at its first position), plus every
+// Subject the Source already filed, on its handle: the row's own Subject is
+// never its own neighbor.
+func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceRequest) (claimevidence.Evidence, error) {
+	row, err := checkFixed(g, in.primary, graphalign.Fixed{SubjectID: req.SubjectID, HandleID: req.HandleID})
 	if err != nil {
 		return claimevidence.Evidence{}, err
 	}
 	if len(req.Neighbors) > len(in.primary) {
 		return claimevidence.Evidence{}, promote.ErrInvalid
 	}
-	placed := map[string][]byte{} // layer neighbor → its handle
-	var order [][]byte
+	var named []graphalign.Fixed
+	at := map[string]int{}
 	for _, f := range req.Neighbors {
-		nf, err := checkFixed(c.Graph(), in.primary, f)
-		if err != nil {
-			return claimevidence.Evidence{}, err
-		}
-		if len(nf.HandleID) != 16 {
+		if i, dup := at[string(f.SubjectID)]; dup {
+			named[i] = f
 			continue
 		}
-		if _, dup := placed[string(nf.SubjectID)]; !dup {
-			order = append(order, nf.SubjectID)
-		}
-		placed[string(nf.SubjectID)] = nf.HandleID
+		at[string(f.SubjectID)] = len(named)
+		named = append(named, f)
 	}
-
-	g := c.Graph()
-	q, err := newEvidenceReader(g, in)
+	merged, err := mergeFixed(g, req.SourceID, in.primary, named)
 	if err != nil {
 		return claimevidence.Evidence{}, err
 	}
+	placed := map[string][]byte{} // layer neighbor → its handle
+	var order [][]byte
+	for _, nf := range merged {
+		if len(nf.HandleID) != 16 || bytes.Equal(nf.SubjectID, row.SubjectID) {
+			continue
+		}
+		order = append(order, nf.SubjectID)
+		placed[string(nf.SubjectID)] = nf.HandleID
+	}
+
 	valuesOf := map[string]subjectcompare.Values{}
 	for _, s := range in.layer.Subjects {
 		valuesOf[string(s.ID)] = s.Values
@@ -161,6 +178,22 @@ func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence,
 		in.cfg.Segment, in.cfg.Subject, in.cfg.Value)
 	if out.Sources, err = q.titles(out); err != nil {
 		return claimevidence.Evidence{}, err
+	}
+	return out, nil
+}
+
+// acceptedClaims is a handle's accepted members, each with its Source, in
+// claim id order. A handle with no node has none.
+func acceptedClaims(g *graphcache.Graph, entityID []byte) ([]graphcache.Member, error) {
+	n, err := g.Node(entityID)
+	if err != nil || n == nil {
+		return nil, err
+	}
+	var out []graphcache.Member
+	for _, m := range n.Members {
+		if m.Accepted {
+			out = append(out, m)
+		}
 	}
 	return out, nil
 }

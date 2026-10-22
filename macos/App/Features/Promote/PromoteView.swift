@@ -670,7 +670,7 @@ private struct PromoteEvidenceSheet: View {
         PVPanel(title: Text(verbatim: sheetTitle), subtitle: sheetSubtitle, width: 880) {
             ScrollView {
                 VStack(alignment: .leading, spacing: PVSpacing.space5) {
-                    if row.comparisons.contains(where: { $0.outcome == "conflict" }) {
+                    if hasConflict {
                         PVCallout(
                             tone: .warning,
                             title: L10n.Promote.conflictCalloutTitle,
@@ -678,30 +678,7 @@ private struct PromoteEvidenceSheet: View {
                             compact: true
                         )
                     }
-                    sheetColumns
-                    ForEach(groups) { group in
-                        PVCard {
-                            VStack(alignment: .leading, spacing: 0) {
-                                HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
-                                    Text(verbatim: group.title)
-                                        .font(PVFont.display(size: PVTypeScale.h4, weight: PVFontWeight.medium))
-                                        .foregroundStyle(PVColor.textDisplay)
-                                    if !group.ref.isEmpty {
-                                        Text(verbatim: group.ref)
-                                            .font(PVFont.mono(size: PVTypeScale.caption))
-                                            .foregroundStyle(PVColor.textMuted)
-                                    }
-                                }
-                                .padding(.horizontal, PVSpacing.space4)
-                                .padding(.vertical, PVSpacing.space3)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(PVColor.surfaceSunken)
-                                ForEach(group.lines) { line in
-                                    comparisonLine(line)
-                                }
-                            }
-                        }
-                    }
+                    evidenceLines
                     VStack(alignment: .leading, spacing: PVSpacing.space4) {
                         Text(L10n.Promote.claimHeading)
                             .font(PVFont.display(size: PVTypeScale.h4, weight: PVFontWeight.semibold))
@@ -721,7 +698,7 @@ private struct PromoteEvidenceSheet: View {
                                 )
                             }
                         }
-                        PVField(label: L10n.Promote.argument, hint: L10n.Promote.argumentHint(pinned: row.pins.count)) {
+                        PVField(label: L10n.Promote.argument) {
                             PVTextArea(text: argumentBinding)
                                 .accessibilityIdentifier("promote.sheet.argument")
                         }
@@ -782,16 +759,105 @@ private struct PromoteEvidenceSheet: View {
         }
     }
 
-    private func comparisonLine(_ line: CatalogPromoteGraphAlignmentComparison) -> some View {
-        HStack(alignment: .top, spacing: PromoteLayout.columnGap) {
+    /// A line in any section of the evidence disagrees.
+    private var hasConflict: Bool {
+        guard let evidence = row.evidence else { return false }
+        let own = evidence.sections.flatMap(\.lines)
+        let related = evidence.relationships.flatMap { $0.sections.flatMap(\.lines) }
+        return (own + related).contains { $0.outcome == .conflict }
+    }
+
+    /// The evidence read: skeleton bars while it loads, a callout when it
+    /// fails, then the "This subject" card and one card per relationship.
+    @ViewBuilder
+    private var evidenceLines: some View {
+        if case .failed(let message) = model.sheetEvidence {
+            PVCallout(tone: .danger, title: L10n.Promote.evidenceUnavailable, message: message, compact: true)
+        }
+        if let evidence = row.evidence {
+            sheetColumns
+            if evidence.sections.contains(where: { !$0.lines.isEmpty }) {
+                evidenceCard(title: L10n.string(L10n.Promote.ownRecords), ref: row.ref, header: nil, sections: evidence.sections, evidence: evidence)
+            }
+            ForEach(evidence.relationships) { relationship in
+                relationshipCard(relationship, evidence: evidence)
+            }
+        } else if model.sheetEvidence == .loading {
+            VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                PVSkeletonBar(width: nil, height: 12)
+                PVSkeletonBar(width: 320, height: 12)
+                PVSkeletonBar(width: 240, height: 12)
+            }
+            .accessibilityIdentifier("promote.sheet.loading")
+        }
+    }
+
+    private func relationshipCard(_ relationship: CatalogClaimEvidenceRelationship, evidence: CatalogClaimEvidence) -> some View {
+        let neighbor = model.flow.row(relationship.neighborSubjectID)
+        let name = neighbor?.name ?? L10n.string(L10n.Promote.sheetNeighbor)
+        let ids = relationship.bundles.map(\.id)
+        return evidenceCard(
+            title: L10n.Promote.through(name),
+            ref: neighbor?.ref ?? "",
+            header: AnyView(
+                PVCheckbox(
+                    isChecked: pins(ids),
+                    isDisabled: !relationship.pinnable || ids.isEmpty,
+                    accessibilitySpokenLabel: L10n.Promote.pinRelationship(name)
+                )
+                .accessibilityIdentifier("promote.sheet.relationship.\(relationship.neighborSubjectID).\(relationship.key)")
+                .frame(width: PromoteLayout.pinColumn, alignment: .leading)
+            ),
+            sections: relationship.sections,
+            evidence: evidence
+        )
+    }
+
+    private func evidenceCard(
+        title: String,
+        ref: String,
+        header: AnyView?,
+        sections: [CatalogClaimEvidenceSection],
+        evidence: CatalogClaimEvidence
+    ) -> some View {
+        PVCard {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
+                    if let header { header }
+                    Text(verbatim: title)
+                        .font(PVFont.display(size: PVTypeScale.h4, weight: PVFontWeight.medium))
+                        .foregroundStyle(PVColor.textDisplay)
+                    if !ref.isEmpty {
+                        Text(verbatim: ref)
+                            .font(PVFont.mono(size: PVTypeScale.caption))
+                            .foregroundStyle(PVColor.textMuted)
+                    }
+                }
+                .padding(.horizontal, PVSpacing.space4)
+                .padding(.vertical, PVSpacing.space3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(PVColor.surfaceSunken)
+                ForEach(sections) { section in
+                    ForEach(section.lines) { line in
+                        evidenceLine(line, evidence: evidence)
+                    }
+                }
+            }
+        }
+    }
+
+    private func evidenceLine(_ line: CatalogClaimEvidenceLine, evidence: CatalogClaimEvidence) -> some View {
+        let ids = line.members.map(\.id)
+        return HStack(alignment: .top, spacing: PromoteLayout.columnGap) {
             PVCheckbox(
-                isChecked: pin(line.id),
-                isDisabled: line.incomingObservationID.isEmpty || line.outcome == "unknown",
+                isChecked: pins(ids),
+                isDisabled: !line.pinnable || ids.isEmpty,
                 accessibilitySpokenLabel: L10n.Promote.pinLine(
-                    property: compared(line), here: incomingText(line), there: line.memberDisplay
+                    property: compared(line), here: incomingText(line),
+                    there: line.members.map { worded($0.value) }.joined(separator: ", ")
                 )
             )
-            .accessibilityIdentifier("promote.sheet.pin.\(line.id)")
+            .accessibilityIdentifier("promote.sheet.pin.\(ids.first ?? line.id)")
             .frame(width: PromoteLayout.pinColumn, alignment: .leading)
             Text(verbatim: compared(line))
                 .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
@@ -799,20 +865,24 @@ private struct PromoteEvidenceSheet: View {
             Text(verbatim: incomingText(line))
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .frame(maxWidth: .infinity, alignment: .leading)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: line.memberDisplay)
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                if !line.memberSource.isEmpty {
-                    Text(verbatim: line.memberSource)
-                        .font(PVFont.body(size: PVTypeScale.caption))
-                        .italic()
-                        .foregroundStyle(PVColor.textMuted)
+            VStack(alignment: .leading, spacing: PVSpacing.space2) {
+                ForEach(line.members) { pin in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: worded(pin.value))
+                            .font(PVFont.body(size: PVTypeScale.caption))
+                        if let title = evidence.sourceTitles[pin.sourceID], !title.isEmpty {
+                            Text(verbatim: title)
+                                .font(PVFont.body(size: PVTypeScale.caption))
+                                .italic()
+                                .foregroundStyle(PVColor.textMuted)
+                        }
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             PVBadge(L10n.Promote.outcome(line.outcome), tone: outcomeTone(line.outcome), subtle: true)
                 .frame(width: 92, alignment: .leading)
-            Text(verbatim: weightText(line.weight))
+            Text(verbatim: weightText(line.points))
                 .font(PVFont.mono(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textSecondary)
                 .lineLimit(1)
@@ -823,45 +893,26 @@ private struct PromoteEvidenceSheet: View {
         .overlay(alignment: .top) { PVDivider() }
     }
 
-    private struct ExhibitGroup: Identifiable {
-        var id: String
-        var title: String
-        var ref: String
-        var lines: [CatalogPromoteGraphAlignmentComparison]
+    /// A value as the Conclusion page words it, in the researcher's locale and name order.
+    private func worded(_ value: CatalogConclusionValue) -> String {
+        ReconciledValueDisplay.string(for: value, orders: model.session.nameFormat)
     }
 
-    private var groups: [ExhibitGroup] {
-        var order: [String] = []
-        var lines: [String: [CatalogPromoteGraphAlignmentComparison]] = [:]
-        for line in row.comparisons {
-            let key = line.groupSubjectID
-            if lines[key] == nil { order.append(key) }
-            lines[key, default: []].append(line)
-        }
-        return order.map { key in
-            guard !key.isEmpty else {
-                return ExhibitGroup(id: "own", title: L10n.string(L10n.Promote.ownRecords), ref: row.ref, lines: lines[key] ?? [])
-            }
-            let neighbor = model.flow.row(key)
-            let name = neighbor?.name ?? L10n.string(L10n.Promote.sheetNeighbor)
-            return ExhibitGroup(id: key, title: L10n.Promote.through(name), ref: neighbor?.ref ?? "", lines: lines[key] ?? [])
-        }
+    private func incomingText(_ line: CatalogClaimEvidenceLine) -> String {
+        let text = worded(line.incoming)
+        return line.incomingNegative ? L10n.Promote.negatedValue(text) : text
     }
 
-    private func incomingText(_ line: CatalogPromoteGraphAlignmentComparison) -> String {
-        line.incomingNegative ? L10n.Promote.negatedValue(line.incomingDisplay) : line.incomingDisplay
+    private func compared(_ line: CatalogClaimEvidenceLine) -> String {
+        model.propertyLabel(key: line.propertyKey, origin: "provenencia")
     }
 
-    private func compared(_ line: CatalogPromoteGraphAlignmentComparison) -> String {
-        model.propertyLabel(key: line.propertyKey, origin: line.propertyOrigin)
-    }
-
-    private func outcomeTone(_ outcome: String) -> PVBadgeTone {
+    private func outcomeTone(_ outcome: EvidenceOutcome) -> PVBadgeTone {
         switch outcome {
-        case "agree": .success
-        case "partial": .info
-        case "conflict": .danger
-        default: .neutral
+        case .agree: .success
+        case .partial: .info
+        case .conflict: .danger
+        case .unknown, .unrecognized: .neutral
         }
     }
 
@@ -871,10 +922,11 @@ private struct PromoteEvidenceSheet: View {
         return sign + String(format: "%.2f", abs(weight))
     }
 
-    private func pin(_ id: String) -> Binding<Bool> {
+    /// Checked when every pin of the line or relationship is; one tap flips them all.
+    private func pins(_ ids: [String]) -> Binding<Bool> {
         Binding(
-            get: { row.pins.contains(id) },
-            set: { _ in model.togglePin(subjectID: row.subjectID, comparisonID: id) }
+            get: { !ids.isEmpty && row.pins.isSuperset(of: ids) },
+            set: { _ in model.togglePin(subjectID: row.subjectID, pinIDs: ids) }
         )
     }
 

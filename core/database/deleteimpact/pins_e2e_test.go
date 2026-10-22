@@ -30,7 +30,7 @@ import (
 )
 
 // pinnedHandle is one Place handle filed through Promote: A grounds it, B
-// joins with two confirmed pairs (each Subject's toponym and alternate name),
+// joins with a confirmed pin set (each Subject's toponym and alternate name),
 // so all four Observations are pinned on both claims.
 type pinnedHandle struct {
 	c                   *database.Catalog
@@ -92,13 +92,18 @@ func newPinnedHandle(t *testing.T) pinnedHandle {
 		return promote.Save(tx, userID, promote.Input{SubjectID: a.ID, Argument: "The gazetteer entry."})
 	})
 	must(err)
-	joined, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: b.ID, EntityID: grounding.Entity.ID, Pairs: []promote.Pair{
-			{IncomingObservationID: h.bName, MemberObservationID: h.aName},
-			{IncomingObservationID: h.bAlt, MemberObservationID: h.aAlt},
-		}})
+	rev := int64(0)
+	db, err := c.DB()
+	must(err)
+	must(db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev))
+	batch, err := writes.Call(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+		return promote.SaveBatch(tx, userID, promote.Batch{SourceID: src.ID, SeenRevision: rev, Rows: []promote.BatchRow{{
+			SubjectID: b.ID, Target: promote.TargetHandle, EntityID: grounding.Entity.ID,
+			PinSets: []promote.PinSet{{Member: a.ID, Observations: [][]byte{h.bName, h.aName, h.bAlt, h.aAlt}}},
+		}}})
 	})
 	must(err)
+	joined := batch.Written[0]
 	h.entityID, h.entityRef = string(grounding.Entity.ID), grounding.Entity.Ref
 	h.ca, h.cb = grounding.Claim.ID, joined.Claim.ID
 	return h
@@ -270,8 +275,8 @@ func TestPinnedObservationDeleteEndToEnd(t *testing.T) {
 	// The audit reads back per claim: what Promote pinned, then what the delete took.
 	// Promote pins each pair's incoming record, then the member's, on each claim.
 	want := []string{
-		"promote_subject:create:bName", "promote_subject:create:aName",
-		"promote_subject:create:bAlt", "promote_subject:create:aAlt",
+		"promote_batch:create:bName", "promote_batch:create:aName",
+		"promote_batch:create:bAlt", "promote_batch:create:aAlt",
 		"delete_observation:delete:aName",
 	}
 	for name, claimID := range map[string][]byte{"A": h.ca, "B": h.cb} {

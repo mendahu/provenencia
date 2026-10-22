@@ -604,6 +604,15 @@ private struct ThrowingStore: GenealogyStore {
     ) async throws -> CatalogPromoteGraphAlignmentProposal {
         throw StoreBoom.boom
     }
+    func getPromoteClaimEvidence(
+        projectDir _: String,
+        sourceID _: String,
+        subjectID _: String,
+        handleID _: String,
+        neighbors _: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws -> CatalogClaimEvidence {
+        throw StoreBoom.boom
+    }
     func applyPromoteGraphAlignment(
         projectDir _: String,
         userID _: String,

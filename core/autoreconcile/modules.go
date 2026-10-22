@@ -115,36 +115,3 @@ func termKey(v Value) (string, bool) {
 
 // idKey: an id is its own key; no id is no evidence.
 func idKey(id []byte) (string, bool) { return string(id), len(id) > 0 }
-
-// Compatible reports whether two values of valueType are the same value as
-// the pipeline would see it: every unit both carry is equal, or one folds
-// into the other (J. Robins and James Robins). A unit only one carries does
-// not count against them, as in the pipeline's grouping; values that share
-// no unit, or where either is no evidence, are not compatible. Promote
-// graph alignment counts a comparison as an agreement by this test (S9-41).
-func Compatible(rules valuecompare.Rules, valueType string, a, b Value) bool {
-	m := moduleFor(rules, valueType)
-	if m == nil || !Carries(valueType, a) || !Carries(valueType, b) {
-		return false
-	}
-	ua, ok := m.split(a)
-	if !ok {
-		return false
-	}
-	ub, ok := m.split(b)
-	if !ok {
-		return false
-	}
-	shared := false
-	for name, x := range ua {
-		y, ok := ub[name]
-		if !ok {
-			continue
-		}
-		shared = true
-		if x.key != y.key && !m.fold(name, x, y) && !m.fold(name, y, x) {
-			return false
-		}
-	}
-	return shared
-}

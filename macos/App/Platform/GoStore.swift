@@ -964,13 +964,7 @@ struct GoStore: GenealogyStore {
         var req = Provenencia_Engine_V1_ProposePromoteGraphAlignmentRequest()
         req.projectDir = projectDir
         req.sourceID = sourceID
-        req.fixed = fixed.map { f in
-            var row = Provenencia_Engine_V1_PromoteGraphAlignmentFixed()
-            row.subjectID = f.subjectID
-            row.handleID = f.handleID
-            row.target = f.target
-            return row
-        }
+        req.fixed = fixed.map(Self.mapFixed)
         let resp: Provenencia_Engine_V1_ProposePromoteGraphAlignmentResponse = try await provenenciaCall(
             method: CoreMethod.proposePromoteGraphAlignment,
             request: req
@@ -996,30 +990,6 @@ struct GoStore: GenealogyStore {
                 reason: PromoteReasonCode(wire: r.reason),
                 reasonPropertyKey: r.reasonPropertyKey,
                 reasonPropertyOrigin: r.reasonPropertyOrigin,
-                comparisons: r.comparisons.map { c in
-                    CatalogPromoteGraphAlignmentComparison(
-                        propertyKey: c.propertyKey,
-                        propertyOrigin: c.propertyOrigin,
-                        outcome: c.outcome,
-                        valueType: c.valueType,
-                        pinned: c.pinned,
-                        weight: c.weight,
-                        groupSubjectID: c.groupSubjectID,
-                        incomingObservationID: c.incomingObservationID,
-                        incomingDisplay: ComparisonValueDisplay.string(
-                            date: c.hasIncomingDate ? Self.mapDateValue(c.incomingDate) : nil,
-                            fallback: c.incomingDisplay
-                        ),
-                        incomingNegative: c.incomingNegative,
-                        incomingSource: c.incomingSource,
-                        memberObservationID: c.memberObservationID,
-                        memberDisplay: ComparisonValueDisplay.string(
-                            date: c.hasMemberDate ? Self.mapDateValue(c.memberDate) : nil,
-                            fallback: c.memberDisplay
-                        ),
-                        memberSource: c.memberSource
-                    )
-                },
                 alternatives: r.alternatives.map { a in
                     var altPerson: CatalogPersonHeader?
                     var altEvent: CatalogEventHeader?
@@ -1061,6 +1031,87 @@ struct GoStore: GenealogyStore {
         return CatalogPromoteGraphAlignmentProposal(revision: resp.revision, rows: rows)
     }
 
+    func getPromoteClaimEvidence(
+        projectDir: String,
+        sourceID: String,
+        subjectID: String,
+        handleID: String,
+        neighbors: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws -> CatalogClaimEvidence {
+        var req = Provenencia_Engine_V1_GetPromoteClaimEvidenceRequest()
+        req.projectDir = projectDir
+        req.sourceID = sourceID
+        req.subjectID = subjectID
+        req.handleID = handleID
+        req.neighbors = neighbors.map(Self.mapFixed)
+        let resp: Provenencia_Engine_V1_GetPromoteClaimEvidenceResponse = try await provenenciaCall(
+            method: CoreMethod.getPromoteClaimEvidence,
+            request: req
+        )
+        return CatalogClaimEvidence(
+            sections: resp.sections.map(Self.mapEvidenceSection),
+            relationships: resp.relationships.map { r in
+                CatalogClaimEvidenceRelationship(
+                    neighborSubjectID: r.neighborSubjectID,
+                    key: r.key,
+                    bridgeType: r.bridgeType,
+                    term: r.term,
+                    end: r.end,
+                    eventType: r.eventType,
+                    outcome: EvidenceOutcome(wire: r.outcome),
+                    cause: SegmentCause(wire: r.cause),
+                    points: r.points,
+                    pinnable: r.pinnable,
+                    checked: r.checked,
+                    bundles: r.bundles.map {
+                        CatalogClaimEvidenceBundle(id: $0.id, memberSubjectID: $0.memberSubjectID, sourceID: $0.sourceID)
+                    },
+                    sections: r.sections.map(Self.mapEvidenceSection)
+                )
+            },
+            offers: resp.offers.map { CatalogClaimEvidenceOffer(id: $0.id, checked: $0.checked) },
+            sourceTitles: Dictionary(resp.sources.map { ($0.id, $0.title) }, uniquingKeysWith: { first, _ in first })
+        )
+    }
+
+    private static func mapFixed(_ f: CatalogPromoteGraphAlignmentFixed) -> Provenencia_Engine_V1_PromoteGraphAlignmentFixed {
+        var row = Provenencia_Engine_V1_PromoteGraphAlignmentFixed()
+        row.subjectID = f.subjectID
+        row.handleID = f.handleID
+        row.target = f.target
+        return row
+    }
+
+    private static func mapEvidenceSection(_ s: Provenencia_Engine_V1_PromoteClaimEvidenceSection) -> CatalogClaimEvidenceSection {
+        CatalogClaimEvidenceSection(
+            propertyKey: s.propertyKey,
+            lines: s.lines.map { l in
+                CatalogClaimEvidenceLine(
+                    propertyKey: l.propertyKey,
+                    outcome: EvidenceOutcome(wire: l.outcome),
+                    propertyCause: EvidencePropertyCause(wire: l.propertyCause),
+                    relation: ValueRelation(wire: l.relation),
+                    cause: ValueCause(wire: l.cause),
+                    points: l.points,
+                    pinnable: l.pinnable,
+                    checked: l.checked,
+                    incomingObservationID: l.incomingObservationID,
+                    incoming: mapConclusionValue(l.incoming),
+                    incomingNegative: l.incomingNegative,
+                    members: l.members.map { p in
+                        CatalogClaimEvidencePin(
+                            id: p.id,
+                            memberSubjectID: p.memberSubjectID,
+                            observationID: p.memberObservationID,
+                            sourceID: p.sourceID,
+                            value: mapConclusionValue(p.value)
+                        )
+                    }
+                )
+            }
+        )
+    }
+
     func applyPromoteGraphAlignment(
         projectDir: String,
         userID: String,
@@ -1082,12 +1133,8 @@ struct GoStore: GenealogyStore {
             if let entityID = row.entityID { proto.entityID = entityID }
             if let gradeID = row.confidenceGradeID { proto.confidenceGradeID = gradeID }
             proto.argument = row.argument
-            proto.pairs = row.pairs.map { pair in
-                var p = Provenencia_Engine_V1_ApplyPromoteGraphAlignmentPair()
-                p.incomingObservationID = pair.incomingObservationID
-                p.memberObservationID = pair.memberObservationID
-                return p
-            }
+            proto.defaultPins = row.defaultPins
+            proto.pinIds = row.pinIDs
             return proto
         }
         let resp: Provenencia_Engine_V1_ApplyPromoteGraphAlignmentResponse = try await provenenciaCall(

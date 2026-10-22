@@ -91,6 +91,157 @@ enum PromoteReasonCode: Sendable, Equatable {
     }
 }
 
+/// How a claim evidence line or relationship stands (`propertycompare.Outcome`).
+enum EvidenceOutcome: Sendable, Equatable {
+    case agree
+    case partial
+    case conflict
+    case unknown
+    /// A code this build doesn't know.
+    case unrecognized(String)
+
+    init(wire: String) {
+        switch wire {
+        case "agree": self = .agree
+        case "partial": self = .partial
+        case "conflict": self = .conflict
+        case "unknown": self = .unknown
+        default: self = .unrecognized(wire)
+        }
+    }
+}
+
+/// Why a line's outcome came out as it did (`propertycompare.Cause`).
+enum EvidencePropertyCause: Sendable, Equatable {
+    /// No cause: the code is empty.
+    case none
+    case relation
+    case negative
+    case noValues
+    case cardinality
+    /// A code this build doesn't know.
+    case unrecognized(String)
+
+    init(wire: String) {
+        switch wire {
+        case "": self = .none
+        case "relation": self = .relation
+        case "negative": self = .negative
+        case "no_values": self = .noValues
+        case "cardinality": self = .cardinality
+        default: self = .unrecognized(wire)
+        }
+    }
+}
+
+/// How two values relate (`valuecompare.Relation`).
+enum ValueRelation: Sendable, Equatable {
+    case same
+    case equivalent
+    case contains
+    case overlaps
+    case near
+    case different
+    case unknown
+    /// A code this build doesn't know.
+    case unrecognized(String)
+
+    init(wire: String) {
+        switch wire {
+        case "same": self = .same
+        case "equivalent": self = .equivalent
+        case "contains": self = .contains
+        case "overlaps": self = .overlaps
+        case "near": self = .near
+        case "different": self = .different
+        case "unknown": self = .unknown
+        default: self = .unrecognized(wire)
+        }
+    }
+}
+
+/// Why two values relate as they do (`valuecompare.Cause`).
+enum ValueCause: Sendable, Equatable {
+    /// No cause: the code is empty.
+    case none
+    case exact
+    case letterCase
+    case fold
+    case alias
+    case abbreviation
+    case initial
+    case spelling
+    case precision
+    case missingPart
+    case overlap
+    case gap
+    case beyondTolerance
+    case generationConflict
+    case empty
+    case phraseOnly
+    case belowMinimum
+    case noMatch
+    case tooLong
+    case order
+    case role
+    case unsupported
+    /// A code this build doesn't know.
+    case unrecognized(String)
+
+    init(wire: String) {
+        switch wire {
+        case "": self = .none
+        case "exact": self = .exact
+        case "case": self = .letterCase
+        case "fold": self = .fold
+        case "alias": self = .alias
+        case "abbreviation": self = .abbreviation
+        case "initial": self = .initial
+        case "spelling": self = .spelling
+        case "precision": self = .precision
+        case "missing_part": self = .missingPart
+        case "overlap": self = .overlap
+        case "gap": self = .gap
+        case "beyond_tolerance": self = .beyondTolerance
+        case "generation_conflict": self = .generationConflict
+        case "empty": self = .empty
+        case "phrase_only": self = .phraseOnly
+        case "below_minimum": self = .belowMinimum
+        case "no_match": self = .noMatch
+        case "too_long": self = .tooLong
+        case "order": self = .order
+        case "role": self = .role
+        case "unsupported": self = .unsupported
+        default: self = .unrecognized(wire)
+        }
+    }
+}
+
+/// Why a relationship adds nothing or subtracts (`segmentcompare.Cause`).
+enum SegmentCause: Sendable, Equatable {
+    /// No cause: the code is empty.
+    case none
+    case notCorresponding
+    case gated
+    case placedApart
+    case unplacedDiffers
+    case unplacedUnsure
+    /// A code this build doesn't know.
+    case unrecognized(String)
+
+    init(wire: String) {
+        switch wire {
+        case "": self = .none
+        case "not_corresponding": self = .notCorresponding
+        case "gated": self = .gated
+        case "placed_apart": self = .placedApart
+        case "unplaced_differs": self = .unplacedDiffers
+        case "unplaced_unsure": self = .unplacedUnsure
+        default: self = .unrecognized(wire)
+        }
+    }
+}
+
 // A Property's value type is `PropertyValueType` (InterpretationValueKinds.swift).
 
 /// Seeded Property keys the Conclusion pages lay out by name

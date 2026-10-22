@@ -31,7 +31,7 @@ func (st *state) proposal() Proposal {
 			reported = sc
 			row.HandleRef = st.handles[string(hid)].Ref
 			row.Score = sc.score
-			row.Comparisons = comparisonsFrom(sc.result, s.Kind, st.metas, st.cfg.Subject)
+			row.Comparisons = comparisonsFrom(sc.result, s.Kind, st.cfg.Subject)
 			via, viaKey := st.viaOf(sk, sc)
 			switch {
 			case st.fixedSet[sk]:
@@ -232,12 +232,11 @@ func strongestAgreement(cs []Comparison) vocabkey.PropertyKey {
 }
 
 // comparisonsFrom lists one Comparison per lead property r compared.
-func comparisonsFrom(r subjectcompare.Result, kind string, metas subjectcompare.Metas, rules subjectcompare.Rules) []Comparison {
+func comparisonsFrom(r subjectcompare.Result, kind string, rules subjectcompare.Rules) []Comparison {
 	out := make([]Comparison, 0, len(r.Properties))
 	for _, pr := range r.Properties {
 		out = append(out, Comparison{
 			PropertyResult: pr,
-			ValueType:      metas[pr.Key].ValueType,
 			Derived:        rules.Derived(vocabkey.SubjectType(kind), pr.Key),
 		})
 	}
@@ -290,7 +289,7 @@ func (st *state) alternative(sk string, c *cand, kind string) Alternative {
 	if alt.Assessment == AssessNone {
 		return alt
 	}
-	prop := strongestAgreement(comparisonsFrom(c.result, kind, st.metas, st.cfg.Subject))
+	prop := strongestAgreement(comparisonsFrom(c.result, kind, st.cfg.Subject))
 	if prop != "" {
 		alt.Reason = ReasonAgrees
 		alt.ReasonProperty = prop

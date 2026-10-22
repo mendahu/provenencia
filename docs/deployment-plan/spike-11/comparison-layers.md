@@ -466,7 +466,7 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 | Layer | Consumers today, once moved | Future consumers (`docs/ideas/`) |
 |---|---|---|
 | 1 value compare | Promote, `Rank`, the reconciler's grouping and pins, place-chain date windows (`conclusionheaders`) | Term dedupe ("godfather" vs "god-father", `term-management.md`), gazetteer lookup, Daitch–Mokotoff tier, international names |
-| 2 property compare | Promote sheet exhibits (replacing `pairExhibits`), reconciler checks | Whether provisional values count (`possible-values.md`) |
+| 2 property compare | Promote's claim evidence (`core/claimevidence`), reconciler checks | Whether provisional values count (`possible-values.md`) |
 | 3 subject compare | Duplicate New rows (`alikeNew`), merge hints (entity vs entity = two profiles) | Gazetteer place matching, duplicate Subjects while entering a Source |
 | 4 entity compare | Promote candidates (S11-13) | Weak-claim review (`identity-claim-review.md`), share-package import (`share-packages.md`) |
 
@@ -482,7 +482,7 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 |---|---|
 | `autoreconcile` `textKey`, `termKey`, `dateKey`, `subsumes` / `partFits`, `IsInitial`, `SpellingSimilarity`, `EditDistance`, `NormalizeForm`, `DateEnds` and windows (`DateEnds` and windows moved in S11-04) | Value compare (the reconciler imports it) — done in S11-06 |
 | `autoreconcile.Compatible` | Value compare's relation, under the reconciler's own grouping policy (rule 7) — done in S11-06 |
-| `promotealign.pairExhibits` (its own pairing; ignores negatives and cardinality) | Property compare's speaking pair |
+| `promotealign.pairExhibits` (its own pairing; ignores negatives and cardinality) | Property compare's speaking pair — done in S11-25 |
 | `match/pairs.go` leaders and weighting (`weigh`, `pairValues`) | The strict profile; negatives and cardinality move to property compare — done in S11-13 |
 | `graphalign` `alikeNew`, `pairNode` (property part) | Subject compare — done in S11-13 |
 | `conclusionheaders` `laterStart` / `earlierEnd` (year only, while reconciliation uses days) | Value compare's date windows |

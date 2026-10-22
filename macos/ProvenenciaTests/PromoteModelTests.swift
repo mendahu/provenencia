@@ -33,13 +33,6 @@ struct PromoteModelTests {
         CatalogPromoteGraphAlignmentRow(
             subjectID: id, kind: "person", target: "handle", handleID: handleID, handleRef: "PER-\(handleID)",
             score: 5, assessment: assessment, reason: .agrees, reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia",
-            comparisons: [
-                CatalogPromoteGraphAlignmentComparison(
-                    propertyKey: "name", propertyOrigin: "provenencia", outcome: "agree", valueType: "name",
-                    pinned: true, incomingObservationID: "obs-\(id)", incomingDisplay: id,
-                    memberObservationID: "mem-\(id)", memberDisplay: id
-                ),
-            ],
             alternatives: [
                 CatalogPromoteGraphAlignmentAlternative(handleID: "other", handleRef: "PER-OTHER", score: 1),
             ],
@@ -105,16 +98,83 @@ struct PromoteModelTests {
         #expect(bea?.decided == false)
     }
 
-    @Test func doneSendsThePinnedPair() async {
-        let subjects = [subject("a", ref: "CPR-A", label: "Ada")]
-        let store = store(subjects: subjects)
+    private func evidence(_ ids: [(String, Bool)]) -> CatalogClaimEvidence {
+        CatalogClaimEvidence(offers: ids.map { CatalogClaimEvidenceOffer(id: $0.0, checked: $0.1) })
+    }
+
+    @Test func openingASheetLoadsItsEvidence() async {
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
         store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
+        store.promoteEvidence["a"] = evidence([("l:1", true), ("l:2", false)])
         let model = model(store: store, subjectID: "a")
         await model.load()
+        model.openSheet("a")
+        #expect(model.sheetEvidence == .loading)
+        let loaded = await waitUntil { model.flow.row("a")?.evidence != nil }
+        #expect(loaded)
+        #expect(store.recordedCalls.contains("getPromoteClaimEvidence subject=a handle=e1 neighbors=0"))
+        #expect(model.flow.row("a")?.pins == ["l:1"])
+        #expect(model.sheetEvidence == .idle)
+    }
+
+    @Test func aFailedEvidenceReadShowsAnError() async {
+        struct Boom: Error {}
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
+        store.promoteEvidenceError = Boom()
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.openSheet("a")
+        let failed = await waitUntil {
+            if case .failed = model.sheetEvidence { return true }
+            return false
+        }
+        #expect(failed)
+        #expect(model.flow.row("a")?.evidence == nil)
+        model.closeSheet()
+        #expect(model.sheetEvidence == .idle)
+    }
+
+    @Test func aLateAnswerForAnotherSheetIsDropped() async {
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
+        let store = store(subjects: subjects)
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e2")])]
+        store.promoteEvidence["a"] = evidence([("l:a", true)])
+        store.promoteEvidence["b"] = evidence([("l:b", true)])
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.mapRest()
+        model.openSheet("a")
+        model.openSheet("b")
+        let loaded = await waitUntil { model.flow.row("b")?.evidence != nil }
+        #expect(loaded)
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(model.flow.row("a")?.evidence == nil)
+        #expect(model.sheetEvidence == .idle)
+    }
+
+    @Test func doneSendsDefaultOrChosenPins() async {
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
+        let store = store(subjects: subjects)
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e1")])]
+        store.promoteEvidence["b"] = evidence([("l:1", true), ("l:2", true)])
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.mapRest()
+        model.openSheet("b")
+        _ = await waitUntil { model.flow.row("b")?.evidence != nil }
+        model.togglePin(subjectID: "b", pinIDs: ["l:2"])
+        model.closeSheet()
         model.done()
         let filed = await waitUntil { store.lastPromoteBatch != nil }
         #expect(filed)
-        #expect(store.lastPromoteBatch?.rows.first?.pairs.first?.incomingObservationID == "obs-a")
+        let rows = store.lastPromoteBatch?.rows ?? []
+        let ada = rows.first { $0.subjectID == "a" }
+        let bea = rows.first { $0.subjectID == "b" }
+        #expect(ada?.defaultPins == true)
+        #expect(ada?.pinIDs == [])
+        #expect(bea?.defaultPins == false)
+        #expect(bea?.pinIDs == ["l:1"])
     }
 
     @Test func aStaleDoneReproposes() async {

@@ -131,6 +131,7 @@ enum CoreMethod {
     static let listSourceEventTitles = Int32(Provenencia_Engine_V1_Method.listSourceEventTitles.rawValue)
     static let proposePromoteGraphAlignment = Int32(Provenencia_Engine_V1_Method.proposePromoteGraphAlignment.rawValue)
     static let applyPromoteGraphAlignment = Int32(Provenencia_Engine_V1_Method.applyPromoteGraphAlignment.rawValue)
+    static let getPromoteClaimEvidence = Int32(Provenencia_Engine_V1_Method.getPromoteClaimEvidence.rawValue)
     static let getNameFormat = Int32(Provenencia_Engine_V1_Method.getNameFormat.rawValue)
 }
 

@@ -83,6 +83,9 @@ func TestSections(t *testing.T) {
 			if !bytes.Equal(p.Observation, []byte{0x10 + byte(i) + 1}) || !bytes.Equal(p.Source, []byte{0xA0 + byte(i) + 1}) {
 				t.Errorf("pin %d = %+v", i, p)
 			}
+			if !bytes.Equal(p.Value.Ref, p.Observation) || p.Value.Value.Type != "name" {
+				t.Errorf("pin %d value = %+v, want the member's name value", i, p.Value)
+			}
 		}
 	})
 

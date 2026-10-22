@@ -275,29 +275,6 @@ struct CatalogPromoteGraphAlignmentFixed: Sendable, Equatable {
     var target: String = "handle"
 }
 
-/// One Property comparison on a graph-alignment row. Agreeing lines with
-/// observation ids are the drafted pins.
-struct CatalogPromoteGraphAlignmentComparison: Sendable, Equatable, Identifiable {
-    var propertyKey: String
-    var propertyOrigin: String
-    var outcome: String
-    var valueType: String
-    var pinned: Bool
-    var weight: Double = 0
-    /// Empty for the Subject's own records; the layer neighbor for a one-hop record.
-    var groupSubjectID: String = ""
-    var incomingObservationID: String = ""
-    var incomingDisplay: String = ""
-    /// The incoming value is a negative Observation: shown as "not <value>".
-    var incomingNegative: Bool = false
-    var incomingSource: String = ""
-    var memberObservationID: String = ""
-    var memberDisplay: String = ""
-    var memberSource: String = ""
-
-    var id: String { incomingObservationID + "|" + memberObservationID + "|" + propertyKey }
-}
-
 /// A runner-up handle on a graph-alignment row.
 struct CatalogPromoteGraphAlignmentAlternative: Sendable, Equatable {
     var handleID: String
@@ -329,7 +306,6 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     /// With reason agrees: the Property that agrees most.
     var reasonPropertyKey: String = ""
     var reasonPropertyOrigin: String = ""
-    var comparisons: [CatalogPromoteGraphAlignmentComparison]
     var alternatives: [CatalogPromoteGraphAlignmentAlternative]
     var conflictWithFixed: Bool
     var possibleDuplicate: Bool
@@ -356,10 +332,88 @@ struct CatalogPromoteGraphAlignmentProposal: Sendable, Equatable {
     var rows: [CatalogPromoteGraphAlignmentRow]
 }
 
-/// One confirmed comparison on a Done row.
-struct CatalogPromoteGraphAlignmentPair: Sendable, Equatable {
+/// One member Observation a line would pin. `id` is Go's pin id.
+struct CatalogClaimEvidencePin: Sendable, Equatable, Identifiable {
+    var id: String
+    var memberSubjectID: String
+    var observationID: String
+    var sourceID: String
+    var value: CatalogConclusionValue
+}
+
+/// One incoming Observation against the members that say something about the
+/// same property (`claimevidence.Line`).
+struct CatalogClaimEvidenceLine: Sendable, Equatable, Identifiable {
+    var propertyKey: String
+    var outcome: EvidenceOutcome
+    var propertyCause: EvidencePropertyCause = .none
+    var relation: ValueRelation
+    var cause: ValueCause = .none
+    var points: Double = 0
+    var pinnable: Bool
+    var checked: Bool
     var incomingObservationID: String
-    var memberObservationID: String
+    var incoming: CatalogConclusionValue
+    /// The incoming value is a negative Observation: shown as "not <value>".
+    var incomingNegative: Bool = false
+    var members: [CatalogClaimEvidencePin]
+
+    var id: String { incomingObservationID + "|" + (members.first?.id ?? propertyKey) }
+}
+
+/// The lines for one property.
+struct CatalogClaimEvidenceSection: Sendable, Equatable, Identifiable {
+    var propertyKey: String
+    var lines: [CatalogClaimEvidenceLine]
+
+    var id: String { propertyKey }
+}
+
+/// One member's side of a relationship. `id` is Go's pin id.
+struct CatalogClaimEvidenceBundle: Sendable, Equatable, Identifiable {
+    var id: String
+    var memberSubjectID: String
+    var sourceID: String
+}
+
+/// One link of the row's Subject that corresponds to a link between the
+/// entity's members and a neighbor's (`claimevidence.Relationship`).
+struct CatalogClaimEvidenceRelationship: Sendable, Equatable, Identifiable {
+    var neighborSubjectID: String
+    var key: String
+    var bridgeType: String = ""
+    var term: String = ""
+    var end: String = ""
+    var eventType: String = ""
+    var outcome: EvidenceOutcome
+    var cause: SegmentCause = .none
+    var points: Double = 0
+    var pinnable: Bool
+    var checked: Bool
+    var bundles: [CatalogClaimEvidenceBundle]
+    var sections: [CatalogClaimEvidenceSection] = []
+
+    var id: String { neighborSubjectID + "|" + key }
+}
+
+/// A pin the evidence offers; checked ones are the defaults.
+struct CatalogClaimEvidenceOffer: Sendable, Equatable {
+    var id: String
+    var checked: Bool
+}
+
+/// One Promote row's claim evidence against its target (`getPromoteClaimEvidence`).
+struct CatalogClaimEvidence: Sendable, Equatable {
+    var sections: [CatalogClaimEvidenceSection] = []
+    var relationships: [CatalogClaimEvidenceRelationship] = []
+    var offers: [CatalogClaimEvidenceOffer] = []
+    /// Source id → title.
+    var sourceTitles: [String: String] = [:]
+
+    /// The pins that start checked.
+    var checkedPinIDs: Set<String> { Set(offers.filter(\.checked).map(\.id)) }
+    /// Every pin the evidence offers.
+    var offeredPinIDs: Set<String> { Set(offers.map(\.id)) }
 }
 
 /// One Subject on a Done.
@@ -369,7 +423,10 @@ struct CatalogPromoteBatchRow: Sendable, Equatable {
     var entityID: String?
     var confidenceGradeID: String?
     var argument: String
-    var pairs: [CatalogPromoteGraphAlignmentPair]
+    /// The sheet was never opened: Go pins what the evidence checks.
+    var defaultPins: Bool = false
+    /// The pins the researcher left checked (ids from `CatalogClaimEvidence.offers`).
+    var pinIDs: [String] = []
 }
 
 /// One claim a Done filed.
@@ -1295,6 +1352,14 @@ protocol GenealogyStore: Sendable {
         sourceID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogPromoteGraphAlignmentProposal
+    /// One row's claim evidence against its target. `neighbors` are the targets the page holds for its other rows.
+    func getPromoteClaimEvidence(
+        projectDir: String,
+        sourceID: String,
+        subjectID: String,
+        handleID: String,
+        neighbors: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws -> CatalogClaimEvidence
     /// File one Done: claims, pins, and bridges. `seenRevision` is the proposal's revision.
     func applyPromoteGraphAlignment(
         projectDir: String,

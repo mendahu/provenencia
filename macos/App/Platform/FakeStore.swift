@@ -37,6 +37,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var promoteProposeDelays: [Duration] = []
     /// The decided rows the last proposal call held.
     var lastPromoteFixed: [CatalogPromoteGraphAlignmentFixed] = []
+    /// Claim evidence per Subject id, as Go would compose it. A Subject with no
+    /// entry gets empty evidence.
+    var promoteEvidence: [String: CatalogClaimEvidence] = [:]
+    /// Thrown by `getPromoteClaimEvidence` when set.
+    var promoteEvidenceError: Error?
     /// The last Done the page filed, for tests.
     var lastPromoteBatch: (rows: [CatalogPromoteBatchRow], skipBridgeIDs: [String])?
     /// Event and Place headers as Go would compose them, seeded by tests in
@@ -1675,7 +1680,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         score: 0,
                         assessment: "strong",
                         reason: .decided,
-                        comparisons: [],
                         alternatives: [],
                         conflictWithFixed: false,
                         possibleDuplicate: false
@@ -1693,7 +1697,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         score: 0,
                         assessment: "strong",
                         reason: .decided,
-                        comparisons: [],
                         alternatives: [],
                         conflictWithFixed: false,
                         possibleDuplicate: false
@@ -1708,7 +1711,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     score: 0,
                     assessment: "none",
                     reason: .empty,
-                    comparisons: [],
                     alternatives: [],
                     conflictWithFixed: false,
                     possibleDuplicate: false
@@ -1718,7 +1720,22 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// Files claims and records pins so a pinned Observation's delete names each handle.
+    func getPromoteClaimEvidence(
+        projectDir: String,
+        sourceID _: String,
+        subjectID: String,
+        handleID: String,
+        neighbors: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws -> CatalogClaimEvidence {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            recordedCalls.append("getPromoteClaimEvidence subject=\(subjectID) handle=\(handleID) neighbors=\(neighbors.count)")
+            if let promoteEvidenceError { throw promoteEvidenceError }
+            return promoteEvidence[subjectID] ?? CatalogClaimEvidence()
+        }
+    }
+
+    /// Files claims. Which Observations a pin names is Go's (`promotealign.PinOffers`); the fake pins none.
     func applyPromoteGraphAlignment(
         projectDir: String,
         userID _: String,
@@ -1740,12 +1757,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 // Go's applyRow: a Skip writes nothing and carries nothing; a New has no pins.
                 switch row.target {
                 case "skip":
-                    guard row.entityID == nil, row.pairs.isEmpty, row.confidenceGradeID == nil, row.argument.isEmpty else {
+                    guard row.entityID == nil, row.pinIDs.isEmpty, row.confidenceGradeID == nil, row.argument.isEmpty else {
                         throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
                     }
                     continue
                 case "new":
-                    guard row.entityID == nil, row.pairs.isEmpty else {
+                    guard row.entityID == nil, row.pinIDs.isEmpty else {
                         throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
                     }
                 case "handle":
@@ -1760,7 +1777,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
                 }
                 if let existing = membershipBySubject[subject.id] {
-                    if row.target == "handle", existing.entity.id == row.entityID, row.pairs.isEmpty {
+                    if row.target == "handle", existing.entity.id == row.entityID, row.pinIDs.isEmpty {
                         continue
                     }
                     throw CoreInvokeError.coded(status: 1, code: "identityclaims.already_member", kind: .conflict, params: [])
@@ -1797,18 +1814,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     kind: type.key
                 )
                 claimBySubject[subject.id] = claim
-                for pair in row.pairs {
-                    recordPin(observationID: pair.incomingObservationID, entity: entity)
-                    recordPin(observationID: pair.memberObservationID, entity: entity)
-                    if let member = observationsBySource.values.flatMap({ $0 }).first(where: { $0.id == pair.memberObservationID }),
-                       let memberEntity = membershipBySubject[member.subjectID]?.entity,
-                       memberEntity.id != entity.id
-                    {
-                        recordPin(observationID: pair.incomingObservationID, entity: memberEntity)
-                        recordPin(observationID: pair.memberObservationID, entity: memberEntity)
-                    }
-                }
-                written.append(CatalogPromoteBatchWritten(entity: entity, claim: claim, pins: row.pairs.count * 2))
+                written.append(CatalogPromoteBatchWritten(entity: entity, claim: claim, pins: row.pinIDs.count))
             }
             let revision: Int64
             if written.isEmpty {
@@ -1819,14 +1825,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
             return CatalogPromoteBatchResult(revision: revision, written: written)
         }
-    }
-
-    private func recordPin(observationID: String, entity: CatalogCanonicalEntity) {
-        var list = pinsByObservation[observationID] ?? []
-        if !list.contains(where: { $0.id == entity.id }) {
-            list.append(entity)
-        }
-        pinsByObservation[observationID] = list
     }
 
     func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade] {

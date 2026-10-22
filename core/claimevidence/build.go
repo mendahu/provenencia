@@ -24,7 +24,7 @@ import (
 func Build(kind vocabkey.SubjectType, row, handle subjectcompare.Values, members []Member, neighbors []Neighbor,
 	metas subjectcompare.Metas, rules Rules, segment segmentcompare.Rules, subject subjectcompare.Rules,
 	value valuecompare.Rules) Evidence {
-	out := Evidence{Sections: Sections(kind, row, members, metas, rules, subject, value)}
+	out := Evidence{Kind: kind, Sections: Sections(kind, row, members, metas, rules, subject, value)}
 	own := subjectcompare.Compare(kind, row, handle, metas, subject, value).Evidence
 	for _, n := range neighbors {
 		out.Relationships = append(out.Relationships, relationships(n, members, own, metas, rules, segment, subject, value)...)
@@ -89,6 +89,7 @@ func relationships(n Neighbor, members []Member, own float64, metas subjectcompa
 		rel := Relationship{
 			Key:      key,
 			Neighbor: n.Subject,
+			Kind:     n.Kind,
 			Outcome:  res.Outcome,
 			Cause:    res.Cause,
 			Points:   res.Evidence,
@@ -123,7 +124,7 @@ func bundles(n Neighbor, canons []CanonLink, members []Member, defining []vocabk
 			}
 			named[ni] = true
 			found = append(found, placed{Bundle{
-				Member: b.Member, Neighbor: b.Neighbor, Source: b.Source,
+				Member: b.Member, Neighbor: b.Neighbor, Source: b.Source, Bridge: b.Subject,
 				Observations: appendNew(slices.Clone(b.Observations), refsOf(n.Members[ni].Values, defining)...),
 			}, mi, ni})
 		}

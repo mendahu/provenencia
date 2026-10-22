@@ -1,6 +1,6 @@
 # Claim Evidence
 
-**Status:** requirements; the query is built in S11-19 (`core/claimevidence`, `promotealign.Evidence`), the RPC is S11-25 (2026-10-21). Part of [Spike 11](README.md), after the matching algorithm is re-implemented ([`comparison-layers.md`](comparison-layers.md)). Today's model: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 (assessment sheet) and §9 (pins).
+**Status:** requirements; the query is built in S11-19 (`core/claimevidence`, `promotealign.Evidence`), the RPC and Go-owned pins are built in S11-25 (2026-10-21). Part of [Spike 11](README.md), after the matching algorithm is re-implemented ([`comparison-layers.md`](comparison-layers.md)). Today's model: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 (assessment sheet) and §9 (pins).
 
 ## Why
 
@@ -90,8 +90,10 @@ The researcher wants to say "these are the same person because they have a match
 
 ## Retires
 
+Done in S11-25:
+
 - `pairExhibits`, `comparerDiscount` and `exhibitCompatible` (`core/database/promotealign/exhibits.go`).
-- `attachExhibits` running inside every proposal read. `withRowLines` / `refLine` are replaced by the "why suggested" summary.
+- `attachExhibits` running inside every proposal read. `withRowLines` / `refLine` are replaced by the "why suggested" summary (S11-20).
 
 ## Open questions
 

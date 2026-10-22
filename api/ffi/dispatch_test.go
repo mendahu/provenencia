@@ -10,6 +10,7 @@ func TestCallRouter(t *testing.T) {
 		{name: "unspecified method", method: MethodUnspecified},
 		{name: "unknown method", method: 100},
 		{name: "reserved update citation with observations", method: 71},
+		{name: "claim evidence with no request", method: MethodGetPromoteClaimEvidence},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

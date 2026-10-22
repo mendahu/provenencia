@@ -22,8 +22,10 @@ import (
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/objectpath"
+	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/raster"
+	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -228,6 +230,16 @@ func listStrings() []string {
 	return out
 }
 
+// sortedRelations is every valuecompare relation, sorted.
+func sortedRelations() []string {
+	var out []string
+	for _, r := range valuecompare.Relations() {
+		out = append(out, string(r))
+	}
+	sort.Strings(out)
+	return out
+}
+
 func TestSwiftVocabularyMatchesGo(t *testing.T) {
 	tests := []struct {
 		name string
@@ -253,6 +265,36 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 				string(graphalign.ReasonWeak), string(graphalign.ReasonTaken), string(graphalign.ReasonNoMatch),
 				string(graphalign.ReasonEmpty), string(graphalign.ReasonNeighborPlaced), string(graphalign.ReasonNeighborMoved),
 				string(graphalign.ReasonNeighborReleased)),
+		},
+		{
+			name: "evidence outcomes", path: swiftVocabulary, enum: "EvidenceOutcome", re: wireCase,
+			want: sorted(string(propertycompare.OutcomeAgree), string(propertycompare.OutcomePartial),
+				string(propertycompare.OutcomeConflict), string(propertycompare.OutcomeUnknown)),
+		},
+		{
+			name: "evidence property causes", path: swiftVocabulary, enum: "EvidencePropertyCause", re: wireCase,
+			want: sorted("", string(propertycompare.CauseRelation), string(propertycompare.CauseNegative),
+				string(propertycompare.CauseNoValues), string(propertycompare.CauseCardinality)),
+		},
+		{
+			name: "value relations", path: swiftVocabulary, enum: "ValueRelation", re: wireCase,
+			want: sortedRelations(),
+		},
+		{
+			name: "value causes", path: swiftVocabulary, enum: "ValueCause", re: wireCase,
+			want: sorted("", string(valuecompare.CauseExact), string(valuecompare.CauseCase), string(valuecompare.CauseFold),
+				string(valuecompare.CauseAlias), string(valuecompare.CauseAbbreviation), string(valuecompare.CauseInitial),
+				string(valuecompare.CauseSpelling), string(valuecompare.CausePrecision), string(valuecompare.CauseMissingPart),
+				string(valuecompare.CauseOverlap), string(valuecompare.CauseGap), string(valuecompare.CauseBeyondTolerance),
+				string(valuecompare.CauseGenerationConflict), string(valuecompare.CauseEmpty), string(valuecompare.CausePhraseOnly),
+				string(valuecompare.CauseBelowMinimum), string(valuecompare.CauseNoMatch), string(valuecompare.CauseTooLong),
+				string(valuecompare.CauseOrder), string(valuecompare.CauseRole), string(valuecompare.CauseUnsupported)),
+		},
+		{
+			name: "segment causes", path: swiftVocabulary, enum: "SegmentCause", re: wireCase,
+			want: sorted("", string(segmentcompare.CauseNotCorresponding), string(segmentcompare.CauseGated),
+				string(segmentcompare.CausePlacedApart), string(segmentcompare.CauseUnplacedDiffers),
+				string(segmentcompare.CauseUnplacedUnsure)),
 		},
 		{
 			name: "date qualifiers", path: swiftVocabulary, enum: "DateQualifier", re: staticLet,
@@ -300,7 +342,8 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		})
 	}
 	t.Run("states and reasons tolerate a value this build doesn't know", func(t *testing.T) {
-		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteReasonCode"} {
+		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteReasonCode",
+			"EvidenceOutcome", "EvidencePropertyCause", "ValueRelation", "ValueCause", "SegmentCause"} {
 			if !unrecogniz.MatchString(swiftEnumBody(t, swiftVocabulary, enum)) {
 				t.Fatalf("%s has no unrecognized case", enum)
 			}

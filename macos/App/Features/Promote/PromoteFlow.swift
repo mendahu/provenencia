@@ -152,12 +152,13 @@ struct PromoteFlow: Equatable, Sendable {
         var reason: Reason
         var target: Target
         var menu: [Alternative]
-        var comparisons: [CatalogPromoteGraphAlignmentComparison]
+        /// The row's claim evidence against its target; nil until its sheet opens.
+        var evidence: CatalogClaimEvidence?
+        /// The pins left checked (ids from `evidence.offers`). Meaningful only once `evidence` is set.
         var pins: Set<String>
         var confidenceGradeID: String?
+        /// What the researcher typed; Promote drafts none.
         var argument: String
-        /// The researcher typed the argument; a retarget keeps it instead of re-drafting.
-        var argumentEdited = false
         var decided: Bool
         /// A suggested row whose target moved on the last proposal.
         var updated: Bool
@@ -340,14 +341,14 @@ struct PromoteFlow: Equatable, Sendable {
         guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }), !rows[index].anchor else { return false }
         let next = target(for: token, on: rows[index])
         if next != rows[index].target {
-            // The lines, pins and contested flag compared the old target; the
-            // next proposal drafts them for this one.
+            // The evidence, pins and contested flag compared the old target;
+            // the sheet reads them again for this one. The argument is the
+            // researcher's own and stays.
             rows[index].target = next
-            rows[index].comparisons = []
+            rows[index].evidence = nil
             rows[index].pins = []
             rows[index].contested = false
             rows[index].move = nil
-            if !rows[index].argumentEdited { rows[index].argument = "" }
         }
         rows[index].decided = true
         rows[index].updated = false
@@ -356,12 +357,51 @@ struct PromoteFlow: Equatable, Sendable {
         return true
     }
 
-    mutating func togglePin(subjectID: String, comparisonID: String) {
-        guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }) else { return }
-        if rows[index].pins.contains(comparisonID) {
-            rows[index].pins.remove(comparisonID)
+    /// The targets for these rows as the page holds them, for a proposal or a
+    /// claim evidence read: a handle, New, or Skip. An unset row has none.
+    func fixed(for rows: [Row]) -> [CatalogPromoteGraphAlignmentFixed] {
+        rows.compactMap { row in
+            switch row.target {
+            case .handle(let id, _, _):
+                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, handleID: id)
+            case .newKind:
+                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: "new")
+            case .skip:
+                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: "skip")
+            case .unset:
+                return nil
+            }
+        }
+    }
+
+    /// The other rows Done files, as targets: the neighbors a row's evidence
+    /// is read against. Go adds the Subjects already filed.
+    func evidenceNeighbors(for subjectID: String) -> [CatalogPromoteGraphAlignmentFixed] {
+        fixed(for: filedRows.filter { $0.subjectID != subjectID })
+    }
+
+    /// Stores a row's evidence, unless its target moved on while it loaded.
+    /// The first read drafts the pins the evidence checks; a later one keeps
+    /// what the researcher left checked of what is still offered.
+    mutating func setEvidence(subjectID: String, handleID: String, evidence: CatalogClaimEvidence) {
+        guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }),
+              rows[index].target.handleID == handleID
+        else { return }
+        if rows[index].evidence == nil {
+            rows[index].pins = evidence.checkedPinIDs
         } else {
-            rows[index].pins.insert(comparisonID)
+            rows[index].pins.formIntersection(evidence.offeredPinIDs)
+        }
+        rows[index].evidence = evidence
+    }
+
+    /// Checks or unchecks every pin of a line or relationship together.
+    mutating func togglePin(subjectID: String, pinIDs: [String]) {
+        guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }), !pinIDs.isEmpty else { return }
+        if rows[index].pins.isSuperset(of: pinIDs) {
+            rows[index].pins.subtract(pinIDs)
+        } else {
+            rows[index].pins.formUnion(pinIDs)
         }
         rows[index].decided = true
         manual = true
@@ -370,7 +410,6 @@ struct PromoteFlow: Equatable, Sendable {
     mutating func setArgument(subjectID: String, argument: String) {
         guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }) else { return }
         rows[index].argument = argument
-        rows[index].argumentEdited = true
         rows[index].decided = true
         manual = true
     }
@@ -402,27 +441,22 @@ struct PromoteFlow: Equatable, Sendable {
     /// One line per row to file. A Skip writes nothing, so it carries no
     /// argument, confidence, or pins, whatever the row was drafted with.
     func batchRows() -> [CatalogPromoteBatchRow] {
-        scope.compactMap { row in
-            if row.anchor || row.target == .unset { return nil }
-            return batchRow(row)
-        }
+        filedRows.map(batchRow)
+    }
+
+    /// The rows Done files: visible, not already filed, with a target.
+    private var filedRows: [Row] {
+        scope.filter { !$0.anchor && $0.target != .unset }
     }
 
     private func batchRow(_ row: Row) -> CatalogPromoteBatchRow {
-        let pairs: [CatalogPromoteGraphAlignmentPair]
+        // A handle row whose sheet was never opened pins what the evidence
+        // checks, which Go decides; an opened one sends the pins it left.
+        var defaultPins = false
+        var pinIDs: [String] = []
         if case .handle = row.target {
-            pairs = row.comparisons.compactMap { comparison in
-                guard row.pins.contains(comparison.id),
-                      !comparison.incomingObservationID.isEmpty,
-                      !comparison.memberObservationID.isEmpty
-                else { return nil }
-                return CatalogPromoteGraphAlignmentPair(
-                    incomingObservationID: comparison.incomingObservationID,
-                    memberObservationID: comparison.memberObservationID
-                )
-            }
-        } else {
-            pairs = []
+            defaultPins = row.evidence == nil
+            pinIDs = row.evidence == nil ? [] : row.pins.sorted()
         }
         let entityID: String?
         let target: String
@@ -444,7 +478,8 @@ struct PromoteFlow: Equatable, Sendable {
             entityID: entityID,
             confidenceGradeID: files ? row.confidenceGradeID : nil,
             argument: files ? row.argument : "",
-            pairs: pairs
+            defaultPins: defaultPins,
+            pinIDs: pinIDs
         )
     }
 
@@ -510,7 +545,7 @@ struct PromoteFlow: Equatable, Sendable {
                 subjectID: fact.id, kind: fact.kind, name: fact.name, ref: fact.ref,
                 anchor: true, assessment: .strong, reason: .filed,
                 target: .handle(id: anchor.id, ref: anchor.ref, title: anchor.title),
-                menu: [], comparisons: [], pins: [], confidenceGradeID: nil, argument: "",
+                menu: [], evidence: nil, pins: [], confidenceGradeID: nil, argument: "",
                 decided: false, updated: false, conflictNote: nil, proposedDuplicateOf: nil, duplicateNote: nil
             )
         }
@@ -532,33 +567,21 @@ struct PromoteFlow: Equatable, Sendable {
                     kept.menu[menuIndex].reason = matchReason
                 }
             }
-            // Lines only describe the row's own target: a decided handle is
-            // sent as fixed, so the proposal compares exactly that handle.
-            let lines = proposal.target == "handle" && proposal.handleID == previous.target.handleID
-                ? proposal.comparisons : []
-            if previous.comparisons.isEmpty {
-                kept.pins = draftedPins(lines)
-            } else {
-                kept.pins = previous.pins.intersection(lines.map(\.id))
-            }
-            kept.comparisons = lines
-            if !previous.argumentEdited {
-                kept.argument = draftedArgument(lines)
-            }
             kept.conflictNote = proposal.conflictWithFixed ? proposal.alternatives.first?.handleRef : nil
             kept.contested = proposal.contested
             kept.move = Reason(move: proposal)
             kept.proposedDuplicateOf = duplicateOf(proposal)
             return kept
         }
-        let lines = drafted.handleID == nil ? [] : proposal.comparisons
         let updated = previous.map { !$0.anchor && $0.target != drafted } ?? false
+        // The evidence and pins belong to the target they were read for.
+        let keeps = previous.map { $0.target == drafted } ?? false
         return Row(
             subjectID: fact.id, kind: fact.kind, name: fact.name, ref: fact.ref,
             anchor: false, assessment: Assessment(wire: proposal.assessment),
             reason: Reason(proposal),
-            target: drafted, menu: menu, comparisons: proposal.comparisons,
-            pins: draftedPins(lines), confidenceGradeID: nil, argument: draftedArgument(lines),
+            target: drafted, menu: menu, evidence: keeps ? previous?.evidence : nil,
+            pins: keeps ? previous?.pins ?? [] : [], confidenceGradeID: nil, argument: previous?.argument ?? "",
             decided: false, updated: updated, conflictNote: nil,
             proposedDuplicateOf: duplicateOf(proposal), duplicateNote: nil,
             contested: proposal.contested, move: Reason(move: proposal)
@@ -567,18 +590,6 @@ struct PromoteFlow: Equatable, Sendable {
 
     private static func duplicateOf(_ proposal: CatalogPromoteGraphAlignmentRow) -> String? {
         proposal.possibleDuplicate && !proposal.duplicateOfSubjectID.isEmpty ? proposal.duplicateOfSubjectID : nil
-    }
-
-    private static func draftedPins(_ lines: [CatalogPromoteGraphAlignmentComparison]) -> Set<String> {
-        Set(lines.filter { $0.pinned && $0.outcome != "conflict" }.map(\.id))
-    }
-
-    /// The agreeing values, as a starting argument the researcher can edit.
-    private static func draftedArgument(_ lines: [CatalogPromoteGraphAlignmentComparison]) -> String {
-        lines
-            .filter { $0.outcome == "agree" && !$0.incomingDisplay.isEmpty }
-            .map(\.incomingDisplay)
-            .joined(separator: "; ")
     }
 
     private static func draftTarget(_ proposal: CatalogPromoteGraphAlignmentRow, menu: [Alternative]) -> Target {
