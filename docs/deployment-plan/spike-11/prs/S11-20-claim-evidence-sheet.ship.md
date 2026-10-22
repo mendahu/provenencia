@@ -296,3 +296,117 @@ VER-2 (open dates still anchor the lifetime window) is **To user**.
 
 ## Result (after round 8)
 Gate PASS · CI see PR · open: none · to user: VER-2, term origin (a user term keyed like a product term reads as the product term) · manual check §10 not run
+
+## Round 9 — user decision (2026-10-22)
+VER-2, answered by the user: "a lifetime anchored only by an open-ended date stays open on that side." Plan it with a test matrix and verify it the same way.
+
+### The rule (orchestrator)
+The window is the possible lifetime. Every event lies inside it, and a life is at most `MaxYears` long. Each side of the window takes its bound from **closed** ends only; an open end never pins it:
+- **Start:** (1) the earliest closed first end among `Starts` events (birth); else (2) the earliest closed first end among all dates, shifted back `MaxYears`; else (3) open.
+- **End:** (1) the latest closed last end among `Ends` events (death, burial…); else (2) the latest closed last end among all dates, shifted forward `MaxYears`; else (3) open.
+
+Why each step is a true bound:
+- (1) A closed birth bounds the start; a closed death bounds the end.
+- (2) The death falls on or after every event, so it falls on or after any closed first end `x`; the birth then falls on or after `x − MaxYears`. The end side is symmetric.
+- Step (2) no longer shifts from a `BEF` date's collapsed day. Example: baptism 1900 plus residence `BEF 1850` now starts at 1790, not 1740. That is tighter and still true.
+
+**Never open on both sides:** an open start needs every date's first end open, and an open end needs every date's last end open. Every date has at least one closed end.
+
+The "wholly outside the window" check skips an open window end. Keep "contradicts" when a closed start falls after a closed end. Keep "undated" when a shift cannot be placed.
+
+The user asked for "open on that side". Step (2) still applies the 110-year cap when any exact date exists; a side is fully open only when no exact date bounds it. That keeps the registry's longest-life rule (`MaxYears`, an existing knob) rather than dropping it. The final report must say so.
+
+### Fix plan 9
+**F-21 — The lifetime window reads closed ends only** (from VER-2, user decision)
+Files: `core/subjectprofile/subjectprofile.go` (`lifespan`, doc comment), `core/subjectprofile/entity_test.go`, `core/subjectprofile/lifespan_test.go`. Skill: `add-match-rule` (no new knob).
+Failing tests first: a table in `TestEntityCompare`, side B as given, outcome of the lifespan rule.
+
+| # | Side A | Side B | Want | At `1885e198` |
+| --- | --- | --- | --- | --- |
+| W1 | death `BEF 1840` only | birth 1600, death 1650 | not conflict | conflict |
+| W2 | birth `AFT 1800` only | birth 1950, death 2000 | not conflict | conflict |
+| W3 | birth 1900, death `AFT 1950` | residence 1990 only | not conflict | conflict |
+| W4 | birth `BEF 1900`, death `AFT 1950` | birth 1890, death 1960 | not conflict | not conflict |
+| W5 | death `BEF 1840` only | residence 1900 only | conflict | conflict |
+| W6 | birth `AFT 1800` only | death 1790 only | conflict | conflict |
+| W7 | birth 1900, death `AFT 1950` | residence 2020 only | conflict (past 1900 + 110) | conflict |
+| W8 | baptism 1900, residence `BEF 1850` | birth 1700, death 1785 | conflict (A's start ≥ 1790) | conflict |
+| W9 | birth `BEF 1900` only | death 1700 only | conflict (B died before A's latest possible birth?), see note | — |
+
+Note on W9: A's window is open at the start and runs to 1900 + 110 at the end. B's window comes from death 1700, so it starts at 1590 and ends at 1700. B's span is 1700. A's window (−∞, 2010] contains 1700, so A's window direction fits. B's window [1590, 1700] against A's span `BEF 1900` overlaps. So W9 is **not conflict**, and that is correct: a birth before 1900 can be 1650. Write it as "not conflict".
+
+W1–W3 must fail first. W4–W8 are regression guards; run them before the change and say which already pass.
+Do:
+- Implement the rule above.
+- Keep the collapsed `early`/`late` only for `side.First`/`side.Last` and the inverted-span fallback (F-20).
+- The window uses the raw ends.
+- The "wholly outside" check skips an open window end as well as an open date end.
+- List every existing test whose expected window or result changes, with one line on why the new value is right. Expect changes only where a window was anchored on a collapsed open date.
+
+Check:
+- the matrix passes;
+- `go test -tags fts5 ./core/...` PASS;
+- scripts/check-pr.sh PASS.
+
+Landed note, add: "Ship round 9, at the user's request: a lifetime window takes its bounds from closed dates only; a side anchored only by an open-ended date stays open (the 110-year cap still applies from any exact date)."
+
+## Round 9 — fix
+Head `063c2e60`. Gate PASS (orchestrator re-ran). W1–W3 and W9 failed first; W4–W8 already passed. One existing case changed: AC-2.9 window "Between 1730 and 1840" → "Before 1840".
+
+## Round 9 — review
+Verifier (Opus): **Refuted, partly.** Questions (1), (4) and (5) were confirmed: no new false conflict; the window is never open on both sides; an open side contains anything. One defect:
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| VER-3 | CON | blocker | A side with several Starts/Ends records, only some open, now "contradicts itself", and the conflicts that side should raise are lost | Fix now → F-22 | verified by the verifier's probe at both commits. C1 birth 1900 + birth `BEF 1895` vs death 1700: before, conflict; now A contradicts, unknown. C2–C5 are the same pattern, including death 1 Mar 1850 + burial `AFT 5 Mar 1850`. The exact-date control C6 (two exact births) still conflicts. Step (1) is a true bound only when every Starts (Ends) record is closed on that side |
+
+Also confirmed rightly changed:
+- "baptism 1900, residence `BEF 1780`" now contradicts (a life of more than 110 years).
+- "birth `BEF 1900`, residence 1880" no longer contradicts.
+- "death `AFT 1950`, residence 1980" no longer contradicts.
+
+**F-22 — A record's bound counts only when every such record is closed** (from VER-3)
+Files: `core/subjectprofile/subjectprofile.go`, `core/subjectprofile/entity_test.go`.
+Failing tests first (side A vs side B → lifespan outcome; A must have a lifespan, not contradicts):
+
+| # | Side A | Side B | Want |
+| --- | --- | --- | --- |
+| C1 | birth 1900, birth `BEF 1895` | death 1700 | conflict |
+| C2 | death 1850, burial `AFT 1900` | birth 1960 | conflict |
+| C3 | death 1 Mar 1850, burial `AFT 5 Mar 1850` | birth 1960 | conflict |
+| C4 | birth `AFT 1890`, birth `BEF 1880` | residence 1700 | conflict |
+| C5 | death 1850, death `AFT 1855` | birth 1960 | conflict |
+
+Regression guards, already right at `063c2e60`:
+
+| # | Side A | Side B | Want |
+| --- | --- | --- | --- |
+| C6 | birth 1900, birth 1895 | death 1700 | conflict |
+| G1 | baptism 1900, residence `BEF 1780` | — | A contradicts |
+| G2 | birth `BEF 1900`, residence 1880 | — | A has a lifespan |
+| G3 | death `AFT 1950`, residence 1980 | — | A has a lifespan |
+
+W1–W9 and every F-18 – F-20 case still pass.
+Do: step (1) for the start applies only when every Starts record's first end is closed; otherwise step (2). The end works the same way with Ends records and last ends. Update the doc comment and the Round 9 rule text in the plan's Landed note if it states step (1) without this condition.
+Check: tables pass; `go test -tags fts5 ./core/...` PASS; scripts/check-pr.sh PASS.
+F-22 done at `b13fddbb`; gate PASS (orchestrator re-ran); C1–C5 failed first and pass; C6, G1–G3 pass.
+
+## Round 9 — review 2
+Verifier (Opus), probing against `fe5b79b3`, `1885e198` and `b13fddbb`. **Refuted, partly.** No new false conflict was found, and the self-contradiction changes are right. Two regressions remain against the base:
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| VER-4 | CON | blocker | Step (2) drops the cross bound, so a closed death no longer caps the birth from below and a closed birth no longer caps the death from above | To user | Probes: P19 birth `BEF 1850`, residence 1850, death 1900 \| residence 1760; P23; P1 birth 1900, residence 1950, death `AFT 1950` \| residence 2030. Each conflicted at base and at `1885e198`; each agrees at `b13fddbb` |
+| VER-5 | CON | major | An open record that agrees with a closed one (birth 1840 + birth `BEF 1850`; death 1850 + death `AFT 1841`) now removes the closed bound | To user | Probes P2, P4, P17, P18: conflict at base, agree now; the controls without the open record still conflict. P3 (death 1 Mar 1850 + burial `AFT 5 Mar 1850`) also depends on whether a burial bounds the death |
+
+**Orchestrator's read:** three rounds of rule patches (F-18 → F-22) each fixed one case and broke another. The window needs a model, not another step. Proposal to the user:
+- Unknowns: birth B and death D.
+- Every event lies in [B, D].
+- D − B ≤ MaxYears.
+- Records for the same event are intersected when they agree and treated as alternatives (loosest) when they do not.
+- The registry says per Ends role whether it fixes D (death) or only bounds it (burial: D ≤ burial).
+- Propagate the bounds.
+- The window is [min B, max D]; a side with no bound stays open.
+- The test matrix is every counterexample so far: W1–W9, C1–C6, G1–G3, P1–P23 and the F-18 – F-20 cases.
+
+The PR head is currently worse than base for VER-4/VER-5 pairs. The other option is to revert F-21/F-22 (back to `1885e198`'s window, keeping the user's original span fix) and do the model as its own PR.
