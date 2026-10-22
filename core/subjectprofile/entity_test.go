@@ -163,6 +163,19 @@ func TestEntityCompare(t *testing.T) {
 			subject: jamesSubject, subjectLife: []subjectprofile.LifeEvent{
 				ev(birth, subjectRole, datevaluetest.YMD(1850, 0, 0)), ev(death, subjectRole, datevaluetest.YMD(1870, 0, 0))},
 			sim: 2.5 / 22.5, ev: -17.5, check: lifespanResult(propertycompare.OutcomeConflict)},
+		{name: "aBirthBeforeAndADeathAfterStillFit", kind: vocabkey.Person, entity: james,
+			life: []subjectprofile.LifeEvent{
+				ev(birth, subjectRole, datevaluetest.Before(1900, 0, 0)), ev(death, subjectRole, datevaluetest.After(1950, 0, 0))},
+			subject: jamesSubject, subjectLife: []subjectprofile.LifeEvent{
+				ev(birth, subjectRole, datevaluetest.YMD(1890, 0, 0)), ev(death, subjectRole, datevaluetest.YMD(1960, 0, 0))},
+			sim: 1, ev: 2.6, check: lifespanNot(propertycompare.OutcomeConflict)},
+		{name: "twoOpenResidencesStillFit", kind: vocabkey.Person, entity: james,
+			life: []subjectprofile.LifeEvent{
+				ev(vocabkey.EventType("residence"), subjectRole, datevaluetest.After(1950, 0, 0)),
+				ev(vocabkey.EventType("residence"), subjectRole, datevaluetest.Before(1900, 0, 0))},
+			subject: jamesSubject, subjectLife: []subjectprofile.LifeEvent{
+				ev(birth, subjectRole, datevaluetest.YMD(1890, 0, 0)), ev(death, subjectRole, datevaluetest.YMD(1960, 0, 0))},
+			sim: 1, ev: 2.6, check: lifespanNot(propertycompare.OutcomeConflict)},
 		{name: "AC-5.5 two negatives never meet", kind: vocabkey.Person, entity: denied,
 			subject: observed{sex: {vcand(term("female"), true)}}, sim: 0, ev: 0,
 			check: sexResult(propertycompare.OutcomeUnknown, propertycompare.CauseNoValues)},

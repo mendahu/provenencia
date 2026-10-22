@@ -163,6 +163,8 @@ func addLifespans(out subjectcompare.Values, events []LifeEvent, lifespans map[v
 // before the first date, and ends at the latest Ends event, or MaxYears after
 // the last date. The side has a lifespan exactly when side.Missing is empty;
 // its First and Last are then the dates as written that set the span's ends.
+// When the open ends leave the span's two closed ends the wrong way round (a
+// BEF date earlier than an AFT date), the span is read from the collapsed ends.
 // A side with no dated event, or whose shifted end cannot be placed, is
 // undated; one whose window or span would end before it begins, or with a date
 // wholly outside the window (an open end is never outside), contradicts itself and has no lifespan.
@@ -236,6 +238,11 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 	lastEnd, ok := valuecompare.Latest(rawLate)
 	if !ok {
 		lastEnd = valuecompare.DateEnd{Open: true}
+	}
+	// Two closed ends the wrong way round (a BEF date earlier than an AFT
+	// date) are no contradiction: the span falls back to the collapsed ends.
+	if !firstEnd.Open && !lastEnd.Open && firstEnd.Lo > lastEnd.Hi {
+		firstEnd, lastEnd = firstClosed, lastClosed
 	}
 	sp, ok := valuecompare.EndsDate(firstEnd, lastEnd)
 	if !ok {
