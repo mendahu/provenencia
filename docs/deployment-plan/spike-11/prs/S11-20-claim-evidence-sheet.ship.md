@@ -1,7 +1,7 @@
 # Ship log — S11-20 Claim evidence sheet
 
 **Plan:** [`S11-20-claim-evidence-sheet.md`](S11-20-claim-evidence-sheet.md) · **Branch:** `s11-20-claim-evidence-sheet` · **PR:** #525
-**State:** fixing 5 (user request)
+**State:** ready
 
 ## Round 0 — implement
 Head `ec0414a2`. Gate PASS (orchestrator re-ran). PR #525 (draft). Report deviations: STEP-5–9 in one commit (sheet does not build between them); `L10n.Promote.pinRelationship` removed though D-12 said "kept" (replaced by `spokenRelationship`, no reader left); extra identifier `promote.sheet.section.<relationship id>.<property>.<n>`; "Pick a record" empty state above claim fields for New rows (Frame 13 order); neighbor ref and line badge hidden from VoiceOver (carried by checkbox label); `notCompared` reuses key `promote.sheet.unknown` with text "Not compared"; §10 manual check not run.
@@ -173,3 +173,55 @@ Do:
 5. Remove L10n keys left with no reader; keep every key a default row uses.
 
 Check: new and updated tests pass; `grep -nE "case \.(location|relationship|placeRelationship|participation)" macos/App/Features/Catalog/Connect/EvidenceBridgeEdgeSummary.swift macos/App/Features/Catalog/Connect/ConnectEndpointBinding.swift` prints only lines inside the registry's row table, or nothing (the `termDisplay` property-key lookup may become a per-kind field on the default row instead; either way no `switch kind` remains in those two files); scripts/check-pr.sh PASS. Add one sentence to the plan's Landed note: "Ship round 5, at the user's request: connection sentences come from `ConnectionSentenceRegistry`, with plain wording for a subject's birth, death, baptism, marriage, funeral and burial, and an Event endpoint named by its title."
+
+## Round 5 — fix
+Head `d4866a28` (`b471c537` F-13; `d4866a28` Landed note, which also swept in the uncommitted ship log via `git commit -a`). Gate PASS (orchestrator re-ran). Failing-first not run: the registry type did not exist.
+
+## Round 5 — review
+Reviewers: MNT, CON (Sonnet), scope `fdbf0637...d4866a28`. The user asked for this change; the review checks it against Fix plan 5 and the user's "registry-driven, no per-kind if" requirement. Not sent: UX (copy approved by the user; no new chrome), SEC+PRF (no paths matched).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-R5-1, CON-3 | MNT, CON | blocker | Registry spells seeded Property and term keys as raw strings, outside `ConclusionVocabulary.swift` and its Go drift test | Fix now → F-14 | verified: `.cursor/rules/macos-client.mdc:20`; `SeededPropertyKey` lacks `role`/`event_type`/…; `swift_vocabulary_test.go` "seeded term keys are seeded" covers only gender and sex_at_birth |
+| MNT-R5-2 | MNT | major | `bridge.kind == .participation ? endpointB : nil` is a per-kind branch outside the table | Fix now → F-15 | verified `EvidenceBridgeEdgeSummary.swift:43-47`; against the user's requirement |
+| MNT-R5-3 | MNT | minor | `phrase`/`noTerm`/`termProperty` read only from the default row; a specific row's `phrase` is silently ignored | Fix now → F-15 | code this PR adds |
+| MNT-R5-4 | MNT | minor | `ConnectEndpointBinding.sentence(kind:…)` only forwards | Fix now → F-15 | one caller, same file |
+| MNT-R5-5 | MNT | minor | No uniqueness check on (kind, term, eventType) | Fix now → F-15 | |
+| MNT (outside), CON-1 | CON | minor | Role-only lookup step untested; plain wording gated on the label, not the key | Fix now → F-15 | `ConnectionSentenceRegistry.swift:104`, `:135` |
+| CON-2 | CON | minor | No end-to-end test with both an `eventTitle` and an `event_type` key (marriage, funeral) | Fix now → F-15 | |
+| — | MNT | same-pass | `L10n.PropertyTerm.resource` switch spells the same seeded term keys as literals | Fix now → F-16 | same-pass cleanup: this PR adds copies of those keys |
+
+Nits (logged, riding along in F-15): `CON-4 · Localizable.xcstrings · six bridge.sentence comments word arguments differently from L10n.swift` · `CON-5 · ConnectionSentenceRegistry.swift:99 · force unwrap in defaultRow` · `CON-6 · split everyKindHasADefaultRow` · `MNT-R5-6 · :120 · ?? "role" hides a missing termProperty` · `MNT-R5-7 · :137 · fallback computed before the early return`
+
+### Fix plan 6
+**F-14 — Seeded keys spelled once, checked against Go** (from MNT-R5-1, CON-3)
+Files: `macos/App/Platform/ConclusionVocabulary.swift`, `api/ffi/swift_vocabulary_test.go`, `macos/App/Features/Catalog/Connect/ConnectionSentenceRegistry.swift`, `macos/App/Features/Catalog/Connect/EvidenceBridgeEdgeSummary.swift`.
+Failing test first: add `role`, `relationship_type`, `place_relationship_type`, `event_type`, `person`, `event`, `place` (only those the registry or `EvidenceBridgeEdgeSummary` actually spell; check each is seeded with `go test ./api/ffi -run TestSwift`) to `SeededPropertyKey`; add `SeededRoleTerm` and `SeededEventTypeTerm` enums; add `{"SeededRoleTerm","role"}` and `{"SeededEventTypeTerm","event_type"}` to the Go "seeded term keys are seeded" table, and run it (it must pass, proving the keys are seeded; a misspelled key must fail it — try one, then revert).
+Do: the registry rows, `termProperty`, and `EvidenceBridgeEdgeSummary.identityPropertyKey` use these constants; no seeded key is a string literal in either file.
+Check: `grep -nE '"(role|relationship_type|place_relationship_type|event_type|birth|death|baptism|marriage|funeral|burial|subject)"' macos/App/Features/Catalog/Connect` prints nothing; `go test ./api/ffi/...` PASS.
+
+**F-15 — The table owns every per-kind fact** (from MNT-R5-2 – 5, CON-1, CON-2, nits)
+Files: `ConnectionSentenceRegistry.swift`, `EvidenceBridgeEdgeSummary.swift`, `ConnectEndpointBinding.swift`, `macos/ProvenenciaTests/ConnectionSentenceRegistryTests.swift`, `macos/ProvenenciaTests/EvidenceBridgeEdgeSummaryTests.swift`, `Localizable.xcstrings`.
+Failing tests first: `aSpecificRowsPhraseWins` (a test-only row with its own `phrase` is used by `phrase(kind:term:…)`); `rowsAreUnique` (no two rows share kind, term, eventType); `aRoleOnlyRowBeatsTheDefault` (exercise the middle lookup step, with a row injected through a test seam such as `lookup(…, in rows:)`); `aKeyWithoutALabelStillReadsPlainly` (termKey `subject`, label nil → "Don Smith was born"); in `EvidenceBridgeEdgeSummaryTests`, `aMarriageReadsWithItsTitle` and `aFuneralReadsWithItsTitle` (placed snapshot with an event that has both an `eventTitle` and an `event_type` observation) → "Don Smith married (Marriage of Don Smith and Marion Brown)" / "Don Smith's funeral (Funeral of Don Smith)".
+Do:
+- Split `Row` into a per-kind `KindEntry { kind; termProperty (required); sentence; noTerm; phrase }` list and a `Sentence { kind; term; eventType; sentence; phrase? }` list of specific rows; `lookup` returns the specific sentence if any, else the kind entry's; `phrase` uses the specific row's `phrase` when set, else the kind entry's. No `?? "role"` default; no force-unwrap (a missing kind entry is a `preconditionFailure` with a message; `everyKindHasAnEntry` proves none is missing).
+- Plain wording keys on the term **key**, not the label: a matching specific row needs the key; the label only fills `%@` slots.
+- Remove the kind test from `EvidenceBridgeEdgeSummary`: the event type comes from whichever endpoint is an event (`eventTypeKey(A) ?? eventTypeKey(B)`).
+- Inline `ConnectEndpointBinding.sentence(kind:endpointA:endpointB:term:)` into `pendingSentence` (calls the registry) and delete the wrapper.
+- Move `let fallback` below the early return; align the six xcstrings comments with `L10n.swift`; split `everyKindHasADefaultRow` into existence and parity tests.
+Check: tests pass; `grep -n "\.participation\|\.location\|\.relationship\|\.placeRelationship" macos/App/Features/Catalog/Connect/EvidenceBridgeEdgeSummary.swift macos/App/Features/Catalog/Connect/ConnectEndpointBinding.swift` prints nothing; scripts/check-pr.sh PASS.
+
+**F-16 — `L10n.PropertyTerm` reads the typed keys** (same-pass cleanup)
+Files: `macos/App/Platform/L10n.swift`, `macos/App/Platform/ConclusionVocabulary.swift`, `api/ffi/swift_vocabulary_test.go`.
+Do: every term key in `L10n.PropertyTerm.resource`'s switch (`event_type`, `role`, `relationship_type`, `place_relationship_type`) comes from a `Seeded…Term` enum (`SeededEventTypeTerm` and `SeededRoleTerm` from F-14 grow to the full seeded lists; add `SeededRelationshipTypeTerm` and `SeededPlaceRelationshipTypeTerm`), and the property keys from `SeededPropertyKey`. Add the two new enums to the Go "seeded term keys are seeded" table. The strings the switch returns do not change.
+Check: `grep -nE 'case \("' macos/App/Platform/L10n.swift` prints nothing inside `PropertyTerm`; `go test ./api/ffi/...` PASS; scripts/check-pr.sh PASS.
+
+## Round 6 — fix
+Head `6b324baf` (`69a2e148` F-14, `77aa1576` F-15, `6b324baf` F-16). Gate PASS (orchestrator re-ran). Misspelled-key trial (`funerall`) failed the Go drift test, then reverted. `?? .participation` for an unknown bridge type moved into `ConnectionSentenceRegistry.kind(bridgeTypeKey:)`. Failing-first not run for F-15 (new API).
+
+## Round 6 — review
+Reviewers: MNT (had the blocker). CON minors read by the orchestrator against the F-15 tests (`aKeyWithoutALabelStillReadsPlainly`, `aMarriageReadsWithItsTitle`, `aFuneralReadsWithItsTitle`, `aRoleOnlyRowBeatsTheDefault`): CON-1, CON-2 **Resolved**; CON-3 Resolved by F-14. Scope `d4866a28...6b324baf`.
+MNT round 2: MNT-R5-1 – MNT-R5-5 all **Resolved**; no new blockers, no nits. Noted (not a finding): `phrase(for:)` passes no event type, so a future event-specific `Sentence` with its own `phrase` would not reach the card phrase; no row sets one today.
+
+## Result (after round 6)
+Gate PASS · `main` unchanged since the last merge · CI see PR · open: none · follow-ups: — · to user: — (manual check §10 not run) · CON miss: none
