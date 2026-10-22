@@ -276,7 +276,7 @@ func TestGraphProgress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if wantOne := (Progress{GraphID: jones.ID, SubjectCount: 1, PrimaryCount: 1}); !reflect.DeepEqual(one, wantOne) {
+		if wantOne := (Progress{GraphID: jones.ID, SourceID: s.empty.ID, SubjectCount: 1, PrimaryCount: 1}); !reflect.DeepEqual(one, wantOne) {
 			t.Fatalf("Get(Jones) %+v, want %+v", one, wantOne)
 		}
 		unknown := make([]byte, 16)

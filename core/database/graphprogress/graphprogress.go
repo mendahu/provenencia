@@ -4,6 +4,7 @@ package graphprogress
 
 import (
 	"database/sql"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
@@ -36,16 +37,18 @@ const (
 		JOIN subjects s ON s.id = o.subject_id
 		GROUP BY s.graph_id, s.source_id`
 
+	sqlGraphSource = `SELECT source_id FROM evidence_graphs WHERE id = ?`
+
 	sqlCountObservationsOne = `SELECT COUNT(*)
 		FROM observations o
 		JOIN subjects s ON s.id = o.subject_id
 		WHERE s.graph_id = ?`
 )
 
-// Progress is graph-progress counts for one Evidence graph. Get leaves
-// SourceID empty.
+// Progress is graph-progress counts for one Evidence graph.
 type Progress struct {
-	GraphID          []byte
+	GraphID []byte
+	// SourceID is the graph's Source; empty when the graph does not exist.
 	SourceID         []byte
 	SubjectCount     int32
 	ObservationCount int32
@@ -99,6 +102,9 @@ func Get(c *database.Catalog, graphID []byte) (Progress, error) {
 		return Progress{}, ErrInvalid
 	}
 	p := Progress{GraphID: append([]byte(nil), graphID...)}
+	if err := db.QueryRow(sqlGraphSource, graphID).Scan(&p.SourceID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return Progress{}, err
+	}
 	if err := scanSubjectsOne(db, graphID, &p); err != nil {
 		return Progress{}, err
 	}

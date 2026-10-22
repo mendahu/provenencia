@@ -50,7 +50,6 @@ func GetSourceGraphProgress(in []byte) ([]byte, error) {
 			if row, err = graphprogress.Get(c, graphID); err != nil {
 				return err
 			}
-			row.SourceID = sourceID
 		}
 		out = &engine.GetSourceGraphProgressResponse{Progress: protoProgress(row)}
 		return nil
