@@ -53,7 +53,7 @@ type Result struct {
 }
 ```
 
-- **One entry point per value type** behind one interface. Name, date, text, term and integer each have a comparer. A value type with no comparer (subject, depiction) says so explicitly, and is never silently compared as 0.
+- **One entry point per value type** behind one interface. Name, date, text, term and integer each have a comparer. A value type with no comparer (subject) says so explicitly, and is never silently compared as 0.
 - **`Result` is the normalized part.** Every value type returns the same `Relation` set and a `Similarity` with a shared meaning (§ Normalizing). A caller can use `Result` without knowing the value type.
 - **`Detail` is the reasoning.** It is structured, with a shared shape across types and type-specific parts inside it (§ Detail).
 
@@ -382,6 +382,8 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 **Built in S11-12.** `subjectprofile.Build` and `ForSubject` take the person's life events (event type, role, dates) and the registry's `subject.Lifespans` for the kind, and add two derived values, `lifespan` (the window) and `lifespan_span`. `subjectcompare.Compare` scores the `lifespan` lead from both directions: a conflict loses `subject.Weights.person.lifespan.Conflict`, consistent lifespans earn its `Agree`.
 
+**Built in S11-32.** The same pass returns each side's life as a `subjectcompare.LifeSide`: the first and last dated events as written, or why the side has no lifespan (`undated`: no dated event, or none a window can be built from; `contradicts`: a date outside the window or an end it refuses). `Build` and `ForSubject` return it beside the values, so the claim evidence reports a missing lifespan with its reason.
+
 **Built in S11-14.** `segmentcompare.Key(link, terms)` reads a bridge as a `vocabkey.BridgeKey`, and `Corresponds` is the one correspondence rule. `segmentcompare.Compare(a, b, placed, own, metas, rules, subject, value)` compares one layer segment with one research segment; `placed` is `Together` (the layer neighbor is placed on this research neighbor) or `Apart` (placed elsewhere). A one-cardinality link placed apart conflicts; every other link is unknown. Causes: `not_corresponding`, `gated`, `placed_apart`.
 
 
@@ -482,6 +484,7 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 |---|---|
 | `autoreconcile` `textKey`, `termKey`, `dateKey`, `subsumes` / `partFits`, `IsInitial`, `SpellingSimilarity`, `EditDistance`, `NormalizeForm`, `DateEnds` and windows (`DateEnds` and windows moved in S11-04) | Value compare (the reconciler imports it) — done in S11-06 |
 | `autoreconcile.Compatible` | Value compare's relation, under the reconciler's own grouping policy (rule 7) — done in S11-06 |
+| `autoreconcile` `moduleFor`'s private depiction key (`idKey` on the image File) | `valuecompare.Key` on the depiction comparer: the same image File is the same value — done in S11-32 |
 | `promotealign.pairExhibits` (its own pairing; ignores negatives and cardinality) | Property compare's speaking pair — done in S11-25 |
 | `match/pairs.go` leaders and weighting (`weigh`, `pairValues`) | The strict profile; negatives and cardinality move to property compare — done in S11-13 |
 | `graphalign` `alikeNew`, `pairNode` (property part) | Subject compare — done in S11-13 |
