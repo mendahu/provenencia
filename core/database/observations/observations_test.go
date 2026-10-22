@@ -278,7 +278,13 @@ func TestObservations(t *testing.T) {
 						if row.ValueTermLabel == "" || row.ValueText != row.ValueTermLabel {
 							t.Fatalf("term display: label=%q text=%q", row.ValueTermLabel, row.ValueText)
 						}
+						if row.ValueTermKey != "female" {
+							t.Fatalf("term key %q, want female", row.ValueTermKey)
+						}
 						sawTerm = true
+					}
+					if row.PropertyKey == "toponym" && row.ValueTermKey != "" {
+						t.Fatalf("non-term observation has term key %q", row.ValueTermKey)
 					}
 				}
 				if !sawText || !sawTerm {

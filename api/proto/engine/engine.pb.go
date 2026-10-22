@@ -16883,7 +16883,9 @@ type Observation struct {
 	PropertyValueType string                 `protobuf:"bytes,17,opt,name=property_value_type,json=propertyValueType,proto3" json:"property_value_type,omitempty"`
 	ValueDepictionId  string                 `protobuf:"bytes,18,opt,name=value_depiction_id,json=valueDepictionId,proto3" json:"value_depiction_id,omitempty"`
 	// Response data; never read from a request.
-	Depiction     *DepictionValue `protobuf:"bytes,19,opt,name=depiction,proto3" json:"depiction,omitempty"`
+	Depiction *DepictionValue `protobuf:"bytes,19,opt,name=depiction,proto3" json:"depiction,omitempty"`
+	// Response data; never read from a request.
+	ValueTermKey  string `protobuf:"bytes,20,opt,name=value_term_key,json=valueTermKey,proto3" json:"value_term_key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -17049,6 +17051,13 @@ func (x *Observation) GetDepiction() *DepictionValue {
 		return x.Depiction
 	}
 	return nil
+}
+
+func (x *Observation) GetValueTermKey() string {
+	if x != nil {
+		return x.ValueTermKey
+	}
+	return ""
 }
 
 // ObservationDraft is one Observation insert payload (create or append).
@@ -20861,7 +20870,7 @@ const file_engine_proto_rawDesc = "" +
 	"\rtranscription\x18\x05 \x01(\tR\rtranscription\x12\x14\n" +
 	"\x05label\x18\x06 \x01(\tR\x05label\x127\n" +
 	"\x17transcription_uncertain\x18\a \x01(\bR\x16transcriptionUncertain\x12-\n" +
-	"\x12transcription_note\x18\b \x01(\tR\x11transcriptionNote\"\x80\x06\n" +
+	"\x12transcription_note\x18\b \x01(\tR\x11transcriptionNote\"\xa6\x06\n" +
 	"\vObservation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x1f\n" +
@@ -20886,7 +20895,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x0eproperty_label\x18\x10 \x01(\tR\rpropertyLabel\x12.\n" +
 	"\x13property_value_type\x18\x11 \x01(\tR\x11propertyValueType\x12,\n" +
 	"\x12value_depiction_id\x18\x12 \x01(\tR\x10valueDepictionId\x12C\n" +
-	"\tdepiction\x18\x13 \x01(\v2%.provenencia.engine.v1.DepictionValueR\tdepictionB\x10\n" +
+	"\tdepiction\x18\x13 \x01(\v2%.provenencia.engine.v1.DepictionValueR\tdepiction\x12$\n" +
+	"\x0evalue_term_key\x18\x14 \x01(\tR\fvalueTermKeyB\x10\n" +
 	"\x0e_value_integer\"\xb5\x04\n" +
 	"\x10ObservationDraft\x12\x1d\n" +
 	"\n" +

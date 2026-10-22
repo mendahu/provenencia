@@ -675,6 +675,9 @@ func TestListObservationsBySource(t *testing.T) {
 				if got == nil || got.GetValueText() != "Birth" {
 					t.Fatalf("event type %+v", list.Observations)
 				}
+				if got.GetValueTermKey() != "birth" {
+					t.Fatalf("value_term_key %q, want birth", got.GetValueTermKey())
+				}
 			},
 		},
 	})

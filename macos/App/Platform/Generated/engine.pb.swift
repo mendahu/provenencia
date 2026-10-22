@@ -6767,6 +6767,12 @@ public nonisolated struct Provenencia_Engine_V1_Observation: @unchecked Sendable
   /// Clears the value of `depiction`. Subsequent reads from it will return its default value.
   public mutating func clearDepiction() {_uniqueStorage()._depiction = nil}
 
+  /// Response data; never read from a request.
+  public var valueTermKey: String {
+    get {_storage._valueTermKey}
+    set {_uniqueStorage()._valueTermKey = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -19434,7 +19440,7 @@ nonisolated extension Provenencia_Engine_V1_Citation: SwiftProtobuf.Message, Swi
 
 nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Observation"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}citation_id\0\u{3}subject_id\0\u{3}property_id\0\u{1}polarity\0\u{3}value_text\0\u{3}value_integer\0\u{3}value_date_id\0\u{1}date\0\u{3}value_name_id\0\u{1}name\0\u{3}value_subject_id\0\u{3}value_term_id\0\u{3}property_key\0\u{3}property_label\0\u{3}property_value_type\0\u{3}value_depiction_id\0\u{1}depiction\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}citation_id\0\u{3}subject_id\0\u{3}property_id\0\u{1}polarity\0\u{3}value_text\0\u{3}value_integer\0\u{3}value_date_id\0\u{1}date\0\u{3}value_name_id\0\u{1}name\0\u{3}value_subject_id\0\u{3}value_term_id\0\u{3}property_key\0\u{3}property_label\0\u{3}property_value_type\0\u{3}value_depiction_id\0\u{1}depiction\0\u{3}value_term_key\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -19456,6 +19462,7 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
     var _propertyValueType: String = String()
     var _valueDepictionID: String = String()
     var _depiction: Provenencia_Engine_V1_DepictionValue? = nil
+    var _valueTermKey: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -19485,6 +19492,7 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
       _propertyValueType = source._propertyValueType
       _valueDepictionID = source._valueDepictionID
       _depiction = source._depiction
+      _valueTermKey = source._valueTermKey
     }
   }
 
@@ -19522,6 +19530,7 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
         case 17: try { try decoder.decodeSingularStringField(value: &_storage._propertyValueType) }()
         case 18: try { try decoder.decodeSingularStringField(value: &_storage._valueDepictionID) }()
         case 19: try { try decoder.decodeSingularMessageField(value: &_storage._depiction) }()
+        case 20: try { try decoder.decodeSingularStringField(value: &_storage._valueTermKey) }()
         default: break
         }
       }
@@ -19591,6 +19600,9 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
       try { if let v = _storage._depiction {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
       } }()
+      if !_storage._valueTermKey.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._valueTermKey, fieldNumber: 20)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -19619,6 +19631,7 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
         if _storage._propertyValueType != rhs_storage._propertyValueType {return false}
         if _storage._valueDepictionID != rhs_storage._valueDepictionID {return false}
         if _storage._depiction != rhs_storage._depiction {return false}
+        if _storage._valueTermKey != rhs_storage._valueTermKey {return false}
         return true
       }
       if !storagesAreEqual {return false}

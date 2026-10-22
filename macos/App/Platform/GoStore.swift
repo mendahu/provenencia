@@ -2353,6 +2353,7 @@ struct GoStore: GenealogyStore {
             propertyKey: o.propertyKey,
             propertyLabel: o.propertyLabel,
             propertyValueType: o.propertyValueType,
+            valueTermKey: o.valueTermKey,
             valueDepictionID: o.valueDepictionID,
             depiction: o.hasDepiction ? Self.mapDepictionValue(o.depiction) : nil
         )

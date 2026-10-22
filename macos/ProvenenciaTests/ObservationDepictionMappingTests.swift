@@ -17,6 +17,14 @@ struct ObservationDepictionMappingTests {
         #expect(GoStore.mapObservation(Provenencia_Engine_V1_Observation()).depiction == nil)
     }
 
+    @Test func mapsTheTermKey() {
+        var proto = Provenencia_Engine_V1_Observation()
+        proto.valueTermID = "t"
+        proto.valueTermKey = "death"
+        #expect(GoStore.mapObservation(proto).valueTermKey == "death")
+        #expect(GoStore.mapObservation(Provenencia_Engine_V1_Observation()).valueTermKey == "")
+    }
+
     @Test func draftSendsDepiction() {
         let draft = CatalogObservationDraft(
             subjectID: "s",

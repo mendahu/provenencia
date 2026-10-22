@@ -2035,6 +2035,8 @@ message Observation {
   string value_depiction_id = 18;
   // Response data; never read from a request.
   DepictionValue depiction = 19;
+  // Response data; never read from a request.
+  string value_term_key = 20;
 }
 
 // ObservationDraft is one Observation insert payload (create or append).
