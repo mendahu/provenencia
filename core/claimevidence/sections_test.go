@@ -3,6 +3,7 @@ package claimevidence_test
 import (
 	"bytes"
 	"math"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/claimevidence"
@@ -35,9 +36,31 @@ func member(id byte, v vals) claimevidence.Member {
 	return claimevidence.Member{Subject: []byte{id}, Source: []byte{0xA0 + id}, Values: v}
 }
 
+// seedOrder is the seeded binding order of each primary kind.
+func seedOrder() map[vocabkey.SubjectType][]vocabkey.PropertyKey {
+	return map[vocabkey.SubjectType][]vocabkey.PropertyKey{
+		vocabkey.Person: {"name", "likeness", "sex_at_birth", "gender", "interests"},
+		vocabkey.Event:  {"event_type", "event_name", "date"},
+	}
+}
+
 func sections(kind vocabkey.SubjectType, in vals, ms ...claimevidence.Member) []claimevidence.Section {
+	return sectionsOrdered(kind, seedOrder()[kind], in, ms...)
+}
+
+func sectionsOrdered(kind vocabkey.SubjectType, order []vocabkey.PropertyKey, in vals, ms ...claimevidence.Member) []claimevidence.Section {
 	reg := matchregistry.Default()
-	return claimevidence.Sections(kind, in, ms, subjectcomparetest.Metas(), reg.Evidence, reg.Subject, reg.Value)
+	return claimevidence.Sections(kind, order, in, ms, subjectcomparetest.Metas(), reg.Evidence, reg.Subject, reg.Value)
+}
+
+func depiction(id byte, r byte) pv { return ref(propertycomparetest.Depiction(id), r) }
+
+func keysOf(got []claimevidence.Section) []vocabkey.PropertyKey {
+	var out []vocabkey.PropertyKey
+	for _, s := range got {
+		out = append(out, s.Key)
+	}
+	return out
 }
 
 func near(a, b float64) bool { return math.Abs(a-b) < 1e-9 }
@@ -187,4 +210,99 @@ func TestSections(t *testing.T) {
 			t.Errorf("sections = %+v, want none", got)
 		}
 	})
+
+	t.Run("AC-1.1 likenesses: the same image is checked, another is judged by eye", func(t *testing.T) {
+		got := sections(vocabkey.Person, vals{"likeness": {depiction(40, 1)}},
+			member(1, vals{"likeness": {depiction(40, 0x11)}}),
+			member(2, vals{"likeness": {depiction(200, 0x12)}}))
+		if len(got) != 1 || got[0].Key != "likeness" || len(got[0].Lines) != 2 {
+			t.Fatalf("sections = %+v", got)
+		}
+		a, b := got[0].Lines[0], got[0].Lines[1]
+		if a.Relation != same || a.Cause != valuecompare.CauseExact || a.Outcome != propertycompare.OutcomeAgree || !a.Checked || !a.Pinnable {
+			t.Errorf("same-image line = %+v", a)
+		}
+		if b.Relation != valuecompare.Unknown || b.Cause != valuecompare.CauseUnjudged || b.Outcome != propertycompare.OutcomeUnknown || !b.Pinnable || b.Checked {
+			t.Errorf("other-image line = %+v", b)
+		}
+	})
+
+	t.Run("AC-1.4 three members with one image are one collapsed line", func(t *testing.T) {
+		l := only(t, sections(vocabkey.Person, vals{"likeness": {depiction(40, 1)}},
+			member(1, vals{"likeness": {depiction(40, 0x11)}}),
+			member(2, vals{"likeness": {depiction(40, 0x12)}}),
+			member(3, vals{"likeness": {depiction(40, 0x13)}})), "likeness")
+		if !bytes.Equal(pins(l), []byte{1, 2, 3}) {
+			t.Errorf("members = %v", pins(l))
+		}
+	})
+
+	t.Run("an unknown line the researcher does not judge is dropped", func(t *testing.T) {
+		in := vals{"likeness": {ref(propertycomparetest.Depiction(40), 1)}}
+		got := sections(vocabkey.Person, in, member(1, vals{"likeness": {{Ref: []byte{0x11}}}}))
+		if len(got) != 0 {
+			t.Errorf("sections = %+v, want none", got)
+		}
+	})
+
+	t.Run("AC-3.1 person sections follow the binding order", func(t *testing.T) {
+		got := sections(vocabkey.Person, vals{
+			"interests": {ref(propertycomparetest.Text("sailing"), 1)},
+			"likeness":  {depiction(40, 2)},
+			"gender":    {ref(term("man"), 3)},
+			"name":      {ref(name("John Smith"), 4)},
+		}, member(1, vals{
+			"interests":    {ref(propertycomparetest.Text("sailing"), 0x11)},
+			"likeness":     {depiction(40, 0x12)},
+			"sex_at_birth": {ref(term("male"), 0x13)},
+			"name":         {ref(name("John Smith"), 0x14)},
+		}))
+		want := []vocabkey.PropertyKey{"name", "likeness", "sex_at_birth", "interests"}
+		if k := keysOf(got); !equalKeys(k, want) {
+			t.Errorf("order = %v, want %v", k, want)
+		}
+	})
+
+	t.Run("AC-3.2 event sections follow the binding order", func(t *testing.T) {
+		got := sections(vocabkey.Event, vals{
+			"date":       {ref(date(1817), 1)},
+			"event_type": {ref(term("birth"), 2)},
+		}, member(1, vals{
+			"date":       {ref(date(1817), 0x11)},
+			"event_type": {ref(term("birth"), 0x12)},
+		}))
+		if k := keysOf(got); !equalKeys(k, []vocabkey.PropertyKey{"event_type", "date"}) {
+			t.Errorf("order = %v", k)
+		}
+	})
+
+	t.Run("AC-3.4 a section with no binding sorts after the bound ones, by key", func(t *testing.T) {
+		in := vals{
+			"date":       {ref(date(1817), 1)},
+			"event_name": {ref(propertycomparetest.Text("Baptism"), 2)},
+		}
+		m := member(1, vals{
+			"date":       {ref(date(1817), 0x11)},
+			"event_name": {ref(propertycomparetest.Text("Baptism"), 0x12)},
+		})
+		got := sectionsOrdered(vocabkey.Event, []vocabkey.PropertyKey{"date"}, in, m)
+		if k := keysOf(got); !equalKeys(k, []vocabkey.PropertyKey{"date", "event_name"}) {
+			t.Errorf("order = %v", k)
+		}
+		got = sectionsOrdered(vocabkey.Event, nil, in, m)
+		if k := keysOf(got); !equalKeys(k, []vocabkey.PropertyKey{"date", "event_name"}) {
+			t.Errorf("unordered = %v", k)
+		}
+	})
+
+	t.Run("a reordered kind lists the moved section first", func(t *testing.T) {
+		in := vals{"name": {ref(name("John Smith"), 1)}, "interests": {ref(propertycomparetest.Text("sailing"), 2)}}
+		m := member(1, vals{"name": {ref(name("John Smith"), 0x11)}, "interests": {ref(propertycomparetest.Text("sailing"), 0x12)}})
+		got := sectionsOrdered(vocabkey.Person, []vocabkey.PropertyKey{"interests", "name"}, in, m)
+		if k := keysOf(got); !equalKeys(k, []vocabkey.PropertyKey{"interests", "name"}) {
+			t.Errorf("order = %v", k)
+		}
+	})
 }
+
+func equalKeys(a, b []vocabkey.PropertyKey) bool { return slices.Equal(a, b) }

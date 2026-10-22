@@ -56,10 +56,12 @@ type found struct {
 // value has no Ref and gives no line) with each member's values of the same
 // property, one line per member that says something. Members whose lines say
 // the same thing about an incoming value are one line. A pooled or period
-// property counts under its lead. Sections are in ascending key order, lines
-// by incoming Ref then member order.
-func Sections(kind vocabkey.SubjectType, incoming subjectcompare.Values, members []Member, metas subjectcompare.Metas,
-	rules Rules, subject subjectcompare.Rules, value valuecompare.Rules) []Section {
+// property counts under its lead. An unknown line is dropped unless its
+// speaking cause is one the researcher judges (Rules.ByEye). Sections are in
+// the kind's binding order (order), unbound ones after by key; lines by
+// incoming Ref then member order.
+func Sections(kind vocabkey.SubjectType, order []vocabkey.PropertyKey, incoming subjectcompare.Values, members []Member,
+	metas subjectcompare.Metas, rules Rules, subject subjectcompare.Rules, value valuecompare.Rules) []Section {
 	bySection := map[vocabkey.PropertyKey][]found{}
 	for _, p := range slices.Sorted(maps.Keys(incoming)) {
 		r := routeOf(kind, p, subject)
@@ -81,7 +83,10 @@ func Sections(kind vocabkey.SubjectType, incoming subjectcompare.Values, members
 					theirs = subjectcompare.Side(kind, r.lead, m.Values, subject)
 				}
 				res := propertycompare.Compare(side, theirs, meta, value)
-				if res.Outcome == propertycompare.OutcomeUnknown || res.Speaking == nil || len(res.Speaking.Detail.RefB) == 0 {
+				if res.Speaking == nil || len(res.Speaking.Detail.RefB) == 0 {
+					continue
+				}
+				if res.Outcome == propertycompare.OutcomeUnknown && !slices.Contains(rules.ByEye, res.Speaking.Detail.Cause) {
 					continue
 				}
 				bySection[r.section] = append(bySection[r.section], found{
@@ -93,7 +98,10 @@ func Sections(kind vocabkey.SubjectType, incoming subjectcompare.Values, members
 		}
 	}
 	var out []Section
-	for _, key := range slices.Sorted(maps.Keys(bySection)) {
+	keys := slices.SortedFunc(maps.Keys(bySection), func(a, b vocabkey.PropertyKey) int {
+		return vocabkey.CompareByOrder(order, a, b)
+	})
+	for _, key := range keys {
 		out = append(out, Section{Key: key, Lines: collapse(bySection[key])})
 	}
 	return out
@@ -103,21 +111,35 @@ func Sections(kind vocabkey.SubjectType, incoming subjectcompare.Values, members
 // evidence section gives it.
 func line(p vocabkey.PropertyKey, v propertycompare.Value, res propertycompare.Result, m Member, r route, rules Rules) Line {
 	sp := res.Speaking
+	outcome, propertyCause, relation, cause := verdictOf(res)
 	l := Line{
 		Property:      p,
 		Incoming:      v,
-		Outcome:       res.Outcome,
-		PropertyCause: res.Cause,
-		Relation:      sp.Result.Relation,
-		Cause:         sp.Detail.Cause,
+		Outcome:       outcome,
+		PropertyCause: propertyCause,
+		Relation:      relation,
+		Cause:         cause,
 		Members:       []Pin{{Subject: m.Subject, Observation: sp.Detail.RefB, Source: m.Source, Value: sp.B}},
 	}
 	if r.weighted {
 		l.Points = subjectcompare.Points(res, r.weights)
 	}
 	l.Checked = res.Outcome == propertycompare.OutcomeAgree && slices.Contains(rules.Checked, l.Relation)
-	l.Pinnable = l.Checked || (res.Outcome == propertycompare.OutcomePartial && slices.Contains(rules.Pinnable, l.Relation))
+	l.Pinnable = l.Checked ||
+		(res.Outcome == propertycompare.OutcomePartial && slices.Contains(rules.Pinnable, l.Relation)) ||
+		(res.Outcome == propertycompare.OutcomeUnknown && slices.Contains(rules.ByEye, l.Cause))
 	return l
+}
+
+// verdictOf reads a layer 2 result: its outcome and cause, and the speaking
+// pair's relation and cause (empty when no pair speaks).
+func verdictOf(res propertycompare.Result) (outcome propertycompare.Outcome, propertyCause propertycompare.Cause,
+	relation valuecompare.Relation, cause valuecompare.Cause) {
+	outcome, propertyCause = res.Outcome, res.Cause
+	if res.Speaking != nil {
+		relation, cause = res.Speaking.Result.Relation, res.Speaking.Detail.Cause
+	}
+	return
 }
 
 // memberKey is the member value's Same key: two values with one key are

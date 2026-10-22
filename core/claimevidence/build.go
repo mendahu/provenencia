@@ -19,15 +19,18 @@ import (
 // the page placed on an entity, a relationship for every link of the row's
 // Subject that corresponds, through segment compare, to a link between the
 // entity's members and the neighbor entity's. handle is the entity's profile,
-// whose evidence against the row (own) gates the segments. Sources is left
+// whose evidence against the row (own) gates the segments. in carries the
+// catalog's property order for each kind and each side's life. Sources is left
 // for the loader to fill.
 func Build(kind vocabkey.SubjectType, row, handle subjectcompare.Values, members []Member, neighbors []Neighbor,
 	metas subjectcompare.Metas, rules Rules, segment segmentcompare.Rules, subject subjectcompare.Rules,
-	value valuecompare.Rules) Evidence {
-	out := Evidence{Kind: kind, Sections: Sections(kind, row, members, metas, rules, subject, value)}
-	own := subjectcompare.Compare(kind, row, handle, metas, subject, value).Evidence
+	value valuecompare.Rules, in Inputs) Evidence {
+	out := Evidence{Kind: kind, Sections: Sections(kind, in.Order[kind], row, members, metas, rules, subject, value)}
+	compared := subjectcompare.Compare(kind, row, handle, metas, subject, value)
+	own := compared.Evidence
+	out.Lifespan = lifespanOf(kind, compared, subject, in)
 	for _, n := range neighbors {
-		out.Relationships = append(out.Relationships, relationships(n, members, own, metas, rules, segment, subject, value)...)
+		out.Relationships = append(out.Relationships, relationships(n, members, own, metas, rules, segment, subject, value, in)...)
 	}
 	slices.SortStableFunc(out.Relationships, func(a, b Relationship) int {
 		if c := cmp.Compare(boolRank(!isOne(segment, a.Key)), boolRank(!isOne(segment, b.Key))); c != 0 {
@@ -38,6 +41,28 @@ func Build(kind vocabkey.SubjectType, row, handle subjectcompare.Values, members
 		}
 		return bytes.Compare(a.Neighbor, b.Neighbor)
 	})
+	return out
+}
+
+// lifespanOf is the kind's lifespan check: the first lead, in key order, that
+// the kind derives a lifespan for. Nil for a kind with none, and when neither
+// side has dates and neither contradicts itself.
+func lifespanOf(kind vocabkey.SubjectType, compared subjectcompare.Result, subject subjectcompare.Rules, in Inputs) *Lifespan {
+	leads := subject.Lifespans[kind]
+	if len(leads) == 0 {
+		return nil
+	}
+	if in.Row.First == nil && in.Record.First == nil &&
+		in.Row.Missing != subjectcompare.LifespanContradicts && in.Record.Missing != subjectcompare.LifespanContradicts {
+		return nil
+	}
+	lead := slices.Min(slices.Collect(maps.Keys(leads)))
+	out := &Lifespan{Row: in.Row, Record: in.Record}
+	for _, p := range compared.Properties {
+		if p.Key == lead {
+			out.Outcome, out.PropertyCause, out.Relation, out.Cause = verdictOf(p.Result)
+		}
+	}
 	return out
 }
 
@@ -58,7 +83,7 @@ func isOne(segment segmentcompare.Rules, k vocabkey.BridgeKey) bool {
 // relationships are one neighbor's relationships: one for each distinct layer
 // key that a link between the entities corresponds to.
 func relationships(n Neighbor, members []Member, own float64, metas subjectcompare.Metas, rules Rules,
-	segment segmentcompare.Rules, subject subjectcompare.Rules, value valuecompare.Rules) []Relationship {
+	segment segmentcompare.Rules, subject subjectcompare.Rules, value valuecompare.Rules, in Inputs) []Relationship {
 	var keys []vocabkey.BridgeKey
 	observations := map[vocabkey.BridgeKey][][]byte{}
 	for _, l := range n.Layer {
@@ -97,7 +122,7 @@ func relationships(n Neighbor, members []Member, own float64, metas subjectcompa
 			Pinnable: true,
 			Incoming: appendNew(slices.Clone(observations[key]), refsOf(n.Values, defining)...),
 		}
-		rel.Members, rel.Sections = bundles(n, canons, members, defining, metas, rules, subject, value)
+		rel.Members, rel.Sections = bundles(n, canons, members, defining, metas, rules, subject, value, in)
 		out = append(out, rel)
 	}
 	return out
@@ -108,7 +133,7 @@ func relationships(n Neighbor, members []Member, own float64, metas subjectcompa
 // reaches, and the sections that compare the neighbor's other properties with
 // only those neighbor members.
 func bundles(n Neighbor, canons []CanonLink, members []Member, defining []vocabkey.PropertyKey,
-	metas subjectcompare.Metas, rules Rules, subject subjectcompare.Rules, value valuecompare.Rules) ([]Bundle, []Section) {
+	metas subjectcompare.Metas, rules Rules, subject subjectcompare.Rules, value valuecompare.Rules, in Inputs) ([]Bundle, []Section) {
 	type placed struct {
 		bundle         Bundle
 		member, nbhood int
@@ -149,7 +174,7 @@ func bundles(n Neighbor, canons []CanonLink, members []Member, defining []vocabk
 	for _, p := range defining {
 		delete(other, p)
 	}
-	return out, Sections(n.Kind, other, theirs, metas, rules, subject, value)
+	return out, Sections(n.Kind, in.Order[n.Kind], other, theirs, metas, rules, subject, value)
 }
 
 // refsOf is the Ref of every value of the listed properties, in property order.

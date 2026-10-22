@@ -5,9 +5,13 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/claimevidence"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertycompare"
+	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare/subjectcomparetest"
+	"github.com/mendahu/provenencia/core/subjectprofile"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -61,7 +65,7 @@ func (s scene) build() claimevidence.Evidence {
 	reg := matchregistry.Default()
 	row := vals{vocabkey.PropertyName: {ref(name("John Smith"), 0x01)}}
 	return claimevidence.Build(s.kind, row, row, s.members, s.neighbors, subjectcomparetest.Metas(),
-		reg.Evidence, reg.Segment, reg.Subject, reg.Value)
+		reg.Evidence, reg.Segment, reg.Subject, reg.Value, claimevidence.Inputs{Order: seedOrder()})
 }
 
 func TestBuild(t *testing.T) {
@@ -168,4 +172,82 @@ func equalIDs(a, b [][]byte) bool {
 		}
 	}
 	return true
+}
+
+// side builds one side's values and life from its life events, as the loader does.
+func side(events ...subjectprofile.LifeEvent) (vals, subjectcompare.LifeSide) {
+	return subjectprofile.ForSubject(subjectprofile.Subject{Life: events}, matchregistry.Default().Subject.Lifespans[vocabkey.Person])
+}
+
+func life(eventType vocabkey.EventType, d *datevalue.Value) subjectprofile.LifeEvent {
+	return subjectprofile.LifeEvent{EventType: eventType, Role: vocabkey.RoleSubject, Dates: []datevalue.Value{*d}}
+}
+
+func buildLife(kind vocabkey.SubjectType, row, rec vals, rowLife, recLife subjectcompare.LifeSide) claimevidence.Evidence {
+	reg := matchregistry.Default()
+	return claimevidence.Build(kind, row, rec, nil, nil, subjectcomparetest.Metas(),
+		reg.Evidence, reg.Segment, reg.Subject, reg.Value,
+		claimevidence.Inputs{Order: seedOrder(), Row: rowLife, Record: recLife})
+}
+
+func TestBuildLifespan(t *testing.T) {
+	ymd := datevaluetest.YMD
+	person := vocabkey.SubjectType(vocabkey.Person)
+	rowVals, rowLife := side(life(vocabkey.EventBirth, ymd(1817, 5, 14)), life(vocabkey.EventDeath, ymd(1890, 6, 2)))
+
+	t.Run("AC-2.1 two dated sides agree and carry both lives", func(t *testing.T) {
+		recVals, recLife := side(life(vocabkey.EventBirth, ymd(1817, 5, 14)), life("census", ymd(1871, 4, 2)))
+		l := buildLife(person, rowVals, recVals, rowLife, recLife).Lifespan
+		if l == nil || l.Outcome != propertycompare.OutcomeAgree {
+			t.Fatalf("lifespan = %+v", l)
+		}
+		if l.Row.Missing != "" || l.Row.First == nil || l.Row.Last == nil || l.Record.First == nil || l.Record.Last == nil {
+			t.Errorf("sides = %+v", l)
+		}
+		if l.Record.Last.StartYear == nil || *l.Record.Last.StartYear != 1871 {
+			t.Errorf("record last = %+v", l.Record.Last)
+		}
+	})
+
+	t.Run("AC-2.2 a side that contradicts itself has no lifespan and the check is unknown", func(t *testing.T) {
+		badVals, badLife := side(life(vocabkey.EventBirth, ymd(1817, 5, 14)), life(vocabkey.EventDeath, ymd(1809, 6, 2)))
+		recVals, recLife := side(life(vocabkey.EventBirth, ymd(1817, 5, 14)))
+		l := buildLife(person, badVals, recVals, badLife, recLife).Lifespan
+		if l == nil || l.Row.Missing != subjectcompare.LifespanContradicts || l.Row.First != nil {
+			t.Fatalf("lifespan = %+v", l)
+		}
+		if l.Outcome != propertycompare.OutcomeUnknown || l.Relation != "" || l.Cause != "" {
+			t.Errorf("verdict = %+v", l)
+		}
+	})
+
+	t.Run("AC-2.3 an undated record is missing, undated", func(t *testing.T) {
+		recVals, recLife := side()
+		l := buildLife(person, rowVals, recVals, rowLife, recLife).Lifespan
+		if l == nil || l.Record.Missing != subjectcompare.LifespanUndated || l.Outcome != propertycompare.OutcomeUnknown {
+			t.Fatalf("lifespan = %+v", l)
+		}
+	})
+
+	t.Run("AC-2.4 neither side dated gives no lifespan", func(t *testing.T) {
+		a, al := side()
+		b, bl := side()
+		if l := buildLife(person, a, b, al, bl).Lifespan; l != nil {
+			t.Errorf("lifespan = %+v", l)
+		}
+	})
+
+	t.Run("AC-2.5 a record whose life ended before the row was born conflicts", func(t *testing.T) {
+		recVals, recLife := side(life("baptism", ymd(1801, 3, 3)), life(vocabkey.EventBurial, ymd(1810, 1, 9)))
+		l := buildLife(person, rowVals, recVals, rowLife, recLife).Lifespan
+		if l == nil || l.Outcome != propertycompare.OutcomeConflict {
+			t.Fatalf("lifespan = %+v", l)
+		}
+	})
+
+	t.Run("AC-2.6 an event has no lifespan", func(t *testing.T) {
+		if l := buildLife(vocabkey.Event, rowVals, rowVals, rowLife, rowLife).Lifespan; l != nil {
+			t.Errorf("lifespan = %+v", l)
+		}
+	})
 }
