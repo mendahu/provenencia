@@ -4,7 +4,7 @@
 
 ## Source graph mutations
 
-`WorkspaceSession.refreshSourceGraphProgress(for:)` switches over the graph mutations by hand; `CatalogQueryRegistry` lists the same ones for `.sourceGraph`. After S10-41 the lists differ only by `.deletedSource`, which would also be correct to patch (`sourcegraphprogress.Get` returns zeros for a gone Source, and `isZero` removes the entry). A `CatalogMutation.graphSourceId` read by both would keep them in step.
+`WorkspaceSession.refreshSourceGraphProgress(for:)` switches over the graph mutations by hand; `CatalogQueryRegistry` lists the same ones for `.sourceGraph`. After S10-41 the lists differ only by `.deletedSource`, which would also be correct to patch (`graphprogress.Get` returns zeros for a gone graph, and `isZero` removes the entry). A `CatalogMutation.graphSourceId` read by both would keep them in step.
 
 ## Go reads every Swift mirror
 
@@ -20,7 +20,7 @@ Properties draws its own "no results" state instead of `PVEmptyState`.
 
 ## One catalog querier
 
-S12-01 adds `database.Querier` (`Query` + `QueryRow`, in `core/database/tx.go`) for reads that run over a `*sql.DB` or a write's `*sql.Tx`. Nine packages still declare their own copy: `sqlbatch`, `sourceeventtitles`, `conclusiondetails`, `graphcache`, `matching`, `namealiases`, `promotealign`, `autoreconciler` (adds `Exec`) and `effects` (`querier`), plus inline interfaces in `datevalues`, `namevalues` and `canonicalentities`. Move each onto `database.Querier` (or a `database` type that adds `Exec`) when its package is next touched.
+S12-01 adds `database.Querier` (`Query` + `QueryRow`, in `core/database/tx.go`) for reads that run over a `*sql.DB` or a write's `*sql.Tx`. Nine packages still declare their own copy: `sqlbatch`, `conclusiondetails`, `graphcache`, `matching`, `namealiases`, `autoreconciler` (adds `Exec`) and `effects` (`querier`), plus inline interfaces in `datevalues`, `namevalues` and `canonicalentities`. Move each onto `database.Querier` (or a `database` type that adds `Exec`) when its package is next touched. `graphcache` is blocked: `core/database` imports it, so it needs a leaf package for the interface first.
 
 ## Query-wait test helper
 

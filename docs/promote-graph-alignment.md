@@ -147,7 +147,7 @@ A line is pinned only when value compare says the values are the same. A partial
 
 There are no database calls during the walk. Everything it reads is loaded first:
 
-1. **The layer:** one Source's Subjects, bridges, Observations and provenance, held on the catalog's in-memory graph (`graphcache`, `g.Source`).
+1. **The layer:** the Source's one Evidence graph's Subjects, bridges, Observations and provenance, held on the catalog's in-memory graph (`graphcache`, `g.EvidenceGraph`).
 2. **Seed handles:**
    - the fixed pairs;
    - the handles of already-promoted Subjects;

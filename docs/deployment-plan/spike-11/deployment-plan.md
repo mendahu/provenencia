@@ -457,7 +457,7 @@ Split from S11-20 when it was planned (user, 2026-10-22): the engine half of the
 
 #### S11-31 — Bound the Source cache
 
-**Ships.** `graphcache` holds at most N loaded Source graphs, and evicts the least recently used one together with its `SourceMemo` entries (S11-19 D-21). Today `g.sources` has no eviction, and only a commit or a reset clears it, and the claim evidence query loads every member's Source (S11-19 §14). N lives in one named constant, sized from S11-21's fixture. `Verify` checks only Sources that are still loaded. A test shows that an evicted Source reloads with the same graph, and that its memo is rebuilt.
+**Ships.** `graphcache` holds at most N loaded Evidence graphs, and evicts the least recently used one together with its `EvidenceGraphMemo` entries (S11-19 D-21). Today `g.evidenceGraphs` has no eviction, and only a commit or a reset clears it, and the claim evidence query loads every member's Source (S11-19 §14). N lives in one named constant, sized from S11-21's fixture. `Verify` checks only Sources that are still loaded. A test shows that an evicted Source reloads with the same graph, and that its memo is rebuilt.
 **Not this PR.** Evicting nodes, or the match index.
 **Check.** Opening the evidence sheet on every row of a hub page leaves at most N Sources loaded, and the sheet shows the same evidence as before.
 **Context.** [`graphcache`](../../../core/database/graphcache/graph.go); S11-19 §14.

@@ -311,7 +311,7 @@ the rule; do not restate it.
 The shape to copy. Names in the example are illustrative.
 
 "`SourcesListModel.filtered` re-implements the evidence-status grouping that
-`core/database/sourcegraphprogress` already returns; read the counts from that
+`core/database/graphprogress` already returns; read the counts from that
 query and drop the Swift loop." Or: "This is the third `switch subjectKind`
 that maps a kind to a mark; add the mark to the subject-kind registry instead
 (this PR)."
