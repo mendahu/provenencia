@@ -8,9 +8,17 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/claimevidence"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
+	"github.com/mendahu/provenencia/core/database/promotealign"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
+	"github.com/mendahu/provenencia/core/propertycompare"
+	"github.com/mendahu/provenencia/core/subjectcompare"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // evidenceFixture is a handle of three people who all say Mary Smith, male, on
@@ -173,4 +181,105 @@ func pinnedOn(t *testing.T, dir, claimID string) map[string]bool {
 		t.Fatal(err)
 	}
 	return out
+}
+
+// T-10: a likeness arrives as a depiction with the stored crop's path, on the
+// line and on its pin; the lifespan is unset when no side has dates.
+func TestGetPromoteClaimEvidenceLikeness(t *testing.T) {
+	f := newEvidenceFixture(t, observations.PolarityPositive)
+	uid, member := uuid.MustParse(f.userID), uuid.MustParse(f.members[0])
+	incoming, source := uuid.MustParse(f.incoming), uuid.MustParse(f.sourceID)
+	err := withProjectCatalog(f.dir, func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		var id []byte
+		if err := db.QueryRow(`SELECT source_id FROM subjects WHERE id = ?`, member[:]).Scan(&id); err != nil {
+			return err
+		}
+		observationstest.SaveLikeness(t, c, uid[:], source[:], incoming[:], 40)
+		observationstest.SaveLikeness(t, c, uid[:], id, member[:], 40)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp := f.evidence(t)
+	s := sectionOf(resp, "likeness")
+	if s == nil || len(s.GetLines()) != 1 {
+		t.Fatalf("sections = %+v", resp.GetSections())
+	}
+	l := s.GetLines()[0]
+	if l.GetOutcome() != "agree" || l.GetRelation() != "same" || !l.GetChecked() {
+		t.Fatalf("line = %+v", l)
+	}
+	if l.GetIncoming().GetDepiction().GetImageRelPath() == "" || len(l.GetMembers()) != 1 ||
+		l.GetMembers()[0].GetValue().GetDepiction().GetImageRelPath() != l.GetIncoming().GetDepiction().GetImageRelPath() {
+		t.Fatalf("depiction paths: incoming %+v, pins %+v", l.GetIncoming(), l.GetMembers())
+	}
+	if resp.GetLifespan() != nil {
+		t.Errorf("lifespan = %+v, want unset", resp.GetLifespan())
+	}
+}
+
+// T-14: the sections follow the type's binding order, and a reorder shows on
+// the next open with no restart.
+func TestGetPromoteClaimEvidenceFollowsBindingOrder(t *testing.T) {
+	f := newEvidenceFixture(t, observations.PolarityPositive)
+	keys := func() []string {
+		var out []string
+		for _, s := range f.evidence(t).GetSections() {
+			out = append(out, s.GetPropertyKey())
+		}
+		return out
+	}
+	if got := keys(); len(got) != 2 || got[0] != "name" || got[1] != "sex_at_birth" {
+		t.Fatalf("sections = %v, want name then sex_at_birth", got)
+	}
+	var list engine.ListSubjectTypePropertiesResponse
+	mustRPC(t, ListSubjectTypeProperties, &engine.ListSubjectTypePropertiesRequest{ProjectDir: f.dir, SubjectTypeId: f.typeID}, &list)
+	var sex string
+	var rest []string
+	for _, p := range list.GetProperties() {
+		if p.GetProperty().GetKey() == "sex_at_birth" {
+			sex = p.GetProperty().GetId()
+		} else {
+			rest = append(rest, p.GetProperty().GetId())
+		}
+	}
+	var reordered engine.ReorderSubjectTypePropertiesResponse
+	mustRPC(t, ReorderSubjectTypeProperties, &engine.ReorderSubjectTypePropertiesRequest{
+		ProjectDir: f.dir, UserId: f.userID, SubjectTypeId: f.typeID, PropertyIds: append([]string{sex}, rest...),
+	}, &reordered)
+	if got := keys(); len(got) != 2 || got[0] != "sex_at_birth" || got[1] != "name" {
+		t.Fatalf("sections after reorder = %v, want sex_at_birth then name", got)
+	}
+}
+
+// AC-2.8: the lifespan crosses the wire with both sides' first and last dates
+// and adds no offer.
+func TestClaimEvidenceProtoCarriesTheLifespan(t *testing.T) {
+	y := func(n int) *datevalue.Value { return datevaluetest.YMD(n, 0, 0) }
+	e := claimevidence.Evidence{Lifespan: &claimevidence.Lifespan{
+		Outcome: propertycompare.OutcomeAgree, Relation: valuecompare.Overlaps, Cause: valuecompare.CauseOverlap,
+		Row:    subjectcompare.LifeSide{First: y(1817), Last: y(1890)},
+		Record: subjectcompare.LifeSide{Missing: subjectcompare.LifespanUndated},
+	}}
+	got := claimEvidenceProto(e, promotealign.EvidenceValues{}).GetLifespan()
+	if got.GetOutcome() != "agree" || got.GetRelation() != "overlaps" || got.GetCause() != "overlap" {
+		t.Fatalf("lifespan = %+v", got)
+	}
+	if got.GetRow().GetFirst().GetStartYear() != 1817 || got.GetRow().GetLast().GetStartYear() != 1890 || got.GetRow().GetMissing() != "" {
+		t.Errorf("row = %+v", got.GetRow())
+	}
+	if got.GetRecord().GetFirst() != nil || got.GetRecord().GetMissing() != "undated" {
+		t.Errorf("record = %+v", got.GetRecord())
+	}
+	if len(claimEvidenceProto(e, promotealign.EvidenceValues{}).GetOffers()) != 0 {
+		t.Error("the lifespan added an offer")
+	}
+	if claimEvidenceProto(claimevidence.Evidence{}, promotealign.EvidenceValues{}).GetLifespan() != nil {
+		t.Error("a nil lifespan was sent")
+	}
 }

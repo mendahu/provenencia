@@ -147,7 +147,7 @@ func TestConclusionValueProtoCoversEveryKind(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			v := conclusionValueProto(tc.in)
+			v := conclusionValueProto(tc.in, nil)
 			// Round-trip through the wire, as Swift receives it.
 			b, err := proto.Marshal(v)
 			if err != nil {
@@ -161,6 +161,23 @@ func TestConclusionValueProtoCoversEveryKind(t *testing.T) {
 				t.Fatalf("%+v", &got)
 			}
 		})
+	}
+}
+
+// A likeness has no field on conclusiondetails.Value: its depiction input is the
+// whole result, before any other case.
+func TestConclusionValueProtoDepiction(t *testing.T) {
+	v := conclusionValueProto(conclusiondetails.Value{Text: "ignored", HasText: true}, &engine.DepictionValue{ImageRelPath: "objects/x.png"})
+	b, err := proto.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got engine.ConclusionValue
+	if err := proto.Unmarshal(b, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.GetDepiction().GetImageRelPath() != "objects/x.png" || got.GetDepiction().GetRegionJson() != "" || got.GetText() != "" {
+		t.Fatalf("%+v", &got)
 	}
 }
 

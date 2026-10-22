@@ -136,6 +136,8 @@ enum EvidencePropertyCause: Sendable, Equatable {
 
 /// How two values relate (`valuecompare.Relation`).
 enum ValueRelation: Sendable, Equatable {
+    /// No relation: the code is empty (no pair spoke, as on a lifespan with a missing side).
+    case none
     case same
     case equivalent
     case contains
@@ -148,6 +150,7 @@ enum ValueRelation: Sendable, Equatable {
 
     init(wire: String) {
         switch wire {
+        case "": self = .none
         case "same": self = .same
         case "equivalent": self = .equivalent
         case "contains": self = .contains
@@ -185,6 +188,8 @@ enum ValueCause: Sendable, Equatable {
     case order
     case role
     case unsupported
+    /// Two values the layer cannot relate: the researcher judges them.
+    case unjudged
     /// A code this build doesn't know.
     case unrecognized(String)
 
@@ -212,6 +217,28 @@ enum ValueCause: Sendable, Equatable {
         case "order": self = .order
         case "role": self = .role
         case "unsupported": self = .unsupported
+        case "unjudged": self = .unjudged
+        default: self = .unrecognized(wire)
+        }
+    }
+}
+
+/// Why a side has no lifespan (`subjectcompare.LifespanMissing`).
+enum LifespanMissing: Sendable, Equatable {
+    /// It has one: the code is empty.
+    case none
+    /// No dated event to build one from.
+    case undated
+    /// Its own dated events cannot all be true.
+    case contradicts
+    /// A code this build doesn't know.
+    case unrecognized(String)
+
+    init(wire: String) {
+        switch wire {
+        case "": self = .none
+        case "undated": self = .undated
+        case "contradicts": self = .contradicts
         default: self = .unrecognized(wire)
         }
     }

@@ -8187,6 +8187,12 @@ enum L10n {
             comment: "Empty Conclusion field with no specific wording for its Property"
         )
 
+        static let likenessValue = LocalizedStringResource(
+            "conclusions.value.likeness",
+            defaultValue: "Likeness",
+            comment: "A likeness value worded as text where no crop is drawn"
+        )
+
         static let badgeMerged = LocalizedStringResource(
             "conclusions.badge.merged",
             defaultValue: "Merged",

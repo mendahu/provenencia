@@ -26,6 +26,7 @@ import (
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/raster"
 	"github.com/mendahu/provenencia/core/segmentcompare"
+	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -278,7 +279,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		},
 		{
 			name: "value relations", path: swiftVocabulary, enum: "ValueRelation", re: wireCase,
-			want: sortedRelations(),
+			want: sorted(append(sortedRelations(), "")...),
 		},
 		{
 			name: "value causes", path: swiftVocabulary, enum: "ValueCause", re: wireCase,
@@ -288,7 +289,11 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 				string(valuecompare.CauseOverlap), string(valuecompare.CauseGap), string(valuecompare.CauseBeyondTolerance),
 				string(valuecompare.CauseGenerationConflict), string(valuecompare.CauseEmpty), string(valuecompare.CausePhraseOnly),
 				string(valuecompare.CauseBelowMinimum), string(valuecompare.CauseNoMatch), string(valuecompare.CauseTooLong),
-				string(valuecompare.CauseOrder), string(valuecompare.CauseRole), string(valuecompare.CauseUnsupported)),
+				string(valuecompare.CauseOrder), string(valuecompare.CauseRole), string(valuecompare.CauseUnsupported), string(valuecompare.CauseUnjudged)),
+		},
+		{
+			name: "lifespan missing", path: swiftVocabulary, enum: "LifespanMissing", re: wireCase,
+			want: sorted("", string(subjectcompare.LifespanUndated), string(subjectcompare.LifespanContradicts)),
 		},
 		{
 			name: "segment causes", path: swiftVocabulary, enum: "SegmentCause", re: wireCase,
@@ -343,7 +348,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 	}
 	t.Run("states and reasons tolerate a value this build doesn't know", func(t *testing.T) {
 		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteReasonCode",
-			"EvidenceOutcome", "EvidencePropertyCause", "ValueRelation", "ValueCause", "SegmentCause"} {
+			"EvidenceOutcome", "EvidencePropertyCause", "ValueRelation", "ValueCause", "LifespanMissing", "SegmentCause"} {
 			if !unrecogniz.MatchString(swiftEnumBody(t, swiftVocabulary, enum)) {
 				t.Fatalf("%s has no unrecognized case", enum)
 			}

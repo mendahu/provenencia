@@ -1409,6 +1409,8 @@ message ConclusionValue {
     ConclusionTerm term = 3;
     DateValueInput date = 4;
     NameValueInput name = 5;
+    // A likeness: the stored crop's path, with no region.
+    DepictionValue depiction = 6;
   }
 }
 
@@ -1600,6 +1602,26 @@ message GetPromoteClaimEvidenceResponse {
   repeated PromoteClaimEvidenceRelationship relationships = 2;
   repeated PromoteClaimEvidenceOffer offers = 3;
   repeated PromoteClaimEvidenceSource sources = 4;
+  // The lifespan check between the row and the record; unset for a kind with
+  // no lifespan, or when neither side has dates.
+  PromoteClaimEvidenceLifespan lifespan = 5;
+}
+
+// PromoteClaimEvidenceLifeSide is one side's life: its first and last dated
+// events as written, or why it has no lifespan.
+message PromoteClaimEvidenceLifeSide {
+  DateValueInput first = 1;
+  DateValueInput last = 2;
+  string missing = 3; // subjectcompare.LifespanMissing: "", undated or contradicts
+}
+
+message PromoteClaimEvidenceLifespan {
+  string outcome = 1;
+  string property_cause = 2;
+  string relation = 3;
+  string cause = 4;
+  PromoteClaimEvidenceLifeSide row = 5;
+  PromoteClaimEvidenceLifeSide record = 6;
 }
 
 message PromoteGraphAlignmentAlternative {

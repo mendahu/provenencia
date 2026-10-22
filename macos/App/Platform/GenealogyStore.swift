@@ -402,11 +402,32 @@ struct CatalogClaimEvidenceOffer: Sendable, Equatable {
     var checked: Bool
 }
 
+/// One side's life on the lifespan check: its first and last dated events as
+/// written, or why it has no lifespan.
+struct CatalogClaimEvidenceLifeSide: Sendable, Equatable {
+    var first: CatalogDateValueInput?
+    var last: CatalogDateValueInput?
+    var missing: LifespanMissing
+}
+
+/// The lifespan check between the row and the record. It is never a line and
+/// never pinned.
+struct CatalogClaimEvidenceLifespan: Sendable, Equatable {
+    var outcome: EvidenceOutcome
+    var propertyCause: EvidencePropertyCause
+    var relation: ValueRelation
+    var cause: ValueCause
+    var row: CatalogClaimEvidenceLifeSide
+    var record: CatalogClaimEvidenceLifeSide
+}
+
 /// One Promote row's claim evidence against its target (`getPromoteClaimEvidence`).
 struct CatalogClaimEvidence: Sendable, Equatable {
     var sections: [CatalogClaimEvidenceSection] = []
     var relationships: [CatalogClaimEvidenceRelationship] = []
     var offers: [CatalogClaimEvidenceOffer] = []
+    /// The lifespan check; nil for a kind with no lifespan, or when neither side has dates.
+    var lifespan: CatalogClaimEvidenceLifespan?
     /// Source id → title.
     var sourceTitles: [String: String] = [:]
 
@@ -642,6 +663,8 @@ enum CatalogConclusionValue: Sendable, Equatable {
     case term(id: String, key: String, label: String)
     case date(CatalogDateValueInput)
     case name(CatalogNameValue)
+    /// A likeness: its stored crop; the region is not sent on the evidence wire.
+    case depiction(CatalogDepictionValue)
 }
 
 /// One auto-reconciled value of a Property (S9-14). `.kept` is displayed;
