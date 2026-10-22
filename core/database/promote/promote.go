@@ -49,8 +49,6 @@ type PinSet struct {
 type Result struct {
 	Entity canonicalentities.Entity
 	Claim  identityclaims.Claim
-	// Pins is the number of Observations pinned on the new claim.
-	Pins int
 }
 
 // Save files an accepted Identity Claim for the Subject in one transaction,
