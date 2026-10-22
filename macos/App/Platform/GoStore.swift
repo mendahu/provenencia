@@ -964,13 +964,7 @@ struct GoStore: GenealogyStore {
         var req = Provenencia_Engine_V1_ProposePromoteGraphAlignmentRequest()
         req.projectDir = projectDir
         req.sourceID = sourceID
-        req.fixed = fixed.map { f in
-            var row = Provenencia_Engine_V1_PromoteGraphAlignmentFixed()
-            row.subjectID = f.subjectID
-            row.handleID = f.handleID
-            row.target = f.target
-            return row
-        }
+        req.fixed = fixed.map(Self.mapFixed)
         let resp: Provenencia_Engine_V1_ProposePromoteGraphAlignmentResponse = try await provenenciaCall(
             method: CoreMethod.proposePromoteGraphAlignment,
             request: req
@@ -1049,13 +1043,7 @@ struct GoStore: GenealogyStore {
         req.sourceID = sourceID
         req.subjectID = subjectID
         req.handleID = handleID
-        req.neighbors = neighbors.map { f in
-            var row = Provenencia_Engine_V1_PromoteGraphAlignmentFixed()
-            row.subjectID = f.subjectID
-            row.handleID = f.handleID
-            row.target = f.target
-            return row
-        }
+        req.neighbors = neighbors.map(Self.mapFixed)
         let resp: Provenencia_Engine_V1_GetPromoteClaimEvidenceResponse = try await provenenciaCall(
             method: CoreMethod.getPromoteClaimEvidence,
             request: req
@@ -1084,6 +1072,14 @@ struct GoStore: GenealogyStore {
             offers: resp.offers.map { CatalogClaimEvidenceOffer(id: $0.id, checked: $0.checked) },
             sourceTitles: Dictionary(resp.sources.map { ($0.id, $0.title) }, uniquingKeysWith: { first, _ in first })
         )
+    }
+
+    private static func mapFixed(_ f: CatalogPromoteGraphAlignmentFixed) -> Provenencia_Engine_V1_PromoteGraphAlignmentFixed {
+        var row = Provenencia_Engine_V1_PromoteGraphAlignmentFixed()
+        row.subjectID = f.subjectID
+        row.handleID = f.handleID
+        row.target = f.target
+        return row
     }
 
     private static func mapEvidenceSection(_ s: Provenencia_Engine_V1_PromoteClaimEvidenceSection) -> CatalogClaimEvidenceSection {
