@@ -53,9 +53,9 @@ enum EvidenceBridgeEdgeSummary {
 
     static func identityPropertyKey(for kind: EvidencePrimaryKind) -> String {
         switch kind {
-        case .person: "name"
-        case .event: "event_type"
-        case .place: "toponym"
+        case .person: SeededPropertyKey.name
+        case .event: SeededPropertyKey.eventType
+        case .place: SeededPropertyKey.toponym
         }
     }
 

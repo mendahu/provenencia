@@ -282,6 +282,10 @@ enum SeededPropertyKey {
     static let date = "date"
     static let startDate = "start_date"
     static let endDate = "end_date"
+    static let role = "role"
+    static let eventType = "event_type"
+    static let relationshipType = "relationship_type"
+    static let placeRelationshipType = "place_relationship_type"
 }
 
 /// Seeded `gender` terms the Person header colours by (`subjectvocab` seed).
@@ -295,6 +299,21 @@ enum SeededGenderTerm {
 enum SeededSexAtBirthTerm {
     static let female = "female"
     static let male = "male"
+}
+
+/// Seeded `role` terms the connection sentences word by name (`subjectvocab` seed).
+enum SeededRoleTerm {
+    static let subject = "subject"
+}
+
+/// Seeded `event_type` terms the connection sentences word by name.
+enum SeededEventTypeTerm {
+    static let birth = "birth"
+    static let death = "death"
+    static let baptism = "baptism"
+    static let marriage = "marriage"
+    static let funeral = "funeral"
+    static let burial = "burial"
 }
 
 /// A DateValue qualifier (`datevalue.Qualifier*`).

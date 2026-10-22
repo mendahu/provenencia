@@ -34,13 +34,13 @@ enum ConnectionSentenceRegistry {
     static let rows: [Row] = [
         Row(
             kind: .location,
-            termProperty: "role",
+            termProperty: SeededPropertyKey.role,
             sentence: { Text.bridgeSummaryLocation(event: $0.a, place: $0.b) },
             phrase: { _ in L10n.string(Text.bridgeSummaryLocationBare) }
         ),
         Row(
             kind: .relationship,
-            termProperty: "relationship_type",
+            termProperty: SeededPropertyKey.relationshipType,
             sentence: {
                 Text.bridgeSummaryRelationship(person: $0.a, type: $0.termLabel ?? "", related: $0.b)
             },
@@ -52,7 +52,7 @@ enum ConnectionSentenceRegistry {
         ),
         Row(
             kind: .placeRelationship,
-            termProperty: "place_relationship_type",
+            termProperty: SeededPropertyKey.placeRelationshipType,
             sentence: {
                 Text.bridgeSummaryPlaceRelationship(from: $0.a, type: $0.termLabel ?? "", to: $0.b)
             },
@@ -64,7 +64,7 @@ enum ConnectionSentenceRegistry {
         ),
         Row(
             kind: .participation,
-            termProperty: "role",
+            termProperty: SeededPropertyKey.role,
             sentence: {
                 Text.bridgeSummaryParticipation(person: $0.a, role: $0.termLabel ?? "", event: $0.b)
             },
@@ -74,16 +74,16 @@ enum ConnectionSentenceRegistry {
                 return Text.bridgeSummaryParticipationRoleOnly(role: term)
             }
         ),
-        subjectRow("birth") { Text.bridgeSentenceBirthSubject(person: $0.a) },
-        subjectRow("death") { Text.bridgeSentenceDeathSubject(person: $0.a) },
-        subjectRow("baptism") { Text.bridgeSentenceBaptismSubject(person: $0.a) },
-        subjectRow("marriage") { Text.bridgeSentenceMarriageSubject(person: $0.a, event: $0.b) },
-        subjectRow("funeral") { Text.bridgeSentenceFuneralSubject(person: $0.a, event: $0.b) },
-        subjectRow("burial") { Text.bridgeSentenceBurialSubject(person: $0.a) },
+        subjectRow(SeededEventTypeTerm.birth) { Text.bridgeSentenceBirthSubject(person: $0.a) },
+        subjectRow(SeededEventTypeTerm.death) { Text.bridgeSentenceDeathSubject(person: $0.a) },
+        subjectRow(SeededEventTypeTerm.baptism) { Text.bridgeSentenceBaptismSubject(person: $0.a) },
+        subjectRow(SeededEventTypeTerm.marriage) { Text.bridgeSentenceMarriageSubject(person: $0.a, event: $0.b) },
+        subjectRow(SeededEventTypeTerm.funeral) { Text.bridgeSentenceFuneralSubject(person: $0.a, event: $0.b) },
+        subjectRow(SeededEventTypeTerm.burial) { Text.bridgeSentenceBurialSubject(person: $0.a) },
     ]
 
     private static func subjectRow(_ eventType: String, sentence: @escaping (Slots) -> String) -> Row {
-        Row(kind: .participation, term: "subject", eventType: eventType, sentence: sentence)
+        Row(kind: .participation, term: SeededRoleTerm.subject, eventType: eventType, sentence: sentence)
     }
 
     /// The most specific row: kind + term + event type, then kind + term, then
@@ -107,7 +107,7 @@ enum ConnectionSentenceRegistry {
 
     /// The property whose Observation carries the kind's term.
     static func termProperty(for kind: EvidenceBridgeKind) -> String {
-        defaultRow(kind).termProperty ?? "role"
+        defaultRow(kind).termProperty ?? SeededPropertyKey.role
     }
 
     /// Relational phrase only; a specific row without its own phrase uses the

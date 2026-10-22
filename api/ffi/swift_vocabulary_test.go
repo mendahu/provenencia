@@ -371,6 +371,8 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		for _, tc := range []struct{ enum, property string }{
 			{"SeededGenderTerm", "gender"},
 			{"SeededSexAtBirthTerm", "sex_at_birth"},
+			{"SeededRoleTerm", "role"},
+			{"SeededEventTypeTerm", "event_type"},
 		} {
 			keys := matches(staticLet, swiftEnumBody(t, swiftVocabulary, tc.enum))
 			if len(keys) == 0 {
