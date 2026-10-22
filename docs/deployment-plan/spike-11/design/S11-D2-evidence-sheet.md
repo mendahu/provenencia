@@ -62,7 +62,7 @@ The sheet answers two different questions and keeps them apart.
 
 - Every member of the target record shows. Joining a record with five named members shows five name matches; identical values collapse into one line ("The names match · 5 records") that expands to each record.
 - Lines read as sentences built from how the values relate ("Same name, different spelling", "Same date, recorded less precisely"), never from a number. The Weight column goes.
-- Relationships say what matched: "They have a matching birth event" is its own checkable line, and the birth's date lines sit under it.
+- Relationships say what matched: "They share a matching connection — John Smith · subject of · Birth of John Smith" is its own checkable line, and the birth's date lines sit under it.
 - A person's lifespan shows as a line that is never pinned, including when one side's own dates contradict each other.
 - Likenesses show as two crops side by side.
 
@@ -84,9 +84,9 @@ The sheet answers two different questions and keeps them apart.
 | Properties pair up | Sex at birth and gender are one section; an event's date with its start and end dates is one section. |
 | Negative values | This Source can say "not male". Against a member who is male it is a conflict. |
 | Relationships | A link this Subject has (a birth it is the subject of, a spouse, a parent, a place an event happened at) that matches a link the record's members have, to the record the neighbor row is placed on. The relationship line pins the plumbing behind it (the link itself, its role or type, the event's type). The neighbor's other properties are lines under it, with the same rules as the Subject's own lines. |
-| Relationship order | Birth and death first, then the rest. |
+| Order | Go orders everything. Sections: the identity property (Name on a person), then Likeness, then the rest. Relationships: birth and death first, then the rest. The lifespan comes last among the Subject's own Cards. |
 | Neighbors | Each relationship names the neighbor row by its name and the ref it shows on the page: the record ref when placed (PER-7QH3D), else its Source ref. |
-| Lifespan (people only) | Worked out from every dated event the person takes part in, on each side. It is a check, not evidence: never pinned. It fits, it conflicts ("died 1840, before this person was born in 1850"), or one side has none. A side whose own dates contradict each other has no lifespan, and the sheet says which side and why. |
+| Lifespan (people only) | Worked out from every dated event the person takes part in, on each side, as a range of years. It is a check, not evidence: never pinned. It fits, it conflicts (the ranges cannot both be true), or one side has none. A side whose own dates contradict each other has no lifespan, and the sheet says which side. |
 | Likeness | A face crop drawn on a Citation's page (Spike 10). The app cannot judge whether two different photos show the same face. The same image file on both sides is the same likeness and starts checked; two different images are pinnable and start unchecked, for the researcher to judge by eye. A likeness never counts toward the band. |
 | Loading | The evidence is read when the sheet opens, one row at a time. It takes well under a second; a large record takes longer. |
 | Pins and Done | Checked lines and relationships are pinned on Done. A row whose sheet was never opened pins exactly what starts checked. |
@@ -119,7 +119,7 @@ The sheet answers two different questions and keeps them apart.
 | ID | Requirement |
 | --- | --- |
 | ES-1 | The panel keeps its title ("Mary Smith → PER-7QH3D Mary Smith") and width. Its subtitle is the band and the reason as the row speaks them: "Strong, contested · via John Smith → PER-7QH3D (son)". The old second sentence ("Agreeing comparisons are pinned…") goes. A row with no record has no subtitle. |
-| ES-2 | **Why this was suggested.** The first block of the body: a sunken Card titled "Why this was suggested" holding the band Badge, the Contested Badge when contested, and the reason sentence on one line; a move caption ("Updated · after John Smith moved to PER-7QH3D") under it when the row shows one. When contested it adds one line: "Something below disagrees with this record." Nothing in this Card has a checkbox. |
+| ES-2 | **Why this was suggested.** The first block of the body: a sunken Card titled "Why this was suggested" holding the band Badge, the Contested Badge when contested, and the reason sentence on one line; a move caption ("Updated · after John Smith moved to PER-7QH3D") under it when the row shows one. It also shows the row's Updated caption whenever the row shows one ("Updated · after John Smith moved to PER-7QH3D", or "Updated · via …"), worded as on the row. When contested it adds one line: "Something below disagrees with this record." Nothing in this Card has a checkbox. |
 | ES-3 | **The evidence heading.** Under the summary, a SectionHeader: "What's the evidence that this is PER-7QH3D Mary Smith?" (the record's ref and title), with meta "N checked" counting checked pins. |
 | ES-4 | The conflict Callout (warning, compact) sits under the heading when any line conflicts: title "Some evidence disagrees", message "Disagreeing lines can't be pinned. The claim can still be filed." |
 
@@ -127,7 +127,7 @@ The sheet answers two different questions and keeps them apart.
 
 | ID | Requirement |
 | --- | --- |
-| ES-5 | The Subject's own evidence comes first, one Card per property, in the order the evidence gives. The Card's header is the property's name ("Name", "Sex at birth", "Date"). A paired section uses the lead's name ("Sex at birth" holds the gender lines). |
+| ES-5 | The Subject's own evidence comes first, one Card per property, in the order Go gives (§2 Order). The Card's header is the property's name ("Name", "Sex at birth", "Date"). A paired section uses the lead's name ("Sex at birth" holds the gender lines). |
 | ES-6 | **A line** is one row: a checkbox; a sentence (ES-8) followed by "· N records" when collapsed; the outcome Badge (subtle) at the right: Agrees (success), Similar (info), Conflicts (danger), Not compared (neutral). Under the sentence, muted: "This source: John Smith" and, for one member, "Census 1851: J. Smith". |
 | ES-7 | A conflict line shows the checkbox disabled and unchecked; its sentence is in primary text, not dimmed. A negative value on this Source reads "This source: not male". |
 | ES-8 | **Sentences**, from relation and cause. The copy table: |
@@ -161,15 +161,15 @@ The sheet answers two different questions and keeps them apart.
 | ID | Requirement |
 | --- | --- |
 | ES-12 | After the Subject's own Cards, one Card per relationship. Its header row is a line: a checkbox, the relationship sentence, the neighbor's ref in mono caption, and the outcome Badge. The neighbor's lines follow in the Card, laid out as ES-6, indented one step. |
-| ES-13 | **Relationship sentences.** A participation where this Subject is the event's subject: "They have a matching birth event" (the event type's name). Another role: "They have a matching marriage event, as witness". A relationship between people or between places names both ends in the order the link reads, as connection subrows do (S11-D1 CS-1): "They have a matching relationship: Mary Smith · parent of · John Smith", "…: Robert Gates · spouse of · Ann Gates", "…: Toronto · part of · Ontario". An event's place: "It happened at a matching place: Toronto". A similar (partial) relationship reads "They have a similar …" and starts unchecked. |
-| ES-14 | A relationship with no lines under it shows its header only, plus a muted caption: "Nothing else to compare on this event." Checking it still pins the link. |
+| ES-13 | **Relationship sentences.** Every row kind and every link kind reads the same way: a sentence from the outcome, then the link on this Source as the page already names it (S11-D1's "·" form, the same words a connection subrow shows). Agrees: "They share a matching connection" — "John Smith · subject of · Birth of John Smith". Similar: "They share a similar connection" (unchecked). Conflicts: "A connection disagrees" (box disabled) — "Mary Smith · spouse of · Robert Gates". A person row, an event row (its person neighbor: "Birth of John Smith · subject · John Smith") and a place row ("Toronto · part of · Ontario") all use it. When the page has no name for the link, the second line names the neighbor: "with Robert Gates". |
+| ES-14 | A relationship with no lines under it shows its header only, plus a muted caption: "Nothing else to compare." Checking it still pins the link. |
 
 ### 4.4 Lifespan and likeness
 
 | ID | Requirement |
 | --- | --- |
-| ES-15 | **Likeness.** A "Likeness" Card on a person, after Name. Each line shows two crops side by side, 96 pt square, this Source's on the left and the member's on the right, each captioned with its Source title. Same image: "Same likeness", Agrees, checked. Different images: "Compare these likenesses", outcome Badge "Judge by eye" (neutral), pinnable, unchecked. A crop that cannot be shown draws the person mark in the Thumbnail. Likeness lines never collapse unless the image is the same. |
-| ES-16 | **Lifespan.** A "Lifespan" Card on a person, last among the own Cards. One line, no checkbox, with a muted caption under it: "Worked out from dated events. A guide for matching, never pinned." Sentences: fits: "The lifespans fit: 1817–1880 here, about 1815–1890 on the record"; conflict: "The lifespans don't fit: this source has events in 1850, after the record's death in 1840", Badge Conflicts; one side has none: "No lifespan to compare: the record has no dated events"; contradiction: "No lifespan for this source: its own dates contradict each other (a death before the birth)" — "this source" or "the record", naming which side. |
+| ES-15 | **Likeness.** A "Likeness" Card on a person, after Name (§2 Order). Each line shows two crops side by side, 96 pt square, this Source's on the left and the member's on the right, each captioned with its Source title. Same image: "Same likeness", Agrees, checked. Different images: "Compare these likenesses", outcome Badge "Judge by eye" (neutral), pinnable, unchecked. A crop that cannot be shown draws the person mark in the Thumbnail. Likeness lines never collapse unless the image is the same. |
+| ES-16 | **Lifespan.** A "Lifespan" Card on a person, last among the own Cards. One line, no checkbox, with a muted caption under it: "Worked out from dated events. A guide for matching, never pinned." Each side's range is written as the Person page writes a life span ("1817–1880", "about 1815–1890", "–1840"). Fits: "The lifespans fit: 1817–1880 here, about 1815–1890 on the record", Badge Agrees. Conflict: "The lifespans don't fit: 1850–1890 here, 1790–1840 on the record", Badge Conflicts. One side has none: "No lifespan to compare: the record has no dated events", Badge Not compared. Contradiction: "No lifespan for this source: its own dates contradict each other" (or "for the record"), Badge Not compared. A lifespan conflict counts as a disagreement for ES-2 and ES-4. |
 
 ### 4.5 States
 
@@ -185,7 +185,7 @@ The sheet answers two different questions and keeps them apart.
 | ID | Requirement |
 | --- | --- |
 | ES-21 | The Claim block stays below the evidence. The Argument hint becomes "N pieces of evidence checked · say why these are the same" (N counts checked pins). |
-| ES-22 | VoiceOver: a line reads as one element with its checkbox state: "Name. Same name, 5 records. This source: John Smith. Checked." A member: "Census 1851: John Smith. Checked." A relationship: "They have a matching birth event, PER-9QA2C. Checked." A likeness line names both Sources: "Likeness from this source and Census 1851. Compare these likenesses. Not checked." The lifespan line has no checkbox and reads its sentence. The disclosure reads "Show 5 records, collapsed". |
+| ES-22 | VoiceOver: a line reads as one element, its sentence followed by the checkbox's own state, which the kit speaks (checked, not checked, or partly checked): "Name. Same name, 5 records. This source: John Smith." A member: "Census 1851: John Smith." A relationship: "They share a matching connection. John Smith · subject of · Birth of John Smith." A likeness line names both Sources: "Likeness from this source and Census 1851. Compare these likenesses." The lifespan line has no checkbox and reads its sentence. The disclosure reads "Show 5 records, collapsed". |
 
 ---
 
@@ -194,7 +194,7 @@ The sheet answers two different questions and keeps them apart.
 1. **Strong row, five members.** Summary (Strong, "via John Smith → PER-7QH3D (son)"); heading with "7 checked"; Name Card with "Same name · 5 records" collapsed (ES-6, ES-9); Sex at birth Card with "The same"; Lifespan Card that fits (ES-16).
 2. **Frame 1 expanded.** The name line expanded, one member unchecked, the line's box partly checked (ES-10).
 3. **Contested Medium row.** Summary with Contested and the "Something below disagrees" line (ES-2); the conflict Callout (ES-4); a "Different dates" conflict line with the disabled box (ES-7); a checked "Same name (nickname)" line (equivalent); an unchecked "Close dates" line (near).
-4. **Relationships.** "They have a matching birth event" with a "Same date, recorded less precisely" line under it, unchecked (ES-12, ES-13); "They have a matching spouse: Robert Gates" with name and sex lines; "It happened at a matching place: Toronto" with no lines (ES-14).
+4. **Relationships.** "They share a matching connection — John Smith · subject of · Birth of John Smith" with a "Same date, recorded less precisely" line under it, unchecked (ES-12, ES-13); "They share a matching connection — John Smith · spouse of · Mary Ames" with name and sex lines; a conflicting connection with its box disabled; an event's place connection with no lines (ES-14).
 5. **Likeness.** One "Same likeness" line and two "Compare these likenesses" lines, crops side by side (ES-15).
 6. **Lifespan edge cases.** A conflict line, and a "No lifespan for this source: its own dates contradict each other" line (ES-16).
 7. **States.** Loading (ES-17), failed (ES-18), a New row (ES-19), nothing to compare (ES-20).
@@ -209,24 +209,30 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | --- | --- | --- | --- | --- |
 | Sheet shell | Component | Ship | `DesignSystem/Components/Panel/PVPanel.swift` | Title, subtitle, 880 pt, sunken footer; as today. |
 | Evidence sheet body | Snowflake | **Rethink** | `Features/Promote/PromoteView.swift` `PromoteEvidenceSheet` | Columns, `ExhibitGroup` and the "Through" cards go; summary, heading, Cards and lines come in. One call site. |
-| Why-suggested summary | Component | Ship | `DesignSystem/Components/Card/PVCard.swift` (`tone: .sunken`) + `DesignSystem/Components/Badge/PVBadge.swift` | The same band and Contested Badges the row uses (S11-D1). Not a Callout: it is not a warning. |
-| Evidence heading | Component | **Extend** | `DesignSystem/Components/SectionHeader/PVSectionHeader.swift` (`meta:` for "N checked") | Gains a `verbatimTitle:` init, as `PVEmptyState` has, because the title names the record. No local heading style. |
+| Why-suggested summary | Component | Ship | `DesignSystem/Components/Card/PVCard.swift` (`tone: .sunken`) + `DesignSystem/Components/Badge/PVBadge.swift` | The same band and Contested Badges the row uses (S11-D1), drawn by one shared Promote view the row and the summary both instance. Not a Callout: it is not a warning. |
+| Evidence heading | Component | **Extend** | `DesignSystem/Components/SectionHeader/PVSectionHeader.swift` (`meta:` for "N checked") | Its title takes `PVCopy`, as Button, Callout and DisclosureButton do, because the title names the record. No local heading style. |
 | Property and relationship Cards | Component | Ship | `DesignSystem/Components/Card/PVCard.swift` | One per section or relationship; header on `surfaceSunken`, as today's group cards. |
 | Evidence line | Snowflake | **Rethink** | `Features/Promote/PromoteView.swift` | Composes Checkbox, text, disclosure Button, Badge. One call site: not a kit primitive. Replaces `comparisonLine`. |
-| Line and member checkbox | Component | Ship | `DesignSystem/Components/Checkbox/PVCheckbox.swift` (`isIndeterminate:` for a partly checked line, `isDisabled:` for a conflict) | No local check control. |
+| Line and member checkbox | Component | **Extend** | `DesignSystem/Components/Checkbox/PVCheckbox.swift` (`isIndeterminate:` for a partly checked line, `isDisabled:` for a conflict) | Gains a spoken "partly checked" state for `isIndeterminate`, so every caller speaks it. No local check control. |
 | Show / Hide records | Component | Ship | `DesignSystem/Components/Disclosure/PVDisclosureButton.swift` | Not a chevron on the whole row; not a link. |
 | Outcome mark | Component | Ship | `DesignSystem/Components/Badge/PVBadge.swift` (`subtle: true`) | Agrees / Similar / Conflicts / Judge by eye / Not compared. |
-| Likeness crop | Component | Ship | `Platform/CachedThumbnail.swift` (over `DesignSystem/Components/Thumbnail/PVThumbnail.swift`), `fallbackMark: .subjectPerson`, size 96 | As the Person gallery draws crops (`Features/Conclusions/ConclusionDetailPage.swift`). No local image loader. |
+| Likeness crop | Snowflake | **Extend** | `Features/Conclusions/ConclusionDetailPage.swift` `ConclusionDetailLikenessSection` tile (a 96 pt `Platform/CachedThumbnail.swift` crop over a muted Source caption) | Its crop-and-caption becomes one shared view the gallery and the sheet both use (second call site). No local image loader. |
 | Conflict and failure notices | Component | Ship | `DesignSystem/Components/Callout/PVCallout.swift` (`compact: true`) | Warning for disagreement, danger for a failed read. |
 | Loading | Component | Ship | `DesignSystem/Components/SkeletonBar/PVSkeletonBar.swift` | Three bars, as S11-25 drew. |
 | No record, nothing to compare | Component | Ship | `DesignSystem/Components/EmptyState/PVEmptyState.swift` | Pane-level empty inside the sheet. |
 | Claim fields | Component | Ship | `DesignSystem/Components/Field/PVField.swift`, `DesignSystem/Components/Select/PVSelect.swift`, `DesignSystem/Components/TextArea/PVTextArea.swift` | Unchanged; the Argument hint is new copy. |
 | Column headers, Weight column | Snowflake | **Remove** | `PromoteEvidenceSheet` `sheetColumns`, `weightText` | Go with the table. |
 
-**Non-goals.** No new kit primitive. No local Badge, Checkbox, Card, Callout or image view. No table component for lines. No numbers. No select-all. No hover actions on a line.
+**Non-goals.** No new kit primitive (the two kit rows are Extend). No local Badge, Checkbox, Card, Callout or image view. No table component for lines. No numbers. No select-all. No hover actions on a line.
 
 ---
 
 ## 7. Handoff
 
-When the board is agreed: record the board link and frame numbers on S11-20's **Board** line and in a §8 "Board notes" table here (as S11-D1 did), and move S11-20 from `Blocked — …` to `Planned` with `plan-pr` once S11-25 and S11-32 have landed. Move this brief to the spike's design archive folder when S11-20 lands, and update [`README.md`](README.md).
+When the board is agreed: record the board link and frame numbers on S11-20's **Board** line and in a §9 "Board notes" table here (as S11-D1 did in its §8), and move S11-20 from `Blocked — …` to `Planned` with `plan-pr` once S11-25 and S11-32 have landed. Move this brief to the spike's design archive folder when S11-20 lands, and update [`README.md`](README.md).
+
+---
+
+## 8. Review log
+
+[`../prs/S11-20-claim-evidence-sheet.review.md`](../prs/S11-20-claim-evidence-sheet.review.md) (round 1, 2026-10-22) covers this brief: inventory rows for the section header, checkbox, likeness tile and readout badges, Go-owned order, and connection wording were changed from it.
