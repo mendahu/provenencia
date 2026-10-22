@@ -1,6 +1,6 @@
 # S11-26 — Connections file by their ends
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 11 · Slice 6 — Connection subrows
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the connections panel loses its per-row switch and shows the state caption it already shows for unfiled rows; the panel itself is replaced by S11-27 under S11-D1)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/ffi-handlers.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** [Connection subrows](../promote-connection-subrows.md) "The problem" §2 and "What it would change"; [`docs/promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3 ("Bridges aren't rows"), §9 ("Bridges" bullet) and §9.1; [`docs/conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) §5.4; working rules "High tolerance for churn", "One wire vocabulary"
 **Planned:** 2026-10-22 against `main` @ `1e8a580`
-**Review:** — (not reviewed yet)
+**Review:** [`S11-26-connections-by-ends.review.md`](S11-26-connections-by-ends.review.md) — Fits / Ready, 2 rounds (findings fixed)
 
 ### Implementer — read this first
 
@@ -98,7 +98,7 @@ A connection (participation, location, relationship, place relationship) files o
 | View | `macos/App/Features/Promote/PromoteView.swift` `connectionRow(_:)`, `bridgeOn(_:)`, `connectionMeta`, `connectionsPanel`, the `.pvConfirm` leave copy | `.files` / `.off` rows render a `PVSwitch`; the others a muted italic caption; the leave guard passes `bridgeOff.count` |
 | Copy | `macos/App/Platform/L10n.swift` `L10n.Promote.connectionState`, `connectionFiled`, `connectionsMeta(filed:off:unfiled:)`, `connectionsHint`, `leaveDetail(rows:connections:)`; `macos/App/Resources/Localizable.xcstrings` (English only) | `promote.connections.off` = "Not filed this time"; `promote.connections.meta` = "%1$lld filed · %2$lld switched off · %3$lld not filed"; `promote.connections.hint` = "Switch off a relationship you don’t accept from this Source; it stays on the graph"; `promote.leave.pageMessage` names "switched off %2$lld connections" |
 | Tests | `core/database/promote/batch_test.go` `TestSaveBatchSkipsSwitchedOffBridge`, `TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted` (ends with a comment and `_ = bridge` about the switch) | No test covers a bridge with a Skipped end |
-| Tests | `macos/ProvenenciaTests/PromoteFlowTests.swift` `doneSendsPinsAndASwitchedOffBridge`, `promoteAllStartsExpandedAndHidesFiledBridges` (asserts `skipBridgeIDs().isEmpty`); `macos/ProvenenciaTests/PromoteModelTests.swift` (reads `store.lastPromoteBatch?.rows` at two sites) | |
+| Tests | `macos/ProvenenciaTests/PromoteFlowTests.swift` `doneSendsPinsAndASwitchedOffBridge`, `promoteAllStartsExpandedAndHidesFiledBridges` (asserts `skipBridgeIDs().isEmpty`); `macos/ProvenenciaTests/PromoteModelTests.swift` (has one `.rows` read, line 171, and two nil checks, lines 169 and 242) | |
 | Docs | `docs/promote-graph-alignment.md` §3 bullet "Bridges aren't rows", §5 four-case table row Promoted / Promoted ("the researcher can switch it off"), §9 bullet "Bridges", §9.1 bullet "When:" ("On the Promote page the researcher can switch individual bridges off before Done."); `docs/conclusion-layer-data-model.md` §5.4 bullet "On the Promote page, each bridge can be switched off" | State the switch as a rule |
 
 **Precedent.** Removing a proto field: `MetadataWorkspaceEntry` in `api/proto/engine.proto` keeps `reserved 3, 8; reserved "date_value_id", "date";` for its removed fields. Copy that shape. Removing a wire field together with every caller in one PR follows S11-25 ([plan](S11-25-claim-evidence-rpc.md), proposal field 9 removed).
@@ -192,17 +192,17 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/promote/... ./core/data
 **STEP-2 — Reserve the wire field**
 Files: `api/proto/engine.proto`, `api/proto/engine/engine.pb.go`, `macos/App/Platform/Generated/engine.pb.swift`. Skill: `add-ffi-handler`.
 Do: the FFI sketch; `./scripts/generate-proto.sh`.
-Check: `rg -n "skip_bridge_ids|SkipBridgeIds|skipBridgeIds" api macos/App --glob '!*.pb.go' --glob '!*.pb.swift'` matches only the `reserved "skip_bridge_ids";` line (the generated files keep the reserved name in their descriptor, as `date_summary` is kept today); `rg -n "SkipBridgeIds|skipBridgeIds" api/proto/engine/engine.pb.go macos/App/Platform/Generated/engine.pb.swift` is empty; `CGO_ENABLED=1 go test -tags fts5 ./api/...` passes.
+Check: `rg -n "skip_bridge_ids|SkipBridgeIds|skipBridgeIds" api --glob '!*.pb.go'` matches only the `reserved "skip_bridge_ids";` line (the generated files keep the reserved name in their descriptor, as `date_summary` is kept today); `rg -n "SkipBridgeIds|skipBridgeIds" api/proto/engine/engine.pb.go macos/App/Platform/Generated/engine.pb.swift` is empty; `CGO_ENABLED=1 go test -tags fts5 ./api/...` passes. The Swift target does not compile again until STEP-3 (`GoStore` still sets `req.skipBridgeIds`); run no Xcode check in this step.
 
 **STEP-3 — Store takes no skip list**
 Files: `macos/App/Platform/GenealogyStore.swift`, `GoStore.swift`, `FakeStore.swift`, `macos/ProvenenciaTests/OnboardingModelTests.swift`, `macos/ProvenenciaTests/PromoteModelTests.swift`, `macos/App/Features/Promote/PromoteModel.swift` (Done call only).
 Do: remove the `skipBridgeIDs:` parameter and the `req.skipBridgeIds` line; D-9.
-Check: `xcodebuild test` (the `scripts/check-pr.sh` command) passes; `PromoteFlow.skipBridgeIDs()` still exists, unused, until STEP-4.
+Check: `rg -n "skipBridgeIds|skipBridgeIDs:" macos/App macos/ProvenenciaTests --glob '!*.pb.swift'` is empty; `xcodebuild test` (the `scripts/check-pr.sh` command) passes; `PromoteFlow.skipBridgeIDs()` still exists, unused, until STEP-4.
 
 **STEP-4 — Connection states come from their ends; the panel shows them**
 Files: `macos/App/Features/Promote/PromoteFlow.swift`, `PromoteModel.swift`, `PromoteView.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `macos/ProvenenciaTests/PromoteFlowTests.swift`. Skills: `add-swift-test`, `add-localized-string`.
 Do: D-3; delete `bridgeOff`, `toggleBridge` (flow and model), `skipBridgeIDs()`; D-4 – D-8; D-11 (T-3, T-4). The view, the copy and the flow change together: `PromoteView` reads `bridgeOff`, `.off` and `toggleBridge`, and `L10n.Promote.connectionState` switches over `.off`, so neither builds without the other.
-Check: `rg -n "bridgeOff|toggleBridge|skipBridgeIDs|connectionLines|filedBridges|connectionFiled|\.off\b" macos/App macos/ProvenenciaTests` is empty; `python3 scripts/check-localizable-xcstrings.py` passes; `xcodebuild test` passes.
+Check: `rg -n "bridgeOff|toggleBridge|skipBridgeIDs|connectionLines|filedBridges|connectionFiled|\.off\b|case off" macos/App macos/ProvenenciaTests` is empty; `python3 scripts/check-localizable-xcstrings.py` passes; `xcodebuild test` passes.
 
 **STEP-5 — Docs**
 Files: `docs/promote-graph-alignment.md`, `docs/conclusion-layer-data-model.md`, `docs/deployment-plan/spike-11/completed.md`, `docs/deployment-plan/spike-11/deployment-plan.md` (map row), this plan (status).
@@ -214,7 +214,7 @@ Do, in `docs/promote-graph-alignment.md`:
 
 In `docs/conclusion-layer-data-model.md` §5.4: replace the switched-off bullet with "**The Promote page has no per-bridge switch.** A connection the researcher disputes is fixed on the Evidence graph (delete it, or change its type or role)."
 
-Then the Definition of done lines: `completed.md` gets a new `## S11-26 — Connections file by their ends` section at the top (newest first), starting "**In review** in [#N](https://github.com/mendahu/provenencia/pull/N)." like the S11-32 entry; the map row Status becomes `In progress` while the PR is open, per the status words in [`docs/deployment-plan/README.md`](../../README.md).
+Then the Definition of done lines, after the draft PR is open so its number is known: `completed.md` gets a new `## S11-26 — Connections file by their ends` section at the top (newest first), starting "**In review** in [#N](https://github.com/mendahu/provenencia/pull/N)." like the S11-32 entry; the map row Status becomes `In progress` while the PR is open, per the status words in [`docs/deployment-plan/README.md`](../../README.md); the row's Scope text stays as it is. This plan's Status becomes `In progress` with the PR link; `ship-pr` sets `Landed in #N (date)` and the Landed note on merge. The **Review:** line is not changed.
 Check: `rg -n -i "switch" docs/promote-graph-alignment.md docs/conclusion-layer-data-model.md` finds no line about switching a bridge or connection off; links resolve.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log`. Suggested: "File every connection whose ends are both handles on Done." (STEPS 1–3), "Show each connection's state instead of a switch on Promote." (STEP-4), "Drop the connection switch-off rule from the Promote docs." (STEP-5). No WIP commits.
@@ -265,6 +265,8 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 | A caller of `FileBridgesTx` / `FileSourceBridgesTx` exists that §4 does not list | `go build ./...` fails at STEP-1; stop condition below |
 
 **Stop and report if:**
+
+- `protoc`, `protoc-gen-go`, `protoc-gen-swift` or Xcode is missing: stop after STEP-1 and report. Do not hand-edit `engine.pb.go` or `engine.pb.swift`.
 
 - `rg -n "FileBridgesTx|FileSourceBridgesTx" --glob '*.go'` finds a caller not listed in §4.
 - `./scripts/generate-proto.sh` changes lines in `engine.pb.go` or `engine.pb.swift` other than the `skip_bridge_ids` field, its descriptor bytes (where the name stays as reserved) and the file's header version comment.

@@ -1,7 +1,7 @@
 # Review — S11-26 Connections file by their ends
 
-**Verdict:** pending round 2
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits — Ready
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 - None.
@@ -48,3 +48,31 @@ Reserved names stay in the generated descriptors (`date_summary` is in `engine.p
 
 ### M-4 · minor · `filedBridges` / `connectionLines()` are misnamed and one forwards to the other
 **Answer:** Fixed. D-3 merges them into `var connections: [Bridge]`, which S11-27's `connections(hostedBy:)` filters. Codebase fit has the row, and Deletes and Next adds are updated.
+
+## Round 2
+
+Maintainability: **Fits**, with every round 1 answer verified. Executability: **Ready with changes**. After the fixes below, no blocker is open.
+
+### X-A · blocker · STEP-2's check cannot pass until STEP-3, and the Swift tree does not build between them
+**Answer:** Fixed. The `macos/App` part of the STEP-2 check moved to STEP-3. STEP-2 now says that the Swift target does not compile until STEP-3, so it runs no Xcode check.
+
+### X-B · major · Current state row is false about `PromoteModelTests`
+**Answer:** Fixed. The Tests row names one `.rows` read (line 171) and two nil checks (lines 169, 242).
+
+### X-C · major · Several checks cannot run without macOS tools
+**Answer:** Fixed. A new Stop condition says: with `protoc`, the plug-ins or Xcode missing, stop after STEP-1 and report, and never hand-edit generated files.
+
+### X-D · minor · STEP-4's `.off` check misses the enum declaration
+**Answer:** Fixed. The STEP-4 grep adds `case off`.
+
+### X-E · minor · STEP-5 leaves small choices open
+**Answer:** Fixed. `completed.md` is written after the draft PR is open. The plan's Status becomes `In progress` with the link, and `ship-pr` sets Landed. The **Review:** line and the map row's Scope text are left as they are.
+
+### X-F · nit · The accessibility identifier moves to the row
+Logged. Nothing references it.
+
+### M-5 · nit · The page predicts Go's filing rule in Swift
+Logged for S12-09: when that PR changes `fileHeads`, its plan checks `PromoteFlow.connections` still agrees.
+
+### M-6 · nit · "bridge" and "connection" both name one concept in `PromoteFlow`
+Logged. The name matches S11-27's `connections(hostedBy:)`.
