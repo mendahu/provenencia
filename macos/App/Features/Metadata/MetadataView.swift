@@ -132,8 +132,8 @@ private struct MetadataContent: View {
     let store = FakeStore()
     let projectDir = "/tmp/preview.provenencia"
     store.fieldsByProject[projectDir] = [
-        CatalogMetadataField(id: "1", key: "author", origin: "provenencia", label: "Author", dataType: "text", description: "Person or body responsible for the content of the source."),
-        CatalogMetadataField(id: "2", key: "publication-date", origin: "provenencia", label: "Publication date", dataType: "date", description: "Date the source was published."),
+        CatalogMetadataField(id: "1", key: "author", origin: CatalogOrigin.provenencia, label: "Author", dataType: "text", description: "Person or body responsible for the content of the source."),
+        CatalogMetadataField(id: "2", key: "publication-date", origin: CatalogOrigin.provenencia, label: "Publication date", dataType: "date", description: "Date the source was published."),
         CatalogMetadataField(id: "3", key: "grandmas-album-code", origin: "user", label: "Grandma's album code", dataType: "text", description: "Pencil code on the back of prints."),
         CatalogMetadataField(id: "4", key: "memorial-id", origin: "plugin:findagrave", label: "Memorial id", dataType: "text", description: "Numeric memorial identifier."),
     ]

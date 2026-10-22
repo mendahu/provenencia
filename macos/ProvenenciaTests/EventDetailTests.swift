@@ -99,7 +99,7 @@ struct EventDetailTests {
         let header = CatalogEventHeader(
             entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-8PL22", subjectTypeID: "t", label: ""),
             eventTypeKey: "birth",
-            eventTypeOrigin: SeededOrigin.provenencia,
+            eventTypeOrigin: CatalogOrigin.provenencia,
             eventTypeLabel: "Birth",
             subjects: [
                 CatalogEventSubject(
@@ -113,7 +113,7 @@ struct EventDetailTests {
                 CatalogHeaderPlace(entity: toronto, names: ["Toronto"]),
             ],
             title: CatalogEventTitle(
-                rule: .subject, ref: "EVT-8PL22", typeKey: "birth", typeOrigin: SeededOrigin.provenencia, typeLabel: "Birth",
+                rule: .subject, ref: "EVT-8PL22", typeKey: "birth", typeOrigin: CatalogOrigin.provenencia, typeLabel: "Birth",
                 subjects: [CatalogNameValue(form: "James Robins")], place: "York"
             )
         )

@@ -350,9 +350,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		}
 	})
 	t.Run("the product's origin is Go's", func(t *testing.T) {
-		got := matches(staticLet, swiftEnumBody(t, swiftVocabulary, "SeededOrigin"))
-		if len(got) != 1 || got[0] != vocabkey.OriginProvenencia {
-			t.Fatalf("Swift SeededOrigin %q, Go %q", got, vocabkey.OriginProvenencia)
+		got := matches(staticLet, swiftEnumBody(t, swiftVocabulary, "CatalogOrigin"))
+		want := []string{vocabkey.OriginProvenencia, vocabkey.OriginUser}
+		if strings.Join(got, ",") != strings.Join(want, ",") {
+			t.Fatalf("Swift CatalogOrigin %q, Go %q", got, want)
 		}
 	})
 	t.Run("seeded Property keys are seeded", func(t *testing.T) {

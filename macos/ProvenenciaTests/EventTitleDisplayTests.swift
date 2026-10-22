@@ -23,7 +23,7 @@ struct EventTitleDisplayTests {
             label: label,
             ref: ref,
             typeKey: typeKey,
-            typeOrigin: typeOrigin ?? (typeKey.isEmpty ? "" : SeededOrigin.provenencia),
+            typeOrigin: typeOrigin ?? (typeKey.isEmpty ? "" : CatalogOrigin.provenencia),
             typeLabel: typeLabel,
             subjects: subjects.map { $0.map { CatalogNameValue(form: $0) } },
             place: place
@@ -94,7 +94,7 @@ struct EventTitleDisplayTests {
         let header = CatalogEventHeader(
             entity: CatalogCanonicalEntity(id: "e", ref: "EVT-1", subjectTypeID: "t", label: ""),
             eventTypeKey: "birth",
-            eventTypeOrigin: SeededOrigin.provenencia,
+            eventTypeOrigin: CatalogOrigin.provenencia,
             title: title(.subject, subjects: ["Jeremiah Arthur Gumtree"])
         )
         #expect(

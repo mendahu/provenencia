@@ -240,7 +240,7 @@ private struct EvidenceContext {
     }
 
     func propertyLabel(_ key: String) -> String {
-        model.propertyLabel(key: key, origin: "provenencia")
+        model.propertyLabel(key: key, origin: CatalogOrigin.provenencia)
     }
 
     func sourceTitle(_ pin: CatalogClaimEvidencePin) -> String? {

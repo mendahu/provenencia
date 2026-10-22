@@ -145,7 +145,7 @@ enum EvidenceBridgeEdgeSummary {
     }
 
     private static func productKey(of observation: CatalogObservation?) -> String? {
-        guard let observation, observation.valueTermOrigin == SeededOrigin.provenencia,
+        guard let observation, CatalogOrigin.isProduct(observation.valueTermOrigin),
               !observation.valueTermKey.isEmpty
         else { return nil }
         return observation.valueTermKey

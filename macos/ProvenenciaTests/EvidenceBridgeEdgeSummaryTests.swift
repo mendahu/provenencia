@@ -171,10 +171,10 @@ struct EvidenceBridgeEdgeSummaryTests {
     @Test func aParticipationReadsFromTheRegistry() {
         var role = observation(propertyKey: "role", valueText: "Subject", valueType: "term")
         role.valueTermKey = "subject"
-        role.valueTermOrigin = SeededOrigin.provenencia
+        role.valueTermOrigin = CatalogOrigin.provenencia
         var eventType = identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Birth")
         eventType.valueTermKey = "birth"
-        eventType.valueTermOrigin = SeededOrigin.provenencia
+        eventType.valueTermOrigin = CatalogOrigin.provenencia
         let placed = bridge(kind: .participation, observations: [
             observation(propertyKey: "person", valueSubjectID: "p1"),
             observation(propertyKey: "event", valueSubjectID: "e1"),
@@ -200,7 +200,7 @@ struct EvidenceBridgeEdgeSummaryTests {
         role.valueTermOrigin = "user"
         var eventType = identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Birth")
         eventType.valueTermKey = "birth"
-        eventType.valueTermOrigin = SeededOrigin.provenencia
+        eventType.valueTermOrigin = CatalogOrigin.provenencia
         let placed = bridge(kind: .participation, observations: [
             observation(propertyKey: "person", valueSubjectID: "p1"),
             observation(propertyKey: "event", valueSubjectID: "e1"),
@@ -223,7 +223,7 @@ struct EvidenceBridgeEdgeSummaryTests {
         // A researcher's own event type "birth" with the product's subject role.
         var productRole = observation(propertyKey: "role", valueText: "Subject", valueType: "term")
         productRole.valueTermKey = "subject"
-        productRole.valueTermOrigin = SeededOrigin.provenencia
+        productRole.valueTermOrigin = CatalogOrigin.provenencia
         var userType = identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Arrival")
         userType.valueTermKey = "birth"
         userType.valueTermOrigin = "user"
@@ -267,12 +267,12 @@ struct EvidenceBridgeEdgeSummaryTests {
     private func titledEventSentence(eventType: String, title: String) -> String {
         var role = observation(propertyKey: "role", valueText: "Subject", valueType: "term")
         role.valueTermKey = "subject"
-        role.valueTermOrigin = SeededOrigin.provenencia
+        role.valueTermOrigin = CatalogOrigin.provenencia
         var typeObservation = identityObservation(
             subjectID: "e1", propertyKey: "event_type", valueText: eventType.capitalized
         )
         typeObservation.valueTermKey = eventType
-        typeObservation.valueTermOrigin = SeededOrigin.provenencia
+        typeObservation.valueTermOrigin = CatalogOrigin.provenencia
         let placed = bridge(kind: .participation, observations: [
             observation(propertyKey: "person", valueSubjectID: "p1"),
             observation(propertyKey: "event", valueSubjectID: "e1"),

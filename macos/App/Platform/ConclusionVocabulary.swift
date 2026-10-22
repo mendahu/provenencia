@@ -250,11 +250,35 @@ enum SegmentCause: Sendable, Equatable {
 
 // A Property's value type is `PropertyValueType` (InterpretationValueKinds.swift).
 
-/// The origin of every term and Property the product seeds
-/// (`vocabkey.OriginProvenencia`). A key names a seeded term only with it: a
-/// researcher's own term may be keyed the same.
-enum SeededOrigin {
+/// The `origin` namespace shared by every catalog vocabulary row
+/// (`source_types`, `source_metadata_fields`) — mirrors the `Origin…`
+/// constants in `core/database/sourcetypes` and `…/metadatafields`. The FFI
+/// layer carries origin as a plain string, not an enum, and the vocabulary
+/// is open: anything that is neither seeded nor researcher-authored belongs
+/// to a plugin.
+enum CatalogOrigin {
     static let provenencia = "provenencia"
+    static let user = "user"
+
+    private static let pluginPrefix: String = "plugin:"
+
+    /// Whether a term or Property row is the product's: only then does its key
+    /// name a seeded one. A researcher's own row may be keyed the same.
+    static func isProduct(_ origin: String) -> Bool {
+        origin == provenencia
+    }
+
+    /// Anything that is neither seeded nor researcher-authored is owned by a
+    /// plugin — the same open-vocabulary stance the badges take.
+    static func isPlugin(_ origin: String) -> Bool {
+        origin != provenencia && origin != user
+    }
+
+    /// The id after `plugin:` (e.g. `"plugin:findagrave"` → `"findagrave"`),
+    /// or the raw origin unchanged when it has no such prefix.
+    static func pluginID(from origin: String) -> String {
+        origin.hasPrefix(pluginPrefix) ? String(origin.dropFirst(pluginPrefix.count)) : origin
+    }
 }
 
 /// Seeded Property keys the Conclusion pages lay out by name
