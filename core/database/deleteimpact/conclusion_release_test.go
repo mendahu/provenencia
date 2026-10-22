@@ -97,15 +97,24 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// A confirmed comparison: B joins with its toponym paired against A's, so
+	// A confirmed pin set: B joins with its toponym pinned against A's, so
 	// Promote pins both Observations on both claims (backfill).
-	joined, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: b.ID, EntityID: grounding.Entity.ID,
-			Pairs: []promote.Pair{{IncomingObservationID: obsB, MemberObservationID: obsA}}})
+	rev := int64(0)
+	if db, err := c.DB(); err != nil {
+		t.Fatal(err)
+	} else if err := db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev); err != nil {
+		t.Fatal(err)
+	}
+	batch, err := writes.Call(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+		return promote.SaveBatch(tx, userID, promote.Batch{SourceID: src.ID, SeenRevision: rev, Rows: []promote.BatchRow{{
+			SubjectID: b.ID, Target: promote.TargetHandle, EntityID: grounding.Entity.ID,
+			PinSets: []promote.PinSet{{Member: a.ID, Observations: [][]byte{obsB, obsA}}},
+		}}})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	joined := batch.Written[0]
 	ca, cb := grounding.Claim.ID, joined.Claim.ID
 
 	return conclusionFixture{c: c, userID: userID, a: a, b: b, obsA: obsA, obsB: obsB,

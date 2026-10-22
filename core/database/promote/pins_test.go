@@ -123,6 +123,52 @@ func (f *pinFixture) pinned(claimID []byte) string {
 	return strings.Join(out, ",")
 }
 
+// revision is the catalog's latest audit revision, the stamp a batch is read at.
+func (f *pinFixture) revision() int64 {
+	f.t.Helper()
+	db, err := f.c.DB()
+	f.must(err)
+	var rev int64
+	f.must(db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev))
+	return rev
+}
+
+// batch files one Done of the fixture's Source, the one pin write.
+func (f *pinFixture) batch(rows ...promote.BatchRow) (promote.BatchResult, error) {
+	f.t.Helper()
+	seen := f.revision()
+	return writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+		return promote.SaveBatch(tx, userID, promote.Batch{SourceID: f.artifact.SourceID, SeenRevision: seen, Rows: rows})
+	})
+}
+
+// promote files subject on a new handle.
+func (f *pinFixture) promote(subject subjects.Subject, argument string) promote.Written {
+	f.t.Helper()
+	res, err := f.batch(promote.BatchRow{SubjectID: subject.ID, Target: promote.TargetNew, Argument: argument})
+	f.must(err)
+	return res.Written[0]
+}
+
+// join files subject on entityID with the pin sets.
+func (f *pinFixture) join(subject subjects.Subject, entityID []byte, sets ...promote.PinSet) (promote.Written, error) {
+	f.t.Helper()
+	res, err := f.batch(promote.BatchRow{SubjectID: subject.ID, Target: promote.TargetHandle, EntityID: entityID, PinSets: sets})
+	if err != nil {
+		return promote.Written{}, err
+	}
+	return res.Written[0], nil
+}
+
+// set pins observations on the new claim and on member's claim.
+func set(member subjects.Subject, obs ...observations.Observation) promote.PinSet {
+	ps := promote.PinSet{Member: member.ID}
+	for _, o := range obs {
+		ps.Observations = append(ps.Observations, o.ID)
+	}
+	return ps
+}
+
 func idsOf(obs ...observations.Observation) string {
 	var out []string
 	for _, o := range obs {
@@ -133,18 +179,12 @@ func idsOf(obs ...observations.Observation) string {
 }
 
 func TestSavePins(t *testing.T) {
-	t.Run("a confirmed pair pins both Observations on both claims", func(t *testing.T) {
+	t.Run("a pin set pins its Observations on both claims", func(t *testing.T) {
 		f := newPinFixture(t)
 		birth, birthObs := f.person1("James")
-		first, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: birth.ID, Argument: "The birth record."})
-		})
-		f.must(err)
+		first := f.promote(birth, "The birth record.")
 		census, censusObs := f.person1("James")
-		res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: census.ID, EntityID: first.Entity.ID,
-				Pairs: []promote.Pair{{IncomingObservationID: censusObs[0].ID, MemberObservationID: birthObs[0].ID}}})
-		})
+		res, err := f.join(census, first.Entity.ID, set(birth, censusObs[0], birthObs[0]))
 		f.must(err)
 		want := idsOf(birthObs[0], censusObs[0])
 		if got := f.pinned(res.Claim.ID); got != want {
@@ -163,21 +203,15 @@ func TestSavePins(t *testing.T) {
 		}
 	})
 
-	t.Run("pins are audited per claim in the promote_subject revision", func(t *testing.T) {
+	t.Run("pins are audited per claim in the promote_batch revision", func(t *testing.T) {
 		f := newPinFixture(t)
 		birth, birthObs := f.person1("James")
-		first, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: birth.ID})
-		})
-		f.must(err)
+		first := f.promote(birth, "")
 		census, censusObs := f.person1("James")
-		res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: census.ID, EntityID: first.Entity.ID,
-				Pairs: []promote.Pair{{IncomingObservationID: censusObs[0].ID, MemberObservationID: birthObs[0].ID}}})
-		})
+		res, err := f.join(census, first.Entity.ID, set(birth, censusObs[0], birthObs[0]))
 		f.must(err)
 		got := lastRevisionChanges(t, f.c)
-		want := "promote_subject:identity_claim,identity_claim_evidence,identity_claim_evidence,identity_claim_evidence,identity_claim_evidence"
+		want := "promote_batch:identity_claim,identity_claim_evidence,identity_claim_evidence,identity_claim_evidence,identity_claim_evidence"
 		if got != want {
 			t.Fatalf("changes %s", got)
 		}
@@ -191,23 +225,13 @@ func TestSavePins(t *testing.T) {
 	t.Run("pins already carried are not written or audited twice", func(t *testing.T) {
 		f := newPinFixture(t)
 		a, aObs := f.person1("James", "Jim")
-		first, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: a.ID})
-		})
-		f.must(err)
+		first := f.promote(a, "")
 		b, bObs := f.person1("James")
-		pair := promote.Pair{IncomingObservationID: bObs[0].ID, MemberObservationID: aObs[0].ID}
-		_, err = writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: b.ID, EntityID: first.Entity.ID,
-				Pairs: []promote.Pair{pair, pair}})
-		})
+		_, err := f.join(b, first.Entity.ID, set(a, bObs[0], aObs[0]), set(a, bObs[0], aObs[0]))
 		f.must(err)
 		c, cObs := f.person1("James")
 		// The member's Observation is already pinned on its claim by b's join.
-		res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: c.ID, EntityID: first.Entity.ID,
-				Pairs: []promote.Pair{{IncomingObservationID: cObs[0].ID, MemberObservationID: aObs[0].ID}}})
-		})
+		res, err := f.join(c, first.Entity.ID, set(a, cObs[0], aObs[0]))
 		f.must(err)
 		if got, want := f.pinned(first.Claim.ID), idsOf(aObs[0], bObs[0], cObs[0]); got != want {
 			t.Fatalf("member pins differ")
@@ -220,25 +244,15 @@ func TestSavePins(t *testing.T) {
 		}
 	})
 
-	t.Run("pairs against several members backfill each", func(t *testing.T) {
+	t.Run("sets against several members backfill each", func(t *testing.T) {
 		f := newPinFixture(t)
 		a, aObs := f.person1("James")
-		first, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: a.ID})
-		})
-		f.must(err)
+		first := f.promote(a, "")
 		b, bObs := f.person1("James")
-		second, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: b.ID, EntityID: first.Entity.ID})
-		})
+		second, err := f.join(b, first.Entity.ID)
 		f.must(err)
 		c, cObs := f.person1("James")
-		res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: c.ID, EntityID: first.Entity.ID, Pairs: []promote.Pair{
-				{IncomingObservationID: cObs[0].ID, MemberObservationID: aObs[0].ID},
-				{IncomingObservationID: cObs[0].ID, MemberObservationID: bObs[0].ID},
-			}})
-		})
+		res, err := f.join(c, first.Entity.ID, set(a, cObs[0], aObs[0]), set(b, cObs[0], bObs[0]))
 		f.must(err)
 		if got, want := f.pinned(res.Claim.ID), idsOf(aObs[0], bObs[0], cObs[0]); got != want {
 			t.Fatalf("new claim pins differ")
@@ -251,40 +265,33 @@ func TestSavePins(t *testing.T) {
 		}
 	})
 
-	t.Run("invalid pairs are refused and write nothing", func(t *testing.T) {
+	t.Run("invalid pin sets are refused and write nothing", func(t *testing.T) {
 		f := newPinFixture(t)
 		a, aObs := f.person1("James")
-		first, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: a.ID})
-		})
-		f.must(err)
-		_, outsiderObs := f.person1("James")
-		provisional, provisionalObs := f.person1("James")
-		_, err = writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+		first := f.promote(a, "")
+		outsider, _ := f.person1("James")
+		provisional, _ := f.person1("James")
+		_, err := writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
 			return identityclaims.Create(tx, userID, identityclaims.CreateInput{
 				SubjectID: provisional.ID, EntityID: first.Entity.ID, Status: identityclaims.StatusProvisional})
 		})
 		f.must(err)
-		_, otherPropObs := f.record(f.place, f.toponym, "York")
 		in, inObs := f.person1("James")
-		cases := map[string]promote.Input{
-			"pairs on a mint": {SubjectID: in.ID,
-				Pairs: []promote.Pair{{IncomingObservationID: inObs[0].ID, MemberObservationID: aObs[0].ID}}},
-			"incoming Observation not the Subject's": {SubjectID: in.ID, EntityID: first.Entity.ID,
-				Pairs: []promote.Pair{{IncomingObservationID: outsiderObs[0].ID, MemberObservationID: aObs[0].ID}}},
-			"member Observation's Subject not a member": {SubjectID: in.ID, EntityID: first.Entity.ID,
-				Pairs: []promote.Pair{{IncomingObservationID: inObs[0].ID, MemberObservationID: outsiderObs[0].ID}}},
-			"provisional member": {SubjectID: in.ID, EntityID: first.Entity.ID,
-				Pairs: []promote.Pair{{IncomingObservationID: inObs[0].ID, MemberObservationID: provisionalObs[0].ID}}},
-			"different Property": {SubjectID: in.ID, EntityID: first.Entity.ID,
-				Pairs: []promote.Pair{{IncomingObservationID: inObs[0].ID, MemberObservationID: otherPropObs[0].ID}}},
-			"malformed id": {SubjectID: in.ID, EntityID: first.Entity.ID,
-				Pairs: []promote.Pair{{IncomingObservationID: inObs[0].ID[:4], MemberObservationID: aObs[0].ID}}},
+		join := func(sets ...promote.PinSet) promote.BatchRow {
+			return promote.BatchRow{SubjectID: in.ID, Target: promote.TargetHandle, EntityID: first.Entity.ID, PinSets: sets}
 		}
-		for name, input := range cases {
-			if _, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-				return promote.Save(tx, userID, input)
-			}); !errors.Is(err, promote.ErrInvalid) {
+		cases := map[string]promote.BatchRow{
+			"pin sets on a New row": {SubjectID: in.ID, Target: promote.TargetNew,
+				PinSets: []promote.PinSet{set(a, inObs[0], aObs[0])}},
+			"pin sets on a Skip row": {SubjectID: in.ID, Target: promote.TargetSkip,
+				PinSets: []promote.PinSet{set(a, inObs[0], aObs[0])}},
+			"member with no claim":     join(set(outsider, inObs[0], aObs[0])),
+			"provisional member":       join(set(provisional, inObs[0], aObs[0])),
+			"malformed Observation id": join(promote.PinSet{Member: a.ID, Observations: [][]byte{inObs[0].ID[:4]}}),
+			"malformed member id":      join(promote.PinSet{Member: a.ID[:4], Observations: [][]byte{inObs[0].ID}}),
+		}
+		for name, row := range cases {
+			if _, err := f.batch(row); !errors.Is(err, promote.ErrInvalid) {
 				t.Fatalf("%s: got %v", name, err)
 			}
 		}
@@ -299,17 +306,9 @@ func TestSavePins(t *testing.T) {
 	t.Run("deleting a pinned Observation releases it from both claims, audited", func(t *testing.T) {
 		f := newPinFixture(t)
 		a, aObs := f.person1("James", "Jim")
-		first, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: a.ID})
-		})
-		f.must(err)
+		first := f.promote(a, "")
 		b, bObs := f.person1("James")
-		res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: b.ID, EntityID: first.Entity.ID, Pairs: []promote.Pair{
-				{IncomingObservationID: bObs[0].ID, MemberObservationID: aObs[0].ID},
-				{IncomingObservationID: bObs[0].ID, MemberObservationID: aObs[1].ID},
-			}})
-		})
+		res, err := f.join(b, first.Entity.ID, set(a, bObs[0], aObs[0], aObs[1]))
 		f.must(err)
 		{
 			_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {

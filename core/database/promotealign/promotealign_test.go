@@ -929,6 +929,24 @@ func TestProposeExtraGivenNamesAreAWeakMatch(t *testing.T) {
 	}
 }
 
+// namedMembers files n people called name, each on a Source of its own titled
+// "Census 1851", "Census 1861", ...: the first on a new handle, the rest joined
+// to it. It returns the handle and the members in filing order.
+func (f *fixture) namedMembers(n int, name string) (handle []byte, members []subjects.Subject) {
+	f.t.Helper()
+	for i := 0; i < n; i++ {
+		src, art := f.newSource(fmt.Sprintf("Census %d", 1851+10*i))
+		p := f.person(src, art, name)
+		if i == 0 {
+			handle = f.promote(p).Entity.ID
+		} else {
+			f.join(p, handle)
+		}
+		members = append(members, p)
+	}
+	return handle, members
+}
+
 func (f *fixture) join(s subjects.Subject, entityID []byte) {
 	f.t.Helper()
 	_, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
