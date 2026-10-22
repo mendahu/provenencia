@@ -120,6 +120,7 @@ enum Method {
   METHOD_UNLINK_EVIDENCE_GRAPH_ARTIFACT = 108;
   METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT = 109;
   METHOD_GET_PROMOTE_CLAIM_EVIDENCE = 110;
+  METHOD_REORDER_SUBJECT_TYPE_PROPERTIES = 111;
 }
 
 message PingRequest {
@@ -1872,6 +1873,20 @@ message RemoveSubjectTypePropertyRequest {
 }
 
 message RemoveSubjectTypePropertyResponse {}
+
+// ReorderSubjectTypePropertiesRequest sets a type's binding order. property_ids
+// is every bound property of the type, each once, in the new order.
+message ReorderSubjectTypePropertiesRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string subject_type_id = 3;
+  repeated string property_ids = 4;
+}
+
+message ReorderSubjectTypePropertiesResponse {
+  repeated SubjectTypeProperty properties = 1;
+  WriteEffects effects = 2;
+}
 
 message ListPlaceableSubjectTypesRequest {}
 

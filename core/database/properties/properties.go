@@ -375,7 +375,8 @@ func CountByOrigin(c *database.Catalog) (OriginCounts, error) {
 }
 
 // Delete erases a user-origin Property when no observations or terms
-// reference it. Type bindings CASCADE. Seeded and plugin-origin rows are
+// reference it. Its type bindings are released and audited before it goes
+// (the FK cascade stays as a backstop). Seeded and plugin-origin rows are
 // origin_locked even when unused. The caller records delete_property.
 func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if tx == nil {
@@ -404,6 +405,10 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	}); err != nil {
 		return nil, err
 	}
+	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindProperty, id)
+	if err != nil {
+		return nil, err
+	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return nil, err
 	}
@@ -417,12 +422,12 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if prev.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: prev.Description, New: nil}
 	}
-	return []rowchange.Change{{
+	return append(released, rowchange.Change{
 		EntityType: "property",
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionDelete,
 		Fields:     fields,
-	}}, nil
+	}), nil
 }
 
 func valueTypeOK(vt string) bool {

@@ -2,6 +2,7 @@ package subjectvocab
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -149,7 +150,7 @@ func TestSubjectVocab(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := DeleteBinding(c, srcType.ID, prop.ID); err != nil {
+				if _, err := deleteBinding(t, c, srcType.ID, prop.ID); err != nil {
 					t.Fatal(err)
 				}
 				db, err := c.DB()
@@ -186,7 +187,7 @@ func TestSubjectVocab(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := DeleteBinding(c, ptn.ID, personProp.ID); !errors.Is(err, ErrLocked) {
+				if _, err := deleteBinding(t, c, ptn.ID, personProp.ID); !errors.Is(err, ErrLocked) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -545,5 +546,185 @@ func TestAllTypesPaletteSortFollowsBoardOrder(t *testing.T) {
 				t.Errorf("PaletteSort %s=%d, %s=%d; want %s first", prev, byKey[prev], cur, byKey[cur], prev)
 			}
 		})
+	}
+}
+
+// testUser upserts the catalog's test user and returns its id.
+func testUser(t *testing.T, c *database.Catalog) []byte {
+	t.Helper()
+	id := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, id, "Tester", r); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+func appendBinding(t *testing.T, c *database.Catalog, userID, typeID, propertyID []byte) ([]rowchange.Change, error) {
+	t.Helper()
+	changes, err := writes.Call(c, writes.Op{Action: "assign_subject_type_property", UserID: userID},
+		func(tx *database.Tx) ([]rowchange.Change, []rowchange.Change, error) {
+			ch, err := AppendBinding(tx, userID, typeID, propertyID)
+			return ch, ch, err
+		})
+	return changes, err
+}
+
+func deleteBinding(t *testing.T, c *database.Catalog, typeID, propertyID []byte) ([]rowchange.Change, error) {
+	t.Helper()
+	userID := testUser(t, c)
+	return writes.Call(c, writes.Op{Action: "remove_subject_type_property", UserID: userID},
+		func(tx *database.Tx) ([]rowchange.Change, []rowchange.Change, error) {
+			ch, err := DeleteBinding(tx, userID, typeID, propertyID)
+			return ch, ch, err
+		})
+}
+
+func installedPerson(t *testing.T) (*database.Catalog, []byte, []byte) {
+	t.Helper()
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	userID := testUser(t, c)
+	if err := Install(c); err != nil {
+		t.Fatal(err)
+	}
+	person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c, userID, person.ID
+}
+
+func bindingIDs(t *testing.T, c *database.Catalog, typeID []byte) [][]byte {
+	t.Helper()
+	bs, err := ListBindings(c, typeID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ids [][]byte
+	for _, b := range bs {
+		ids = append(ids, b.Property.ID)
+	}
+	return ids
+}
+
+func reorder(c *database.Catalog, userID, typeID []byte, ids [][]byte) ([]rowchange.Change, error) {
+	return writes.Call(c, writes.Op{Action: "reorder_subject_type_properties", UserID: userID},
+		func(tx *database.Tx) ([]rowchange.Change, []rowchange.Change, error) {
+			ch, err := ReorderBindings(tx, userID, typeID, ids)
+			return ch, ch, err
+		})
+}
+
+func TestReorderBindings(t *testing.T) {
+	c, userID, personID := installedPerson(t)
+	ids := bindingIDs(t, c, personID)
+	if len(ids) < 3 {
+		t.Fatalf("person binds %d", len(ids))
+	}
+	order := func() []string {
+		var keys []string
+		bs, _ := ListBindings(c, personID)
+		for _, b := range bs {
+			keys = append(keys, b.Property.Key)
+		}
+		return keys
+	}
+	before := order()
+
+	t.Run("same order records nothing", func(t *testing.T) {
+		ch, err := reorder(c, userID, personID, ids)
+		if err != nil || len(ch) != 0 {
+			t.Fatalf("changes %d err %v", len(ch), err)
+		}
+	})
+
+	t.Run("invalid lists change nothing", func(t *testing.T) {
+		missing := ids[:len(ids)-1]
+		extra := append(append([][]byte(nil), ids...), []byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
+		repeated := append(append([][]byte(nil), ids[:len(ids)-1]...), ids[0])
+		for name, list := range map[string][][]byte{"missing": missing, "extra": extra, "repeated": repeated, "empty": nil} {
+			if _, err := reorder(c, userID, personID, list); !errors.Is(err, ErrInvalid) {
+				t.Errorf("%s: got %v, want ErrInvalid", name, err)
+			}
+		}
+		if got := order(); !slices.Equal(got, before) {
+			t.Fatalf("order moved: %v", got)
+		}
+	})
+
+	t.Run("a swap records the moved rows", func(t *testing.T) {
+		swapped := append([][]byte(nil), ids...)
+		swapped[0], swapped[1] = swapped[1], swapped[0]
+		ch, err := reorder(c, userID, personID, swapped)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(ch) != 2 {
+			t.Fatalf("changes %d, want 2", len(ch))
+		}
+		for _, x := range ch {
+			if x.EntityType != "subject_type_property" || x.Action != rowchange.ActionUpdate {
+				t.Fatalf("change %+v", x)
+			}
+		}
+		got := order()
+		if got[0] != before[1] || got[1] != before[0] {
+			t.Fatalf("order %v from %v", got, before)
+		}
+	})
+}
+
+func TestBindingChanges(t *testing.T) {
+	c, userID, personID := installedPerson(t)
+	prop, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID},
+		func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+			return properties.Create(tx, userID, "Burial Ground", propertymeta.ValueTypeText, "", "")
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ch, err := appendBinding(t, c, userID, personID, prop.ID)
+	if err != nil || len(ch) != 1 || ch[0].Action != rowchange.ActionCreate || ch[0].EntityType != "subject_type_property" {
+		t.Fatalf("append %+v %v", ch, err)
+	}
+	if string(ch[0].EntityID) != string(prop.ID) {
+		t.Fatal("entity id is not the property id")
+	}
+	if ch[0].Fields["sort_order"].New == nil || ch[0].Fields["subject_type_id"].New == nil {
+		t.Fatalf("fields %+v", ch[0].Fields)
+	}
+	revs := func() int {
+		db, _ := c.DB()
+		var n int
+		_ = db.QueryRow(`SELECT COUNT(*) FROM audit_transactions`).Scan(&n)
+		return n
+	}
+	n := revs()
+	if ch, err := appendBinding(t, c, userID, personID, prop.ID); err != nil || len(ch) != 0 {
+		t.Fatalf("append again %+v %v", ch, err)
+	}
+	if revs() != n {
+		t.Fatal("a bound pair recorded a revision")
+	}
+	ch, err = deleteBinding(t, c, personID, prop.ID)
+	if err != nil || len(ch) != 1 || ch[0].Action != rowchange.ActionDelete {
+		t.Fatalf("delete %+v %v", ch, err)
+	}
+	if ch[0].Fields["subject_type_id"].Old == nil || ch[0].Fields["property_id"].Old == nil {
+		t.Fatalf("delete fields %+v", ch[0].Fields)
+	}
+	name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := deleteBinding(t, c, personID, name.ID); !errors.Is(err, ErrLocked) {
+		t.Fatalf("locked delete: %v", err)
 	}
 }

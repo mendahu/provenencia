@@ -408,7 +408,10 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		})
 
 		t.Run("bridge extra observation inbound", func(t *testing.T) {
-			if err := subjectvocab.AppendBinding(c, bridge.Subject.SubjectTypeID, toponym.ID); err != nil {
+			if _, err := writes.Call(c, writes.Op{Action: "assign_subject_type_property", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := subjectvocab.AppendBinding(tx, userID, bridge.Subject.SubjectTypeID, toponym.ID)
+				return struct{}{}, changes, err
+			}); err != nil {
 				t.Fatal(err)
 			}
 			if _, err := writes.Call(c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
@@ -466,7 +469,10 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if userRole.Key != "role" || userRole.Origin != vocabkey.OriginUser {
 			t.Fatalf("user role %+v", userRole)
 		}
-		if err := subjectvocab.AppendBinding(c, personType.ID, userRole.ID); err != nil {
+		if _, err := writes.Call(c, writes.Op{Action: "assign_subject_type_property", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := subjectvocab.AppendBinding(tx, userID, personType.ID, userRole.ID)
+			return struct{}{}, changes, err
+		}); err != nil {
 			t.Fatal(err)
 		}
 		res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
@@ -515,7 +521,10 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := subjectvocab.AppendBinding(c, personType.ID, roleProp.ID); err != nil {
+		if _, err := writes.Call(c, writes.Op{Action: "assign_subject_type_property", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := subjectvocab.AppendBinding(tx, userID, personType.ID, roleProp.ID)
+			return struct{}{}, changes, err
+		}); err != nil {
 			t.Fatal(err)
 		}
 		roleTerm, err := propertyterms.Lookup(c, roleProp.ID, "witness", vocabkey.OriginProvenencia)

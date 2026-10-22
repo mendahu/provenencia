@@ -109,6 +109,44 @@ func TestDelete(t *testing.T) {
 			},
 		},
 		{
+			name: "bound user property releases its binding before the delete",
+			run: func(t *testing.T, c *database.Catalog) {
+				if err := subjectvocab.Install(c); err != nil {
+					t.Fatal(err)
+				}
+				got, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+					return properties.Create(tx, userID, "Maiden Name", propertymeta.ValueTypeText, "", "")
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := writes.Call(c, writes.Op{Action: "assign_subject_type_property", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := subjectvocab.AppendBinding(tx, userID, person.ID, got.ID)
+					return struct{}{}, changes, err
+				}); err != nil {
+					t.Fatal(err)
+				}
+				changes, err := writes.Call(c, writes.Op{Action: "delete_property", UserID: userID}, func(tx *database.Tx) ([]rowchange.Change, []rowchange.Change, error) {
+					ch, err := properties.Delete(tx, userID, got.ID)
+					return ch, ch, err
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(changes) != 2 || changes[0].EntityType != "subject_type_property" ||
+					changes[0].Action != rowchange.ActionDelete || changes[1].EntityType != "property" {
+					t.Fatalf("changes %+v", changes)
+				}
+				if changes[0].Fields["subject_type_id"].Old == nil || changes[0].Fields["property_id"].Old == nil {
+					t.Fatalf("release fields %+v", changes[0].Fields)
+				}
+			},
+		},
+		{
 			name: "observation inbound is in use",
 			run: func(t *testing.T, c *database.Catalog) {
 				if err := subjectvocab.Install(c); err != nil {

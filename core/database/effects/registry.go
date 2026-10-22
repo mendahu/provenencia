@@ -33,7 +33,8 @@ type List string
 
 const (
 	// ListVocabulary: a vocabulary label (source type, metadata field,
-	// subject type, Property, Property term) changed.
+	// subject type, Property, Property term) or a subject type's property
+	// binding changed.
 	ListVocabulary List = "vocabulary"
 	// ListPropertyUsage: an Observation was created, deleted, or moved to
 	// another Property, so the Properties workspace's usedBy counts changed.
@@ -318,7 +319,7 @@ var registry = map[string]Effect{
 	"claim_confidence_grades":     {None: true},
 	"users":                       {None: true},
 	"subject_positions":           {Entity: "subject_position", None: true},
-	"subject_type_properties":     {None: true},
+	"subject_type_properties":     {Entity: "subject_type_property", Lists: []List{ListVocabulary}},
 	"source_type_metadata_fields": {None: true},
 	"name_value_parts":            {None: true},
 	"name_format_profiles":        {None: true},

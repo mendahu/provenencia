@@ -194,7 +194,10 @@ func TestSubjectDelete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := subjectvocab.AppendBinding(c, bridge.Subject.SubjectTypeID, toponym.ID); err != nil {
+		if _, err := writes.Call(c, writes.Op{Action: "assign_subject_type_property", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := subjectvocab.AppendBinding(tx, userID, bridge.Subject.SubjectTypeID, toponym.ID)
+			return struct{}{}, changes, err
+		}); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := writes.Call(c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
