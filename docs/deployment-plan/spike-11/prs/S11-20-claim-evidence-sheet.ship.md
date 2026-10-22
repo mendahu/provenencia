@@ -1,7 +1,7 @@
 # Ship log — S11-20 Claim evidence sheet
 
 **Plan:** [`S11-20-claim-evidence-sheet.md`](S11-20-claim-evidence-sheet.md) · **Branch:** `s11-20-claim-evidence-sheet` · **PR:** #525
-**State:** ready
+**State:** fixing 5 (user request)
 
 ## Round 0 — implement
 Head `ec0414a2`. Gate PASS (orchestrator re-ran). PR #525 (draft). Report deviations: STEP-5–9 in one commit (sheet does not build between them); `L10n.Promote.pinRelationship` removed though D-12 said "kept" (replaced by `spokenRelationship`, no reader left); extra identifier `promote.sheet.section.<relationship id>.<property>.<n>`; "Pick a record" empty state above claim fields for New rows (Frame 13 order); neighbor ref and line badge hidden from VoiceOver (carried by checkbox label); `notCompared` reuses key `promote.sheet.unknown` with text "Not compared"; §10 manual check not run.
@@ -139,3 +139,37 @@ F-12 done at `da4f3ffe`; gate PASS (orchestrator re-ran); diff read: `showsBadge
 
 ## Result (after round 4)
 Gate PASS · CI see PR · open: none · follow-ups: — · to user: — (manual check §10 not run) · CON miss: none
+
+## Round 5 — user request (2026-10-22)
+The user asked: person-to-event connections read in plain language for birth, death, marriage, baptism and funeral (and burial, approved), and every connection sentence comes from a registry, not `if`/`switch` branches per kind. Wording approved by the user:
+
+| Event | Role | Sentence (en) |
+| --- | --- | --- |
+| birth | subject | Don Smith was born |
+| death | subject | Don Smith died |
+| baptism | subject | Don Smith was baptized |
+| marriage | subject | Don Smith married (Marriage of Don Smith and Marion Brown) |
+| funeral | subject | Don Smith's funeral (Funeral of Don Smith) |
+| burial | subject | Don Smith was buried |
+| any | any other | unchanged: "%1$@ participated as %2$@ at %3$@" |
+
+### Fix plan 5
+**F-13 — Connection-sentence registry** (from the user)
+Files: `macos/App/Features/Catalog/Connect/ConnectionSentenceRegistry.swift` *(new)*, `macos/App/Features/Catalog/Connect/EvidenceBridgeEdgeSummary.swift`, `macos/App/Features/Catalog/Connect/ConnectEndpointBinding.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `macos/ProvenenciaTests/ConnectionSentenceRegistryTests.swift` *(new)*, `macos/ProvenenciaTests/EvidenceBridgeEdgeSummaryTests.swift`, `macos/Provenencia.xcodeproj/project.pbxproj`. Skills: `add-localized-string`, `add-swift-test`.
+
+Failing tests first, in `ConnectionSentenceRegistryTests`:
+- `eachEventRowReadsPlainly` — for each of the six approved rows (participation, role key `subject`, event type key `birth|death|baptism|marriage|funeral|burial`), with person "Don Smith" and event "Marriage of Don Smith and Marion Brown" / "Funeral of Don Smith" etc., the sentence equals the table above.
+- `anotherRoleKeepsTheGenericSentence` — `witness` at `baptism` → "John Smith participated as Witness at Baptism of Don Smith" (role label as `PropertyTermDisplay` gives it today).
+- `lookupPrefersTheMostSpecificRow` — event type + role row beats a role-only row beats the kind default; an unknown event type key falls to the default.
+- `everyKindHasADefaultRow` — for every `EvidenceBridgeKind.allCases` (add `CaseIterable` if missing), the registry has a row with no term and no event type, and it yields today's sentence, today's no-term fallback, and today's phrase forms (`bridgeSummary…TypeOnly` / `…Bare`).
+- In `EvidenceBridgeEdgeSummaryTests`: `aParticipationReadsFromTheRegistry` — a placed participation bridge whose role observation has term key `subject` and whose event endpoint has an `event_type` observation with term key `birth` reads "Alice was born".
+- `anEventEndpointIsNamedByItsTitle` — an event endpoint with an `eventTitle` is named by `EventTitleDisplay.title`, not by its `event_type` value.
+
+Do:
+1. **Registry** (`ConnectionSentenceRegistry`): a static array of `Row { kind: EvidenceBridgeKind; term: String?; eventType: String?; sentence: (Slots) -> String; noTerm: ((Slots) -> String)?; phrase: ((String?) -> String)? }` where `Slots { a: String; b: String; termLabel: String? }` are the two endpoint nouns in the kind's A/B order (the order `ConnectEndpointBinding` documents: participation A = person, B = event; location A = event, B = place; relationship and place relationship A = from, B = to) and the term's display label. One `lookup(kind:term:eventType:) -> Row` picks the first row matching kind + term + eventType, then kind + term, then the kind's default row (term and eventType nil). The table is data: no per-kind `switch` or per-key `if` outside it. Rows: the four kind defaults, built from today's L10n keys (`bridgeSummaryRelationship` / `…Fallback` / `…TypeOnly` / `…Bare`, and the same for location, place relationship, participation), and the six approved participation rows, each with a new L10n key under `L10n.EvidenceGraph` (`bridgeSentenceBirthSubject` "%1$@ was born", `…DeathSubject` "%1$@ died", `…BaptismSubject` "%1$@ was baptized", `…MarriageSubject` "%1$@ married (%2$@)", `…FuneralSubject` "%1$@'s funeral (%2$@)", `…BurialSubject` "%1$@ was buried"; comments name the arguments). A specific row with no `phrase` uses its kind default's `phrase` and `noTerm`.
+2. **`EvidenceBridgeEdgeSummary`**: `sentence(kind:person:related:event:place:term:)`, `phrase(kind:term:)` and the private per-kind `…Sentence` helpers go; `sentence(for:in:orders:)` and `phrase(for:)` read the registry. Read the role / relationship type term **key** (`observation.valueTermKey`) beside the label `termDisplay` already makes, and the event endpoint's `event_type` term key from the placed event's observations (positive first, as `identityNoun` picks). Keep the never-empty and whole-name fallbacks exactly as they are.
+3. **Event nouns**: in `noun(subjectID:snapshot:orders:)`, an event endpoint with an `eventTitle` is named by `EventTitleDisplay.title(_, orders:)` (as `SourceGraphPlacedSubject.displayName` does); otherwise the existing identity / label / type-and-ref chain.
+4. **`ConnectEndpointBinding.sentence(kind:endpointA:endpointB:term:)`**: drop its per-kind `switch`; it calls the registry with A/B as given (no term key, no event type → the default row).
+5. Remove L10n keys left with no reader; keep every key a default row uses.
+
+Check: new and updated tests pass; `grep -nE "case \.(location|relationship|placeRelationship|participation)" macos/App/Features/Catalog/Connect/EvidenceBridgeEdgeSummary.swift macos/App/Features/Catalog/Connect/ConnectEndpointBinding.swift` prints only lines inside the registry's row table, or nothing (the `termDisplay` property-key lookup may become a per-kind field on the default row instead; either way no `switch kind` remains in those two files); scripts/check-pr.sh PASS. Add one sentence to the plan's Landed note: "Ship round 5, at the user's request: connection sentences come from `ConnectionSentenceRegistry`, with plain wording for a subject's birth, death, baptism, marriage, funeral and burial, and an Event endpoint named by its title."
