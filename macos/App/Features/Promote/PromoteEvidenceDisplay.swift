@@ -115,12 +115,37 @@ enum PromoteEvidenceDisplay {
         return title
     }
 
-    /// A relationship's second line: the link as the page names it, else the neighbor by name.
-    static func linkText(bridge: PromoteFlow.BridgeFact?, neighborName: String?) -> String {
-        if let bridge, !bridge.endAName.isEmpty, !bridge.endBName.isEmpty, !bridge.phrase.isEmpty {
-            return L10n.Promote.connectionLink(first: bridge.endAName, phrase: bridge.phrase, second: bridge.endBName)
+    /// A relationship card's heading: what the card shows and how VoiceOver speaks it.
+    struct RelationshipHeader: Equatable {
+        var title: String
+        var subtitle: String?
+        var showsBadge: Bool
+        var spoken: String
+    }
+
+    /// The bridge's sentence with the outcome as a badge; with no bridge, the outcome's sentence
+    /// over the neighbor's name.
+    static func relationshipHeader(
+        bridge: PromoteFlow.BridgeFact?,
+        outcome: EvidenceOutcome,
+        neighborName: String?
+    ) -> RelationshipHeader {
+        if let bridge {
+            return RelationshipHeader(
+                title: bridge.sentence,
+                subtitle: nil,
+                showsBadge: true,
+                spoken: L10n.Promote.spokenRelationship(sentence: bridge.sentence, link: L10n.string(L10n.Promote.outcome(outcome)))
+            )
         }
-        return L10n.Promote.relationshipWith(neighborName ?? L10n.string(L10n.Promote.sheetNeighbor))
+        let title = L10n.string(L10n.Promote.relationshipSentence(outcome))
+        let link = L10n.Promote.relationshipWith(neighborName ?? L10n.string(L10n.Promote.sheetNeighbor))
+        return RelationshipHeader(
+            title: title,
+            subtitle: link,
+            showsBadge: false,
+            spoken: L10n.Promote.spokenRelationship(sentence: title, link: link)
+        )
     }
 
     /// The lifespan line's sentence. A side that contradicts itself is named before one that has

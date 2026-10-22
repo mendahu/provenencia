@@ -647,28 +647,32 @@ private struct EvidenceRelationshipCard: View {
     }
 
     private var header: some View {
-        let sentence = L10n.string(L10n.Promote.relationshipSentence(relationship.outcome))
-        let link = linkText
-        return HStack(alignment: .top, spacing: EvidenceLayout.gap) {
+        let heading = PromoteEvidenceDisplay.relationshipHeader(
+            bridge: PromoteEvidenceDisplay.bridge(for: relationship, row: context.row.subjectID, in: context.model.flow.bridges),
+            outcome: relationship.outcome,
+            neighborName: neighbor?.name
+        )
+        return HStack(alignment: heading.subtitle == nil ? .center : .top, spacing: EvidenceLayout.gap) {
             PVCheckbox(
                 isChecked: context.binding(ids),
                 isIndeterminate: context.state(ids) == .partial,
                 isDisabled: !relationship.pinnable || ids.isEmpty,
-                accessibilitySpokenLabel: L10n.Promote.spokenRelationship(sentence: sentence, link: link)
+                accessibilitySpokenLabel: heading.spoken
             )
             .accessibilityIdentifier("promote.sheet.relationship.\(relationship.neighborSubjectID).\(relationship.key)")
             VStack(alignment: .leading, spacing: PVSpacing.space1) {
-                Text(verbatim: sentence)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
-                    .foregroundStyle(PVColor.textPrimary)
                 HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
-                    Text(verbatim: link)
-                        .font(PVFont.body(size: PVTypeScale.caption))
-                        .foregroundStyle(PVColor.textSecondary)
-                    if ids.count > 1 {
-                        Text(verbatim: L10n.Promote.recordCount(ids.count))
+                    Text(verbatim: heading.title)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
+                        .foregroundStyle(PVColor.textPrimary)
+                    if heading.subtitle == nil, ids.count > 1 { recordCount }
+                }
+                if let subtitle = heading.subtitle {
+                    HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
+                        Text(verbatim: subtitle)
                             .font(PVFont.body(size: PVTypeScale.caption))
-                            .foregroundStyle(PVColor.textMuted)
+                            .foregroundStyle(PVColor.textSecondary)
+                        if ids.count > 1 { recordCount }
                     }
                 }
             }
@@ -680,18 +684,18 @@ private struct EvidenceRelationshipCard: View {
                     .foregroundStyle(PVColor.textMuted)
                     .accessibilityHidden(true)
             }
-            EvidenceOutcomeBadge(outcome: relationship.outcome)
+            if heading.showsBadge {
+                EvidenceOutcomeBadge(outcome: relationship.outcome)
+            }
         }
         .padding(.horizontal, EvidenceLayout.inset)
         .padding(.vertical, PVSpacing.space3)
     }
 
-    /// The link on this Source as the page names it, else the neighbor by name.
-    private var linkText: String {
-        PromoteEvidenceDisplay.linkText(
-            bridge: PromoteEvidenceDisplay.bridge(for: relationship, row: context.row.subjectID, in: context.model.flow.bridges),
-            neighborName: neighbor?.name
-        )
+    private var recordCount: some View {
+        Text(verbatim: L10n.Promote.recordCount(ids.count))
+            .font(PVFont.body(size: PVTypeScale.caption))
+            .foregroundStyle(PVColor.textMuted)
     }
 }
 
