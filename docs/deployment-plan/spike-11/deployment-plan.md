@@ -109,7 +109,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-19 | Claim evidence query | 5 | Go query: member lines, collapse, relationship bundles; registry evidence section | — | S11-16 | [plan](prs/S11-19-claim-evidence-query.md) | Landed #513 |
 | S11-25 | Claim evidence RPC and pin policy | 5 | Lazy per-row RPC; Go default pins at Apply; Swift drafting moves onto it; proposal field 9 and `attachExhibits` removed | — | S11-19 | [plan](prs/S11-25-claim-evidence-rpc.md) | Landed #517 |
 | S11-32 | Lifespan and likeness evidence lines | 5 | The lifespan line (not pinnable, says when a side contradicts itself) and likeness lines (depiction compare by image) in `claimevidence` and the RPC; `ConclusionValue` gains a depiction case | — | S11-25, S10-54 (landed #433) | [plan](prs/S11-32-lifespan-likeness-lines.md) | Landed #523 |
-| S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy, with likeness lines as two crops | [S11-D2](design/S11-D2-evidence-sheet.md) | S11-25, S11-32, S11-D2 | [plan](prs/S11-20-claim-evidence-sheet.md) | Blocked — on S11-32, board S11-D2 |
+| S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy, with likeness lines as two crops | [S11-D2](design/S11-D2-evidence-sheet.md) | S11-25, S11-32, S11-D2 | [plan](prs/S11-20-claim-evidence-sheet.md) | Planned |
 | S11-26 | Connections file by their ends | 6 | Drop the bridge switch-off: `SkipBridgeIDs`, `skip_bridge_ids`, the `skip` parameters | — | — | — | Scoped |
 | S11-27 | Connection subrows on Promote | 6 | Each connection as a subrow of a row it joins, its state from its ends; the panel and toggles go | S11-D1 | S11-26, S11-D1 | — | Scoped |
 | S11-21 | Large-Source performance check | 7 | 100-Subject benchmark; memoize only if it fails | — | S11-16 | — | Scoped |
@@ -124,7 +124,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | Brief | View | Gates | Notes |
 | --- | --- | --- | --- |
 | [S11-D1](design/S11-D1-promote-rows.md) | Promote page — rows | **S11-18**, **S11-27** | Board agreed 2026-10-20 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share)). Contested marker beside the band; move reasons in the Updated caption; connections as subrows of the rows they join, answering the [design questions](promote-connection-subrows.md#open-questions-for-design) |
-| [S11-D2](design/S11-D2-evidence-sheet.md) | Promote page — evidence sheet | **S11-20** | Brief written 2026-10-22; board not drawn. Whole sheet: "why suggested" summary, property sections, relationship lines, collapsed members, likeness crops (from Spike 10's S10-D13), copy |
+| [S11-D2](design/S11-D2-evidence-sheet.md) | Promote page — evidence sheet | **S11-20** | Board agreed 2026-10-22 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), frames E01 – E14). Whole sheet: "why suggested" marks at the title, property sections, relationship lines, collapsed members, likeness crops (from Spike 10's S10-D13), copy |
 
 ## Slices
 
@@ -415,7 +415,7 @@ Split from S11-20 when it was planned (user, 2026-10-22): the engine half of the
 
 #### S11-20 — Claim evidence sheet
 
-**Ships.** The Promote sheet as S11-D2 draws it: "why suggested" summary, then "What's the evidence that this is <record>?", property sections, relationship lines with their checkboxes, expandable collapsed lines, the lifespan line, likeness lines as two crops; all copy through L10n. No engine change: the lines come from S11-25 and S11-32 (split, user 2026-10-22).
+**Ships.** The Promote sheet as S11-D2 draws it (board agreed 2026-10-22): the band and Contested marks at the title with the reason as their tooltip, the claim fields, then "What's the evidence that this is <record>?", property sections, relationship lines with their checkboxes, expandable collapsed lines, the lifespan line, likeness lines as two crops; all copy through L10n. No engine change: the lines come from S11-25 and S11-32 (split, user 2026-10-22).
 **Naming and band (from S11-18 review M-2, M-6).** The sheet's subtitle speaks the band through `PromoteModel.assessmentText`, so a contested row reads "Strong, contested"; neighbor groups name a row by `PromoteFlow.Row.shownRef`, as the row reasons do.
 **Lifespan (from S11-12 review, carried by S11-13).** Word the person's lifespan line, and where a side has no lifespan because its own dated events contradict each other (S11-12 D-12), say so instead of leaving it out silently. S11-32 delivers the result; this PR words it.
 **Empty evidence (from S11-25 review UX-3).** When a row's evidence has no lines and no relationships, say there is nothing to compare instead of drawing the column headers alone.
