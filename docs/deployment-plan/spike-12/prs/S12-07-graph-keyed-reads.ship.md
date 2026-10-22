@@ -70,4 +70,4 @@ Reviewers: MNT (only lens with a Fix-now major). Scope `cb010094...61a75310`.
 No new findings. Verdict: Clean. No Fix plan 2.
 
 ## Result
-Gate PASS (`61a75310`, `main` unmoved at `376eb9ad`) · CI pending · open: none · follow-ups: — · to user: — · nits logged: MNT-4, MNT-5 · CON miss: none
+Gate PASS (`61a75310`, `main` unmoved at `376eb9ad`) · CI green (test ×2, localizable) · open: none · follow-ups: — · to user: — · nits logged: MNT-4, MNT-5 · CON miss: none
