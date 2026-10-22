@@ -20,6 +20,7 @@ type primarySubject struct {
 	id   []byte
 	ref  string
 	kind string
+	life subjectcompare.LifeSide // why the Subject has no lifespan, or its first and last dates
 }
 
 // participation is one person taking part in one event on the layer, in a role.
@@ -106,9 +107,12 @@ func loadLayer(g *graphcache.Graph, graphID []byte, cfg graphalign.Config, nameP
 	// Events first: a person's life is read from the events it takes part in.
 	built := map[string]subjectcompare.Values{}
 	forSubject := func(s primarySubject, life []subjectprofile.LifeEvent) subjectcompare.Values {
-		return subjectprofile.ForSubject(subjectprofile.Subject{
+		vals, side := subjectprofile.ForSubject(subjectprofile.Subject{
 			Values: candidates[string(s.id)], NamePattern: namePattern, Life: life,
 		}, cfg.Subject.Lifespans[vocabkey.SubjectType(s.kind)])
+		s.life = side
+		primary[string(s.id)] = s
+		return vals
 	}
 	for id, s := range primary {
 		if s.kind == vocabkey.Event {

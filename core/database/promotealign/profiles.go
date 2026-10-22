@@ -139,6 +139,13 @@ func lifeEvent(event subjectcompare.Values, role vocabkey.Role) subjectprofile.L
 	return le
 }
 
+// profile is a built handle: its values and its life, why it has no lifespan
+// or the first and last dated events.
+type profile struct {
+	values subjectcompare.Values
+	life   subjectcompare.LifeSide
+}
+
 // profiler builds handle profiles from the canon graph, each once for as long
 // as the graph's match index lives. done is the index's profile map. A caller
 // keeps the profiles with keep(); nothing else stores them.
@@ -151,7 +158,7 @@ type profiler struct {
 	rules       subjectcompare.Rules
 	reconcile   valuecompare.Rules
 	namePattern string
-	done        map[string]subjectcompare.Values
+	done        map[string]profile
 }
 
 func newProfiler(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectcompare.Rules, namePattern string) (*profiler, error) {
@@ -173,7 +180,7 @@ func newProfiler(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectc
 	m := matchIndexOf(g)
 	done := m.profiles
 	if done == nil || m.profilesPattern != namePattern {
-		done = map[string]subjectcompare.Values{}
+		done = map[string]profile{}
 	}
 	return &profiler{
 		g: g, props: props, terms: vocab.TermsByID(), metas: metas, types: types, rules: rules,
@@ -288,7 +295,8 @@ func (p *profiler) keyValues(n *graphcache.Node) (subjectcompare.Values, error) 
 	if err != nil {
 		return nil, err
 	}
-	return subjectprofile.Build(e, p.metas, p.reconcile, nil, subjectprofile.Options{})
+	vals, _, err := subjectprofile.Build(e, p.metas, p.reconcile, nil, subjectprofile.Options{})
+	return vals, err
 }
 
 // build makes one node's profile. A kind with a lifespan reads its life from
@@ -306,22 +314,27 @@ func (p *profiler) build(n *graphcache.Node) error {
 		}
 		for _, l := range links {
 			if ev, ok := p.done[string(l.Neighbor)]; ok {
-				e.Life = append(e.Life, lifeEvent(ev, vocabkey.Role(l.TermKey)))
+				e.Life = append(e.Life, lifeEvent(ev.values, vocabkey.Role(l.TermKey)))
 			}
 		}
 	}
-	vals, err := subjectprofile.Build(e, p.metas, p.reconcile, p.rules.Lifespans[kind], subjectprofile.Options{})
+	vals, life, err := subjectprofile.Build(e, p.metas, p.reconcile, p.rules.Lifespans[kind], subjectprofile.Options{})
 	if err != nil {
 		return err
 	}
-	p.done[string(n.ID)] = vals
+	p.done[string(n.ID)] = profile{values: vals, life: life}
 	return nil
 }
 
 // values is a built node's profile.
 func (p *profiler) values(id []byte) subjectcompare.Values {
 	if v, ok := p.done[string(id)]; ok {
-		return v
+		return v.values
 	}
 	return subjectcompare.Values{}
+}
+
+// life is a built node's life.
+func (p *profiler) life(id []byte) subjectcompare.LifeSide {
+	return p.done[string(id)].life
 }
