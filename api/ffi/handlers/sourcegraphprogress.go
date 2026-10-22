@@ -3,7 +3,7 @@ package handlers
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/sourcegraphprogress"
+	"github.com/mendahu/provenencia/core/database/graphprogress"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -14,7 +14,7 @@ func ListSourceGraphProgress(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListSourceGraphProgressResponse
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := sourcegraphprogress.List(c)
+		rows, err := graphprogress.List(c)
 		if err != nil {
 			return err
 		}
@@ -41,9 +41,16 @@ func GetSourceGraphProgress(in []byte) ([]byte, error) {
 	}
 	var out *engine.GetSourceGraphProgressResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		row, err := sourcegraphprogress.Get(c, sourceID)
+		row := graphprogress.Progress{SourceID: sourceID}
+		graphID, ok, err := sourceGraphID(c, sourceID)
 		if err != nil {
 			return err
+		}
+		if ok {
+			if row, err = graphprogress.Get(c, graphID); err != nil {
+				return err
+			}
+			row.SourceID = sourceID
 		}
 		out = &engine.GetSourceGraphProgressResponse{Progress: protoProgress(row)}
 		return nil
@@ -54,7 +61,7 @@ func GetSourceGraphProgress(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func protoProgress(row sourcegraphprogress.Progress) *engine.SourceGraphProgress {
+func protoProgress(row graphprogress.Progress) *engine.SourceGraphProgress {
 	return &engine.SourceGraphProgress{
 		SourceId:         database.UUIDString(row.SourceID),
 		SubjectCount:     row.SubjectCount,

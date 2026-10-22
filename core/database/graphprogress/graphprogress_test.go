@@ -1,13 +1,16 @@
-package sourcegraphprogress
+package graphprogress
 
 import (
 	"bytes"
 	"errors"
+	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -17,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -24,7 +28,7 @@ import (
 
 const validLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":12,"page_label":"10"}]}`
 
-func TestSourceGraphProgress(t *testing.T) {
+func TestGraphProgress(t *testing.T) {
 	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
 
 	type seed struct {
@@ -188,26 +192,120 @@ func TestSourceGraphProgress(t *testing.T) {
 
 	t.Run("get zeros for empty source", func(t *testing.T) {
 		s := mustSeed(t)
-		got, err := Get(s.c, s.empty.ID)
+		graphID := evidencegraphstest.SoleGraph(t, s.c, s.empty.ID).ID
+		got, err := Get(s.c, graphID)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if got.SubjectCount != 0 || got.ObservationCount != 0 {
 			t.Fatalf("got %+v", got)
 		}
-		if !bytes.Equal(got.SourceID, s.empty.ID) {
-			t.Fatalf("source id %+v", got.SourceID)
+		if !bytes.Equal(got.GraphID, graphID) {
+			t.Fatalf("graph id %+v", got.GraphID)
 		}
 	})
 
 	t.Run("get matches list for worked source", func(t *testing.T) {
 		s := mustSeed(t)
-		got, err := Get(s.c, s.worked.ID)
+		got, err := Get(s.c, evidencegraphstest.SoleGraph(t, s.c, s.worked.ID).ID)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if got.SubjectCount != 2 || got.ObservationCount != 1 {
 			t.Fatalf("got %+v", got)
+		}
+	})
+
+	t.Run("two graphs of one Source count apart", func(t *testing.T) {
+		s := mustSeed(t)
+		art1, err := runArtifactCreate(s.c, userID, artifacts.CreateInput{SourceID: s.empty.ID, Label: "Page 1"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		art2, err := runArtifactCreate(s.c, userID, artifacts.CreateInput{SourceID: s.empty.ID, Label: "Page 2"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		def, jones := evidencegraphstest.Split(t, s.c, userID, s.empty.ID, "Jones", art2.ID)
+		personType, err := subjecttypes.Lookup(s.c, "person", vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		placeType, err := subjecttypes.Lookup(s.c, "place", vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		newSubject := func(graphID, typeID []byte, label string) subjects.Subject {
+			t.Helper()
+			sub, err := writes.Call(s.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+				return subjects.Create(tx, userID, subjects.CreateInput{
+					SourceID: s.empty.ID, GraphID: graphID, SubjectTypeID: typeID, Label: label,
+				}, nil)
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			return sub
+		}
+		ada := newSubject(def.ID, personType.ID, "Ada")
+		newSubject(def.ID, personType.ID, "Ann")
+		newSubject(jones.ID, placeType.ID, "Hull")
+		db, err := s.c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		entityID := []byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 1}
+		if _, err := db.Exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, ?)`, entityID, personType.ID, "CNE-TEST1"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(`INSERT INTO identity_claims (id, subject_id, entity_id, subject_type_id, status) VALUES (?, ?, ?, ?, 'accepted')`,
+			[]byte{8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 1}, ada.ID, entityID, personType.ID); err != nil {
+			t.Fatal(err)
+		}
+		nameProp, err := properties.Lookup(s.c, "name", vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := writes.Call(s.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: art1.ID, LocatorJSON: validLocator},
+				[]observations.Input{{SubjectID: ada.ID, PropertyID: nameProp.ID, Name: namevaluetest.Western("Ada Lee")}})
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		wantDef := Progress{GraphID: def.ID, SourceID: s.empty.ID, SubjectCount: 2, PrimaryCount: 2, FiledCount: 1, ObservationCount: 1}
+		wantJones := Progress{GraphID: jones.ID, SourceID: s.empty.ID, SubjectCount: 1, PrimaryCount: 1, FiledCount: 0, ObservationCount: 0}
+		rows, err := List(s.c)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []Progress
+		for _, p := range rows {
+			if bytes.Equal(p.SourceID, s.empty.ID) {
+				got = append(got, p)
+			}
+		}
+		sort.Slice(got, func(i, j int) bool { return bytes.Compare(got[i].GraphID, got[j].GraphID) < 0 })
+		want := []Progress{wantDef, wantJones}
+		sort.Slice(want, func(i, j int) bool { return bytes.Compare(want[i].GraphID, want[j].GraphID) < 0 })
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("list rows %+v, want %+v", got, want)
+		}
+		one, err := Get(s.c, jones.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if wantOne := (Progress{GraphID: jones.ID, SubjectCount: 1, PrimaryCount: 1}); !reflect.DeepEqual(one, wantOne) {
+			t.Fatalf("Get(Jones) %+v, want %+v", one, wantOne)
+		}
+		unknown := make([]byte, 16)
+		unknown[0] = 7
+		zero, err := Get(s.c, unknown)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if wantZero := (Progress{GraphID: unknown}); !reflect.DeepEqual(zero, wantZero) {
+			t.Fatalf("Get(unknown) %+v, want zeros", zero)
 		}
 	})
 
@@ -224,7 +322,7 @@ func TestSourceGraphProgress(t *testing.T) {
 		if _, err := List(s.c); !errors.Is(err, database.ErrClosed) {
 			t.Fatalf("list %v", err)
 		}
-		if _, err := Get(s.c, s.worked.ID); !errors.Is(err, database.ErrClosed) {
+		if _, err := Get(s.c, make([]byte, 16)); !errors.Is(err, database.ErrClosed) {
 			t.Fatalf("get %v", err)
 		}
 	})
@@ -345,11 +443,11 @@ func TestPrimaryAndFiledCounts(t *testing.T) {
 		if got.SubjectCount != w.SubjectCount || got.PrimaryCount != w.PrimaryCount || got.FiledCount != w.FiledCount {
 			t.Fatalf("%s list %+v want %+v", name, *got, w)
 		}
-		one, err := Get(c, src.ID)
+		one, err := Get(c, got.GraphID)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !bytes.Equal(one.SourceID, got.SourceID) || one.SubjectCount != got.SubjectCount ||
+		if !bytes.Equal(one.GraphID, got.GraphID) || one.SubjectCount != got.SubjectCount ||
 			one.ObservationCount != got.ObservationCount || one.PrimaryCount != got.PrimaryCount ||
 			one.FiledCount != got.FiledCount {
 			t.Fatalf("%s get %+v != list %+v", name, one, *got)
@@ -361,7 +459,7 @@ func TestPrimaryAndFiledCounts(t *testing.T) {
 				t.Fatalf("source %s should be absent from list", src.Title)
 			}
 		}
-		got, err := Get(c, src.ID)
+		got, err := Get(c, evidencegraphstest.SoleGraph(t, c, src.ID).ID)
 		if err != nil {
 			t.Fatal(err)
 		}

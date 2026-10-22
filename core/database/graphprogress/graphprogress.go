@@ -1,6 +1,6 @@
-// Package sourcegraphprogress aggregates Evidence-graph subject, observation,
-// primary, and filed counts per Source for the Sources list.
-package sourcegraphprogress
+// Package graphprogress aggregates subject, observation, primary, and filed
+// counts per Evidence graph for the Sources list.
+package graphprogress
 
 import (
 	"database/sql"
@@ -14,35 +14,38 @@ import (
 var ErrInvalid = apperr.New(apperr.CodeSourcesInvalid, apperr.KindUser)
 
 const (
-	// sqlCountSubjectsByType reads subjects once per call: per Source and
+	// sqlCountSubjectsByType reads subjects once per call: per graph and
 	// type, how many subjects exist and how many carry an accepted claim
 	// (the unique accepted-claim index makes the second count the filed one).
-	sqlCountSubjectsByType = `SELECT s.source_id, t.key, t.origin, COUNT(*), COUNT(ic.subject_id)
+	// The composite foreign key makes s.source_id the graph's Source.
+	sqlCountSubjectsByType = `SELECT s.graph_id, s.source_id, t.key, t.origin, COUNT(*), COUNT(ic.subject_id)
 		FROM subjects s
 		JOIN subject_types t ON t.id = s.subject_type_id
 		LEFT JOIN identity_claims ic ON ic.subject_id = s.id AND ic.status = 'accepted'
-		GROUP BY s.source_id, t.key, t.origin`
+		GROUP BY s.graph_id, s.source_id, t.key, t.origin`
 
 	sqlCountSubjectsByTypeOne = `SELECT t.key, t.origin, COUNT(*), COUNT(ic.subject_id)
 		FROM subjects s
 		JOIN subject_types t ON t.id = s.subject_type_id
 		LEFT JOIN identity_claims ic ON ic.subject_id = s.id AND ic.status = 'accepted'
-		WHERE s.source_id = ?
+		WHERE s.graph_id = ?
 		GROUP BY t.key, t.origin`
 
-	sqlCountObservationsBySource = `SELECT s.source_id, COUNT(*)
+	sqlCountObservationsByGraph = `SELECT s.graph_id, s.source_id, COUNT(*)
 		FROM observations o
 		JOIN subjects s ON s.id = o.subject_id
-		GROUP BY s.source_id`
+		GROUP BY s.graph_id, s.source_id`
 
 	sqlCountObservationsOne = `SELECT COUNT(*)
 		FROM observations o
 		JOIN subjects s ON s.id = o.subject_id
-		WHERE s.source_id = ?`
+		WHERE s.graph_id = ?`
 )
 
-// Progress is graph-progress counts for one Source.
+// Progress is graph-progress counts for one Evidence graph. Get leaves
+// SourceID empty.
 type Progress struct {
+	GraphID          []byte
 	SourceID         []byte
 	SubjectCount     int32
 	ObservationCount int32
@@ -63,7 +66,8 @@ func (p *Progress) add(key, origin string, n, filed int32) {
 	}
 }
 
-// List returns per-Source counts. Sources with all zeros are omitted.
+// List returns per-graph counts, in no fixed order. Graphs with all zeros are
+// omitted.
 func List(c *database.Catalog) ([]Progress, error) {
 	db, err := c.DB()
 	if err != nil {
@@ -73,7 +77,7 @@ func List(c *database.Catalog) ([]Progress, error) {
 	if err := scanSubjects(db, byID); err != nil {
 		return nil, err
 	}
-	if err := scanGrouped(db, sqlCountObservationsBySource, func(p *Progress, n int32) {
+	if err := scanGrouped(db, sqlCountObservationsByGraph, func(p *Progress, n int32) {
 		p.ObservationCount = n
 	}, byID); err != nil {
 		return nil, err
@@ -85,20 +89,20 @@ func List(c *database.Catalog) ([]Progress, error) {
 	return out, nil
 }
 
-// Get returns counts for one Source. An unknown or empty graph is zeros.
-func Get(c *database.Catalog, sourceID []byte) (Progress, error) {
+// Get returns counts for one Evidence graph. An unknown or empty graph is zeros.
+func Get(c *database.Catalog, graphID []byte) (Progress, error) {
 	db, err := c.DB()
 	if err != nil {
 		return Progress{}, err
 	}
-	if len(sourceID) != 16 {
+	if len(graphID) != 16 {
 		return Progress{}, ErrInvalid
 	}
-	p := Progress{SourceID: append([]byte(nil), sourceID...)}
-	if err := scanSubjectsOne(db, sourceID, &p); err != nil {
+	p := Progress{GraphID: append([]byte(nil), graphID...)}
+	if err := scanSubjectsOne(db, graphID, &p); err != nil {
 		return Progress{}, err
 	}
-	if err := db.QueryRow(sqlCountObservationsOne, sourceID).Scan(&p.ObservationCount); err != nil {
+	if err := db.QueryRow(sqlCountObservationsOne, graphID).Scan(&p.ObservationCount); err != nil {
 		return Progress{}, err
 	}
 	return p, nil
@@ -111,18 +115,18 @@ func scanGrouped(db *sql.DB, query string, set func(*Progress, int32), byID map[
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var sourceID []byte
+		var graphID, sourceID []byte
 		var n int32
-		if err := rows.Scan(&sourceID, &n); err != nil {
+		if err := rows.Scan(&graphID, &sourceID, &n); err != nil {
 			return err
 		}
-		key, err := uuid.FromBytes(sourceID)
+		key, err := uuid.FromBytes(graphID)
 		if err != nil {
 			return err
 		}
 		p := byID[key.String()]
 		if p == nil {
-			p = &Progress{SourceID: append([]byte(nil), sourceID...)}
+			p = &Progress{GraphID: append([]byte(nil), graphID...), SourceID: append([]byte(nil), sourceID...)}
 			byID[key.String()] = p
 		}
 		set(p, n)
@@ -137,23 +141,23 @@ func scanSubjects(db *sql.DB, byID map[string]*Progress) error {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var sourceID []byte
+		var graphID, sourceID []byte
 		var key, origin string
 		var n, filed int32
-		if err := rows.Scan(&sourceID, &key, &origin, &n, &filed); err != nil {
+		if err := rows.Scan(&graphID, &sourceID, &key, &origin, &n, &filed); err != nil {
 			return err
 		}
-		// A Source whose only subject is its own reification has no entry.
+		// A graph whose only subject is its Source's reification has no entry.
 		if key == "source" {
 			continue
 		}
-		id, err := uuid.FromBytes(sourceID)
+		id, err := uuid.FromBytes(graphID)
 		if err != nil {
 			return err
 		}
 		p := byID[id.String()]
 		if p == nil {
-			p = &Progress{SourceID: append([]byte(nil), sourceID...)}
+			p = &Progress{GraphID: append([]byte(nil), graphID...), SourceID: append([]byte(nil), sourceID...)}
 			byID[id.String()] = p
 		}
 		p.add(key, origin, n, filed)
@@ -161,8 +165,8 @@ func scanSubjects(db *sql.DB, byID map[string]*Progress) error {
 	return rows.Err()
 }
 
-func scanSubjectsOne(db *sql.DB, sourceID []byte, p *Progress) error {
-	rows, err := db.Query(sqlCountSubjectsByTypeOne, sourceID)
+func scanSubjectsOne(db *sql.DB, graphID []byte, p *Progress) error {
+	rows, err := db.Query(sqlCountSubjectsByTypeOne, graphID)
 	if err != nil {
 		return err
 	}
