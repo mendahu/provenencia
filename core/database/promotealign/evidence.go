@@ -324,7 +324,7 @@ func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Memb
 				memo = map[string]subjectcompare.Values{}
 			}
 			for id := range missing {
-				memo[id], _ = subjectprofile.ForSubject(subjectprofile.Subject{
+				memo[id] = subjectprofile.ForSubject(subjectprofile.Subject{
 					Values: cands[id], NamePattern: r.in.namePattern,
 				}, nil)
 			}

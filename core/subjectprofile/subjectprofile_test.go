@@ -176,7 +176,7 @@ func TestBuild(t *testing.T) {
 			if metas == nil {
 				metas = subjectcomparetest.Metas()
 			}
-			got, _, err := subjectprofile.Build(tc.entity(t), metas, matchregistry.Default().Value, tc.lifespans, tc.opts)
+			got, err := subjectprofile.Build(tc.entity(t), metas, matchregistry.Default().Value, tc.lifespans, tc.opts)
 			if tc.wantErr != nil {
 				if !errors.Is(err, tc.wantErr) {
 					t.Fatalf("err = %v, want %v", err, tc.wantErr)
@@ -226,14 +226,14 @@ func TestForSubject(t *testing.T) {
 				if p == nil || len(p) != 0 {
 					t.Errorf("want non-nil empty profile, got %v", p)
 				}
-				if n, _ := subjectprofile.ForSubject(subjectprofile.Subject{}, nil); n == nil || len(n) != 0 {
+				if n := subjectprofile.ForSubject(subjectprofile.Subject{}, nil); n == nil || len(n) != 0 {
 					t.Errorf("nil map: want non-nil empty profile, got %v", n)
 				}
 			}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, _ := subjectprofile.ForSubject(subjectprofile.Subject{Values: tc.values, NamePattern: tc.namePattern}, nil)
+			got := subjectprofile.ForSubject(subjectprofile.Subject{Values: tc.values, NamePattern: tc.namePattern}, nil)
 			if tc.check != nil {
 				tc.check(t, got)
 				return
@@ -251,7 +251,7 @@ func TestForSubjectEchoesObservationRefs(t *testing.T) {
 		{ObservationID: []byte{0x02}, Value: term("female"), Negative: true},
 	}
 	rules := matchregistry.Default().Subject.Lifespans[vocabkey.Person]
-	got, _ := subjectprofile.ForSubject(subjectprofile.Subject{
+	got := subjectprofile.ForSubject(subjectprofile.Subject{
 		Values: map[vocabkey.PropertyKey][]autoreconcile.Candidate{sex: cands},
 		Life: []subjectprofile.LifeEvent{{
 			EventType: vocabkey.EventBirth, Role: vocabkey.RoleSubject, Dates: []datevalue.Value{*datevaluetest.YMD(1850, 0, 0)},
@@ -269,7 +269,7 @@ func TestForSubjectEchoesObservationRefs(t *testing.T) {
 
 func TestValueCarriesDepiction(t *testing.T) {
 	pic := &depictionvalue.Value{ImageFileID: bytes.Repeat([]byte{7}, 16)}
-	got, _ := subjectprofile.ForSubject(subjectprofile.Subject{
+	got := subjectprofile.ForSubject(subjectprofile.Subject{
 		Values: map[vocabkey.PropertyKey][]autoreconcile.Candidate{
 			vocabkey.PropertyLikeness: {{ObservationID: []byte{1}, Value: autoreconcile.Value{Depiction: pic}}},
 		},

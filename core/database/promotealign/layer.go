@@ -106,7 +106,7 @@ func loadLayer(g *graphcache.Graph, graphID []byte, cfg graphalign.Config, nameP
 	// Events first: a person's life is read from the events it takes part in.
 	built := map[string]subjectcompare.Values{}
 	forSubject := func(s primarySubject, life []subjectprofile.LifeEvent) subjectcompare.Values {
-		vals, _ := subjectprofile.ForSubject(subjectprofile.Subject{
+		vals := subjectprofile.ForSubject(subjectprofile.Subject{
 			Values: candidates[string(s.id)], NamePattern: namePattern, Life: life,
 		}, cfg.Subject.Lifespans[vocabkey.SubjectType(s.kind)])
 		return vals

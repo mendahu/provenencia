@@ -191,11 +191,11 @@ func TestEntityCompare(t *testing.T) {
 			e := tc.entity(t)
 			e.Life = tc.life
 			lifespans := reg.Subject.Lifespans[vocabkey.Person]
-			a, _, err := subjectprofile.Build(e, metas, reg.Value, lifespans, tc.opts)
+			a, err := subjectprofile.Build(e, metas, reg.Value, lifespans, tc.opts)
 			if err != nil {
 				t.Fatal(err)
 			}
-			b, _ := subjectprofile.ForSubject(subjectprofile.Subject{Values: tc.subject, Life: tc.subjectLife}, lifespans)
+			b := subjectprofile.ForSubject(subjectprofile.Subject{Values: tc.subject, Life: tc.subjectLife}, lifespans)
 			r := subjectcompare.Compare(tc.kind, a, b, metas, reg.Subject, reg.Value)
 			if math.Abs(r.Similarity-tc.sim) > 0.0001 || math.Abs(r.Evidence-tc.ev) > 0.0001 {
 				t.Errorf("sim %.4f ev %.4f, want sim %.4f ev %.4f (a=%s b=%s)", r.Similarity, r.Evidence, tc.sim, tc.ev,

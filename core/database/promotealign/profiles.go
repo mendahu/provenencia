@@ -297,7 +297,7 @@ func (p *profiler) keyValues(n *graphcache.Node) (subjectcompare.Values, error) 
 	if err != nil {
 		return nil, err
 	}
-	vals, _, err := subjectprofile.Build(e, p.metas, p.reconcile, nil, subjectprofile.Options{})
+	vals, err := subjectprofile.Build(e, p.metas, p.reconcile, nil, subjectprofile.Options{})
 	return vals, err
 }
 
@@ -320,7 +320,7 @@ func (p *profiler) build(n *graphcache.Node) error {
 			}
 		}
 	}
-	vals, _, err := subjectprofile.Build(e, p.metas, p.reconcile, p.rules.Lifespans[kind], subjectprofile.Options{})
+	vals, err := subjectprofile.Build(e, p.metas, p.reconcile, p.rules.Lifespans[kind], subjectprofile.Options{})
 	if err != nil {
 		return err
 	}

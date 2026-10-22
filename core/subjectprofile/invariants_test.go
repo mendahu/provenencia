@@ -71,7 +71,7 @@ func TestInvariants(t *testing.T) {
 	rules := matchregistry.Default().Value
 	build := func(t *testing.T, e subjectprofile.Entity, ex ...[]byte) subjectcompare.Values {
 		t.Helper()
-		p, _, err := subjectprofile.Build(e, metas, rules, nil, subjectprofile.Options{Excluding: ex})
+		p, err := subjectprofile.Build(e, metas, rules, nil, subjectprofile.Options{Excluding: ex})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -157,10 +157,10 @@ func TestInvariants(t *testing.T) {
 			for n := 1 + r.Intn(4); n > 0; n-- {
 				events = append(events, ev(types[r.Intn(len(types))], roles[r.Intn(len(roles))], datevaluetest.YMD(1800+r.Intn(200), 0, 0)))
 			}
-			got, _ := subjectprofile.ForSubject(subjectprofile.Subject{Life: events}, lifespans)
+			got := subjectprofile.ForSubject(subjectprofile.Subject{Life: events}, lifespans)
 			shuffled := slices.Clone(events)
 			r.Shuffle(len(shuffled), func(a, b int) { shuffled[a], shuffled[b] = shuffled[b], shuffled[a] })
-			again, _ := subjectprofile.ForSubject(subjectprofile.Subject{Life: shuffled}, lifespans)
+			again := subjectprofile.ForSubject(subjectprofile.Subject{Life: shuffled}, lifespans)
 			same(t, i, "event order", again, got)
 			window := got[vocabkey.PropertyLifespan]
 			if len(window) == 0 {
