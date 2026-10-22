@@ -81,34 +81,11 @@ enum ConnectEndpointBinding {
         endpointB: String?,
         term: String?
     ) -> String {
-        switch kind {
-        case .location:
-            return EvidenceBridgeEdgeSummary.sentence(
-                kind: kind,
-                person: nil,
-                related: nil,
-                event: endpointA,
-                place: endpointB,
-                term: term
-            )
-        case .relationship, .placeRelationship:
-            return EvidenceBridgeEdgeSummary.sentence(
-                kind: kind,
-                person: endpointA,
-                related: endpointB,
-                event: nil,
-                place: nil,
-                term: term
-            )
-        case .participation:
-            return EvidenceBridgeEdgeSummary.sentence(
-                kind: kind,
-                person: endpointA,
-                related: nil,
-                event: endpointB,
-                place: nil,
-                term: term
-            )
-        }
+        ConnectionSentenceRegistry.sentence(
+            kind: kind,
+            endpointA: endpointA,
+            endpointB: endpointB,
+            term: term
+        )
     }
 }

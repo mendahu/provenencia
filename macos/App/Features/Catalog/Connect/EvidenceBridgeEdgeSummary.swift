@@ -5,7 +5,10 @@ import Foundation
 enum EvidenceBridgeEdgeSummary {
     /// Relational phrase only — “is the father of”, “participated as witness”.
     static func phrase(for placed: SourceGraphPlacedBridge) -> String {
-        phrase(kind: placed.kind, term: termDisplay(kind: placed.kind, in: placed.observations))
+        ConnectionSentenceRegistry.phrase(
+            kind: placed.kind,
+            term: termDisplay(kind: placed.kind, in: placed.observations)
+        )
     }
 
     /// Snapshot-aware sentence. Nouns come from cited endpoints; unreadable
@@ -31,107 +34,21 @@ enum EvidenceBridgeEdgeSummary {
             return nonEmpty(wholeNameFallback(for: bridge))
         }
         return nonEmpty(
-            ConnectEndpointBinding.sentence(
+            ConnectionSentenceRegistry.sentence(
                 kind: bridge.kind,
                 endpointA: endpointA,
                 endpointB: endpointB,
-                term: term
+                term: term,
+                termKey: termKey(kind: bridge.kind, in: bridge.observations),
+                eventType: eventTypeKey(
+                    subjectID: bridge.kind == .participation
+                        ? (bridge.endpointBID ?? resolved.endpointBID)
+                        : nil,
+                    snapshot: snapshot
+                )
             ),
             fallback: wholeNameFallback(for: bridge)
         )
-    }
-
-    static func phrase(kind: EvidenceBridgeKind, term: String?) -> String {
-        switch kind {
-        case .location:
-            return L10n.string(L10n.EvidenceGraph.bridgeSummaryLocationBare)
-        case .relationship:
-            if let term {
-                return L10n.EvidenceGraph.bridgeSummaryRelationshipTypeOnly(type: term)
-            }
-            return L10n.string(L10n.EvidenceGraph.bridgeSummaryRelationshipBare)
-        case .placeRelationship:
-            if let term {
-                return L10n.EvidenceGraph.bridgeSummaryPlaceRelationshipTypeOnly(type: term)
-            }
-            return L10n.string(L10n.EvidenceGraph.bridgeSummaryPlaceRelationshipBare)
-        case .participation:
-            if let term {
-                return L10n.EvidenceGraph.bridgeSummaryParticipationRoleOnly(role: term)
-            }
-            return L10n.string(L10n.EvidenceGraph.bridgeSummaryParticipationBare)
-        }
-    }
-
-    static func sentence(
-        kind: EvidenceBridgeKind,
-        person: String?,
-        related: String?,
-        event: String?,
-        place: String?,
-        term: String?
-    ) -> String {
-        switch kind {
-        case .location:
-            return locationSentence(event: event, place: place)
-        case .relationship:
-            return relationshipSentence(person: person, related: related, type: term)
-        case .placeRelationship:
-            return placeRelationshipSentence(from: person, to: related, type: term)
-        case .participation:
-            return participationSentence(person: person, event: event, role: term)
-        }
-    }
-
-    private static func placeRelationshipSentence(from: String?, to: String?, type: String?) -> String {
-        if let from, let to, let type {
-            return L10n.EvidenceGraph.bridgeSummaryPlaceRelationship(from: from, type: type, to: to)
-        }
-        if let from, let to {
-            return L10n.EvidenceGraph.bridgeSummaryPlaceRelationshipFallback(from: from, to: to)
-        }
-        return phrase(kind: .placeRelationship, term: type)
-    }
-
-    private static func locationSentence(event: String?, place: String?) -> String {
-        if let event, let place {
-            return L10n.EvidenceGraph.bridgeSummaryLocation(event: event, place: place)
-        }
-        return L10n.string(L10n.EvidenceGraph.bridgeSummaryLocationBare)
-    }
-
-    private static func relationshipSentence(person: String?, related: String?, type: String?) -> String {
-        if let person, let related, let type {
-            return L10n.EvidenceGraph.bridgeSummaryRelationship(
-                person: person,
-                type: type,
-                related: related
-            )
-        }
-        if let person, let related {
-            return L10n.EvidenceGraph.bridgeSummaryRelationshipFallback(
-                person: person,
-                related: related
-            )
-        }
-        return phrase(kind: .relationship, term: type)
-    }
-
-    private static func participationSentence(person: String?, event: String?, role: String?) -> String {
-        if let person, let event, let role {
-            return L10n.EvidenceGraph.bridgeSummaryParticipation(
-                person: person,
-                role: role,
-                event: event
-            )
-        }
-        if let person, let event {
-            return L10n.EvidenceGraph.bridgeSummaryParticipationFallback(
-                person: person,
-                event: event
-            )
-        }
-        return phrase(kind: .participation, term: role)
     }
 
     static func identityPropertyKey(for kind: EvidencePrimaryKind) -> String {
@@ -150,6 +67,11 @@ enum EvidenceBridgeEdgeSummary {
         guard let subjectID,
               let placed = snapshot.subjects.first(where: { $0.id == subjectID })
         else { return nil }
+        if placed.kind == .event, let title = placed.eventTitle {
+            let text = EventTitleDisplay.title(title, orders: orders)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty { return text }
+        }
         if let identity = identityNoun(on: placed, orders: orders) {
             return identity
         }
@@ -167,13 +89,27 @@ enum EvidenceBridgeEdgeSummary {
         on placed: SourceGraphPlacedSubject,
         orders: NameFormatOrders
     ) -> String? {
-        let key = identityPropertyKey(for: placed.kind)
-        let matches = placed.observations.filter { $0.propertyKey == key }
-        let chosen = matches.first(where: isPositive) ?? matches.first
-        guard let chosen else { return nil }
+        guard let chosen = identityObservation(on: placed) else { return nil }
         let display = ObservationValueDisplay.string(for: chosen, orders: orders)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return display.isEmpty ? nil : display
+    }
+
+    private static func identityObservation(on placed: SourceGraphPlacedSubject) -> CatalogObservation? {
+        let key = identityPropertyKey(for: placed.kind)
+        let matches = placed.observations.filter { $0.propertyKey == key }
+        return matches.first(where: isPositive) ?? matches.first
+    }
+
+    /// The placed event's `event_type` term key, positive first, else nil.
+    private static func eventTypeKey(subjectID: String?, snapshot: SourceGraphSnapshot) -> String? {
+        guard let subjectID,
+              let placed = snapshot.subjects.first(where: { $0.id == subjectID }),
+              placed.kind == .event,
+              let key = identityObservation(on: placed)?.valueTermKey,
+              !key.isEmpty
+        else { return nil }
+        return key
     }
 
     private static func isPositive(_ observation: CatalogObservation) -> Bool {
@@ -200,17 +136,27 @@ enum EvidenceBridgeEdgeSummary {
         return "—"
     }
 
+    private static func termObservation(
+        kind: EvidenceBridgeKind,
+        in observations: [CatalogObservation]
+    ) -> CatalogObservation? {
+        let key = ConnectionSentenceRegistry.termProperty(for: kind)
+        return observations.first(where: { $0.propertyKey == key })
+    }
+
+    private static func termKey(kind: EvidenceBridgeKind, in observations: [CatalogObservation]) -> String? {
+        guard let key = termObservation(kind: kind, in: observations)?.valueTermKey, !key.isEmpty else {
+            return nil
+        }
+        return key
+    }
+
     private static func termDisplay(
         kind: EvidenceBridgeKind,
         in observations: [CatalogObservation]
     ) -> String? {
-        let key: String
-        switch kind {
-        case .relationship: key = "relationship_type"
-        case .placeRelationship: key = "place_relationship_type"
-        case .participation, .location: key = "role"
-        }
-        guard let observation = observations.first(where: { $0.propertyKey == key }) else {
+        let key = ConnectionSentenceRegistry.termProperty(for: kind)
+        guard let observation = termObservation(kind: kind, in: observations) else {
             return nil
         }
         let catalog = ObservationValueDisplay.string(for: observation)

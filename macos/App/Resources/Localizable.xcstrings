@@ -3822,6 +3822,78 @@
         }
       }
     },
+    "evidenceGraph.bridge.sentence.birthSubject": {
+      "comment": "Connection sentence for a person who is the subject of a birth; arguments are the person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ was born"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.sentence.deathSubject": {
+      "comment": "Connection sentence for a person who is the subject of a death; arguments are the person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ died"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.sentence.baptismSubject": {
+      "comment": "Connection sentence for a person who is the subject of a baptism; arguments are the person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ was baptized"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.sentence.marriageSubject": {
+      "comment": "Connection sentence for a person who is the subject of a marriage; arguments are person then event title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ married (%2$@)"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.sentence.funeralSubject": {
+      "comment": "Connection sentence for a person who is the subject of a funeral; arguments are person then event title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@'s funeral (%2$@)"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.sentence.burialSubject": {
+      "comment": "Connection sentence for a person who is the subject of a burial; arguments are the person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ was buried"
+          }
+        }
+      }
+    },
     "evidenceGraph.bridge.summary.participationBare": {
       "comment": "Participation edge summary when role and endpoint labels are missing",
       "extractionState": "manual",

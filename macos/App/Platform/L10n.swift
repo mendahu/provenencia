@@ -2340,6 +2340,60 @@ enum L10n {
             comment: "Participation edge summary when role and endpoint labels are missing"
         )
 
+        /// "%1$@ was born" for a subject's birth; the argument is the person.
+        static func bridgeSentenceBirthSubject(person: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.birthSubject",
+                defaultValue: "%1$@ was born",
+                comment: "Connection sentence for a person who is the subject of a birth; the argument is the person"
+            ), person)
+        }
+
+        /// "%1$@ died" for a subject's death; the argument is the person.
+        static func bridgeSentenceDeathSubject(person: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.deathSubject",
+                defaultValue: "%1$@ died",
+                comment: "Connection sentence for a person who is the subject of a death; the argument is the person"
+            ), person)
+        }
+
+        /// "%1$@ was baptized" for a subject's baptism; the argument is the person.
+        static func bridgeSentenceBaptismSubject(person: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.baptismSubject",
+                defaultValue: "%1$@ was baptized",
+                comment: "Connection sentence for a person who is the subject of a baptism; the argument is the person"
+            ), person)
+        }
+
+        /// "%1$@ married (%2$@)" for a subject's marriage; arguments are person then event title.
+        static func bridgeSentenceMarriageSubject(person: String, event: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.marriageSubject",
+                defaultValue: "%1$@ married (%2$@)",
+                comment: "Connection sentence for a person who is the subject of a marriage; arguments are person then event title"
+            ), person, event)
+        }
+
+        /// "%1$@'s funeral (%2$@)" for a subject's funeral; arguments are person then event title.
+        static func bridgeSentenceFuneralSubject(person: String, event: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.funeralSubject",
+                defaultValue: "%1$@'s funeral (%2$@)",
+                comment: "Connection sentence for a person who is the subject of a funeral; arguments are person then event title"
+            ), person, event)
+        }
+
+        /// "%1$@ was buried" for a subject's burial; the argument is the person.
+        static func bridgeSentenceBurialSubject(person: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.burialSubject",
+                defaultValue: "%1$@ was buried",
+                comment: "Connection sentence for a person who is the subject of a burial; the argument is the person"
+            ), person)
+        }
+
         static let linksRotor = LocalizedStringResource(
             "evidenceGraph.rotor.links",
             defaultValue: "Links",

@@ -194,6 +194,8 @@
 		A71D00000000000000000006 /* VisionOCREngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000005 /* VisionOCREngine.swift */; };
 		A71D00000000000000000008 /* OCRImageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000007 /* OCRImageTests.swift */; };
 		A71D0000000000000000000A /* CitationAutoTranscribeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000009 /* CitationAutoTranscribeTests.swift */; };
+		A71C00000000000000000002 /* ConnectionSentenceRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71C00000000000000000001 /* ConnectionSentenceRegistry.swift */; };
+		A71C00000000000000000004 /* ConnectionSentenceRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71C00000000000000000003 /* ConnectionSentenceRegistryTests.swift */; };
 		A71A00000000000000000002 /* ConnectEndpointBinding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71A00000000000000000001 /* ConnectEndpointBinding.swift */; };
 		A71B00000000000000000002 /* ConnectEndpointBindingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71B00000000000000000001 /* ConnectEndpointBindingTests.swift */; };
 		A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000005 /* PropertyTermDisplayTests.swift */; };
@@ -615,6 +617,8 @@
 		A71D00000000000000000005 /* VisionOCREngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = VisionOCREngine.swift; sourceTree = "<group>"; };
 		A71D00000000000000000007 /* OCRImageTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OCRImageTests.swift; sourceTree = "<group>"; };
 		A71D00000000000000000009 /* CitationAutoTranscribeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationAutoTranscribeTests.swift; sourceTree = "<group>"; };
+		A71C00000000000000000001 /* ConnectionSentenceRegistry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectionSentenceRegistry.swift; sourceTree = "<group>"; };
+		A71C00000000000000000003 /* ConnectionSentenceRegistryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectionSentenceRegistryTests.swift; sourceTree = "<group>"; };
 		A71A00000000000000000001 /* ConnectEndpointBinding.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectEndpointBinding.swift; sourceTree = "<group>"; };
 		A71B00000000000000000001 /* ConnectEndpointBindingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectEndpointBindingTests.swift; sourceTree = "<group>"; };
 		A71000000000000000000005 /* PropertyTermDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertyTermDisplayTests.swift; sourceTree = "<group>"; };
@@ -846,6 +850,7 @@
 			children = (
 				A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */,
 				A71A00000000000000000001 /* ConnectEndpointBinding.swift */,
+				A71C00000000000000000001 /* ConnectionSentenceRegistry.swift */,
 				A71700000000000000000001 /* EvidenceGraphPlacement.swift */,
 			);
 			path = Connect;
@@ -1367,6 +1372,7 @@
 				AA000000000000000000067F /* GraphCanvasItemLayerTests.swift */,
 				AA0000000000000000000677 /* L10nPluralTests.swift */,
 				A71B00000000000000000001 /* ConnectEndpointBindingTests.swift */,
+				A71C00000000000000000003 /* ConnectionSentenceRegistryTests.swift */,
 				A70B0000000000000000000B /* ArtifactViewerModelTests.swift */,
 				A70B00000000000000000016 /* ArtifactRegionGeometryTests.swift */,
 				A70B0000000000000000001A /* CitationLocatorDraftTests.swift */,
@@ -1998,6 +2004,7 @@
 				A71D00000000000000000006 /* VisionOCREngine.swift in Sources */,
 				A71700000000000000000002 /* EvidenceGraphPlacement.swift in Sources */,
 				A71A00000000000000000002 /* ConnectEndpointBinding.swift in Sources */,
+				A71C00000000000000000002 /* ConnectionSentenceRegistry.swift in Sources */,
 				AA0000000000000000000005 /* GenealogyStore.swift in Sources */,
 				AA0000000000000000000006 /* FakeStore.swift in Sources */,
 				AA0000000000000000000007 /* GoStore.swift in Sources */,
@@ -2308,6 +2315,7 @@
 				AA0000000000000000000682 /* PVTextAreaTests.swift in Sources */,
 				AA0000000000000000000678 /* L10nPluralTests.swift in Sources */,
 				A71B00000000000000000002 /* ConnectEndpointBindingTests.swift in Sources */,
+				A71C00000000000000000004 /* ConnectionSentenceRegistryTests.swift in Sources */,
 				A70B0000000000000000000C /* ArtifactViewerModelTests.swift in Sources */,
 				A70B00000000000000000017 /* ArtifactRegionGeometryTests.swift in Sources */,
 				A70B0000000000000000001B /* CitationLocatorDraftTests.swift in Sources */,

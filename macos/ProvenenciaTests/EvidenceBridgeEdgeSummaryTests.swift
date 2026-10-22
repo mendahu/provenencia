@@ -168,6 +168,55 @@ struct EvidenceBridgeEdgeSummaryTests {
         )
     }
 
+    @Test func aParticipationReadsFromTheRegistry() {
+        var role = observation(propertyKey: "role", valueText: "Subject", valueType: "term")
+        role.valueTermKey = "subject"
+        var eventType = identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Birth")
+        eventType.valueTermKey = "birth"
+        let placed = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueSubjectID: "p1"),
+            observation(propertyKey: "event", valueSubjectID: "e1"),
+            role,
+        ])
+        let snap = snapshot(bridge: placed, subjects: [
+            primary(
+                id: "p1",
+                kind: .person,
+                label: "Alice",
+                ref: "CPR-1",
+                observations: [identityObservation(subjectID: "p1", propertyKey: "name", valueText: "Alice")]
+            ),
+            primary(id: "e1", kind: .event, label: "Birth", ref: "CEV-1", observations: [eventType]),
+        ])
+        #expect(EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap) == "Alice was born")
+    }
+
+    @Test func anEventEndpointIsNamedByItsTitle() {
+        let placed = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueSubjectID: "p1"),
+            observation(propertyKey: "event", valueSubjectID: "e1"),
+        ])
+        var event = primary(
+            id: "e1",
+            kind: .event,
+            label: "Working",
+            ref: "CEV-1",
+            observations: [identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Birth")]
+        )
+        event.eventTitle = CatalogEventTitle(rule: .label, label: "Birth of Alice")
+        let snap = snapshot(bridge: placed, subjects: [
+            primary(id: "p1", kind: .person, label: "Alice", ref: "CPR-1"),
+            event,
+        ])
+        #expect(
+            EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap)
+                == L10n.EvidenceGraph.bridgeSummaryParticipationFallback(
+                    person: "Alice",
+                    event: EventTitleDisplay.title(CatalogEventTitle(rule: .label, label: "Birth of Alice"))
+                )
+        )
+    }
+
     @Test func missingEndpointUsesStoredLabel() {
         let placed = bridge(
             kind: .participation,
