@@ -538,7 +538,7 @@ enum CitationComposerAuthoring {
                 true
             )
         case EvidenceBridgeKind.placeRelationship.rawValue:
-            switch term?.key {
+            switch term?.productKey {
             case "part_of":
                 return (
                     L10n.string(L10n.CitationComposer.partEnd),
@@ -551,9 +551,8 @@ enum CitationComposerAuthoring {
                     L10n.string(L10n.CitationComposer.laterPlace),
                     true
                 )
-            case .some:
-                return (term?.label ?? "", term?.label ?? "", true)
-            case nil:
+            default:
+                if let term { return (term.label, term.label, true) }
                 return (
                     L10n.string(L10n.CitationComposer.firstPlace),
                     L10n.string(L10n.CitationComposer.secondPlace),
@@ -648,10 +647,10 @@ enum CitationComposerAuthoring {
         switch rule.bridgeTypeKey {
         case EvidenceBridgeKind.relationship.rawValue:
             guard let term else { return nil }
-            if term.key == "spouse" {
+            if term.productKey == "spouse" {
                 return L10n.CitationComposer.areSpouses(from.label, to.label)
             }
-            if term.key == "sibling" {
+            if term.productKey == "sibling" {
                 return L10n.CitationComposer.areSiblings(from.label, to.label)
             }
             return L10n.CitationComposer.isATermOf(from.label, term.label.lowercased(), to.label)
@@ -666,10 +665,10 @@ enum CitationComposerAuthoring {
             return L10n.CitationComposer.tookPlaceAt(event.label, place.label)
         case EvidenceBridgeKind.placeRelationship.rawValue:
             guard let term else { return nil }
-            if term.key == "part_of" {
+            if term.productKey == "part_of" {
                 return L10n.CitationComposer.isPartOf(from.label, to.label)
             }
-            if term.key == "succeeded_by" {
+            if term.productKey == "succeeded_by" {
                 return L10n.CitationComposer.wasSucceededBy(from.label, to.label)
             }
             return nil
@@ -720,7 +719,7 @@ enum CitationComposerAuthoring {
         property: CatalogProperty?,
         vocabulary: CitationComposerVocabulary
     ) -> CatalogPropertyTerm? {
-        guard let term, let property, let inverseKey = inverseTermKey[term.key] else { return nil }
-        return vocabulary.termsByPropertyID[property.id]?.first { $0.key == inverseKey }
+        guard let term, let property, let inverseKey = term.productKey.flatMap({ inverseTermKey[$0] }) else { return nil }
+        return vocabulary.termsByPropertyID[property.id]?.first { $0.productKey == inverseKey }
     }
 }

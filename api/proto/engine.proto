@@ -1419,7 +1419,7 @@ message ConclusionTerm {
   string id = 1;
   string key = 2;
   string label = 3;
-  string origin = 4; // set on an Event header's type: with key, whose term it is
+  string origin = 4; // whose term the key is: it names a product term only with the product's origin
 }
 
 // ReconciledValueDetail is one auto-reconciled value of a Property: displayed

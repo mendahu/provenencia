@@ -806,7 +806,7 @@ struct CitationBridgeSentence: View {
     }
 
     static func displayLabel(_ term: CatalogPropertyTerm) -> String {
-        switch term.key {
+        switch term.productKey {
         case "part_of":
             return L10n.string(L10n.CitationComposer.placeTermPartOf)
         case "succeeded_by":

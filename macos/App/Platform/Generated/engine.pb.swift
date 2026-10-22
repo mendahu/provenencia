@@ -4789,7 +4789,7 @@ public nonisolated struct Provenencia_Engine_V1_ConclusionTerm: Sendable {
 
   public var label: String = String()
 
-  /// set on an Event header's type: with key, whose term it is
+  /// whose term the key is: it names a product term only with the product's origin
   public var origin: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()

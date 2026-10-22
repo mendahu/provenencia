@@ -72,10 +72,10 @@ struct PersonGenderTreatment: Equatable {
 
     private static func treatment(_ field: CatalogConclusionField, basis: Basis) -> PersonGenderTreatment? {
         let shown = field.displayedValues
-        guard shown.count == 1, case .term(_, let key, _) = shown[0].value else { return nil }
+        guard shown.count == 1, case .term(_, let key, _, let origin) = shown[0].value else { return nil }
         let text = ReconciledValueDisplay.string(for: shown[0].value)
         guard !text.isEmpty else { return nil }
-        return PersonGenderTreatment(family: family(key, basis: basis), basis: basis, text: text, fieldLabel: field.label)
+        return PersonGenderTreatment(family: family(CatalogOrigin.isProduct(origin) ? key : "", basis: basis), basis: basis, text: text, fieldLabel: field.label)
     }
 
     private static func family(_ key: String, basis: Basis) -> Family {

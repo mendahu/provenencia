@@ -1432,7 +1432,7 @@ struct GoStore: GenealogyStore {
         switch v.kind {
         case .text(let t): return .text(t)
         case .integer(let i): return .integer(i)
-        case .term(let t): return .term(id: t.id, key: t.key, label: t.label)
+        case .term(let t): return .term(id: t.id, key: t.key, label: t.label, origin: t.origin)
         case .date(let d): return .date(mapDateValue(d))
         case .name(let n): return .name(mapNameValue(n))
         case .depiction(let d): return .depiction(mapDepictionValue(d))

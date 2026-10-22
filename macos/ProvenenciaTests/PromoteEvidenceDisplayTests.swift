@@ -112,7 +112,7 @@ struct PromoteEvidenceDisplayTests {
     @Test func lineSentencesFollowTheTable() {
         let name = CatalogConclusionValue.name(CatalogNameValue(form: "John Smith"))
         let day = CatalogConclusionValue.date(date(1817, 5, 14))
-        let term = CatalogConclusionValue.term(id: "t", key: "male", label: "Male")
+        let term = CatalogConclusionValue.term(id: "t", key: "male", label: "Male", origin: CatalogOrigin.provenencia)
         let likeness = CatalogConclusionValue.depiction(CatalogDepictionValue(regionJSON: "", imageRelPath: "objects/a.png"))
         let key = { (r: LocalizedStringResource) in r.key }
 

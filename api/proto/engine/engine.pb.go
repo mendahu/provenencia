@@ -11605,7 +11605,7 @@ type ConclusionTerm struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
 	Label         string                 `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
-	Origin        string                 `protobuf:"bytes,4,opt,name=origin,proto3" json:"origin,omitempty"` // set on an Event header's type: with key, whose term it is
+	Origin        string                 `protobuf:"bytes,4,opt,name=origin,proto3" json:"origin,omitempty"` // whose term the key is: it names a product term only with the product's origin
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

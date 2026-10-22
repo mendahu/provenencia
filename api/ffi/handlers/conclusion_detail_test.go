@@ -129,9 +129,9 @@ func TestConclusionValueProtoCoversEveryKind(t *testing.T) {
 			_, ok := v.GetKind().(*engine.ConclusionValue_Integer)
 			return ok
 		}},
-		{"term", conclusiondetails.Value{TermID: term, TermKey: "male", TermLabel: "Male"}, func(v *engine.ConclusionValue) bool {
+		{"term", conclusiondetails.Value{TermID: term, TermKey: "male", TermLabel: "Male", TermOrigin: "user"}, func(v *engine.ConclusionValue) bool {
 			tm := v.GetTerm()
-			return tm.GetId() == database.UUIDString(term) && tm.GetKey() == "male" && tm.GetLabel() == "Male"
+			return tm.GetId() == database.UUIDString(term) && tm.GetKey() == "male" && tm.GetLabel() == "Male" && tm.GetOrigin() == "user"
 		}},
 		{"term without an id", conclusiondetails.Value{TermKey: "male", TermLabel: "Male"}, func(v *engine.ConclusionValue) bool {
 			tm := v.GetTerm()

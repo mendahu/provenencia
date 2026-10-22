@@ -63,7 +63,7 @@ struct PersonDetailTests {
     }
 
     @Test func treatmentRidesOnContentAndRowsStay() {
-        let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Woman")
+        let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Woman", origin: CatalogOrigin.provenencia)
         let gender = D.field(
             "single", key: "gender", label: "Gender", valueType: "term",
             [D.value(1, "kept", woman)], outcomes: [D.outcome("g", "kept", recorded: woman)]
@@ -88,7 +88,7 @@ struct PersonDetailTests {
     }
 
     @Test func headerThumbIsTheLeadLikeness() {
-        let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Woman")
+        let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Woman", origin: CatalogOrigin.provenencia)
         let gender = D.field(
             "single", key: "gender", label: "Gender", valueType: "term",
             [D.value(1, "kept", woman)], outcomes: [D.outcome("g", "kept", recorded: woman)]

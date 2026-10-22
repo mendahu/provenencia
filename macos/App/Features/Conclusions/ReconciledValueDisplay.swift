@@ -87,7 +87,7 @@ enum ReconciledValueDisplay {
             return text.trimmingCharacters(in: .whitespacesAndNewlines)
         case .integer(let integer):
             return integer.formatted(.number.grouping(.never).locale(locale))
-        case .term(_, let key, let label):
+        case .term(_, let key, let label, _):
             return label.isEmpty ? key : label
         case .date(let date):
             return DateRowDisplay.line(date: date, locale: locale)

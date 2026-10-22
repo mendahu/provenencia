@@ -566,7 +566,7 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
     var eventName: String = ""
     var eventNameCount: Int = 0
     var eventTypeKey: String = ""
-    /// The type term's origin; `eventTypeKey` is the product's only when this is `SeededOrigin.provenencia`.
+    /// The type term's origin; `eventTypeKey` is the product's only when this is `CatalogOrigin.provenencia`.
     var eventTypeOrigin: String = ""
     var eventTypeLabel: String = ""
     var eventTypeCount: Int = 0
@@ -608,7 +608,7 @@ struct CatalogEventTitle: Sendable, Equatable {
     var label: String = ""
     var ref: String = ""
     var typeKey: String = ""
-    /// The type term's origin; `typeKey` is the product's only when this is `SeededOrigin.provenencia`.
+    /// The type term's origin; `typeKey` is the product's only when this is `CatalogOrigin.provenencia`.
     var typeOrigin: String = ""
     var typeLabel: String = ""
     /// Subject-role persons in stable order; `nil` reads "unnamed person".
@@ -643,7 +643,8 @@ enum CatalogConclusionValue: Sendable, Equatable {
     case none
     case text(String)
     case integer(Int64)
-    case term(id: String, key: String, label: String)
+    /// `origin` is the term's: `key` names a product term only when `CatalogOrigin.isProduct(origin)`.
+    case term(id: String, key: String, label: String, origin: String)
     case date(CatalogDateValueInput)
     case name(CatalogNameValue)
     /// A likeness: its stored crop; the region is not sent on the evidence wire.
@@ -786,7 +787,7 @@ struct CatalogObservation: Sendable, Equatable, Identifiable {
     var propertyValueType: String
     /// Product/user term key when `valueTermID` is set (empty when unknown).
     var valueTermKey: String = ""
-    /// The term's origin; its key is the product's only when this is `SeededOrigin.provenencia`.
+    /// The term's origin; its key is the product's only when this is `CatalogOrigin.provenencia`.
     var valueTermOrigin: String = ""
     /// depiction_values.id when the Observation holds a depiction.
     var valueDepictionID: String = ""
@@ -815,6 +816,10 @@ struct CatalogPropertyTerm: Sendable, Equatable, Identifiable {
     var origin: String
     var label: String
     var description: String
+
+    /// `key` when this is a product term, else nil: a researcher's own term
+    /// may be keyed like one, so only the product's names a seeded term.
+    var productKey: String? { CatalogOrigin.isProduct(origin) ? key : nil }
 }
 
 struct CatalogSubjectTypeProperty: Sendable, Equatable, Identifiable {

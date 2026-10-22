@@ -58,14 +58,7 @@ func loadVocab(g *graphcache.Graph) (vocab, error) {
 	}); err != nil {
 		return vocab{}, err
 	}
-	if err := scanVocab(g, `SELECT id, label FROM property_terms`, nil, func(id []byte, label, _ string) {
-		v.termLabel[string(id)] = label
-	}); err != nil {
-		return vocab{}, err
-	}
-	if err := scanVocab(g, `SELECT id, origin FROM property_terms`, nil, func(id []byte, origin, _ string) {
-		v.termOrigin[string(id)] = origin
-	}); err != nil {
+	if err := scanTerms(g, v); err != nil {
 		return vocab{}, err
 	}
 	if err := scanVocab(g, `SELECT id, key FROM subject_types WHERE origin = ?`, []any{vocabkey.OriginProvenencia}, func(id []byte, key, _ string) {
@@ -74,6 +67,25 @@ func loadVocab(g *graphcache.Graph) (vocab, error) {
 		return vocab{}, err
 	}
 	return v, nil
+}
+
+// scanTerms reads each term's label and origin in one pass.
+func scanTerms(g *graphcache.Graph, v vocab) error {
+	rows, err := g.Query(`SELECT id, label, origin FROM property_terms`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id []byte
+		var label, origin string
+		if err := rows.Scan(&id, &label, &origin); err != nil {
+			return err
+		}
+		v.termLabel[string(id)] = label
+		v.termOrigin[string(id)] = origin
+	}
+	return rows.Err()
 }
 
 func scanVocab(g *graphcache.Graph, query string, args []any, take func(id []byte, a, b string)) error {

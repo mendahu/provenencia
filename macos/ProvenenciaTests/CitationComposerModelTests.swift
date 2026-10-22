@@ -1335,6 +1335,101 @@ struct CitationComposerModelTests {
         }
     }
 
+    // MARK: term keys honour the term's origin
+
+    private func termVocabulary(
+        propertyKey: String, terms: [(key: String, label: String, origin: String)], endTypeKey: String
+    ) -> CitationComposerVocabulary {
+        let property = CatalogProperty(
+            id: "p-\(propertyKey)", key: propertyKey, origin: CatalogOrigin.provenencia, label: propertyKey,
+            description: "", valueType: "term"
+        )
+        func end(_ id: String) -> CitationComposerModel.GraphSubjectOption {
+            .init(id: id, label: id, ref: id, typeID: "t", typeKey: endTypeKey)
+        }
+        var vocabulary = CitationComposerVocabulary.empty
+        vocabulary.propertiesByID = [property.id: property]
+        vocabulary.subjectsByID = ["a": end("a"), "b": end("b")]
+        vocabulary.connectRules = CatalogConnectRule.productMatrix
+        vocabulary.termsByPropertyID[property.id] = terms.map {
+            CatalogPropertyTerm(
+                id: "term-\($0.origin)-\($0.key)", propertyID: property.id, key: $0.key,
+                origin: $0.origin, label: $0.label, description: ""
+            )
+        }
+        return vocabulary
+    }
+
+    private func readyBridge(_ vocabulary: CitationComposerVocabulary, termID: String) -> CitationReadyBridge? {
+        guard case .ready(let ready) = CitationComposerAuthoring.resolvePair(
+            endA: "a", endB: "b", termID: termID, vocabulary: vocabulary
+        ) else { return nil }
+        return ready
+    }
+
+    @Test func aProductTermsInverseIsNeverAResearchersTerm() {
+        let vocabulary = termVocabulary(
+            propertyKey: "relationship_type",
+            terms: [
+                (key: "parent", label: "Parent", origin: CatalogOrigin.provenencia),
+                (key: "child", label: "Kid", origin: CatalogOrigin.user),
+            ],
+            endTypeKey: "person"
+        )
+        let ready = readyBridge(vocabulary, termID: "term-provenencia-parent")
+        #expect(ready?.endBTitle == "Parent")
+        let theirs = termVocabulary(
+            propertyKey: "relationship_type",
+            terms: [
+                (key: "parent", label: "Mine", origin: CatalogOrigin.user),
+                (key: "child", label: "Child", origin: CatalogOrigin.provenencia),
+            ],
+            endTypeKey: "person"
+        )
+        #expect(readyBridge(theirs, termID: "term-user-parent")?.endBTitle == "Mine")
+        let product = termVocabulary(
+            propertyKey: "relationship_type",
+            terms: [
+                (key: "parent", label: "Parent", origin: CatalogOrigin.provenencia),
+                (key: "child", label: "Child", origin: CatalogOrigin.provenencia),
+            ],
+            endTypeKey: "person"
+        )
+        #expect(readyBridge(product, termID: "term-provenencia-parent")?.endBTitle == "Child")
+    }
+
+    @Test func aResearchersSpouseTermGetsNoSpouseSentence() {
+        let user = termVocabulary(
+            propertyKey: "relationship_type",
+            terms: [(key: "spouse", label: "Partner", origin: CatalogOrigin.user)],
+            endTypeKey: "person"
+        )
+        #expect(readyBridge(user, termID: "term-user-spouse")?.reading == L10n.CitationComposer.isATermOf("a", "partner", "b"))
+        let product = termVocabulary(
+            propertyKey: "relationship_type",
+            terms: [(key: "spouse", label: "Spouse", origin: CatalogOrigin.provenencia)],
+            endTypeKey: "person"
+        )
+        #expect(readyBridge(product, termID: "term-provenencia-spouse")?.reading == L10n.CitationComposer.areSpouses("a", "b"))
+    }
+
+    @Test func aResearchersPlaceTermKeyedPartOfKeepsItsOwnLabel() {
+        let theirs = CatalogPropertyTerm(
+            id: "t", propertyID: "p", key: "part_of", origin: CatalogOrigin.user, label: "Inside of", description: ""
+        )
+        #expect(CitationBridgeSentence.displayLabel(theirs) == "inside of")
+        var product = theirs
+        product.origin = CatalogOrigin.provenencia
+        #expect(CitationBridgeSentence.displayLabel(product) == L10n.string(L10n.CitationComposer.placeTermPartOf))
+        let vocabulary = termVocabulary(
+            propertyKey: "place_relationship_type",
+            terms: [(key: "part_of", label: "Inside of", origin: CatalogOrigin.user)],
+            endTypeKey: "place"
+        )
+        let ready = readyBridge(vocabulary, termID: "term-user-part_of")
+        #expect(ready?.endATitle == "Inside of" && ready?.reading == nil)
+    }
+
     @Test func citationPreviewFallsBack() {
         #expect(CitationComposerAuthoring.preview(transcription: "line", description: "desc") == .text("line"))
         #expect(CitationComposerAuthoring.preview(transcription: "", description: "desc") == .text("desc"))
