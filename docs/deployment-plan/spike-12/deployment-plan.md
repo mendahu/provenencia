@@ -116,7 +116,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S12-04 | Graph lifecycle | 2 | `evidencegraphs` `List` (the one read), create, update (name, description and links in one write), delete with their refusals; the `last_graph` delete gate | — | S12-03 | [Plan](prs/S12-04-graph-lifecycle.md) | Landed #505 |
 | S12-05 | Graph RPCs and graph list | 2 | FFI and store methods for graphs and links; `CreateArtifactRequest.graph_ids`; one project-wide graph list key | — | S12-04 | [Plan](prs/S12-05-graph-rpcs.md) | Landed #511 |
 | S12-06 | Graph isolation | 2 | One `requireSameGraph` for Observations; `connect` relies on it; the canonical walk joins on graph | — | S12-03 | [Plan](prs/S12-06-graph-isolation.md) | Landed #515 |
-| S12-07 | Graph-keyed reads | 3 | `graphcache`, loaders, positions, event titles and progress keyed and named by Evidence graph; effects stay per Source | — | S12-03, S11-14, S11-15 | — | Scoped |
+| S12-07 | Graph-keyed reads | 3 | `graphcache`, loaders, positions, event titles and progress keyed and named by Evidence graph; effects stay per Source | — | S12-03, S11-14, S11-15 | [Plan](prs/S12-07-graph-keyed-reads.md) | Scoped |
 | S12-08 | Graph id end to end | 3 | RPCs, effects, wire and Swift mutations take graph ids together; per-graph query keys; `WorkspaceLocation` carries the graph; `SoleGraphTx` goes | — | S12-05, S12-07 | — | Scoped |
 | S12-09 | Promote per graph | 3 | Proposal, Apply, bridge filing, unpromote, the Promote key and location per graph | — | S12-08, S11-17, S11-25, S11-26, S11-27 | — | Scoped |
 | S12-10 | Composer offers linked Artifacts | 3 | The Citation composer lists only the graph's linked Artifacts | — | S12-05, S12-08 | — | Scoped |
@@ -274,9 +274,9 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-07 — Graph-keyed reads
 
-**Ships.** `graphcache` caches per Evidence graph; `sourcefill` loaders, `subjectpositions`, `sourceeventtitles` and progress read by graph, renamed to match; `effects.Set` stays keyed by Source and `graphcache` drops every graph of a changed Source. `promotealign.loadLayer` reads its graph through `SoleGraphTx` until S12-09.
+**Ships.** `graphcache` caches per Evidence graph; `sourcefill` loaders, `subjectpositions`, `sourceeventtitles` and progress read by graph, renamed to match; `effects.Set` stays keyed by Source and `graphcache` drops every graph of a changed Source. `promotealign.loadLayer` reads its graph through `SoleGraphTx` until S12-09. Planning added: claim evidence reads each member's own graph (`graphcache.Member.GraphID`), and `evidence_graphs` rows set `Effect.Source` so a deleted graph leaves the cache.
 **Not this PR.** FFI and Swift (S12-08); Promote (S12-09).
-**Check.** Go tests: two graphs on one Source load, count and invalidate independently.
+**Check.** Go tests: two graphs on one Source load and count independently; a write under the Source drops both, and a write under another Source drops neither (per-graph drops come with S12-08's graph-keyed effects). Every handler test passes unchanged.
 **Context.** Working rules "A re-keyed symbol is renamed", "Effects are graph-keyed, in one step", "`subjects.source_id` stays". Waits on S11-14 and S11-15, which rework `loadLayer` and add a shortlist index on `graphcache`.
 
 #### S12-08 — Graph id end to end
