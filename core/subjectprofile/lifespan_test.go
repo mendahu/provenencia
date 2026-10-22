@@ -99,6 +99,22 @@ func TestLifespanFromEvents(t *testing.T) {
 			check: empty, missing: subjectcompare.LifespanContradicts},
 		{name: "AC-2.17 a residence wholly after the death", events: []subjectprofile.LifeEvent{ev(death, subj, y(1850)), ev(residence, subj, y(1900))},
 			check: empty, missing: subjectcompare.LifespanContradicts},
+		{name: "G1 a baptism and a residence before a year past the longest life", events: []subjectprofile.LifeEvent{ev(baptism, subj, y(1900)), ev(residence, subj, datevaluetest.Before(1780, 0, 0))},
+			check: empty, missing: subjectcompare.LifespanContradicts},
+		{name: "G2 a birth before a year beside a residence", events: []subjectprofile.LifeEvent{ev(birth, subj, datevaluetest.Before(1900, 0, 0)), ev(residence, subj, y(1880))},
+			check: func(t *testing.T, p subjectcompare.Values) {
+				t.Helper()
+				if len(p[vocabkey.PropertyLifespan]) != 1 {
+					t.Errorf("want a lifespan, got %s", subjectcomparetest.Labels(p))
+				}
+			}},
+		{name: "G3 a death after a year beside a residence", events: []subjectprofile.LifeEvent{ev(death, subj, datevaluetest.After(1950, 0, 0)), ev(residence, subj, y(1980))},
+			check: func(t *testing.T, p subjectcompare.Values) {
+				t.Helper()
+				if len(p[vocabkey.PropertyLifespan]) != 1 {
+					t.Errorf("want a lifespan, got %s", subjectcomparetest.Labels(p))
+				}
+			}},
 		{name: "AC-2.18 a coarser date in the same year is no contradiction", events: []subjectprofile.LifeEvent{
 			ev(birth, subj, datevaluetest.YMD(1850, 5, 1)), ev(baptism, subj, y(1850))},
 			first: y(1850), last: y(1850),

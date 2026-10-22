@@ -160,10 +160,10 @@ func addLifespans(out subjectcompare.Values, events []LifeEvent, lifespans map[v
 // lifespan lays the dated events on one timeline. The span is the first to the
 // last date; an end no date closes (a lone BEF or AFT) stays open, so the span
 // reads BEF or AFT there. The window takes its bounds from closed ends only.
-// It starts at the earliest closed start of a Starts event, else MaxYears
-// before the earliest closed start of any date, else it is open; it ends at the
-// latest closed end of an Ends event, else MaxYears after the latest closed end
-// of any date, else it is open. The side has a lifespan exactly when side.Missing is empty;
+// It starts at the earliest start of a Starts event when every such start is
+// closed, else MaxYears before the earliest closed start of any date, else it
+// is open; it ends at the latest end of an Ends event when every such end is
+// closed, else MaxYears after the latest closed end of any date, else it is open. The side has a lifespan exactly when side.Missing is empty;
 // its First and Last are then the dates as written that set the span's ends.
 // When the open ends leave the span's two closed ends the wrong way round (a
 // BEF date earlier than an AFT date), the span is read from the collapsed ends.
@@ -180,6 +180,10 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 	// endLate are those of the events that fix the start and the end.
 	var rawEarly, rawLate, startEarly, endLate []valuecompare.DateEnd
 	var dates []datevalue.Value
+	// startOpen and endOpen are set when some Starts record has an open first
+	// end, or some Ends record an open last end: that side's records then
+	// bound nothing on their own.
+	var startOpen, endOpen bool
 	for _, ev := range events {
 		er := subjectcompare.EventRole{EventType: ev.EventType, Role: ev.Role}
 		for _, d := range ev.Dates {
@@ -198,9 +202,11 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 			early, late, dates = append(early, first), append(late, last), append(dates, d)
 			if slices.Contains(l.Starts, er) {
 				startEarly = append(startEarly, rawFirst)
+				startOpen = startOpen || rawFirst.Open
 			}
 			if slices.Contains(l.Ends, er) {
 				endLate = append(endLate, rawLast)
+				endOpen = endOpen || rawLast.Open
 			}
 		}
 	}
@@ -215,7 +221,7 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 	// The window takes each bound from closed ends only: an open end never
 	// pins it. A side no closed end bounds stays open.
 	start, ok := valuecompare.Earliest(startEarly)
-	if !ok {
+	if !ok || startOpen {
 		if first, closed := valuecompare.Earliest(rawEarly); !closed {
 			start = valuecompare.DateEnd{Open: true}
 		} else if start, ok = valuecompare.ShiftYears(first, -l.MaxYears); !ok {
@@ -223,7 +229,7 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 		}
 	}
 	end, ok := valuecompare.Latest(endLate)
-	if !ok {
+	if !ok || endOpen {
 		if last, closed := valuecompare.Latest(rawLate); !closed {
 			end = valuecompare.DateEnd{Open: true}
 		} else if end, ok = valuecompare.ShiftYears(last, l.MaxYears); !ok {
