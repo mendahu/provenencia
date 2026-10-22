@@ -536,7 +536,7 @@ private struct EvidenceMemberRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             PVDivider()
-            HStack(alignment: .top, spacing: EvidenceLayout.gap) {
+            HStack(alignment: isLikeness ? .top : .center, spacing: EvidenceLayout.gap) {
                 PVCheckbox(
                     isChecked: context.binding([pin.id]),
                     isDisabled: isDisabled,
@@ -547,10 +547,15 @@ private struct EvidenceMemberRow: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityHidden(true)
             }
-            .padding(.vertical, PVSpacing.space3)
+            .padding(.vertical, PVSpacing.space2)
         }
         .padding(.leading, EvidenceLayout.textIndent)
         .padding(.trailing, EvidenceLayout.inset)
+    }
+
+    private var isLikeness: Bool {
+        if case .depiction = pin.value { return true }
+        return false
     }
 
     /// The record as it is spoken: a likeness with no Source title is "a record", not "Likeness".
@@ -574,14 +579,21 @@ private struct EvidenceMemberRow: View {
                 captionWidth: LikenessTile<EmptyView>.crop
             )
         } else {
-            VStack(alignment: .leading, spacing: PVSpacing.space1) {
+            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
                 Text(verbatim: context.worded(pin.value))
                     .font(PVFont.body(size: PVTypeScale.bodySmall))
                     .foregroundStyle(PVColor.textPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .layoutPriority(1)
                 if let title = context.sourceTitle(pin) {
+                    Spacer(minLength: PVSpacing.space3)
                     Text(verbatim: title)
                         .font(PVFont.body(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textMuted)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .multilineTextAlignment(.trailing)
                 }
             }
         }
