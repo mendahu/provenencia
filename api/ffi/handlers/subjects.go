@@ -237,11 +237,15 @@ func ListSubjectPositions(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListSubjectPositionsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := subjectpositions.ListBySource(c, sourceID)
+		out = &engine.ListSubjectPositionsResponse{}
+		graphID, ok, err := sourceGraphID(c, sourceID)
+		if err != nil || !ok {
+			return err
+		}
+		rows, err := subjectpositions.ListByEvidenceGraph(c, graphID)
 		if err != nil {
 			return err
 		}
-		out = &engine.ListSubjectPositionsResponse{}
 		for _, p := range rows {
 			out.Positions = append(out.Positions, subjectPositionProto(p))
 		}

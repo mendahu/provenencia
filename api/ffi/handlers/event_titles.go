@@ -3,7 +3,7 @@ package handlers
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/sourceeventtitles"
+	"github.com/mendahu/provenencia/core/database/grapheventtitles"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"google.golang.org/protobuf/proto"
@@ -71,7 +71,7 @@ func ListSourceEventTitles(in []byte) ([]byte, error) {
 		for id, info := range vocab.TermsByID() {
 			termLookup[id] = struct{ Key, Label string }{Key: info.Key, Label: info.Label}
 		}
-		for _, t := range sourceeventtitles.FromStored(eg, keys, termLookup) {
+		for _, t := range grapheventtitles.FromStored(eg, keys, termLookup) {
 			out.Titles = append(out.Titles, &engine.SourceEventTitle{
 				SubjectId: database.UUIDString(t.SubjectID),
 				Title:     eventTitleProto(t.Plan),

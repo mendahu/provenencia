@@ -1,4 +1,4 @@
-package sourceeventtitles_test
+package grapheventtitles_test
 
 import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
@@ -9,12 +9,12 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/grapheventtitles"
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/sourceeventtitles"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -140,7 +140,7 @@ func (f *fixture) location(event, place subjects.Subject) {
 	)
 }
 
-func TestForSource(t *testing.T) {
+func TestForEvidenceGraph(t *testing.T) {
 	f := newFixture(t)
 	name := func(form string) observations.Input {
 		return observations.Input{PropertyID: f.prop("name"), Name: namevaluetest.Western(form)}
@@ -276,15 +276,35 @@ func TestForSource(t *testing.T) {
 		}
 	})
 
+	t.Run("one Event on each graph titles only its own graph's", func(t *testing.T) {
+		f := newFixture(t)
+		f.subject("event", "Default event")
+		page2, err := runArtifactCreate(f.c, userID, artifacts.CreateInput{SourceID: f.src.ID, Label: "Page 2"})
+		must(t, err)
+		_, jones := evidencegraphstest.Split(t, f.c, userID, f.src.ID, "Jones", page2.ID)
+		st, err := subjecttypes.Lookup(f.c, "event", vocabkey.OriginProvenencia)
+		must(t, err)
+		jonesEvent, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.src.ID, GraphID: jones.ID, SubjectTypeID: st.ID, Label: "Jones event"}, nil)
+		})
+		must(t, err)
+		eg, err := f.c.Graph().EvidenceGraph(jones.ID)
+		must(t, err)
+		got := grapheventtitles.FromStored(eg, nil, nil)
+		if len(got) != 1 || string(got[0].SubjectID) != string(jonesEvent.ID) {
+			t.Fatalf("titles %+v, want one for %x", got, jonesEvent.ID)
+		}
+	})
+
 	t.Run("an empty Source has no titles", func(t *testing.T) {
-		got := sourceeventtitles.FromStored(graphcache.EvidenceGraph{}, nil, nil)
+		got := grapheventtitles.FromStored(graphcache.EvidenceGraph{}, nil, nil)
 		if len(got) != 0 {
 			t.Fatalf("titled %d", len(got))
 		}
 	})
 }
 
-func titlesFromStored(t *testing.T, f *fixture) []sourceeventtitles.Title {
+func titlesFromStored(t *testing.T, f *fixture) []grapheventtitles.Title {
 	t.Helper()
 	eg, err := f.c.Graph().EvidenceGraph(evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID)
 	must(t, err)
@@ -298,7 +318,7 @@ func titlesFromStored(t *testing.T, f *fixture) []sourceeventtitles.Title {
 	for _, term := range v.Terms {
 		terms[string(term.ID)] = struct{ Key, Label string }{Key: term.Key, Label: term.Label}
 	}
-	return sourceeventtitles.FromStored(eg, propKey, terms)
+	return grapheventtitles.FromStored(eg, propKey, terms)
 }
 
 func sameSet(got, want []string) bool {

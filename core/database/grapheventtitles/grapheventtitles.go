@@ -1,12 +1,12 @@
-// Package sourceeventtitles chooses the title of every Event Subject on one
-// Source's Evidence graph, from what that Source cites: the event's own
-// event_name and event_type, the people its subject-role participations name,
-// and the places its locations name. The rule is eventtitle's, the same one
-// canonical Event headers use, so a card and the Event it is promoted to
-// title themselves by one matrix.
+// Package grapheventtitles chooses the title of every Event Subject on one
+// Evidence graph, from what that graph cites: the event's own event_name and
+// event_type, the people its subject-role participations name, and the places
+// its locations name. The rule is eventtitle's, the same one canonical Event
+// headers use, so a card and the Event it is promoted to title themselves by
+// one matrix.
 //
-// It reads the loaded Source graph and issues no query.
-package sourceeventtitles
+// It reads the loaded Evidence graph and issues no query.
+package grapheventtitles
 
 import (
 	"slices"
