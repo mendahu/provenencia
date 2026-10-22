@@ -210,7 +210,7 @@ None —.
 ## 7. Steps
 
 **STEP-1 — Fold aliases of given names into their formal names**
-Files: `core/valuecompare/aliases.go`, `core/valuecompare/words_test.go`, `core/autoreconcile/names.go`, `core/autoreconcile/names_test.go`, `core/autoreconcile/modules_test.go`. Skill: `add-match-rule` (no knob; read it for the layer rules).
+Files: `core/valuecompare/aliases.go`, `core/valuecompare/words_test.go`, `core/autoreconcile/names.go`, `core/autoreconcile/names_test.go`. Skill: `add-match-rule` (no knob; read it for the layer rules).
 Do: implement D-1, D-1a, D-2, D-3 per the sketch; add T-8. Add `aliasRules` (product `matchregistry.Default().Value` with a `NewAliasIndex` over two `FormalFirst` tables: nickname `{christopher, chris, kit}`, `{christina, chris}`, `{william, bill}`, `{james, jim}`, `{abel, ebbie}`, `{allan, allen}`, `{allen, allan}`; abbreviation `{william, wm}`; roles given / nick / untyped). Add `TestReconcileNamesAliases` *(new)* with T-1's rows, in the shape of `TestReconcileNames` (`in`, `want []cl`, `state`, `reasons`).
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/valuecompare/ ./core/autoreconcile/` passes, including the untouched `TestReconcileNamesWords` row "an accent-folded pair never folds".
 
