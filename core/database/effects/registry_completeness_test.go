@@ -82,7 +82,7 @@ func hasWork(e Effect) bool {
 }
 
 // TestSourceEvidenceIsNotActivity pins which tables move a Source's evidence
-// (Effect.Source: what the Source graph, graph progress, citation counts, and
+// (Effect.Source: what the Evidence graph cache, graph progress, citation counts, and
 // citations by artifact load) and which move its last activity
 // (Effect.SourceScope: the audit source scope). Identity claims change the
 // evidence graph but have never been audited under a Source.
@@ -98,7 +98,7 @@ func TestSourceEvidenceIsNotActivity(t *testing.T) {
 		{"source_metadata", false, true, false},
 		{"source_metadata_layout", false, true, false},
 		{"source_credibility_assessments", false, true, false},
-		{"evidence_graphs", false, true, false},
+		{"evidence_graphs", true, true, false},
 		{"evidence_graph_artifacts", false, true, false},
 		{"files", false, true, false},
 		{"citation_notes", false, true, false},

@@ -5,11 +5,18 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
@@ -24,7 +31,7 @@ var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 
 // TestRetitleDropsEvidenceGraph: an Evidence graph knows its Source's title, so
 // a title edit drops it and the next read has the new title. An id no graph has
-// reads as not found.
+// reads as not found. A retitle drops every graph of its Source.
 func TestRetitleDropsEvidenceGraph(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
@@ -79,6 +86,28 @@ func TestRetitleDropsEvidenceGraph(t *testing.T) {
 	if eg := read(make([]byte, 16)); eg.Found || eg.SourceTitle != "" {
 		t.Fatalf("unknown id found %v, title %q", eg.Found, eg.SourceTitle)
 	}
+
+	t.Run("a Source with two graphs", func(t *testing.T) {
+		f := newTwoGraphs(t)
+		f.read(t, f.def.ID)
+		f.read(t, f.jones.ID)
+		f.src.Title = "Parish register"
+		if _, _, err := writes.Run(f.c, writes.Op{Action: "update_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			ch, err := sources.Update(tx, userID, f.src)
+			return f.src, ch, err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		g := f.c.Graph()
+		if g.LoadedEvidenceGraphForTest(f.def.ID) || g.LoadedEvidenceGraphForTest(f.jones.ID) {
+			t.Fatal("a title edit left a graph of the Source loaded")
+		}
+		for _, id := range [][]byte{f.def.ID, f.jones.ID} {
+			if eg := f.read(t, id); eg.SourceTitle != "Parish register" {
+				t.Fatalf("title after the edit %q", eg.SourceTitle)
+			}
+		}
+	})
 }
 
 // TestOnlyATitleChangeDropsEvidenceGraph: an Evidence graph holds the title and
@@ -142,5 +171,209 @@ func TestOnlyATitleChangeDropsEvidenceGraph(t *testing.T) {
 	update(src)
 	if g.LoadedEvidenceGraphForTest(graphID) {
 		t.Fatal("a title edit left the evidence graph loaded")
+	}
+}
+
+const pageLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
+
+// twoGraphs is one Source ("Register") split into a Default graph holding
+// Ada (a person) and a Jones graph holding Bea (a place) and one Observation on her, plus a second
+// Source with one graph holding one Subject.
+type twoGraphs struct {
+	c          *database.Catalog
+	src, other sources.Source
+	def, jones evidencegraphs.Graph
+	ada, bea   subjects.Subject
+	away       subjects.Subject
+	page1      artifacts.Artifact
+	typeID     []byte
+}
+
+func newTwoGraphs(t *testing.T) twoGraphs {
+	t.Helper()
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Tester", r); err != nil {
+		t.Fatal(err)
+	}
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	f := twoGraphs{c: c}
+	f.typeID, err = sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	newSource := func(title string) sources.Source {
+		s, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: f.typeID, Title: title})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	newArtifact := func(src sources.Source, label string) artifacts.Artifact {
+		a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID}, func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, artifacts.CreateInput{SourceID: src.ID, Label: label})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return a
+	}
+	person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	place, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	newSubject := func(src sources.Source, graphID []byte, typeID []byte, label string) subjects.Subject {
+		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, GraphID: graphID, SubjectTypeID: typeID, Label: label}, nil)
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	f.src = newSource("Register")
+	f.page1 = newArtifact(f.src, "Page 1")
+	page2 := newArtifact(f.src, "Page 2")
+	f.def, f.jones = evidencegraphstest.Split(t, c, userID, f.src.ID, "Jones", page2.ID)
+	f.ada = newSubject(f.src, f.def.ID, person.ID, "Ada")
+	f.bea = newSubject(f.src, f.jones.ID, place.ID, "Bea")
+	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: page2.ID, LocatorJSON: pageLocator},
+			[]observations.Input{{SubjectID: f.bea.ID, PropertyID: toponym.ID, ValueText: "Bea", HasText: true}})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	f.other = newSource("Elsewhere")
+	f.away = newSubject(f.other, nil, person.ID, "Cy")
+	return f
+}
+
+func (f twoGraphs) read(t *testing.T, graphID []byte) graphcache.EvidenceGraph {
+	t.Helper()
+	eg, err := f.c.Graph().EvidenceGraph(graphID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return eg
+}
+
+func labels(eg graphcache.EvidenceGraph) []string {
+	var out []string
+	for _, s := range eg.Subjects {
+		out = append(out, s.Label)
+	}
+	return out
+}
+
+// TestTwoEvidenceGraphsLoadApart: two graphs of one Source each hold only their
+// own Subjects and Observations, and both name the Source and its title.
+func TestTwoEvidenceGraphsLoadApart(t *testing.T) {
+	f := newTwoGraphs(t)
+	def, jones := f.read(t, f.def.ID), f.read(t, f.jones.ID)
+	for name, eg := range map[string]graphcache.EvidenceGraph{"Default": def, "Jones": jones} {
+		if !eg.Found || eg.SourceTitle != "Register" || !bytes.Equal(eg.SourceID, f.src.ID) {
+			t.Fatalf("%s: found %v, title %q, source %x", name, eg.Found, eg.SourceTitle, eg.SourceID)
+		}
+	}
+	if !bytes.Equal(def.GraphID, f.def.ID) || !bytes.Equal(jones.GraphID, f.jones.ID) {
+		t.Fatalf("graph ids %x, %x", def.GraphID, jones.GraphID)
+	}
+	if got := labels(def); len(got) != 1 || got[0] != "Ada" {
+		t.Fatalf("Default subjects %v", got)
+	}
+	if got := labels(jones); len(got) != 1 || got[0] != "Bea" {
+		t.Fatalf("Jones subjects %v", got)
+	}
+	if len(def.Observations) != 0 {
+		t.Fatalf("Default observations %+v", def.Observations)
+	}
+	if len(jones.Observations) != 1 || !bytes.Equal(jones.Observations[0].SubjectID, f.bea.ID) {
+		t.Fatalf("Jones observations %+v", jones.Observations)
+	}
+}
+
+// TestSourceWriteDropsEveryGraph: a write that names a Source drops every
+// loaded graph of it, with their memos, and leaves another Source's graph.
+func TestSourceWriteDropsEveryGraph(t *testing.T) {
+	f := newTwoGraphs(t)
+	g := f.c.Graph()
+	otherGraph := evidencegraphstest.SoleGraph(t, f.c, f.other.ID).ID
+	for _, id := range [][]byte{f.def.ID, f.jones.ID, otherGraph} {
+		f.read(t, id)
+		g.SetEvidenceGraphMemo(id, "k", "memo")
+		if _, ok := g.EvidenceGraphMemo(id, "k"); !ok {
+			t.Fatalf("memo for %x not held", id)
+		}
+	}
+	person, err := subjecttypes.Lookup(f.c, "person", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.src.ID, GraphID: f.jones.ID, SubjectTypeID: person.ID, Label: "Cal"}, nil)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range [][]byte{f.def.ID, f.jones.ID} {
+		if g.LoadedEvidenceGraphForTest(id) {
+			t.Fatalf("graph %x of the written Source is still loaded", id)
+		}
+		if _, ok := g.EvidenceGraphMemo(id, "k"); ok {
+			t.Fatalf("memo of graph %x outlived its graph", id)
+		}
+	}
+	if !g.LoadedEvidenceGraphForTest(otherGraph) {
+		t.Fatal("a write on one Source dropped another Source's graph")
+	}
+	if _, ok := g.EvidenceGraphMemo(otherGraph, "k"); !ok {
+		t.Fatal("a write on one Source dropped another Source's memo")
+	}
+	if got := labels(f.read(t, f.jones.ID)); len(got) != 2 {
+		t.Fatalf("Jones after the write %v", got)
+	}
+}
+
+// TestDeletedGraphIsNotFound: deleting a graph drops it, and the next read of
+// its id finds nothing.
+func TestDeletedGraphIsNotFound(t *testing.T) {
+	f := newTwoGraphs(t)
+	empty := evidencegraphstest.Create(t, f.c, userID, f.src.ID, "Empty", f.page1.ID)
+	if eg := f.read(t, empty.ID); !eg.Found || len(eg.Subjects) != 0 {
+		t.Fatalf("empty graph found %v, subjects %d", eg.Found, len(eg.Subjects))
+	}
+	g := f.c.Graph()
+	if !g.LoadedEvidenceGraphForTest(empty.ID) {
+		t.Fatal("graph not loaded")
+	}
+	if _, _, err := writes.Run(f.c, writes.Op{Action: "delete_evidence_graph", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		ch, err := evidencegraphs.Delete(tx, userID, empty.ID)
+		return struct{}{}, ch, err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if g.LoadedEvidenceGraphForTest(empty.ID) {
+		t.Fatal("a deleted graph is still loaded")
+	}
+	if eg := f.read(t, empty.ID); eg.Found {
+		t.Fatalf("a deleted graph reads as found: %+v", eg)
 	}
 }
