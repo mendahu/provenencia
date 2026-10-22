@@ -27,7 +27,9 @@ import (
 type vocab struct {
 	propID    map[string][]byte
 	termLabel map[string]string
-	typeID    map[string][]byte
+	// termOrigin is each term's origin: a key names a product term only with the product's.
+	termOrigin map[string]string
+	typeID     map[string][]byte
 }
 
 func vocabulary(g *graphcache.Graph) (vocab, error) {
@@ -46,9 +48,10 @@ func vocabulary(g *graphcache.Graph) (vocab, error) {
 
 func loadVocab(g *graphcache.Graph) (vocab, error) {
 	v := vocab{
-		propID:    map[string][]byte{},
-		termLabel: map[string]string{},
-		typeID:    map[string][]byte{},
+		propID:     map[string][]byte{},
+		termLabel:  map[string]string{},
+		termOrigin: map[string]string{},
+		typeID:     map[string][]byte{},
 	}
 	if err := scanVocab(g, `SELECT id, key FROM properties WHERE origin = ?`, []any{vocabkey.OriginProvenencia}, func(id []byte, key, _ string) {
 		v.propID[key] = append([]byte(nil), id...)
@@ -57,6 +60,11 @@ func loadVocab(g *graphcache.Graph) (vocab, error) {
 	}
 	if err := scanVocab(g, `SELECT id, label FROM property_terms`, nil, func(id []byte, label, _ string) {
 		v.termLabel[string(id)] = label
+	}); err != nil {
+		return vocab{}, err
+	}
+	if err := scanVocab(g, `SELECT id, origin FROM property_terms`, nil, func(id []byte, origin, _ string) {
+		v.termOrigin[string(id)] = origin
 	}); err != nil {
 		return vocab{}, err
 	}
@@ -679,6 +687,7 @@ func finishEvent(v vocab, h EventHeader) EventHeader {
 	if h.EventType != nil {
 		et := *h.EventType
 		et.Label = v.termLabel[string(et.ID)]
+		et.Origin = v.termOrigin[string(et.ID)]
 		h.EventType = &et
 	}
 	h.Title = eventTitle(h)

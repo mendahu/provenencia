@@ -21,6 +21,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -566,4 +567,13 @@ func TestEventTitlesUseOneRule(t *testing.T) {
 			},
 		},
 	})
+}
+
+// A user event type keyed like a product one crosses with its origin, so the
+// app never reads it as the product's.
+func TestEventTitleProtoCarriesTheTypeOrigin(t *testing.T) {
+	got := eventTitleProto(eventtitle.Choose(eventtitle.Parts{TypeKey: "birth", TypeOrigin: "user", TypeLabel: "Arrival"}))
+	if got.GetTypeKey() != "birth" || got.GetTypeOrigin() != "user" {
+		t.Fatalf("type = %q (%q)", got.GetTypeKey(), got.GetTypeOrigin())
+	}
 }

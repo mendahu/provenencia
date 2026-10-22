@@ -1493,18 +1493,6 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.connection.link", defaultValue: "%1$@ · %2$@ · %3$@", comment: "A connection as the page words it: one end, the link, the other end; shared by the Promote evidence sheet and connection subrows"), first, phrase, second)
         }
         static let nothingUnder = LocalizedStringResource("promote.sheet.nothingUnder", defaultValue: "Nothing else to compare.", comment: "Caption under a relationship that has no lines of its own")
-        static let lifespanTitle = LocalizedStringResource("promote.sheet.lifespan.title", defaultValue: "Lifespan", comment: "Header of the lifespan card on the evidence sheet")
-        static let lifespanCaption = LocalizedStringResource("promote.sheet.lifespan.caption", defaultValue: "Worked out from dated events. A guide for matching, never pinned.", comment: "Caption under the lifespan line on the evidence sheet")
-        static func lifespanFits(here: String, there: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.lifespan.fits", defaultValue: "The lifespans fit: %1$@ here, %2$@ on the record", comment: "Lifespan line when the two lives can both be true; 1 = this source's span, 2 = the record's span"), here, there)
-        }
-        static func lifespanConflict(here: String, there: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.lifespan.conflict", defaultValue: "The lifespans don't fit: %1$@ here, %2$@ on the record", comment: "Lifespan line when the two lives cannot both be true; 1 = this source's span, 2 = the record's span"), here, there)
-        }
-        static let lifespanNoneThisSource = LocalizedStringResource("promote.sheet.lifespan.noneThisSource", defaultValue: "No lifespan to compare: this source has no dated events", comment: "Lifespan line when the Source being promoted has no dated events")
-        static let lifespanNoneRecord = LocalizedStringResource("promote.sheet.lifespan.noneRecord", defaultValue: "No lifespan to compare: the record has no dated events", comment: "Lifespan line when the record has no dated events")
-        static let lifespanContradictsThisSource = LocalizedStringResource("promote.sheet.lifespan.contradictsThisSource", defaultValue: "No lifespan for this source: its own dates contradict each other", comment: "Lifespan line when the Source being promoted dates itself inconsistently")
-        static let lifespanContradictsRecord = LocalizedStringResource("promote.sheet.lifespan.contradictsRecord", defaultValue: "No lifespan for the record: its own dates contradict each other", comment: "Lifespan line when the record's own dates contradict each other")
         static let pickRecordTitle = LocalizedStringResource("promote.sheet.pickRecord.title", defaultValue: "Pick a record to see its evidence", comment: "Empty state title on the evidence sheet of a row with no record")
         static let pickRecordBody = LocalizedStringResource("promote.sheet.pickRecord.body", defaultValue: "Choose a record in this row's menu. New and Skip file no evidence.", comment: "Empty state body on the evidence sheet of a row with no record")
         static let nothingToCompareTitle = LocalizedStringResource("promote.sheet.nothingToCompare.title", defaultValue: "Nothing to compare yet", comment: "Empty state title when the record has nothing to compare with this row")

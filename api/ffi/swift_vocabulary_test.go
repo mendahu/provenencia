@@ -26,7 +26,6 @@ import (
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/raster"
 	"github.com/mendahu/provenencia/core/segmentcompare"
-	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -292,10 +291,6 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 				string(valuecompare.CauseOrder), string(valuecompare.CauseRole), string(valuecompare.CauseUnsupported), string(valuecompare.CauseUnjudged)),
 		},
 		{
-			name: "lifespan missing", path: swiftVocabulary, enum: "LifespanMissing", re: wireCase,
-			want: sorted("", string(subjectcompare.LifespanUndated), string(subjectcompare.LifespanContradicts)),
-		},
-		{
 			name: "segment causes", path: swiftVocabulary, enum: "SegmentCause", re: wireCase,
 			want: sorted("", string(segmentcompare.CauseNotCorresponding), string(segmentcompare.CauseGated),
 				string(segmentcompare.CausePlacedApart), string(segmentcompare.CauseUnplacedDiffers),
@@ -348,10 +343,16 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 	}
 	t.Run("states and reasons tolerate a value this build doesn't know", func(t *testing.T) {
 		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteReasonCode",
-			"EvidenceOutcome", "EvidencePropertyCause", "ValueRelation", "ValueCause", "LifespanMissing", "SegmentCause"} {
+			"EvidenceOutcome", "EvidencePropertyCause", "ValueRelation", "ValueCause", "SegmentCause"} {
 			if !unrecogniz.MatchString(swiftEnumBody(t, swiftVocabulary, enum)) {
 				t.Fatalf("%s has no unrecognized case", enum)
 			}
+		}
+	})
+	t.Run("the product's origin is Go's", func(t *testing.T) {
+		got := matches(staticLet, swiftEnumBody(t, swiftVocabulary, "SeededOrigin"))
+		if len(got) != 1 || got[0] != vocabkey.OriginProvenencia {
+			t.Fatalf("Swift SeededOrigin %q, Go %q", got, vocabkey.OriginProvenencia)
 		}
 	})
 	t.Run("seeded Property keys are seeded", func(t *testing.T) {

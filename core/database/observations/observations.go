@@ -78,6 +78,7 @@ const (
 		p.key, p.label, p.value_type,
 		COALESCE(pt.label, ''),
 		COALESCE(pt.key, ''),
+		COALESCE(pt.origin, ''),
 		COALESCE(nv.form, ''),
 		COALESCE(vs.label, ''),
 		dv.kind, dv.qualifier, dv.calendar,
@@ -139,6 +140,8 @@ type Listed struct {
 	ValueTermLabel string
 	// ValueTermKey is the property_terms.key for value_term_id (empty when unset).
 	ValueTermKey string
+	// ValueTermOrigin is the property_terms.origin for value_term_id (empty when unset).
+	ValueTermOrigin string
 	// ValueNameForm is name_values.form for value_name_id (empty when unset).
 	ValueNameForm string
 	// Name is the joined name_values row plus parts when value_name_id is set.
@@ -648,7 +651,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 			depictionRegion                                           sql.NullString
 			depictionImage                                            []byte
 			citationLocator, imageMediaType                           sql.NullString
-			termLabel, termKey, nameForm, subjectLabel                string
+			termLabel, termKey, termOrigin, nameForm, subjectLabel    string
 			kind, qual, cal, phrase, startTZ, endTZ                   sql.NullString
 			startY, startM, startD, startH, startMin, startS, startMs sql.NullInt64
 			endY, endM, endD, endH, endMin, endS, endMs               sql.NullInt64
@@ -658,7 +661,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 			&valueText, &valueInt, &dateID, &nameID, &subjectID, &termID,
 			&depictionID,
 			&l.PropertyKey, &l.PropertyLabel, &l.PropertyValueType,
-			&termLabel, &termKey, &nameForm, &subjectLabel,
+			&termLabel, &termKey, &termOrigin, &nameForm, &subjectLabel,
 			&kind, &qual, &cal,
 			&startY, &startM, &startD,
 			&startH, &startMin, &startS, &startMs, &startTZ,
@@ -685,6 +688,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 		l.Depiction = depictionvalues.FromJoin(depictionID, depictionRegion, depictionImage, citationLocator, imageMediaType)
 		l.ValueTermLabel = termLabel
 		l.ValueTermKey = termKey
+		l.ValueTermOrigin = termOrigin
 		l.ValueNameForm = nameForm
 		l.ValueSubjectLabel = subjectLabel
 		if kind.Valid && kind.String != "" {

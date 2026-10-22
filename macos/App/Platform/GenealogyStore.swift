@@ -402,32 +402,11 @@ struct CatalogClaimEvidenceOffer: Sendable, Equatable {
     var checked: Bool
 }
 
-/// One side's life on the lifespan check: its first and last dated events as
-/// written, or why it has no lifespan.
-struct CatalogClaimEvidenceLifeSide: Sendable, Equatable {
-    var first: CatalogDateValueInput?
-    var last: CatalogDateValueInput?
-    var missing: LifespanMissing
-}
-
-/// The lifespan check between the row and the record. It is never a line and
-/// never pinned.
-struct CatalogClaimEvidenceLifespan: Sendable, Equatable {
-    var outcome: EvidenceOutcome
-    var propertyCause: EvidencePropertyCause
-    var relation: ValueRelation
-    var cause: ValueCause
-    var row: CatalogClaimEvidenceLifeSide
-    var record: CatalogClaimEvidenceLifeSide
-}
-
 /// One Promote row's claim evidence against its target (`getPromoteClaimEvidence`).
 struct CatalogClaimEvidence: Sendable, Equatable {
     var sections: [CatalogClaimEvidenceSection] = []
     var relationships: [CatalogClaimEvidenceRelationship] = []
     var offers: [CatalogClaimEvidenceOffer] = []
-    /// The lifespan check; nil for a kind with no lifespan, or when neither side has dates.
-    var lifespan: CatalogClaimEvidenceLifespan?
     /// Source id → title.
     var sourceTitles: [String: String] = [:]
 
@@ -587,6 +566,8 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
     var eventName: String = ""
     var eventNameCount: Int = 0
     var eventTypeKey: String = ""
+    /// The type term's origin; `eventTypeKey` is the product's only when this is `SeededOrigin.provenencia`.
+    var eventTypeOrigin: String = ""
     var eventTypeLabel: String = ""
     var eventTypeCount: Int = 0
     var date: CatalogDateValueInput?
@@ -627,6 +608,8 @@ struct CatalogEventTitle: Sendable, Equatable {
     var label: String = ""
     var ref: String = ""
     var typeKey: String = ""
+    /// The type term's origin; `typeKey` is the product's only when this is `SeededOrigin.provenencia`.
+    var typeOrigin: String = ""
     var typeLabel: String = ""
     /// Subject-role persons in stable order; `nil` reads "unnamed person".
     var subjects: [CatalogNameValue?] = []
@@ -803,6 +786,8 @@ struct CatalogObservation: Sendable, Equatable, Identifiable {
     var propertyValueType: String
     /// Product/user term key when `valueTermID` is set (empty when unknown).
     var valueTermKey: String = ""
+    /// The term's origin; its key is the product's only when this is `SeededOrigin.provenencia`.
+    var valueTermOrigin: String = ""
     /// depiction_values.id when the Observation holds a depiction.
     var valueDepictionID: String = ""
     /// The saved depiction when listed; response data, never sent back to Go.
@@ -884,7 +869,7 @@ struct CatalogConnectRule: Sendable, Equatable {
         CatalogConnectRule(
             fromTypeKey: "person", toTypeKey: "event",
             bridgeTypeKey: "participation", edgePropertyKeys: ["person", "event"],
-            disambiguation: "role", refuse: false,
+            disambiguation: SeededPropertyKey.role, refuse: false,
             edges: [
                 CatalogConnectEdge(propertyKey: "person", endpointTypeKey: "person"),
                 CatalogConnectEdge(propertyKey: "event", endpointTypeKey: "event"),
@@ -893,7 +878,7 @@ struct CatalogConnectRule: Sendable, Equatable {
         CatalogConnectRule(
             fromTypeKey: "event", toTypeKey: "person",
             bridgeTypeKey: "participation", edgePropertyKeys: ["person", "event"],
-            disambiguation: "role", refuse: false,
+            disambiguation: SeededPropertyKey.role, refuse: false,
             edges: [
                 CatalogConnectEdge(propertyKey: "person", endpointTypeKey: "person"),
                 CatalogConnectEdge(propertyKey: "event", endpointTypeKey: "event"),

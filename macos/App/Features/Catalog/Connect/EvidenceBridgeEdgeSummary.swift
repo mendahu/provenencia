@@ -101,8 +101,7 @@ enum EvidenceBridgeEdgeSummary {
         guard let subjectID,
               let placed = snapshot.subjects.first(where: { $0.id == subjectID }),
               placed.kind == .event,
-              let key = identityObservation(on: placed)?.valueTermKey,
-              !key.isEmpty
+              let key = productKey(of: identityObservation(on: placed))
         else { return nil }
         return key
     }
@@ -139,11 +138,17 @@ enum EvidenceBridgeEdgeSummary {
         return observations.first(where: { $0.propertyKey == key })
     }
 
+    /// The bridge's term key, only when it is a product term: the sentence
+    /// registry matches product keys, never a researcher's.
     private static func termKey(kind: EvidenceBridgeKind, in observations: [CatalogObservation]) -> String? {
-        guard let key = termObservation(kind: kind, in: observations)?.valueTermKey, !key.isEmpty else {
-            return nil
-        }
-        return key
+        productKey(of: termObservation(kind: kind, in: observations))
+    }
+
+    private static func productKey(of observation: CatalogObservation?) -> String? {
+        guard let observation, observation.valueTermOrigin == SeededOrigin.provenencia,
+              !observation.valueTermKey.isEmpty
+        else { return nil }
+        return observation.valueTermKey
     }
 
     private static func termDisplay(
@@ -160,6 +165,7 @@ enum EvidenceBridgeEdgeSummary {
         if !termKey.isEmpty {
             return PropertyTermDisplay.name(
                 key: termKey,
+                origin: observation.valueTermOrigin,
                 propertyKey: key,
                 catalogLabel: catalog
             )

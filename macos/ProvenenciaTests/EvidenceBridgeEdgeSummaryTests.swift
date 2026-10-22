@@ -171,8 +171,10 @@ struct EvidenceBridgeEdgeSummaryTests {
     @Test func aParticipationReadsFromTheRegistry() {
         var role = observation(propertyKey: "role", valueText: "Subject", valueType: "term")
         role.valueTermKey = "subject"
+        role.valueTermOrigin = SeededOrigin.provenencia
         var eventType = identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Birth")
         eventType.valueTermKey = "birth"
+        eventType.valueTermOrigin = SeededOrigin.provenencia
         let placed = bridge(kind: .participation, observations: [
             observation(propertyKey: "person", valueSubjectID: "p1"),
             observation(propertyKey: "event", valueSubjectID: "e1"),
@@ -189,6 +191,51 @@ struct EvidenceBridgeEdgeSummaryTests {
             primary(id: "e1", kind: .event, label: "Birth", ref: "CEV-1", observations: [eventType]),
         ])
         #expect(EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap) == "Alice was born")
+    }
+
+    @Test func aUserTermKeyedLikeAProductTermReadsGenerically() {
+        // A researcher's own role "subject", labelled "Main person", at a product birth.
+        var role = observation(propertyKey: "role", valueText: "Main person", valueType: "term")
+        role.valueTermKey = "subject"
+        role.valueTermOrigin = "user"
+        var eventType = identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Birth")
+        eventType.valueTermKey = "birth"
+        eventType.valueTermOrigin = SeededOrigin.provenencia
+        let placed = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueSubjectID: "p1"),
+            observation(propertyKey: "event", valueSubjectID: "e1"),
+            role,
+        ])
+        let people = [
+            primary(
+                id: "p1", kind: .person, label: "Alice", ref: "CPR-1",
+                observations: [identityObservation(subjectID: "p1", propertyKey: "name", valueText: "Alice")]
+            ),
+        ]
+        let snap = snapshot(bridge: placed, subjects: people + [
+            primary(id: "e1", kind: .event, label: "Birth", ref: "CEV-1", observations: [eventType]),
+        ])
+        let sentence = EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap)
+        #expect(sentence.hasPrefix("Alice participated as Main person"))
+        #expect(!sentence.contains("was born"))
+        #expect(EvidenceBridgeEdgeSummary.phrase(for: placed).contains("Main person"))
+
+        // A researcher's own event type "birth" with the product's subject role.
+        var productRole = observation(propertyKey: "role", valueText: "Subject", valueType: "term")
+        productRole.valueTermKey = "subject"
+        productRole.valueTermOrigin = SeededOrigin.provenencia
+        var userType = identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Arrival")
+        userType.valueTermKey = "birth"
+        userType.valueTermOrigin = "user"
+        let userPlaced = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueSubjectID: "p1"),
+            observation(propertyKey: "event", valueSubjectID: "e1"),
+            productRole,
+        ])
+        let userSnap = snapshot(bridge: userPlaced, subjects: people + [
+            primary(id: "e1", kind: .event, label: "Arrival", ref: "CEV-1", observations: [userType]),
+        ])
+        #expect(!EvidenceBridgeEdgeSummary.sentence(for: userPlaced, in: userSnap).contains("was born"))
     }
 
     @Test func anEventEndpointIsNamedByItsTitle() {
@@ -220,10 +267,12 @@ struct EvidenceBridgeEdgeSummaryTests {
     private func titledEventSentence(eventType: String, title: String) -> String {
         var role = observation(propertyKey: "role", valueText: "Subject", valueType: "term")
         role.valueTermKey = "subject"
+        role.valueTermOrigin = SeededOrigin.provenencia
         var typeObservation = identityObservation(
             subjectID: "e1", propertyKey: "event_type", valueText: eventType.capitalized
         )
         typeObservation.valueTermKey = eventType
+        typeObservation.valueTermOrigin = SeededOrigin.provenencia
         let placed = bridge(kind: .participation, observations: [
             observation(propertyKey: "person", valueSubjectID: "p1"),
             observation(propertyKey: "event", valueSubjectID: "e1"),

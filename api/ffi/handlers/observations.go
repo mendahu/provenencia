@@ -364,6 +364,7 @@ func listedObservationProto(l observations.Listed, paths map[string]string) *eng
 	o.PropertyLabel = l.PropertyLabel
 	o.PropertyValueType = l.PropertyValueType
 	o.ValueTermKey = l.ValueTermKey
+	o.ValueTermOrigin = l.ValueTermOrigin
 	if l.Date != nil {
 		o.Date = valuecodec.DateToProto(*l.Date)
 	}

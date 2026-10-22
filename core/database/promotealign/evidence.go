@@ -180,9 +180,7 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 	out := claimevidence.Build(vocabkey.SubjectType(in.primary[string(row.SubjectID)].kind), valuesOf[string(row.SubjectID)],
 		q.prof.values(row.HandleID), members, neighbors, in.layer.Metas, matchregistry.Default().Evidence,
 		in.cfg.Segment, in.cfg.Subject, in.cfg.Value, claimevidence.Inputs{
-			Order:  kindOrder,
-			Row:    in.primary[string(row.SubjectID)].life,
-			Record: q.prof.life(row.HandleID),
+			Order: kindOrder,
 		})
 	if out.Sources, err = q.titles(out); err != nil {
 		return claimevidence.Evidence{}, err

@@ -34,17 +34,6 @@ enum PersonLifeDisplay {
         return DateRowDisplay.line(date: date, locale: locale)
     }
 
-    /// A life's first and last dated events as one span: "14 May 1817 – 2 Jun 1890", and
-    /// one date, once, when the two are the same event ("1843", not "1843 –").
-    static func span(
-        first: CatalogDateValueInput?,
-        last: CatalogDateValueInput?,
-        locale: Locale = .autoupdatingCurrent
-    ) -> String {
-        if first == last { return dateText(first, locale: locale) }
-        return dateSpan(birth: first, death: last, locale: locale)
-    }
-
     private static func dateSpan(
         birth: CatalogDateValueInput?,
         death: CatalogDateValueInput?,

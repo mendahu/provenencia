@@ -281,10 +281,16 @@ func TestObservations(t *testing.T) {
 						if row.ValueTermKey != "female" {
 							t.Fatalf("term key %q, want female", row.ValueTermKey)
 						}
+						if row.ValueTermOrigin != "provenencia" {
+							t.Fatalf("term origin %q, want provenencia", row.ValueTermOrigin)
+						}
 						sawTerm = true
 					}
 					if row.PropertyKey == "toponym" && row.ValueTermKey != "" {
 						t.Fatalf("non-term observation has term key %q", row.ValueTermKey)
+					}
+					if row.PropertyKey == "toponym" && row.ValueTermOrigin != "" {
+						t.Fatalf("non-term observation has term origin %q", row.ValueTermOrigin)
 					}
 				}
 				if !sawText || !sawTerm {

@@ -1070,27 +1070,7 @@ struct GoStore: GenealogyStore {
                 )
             },
             offers: resp.offers.map { CatalogClaimEvidenceOffer(id: $0.id, checked: $0.checked) },
-            lifespan: resp.hasLifespan ? Self.mapLifespan(resp.lifespan) : nil,
             sourceTitles: Dictionary(resp.sources.map { ($0.id, $0.title) }, uniquingKeysWith: { first, _ in first })
-        )
-    }
-
-    private static func mapLifespan(_ l: Provenencia_Engine_V1_PromoteClaimEvidenceLifespan) -> CatalogClaimEvidenceLifespan {
-        CatalogClaimEvidenceLifespan(
-            outcome: EvidenceOutcome(wire: l.outcome),
-            propertyCause: EvidencePropertyCause(wire: l.propertyCause),
-            relation: ValueRelation(wire: l.relation),
-            cause: ValueCause(wire: l.cause),
-            row: mapLifeSide(l.row),
-            record: mapLifeSide(l.record)
-        )
-    }
-
-    private static func mapLifeSide(_ s: Provenencia_Engine_V1_PromoteClaimEvidenceLifeSide) -> CatalogClaimEvidenceLifeSide {
-        CatalogClaimEvidenceLifeSide(
-            first: s.hasFirst ? mapDateValue(s.first) : nil,
-            last: s.hasLast ? mapDateValue(s.last) : nil,
-            missing: LifespanMissing(wire: s.missing)
         )
     }
 
@@ -1224,6 +1204,7 @@ struct GoStore: GenealogyStore {
             label: t.label,
             ref: t.ref,
             typeKey: t.typeKey,
+            typeOrigin: t.typeOrigin,
             typeLabel: t.typeLabel,
             subjects: t.subjects.map { $0.hasName ? mapNameValue($0.name) : nil },
             place: t.place
@@ -1335,6 +1316,7 @@ struct GoStore: GenealogyStore {
             eventName: h.eventName,
             eventNameCount: Int(h.eventNameCount),
             eventTypeKey: h.hasEventType ? h.eventType.key : "",
+            eventTypeOrigin: h.hasEventType ? h.eventType.origin : "",
             eventTypeLabel: h.hasEventType ? h.eventType.label : "",
             eventTypeCount: Int(h.eventTypeCount),
             date: h.hasDate ? mapDateValue(h.date) : nil,
@@ -2354,6 +2336,7 @@ struct GoStore: GenealogyStore {
             propertyLabel: o.propertyLabel,
             propertyValueType: o.propertyValueType,
             valueTermKey: o.valueTermKey,
+            valueTermOrigin: o.valueTermOrigin,
             valueDepictionID: o.valueDepictionID,
             depiction: o.hasDepiction ? Self.mapDepictionValue(o.depiction) : nil
         )

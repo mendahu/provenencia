@@ -16,12 +16,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertycompare"
-	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -568,80 +566,8 @@ func TestEvidenceLikenesses(t *testing.T) {
 	})
 }
 
-// T-7: the lifespan crosses with each side's first and last dated events or why
-// it has none, and the sections follow the catalog's order.
-func TestEvidenceLifespan(t *testing.T) {
-	// handle is a person promoted with a birth on 14 May 1817 and, for the
-	// record side, a census on 2 Apr 1871 (or any other events).
-	type event struct {
-		eventType string
-		y, m, d   int
-	}
-	build := func(t *testing.T, row []event, record []event) (*fixture, promotealign.EvidenceRequest) {
-		f := newFixture(t)
-		member := f.person(f.source, f.artifact, "John Smith")
-		var filed []subjects.Subject
-		for _, e := range record {
-			ev := f.datedOn(f.source, f.artifact, e.eventType, e.y, e.m, e.d)
-			f.participation(f.source, f.artifact, member, ev, "subject")
-			filed = append(filed, ev)
-		}
-		handle := f.promote(member).Entity.ID
-		for _, ev := range filed {
-			f.promote(ev)
-		}
-		srcB, artB := f.newSource("Obituary")
-		incoming := f.person(srcB, artB, "John Smith")
-		for _, e := range row {
-			f.participation(srcB, artB, incoming, f.datedOn(srcB, artB, e.eventType, e.y, e.m, e.d), "subject")
-		}
-		return f, promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: incoming.ID, HandleID: handle}
-	}
-	rowLife := []event{{"birth", 1817, 5, 14}, {"death", 1890, 6, 2}}
-	year := func(v *datevalue.Value) int {
-		if v == nil || v.StartYear == nil {
-			return 0
-		}
-		return *v.StartYear
-	}
-
-	t.Run("AC-2.1 agreeing sides", func(t *testing.T) {
-		f, req := build(t, rowLife, []event{{"birth", 1817, 5, 14}, {"census", 1871, 4, 2}})
-		l := f.evidence(req).Lifespan
-		if l == nil || l.Outcome != propertycompare.OutcomeAgree || l.Row.Missing != "" || l.Record.Missing != "" {
-			t.Fatalf("lifespan = %+v", l)
-		}
-		if year(l.Row.First) != 1817 || year(l.Row.Last) != 1890 || year(l.Record.First) != 1817 || year(l.Record.Last) != 1871 {
-			t.Errorf("sides = %+v", l)
-		}
-	})
-	t.Run("AC-2.2 a side that contradicts itself", func(t *testing.T) {
-		f, req := build(t, []event{{"birth", 1817, 5, 14}, {"death", 1790, 6, 2}}, []event{{"birth", 1817, 5, 14}})
-		l := f.evidence(req).Lifespan
-		if l == nil || l.Row.Missing != subjectcompare.LifespanContradicts || l.Row.First != nil || l.Outcome != propertycompare.OutcomeUnknown || l.Relation != "" || l.Cause != "" {
-			t.Fatalf("lifespan = %+v", l)
-		}
-	})
-	t.Run("AC-2.3 an undated record", func(t *testing.T) {
-		f, req := build(t, rowLife, nil)
-		l := f.evidence(req).Lifespan
-		if l == nil || l.Record.Missing != subjectcompare.LifespanUndated || l.Outcome != propertycompare.OutcomeUnknown {
-			t.Fatalf("lifespan = %+v", l)
-		}
-	})
-	t.Run("AC-2.5 lives that cannot be one person's conflict", func(t *testing.T) {
-		f, req := build(t, rowLife, []event{{"baptism", 1781, 3, 3}, {"burial", 1790, 1, 9}})
-		l := f.evidence(req).Lifespan
-		if l == nil || l.Outcome != propertycompare.OutcomeConflict {
-			t.Fatalf("lifespan = %+v", l)
-		}
-	})
-	t.Run("AC-2.4 neither side dated", func(t *testing.T) {
-		f, req := build(t, nil, nil)
-		if l := f.evidence(req).Lifespan; l != nil {
-			t.Fatalf("lifespan = %+v", l)
-		}
-	})
+// T-7: the sections follow the catalog's order.
+func TestEvidenceSectionOrder(t *testing.T) {
 	t.Run("AC-3.1 sections follow the seeded order", func(t *testing.T) {
 		f := newFixture(t)
 		sex := func(src sources.Source, art artifacts.Artifact) subjects.Subject {

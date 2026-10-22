@@ -136,7 +136,7 @@ enum EvidencePropertyCause: Sendable, Equatable {
 
 /// How two values relate (`valuecompare.Relation`).
 enum ValueRelation: Sendable, Equatable {
-    /// No relation: the code is empty (no pair spoke, as on a lifespan with a missing side).
+    /// No relation: the code is empty (no pair spoke).
     case none
     case same
     case equivalent
@@ -223,27 +223,6 @@ enum ValueCause: Sendable, Equatable {
     }
 }
 
-/// Why a side has no lifespan (`subjectcompare.LifespanMissing`).
-enum LifespanMissing: Sendable, Equatable {
-    /// It has one: the code is empty.
-    case none
-    /// No dated event to build one from.
-    case undated
-    /// Its own dated events cannot all be true.
-    case contradicts
-    /// A code this build doesn't know.
-    case unrecognized(String)
-
-    init(wire: String) {
-        switch wire {
-        case "": self = .none
-        case "undated": self = .undated
-        case "contradicts": self = .contradicts
-        default: self = .unrecognized(wire)
-        }
-    }
-}
-
 /// Why a relationship adds nothing or subtracts (`segmentcompare.Cause`).
 enum SegmentCause: Sendable, Equatable {
     /// No cause: the code is empty.
@@ -270,6 +249,13 @@ enum SegmentCause: Sendable, Equatable {
 }
 
 // A Property's value type is `PropertyValueType` (InterpretationValueKinds.swift).
+
+/// The origin of every term and Property the product seeds
+/// (`vocabkey.OriginProvenencia`). A key names a seeded term only with it: a
+/// researcher's own term may be keyed the same.
+enum SeededOrigin {
+    static let provenencia = "provenencia"
+}
 
 /// Seeded Property keys the Conclusion pages lay out by name
 /// (`docs/seeded-vocabulary.md`, `subjectvocab` seed). User Properties have

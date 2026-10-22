@@ -49,8 +49,11 @@ type Parts struct {
 	Label        string
 	Ref          string
 	TypeKey      string
-	TypeLabel    string
-	Subjects     []Subject
+	// TypeOrigin is the type term's origin; the key names a product type only
+	// when it is the product's.
+	TypeOrigin string
+	TypeLabel  string
+	Subjects   []Subject
 	// Place is the first named place; chains are not part of a title.
 	Place string
 }
@@ -69,6 +72,7 @@ func Choose(p Parts) Plan {
 	p.Label = strings.TrimSpace(p.Label)
 	p.Ref = strings.TrimSpace(p.Ref)
 	p.TypeKey = strings.TrimSpace(p.TypeKey)
+	p.TypeOrigin = strings.TrimSpace(p.TypeOrigin)
 	p.TypeLabel = strings.TrimSpace(p.TypeLabel)
 	p.Place = strings.TrimSpace(p.Place)
 	switch {

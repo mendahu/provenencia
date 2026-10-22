@@ -12,6 +12,7 @@ struct EventTitleDisplayTests {
         label: String = "",
         ref: String = "EVT-1",
         typeKey: String = "",
+        typeOrigin: String? = nil,
         typeLabel: String = "",
         subjects: [String?] = [],
         place: String = ""
@@ -22,6 +23,7 @@ struct EventTitleDisplayTests {
             label: label,
             ref: ref,
             typeKey: typeKey,
+            typeOrigin: typeOrigin ?? (typeKey.isEmpty ? "" : SeededOrigin.provenencia),
             typeLabel: typeLabel,
             subjects: subjects.map { $0.map { CatalogNameValue(form: $0) } },
             place: place
@@ -29,6 +31,11 @@ struct EventTitleDisplayTests {
     }
 
     // Go chooses the rule (core/eventtitle); these check each rule's template.
+
+    @Test func aUserTypeKeyedLikeAProductTypeKeepsItsOwnLabel() {
+        let user = title(.subject, typeKey: "birth", typeOrigin: "user", typeLabel: "Arrival", subjects: ["James Robins"])
+        #expect(EventTitleDisplay.title(user, locale: en) == L10n.EventTitle.ofOne(type: "Arrival", subject: "James Robins", locale: en))
+    }
 
     @Test func recordedNameIsTheName() {
         #expect(EventTitleDisplay.title(title(.recordedName, recordedName: "The Great Fire", label: "Grandpa's fire"), locale: en) == "The Great Fire")
@@ -87,6 +94,7 @@ struct EventTitleDisplayTests {
         let header = CatalogEventHeader(
             entity: CatalogCanonicalEntity(id: "e", ref: "EVT-1", subjectTypeID: "t", label: ""),
             eventTypeKey: "birth",
+            eventTypeOrigin: SeededOrigin.provenencia,
             title: title(.subject, subjects: ["Jeremiah Arthur Gumtree"])
         )
         #expect(

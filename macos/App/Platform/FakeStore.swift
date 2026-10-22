@@ -3222,7 +3222,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         let propertyKey = observation.propertyKey.isEmpty
             ? (propertiesByProject[projectDir]?.first(where: { $0.id == observation.propertyID })?.key ?? "")
             : observation.propertyKey
-        return propertyKey == "role" || propertyKey == "relationship_type"
+        return propertyKey == SeededPropertyKey.role || propertyKey == SeededPropertyKey.relationshipType
     }
 
     private func fixtureContains(projectDir: String, id: String) -> Bool {
@@ -3367,7 +3367,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             propertyValueType: row.propertyValueType.isEmpty ? (property?.valueType ?? "") : row.propertyValueType,
             valueTermKey: row.valueTermKey.isEmpty
                 ? (propertyTermsByProperty[row.propertyID]?.first(where: { $0.id == row.valueTermID })?.key ?? "")
-                : row.valueTermKey
+                : row.valueTermKey,
+            valueTermOrigin: row.valueTermOrigin.isEmpty
+                ? (propertyTermsByProperty[row.propertyID]?.first(where: { $0.id == row.valueTermID })?.origin ?? "")
+                : row.valueTermOrigin
         )
     }
 
@@ -3439,7 +3442,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 propertyValueType: property?.valueType ?? "",
                 valueTermKey: propertyTermsByProperty[draft.propertyID]?
                     .first(where: { $0.id == draft.valueTermID })?
-                    .key ?? ""
+                    .key ?? "",
+                valueTermOrigin: propertyTermsByProperty[draft.propertyID]?
+                    .first(where: { $0.id == draft.valueTermID })?
+                    .origin ?? ""
             )
             if let input = draft.depiction {
                 let stored = nextFakeDepiction(input)

@@ -1,8 +1,7 @@
 import Foundation
 
 /// The evidence sheet's choices, made without a view: which boxes are
-/// checked, whether a line disagrees, which bridge a relationship names, and
-/// how a lifespan reads.
+/// checked, whether a line disagrees, and which bridge a relationship names.
 enum PromoteEvidenceDisplay {
     /// How much of a line's or relationship's pins are checked.
     enum CheckState: Equatable {
@@ -24,9 +23,8 @@ enum PromoteEvidenceDisplay {
         pins.intersection(evidence.offeredPinIDs).count
     }
 
-    /// A line anywhere in the evidence, or the lifespan, disagrees. A relationship never does.
+    /// A line anywhere in the evidence disagrees. A relationship never does.
     static func hasConflict(_ evidence: CatalogClaimEvidence) -> Bool {
-        if evidence.lifespan?.outcome == .conflict { return true }
         let related = evidence.relationships.flatMap(\.sections)
         return (evidence.sections + related).contains { section in
             section.lines.contains { $0.outcome == .conflict }
@@ -63,9 +61,9 @@ enum PromoteEvidenceDisplay {
         !line.pinnable
     }
 
-    /// Loaded, and nothing to compare: no line, no relationship and no lifespan.
+    /// Loaded, and nothing to compare: no line and no relationship.
     static func hasNothingToCompare(_ evidence: CatalogClaimEvidence) -> Bool {
-        evidence.sections.allSatisfy { $0.lines.isEmpty } && evidence.relationships.isEmpty && evidence.lifespan == nil
+        evidence.sections.allSatisfy { $0.lines.isEmpty } && evidence.relationships.isEmpty
     }
 
     /// A record behind a line: its Source's title when it has one, and its worded value.
@@ -143,19 +141,5 @@ enum PromoteEvidenceDisplay {
             subtitle: link,
             spoken: L10n.Promote.spokenRelationship(sentence: title, link: link)
         )
-    }
-
-    /// The lifespan line's sentence. A side that contradicts itself is named before one that has
-    /// no dates, this source before the record.
-    static func lifespanSentence(_ lifespan: CatalogClaimEvidenceLifespan, locale: Locale = .autoupdatingCurrent) -> String {
-        if lifespan.row.missing == .contradicts { return L10n.string(L10n.Promote.lifespanContradictsThisSource) }
-        if lifespan.record.missing == .contradicts { return L10n.string(L10n.Promote.lifespanContradictsRecord) }
-        if lifespan.row.missing != .none { return L10n.string(L10n.Promote.lifespanNoneThisSource) }
-        if lifespan.record.missing != .none { return L10n.string(L10n.Promote.lifespanNoneRecord) }
-        let here = PersonLifeDisplay.span(first: lifespan.row.first, last: lifespan.row.last, locale: locale)
-        let there = PersonLifeDisplay.span(first: lifespan.record.first, last: lifespan.record.last, locale: locale)
-        return lifespan.outcome == .conflict
-            ? L10n.Promote.lifespanConflict(here: here, there: there)
-            : L10n.Promote.lifespanFits(here: here, there: there)
     }
 }

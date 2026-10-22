@@ -678,6 +678,9 @@ func TestListObservationsBySource(t *testing.T) {
 				if got.GetValueTermKey() != "birth" {
 					t.Fatalf("value_term_key %q, want birth", got.GetValueTermKey())
 				}
+				if got.GetValueTermOrigin() != "provenencia" {
+					t.Fatalf("value_term_origin %q, want provenencia", got.GetValueTermOrigin())
+				}
 			},
 		},
 	})

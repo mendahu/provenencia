@@ -4,11 +4,11 @@ import Observation
 enum ConnectionTermCopy {
     static func label(disambiguationKey: String) -> String {
         switch disambiguationKey {
-        case "relationship_type":
+        case SeededPropertyKey.relationshipType:
             return L10n.string(L10n.CitationComposer.connectionRelationship)
-        case "role":
+        case SeededPropertyKey.role:
             return L10n.string(L10n.CitationComposer.connectionRole)
-        case "place_relationship_type":
+        case SeededPropertyKey.placeRelationshipType:
             return L10n.string(L10n.CitationComposer.connectionPlaceRelationship)
         default:
             return L10n.string(L10n.CitationComposer.connectionNoRole)

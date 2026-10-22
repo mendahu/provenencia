@@ -5,7 +5,6 @@ import Testing
 /// The evidence sheet's choices and words, tested without a view.
 @Suite
 struct PromoteEvidenceDisplayTests {
-    private let en = Locale(identifier: "en_US")
 
     // MARK: - Fixtures
 
@@ -82,13 +81,6 @@ struct PromoteEvidenceDisplayTests {
         var partial = relationship(sections: [similar])
         partial.outcome = .partial
         #expect(!PromoteEvidenceDisplay.hasConflict(CatalogClaimEvidence(sections: [fine], relationships: [partial])))
-        // Only the lifespan.
-        let lifespan = CatalogClaimEvidenceLifespan(
-            outcome: .conflict, propertyCause: .none, relation: .none, cause: .none,
-            row: CatalogClaimEvidenceLifeSide(first: date(1817), last: date(1890), missing: .none),
-            record: CatalogClaimEvidenceLifeSide(first: date(1741), last: date(1810), missing: .none)
-        )
-        #expect(PromoteEvidenceDisplay.hasConflict(CatalogClaimEvidence(sections: [fine], lifespan: lifespan)))
     }
 
     @Test func bridgeForARelationship() {
@@ -170,7 +162,7 @@ struct PromoteEvidenceDisplayTests {
 
     // MARK: - T-3
 
-    @Test func relationshipAndLifespanSentences() {
+    @Test func relationshipSentences() {
         #expect(L10n.string(L10n.Promote.relationshipSentence(.agree)) == "They share a matching connection")
         #expect(L10n.string(L10n.Promote.relationshipSentence(.partial)) == "They share a similar connection")
         #expect(
@@ -178,62 +170,6 @@ struct PromoteEvidenceDisplayTests {
                 == "John Smith · subject of · Birth of John Smith"
         )
         #expect(L10n.Promote.relationshipWith("Mary Smith") == "with Mary Smith")
-
-        func side(_ first: CatalogDateValueInput?, _ last: CatalogDateValueInput?, _ missing: LifespanMissing = .none) -> CatalogClaimEvidenceLifeSide {
-            CatalogClaimEvidenceLifeSide(first: first, last: last, missing: missing)
-        }
-        func lifespan(
-            _ outcome: EvidenceOutcome, row: CatalogClaimEvidenceLifeSide, record: CatalogClaimEvidenceLifeSide
-        ) -> CatalogClaimEvidenceLifespan {
-            CatalogClaimEvidenceLifespan(outcome: outcome, propertyCause: .none, relation: .none, cause: .none, row: row, record: record)
-        }
-        let mine = side(date(1817, 5, 14), date(1890, 6, 2))
-        let fits = lifespan(.agree, row: mine, record: side(date(1817, 5, 14), date(1871, 4, 2)))
-        #expect(
-            PromoteEvidenceDisplay.lifespanSentence(fits, locale: en)
-                == "The lifespans fit: 14 May 1817 – 2 Jun 1890 here, 14 May 1817 – 2 Apr 1871 on the record"
-        )
-        let apart = lifespan(.conflict, row: mine, record: side(date(1741, 3, 3), date(1810, 1, 9)))
-        #expect(
-            PromoteEvidenceDisplay.lifespanSentence(apart, locale: en)
-                == "The lifespans don't fit: 14 May 1817 – 2 Jun 1890 here, 3 Mar 1741 – 9 Jan 1810 on the record"
-        )
-        // One dated event prints one date.
-        let one = lifespan(.agree, row: side(date(1843), date(1843)), record: side(date(1843, 10, 12), date(1861, 4, 7)))
-        #expect(PromoteEvidenceDisplay.lifespanSentence(one, locale: en) == "The lifespans fit: 1843 here, 12 Oct 1843 – 7 Apr 1861 on the record")
-        // A side with no lifespan.
-        let none = side(nil, nil, .undated)
-        let contradicts = side(nil, nil, .contradicts)
-        #expect(
-            PromoteEvidenceDisplay.lifespanSentence(lifespan(.unknown, row: mine, record: none), locale: en)
-                == "No lifespan to compare: the record has no dated events"
-        )
-        #expect(
-            PromoteEvidenceDisplay.lifespanSentence(lifespan(.unknown, row: none, record: mine), locale: en)
-                == "No lifespan to compare: this source has no dated events"
-        )
-        #expect(
-            PromoteEvidenceDisplay.lifespanSentence(lifespan(.unknown, row: contradicts, record: mine), locale: en)
-                == "No lifespan for this source: its own dates contradict each other"
-        )
-        #expect(
-            PromoteEvidenceDisplay.lifespanSentence(lifespan(.unknown, row: mine, record: contradicts), locale: en)
-                == "No lifespan for the record: its own dates contradict each other"
-        )
-        // Contradicting beats undated; this source comes before the record.
-        #expect(
-            PromoteEvidenceDisplay.lifespanSentence(lifespan(.unknown, row: none, record: contradicts), locale: en)
-                == "No lifespan for the record: its own dates contradict each other"
-        )
-        #expect(
-            PromoteEvidenceDisplay.lifespanSentence(lifespan(.unknown, row: contradicts, record: contradicts), locale: en)
-                == "No lifespan for this source: its own dates contradict each other"
-        )
-        // A code this build does not know reads as undated.
-        #expect(
-            PromoteEvidenceDisplay.lifespanSentence(lifespan(.unknown, row: side(nil, nil, .unrecognized("x")), record: mine), locale: en)
-                == "No lifespan to compare: this source has no dated events"
-        )
     }
 
     @Test func countsArePlural() {
@@ -242,12 +178,6 @@ struct PromoteEvidenceDisplayTests {
         #expect(L10n.Promote.checkedCount(4) == "4 checked")
         #expect(L10n.Promote.showRecords(5) == "Show 5 records")
         #expect(L10n.Promote.evidenceHeading(ref: "PER-7QH3D", title: "John Smith") == "What's the evidence that this is PER-7QH3D John Smith?")
-    }
-
-    @Test func aSpanOfOneDatePrintsIt() {
-        #expect(PersonLifeDisplay.span(first: date(1843), last: date(1843), locale: en) == "1843")
-        #expect(PersonLifeDisplay.span(first: date(1817, 5, 14), last: date(1890, 6, 2), locale: en) == "14 May 1817 – 2 Jun 1890")
-        #expect(PersonLifeDisplay.span(first: nil, last: nil, locale: en) == "")
     }
 
     // MARK: - T-7, T-6
@@ -283,13 +213,6 @@ struct PromoteEvidenceDisplayTests {
                 link: "John Smith · subject of · Birth of John Smith"
             ) == "They share a matching connection. John Smith · subject of · Birth of John Smith."
         )
-        // The lifespan line reads its sentence only.
-        let lifespan = CatalogClaimEvidenceLifespan(
-            outcome: .agree, propertyCause: .none, relation: .none, cause: .none,
-            row: CatalogClaimEvidenceLifeSide(first: date(1817), last: date(1890), missing: .none),
-            record: CatalogClaimEvidenceLifeSide(first: date(1817), last: date(1871), missing: .none)
-        )
-        #expect(PromoteEvidenceDisplay.lifespanSentence(lifespan, locale: en).hasPrefix("The lifespans fit"))
     }
 
     @Test func twoLikenessLinesNeverReadAlike() {
@@ -373,7 +296,7 @@ struct PromoteEvidenceDisplayTests {
         #expect(unnamed.subtitle == "with a connected record")
     }
 
-    @Test func nothingToCompareWhenNoLineRelationshipOrLifespan() {
+    @Test func nothingToCompareWhenNoLineOrRelationship() {
         #expect(PromoteEvidenceDisplay.hasNothingToCompare(CatalogClaimEvidence()))
         #expect(PromoteEvidenceDisplay.hasNothingToCompare(CatalogClaimEvidence(sections: [CatalogClaimEvidenceSection(propertyKey: "name", lines: [])])))
         #expect(!PromoteEvidenceDisplay.hasNothingToCompare(CatalogClaimEvidence(sections: [CatalogClaimEvidenceSection(propertyKey: "name", lines: [line()])])))

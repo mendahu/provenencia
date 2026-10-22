@@ -166,15 +166,12 @@ struct PromoteEvidenceSheet: View {
         }
     }
 
-    /// The Subject's own Cards in Go's order, the lifespan last among them, then one Card per relationship.
+    /// The Subject's own Cards in Go's order, then one Card per relationship.
     @ViewBuilder
     private func cards(_ evidence: CatalogClaimEvidence) -> some View {
         let context = EvidenceContext(row: row, evidence: evidence, model: model)
         ForEach(evidence.sections.filter { !$0.lines.isEmpty }) { section in
             EvidenceSectionCard(context: context, section: section, expanded: $expanded)
-        }
-        if let lifespan = evidence.lifespan {
-            EvidenceLifespanCard(lifespan: lifespan)
         }
         ForEach(evidence.relationships) { relationship in
             EvidenceRelationshipCard(context: context, relationship: relationship, expanded: $expanded)
@@ -515,7 +512,7 @@ private struct EvidenceCardHeader: View {
     }
 }
 
-/// A line's, relationship's or lifespan's outcome, in the column every Badge lines up in.
+/// A line's or relationship's outcome, in the column every Badge lines up in.
 private struct EvidenceOutcomeBadge: View {
     let outcome: EvidenceOutcome
     var cause: ValueCause = .none
@@ -694,42 +691,5 @@ private struct EvidenceRelationshipCard: View {
         Text(verbatim: L10n.Promote.recordCount(ids.count))
             .font(PVFont.body(size: PVTypeScale.caption))
             .foregroundStyle(PVColor.textMuted)
-    }
-}
-
-// MARK: - Lifespan
-
-/// The lifespan check: one line, no checkbox, never pinned.
-private struct EvidenceLifespanCard: View {
-    let lifespan: CatalogClaimEvidenceLifespan
-
-    var body: some View {
-        let sentence = PromoteEvidenceDisplay.lifespanSentence(lifespan)
-        PVCard(cornerRadius: PVRadius.sm) {
-            VStack(alignment: .leading, spacing: 0) {
-                EvidenceCardHeader(title: Text(L10n.Promote.lifespanTitle))
-                HStack(alignment: .top, spacing: EvidenceLayout.gap) {
-                    PVIcon(.info, size: EvidenceLayout.box)
-                        .foregroundStyle(PVColor.textFaint)
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: PVSpacing.space1) {
-                        Text(verbatim: sentence)
-                            .font(PVFont.body(size: PVTypeScale.bodySmall))
-                            .foregroundStyle(PVColor.textPrimary)
-                        Text(L10n.Promote.lifespanCaption)
-                            .font(PVFont.body(size: PVTypeScale.caption))
-                            .italic()
-                            .foregroundStyle(PVColor.textMuted)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    EvidenceOutcomeBadge(outcome: lifespan.outcome)
-                }
-                .padding(.horizontal, EvidenceLayout.inset)
-                .padding(.vertical, PVSpacing.space3)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(Text(verbatim: sentence))
-            }
-        }
-        .accessibilityIdentifier("promote.sheet.lifespan")
     }
 }

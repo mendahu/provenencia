@@ -1210,6 +1210,7 @@ message EventTitle {
   string type_label = 6;
   repeated EventTitleSubject subjects = 7;
   string place = 8;
+  string type_origin = 9; // with type_key: the term's origin
 }
 
 // ListSourceEventTitles titles every Event Subject on one Source's Evidence
@@ -1418,6 +1419,7 @@ message ConclusionTerm {
   string id = 1;
   string key = 2;
   string label = 3;
+  string origin = 4; // set on an Event header's type: with key, whose term it is
 }
 
 // ReconciledValueDetail is one auto-reconciled value of a Property: displayed
@@ -1602,26 +1604,8 @@ message GetPromoteClaimEvidenceResponse {
   repeated PromoteClaimEvidenceRelationship relationships = 2;
   repeated PromoteClaimEvidenceOffer offers = 3;
   repeated PromoteClaimEvidenceSource sources = 4;
-  // The lifespan check between the row and the record; unset for a kind with
-  // no lifespan, or when neither side has dates.
-  PromoteClaimEvidenceLifespan lifespan = 5;
-}
-
-// PromoteClaimEvidenceLifeSide is one side's life: its first and last dated
-// events as written, or why it has no lifespan.
-message PromoteClaimEvidenceLifeSide {
-  DateValueInput first = 1;
-  DateValueInput last = 2;
-  string missing = 3; // subjectcompare.LifespanMissing: "", undated or contradicts
-}
-
-message PromoteClaimEvidenceLifespan {
-  string outcome = 1;
-  string property_cause = 2;
-  string relation = 3;
-  string cause = 4;
-  PromoteClaimEvidenceLifeSide row = 5;
-  PromoteClaimEvidenceLifeSide record = 6;
+  reserved 5;
+  reserved "lifespan";
 }
 
 message PromoteGraphAlignmentAlternative {
@@ -2037,6 +2021,9 @@ message Observation {
   DepictionValue depiction = 19;
   // Response data; never read from a request.
   string value_term_key = 20;
+  // Response data; never read from a request. With value_term_key: the
+  // term's origin, so a key reads as the product's only when it is.
+  string value_term_origin = 21;
 }
 
 // ObservationDraft is one Observation insert payload (create or append).

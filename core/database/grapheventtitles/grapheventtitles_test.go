@@ -229,7 +229,7 @@ func TestForEvidenceGraph(t *testing.T) {
 	if p := byID[string(named.ID)].Parts; p.RecordedName != "The Great Fire" {
 		t.Fatalf("recorded name %q", p.RecordedName)
 	}
-	if p := byID[string(fire.ID)].Parts; p.TypeKey != fireTerm.Key || p.TypeLabel != "Fire" {
+	if p := byID[string(fire.ID)].Parts; p.TypeKey != fireTerm.Key || p.TypeLabel != "Fire" || p.TypeOrigin != fireTerm.Origin {
 		t.Fatalf("type %+v", p)
 	}
 
@@ -309,9 +309,9 @@ func titlesFromStored(t *testing.T, f *fixture) []grapheventtitles.Title {
 	for _, p := range v.Properties {
 		propKey[string(p.ID)] = p.Key
 	}
-	terms := map[string]struct{ Key, Label string }{}
+	terms := map[string]struct{ Key, Origin, Label string }{}
 	for _, term := range v.Terms {
-		terms[string(term.ID)] = struct{ Key, Label string }{Key: term.Key, Label: term.Label}
+		terms[string(term.ID)] = struct{ Key, Origin, Label string }{Key: term.Key, Origin: term.Origin, Label: term.Label}
 	}
 	return grapheventtitles.FromStored(eg, propKey, terms)
 }

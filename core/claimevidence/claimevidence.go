@@ -92,22 +92,9 @@ type Relationship struct {
 }
 
 // Inputs is what the loader reads beside the values: the catalog's property
-// order for each kind, and each side's life as the profile builder read it.
+// order for each kind.
 type Inputs struct {
-	Order       map[vocabkey.SubjectType][]vocabkey.PropertyKey // each kind's bound properties, in binding order
-	Row, Record subjectcompare.LifeSide
-}
-
-// Lifespan is the lifespan check between the row's Subject and the record
-// (the entity's profile): matching's verdict, and each side's first and last
-// dated events, or why it has none. It is not a line: it has no member and
-// is never pinned.
-type Lifespan struct {
-	Outcome       propertycompare.Outcome
-	PropertyCause propertycompare.Cause
-	Relation      valuecompare.Relation
-	Cause         valuecompare.Cause
-	Row, Record   subjectcompare.LifeSide
+	Order map[vocabkey.SubjectType][]vocabkey.PropertyKey // each kind's bound properties, in binding order
 }
 
 // Evidence is everything the sheet shows for one row.
@@ -115,7 +102,6 @@ type Evidence struct {
 	Kind          vocabkey.SubjectType // the row's kind
 	Sections      []Section
 	Relationships []Relationship
-	Lifespan      *Lifespan         // nil for a kind with no lifespan, or when neither side has dates
 	Sources       map[string]string // Source id → title; the loader fills it
 }
 

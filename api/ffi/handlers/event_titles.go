@@ -27,6 +27,7 @@ func eventTitleProto(p eventtitle.Plan) *engine.EventTitle {
 		Label:        p.Parts.Label,
 		Ref:          p.Parts.Ref,
 		TypeKey:      p.Parts.TypeKey,
+		TypeOrigin:   p.Parts.TypeOrigin,
 		TypeLabel:    p.Parts.TypeLabel,
 		Place:        p.Parts.Place,
 	}
@@ -67,9 +68,9 @@ func ListSourceEventTitles(in []byte) ([]byte, error) {
 		for id, info := range props {
 			keys[id] = info.Key
 		}
-		termLookup := map[string]struct{ Key, Label string }{}
+		termLookup := map[string]struct{ Key, Origin, Label string }{}
 		for id, info := range vocab.TermsByID() {
-			termLookup[id] = struct{ Key, Label string }{Key: info.Key, Label: info.Label}
+			termLookup[id] = struct{ Key, Origin, Label string }{Key: info.Key, Origin: info.Origin, Label: info.Label}
 		}
 		for _, t := range grapheventtitles.FromStored(eg, keys, termLookup) {
 			out.Titles = append(out.Titles, &engine.SourceEventTitle{
