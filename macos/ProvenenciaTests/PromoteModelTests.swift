@@ -314,6 +314,39 @@ struct PromoteModelTests {
         #expect(model.assessmentText(bea.selectionReadout!) == L10n.string(L10n.Promote.assessment(.strong)))
     }
 
+    @Test func theSheetMarksSpeakTheContestedBand() async {
+        var contested = row("a", handleID: "e1")
+        contested.contested = true
+        let model = await loadedAdaAndBea(contested, row("b", handleID: "e2"), properties: [
+            CatalogProperty(id: "p-name", key: "name", origin: "provenencia", label: "Full name", description: "", valueType: "name"),
+        ])
+        let ada = model.flow.row("a")!
+        let readout = ada.selectionReadout!
+        let reason = model.reasonText(readout.reason, on: ada)
+        #expect(reason == L10n.Promote.agreesOn(property: "Full name"))
+        #expect(
+            L10n.Promote.whySuggestedSpoken(assessment: model.assessmentText(readout), reason: reason)
+                == "Why this was suggested: Strong, contested, \(reason)"
+        )
+        let bea = model.flow.row("b")!
+        #expect(model.assessmentText(bea.selectionReadout!) == "Strong")
+    }
+
+    @Test func theSheetCarriesTheRowsCaption() async {
+        var viaA = row("b", handleID: "e2")
+        viaA.reason = .via
+        viaA.viaNeighborSubjectID = "a"
+        let model = await loadedAdaAndBea(row("a", handleID: "e1"), viaA)
+        let bea = model.flow.row("b")!
+        let reason = model.reasonText(bea.captionReason, on: bea)
+        #expect(L10n.Promote.updatedDetail(reason) == "Updated · \(reason)")
+        #expect(reason == L10n.Promote.viaNeighbor(neighbor: "Ada", ref: "PER-e1"))
+        // The sheet names a relationship's neighbor by the row it is on the page.
+        #expect(model.neighbor("a")?.name == "Ada")
+        #expect(model.neighbor("a")?.shownRef == "PER-e1")
+        #expect(model.neighbor("zz") == nil)
+    }
+
     @Test func leaveGuardAsksOnlyAfterAManualChange() async {
         let subjects = [subject("a", ref: "CPR-A", label: "Ada")]
         let store = store(subjects: subjects)

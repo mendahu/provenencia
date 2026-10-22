@@ -17697,18 +17697,6 @@
         }
       }
     },
-    "promote.sheet.own": {
-      "comment": "Evidence group for the subject's own records",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This subject"
-          }
-        }
-      }
-    },
     "promote.sheet.neighbor": {
       "comment": "Names a relationship’s neighbor on the evidence sheet when its row is not on the page",
       "extractionState": "manual",
@@ -17777,30 +17765,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "not %@"
-          }
-        }
-      }
-    },
-    "promote.sheet.pinLine": {
-      "comment": "VoiceOver label for one pin box; 1 = property, 2 = this source's value, 3 = the matched record's value",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pin %1$@: %2$@ and %3$@"
-          }
-        }
-      }
-    },
-    "promote.sheet.pinRelationship": {
-      "comment": "Spoken label of the checkbox that pins every record reached through a related person; %@ is that person's name",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pin the records through %@"
           }
         }
       }
@@ -18029,18 +17993,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "You chose targets on %1$lld rows and switched off %2$lld connections. Nothing has been filed; opening Promote again proposes the graph afresh."
-          }
-        }
-      }
-    },
-    "promote.sheet.claim": {
-      "comment": "Heading above status, confidence, and argument on the evidence sheet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claim"
           }
         }
       }
@@ -18357,90 +18309,6 @@
         }
       }
     },
-    "promote.sheet.column.here": {
-      "comment": "Evidence sheet column: the value on this Source",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This source"
-          }
-        }
-      }
-    },
-    "promote.sheet.column.pin": {
-      "comment": "Evidence sheet column: whether the comparison is pinned",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pin"
-          }
-        }
-      }
-    },
-    "promote.sheet.column.compared": {
-      "comment": "Evidence sheet column: what is being compared",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Compared"
-          }
-        }
-      }
-    },
-    "promote.sheet.column.result": {
-      "comment": "Evidence sheet column: agrees, conflicts, or unknown",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Result"
-          }
-        }
-      }
-    },
-    "promote.sheet.column.weight": {
-      "comment": "Evidence sheet column: how much the comparison counted",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Weight"
-          }
-        }
-      }
-    },
-    "promote.sheet.status.hint": {
-      "comment": "Hint under claim status; only Accepted can be filed",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Provisional and rejected arrive in a later spike"
-          }
-        }
-      }
-    },
-    "promote.sheet.subtitle": {
-      "comment": "Evidence sheet subtitle; 1 = assessment, 2 = why this row matched",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · %2$@. Agreeing comparisons are pinned as this claim’s evidence."
-          }
-        }
-      }
-    },
     "promote.sheet.titleHandle": {
       "comment": "Evidence sheet title for a row filed on an existing record; 1 = the row's name, 2 = the record's ref, 3 = the record's title",
       "extractionState": "manual",
@@ -18461,18 +18329,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ → %2$@"
-          }
-        }
-      }
-    },
-    "promote.sheet.through": {
-      "comment": "Evidence group reached through a neighbor; argument is the neighbor's name",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Through %@"
           }
         }
       }

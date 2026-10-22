@@ -1342,20 +1342,12 @@ enum L10n {
         static func updatedDetail(_ reason: String) -> String {
             L10n.format(LocalizedStringResource("promote.row.updatedDetail", defaultValue: "Updated · %@", comment: "A suggested row moved on the last proposal; argument is why, e.g. via a neighbor"), reason)
         }
-        static let claimHeading = LocalizedStringResource("promote.sheet.claim", defaultValue: "Claim", comment: "Heading above status, confidence, and argument on the evidence sheet")
         static let backToRows = LocalizedStringResource("promote.sheet.back", defaultValue: "Back to all rows", comment: "Closes the Promote evidence sheet")
         static let sheetNeighbor = LocalizedStringResource("promote.sheet.neighbor", defaultValue: "a connected record", comment: "Names a relationship’s neighbor on the evidence sheet when its row is not on the page")
-        static let ownRecords = LocalizedStringResource("promote.sheet.own", defaultValue: "This subject", comment: "Evidence group for the subject's own records")
         static let status = LocalizedStringResource("promote.sheet.status", defaultValue: "Status", comment: "Claim status field")
         static let confidence = LocalizedStringResource("promote.sheet.confidence", defaultValue: "Confidence", comment: "Claim confidence field")
         static let confidenceUnset = LocalizedStringResource("promote.sheet.confidence.unset", defaultValue: "Not stated", comment: "No confidence grade chosen")
         static let argument = LocalizedStringResource("promote.sheet.argument", defaultValue: "Additional comments or arguments about this claim", comment: "Claim argument field label; the field is marked optional")
-        static func pinLine(property: String, here: String, there: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.pinLine", defaultValue: "Pin %1$@: %2$@ and %3$@", comment: "VoiceOver label for one pin box; 1 = property, 2 = this source's value, 3 = the matched record's value"), property, here, there)
-        }
-        static func pinRelationship(_ name: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.pinRelationship", defaultValue: "Pin the records through %@", comment: "Spoken label of the checkbox that pins every record reached through a related person; %@ is that person's name"), name)
-        }
         static func negatedValue(_ value: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.negatedValue", defaultValue: "not %@", comment: "An incoming value a record denies, on the evidence sheet; %@ = the value it says the subject is not"), value)
         }
@@ -1623,23 +1615,11 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.connections.meta", defaultValue: "%1$lld filed · %2$lld switched off · %3$lld not filed", comment: "Connections list summary; 1 = filed, 2 = switched off, 3 = not filed"), filed, off, unfiled)
         }
         static let connectionsHint = LocalizedStringResource("promote.connections.hint", defaultValue: "Switch off a relationship you don’t accept from this Source; it stays on the graph", comment: "Hint in the connections list")
-        static let sheetHere = LocalizedStringResource("promote.sheet.column.here", defaultValue: "This source", comment: "Evidence sheet column: the value on this Source")
-        static let sheetPin = LocalizedStringResource("promote.sheet.column.pin", defaultValue: "Pin", comment: "Evidence sheet column: whether the comparison is pinned")
-        static let sheetCompared = LocalizedStringResource("promote.sheet.column.compared", defaultValue: "Compared", comment: "Evidence sheet column: what is being compared")
-        static let sheetResult = LocalizedStringResource("promote.sheet.column.result", defaultValue: "Result", comment: "Evidence sheet column: agrees, conflicts, or unknown")
-        static let sheetWeight = LocalizedStringResource("promote.sheet.column.weight", defaultValue: "Weight", comment: "Evidence sheet column: how much the comparison counted")
-        static let sheetStatusHint = LocalizedStringResource("promote.sheet.status.hint", defaultValue: "Provisional and rejected arrive in a later spike", comment: "Hint under claim status; only Accepted can be filed")
         static func sheetTitleHandle(name: String, ref: String, title: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.titleHandle", defaultValue: "%1$@ → %2$@ %3$@", comment: "Evidence sheet title for a row filed on an existing record; 1 = the row's name, 2 = the record's ref, 3 = the record's title"), name, ref, title)
         }
         static func sheetTitleNew(name: String, target: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.titleNew", defaultValue: "%1$@ → %2$@", comment: "Evidence sheet title for a row filed as a new record; 1 = the row's name, 2 = the New option, e.g. New person"), name, target)
-        }
-        static func sheetSubtitle(assessment: String, reason: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.subtitle", defaultValue: "%1$@ · %2$@. Agreeing comparisons are pinned as this claim’s evidence.", comment: "Evidence sheet subtitle; 1 = assessment, 2 = why this row matched"), assessment, reason)
-        }
-        static func through(_ neighbor: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.through", defaultValue: "Through %@", comment: "Evidence group reached through a neighbor; argument is the neighbor's name"), neighbor)
         }
         static let conflictCalloutTitle = LocalizedStringResource("promote.sheet.conflict.title", defaultValue: "Some evidence disagrees", comment: "Evidence sheet callout when a line conflicts")
         static let evidenceUnavailable = LocalizedStringResource("promote.sheet.evidenceUnavailable", defaultValue: "The evidence could not be loaded", comment: "Evidence sheet callout title when the evidence read fails")
