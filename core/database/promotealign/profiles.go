@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/depictionvalue"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/subjectcompare"
@@ -51,7 +52,7 @@ func propertiesByID(g *graphcache.Graph) (map[string]graphcache.VocabProperty, e
 
 // decode is the one row decoder for both sides: a Source Observation and a
 // cached handle value carry the same value columns.
-func decode(text string, hasText bool, integer int64, hasInteger bool, termID, date, name []byte, terms map[string]graphcache.VocabTerm) (autoreconcile.Value, error) {
+func decode(text string, hasText bool, integer int64, hasInteger bool, termID, date, name, image []byte, terms map[string]graphcache.VocabTerm) (autoreconcile.Value, error) {
 	v := autoreconcile.Value{Text: text, HasText: hasText, Integer: integer, HasInteger: hasInteger}
 	if len(termID) > 0 {
 		t := terms[string(termID)]
@@ -73,12 +74,15 @@ func decode(text string, hasText bool, integer int64, hasInteger bool, termID, d
 		}
 		v.Name = &n
 	}
+	if len(image) > 0 {
+		v.Depiction = &depictionvalue.Value{ImageFileID: bytes.Clone(image)}
+	}
 	return v, nil
 }
 
 // reconciled is a cached handle value as the reconciler left it.
 func reconciled(row graphcache.Value, terms map[string]graphcache.VocabTerm) (autoreconcile.ReconciledValue, error) {
-	v, err := decode(row.Text, row.HasText, row.Integer, row.HasInteger, row.TermID, row.Date, row.Name, terms)
+	v, err := decode(row.Text, row.HasText, row.Integer, row.HasInteger, row.TermID, row.Date, row.Name, row.ImageFileID, terms)
 	if err != nil {
 		return autoreconcile.ReconciledValue{}, err
 	}
@@ -102,7 +106,7 @@ func layerValues(eg graphcache.EvidenceGraph, subjects map[string]bool, props ma
 		if !ok || prop.Origin != vocabkey.OriginProvenencia {
 			continue
 		}
-		v, err := decode(o.Text, o.HasText, o.Integer, o.HasInteger, o.TermID, o.Date, o.Name, terms)
+		v, err := decode(o.Text, o.HasText, o.Integer, o.HasInteger, o.TermID, o.Date, o.Name, o.DepictionImageFileID, terms)
 		if err != nil {
 			return nil, err
 		}

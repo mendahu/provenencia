@@ -173,13 +173,31 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 		})
 	}
 
+	kindOrder, err := bindingOrder(g)
+	if err != nil {
+		return claimevidence.Evidence{}, err
+	}
 	out := claimevidence.Build(vocabkey.SubjectType(in.primary[string(row.SubjectID)].kind), valuesOf[string(row.SubjectID)],
 		q.prof.values(row.HandleID), members, neighbors, in.layer.Metas, matchregistry.Default().Evidence,
-		in.cfg.Segment, in.cfg.Subject, in.cfg.Value, claimevidence.Inputs{})
+		in.cfg.Segment, in.cfg.Subject, in.cfg.Value, claimevidence.Inputs{
+			Order:  kindOrder,
+			Row:    in.primary[string(row.SubjectID)].life,
+			Record: q.prof.life(row.HandleID),
+		})
 	if out.Sources, err = q.titles(out); err != nil {
 		return claimevidence.Evidence{}, err
 	}
 	return out, nil
+}
+
+// bindingOrder is each kind's bound properties in the catalog's order, from
+// the cached vocabulary.
+func bindingOrder(g *graphcache.Graph) (map[vocabkey.SubjectType][]vocabkey.PropertyKey, error) {
+	v, err := g.Vocabulary()
+	if err != nil {
+		return nil, err
+	}
+	return v.BindingOrder(), nil
 }
 
 // acceptedClaims is a handle's accepted members, each with its Source and

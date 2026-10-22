@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/connect"
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -863,6 +864,31 @@ func TestProposeJudgesAgainstTheMajority(t *testing.T) {
 	})
 }
 
+// Likeness has no weight: a person proposed with likenesses on the Source and
+// on the handle gets the band, score and comparisons it gets without them.
+func TestProposeIgnoresLikenesses(t *testing.T) {
+	score := func(t *testing.T, withLikeness bool) graphalign.Row {
+		f := newFixture(t)
+		a := f.person(f.source, f.artifact, "John Smith")
+		if withLikeness {
+			observationstest.SaveLikeness(t, f.c, userID, f.source.ID, a.ID, 40)
+		}
+		f.promote(a)
+		src, art := f.newSource("Obituary")
+		incoming := f.person(src, art, "John Smith")
+		if withLikeness {
+			observationstest.SaveLikeness(t, f.c, userID, src.ID, incoming.ID, 200)
+		}
+		_ = art
+		return rowFor(f.propose(src.ID, nil), incoming.ID)
+	}
+	with, without := score(t, true), score(t, false)
+	if with.Target != without.Target || with.Assessment != without.Assessment || with.Score != without.Score || with.Flags.Contested != without.Flags.Contested || with.Reason != without.Reason ||
+		len(with.Comparisons) != len(without.Comparisons) {
+		t.Fatalf("with likenesses %+v\nwithout %+v", with, without)
+	}
+}
+
 // A Place handle keeps every toponym it was read as; the minority one still
 // agrees, because a multiple-cardinality Property weighs no value down.
 func TestProposeMultipleToponyms(t *testing.T) {
@@ -885,14 +911,26 @@ func TestProposeMultipleToponyms(t *testing.T) {
 	}
 }
 
-func datedEvent(f *fixture, src sources.Source, art artifacts.Artifact, eventType string, year int, polarity string) subjects.Subject {
-	b := f.bare(src, "event")
-	f.cite(art, b,
+func datedEvent(f *fixture, src sources.Source, art artifacts.Artifact, eventType string, year int) subjects.Subject {
+	return f.datedOn(src, art, eventType, year, 0, 0)
+}
+
+// datedOn is an event cited as an event type on a date (m and d 0 for a year).
+func (f *fixture) datedOn(src sources.Source, art artifacts.Artifact, eventType string, y, m, d int) subjects.Subject {
+	f.t.Helper()
+	s := f.bare(src, "event")
+	date := datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
+	if m != 0 {
+		date.StartMonth = &m
+	}
+	if d != 0 {
+		date.StartDay = &d
+	}
+	f.cite(art, s,
 		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", eventType).ID},
-		observations.Input{PropertyID: f.prop("date").ID, Polarity: polarity,
-			Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &year}},
+		observations.Input{PropertyID: f.prop("date").ID, Date: &date},
 	)
-	return b
+	return s
 }
 
 // lifeFixture is a person "James Robins" on the first Source, the subject of a
@@ -902,14 +940,14 @@ func lifeFixture(t *testing.T, deathYear int) (f *fixture, handle []byte, src so
 	t.Helper()
 	f = newFixture(t)
 	aPerson := f.person(f.source, f.artifact, "James Robins")
-	aDeath := datedEvent(f, f.source, f.artifact, "death", deathYear, "")
+	aDeath := datedEvent(f, f.source, f.artifact, "death", deathYear)
 	f.participation(f.source, f.artifact, aPerson, aDeath, "subject")
 	handle = f.promote(aPerson).Entity.ID
 	f.promote(aDeath)
 
 	src, art := f.newSource("Letter")
 	person = f.person(src, art, "James Robins")
-	bBirth := datedEvent(f, src, art, "birth", 1850, "")
+	bBirth := datedEvent(f, src, art, "birth", 1850)
 	f.participation(src, art, person, bBirth, "subject")
 	return f, handle, src, person
 }
@@ -956,12 +994,7 @@ func TestProposeComparesTheLifespan(t *testing.T) {
 // datedBirth is an event cited as a birth in a year.
 func (f *fixture) datedBirth(src sources.Source, art artifacts.Artifact, y int) subjects.Subject {
 	f.t.Helper()
-	s := f.bare(src, "event")
-	f.cite(art, s,
-		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
-		observations.Input{PropertyID: f.prop("date").ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}},
-	)
-	return s
+	return f.datedOn(src, art, "birth", y, 0, 0)
 }
 
 // The loader reads a Source's links from the connect rules: one bridge for
