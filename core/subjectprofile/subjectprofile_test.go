@@ -162,13 +162,13 @@ func TestBuild(t *testing.T) {
 			e.Life = []subjectprofile.LifeEvent{ev(vocabkey.EventBirth, vocabkey.RoleSubject, datevaluetest.YMD(1850, 0, 0))}
 			return e
 		}, lifespans: matchregistry.Default().Subject.Lifespans[vocabkey.Person],
-			want: "lifespan={Between 1850 and 1960}; lifespan_span={Between 1850 and 1850}; sex_at_birth={male}"},
+			want: "lifespan={Between 1840 and 1970}; lifespan_span={Between 1850 and 1850}; sex_at_birth={male}"},
 		{name: "AC-2.19 leaving a member out leaves the lifespan", entity: func(t *testing.T) subjectprofile.Entity {
 			e := maleFemale(t)
 			e.Life = []subjectprofile.LifeEvent{ev(vocabkey.EventBirth, vocabkey.RoleSubject, datevaluetest.YMD(1850, 0, 0))}
 			return e
 		}, lifespans: matchregistry.Default().Subject.Lifespans[vocabkey.Person], opts: ex(1),
-			want: "lifespan={Between 1850 and 1960}; lifespan_span={Between 1850 and 1850}; sex_at_birth={male, female}"},
+			want: "lifespan={Between 1840 and 1970}; lifespan_span={Between 1850 and 1850}; sex_at_birth={male, female}"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

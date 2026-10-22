@@ -38,9 +38,10 @@ func defaultSubject() subjectcompare.Rules {
 		},
 		Lifespans: map[vocabkey.SubjectType]map[vocabkey.PropertyKey]subjectcompare.Lifespan{
 			vocabkey.Person: {vocabkey.PropertyLifespan: {
-				Span:     vocabkey.PropertyLifespanSpan,
-				MaxYears: 110, // estimate: longest plausible human life
-				Starts:   []subjectcompare.EventRole{{EventType: vocabkey.EventBirth, Role: vocabkey.RoleSubject}},
+				Span:       vocabkey.PropertyLifespanSpan,
+				MaxYears:   110, // estimate: longest plausible human life
+				SlackYears: 10,  // estimate: forgiving margin for misdated records
+				Starts:     []subjectcompare.EventRole{{EventType: vocabkey.EventBirth, Role: vocabkey.RoleSubject}},
 				Ends: []subjectcompare.EventRole{
 					{EventType: vocabkey.EventDeath, Role: vocabkey.RoleSubject},
 					{EventType: vocabkey.EventBurial, Role: vocabkey.RoleSubject},

@@ -210,7 +210,7 @@ func TestBuildLifespan(t *testing.T) {
 	})
 
 	t.Run("AC-2.2 a side that contradicts itself has no lifespan and the check is unknown", func(t *testing.T) {
-		badVals, badLife := side(life(vocabkey.EventBirth, ymd(1817, 5, 14)), life(vocabkey.EventDeath, ymd(1809, 6, 2)))
+		badVals, badLife := side(life(vocabkey.EventBirth, ymd(1817, 5, 14)), life(vocabkey.EventDeath, ymd(1790, 6, 2)))
 		recVals, recLife := side(life(vocabkey.EventBirth, ymd(1817, 5, 14)))
 		l := buildLife(person, badVals, recVals, badLife, recLife).Lifespan
 		if l == nil || l.Row.Missing != subjectcompare.LifespanContradicts || l.Row.First != nil {
@@ -238,7 +238,7 @@ func TestBuildLifespan(t *testing.T) {
 	})
 
 	t.Run("AC-2.5 a record whose life ended before the row was born conflicts", func(t *testing.T) {
-		recVals, recLife := side(life("baptism", ymd(1801, 3, 3)), life(vocabkey.EventBurial, ymd(1810, 1, 9)))
+		recVals, recLife := side(life("baptism", ymd(1781, 3, 3)), life(vocabkey.EventBurial, ymd(1790, 1, 9)))
 		l := buildLife(person, rowVals, recVals, rowLife, recLife).Lifespan
 		if l == nil || l.Outcome != propertycompare.OutcomeConflict {
 			t.Fatalf("lifespan = %+v", l)

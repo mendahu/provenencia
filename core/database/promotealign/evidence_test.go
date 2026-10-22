@@ -616,7 +616,7 @@ func TestEvidenceLifespan(t *testing.T) {
 		}
 	})
 	t.Run("AC-2.2 a side that contradicts itself", func(t *testing.T) {
-		f, req := build(t, []event{{"birth", 1817, 5, 14}, {"death", 1809, 6, 2}}, []event{{"birth", 1817, 5, 14}})
+		f, req := build(t, []event{{"birth", 1817, 5, 14}, {"death", 1790, 6, 2}}, []event{{"birth", 1817, 5, 14}})
 		l := f.evidence(req).Lifespan
 		if l == nil || l.Row.Missing != subjectcompare.LifespanContradicts || l.Row.First != nil || l.Outcome != propertycompare.OutcomeUnknown || l.Relation != "" || l.Cause != "" {
 			t.Fatalf("lifespan = %+v", l)
@@ -630,7 +630,7 @@ func TestEvidenceLifespan(t *testing.T) {
 		}
 	})
 	t.Run("AC-2.5 lives that cannot be one person's conflict", func(t *testing.T) {
-		f, req := build(t, rowLife, []event{{"baptism", 1801, 3, 3}, {"burial", 1810, 1, 9}})
+		f, req := build(t, rowLife, []event{{"baptism", 1781, 3, 3}, {"burial", 1790, 1, 9}})
 		l := f.evidence(req).Lifespan
 		if l == nil || l.Outcome != propertycompare.OutcomeConflict {
 			t.Fatalf("lifespan = %+v", l)

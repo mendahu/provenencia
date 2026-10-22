@@ -1863,7 +1863,7 @@ func TestLifespanRulesOutAPerson(t *testing.T) {
 		return rowBySubject(alignWith(layer, canon, nil, matchregistry.Default().AlignConfig()), s)
 	}
 	t.Run("AC-1.4", func(t *testing.T) {
-		row := align(probe(1840))
+		row := align(probe(1830))
 		if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch {
 			t.Fatalf("died before the handle was born: %+v", row)
 		}

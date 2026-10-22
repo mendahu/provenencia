@@ -956,10 +956,10 @@ func lifeFixture(t *testing.T, deathYear int) (f *fixture, handle []byte, src so
 // proposed for them, and one who could be them is.
 func TestProposeLifespanFromLifeEvents(t *testing.T) {
 	t.Run("AC-3.1", func(t *testing.T) {
-		f, _, src, person := lifeFixture(t, 1840)
+		f, _, src, person := lifeFixture(t, 1830)
 		row := rowFor(f.propose(src.ID, nil), person.ID)
 		if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch {
-			t.Fatalf("a man who died in 1840 for a man born in 1850: %+v", row)
+			t.Fatalf("a man who died in 1830 for a man born in 1850: %+v", row)
 		}
 	})
 	t.Run("AC-3.2", func(t *testing.T) {
@@ -974,7 +974,7 @@ func TestProposeLifespanFromLifeEvents(t *testing.T) {
 
 // The lifespan counts in the row's score and comparisons.
 func TestProposeComparesTheLifespan(t *testing.T) {
-	f, handle, src, person := lifeFixture(t, 1840)
+	f, handle, src, person := lifeFixture(t, 1830)
 	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: person.ID, HandleID: handle}}), person.ID)
 	var lifespans int
 	for _, c := range row.Comparisons {

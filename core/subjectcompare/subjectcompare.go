@@ -44,10 +44,11 @@ type EventRole struct {
 // lie, and Span its first to last dated event. Compare checks each side's span
 // against the other side's window; the profile builder builds both.
 type Lifespan struct {
-	Span     vocabkey.PropertyKey // not a lead
-	MaxYears int                  // pads an end no Starts or Ends event fixes
-	Starts   []EventRole          // events that fix the start
-	Ends     []EventRole          // events that fix the end
+	Span       vocabkey.PropertyKey // not a lead
+	MaxYears   int                  // pads an end no Starts or Ends event fixes
+	SlackYears int                  // widens the window each way, so only egregious cases conflict
+	Starts     []EventRole          // events that fix the start
+	Ends       []EventRole          // events that fix the end
 }
 
 // FirstLifespanLead is the smallest lead key, the lead whose lifespan stands for
