@@ -110,7 +110,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-25 | Claim evidence RPC and pin policy | 5 | Lazy per-row RPC; Go default pins at Apply; Swift drafting moves onto it; proposal field 9 and `attachExhibits` removed | — | S11-19 | [plan](prs/S11-25-claim-evidence-rpc.md) | Landed #517 |
 | S11-32 | Lifespan and likeness evidence lines | 5 | The lifespan line (not pinnable, says when a side contradicts itself) and likeness lines (depiction compare by image) in `claimevidence` and the RPC; `ConclusionValue` gains a depiction case | — | S11-25, S10-54 (landed #433) | [plan](prs/S11-32-lifespan-likeness-lines.md) | Landed #523 |
 | S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy, with likeness lines as two crops | [S11-D2](design/S11-D2-evidence-sheet.md) | S11-25, S11-32, S11-D2 | [plan](prs/S11-20-claim-evidence-sheet.md) | Planned |
-| S11-26 | Connections file by their ends | 6 | Drop the bridge switch-off: `SkipBridgeIDs`, `skip_bridge_ids`, the `skip` parameters | — | — | — | Scoped |
+| S11-26 | Connections file by their ends | 6 | Drop the bridge switch-off: `SkipBridgeIDs`, `skip_bridge_ids`, the `skip` parameters | — | — | [plan](prs/S11-26-connections-by-ends.md) | Draft |
 | S11-27 | Connection subrows on Promote | 6 | Each connection as a subrow of a row it joins, its state from its ends; the panel and toggles go | S11-D1 | S11-26, S11-D1 | — | Scoped |
 | S11-21 | Large-Source performance check | 7 | 100-Subject benchmark; memoize only if it fails | — | S11-16 | — | Scoped |
 | S11-31 | Bound the Source cache | 7 | Loaded Source graphs and their memos are evicted least recently used beyond a cap | — | S11-19 | — | Scoped |
