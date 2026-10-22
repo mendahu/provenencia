@@ -225,3 +225,24 @@ MNT round 2: MNT-R5-1 – MNT-R5-5 all **Resolved**; no new blockers, no nits. N
 
 ## Result (after round 6)
 Gate PASS · `main` unchanged since the last merge · CI see PR · open: none · follow-ups: — · to user: — (manual check §10 not run) · CON miss: none
+
+## Round 7 — user report (2026-10-22)
+The user saw "Marion Robins participated as Subject at Death of Marion Robins" in the built app: the death row did not match.
+Root cause (orchestrator, verified): the engine never sends an Observation's term **key**. `engine.proto` `Observation` has `value_term_id` but no key; `GoStore.mapObservation` (`GoStore.swift:2336`) leaves `CatalogObservation.valueTermKey` at `""`; only `FakeStore` fills it (`FakeStore.swift:3368`), so every Swift test passed. The registry matches on term keys, so in the real app no specific row ever matches. The same gap means `PropertyTermDisplay` has never used its L10n term labels in the real app (hence "Subject" from the catalog label). `CON miss: none` (no reviewer could see it from the Swift tests); recorded as a gap in the test seam.
+
+### Fix plan 7
+**F-17 — The engine sends the term key with every listed Observation** (from the user's report)
+Files: `api/proto/engine.proto`, generated `api/proto/engine/*.pb.go` and `macos/App/Platform/Generated/engine.pb.swift` (via `scripts/generate-proto.sh`), `core/database/observations/observations.go`, `api/ffi/handlers/observations.go`, `macos/App/Platform/GoStore.swift`, Go and Swift tests.
+Failing tests first:
+- Go: in the observations package tests, a listed term Observation (seeded `event_type` = `death`, and `role` = `subject`) has `ValueTermKey == "death"` / `"subject"`; a non-term Observation has `""`.
+- Go: in the handler tests (`runRPC`), the RPC that lists a Source's graph observations (the one feeding `SourceGraphSnapshot`) returns `value_term_key` for a term Observation.
+- Swift: `GoStore.mapObservation` carries `valueTermKey` from the proto (a test that builds a `Provenencia_Engine_V1_Observation` with `valueTermKey = "death"`).
+Do: add `string value_term_key = 20;` to `Observation` (response data, never read from a request; comment it like `depiction`). Select `property_terms.key` beside the label the `Listed` query already joins, as `Listed.ValueTermKey`. `listedObservationProto` sets `ValueTermKey`. `GoStore.mapObservation` maps it. Regenerate the proto code with the repo script. Do not change `FakeStore`.
+Check: tests pass; scripts/check-pr.sh PASS. In the Landed note, add: "Ship round 7: the engine now sends an Observation's term key, which the registry and `PropertyTermDisplay` match on."
+
+## Round 7 — fix
+Head `3f24103f`. Gate PASS (orchestrator re-ran). F-17 done: `Listed.ValueTermKey` (`COALESCE(pt.key,'')` beside the joined label), `listedFromSource` in `source_read.go` also sets it (the graph read builds rows there; not in the file list, needed), proto field `value_term_key = 20`, `GoStore.mapObservation`. `ListObservationsBySource` feeds `CatalogQueryRegistry.swift:245`, the snapshot behind Promote and the Evidence graph. Tests: observations package (`female`), handler `TestListObservationsBySource` (`birth`, failed `""` with the fix stashed), Swift `mapsTheTermKey`.
+No reviewer dispatched: `api/ffi/**` and `core/database/**` paths matched SEC+PRF, but the diff adds one response-only string from a column the query already joins (no new input, no new loop or query); read by the orchestrator.
+
+## Result (after round 7)
+Gate PASS · CI see PR · open: none · follow-ups: — · to user: — (manual check §10 not run) · CON miss: none (FakeStore filled a field the real store never sent; no Swift test could see it)
