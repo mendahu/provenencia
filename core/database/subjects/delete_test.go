@@ -19,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/database/subjectvocab/subjectvocabtest"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -194,12 +195,7 @@ func TestSubjectDelete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := writes.Call(c, writes.Op{Action: "assign_subject_type_property", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			changes, err := subjectvocab.AppendBinding(tx, userID, bridge.Subject.SubjectTypeID, toponym.ID)
-			return struct{}{}, changes, err
-		}); err != nil {
-			t.Fatal(err)
-		}
+		subjectvocabtest.Assign(t, c, userID, bridge.Subject.SubjectTypeID, toponym.ID)
 		if _, err := writes.Call(c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
 			return observations.AddToCitation(tx, userID, bridge.Citation.ID, []observations.Input{{
 				SubjectID: bridge.Subject.ID, PropertyID: toponym.ID, ValueText: "extra", HasText: true,

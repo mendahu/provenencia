@@ -150,7 +150,7 @@ func TestSubjectVocab(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := deleteBinding(t, c, srcType.ID, prop.ID); err != nil {
+				if _, err := deleteBinding(t, c, testUser(t, c), srcType.ID, prop.ID); err != nil {
 					t.Fatal(err)
 				}
 				db, err := c.DB()
@@ -187,7 +187,7 @@ func TestSubjectVocab(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := deleteBinding(t, c, ptn.ID, personProp.ID); !errors.Is(err, ErrLocked) {
+				if _, err := deleteBinding(t, c, testUser(t, c), ptn.ID, personProp.ID); !errors.Is(err, ErrLocked) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -565,7 +565,7 @@ func testUser(t *testing.T, c *database.Catalog) []byte {
 
 func appendBinding(t *testing.T, c *database.Catalog, userID, typeID, propertyID []byte) ([]rowchange.Change, error) {
 	t.Helper()
-	changes, err := writes.Call(c, writes.Op{Action: "assign_subject_type_property", UserID: userID},
+	changes, err := writes.Call(c, writes.Op{Action: ActionAssign, UserID: userID},
 		func(tx *database.Tx) ([]rowchange.Change, []rowchange.Change, error) {
 			ch, err := AppendBinding(tx, userID, typeID, propertyID)
 			return ch, ch, err
@@ -573,10 +573,9 @@ func appendBinding(t *testing.T, c *database.Catalog, userID, typeID, propertyID
 	return changes, err
 }
 
-func deleteBinding(t *testing.T, c *database.Catalog, typeID, propertyID []byte) ([]rowchange.Change, error) {
+func deleteBinding(t *testing.T, c *database.Catalog, userID, typeID, propertyID []byte) ([]rowchange.Change, error) {
 	t.Helper()
-	userID := testUser(t, c)
-	return writes.Call(c, writes.Op{Action: "remove_subject_type_property", UserID: userID},
+	return writes.Call(c, writes.Op{Action: ActionRemove, UserID: userID},
 		func(tx *database.Tx) ([]rowchange.Change, []rowchange.Change, error) {
 			ch, err := DeleteBinding(tx, userID, typeID, propertyID)
 			return ch, ch, err
@@ -615,7 +614,7 @@ func bindingIDs(t *testing.T, c *database.Catalog, typeID []byte) [][]byte {
 }
 
 func reorder(c *database.Catalog, userID, typeID []byte, ids [][]byte) ([]rowchange.Change, error) {
-	return writes.Call(c, writes.Op{Action: "reorder_subject_type_properties", UserID: userID},
+	return writes.Call(c, writes.Op{Action: ActionReorder, UserID: userID},
 		func(tx *database.Tx) ([]rowchange.Change, []rowchange.Change, error) {
 			ch, err := ReorderBindings(tx, userID, typeID, ids)
 			return ch, ch, err
@@ -713,7 +712,7 @@ func TestBindingChanges(t *testing.T) {
 	if revs() != n {
 		t.Fatal("a bound pair recorded a revision")
 	}
-	ch, err = deleteBinding(t, c, personID, prop.ID)
+	ch, err = deleteBinding(t, c, userID, personID, prop.ID)
 	if err != nil || len(ch) != 1 || ch[0].Action != rowchange.ActionDelete {
 		t.Fatalf("delete %+v %v", ch, err)
 	}
@@ -724,7 +723,7 @@ func TestBindingChanges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := deleteBinding(t, c, personID, name.ID); !errors.Is(err, ErrLocked) {
+	if _, err := deleteBinding(t, c, userID, personID, name.ID); !errors.Is(err, ErrLocked) {
 		t.Fatalf("locked delete: %v", err)
 	}
 }

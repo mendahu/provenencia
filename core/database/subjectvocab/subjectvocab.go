@@ -28,6 +28,14 @@ import (
 
 var ErrInvalid = apperr.New(apperr.CodeSubjectVocabInvalid, apperr.KindUser)
 
+// The audit action names of a binding write. A caller of AppendBinding,
+// DeleteBinding or ReorderBindings passes one to writes.Run.
+const (
+	ActionAssign  = "assign_subject_type_property"
+	ActionRemove  = "remove_subject_type_property"
+	ActionReorder = "reorder_subject_type_properties"
+)
+
 // ErrLocked is returned when removing or assigning against a registry-locked binding.
 var ErrLocked = apperr.New(apperr.CodeSubjectVocabLocked, apperr.KindConflict)
 

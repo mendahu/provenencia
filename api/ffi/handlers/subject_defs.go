@@ -175,7 +175,7 @@ func ReorderSubjectTypeProperties(in []byte) ([]byte, error) {
 	}
 	var out *engine.ReorderSubjectTypePropertiesResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		_, wrote, err := writes.Run(c, writes.Op{Action: "reorder_subject_type_properties", UserID: userID},
+		_, wrote, err := writes.Run(c, writes.Op{Action: subjectvocab.ActionReorder, UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := subjectvocab.ReorderBindings(tx, userID, typeID, propertyIDs)
 				return struct{}{}, changes, err
@@ -218,7 +218,7 @@ func AssignSubjectTypeProperty(in []byte) ([]byte, error) {
 	}
 	var out *engine.AssignSubjectTypePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if _, _, err := writes.Run(c, writes.Op{Action: "assign_subject_type_property", UserID: userID},
+		if _, _, err := writes.Run(c, writes.Op{Action: subjectvocab.ActionAssign, UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := subjectvocab.AppendBinding(tx, userID, typeID, propertyID)
 				return struct{}{}, changes, err
@@ -253,7 +253,7 @@ func RemoveSubjectTypeProperty(in []byte) ([]byte, error) {
 	}
 	var out *engine.RemoveSubjectTypePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if _, _, err := writes.Run(c, writes.Op{Action: "remove_subject_type_property", UserID: userID},
+		if _, _, err := writes.Run(c, writes.Op{Action: subjectvocab.ActionRemove, UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := subjectvocab.DeleteBinding(tx, userID, typeID, propertyID)
 				return struct{}{}, changes, err

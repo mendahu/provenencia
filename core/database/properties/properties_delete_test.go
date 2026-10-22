@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/database/subjectvocab/subjectvocabtest"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
@@ -124,12 +125,7 @@ func TestDelete(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := writes.Call(c, writes.Op{Action: "assign_subject_type_property", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-					changes, err := subjectvocab.AppendBinding(tx, userID, person.ID, got.ID)
-					return struct{}{}, changes, err
-				}); err != nil {
-					t.Fatal(err)
-				}
+				subjectvocabtest.Assign(t, c, userID, person.ID, got.ID)
 				changes, err := writes.Call(c, writes.Op{Action: "delete_property", UserID: userID}, func(tx *database.Tx) ([]rowchange.Change, []rowchange.Change, error) {
 					ch, err := properties.Delete(tx, userID, got.ID)
 					return ch, ch, err
