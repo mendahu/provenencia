@@ -684,9 +684,7 @@ private struct EvidenceRelationshipCard: View {
                     .foregroundStyle(PVColor.textMuted)
                     .accessibilityHidden(true)
             }
-            if heading.showsBadge {
-                EvidenceOutcomeBadge(outcome: relationship.outcome)
-            }
+            EvidenceOutcomeBadge(outcome: relationship.outcome)
         }
         .padding(.horizontal, EvidenceLayout.inset)
         .padding(.vertical, PVSpacing.space3)

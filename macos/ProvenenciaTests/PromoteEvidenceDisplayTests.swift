@@ -360,7 +360,6 @@ struct PromoteEvidenceDisplayTests {
         let agrees = PromoteEvidenceDisplay.relationshipHeader(bridge: found, outcome: .agree, neighborName: "Don")
         #expect(agrees.title == "Marion Smith is the mother of Don Smith")
         #expect(agrees.subtitle == nil)
-        #expect(agrees.showsBadge)
         #expect(agrees.spoken == "Marion Smith is the mother of Don Smith. Agrees.")
         let similar = PromoteEvidenceDisplay.relationshipHeader(bridge: found, outcome: .partial, neighborName: "Don")
         #expect(similar.spoken == "Marion Smith is the mother of Don Smith. Similar.")
@@ -368,12 +367,10 @@ struct PromoteEvidenceDisplayTests {
         let named = PromoteEvidenceDisplay.relationshipHeader(bridge: nil, outcome: .agree, neighborName: "Birth")
         #expect(named.title == "They share a matching connection")
         #expect(named.subtitle == "with Birth")
-        #expect(!named.showsBadge)
         #expect(named.spoken == L10n.Promote.spokenRelationship(sentence: "They share a matching connection", link: "with Birth"))
         let unnamed = PromoteEvidenceDisplay.relationshipHeader(bridge: nil, outcome: .partial, neighborName: nil)
         #expect(unnamed.title == "They share a similar connection")
         #expect(unnamed.subtitle == "with a connected record")
-        #expect(!unnamed.showsBadge)
     }
 
     @Test func nothingToCompareWhenNoLineRelationshipOrLifespan() {

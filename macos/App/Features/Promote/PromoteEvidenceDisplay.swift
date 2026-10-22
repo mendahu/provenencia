@@ -119,7 +119,6 @@ enum PromoteEvidenceDisplay {
     struct RelationshipHeader: Equatable {
         var title: String
         var subtitle: String?
-        var showsBadge: Bool
         var spoken: String
     }
 
@@ -134,7 +133,6 @@ enum PromoteEvidenceDisplay {
             return RelationshipHeader(
                 title: bridge.sentence,
                 subtitle: nil,
-                showsBadge: true,
                 spoken: L10n.Promote.spokenRelationship(sentence: bridge.sentence, link: L10n.string(L10n.Promote.outcome(outcome)))
             )
         }
@@ -143,7 +141,6 @@ enum PromoteEvidenceDisplay {
         return RelationshipHeader(
             title: title,
             subtitle: link,
-            showsBadge: false,
             spoken: L10n.Promote.spokenRelationship(sentence: title, link: link)
         )
     }
