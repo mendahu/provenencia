@@ -1,0 +1,360 @@
+# S11-20 — Claim evidence sheet
+
+**Status:** Blocked — on S11-32, board S11-D2
+**Spike / slice:** Spike 11 · Slice 5 — Claim evidence
+**Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
+**Brief:** [S11-D2](../design/S11-D2-evidence-sheet.md), board not drawn
+**Board:** — (to be recorded when the board is agreed: link, frame numbers, and S11-D2 §9 board notes)
+**Depends on:** S11-25 (landed [#517](https://github.com/mendahu/provenencia/pull/517) after this draft; STEP-0 rereads it against [its plan](S11-25-claim-evidence-rpc.md) and Landed note), S11-32 (scoped; this draft follows its [scope entry](../deployment-plan.md#s11-32--lifespan-and-likeness-evidence-lines)), S11-D2
+**Blocks:** —
+**Branch:** `s11-20-claim-evidence-sheet`
+**Version bump:** none — Spike 11 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
+**Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
+**Rules that bind:** `.cursor/rules/design-system-layers.mdc`
+**Context:** [S11-D2](../design/S11-D2-evidence-sheet.md) (requirements ES-1 – ES-22, copy table, inventory); [`claim-evidence.md`](../claim-evidence.md) (Lines, Wording, Evidence through relationships); [S11-D1](../design/S11-D1-promote-rows.md) (band, Contested, captions, the "·" connection form); [`promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3; working rules "The pin policy has one owner, in Go", "One wire vocabulary"; S11-18 review M-2, M-6 (subtitle and neighbor naming); S11-12 D-12 (a side that contradicts itself)
+**Planned:** 2026-10-22 against `main` @ `6504003` (draft: S11-25 and S11-32 not landed)
+**Review:** [`S11-20-claim-evidence-sheet.review.md`](S11-20-claim-evidence-sheet.review.md) — round 1 on the draft: Fits with changes / Not ready; every finding fixed or declined; round 2 runs at the STEP-0 refresh
+
+### Implementer — read this first
+
+1. **This file is the whole task.** Read it top to bottom before you change code. Then read every file under **Current state** and load every skill under **Skills to load**.
+2. **Check the base.** Compare `main` with the **Planned** commit. If a file under **Current state** has changed so a row is no longer true, stop and report which rows.
+3. **Decisions are made.** Do not reopen a **Decision** or a **Scope** line, and do not swap in a design you like better. If one cannot work, stop: say which ID it is, what you found (path, line, output), and what you would need. Do not improvise around it.
+4. **Do only In.** Out stays out, even when it is one line away. Do not refactor, rename, or tidy code the plan does not name.
+5. **Work the Steps in order.** Run each step's check before you start the next. A failing check is fixed in that step.
+6. **Hit a Stop condition → stop.** Report it. Do not work around it.
+7. **Done is the Definition of done.** Report each box with its evidence: the command and its result, the test name, or the manual check you ran.
+8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
+
+---
+
+## 1. Objective
+
+The Promote evidence sheet answers two questions and keeps them apart. A summary at the top says why the row was suggested: its band, Contested when it applies, the row's reason and its Updated caption. Under it, "What's the evidence that this is <record>?" lists every member's evidence as sentences the researcher checks or unchecks: property sections, collapsed lines that expand to each record, relationships that name the connection that matched, a lifespan line that is never pinned, and likenesses as two crops side by side. The table with its Weight column and the "Through <name>" cards go.
+
+**Why now.** S11-25 moved the sheet onto the evidence RPC in today's shape; S11-32 adds the lifespan and likeness lines and Go's section order. This PR is the redraw S11-D2 specifies, and closes the dogfood bar item "the evidence sheet shows all the evidence".
+
+**What stays.** The data: `CatalogClaimEvidence` and every Go path (no wire change). Pins as S11-25 left them: `PromoteFlow.Row.pins`, `togglePin(subjectID:pinIDs:)`, `setEvidence`, `defaultPins`, the lazy load and `SheetEvidence` states. The panel, its title, the claim fields, the footer. The Promote rows, which only change by sharing their readout badges with the summary.
+
+## 2. User stories
+
+Conventions. "Evidence E1" is a `CatalogClaimEvidence` with one `name` section holding one line: relation `same`, outcome `agree`, pinnable, checked, `incoming` the name "John Smith", five members (pin ids `p1`…`p5`) on Sources "Census 1851" … "Census 1891", each value "John Smith". "Row R" is a `PromoteFlow.Row` named "John Smith" with target `.handle(id: "h1", ref: "PER-7QH3D", title: "John Smith")`, readout assessment `.strong`, readout reason `.via` a neighbor "Mary Smith" whose `shownRef` is "PER-4KX2M".
+
+**US-1.** As a researcher, when I open a row's sheet, I first read why it was suggested, then the evidence, so that I never mistake matching's reasons for the pins I file.
+
+| AC | Given / when | Then |
+| --- | --- | --- |
+| AC-1.1 | Row R, contested | Subtitle "Strong, contested · via Mary Smith → PER-4KX2M"; the summary Card holds the Strong and Contested Badges, the reason, and "Something below disagrees with this record." (ES-1, ES-2) |
+| AC-1.2 | Row R, `updated`, move `.neighborMoved` | Subtitle "Strong · via Mary Smith → PER-4KX2M" (the readout reason, as the row button); the summary adds "Updated · after Mary Smith moved to PER-4KX2M". Row R `updated` with no move: "Updated · via Mary Smith → PER-4KX2M". Not `updated`: no Updated line (ES-2) |
+| AC-1.3 | Row R with E1, all five pins checked | Heading "What's the evidence that this is PER-7QH3D John Smith?" with meta "5 checked"; while loading, no meta (ES-3) |
+| AC-1.4 | A row set to New, Skip or unset | No subtitle; the EmptyState "Pick a record to see its evidence"; claim fields shown for New, hidden for Skip and unset (ES-19) |
+
+**US-2.** As a researcher, I see every member's evidence as a sentence, and I can uncheck one record of a collapsed line.
+
+| AC | Given / when | Then |
+| --- | --- | --- |
+| AC-2.1 | Row R with E1 | A "Name" Card with one line "Same name · 5 records", Badge Agrees, box checked, "Show 5 records" (ES-5, ES-6, ES-9) |
+| AC-2.2 | AC-2.1, expand, uncheck Census 1861 | Five member rows; Census 1861 unchecked; the line's box partly checked; pins `p1, p3, p4, p5`; heading meta "4 checked" (ES-9, ES-10) |
+| AC-2.3 | AC-2.2, press the line's box | All five checked (ES-10) |
+| AC-2.4 | A `date` line `contains` / `precision` | "Same date, recorded less precisely", Badge Similar, box unchecked and enabled (ES-8) |
+| AC-2.5 | A `sex_at_birth` line whose incoming is negative "male", outcome `conflict` | "Disagrees", Badge Conflicts, box disabled; "This source: not male"; the conflict Callout under the heading (ES-4, ES-7) |
+| AC-2.6 | Every relation × cause in the ES-8 table, for a name value, a date value, and a term value | The table's sentence (T-2) |
+
+**US-3.** As a researcher, a relationship names the connection that matched, and checking it pins what is behind it.
+
+| AC | Given / when | Then |
+| --- | --- | --- |
+| AC-3.1 | A relationship `participation`, outcome `agree`, checked, one bundle, one `date` section; on the page, the bridge between John and the birth row reads "John Smith · subject of · Birth of John Smith" | A Card headed "They share a matching connection", then "John Smith · subject of · Birth of John Smith", the birth row's `shownRef`, Badge Agrees, box checked; the date line under it, indented (ES-12, ES-13) |
+| AC-3.2 | The same on the birth (event) row, whose neighbor is John | "They share a matching connection" — the same bridge's words (ES-13) |
+| AC-3.3 | Outcome `partial` (S11-D2 Frame 4: the marriage dated 1840 against 12 Oct 1843) | "They share a similar connection", Badge Similar, box unchecked and enabled; the "Different dates" line under it (ES-13). No relationship ever arrives with outcome `conflict` (`claimevidence` keeps agree and partial only) |
+| AC-3.4 | A relationship with no sections; a relationship whose neighbor has no bridge in `flow.bridges` | "Nothing else to compare."; pressing its box toggles its bundle ids. No bridge: the second line reads "with <neighbor name>" (ES-13, ES-14) |
+| AC-3.5 | No sheet string reads "Through" | `rg -n 'promote.sheet.through\|Through %@' macos/App` prints nothing |
+
+**US-4.** As a researcher, I see a person's lifespan check and their likenesses.
+
+| AC | Given / when | Then |
+| --- | --- | --- |
+| AC-4.1 | Lifespan agree, this side's span 14 May 1817 – 2 Jun 1890, the record's 14 May 1817 – 2 Apr 1871 (S11-D2 Frame 1) | A "Lifespan" Card, last among own Cards: "The lifespans fit: 14 May 1817 – 2 Jun 1890 here, 14 May 1817 – 2 Apr 1871 on the record", Badge Agrees, no checkbox, the caption "Worked out from dated events. A guide for matching, never pinned." (ES-16) |
+| AC-4.2 | Lifespan conflict, the record's span 3 Mar 1801 – 9 Jan 1838 (S11-D2 Frame 10) | "The lifespans don't fit: 14 May 1817 – 2 Jun 1890 here, 3 Mar 1801 – 9 Jan 1838 on the record", Badge Conflicts; the conflict Callout shows. A span of one date prints it once: "1843" (ES-16) |
+| AC-4.3 | This side contradicts itself; the record has no dated events; neither side has a dated event | "No lifespan for this source: its own dates contradict each other"; "No lifespan to compare: the record has no dated events"; Badge Not compared; neither: no Lifespan Card (ES-16) |
+| AC-4.4 | A `likeness` line, same image, two members | A "Likeness" Card after Name; two 96 pt crops (this Source's, then the first member's), each over its caption; "Same likeness · 2 records", Agrees, checked (ES-15) |
+| AC-4.5 | A `likeness` line, two images | "Compare these likenesses", Badge "Judge by eye", unchecked, enabled (ES-15) |
+
+**US-5.** As a VoiceOver user, each line reads as one sentence, and the checkbox speaks its own state.
+
+| AC | Given / when | Then |
+| --- | --- | --- |
+| AC-5.1 | AC-2.1's line | Label "Name. Same name, 5 records. This source: John Smith."; the checkbox value "checked"; a partly checked box speaks "partly checked" (ES-22) |
+| AC-5.2 | The lifespan line | Its sentence only; no checkbox element (ES-22) |
+
+## 3. Scope
+
+| In | Covered by |
+| --- | --- |
+| Kit: `PVSectionHeader` title as `PVCopy`; `PVCheckbox` speaks "partly checked" (S11-D2 inventory, Extend) | STEP-1, D-11, D-15, AC-5.1 |
+| Shared pieces: the readout badges, the likeness tile, the life span text, the neighbor naming, the bridge kind on `BridgeFact` | STEP-2, D-8, D-9, D-13, D-14, D-16 |
+| Pure display helpers (D-2) | STEP-3, AC-2.2, AC-2.3 |
+| Copy: ES-8 table, relationship and lifespan sentences, summary, heading, states, spoken labels; changed and removed keys (D-4, D-5, D-12) | STEP-4, AC-2.6 |
+| Sheet shell, subtitle, summary, heading, states (ES-1 – ES-4, ES-17 – ES-21) | STEP-5, US-1 |
+| Property Cards, lines, collapse (ES-5 – ES-11) | STEP-6, US-2 |
+| Relationship Cards (ES-12 – ES-14) | STEP-7, US-3 |
+| Lifespan and likeness Cards (ES-15, ES-16) | STEP-8, US-4 |
+| Spoken labels, identifiers, removal of the old table | STEP-9, US-5, AC-3.5 |
+| Docs | STEP-10 |
+
+| Out | Home |
+| --- | --- |
+| Any Go, proto or store change, including section order | S11-25, S11-32 (a missing field is a Stop condition) |
+| Opening the sheet from a connection subrow | not planned (decided here for S11-D1's note) |
+| Select-all / pin-nothing | not planned (S11-D2 §2.1) |
+| Face comparison of two likenesses | not planned |
+| Statuses beyond Accepted | a later spike (today's hint) |
+| Moving `PlacePeriodDisplay.span` onto `PersonLifeDisplay.dateSpan` | not planned (its open and until copy differ: `placePeriodOpen`, `placePeriodUntil`) |
+| The same indeterminate gap in `Features/Sources/SourceArtifactChecklist.swift` | fixed by D-15 for every caller; no change there |
+
+## 4. Current state
+
+Verified at `6504003`, then read against S11-25's plan for the rows it changes. Rows marked **after S11-25** or **after S11-32** describe code those PRs write; recheck them at your base.
+
+| Area | Where | Today |
+| --- | --- | --- |
+| Sheet | `macos/App/Features/Promote/PromoteView.swift` `private struct PromoteEvidenceSheet` (lines 664–896), `PromoteView.body` `.sheet(item: sheetBinding)` (lines 68–70), `private enum PromoteLayout` (lines 900–910) | A `PVPanel(width: 880)` with a conflict callout, `sheetColumns` (Pin, Compared, This source, target, Result, Weight), one `PVCard` per `ExhibitGroup` ("This subject", "Through <name>"), `comparisonLine`, claim fields, "Back to all rows". `sheetSubtitle` uses `L10n.Promote.assessment(readout.assessment)`, not `assessmentText`; group refs use `row.ref`, not `shownRef` |
+| Row readout | `PromoteView.swift` `PromoteAlignmentRow` (band and Contested `PVBadge`s, lines 490–498; `if row.updated` caption with `captionReason`, lines 525–529), `private func badgeTone(_:)` (lines 566–573) | The band, Contested and reason the summary repeats |
+| Sheet after S11-25 | same file | Reads `row.evidence: CatalogClaimEvidence?` and `model.sheetEvidence`; `evidenceLine` binds a `PVCheckbox` to a line's pin ids; relationship cards titled `through(name)` with a header checkbox; skeleton bars while loading; a danger callout on failure (S11-25 D-14) |
+| Evidence types after S11-25 | `macos/App/Platform/GenealogyStore.swift` `CatalogClaimEvidence{sections, relationships, offers, sourceTitles}`, `checkedPinIDs`, `offeredPinIDs`, `CatalogClaimEvidenceSection{propertyKey, lines}`, `CatalogClaimEvidenceLine{propertyKey, outcome, propertyCause, relation, cause, points, pinnable, checked, incomingObservationID, incoming, incomingNegative, members}`, `CatalogClaimEvidencePin{id, memberSubjectID, observationID, sourceID, value}`, `CatalogClaimEvidenceRelationship{neighborSubjectID, key, bridgeType, term, end, eventType, outcome, cause, points, pinnable, checked, bundles, sections}`, `CatalogClaimEvidenceBundle{id, memberSubjectID, sourceID}` | S11-25 D-11. `relationship.outcome` is assumed to be `EvidenceOutcome` and `cause` `SegmentCause` |
+| Vocabulary after S11-25 | `macos/App/Platform/ConclusionVocabulary.swift` `EvidenceOutcome`, `EvidencePropertyCause`, `ValueRelation`, `ValueCause`, `SegmentCause` | S11-25 D-10; `L10n.Promote.outcome(_: EvidenceOutcome)` |
+| Added by S11-32 | `CatalogClaimEvidence` lifespan result (outcome, each side's window as start and end date values, each side's no-lifespan reason); `CatalogConclusionValue.depiction(CatalogDepictionValue)`; a `ValueCause` case for "cannot judge two images"; sections in Go's lead order | Per the S11-32 scope entry. Exact names come from S11-32's plan; STEP-0 records them here |
+| Flow | `macos/App/Features/Promote/PromoteFlow.swift` `Row` (`name`, `ref`, `shownRef`, `target`, `selectionReadout`, `captionReason` = `move ?? reason`, `updated`, `move`, `contested`, `pins`), `row(_:)`, `bridges: [BridgeFact]`, `struct BridgeFact{id, sentence, phrase, endAName, endBName, mark, endA, endB, alreadyFiled}` (line 217) | `BridgeFact` has no bridge kind |
+| Model | `macos/App/Features/Promote/PromoteModel.swift` `reasonText(_:on:)` (from line 199; `.via` and the move cases look up `flow.row(id)`, `.name`, `.shownRef`), `assessmentText(_:)` (lines 238–241), `propertyLabel(key:origin:)`, `facts()` (`BridgeFact` built from `snapshot.bridges`, lines 362–374, `bridge.kind` in hand), `session.projectKey.projectDir` (line 131) | `assessmentText` gives "Strong, contested" |
+| Values to text | `macos/App/Features/Conclusions/ReconciledValueDisplay.swift` `string(for:locale:orders:)`; `macos/App/Features/Conclusions/PersonLifeDisplay.swift` `private static func dateSpan(birth:death:locale:)` (line 37: "1817–1880", open and death-only forms through `L10n.Conclusions.lifeSpan*`, each end through `DateRowDisplay.line`) | S11-25 words line values with the first |
+| Likeness tile | `macos/App/Features/Conclusions/ConclusionDetailPage.swift` `ConclusionDetailLikenessSection` `tileView` (a 96 pt `CachedThumbnail(fallbackMark: .subjectPerson)` over a one-line muted Source caption, around line 270) | The one crop-and-caption today |
+| Kit | `macos/App/DesignSystem/Components/SectionHeader/PVSectionHeader.swift` (stores `title: LocalizedStringResource`, renders `Text(title)`); `macos/App/DesignSystem/Components/Copy/PVCopy.swift` `protocol PVCopy` (`pvText`), used generically by `PVDisclosureButton<Title: PVCopy>`; `macos/App/DesignSystem/Components/Checkbox/PVCheckbox.swift` (`isIndeterminate` drawn by `PVCheckboxMark`, spoken state from `isChecked` only); `PVBadge`, `PVCallout`, `PVCard(tone: .sunken)`, `PVSkeletonBar`, `PVEmptyState` | — |
+| Copy | `macos/App/Platform/L10n.swift` `L10n.Promote` (lines 1297–1499): `sheetSubtitle`, `through`, `ownRecords`, `sheetNeighbor`, `pinLine`, `negatedValue`, `conflictCalloutTitle`, `conflictCalloutBody`, `argumentHint`, `sheetHere`, `sheetPin`, `sheetCompared`, `sheetResult`, `sheetWeight`, `outcome`; `macos/App/Resources/Localizable.xcstrings` | Today's sheet strings |
+| Project | `macos/Provenencia.xcodeproj/project.pbxproj` | Lists every Swift file; new files are registered there |
+| Tests | `macos/ProvenenciaTests/PromoteModelTests.swift` `theContestedBandIsSpoken`, `reasonsAreWordedWithLabelsAndRefs`; `macos/ProvenenciaTests/PromoteFlowTests.swift` (S11-25's T-10 tests); `macos/ProvenenciaTests/L10nResolutionTests.swift` | No test renders the sheet; there is no UI-test target |
+
+**Precedent.** S11-18 ([#507](https://github.com/mendahu/provenencia/pull/507)) built S11-D1's frames on the same page: kit Badges and Callouts composed in `PromoteView.swift`, copy through `L10n.Promote`, wording tested on `PromoteModel` (`theContestedBandIsSpoken`). Copy that: words in `L10n` functions that switch on wire enums (`L10n.Promote.outcome`, `assessment`), choices in a pure `*Display` enum tested without a view (`ReconciledValueDisplay`, `PersonLifeDisplay`).
+
+## 5. Decisions
+
+| ID | Decision | Why | Rejected |
+| --- | --- | --- | --- |
+| D-1 | **The sheet moves to its own file.** `macos/App/Features/Promote/PromoteEvidenceSheet.swift` *(new)* holds `struct PromoteEvidenceSheet` (internal) and its private subviews: `EvidenceSummary`, `EvidenceSectionCard`, `EvidenceLineRow`, `EvidenceMemberRow`, `EvidenceRelationshipCard`, `EvidenceLikenessLine`, `EvidenceLifespanCard` *(all new)*. `PromoteView.swift` keeps only the `.sheet` call. Every new file is registered in `project.pbxproj` | The rethink replaces the sheet wholesale; `PromoteView.swift` is 927 lines | Keeping it in `PromoteView.swift` |
+| D-2 | **Pure display helpers.** `macos/App/Features/Promote/PromoteEvidenceDisplay.swift` *(new)*: `enum PromoteEvidenceDisplay` with `enum CheckState { case checked, unchecked, partial }`; `checkState(pinIDs: [String], pins: Set<String>) -> CheckState` (all in → checked, none → unchecked, else partial; empty → unchecked); `checkedCount(_ e: CatalogClaimEvidence, pins: Set<String>) -> Int` (`pins ∩ e.offeredPinIDs`); `hasConflict(_ e:) -> Bool` (any line in any section or relationship section with outcome `.conflict`, or a lifespan with outcome `.conflict`; a relationship never has outcome `.conflict`); `bridge(for r: CatalogClaimEvidenceRelationship, row: String, in bridges: [PromoteFlow.BridgeFact]) -> PromoteFlow.BridgeFact?` (the first bridge whose `kind == EvidenceBridgeKind(rawValue: r.bridgeType)` and whose `{endA, endB}` is `{row, r.neighborSubjectID}`, in `bridges` order) | One testable home for every choice the view makes; the `*Display` naming of `ReconciledValueDisplay` | Logic inside SwiftUI bodies — untestable (no UI target) |
+| D-3 | **Order comes from Go.** Sections and relationships render in the order `CatalogClaimEvidence` gives. S11-32 puts the lead order (person: `name`, `likeness`) first; relationships keep S11-19's order (one-cardinality keys, birth and death, first). The lifespan Card is last among own Cards. Section Card headers are `model.propertyLabel(key:origin: "provenencia")`, likeness included | One owner of order (review M-2) | A Swift rank or a `likeness` special case |
+| D-4 | **Words through `L10n.Promote`, switching on wire enums.** `lineSentence(relation: ValueRelation, cause: ValueCause, propertyCause: EvidencePropertyCause, value: CatalogConclusionValue) -> LocalizedStringResource` *(new)* implements the ES-8 table: the `value` case picks the name, date or generic variant; `propertyCause == .negative` or `relation == .different` → the "Disagrees" family; S11-32's cannot-judge cause → "Compare these likenesses"; `.same` on a depiction → "Same likeness"; `.unknown` (other causes) and `.unrecognized` → the generic "Similar". `outcome(_ outcome: EvidenceOutcome, cause: ValueCause = .none) -> LocalizedStringResource` (signature changed, key kept): Agrees, Similar, Conflicts, "Judge by eye" for the cannot-judge cause, "Not compared" for `.unknown` and `.unrecognized`; a relationship and the lifespan call it with their outcome only | The precedent (`outcome`, `assessment`); "One wire vocabulary": codes parsed once, worded once | A `Wording` type in the feature folder |
+| D-5 | **Counts are plural keys.** "· %lld records", "%lld checked", "Show %lld records", the argument hint: one key each with `plural` variations in `Localizable.xcstrings` | `add-localized-string` §4 | `count == 1` branches |
+| D-6 | **Expansion is view state.** `@State private var expanded: Set<String>` on `PromoteEvidenceSheet`, keyed by a line's first pin id; reset when the sheet closes | Not part of the claim | Storing it on `PromoteFlow.Row` |
+| D-7 | **Toggles reuse S11-25.** A line's box calls `model.togglePin(subjectID:pinIDs:)` with every pin id (partial → all in, ES-10, which S11-25's "else insert all" does); a member row calls it with its one id; a relationship's box with its bundle ids. A non-pinnable line has a disabled box; the lifespan line has none | One pin owner | A per-member toggle function |
+| D-8 | **The sheet says what the row says.** `PromoteReadoutBadges(readout:)` *(new)* in `macos/App/Features/Promote/PromoteReadoutBadges.swift` draws the band `PVBadge` (with the tone map that was `badgeTone`) and the Contested `PVBadge`; `PromoteAlignmentRow` and the summary both instance it, and `badgeTone` is deleted. Subtitle: `L10n.Promote.sheetSubtitle(assessment: model.assessmentText(readout), reason: model.reasonText(readout.reason, on: row))`. The summary: `PromoteReadoutBadges`, `reasonText(readout.reason, on: row)`, and, when `row.updated`, `L10n.Promote.updatedDetail(model.reasonText(row.captionReason, on: row))`, exactly as the row's caption | S11-18 review M-2; review M-5, X-6 | Moving `badgeTone` into `PromoteLayout` — a tone map in a grid type |
+| D-9 | **Neighbors are named as rows are.** `PromoteModel.neighborName(_ subjectID: String) -> (name: String, ref: String?)` *(new)*: `flow.row(subjectID)` → `(name, shownRef)`, else `(L10n.string(L10n.Promote.sheetNeighbor), nil)`. `reasonText` calls it in its `.via` and move cases; the sheet calls it for a relationship's ref and the "with <name>" fallback | S11-18 review M-6 in one function (review M-10) | A second lookup in the sheet |
+| D-10 | **Values.** A line's and a member's value text is `ReconciledValueDisplay.string(for:orders: model.session.nameFormat)` as S11-25 does; a negative incoming is `negatedValue`. A depiction value draws D-16's tile. This Source's crop caption is "This source" (`L10n.Promote.thisSourceCaption`); a member's is `sourceTitles[pin.sourceID]`. A collapsed same-image line shows the first member's crop | One value-to-text path | A local image loader |
+| D-11 | **Section header takes `PVCopy`.** `PVSectionHeader<Title: PVCopy, Aside, Actions>` stores `title: Title` and renders `title.pvText`, as `PVDisclosureButton` does. Existing callers pass a `LocalizedStringResource` and compile unchanged; `Text(resource)` and `resource.pvText` render the same. The heading is `PVSectionHeader(title: L10n.Promote.evidenceHeading(ref:title:), meta: …)` | `PVCopy` is the kit's one way to take copy (review M-1, X-5) | A `verbatimTitle:` init — a second pattern per component |
+| D-12 | **Keys.** Kept with new text or signature: `sheetSubtitle` ("%1$@ · %2$@"), `argumentHint` (plural), `conflictCalloutTitle` ("Some evidence disagrees"), `conflictCalloutBody` ("Disagreeing lines can't be pinned. The claim can still be filed."), `sheetNeighbor` ("a connected record"), `outcome` (D-4). Removed with their `Localizable.xcstrings` entries: `through`, `ownRecords`, `pinLine`, `sheetHere`, `sheetPin`, `sheetCompared`, `sheetResult`, `sheetWeight` | One name per concept (review M-8); "High tolerance for churn" | Delete and re-add under new names |
+| D-13 | **Life span text has one formatter.** `PersonLifeDisplay.dateSpan(birth:death:locale:)` becomes internal (drop `private`); the lifespan line calls it with each side's **span** (earliest and latest dated event, from S11-32), not its window: a window without a birth starts 110 years before the first event and reads as nonsense. It gives "14 May 1817 – 2 Jun 1890" and "abt 1817 – 1890" (`DateRowDisplay.line`); when both ends are the same date it is called with the start only and the death-only form is not used, giving "1843". The Lifespan Card is left out when neither side has a span or a no-lifespan reason other than "no dated events" | The Person page's span reads the same (review M-4, X-1) | A third inline `"\(a)–\(b)"` |
+| D-14 | **A relationship is named by its bridge on the page.** `PromoteFlow.BridgeFact` gains `kind: EvidenceBridgeKind`, set in `PromoteModel.facts()` from `bridge.kind`. The header's first line is the outcome sentence (`relationshipAgrees` "They share a matching connection" for `.agree`, `relationshipSimilar` "They share a similar connection" for `.partial`; `claimevidence` sends no other relationship outcome); the second is `L10n.Promote.connectionLink(first: bridge.endAName, phrase: bridge.phrase, second: bridge.endBName)` *(new)* "%1$@ · %2$@ · %3$@" from D-2's `bridge(for:…)`, else `relationshipWith(name)` "with %@" (D-9). S11-27 calls `connectionLink` for its subrows | One owner of link wording and end order, shared with S11-D1's subrows; every row kind and outcome is covered; no term or `End` reading in Swift (review M-3, X-2, X-3) | Wording from S11-32 term labels and `End` — the inverse-term and symmetric-link cases cannot be read correctly from the key |
+| D-15 | **`PVCheckbox` speaks its mixed state.** With `isIndeterminate`, its accessibility value is "partly checked" from a new key `checkboxPartlyChecked` in the L10n namespace the kit already uses for checkbox copy (the implementer finds it with `rg -n 'enum DesignSystem\|checkbox' macos/App/Platform/L10n.swift`; with none, `L10n.DesignSystem` *(new)*). The sheet's spoken labels carry no state words | The control owns its state (review M-6) | State words in each sheet label |
+| D-16 | **One likeness tile.** `LikenessTile(projectDir:relPath:caption:)` *(new)* in `macos/App/Features/Conclusions/LikenessTile.swift`: the 96 pt `CachedThumbnail(fallbackMark: .subjectPerson)` over a one-line muted caption, lifted from `ConclusionDetailLikenessSection.tileView`, which then instances it inside its open-Citation button. `projectDir` is `model.session.projectKey.projectDir` | Second call site (review M-7); it depends on `CachedThumbnail` (Platform), so it stays a feature view, not a `DesignSystem/Recipes` type | A `PVLikenessTile` recipe — DesignSystem would import Platform |
+| D-17 | **States.** Loading: skeleton bars, no heading meta. No record: `PVEmptyState(icon: .search, title: pickRecordTitle, message: pickRecordBody, compact: true)`; claim fields shown for New, hidden for Skip and unset. Nothing to compare (loaded; no section, no relationship, no Lifespan Card): `PVEmptyState(icon: .info, …, compact: true)`. Identifiers: `promote.sheet.summary`, `promote.sheet.heading`, `promote.sheet.section.<propertyKey>`, `promote.sheet.pin.<first pin id>`, `promote.sheet.member.<pin id>`, `promote.sheet.expand.<first pin id>`, `promote.sheet.relationship.<first bundle id>`, `promote.sheet.lifespan`, `promote.sheet.likeness.<first pin id>` | Each choice the dry run found open (review X-12); a bundle id is unique where a key is not | Keys that repeat for two children |
+
+## 6. Design
+
+### Codebase fit
+
+| New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
+| --- | --- | --- | --- |
+| `PromoteEvidenceSheet.swift` *(new)* and its private subviews | file, views | `PromoteView.swift` `PromoteEvidenceSheet` | Moved and rewritten (D-1) |
+| `PromoteEvidenceDisplay.swift` `PromoteEvidenceDisplay` *(new)* | enum, funcs | `ReconciledValueDisplay` | Display only; pins stay in `PromoteFlow` (D-2) |
+| `PromoteReadoutBadges.swift` `PromoteReadoutBadges` *(new)* | view | `PromoteAlignmentRow`'s badges, `badgeTone` | Extracted; both call sites use it (D-8) |
+| `LikenessTile.swift` `LikenessTile` *(new)* | view | `ConclusionDetailLikenessSection.tileView` | Extracted; both call sites use it (D-16) |
+| `PromoteModel.neighborName` *(new)* | func | `reasonText`'s lookups | Extracted (D-9) |
+| `BridgeFact.kind` *(new)* | field | `SourceGraphPlacedBridge.kind` | Carried through (D-14) |
+| `PVSectionHeader` generic title; `PVCheckbox` mixed value | kit extend | `PVDisclosureButton<Title: PVCopy>`; `CheckboxAccessibility` | D-11, D-15 |
+| `L10n.Promote` sheet functions and keys *(new)*, `connectionLink` *(new)* | keys | `L10n.Promote.outcome`, `assessment` | Same pattern (D-4, D-12, D-14) |
+| `PromoteEvidenceDisplayTests.swift` *(new)* | tests | `PromoteModelTests.swift` | Tests the display enum and L10n functions without a view |
+
+**Builds on.** S11-25's `CatalogClaimEvidence`, `togglePin(subjectID:pinIDs:)`, `SheetEvidence`; S11-32's lifespan, depiction case and section order; `ReconciledValueDisplay`; `PersonLifeDisplay.dateSpan`; `CachedThumbnail`; `EvidenceBridgeEdgeSummary` (through `BridgeFact.phrase`); `PromoteModel.assessmentText`, `reasonText`; `PVCopy`; the kit.
+**Deletes.** `sheetColumns`, `weightText`, `badgeTone`, `ExhibitGroup` (if S11-25 left it), the "Through" relationship card, `PromoteLayout.pinColumn` and `weightColumn` when `rg` finds no other reader, the D-12 removed keys.
+**Next adds.** S11-27's subrows call `connectionLink`. A new relation or cause is one case in `lineSentence`. A new section kind needs no view change. A likeness on another surface is one `LikenessTile`.
+
+### Schema
+
+None — no catalog change.
+
+### Go core
+
+None — the lines and their order come from S11-25 and S11-32.
+
+### FFI
+
+None — no wire change.
+
+### macOS
+
+From the S11-D2 inventory. Paths under `macos/App/`.
+
+| Building block | Component | Home | Notes |
+| --- | --- | --- | --- |
+| Shell | `PVPanel(title:subtitle:width: 880)` | `Features/Promote/PromoteEvidenceSheet.swift` *(new)* | Title as today (`sheetTitleHandle` / `sheetTitleNew`); subtitle D-8 |
+| Summary | `PVCard(tone: .sunken)` + `PromoteReadoutBadges` | same | ES-2; no checkbox |
+| Heading | `PVSectionHeader(title:meta:)` | same | ES-3, D-11 |
+| Conflict | `PVCallout(tone: .warning, compact: true)` | same | ES-4, when `PromoteEvidenceDisplay.hasConflict` |
+| Section / relationship Card | `PVCard`, header on `PVColor.surfaceSunken` as today's group header | same | ES-5, ES-12 |
+| Line | `PVCheckbox(isChecked:isIndeterminate:isDisabled:accessibilitySpokenLabel:)`, `Text`, `PVDisclosureButton`, `PVBadge(subtle: true)`, `PVDivider` | same | ES-6 – ES-11 |
+| Likeness line | two `LikenessTile` | same | ES-15, D-16 |
+| Lifespan Card | `PVCard`, `Text`, `PVBadge` | same | ES-16, D-13, no checkbox |
+| Loading / failed / empty | `PVSkeletonBar` ×3 / `PVCallout(tone: .danger)` / `PVEmptyState` | same | ES-17 – ES-20, D-17 |
+
+States: loading, failed, no record, nothing to compare, 50 members (the member list grows; `ScrollView`).
+
+### Strings
+
+New, under `promote.sheet.*` (English as in S11-D2 §4; the board's copy wins where it differs):
+
+| Function / key | English |
+| --- | --- |
+| `whySuggested` | "Why this was suggested" |
+| `somethingDisagrees` | "Something below disagrees with this record." |
+| `evidenceHeading(ref:title:)` | "What's the evidence that this is %1$@ %2$@?" |
+| `checkedCount(_:)` (plural) | "%lld checked" |
+| `lineSentence(…)` | the ES-8 table (one key per cell) |
+| `recordCount(_:)` (plural) | "· %lld records" |
+| `showRecords(_:)` (plural), `hideRecords` | "Show %lld records" / "Hide records" |
+| `thisSource(_:)`, `onSource(source:value:)`, `thisSourceCaption` | "This source: %@" / "%1$@: %2$@" / "This source" |
+| `relationshipAgrees`, `relationshipSimilar`, `relationshipWith(_:)`, `connectionLink(first:phrase:second:)` | D-14 |
+| `nothingUnder` | "Nothing else to compare." |
+| `lifespanCaption`, `lifespanFits(here:there:)`, `lifespanConflict(here:there:)`, `lifespanNoneThisSource`, `lifespanNoneRecord`, `lifespanContradictsThisSource`, `lifespanContradictsRecord` | ES-16 (whole sentences per side, no side fragment) |
+| `pickRecordTitle`, `pickRecordBody`, `nothingToCompareTitle`, `nothingToCompareBody` | ES-19, ES-20 |
+| `spokenLine(property:sentence:here:)`, `spokenMember(source:value:)`, `spokenRelationship(sentence:link:)`, `spokenLikeness(source:sentence:)` | ES-22 |
+
+Changed and removed: D-12. `checkboxPartlyChecked` "partly checked" (D-15).
+
+## 7. Steps
+
+**STEP-0 — Refresh on landing**
+Files: this plan. Skill: `plan-pr` ("Refresh an existing plan").
+Do: when S11-25 and S11-32 have landed and the board is agreed, record their **Landed** notes' differences in §4, S11-32's exact names in the "Added by S11-32" row, the board's frames on **Board**, and run `review-plan` round 2. This step is the planner's: the implementer starts at STEP-1 on a plan whose status is `Planned`.
+Check: status `Planned`; `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-11/prs/S11-20-claim-evidence-sheet.md` reports no errors.
+
+**STEP-1 — Kit**
+Files: `macos/App/DesignSystem/Components/SectionHeader/PVSectionHeader.swift`, `macos/App/DesignSystem/Components/Checkbox/PVCheckbox.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`. Skill: `add-ui-component`.
+Do: D-11, D-15.
+Check: `xcodebuild build -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS'` succeeds with no change to `PVSectionHeader`'s callers; T-6 passes.
+
+**STEP-2 — Shared pieces**
+Files: `macos/App/Features/Promote/PromoteReadoutBadges.swift` *(new)*, `macos/App/Features/Promote/PromoteView.swift`, `macos/App/Features/Conclusions/LikenessTile.swift` *(new)*, `macos/App/Features/Conclusions/ConclusionDetailPage.swift`, `macos/App/Features/Conclusions/PersonLifeDisplay.swift`, `macos/App/Features/Promote/PromoteModel.swift`, `macos/App/Features/Promote/PromoteFlow.swift`, `macos/Provenencia.xcodeproj/project.pbxproj`.
+Do: D-8's `PromoteReadoutBadges` (the row uses it), D-16, D-13, D-9, D-14's `BridgeFact.kind`.
+Check: `xcodebuild test` passes; `PromoteModelTests` `reasonsAreWordedWithLabelsAndRefs` and `movesAreWordedNamingTheNeighbor` pass unchanged; the Person gallery and the Promote rows look as before.
+
+**STEP-3 — Display helpers**
+Files: `macos/App/Features/Promote/PromoteEvidenceDisplay.swift` *(new)*, `macos/ProvenenciaTests/PromoteEvidenceDisplayTests.swift` *(new)*, `project.pbxproj`. Skill: `add-swift-test`.
+Do: D-2.
+Check: T-1 passes.
+
+**STEP-4 — Copy**
+Files: `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `macos/ProvenenciaTests/PromoteEvidenceDisplayTests.swift` (new) from STEP-3. Skill: `add-localized-string`.
+Do: D-4, D-5, D-12's changed keys, §6 Strings; keep the removed keys until STEP-9 so the old sheet still builds.
+Check: `python3 scripts/check-localizable-xcstrings.py` passes; T-2, T-3 pass.
+
+**STEP-5 — Shell, summary, heading, states**
+Files: `macos/App/Features/Promote/PromoteEvidenceSheet.swift` *(new)*, `PromoteView.swift`, `project.pbxproj`. Skill: `add-ui-component`.
+Do: D-1, D-8, D-17; ES-1 – ES-4, ES-17 – ES-21. Lines render as S11-25 left them until STEP-6.
+Check: the app builds; T-4 passes; §10 steps 1 and 7.
+
+**STEP-6 — Property Cards and lines**
+Files: `PromoteEvidenceSheet.swift`.
+Do: ES-5 – ES-11, D-3, D-6, D-7, D-10.
+Check: T-1 and T-2 pass; §10 steps 2–3.
+
+**STEP-7 — Relationships**
+Files: `PromoteEvidenceSheet.swift`.
+Do: ES-12 – ES-14, D-14.
+Check: T-1's `bridgeForARelationship` and T-3 pass; §10 step 4.
+
+**STEP-8 — Lifespan and likeness**
+Files: `PromoteEvidenceSheet.swift`.
+Do: ES-15, ES-16, D-10, D-13, D-16.
+Check: T-3 passes; §10 steps 5–6.
+
+**STEP-9 — Spoken labels and removal**
+Files: `PromoteEvidenceSheet.swift`, `PromoteView.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`.
+Do: ES-22 spoken labels and D-17's identifiers; delete D-12's removed keys and the code §6 Deletes names.
+Check: `rg -n 'sheetColumns|weightText|badgeTone|through\(|ownRecords|sheetWeight|ExhibitGroup|promote\.sheet\.through' macos/App` prints nothing; `python3 scripts/check-localizable-xcstrings.py` passes; T-5 passes; `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS'` passes.
+
+**STEP-10 — Docs**
+Files: `docs/promote-graph-alignment.md` (§3 "Assessment" bullet: the sheet opens with why the row was suggested, then the evidence as sentences; no weights), `docs/deployment-plan/spike-11/claim-evidence.md` (Status: sheet built in S11-20; Wording: settled in S11-D2, relationships named by their connection), `docs/deployment-plan/spike-11/deployment-plan.md` (map row status), `docs/deployment-plan/spike-11/completed.md`, `docs/deployment-plan/spike-11/design/README.md` and the brief (to the spike's design archive folder), this plan (status, Landed note).
+Do: per the Definition of done.
+Check: links resolve; `python3 scripts/check-plan-docs.py` reports no errors.
+
+Commits: one per step from STEP-1 (STEP-6 to STEP-8 may be one commit if the sheet does not build between them; say so in the PR). The subject is one full imperative sentence that says what changed for the researcher, ending in a period ("Show every record's evidence on the Promote sheet as sentences."). No WIP commits.
+
+## 8. Tests
+
+| ID | Layer | File · test | Case: input → expected | Covers |
+| --- | --- | --- | --- | --- |
+| T-1 | Swift | `macos/ProvenenciaTests/PromoteEvidenceDisplayTests.swift` *(new)* `checkStateFollowsThePins`, `checkedCountIsOfferedPinsOnly`, `aConflictAnywhereShowsTheCallout`, `bridgeForARelationship` | `["p1"…"p5"]` with all / none / four pins → checked / unchecked / partial; `[]` → unchecked. Pins `{p1, x}` with `x` not offered → 1. A conflict only inside a relationship section → true; only a lifespan conflict → true; a partial relationship with no conflicting line → false. Two bridges between the row and the neighbor, one `participation`, one `relationship`, and a relationship of type `participation` → the participation bridge; no bridge between them → nil | AC-2.2, AC-2.3, AC-3.1, AC-3.4, D-2 |
+| T-2 | Swift | same file `lineSentencesFollowTheTable` | Table-driven over every ES-8 row × name / date / term value → the row's resource key; `.negative` property cause with relation `.same` → "Disagrees" family; `.unrecognized` relation → "Similar" | AC-2.4, AC-2.5, AC-2.6, D-4 |
+| T-3 | Swift | same file `relationshipAndLifespanSentences`, `countsArePlural` | Outcomes agree / partial → the two D-14 sentences; `connectionLink("John Smith", "subject of", "Birth of John Smith")` → "John Smith · subject of · Birth of John Smith"; each lifespan case of AC-4.1 – AC-4.3, with spans from `PersonLifeDisplay.dateSpan` → its English; `recordCount(1)` / `(5)` → "· 1 record" / "· 5 records" | AC-3.1, AC-3.2, AC-3.3, AC-4.1, AC-4.2, AC-4.3, D-5, D-13, D-14 |
+| T-4 | Swift | `macos/ProvenenciaTests/PromoteModelTests.swift` `theSheetSubtitleSpeaksTheContestedBand` *(new)*, `theSheetSummaryCarriesTheRowsCaption` *(new)* | AC-1.1, AC-1.2's rows → the subtitle and Updated strings built through D-8's calls | AC-1.1, AC-1.2, D-8 |
+| T-5 | Swift | `PromoteEvidenceDisplayTests.swift` `spokenLabelsReadTheLine` | AC-5.1's line → "Name. Same name, 5 records. This source: John Smith."; the lifespan line → its sentence | AC-5.1, AC-5.2 |
+| T-6 | Swift | `PromoteEvidenceDisplayTests.swift` `aPartlyCheckedBoxSaysSo` | `L10n.string` of D-15's key → "partly checked" | AC-5.1, D-15 |
+
+Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `PromoteFlowTests` and `PromoteModelTests` (strings, `BridgeFact`), `L10nResolutionTests` (removed keys).
+
+## 9. Definition of done
+
+```
+- [ ] Every AC in §2 is true: test name or manual check line for each
+- [ ] Every T-# in §8 exists and passes
+- [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests, catalog and plan-doc checks); on a host without Xcode, report the Go and plan-doc steps and say Xcode was not run
+- [ ] No Out line was implemented; no code outside §4 / §6 was refactored
+- [ ] New user-facing copy is in L10n + Localizable.xcstrings; D-12's removed keys are gone; no stale strings left
+- [ ] UI matches the S11-D2 inventory and board; the kit changes are D-11 and D-15 only
+- [ ] Version bump as the header says — none
+- [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
+- [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
+- [ ] Brief moved to the design archive and design/README.md updated
+- [ ] Domain doc updated: promote-graph-alignment.md §3; claim-evidence.md Status and Wording
+- [ ] PR description: what shipped, AC evidence, deviations, manual check
+```
+
+## 10. Manual check
+
+Data: build the project in [S11-D2 §5.2](../design/S11-D2-evidence-sheet.md#52-the-project) (the obituary of John Smith and the records it is promoted against). Each step compares the sheet with the brief's frame of the same number; every value, sentence, outcome and count must match.
+
+1. Open Promote on the obituary; open John Smith's sheet. Skeleton bars, then Frame 1. No "Through". (AC-1.1 – AC-1.3, AC-2.1, AC-3.1, AC-4.1, AC-4.4, AC-4.5, ES-17)
+2. Expand the name line; uncheck the 1861 Census; then press the line's box: Frame 2, then all four checked. (AC-2.2, AC-2.3)
+3. Open Mary Smith's sheet: Frame 5 (a disagreeing member, not contested). Open the birth's sheet: Frame 6. Open Leeds's: Frame 7. (AC-2.4, AC-2.5, AC-3.2)
+4. Edit a fresh copy so the obituary's marriage reads "1840"; in the marriage row's menu pick EVT-2W8NC: Frame 3; reopen John's sheet: Frame 4. Press Done with the marriage relationship left unchecked; on the person's conclusion page the marriage bundle is not pinned. (AC-1.1, AC-3.3, AC-3.4)
+5. In John's menu pick PER-3X9QV: Frame 9; pick PER-5J2NB: Frame 10. (AC-4.2, AC-4.3, AC-4.5)
+6. On a fresh copy set the obituary's death to "2 Jun 1809": Frame 11. (AC-4.3)
+7. Set the death row to New, then Skip, then EVT-0P7XR: Frame 13's three states. (AC-1.4)
+8. With VoiceOver, move through a line, a partly checked line, a member, a relationship and the lifespan line. (AC-5.1, AC-5.2)
+9. Run `rg -n 'promote.sheet.through|Through %@' macos/App` from the repo root: it prints nothing. (AC-3.5)
+
+## 11. Risks and stop conditions
+
+| Risk | Mitigation |
+| --- | --- |
+| The draft is written before S11-25 and S11-32 land | STEP-0 refresh; Current state rows marked; status Blocked |
+| The board changes copy or layout | The board wins; STEP-0 copies its notes into §6 |
+| Two bridges of one kind join the row and its neighbor (a person witness and subject of one event) | D-2 takes the first in `flow.bridges` order; the sentence is still true for the pinned bundle's kind |
+| A record with many members makes a tall sheet | Collapsed lines and the existing `ScrollView`; S11-21 times the read |
+
+**Stop and report if:**
+
+- `CatalogClaimEvidence` lacks a field this plan reads (a line's `relation`, `cause`, `propertyCause`; a relationship's `bridgeType`, `outcome`; the lifespan result with each side's window and no-lifespan reason; the depiction case).
+- Sections arrive with `likeness` not right after `name` on a person (S11-32's order is missing).
+- Showing a line needs a Go or wire change.
+- `togglePin(subjectID:pinIDs:)` does not insert every id when some are already in `pins`.
+- The board draws a control the S11-D2 inventory does not list.
+- Making `PVSectionHeader` generic changes how an existing caller renders, or does not compile without editing a caller.
+
+## 12. Open questions
+
+- **How the agreed board reaches the implementer** (the S11-D1 board link, exported frames in the repo, or screenshots). Recommended: the Claude Design link plus a §9 "Board notes" table in S11-D2, as S11-D1 did. Answer when the board is agreed.
+
+## 13. PR
+
+**Title:** S11-20 — Claim evidence sheet
+**Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-20-claim-evidence-sheet.md`.

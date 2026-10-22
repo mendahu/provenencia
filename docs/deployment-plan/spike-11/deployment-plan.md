@@ -31,10 +31,10 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 | [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md) — "make the algorithm graspable" (one-page model, glossary, knob inventory) | S11-01 | — |
 | Same — "are the levers right?" | S11-02 – S11-16 (the layer rewrite) | — |
 | Same — known gaps | [`comparison-layers.md`](comparison-layers.md) open questions | — |
-| Claim evidence shows only the first member; "Through <name>" wording | S11-19, S11-25, S11-20 | S11-D2 |
+| Claim evidence shows only the first member; "Through <name>" wording | S11-19, S11-25, S11-32, S11-20 | S11-D2 |
 | [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md) — "Primary Subject kinds", "In-list text matching" | S11-23, S11-08 | — |
 | [Connection subrows](promote-connection-subrows.md) (was `ideas/promote-connection-subrows.md`) | S11-26, S11-27 | S11-D1 |
-| Spike 10 S10-36 — Promote compares two likeness crops (moved 2026-10-17) | S11-20 | S11-D2 |
+| Spike 10 S10-36 — Promote compares two likeness crops (moved 2026-10-17) | S11-32 (lines), S11-20 (crops) | S11-D2 |
 | Reuse inventory ([`comparison-layers.md`](comparison-layers.md#reuse-across-the-app)) | S11-05 – S11-08, S11-13, S11-19 | — |
 
 **Stays in the ideas folder** — the rest of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md): scenario files and goldens runner, random-graph invariants, the simulated world, the scoreboard, the labeler, fitting, and dogfood export. Whether they join this spike is decided after the re-implementation.
@@ -108,7 +108,8 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-18 | Contested marker on Promote rows | 4 | The marker on the page | [S11-D1](design/S11-D1-promote-rows.md) | S11-17, S11-D1 | [plan](prs/S11-18-contested-marker.md) | Landed #507 |
 | S11-19 | Claim evidence query | 5 | Go query: member lines, collapse, relationship bundles; registry evidence section | — | S11-16 | [plan](prs/S11-19-claim-evidence-query.md) | Landed #513 |
 | S11-25 | Claim evidence RPC and pin policy | 5 | Lazy per-row RPC; Go default pins at Apply; Swift drafting moves onto it; proposal field 9 and `attachExhibits` removed | — | S11-19 | [plan](prs/S11-25-claim-evidence-rpc.md) | Landed #517 |
-| S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy, with likeness lines as two crops | S11-D2 | S11-25, S11-D2, S10-54 (landed #433) | — | Scoped |
+| S11-32 | Lifespan and likeness evidence lines | 5 | The lifespan line (not pinnable, says when a side contradicts itself) and likeness lines (depiction compare by image) in `claimevidence` and the RPC; `ConclusionValue` gains a depiction case | — | S11-25, S10-54 (landed #433) | — | Scoped |
+| S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy, with likeness lines as two crops | [S11-D2](design/S11-D2-evidence-sheet.md) | S11-25, S11-32, S11-D2 | [plan](prs/S11-20-claim-evidence-sheet.md) | Blocked — on S11-32, board S11-D2 |
 | S11-26 | Connections file by their ends | 6 | Drop the bridge switch-off: `SkipBridgeIDs`, `skip_bridge_ids`, the `skip` parameters | — | — | — | Scoped |
 | S11-27 | Connection subrows on Promote | 6 | Each connection as a subrow of a row it joins, its state from its ends; the panel and toggles go | S11-D1 | S11-26, S11-D1 | — | Scoped |
 | S11-21 | Large-Source performance check | 7 | 100-Subject benchmark; memoize only if it fails | — | S11-16 | — | Scoped |
@@ -123,7 +124,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | Brief | View | Gates | Notes |
 | --- | --- | --- | --- |
 | [S11-D1](design/S11-D1-promote-rows.md) | Promote page — rows | **S11-18**, **S11-27** | Board agreed 2026-10-20 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share)). Contested marker beside the band; move reasons in the Updated caption; connections as subrows of the rows they join, answering the [design questions](promote-connection-subrows.md#open-questions-for-design) |
-| S11-D2 | Promote page — evidence sheet | **S11-20** | Whole sheet: "why suggested" summary, property sections, relationship lines, collapsed members, likeness crops (from Spike 10's S10-D13), copy |
+| [S11-D2](design/S11-D2-evidence-sheet.md) | Promote page — evidence sheet | **S11-20** | Brief written 2026-10-22; board not drawn. Whole sheet: "why suggested" summary, property sections, relationship lines, collapsed members, likeness crops (from Spike 10's S10-D13), copy |
 
 ## Slices
 
@@ -173,9 +174,10 @@ SLICE 4 — Segments and graph alignment
 SLICE 5 — Claim evidence
   S11-19  Claim evidence query
   S11-25  Claim evidence RPC and pin policy
+  S11-32  Lifespan and likeness evidence lines
   ✎ S11-D2 ──▶ S11-20  Claim evidence sheet
   Check: five named members show as matches with identical values collapsed;
-         "They have a matching birth event" pins its bundle; pins land on every member.
+         "They have a matching birth event" pins its bundle; pins land on every member; two people with a likeness show both crops.
 
 SLICE 6 — Connection subrows
   S11-26  Connections file by their ends   (any time)
@@ -205,12 +207,12 @@ S11-01 ─────────────┴──▶ S11-02 ──▶ S11-
                                        └──▶ S11-09 ──▶ S11-10 ──▶ S11-11 ──▶ S11-12 ──┴──▶ S11-13
 S11-13 ──▶ S11-14 ──┐
 S11-13 ──▶ S11-15 ──┴──▶ S11-16 ──▶ S11-17 ──▶ S11-18
-                            ├──▶ S11-19 ──▶ S11-25 ──▶ S11-20
+                            ├──▶ S11-19 ──▶ S11-25 ──▶ S11-32 ──▶ S11-20
                             └──▶ S11-21
 S11-19 ──▶ S11-31
 S11-D1 ──▶ S11-18, S11-27
 S11-26 ──▶ S11-27
-S10-54 ──▶ S11-20   (Spike 10)
+S10-54 ──▶ S11-32   (Spike 10)
 S11-D2 ──▶ S11-20
 ```
 
@@ -398,16 +400,27 @@ Apply runs S11-19's query once per row and reuses the per-Source layer memo and 
 **Check.** Done on a row never opened pins its matching lines; opening the sheet shows the same defaults; every member's claim is backfilled.
 **Context.** Rule "The pin policy has one owner, in Go"; [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md).
 
+#### S11-32 — Lifespan and likeness evidence lines
+
+Split from S11-20 when it was planned (user, 2026-10-22): the engine half of the lines S11-19's query leaves out, so S11-20 is the sheet only.
+**Ships.** No new chrome; the sheet S11-25 left draws the new lines in its current shape. The contract below is what S11-20's plan builds on; this PR's plan may name types differently but must deliver each item.
+- **Lifespan line.** People only. `claimevidence.Evidence` gains one lifespan result from the row against the record's profile (the `lifespan` lead of `subjectcompare.Compare`, which `Build` already runs): its outcome, relation and value cause, and each side's window and span as date values. `subjectprofile` reports why a side has no lifespan: no dated events, or its own dated events contradict each other (S11-12 D-12); the result says which side contradicts itself. The RPC carries it as one message on the response (not a section line: it has no member and no pin), parsed into a Swift `CatalogClaimEvidence` field. It gets no offer and is never pinned; each side's span (its earliest and latest dated event) is sent as date values, and a side with none says whether it had no dated events or contradicts itself. The sheet shows spans, not windows (S11-D2 §5).
+- **Likeness lines.** `likeness` values reach the evidence: `decode` and the profile values carry the depiction's image File id (pure `core/depictionvalue`; layers never import `core/database/depictionvalues`). A depiction comparer says `Same` when both values name one image File (the reconciler's rule in `autoreconcile/modules.go`), and otherwise that the layer cannot judge, with a new cause code. In `claimevidence`, a likeness line with the same image is agree, pinnable and checked; with two images it is shown, pinnable and unchecked (user, 2026-10-22: the researcher judges by eye). Likeness earns no points and does not change matching.
+- **Section order.** `claimevidence.Rules` gains a lead order per kind (person: `name`, `likeness`; event: `event_type`), filled in `matchregistry` `defaultEvidence()` with its inventory row; `Sections` puts those keys first in that order, then the rest ascending. The sheet renders wire order (S11-20 review M-2).
+- **Wire.** `ConclusionValue` gains `DepictionValue depiction = 6` (the S10-54 message: `region_json`, `image_rel_path`, the path resolved as `observations.go` `depictionPaths` does); Swift `CatalogConclusionValue` gains its case and `mapConclusionValue` maps it; the new cause code joins `ConclusionVocabulary.swift` and `TestSwiftVocabularyMatchesGo`. Likeness offers come from `PinOffers` with no change to Apply; the lifespan has none.
+**Not this PR.** The sheet's new layout and copy (S11-20).
+**Check.** A person whose own death precedes their birth gives a lifespan result naming that side as contradicting itself; two members with likenesses, one the same image as this Source's, give two likeness lines, one checked and one unchecked; Done on an unopened row pins the same-image likeness only.
+**Context.** [`comparison-layers.md`](comparison-layers.md#lifespan-a-derived-property-for-people); [`add-depiction-value`](../../../.agents/skills/add-depiction-value/SKILL.md), [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md); S11-12 D-12.
+
 #### S11-20 — Claim evidence sheet
 
-**Ships.** The Promote sheet as S11-D2 draws it: "why suggested" summary, then "What's the evidence that this record is <entity>?", property sections, relationship lines with their checkboxes, expandable collapsed lines; all copy through L10n.
-**Not this PR.** Engine (S11-19), except the lines S11-19's query leaves out (user, 2026-10-21): this PR adds the lifespan line (a derived line with no pin) and likeness lines (a section pairing depiction Observations) to `core/claimevidence` and its loader; S10-54 (depiction values over the FFI) landed in #433.
-Likeness comparisons show the two crops, which S10-36 was to add in Spike 10; pinning one writes the same kind of pin a name pin writes.
+**Ships.** The Promote sheet as S11-D2 draws it: "why suggested" summary, then "What's the evidence that this is <record>?", property sections, relationship lines with their checkboxes, expandable collapsed lines, the lifespan line, likeness lines as two crops; all copy through L10n. No engine change: the lines come from S11-25 and S11-32 (split, user 2026-10-22).
 **Naming and band (from S11-18 review M-2, M-6).** The sheet's subtitle speaks the band through `PromoteModel.assessmentText`, so a contested row reads "Strong, contested"; neighbor groups name a row by `PromoteFlow.Row.shownRef`, as the row reasons do.
-**Lifespan (from S11-12 review, carried by S11-13).** Word the person's lifespan line (`Comparison.Derived`), and where a person has no lifespan because their own dated events contradict each other (S11-12 D-12), say so instead of leaving it out silently.
+**Lifespan (from S11-12 review, carried by S11-13).** Word the person's lifespan line, and where a side has no lifespan because its own dated events contradict each other (S11-12 D-12), say so instead of leaving it out silently. S11-32 delivers the result; this PR words it.
 **Empty evidence (from S11-25 review UX-3).** When a row's evidence has no lines and no relationships, say there is nothing to compare instead of drawing the column headers alone.
+**Not this PR.** Engine and wire (S11-25, S11-32). Opening the sheet from a connection subrow (not planned, decided here for S11-D1's note).
 **Check.** The sheet reads as sentences; no "Through <name>"; checking a relationship line pins it; two people with a likeness show both images.
-**Context.** S11-D2; [wording](claim-evidence.md#wording); Spike 10 S10-54 (depiction values over the FFI) landed in #433.
+**Context.** [S11-D2](design/S11-D2-evidence-sheet.md); [wording](claim-evidence.md#wording); [plan](prs/S11-20-claim-evidence-sheet.md).
 
 ### Slice 3 follow-up — Sex and gender
 
