@@ -17818,7 +17818,7 @@
       }
     },
     "promote.sheet.unknown": {
-      "comment": "A comparison with nothing to compare",
+      "comment": "A comparison with nothing to compare, or two likenesses the researcher judges by eye",
       "extractionState": "manual",
       "localizations": {
         "en": {

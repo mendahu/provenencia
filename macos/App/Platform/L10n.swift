@@ -1379,7 +1379,7 @@ enum L10n {
             case .agree: LocalizedStringResource("promote.sheet.agrees", defaultValue: "Agrees", comment: "A comparison that agrees")
             case .partial: LocalizedStringResource("promote.sheet.similar", defaultValue: "Similar", comment: "A comparison whose text is a spelling variant or shares words")
             case .conflict: LocalizedStringResource("promote.sheet.conflicts", defaultValue: "Conflicts", comment: "A comparison that disagrees")
-            case .unknown, .unrecognized: LocalizedStringResource("promote.sheet.unknown", defaultValue: "Unknown", comment: "A comparison with nothing to compare")
+            case .unknown, .unrecognized: LocalizedStringResource("promote.sheet.unknown", defaultValue: "Unknown", comment: "A comparison with nothing to compare, or two likenesses the researcher judges by eye")
             }
         }
         static func connections(count: Int) -> String {
