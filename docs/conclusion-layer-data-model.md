@@ -264,7 +264,7 @@ The researcher files an Evidence graph's Subjects onto handles from one page. Th
    - the pins from §5.1, with backfill onto the members' claims;
    - the bridges (§5.4).
 
-   A new claim's `argument` may be drafted from its agreeing comparisons and edited. Older claims' arguments are not rewritten.
+   A new claim's `argument` is what the researcher writes; Promote drafts none. Older claims' arguments are not rewritten.
 
 A skipped row or an unpinned comparison is not stored. Opening Promote again proposes it afresh.
 
