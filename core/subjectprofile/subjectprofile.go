@@ -158,7 +158,8 @@ func addLifespans(out subjectcompare.Values, events []LifeEvent, lifespans map[v
 }
 
 // lifespan lays the dated events on one timeline. The span is the first to the
-// last date. The window starts at the earliest Starts event, or MaxYears
+// last date; an end no date closes (a lone BEF or AFT) stays open, so the span
+// reads BEF or AFT there. The window starts at the earliest Starts event, or MaxYears
 // before the first date, and ends at the latest Ends event, or MaxYears after
 // the last date. The side has a lifespan exactly when side.Missing is empty;
 // its First and Last are then the dates as written that set the span's ends.
@@ -171,9 +172,8 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 	// fix the start and the end.
 	var early, late, startEarly, endLate []valuecompare.DateEnd
 	// rawEarly and rawLate are the same ends as written, an open one still
-	// open; openFirst and openLast say any date has one.
+	// open; the span is built from them.
 	var rawEarly, rawLate []valuecompare.DateEnd
-	var openFirst, openLast bool
 	var dates []datevalue.Value
 	for _, ev := range events {
 		er := subjectcompare.EventRole{EventType: ev.EventType, Role: ev.Role}
@@ -183,7 +183,6 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 				continue
 			}
 			rawEarly, rawLate = append(rawEarly, first), append(rawLate, last)
-			openFirst, openLast = openFirst || first.Open, openLast || last.Open
 			if first.Open {
 				first = last
 			}
@@ -228,15 +227,17 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 	if !ok {
 		return window, span, contradicts
 	}
-	// An open end can lie anywhere on its side, and the events lie in the
-	// window, so the window's end bounds the span there.
-	if openFirst {
-		spanFirst = start
+	// An end no date closes stays open: the span is BEF or AFT there, so a
+	// closed date on the other side still bounds it.
+	firstEnd, ok := valuecompare.Earliest(rawEarly)
+	if !ok {
+		firstEnd = valuecompare.DateEnd{Open: true}
 	}
-	if openLast {
-		spanLast = end
+	lastEnd, ok := valuecompare.Latest(rawLate)
+	if !ok {
+		lastEnd = valuecompare.DateEnd{Open: true}
 	}
-	sp, ok := valuecompare.EndsDate(spanFirst, spanLast)
+	sp, ok := valuecompare.EndsDate(firstEnd, lastEnd)
 	if !ok {
 		return window, span, contradicts
 	}
