@@ -426,6 +426,24 @@ func SoleGraphTx(tx *sql.Tx, sourceID []byte) ([]byte, error) {
 	}
 }
 
+// SoleGraph returns the id of the one graph of a Source, in its own read
+// transaction, the way List wraps list. S12-08 deletes it with SoleGraphTx.
+func SoleGraph(c *database.Catalog, sourceID []byte) ([]byte, error) {
+	if len(sourceID) != 16 {
+		return nil, ErrInvalid
+	}
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	return SoleGraphTx(tx, sourceID)
+}
+
 // SubjectGraphTx returns the graph a Subject belongs to.
 func SubjectGraphTx(tx *sql.Tx, subjectID []byte) ([]byte, error) {
 	if tx == nil || len(subjectID) != 16 {

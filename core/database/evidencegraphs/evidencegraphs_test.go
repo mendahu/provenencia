@@ -183,6 +183,21 @@ func TestSoleGraphTx(t *testing.T) {
 				t.Fatalf("got %x want %x", got, tt.want)
 			}
 		})
+		t.Run(tt.name+" over a catalog", func(t *testing.T) {
+			got, err := evidencegraphs.SoleGraph(f.c, tt.sourceID)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("got %v want %v", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(got, tt.want) {
+				t.Fatalf("got %x want %x", got, tt.want)
+			}
+		})
 	}
 
 	t.Run("two graphs is not ErrInvalid", func(t *testing.T) {
@@ -196,6 +211,10 @@ func TestSoleGraphTx(t *testing.T) {
 		}
 		if _, err := db.Exec(`INSERT INTO evidence_graphs (id, source_id, name) VALUES (?, ?, 'Second')`, second[:], src.ID); err != nil {
 			t.Fatal(err)
+		}
+		// The catalog has one connection: read over it before a transaction holds it.
+		if _, err := evidencegraphs.SoleGraph(f.c, src.ID); err == nil || errors.Is(err, evidencegraphs.ErrInvalid) {
+			t.Fatalf("SoleGraph got %v", err)
 		}
 		tx, err := db.Begin()
 		if err != nil {
