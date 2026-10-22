@@ -105,3 +105,5 @@ Reviewer (opus, both lenses), on the nickname-heads version. Verdict: Not ready.
 ## After round 4 (user, 2026-10-19)
 
 The user asked whether *Wilma* is a nickname of *William*. It is not: the upstream row `{wilma, billiewilhelm, william}` is an error. With the user's agreement, #499 (the PR carrying this plan) also edits the seed: 31 pairs that join two different given names — masculine and feminine forms (*Andrew* / *Andrea*, *Louis* / *Louise*, *Felix* / *Felicia*) and upstream errors (*Paul* / *Polly*, *William* / *Bela*) — were removed; five sets left with one name were dropped (1,227 sets). Candidates came from an offline name-gender dataset; unisex short forms (*Alex*, *Chris*, *Jamie*, *Kit*) were kept. Appendix A was regenerated (143 two-way pairs: 108 directed, 35 kept). Matching for new catalogs no longer pairs these names; `go test -tags fts5 ./...` passes.
+
+2026-10-21 — S11-25 deleted `autoreconcile.Compatible` with its last caller (`promotealign/exhibits.go`); D-7, T-3 and their rows removed. Other numbering unchanged.
