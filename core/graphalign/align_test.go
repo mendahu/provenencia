@@ -1774,7 +1774,7 @@ func eventVals(eventType string, year int) subjectcompare.Values {
 func withLife(v subjectcompare.Values, events ...subjectprofile.LifeEvent) subjectcompare.Values {
 	out := subjectcompare.Values{}
 	maps.Copy(out, v)
-	life := subjectprofile.ForSubject(subjectprofile.Subject{Life: events}, matchregistry.Default().Subject.Lifespans[vocabkey.Person])
+	life, _ := subjectprofile.ForSubject(subjectprofile.Subject{Life: events}, matchregistry.Default().Subject.Lifespans[vocabkey.Person])
 	maps.Copy(out, life)
 	return out
 }

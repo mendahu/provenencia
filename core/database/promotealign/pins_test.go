@@ -292,3 +292,50 @@ func TestResolvePinsReadsThePageOnce(t *testing.T) {
 		}
 	}
 }
+
+// AC-1.2, AC-1.3: likeness lines offer a pin for the same-image pair (checked)
+// and the other-image pair (unchecked); a row never opened pins only the first.
+func TestResolvePinsLikeness(t *testing.T) {
+	l := newLikenessFixture(t, 90)
+	e := l.evidence()
+	var offers []promotealign.PinOffer
+	for _, o := range promotealign.PinOffers(e) {
+		for _, sec := range e.Sections {
+			if sec.Key != "likeness" {
+				continue
+			}
+			for _, line := range sec.Lines {
+				for _, p := range line.Members {
+					if o.ID == promotealign.LinePinID(line, p) {
+						offers = append(offers, o)
+					}
+				}
+			}
+		}
+	}
+	if len(offers) != 3 {
+		t.Fatalf("likeness offers = %d, want 3 (one same-image, two other-image)", len(offers))
+	}
+	checked := 0
+	for _, o := range offers {
+		if o.Checked {
+			checked++
+		}
+	}
+	if checked != 1 {
+		t.Fatalf("checked likeness offers = %d, want 1", checked)
+	}
+	likeness := section(t, e.Sections, "likeness").Lines[0].Incoming.Ref
+	got := l.f.resolve(l.srcB, handleRow(l.incoming, l.handle, true))
+	pinned := map[string]bool{}
+	for _, set := range got[0].PinSets {
+		for _, o := range set.Observations {
+			if bytes.Equal(o, likeness) {
+				pinned[string(set.Member)] = true
+			}
+		}
+	}
+	if !pinned[string(l.a.ID)] || pinned[string(l.b.ID)] || pinned[string(l.third.ID)] {
+		t.Fatalf("default pins of the likeness, by member: %v, want only the image-A member", len(pinned))
+	}
+}

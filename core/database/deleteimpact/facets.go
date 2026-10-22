@@ -212,6 +212,14 @@ func buildFacetReleases() []facetRelease {
 			col{"source_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
 		rowFacet(catalogmodel.KindMetadataField, "source_metadata_layout", "field_id", "source_metadata_layout", "field_id",
 			col{"source_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
+
+		// A type's bindings are audited under the property id (subjectvocab
+		// precedent), released from either parent. Subject types have no
+		// delete command yet; the release is what an audited CASCADE needs.
+		rowFacet(catalogmodel.KindProperty, "subject_type_properties", "property_id", "subject_type_property", "property_id",
+			col{"subject_type_id", colUUID}, col{"property_id", colUUID}, col{"sort_order", colInt}),
+		rowFacet(catalogmodel.KindSubjectType, "subject_type_properties", "subject_type_id", "subject_type_property", "property_id",
+			col{"subject_type_id", colUUID}, col{"property_id", colUUID}, col{"sort_order", colInt}),
 	}
 }
 

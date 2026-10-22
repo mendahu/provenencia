@@ -93,6 +93,8 @@ enum ReconciledValueDisplay {
             return DateRowDisplay.line(date: date, locale: locale)
         case .name(let name):
             return NameValueDisplay.string(for: name, style: .natural, orders: orders)
+        case .depiction:
+            return L10n.string(L10n.Conclusions.likenessValue)
         }
     }
 

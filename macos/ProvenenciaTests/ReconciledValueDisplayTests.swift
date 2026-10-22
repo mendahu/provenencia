@@ -71,6 +71,11 @@ struct ReconciledValueDisplayTests {
         ])
     }
 
+    @Test func aDepictionReadsAsLikeness() {
+        let likeness = CatalogConclusionValue.depiction(CatalogDepictionValue(regionJSON: "", imageRelPath: "objects/x.png"))
+        #expect(ReconciledValueDisplay.string(for: likeness) == "Likeness")
+    }
+
     @Test func badgesNameEveryShownState() {
         #expect(ReconciledValueDisplay.stateBadge(Self.field("")) == nil)
         #expect(ReconciledValueDisplay.stateBadge(Self.field("single", [Self.value(1, "kept")])) == nil)

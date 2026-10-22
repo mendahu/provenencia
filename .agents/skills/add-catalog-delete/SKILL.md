@@ -25,7 +25,7 @@ Rule: [`.cursor/rules/catalog-deletes.mdc`](../../../.cursor/rules/catalog-delet
 | Yes — must call `deleteimpact` | No — leave as a field/facet write |
 | --- | --- |
 | `sources` / `artifacts` / `citations` / `observations` / `subjects` | Note row delete, `ClearSourceMetadata` |
-| Vocab: `sourcetypes`, `metadatafields`, `properties`, `propertyterms`, later subject types | `sourcevocab` / `subjectvocab` join-row remove |
+| Vocab: `sourcetypes`, `metadatafields`, `properties`, `propertyterms`, later subject types | `sourcevocab` join-row remove; the `subjectvocab` join-row remove is an audited `writes.Run` write (`subject_type_property`), not a Delete |
 | Later Claim / Narrative resources | `searchindex.Delete` (FTS doc only) |
 | Existing `Delete` with no UI this spike | Owned-outbound child rows that `catalogmodel` already declares |
 

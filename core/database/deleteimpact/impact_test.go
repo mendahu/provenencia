@@ -28,6 +28,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/database/subjectvocab/subjectvocabtest"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
@@ -408,9 +409,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		})
 
 		t.Run("bridge extra observation inbound", func(t *testing.T) {
-			if err := subjectvocab.AppendBinding(c, bridge.Subject.SubjectTypeID, toponym.ID); err != nil {
-				t.Fatal(err)
-			}
+			subjectvocabtest.Assign(t, c, userID, bridge.Subject.SubjectTypeID, toponym.ID)
 			if _, err := writes.Call(c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
 				return observations.AddToCitation(tx, userID, bridge.Citation.ID, []observations.Input{{
 					SubjectID: bridge.Subject.ID, PropertyID: toponym.ID, ValueText: "extra", HasText: true,
@@ -466,9 +465,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if userRole.Key != "role" || userRole.Origin != vocabkey.OriginUser {
 			t.Fatalf("user role %+v", userRole)
 		}
-		if err := subjectvocab.AppendBinding(c, personType.ID, userRole.ID); err != nil {
-			t.Fatal(err)
-		}
+		subjectvocabtest.Assign(t, c, userID, personType.ID, userRole.ID)
 		res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 				ArtifactID: art.ID, LocatorJSON: testLocator,
@@ -515,9 +512,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := subjectvocab.AppendBinding(c, personType.ID, roleProp.ID); err != nil {
-			t.Fatal(err)
-		}
+		subjectvocabtest.Assign(t, c, userID, personType.ID, roleProp.ID)
 		roleTerm, err := propertyterms.Lookup(c, roleProp.ID, "witness", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)

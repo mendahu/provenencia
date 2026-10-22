@@ -1070,7 +1070,27 @@ struct GoStore: GenealogyStore {
                 )
             },
             offers: resp.offers.map { CatalogClaimEvidenceOffer(id: $0.id, checked: $0.checked) },
+            lifespan: resp.hasLifespan ? Self.mapLifespan(resp.lifespan) : nil,
             sourceTitles: Dictionary(resp.sources.map { ($0.id, $0.title) }, uniquingKeysWith: { first, _ in first })
+        )
+    }
+
+    private static func mapLifespan(_ l: Provenencia_Engine_V1_PromoteClaimEvidenceLifespan) -> CatalogClaimEvidenceLifespan {
+        CatalogClaimEvidenceLifespan(
+            outcome: EvidenceOutcome(wire: l.outcome),
+            propertyCause: EvidencePropertyCause(wire: l.propertyCause),
+            relation: ValueRelation(wire: l.relation),
+            cause: ValueCause(wire: l.cause),
+            row: mapLifeSide(l.row),
+            record: mapLifeSide(l.record)
+        )
+    }
+
+    private static func mapLifeSide(_ s: Provenencia_Engine_V1_PromoteClaimEvidenceLifeSide) -> CatalogClaimEvidenceLifeSide {
+        CatalogClaimEvidenceLifeSide(
+            first: s.hasFirst ? mapDateValue(s.first) : nil,
+            last: s.hasLast ? mapDateValue(s.last) : nil,
+            missing: LifespanMissing(wire: s.missing)
         )
     }
 
@@ -1433,8 +1453,13 @@ struct GoStore: GenealogyStore {
         case .term(let t): return .term(id: t.id, key: t.key, label: t.label)
         case .date(let d): return .date(mapDateValue(d))
         case .name(let n): return .name(mapNameValue(n))
+        case .depiction(let d): return .depiction(mapDepictionValue(d))
         case nil: return .none
         }
+    }
+
+    private static func mapDepictionValue(_ d: Provenencia_Engine_V1_DepictionValue) -> CatalogDepictionValue {
+        CatalogDepictionValue(regionJSON: d.regionJson, imageRelPath: d.imageRelPath)
     }
 
     private static func mapNameValue(_ n: Provenencia_Engine_V1_NameValueInput) -> CatalogNameValue {
@@ -2329,9 +2354,7 @@ struct GoStore: GenealogyStore {
             propertyLabel: o.propertyLabel,
             propertyValueType: o.propertyValueType,
             valueDepictionID: o.valueDepictionID,
-            depiction: o.hasDepiction
-                ? CatalogDepictionValue(regionJSON: o.depiction.regionJson, imageRelPath: o.depiction.imageRelPath)
-                : nil
+            depiction: o.hasDepiction ? Self.mapDepictionValue(o.depiction) : nil
         )
     }
 

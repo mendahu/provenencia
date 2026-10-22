@@ -47,7 +47,7 @@ Research rows that a delete takes with it are removed **explicitly** and audited
 
 | Audited (released) | Silent (`CASCADE` only) |
 | --- | --- |
-| `source_notes`, `source_metadata`, `source_credibility_assessments`, `source_metadata_layout` (both FKs), `citation_notes`, `observation_notes`, `identity_claims` (both FKs; `entity_id` has no delete path yet), `identity_claim_evidence` (both FKs), `evidence_graphs` (`source_id`), `evidence_graph_artifacts` (both FKs) | `subject_positions` (unaudited layout), `source_type_metadata_fields` / `subject_type_properties` (vocab joins, never audited), `name_value_parts` (part of its name value) |
+| `source_notes`, `source_metadata`, `source_credibility_assessments`, `source_metadata_layout` (both FKs), `citation_notes`, `observation_notes`, `identity_claims` (both FKs; `entity_id` has no delete path yet), `identity_claim_evidence` (both FKs), `evidence_graphs` (`source_id`), `evidence_graph_artifacts` (both FKs), `subject_type_properties` (both FKs, released under the property id: a Property delete releases its bindings; subject types have no delete command yet, but the audited FK has its release, as `TestFacetReleaseHonesty` requires) | `subject_positions` (unaudited layout), `source_type_metadata_fields` (a vocab join, a UI hint, never audited), `name_value_parts` (part of its name value) |
 
 A silent `CASCADE` is only for rows that are never audited on create either. If a row has an audit entity type, its delete is audited.
 
@@ -63,7 +63,7 @@ Plugin rows are a future plugin manager, not researcher trash.
 
 ### Terms are resources
 
-`property_terms.property_id` is `NO ACTION`. A property with any term row is blocked until those terms are deleted. There is no Terms page — that notice is honest. Type-bindings (`subject_type_properties`) CASCADE and do not block.
+`property_terms.property_id` is `NO ACTION`. A property with any term row is blocked until those terms are deleted. There is no Terms page — that notice is honest. Type-bindings (`subject_type_properties`) do not block: a Property delete releases and audits them (`subject_type_property`, one change per bound type) before the Property itself.
 
 ## Impact report
 

@@ -86,6 +86,7 @@ Conventions. "Evidence E1" is a `CatalogClaimEvidence` with one `name` section h
 | --- | --- | --- |
 | AC-5.1 | AC-2.1's line | Label "Name. Same name, 5 records. This source: John Smith."; the checkbox value "checked"; a partly checked box speaks "partly checked" (ES-22) |
 | AC-5.2 | The lifespan line | Its sentence only; no checkbox element (ES-22) |
+| AC-5.3 | Two likeness lines, one same image (agree) and one different image (unjudged), for two members of one handle | Their labels and checkbox labels differ: each names the member's Source and the line's outcome, so two likeness pins never read alike (S11-32 review UX-1: today's sheet words both "Pin Likeness: Likeness and Likeness") |
 
 ## 3. Scope
 
@@ -296,7 +297,7 @@ Commits: one per step from STEP-1 (STEP-6 to STEP-8 may be one commit if the she
 | T-2 | Swift | same file `lineSentencesFollowTheTable` | Table-driven over every ES-8 row × name / date / term value → the row's resource key; `.negative` property cause with relation `.same` → "Disagrees" family; `.unrecognized` relation → "Similar" | AC-2.4, AC-2.5, AC-2.6, D-4 |
 | T-3 | Swift | same file `relationshipAndLifespanSentences`, `countsArePlural` | Outcomes agree / partial → the two D-14 sentences; `connectionLink("John Smith", "subject of", "Birth of John Smith")` → "John Smith · subject of · Birth of John Smith"; each lifespan case of AC-4.1 – AC-4.3, with spans from `PersonLifeDisplay.dateSpan` → its English; `recordCount(1)` / `(5)` → "· 1 record" / "· 5 records" | AC-3.1, AC-3.2, AC-3.3, AC-4.1, AC-4.2, AC-4.3, D-5, D-13, D-14 |
 | T-4 | Swift | `macos/ProvenenciaTests/PromoteModelTests.swift` `theSheetSubtitleSpeaksTheContestedBand` *(new)*, `theSheetSummaryCarriesTheRowsCaption` *(new)* | AC-1.1, AC-1.2's rows → the subtitle and Updated strings built through D-8's calls | AC-1.1, AC-1.2, D-8 |
-| T-5 | Swift | `PromoteEvidenceDisplayTests.swift` `spokenLabelsReadTheLine` | AC-5.1's line → "Name. Same name, 5 records. This source: John Smith."; the lifespan line → its sentence | AC-5.1, AC-5.2 |
+| T-5 | Swift | `PromoteEvidenceDisplayTests.swift` `spokenLabelsReadTheLine` | AC-5.1's line → "Name. Same name, 5 records. This source: John Smith."; the lifespan line → its sentence; AC-5.3's two likeness lines → labels and checkbox labels that differ, each naming its Source and outcome | AC-5.1, AC-5.2, AC-5.3 |
 | T-6 | Swift | `PromoteEvidenceDisplayTests.swift` `aPartlyCheckedBoxSaysSo` | `L10n.string` of D-15's key → "partly checked" | AC-5.1, D-15 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `PromoteFlowTests` and `PromoteModelTests` (strings, `BridgeFact`), `L10nResolutionTests` (removed keys).
@@ -329,7 +330,7 @@ Data: build the project in [S11-D2 §5.2](../design/S11-D2-evidence-sheet.md#52-
 5. In John's menu pick PER-3X9QV: Frame 9; pick PER-5J2NB: Frame 10. (AC-4.2, AC-4.3, AC-4.5)
 6. On a fresh copy set the obituary's death to "2 Jun 1809": Frame 11. (AC-4.3)
 7. Set the death row to New, then Skip, then EVT-0P7XR: Frame 13's three states. (AC-1.4)
-8. With VoiceOver, move through a line, a partly checked line, a member, a relationship and the lifespan line. (AC-5.1, AC-5.2)
+8. With VoiceOver, move through a line, a partly checked line, a member, a relationship, the lifespan line and two likeness lines. (AC-5.1, AC-5.2, AC-5.3)
 9. Run `rg -n 'promote.sheet.through|Through %@' macos/App` from the repo root: it prints nothing. (AC-3.5)
 
 ## 11. Risks and stop conditions

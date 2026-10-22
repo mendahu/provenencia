@@ -21,14 +21,27 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeSubjectVocabInvalid, apperr.KindUser)
 
+// The audit action names of a binding write. A caller of AppendBinding,
+// DeleteBinding or ReorderBindings passes one to writes.Run.
+const (
+	ActionAssign  = "assign_subject_type_property"
+	ActionRemove  = "remove_subject_type_property"
+	ActionReorder = "reorder_subject_type_properties"
+)
+
 // ErrLocked is returned when removing or assigning against a registry-locked binding.
 var ErrLocked = apperr.New(apperr.CodeSubjectVocabLocked, apperr.KindConflict)
+
+// bindingEntity is the audit entity type of a subject_type_properties row,
+// keyed by its property id.
+const bindingEntity = "subject_type_property"
 
 const (
 	sqlEnsureBinding = `INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order)
@@ -45,7 +58,10 @@ const (
 		SELECT ?, ?, COALESCE(MAX(sort_order), -1) + 1
 		FROM subject_type_properties WHERE subject_type_id = ?
 		ON CONFLICT(subject_type_id, property_id) DO NOTHING`
-	sqlCountBindings = `SELECT COUNT(*) FROM subject_type_properties WHERE subject_type_id = ?`
+	sqlBindingOrder    = `SELECT sort_order FROM subject_type_properties WHERE subject_type_id = ? AND property_id = ?`
+	sqlBindingOrders   = `SELECT property_id, sort_order FROM subject_type_properties WHERE subject_type_id = ?`
+	sqlSetBindingOrder = `UPDATE subject_type_properties SET sort_order = ? WHERE subject_type_id = ? AND property_id = ?`
+	sqlCountBindings   = `SELECT COUNT(*) FROM subject_type_properties WHERE subject_type_id = ?`
 )
 
 // Binding is one ordered Property attached to a Subject type.
@@ -111,33 +127,127 @@ func EnsureBinding(c *database.Catalog, typeID, propertyID []byte, sortOrder int
 	return err
 }
 
-// AppendBinding attaches a Property to a type at the end of its order.
-// Refuses when the registry marks the proveniencia (type_key, property_key) pair locked
-// and it is already bound — callers still use RemoveBinding for detach.
-// New user assign of a locked seed pair is allowed only if not already the locked seed
-// (locked means cannot remove / cannot drop integrity — assign of same keys is OK for Install).
-func AppendBinding(c *database.Catalog, typeID, propertyID []byte) error {
-	db, err := c.DB()
+// AppendBinding attaches a Property to a type at the end of its order and
+// returns the audited create change. A pair that is already bound returns no
+// change. The caller records the changes (writes.Run).
+func AppendBinding(tx *database.Tx, userID, typeID, propertyID []byte) ([]rowchange.Change, error) {
+	if tx == nil || len(typeID) != 16 || len(propertyID) != 16 {
+		return nil, ErrInvalid
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return nil, err
+	}
+	if _, err := subjecttypes.GetByIDTx(tx.Tx, typeID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrInvalid
+		}
+		return nil, err
+	}
+	if _, err := properties.GetByIDTx(tx.Tx, propertyID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrInvalid
+		}
+		return nil, err
+	}
+	res, err := tx.Exec(sqlAppendBinding, typeID, propertyID, typeID)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if len(typeID) != 16 || len(propertyID) != 16 {
-		return ErrInvalid
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, err
 	}
-	if _, err := subjecttypes.GetByID(c, typeID); err != nil {
+	if n == 0 {
+		return nil, nil
+	}
+	var order int
+	if err := tx.QueryRow(sqlBindingOrder, typeID, propertyID).Scan(&order); err != nil {
+		return nil, err
+	}
+	return []rowchange.Change{{
+		EntityType: bindingEntity,
+		EntityID:   append([]byte(nil), propertyID...),
+		Action:     rowchange.ActionCreate,
+		Fields:     rowchange.FullRow(bindingFields(typeID, propertyID, order)),
+	}}, nil
+}
+
+// bindingFields is a binding row's audited columns.
+func bindingFields(typeID, propertyID []byte, sortOrder int) map[string]any {
+	return map[string]any{
+		"subject_type_id": database.UUIDJSON(typeID),
+		"property_id":     database.UUIDJSON(propertyID),
+		"sort_order":      sortOrder,
+	}
+}
+
+// ReorderBindings rewrites a type's binding order as 0..n-1 over propertyIDs,
+// which must be exactly the type's bound Properties, each once. It returns one
+// update change per row whose order moved; an order that already matches
+// returns none. The caller records the changes (writes.Run).
+func ReorderBindings(tx *database.Tx, userID, typeID []byte, propertyIDs [][]byte) ([]rowchange.Change, error) {
+	if tx == nil || len(typeID) != 16 || len(propertyIDs) == 0 {
+		return nil, ErrInvalid
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return nil, err
+	}
+	if _, err := subjecttypes.GetByIDTx(tx.Tx, typeID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return ErrInvalid
+			return nil, ErrInvalid
 		}
-		return err
+		return nil, err
 	}
-	if _, err := properties.GetByID(c, propertyID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrInvalid
+	rows, err := tx.Query(sqlBindingOrders, typeID)
+	if err != nil {
+		return nil, err
+	}
+	bound := map[string]int{}
+	for rows.Next() {
+		var id []byte
+		var order int
+		if err := rows.Scan(&id, &order); err != nil {
+			_ = rows.Close()
+			return nil, err
 		}
-		return err
+		bound[string(id)] = order
 	}
-	_, err = db.Exec(sqlAppendBinding, typeID, propertyID, typeID)
-	return err
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if len(propertyIDs) != len(bound) {
+		return nil, ErrInvalid
+	}
+	seen := make(map[string]struct{}, len(propertyIDs))
+	for _, id := range propertyIDs {
+		if _, ok := bound[string(id)]; !ok {
+			return nil, ErrInvalid
+		}
+		if _, dup := seen[string(id)]; dup {
+			return nil, ErrInvalid
+		}
+		seen[string(id)] = struct{}{}
+	}
+	var changes []rowchange.Change
+	for i, id := range propertyIDs {
+		if bound[string(id)] == i {
+			continue
+		}
+		if _, err := tx.Exec(sqlSetBindingOrder, i, typeID, id); err != nil {
+			return nil, err
+		}
+		changes = append(changes, rowchange.Change{
+			EntityType: bindingEntity,
+			EntityID:   append([]byte(nil), id...),
+			Action:     rowchange.ActionUpdate,
+			Fields: map[string]rowchange.FieldDiff{
+				"subject_type_id": {Old: database.UUIDJSON(typeID), New: database.UUIDJSON(typeID)},
+				"property_id":     {Old: database.UUIDJSON(id), New: database.UUIDJSON(id)},
+				"sort_order":      {Old: bound[string(id)], New: i},
+			},
+		})
+	}
+	return changes, nil
 }
 
 // CountBindings reports how many Properties a type binds.
@@ -192,34 +302,50 @@ func ListBindings(c *database.Catalog, typeID []byte) ([]Binding, error) {
 	return out, rows.Err()
 }
 
-// DeleteBinding removes one join row. Refuses registry-locked proveniencia seed bindings.
-func DeleteBinding(c *database.Catalog, typeID, propertyID []byte) error {
-	db, err := c.DB()
-	if err != nil {
-		return err
+// DeleteBinding removes one join row and returns the audited delete change.
+// Refuses registry-locked proveniencia seed bindings. An unbound pair returns
+// no change. The caller records the changes (writes.Run).
+func DeleteBinding(tx *database.Tx, userID, typeID, propertyID []byte) ([]rowchange.Change, error) {
+	if tx == nil || len(typeID) != 16 || len(propertyID) != 16 {
+		return nil, ErrInvalid
 	}
-	if len(typeID) != 16 || len(propertyID) != 16 {
-		return ErrInvalid
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return nil, err
 	}
-	st, err := subjecttypes.GetByID(c, typeID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrInvalid
-		}
-		return err
-	}
-	prop, err := properties.GetByID(c, propertyID)
+	st, err := subjecttypes.GetByIDTx(tx.Tx, typeID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return ErrInvalid
+			return nil, ErrInvalid
 		}
-		return err
+		return nil, err
+	}
+	prop, err := properties.GetByIDTx(tx.Tx, propertyID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrInvalid
+		}
+		return nil, err
 	}
 	if LockedBinding(st.Key, prop.Key) && prop.Origin == vocabkey.OriginProvenencia {
-		return ErrLocked
+		return nil, ErrLocked
 	}
-	_, err = db.Exec(sqlDeleteBinding, typeID, propertyID)
-	return err
+	var order int
+	err = tx.QueryRow(sqlBindingOrder, typeID, propertyID).Scan(&order)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(sqlDeleteBinding, typeID, propertyID); err != nil {
+		return nil, err
+	}
+	return []rowchange.Change{{
+		EntityType: bindingEntity,
+		EntityID:   append([]byte(nil), propertyID...),
+		Action:     rowchange.ActionDelete,
+		Fields:     rowchange.DeletedRow(bindingFields(typeID, propertyID, order)),
+	}}, nil
 }
 
 // Install writes the proveniencia Subject type + Property + binding registry.

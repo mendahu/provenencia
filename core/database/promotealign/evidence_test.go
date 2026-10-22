@@ -4,20 +4,24 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/claimevidence"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertycompare"
+	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -481,4 +485,181 @@ func TestEvidenceReadsMemberGraph(t *testing.T) {
 	if got := e.Sources[string(census.ID)]; got != "Census 1851" {
 		t.Errorf("Sources[census] = %q", got)
 	}
+}
+
+// likenessFixture is a Source person with image A (shade 40) and a handle with
+// three members: image A, image B (shade 200) and a third saved under shade.
+type likenessFixture struct {
+	f                *fixture
+	srcB             sources.Source
+	incoming         subjects.Subject
+	handle           []byte
+	a, b, third      subjects.Subject
+	thirdObservation []byte
+}
+
+func newLikenessFixture(t *testing.T, third uint8) likenessFixture {
+	t.Helper()
+	f := newFixture(t)
+	l := likenessFixture{f: f}
+	l.a = f.person(f.source, f.artifact, "John Smith")
+	observationstest.SaveLikeness(t, f.c, userID, f.source.ID, l.a.ID, 40)
+	l.handle = f.promote(l.a).Entity.ID
+
+	srcM2, artM2 := f.newSource("Album")
+	l.b = f.person(srcM2, artM2, "John Smith")
+	observationstest.SaveLikeness(t, f.c, userID, srcM2.ID, l.b.ID, 200)
+	f.join(l.b, l.handle)
+
+	srcM3, artM3 := f.newSource("Card")
+	l.third = f.person(srcM3, artM3, "John Smith")
+	l.thirdObservation = observationstest.SaveLikeness(t, f.c, userID, srcM3.ID, l.third.ID, third).ID
+	f.join(l.third, l.handle)
+
+	var art artifacts.Artifact
+	l.srcB, art = f.newSource("Obituary")
+	l.incoming = f.person(l.srcB, art, "John Smith")
+	observationstest.SaveLikeness(t, f.c, userID, l.srcB.ID, l.incoming.ID, 40)
+	return l
+}
+
+func (l likenessFixture) evidence() claimevidence.Evidence {
+	return l.f.evidence(promotealign.EvidenceRequest{SourceID: l.srcB.ID, SubjectID: l.incoming.ID, HandleID: l.handle})
+}
+
+// T-6: a Source person's likeness meets each member's: the same image is a
+// checked line, another image is judged by eye, and a refused image is no line.
+func TestEvidenceLikenesses(t *testing.T) {
+	t.Run("AC-1.1 and AC-1.4 same image, other image, collapse", func(t *testing.T) {
+		l := newLikenessFixture(t, 40)
+		s := section(t, l.evidence().Sections, vocabkey.PropertyLikeness)
+		if len(s.Lines) != 2 {
+			t.Fatalf("likeness lines = %+v", s.Lines)
+		}
+		same, other := s.Lines[0], s.Lines[1]
+		if same.Relation != valuecompare.Same || same.Cause != valuecompare.CauseExact || same.Outcome != propertycompare.OutcomeAgree || !same.Checked || !same.Pinnable {
+			t.Errorf("same-image line = %+v", same)
+		}
+		if len(same.Members) != 2 {
+			t.Errorf("same-image pins = %d, want the two image-A members collapsed", len(same.Members))
+		}
+		if other.Relation != valuecompare.Unknown || other.Cause != valuecompare.CauseUnjudged || other.Outcome != propertycompare.OutcomeUnknown || !other.Pinnable || other.Checked {
+			t.Errorf("other-image line = %+v", other)
+		}
+		if len(other.Members) != 1 || !bytes.Equal(other.Members[0].Subject, l.b.ID) {
+			t.Errorf("other-image pins = %+v", other.Members)
+		}
+	})
+
+	t.Run("AC-1.5 a refused image gives no line for that member", func(t *testing.T) {
+		l := newLikenessFixture(t, 90)
+		db, err := l.f.c.DB()
+		must(t, err)
+		_, err = db.Exec(`UPDATE files SET media_type = 'image/jpeg' WHERE id = ?`, observationstest.ImageOf(t, l.f.c, l.thirdObservation))
+		must(t, err)
+		l.f.c.Graph().Drop()
+		for _, line := range section(t, l.evidence().Sections, vocabkey.PropertyLikeness).Lines {
+			for _, p := range line.Members {
+				if bytes.Equal(p.Subject, l.third.ID) {
+					t.Errorf("a refused image gave a line: %+v", line)
+				}
+			}
+		}
+	})
+}
+
+// T-7: the lifespan crosses with each side's first and last dated events or why
+// it has none, and the sections follow the catalog's order.
+func TestEvidenceLifespan(t *testing.T) {
+	// handle is a person promoted with a birth on 14 May 1817 and, for the
+	// record side, a census on 2 Apr 1871 (or any other events).
+	type event struct {
+		eventType string
+		y, m, d   int
+	}
+	build := func(t *testing.T, row []event, record []event) (*fixture, promotealign.EvidenceRequest) {
+		f := newFixture(t)
+		member := f.person(f.source, f.artifact, "John Smith")
+		var filed []subjects.Subject
+		for _, e := range record {
+			ev := f.datedOn(f.source, f.artifact, e.eventType, e.y, e.m, e.d)
+			f.participation(f.source, f.artifact, member, ev, "subject")
+			filed = append(filed, ev)
+		}
+		handle := f.promote(member).Entity.ID
+		for _, ev := range filed {
+			f.promote(ev)
+		}
+		srcB, artB := f.newSource("Obituary")
+		incoming := f.person(srcB, artB, "John Smith")
+		for _, e := range row {
+			f.participation(srcB, artB, incoming, f.datedOn(srcB, artB, e.eventType, e.y, e.m, e.d), "subject")
+		}
+		return f, promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: incoming.ID, HandleID: handle}
+	}
+	rowLife := []event{{"birth", 1817, 5, 14}, {"death", 1890, 6, 2}}
+	year := func(v *datevalue.Value) int {
+		if v == nil || v.StartYear == nil {
+			return 0
+		}
+		return *v.StartYear
+	}
+
+	t.Run("AC-2.1 agreeing sides", func(t *testing.T) {
+		f, req := build(t, rowLife, []event{{"birth", 1817, 5, 14}, {"census", 1871, 4, 2}})
+		l := f.evidence(req).Lifespan
+		if l == nil || l.Outcome != propertycompare.OutcomeAgree || l.Row.Missing != "" || l.Record.Missing != "" {
+			t.Fatalf("lifespan = %+v", l)
+		}
+		if year(l.Row.First) != 1817 || year(l.Row.Last) != 1890 || year(l.Record.First) != 1817 || year(l.Record.Last) != 1871 {
+			t.Errorf("sides = %+v", l)
+		}
+	})
+	t.Run("AC-2.2 a side that contradicts itself", func(t *testing.T) {
+		f, req := build(t, []event{{"birth", 1817, 5, 14}, {"death", 1809, 6, 2}}, []event{{"birth", 1817, 5, 14}})
+		l := f.evidence(req).Lifespan
+		if l == nil || l.Row.Missing != subjectcompare.LifespanContradicts || l.Row.First != nil || l.Outcome != propertycompare.OutcomeUnknown || l.Relation != "" || l.Cause != "" {
+			t.Fatalf("lifespan = %+v", l)
+		}
+	})
+	t.Run("AC-2.3 an undated record", func(t *testing.T) {
+		f, req := build(t, rowLife, nil)
+		l := f.evidence(req).Lifespan
+		if l == nil || l.Record.Missing != subjectcompare.LifespanUndated || l.Outcome != propertycompare.OutcomeUnknown {
+			t.Fatalf("lifespan = %+v", l)
+		}
+	})
+	t.Run("AC-2.5 lives that cannot be one person's conflict", func(t *testing.T) {
+		f, req := build(t, rowLife, []event{{"baptism", 1801, 3, 3}, {"burial", 1810, 1, 9}})
+		l := f.evidence(req).Lifespan
+		if l == nil || l.Outcome != propertycompare.OutcomeConflict {
+			t.Fatalf("lifespan = %+v", l)
+		}
+	})
+	t.Run("AC-2.4 neither side dated", func(t *testing.T) {
+		f, req := build(t, nil, nil)
+		if l := f.evidence(req).Lifespan; l != nil {
+			t.Fatalf("lifespan = %+v", l)
+		}
+	})
+	t.Run("AC-3.1 sections follow the seeded order", func(t *testing.T) {
+		f := newFixture(t)
+		sex := func(src sources.Source, art artifacts.Artifact) subjects.Subject {
+			p := f.person(src, art, "John Smith")
+			f.cite(art, p, observations.Input{PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", "male").ID})
+			return p
+		}
+		member := sex(f.source, f.artifact)
+		handle := f.promote(member).Entity.ID
+		srcB, artB := f.newSource("Obituary")
+		incoming := sex(srcB, artB)
+		e := f.evidence(promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: incoming.ID, HandleID: handle})
+		var keys []vocabkey.PropertyKey
+		for _, s := range e.Sections {
+			keys = append(keys, s.Key)
+		}
+		if !slices.Equal(keys, []vocabkey.PropertyKey{"name", "sex_at_birth"}) {
+			t.Errorf("sections = %v", keys)
+		}
+	})
 }

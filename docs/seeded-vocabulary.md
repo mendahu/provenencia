@@ -356,10 +356,10 @@ Additional Properties may be seeded as workflows need them (shared DNA, predicte
 ```text
 subject_type    property
 person          name                # locked
+person          likeness            # depiction; multiple; locked
 person          sex_at_birth        # term
 person          gender              # term; unlocked
 person          interests           # text; multiple; unlocked
-person          likeness            # depiction; multiple; locked
 
 event           event_type          # term; locked
 event           event_name          # text; unlocked

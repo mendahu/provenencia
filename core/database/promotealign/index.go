@@ -10,7 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/shortlist"
-	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -21,7 +20,7 @@ import (
 // long as the index does, and every handle commit drops both.
 type matchIndex struct {
 	shortlist       *shortlist.Index
-	profiles        map[string]subjectcompare.Values
+	profiles        map[string]profile
 	profilesPattern string
 }
 

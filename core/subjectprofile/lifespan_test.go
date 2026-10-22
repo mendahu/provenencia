@@ -1,6 +1,7 @@
 package subjectprofile_test
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
@@ -51,9 +52,13 @@ func TestLifespanFromEvents(t *testing.T) {
 		values  map[vocabkey.PropertyKey][]autoreconcile.Candidate
 		want    string
 		check   func(t *testing.T, p subjectcompare.Values)
+		// missing is why ForSubject returns no lifespan; first and last, when
+		// set, are the dates as written that set the span.
+		missing     subjectcompare.LifespanMissing
+		first, last *datevalue.Value
 	}{
 		{name: "AC-2.1 a birth starts the life", events: []subjectprofile.LifeEvent{ev(birth, subj, y(1850))},
-			want: "lifespan={Between 1850 and 1960}; lifespan_span={Between 1850 and 1850}"},
+			want: "lifespan={Between 1850 and 1960}; lifespan_span={Between 1850 and 1850}", first: y(1850), last: y(1850)},
 		{name: "AC-2.2 a death ends the life", events: []subjectprofile.LifeEvent{ev(death, subj, y(1840))},
 			want: "lifespan={Between 1730 and 1840}; lifespan_span={Between 1840 and 1840}"},
 		{name: "AC-2.3 a birth and a death", events: []subjectprofile.LifeEvent{ev(birth, subj, y(1850)), ev(death, subj, y(1920))},
@@ -81,9 +86,9 @@ func TestLifespanFromEvents(t *testing.T) {
 		{name: "AC-2.11 undated events give no lifespan", events: []subjectprofile.LifeEvent{
 			{EventType: residence, Role: subj},
 			ev(residence, subj, datevaluetest.Phrase("spring"))},
-			check: empty},
+			check: empty, missing: subjectcompare.LifespanUndated},
 		{name: "AC-2.12 a window that would end before it starts", events: []subjectprofile.LifeEvent{ev(birth, subj, y(1900)), ev(death, subj, y(1850))},
-			check: empty},
+			check: empty, missing: subjectcompare.LifespanContradicts},
 		{name: "AC-2.13 no rules give no lifespan", noRules: true, events: []subjectprofile.LifeEvent{ev(birth, subj, y(1850))},
 			check: empty},
 		{name: "AC-2.15 a plain Subject keeps its values beside the lifespan",
@@ -91,11 +96,12 @@ func TestLifespanFromEvents(t *testing.T) {
 			values: map[vocabkey.PropertyKey][]autoreconcile.Candidate{sex: {vcand(term("male"), false)}},
 			want:   "lifespan={Between 1850 and 1960}; lifespan_span={Between 1850 and 1850}; sex_at_birth={male}"},
 		{name: "AC-2.16 a residence wholly before the birth", events: []subjectprofile.LifeEvent{ev(birth, subj, y(1900)), ev(residence, subj, y(1850))},
-			check: empty},
+			check: empty, missing: subjectcompare.LifespanContradicts},
 		{name: "AC-2.17 a residence wholly after the death", events: []subjectprofile.LifeEvent{ev(death, subj, y(1850)), ev(residence, subj, y(1900))},
-			check: empty},
+			check: empty, missing: subjectcompare.LifespanContradicts},
 		{name: "AC-2.18 a coarser date in the same year is no contradiction", events: []subjectprofile.LifeEvent{
 			ev(birth, subj, datevaluetest.YMD(1850, 5, 1)), ev(baptism, subj, y(1850))},
+			first: y(1850), last: y(1850),
 			check: func(t *testing.T, p subjectcompare.Values) {
 				first, last := ends(t, p, vocabkey.PropertyLifespan)
 				if first.Year != 1850 || first.Month != 5 || first.Day != 1 || last.Year != 1960 || last.Month != 0 || last.Day != 0 {
@@ -106,6 +112,10 @@ func TestLifespanFromEvents(t *testing.T) {
 					t.Errorf("span first end %+v", sFirst)
 				}
 			}},
+		{name: "a date written about stays as written", events: []subjectprofile.LifeEvent{
+			ev(birth, subj, datevaluetest.About(1815, 0, 0)), ev(death, subj, y(1890))},
+			want:  "lifespan={Between 1815 and 1890}; lifespan_span={Between 1815 and 1890}",
+			first: datevaluetest.About(1815, 0, 0), last: y(1890)},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -113,7 +123,13 @@ func TestLifespanFromEvents(t *testing.T) {
 			if tc.noRules {
 				rules = nil
 			}
-			got := subjectprofile.ForSubject(subjectprofile.Subject{Values: tc.values, Life: tc.events}, rules)
+			got, side := subjectprofile.ForSubject(subjectprofile.Subject{Values: tc.values, Life: tc.events}, rules)
+			if side.Missing != tc.missing || (tc.missing != "" || tc.noRules) && (side.First != nil || side.Last != nil) {
+				t.Errorf("side = %+v, want missing %q and no dates", side, tc.missing)
+			}
+			if tc.first != nil && (!reflect.DeepEqual(side.First, tc.first) || !reflect.DeepEqual(side.Last, tc.last)) {
+				t.Errorf("side first %v last %v, want %v and %v", side.First, side.Last, tc.first, tc.last)
+			}
 			if tc.check != nil {
 				tc.check(t, got)
 				return

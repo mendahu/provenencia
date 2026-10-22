@@ -38,8 +38,12 @@ This is a different question from **"Why was this suggested?"**, which is matchi
   | `Same`, `Equivalent` | yes | yes | yes |
   | `Contains`, `Overlaps`, `Near` | yes | yes | **no** |
   | `Different`, or a negative that contradicts | yes, as a disagreement | no | — |
-  | `Unknown` | no | — | — |
+  | `Unknown`, cause `unjudged` (two different likeness images) | yes, to judge by eye | yes | **no** |
+  | `Unknown`, any other cause | no | — | — |
 
+- **Likenesses are judged by eye** (S11-32). Two likeness values are `Same` (`exact`) when they are the same image File and `Unknown` (`unjudged`) otherwise; the app never calls two different images the same face. `evidence.ByEye` lists the causes of an unknown line that is kept: pinnable, never checked. The line carries the stored crop's path, not its region. Likeness has no weight in matching, so these lines never move a band.
+- **Sections follow the catalog's binding order** for the kind (`subject_type_properties.sort_order`, cached with the vocabulary): the person's `name`, `likeness`, `sex_at_birth`, `gender`, `interests` as seeded, then any property with no binding, by key. Reordering a type's bindings (`ReorderSubjectTypeProperties`) shows on the next open.
+- **The lifespan is carried, never pinned** (S11-32). `Evidence.Lifespan` is matching's lifespan comparison between the row and the record, with each side's first and last dated events as written, or why a side has none (`undated`, or `contradicts` when its own events cannot all be true). It is not a line: it has no member and adds no offer. It is nil for an event or place, and when neither side has a date.
 - **Each line names the member's Source,** so the researcher sees which record agrees.
 
 ### Wording

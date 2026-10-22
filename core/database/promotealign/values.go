@@ -2,6 +2,8 @@ package promotealign
 
 import (
 	"github.com/mendahu/provenencia/core/claimevidence"
+	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertycompare"
@@ -17,6 +19,9 @@ type EvidenceValue struct {
 	Type      string // propertymeta.ValueType*
 	Value     propertycompare.Value
 	TermLabel string
+	// ImageRelPath is a likeness's image File path under the project, set
+	// from ResolvePaths; empty for any other value.
+	ImageRelPath string
 }
 
 // EvidenceValues types and labels the values of a claim evidence, from the
@@ -25,6 +30,7 @@ type EvidenceValues struct {
 	labels map[string]string // "property|term" → label
 	types  map[vocabkey.PropertyKey]string
 	pools  map[vocabkey.SubjectType]map[vocabkey.PropertyKey][]vocabkey.PropertyKey
+	paths  map[string]string // image File id → objects/… path, from ResolvePaths
 }
 
 // NewEvidenceValues reads the graph's product vocabulary: each property's value
@@ -59,6 +65,44 @@ func NewEvidenceValues(g *graphcache.Graph) (EvidenceValues, error) {
 	return out, nil
 }
 
+// ResolvePaths reads the image path of every likeness the evidence shows, on
+// lines and pins, in its sections and its relationships' sections, with one
+// query. Incoming and Member then fill ImageRelPath.
+func (v *EvidenceValues) ResolvePaths(c *database.Catalog, e claimevidence.Evidence) error {
+	var ids [][]byte
+	seen := map[string]bool{}
+	add := func(x propertycompare.Value) {
+		if x.Depiction == nil || len(x.Depiction.ImageFileID) == 0 || seen[string(x.Depiction.ImageFileID)] {
+			return
+		}
+		seen[string(x.Depiction.ImageFileID)] = true
+		ids = append(ids, x.Depiction.ImageFileID)
+	}
+	walk := func(sections []claimevidence.Section) {
+		for _, s := range sections {
+			for _, l := range s.Lines {
+				add(l.Incoming)
+				for _, p := range l.Members {
+					add(p.Value)
+				}
+			}
+		}
+	}
+	walk(e.Sections)
+	for _, r := range e.Relationships {
+		walk(r.Sections)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	paths, err := files.RelPaths(c, ids)
+	if err != nil {
+		return err
+	}
+	v.paths = paths
+	return nil
+}
+
 // Incoming is the line's incoming value. kind is the kind of the Subject the
 // section belongs to: the evidence's, or the relationship's under one. A term
 // shows the label found on the incoming property, then the section's lead,
@@ -88,6 +132,9 @@ func (v EvidenceValues) value(property vocabkey.PropertyKey, val propertycompare
 		typ = val.Type
 	}
 	out := EvidenceValue{Type: typ, Value: val}
+	if val.Depiction != nil {
+		out.ImageRelPath = v.paths[string(val.Depiction.ImageFileID)]
+	}
 	if typ == propertymeta.ValueTypeTerm {
 		for _, p := range search {
 			if label, ok := v.labels[string(p)+"|"+val.Term]; ok {

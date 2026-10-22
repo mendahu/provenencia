@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-32 — Lifespan and likeness evidence lines
+
+**In review** in [#523](https://github.com/mendahu/provenencia/pull/523). The claim evidence now carries a person's lifespan check and each record's likenesses. A lifespan comparison arrives with each side's first and last dated events, or why a side has none (no dated event, or its own dates contradict), and is never pinned. Likenesses are lines: the same image is a checked line, two different images are kept to judge by eye (pinnable, never checked), and a likeness changes no band. Sections follow the catalog's property order for the kind (a new catalog seeds a person's likeness second), and a type's bindings are now audited writes with a reorder RPC that shows on the next evidence open. Today's sheet words a likeness as "Likeness"; S11-20 draws the crops and the lifespan.
+
 ## S11-25 — Claim evidence RPC and pin policy
 
 **In review** in [#517](https://github.com/mendahu/provenencia/pull/517). The Promote sheet loads a row's claim evidence when it opens (`GetPromoteClaimEvidence`), in the shipped layout: a "This subject" card with a line per property and a "Through <name>" card per neighbor, each pin box covering every member of its line. Done pins what the evidence offers, decided in Go (`promotealign.PinOffers`, `ResolvePins`): the checked lines and relationships for a row whose sheet was never opened, the ones left checked for an opened row, each landing on the new claim and on the claim of every member it names. The proposal no longer carries sheet lines (`attachExhibits`, `pairExhibits`, proposal field 9 and `promote.Pair` are gone), and Promote drafts no argument. Outcomes, relations and causes cross the wire as codes that `ConclusionVocabulary.swift` parses once, under `TestSwiftVocabularyMatchesGo`. S11-20 rebuilds the sheet on this RPC.

@@ -72,3 +72,31 @@ func TestEvidenceValues(t *testing.T) {
 		})
 	}
 }
+
+// ResolvePaths gives each likeness the path of its image File, and two images
+// different paths.
+func TestEvidenceValuesResolvePaths(t *testing.T) {
+	l := newLikenessFixture(t, 90)
+	e := l.evidence()
+	values, err := promotealign.NewEvidenceValues(l.f.c.Graph())
+	must(t, err)
+	must(t, values.ResolvePaths(l.f.c, e))
+	s := section(t, e.Sections, vocabkey.PropertyLikeness)
+	paths := map[string]bool{}
+	for _, line := range s.Lines {
+		in := values.Incoming(vocabkey.Person, s, line)
+		if in.Type != propertymeta.ValueTypeDepiction || in.ImageRelPath == "" {
+			t.Fatalf("incoming = %+v", in)
+		}
+		for _, p := range line.Members {
+			m := values.Member(vocabkey.Person, s, line, p)
+			if m.ImageRelPath == "" {
+				t.Fatalf("member = %+v", m)
+			}
+			paths[m.ImageRelPath] = true
+		}
+	}
+	if len(paths) < 2 {
+		t.Fatalf("member image paths = %v, want at least two distinct", paths)
+	}
+}

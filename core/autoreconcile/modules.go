@@ -47,7 +47,7 @@ const wholeValue = ""
 // Contains folds, and no other relation does (D-2 of S11-06).
 func moduleFor(rules valuecompare.Rules, valueType string) module {
 	switch valueType {
-	case propertymeta.ValueTypeText, propertymeta.ValueTypeInteger:
+	case propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeDepiction:
 		return keyModule{keyOf: func(v Value) (string, bool) {
 			return valuecompare.Key(v.compareValue(valueType), valuecompare.Same, rules)
 		}}
@@ -57,14 +57,6 @@ func moduleFor(rules valuecompare.Rules, valueType string) module {
 		// The accepted handle. The loader fills EntityID; an unpromoted or
 		// missing end has none and is no evidence.
 		return keyModule{keyOf: func(v Value) (string, bool) { return idKey(v.EntityID) }}
-	case propertymeta.ValueTypeDepiction:
-		// The same image File, so the same pixels; no readable image is no evidence.
-		return keyModule{keyOf: func(v Value) (string, bool) {
-			if v.Depiction == nil {
-				return "", false
-			}
-			return idKey(v.Depiction.ImageFileID)
-		}}
 	case propertymeta.ValueTypeName:
 		return nameModule{rules: rules}
 	case propertymeta.ValueTypeDate:
@@ -73,10 +65,10 @@ func moduleFor(rules valuecompare.Rules, valueType string) module {
 	return nil
 }
 
-// compareValue is v in the shape value compare reads: the text, integer or
-// date of a value of valueType. Names go through nameUnit.compareValue.
+// compareValue is v in the shape value compare reads: the text, integer, date
+// or depiction of a value of valueType. Names go through nameUnit.compareValue.
 func (v Value) compareValue(valueType string) valuecompare.Value {
-	return valuecompare.Value{Type: valueType, Text: v.Text, Integer: v.Integer, Date: v.Date}
+	return valuecompare.Value{Type: valueType, Text: v.Text, Integer: v.Integer, Date: v.Date, Depiction: v.Depiction}
 }
 
 // keyModule is a value type whose values are the same exactly when their

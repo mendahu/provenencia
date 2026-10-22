@@ -70,8 +70,10 @@ type Options struct {
 // valuerules. metas give each Property's value type and cardinality for
 // Options.Excluding. lifespans is the registry's Subject.Lifespans for the
 // side's kind; for each, a window and a span are added when the life events
-// give them. The error is Reconcile's, and only Excluding runs it.
-func Build(e Entity, metas subjectcompare.Metas, reconcile valuecompare.Rules, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan, opts Options) (subjectcompare.Values, error) {
+// give them, and the side's life (its first and last dates, or why it has no
+// lifespan) is returned beside the values. The error is Reconcile's, and only
+// Excluding runs it.
+func Build(e Entity, metas subjectcompare.Metas, reconcile valuecompare.Rules, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan, opts Options) (subjectcompare.Values, subjectcompare.LifeSide, error) {
 	out := subjectcompare.Values{}
 	for _, key := range slices.Sorted(maps.Keys(e.Properties)) {
 		p := e.Properties[key]
@@ -80,7 +82,7 @@ func Build(e Entity, metas subjectcompare.Metas, reconcile valuecompare.Rules, l
 			meta := metas[key]
 			res, err := autoreconcile.Reconcile(reconcile, meta.ValueType, kept, nil, meta.CardinalityOrSingle())
 			if err != nil {
-				return nil, err
+				return nil, subjectcompare.LifeSide{}, err
 			}
 			vals = res.Values
 		}
@@ -97,8 +99,7 @@ func Build(e Entity, metas subjectcompare.Metas, reconcile valuecompare.Rules, l
 			out[key] = profile
 		}
 	}
-	addLifespans(out, e.Life, lifespans)
-	return out, nil
+	return out, addLifespans(out, e.Life, lifespans), nil
 }
 
 // without returns the candidates not on an excluded member, and whether any
@@ -123,7 +124,8 @@ func without(cs []Candidate, excluding [][]byte) ([]autoreconcile.Candidate, boo
 // negative as recorded, in order. Each value's Ref is its Observation id.
 // lifespans is the registry's Subject.Lifespans for the side's kind; for each,
 // a window and a span are added when the life events give them, with no Ref.
-func ForSubject(s Subject, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan) subjectcompare.Values {
+// The side's life is returned beside the values.
+func ForSubject(s Subject, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan) (subjectcompare.Values, subjectcompare.LifeSide) {
 	out := subjectcompare.Values{}
 	for key, cs := range s.Values {
 		for _, c := range cs {
@@ -132,33 +134,43 @@ func ForSubject(s Subject, lifespans map[vocabkey.PropertyKey]subjectcompare.Lif
 			out[key] = append(out[key], v)
 		}
 	}
-	addLifespans(out, s.Life, lifespans)
-	return out
+	return out, addLifespans(out, s.Life, lifespans)
 }
 
-// addLifespans sets, for each lifespan in key order, the window under its lead
-// and the span under its Span, one value each, when the events give them.
-func addLifespans(out subjectcompare.Values, events []LifeEvent, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan) {
-	for _, lead := range slices.Sorted(maps.Keys(lifespans)) {
-		l := lifespans[lead]
-		if window, span, ok := lifespan(events, l); ok {
+// addLifespans sets, for each lifespan, the window under its lead
+// and the span under its Span, one value each, when the events give them. It
+// returns the side's life from the first lead in key order, the zero LifeSide
+// when there is none.
+func addLifespans(out subjectcompare.Values, events []LifeEvent, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan) subjectcompare.LifeSide {
+	var side subjectcompare.LifeSide
+	first, _ := subjectcompare.FirstLifespanLead(lifespans)
+	for lead, l := range lifespans {
+		window, span, s := lifespan(events, l)
+		if lead == first {
+			side = s
+		}
+		if s.Missing == "" {
 			out[lead] = []propertycompare.Value{window}
 			out[l.Span] = []propertycompare.Value{span}
 		}
 	}
+	return side
 }
 
 // lifespan lays the dated events on one timeline. The span is the first to the
 // last date. The window starts at the earliest Starts event, or MaxYears
 // before the first date, and ends at the latest Ends event, or MaxYears after
-// the last date. ok is false when no event is dated, when a shifted end
-// cannot be placed, when the window or span would end before it begins, or
-// when a date lies wholly outside the window: a side that contradicts itself
-// has no lifespan.
-func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span propertycompare.Value, ok bool) {
-	// early and late are each date's first and last closed end; startEarly
-	// and endLate are those of the events that fix the start and the end.
+// the last date. The side has a lifespan exactly when side.Missing is empty;
+// its First and Last are then the dates as written that set the span's ends.
+// A side with no dated event, or whose shifted end cannot be placed, is
+// undated; one whose window or span would end before it begins, or with a date
+// wholly outside the window, contradicts itself and has no lifespan.
+func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span propertycompare.Value, side subjectcompare.LifeSide) {
+	// early and late are each date's first and last closed end, dates the
+	// date each came from; startEarly and endLate are those of the events that
+	// fix the start and the end.
 	var early, late, startEarly, endLate []valuecompare.DateEnd
+	var dates []datevalue.Value
 	for _, ev := range events {
 		er := subjectcompare.EventRole{EventType: ev.EventType, Role: ev.Role}
 		for _, d := range ev.Dates {
@@ -172,7 +184,7 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 			if last.Open {
 				last = first
 			}
-			early, late = append(early, first), append(late, last)
+			early, late, dates = append(early, first), append(late, last), append(dates, d)
 			if slices.Contains(l.Starts, er) {
 				startEarly = append(startEarly, first)
 			}
@@ -181,50 +193,56 @@ func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span prope
 			}
 		}
 	}
+	undated := subjectcompare.LifeSide{Missing: subjectcompare.LifespanUndated}
+	contradicts := subjectcompare.LifeSide{Missing: subjectcompare.LifespanContradicts}
 	spanFirst, ok := valuecompare.Earliest(early)
 	if !ok {
-		return window, span, false
+		return window, span, undated
 	}
 	spanLast, _ := valuecompare.Latest(late)
 	start, ok := valuecompare.Earliest(startEarly)
 	if !ok {
 		if start, ok = valuecompare.ShiftYears(spanFirst, -l.MaxYears); !ok {
-			return window, span, false
+			return window, span, undated
 		}
 	}
 	end, ok := valuecompare.Latest(endLate)
 	if !ok {
 		if end, ok = valuecompare.ShiftYears(spanLast, l.MaxYears); !ok {
-			return window, span, false
+			return window, span, undated
 		}
 	}
 	for i := range early {
 		if late[i].Hi < start.Lo || early[i].Lo > end.Hi {
-			return window, span, false
+			return window, span, contradicts
 		}
 	}
 	w, ok := valuecompare.EndsDate(start, end)
 	if !ok {
-		return window, span, false
+		return window, span, contradicts
 	}
 	sp, ok := valuecompare.EndsDate(spanFirst, spanLast)
 	if !ok {
-		return window, span, false
+		return window, span, contradicts
 	}
-	return propertycompare.Value{Value: valuecompare.Value{Date: &w}}, propertycompare.Value{Value: valuecompare.Value{Date: &sp}}, true
+	firstAt := slices.Index(early, spanFirst)
+	lastAt := slices.Index(late, spanLast)
+	side.First, side.Last = &dates[firstAt], &dates[lastAt]
+	return propertycompare.Value{Value: valuecompare.Value{Date: &w}}, propertycompare.Value{Value: valuecompare.Value{Date: &sp}}, side
 }
 
 // Value is the one conversion from the reconciler's value to layer 2's. Type
-// and Ref stay empty: layer 2 sets the type from the meta. Name and Date are
-// shared with v.
+// and Ref stay empty: layer 2 sets the type from the meta. Name, Date and Depiction
+// are shared with v.
 func Value(v autoreconcile.Value, negative bool, namePattern string) propertycompare.Value {
 	out := propertycompare.Value{
 		Value: valuecompare.Value{
-			Text:    v.Text,
-			Term:    v.TermKey,
-			Integer: v.Integer,
-			Name:    v.Name,
-			Date:    v.Date,
+			Text:      v.Text,
+			Term:      v.TermKey,
+			Integer:   v.Integer,
+			Name:      v.Name,
+			Date:      v.Date,
+			Depiction: v.Depiction,
 		},
 		Negative: negative,
 		Neutral:  v.Neutral,

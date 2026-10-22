@@ -10,6 +10,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/subjectcompare"
+	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
@@ -52,6 +54,9 @@ func GetPromoteClaimEvidence(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
+		if err := values.ResolvePaths(c, e); err != nil {
+			return err
+		}
 		out = claimEvidenceProto(e, values)
 		return nil
 	})
@@ -87,6 +92,7 @@ func claimEvidenceProto(e claimevidence.Evidence, values promotealign.EvidenceVa
 		}
 		out.Relationships = append(out.Relationships, r)
 	}
+	out.Lifespan = lifespanProto(e.Lifespan)
 	for _, o := range promotealign.PinOffers(e) {
 		out.Offers = append(out.Offers, &engine.PromoteClaimEvidenceOffer{Id: o.ID, Checked: o.Checked})
 	}
@@ -139,7 +145,10 @@ func evidenceSectionsProto(kind vocabkey.SubjectType, sections []claimevidence.S
 // for a typed value. A term has no id here: its key and label name it.
 func evidenceValueProto(v promotealign.EvidenceValue) *engine.ConclusionValue {
 	var d conclusiondetails.Value
+	var depiction *engine.DepictionValue
 	switch v.Type {
+	case propertymeta.ValueTypeDepiction:
+		depiction = &engine.DepictionValue{ImageRelPath: v.ImageRelPath}
 	case propertymeta.ValueTypeName:
 		d.Name = v.Value.Name
 	case propertymeta.ValueTypeDate:
@@ -151,5 +160,30 @@ func evidenceValueProto(v promotealign.EvidenceValue) *engine.ConclusionValue {
 	case propertymeta.ValueTypeText:
 		d.HasText, d.Text = true, v.Value.Text
 	}
-	return conclusionValueProto(d)
+	return conclusionValueProto(d, depiction)
+}
+
+func lifespanProto(l *claimevidence.Lifespan) *engine.PromoteClaimEvidenceLifespan {
+	if l == nil {
+		return nil
+	}
+	return &engine.PromoteClaimEvidenceLifespan{
+		Outcome:       string(l.Outcome),
+		PropertyCause: string(l.PropertyCause),
+		Relation:      string(l.Relation),
+		Cause:         string(l.Cause),
+		Row:           lifeSideProto(l.Row),
+		Record:        lifeSideProto(l.Record),
+	}
+}
+
+func lifeSideProto(s subjectcompare.LifeSide) *engine.PromoteClaimEvidenceLifeSide {
+	out := &engine.PromoteClaimEvidenceLifeSide{Missing: string(s.Missing)}
+	if s.First != nil {
+		out.First = valuecodec.DateToProto(*s.First)
+	}
+	if s.Last != nil {
+		out.Last = valuecodec.DateToProto(*s.Last)
+	}
+	return out
 }

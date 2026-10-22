@@ -18,6 +18,9 @@ func TestEvidenceSection(t *testing.T) {
 	if want := []valuecompare.Relation{valuecompare.Contains, valuecompare.Overlaps, valuecompare.Near}; !slices.Equal(e.Pinnable, want) {
 		t.Errorf("Pinnable = %v, want %v", e.Pinnable, want)
 	}
+	if want := []valuecompare.Cause{valuecompare.CauseUnjudged}; !slices.Equal(e.ByEye, want) {
+		t.Errorf("ByEye = %v, want %v", e.ByEye, want)
+	}
 	for _, r := range e.Checked {
 		if slices.Contains(e.Pinnable, r) {
 			t.Errorf("relation %s is both checked and pinnable", r)

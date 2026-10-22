@@ -175,8 +175,8 @@ var FKs = []FK{
 	{From: "evidence_graph_artifacts", Column: "graph_id", To: "evidence_graphs", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 	{From: "evidence_graph_artifacts", Column: "artifact_id", To: "artifacts", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 	{From: "subject_positions", Column: "subject_id", To: "subjects", OnDelete: "CASCADE", Bucket: BucketFacet},
-	{From: "subject_type_properties", Column: "subject_type_id", To: "subject_types", OnDelete: "CASCADE", Bucket: BucketFacet},
-	{From: "subject_type_properties", Column: "property_id", To: "properties", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{From: "subject_type_properties", Column: "subject_type_id", To: "subject_types", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
+	{From: "subject_type_properties", Column: "property_id", To: "properties", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 
 	{From: "property_terms", Column: "property_id", To: "properties", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{From: "name_value_parts", Column: "name_value_id", To: "name_values", OnDelete: "CASCADE", Bucket: BucketFacet},

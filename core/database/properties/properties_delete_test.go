@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/database/subjectvocab/subjectvocabtest"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
@@ -105,6 +106,39 @@ func TestDelete(t *testing.T) {
 					`SELECT COUNT(*) FROM subject_type_properties WHERE property_id = ?`, got.ID,
 				).Scan(&joins); err != nil || joins != 0 {
 					t.Fatalf("binding leftover %d %v", joins, err)
+				}
+			},
+		},
+		{
+			name: "bound user property releases its binding before the delete",
+			run: func(t *testing.T, c *database.Catalog) {
+				if err := subjectvocab.Install(c); err != nil {
+					t.Fatal(err)
+				}
+				got, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+					return properties.Create(tx, userID, "Maiden Name", propertymeta.ValueTypeText, "", "")
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				subjectvocabtest.Assign(t, c, userID, person.ID, got.ID)
+				changes, err := writes.Call(c, writes.Op{Action: "delete_property", UserID: userID}, func(tx *database.Tx) ([]rowchange.Change, []rowchange.Change, error) {
+					ch, err := properties.Delete(tx, userID, got.ID)
+					return ch, ch, err
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(changes) != 2 || changes[0].EntityType != "subject_type_property" ||
+					changes[0].Action != rowchange.ActionDelete || changes[1].EntityType != "property" {
+					t.Fatalf("changes %+v", changes)
+				}
+				if changes[0].Fields["subject_type_id"].Old == nil || changes[0].Fields["property_id"].Old == nil {
+					t.Fatalf("release fields %+v", changes[0].Fields)
 				}
 			},
 		},

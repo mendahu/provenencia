@@ -99,7 +99,7 @@ func conclusionDetailProto(d conclusiondetails.Detail) *engine.ConclusionDetail 
 				Reason:  v.Reason,
 				Support: int32(v.Support),
 				Against: int32(v.Against),
-				Value:   conclusionValueProto(v.Value),
+				Value:   conclusionValueProto(v.Value, nil),
 			})
 		}
 		for _, o := range f.Outcomes {
@@ -116,7 +116,7 @@ func reconcilerOutcomeProto(o conclusiondetails.Outcome) *engine.ReconcilerOutco
 		ObservationRef:         o.ObservationRef,
 		Reason:                 o.Reason,
 		ValueRank:              int32(o.ValueRank),
-		Recorded:               conclusionValueProto(o.Recorded),
+		Recorded:               conclusionValueProto(o.Recorded, nil),
 		SubjectId:              database.UUIDString(o.SubjectID),
 		SubjectRef:             o.SubjectRef,
 		CitationId:             database.UUIDString(o.CitationID),
@@ -137,7 +137,12 @@ func reconcilerOutcomeProto(o conclusiondetails.Outcome) *engine.ReconcilerOutco
 	return po
 }
 
-func conclusionValueProto(v conclusiondetails.Value) *engine.ConclusionValue {
+// conclusionValueProto is a typed value as a ConclusionValue. depiction, when
+// not nil, is the result: a likeness has no field on conclusiondetails.Value.
+func conclusionValueProto(v conclusiondetails.Value, depiction *engine.DepictionValue) *engine.ConclusionValue {
+	if depiction != nil {
+		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Depiction{Depiction: depiction}}
+	}
 	switch {
 	case v.Name != nil:
 		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Name{Name: valuecodec.NameToProto(*v.Name)}}

@@ -15620,6 +15620,18 @@
         }
       }
     },
+    "conclusions.value.likeness": {
+      "comment": "A likeness value worded as text where no crop is drawn",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Likeness"
+          }
+        }
+      }
+    },
     "conclusions.badge.merged": {
       "comment": "Badge on a Conclusion field whose one value several Sources agree on",
       "extractionState": "manual",
@@ -17806,7 +17818,7 @@
       }
     },
     "promote.sheet.unknown": {
-      "comment": "A comparison with nothing to compare",
+      "comment": "A comparison with nothing to compare, or two likenesses the researcher judges by eye",
       "extractionState": "manual",
       "localizations": {
         "en": {

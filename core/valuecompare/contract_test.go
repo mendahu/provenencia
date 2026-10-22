@@ -1,6 +1,7 @@
 package valuecompare_test
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"math/rand"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
+	"github.com/mendahu/provenencia/core/depictionvalue"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -27,6 +29,17 @@ func ofText(a, b string) samplePair { return samplePair{textValue(a), textValue(
 func ofTerm(a, b string) samplePair { return samplePair{termValue(a), termValue(b)} }
 func ofInt(a, b int64) samplePair   { return samplePair{intValue(a), intValue(b)} }
 func ofName(a, b string) samplePair { return samplePair{nv(a), nv(b)} }
+
+// pic is a depiction value whose image File id is 16 bytes of id; 0 is none.
+func pic(id byte) valuecompare.Value {
+	v := valuecompare.Value{Type: propertymeta.ValueTypeDepiction}
+	if id != 0 {
+		v.Depiction = &depictionvalue.Value{ImageFileID: bytes.Repeat([]byte{id}, 16)}
+	}
+	return v
+}
+
+func ofPic(a, b byte) samplePair { return samplePair{pic(a), pic(b)} }
 
 // samples are hand-picked pairs per value type, read before the generated ones.
 var samples = map[string][]samplePair{
@@ -79,6 +92,9 @@ var samples = map[string][]samplePair{
 		ofDate(bound(datevalue.QualifierBEF, 1800), bound(datevalue.QualifierAFT, 1810)),
 		ofDate(datevaluetest.Phrase("spring"), datevaluetest.YMD(1817, 0, 0)), ofDate(datevaluetest.Phrase("spring"), datevaluetest.Phrase("spring")),
 		ofDate(noYearRange(), datevaluetest.YMD(1817, 0, 0)), ofDate(nil, datevaluetest.YMD(1817, 0, 0)), ofDate(nil, nil),
+	},
+	propertymeta.ValueTypeDepiction: {
+		ofPic(1, 1), ofPic(1, 2), ofPic(0, 1), ofPic(0, 0),
 	},
 	propertymeta.ValueTypeInteger: {
 		ofInt(3, 3), ofInt(3, 4), ofInt(3, 6), ofInt(0, 0), ofInt(-2, 2),
@@ -225,6 +241,9 @@ var generators = map[string]func(rng *rand.Rand) samplePair{
 	propertymeta.ValueTypeDate: func(rng *rand.Rand) samplePair {
 		a, b := randomDate(rng), randomDate(rng)
 		return ofDate(&a, &b)
+	},
+	propertymeta.ValueTypeDepiction: func(rng *rand.Rand) samplePair {
+		return ofPic(byte(rng.Intn(4)), byte(rng.Intn(4)))
 	},
 	propertymeta.ValueTypeInteger: func(rng *rand.Rand) samplePair {
 		return ofInt(int64(rng.Intn(10)), int64(rng.Intn(10)))
