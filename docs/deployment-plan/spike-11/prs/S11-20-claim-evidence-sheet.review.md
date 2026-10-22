@@ -58,3 +58,20 @@ The user asked for a complete, realistic example set so designers make no data c
 | "The same, written differently", "Matches, with less detail" drawn | Marked unreachable fallbacks | No comparer returns equivalent or contains with another cause (`valuecompare` `text.go`, `name.go`, `date.go`, `words.go`) |
 
 Plan updated to match: AC-3.3, AC-4.1 – AC-4.3, D-2, D-13, D-14, D-17, T-1, T-3, and §10 now walks the brief's frames. S11-32's entry sends spans.
+
+## Board agreed, 2026-10-22
+
+The user drew the board from S11-D2 and supplied its export (`Promote flow.dc.html`, `EvidenceCard.dc.html`). It was read frame by frame (E01 – E14) against the brief and the plan, and S11-25's Landed note (#517) was folded in at the same time.
+
+| Board or landing | Plan change |
+| --- | --- |
+| Band and Contested Badges at the title's right end, the reason as their tooltip; no subtitle, no summary Card; Updated and contested lines under the title only when they apply | D-8 rewritten; D-18 `PVPanel` title accessory *(kit)*; `sheetSubtitle` removed (D-12); AC-1.1, AC-1.2, T-4 |
+| Claim fields above the evidence: Status over Confidence beside the argument, labelled "Additional comments or arguments about this claim (optional)", no hints | D-19 with `PVField.optional` *(kit)*; `argument` text changed and `sheetStatusHint` removed (D-12); AC-1.5, T-7 |
+| A sentence under the heading; one " · "-joined detail line; a 116 pt Badge column; micro-caps property labels under a relationship; an info icon on the lifespan line | D-20; `evidenceIntro`, `lineDetail` keys |
+| File-search icon on both EmptyStates | D-17 `.searchEmpty` |
+| Board's E04 count 15 | S11-D2 §5.3 Frame 4 corrected from 14 |
+| Board left the failed message and E13e's Badges out | S11-D2 §5.3 and §9 supply them ("Catalog closed."; No match, "Your choice") |
+| Board's italic crop captions | Not copied: the shared `LikenessTile` keeps the gallery's caption (D-16) |
+| S11-25: argument hint already removed; `pinRelationship` added; relationship identifier `promote.sheet.relationship.<neighborSubjectID>.<key>` | §4 rows, D-12, D-17 |
+
+Status is `Blocked — on S11-32`. Open questions: none. Round 2 of `review-plan` runs when S11-32 lands, as STEP-0 says.

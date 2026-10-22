@@ -6,7 +6,7 @@
 **Implements later as:** PR **S11-20** (the sheet). The lines it draws come from S11-19, S11-25 and S11-32
 **Depends on:** S11-25 (the evidence RPC: every member's line, pin ids, relation and cause codes); S11-32 (the lifespan and likeness lines) before S11-20 ships
 **Related:** [`../claim-evidence.md`](../claim-evidence.md) (the requirements and draft wording), [`S11-D1-promote-rows.md`](S11-D1-promote-rows.md) (the rows, the band and Contested badges, the move captions), [`../../../promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3, Spike 10's likeness gallery ([decisions](../../archive/spike-10/README.md))
-**Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share) (the board S11-D1 extended); not yet drawn
+**Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share) (the board S11-D1 extended), agreed 2026-10-22. Frames E01 – E14 gate S11-20; where the board differs from this brief, §9 records it and the board wins
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
 **Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
 
@@ -309,7 +309,7 @@ Each frame lists the sheet from top to bottom. The count is one pin per member: 
 **Frame 4 — Frame 1 in the 1840 variant: a similar connection (ES-13).** Only the marriage relationship changes:
 - It reads "They share a similar connection", Similar, unchecked.
 - Under it, **Date** reads "Different dates", Conflicts, disabled — 1840 against 12 Oct 1843.
-- The Callout shows. The heading reads "14 checked". The row is still Strong and not contested.
+- The Callout shows. The heading reads "15 checked" (Frame 1's 16 less the marriage pin). The row is still Strong and not contested.
 
 **Frame 5 — Person: a member disagrees, but the row is not contested.** Row: Mary Smith.
 - Title "Mary Smith → PER-9B2XW Mary Smith". Subtitle "Strong · via John Smith → PER-7QH3D (spouse)".
@@ -367,10 +367,10 @@ Each frame lists the sheet from top to bottom. The count is one pin per member: 
 
 **Frame 13 — States (ES-17 – ES-20).**
 - **Loading**: Frame 1's title, subtitle, summary and heading, with no "N checked"; three skeleton bars.
-- **Failed**: the same, with the danger Callout "The evidence could not be loaded" and the error message under it; the claim fields below.
+- **Failed**: the same, with the danger Callout "The evidence could not be loaded" with the read's error under it, here "Catalog closed."; the claim fields stay usable.
 - **New**: row Death of John Smith set to New Event. Title "Death of John Smith → New Event"; no subtitle; the EmptyState "Pick a record to see its evidence"; the claim fields shown.
 - **Skip**: the same row set to Skip. Title "Death of John Smith"; the EmptyState; no claim fields.
-- **Nothing to compare**: the researcher sets Death of John Smith to EVT-0P7XR. Its member has no type, no date and no place, and events have no lifespan. The EmptyState reads "Nothing to compare yet".
+- **Nothing to compare**: the researcher sets Death of John Smith to EVT-0P7XR. Its member has no type, no date and no place, and events have no lifespan. The title carries the No match Badge with "Your choice" (the researcher's pick, no conflict). The EmptyState reads "Nothing to compare yet".
 
 ### 5.4 Specimen lines
 
@@ -397,9 +397,9 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
-| Sheet shell | Component | Ship | `DesignSystem/Components/Panel/PVPanel.swift` | Title, subtitle, 880 pt, sunken footer; as today. |
+| Sheet shell | Component | **Extend** | `DesignSystem/Components/Panel/PVPanel.swift` | Title, 880 pt, sunken footer, no subtitle. Gains a trailing title accessory: the band and Contested Badges sit at the right end of the title row (§9). |
 | Evidence sheet body | Snowflake | **Rethink** | `Features/Promote/PromoteView.swift` `PromoteEvidenceSheet` | Columns, `ExhibitGroup` and the "Through" cards go; summary, heading, Cards and lines come in. One call site. |
-| Why-suggested summary | Component | Ship | `DesignSystem/Components/Card/PVCard.swift` (`tone: .sunken`) + `DesignSystem/Components/Badge/PVBadge.swift` | The same band and Contested Badges the row uses (S11-D1), drawn by one shared Promote view the row and the summary both instance. Not a Callout: it is not a warning. |
+| Why-suggested marks | Component | Ship | `DesignSystem/Components/Badge/PVBadge.swift`, SwiftUI `.help` (the kit's tooltip on macOS, `DesignSystem/README.md`) | The row's band and Contested Badges, drawn by one shared Promote view the row and the title both instance; the reason is their tooltip. The Updated and contested lines under the title are plain text. Not a Card, not a Callout. |
 | Evidence heading | Component | **Extend** | `DesignSystem/Components/SectionHeader/PVSectionHeader.swift` (`meta:` for "N checked") | Its title takes `PVCopy`, as Button, Callout and DisclosureButton do, because the title names the record. No local heading style. |
 | Property and relationship Cards | Component | Ship | `DesignSystem/Components/Card/PVCard.swift` | One per section or relationship; header on `surfaceSunken`, as today's group cards. |
 | Evidence line | Snowflake | **Rethink** | `Features/Promote/PromoteView.swift` | Composes Checkbox, text, disclosure Button, Badge. One call site: not a kit primitive. Replaces `comparisonLine`. |
@@ -410,7 +410,7 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Conflict and failure notices | Component | Ship | `DesignSystem/Components/Callout/PVCallout.swift` (`compact: true`) | Warning for disagreement, danger for a failed read. |
 | Loading | Component | Ship | `DesignSystem/Components/SkeletonBar/PVSkeletonBar.swift` | Three bars, as S11-25 drew. |
 | No record, nothing to compare | Component | Ship | `DesignSystem/Components/EmptyState/PVEmptyState.swift` | Pane-level empty inside the sheet. |
-| Claim fields | Component | Ship | `DesignSystem/Components/Field/PVField.swift`, `DesignSystem/Components/Select/PVSelect.swift`, `DesignSystem/Components/TextArea/PVTextArea.swift` | Unchanged; the Argument hint is new copy. |
+| Claim fields | Component | **Extend** | `DesignSystem/Components/Field/PVField.swift`, `DesignSystem/Components/Select/PVSelect.swift`, `DesignSystem/Components/TextArea/PVTextArea.swift` | Above the evidence (§9). `PVField` gains a muted "(optional)" marker beside `required`'s, for the argument label. No hints. |
 | Column headers, Weight column | Snowflake | **Remove** | `PromoteEvidenceSheet` `sheetColumns`, `weightText` | Go with the table. |
 
 **Non-goals.** No new kit primitive (the two kit rows are Extend). No local Badge, Checkbox, Card, Callout or image view. No table component for lines. No numbers. No select-all. No hover actions on a line.
@@ -419,10 +419,33 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 ## 7. Handoff
 
-When the board is agreed: record the board link and frame numbers on S11-20's **Board** line and in a §9 "Board notes" table here (as S11-D1 did in its §8), and move S11-20 from `Blocked — …` to `Planned` with `plan-pr` once S11-25 and S11-32 have landed. Move this brief to the spike's design archive folder when S11-20 lands, and update [`README.md`](README.md).
+The board was agreed on 2026-10-22: its link is on S11-20's **Board** line and its differences are in §9. Move S11-20 from `Blocked — …` to `Planned` with `plan-pr` once S11-32 has landed. Move this brief to the spike's design archive folder when S11-20 lands, and update [`README.md`](README.md).
 
 ---
 
 ## 8. Review log
 
 [`../prs/S11-20-claim-evidence-sheet.review.md`](../prs/S11-20-claim-evidence-sheet.review.md) (round 1, 2026-10-22) covers this brief: inventory rows for the section header, checkbox, likeness tile and readout badges, Go-owned order, and connection wording were changed from it.
+
+---
+
+## 9. Board notes (agreed 2026-10-22)
+
+Checked against `Promote flow.dc.html` and its `EvidenceCard` component (frames E01 – E14, drawn from §5's project). Where the board differs from §4, the board wins and S11-20's plan copies it. Frame values match §5.3 except where a row below says so.
+
+| Frame | Requirement | The board |
+| --- | --- | --- |
+| E01 – E13 | ES-1, ES-2 | **No subtitle and no summary Card.** The band Badge and, when contested, the Contested Badge sit at the right end of the panel title, top-aligned. The row's reason is their tooltip; the pair is one focusable element that reads "Why this was suggested: Strong, contested, via …". Under the title, only when they apply, a group named "Why this was suggested" holds the Updated caption (italic, info ink) and "Something below disagrees with this record." (primary text). A row with no record (New, Skip) has no Badges. |
+| all | ES-21 | **Claim fields come before the evidence.** A 200 pt column with Status over Confidence, beside the argument field. The argument label is "Additional comments or arguments about this claim" followed by a muted "(optional)". No hints under Status or the argument. New shows the claim fields; Skip hides them. |
+| all | ES-3 | Under the heading, one sentence in secondary text: "Check every line that supports this match. Checked lines are pinned to the claim when you press Done." The conflict Callout follows it. |
+| E01 | ES-5, ES-6 | Cards have the small radius. A property Card's header is its name on the sunken fill. A line is a grid: checkbox, text, disclosure, then the Badge in a 116 pt right column. Under the sentence, one muted line joins its parts with " · ": "This source: John Smith · 1871 England Census — Leeds, Briggate: J. Smith". A collapsed line shows only "This source: …". |
+| E02 | ES-9 | The disclosure is a small ghost Button with a chevron (down when collapsed, up when open), spoken "Show 4 records, collapsed" / "Hide records, expanded". Members list under the line, indented to its text, each row with a hairline above: checkbox, value, and the Source title under it in muted text. |
+| E01, E03, E05 | ES-12 | A relationship's header: checkbox, the sentence (medium weight) over the link in secondary text with "· N records" muted, the ref in mono, the Badge. Under it, each of the neighbor's properties has a small-caps label ("Date", "Name", "Sex at birth") indented 28 pt, with a divider between properties. |
+| E08 | ES-14 | "Nothing else to compare." is italic muted text under the header, indented to the sentence. |
+| E01, E05, E09 – E11 | ES-16 | The lifespan line has a faint info icon in the checkbox column. Its caption sits directly under the sentence, in italics. It has no "This source" line. |
+| E01, E09 | ES-15 | Crops are 96 pt with an italic caption under each ("This source", then the member's Source title), below the sentence. No "This source" text line. No image files were supplied, so the board's crops draw the person mark. |
+| E13a | ES-17 | Three bars at 100%, 86% and 62% width, 12 pt high. The board drew sunken boxes because the web kit has no skeleton bar; the app uses `PVSkeletonBar`. |
+| E13b | ES-18 | The board left the Callout's message empty; the app shows the read's error ("Catalog closed." in §5.3). |
+| E13c – E13e | ES-19, ES-20 | Both EmptyStates use the file-search icon. E13e left out the title Badges; the app shows No match with "Your choice" (§5.3). |
+| E04 | ES-3 | "15 checked" (§5.3 Frame 4 corrected from 14). |
+| E14 | ES-8 | Specimen members show the value alone, with no Source. |
