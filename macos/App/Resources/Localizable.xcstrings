@@ -17710,13 +17710,13 @@
       }
     },
     "promote.sheet.neighbor": {
-      "comment": "Evidence group name when the neighbor row is not on the page; shown after 'Through'",
+      "comment": "Names a relationship’s neighbor on the evidence sheet when its row is not on the page",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "a neighbor"
+            "value": "a connected record"
           }
         }
       }
@@ -17758,13 +17758,13 @@
       }
     },
     "promote.sheet.argument": {
-      "comment": "Claim argument field",
+      "comment": "Claim argument field label; the field is marked optional",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Argument"
+            "value": "Additional comments or arguments about this claim"
           }
         }
       }
@@ -17842,13 +17842,13 @@
       }
     },
     "promote.sheet.unknown": {
-      "comment": "A comparison with nothing to compare, or two likenesses the researcher judges by eye",
+      "comment": "A comparison with nothing to compare, on the evidence sheet",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unknown"
+            "value": "Not compared"
           }
         }
       }
@@ -18478,13 +18478,13 @@
       }
     },
     "promote.sheet.conflict.title": {
-      "comment": "Evidence sheet callout when one comparison conflicts",
+      "comment": "Evidence sheet callout when a line conflicts",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A comparison disagrees"
+            "value": "Some evidence disagrees"
           }
         }
       }
@@ -18496,7 +18496,749 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The conflicting comparison is not pinned. The claim can still be filed."
+            "value": "Disagreeing lines can't be pinned. The claim can still be filed."
+          }
+        }
+      }
+    },
+    "promote.sheet.whySuggested": {
+      "comment": "Group name for the lines under the evidence sheet title: the Updated caption and the contested line",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why this was suggested"
+          }
+        }
+      }
+    },
+    "promote.sheet.whySuggestedSpoken": {
+      "comment": "VoiceOver label of the band and Contested marks in the evidence sheet title; 1 = band, 2 = reason",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why this was suggested: %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "promote.sheet.somethingDisagrees": {
+      "comment": "Line under the evidence sheet title when the row is contested",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something below disagrees with this record."
+          }
+        }
+      }
+    },
+    "promote.sheet.evidenceIntro": {
+      "comment": "Sentence under the evidence heading on the Promote sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check every line that supports this match. Checked lines are pinned to the claim when you press Done."
+          }
+        }
+      }
+    },
+    "promote.sheet.evidenceHeading": {
+      "comment": "Heading of the evidence on the Promote sheet; 1 = the record ref, 2 = the record title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What's the evidence that this is %1$@ %2$@?"
+          }
+        }
+      }
+    },
+    "promote.sheet.checkedCount": {
+      "comment": "Meta of the evidence heading: how many pieces of evidence are checked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld checked"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld checked"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "promote.sheet.recordCount": {
+      "comment": "After a collapsed line or a relationship: how many records stand behind it",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "· %lld record"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "· %lld records"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "promote.sheet.showRecords": {
+      "comment": "Button that expands a collapsed evidence line to its records",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Show %lld record"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Show %lld records"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "promote.sheet.hideRecords": {
+      "comment": "Button that collapses an expanded evidence line",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide records"
+          }
+        }
+      }
+    },
+    "promote.sheet.thisSource": {
+      "comment": "Muted detail under an evidence sentence: the value on the Source being promoted",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This source: %@"
+          }
+        }
+      }
+    },
+    "promote.sheet.onSource": {
+      "comment": "Muted detail under an evidence sentence: a record's Source, then its value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: %2$@"
+          }
+        }
+      }
+    },
+    "promote.sheet.thisSourceCaption": {
+      "comment": "Caption under the Source being promoted's likeness crop",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This source"
+          }
+        }
+      }
+    },
+    "promote.sheet.lineDetail": {
+      "comment": "Joins the muted detail parts of an evidence line",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "promote.sheet.relationshipAgrees": {
+      "comment": "Relationship line whose connection matches",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They share a matching connection"
+          }
+        }
+      }
+    },
+    "promote.sheet.relationshipSimilar": {
+      "comment": "Relationship line whose connection matches but the neighbor's own facts disagree",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They share a similar connection"
+          }
+        }
+      }
+    },
+    "promote.sheet.relationshipWith": {
+      "comment": "Second line of a relationship when the page has no name for the link; argument is the neighbor's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "with %@"
+          }
+        }
+      }
+    },
+    "promote.connection.link": {
+      "comment": "A connection as the page words it: one end, the link, the other end; shared by the Promote evidence sheet and connection subrows",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "promote.sheet.nothingUnder": {
+      "comment": "Caption under a relationship that has no lines of its own",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing else to compare."
+          }
+        }
+      }
+    },
+    "promote.sheet.lifespan.title": {
+      "comment": "Header of the lifespan card on the evidence sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lifespan"
+          }
+        }
+      }
+    },
+    "promote.sheet.lifespan.caption": {
+      "comment": "Caption under the lifespan line on the evidence sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Worked out from dated events. A guide for matching, never pinned."
+          }
+        }
+      }
+    },
+    "promote.sheet.lifespan.fits": {
+      "comment": "Lifespan line when the two lives can both be true; 1 = this source's span, 2 = the record's span",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The lifespans fit: %1$@ here, %2$@ on the record"
+          }
+        }
+      }
+    },
+    "promote.sheet.lifespan.conflict": {
+      "comment": "Lifespan line when the two lives cannot both be true; 1 = this source's span, 2 = the record's span",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The lifespans don't fit: %1$@ here, %2$@ on the record"
+          }
+        }
+      }
+    },
+    "promote.sheet.lifespan.noneThisSource": {
+      "comment": "Lifespan line when the Source being promoted has no dated events",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No lifespan to compare: this source has no dated events"
+          }
+        }
+      }
+    },
+    "promote.sheet.lifespan.noneRecord": {
+      "comment": "Lifespan line when the record has no dated events",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No lifespan to compare: the record has no dated events"
+          }
+        }
+      }
+    },
+    "promote.sheet.lifespan.contradictsThisSource": {
+      "comment": "Lifespan line when the Source being promoted dates itself inconsistently",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No lifespan for this source: its own dates contradict each other"
+          }
+        }
+      }
+    },
+    "promote.sheet.lifespan.contradictsRecord": {
+      "comment": "Lifespan line when the record's own dates contradict each other",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No lifespan for the record: its own dates contradict each other"
+          }
+        }
+      }
+    },
+    "promote.sheet.pickRecord.title": {
+      "comment": "Empty state title on the evidence sheet of a row with no record",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick a record to see its evidence"
+          }
+        }
+      }
+    },
+    "promote.sheet.pickRecord.body": {
+      "comment": "Empty state body on the evidence sheet of a row with no record",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a record in this row's menu. New and Skip file no evidence."
+          }
+        }
+      }
+    },
+    "promote.sheet.nothingToCompare.title": {
+      "comment": "Empty state title when the record has nothing to compare with this row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing to compare yet"
+          }
+        }
+      }
+    },
+    "promote.sheet.nothingToCompare.body": {
+      "comment": "Empty state body when the record has nothing to compare with this row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The record's other sources say nothing about these properties."
+          }
+        }
+      }
+    },
+    "promote.sheet.judgeByEye": {
+      "comment": "Badge on two likenesses the researcher compares",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Judge by eye"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.sameName": {
+      "comment": "Evidence sentence: a name that matches exactly",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same name"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.sameDate": {
+      "comment": "Evidence sentence: a date that matches exactly",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same date"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.sameLikeness": {
+      "comment": "Evidence sentence: a likeness that is the same image",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same likeness"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.same": {
+      "comment": "Evidence sentence: a value that matches exactly",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The same"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.equivalentFold": {
+      "comment": "Evidence sentence: values that match once accents are folded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same, written with different accents"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.equivalentAlias": {
+      "comment": "Evidence sentence: a name that is a nickname of the other",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same name (nickname)"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.equivalentAbbreviation": {
+      "comment": "Evidence sentence: a name that abbreviates the other",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same name (abbreviated)"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.equivalentOther": {
+      "comment": "Evidence sentence: values that are equivalent for another reason",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The same, written differently"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.containsPrecision": {
+      "comment": "Evidence sentence: a date that contains the other, less precise",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same date, recorded less precisely"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.containsMissingPart": {
+      "comment": "Evidence sentence: a name missing a word the other has",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matches; part of the name is missing"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.containsInitial": {
+      "comment": "Evidence sentence: a name that matches by an initial",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matches by initial"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.containsOther": {
+      "comment": "Evidence sentence: a value that contains the other with less detail",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matches, with less detail"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.overlapsDates": {
+      "comment": "Evidence sentence: dates that overlap",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The dates overlap"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.overlapsOther": {
+      "comment": "Evidence sentence: values that partly overlap",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partly the same"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.nearSpelling": {
+      "comment": "Evidence sentence: names spelled alike",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Similar spelling"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.nearGap": {
+      "comment": "Evidence sentence: dates a year or two apart",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close dates"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.similar": {
+      "comment": "Evidence sentence: values that are alike for another reason",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Similar"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.differentDates": {
+      "comment": "Evidence sentence: dates that disagree",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Different dates"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.differentNames": {
+      "comment": "Evidence sentence: names that disagree",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Different names"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.disagrees": {
+      "comment": "Evidence sentence: values that disagree, or a negative that denies the other",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disagrees"
+          }
+        }
+      }
+    },
+    "promote.sheet.line.compareLikenesses": {
+      "comment": "Evidence sentence: two different likeness images the researcher judges by eye",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare these likenesses"
+          }
+        }
+      }
+    },
+    "promote.sheet.spokenLine": {
+      "comment": "VoiceOver label of an evidence line; 1 = property, 2 = sentence, 3 = this source's value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@. %2$@. This source: %3$@."
+          }
+        }
+      }
+    },
+    "promote.sheet.spokenLineCount": {
+      "comment": "VoiceOver label of a collapsed evidence line; 1 = property, 2 = sentence, 3 = record count, 4 = this source's value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@. %2$@, %#@n@. This source: %4$@."
+          },
+          "substitutions": {
+            "n": {
+              "argNum": 3,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg record"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg records"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "promote.sheet.spokenMember": {
+      "comment": "VoiceOver label of one record under an expanded line; 1 = its Source, 2 = its value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: %2$@."
+          }
+        }
+      }
+    },
+    "promote.sheet.spokenRelationship": {
+      "comment": "VoiceOver label of a relationship line; 1 = sentence, 2 = the connection",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@. %2$@."
+          }
+        }
+      }
+    },
+    "promote.sheet.spokenLikeness": {
+      "comment": "VoiceOver label of a likeness line; 1 = the record's Source, 2 = sentence",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Likeness from this source and %1$@. %2$@."
           }
         }
       }

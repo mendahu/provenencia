@@ -1344,12 +1344,12 @@ enum L10n {
         }
         static let claimHeading = LocalizedStringResource("promote.sheet.claim", defaultValue: "Claim", comment: "Heading above status, confidence, and argument on the evidence sheet")
         static let backToRows = LocalizedStringResource("promote.sheet.back", defaultValue: "Back to all rows", comment: "Closes the Promote evidence sheet")
-        static let sheetNeighbor = LocalizedStringResource("promote.sheet.neighbor", defaultValue: "a neighbor", comment: "Evidence group name when the neighbor row is not on the page; shown after 'Through'")
+        static let sheetNeighbor = LocalizedStringResource("promote.sheet.neighbor", defaultValue: "a connected record", comment: "Names a relationship’s neighbor on the evidence sheet when its row is not on the page")
         static let ownRecords = LocalizedStringResource("promote.sheet.own", defaultValue: "This subject", comment: "Evidence group for the subject's own records")
         static let status = LocalizedStringResource("promote.sheet.status", defaultValue: "Status", comment: "Claim status field")
         static let confidence = LocalizedStringResource("promote.sheet.confidence", defaultValue: "Confidence", comment: "Claim confidence field")
         static let confidenceUnset = LocalizedStringResource("promote.sheet.confidence.unset", defaultValue: "Not stated", comment: "No confidence grade chosen")
-        static let argument = LocalizedStringResource("promote.sheet.argument", defaultValue: "Argument", comment: "Claim argument field")
+        static let argument = LocalizedStringResource("promote.sheet.argument", defaultValue: "Additional comments or arguments about this claim", comment: "Claim argument field label; the field is marked optional")
         static func pinLine(property: String, here: String, there: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.pinLine", defaultValue: "Pin %1$@: %2$@ and %3$@", comment: "VoiceOver label for one pin box; 1 = property, 2 = this source's value, 3 = the matched record's value"), property, here, there)
         }
@@ -1384,13 +1384,167 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.reason.neighborReleased", defaultValue: "after %@ was unmatched", comment: "Why a row moved: a neighbor lost its match; argument is the neighbor name. Follows \"Updated · \""), neighbor)
         }
         static let reasonMoveUnknown = LocalizedStringResource("promote.reason.moveUnknown", defaultValue: "after a connected row changed", comment: "Why a row moved, when the neighbor is not on the page. Follows \"Updated · \"")
-        static func outcome(_ outcome: EvidenceOutcome) -> LocalizedStringResource {
+        /// The Badge on a line: how the comparison came out. Two likenesses the layer cannot relate say "Judge by eye".
+        static func outcome(_ outcome: EvidenceOutcome, cause: ValueCause = .none) -> LocalizedStringResource {
             switch outcome {
             case .agree: LocalizedStringResource("promote.sheet.agrees", defaultValue: "Agrees", comment: "A comparison that agrees")
             case .partial: LocalizedStringResource("promote.sheet.similar", defaultValue: "Similar", comment: "A comparison whose text is a spelling variant or shares words")
             case .conflict: LocalizedStringResource("promote.sheet.conflicts", defaultValue: "Conflicts", comment: "A comparison that disagrees")
-            case .unknown, .unrecognized: LocalizedStringResource("promote.sheet.unknown", defaultValue: "Unknown", comment: "A comparison with nothing to compare, or two likenesses the researcher judges by eye")
+            case .unknown: cause == .unjudged ? judgeByEye : notCompared
+            case .unrecognized: notCompared
             }
+        }
+        static let notCompared = LocalizedStringResource("promote.sheet.unknown", defaultValue: "Not compared", comment: "A comparison with nothing to compare, on the evidence sheet")
+        /// The sentence of a relationship line, from its outcome. `claimevidence` sends only agree and partial.
+        static func relationshipSentence(_ outcome: EvidenceOutcome) -> LocalizedStringResource {
+            outcome == .agree ? relationshipAgrees : relationshipSimilar
+        }
+        /// The sentence of an evidence line, from how its values relate (S11-D2 ES-8). The value's type picks the name, date or generic wording.
+        static func lineSentence(
+            relation: ValueRelation,
+            cause: ValueCause,
+            propertyCause: EvidencePropertyCause,
+            value: CatalogConclusionValue
+        ) -> LocalizedStringResource {
+            if cause == .unjudged { return lineCompareLikenesses }
+            let isName: Bool
+            let isDate: Bool
+            let isLikeness: Bool
+            switch value {
+            case .name: (isName, isDate, isLikeness) = (true, false, false)
+            case .date: (isName, isDate, isLikeness) = (false, true, false)
+            case .depiction: (isName, isDate, isLikeness) = (false, false, true)
+            default: (isName, isDate, isLikeness) = (false, false, false)
+            }
+            if propertyCause == .negative || relation == .different {
+                return isDate ? lineDifferentDates : isName ? lineDifferentNames : lineDisagrees
+            }
+            switch relation {
+            case .same:
+                return isName ? lineSameName : isDate ? lineSameDate : isLikeness ? lineSameLikeness : lineSame
+            case .equivalent:
+                switch cause {
+                case .fold: return lineEquivalentFold
+                case .alias: return lineEquivalentAlias
+                case .abbreviation: return lineEquivalentAbbreviation
+                default: return lineEquivalentOther
+                }
+            case .contains:
+                switch cause {
+                case .precision: return lineContainsPrecision
+                case .missingPart: return lineContainsMissingPart
+                case .initial: return lineContainsInitial
+                default: return lineContainsOther
+                }
+            case .overlaps:
+                return isDate ? lineOverlapsDates : lineOverlapsOther
+            case .near:
+                switch cause {
+                case .spelling: return lineNearSpelling
+                case .gap: return lineNearGap
+                default: return lineSimilar
+                }
+            case .none:
+                return notCompared
+            case .unknown, .unrecognized:
+                return lineSimilar
+            case .different:
+                return lineDisagrees
+            }
+        }
+        static let whySuggested = LocalizedStringResource("promote.sheet.whySuggested", defaultValue: "Why this was suggested", comment: "Group name for the lines under the evidence sheet title: the Updated caption and the contested line")
+        static func whySuggestedSpoken(assessment: String, reason: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.whySuggestedSpoken", defaultValue: "Why this was suggested: %1$@, %2$@", comment: "VoiceOver label of the band and Contested marks in the evidence sheet title; 1 = band, 2 = reason"), assessment, reason)
+        }
+        static let somethingDisagrees = LocalizedStringResource("promote.sheet.somethingDisagrees", defaultValue: "Something below disagrees with this record.", comment: "Line under the evidence sheet title when the row is contested")
+        static let evidenceIntro = LocalizedStringResource("promote.sheet.evidenceIntro", defaultValue: "Check every line that supports this match. Checked lines are pinned to the claim when you press Done.", comment: "Sentence under the evidence heading on the Promote sheet")
+        static func evidenceHeading(ref: String, title: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.evidenceHeading", defaultValue: "What's the evidence that this is %1$@ %2$@?", comment: "Heading of the evidence on the Promote sheet; 1 = the record ref, 2 = the record title"), ref, title)
+        }
+        static func checkedCount(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.checkedCount", defaultValue: "%lld checked", comment: "Meta of the evidence heading: how many pieces of evidence are checked"), count)
+        }
+        static func recordCount(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.recordCount", defaultValue: "· %lld records", comment: "After a collapsed line or a relationship: how many records stand behind it"), count)
+        }
+        static func showRecords(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.showRecords", defaultValue: "Show %lld records", comment: "Button that expands a collapsed evidence line to its records"), count)
+        }
+        static let hideRecords = LocalizedStringResource("promote.sheet.hideRecords", defaultValue: "Hide records", comment: "Button that collapses an expanded evidence line")
+        static func thisSource(_ value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.thisSource", defaultValue: "This source: %@", comment: "Muted detail under an evidence sentence: the value on the Source being promoted"), value)
+        }
+        static func onSource(source: String, value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.onSource", defaultValue: "%1$@: %2$@", comment: "Muted detail under an evidence sentence: a record's Source, then its value"), source, value)
+        }
+        static let thisSourceCaption = LocalizedStringResource("promote.sheet.thisSourceCaption", defaultValue: "This source", comment: "Caption under the Source being promoted's likeness crop")
+        /// The muted detail line of an evidence line: its parts, joined with " · ".
+        static func lineDetail(parts: [String]) -> String {
+            guard let first = parts.first else { return "" }
+            let join = LocalizedStringResource("promote.sheet.lineDetail", defaultValue: "%1$@ · %2$@", comment: "Joins the muted detail parts of an evidence line: this source's value, then a record's Source and value")
+            return parts.dropFirst().reduce(first) { L10n.format(join, $0, $1) }
+        }
+        static let relationshipAgrees = LocalizedStringResource("promote.sheet.relationshipAgrees", defaultValue: "They share a matching connection", comment: "Relationship line whose connection matches")
+        static let relationshipSimilar = LocalizedStringResource("promote.sheet.relationshipSimilar", defaultValue: "They share a similar connection", comment: "Relationship line whose connection matches but the neighbor's own facts disagree")
+        static func relationshipWith(_ name: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.relationshipWith", defaultValue: "with %@", comment: "Second line of a relationship when the page has no name for the link; argument is the neighbor's name"), name)
+        }
+        static func connectionLink(first: String, phrase: String, second: String) -> String {
+            L10n.format(LocalizedStringResource("promote.connection.link", defaultValue: "%1$@ · %2$@ · %3$@", comment: "A connection as the page words it: one end, the link, the other end; shared by the Promote evidence sheet and connection subrows"), first, phrase, second)
+        }
+        static let nothingUnder = LocalizedStringResource("promote.sheet.nothingUnder", defaultValue: "Nothing else to compare.", comment: "Caption under a relationship that has no lines of its own")
+        static let lifespanTitle = LocalizedStringResource("promote.sheet.lifespan.title", defaultValue: "Lifespan", comment: "Header of the lifespan card on the evidence sheet")
+        static let lifespanCaption = LocalizedStringResource("promote.sheet.lifespan.caption", defaultValue: "Worked out from dated events. A guide for matching, never pinned.", comment: "Caption under the lifespan line on the evidence sheet")
+        static func lifespanFits(here: String, there: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.lifespan.fits", defaultValue: "The lifespans fit: %1$@ here, %2$@ on the record", comment: "Lifespan line when the two lives can both be true; 1 = this source's span, 2 = the record's span"), here, there)
+        }
+        static func lifespanConflict(here: String, there: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.lifespan.conflict", defaultValue: "The lifespans don't fit: %1$@ here, %2$@ on the record", comment: "Lifespan line when the two lives cannot both be true; 1 = this source's span, 2 = the record's span"), here, there)
+        }
+        static let lifespanNoneThisSource = LocalizedStringResource("promote.sheet.lifespan.noneThisSource", defaultValue: "No lifespan to compare: this source has no dated events", comment: "Lifespan line when the Source being promoted has no dated events")
+        static let lifespanNoneRecord = LocalizedStringResource("promote.sheet.lifespan.noneRecord", defaultValue: "No lifespan to compare: the record has no dated events", comment: "Lifespan line when the record has no dated events")
+        static let lifespanContradictsThisSource = LocalizedStringResource("promote.sheet.lifespan.contradictsThisSource", defaultValue: "No lifespan for this source: its own dates contradict each other", comment: "Lifespan line when the Source being promoted dates itself inconsistently")
+        static let lifespanContradictsRecord = LocalizedStringResource("promote.sheet.lifespan.contradictsRecord", defaultValue: "No lifespan for the record: its own dates contradict each other", comment: "Lifespan line when the record's own dates contradict each other")
+        static let pickRecordTitle = LocalizedStringResource("promote.sheet.pickRecord.title", defaultValue: "Pick a record to see its evidence", comment: "Empty state title on the evidence sheet of a row with no record")
+        static let pickRecordBody = LocalizedStringResource("promote.sheet.pickRecord.body", defaultValue: "Choose a record in this row's menu. New and Skip file no evidence.", comment: "Empty state body on the evidence sheet of a row with no record")
+        static let nothingToCompareTitle = LocalizedStringResource("promote.sheet.nothingToCompare.title", defaultValue: "Nothing to compare yet", comment: "Empty state title when the record has nothing to compare with this row")
+        static let nothingToCompareBody = LocalizedStringResource("promote.sheet.nothingToCompare.body", defaultValue: "The record's other sources say nothing about these properties.", comment: "Empty state body when the record has nothing to compare with this row")
+        static let judgeByEye = LocalizedStringResource("promote.sheet.judgeByEye", defaultValue: "Judge by eye", comment: "Badge on two likenesses the researcher compares")
+        static let lineSameName = LocalizedStringResource("promote.sheet.line.sameName", defaultValue: "Same name", comment: "Evidence sentence: a name that matches exactly")
+        static let lineSameDate = LocalizedStringResource("promote.sheet.line.sameDate", defaultValue: "Same date", comment: "Evidence sentence: a date that matches exactly")
+        static let lineSameLikeness = LocalizedStringResource("promote.sheet.line.sameLikeness", defaultValue: "Same likeness", comment: "Evidence sentence: a likeness that is the same image")
+        static let lineSame = LocalizedStringResource("promote.sheet.line.same", defaultValue: "The same", comment: "Evidence sentence: a value that matches exactly")
+        static let lineEquivalentFold = LocalizedStringResource("promote.sheet.line.equivalentFold", defaultValue: "Same, written with different accents", comment: "Evidence sentence: values that match once accents are folded")
+        static let lineEquivalentAlias = LocalizedStringResource("promote.sheet.line.equivalentAlias", defaultValue: "Same name (nickname)", comment: "Evidence sentence: a name that is a nickname of the other")
+        static let lineEquivalentAbbreviation = LocalizedStringResource("promote.sheet.line.equivalentAbbreviation", defaultValue: "Same name (abbreviated)", comment: "Evidence sentence: a name that abbreviates the other")
+        static let lineEquivalentOther = LocalizedStringResource("promote.sheet.line.equivalentOther", defaultValue: "The same, written differently", comment: "Evidence sentence: values that are equivalent for another reason")
+        static let lineContainsPrecision = LocalizedStringResource("promote.sheet.line.containsPrecision", defaultValue: "Same date, recorded less precisely", comment: "Evidence sentence: a date that contains the other, less precise")
+        static let lineContainsMissingPart = LocalizedStringResource("promote.sheet.line.containsMissingPart", defaultValue: "Matches; part of the name is missing", comment: "Evidence sentence: a name missing a word the other has")
+        static let lineContainsInitial = LocalizedStringResource("promote.sheet.line.containsInitial", defaultValue: "Matches by initial", comment: "Evidence sentence: a name that matches by an initial")
+        static let lineContainsOther = LocalizedStringResource("promote.sheet.line.containsOther", defaultValue: "Matches, with less detail", comment: "Evidence sentence: a value that contains the other with less detail")
+        static let lineOverlapsDates = LocalizedStringResource("promote.sheet.line.overlapsDates", defaultValue: "The dates overlap", comment: "Evidence sentence: dates that overlap")
+        static let lineOverlapsOther = LocalizedStringResource("promote.sheet.line.overlapsOther", defaultValue: "Partly the same", comment: "Evidence sentence: values that partly overlap")
+        static let lineNearSpelling = LocalizedStringResource("promote.sheet.line.nearSpelling", defaultValue: "Similar spelling", comment: "Evidence sentence: names spelled alike")
+        static let lineNearGap = LocalizedStringResource("promote.sheet.line.nearGap", defaultValue: "Close dates", comment: "Evidence sentence: dates a year or two apart")
+        static let lineSimilar = LocalizedStringResource("promote.sheet.line.similar", defaultValue: "Similar", comment: "Evidence sentence: values that are alike for another reason")
+        static let lineDifferentDates = LocalizedStringResource("promote.sheet.line.differentDates", defaultValue: "Different dates", comment: "Evidence sentence: dates that disagree")
+        static let lineDifferentNames = LocalizedStringResource("promote.sheet.line.differentNames", defaultValue: "Different names", comment: "Evidence sentence: names that disagree")
+        static let lineDisagrees = LocalizedStringResource("promote.sheet.line.disagrees", defaultValue: "Disagrees", comment: "Evidence sentence: values that disagree, or a negative that denies the other")
+        static let lineCompareLikenesses = LocalizedStringResource("promote.sheet.line.compareLikenesses", defaultValue: "Compare these likenesses", comment: "Evidence sentence: two different likeness images the researcher judges by eye")
+        static func spokenLine(property: String, sentence: String, here: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenLine", defaultValue: "%1$@. %2$@. This source: %3$@.", comment: "VoiceOver label of an evidence line; 1 = property, 2 = sentence, 3 = this source's value"), property, sentence, here)
+        }
+        static func spokenLineCount(property: String, sentence: String, count: Int, here: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenLineCount", defaultValue: "%1$@. %2$@, %#@n@. This source: %4$@.", comment: "VoiceOver label of a collapsed evidence line; 1 = property, 2 = sentence, 3 = record count, 4 = this source's value"), property, sentence, count, here)
+        }
+        static func spokenMember(source: String, value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenMember", defaultValue: "%1$@: %2$@.", comment: "VoiceOver label of one record under an expanded line; 1 = its Source, 2 = its value"), source, value)
+        }
+        static func spokenRelationship(sentence: String, link: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenRelationship", defaultValue: "%1$@. %2$@.", comment: "VoiceOver label of a relationship line; 1 = sentence, 2 = the connection"), sentence, link)
+        }
+        static func spokenLikeness(source: String, sentence: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenLikeness", defaultValue: "Likeness from this source and %1$@. %2$@.", comment: "VoiceOver label of a likeness line; 1 = the record's Source, 2 = sentence"), source, sentence)
         }
         static func connections(count: Int) -> String {
             L10n.format(LocalizedStringResource("promote.connections.count", defaultValue: "%lld connections will be filed", comment: "Bridge summary; argument is how many will be filed"), count)
@@ -1487,9 +1641,9 @@ enum L10n {
         static func through(_ neighbor: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.through", defaultValue: "Through %@", comment: "Evidence group reached through a neighbor; argument is the neighbor's name"), neighbor)
         }
-        static let conflictCalloutTitle = LocalizedStringResource("promote.sheet.conflict.title", defaultValue: "A comparison disagrees", comment: "Evidence sheet callout when one comparison conflicts")
+        static let conflictCalloutTitle = LocalizedStringResource("promote.sheet.conflict.title", defaultValue: "Some evidence disagrees", comment: "Evidence sheet callout when a line conflicts")
         static let evidenceUnavailable = LocalizedStringResource("promote.sheet.evidenceUnavailable", defaultValue: "The evidence could not be loaded", comment: "Evidence sheet callout title when the evidence read fails")
-        static let conflictCalloutBody = LocalizedStringResource("promote.sheet.conflict.body", defaultValue: "The conflicting comparison is not pinned. The claim can still be filed.", comment: "Evidence sheet callout body for a conflict")
+        static let conflictCalloutBody = LocalizedStringResource("promote.sheet.conflict.body", defaultValue: "Disagreeing lines can't be pinned. The claim can still be filed.", comment: "Evidence sheet callout body for a conflict")
         static func newOption(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
             let resource: LocalizedStringResource = switch kind {
             case .person: LocalizedStringResource("promote.new.person", defaultValue: "New Person", comment: "Promote target choice: mint a new handle")

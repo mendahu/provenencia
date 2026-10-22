@@ -364,6 +364,7 @@
 		B91100000000000000000008 /* PromoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91100000000000000000007 /* PromoteView.swift */; };
 		B9110000000000000000000C /* PromoteModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000B /* PromoteModelTests.swift */; };
 		B9110000000000000000000E /* PromoteFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000D /* PromoteFlow.swift */; };
+		C11200BD269354BE1FC4BDC0 /* PromoteEvidenceDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */; };
 		C11200E6D8FE13682466E995 /* PromoteReadoutBadges.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112002B53DFC6E2EF560AC7 /* PromoteReadoutBadges.swift */; };
 		B91100000000000000000010 /* PromoteFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000F /* PromoteFlowTests.swift */; };
 		C112007CF5D40430AF417EA9 /* PromoteEvidenceDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */; };
@@ -771,6 +772,7 @@
 		B91100000000000000000007 /* PromoteView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteView.swift; sourceTree = "<group>"; };
 		B9110000000000000000000B /* PromoteModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteModelTests.swift; sourceTree = "<group>"; };
 		B9110000000000000000000D /* PromoteFlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlow.swift; sourceTree = "<group>"; };
+		C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceDisplay.swift; sourceTree = "<group>"; };
 		C112002B53DFC6E2EF560AC7 /* PromoteReadoutBadges.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteReadoutBadges.swift; sourceTree = "<group>"; };
 		B9110000000000000000000F /* PromoteFlowTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlowTests.swift; sourceTree = "<group>"; };
 		C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceDisplayTests.swift; sourceTree = "<group>"; };
@@ -1825,6 +1827,7 @@
 				B91100000000000000000005 /* PromoteModel.swift */,
 				B91100000000000000000007 /* PromoteView.swift */,
 				B9110000000000000000000D /* PromoteFlow.swift */,
+				C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */,
 				C112002B53DFC6E2EF560AC7 /* PromoteReadoutBadges.swift */,
 			);
 			path = Promote;
@@ -2223,6 +2226,7 @@
 				B91100000000000000000006 /* PromoteModel.swift in Sources */,
 				B91100000000000000000008 /* PromoteView.swift in Sources */,
 				B9110000000000000000000E /* PromoteFlow.swift in Sources */,
+				C11200BD269354BE1FC4BDC0 /* PromoteEvidenceDisplay.swift in Sources */,
 				C11200E6D8FE13682466E995 /* PromoteReadoutBadges.swift in Sources */,
 				B02746CAC03F94127373BB92 /* DateRowDisplay.swift in Sources */,
 				B0F71D26711A163E3B415FCB /* DerivedPlace.swift in Sources */,
