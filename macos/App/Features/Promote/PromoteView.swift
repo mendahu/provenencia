@@ -698,7 +698,7 @@ private struct PromoteEvidenceSheet: View {
                                 )
                             }
                         }
-                        PVField(label: L10n.Promote.argument, hint: L10n.Promote.argumentHint(pinned: row.pins.count)) {
+                        PVField(label: L10n.Promote.argument) {
                             PVTextArea(text: argumentBinding)
                                 .accessibilityIdentifier("promote.sheet.argument")
                         }
@@ -803,9 +803,9 @@ private struct PromoteEvidenceSheet: View {
                 PVCheckbox(
                     isChecked: pins(ids),
                     isDisabled: !relationship.pinnable || ids.isEmpty,
-                    accessibilitySpokenLabel: L10n.Promote.pinLine(property: L10n.Promote.through(name), here: "", there: "")
+                    accessibilitySpokenLabel: L10n.Promote.pinRelationship(name)
                 )
-                .accessibilityIdentifier("promote.sheet.relationship.\(relationship.key)")
+                .accessibilityIdentifier("promote.sheet.relationship.\(relationship.neighborSubjectID).\(relationship.key)")
                 .frame(width: PromoteLayout.pinColumn, alignment: .leading)
             ),
             sections: relationship.sections,

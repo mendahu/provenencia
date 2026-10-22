@@ -1343,6 +1343,9 @@ enum L10n {
         static func pinLine(property: String, here: String, there: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.pinLine", defaultValue: "Pin %1$@: %2$@ and %3$@", comment: "VoiceOver label for one pin box; 1 = property, 2 = this source's value, 3 = the matched record's value"), property, here, there)
         }
+        static func pinRelationship(_ name: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.pinRelationship", defaultValue: "Pin the records through %@", comment: "Spoken label of the checkbox that pins every record reached through a related person; %@ is that person's name"), name)
+        }
         static func negatedValue(_ value: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.negatedValue", defaultValue: "not %@", comment: "An incoming value a record denies, on the evidence sheet; %@ = the value it says the subject is not"), value)
         }
@@ -1462,9 +1465,6 @@ enum L10n {
         static let sheetResult = LocalizedStringResource("promote.sheet.column.result", defaultValue: "Result", comment: "Evidence sheet column: agrees, conflicts, or unknown")
         static let sheetWeight = LocalizedStringResource("promote.sheet.column.weight", defaultValue: "Weight", comment: "Evidence sheet column: how much the comparison counted")
         static let sheetStatusHint = LocalizedStringResource("promote.sheet.status.hint", defaultValue: "Provisional and rejected arrive in a later spike", comment: "Hint under claim status; only Accepted can be filed")
-        static func argumentHint(pinned: Int) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.argument.hint", defaultValue: "Drafted from the %lld pinned comparisons · edit before filing", comment: "Hint under the claim argument; argument is how many comparisons are pinned"), pinned)
-        }
         static func sheetTitleHandle(name: String, ref: String, title: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.titleHandle", defaultValue: "%1$@ → %2$@ %3$@", comment: "Evidence sheet title for a row filed on an existing record; 1 = the row's name, 2 = the record's ref, 3 = the record's title"), name, ref, title)
         }

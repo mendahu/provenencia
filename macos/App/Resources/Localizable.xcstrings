@@ -17757,6 +17757,18 @@
         }
       }
     },
+    "promote.sheet.pinRelationship": {
+      "comment": "Spoken label of the checkbox that pins every record reached through a related person; %@ is that person's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pin the records through %@"
+          }
+        }
+      }
+    },
     "promote.sheet.agrees": {
       "comment": "A comparison that agrees",
       "extractionState": "manual",
@@ -18377,18 +18389,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Provisional and rejected arrive in a later spike"
-          }
-        }
-      }
-    },
-    "promote.sheet.argument.hint": {
-      "comment": "Hint under the claim argument; argument is how many comparisons are pinned",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Drafted from the %lld pinned comparisons · edit before filing"
           }
         }
       }
