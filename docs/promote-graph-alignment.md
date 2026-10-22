@@ -84,7 +84,7 @@ func Align(layer Layer, canon Canon, fixed []Fixed, cfg Config) Proposal
 `Proposal` is one row per Subject:
 - the target, plus the next 2–3 alternatives;
 - the assessment;
-- the comparisons, with drafted pins;
+- the comparisons (the score's inputs); pins come from the claim evidence (§9);
 - the reasons;
 - flags (conflicts with decided rows, possible duplicates).
 

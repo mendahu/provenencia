@@ -405,6 +405,7 @@ Apply runs S11-19's query once per row and reuses the per-Source layer memo and 
 Likeness comparisons show the two crops, which S10-36 was to add in Spike 10; pinning one writes the same kind of pin a name pin writes.
 **Naming and band (from S11-18 review M-2, M-6).** The sheet's subtitle speaks the band through `PromoteModel.assessmentText`, so a contested row reads "Strong, contested"; neighbor groups name a row by `PromoteFlow.Row.shownRef`, as the row reasons do.
 **Lifespan (from S11-12 review, carried by S11-13).** Word the person's lifespan line (`Comparison.Derived`), and where a person has no lifespan because their own dated events contradict each other (S11-12 D-12), say so instead of leaving it out silently.
+**Empty evidence (from S11-25 review UX-3).** When a row's evidence has no lines and no relationships, say there is nothing to compare instead of drawing the column headers alone.
 **Check.** The sheet reads as sentences; no "Through <name>"; checking a relationship line pins it; two people with a likeness show both images.
 **Context.** S11-D2; [wording](claim-evidence.md#wording); Spike 10 S10-54 (depiction values over the FFI) landed in #433.
 
