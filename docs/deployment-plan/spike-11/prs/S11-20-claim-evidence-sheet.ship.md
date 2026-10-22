@@ -450,3 +450,91 @@ Head `bdbfabfa`. Gate PASS (orchestrator re-ran). F-23 done: `lifespan` rewritte
 
 ## Result (after round 10)
 Gate PASS · CI see PR · open: none · to user: term origin (a user term keyed like a product term reads as the product term) · manual check §10 not run
+
+## Round 11 — user requests (2026-10-22)
+1. Fix the term-origin gap on this PR. A term is unique by (property, key, origin), so a researcher's own `role` term keyed `subject` currently reads as the product term: it takes the L10n label and the registry's plain wording.
+2. Remove the lifespan row from the evidence sheet. It is used only to rank suggestions, and it cannot be pinned, so it does not belong among the evidence. This supersedes the plan's AC-4.1 – AC-4.3 and the Lifespan Card. Record that in the Landed note.
+
+### Fix plan 11
+**F-24 — Only a product term reads as a product term** (from the user)
+Files: `api/proto/engine.proto` (Observation `value_term_origin = 21`; the event-title message gains `type_origin`), regenerated `engine.pb.go` / `engine.pb.swift`, `core/database/observations/observations.go` and `api/ffi/handlers/{observations,source_read}.go` (select and send `property_terms.origin` beside the key), `core/database/grapheventtitles/grapheventtitles.go` (and any other `TypeKey` filler for event titles) plus its handler, `macos/App/Platform/GenealogyStore.swift` (`CatalogObservation.valueTermOrigin`, `CatalogEventTitle.typeOrigin`), `GoStore.swift`, `FakeStore.swift` (fill origin wherever it fills the key), `macos/App/Platform/ConclusionVocabulary.swift` (`SeededOrigin.provenencia`), `api/ffi/swift_vocabulary_test.go` (pin `SeededOrigin.provenencia` to `vocabkey.OriginProvenencia`), `macos/App/Platform/PropertyTermDisplay.swift`, `macos/App/Features/Catalog/Connect/EvidenceBridgeEdgeSummary.swift`, `macos/App/Features/Conclusions/EventTitleDisplay.swift`, `macos/App/Features/CitationComposer/CitationComposerVocabulary.swift`.
+Failing tests first:
+- Swift `PropertyTermDisplay`: a `role` term keyed `subject` with user origin and label "Main person" shows "Main person"; the product one shows the L10n label.
+- `EvidenceBridgeEdgeSummaryTests` `aUserTermKeyedLikeAProductTermReadsGenerically`: a role observation with key `subject` and user origin, at a birth, reads "Alice participated as Main person at …", not "Alice was born". The same holds for a user `event_type` term keyed `birth` with a product `subject` role.
+- Go observations and handler tests return `value_term_origin`; the event-titles test returns `type_origin`.
+Do:
+- `PropertyTermDisplay.name` takes `origin`. It consults `L10n.PropertyTerm` only when the origin is `SeededOrigin.provenencia`, so all four callers pass the origin they have.
+- `EvidenceBridgeEdgeSummary`'s term key and event-type key are nil unless the term's origin is the product origin, so the registry only ever matches product keys.
+- Replace the literal `"event_type"` in `EventTitleDisplay` with `SeededPropertyKey.eventType` (missed by F-16).
+Check: tests pass; `grep -rn '"event_type"\|"role"' macos/App --include=*.swift` prints nothing outside `ConclusionVocabulary.swift`; scripts/check-pr.sh PASS.
+
+**F-25 — The lifespan leaves the evidence sheet; matching keeps it** (from the user)
+Files: `core/claimevidence/{claimevidence,build}.go` and tests, `api/proto/engine.proto` (drop `PromoteClaimEvidence.lifespan` and `PromoteClaimEvidenceLifespan`; `reserved 5;` and `reserved "lifespan";`), regenerated proto code, `api/ffi/handlers/promote_evidence.go` and tests, `core/database/promotealign/evidence.go` and tests, `macos/App/Platform/{GenealogyStore,GoStore,FakeStore}.swift`, `macos/App/Features/Promote/{PromoteEvidenceSheet,PromoteEvidenceDisplay}.swift`, `macos/App/Platform/L10n.swift`, `Localizable.xcstrings`, Swift tests, `docs/deployment-plan/spike-11/claim-evidence.md`, `docs/matching-model.md` (if it says the sheet shows the lifespan), the S11-20 plan's Landed note.
+Do:
+- The claim evidence no longer carries a lifespan, end to end: remove `claimevidence.Lifespan`, the wire message and field, the Swift types and mapping, `EvidenceLifespanCard`, `PromoteEvidenceDisplay.lifespanSentence`, and the lifespan clause of `hasConflict` and `hasNothingToCompare`.
+- Remove every L10n key and xcstrings entry left without a reader: the lifespan sentences, the card heading, the "Worked out from dated events…" caption, and the spoken lifespan label.
+- Remove `LifeSide.First`/`Last` and `PersonLifeDisplay.span` if nothing else reads them (grep to prove it; the Person page may still use `span`).
+- Matching is untouched: `subjectprofile.lifespan`, `subjectcompare.lifespan`, the knobs and their tests stay.
+- Identifier `promote.sheet.lifespan` goes.
+- `claim-evidence.md`: the lifespan is a matching signal only, not a sheet line.
+- Landed note: "Ship round 11, at the user's request: the lifespan is no longer on the evidence sheet (AC-4.1 – AC-4.3 withdrawn); it only ranks suggestions. A product term reads as one only when its origin is the product's."
+Check: `grep -rni "lifespan" macos/App api/ffi/handlers core/claimevidence` prints only matching-side code, if any; `go test -tags fts5 ./...` PASS; scripts/check-pr.sh PASS.
+
+## Round 11 — fix
+Head `91b40b61` (F-24 and F-25 in one commit: they share the regenerated proto code and `GenealogyStore.swift`). Gate PASS (orchestrator re-ran). Beyond the file list:
+- The event-header path got an origin too (`ConclusionTerm.origin = 4`, filled for Event headers only).
+- `LifespanMissing` (Swift), `PersonLifeDisplay.span` and the sheet-only life plumbing in `promotealign` were removed.
+- Literals in `FakeStore`, `CitationConnections` and `GenealogyStore` moved to `SeededPropertyKey`.
+Failing-first was not run.
+
+## Round 11 — review
+Reviewers: MNT, CON (Sonnet), scope `1152a19e...91b40b61`. Not sent: UX (no new chrome; strings only removed), SEC+PRF (response-only fields, no new input or query shape).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| CON-1 | CON | major | Composer reading sentences, `displayLabel`, `inverseTerm`, and the Person gender treatment still treat a researcher's term as the product's | Fix now → F-27 | verified: `CitationComposerAuthoring.swift:651–672,723`; `CitationComposerAuthoringBox.swift:808–815`; `PersonGenderTreatment.swift:75–86`. None reads the origin. `ConclusionTerm` has no origin on `conclusion_detail.go:152`. Same defect as F-24 |
+| MNT-1 | MNT | major | `SeededOrigin.provenencia` duplicates `CatalogOrigin.provenencia`, and the product-origin test is written out twice | Fix now → F-26 | verified: `OriginMarkers.swift:9–11` (about 34 uses); new enum `ConclusionVocabulary.swift:253`; literal at `PromoteEvidenceSheet.swift:243`. Same-pass cleanup |
+| MNT-2, CON-2 | MNT, CON | major | `LifeSide` / `FirstLifespanLead` / the second return of `Build`/`ForSubject` are dead | Fix now → F-28 | verified: every non-test caller discards it with `_`; F-25 asked for the grep. Matching behavior unchanged |
+| MNT-3, CON-3 | MNT, CON | major | `add-match-rule` SKILL.md, `comparison-layers.md:385` and the plan's AC table still describe the sheet's lifespan | Fix now → F-29 | verified at the lines quoted |
+| MNT-5 | MNT | minor | `ConclusionTerm.origin` filled only for Event headers | Fix now → F-27 | the gender fix needs it everywhere |
+| MNT-4 | MNT | minor | Second full scan of `property_terms` in `conclusionheaders/compose.go` | Fix now → F-27 | one scan of id, label, origin |
+| CON-4 | CON | minor | `searchindex/handles.go:371` uses `Parts.TypeKey` as an English fallback search word | Rejected | a search word, not a claim that the term is the product's |
+| CON-5 | CON | minor | F-24's file list named a file that needed no change | Rejected | no defect |
+
+### Fix plan 12
+**F-26 — One product-origin constant and one test** (from MNT-1)
+Files: move `CatalogOrigin` from `macos/App/Features/Catalog/OriginMarkers.swift` to `macos/App/Platform/ConclusionVocabulary.swift`; delete `SeededOrigin`; add `CatalogOrigin.isProduct(_ origin: String) -> Bool`. `api/ffi/swift_vocabulary_test.go` pins `CatalogOrigin.provenencia` and `.user` to Go. `PropertyTermDisplay`, `EvidenceBridgeEdgeSummary` and every reader in F-27 call `isProduct`. Replace the literal at `PromoteEvidenceSheet.swift:243`.
+Check: `grep -rn 'SeededOrigin\|"provenencia"' macos/App` prints nothing outside `ConclusionVocabulary.swift`. `grep -rn 'origin == CatalogOrigin.provenencia\|== CatalogOrigin.provenencia' macos/App` prints only the predicate's body, or uses where a whole-row origin (not a term's) is shown, such as the origin pills: list those and leave them.
+
+**F-27 — Every term-key reader honours the origin** (from CON-1, MNT-4, MNT-5)
+Files: `macos/App/Features/CitationComposer/CitationComposerAuthoring.swift`, `CitationComposerAuthoringBox.swift`, `macos/App/Features/Conclusions/PersonGenderTreatment.swift`, `api/ffi/handlers/conclusion_detail.go` (fill `ConclusionTerm.origin` wherever a `ConclusionTerm` is built; drop the "Event header only" comment), the Swift `.term` case of `CatalogConclusionValue` and its mapping, `core/database/conclusionheaders/compose.go` (one scan of id, label, origin), tests.
+Failing tests first:
+- `inverseTerm` of a product `parent` never returns a researcher's `child`.
+- A researcher's `relationship_type` keyed `spouse` does not get the "are spouses" sentence.
+- A researcher's `place_relationship_type` keyed `part_of` keeps its own label.
+- A researcher's `gender` term keyed `woman` gets the `.other` family.
+- `conclusion_detail` returns `origin` on a term value.
+Do: gate each read on `CatalogOrigin.isProduct(term.origin)`. That covers `inverseTerm`'s source and its lookup.
+Check: `rg -n 'term\.key ==|switch term\.key|\.key == Seeded|inverseTermKey\[' macos/App` prints only reads gated by `isProduct`; scripts/check-pr.sh PASS.
+
+**F-28 — Drop the dead lifespan side** (from MNT-2, CON-2)
+Files: `core/subjectprofile/subjectprofile.go`, `core/subjectcompare/subjectcompare.go`, `core/database/promotealign/{layer,profiles,evidence}.go`, `core/graphalign` and `core/subjectprofile` tests.
+Do: `lifespan` returns `(window, span propertycompare.Value, ok bool)`. `Build`, `ForSubject` and `addLifespans` lose the second return. Delete `LifeSide`, `FirstLifespanLead` and the exported `LifespanMissing` if nothing else reads them (grep). Update callers and the side assertions in `lifespan_test.go` to assert `ok`, window and span. Matching behavior is unchanged: all matching tests pass unedited, apart from the signature.
+Check: `grep -rn 'LifeSide\|FirstLifespanLead' core api` prints nothing; `go test -tags fts5 ./...` PASS.
+
+**F-29 — Docs say the lifespan is a matching signal only** (from MNT-3, CON-3)
+Files: `.agents/skills/add-match-rule/SKILL.md` (lines 34, 75), `docs/deployment-plan/spike-11/comparison-layers.md:385`, the S11-20 plan: mark AC-4.1 – AC-4.3, D-13, STEP-8, T-3, the `promote.sheet.lifespan` identifier and the lifespan strings rows "(withdrawn, ship round 11)".
+Check: `grep -rn 'Evidence.Lifespan\|LifespanMissing\|LifeSide' .agents docs` prints only withdrawn-marked plan rows; `scripts/check-plan-docs.py` passes.
+
+## Round 12 — fix
+Head `b4541135` (`c751c621` F-26, `284ed414` F-27, `85daf9d4` F-28, `b4541135` F-29). Gate PASS (orchestrator re-ran). The F-26 vocabulary pin and the F-27 Go and Swift tests failed first; F-28 is a refactor. The landed S11-32 plan is left as the record of what it shipped.
+
+## Round 12 — review
+MNT and CON (Sonnet), scope `91b40b61...b4541135`. CON-1, CON-2, MNT-1 – MNT-5 all **Resolved**; no new blockers. Product terms keep their wording, inverses and gender families. Matching's lifespan output is unchanged (only the dead return was dropped).
+Nits (logged): `MNT-6 · conclusionheaders/compose.go:72-104 · scanTerms repeats scanVocab's loop` · `MNT-7 · ConclusionVocabulary.swift:253-258 · CatalogOrigin doc names only source tables`
+
+## Finish
+Merged `origin/main` @ `d36060a0` (S11-26 plan). One conflict in the map (`deployment-plan.md`): kept S11-20 "Landed #525" and S11-26's new plan link and "Planned". Gate PASS on `e4a63fb5`.
+
+## Result (after round 12)
+Gate PASS · CI see PR · open: none · to user: — · manual check §10 not run · follow-ups: none
