@@ -86,6 +86,7 @@ Conventions. "Evidence E1" is a `CatalogClaimEvidence` with one `name` section h
 | --- | --- | --- |
 | AC-5.1 | AC-2.1's line | Label "Name. Same name, 5 records. This source: John Smith."; the checkbox value "checked"; a partly checked box speaks "partly checked" (ES-22) |
 | AC-5.2 | The lifespan line | Its sentence only; no checkbox element (ES-22) |
+| AC-5.3 | Two likeness lines, one same image (agree) and one different image (unjudged), for two members of one handle | Their labels and checkbox labels differ: each names the member's Source and the line's outcome, so two likeness pins never read alike (S11-32 review UX-1: today's sheet words both "Pin Likeness: Likeness and Likeness") |
 
 ## 3. Scope
 
