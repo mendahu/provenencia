@@ -47,13 +47,13 @@ These are the calls for this spike. PR plans treat them as binding.
 
 - **Two tools, one rule for choosing.** A part that can be cited on its own (its own author, title or date) is its own Source, started with Copy Source; a region of one work is another graph ([the two tools](source-structure.md#the-two-tools)). Copy and docs wording follow this rule.
 - **High tolerance for churn.** No one but the product owner uses the app yet. No adapters, shims or kept-for-now paths beyond the one bridge below. A PR that moves a caller from Source to graph moves every caller and deletes the Source-keyed version; it **replaces** Source-keyed fields (effects, query keys, wire fields) instead of adding graph ones beside them.
-- **One bridge, one function, deleted in S12-08.** Between S12-03 and S12-08 every Source has exactly one graph (creating a second is not exposed until S12-11 / S12-12). `evidencegraphs.SoleGraphTx(sourceID)` is the only place that resolves "the Source's graph"; every interim caller uses it. S12-08 deletes it, and the compiler lists anything left (except Promote's, which S12-09 removes).
+- **One bridge, one function, retired by S12-08, S12-18 and S12-09.** Between S12-03 and S12-08 every Source has exactly one graph (creating a second is not exposed until S12-11 / S12-12). `evidencegraphs.SoleGraphTx(sourceID)` is the only place that resolves "the Source's graph"; every interim caller uses it. S12-08 removes the handlers' use, S12-18 removes `subjects.InsertTx`'s fallback, and S12-09 removes Promote's and deletes `SoleGraph` and `SoleGraphTx` (planning S12-08, user 2026-10-22). The test fixture `evidencegraphstest.SoleGraph` stays.
 - **A re-keyed symbol is renamed in the PR that re-keys it.** One name for the concept: `EvidenceGraph` in Go and Swift (`graphcache` `EvidenceGraph(id)`, `CatalogQueryKey.evidenceGraph(graphId:)`, `graphprogress`), "Evidence graph" in copy. Bare "graph" is already taken by `graphcache.Graph`, `canonicalgraph` and `graphalign`. Binds S12-07, S12-08, S12-09.
 - **Each PR updates the docs and skills it makes false.**
   - S12-01: [`source-layer-data-model.md`](../../source-layer-data-model.md) (Copy Source).
   - S12-03: `source-layer-data-model.md` and [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) (graphs, a Subject's graph); [`catalog-refs.md`](../../catalog-refs.md) and the [`add-catalog-ref`](../../../.agents/skills/add-catalog-ref/SKILL.md) prefix table (`GPH`); `core/database/effects/README.md`; [`catalog-deletes.md`](../../catalog-deletes.md).
   - S12-06: `interpretation-layer-data-model.md` and [`source-layer-data-model.md`](../../source-layer-data-model.md) § 7.1 (isolation).
-  - S12-08: [`macos-client-patterns.md`](../../macos-client-patterns.md), [`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md), [`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md) (graph-keyed effects and keys).
+  - S12-08: [`macos-client-patterns.md`](../../macos-client-patterns.md), [`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md), [`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md), [`add-workspace-location`](../../../.agents/skills/add-workspace-location/SKILL.md), `core/database/effects/README.md` (graph-keyed effects, keys and locations).
   - S12-09: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) ("a layer is one Evidence graph's Subjects"), [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) (Unpromote unfiles the graph's bridges).
 
 ### Copy Source
@@ -96,8 +96,8 @@ These are the calls for this spike. PR plans treat them as binding.
 ### Client
 
 - **One graph list.** S12-04's `evidencegraphs.List` (one read: full rows with linked Artifact ids, sorted by name, optional Source filter) is the only graph read; S12-05 wraps it in one project-wide RPC with its own `CatalogQueryKey`. The Source page, Sources list rows, the composer filter, breadcrumbs and the omnibar location all read it. `GetSourceWorkspace` does not gain graphs ([`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md): do not fold a shared list into a page payload). Per-graph progress is its own key, keyed by graph id. Binds S12-05, S12-07, S12-08, S12-10, S12-11, S12-14.
-- **A graph is a place.** `WorkspaceLocation` carries the graph id for the graph and composer surfaces (S12-08) and the Promote surface (S12-09), so history and restore land on that graph. Breadcrumbs read Source › graph name. Through [`add-workspace-location`](../../../.agents/skills/add-workspace-location/SKILL.md).
-- **Effects are graph-keyed, in one step.** S12-07 keeps `effects.Set.Sources` keyed by Source; `graphcache` drops every graph of a changed Source. S12-08 re-keys `Set` / `Effect`, `WriteEffects.sources` and the Swift mutations (`.mutatedSourceGraph`, `.deletedSubject`, `.promotedSubject`) to graph ids together, so the wire never carries graph ids that Swift reads as Source ids. The Promote mutation moves in S12-09. Binds S12-07, S12-08, S12-09.
+- **A graph is a place.** `WorkspaceLocation` carries the graph id for the graph, composer and Promote surfaces (S12-08; Promote moved from S12-09 because its rows read the canvas's key, user 2026-10-22), so history and restore land on that graph. Until S12-11 and S12-14 add per-graph Open, the Source page jump and the Sources list Open open the Source's first graph in the graph list (user, 2026-10-22). Breadcrumbs read Source › graph name. Through [`add-workspace-location`](../../../.agents/skills/add-workspace-location/SKILL.md).
+- **Effects are graph-keyed, in one step.** S12-07 keeps `effects.Set.Sources` keyed by Source; `graphcache` drops every graph of a changed Source. S12-08 re-keys `Set` / `Effect`, `WriteEffects.sources` and the Swift mutations (`.mutatedSourceGraph`, `.deletedSubject`, `.promotedSubject`) to graph ids together, so the wire never carries graph ids that Swift reads as Source ids. `.promotedSubject` moves in S12-08 too, because Promote reads the canvas's key (user, 2026-10-22). Binds S12-07, S12-08, S12-09.
 - **The graph list has its own effect.** S12-03 gives `evidence_graphs` and `evidence_graph_artifacts` an `Effect` that sets the catalog-wide list key `evidence_graphs` (`effects.ListEvidenceGraphs` in `Set.Lists`, beside `vocabulary` and `property_usage`); the wire (`WriteEffects.lists`) and Swift (`CatalogList`) already carry every list key, so S12-05 adds one `CatalogQueryRegistry.invalidations(for: CatalogList)` line for the graph list. Every write that creates, edits, links or deletes a graph (Copy Source, Add Artifact, Source delete included) refreshes the list with no per-feature code. Binds S12-03, S12-05.
 - **Single-graph Sources hide link checkboxes.** Linking is automatic while a Source has one graph; the checkboxes appear in the Artifacts section once there are two or more. Binds S12-13.
 - **Source page:** a Graphs section with one row per graph (name, ref, description, Open), create, edit and delete. The header's Evidence graph jump is removed. No per-graph progress on this page. Binds S12-11, S12-12.
@@ -117,8 +117,9 @@ These are the calls for this spike. PR plans treat them as binding.
 | S12-05 | Graph RPCs and graph list | 2 | FFI and store methods for graphs and links; `CreateArtifactRequest.graph_ids`; one project-wide graph list key | — | S12-04 | [Plan](prs/S12-05-graph-rpcs.md) | Landed #511 |
 | S12-06 | Graph isolation | 2 | One `requireSameGraph` for Observations; `connect` relies on it; the canonical walk joins on graph | — | S12-03 | [Plan](prs/S12-06-graph-isolation.md) | Landed #515 |
 | S12-07 | Graph-keyed reads | 3 | `graphcache`, loaders, positions, event titles and progress keyed and named by Evidence graph; effects stay per Source | — | S12-03, S11-14, S11-15 | [Plan](prs/S12-07-graph-keyed-reads.md) | Landed #520 |
-| S12-08 | Graph id end to end | 3 | RPCs, effects, wire and Swift mutations take graph ids together; per-graph query keys; `WorkspaceLocation` carries the graph; `SoleGraphTx` goes | — | S12-05, S12-07 | — | Scoped |
-| S12-09 | Promote per graph | 3 | Proposal, Apply, bridge filing, unpromote, the Promote key and location per graph | — | S12-08, S11-17, S11-25, S11-26, S11-27 | — | Scoped |
+| S12-08 | Graph id end to end | 3 | RPCs, effects, wire and Swift mutations take graph ids together; per-graph query keys; `WorkspaceLocation` carries the graph, Promote's included; the handlers' bridge goes | — | S12-05, S12-07 | [Plan](prs/S12-08-graph-id-end-to-end.md) | Planned |
+| S12-18 | A Subject needs its graph | 3 | `subjects.CreateInput.GraphID` required (Source read from the graph), `InsertTx`'s `SoleGraphTx` fallback deleted; test literals move onto graph ids | — | S12-08 | — | Scoped |
+| S12-09 | Promote per graph | 3 | Proposal, Apply, bridge filing, unpromote and the Promote RPCs per graph; `SoleGraph` / `SoleGraphTx` deleted | — | S12-08, S12-18, S11-17, S11-25, S11-26, S11-27 | — | Scoped |
 | S12-10 | Composer offers linked Artifacts | 3 | The Citation composer lists only the graph's linked Artifacts | — | S12-05, S12-08 | — | Scoped |
 | S12-11 | Source page Graphs section | 4 | List graphs with Open and Delete; remove the header jump | S12-D2 | S12-05, S12-08, S12-D2 | — | Scoped |
 | S12-12 | Graph form | 4 | Create and edit a graph: name, description, the shared Artifact checklist | S12-D3 | S12-02, S12-11, S12-D3 | — | Scoped |
@@ -164,6 +165,7 @@ SLICE 2 — Graphs in the catalog
 SLICE 3 — Graph id end to end
   S12-07  Graph-keyed reads
   S12-08  Graph id end to end
+  S12-18  A Subject needs its graph
   S12-09  Promote per graph
   S12-10  Composer offers linked Artifacts
   Check: The canvas, composer and Promote open on a graph id; Back / Forward
@@ -194,6 +196,7 @@ S12-03 ──▶ S12-04 ──▶ S12-05
 S12-03 ──▶ S12-06
 S12-03 ──▶ S12-07
 S12-05, S12-07 ──▶ S12-08
+S12-08 ──▶ S12-18 ──▶ S12-09
 S12-08 ──▶ S12-09, S12-14, S12-15
 S12-05, S12-08 ──▶ S12-10
 S12-05, S12-08 ──▶ S12-11 ──▶ S12-12 ──▶ S12-13
@@ -281,14 +284,21 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-08 — Graph id end to end
 
-**Ships.** List and create-Subject RPCs take a graph id; `CreateCitedBridgeRequest` drops `source_id` and takes no graph id (the bridge's graph comes from its endpoints, S12-06); `subjects.CreateInput.GraphID` (S12-06) becomes required; `effects.Set`, `Effect`, `WriteEffects` and the Swift mutations carry graph ids instead of Source ids, together; `CatalogQueryKey.evidenceGraph` and the session cache are per graph; `WorkspaceLocation` carries the graph for graph and composer surfaces; existing entry points open the Source's graph. `SoleGraphTx` is deleted except Promote's use. Updates `macos-client-patterns.md`, `add-workspace-place`, `add-catalog-delete`.
-**Not this PR.** Promote (S12-09); new chrome (slice 4).
+**Ships.** List and create-Subject RPCs (and `GetCitation`) take a graph id, and the RPCs named for a Source are renamed for the Evidence graph; `CreateCitedBridgeRequest` drops `source_id` and takes no graph id (the bridge's graph comes from its endpoints, S12-06); `effects.Set`, `Effect`, `WriteEffects` and the Swift mutations carry graph ids instead of Source ids, together; `CatalogQueryKey.evidenceGraph` and the session cache are per graph, and the Swift `SourceGraph*` types are renamed; `WorkspaceLocation` carries the graph for graph, composer and Promote surfaces, and delete-impact and reconciliation locations fill it; existing entry points open the Source's first graph in the graph list. The handlers' `sourceGraphID` / `sourceEvidenceGraph` bridge goes. Updates `macos-client-patterns.md`, `add-workspace-place`, `add-catalog-delete`, `add-workspace-location`. Planning split off S12-18 and moved Promote's location and key here (user, 2026-10-22).
+**Not this PR.** Promote's RPCs and Go code (S12-09); `subjects.CreateInput.GraphID` required (S12-18); the graph's name in breadcrumbs (S12-11); new chrome (slice 4).
 **Check.** The canvas and composer work as before; Back / Forward and a relaunch return to the same graph.
 **Context.** Working rules "A graph is a place", "Effects are graph-keyed, in one step"; `add-workspace-location`, `add-workspace-place`, `add-ffi-handler`. The largest PR; `plan-pr` may split it along FFI and Swift if it runs past ten steps.
 
+#### S12-18 — A Subject needs its graph
+
+**Ships.** `subjects.CreateInput.GraphID` is required and `CreateInput.SourceID` goes: `InsertTx` already reads the graph's Source with `evidencegraphs.SourceOf` when `SourceID` is empty (S12-08), so this PR deletes its `SoleGraphTx` fallback and the field. The `subjects.CreateInput{` test literals (66 in about 40 files) take a graph id, through `evidencegraphstest.SoleGraph` or `artifactstest.Split`. Go only.
+**Not this PR.** Promote (S12-09).
+**Check.** `go test` passes; `rg -n 'SoleGraphTx' core api` lists only `evidencegraphs` itself, `promotealign` (through `SoleGraph`) and tests.
+**Context.** Split from S12-08 at planning (user, 2026-10-22); working rule "One bridge, one function"; `add-catalog-query`.
+
 #### S12-09 — Promote per graph
 
-**Ships.** `promotealign.Propose`, `promote.SaveBatch`, bridge filing and `Unpromote` take a graph; the Promote RPCs, `PromoteEntry`, Promote's query key and its `WorkspaceLocation` surface carry the graph id. Promote's last `SoleGraphTx` use goes, and the function with it.
+**Ships.** `promotealign.Propose`, `promote.SaveBatch`, bridge filing and `Unpromote` take a graph; the Promote RPCs take `PromoteEntry.graphID` (S12-08 put the graph on `PromoteEntry`, its location and its query key). Promote's last `SoleGraph` use goes, and `SoleGraph` and `SoleGraphTx` with it (`core/database/audit/scopes_test.go` too).
 **Not this PR.** Any matching change (Spike 11).
 **Check.** On a two-graph Source, Promote all on one graph proposes and files only its Subjects.
 **Context.** Working rules "Promote is per graph", "Agreement counts per Source"; [`promote-graph-alignment.md`](../../promote-graph-alignment.md). Waits on S11-17, S11-25, S11-26 and S11-27, which rewrite the same Promote code; if S11-21 adds layer memoization, it is keyed per graph here.
@@ -304,7 +314,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-11 — Source page Graphs section
 
-**Ships.** The Graphs section on the Source page: one row per graph, alphabetical, with name, ref, description, Open and Delete (refusals worded). The header's graph jump is removed. The stored name `Default` (`evidencegraphs.DefaultName`, English catalog data) is shown as the researcher's own text, not localized; decide here whether a graph still named `Default` shows a localized label (S12-03 review UX-3).
+**Ships.** The Graphs section on the Source page: one row per graph, alphabetical, with name, ref, description, Open and Delete (refusals worded). The header's graph jump is removed. Breadcrumbs read Source › graph name (moved from S12-08 at its planning). The stored name `Default` (`evidencegraphs.DefaultName`, English catalog data) is shown as the researcher's own text, not localized; decide here whether a graph still named `Default` shows a localized label (S12-03 review UX-3).
 **Not this PR.** Create and edit (S12-12).
 **Check.** A Source's graphs show and open; deleting an empty, non-last graph works; the others are refused with the reason.
 **Context.** Working rule "Source page"; brief S12-D2.
