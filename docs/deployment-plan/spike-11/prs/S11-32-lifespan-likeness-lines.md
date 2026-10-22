@@ -1,6 +1,8 @@
 # S11-32 — Lifespan and likeness evidence lines
 
-**Status:** Planned
+**Status:** Landed in [#523](https://github.com/mendahu/provenencia/pull/523) (2026-10-22)
+
+**Landed 2026-10-22.** Differences from the plan: AC-2.5's dates did not conflict (the row's span 1817–1890 overlaps a record window ending 1838), so `TestBuildLifespan` and `TestEvidenceLifespan` use a burial on 9 Jan 1810 to make the lives disjoint. D-20 named no facet for `subject_type_id`, but `TestFacetReleaseHonesty` counts `subject_types` as deletable (it is an Impact lookup kind), so `deleteimpact/facets.go` has a second `rowFacet` on `KindSubjectType` for it, and `docs/catalog-deletes.md` says so. `datedEvent` lost its `polarity` parameter (every caller passed ""), and calls `fixture.datedOn`. `Vocabulary.BindingOrder` has a value receiver, as `TermsByID` does. T-10 asserts `lifespan` unset through the handler; the lifespan's dates on the wire are `TestClaimEvidenceProtoCarriesTheLifespan` (a unit test on `claimEvidenceProto`), and the loader's dates are `TestEvidenceLifespan`. The STEP-6 commit passes an empty `claimevidence.Inputs{}` from the loader until STEP-7 fills it. The names S11-20 reads: `claimevidence.Evidence.Lifespan` (`claimevidence.Lifespan`), `subjectcompare.LifeSide`, `subjectcompare.LifespanMissing`, `claimevidence.Inputs`, `claimevidence.Rules.ByEye`; Swift `CatalogClaimEvidenceLifespan`, `CatalogClaimEvidenceLifeSide`, `LifespanMissing`, `ValueRelation.none`, `ValueCause.unjudged`, `CatalogConclusionValue.depiction`, `L10n.Conclusions.likenessValue`. No stop condition fired.
 **Spike / slice:** Spike 11 · Slice 5 — Claim evidence
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: today's sheet words a likeness value as "Likeness" in its existing columns and does not draw the lifespan; S11-20 draws both from S11-D2)

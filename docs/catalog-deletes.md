@@ -47,7 +47,7 @@ Research rows that a delete takes with it are removed **explicitly** and audited
 
 | Audited (released) | Silent (`CASCADE` only) |
 | --- | --- |
-| `source_notes`, `source_metadata`, `source_credibility_assessments`, `source_metadata_layout` (both FKs), `citation_notes`, `observation_notes`, `identity_claims` (both FKs; `entity_id` has no delete path yet), `identity_claim_evidence` (both FKs), `evidence_graphs` (`source_id`), `evidence_graph_artifacts` (both FKs), `subject_type_properties` (both FKs: `property_id` is released when a Property is deleted; `subject_type_id` is audited with no delete path yet, worded as `identity_claims.entity_id`) | `subject_positions` (unaudited layout), `source_type_metadata_fields` (a vocab join, a UI hint, never audited), `name_value_parts` (part of its name value) |
+| `source_notes`, `source_metadata`, `source_credibility_assessments`, `source_metadata_layout` (both FKs), `citation_notes`, `observation_notes`, `identity_claims` (both FKs; `entity_id` has no delete path yet), `identity_claim_evidence` (both FKs), `evidence_graphs` (`source_id`), `evidence_graph_artifacts` (both FKs), `subject_type_properties` (both FKs, released under the property id: a Property delete releases its bindings; subject types have no delete command yet, but the audited FK has its release, as `TestFacetReleaseHonesty` requires) | `subject_positions` (unaudited layout), `source_type_metadata_fields` (a vocab join, a UI hint, never audited), `name_value_parts` (part of its name value) |
 
 A silent `CASCADE` is only for rows that are never audited on create either. If a row has an audit entity type, its delete is audited.
 
