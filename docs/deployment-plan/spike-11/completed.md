@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-25 — Claim evidence RPC and pin policy
+
+**In review** in [#517](https://github.com/mendahu/provenencia/pull/517). The Promote sheet loads a row's claim evidence when it opens (`GetPromoteClaimEvidence`), in the shipped layout: a "This subject" card with a line per property and a "Through <name>" card per neighbor, each pin box covering every member of its line. Done pins what the evidence offers, decided in Go (`promotealign.PinOffers`, `ResolvePins`): the checked lines and relationships for a row whose sheet was never opened, the ones left checked for an opened row, each landing on the new claim and on the claim of every member it names. The proposal no longer carries sheet lines (`attachExhibits`, `pairExhibits`, proposal field 9 and `promote.Pair` are gone), and Promote drafts no argument. Outcomes, relations and causes cross the wire as codes that `ConclusionVocabulary.swift` parses once, under `TestSwiftVocabularyMatchesGo`. S11-20 rebuilds the sheet on this RPC.
+
 ## S11-19 — Claim evidence query
 
 **In review** in [#513](https://github.com/mendahu/provenencia/pull/513). A Promote row's claim evidence now has its own Go query, `promotealign.Evidence`, with no caller on the wire yet. Every accepted member of the target entity gets its own line per property, members with an identical value collapse into one line, and a link that corresponds through segment compare is one relationship that bundles every Observation behind it. Which lines are pinnable and which start checked is the registry's new `evidence` section (`core/claimevidence`); a line's points come from the one `subjectcompare.Points` helper. The sheet and the RPC follow in S11-25 and S11-20. The query and Promote's setup read through the graph cache: a Source's Subjects, Observations, title and members, its in-memory bridge walk, and the layer and member values built from them, which are memoized and dropped on commit.

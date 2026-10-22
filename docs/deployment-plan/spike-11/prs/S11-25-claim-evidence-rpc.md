@@ -1,6 +1,8 @@
 # S11-25 — Claim evidence RPC and pin policy
 
-**Status:** Planned
+**Status:** Landed in [#517](https://github.com/mendahu/provenencia/pull/517) (2026-10-21)
+
+**Landed 2026-10-21.** Differences from the plan: STEP-4 to STEP-8 are one commit, as the plan says. T-7's fixture people also share a name, so its response has a name line beside the `sex_at_birth` line and the test asserts the `sex_at_birth` pins and offers; a merged handle is not exercised at handler level. `DateValueDisplayTests.aComparisonFormatsABoundInTheLocale` went with `ComparisonValueDisplay.swift` (and its `project.pbxproj` lines). Dead after the deletions and removed: `graphalign.comparisonsFrom`'s `metas` parameter, the `provisionalOnly` test helper and `FakeStore.recordPin` (the fake pins nothing; Go owns which Observations a pin names). `TestSaveBatchOneHopPin` became `TestSaveBatchPinsANeighborRecord` with its refusal cases removed, `TestProposeKeepsTheLifespanOffTheSheet` became `TestProposeComparesTheLifespan`, and `TestProposeNegativeDateConflictLine` was deleted with its only assertion. `ValueCause`'s Swift case for the wire code `case` is `letterCase`. `PromoteModel.loadEvidence(subjectID:handleID:)` is synchronous and starts its own task so it captures the generation first. `ResolvePins` loads the Source inputs lazily, when a row first needs pins. No stop condition fired.
 **Spike / slice:** Spike 11 · Slice 5 — Claim evidence
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the shipped sheet reads the new lines in today's columns and cards; S11-D2 gates the new layout in S11-20)
