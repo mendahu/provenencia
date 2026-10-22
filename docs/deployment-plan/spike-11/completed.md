@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-20 — Claim evidence sheet
+
+**In review** in [#525](https://github.com/mendahu/provenencia/pull/525). The Promote evidence sheet now says why a row was suggested and then what the evidence is. The band and Contested marks sit at the right end of the title with the reason as their tooltip, and under it the Updated caption and "Something below disagrees with this record." appear when they apply. The claim fields come next, then "What's the evidence that this is <record>?" with the count checked. The Weight table and the "Through" cards are gone: each property is a Card of sentences ("Same name · 5 records", "Same date, recorded less precisely"), a line with several records opens to each of them, and a partly checked box checks them all. A relationship is named by the connection that matched, with the neighbor's properties under it; a person's lifespan is a line that is never pinned; and likenesses are two crops side by side. The kit gained a `PVSectionHeader` title that takes a record's name, a `PVPanel` title accessory, a `PVCheckbox` that speaks "partly checked", and a `PVField` "(optional)" marker.
+
 ## S11-32 — Lifespan and likeness evidence lines
 
 **In review** in [#523](https://github.com/mendahu/provenencia/pull/523). The claim evidence now carries a person's lifespan check and each record's likenesses. A lifespan comparison arrives with each side's first and last dated events, or why a side has none (no dated event, or its own dates contradict), and is never pinned. Likenesses are lines: the same image is a checked line, two different images are kept to judge by eye (pinnable, never checked), and a likeness changes no band. Sections follow the catalog's property order for the kind (a new catalog seeds a person's likeness second), and a type's bindings are now audited writes with a reorder RPC that shows on the next evidence open. Today's sheet words a likeness as "Likeness"; S11-20 draws the crops and the lifespan.

@@ -1,17 +1,19 @@
 # S11-20 — Claim evidence sheet
 
-**Status:** Planned
+**Status:** Landed in [#525](https://github.com/mendahu/provenencia/pull/525) (2026-10-22)
+
+**Landed 2026-10-22.** Differences from the plan: STEP-5 to STEP-9 are one commit, because the sheet does not build between them. `L10n.Promote.pinRelationship`, which D-12 keeps, is removed with the rest: the relationship checkbox speaks `spokenRelationship` (ES-22), so nothing reads the old key. `PromoteEvidenceSheet` has two identifiers D-17 does not list (`promote.sheet.section.<relationship id>.<property>.<n>` for a relationship's property groups) and puts the empty state of a row with no record above the claim fields, as Frame 13 lists them. A relationship's neighbor ref and an evidence line's Badge are hidden from VoiceOver because the checkbox's label already speaks them. `L10n.Promote.notCompared` shares the key `promote.sheet.unknown` (text now "Not compared"). The brief is in `design/archive/` and the links to it follow. The §10 manual check was not run: it needs the example project and the app.
 **Spike / slice:** Spike 11 · Slice 5 — Claim evidence
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S11-D2](../design/S11-D2-evidence-sheet.md), board agreed 2026-10-22
-**Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), frames E01 – E14, agreed 2026-10-22. The implementer cannot open the link from every host: S11-D2 §5.3 gives every frame's content and [§9 Board notes](../design/S11-D2-evidence-sheet.md#9-board-notes-agreed-2026-10-22) its layout where it differs from §4; together they are the board in words. Frame E*nn* is §5.3 Frame *nn*
+**Brief:** [S11-D2](../design/archive/S11-D2-evidence-sheet.md), board agreed 2026-10-22
+**Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), frames E01 – E14, agreed 2026-10-22. The implementer cannot open the link from every host: S11-D2 §5.3 gives every frame's content and [§9 Board notes](../design/archive/S11-D2-evidence-sheet.md#9-board-notes-agreed-2026-10-22) its layout where it differs from §4; together they are the board in words. Frame E*nn* is §5.3 Frame *nn*
 **Depends on:** S11-25 (landed [#517](https://github.com/mendahu/provenencia/pull/517); its Landed note is folded into §4), S11-32 (landed [#523](https://github.com/mendahu/provenencia/pull/523); its Landed note is folded into §4), S11-D2 (agreed)
 **Blocks:** —
 **Branch:** `s11-20-claim-evidence-sheet`
 **Version bump:** none — Spike 11 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/design-system-layers.mdc`
-**Context:** [S11-D2](../design/S11-D2-evidence-sheet.md) (requirements ES-1 – ES-22, copy table, inventory); [`claim-evidence.md`](../claim-evidence.md) (Lines, Wording, Evidence through relationships); [S11-D1](../design/S11-D1-promote-rows.md) (band, Contested, captions, the "·" connection form); [`promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3; working rules "The pin policy has one owner, in Go", "One wire vocabulary"; S11-18 review M-2, M-6 (subtitle and neighbor naming); S11-12 D-12 (a side that contradicts itself)
+**Context:** [S11-D2](../design/archive/S11-D2-evidence-sheet.md) (requirements ES-1 – ES-22, copy table, inventory); [`claim-evidence.md`](../claim-evidence.md) (Lines, Wording, Evidence through relationships); [S11-D1](../design/S11-D1-promote-rows.md) (band, Contested, captions, the "·" connection form); [`promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3; working rules "The pin policy has one owner, in Go", "One wire vocabulary"; S11-18 review M-2, M-6 (subtitle and neighbor naming); S11-12 D-12 (a side that contradicts itself)
 **Planned:** 2026-10-22 against `main` @ `6504003`; refreshed for the board, S11-25's and S11-32's landings against `main` @ `05db499`
 **Review:** [`S11-20-claim-evidence-sheet.review.md`](S11-20-claim-evidence-sheet.review.md) — round 1 on the draft: Fits with changes / Not ready; round 2 at the STEP-0 refresh (see the log); every finding fixed or declined
 
@@ -328,7 +330,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 
 ## 10. Manual check
 
-Data: build the project in [S11-D2 §5.2](../design/S11-D2-evidence-sheet.md#52-the-project) (the obituary of John Smith and the records it is promoted against). Each step compares the sheet with the brief's frame of the same number; every value, sentence, outcome and count must match.
+Data: build the project in [S11-D2 §5.2](../design/archive/S11-D2-evidence-sheet.md#52-the-project) (the obituary of John Smith and the records it is promoted against). Each step compares the sheet with the brief's frame of the same number; every value, sentence, outcome and count must match.
 
 1. Open Promote on the obituary; open John Smith's sheet. Skeleton bars, then Frame 1. No "Through". (AC-1.1 – AC-1.3, AC-2.1, AC-3.1, AC-4.1, AC-4.4, AC-4.5, ES-17)
 2. Expand the name line; uncheck the 1861 Census; then press the line's box: Frame 2, then all four checked. (AC-2.2, AC-2.3)

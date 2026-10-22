@@ -1,6 +1,6 @@
 # Claim Evidence
 
-**Status:** requirements; the query is built in S11-19 (`core/claimevidence`, `promotealign.Evidence`), the RPC and Go-owned pins are built in S11-25 (2026-10-21). Part of [Spike 11](README.md), after the matching algorithm is re-implemented ([`comparison-layers.md`](comparison-layers.md)). Today's model: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 (assessment sheet) and §9 (pins).
+**Status:** requirements; the query is built in S11-19 (`core/claimevidence`, `promotealign.Evidence`), the RPC and Go-owned pins are built in S11-25 (2026-10-21), the lifespan and likeness lines in S11-32, and the sheet in S11-20 (2026-10-22). Part of [Spike 11](README.md), after the matching algorithm is re-implemented ([`comparison-layers.md`](comparison-layers.md)). Today's model: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 (assessment sheet) and §9 (pins).
 
 ## Why
 
@@ -48,7 +48,7 @@ This is a different question from **"Why was this suggested?"**, which is matchi
 
 ### Wording
 
-The copy is overhauled so the screen says what it is for. Lines are sentences built from value compare's relation and `Detail.Cause`, never from a number. Draft wording, to be settled in the design brief:
+The copy is overhauled so the screen says what it is for. Lines are sentences built from value compare's relation and `Detail.Cause`, never from a number. Settled in [S11-D2](design/archive/S11-D2-evidence-sheet.md) (the copy table, ES-8) and built in S11-20 as `L10n.Promote.lineSentence`; a relationship is named by the connection that matched ("They share a matching connection", then the link as the page words it), not by its neighbor ("Through <name>"). The first draft:
 
 | Relation and cause | Line reads |
 |---|---|
@@ -77,7 +77,7 @@ New chrome and copy: a Claude Design brief ([`add-design-brief`](../../../.agent
 - **Every bridge counts, on both sides, with no key relationships.** On the layer, every bridge the loader reads (participation, location, relationship, `part_of`, `succeeded_by`) gives a neighbor group. On the entity side, any bridge of any type between the handle's members and the neighbor's handle's members qualifies.
 - **The bridge type is never checked.** A spouse on the Source can pair with a member who is that person's *sibling* in another Source. Matching checks that (`corresponds`); the evidence view doesn't.
 - **The lines compare only the neighbor's own values** (her husband's name), never the relationship itself.
-- **The heading is "Through <name>"** (`promote.sheet.through`): no relationship, and no reason it matters.
+- **The heading was "Through <name>"** (`promote.sheet.through`, gone in S11-20): no relationship, and no reason it matters.
 
 **Decided (2026-10-17): the relationship is abstracted; the neighbor's properties are shown.**
 
