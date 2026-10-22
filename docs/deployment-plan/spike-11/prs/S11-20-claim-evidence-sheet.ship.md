@@ -410,3 +410,43 @@ Verifier (Opus), probing against `fe5b79b3`, `1885e198` and `b13fddbb`. **Refute
 - The test matrix is every counterexample so far: W1–W9, C1–C6, G1–G3, P1–P23 and the F-18 – F-20 cases.
 
 The PR head is currently worse than base for VER-4/VER-5 pairs. The other option is to revert F-21/F-22 (back to `1885e198`'s window, keeping the user's original span fix) and do the model as its own PR.
+
+## Round 10 — user decision (2026-10-22)
+The user: lifespans are guidance to refine suggestions, always a bit fuzzy; only remove the really egregious cases (born 1950 vs died 1850); be very forgiving; find a simpler way. This answers VER-4 and VER-5 (no exact model) and replaces the F-18 – F-22 rules.
+
+### The rule (orchestrator)
+A side's lifespan is built from its **exact dates only**. A date with an open end (`BEF`, `AFT`, a half-open range) is skipped: it is too vague to rule anything out.
+- **Span:** earliest first end to latest last end of the counted dates.
+- **Start:** the earliest counted Starts (birth) first end, else the span's first end − `MaxYears`.
+- **End:** the latest counted Ends (death, burial) last end, else the span's last end + `MaxYears`.
+- **Window:** [start − `SlackYears`, end + `SlackYears`]. `SlackYears` is a new registry knob, 10 (estimate: forgiving margin for misdated records).
+- **Undated:** no counted date. **Contradicts:** a counted date outside its own window, or the window inverted. With the slack, only egregious cases.
+- Comparison is unchanged (`subjectcompare.lifespan`: each span against the other's window).
+
+### Fix plan 10
+**F-23 — A forgiving lifespan from exact dates, with slack** (user decision; supersedes F-18 – F-22)
+Files: `core/subjectprofile/subjectprofile.go` (`lifespan`, doc comment), `core/subjectcompare/subjectcompare.go` (`Lifespan.SlackYears`), `core/matchregistry/subject.go` (`SlackYears: 10, // estimate: forgiving margin for misdated records`), `docs/matching-model.md` (knob row; update the `MaxYears` row and the lifespan description), `core/subjectprofile/entity_test.go`, `core/subjectprofile/lifespan_test.go`. Skill: `add-match-rule` (a new knob: registry, inventory row, `TestKnobInventoryMatchesRegistry`).
+Do: rewrite `lifespan` to the rule above. It should be shorter than today: no collapsed/raw ends, no inverted-span fallback, no `startOpen`/`endOpen`. Delete the F-18 – F-22 test cases (W*, C*, G*, P*, the F-18 – F-20 cases) and replace them with this table in `TestEntityCompare` (lifespan outcome):
+
+| # | Side A | Side B | Want |
+| --- | --- | --- | --- |
+| L1 | birth 1950 | death 1850 | conflict |
+| L2 | death `BEF 11 Jan 2021` | birth 27 Jul 1932, death 31 Mar 2001 | not conflict (A undated) |
+| L3 | birth 1900, death 1980 | birth 1905, death 1975 | not conflict |
+| L4 | residence 1900 | residence 2030 | conflict |
+| L5 | residence 1900 | residence 2015 | not conflict |
+| L6 | birth 1900 | residence 1895 | not conflict |
+| L7 | birth 1900 | residence 1880 | conflict |
+| L8 | death 1850 | residence 1855 | not conflict |
+| L9 | death 1850 | residence 1875 | conflict |
+| L10 | birth `BEF 1900`, death `AFT 1950` | birth 1700 | not conflict (A undated) |
+| L11 | birth 1900, birth `BEF 1895` | death 1700 | conflict |
+
+Update the S11-32 cases in `lifespan_test.go` to the new rule. List each changed expectation with one line on why.
+Check: table passes; `go test -tags fts5 ./core/...` PASS (including the knob inventory test); scripts/check-pr.sh PASS. Replace the Landed note's round 8 and 9 sentences with: "Ship rounds 8 – 10, at the user's request: a lifespan is guidance built from exact dates only, with a 10-year slack on its window, so only egregious cases conflict; open-ended dates are skipped."
+
+## Round 10 — fix
+Head `bdbfabfa`. Gate PASS (orchestrator re-ran). F-23 done: `lifespan` rewritten (open-ended dates skipped, slack window), `Lifespan.SlackYears` = 10 with its `matching-model.md` row; L1–L11 pass; the F-18 – F-22 cases are deleted. Fixtures in `claimevidence`, `promotealign` and `graphalign` moved past the slack so they still conflict (dates only). The orchestrator read the new function. No verifier: the user asked for a forgiving heuristic, not an exact model, and the table is the spec. VER-4 and VER-5 were answered by the user's decision.
+
+## Result (after round 10)
+Gate PASS · CI see PR · open: none · to user: term origin (a user term keyed like a product term reads as the product term) · manual check §10 not run
