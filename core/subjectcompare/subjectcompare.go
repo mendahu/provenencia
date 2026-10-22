@@ -50,6 +50,19 @@ type Lifespan struct {
 	Ends     []EventRole          // events that fix the end
 }
 
+// FirstLifespanLead is the smallest lead key, the lead whose lifespan stands for
+// a side where a kind has several. False when there are none.
+func FirstLifespanLead(leads map[vocabkey.PropertyKey]Lifespan) (vocabkey.PropertyKey, bool) {
+	var first vocabkey.PropertyKey
+	found := false
+	for lead := range leads {
+		if !found || lead < first {
+			first, found = lead, true
+		}
+	}
+	return first, found
+}
+
 // LifespanMissing is why a side has no lifespan.
 type LifespanMissing string
 

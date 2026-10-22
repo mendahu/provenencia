@@ -90,3 +90,13 @@ func TestLifespan(t *testing.T) {
 		})
 	}
 }
+
+func TestFirstLifespanLead(t *testing.T) {
+	got, ok := subjectcompare.FirstLifespanLead(map[vocabkey.PropertyKey]subjectcompare.Lifespan{"b": {}, "a": {}})
+	if got != "a" || !ok {
+		t.Fatalf("FirstLifespanLead = %q, %v; want a, true", got, ok)
+	}
+	if got, ok := subjectcompare.FirstLifespanLead(nil); got != "" || ok {
+		t.Fatalf("FirstLifespanLead(nil) = %q, %v; want empty, false", got, ok)
+	}
+}

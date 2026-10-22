@@ -137,16 +137,16 @@ func ForSubject(s Subject, lifespans map[vocabkey.PropertyKey]subjectcompare.Lif
 	return out, addLifespans(out, s.Life, lifespans)
 }
 
-// addLifespans sets, for each lifespan in key order, the window under its lead
+// addLifespans sets, for each lifespan, the window under its lead
 // and the span under its Span, one value each, when the events give them. It
 // returns the side's life from the first lead in key order, the zero LifeSide
 // when there is none.
 func addLifespans(out subjectcompare.Values, events []LifeEvent, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan) subjectcompare.LifeSide {
 	var side subjectcompare.LifeSide
-	for i, lead := range slices.Sorted(maps.Keys(lifespans)) {
-		l := lifespans[lead]
+	first, _ := subjectcompare.FirstLifespanLead(lifespans)
+	for lead, l := range lifespans {
 		window, span, s := lifespan(events, l)
-		if i == 0 {
+		if lead == first {
 			side = s
 		}
 		if s.Missing == "" {

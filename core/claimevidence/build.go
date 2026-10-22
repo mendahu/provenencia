@@ -48,15 +48,14 @@ func Build(kind vocabkey.SubjectType, row, handle subjectcompare.Values, members
 // the kind derives a lifespan for. Nil for a kind with none, and when neither
 // side has dates and neither contradicts itself.
 func lifespanOf(kind vocabkey.SubjectType, compared subjectcompare.Result, subject subjectcompare.Rules, in Inputs) *Lifespan {
-	leads := subject.Lifespans[kind]
-	if len(leads) == 0 {
+	lead, ok := subjectcompare.FirstLifespanLead(subject.Lifespans[kind])
+	if !ok {
 		return nil
 	}
 	if in.Row.First == nil && in.Record.First == nil &&
 		in.Row.Missing != subjectcompare.LifespanContradicts && in.Record.Missing != subjectcompare.LifespanContradicts {
 		return nil
 	}
-	lead := slices.Min(slices.Collect(maps.Keys(leads)))
 	out := &Lifespan{Row: in.Row, Record: in.Record}
 	for _, p := range compared.Properties {
 		if p.Key == lead {
