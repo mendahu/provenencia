@@ -418,12 +418,12 @@ struct PromoteModelTests {
         #expect(model.reasonText(bea.captionReason, on: bea) == L10n.Promote.viaNeighbor(neighbor: "Ada", ref: "PER-e1"))
     }
 
-    /// Ada and Bea on one page, joined by one bridge of `kind` that carries `term`.
-    private func viaReason(
+    /// Ada and Bea on one page, joined by one bridge of `kind` that carries `term`, loaded.
+    private func bridgeModel(
         kind: EvidenceBridgeKind,
         edgeKeys: (String, String),
         term: (property: String, key: String, origin: String, label: String)?
-    ) async -> String {
+    ) async -> PromoteModel {
         let bridgeSubject = CatalogSubject(
             id: "br", ref: "CPA-1", sourceID: sourceID, subjectTypeID: "type-bridge", label: "", description: ""
         )
@@ -461,8 +461,34 @@ struct PromoteModelTests {
         store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), viaA])]
         let model = model(store: store, subjectID: "a")
         await model.load()
+        return model
+    }
+
+    /// Bea's reason in the page built by `bridgeModel`.
+    private func viaReason(
+        kind: EvidenceBridgeKind,
+        edgeKeys: (String, String),
+        term: (property: String, key: String, origin: String, label: String)?
+    ) async -> String {
+        let model = await bridgeModel(kind: kind, edgeKeys: edgeKeys, term: term)
         let bea = model.flow.row("b")!
         return model.reasonText(bea.captionReason, on: bea)
+    }
+
+    @Test func bridgeFactsCarryKindAndSymmetry() async {
+        let provenencia = CatalogOrigin.provenencia
+        let spouse = await bridgeModel(
+            kind: .relationship, edgeKeys: ("person", "related_to"),
+            term: ("relationship_type", "spouse", provenencia, "Spouse")
+        )
+        #expect(spouse.flow.bridges.first?.kind == .relationship)
+        #expect(spouse.flow.bridges.first?.symmetric == true)
+        let participation = await bridgeModel(
+            kind: .participation, edgeKeys: ("person", "event"),
+            term: ("role", "subject", provenencia, "Subject")
+        )
+        #expect(participation.flow.bridges.first?.kind == .participation)
+        #expect(participation.flow.bridges.first?.symmetric == false)
     }
 
     @Test func aViaReasonNamesTheTermInLowercase() async {

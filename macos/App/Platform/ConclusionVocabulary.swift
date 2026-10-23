@@ -352,6 +352,11 @@ enum SeededRelationshipTypeTerm {
         guardian: ward,
         ward: guardian,
     ]
+
+    /// Whether the term reads the same from both ends (it is its own inverse).
+    static func isSymmetric(_ key: String) -> Bool {
+        inverse[key] == key
+    }
 }
 
 /// Seeded `place_relationship_type` terms.
