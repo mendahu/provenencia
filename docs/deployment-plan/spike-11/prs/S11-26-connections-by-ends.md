@@ -1,6 +1,6 @@
 # S11-26 — Connections file by their ends
 
-**Status:** In progress
+**Status:** Landed in [#527](https://github.com/mendahu/provenencia/pull/527) (2026-10-23)
 **Spike / slice:** Spike 11 · Slice 6 — Connection subrows
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the connections panel loses its per-row switch and shows the state caption it already shows for unfiled rows; the panel itself is replaced by S11-27 under S11-D1)
@@ -14,6 +14,8 @@
 **Context:** [Connection subrows](../promote-connection-subrows.md) "The problem" §2 and "What it would change"; [`docs/promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3 ("Bridges aren't rows"), §9 ("Bridges" bullet) and §9.1; [`docs/conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) §5.4; working rules "High tolerance for churn", "One wire vocabulary"
 **Planned:** 2026-10-22 against `main` @ `1e8a580`
 **Review:** [`S11-26-connections-by-ends.review.md`](S11-26-connections-by-ends.review.md) — Fits / Ready, 2 rounds (findings fixed)
+
+> **Landed.** Differences from the plan: `promote.leave.pageMessage` has `plural` `one` / `other` variations (D-8's text is the `other` form; ship round 1 F-2, test `PromoteEvidenceDisplayTests.countsArePlural`); `PromoteView.connectionMeta` binds `model.flow.connections` once (F-1). Plurals for `promote.connections.count` and `promote.toast.filedBody` were left as follow-ups; S11-27 deletes the first.
 
 ### Implementer — read this first
 
