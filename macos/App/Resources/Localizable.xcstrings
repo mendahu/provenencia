@@ -17986,25 +17986,13 @@
       }
     },
     "promote.connections.filed": {
-      "comment": "Switch label for a connection that will be filed",
+      "comment": "A connection that files on Done",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Filed"
-          }
-        }
-      }
-    },
-    "promote.connections.off": {
-      "comment": "A connection the researcher switched off",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not filed this time"
           }
         }
       }
@@ -18142,13 +18130,13 @@
       }
     },
     "promote.leave.pageMessage": {
-      "comment": "Leave guard body; 1 = rows changed, 2 = connections switched off",
+      "comment": "Leave guard body; argument is how many rows changed",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You chose targets on %1$lld rows and switched off %2$lld connections. Nothing has been filed; opening Promote again proposes the graph afresh."
+            "value": "You chose targets on %lld rows. Nothing has been filed; opening Promote again proposes the graph afresh."
           }
         }
       }
@@ -18442,13 +18430,13 @@
       }
     },
     "promote.connections.meta": {
-      "comment": "Connections list summary; 1 = filed, 2 = switched off, 3 = not filed",
+      "comment": "Connections list summary; 1 = filed, 2 = not filed",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$lld filed · %2$lld switched off · %3$lld not filed"
+            "value": "%1$lld filed · %2$lld not filed"
           }
         }
       }
@@ -18460,7 +18448,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Switch off a relationship you don’t accept from this Source; it stays on the graph"
+            "value": "A connection files once both its ends are filed; to dispute one, change it on the Evidence graph"
           }
         }
       }

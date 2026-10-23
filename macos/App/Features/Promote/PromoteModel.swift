@@ -184,8 +184,6 @@ final class PromoteModel {
         flow.setConfidence(subjectID: subjectID, gradeID: gradeID)
     }
 
-    func toggleBridge(_ id: String) { flow.toggleBridge(id) }
-
     func openSheet(_ subjectID: String) { setSheetSubject(subjectID) }
     func closeSheet() { setSheetSubject(nil) }
 

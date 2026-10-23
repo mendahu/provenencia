@@ -1585,11 +1585,9 @@ enum L10n {
         static func connections(count: Int) -> String {
             L10n.format(LocalizedStringResource("promote.connections.count", defaultValue: "%lld connections will be filed", comment: "Bridge summary; argument is how many will be filed"), count)
         }
-        static let connectionFiled = LocalizedStringResource("promote.connections.filed", defaultValue: "Filed", comment: "Switch label for a connection that will be filed")
         static func connectionState(_ state: PromoteFlow.ConnectionState) -> LocalizedStringResource {
             switch state {
-            case .files: connectionFiled
-            case .off: LocalizedStringResource("promote.connections.off", defaultValue: "Not filed this time", comment: "A connection the researcher switched off")
+            case .files: LocalizedStringResource("promote.connections.filed", defaultValue: "Filed", comment: "A connection that files on Done")
             case .selfLink: LocalizedStringResource("promote.connections.self", defaultValue: "Not filed · both ends are the same record", comment: "A connection whose ends resolve to one handle")
             case .endSkipped: LocalizedStringResource("promote.connections.skipped", defaultValue: "Not filed · an end is skipped", comment: "A connection that stays unfiled because an end is not being filed")
             }
@@ -1611,8 +1609,8 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.toast.filedBody", defaultValue: "%lld subjects are still on the graph, not filed yet", comment: "Toast body after Done; skipped subjects are not a rejection"), skipped)
         }
         static let leaveTitle = LocalizedStringResource("promote.leave.pageTitle", defaultValue: "Discard your changes to this mapping?", comment: "Leave guard title when the Promote page has manual changes")
-        static func leaveDetail(rows: Int, connections: Int) -> String {
-            L10n.format(LocalizedStringResource("promote.leave.pageMessage", defaultValue: "You chose targets on %1$lld rows and switched off %2$lld connections. Nothing has been filed; opening Promote again proposes the graph afresh.", comment: "Leave guard body; 1 = rows changed, 2 = connections switched off"), rows, connections)
+        static func leaveDetail(rows: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.leave.pageMessage", defaultValue: "You chose targets on %lld rows. Nothing has been filed; opening Promote again proposes the graph afresh.", comment: "Leave guard body; argument is how many rows changed"), rows)
         }
         static func openedFrom(name: String) -> String {
             L10n.format(LocalizedStringResource("promote.page.openedFrom", defaultValue: "Opened from %@ · weak and unmatched rows start as Skip", comment: "Shown once the rest of the graph is mapped; argument is the subject the page opened on"), name)
@@ -1655,10 +1653,10 @@ enum L10n {
         }
         static let conflictBody = LocalizedStringResource("promote.warning.conflictBody", defaultValue: "This choice is kept.", comment: "Warning body when a decided row disagrees with a new proposal")
         static let connectionsTitle = LocalizedStringResource("promote.connections.title", defaultValue: "Connections", comment: "Title of the connections list")
-        static func connectionsMeta(filed: Int, off: Int, unfiled: Int) -> String {
-            L10n.format(LocalizedStringResource("promote.connections.meta", defaultValue: "%1$lld filed · %2$lld switched off · %3$lld not filed", comment: "Connections list summary; 1 = filed, 2 = switched off, 3 = not filed"), filed, off, unfiled)
+        static func connectionsMeta(filed: Int, unfiled: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.connections.meta", defaultValue: "%1$lld filed · %2$lld not filed", comment: "Connections list summary; 1 = filed, 2 = not filed"), filed, unfiled)
         }
-        static let connectionsHint = LocalizedStringResource("promote.connections.hint", defaultValue: "Switch off a relationship you don’t accept from this Source; it stays on the graph", comment: "Hint in the connections list")
+        static let connectionsHint = LocalizedStringResource("promote.connections.hint", defaultValue: "A connection files once both its ends are filed; to dispute one, change it on the Evidence graph", comment: "Hint in the connections list")
         static func sheetTitleNew(name: String, target: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.titleNew", defaultValue: "%1$@ → %2$@", comment: "Evidence sheet title for a row filed as a new record; 1 = the row's name, 2 = the New option, e.g. New person"), name, target)
         }

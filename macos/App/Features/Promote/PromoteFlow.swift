@@ -108,8 +108,6 @@ struct PromoteFlow: Equatable, Sendable {
     /// Whether a connection files on Done, and if not, why.
     enum ConnectionState: Equatable, Sendable {
         case files
-        /// The researcher switched it off.
-        case off
         /// An end is skipped or not on the page.
         case endSkipped
         /// Both ends land on one handle.
@@ -246,7 +244,6 @@ struct PromoteFlow: Equatable, Sendable {
     var mappedRest = false
     var rows: [Row] = []
     var bridges: [BridgeFact] = []
-    var bridgeOff: Set<String> = []
     var revision: Int64 = 0
     var saving = false
     var staleNote: String?
@@ -280,11 +277,9 @@ struct PromoteFlow: Equatable, Sendable {
         scope.allSatisfy { $0.anchor || $0.target != .unset }
     }
 
-    var connectionCount: Int { filedBridges.filter(\.files).count }
+    var connectionCount: Int { connections.filter(\.files).count }
 
     private var scope: [Row] { visibleRows }
-
-    func connectionLines() -> [Bridge] { filedBridges }
 
     private func lined(_ bridge: BridgeFact, _ state: ConnectionState) -> Bridge {
         Bridge(
@@ -294,11 +289,8 @@ struct PromoteFlow: Equatable, Sendable {
         )
     }
 
-    private var filedBridges: [Bridge] {
+    var connections: [Bridge] {
         bridges.filter { !$0.alreadyFiled }.map { bridge in
-            if bridgeOff.contains(bridge.id) {
-                return lined(bridge, .off)
-            }
             guard let left = resolve(bridge.endA), let right = resolve(bridge.endB) else {
                 return lined(bridge, .endSkipped)
             }
@@ -439,11 +431,6 @@ struct PromoteFlow: Equatable, Sendable {
         manual = true
     }
 
-    mutating func toggleBridge(_ id: String) {
-        if bridgeOff.contains(id) { bridgeOff.remove(id) } else { bridgeOff.insert(id) }
-        manual = true
-    }
-
     /// Fold a new proposal. Decided rows keep their choice.
     mutating func merge(_ proposal: CatalogPromoteGraphAlignmentProposal, subjects: [SubjectFact]) {
         revision = proposal.revision
@@ -500,8 +487,6 @@ struct PromoteFlow: Equatable, Sendable {
             pinIDs: pinIDs
         )
     }
-
-    func skipBridgeIDs() -> [String] { bridgeOff.sorted() }
 
     mutating func requestLeave(_ pending: PendingNavigation) -> Bool {
         guard manual, !saving else { return false }
