@@ -1074,3 +1074,90 @@ func TestListedGroup(t *testing.T) {
 		}
 	})
 }
+
+// A Subject, an Observation, a Citation and a graph name their Evidence graph
+// in the location the delete report links to.
+func TestLocationsNameTheirGraph(t *testing.T) {
+	c, userID := testCatalog(t)
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"}); err != nil {
+		t.Fatal(err)
+	}
+	def, jones, page := artifactstest.Split(t, c, userID, src.ID, "Jones")
+	subject := artifactstest.SubjectOn(t, c, userID, src.ID, jones.ID, "place", "Leeds")
+	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cited, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: page.ID, LocatorJSON: testLocator,
+		}, []observations.Input{{SubjectID: subject.ID, PropertyID: toponym.ID, ValueText: "Leeds", HasText: true}})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	bare, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: page.ID, LocatorJSON: testLocator,
+		}, nil)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	loc := func(kind catalogmodel.Kind, id []byte, ref string) deleteimpact.Location {
+		t.Helper()
+		g, err := deleteimpact.ListedGroup(tx, "x.via", kind, []deleteimpact.Listed{{ID: id, Ref: ref}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return g.Listed[0].Location
+	}
+	for _, tt := range []struct {
+		name     string
+		kind     catalogmodel.Kind
+		id       []byte
+		ref      string
+		surface  string
+		graphID  []byte
+		sourceID []byte
+	}{
+		{"Subject", catalogmodel.KindSubject, subject.ID, subject.Ref, "graph", jones.ID, src.ID},
+		{"Observation", catalogmodel.KindObservation, cited.Observations[0].ID, cited.Observations[0].Ref, "citationComposer", jones.ID, src.ID},
+		{"Citation with an Observation", catalogmodel.KindCitation, cited.Citation.ID, cited.Citation.Ref, "citationComposer", jones.ID, src.ID},
+		{"Citation with no Observation", catalogmodel.KindCitation, bare.Citation.ID, bare.Citation.Ref, "citationComposer", jones.ID, src.ID},
+		{"graph", catalogmodel.KindEvidenceGraph, jones.ID, jones.Ref, "graph", jones.ID, src.ID},
+		{"Default graph", catalogmodel.KindEvidenceGraph, def.ID, def.Ref, "graph", def.ID, src.ID},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := loc(tt.kind, tt.id, tt.ref)
+			if got.SourceSurface != tt.surface || got.GraphID != idString(tt.graphID) || got.SourceID != idString(tt.sourceID) {
+				t.Fatalf("location %+v, want %s on graph %x of %x", got, tt.surface, tt.graphID, tt.sourceID)
+			}
+		})
+	}
+}

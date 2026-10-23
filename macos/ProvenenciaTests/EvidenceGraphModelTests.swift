@@ -7,6 +7,7 @@ import Testing
 struct EvidenceGraphModelTests {
     private let projectDir = "/tmp/evidence-graph-model.provenencia"
     private let sourceID = "src-1"
+    private let graphID = "g-1"
     private let personTypeID = "type-person"
 
     private func makeStore() -> FakeStore {
@@ -95,6 +96,11 @@ struct EvidenceGraphModelTests {
                 description: ""
             ),
         ]
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: ["art-0"]
+            ),
+        ]
         store.propertyTermsByProperty["prop-rel-type"] = [
             CatalogPropertyTerm(
                 id: "term-spouse",
@@ -122,16 +128,16 @@ struct EvidenceGraphModelTests {
 
     /// Session graph payload. `types` is ignored — vocabulary lives on `propertiesWorkspace`.
     private func graphRows(
-        sourceId: String,
+        graphId: String,
         subjects: [CatalogSubject],
         positions: [CatalogSubjectPosition],
         types: [CatalogSubjectType] = [],
         observations: [CatalogObservation] = [],
         memberships: [CatalogSubjectMembership] = []
-    ) -> SourceGraphRows {
+    ) -> EvidenceGraphRows {
         _ = types
-        return SourceGraphRows(
-            sourceId: sourceId,
+        return EvidenceGraphRows(
+            graphId: graphId,
             subjects: subjects,
             positions: positions,
             observations: observations,
@@ -145,6 +151,7 @@ struct EvidenceGraphModelTests {
             store: store
         )
         return EvidenceGraphModel(
+            graphID: graphID,
             sourceID: sourceID,
             session: session,
             store: store,
@@ -158,9 +165,9 @@ struct EvidenceGraphModelTests {
         let store = makeStore()
         let model = makeModel(store: store)
         let types = store.subjectTypesByProject[projectDir] ?? []
-        func rows(label: String) -> SourceGraphRows {
-            SourceGraphRows(
-                sourceId: sourceID,
+        func rows(label: String) -> EvidenceGraphRows {
+            EvidenceGraphRows(
+                graphId: graphID,
                 subjects: [CatalogSubject(
                     id: "s1",
                     ref: "CPR-1",
@@ -203,8 +210,8 @@ struct EvidenceGraphModelTests {
         let store = makeStore()
         let model = makeModel(store: store)
         await model.prepare()
-        let _: QueryHandle<SourceGraphRows> = model.session.query(
-            CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let _: QueryHandle<EvidenceGraphRows> = model.session.query(
+            CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         )
 
         model.toggleArm(.person)
@@ -226,16 +233,16 @@ struct EvidenceGraphModelTests {
         })
         #expect(store.recordedCalls.contains { $0.hasPrefix("setSubjectPosition") } == false)
 
-        let subjects = try await store.listSubjects(projectDir: projectDir, sourceID: sourceID)
+        let subjects = try await store.listSubjects(projectDir: projectDir, graphID: graphID)
         #expect(subjects.count == 1)
         #expect(subjects.first?.label == "Alice")
-        let positions = try await store.listSubjectPositions(projectDir: projectDir, sourceID: sourceID)
+        let positions = try await store.listSubjectPositions(projectDir: projectDir, graphID: graphID)
         #expect(positions.first?.gridX == gridX)
         #expect(positions.first?.gridY == gridY)
 
         // Session must re-query so the canvas leaves the stale empty snapshot.
-        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(
-            CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(
+            CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         )
         var waited = 0
         while handle?.value?.subjects.isEmpty != false, waited < 40 {
@@ -294,7 +301,7 @@ struct EvidenceGraphModelTests {
             label: "A",
             description: ""
         )
-        store.subjectsBySource[sourceID] = [subject]
+        store.subjectsByGraph[graphID] = [subject]
         store.subjectPositionsBySubject["s1"] = CatalogSubjectPosition(
             subjectID: "s1",
             gridX: 1,
@@ -302,11 +309,11 @@ struct EvidenceGraphModelTests {
         )
         let model = makeModel(store: store)
         await model.prepare()
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         model.session.setQueryValue(
             key,
-            value: SourceGraphRows(
-                sourceId: sourceID,
+            value: EvidenceGraphRows(
+                graphId: graphID,
                 subjects: [subject],
                 positions: [CatalogSubjectPosition(subjectID: "s1", gridX: 1, gridY: 2)]
             )
@@ -323,7 +330,7 @@ struct EvidenceGraphModelTests {
             deltaY: 0
         )
         #expect(result == nil)
-        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
         #expect(handle?.value?.positions.first?.gridX == 1)
         #expect(handle?.value?.positions.first?.gridY == 2)
         #expect(model.toast?.tone == .danger)
@@ -339,8 +346,8 @@ struct EvidenceGraphModelTests {
             label: "A",
             description: ""
         )
-        let rows = SourceGraphRows(
-            sourceId: sourceID,
+        let rows = EvidenceGraphRows(
+            graphId: graphID,
             subjects: [subject],
             positions: [CatalogSubjectPosition(subjectID: "s1", gridX: 1, gridY: 1)]
         )
@@ -349,14 +356,42 @@ struct EvidenceGraphModelTests {
         #expect(next.positions[0].gridY == 5)
     }
 
-    @Test func mutatedSourceGraphInvalidatesSourceGraph() {
+    /// T-17 (AC-2.7): a Subject created on the canvas reports its graph, and
+    /// applying the effects alone reloads `.evidenceGraph` of that graph.
+    @Test func subjectWriteEffectsReloadTheGraph() async throws {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
+        let handle: QueryHandle<EvidenceGraphRows> = model.session.query(key)
+        await waitForQuery(handle)
+        let (created, effects) = try await store.createSubject(
+            projectDir: projectDir, userID: "user-1", graphID: graphID,
+            subjectTypeID: personTypeID, label: "Ada", description: "", placement: nil
+        )
+        #expect(effects.evidenceGraphs == [graphID])
+        #expect(created.sourceID == sourceID)
         let registry = CatalogQueryRegistry.standard
         let project = ProjectKey(projectDir: projectDir)
-        let effects = registry.invalidations(
-            by: .mutatedSourceGraph(sourceId: sourceID),
-            project: project
-        )
-        #expect(effects == [.key(.sourceGraph(project: project, sourceId: sourceID))])
+        #expect(registry.invalidations(for: effects, project: project)
+            .contains(.key(.evidenceGraph(project: project, graphId: graphID))))
+        model.session.apply(effects)
+        await waitForQuery(handle)
+        #expect(handle.value?.subjects.map(\.id) == [created.id])
+    }
+
+    /// T-17 (AC-1.4): every location the canvas builds names its graph and its Source.
+    @Test func graphLocationsCarryTheGraph() async {
+        let (_, model) = await promotableModel()
+        let card = model.promoteLocation(for: "s-james")
+        let all = model.promoteAllLocation()
+        let composer = model.composerLocation(for: "s-james")
+        for location in [card, all, composer] {
+            #expect(location?.graphId == graphID)
+            #expect(location?.sourceId == sourceID)
+        }
+        #expect(card?.sourceSurface == .promote)
+        #expect(composer?.sourceSurface == .citationComposer)
     }
 
     @Test func connectExcludesPlacingAndPickCreatesBridge() async throws {
@@ -380,7 +415,7 @@ struct EvidenceGraphModelTests {
             label: "Birth",
             description: ""
         )
-        store.subjectsBySource[sourceID] = [person, event]
+        store.subjectsByGraph[graphID] = [person, event]
         store.subjectPositionsBySubject["p1"] = CatalogSubjectPosition(
             subjectID: "p1", gridX: 1, gridY: 1
         )
@@ -388,11 +423,11 @@ struct EvidenceGraphModelTests {
             subjectID: "e1", gridX: 5, gridY: 1
         )
 
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         model.session.setQueryValue(
             key,
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: [person, event],
                 positions: [
                     CatalogSubjectPosition(subjectID: "p1", gridX: 1, gridY: 1),
@@ -421,7 +456,7 @@ struct EvidenceGraphModelTests {
         #expect(handoff?.connectBridgeTypeKey == "participation")
         #expect(handoff?.sourceSurface == .citationComposer)
 
-        let subjects = try await store.listSubjects(projectDir: projectDir, sourceID: sourceID)
+        let subjects = try await store.listSubjects(projectDir: projectDir, graphID: graphID)
         #expect(subjects.count == 2)
     }
 
@@ -445,12 +480,12 @@ struct EvidenceGraphModelTests {
             label: "Leeds",
             description: ""
         )
-        store.subjectsBySource[sourceID] = [event, place]
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        store.subjectsByGraph[graphID] = [event, place]
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         model.session.setQueryValue(
             key,
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: [event, place],
                 positions: [
                     CatalogSubjectPosition(subjectID: "e1", gridX: 0, gridY: 0),
@@ -490,12 +525,12 @@ struct EvidenceGraphModelTests {
             label: "Town",
             description: ""
         )
-        store.subjectsBySource[sourceID] = [person, placeSubject]
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        store.subjectsByGraph[graphID] = [person, placeSubject]
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         model.session.setQueryValue(
             key,
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: [person, placeSubject],
                 positions: [
                     CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0),
@@ -535,18 +570,18 @@ struct EvidenceGraphModelTests {
             label: "B",
             description: ""
         )
-        store.subjectsBySource[sourceID] = [e1, e2]
+        store.subjectsByGraph[graphID] = [e1, e2]
         store.subjectPositionsBySubject["e1"] = CatalogSubjectPosition(
             subjectID: "e1", gridX: 0, gridY: 0
         )
         store.subjectPositionsBySubject["e2"] = CatalogSubjectPosition(
             subjectID: "e2", gridX: 2, gridY: 0
         )
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         model.session.setQueryValue(
             key,
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: [e1, e2],
                 positions: [
                     CatalogSubjectPosition(subjectID: "e1", gridX: 0, gridY: 0),
@@ -576,15 +611,15 @@ struct EvidenceGraphModelTests {
             label: "Old",
             description: "Was"
         )
-        store.subjectsBySource[sourceID] = [person]
+        store.subjectsByGraph[graphID] = [person]
         store.subjectPositionsBySubject["p1"] = CatalogSubjectPosition(
             subjectID: "p1", gridX: 1, gridY: 2
         )
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         model.session.setQueryValue(
             key,
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: [person],
                 positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 1, gridY: 2)],
                 types: store.subjectTypesByProject[projectDir] ?? []
@@ -599,8 +634,8 @@ struct EvidenceGraphModelTests {
         let id = await model.confirmEdit()
         #expect(id == "p1")
         #expect(model.editingSubjectID == nil)
-        #expect(store.subjectsBySource[sourceID]?.first?.label == "New name")
-        #expect(store.subjectsBySource[sourceID]?.first?.description == "Updated")
+        #expect(store.subjectsByGraph[graphID]?.first?.label == "New name")
+        #expect(store.subjectsByGraph[graphID]?.first?.description == "Updated")
     }
 
     @Test func bridgeEditSendsStoredLabelUnchanged() async {
@@ -615,15 +650,15 @@ struct EvidenceGraphModelTests {
             label: "Stored",
             description: "Was"
         )
-        store.subjectsBySource[sourceID] = [bridge]
+        store.subjectsByGraph[graphID] = [bridge]
         store.subjectPositionsBySubject["b1"] = CatalogSubjectPosition(
             subjectID: "b1", gridX: 2, gridY: 2
         )
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         model.session.setQueryValue(
             key,
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: [bridge],
                 positions: [CatalogSubjectPosition(subjectID: "b1", gridX: 2, gridY: 2)],
                 types: store.subjectTypesByProject[projectDir] ?? []
@@ -636,8 +671,8 @@ struct EvidenceGraphModelTests {
         let id = await model.confirmEdit()
         #expect(id == "b1")
         #expect(store.recordedCalls.contains { $0 == "updateSubject id=b1 label=Stored" })
-        #expect(store.subjectsBySource[sourceID]?.first?.label == "Stored")
-        #expect(store.subjectsBySource[sourceID]?.first?.description == "New note")
+        #expect(store.subjectsByGraph[graphID]?.first?.label == "Stored")
+        #expect(store.subjectsByGraph[graphID]?.first?.description == "New note")
     }
 
     @Test func failedOlderDragDoesNotRevertNewerMove() async throws {
@@ -650,17 +685,17 @@ struct EvidenceGraphModelTests {
             label: "A",
             description: ""
         )
-        store.subjectsBySource[sourceID] = [subject]
+        store.subjectsByGraph[graphID] = [subject]
         store.subjectPositionsBySubject["s1"] = CatalogSubjectPosition(
             subjectID: "s1", gridX: 1, gridY: 2
         )
         let model = makeModel(store: store)
         await model.prepare()
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         model.session.setQueryValue(
             key,
-            value: SourceGraphRows(
-                sourceId: sourceID,
+            value: EvidenceGraphRows(
+                graphId: graphID,
                 subjects: [subject],
                 positions: [CatalogSubjectPosition(subjectID: "s1", gridX: 1, gridY: 2)]
             )
@@ -691,7 +726,7 @@ struct EvidenceGraphModelTests {
         await olderWrite?.value
         store.releaseSetSubjectPosition()
         await newerWrite?.value
-        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
         #expect(handle?.value?.positions.first?.gridX == 9)
         #expect(handle?.value?.positions.first?.gridY == 2)
         #expect(store.subjectPositionsBySubject["s1"]?.gridX == 9)
@@ -707,17 +742,17 @@ struct EvidenceGraphModelTests {
             label: "A",
             description: ""
         )
-        store.subjectsBySource[sourceID] = [subject]
+        store.subjectsByGraph[graphID] = [subject]
         store.subjectPositionsBySubject["s1"] = CatalogSubjectPosition(
             subjectID: "s1", gridX: 1, gridY: 2
         )
         let model = makeModel(store: store)
         await model.prepare()
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         model.session.setQueryValue(
             key,
-            value: SourceGraphRows(
-                sourceId: sourceID,
+            value: EvidenceGraphRows(
+                graphId: graphID,
                 subjects: [subject],
                 positions: [CatalogSubjectPosition(subjectID: "s1", gridX: 1, gridY: 2)]
             )
@@ -748,7 +783,7 @@ struct EvidenceGraphModelTests {
         await olderWrite?.value
         store.releaseSetSubjectPosition()
         await newerWrite?.value
-        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
         #expect(handle?.value?.positions.first?.gridX == 5)
         #expect(handle?.value?.positions.first?.gridY == 2)
         #expect(store.subjectPositionsBySubject["s1"]?.gridX == 5)
@@ -796,7 +831,7 @@ struct EvidenceGraphModelTests {
             label: "Alice",
             description: ""
         )
-        store.subjectsBySource[sourceID] = [subject]
+        store.subjectsByGraph[graphID] = [subject]
         store.subjectPositionsBySubject["s-uncited"] = CatalogSubjectPosition(
             subjectID: "s-uncited",
             gridX: 0,
@@ -804,11 +839,11 @@ struct EvidenceGraphModelTests {
         )
         let model = makeModel(store: store)
         await model.prepare()
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         model.session.setQueryValue(
             key,
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: [subject],
                 positions: [CatalogSubjectPosition(subjectID: "s-uncited", gridX: 0, gridY: 0)]
             )
@@ -821,11 +856,11 @@ struct EvidenceGraphModelTests {
         let ok = await model.confirmPendingImpact()
         #expect(ok)
         #expect(model.pendingImpact == nil)
-        #expect(store.subjectsBySource[sourceID]?.isEmpty == true)
-        // Allow the invalidated sourceGraph query to finish reloading.
+        #expect(store.subjectsByGraph[graphID]?.isEmpty == true)
+        // Allow the invalidated evidenceGraph query to finish reloading.
         try await Task.sleep(for: .milliseconds(50))
-        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(
-            CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(
+            CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         )
         #expect(handle?.value?.subjects.isEmpty == true)
     }
@@ -866,7 +901,7 @@ struct EvidenceGraphModelTests {
             label: "Witness",
             description: ""
         )
-        store.subjectsBySource[sourceID] = [person, event, bridge]
+        store.subjectsByGraph[graphID] = [person, event, bridge]
         store.subjectPositionsBySubject["p1"] = CatalogSubjectPosition(
             subjectID: "p1", gridX: 0, gridY: 0
         )
@@ -878,11 +913,11 @@ struct EvidenceGraphModelTests {
         )
         let model = makeModel(store: store)
         await model.prepare()
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         model.session.setQueryValue(
             key,
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: [person, event, bridge],
                 positions: [
                     CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0),
@@ -898,7 +933,7 @@ struct EvidenceGraphModelTests {
         let ok = await model.confirmPendingImpact()
         #expect(ok)
         try await Task.sleep(for: .milliseconds(50))
-        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
         #expect(handle?.value?.subjects.contains { $0.id == "b1" } == false)
         #expect(handle?.value?.subjects.count == 2)
     }
@@ -939,7 +974,7 @@ struct EvidenceGraphModelTests {
             label: "",
             description: ""
         )
-        store.subjectsBySource[sourceID] = [person, event, bridge]
+        store.subjectsByGraph[graphID] = [person, event, bridge]
         let edge = CatalogObservation(
             id: "obs-person",
             ref: "OBS-1",
@@ -957,15 +992,15 @@ struct EvidenceGraphModelTests {
             propertyLabel: "Person",
             propertyValueType: "subject"
         )
-        store.observationsBySource[sourceID] = [edge]
+        store.observationsByGraph[graphID] = [edge]
         store.edgeObservationIDs.insert(edge.id)
         let model = makeModel(store: store)
         await model.prepare()
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         model.session.setQueryValue(
             key,
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: [person, event, bridge],
                 positions: [
                     CatalogSubjectPosition(subjectID: "s-cited", gridX: 0, gridY: 0),
@@ -980,7 +1015,7 @@ struct EvidenceGraphModelTests {
         #expect(model.pendingImpact?.report.groups.first?.via == "observations.value_subject_id")
         let ok = await model.confirmPendingImpact()
         #expect(!ok)
-        #expect(store.subjectsBySource[sourceID]?.contains { $0.id == "s-cited" } == true)
+        #expect(store.subjectsByGraph[graphID]?.contains { $0.id == "s-cited" } == true)
         #expect(!store.recordedCalls.contains { $0.hasPrefix("deleteSubject") })
     }
 
@@ -1020,7 +1055,7 @@ struct EvidenceGraphModelTests {
             label: "",
             description: ""
         )
-        store.subjectsBySource[sourceID] = [person, event, bridge]
+        store.subjectsByGraph[graphID] = [person, event, bridge]
         store.subjectPositionsBySubject["p1"] = CatalogSubjectPosition(
             subjectID: "p1", gridX: 0, gridY: 0
         )
@@ -1083,15 +1118,15 @@ struct EvidenceGraphModelTests {
                 propertyValueType: "term"
             ),
         ]
-        store.observationsBySource[sourceID] = edges
+        store.observationsByGraph[graphID] = edges
         store.edgeObservationIDs.formUnion(["obs-person", "obs-event"])
         let model = makeModel(store: store)
         await model.prepare()
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         model.session.setQueryValue(
             key,
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: [person, event, bridge],
                 positions: [
                     CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0),
@@ -1106,12 +1141,12 @@ struct EvidenceGraphModelTests {
         #expect(model.pendingImpact?.report.allowed == true)
         let ok = await model.confirmPendingImpact()
         #expect(ok)
-        #expect(store.subjectsBySource[sourceID]?.contains { $0.id == "b1" } == false)
-        #expect(store.subjectsBySource[sourceID]?.contains { $0.id == "p1" } == true)
-        #expect(store.subjectsBySource[sourceID]?.contains { $0.id == "e1" } == true)
-        #expect(store.observationsBySource[sourceID]?.isEmpty == true)
+        #expect(store.subjectsByGraph[graphID]?.contains { $0.id == "b1" } == false)
+        #expect(store.subjectsByGraph[graphID]?.contains { $0.id == "p1" } == true)
+        #expect(store.subjectsByGraph[graphID]?.contains { $0.id == "e1" } == true)
+        #expect(store.observationsByGraph[graphID]?.isEmpty == true)
         try await Task.sleep(for: .milliseconds(50))
-        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
         #expect(handle?.value?.subjects.contains { $0.id == "b1" } == false)
     }
 
@@ -1183,11 +1218,11 @@ struct EvidenceGraphModelTests {
         let model = makeModel(store: store)
         await model.prepare()
         #expect(model.canCite)
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         model.session.setQueryValue(
             key,
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: [subject],
                 positions: [CatalogSubjectPosition(subjectID: "s1", gridX: 0, gridY: 0)],
                 observations: [obsA, obsB]
@@ -1255,11 +1290,11 @@ struct EvidenceGraphModelTests {
         let model = makeModel(store: store)
         await model.prepare()
         #expect(model.canCite)
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         model.session.setQueryValue(
             key,
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: [bridgeSubject],
                 positions: [CatalogSubjectPosition(subjectID: "b1", gridX: 0, gridY: 0)],
                 observations: [observation]
@@ -1314,12 +1349,12 @@ struct EvidenceGraphModelTests {
             label: "Alice",
             description: ""
         )
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         seedFields(model.session, store: store)
         model.session.setQueryValue(
             key,
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: [person],
                 positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 2, gridY: 3)],
                 types: store.subjectTypesByProject[projectDir] ?? []
@@ -1346,12 +1381,12 @@ struct EvidenceGraphModelTests {
             label: "Alice",
             description: ""
         )
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         seedFields(model.session, store: store)
         model.session.setQueryValue(
             key,
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: [person],
                 positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0)],
                 types: store.subjectTypesByProject[projectDir] ?? []
@@ -1384,14 +1419,14 @@ struct EvidenceGraphModelTests {
             id: "s-james", ref: "CPR-2AB91", sourceID: sourceID, subjectTypeID: personTypeID,
             label: "James Robins", description: ""
         )
-        store.subjectsBySource[sourceID] = [subject]
+        store.subjectsByGraph[graphID] = [subject]
         store.subjectPositionsBySubject["s-james"] = CatalogSubjectPosition(subjectID: "s-james", gridX: 1, gridY: 1)
         let model = makeModel(store: store)
         await model.prepare()
         model.session.setQueryValue(
-            CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID),
+            CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID),
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: [subject],
                 positions: [CatalogSubjectPosition(subjectID: "s-james", gridX: 1, gridY: 1)]
             )
@@ -1428,7 +1463,7 @@ struct EvidenceGraphModelTests {
         #expect(location?.subjectTypeKey == "person")
         #expect(location != card)
         #expect(PromoteEntry(location: location!)?.mapAll == true)
-        #expect(PromoteEntry(location: location!)?.identityKey == "promote|\(sourceID)|all")
+        #expect(PromoteEntry(location: location!)?.identityKey == "promote|\(graphID)|all")
     }
 
     @Test func promoteAllOpensWhenEveryCardIsAlreadyFiled() async {
@@ -1437,14 +1472,14 @@ struct EvidenceGraphModelTests {
             id: "s-james", ref: "CPR-2AB91", sourceID: sourceID, subjectTypeID: personTypeID,
             label: "James Robins", description: ""
         )
-        store.subjectsBySource[sourceID] = [subject]
+        store.subjectsByGraph[graphID] = [subject]
         store.subjectPositionsBySubject["s-james"] = CatalogSubjectPosition(subjectID: "s-james", gridX: 1, gridY: 1)
         let model = makeModel(store: store)
         await model.prepare()
         model.session.setQueryValue(
-            CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID),
-            value: SourceGraphRows(
-                sourceId: sourceID,
+            CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID),
+            value: EvidenceGraphRows(
+                graphId: graphID,
                 subjects: [subject],
                 positions: [CatalogSubjectPosition(subjectID: "s-james", gridX: 1, gridY: 1)],
                 memberships: [
@@ -1483,9 +1518,9 @@ struct EvidenceGraphModelTests {
             var subject = base
             subject.label = label
             model.session.setQueryValue(
-                CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID),
+                CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID),
                 value: graphRows(
-                    sourceId: sourceID,
+                    graphId: graphID,
                     subjects: [subject],
                     positions: [CatalogSubjectPosition(subjectID: "s-james", gridX: 1, gridY: 1)],
                     observations: observations
@@ -1540,7 +1575,7 @@ struct EvidenceGraphModelTests {
             subject("b2-part", "CPA", "type-participation", "", x: 1, y: 3),
             subject("b3-spouse", "CRL", "type-relationship", "", x: 4, y: 1),
         ]
-        store.subjectsBySource[sourceID] = subjects
+        store.subjectsByGraph[graphID] = subjects
         let observations = [
             edgeObservation("e1", bridge: "b1-sonof", key: "person", value: "s-james"),
             edgeObservation("e2", bridge: "b1-sonof", key: "related_to", value: "s-john"),
@@ -1549,7 +1584,7 @@ struct EvidenceGraphModelTests {
             edgeObservation("e5", bridge: "b3-spouse", key: "person", value: "s-john"),
             edgeObservation("e6", bridge: "b3-spouse", key: "related_to", value: "s-mary"),
         ]
-        store.observationsBySource[sourceID] = observations
+        store.observationsByGraph[graphID] = observations
         var memberships = [
             handleMembership("s-james", ref: "PER-4M2QX", typeID: personTypeID, kind: "person"),
             handleMembership("s-john", ref: "PER-7KD45", typeID: personTypeID, kind: "person"),
@@ -1565,9 +1600,9 @@ struct EvidenceGraphModelTests {
         let model = makeModel(store: store)
         await model.prepare()
         model.session.setQueryValue(
-            CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID),
+            CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID),
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: subjects,
                 positions: subjects.compactMap { store.subjectPositionsBySubject[$0.id] },
                 observations: observations,
@@ -1585,11 +1620,11 @@ struct EvidenceGraphModelTests {
         L10n.EvidenceGraph.bridgeSummaryParticipationFallback(person: "James Robins", event: "1881 census")
     }
 
-    private func placedSubject(_ model: EvidenceGraphModel, _ id: String) -> SourceGraphPlacedSubject? {
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
-        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
-        let snapshot = SourceGraphSnapshot.build(
-            rows: handle?.value ?? SourceGraphRows(sourceId: sourceID),
+    private func placedSubject(_ model: EvidenceGraphModel, _ id: String) -> EvidenceGraphPlacedSubject? {
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
+        let snapshot = EvidenceGraphSnapshot.build(
+            rows: handle?.value ?? EvidenceGraphRows(graphId: graphID),
             types: model.session.queryHandle(CatalogQueryKey.propertiesWorkspace(project: model.session.projectKey)).flatMap { (h: QueryHandle<PropertiesSnapshot>) in h.value?.types } ?? [],
             rules: CatalogConnectRule.productMatrix
         )
@@ -1599,7 +1634,7 @@ struct EvidenceGraphModelTests {
     @Test func unpromoteVoiceOverActionFollowsFooterAction() async throws {
         let (_, model) = await householdModel()
         let content = EvidenceCanvasCardContent(model: model, navigation: WorkspaceNavigation(), layouts: EvidenceCardLayoutStore())
-        func card(_ placed: SourceGraphPlacedSubject) -> EvidenceCanvasCard {
+        func card(_ placed: EvidenceGraphPlacedSubject) -> EvidenceCanvasCard {
             EvidenceCanvasCard(
                 placed: .subject(placed, nil),
                 text: EvidenceCardText(subject: placed),
@@ -1642,10 +1677,10 @@ struct EvidenceGraphModelTests {
     @Test func unpromoteWithNoBridgesHasEmptyDetail() async throws {
         let (store, model) = await promotableModel()
         _ = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "s-james")
-        model.session.apply(.promotedSubject(sourceId: sourceID))
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.apply(.promotedSubject(graphId: graphID))
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         let loaded = await waitUntil(timeout: .seconds(5)) {
-            let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+            let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
             return handle?.value?.memberships.first?.subjectID == "s-james"
         }
         #expect(loaded)
@@ -1667,14 +1702,14 @@ struct EvidenceGraphModelTests {
         await model.confirmUnpromote()
         #expect(store.recordedCalls.contains("unpromoteSubject id=s-james"))
         #expect(model.pendingUnpromote == nil)
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         let refreshed = await waitUntil(timeout: .seconds(5)) {
-            let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+            let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
             let ids = Set(handle?.value?.memberships.map(\.subjectID) ?? [])
             return !ids.contains("s-james")
         }
         #expect(refreshed)
-        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
         let ids = Set(handle?.value?.memberships.map(\.subjectID) ?? [])
         #expect(ids == ["s-john", "s-mary", "s-census", "b3-spouse"])
     }
@@ -1691,7 +1726,7 @@ struct EvidenceGraphModelTests {
         ]
         let before = store.sourcesByProject
         let effects = try await store.unpromoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "s-james")
-        #expect(effects == CatalogWriteEffects(handles: removed, sources: [sourceID], handleScopes: removed))
+        #expect(effects == CatalogWriteEffects(handles: removed, evidenceGraphs: [graphID], handleScopes: removed))
         #expect(store.sourcesByProject == before)
     }
 
@@ -1711,14 +1746,14 @@ struct EvidenceGraphModelTests {
     /// Files s-james the way the Promote place does: write, then invalidate.
     private func promoteJames(_ store: FakeStore, _ model: EvidenceGraphModel) async throws {
         _ = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "s-james")
-        model.session.apply(.promotedSubject(sourceId: sourceID))
+        model.session.apply(.promotedSubject(graphId: graphID))
     }
 
     /// A promoted person's membership row opens its Person page (S9-09 stub)
     /// and shows the handle's auto-reconciled name.
     @Test func promotedPersonOpensItsPageAndShowsItsName() async {
         let (store, model) = await promotableModel()
-        store.observationsBySource[sourceID] = [
+        store.observationsByGraph[graphID] = [
             CatalogObservation(
                 id: "o-name", ref: "OBS-1", citationID: "c1", subjectID: "s-james", propertyID: "p-name",
                 polarity: "positive", valueText: "James Robins", valueInteger: nil, valueDateID: "",
@@ -1733,13 +1768,13 @@ struct EvidenceGraphModelTests {
         ]
         #expect(model.openHandle(subjectID: "s-james") == nil)
         try? await promoteJames(store, model)
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         let loaded = await waitUntil(timeout: .seconds(5)) {
-            let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+            let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
             return handle?.value?.memberships.first?.name != nil
         }
         #expect(loaded)
-        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
         let membership = handle?.value?.memberships.first
         #expect(membership.flatMap(EvidenceSubjectCard.membershipName) == "James Robins")
 
@@ -1761,7 +1796,7 @@ struct EvidenceGraphModelTests {
             id: "s-york", ref: "CPL-1", sourceID: sourceID, subjectTypeID: "type-place",
             label: "York", description: ""
         )
-        store.subjectsBySource[sourceID] = [event, place]
+        store.subjectsByGraph[graphID] = [event, place]
         store.subjectPositionsBySubject["s-fire"] = CatalogSubjectPosition(subjectID: "s-fire", gridX: 1, gridY: 1)
         store.subjectPositionsBySubject["s-york"] = CatalogSubjectPosition(subjectID: "s-york", gridX: 4, gridY: 1)
         let model = makeModel(store: store)
@@ -1776,14 +1811,14 @@ struct EvidenceGraphModelTests {
             projectDir: projectDir, userID: "user-1", subjectID: "s-york",
             entityID: nil, confidenceGradeID: nil, argument: ""
         )
-        model.session.apply(.promotedSubject(sourceId: sourceID))
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.apply(.promotedSubject(graphId: graphID))
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         let loaded = await waitUntil(timeout: .seconds(5)) {
-            let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+            let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
             return handle?.value?.memberships.contains { $0.subjectID == "s-fire" && $0.kind == "event" } == true
         }
         #expect(loaded)
-        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
         let membership = handle?.value?.memberships.first { $0.subjectID == "s-fire" }
         let location = model.openHandle(subjectID: "s-fire")
         #expect(location?.section == .events)
@@ -1799,15 +1834,15 @@ struct EvidenceGraphModelTests {
     @Test func promotedCardShowsMembershipAndNoLongerOffersPromote() async throws {
         let (store, model) = await promotableModel()
         try await promoteJames(store, model)
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         let reloaded = await waitUntil(timeout: .seconds(5)) {
-            let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+            let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
             return handle?.value?.memberships.first?.subjectID == "s-james"
         }
         #expect(reloaded)
-        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
-        let snapshot = SourceGraphSnapshot.build(
-            rows: handle?.value ?? SourceGraphRows(sourceId: sourceID),
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
+        let snapshot = EvidenceGraphSnapshot.build(
+            rows: handle?.value ?? EvidenceGraphRows(graphId: graphID),
             types: store.subjectTypesByProject[projectDir] ?? [],
             rules: []
         )
@@ -2023,14 +2058,14 @@ struct EvidenceGraphModelTests {
             CatalogSubjectPosition(subjectID: "p3", gridX: 8, gridY: 3),
             CatalogSubjectPosition(subjectID: "b1", gridX: 3, gridY: 3),
         ]
-        store.subjectsBySource[sourceID] = subjects
+        store.subjectsByGraph[graphID] = subjects
         for position in positions { store.subjectPositionsBySubject[position.subjectID] = position }
         let model = makeModel(store: store)
         seedFields(model.session, store: store)
         model.session.setQueryValue(
-            CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID),
+            CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID),
             value: graphRows(
-                sourceId: sourceID,
+                graphId: graphID,
                 subjects: subjects,
                 positions: positions,
                 types: store.subjectTypesByProject[projectDir] ?? []

@@ -51,6 +51,7 @@ type WorkspaceLocation struct {
 	SubjectTypeKey       string
 	PropertyID           string
 	EntityID             string
+	GraphID              string
 	SourceSurface        string
 	Ref                  string
 	Title                string

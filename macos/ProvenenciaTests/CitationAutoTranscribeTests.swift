@@ -9,6 +9,7 @@ import Testing
 @MainActor
 struct CitationAutoTranscribeTests {
     private let sourceID = "src-1"
+    private let graphID = "g-1"
     private let subjectID = "sub-person-1"
     private let personTypeID = "type-person"
     private let eventTypeID = "type-event"
@@ -377,7 +378,12 @@ struct CitationAutoTranscribeTests {
                 id: sourceID, ref: "SRC-1", sourceTypeID: "stype", title: "Census", description: ""
             ),
         ]
-        store.subjectsBySource[sourceID] = [
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: ["art-0"]
+            ),
+        ]
+        store.subjectsByGraph[graphID] = [
             CatalogSubject(
                 id: subjectID, ref: "CPR-1", sourceID: sourceID, subjectTypeID: personTypeID,
                 label: "Margt.", description: ""
@@ -395,7 +401,7 @@ struct CitationAutoTranscribeTests {
         engine: FakeOCREngine
     ) -> CitationComposerModel {
         CitationComposerModel(
-            entry: .addProperty(sourceID: sourceID, subjectID: subjectID, artifactID: "art-0"),
+            entry: .addProperty(sourceID: sourceID, graphID: graphID, subjectID: subjectID, artifactID: "art-0"),
             session: WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store),
             store: store,
             userID: "user-1",

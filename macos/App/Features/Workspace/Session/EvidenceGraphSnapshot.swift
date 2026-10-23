@@ -16,14 +16,14 @@ enum EvidenceBridgeKind: String, Sendable, Equatable, CaseIterable {
 }
 
 /// A primary subject with a persisted grid position for the Evidence graph.
-struct SourceGraphPlacedSubject: Identifiable, Sendable, Equatable {
+struct EvidenceGraphPlacedSubject: Identifiable, Sendable, Equatable {
     var id: String { subject.id }
     var subject: CatalogSubject
     var kind: EvidencePrimaryKind
     var typeLabel: String
     var gridX: Int64
     var gridY: Int64
-    /// True when the subject has at least one Observation on this Source.
+    /// True when the subject has at least one Observation on this graph.
     var isCited: Bool
     /// Observations about this subject (property summaries for card rows).
     var observations: [CatalogObservation] = []
@@ -75,14 +75,14 @@ struct SourceGraphPlacedSubject: Identifiable, Sendable, Equatable {
 }
 
 /// A bridge subject with position and provisional endpoint ids (S6-04).
-struct SourceGraphPlacedBridge: Identifiable, Sendable, Equatable {
+struct EvidenceGraphPlacedBridge: Identifiable, Sendable, Equatable {
     var id: String { subject.id }
     var subject: CatalogSubject
     var kind: EvidenceBridgeKind
     var typeLabel: String
     var gridX: Int64
     var gridY: Int64
-    /// True when the bridge subject has at least one Observation on this Source.
+    /// True when the bridge subject has at least one Observation on this graph.
     var isCited: Bool = false
     /// Observations about this bridge (edge Properties + disambiguation terms).
     var observations: [CatalogObservation] = []
@@ -93,10 +93,10 @@ struct SourceGraphPlacedBridge: Identifiable, Sendable, Equatable {
     var membership: CatalogSubjectMembership?
 }
 
-/// Catalog rows for one Source's Evidence graph. Types stay on
+/// Catalog rows for one Evidence graph. Types stay on
 /// `propertiesWorkspace` so a citation save does not reload vocabulary.
-struct SourceGraphRows: Sendable, Equatable {
-    var sourceId: String
+struct EvidenceGraphRows: Sendable, Equatable {
+    var graphId: String
     var subjects: [CatalogSubject]
     var positions: [CatalogSubjectPosition]
     var observations: [CatalogObservation]
@@ -106,14 +106,14 @@ struct SourceGraphRows: Sendable, Equatable {
     var eventTitles: [String: CatalogEventTitle]
 
     init(
-        sourceId: String,
+        graphId: String,
         subjects: [CatalogSubject] = [],
         positions: [CatalogSubjectPosition] = [],
         observations: [CatalogObservation] = [],
         memberships: [CatalogSubjectMembership] = [],
         eventTitles: [String: CatalogEventTitle] = [:]
     ) {
-        self.sourceId = sourceId
+        self.graphId = graphId
         self.subjects = subjects
         self.positions = positions
         self.observations = observations
@@ -122,7 +122,7 @@ struct SourceGraphRows: Sendable, Equatable {
     }
 
     /// Returns a copy with one subject's grid cell updated.
-    func updatingPosition(subjectID: String, gridX: Int64, gridY: Int64) -> SourceGraphRows {
+    func updatingPosition(subjectID: String, gridX: Int64, gridY: Int64) -> EvidenceGraphRows {
         var next = positions
         if let index = next.firstIndex(where: { $0.subjectID == subjectID }) {
             next[index].gridX = gridX
@@ -130,8 +130,8 @@ struct SourceGraphRows: Sendable, Equatable {
         } else {
             next.append(CatalogSubjectPosition(subjectID: subjectID, gridX: gridX, gridY: gridY))
         }
-        return SourceGraphRows(
-            sourceId: sourceId,
+        return EvidenceGraphRows(
+            graphId: graphId,
             subjects: subjects,
             positions: next,
             observations: observations,
@@ -141,18 +141,18 @@ struct SourceGraphRows: Sendable, Equatable {
     }
 }
 
-/// Source-scoped Evidence graph payload (primaries + bridges + positions).
-struct SourceGraphSnapshot: Sendable, Equatable {
-    var sourceId: String
-    var subjects: [SourceGraphPlacedSubject]
-    var bridges: [SourceGraphPlacedBridge]
+/// One Evidence graph's payload (primaries + bridges + positions).
+struct EvidenceGraphSnapshot: Sendable, Equatable {
+    var graphId: String
+    var subjects: [EvidenceGraphPlacedSubject]
+    var bridges: [EvidenceGraphPlacedBridge]
 
     init(
-        sourceId: String,
-        subjects: [SourceGraphPlacedSubject] = [],
-        bridges: [SourceGraphPlacedBridge] = []
+        graphId: String,
+        subjects: [EvidenceGraphPlacedSubject] = [],
+        bridges: [EvidenceGraphPlacedBridge] = []
     ) {
-        self.sourceId = sourceId
+        self.graphId = graphId
         self.subjects = subjects
         self.bridges = bridges
     }
@@ -161,12 +161,12 @@ struct SourceGraphSnapshot: Sendable, Equatable {
     /// types are omitted. Endpoint ids come from cited `value_subject_id` on
     /// the matching connect rule's edge Properties.
     static func build(
-        rows: SourceGraphRows,
+        rows: EvidenceGraphRows,
         types: [CatalogSubjectType],
         rules: [CatalogConnectRule]
-    ) -> SourceGraphSnapshot {
+    ) -> EvidenceGraphSnapshot {
         build(
-            sourceId: rows.sourceId,
+            graphId: rows.graphId,
             subjects: rows.subjects,
             positions: rows.positions,
             types: types,
@@ -186,7 +186,7 @@ struct SourceGraphSnapshot: Sendable, Equatable {
     /// brackets join adjacent same-key rows, and a different sort splits
     /// a competing Property into one-row marks.
     static func build(
-        sourceId: String,
+        graphId: String,
         subjects: [CatalogSubject],
         positions: [CatalogSubjectPosition],
         types: [CatalogSubjectType],
@@ -194,7 +194,7 @@ struct SourceGraphSnapshot: Sendable, Equatable {
         memberships: [CatalogSubjectMembership] = [],
         eventTitles: [String: CatalogEventTitle] = [:],
         rules: [CatalogConnectRule] = []
-    ) -> SourceGraphSnapshot {
+    ) -> EvidenceGraphSnapshot {
         let typeByID = Dictionary(uniqueKeysWithValues: types.map { ($0.id, $0) })
         let membershipBySubject = Dictionary(
             memberships.map { ($0.subjectID, $0) },
@@ -203,8 +203,8 @@ struct SourceGraphSnapshot: Sendable, Equatable {
         let positionBySubject = Dictionary(uniqueKeysWithValues: positions.map { ($0.subjectID, $0) })
         let observationsBySubject = Dictionary(grouping: observations, by: \.subjectID)
 
-        var placed: [SourceGraphPlacedSubject] = []
-        var placedBridges: [SourceGraphPlacedBridge] = []
+        var placed: [EvidenceGraphPlacedSubject] = []
+        var placedBridges: [EvidenceGraphPlacedBridge] = []
         placed.reserveCapacity(subjects.count)
         placedBridges.reserveCapacity(subjects.count)
 
@@ -219,7 +219,7 @@ struct SourceGraphSnapshot: Sendable, Equatable {
                 let subjectObservations = (observationsBySubject[subject.id] ?? [])
                     .sorted(by: Self.observationDisplayOrder)
                 placed.append(
-                    SourceGraphPlacedSubject(
+                    EvidenceGraphPlacedSubject(
                         subject: subject,
                         kind: kind,
                         typeLabel: type.label,
@@ -240,7 +240,7 @@ struct SourceGraphSnapshot: Sendable, Equatable {
                     rules: rules
                 )
                 placedBridges.append(
-                    SourceGraphPlacedBridge(
+                    EvidenceGraphPlacedBridge(
                         subject: subject,
                         kind: kind,
                         typeLabel: type.label,
@@ -266,7 +266,7 @@ struct SourceGraphSnapshot: Sendable, Equatable {
             if labelCompare != .orderedSame { return labelCompare == .orderedAscending }
             return lhs.subject.ref.localizedStandardCompare(rhs.subject.ref) == .orderedAscending
         }
-        return SourceGraphSnapshot(sourceId: sourceId, subjects: placed, bridges: placedBridges)
+        return EvidenceGraphSnapshot(graphId: graphId, subjects: placed, bridges: placedBridges)
     }
 
     /// Cited A/B endpoints from the matching rule's `edges` (A then B).

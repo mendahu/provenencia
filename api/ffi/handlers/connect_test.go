@@ -47,7 +47,7 @@ func connectFixture(t *testing.T) (
 		}
 	}
 	personOut, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-		ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: personTypeID, Label: "Ada",
+		ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: personTypeID, Label: "Ada",
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -62,7 +62,7 @@ func connectFixture(t *testing.T) (
 		t.Fatal(err)
 	}
 	eventOut, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-		ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: eventTypeID, Label: "Census",
+		ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: eventTypeID, Label: "Census",
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -123,11 +123,10 @@ func TestCreateCitedBridge(t *testing.T) {
 		{
 			name: "creates participation",
 			reqFn: func(t *testing.T) proto.Message {
-				dir, userID, sourceID, artifactID, personID, eventID, personProp, eventProp, roleProp, roleTerm := connectFixture(t)
+				dir, userID, _, artifactID, personID, eventID, personProp, eventProp, roleProp, roleTerm := connectFixture(t)
 				return &engine.CreateCitedBridgeRequest{
 					ProjectDir:    dir,
 					UserId:        userID,
-					SourceId:      sourceID,
 					FromSubjectId: personID,
 					ToSubjectId:   eventID,
 					BridgeTypeKey: "participation",
@@ -156,7 +155,7 @@ func TestCreateCitedBridge(t *testing.T) {
 		{
 			name: "stages a depiction draft",
 			reqFn: func(t *testing.T) proto.Message {
-				dir, userID, sourceID, artifactID, personID, eventID, personProp, eventProp, roleProp, roleTerm := connectFixture(t)
+				dir, userID, _, artifactID, personID, eventID, personProp, eventProp, roleProp, roleTerm := connectFixture(t)
 				link := filepath.Join(t.TempDir(), "link.jpg")
 				if err := os.Symlink(writeCrop(t, 300, 200, 128), link); err != nil {
 					t.Fatal(err)
@@ -164,7 +163,6 @@ func TestCreateCitedBridge(t *testing.T) {
 				return &engine.CreateCitedBridgeRequest{
 					ProjectDir:    dir,
 					UserId:        userID,
-					SourceId:      sourceID,
 					FromSubjectId: personID,
 					ToSubjectId:   eventID,
 					BridgeTypeKey: "participation",
@@ -200,7 +198,7 @@ func TestCreateCitedBridge(t *testing.T) {
 					}
 				}
 				placeOut, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-					ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: placeTypeID, Label: "Leeds",
+					ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: placeTypeID, Label: "Leeds",
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -231,7 +229,6 @@ func TestCreateCitedBridge(t *testing.T) {
 				return &engine.CreateCitedBridgeRequest{
 					ProjectDir:    dir,
 					UserId:        userID,
-					SourceId:      sourceID,
 					FromSubjectId: personID,
 					ToSubjectId:   place.Subject.GetId(),
 					BridgeTypeKey: "location",

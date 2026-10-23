@@ -119,6 +119,7 @@ func reconcilerOutcomeProto(o conclusiondetails.Outcome) *engine.ReconcilerOutco
 		Recorded:               conclusionValueProto(o.Recorded, nil),
 		SubjectId:              database.UUIDString(o.SubjectID),
 		SubjectRef:             o.SubjectRef,
+		GraphId:                database.UUIDString(o.GraphID),
 		CitationId:             database.UUIDString(o.CitationID),
 		ArtifactId:             database.UUIDString(o.ArtifactID),
 		VoteSupport:            int32(o.Vote.Support),

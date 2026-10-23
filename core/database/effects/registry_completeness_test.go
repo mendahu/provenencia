@@ -82,8 +82,8 @@ func hasWork(e Effect) bool {
 }
 
 // TestSourceEvidenceIsNotActivity pins which tables move a Source's evidence
-// (Effect.Source: what the Evidence graph cache, graph progress, citation counts, and
-// citations by artifact load) and which move its last activity
+// (Effect.EvidenceGraph: what the Evidence graph cache and graph progress load;
+// Effect.CitationSource: what citation counts and citations by artifact load) and which move its last activity
 // (Effect.SourceScope: the audit source scope). Identity claims change the
 // evidence graph but have never been audited under a Source.
 func TestSourceEvidenceIsNotActivity(t *testing.T) {
@@ -118,8 +118,8 @@ func TestSourceEvidenceIsNotActivity(t *testing.T) {
 			if !ok {
 				t.Fatalf("no entry for %s", tt.table)
 			}
-			if got := !eff.Source.zero(); got != tt.evidence {
-				t.Errorf("Source set = %v, want %v", got, tt.evidence)
+			if got := !eff.EvidenceGraph.zero(); got != tt.evidence {
+				t.Errorf("EvidenceGraph set = %v, want %v", got, tt.evidence)
 			}
 			if got := !eff.SourceScope.zero(); got != tt.activity {
 				t.Errorf("SourceScope set = %v, want %v", got, tt.activity)
@@ -179,5 +179,35 @@ func TestEvidenceGraphsList(t *testing.T) {
 	}
 	if err := (Effect{ListsOnField: "property_id"}).validate("x"); err == nil {
 		t.Fatal("ListsOnField without Lists validated")
+	}
+}
+
+// TestEvidenceGraphPathsEndAtGraphs pins which tables name Evidence graphs and
+// that every such path ends at evidence_graphs.
+func TestEvidenceGraphPathsEndAtGraphs(t *testing.T) {
+	want := []string{
+		"sources", "artifacts", "citations", "observations", "subjects",
+		"evidence_graphs", "identity_claims", "identity_claim_evidence",
+		"date_values", "name_values", "depiction_values",
+	}
+	var got []string
+	for table, eff := range registry {
+		if eff.EvidenceGraph.zero() {
+			continue
+		}
+		got = append(got, table)
+		end, err := eff.EvidenceGraph.check(table)
+		if err != nil {
+			t.Errorf("%s: %v", table, err)
+			continue
+		}
+		if end != "evidence_graphs" {
+			t.Errorf("%s: EvidenceGraph ends at %s, want evidence_graphs", table, end)
+		}
+	}
+	slices.Sort(got)
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Errorf("tables with an EvidenceGraph path = %v, want %v", got, want)
 	}
 }

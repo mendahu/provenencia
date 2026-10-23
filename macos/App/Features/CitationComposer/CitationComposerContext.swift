@@ -18,6 +18,9 @@ final class CitationComposerContext {
     let session: WorkspaceSession
     let userID: String
     let sourceID: String
+    /// The Evidence graph the composer works on: its rows, the new Subjects and
+    /// the saved Citations all read it.
+    let graphID: String
 
     var citationID: String?
     var artifactID: String?
@@ -25,7 +28,7 @@ final class CitationComposerContext {
     @ObservationIgnored
     private var memoToken: MemoToken?
     @ObservationIgnored
-    private var memoSnapshot: SourceGraphSnapshot
+    private var memoSnapshot: EvidenceGraphSnapshot
     @ObservationIgnored
     private var memoVocabulary = CitationComposerVocabulary.empty
     @ObservationIgnored
@@ -37,17 +40,19 @@ final class CitationComposerContext {
         store: any GenealogyStore,
         session: WorkspaceSession,
         userID: String,
-        sourceID: String
+        sourceID: String,
+        graphID: String
     ) {
         self.store = store
         self.session = session
         self.userID = userID
         self.sourceID = sourceID
-        memoSnapshot = SourceGraphSnapshot(sourceId: sourceID)
+        self.graphID = graphID
+        memoSnapshot = EvidenceGraphSnapshot(graphId: graphID)
     }
 
     var projectDir: String { session.projectKey.projectDir }
-    var graphKey: CatalogQueryKey { .sourceGraph(project: session.projectKey, sourceId: sourceID) }
+    var graphKey: CatalogQueryKey { .evidenceGraph(project: session.projectKey, graphId: graphID) }
     var fieldsKey: CatalogQueryKey { .propertiesWorkspace(project: session.projectKey) }
     var connectRulesKey: CatalogQueryKey { .connectRules(project: session.projectKey) }
 
@@ -56,7 +61,7 @@ final class CitationComposerContext {
         return handle?.value ?? .empty
     }
 
-    var graphSnapshot: SourceGraphSnapshot {
+    var graphSnapshot: EvidenceGraphSnapshot {
         refreshMemo()
         return memoSnapshot
     }
@@ -145,8 +150,8 @@ final class CitationComposerContext {
     }
 
     func waitForGraph() async {
-        let _: QueryHandle<SourceGraphRows> = session.query(graphKey)
-        _ = await session.readyValue(graphKey) as SourceGraphRows?
+        let _: QueryHandle<EvidenceGraphRows> = session.query(graphKey)
+        _ = await session.readyValue(graphKey) as EvidenceGraphRows?
     }
 
     private func termsKey(propertyID: String) -> CatalogQueryKey {
@@ -155,7 +160,7 @@ final class CitationComposerContext {
 
     private func refreshMemo() {
         let fieldsHandle: QueryHandle<PropertiesSnapshot>? = session.queryHandle(fieldsKey)
-        let rowsHandle: QueryHandle<SourceGraphRows>? = session.queryHandle(graphKey)
+        let rowsHandle: QueryHandle<EvidenceGraphRows>? = session.queryHandle(graphKey)
         let rulesHandle: QueryHandle<[CatalogConnectRule]>? = session.queryHandle(connectRulesKey)
         let graph = rowsHandle?.revision ?? 0
         let fieldsRevision = fieldsHandle?.revision ?? 0
@@ -176,7 +181,7 @@ final class CitationComposerContext {
             rules: rulesRevision,
             terms: terms
         )
-        let rows = rowsHandle?.value ?? SourceGraphRows(sourceId: sourceID)
+        let rows = rowsHandle?.value ?? EvidenceGraphRows(graphId: graphID)
         let rules = rulesHandle?.value ?? []
         var termLists: [String: [CatalogPropertyTerm]] = [:]
         for propertyID in terms.keys {
@@ -187,7 +192,7 @@ final class CitationComposerContext {
                 termLists[propertyID] = value
             }
         }
-        memoSnapshot = SourceGraphSnapshot.build(rows: rows, types: fields.types, rules: rules)
+        memoSnapshot = EvidenceGraphSnapshot.build(rows: rows, types: fields.types, rules: rules)
         memoVocabulary = CitationComposerVocabulary.make(
             fields: fields,
             snapshot: memoSnapshot,

@@ -89,6 +89,7 @@ struct WorkspaceToolbarBreadcrumbTests {
             for: WorkspaceLocation(
                 section: .sources,
                 sourceId: "src-1",
+                graphId: "g-1",
                 sourceSurface: .graph,
                 ref: "SRC-AAAA",
                 title: "Deed"
@@ -105,6 +106,7 @@ struct WorkspaceToolbarBreadcrumbTests {
             for: WorkspaceLocation(
                 section: .sources,
                 sourceId: "src-1",
+                graphId: "g-1",
                 subjectId: "sub-1",
                 sourceSurface: .citationComposer,
                 title: "Margt. Alderwick",
@@ -126,6 +128,7 @@ struct WorkspaceToolbarBreadcrumbTests {
         #expect(items[2].action == nil)
         items[1].action?()
         #expect(wentTo?.sourceId == "src-1")
+        #expect(wentTo?.graphId == "g-1")
         #expect(wentTo?.sourceSurface == .graph)
         #expect(wentTo?.title == "Alderwick family bible")
     }
@@ -134,7 +137,7 @@ struct WorkspaceToolbarBreadcrumbTests {
         var wentTo: WorkspaceLocation?
         let items = WorkspaceToolbar.breadcrumbItems(
             for: .promote(
-                sourceId: "src-1", subjectId: "sub-1", kind: .person,
+                sourceId: "src-1", graphId: "g-1", subjectId: "sub-1", kind: .person,
                 ref: "CPR-2AB91", title: "James Robins", sourceTitle: "1851 census"
             ),
             goTo: { wentTo = $0 }
@@ -146,5 +149,6 @@ struct WorkspaceToolbarBreadcrumbTests {
         items[1].action?()
         #expect(wentTo?.sourceSurface == .graph)
         #expect(wentTo?.sourceId == "src-1")
+        #expect(wentTo?.graphId == "g-1")
     }
 }

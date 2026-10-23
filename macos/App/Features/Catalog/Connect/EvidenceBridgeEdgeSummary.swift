@@ -4,7 +4,7 @@ import Foundation
 /// **sentence** wherever a bridge is named (S8-D8 §2.4).
 enum EvidenceBridgeEdgeSummary {
     /// Relational phrase only — “is the father of”, “participated as witness”.
-    static func phrase(for placed: SourceGraphPlacedBridge) -> String {
+    static func phrase(for placed: EvidenceGraphPlacedBridge) -> String {
         ConnectionSentenceRegistry.phrase(
             kind: placed.kind,
             term: termDisplay(kind: placed.kind, in: placed.observations),
@@ -14,7 +14,7 @@ enum EvidenceBridgeEdgeSummary {
 
     /// The bridge's term as a reason names it: "spouse", "subject". nil when
     /// the bridge has none.
-    static func reasonRole(for placed: SourceGraphPlacedBridge) -> String? {
+    static func reasonRole(for placed: EvidenceGraphPlacedBridge) -> String? {
         ConnectionSentenceRegistry.reasonRole(
             kind: placed.kind,
             term: termDisplay(kind: placed.kind, in: placed.observations)
@@ -22,12 +22,12 @@ enum EvidenceBridgeEdgeSummary {
     }
 
     /// The snapshot's placed Subjects by id: build once, then pass to every lookup of one pass.
-    static func subjects(of snapshot: SourceGraphSnapshot) -> [String: SourceGraphPlacedSubject] {
+    static func subjects(of snapshot: EvidenceGraphSnapshot) -> [String: EvidenceGraphPlacedSubject] {
         Dictionary(snapshot.subjects.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
     /// The snapshot's placed bridges by id: build once to resolve many bridges in one pass.
-    static func bridges(of snapshot: SourceGraphSnapshot) -> [String: SourceGraphPlacedBridge] {
+    static func bridges(of snapshot: EvidenceGraphSnapshot) -> [String: EvidenceGraphPlacedBridge] {
         Dictionary(snapshot.bridges.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
@@ -38,11 +38,11 @@ enum EvidenceBridgeEdgeSummary {
     /// completion, for bridges that come from the snapshot itself), else by one scan of the
     /// snapshot, made only when an endpoint is missing.
     static func sentence(
-        for bridge: SourceGraphPlacedBridge,
-        in snapshot: SourceGraphSnapshot,
+        for bridge: EvidenceGraphPlacedBridge,
+        in snapshot: EvidenceGraphSnapshot,
         orders: NameFormatOrders = NameFormatOrders(),
-        subjects: [String: SourceGraphPlacedSubject]? = nil,
-        bridges: [String: SourceGraphPlacedBridge]? = nil
+        subjects: [String: EvidenceGraphPlacedSubject]? = nil,
+        bridges: [String: EvidenceGraphPlacedBridge]? = nil
     ) -> String {
         let subjects = subjects ?? Self.subjects(of: snapshot)
         var endpointAID = bridge.endpointAID
@@ -83,7 +83,7 @@ enum EvidenceBridgeEdgeSummary {
 
     private static func noun(
         subjectID: String?,
-        subjects: [String: SourceGraphPlacedSubject],
+        subjects: [String: EvidenceGraphPlacedSubject],
         orders: NameFormatOrders
     ) -> String? {
         guard let subjectID, let placed = subjects[subjectID] else { return nil }
@@ -106,7 +106,7 @@ enum EvidenceBridgeEdgeSummary {
 
     /// First positive identity Observation, else first, else nil (GV-17).
     private static func identityNoun(
-        on placed: SourceGraphPlacedSubject,
+        on placed: EvidenceGraphPlacedSubject,
         orders: NameFormatOrders
     ) -> String? {
         guard let chosen = identityObservation(on: placed) else { return nil }
@@ -115,7 +115,7 @@ enum EvidenceBridgeEdgeSummary {
         return display.isEmpty ? nil : display
     }
 
-    private static func identityObservation(on placed: SourceGraphPlacedSubject) -> CatalogObservation? {
+    private static func identityObservation(on placed: EvidenceGraphPlacedSubject) -> CatalogObservation? {
         let key = identityPropertyKey(for: placed.kind)
         let matches = placed.observations.filter { $0.propertyKey == key }
         return matches.first(where: isPositive) ?? matches.first
@@ -126,7 +126,7 @@ enum EvidenceBridgeEdgeSummary {
     private static func eventTypeObservation(
         endpointAID: String?,
         endpointBID: String?,
-        subjects: [String: SourceGraphPlacedSubject]
+        subjects: [String: EvidenceGraphPlacedSubject]
     ) -> CatalogObservation? {
         eventTypeObservation(subjectID: endpointAID, subjects: subjects)
             ?? eventTypeObservation(subjectID: endpointBID, subjects: subjects)
@@ -134,7 +134,7 @@ enum EvidenceBridgeEdgeSummary {
 
     private static func eventTypeObservation(
         subjectID: String?,
-        subjects: [String: SourceGraphPlacedSubject]
+        subjects: [String: EvidenceGraphPlacedSubject]
     ) -> CatalogObservation? {
         guard let subjectID, let placed = subjects[subjectID], placed.kind == .event else { return nil }
         return identityObservation(on: placed)
@@ -147,7 +147,7 @@ enum EvidenceBridgeEdgeSummary {
         return polarity.isEmpty || polarity == ObservationPolarity.positive.rawValue
     }
 
-    private static func wholeNameFallback(for bridge: SourceGraphPlacedBridge) -> String {
+    private static func wholeNameFallback(for bridge: EvidenceGraphPlacedBridge) -> String {
         let stored = bridge.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         if !stored.isEmpty { return stored }
         return L10n.EvidenceGraph.bridgeNameKindAndRef(

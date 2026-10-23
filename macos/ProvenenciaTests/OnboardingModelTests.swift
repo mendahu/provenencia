@@ -574,7 +574,7 @@ private struct ThrowingStore: GenealogyStore {
     func createSubject(
         projectDir _: String,
         userID _: String,
-        sourceID _: String,
+        graphID _: String,
         subjectTypeID _: String,
         label _: String,
         description _: String,
@@ -625,10 +625,10 @@ private struct ThrowingStore: GenealogyStore {
     func listClaimConfidenceGrades(projectDir _: String) async throws -> [CatalogClaimConfidenceGrade] {
         throw StoreBoom.boom
     }
-    func listSubjectMemberships(projectDir _: String, sourceID _: String) async throws -> [CatalogSubjectMembership] {
+    func listSubjectMemberships(projectDir _: String, graphID _: String) async throws -> [CatalogSubjectMembership] {
         throw StoreBoom.boom
     }
-    func listSourceEventTitles(projectDir _: String, sourceID _: String) async throws -> [String: CatalogEventTitle] {
+    func listEvidenceGraphEventTitles(projectDir _: String, graphID _: String) async throws -> [String: CatalogEventTitle] {
         throw StoreBoom.boom
     }
     func listPersonHeaders(projectDir _: String) async throws -> [CatalogPersonHeader] {
@@ -657,7 +657,7 @@ private struct ThrowingStore: GenealogyStore {
     ) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
     }
-    func listSubjects(projectDir _: String, sourceID _: String) async throws -> [CatalogSubject] {
+    func listSubjects(projectDir _: String, graphID _: String) async throws -> [CatalogSubject] {
         throw StoreBoom.boom
     }
     func setSubjectPosition(
@@ -669,7 +669,7 @@ private struct ThrowingStore: GenealogyStore {
     func clearSubjectPosition(projectDir _: String, subjectID _: String) async throws {
         throw StoreBoom.boom
     }
-    func listSubjectPositions(projectDir _: String, sourceID _: String) async throws
+    func listSubjectPositions(projectDir _: String, graphID _: String) async throws
         -> [CatalogSubjectPosition] { throw StoreBoom.boom }
     func createProperty(
         projectDir _: String,
@@ -717,7 +717,6 @@ private struct ThrowingStore: GenealogyStore {
     func createCitedBridge(
         projectDir _: String,
         userID _: String,
-        sourceID _: String,
         fromSubjectID _: String,
         toSubjectID _: String,
         bridgeTypeKey _: String,
@@ -746,6 +745,7 @@ private struct ThrowingStore: GenealogyStore {
     ) async throws -> (CatalogCitation, [CatalogObservation], CatalogWriteEffects) { throw StoreBoom.boom }
     func getCitation(
         projectDir _: String,
+        graphID _: String,
         citationID _: String
     ) async throws -> (CatalogCitation, [String], [CatalogObservation]) { throw StoreBoom.boom }
     func updateCitation(
@@ -779,7 +779,7 @@ private struct ThrowingStore: GenealogyStore {
         citationID _: String,
         observations _: [CatalogObservationDraft]
     ) async throws -> ([CatalogObservation], CatalogWriteEffects) { throw StoreBoom.boom }
-    func listObservationsBySource(projectDir _: String, sourceID _: String) async throws -> [CatalogObservation] {
+    func listObservationsByEvidenceGraph(projectDir _: String, graphID _: String) async throws -> [CatalogObservation] {
         throw StoreBoom.boom
     }
     func citationCountsBySource(projectDir _: String, sourceID _: String) async throws -> [String: Int] {
@@ -788,10 +788,10 @@ private struct ThrowingStore: GenealogyStore {
     func listCitationsByArtifact(projectDir _: String, artifactID _: String) async throws -> [CatalogListedCitation] {
         throw StoreBoom.boom
     }
-    func listSourceGraphProgress(projectDir _: String) async throws -> [SourceGraphProgress] {
+    func listEvidenceGraphProgress(projectDir _: String) async throws -> [EvidenceGraphProgress] {
         throw StoreBoom.boom
     }
-    func getSourceGraphProgress(projectDir _: String, sourceID _: String) async throws -> SourceGraphProgress {
+    func getEvidenceGraphProgress(projectDir _: String, graphID _: String) async throws -> EvidenceGraphProgress {
         throw StoreBoom.boom
     }
     func getDeleteImpact(projectDir _: String, kind _: String, id _: String) async throws -> CatalogDeleteImpact {

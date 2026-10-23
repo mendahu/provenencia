@@ -39,8 +39,10 @@ var ErrInvalid = apperr.New(apperr.CodeDeleteImpactInvalid, apperr.KindUser)
 
 // Location is the Go form of proto WorkspaceLocation after S8-12.
 type Location struct {
-	Section              string
-	SourceID             string
+	Section  string
+	SourceID string
+	// GraphID is the Evidence graph of a graph or citationComposer location.
+	GraphID              string
 	FieldID              string
 	TypeID               string
 	SubjectID            string

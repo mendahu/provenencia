@@ -65,7 +65,7 @@ func AllNone(changes []rowchange.Change) (bool, error) {
 	return true, nil
 }
 
-// Resolve is the whole effect of a batch: evidence sources, source scopes, handles, search documents,
+// Resolve is the whole effect of a batch: evidence graphs, source scopes, handles, search documents,
 // the catalog-wide lists that changed, and whether structure changed.
 func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 	if tx == nil {
@@ -89,7 +89,7 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 		}
 		w := &walk{q: tx, ch: ch, ghosts: ghosts, table: table}
 		var err error
-		set.Sources, err = appendPath(w, table, eff.Source, set.Sources)
+		set.EvidenceGraphs, err = appendPath(w, table, eff.EvidenceGraph, set.EvidenceGraphs)
 		if err != nil {
 			return Set{}, err
 		}

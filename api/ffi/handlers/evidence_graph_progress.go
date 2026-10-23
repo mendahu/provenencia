@@ -7,18 +7,18 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func ListSourceGraphProgress(in []byte) ([]byte, error) {
-	var req engine.ListSourceGraphProgressRequest
+func ListEvidenceGraphProgress(in []byte) ([]byte, error) {
+	var req engine.ListEvidenceGraphProgressRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("list_source_graph_progress", err)
+		return nil, unmarshalErr("list_evidence_graph_progress", err)
 	}
-	var out *engine.ListSourceGraphProgressResponse
+	var out *engine.ListEvidenceGraphProgressResponse
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		rows, err := graphprogress.List(c)
 		if err != nil {
 			return err
 		}
-		out = &engine.ListSourceGraphProgressResponse{}
+		out = &engine.ListEvidenceGraphProgressResponse{}
 		for _, row := range rows {
 			out.Rows = append(out.Rows, protoProgress(row))
 		}
@@ -30,28 +30,22 @@ func ListSourceGraphProgress(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func GetSourceGraphProgress(in []byte) ([]byte, error) {
-	var req engine.GetSourceGraphProgressRequest
+func GetEvidenceGraphProgress(in []byte) ([]byte, error) {
+	var req engine.GetEvidenceGraphProgressRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("get_source_graph_progress", err)
+		return nil, unmarshalErr("get_evidence_graph_progress", err)
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
-	var out *engine.GetSourceGraphProgressResponse
+	var out *engine.GetEvidenceGraphProgressResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		row := graphprogress.Progress{SourceID: sourceID}
-		graphID, ok, err := sourceGraphID(c, sourceID)
+		row, err := graphprogress.Get(c, graphID)
 		if err != nil {
 			return err
 		}
-		if ok {
-			if row, err = graphprogress.Get(c, graphID); err != nil {
-				return err
-			}
-		}
-		out = &engine.GetSourceGraphProgressResponse{Progress: protoProgress(row)}
+		out = &engine.GetEvidenceGraphProgressResponse{Progress: protoProgress(row)}
 		return nil
 	})
 	if err != nil {
@@ -60,8 +54,9 @@ func GetSourceGraphProgress(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func protoProgress(row graphprogress.Progress) *engine.SourceGraphProgress {
-	return &engine.SourceGraphProgress{
+func protoProgress(row graphprogress.Progress) *engine.EvidenceGraphProgress {
+	return &engine.EvidenceGraphProgress{
+		GraphId:          database.UUIDString(row.GraphID),
 		SourceId:         database.UUIDString(row.SourceID),
 		SubjectCount:     row.SubjectCount,
 		ObservationCount: row.ObservationCount,

@@ -427,11 +427,10 @@ enum PVDeleteImpactPreviewData {
     )
 
     static func loc(_ observationId: String) -> WorkspaceLocation {
-        WorkspaceLocation(
-            section: .sources,
+        .citationComposer(
             sourceId: "preview-source",
-            observationId: observationId,
-            sourceSurface: .citationComposer
+            graphId: "preview-graph",
+            observationId: observationId
         )
     }
 

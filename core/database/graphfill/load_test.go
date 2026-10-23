@@ -302,9 +302,10 @@ func TestTwoEvidenceGraphsLoadApart(t *testing.T) {
 	}
 }
 
-// TestSourceWriteDropsEveryGraph: a write that names a Source drops every
-// loaded graph of it, with their memos, and leaves another Source's graph.
-func TestSourceWriteDropsEveryGraph(t *testing.T) {
+// TestGraphWriteDropsOnlyThatGraph: a write that names an Evidence graph drops
+// that loaded graph with its memo, and leaves its Source's other graph and
+// another Source's graph.
+func TestGraphWriteDropsOnlyThatGraph(t *testing.T) {
 	f := newTwoGraphs(t)
 	g := f.c.Graph()
 	otherGraph := evidencegraphstest.SoleGraph(t, f.c, f.other.ID).ID
@@ -324,19 +325,19 @@ func TestSourceWriteDropsEveryGraph(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	for _, id := range [][]byte{f.def.ID, f.jones.ID} {
-		if g.LoadedEvidenceGraphForTest(id) {
-			t.Fatalf("graph %x of the written Source is still loaded", id)
-		}
-		if _, ok := g.EvidenceGraphMemo(id, "k"); ok {
-			t.Fatalf("memo of graph %x outlived its graph", id)
-		}
+	if g.LoadedEvidenceGraphForTest(f.jones.ID) {
+		t.Fatal("the written graph is still loaded")
 	}
-	if !g.LoadedEvidenceGraphForTest(otherGraph) {
-		t.Fatal("a write on one Source dropped another Source's graph")
+	if _, ok := g.EvidenceGraphMemo(f.jones.ID, "k"); ok {
+		t.Fatal("the memo of the written graph outlived it")
 	}
-	if _, ok := g.EvidenceGraphMemo(otherGraph, "k"); !ok {
-		t.Fatal("a write on one Source dropped another Source's memo")
+	for _, id := range [][]byte{f.def.ID, otherGraph} {
+		if !g.LoadedEvidenceGraphForTest(id) {
+			t.Fatalf("a write on Jones dropped graph %x", id)
+		}
+		if _, ok := g.EvidenceGraphMemo(id, "k"); !ok {
+			t.Fatalf("a write on Jones dropped the memo of graph %x", id)
+		}
 	}
 	if got := labels(f.read(t, f.jones.ID)); len(got) != 2 {
 		t.Fatalf("Jones after the write %v", got)

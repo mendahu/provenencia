@@ -146,19 +146,20 @@ struct CatalogQueryRegistryTests {
         #expect(handle.value?["art-1"] == nil)
     }
 
-    @Test func sourceGraphProgressLoadsMap() async {
+    @Test func evidenceGraphProgressLoadsMap() async {
         let store = FakeStore()
         seedStore(store)
-        store.graphProgressBySource["s1"] = SourceGraphProgress(
-            sourceId: "s1", subjectCount: 12, observationCount: 48
+        store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
+            graphId: "g-1", sourceId: "s1", subjectCount: 12, observationCount: 48
         )
         let session = makeSession(store: store)
-        let handle: QueryHandle<[String: SourceGraphProgress]> = session.query(
-            CatalogQueryKey.sourceGraphProgress(project: session.projectKey)
+        let handle: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
+            CatalogQueryKey.evidenceGraphProgress(project: session.projectKey)
         )
         await waitForFetchComplete(handle)
-        #expect(handle.value?["s1"]?.subjectCount == 12)
-        #expect(handle.value?["s1"]?.observationCount == 48)
+        #expect(handle.value?["g-1"]?.subjectCount == 12)
+        #expect(handle.value?["g-1"]?.observationCount == 48)
+        #expect(handle.value?["s1"] == nil)
     }
 
     @Test func connectRulesLoadFromStore() async {
@@ -225,7 +226,7 @@ struct CatalogQueryRegistryTests {
         #expect(handle.value?.map(\.id) == ["cit-1"])
     }
 
-    @Test func sourceGraphLoadsPlacedPrimaries() async {
+    @Test func evidenceGraphLoadsPlacedPrimaries() async {
         let store = FakeStore()
         seedStore(store)
         store.subjectTypesByProject[projectDir] = [
@@ -248,7 +249,7 @@ struct CatalogQueryRegistryTests {
                 candidateRefPrefix: "CLO"
             ),
         ]
-        store.subjectsBySource["s1"] = [
+        store.subjectsByGraph["g-1"] = [
             CatalogSubject(
                 id: "sub-1",
                 ref: "CPR-1",
@@ -278,17 +279,17 @@ struct CatalogQueryRegistryTests {
         )
 
         let session = makeSession(store: store)
-        let handle: QueryHandle<SourceGraphRows> = session.query(
-            CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: "s1")
+        let handle: QueryHandle<EvidenceGraphRows> = session.query(
+            CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-1")
         )
         await waitForFetchComplete(handle)
 
-        #expect(handle.value?.sourceId == "s1")
+        #expect(handle.value?.graphId == "g-1")
         #expect(handle.value?.subjects.count == 2)
         #expect(handle.value?.subjects.map(\.id).sorted() == ["sub-1", "sub-bridge"])
         #expect(handle.value?.positions.first { $0.subjectID == "sub-1" }?.gridX == 2)
-        let snapshot = SourceGraphSnapshot.build(
-            rows: handle.value ?? SourceGraphRows(sourceId: "s1"),
+        let snapshot = EvidenceGraphSnapshot.build(
+            rows: handle.value ?? EvidenceGraphRows(graphId: "g-1"),
             types: store.subjectTypesByProject[projectDir] ?? [],
             rules: CatalogConnectRule.productMatrix
         )
@@ -299,7 +300,7 @@ struct CatalogQueryRegistryTests {
         #expect(snapshot.subjects.first?.membership == nil)
     }
 
-    @Test func sourceGraphLoadsMembershipOfPromotedSubjects() async throws {
+    @Test func evidenceGraphLoadsMembershipOfPromotedSubjects() async throws {
         let store = FakeStore()
         seedStore(store)
         store.subjectTypesByProject[projectDir] = [
@@ -308,7 +309,7 @@ struct CatalogQueryRegistryTests {
                 description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
             ),
         ]
-        store.subjectsBySource["s1"] = [
+        store.subjectsByGraph["g-1"] = [
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "Alice", description: ""),
             CatalogSubject(id: "sub-2", ref: "CPR-2", sourceID: "s1", subjectTypeID: "type-person", label: "Bob", description: ""),
         ]
@@ -318,14 +319,14 @@ struct CatalogQueryRegistryTests {
         let promoted = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
 
         let session = makeSession(store: store)
-        let handle: QueryHandle<SourceGraphRows> = session.query(
-            CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: "s1")
+        let handle: QueryHandle<EvidenceGraphRows> = session.query(
+            CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-1")
         )
         await waitForFetchComplete(handle)
 
         #expect(handle.value?.memberships.map(\.subjectID) == ["sub-1"])
-        let snapshot = SourceGraphSnapshot.build(
-            rows: handle.value ?? SourceGraphRows(sourceId: "s1"),
+        let snapshot = EvidenceGraphSnapshot.build(
+            rows: handle.value ?? EvidenceGraphRows(graphId: "g-1"),
             types: store.subjectTypesByProject[projectDir] ?? [],
             rules: []
         )
@@ -346,11 +347,11 @@ struct CatalogQueryRegistryTests {
                 description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
             ),
         ]
-        store.subjectsBySource["s1"] = [
+        store.subjectsByGraph["g-1"] = [
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
             CatalogSubject(id: "sub-2", ref: "CPR-2", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
         ]
-        store.observationsBySource["s1"] = [
+        store.observationsByGraph["g-1"] = [
             nameObservation(id: "o1", subjectID: "sub-1", form: "James Robins",
                             parts: [part("James", "given"), part("Robins", "surname")]),
             nameObservation(id: "o2", subjectID: "sub-1", form: "Jim Robins",
@@ -386,10 +387,10 @@ struct CatalogQueryRegistryTests {
                 description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
             ),
         ]
-        store.subjectsBySource["s1"] = [
+        store.subjectsByGraph["g-1"] = [
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
         ]
-        store.observationsBySource["s1"] = [
+        store.observationsByGraph["g-1"] = [
             nameObservation(id: "o1", subjectID: "sub-1", form: "José Robins",
                             parts: [part("José", "given"), part("Robins", "surname")]),
             nameObservation(id: "o2", subjectID: "sub-1", form: "Jose Robins",
@@ -415,10 +416,13 @@ struct CatalogQueryRegistryTests {
                 description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
             ),
         ]
-        store.subjectsBySource["s1"] = [
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(id: "g-1", ref: "GPH-1", sourceID: "s1", name: "Default", description: "", artifactIDs: []),
+        ]
+        store.subjectsByGraph["g-1"] = [
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
         ]
-        store.observationsBySource["s1"] = [
+        store.observationsByGraph["g-1"] = [
             nameObservation(id: "o1", subjectID: "sub-1", form: "James Robins",
                             parts: [part("James", "given"), part("Robins", "surname")]),
             nameObservation(id: "o2", subjectID: "sub-1", form: "Jim Robins",
@@ -618,6 +622,22 @@ struct CatalogQueryRegistryTests {
         #expect(handle.value?.map(\.title) == ["New Row", "Alpha"])
     }
 
+    /// T-14: a write's effects name the Evidence graphs to reload, one key each;
+    /// a mutation that names a graph does the same, and a Source delete reloads every cached graph.
+    @Test func evidenceGraphEffectsReloadOnlyThatGraph() {
+        let registry = CatalogQueryRegistry.standard
+        let project = ProjectKey(projectDir: projectDir)
+        let graph2 = CatalogQueryInvalidation.key(.evidenceGraph(project: project, graphId: "g-2"))
+        #expect(registry.invalidations(for: CatalogWriteEffects(evidenceGraphs: ["g-2"]), project: project) == [graph2])
+        #expect(registry.invalidations(by: .promotedSubject(graphId: "g-1"), project: project).first
+            == .key(.evidenceGraph(project: project, graphId: "g-1")))
+        let deleted = registry.invalidations(by: .deletedSubject(sourceId: "src-1"), project: project)
+        #expect(deleted.contains(.key(.citationCounts(project: project, sourceId: "src-1"))))
+        #expect(!deleted.contains { $0 == .allCached(.evidenceGraph) || $0 == graph2 })
+        #expect(registry.invalidations(by: .deletedSource(id: "src-1"), project: project)
+            .contains(.allCached(.evidenceGraph)))
+    }
+
     /// Work under a Source moves its "Updated" revision. The write reports its
     /// activity, so the cached row is patched in place: no reload, no stale mark.
     @Test func applySourceWriteEffectsPatchesTheListRowWithoutReloading() async {
@@ -631,10 +651,7 @@ struct CatalogQueryRegistryTests {
         store.heldCatalogProjectDir = nil
 
         let activity = CatalogActivity(revision: 42, at: "2026-10-15T16:00:00Z")
-        session.apply(
-            CatalogWriteEffects(sourceScopes: ["s1"], activity: activity),
-            .mutatedSourceGraph(sourceId: "s1")
-        )
+        session.apply(CatalogWriteEffects(sourceScopes: ["s1"], activity: activity))
         await Task.yield()
         #expect(handle.value?.first?.updated == activity)
         #expect(!handle.isFetching)
@@ -654,8 +671,8 @@ struct CatalogQueryRegistryTests {
         let list = CatalogQueryInvalidation.key(.sourcesList(project: project))
         let writes: [CatalogMutation] = [
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
-            .mutatedSourceGraph(sourceId: "s1"), .deletedSubject(sourceId: "s1"),
-            .promotedSubject(sourceId: "s1"),
+            .deletedSubject(sourceId: "s1"),
+            .promotedSubject(graphId: "g-1"),
         ]
         for mutation in writes {
             #expect(!registry.invalidations(by: mutation, project: project).contains(list), "\(mutation)")
@@ -675,7 +692,7 @@ struct CatalogQueryRegistryTests {
         ]
         for mutation: CatalogMutation in [
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
-            .mutatedSourceGraph(sourceId: "s1"), .deletedSubject(sourceId: "s1"),
+            .deletedSubject(sourceId: "s1"),
         ] {
             let invalidations = registry.invalidations(by: mutation, project: project)
             for key in conclusionKeys {
@@ -827,7 +844,7 @@ struct CatalogQueryRegistryTests {
             .key(.sourcesList(project: project)),
             .key(.sourceTypesList(project: project)),
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
-            .key(.sourceGraph(project: project, sourceId: "s1")),
+            .allCached(.evidenceGraph),
             .key(.evidenceGraphsList(project: project)),
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
@@ -858,27 +875,14 @@ struct CatalogQueryRegistryTests {
             .allCached(.sourceWorkspace),
             .key(.typeSuggestions(project: project, typeId: "t1")),
         ])
-        #expect(registry.invalidations(by: .mutatedSourceGraph(sourceId: "s1"), project: project) == [
-            .key(.sourceGraph(project: project, sourceId: "s1")),
-        ])
-        #expect(
-            !registry.invalidations(by: .mutatedSourceGraph(sourceId: "s1"), project: project).contains(
-                .key(.sourceGraphProgress(project: project))
-            )
-        )
-        #expect(
-            !registry.invalidations(by: .mutatedSourceGraph(sourceId: "s1"), project: project).contains(
-                .key(.sourcesList(project: project))
-            )
-        )
         #expect(registry.invalidations(for: CatalogWriteEffects(
             handles: ["e1"],
-            sources: ["s1"],
+            evidenceGraphs: ["g-1"],
             citationSources: ["s1"],
             lists: [.propertyUsage],
             headerHandles: ["e2"]
         ), project: project) == [
-            .key(.sourceGraph(project: project, sourceId: "s1")),
+            .key(.evidenceGraph(project: project, graphId: "g-1")),
             .key(.citationCounts(project: project, sourceId: "s1")),
             .allCached(.citationsByArtifact),
             .key(.propertiesWorkspace(project: project)),
@@ -890,23 +894,22 @@ struct CatalogQueryRegistryTests {
         ])
         // A key the effects and the mutation both name appears once.
         let both = registry.invalidations(
-            for: CatalogWriteEffects(sources: ["s1"]),
-            by: .mutatedSourceGraph(sourceId: "s1"),
+            for: CatalogWriteEffects(evidenceGraphs: ["g-1"]),
+            by: .promotedSubject(graphId: "g-1"),
             project: project
         )
-        #expect(both.filter { $0 == .key(.sourceGraph(project: project, sourceId: "s1")) }.count == 1)
-        // A Subject delete reports its handles in `WriteEffects`, so the lists
-        // and details are not named here.
+        #expect(both.filter { $0 == .key(.evidenceGraph(project: project, graphId: "g-1")) }.count == 1)
+        // A Subject delete reports its handles and its graph in `WriteEffects`, so
+        // the lists, the details and the graph are not named here.
         #expect(registry.invalidations(by: .deletedSubject(sourceId: "s1"), project: project) == [
-            .key(.sourceGraph(project: project, sourceId: "s1")),
             .key(.citationCounts(project: project, sourceId: "s1")),
             .key(.propertiesWorkspace(project: project)),
             .allCached(.citationsByArtifact),
         ])
-        // A Promote changes that Source's graph cards (their membership row)
-        // and every Conclusion key.
-        #expect(registry.invalidations(by: .promotedSubject(sourceId: "s1"), project: project) == [
-            .key(.sourceGraph(project: project, sourceId: "s1")),
+        // A Promote changes that graph's cards (their membership row) and every
+        // Conclusion key.
+        #expect(registry.invalidations(by: .promotedSubject(graphId: "g-1"), project: project) == [
+            .key(.evidenceGraph(project: project, graphId: "g-1")),
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
             .key(.placesList(project: project)),
@@ -922,9 +925,8 @@ struct CatalogQueryRegistryTests {
             .createdMetadataField, .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
-            .mutatedSourceGraph(sourceId: "s1"),
             .deletedSubject(sourceId: "s1"),
-            .promotedSubject(sourceId: "s1"),
+            .promotedSubject(graphId: "g-1"),
             .createdPropertyTerm(propertyId: "p1"),
         ]
         #expect(everyMutation.allSatisfy { mutation in

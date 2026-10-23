@@ -5804,7 +5804,7 @@ enum L10n {
         }
 
         static func graphZoneAccessibility(
-            progress: SourceGraphProgress?,
+            progress: EvidenceGraphProgress?,
             countsLoading: Bool
         ) -> String {
             let open = L10n.string(openGraph)

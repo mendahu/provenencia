@@ -54,6 +54,7 @@ const (
 	sqlUpdate = `UPDATE evidence_graphs SET name = ?, description = ? WHERE id = ?`
 
 	sqlSubjectGraph = `SELECT graph_id FROM subjects WHERE id = ?`
+	sqlGraphSource  = `SELECT source_id FROM evidence_graphs WHERE id = ?`
 	sqlIsLinked     = `SELECT 1 FROM evidence_graph_artifacts WHERE graph_id = ? AND artifact_id = ?`
 	sqlLinkSources  = `SELECT g.source_id, a.source_id FROM evidence_graphs g, artifacts a
 		WHERE g.id = ? AND a.id = ?`
@@ -407,7 +408,8 @@ func graphFields(g Graph) map[string]any {
 
 // SoleGraphTx returns the id of the one graph of a Source.
 //
-// The one bridge between S12-03 and S12-08. S12-08 deletes it.
+// The one bridge left: Promote's alignment (S12-09) and the empty-GraphID
+// fallback of subjects.InsertTx (S12-18) still read it. Both PRs delete it.
 func SoleGraphTx(tx *sql.Tx, sourceID []byte) ([]byte, error) {
 	if tx == nil || len(sourceID) != 16 {
 		return nil, ErrInvalid
@@ -427,7 +429,7 @@ func SoleGraphTx(tx *sql.Tx, sourceID []byte) ([]byte, error) {
 }
 
 // SoleGraph returns the id of the one graph of a Source, in its own read
-// transaction, the way List wraps list. S12-08 deletes it with SoleGraphTx.
+// transaction, the way List wraps list. S12-09 deletes it with SoleGraphTx.
 func SoleGraph(c *database.Catalog, sourceID []byte) ([]byte, error) {
 	if len(sourceID) != 16 {
 		return nil, ErrInvalid
@@ -451,6 +453,23 @@ func SubjectGraphTx(tx *sql.Tx, subjectID []byte) ([]byte, error) {
 	}
 	var id []byte
 	err := tx.QueryRow(sqlSubjectGraph, subjectID).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrInvalid
+	}
+	if err != nil {
+		return nil, err
+	}
+	return id, nil
+}
+
+// SourceOf returns the Source a graph belongs to. ErrInvalid for a nil
+// querier, a malformed id or no such graph.
+func SourceOf(q database.Querier, graphID []byte) ([]byte, error) {
+	if q == nil || len(graphID) != 16 {
+		return nil, ErrInvalid
+	}
+	var id []byte
+	err := q.QueryRow(sqlGraphSource, graphID).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrInvalid
 	}

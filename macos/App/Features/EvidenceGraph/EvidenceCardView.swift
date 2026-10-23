@@ -309,7 +309,7 @@ private func continuous(_ rect: CGRect, radius: CGFloat) -> NSBezierPath {
 
 private extension EvidenceCardView {
     static func subject(
-        _ placed: SourceGraphPlacedSubject,
+        _ placed: EvidenceGraphPlacedSubject,
         presentation: CatalogSubjectTypePresentation?,
         card: EvidenceCanvasCard,
         painter: Painter?
@@ -416,7 +416,7 @@ private extension EvidenceCardView {
         return EvidenceCardLayout(size: CGSize(width: width, height: y), regions: regions)
     }
 
-    static func bridge(_ placed: SourceGraphPlacedBridge, card: EvidenceCanvasCard, painter: Painter?) -> EvidenceCardLayout {
+    static func bridge(_ placed: EvidenceGraphPlacedBridge, card: EvidenceCanvasCard, painter: Painter?) -> EvidenceCardLayout {
         let width = EvidenceBridgeCard.width
         let state = card.state
         let selected = state.isSelected || state.isActivated || state.isDragging
@@ -511,7 +511,7 @@ private extension EvidenceCardView {
     }
 
     static func paintSubjectShell(
-        placed: SourceGraphPlacedSubject,
+        placed: EvidenceGraphPlacedSubject,
         style: EvidenceSubjectKindStyle,
         selected: Bool,
         dragging: Bool,
@@ -703,7 +703,7 @@ private extension EvidenceCardView {
     /// records the handle row and the Unpromote square from the same parts the
     /// paint reads. Returns the whole footer rect.
     private static func recordFooter(
-        placed: SourceGraphPlacedSubject,
+        placed: EvidenceGraphPlacedSubject,
         y: inout CGFloat,
         width: CGFloat,
         regions: inout [String: CGRect]
@@ -722,7 +722,7 @@ private extension EvidenceCardView {
 
     static func paintFooter(
         _ rect: CGRect,
-        placed: SourceGraphPlacedSubject,
+        placed: EvidenceGraphPlacedSubject,
         style: EvidenceSubjectKindStyle,
         hovered: String?,
         pressed: String?,
@@ -799,24 +799,24 @@ private extension EvidenceCardView {
     }
     static var addPropertyRowHeight: CGFloat { lineHeight(PVFont.nsBody(size: 12)) + 20 }
 
-    static func displayLabel(_ placed: SourceGraphPlacedSubject) -> String {
+    static func displayLabel(_ placed: EvidenceGraphPlacedSubject) -> String {
         let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? placed.typeLabel : trimmed
     }
-    static func typeLine(_ placed: SourceGraphPlacedSubject) -> String {
+    static func typeLine(_ placed: EvidenceGraphPlacedSubject) -> String {
         let ref = placed.subject.ref.trimmingCharacters(in: .whitespacesAndNewlines)
         return ref.isEmpty ? placed.typeLabel : "\(placed.typeLabel) · \(ref)"
     }
-    static func typeRef(_ placed: SourceGraphPlacedBridge) -> String {
+    static func typeRef(_ placed: EvidenceGraphPlacedBridge) -> String {
         let ref = placed.subject.ref.trimmingCharacters(in: .whitespacesAndNewlines)
         return ref.isEmpty ? placed.typeLabel : "\(placed.typeLabel) · \(ref)"
     }
-    static func titleBlockHeight(_ placed: SourceGraphPlacedSubject) -> CGFloat {
+    static func titleBlockHeight(_ placed: EvidenceGraphPlacedSubject) -> CGFloat {
         let width = EvidenceSubjectCard.width - EvidenceSubjectCard.shellPaddingX * 2 - 78
         let title = wrappedHeight(displayLabel(placed), width: width, font: PVFont.nsDisplay(size: 16, weight: PVFontWeight.medium), maxLines: 2)
         return title + 2 + lineHeight(mono(10))
     }
-    static func bridgeTitleBlock(_ placed: SourceGraphPlacedBridge) -> CGFloat {
+    static func bridgeTitleBlock(_ placed: EvidenceGraphPlacedBridge) -> CGFloat {
         let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         let title = label.isEmpty ? placed.typeLabel : label
         return wrappedHeight(title, width: bridgeBodyWidth, font: PVFont.nsDisplay(size: 14, weight: PVFontWeight.medium), maxLines: 2) + 1 + lineHeight(mono(9.5))

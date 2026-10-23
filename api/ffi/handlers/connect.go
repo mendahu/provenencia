@@ -22,8 +22,6 @@ func CreateCitedBridge(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// source_id is unread: the bridge's graph comes from its endpoints (S12-08
-	// removes the field).
 	fromID, err := parseID(req.GetFromSubjectId())
 	if err != nil {
 		return nil, err

@@ -11,7 +11,7 @@ func writeEffectsProto(res writes.Result) *engine.WriteEffects {
 	set := res.Effects
 	return &engine.WriteEffects{
 		Handles:         idStrings(set.Handles),
-		Sources:         idStrings(set.Sources),
+		EvidenceGraphs:  idStrings(set.EvidenceGraphs),
 		SourceScopes:    idStrings(set.SourceScopes),
 		CitationSources: idStrings(set.CitationSources),
 		Lists:           listStrings(set.Lists),

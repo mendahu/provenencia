@@ -8,8 +8,8 @@ import SwiftUI
 /// its model changes. Drag position is not part of it: AppKit moves the view.
 struct EvidenceCanvasCard: Equatable {
     enum Placed: Equatable {
-        case subject(SourceGraphPlacedSubject, CatalogSubjectTypePresentation?)
-        case bridge(SourceGraphPlacedBridge)
+        case subject(EvidenceGraphPlacedSubject, CatalogSubjectTypePresentation?)
+        case bridge(EvidenceGraphPlacedBridge)
     }
 
     /// Interaction state that changes the card's paint.
@@ -32,7 +32,7 @@ struct EvidenceCanvasCard: Equatable {
     /// The placement ghost's card: an unfiled, resting subject card.
     @MainActor
     static func ghost(
-        _ placed: SourceGraphPlacedSubject,
+        _ placed: EvidenceGraphPlacedSubject,
         presentation: CatalogSubjectTypePresentation?
     ) -> EvidenceCanvasCard {
         EvidenceCanvasCard(

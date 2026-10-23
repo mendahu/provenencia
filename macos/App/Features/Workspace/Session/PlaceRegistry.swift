@@ -26,9 +26,9 @@ struct PlaceRegistry: Sendable {
                     && $0.subjectId != nil
             },
             queryKeys: { project, location in
-                guard let sourceId = location.sourceId else { return [] }
+                guard location.sourceId != nil, let graphId = location.graphId else { return [] }
                 return [
-                    .sourceGraph(project: project, sourceId: sourceId),
+                    .evidenceGraph(project: project, graphId: graphId),
                     .sourcesList(project: project),
                     .sourceTypesList(project: project),
                     .confidenceGradesList(project: project),
@@ -49,9 +49,9 @@ struct PlaceRegistry: Sendable {
                     && ($0.subjectId != nil || $0.isConnectPrefill || $0.citationId != nil)
             },
             queryKeys: { project, location in
-                guard let sourceId = location.sourceId else { return [] }
+                guard let sourceId = location.sourceId, let graphId = location.graphId else { return [] }
                 var keys: [CatalogQueryKey] = [
-                    .sourceGraph(project: project, sourceId: sourceId),
+                    .evidenceGraph(project: project, graphId: graphId),
                     .propertiesWorkspace(project: project),
                     .sourcesList(project: project),
                     .connectRules(project: project),
@@ -74,9 +74,9 @@ struct PlaceRegistry: Sendable {
                 $0.section == .sources && $0.sourceId != nil && $0.sourceSurface == .graph
             },
             queryKeys: { project, location in
-                guard let sourceId = location.sourceId else { return [] }
+                guard let sourceId = location.sourceId, let graphId = location.graphId else { return [] }
                 return [
-                    .sourceGraph(project: project, sourceId: sourceId),
+                    .evidenceGraph(project: project, graphId: graphId),
                     .propertiesWorkspace(project: project),
                     .sourcesList(project: project),
                     .connectRules(project: project),
@@ -84,7 +84,7 @@ struct PlaceRegistry: Sendable {
                     .citationCounts(project: project, sourceId: sourceId),
                 ]
             },
-            deepId: { $0.sourceId }
+            deepId: { $0.graphId }
         ),
         Spec(
             id: .sourceDetail,
@@ -103,6 +103,7 @@ struct PlaceRegistry: Sendable {
                     .sourceTypesList(project: project),
                     .metadataFieldsList(project: project),
                     .credibilityGradesList(project: project),
+                    .evidenceGraphsList(project: project),
                 ]
             },
             deepId: { $0.sourceId }
@@ -151,7 +152,8 @@ struct PlaceRegistry: Sendable {
                 [
                     .sourcesList(project: project),
                     .sourceTypesList(project: project),
-                    .sourceGraphProgress(project: project),
+                    .evidenceGraphsList(project: project),
+                    .evidenceGraphProgress(project: project),
                 ]
             },
             deepId: { _ in nil }

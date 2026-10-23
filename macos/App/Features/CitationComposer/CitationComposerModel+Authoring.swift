@@ -634,7 +634,6 @@ extension CitationComposerModel {
             let created = try await context.store.createCitedBridge(
                 projectDir: context.projectDir,
                 userID: context.userID,
-                sourceID: context.sourceID,
                 fromSubjectID: draft.endA,
                 toSubjectID: draft.endB,
                 bridgeTypeKey: ready.rule.bridgeTypeKey,

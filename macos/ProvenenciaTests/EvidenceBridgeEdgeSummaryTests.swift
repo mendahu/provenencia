@@ -36,8 +36,8 @@ struct EvidenceBridgeEdgeSummaryTests {
         label: String,
         ref: String,
         observations: [CatalogObservation] = []
-    ) -> SourceGraphPlacedSubject {
-        SourceGraphPlacedSubject(
+    ) -> EvidenceGraphPlacedSubject {
+        EvidenceGraphPlacedSubject(
             subject: CatalogSubject(
                 id: id,
                 ref: ref,
@@ -91,13 +91,13 @@ struct EvidenceBridgeEdgeSummaryTests {
         observations: [CatalogObservation],
         label: String = "Working label",
         ref: String = "CPA-1"
-    ) -> SourceGraphPlacedBridge {
-        let ends = SourceGraphSnapshot.citedEndpoints(
+    ) -> EvidenceGraphPlacedBridge {
+        let ends = EvidenceGraphSnapshot.citedEndpoints(
             kind: kind,
             observations: observations,
             rules: CatalogConnectRule.productMatrix
         )
-        return SourceGraphPlacedBridge(
+        return EvidenceGraphPlacedBridge(
             subject: CatalogSubject(
                 id: "bridge-1",
                 ref: ref,
@@ -118,10 +118,10 @@ struct EvidenceBridgeEdgeSummaryTests {
     }
 
     private func snapshot(
-        bridge: SourceGraphPlacedBridge,
-        subjects: [SourceGraphPlacedSubject]
-    ) -> SourceGraphSnapshot {
-        SourceGraphSnapshot(sourceId: "src-1", subjects: subjects, bridges: [bridge])
+        bridge: EvidenceGraphPlacedBridge,
+        subjects: [EvidenceGraphPlacedSubject]
+    ) -> EvidenceGraphSnapshot {
+        EvidenceGraphSnapshot(graphId: "src-1", subjects: subjects, bridges: [bridge])
     }
 
     @Test func locationPhraseIsRelationalOnly() {

@@ -184,7 +184,7 @@ final class CitationConnections {
     static func groupSaved(
         observations: [CatalogObservation],
         vocabulary: CitationComposerVocabulary,
-        snapshot: SourceGraphSnapshot
+        snapshot: EvidenceGraphSnapshot
     ) -> (connections: [ConnectionRow], leftover: [CatalogObservation]) {
         var leftover = observations
         var used = Set<String>()
@@ -306,7 +306,6 @@ final class CitationConnections {
             let created = try await context.store.createCitedBridge(
                 projectDir: context.projectDir,
                 userID: context.userID,
-                sourceID: context.sourceID,
                 fromSubjectID: pending.fromSubjectID,
                 toSubjectID: pending.toSubjectID,
                 bridgeTypeKey: pending.bridgeTypeKey,

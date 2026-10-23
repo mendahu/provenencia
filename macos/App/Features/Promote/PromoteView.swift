@@ -57,7 +57,7 @@ struct PromoteView: View {
             }
         }
         .task {
-            let _: QueryHandle<SourceGraphRows> = model.session.query(model.graphKey)
+            let _: QueryHandle<EvidenceGraphRows> = model.session.query(model.graphKey)
             let _: QueryHandle<[CatalogClaimConfidenceGrade]> = model.session.query(model.confidenceKey)
             let _: QueryHandle<PropertiesSnapshot> = model.session.query(model.propertiesKey)
             let _: QueryHandle<[CatalogConnectRule]> = model.session.query(model.rulesKey)

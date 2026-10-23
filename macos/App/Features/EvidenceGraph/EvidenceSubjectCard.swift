@@ -69,7 +69,7 @@ enum EvidenceSubjectCard {
     }
 
     /// Document-space top-leading corner of the painted card.
-    static func origin(for placed: SourceGraphPlacedSubject, dragOffset: CGSize = .zero) -> CGPoint {
+    static func origin(for placed: EvidenceGraphPlacedSubject, dragOffset: CGSize = .zero) -> CGPoint {
         let offset = topLeadingOffset(gridX: placed.gridX, gridY: placed.gridY)
         return CGPoint(x: offset.width + dragOffset.width, y: offset.height + dragOffset.height)
     }
@@ -78,7 +78,7 @@ enum EvidenceSubjectCard {
     /// Uses the card's measured `layout` when it has reported one; the
     /// constant-based ``contentHeight(for:)`` is only the first-frame fallback.
     static func edgeFrame(
-        for placed: SourceGraphPlacedSubject,
+        for placed: EvidenceGraphPlacedSubject,
         dragOffset: CGSize = .zero,
         layout: EvidenceCardLayout? = nil
     ) -> CGRect {
@@ -93,7 +93,7 @@ enum EvidenceSubjectCard {
     /// With a measured `layout`, every row / Add property / footer target is the
     /// painted band of the piece it belongs to, so hits move with the paint.
     static func actionTargets(
-        for placed: SourceGraphPlacedSubject,
+        for placed: EvidenceGraphPlacedSubject,
         canCite: Bool,
         dragOffset: CGSize = .zero,
         layout: EvidenceCardLayout? = nil
@@ -172,7 +172,7 @@ enum EvidenceSubjectCard {
     /// Header icons stay on fixed top-anchored metrics; everything below them
     /// comes from the measured bands.
     private static func measuredActionTargets(
-        for placed: SourceGraphPlacedSubject,
+        for placed: EvidenceGraphPlacedSubject,
         canCite: Bool,
         frame: CGRect,
         layout: EvidenceCardLayout
@@ -242,7 +242,7 @@ enum EvidenceSubjectCard {
     /// Constant-based height estimate: the first-frame fallback before the card
     /// reports its measured ``EvidenceCardLayout``. Hits and edges use the
     /// measured layout once it exists; do not tune this to chase paint.
-    static func contentHeight(for placed: SourceGraphPlacedSubject) -> CGFloat {
+    static func contentHeight(for placed: EvidenceGraphPlacedSubject) -> CGFloat {
         var height = shellPaddingTop + headerHeight
         let hasDescription = !placed.subject.description
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -266,7 +266,7 @@ enum EvidenceSubjectCard {
         return max(edgeLayoutHeight, height)
     }
 
-    private static func stackOriginY(for placed: SourceGraphPlacedSubject, frame: CGRect) -> CGFloat {
+    private static func stackOriginY(for placed: EvidenceGraphPlacedSubject, frame: CGRect) -> CGFloat {
         var y = frame.minY + shellPaddingTop + headerHeight + headerToBodyGap
         let hasDescription = !placed.subject.description
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -292,7 +292,7 @@ enum EvidenceSubjectCard {
     }
 
     /// VoiceOver / rotor label for a placed subject.
-    static func accessibilityLabel(for placed: SourceGraphPlacedSubject) -> String {
+    static func accessibilityLabel(for placed: EvidenceGraphPlacedSubject) -> String {
         let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         let name = trimmed.isEmpty ? placed.typeLabel : trimmed
         let citation = placed.isCited
@@ -307,7 +307,7 @@ enum EvidenceSubjectCard {
 
     /// VoiceOver name for the footer action: "Promote James Robins, CPR-…" or "Open person PER-…".
     static func footerAccessibilityActionName(
-        for placed: SourceGraphPlacedSubject,
+        for placed: EvidenceGraphPlacedSubject,
         orders: NameFormatOrders = NameFormatOrders()
     ) -> String {
         if let membership = placed.membership {

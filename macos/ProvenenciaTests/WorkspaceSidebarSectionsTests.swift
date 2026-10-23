@@ -44,7 +44,7 @@ struct WorkspaceSidebarSectionsTests {
                 description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
             ),
         ]
-        store.subjectsBySource["s1"] = [
+        store.subjectsByGraph["g1"] = [
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
         ]
         _ = try await store.promoteSubject(projectDir: projectDir, userID: "u", subjectID: "sub-1")

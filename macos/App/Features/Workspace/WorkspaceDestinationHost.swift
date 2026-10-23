@@ -31,8 +31,11 @@ struct WorkspaceDestinationHost: View {
                 )
             }
         case .sourceGraph:
-            if let sourceID = navigation.currentLocation.sourceId {
+            if let sourceID = navigation.currentLocation.sourceId,
+               let graphID = navigation.currentLocation.graphId
+            {
                 EvidenceGraphView(
+                    graphID: graphID,
                     sourceID: sourceID,
                     session: session,
                     store: store,

@@ -68,7 +68,7 @@ handles; they do not own fetch-on-appear lifecycle.
 Do **not** call `session.query()` from view `body` or from model computed properties
 that `body` reads every frame — that starves the MainActor and breaks observation.
 
-Do **not** fold a shared list into a page payload (`sourceGraph` is subjects +
+Do **not** fold a shared list into a page payload (`evidenceGraph` is subjects +
 positions + observations; types live on `propertiesWorkspace`). Do **not**
 copy catalog lists onto a feature model — observe the handle.
 
@@ -169,8 +169,8 @@ sync apply from history after list is ready; `fallbackToSectionRoot()` if deep i
 - Source type moved: `context.applySource(updated, typeChanged: true)` — patches the row, then refetches the page because the engine derives suggested rows from the type.
 - Metadata values: `context.applyMetadataWrite(effects)` with the write's effects (also busts the field list's `usedBy`).
 - Other page edits (notes, artifacts, credibility): `context.applyWrite(effects)` → bust the `sourceWorkspace` key, and the effects move the lists.
-- Graph and composer writes (`createSubject`, `updateSubject`, `deleteSubject`): `session.apply(effects, .mutatedSourceGraph(sourceId:))` or `.deletedSubject(sourceId:)`.
-- Any write under a Source moves its `updated` activity (engine audit scopes). Every write under a Source returns `WriteEffects` with its activity, and `apply(effects)` patches the Sources row in place; the mutations that ride along (`mutatedSourceWorkspace`, `mutatedSourceMetadata`, `mutatedSourceGraph`, `deletedSubject`) never invalidate `sourcesList` or the Conclusion lists — the Sources row follows the effects' `sourceScopes`, and the Source's graph and citation reads follow `sources` (evidence only), and the Conclusion lists follow `handles`. A new Source child write returns `WriteEffects` (`writeEffectsProto(wrote)` in its handler); the writes that still report none (`updateSource`, `setSourceCover`, `deleteSource`, promote, Property writes) keep their mutation kinds. `createSource` returns `WriteEffects` and is applied with `apply(effects, .createdSource)`, as Copy Source is.
+- Graph and composer writes (`createSubject`, `updateSubject`, `deleteSubject`): `session.apply(effects)`, plus `.deletedSubject(sourceId:)` for a delete.
+- Any write under a Source moves its `updated` activity (engine audit scopes). Every write under a Source returns `WriteEffects` with its activity, and `apply(effects)` patches the Sources row in place; the mutations that ride along (`mutatedSourceWorkspace`, `mutatedSourceMetadata`, `deletedSubject`) never invalidate `sourcesList` or the Conclusion lists — the Sources row follows the effects' `sourceScopes`, each graph's rows follow `evidenceGraphs`, and the Source's citation reads follow `citationSources`, and the Conclusion lists follow `handles`. A new Source child write returns `WriteEffects` (`writeEffectsProto(wrote)` in its handler); the writes that still report none (`updateSource`, `setSourceCover`, `deleteSource`, promote, Property writes) keep their mutation kinds. `createSource` returns `WriteEffects` and is applied with `apply(effects, .createdSource)`, as Copy Source is.
 - A new list with a last-updated cell: conform its row to `CatalogLastUpdatedRow` and add `lastUpdated: .rows(Row.self, scope: …)` to its registry row.
 - Vocabulary CRUD: registry `invalidateOn` + list patch where cheap. A patch is an
   optimization on top of invalidation unless the write reported everything the patch needs (last-updated activity).

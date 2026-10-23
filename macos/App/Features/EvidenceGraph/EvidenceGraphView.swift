@@ -1,12 +1,13 @@
 import AppKit
 import SwiftUI
 
-/// Workspace destination for a Source’s Evidence graph.
+/// Workspace destination for one Evidence graph.
 ///
-/// Product place under Sources (`sourceSurface: .graph`). Composes the
+/// Product place under Sources (`WorkspaceLocation.evidenceGraph(…)`). Composes the
 /// reusable [`GraphCanvas`](../GraphCanvas/) shell with primary + bridge cards,
 /// palette place/create/connect, and drag persist (S6-02–S6-04).
 struct EvidenceGraphView: View {
+    let graphID: String
     let sourceID: String
     let session: WorkspaceSession
     let store: any GenealogyStore
@@ -16,7 +17,7 @@ struct EvidenceGraphView: View {
     @State private var model: EvidenceGraphModel
 
     private var graphKey: CatalogQueryKey {
-        CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: sourceID)
+        CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: graphID)
     }
 
     private var fieldsKey: CatalogQueryKey {
@@ -24,17 +25,20 @@ struct EvidenceGraphView: View {
     }
 
     init(
+        graphID: String,
         sourceID: String,
         session: WorkspaceSession,
         store: any GenealogyStore,
         userID: String
     ) {
+        self.graphID = graphID
         self.sourceID = sourceID
         self.session = session
         self.store = store
         self.userID = userID
         _model = State(
             initialValue: EvidenceGraphModel(
+                graphID: graphID,
                 sourceID: sourceID,
                 session: session,
                 store: store,
@@ -45,14 +49,14 @@ struct EvidenceGraphView: View {
 
     var body: some View {
         Group {
-            if let graphHandle: QueryHandle<SourceGraphRows> = session.queryHandle(graphKey),
+            if let graphHandle: QueryHandle<EvidenceGraphRows> = session.queryHandle(graphKey),
                let fieldsHandle: QueryHandle<PropertiesSnapshot> = session.queryHandle(fieldsKey)
             {
                 EvidenceGraphContent(
                     graphHandle: graphHandle,
                     fieldsHandle: fieldsHandle,
                     model: model,
-                    sourceID: sourceID,
+                    graphID: graphID,
                     sourceTitle: model.sourceTitle,
                     sourceRef: model.sourceRef,
                     navigation: navigation
@@ -65,7 +69,7 @@ struct EvidenceGraphView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier("workspace.destination.evidenceGraph")
-        .task(id: sourceID) {
+        .task(id: graphID) {
             await model.prepare()
         }
         .onChange(of: model.armedKind) { _, kind in
@@ -92,24 +96,24 @@ struct EvidenceGraphView: View {
 // MARK: - Content
 
 private struct EvidenceGraphContent: View {
-    @Bindable var graphHandle: QueryHandle<SourceGraphRows>
+    @Bindable var graphHandle: QueryHandle<EvidenceGraphRows>
     @Bindable var fieldsHandle: QueryHandle<PropertiesSnapshot>
     @Bindable var model: EvidenceGraphModel
-    let sourceID: String
+    let graphID: String
     let sourceTitle: String
     let sourceRef: String?
     let navigation: WorkspaceNavigation
     @FocusState private var focus: EvidenceGraphFocus?
 
-    private var snapshot: SourceGraphSnapshot {
+    private var snapshot: EvidenceGraphSnapshot {
         model.displaySnapshot(rows: graphHandle.value, types: fieldsHandle.value?.types ?? [])
     }
 
-    private var subjects: [SourceGraphPlacedSubject] {
+    private var subjects: [EvidenceGraphPlacedSubject] {
         snapshot.subjects
     }
 
-    private var bridges: [SourceGraphPlacedBridge] {
+    private var bridges: [EvidenceGraphPlacedBridge] {
         snapshot.bridges
     }
 
@@ -270,10 +274,10 @@ private struct EvidenceGraphContent: View {
             GraphCanvasScrollView(
                 contentSize: contentSize,
                 contentOrigin: canvas.origin,
-                contentID: sourceID,
-                restoredCamera: model.session.graphCamera(for: sourceID),
+                contentID: graphID,
+                restoredCamera: model.session.graphCamera(for: graphID),
                 onCameraChange: { camera in
-                    model.session.setGraphCamera(camera, for: sourceID)
+                    model.session.setGraphCamera(camera, for: graphID)
                 },
                 accessibilityLabel: L10n.string(L10n.Workspace.evidenceGraphTitle)
             ) {
@@ -700,7 +704,7 @@ private struct EvidenceGraphLabeledHeaderWidthKey: PreferenceKey {
 /// Reads live drag offsets so the document can grow before the drop, without
 /// the card `ForEach` following every pointer event.
 private struct EvidenceGraphDragCanvasSize: View {
-    let snapshot: SourceGraphSnapshot
+    let snapshot: EvidenceGraphSnapshot
     @Bindable var pointer: GraphCanvasPointerController
     @Bindable var model: EvidenceGraphModel
 
@@ -743,7 +747,7 @@ private struct EvidenceGraphMarquee: View {
 }
 
 private struct EvidenceGraphDocument: View {
-    @Bindable var graphHandle: QueryHandle<SourceGraphRows>
+    @Bindable var graphHandle: QueryHandle<EvidenceGraphRows>
     @Bindable var fieldsHandle: QueryHandle<PropertiesSnapshot>
     @Bindable var model: EvidenceGraphModel
     let canvas: EvidenceGraphCanvas
@@ -781,7 +785,7 @@ private struct EvidenceGraphDocument: View {
 /// read would re-run this body on every pointer event. ``EvidenceGraphEdgesHost``
 /// is the one view that follows live offsets.
 private struct EvidenceGraphDocumentBody: View {
-    @Bindable var graphHandle: QueryHandle<SourceGraphRows>
+    @Bindable var graphHandle: QueryHandle<EvidenceGraphRows>
     @Bindable var fieldsHandle: QueryHandle<PropertiesSnapshot>
     @Bindable var model: EvidenceGraphModel
     let canvas: EvidenceGraphCanvas
@@ -791,15 +795,15 @@ private struct EvidenceGraphDocumentBody: View {
     /// Painted card layouts; hit targets and edges follow these, not constants.
     @State private var cardLayouts = EvidenceCardLayoutStore()
 
-    private var snapshot: SourceGraphSnapshot {
+    private var snapshot: EvidenceGraphSnapshot {
         model.displaySnapshot(rows: graphHandle.value, types: fieldsHandle.value?.types ?? [])
     }
 
-    private var subjects: [SourceGraphPlacedSubject] {
+    private var subjects: [EvidenceGraphPlacedSubject] {
         snapshot.subjects
     }
 
-    private var bridges: [SourceGraphPlacedBridge] {
+    private var bridges: [EvidenceGraphPlacedBridge] {
         snapshot.bridges
     }
 
@@ -1196,8 +1200,8 @@ private struct EvidenceLegendConflictMark: View {
 /// the row count does. Saving a citation deletes and reinserts its observations.
 enum EvidenceGraphHitRefresh {
     static func token(
-        subjects: [SourceGraphPlacedSubject],
-        bridges: [SourceGraphPlacedBridge]
+        subjects: [EvidenceGraphPlacedSubject],
+        bridges: [EvidenceGraphPlacedBridge]
     ) -> String {
         var parts: [String] = []
         parts.reserveCapacity(subjects.count + bridges.count)

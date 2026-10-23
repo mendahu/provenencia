@@ -7,6 +7,7 @@ import Testing
 struct PromoteModelTests {
     private let projectDir = "/tmp/promote-model.provenencia"
     private let sourceID = "src-1"
+    private let graphID = "g-1"
 
     private func subject(_ id: String, ref: String, label: String) -> CatalogSubject {
         CatalogSubject(id: id, ref: ref, sourceID: sourceID, subjectTypeID: "type-person", label: label, description: "")
@@ -20,7 +21,12 @@ struct PromoteModelTests {
                 description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
             ),
         ]
-        store.subjectsBySource[sourceID] = subjects
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: []
+            ),
+        ]
+        store.subjectsByGraph[graphID] = subjects
         for (index, subject) in subjects.enumerated() {
             store.subjectPositionsBySubject[subject.id] = CatalogSubjectPosition(
                 subjectID: subject.id, gridX: 0, gridY: Int64(index * 2)
@@ -43,10 +49,10 @@ struct PromoteModelTests {
     private func model(store: FakeStore, subjectID: String) -> PromoteModel {
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let entry = PromoteEntry(location: .promote(
-            sourceId: sourceID, subjectId: subjectID, kind: .person, ref: "CPR-1", title: "James", sourceTitle: "Census"
+            sourceId: sourceID, graphId: graphID, subjectId: subjectID, kind: .person, ref: "CPR-1", title: "James", sourceTitle: "Census"
         ))!
         let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1")
-        let _: QueryHandle<SourceGraphRows> = session.query(model.graphKey)
+        let _: QueryHandle<EvidenceGraphRows> = session.query(model.graphKey)
         let _: QueryHandle<PropertiesSnapshot> = session.query(model.propertiesKey)
         let _: QueryHandle<[CatalogConnectRule]> = session.query(model.rulesKey)
         let _: QueryHandle<[CatalogClaimConfidenceGrade]> = session.query(model.confidenceKey)
@@ -58,7 +64,7 @@ struct PromoteModelTests {
         store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let entry = PromoteEntry(location: .promote(
-            sourceId: sourceID, subjectId: "a", kind: .person, ref: "CPR-A", title: "Ada", sourceTitle: "Census"
+            sourceId: sourceID, graphId: graphID, subjectId: "a", kind: .person, ref: "CPR-A", title: "Ada", sourceTitle: "Census"
         ))!
         // The graph key was never warmed, so readyValue has nothing to give.
         let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1")
@@ -97,7 +103,7 @@ struct PromoteModelTests {
                 valueSubjectID: subjectID, valueTermID: "", propertyKey: key, propertyLabel: key, propertyValueType: "subject"
             )
         }
-        store.observationsBySource[sourceID] = [cite("person", "a"), cite("related_to", "b")]
+        store.observationsByGraph[graphID] = [cite("person", "a"), cite("related_to", "b")]
         store.promoteProposals = [
             CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e1")]),
             CatalogPromoteGraphAlignmentProposal(revision: 2, rows: [row("a", handleID: "e1"), row("b", handleID: "e9")]),
@@ -107,9 +113,9 @@ struct PromoteModelTests {
         let loaded = model.flow.bridges
         #expect(loaded.count == 1)
         // The graph changes under the page, then a decision proposes again: the page keeps its connections.
-        store.observationsBySource[sourceID] = []
+        store.observationsByGraph[graphID] = []
         model.session.invalidate(model.graphKey)
-        let _: QueryHandle<SourceGraphRows> = model.session.query(model.graphKey)
+        let _: QueryHandle<EvidenceGraphRows> = model.session.query(model.graphKey)
         model.mapRest()
         model.setTarget(subjectID: "a", token: "handle:other")
         let proposed = await waitUntil { model.flow.rows.first { $0.subjectID == "b" }?.updated == true }
@@ -314,7 +320,7 @@ struct PromoteModelTests {
         let model = model(store: store, subjectID: "a")
         await model.load()
         _ = try? await store.createSubject(
-            projectDir: projectDir, userID: "user-1", sourceID: sourceID,
+            projectDir: projectDir, userID: "user-1", graphID: graphID,
             subjectTypeID: "type-person", label: "Later", description: "", placement: nil
         )
         model.done()
@@ -448,7 +454,7 @@ struct PromoteModelTests {
             o.propertyValueType = PropertyValueType.term.rawValue
             observations.append(o)
         }
-        store.observationsBySource[sourceID] = observations
+        store.observationsByGraph[graphID] = observations
         var viaA = row("b", handleID: "e2")
         viaA.reason = .via
         viaA.viaNeighborSubjectID = "a"
@@ -557,7 +563,7 @@ struct PromoteModelTests {
     @Test func aPinnedObservationDeleteNamesThePerson() async throws {
         let store = FakeStore()
         let person = CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "type-person", label: "")
-        store.observationsBySource[sourceID] = [
+        store.observationsByGraph[graphID] = [
             CatalogObservation(
                 id: "obs-1", ref: "OBS-1", citationID: "c1", subjectID: "a", propertyID: "p-name",
                 polarity: "positive", valueText: "Ada", valueInteger: nil, valueDateID: "",

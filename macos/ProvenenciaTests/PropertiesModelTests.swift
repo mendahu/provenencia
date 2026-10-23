@@ -462,7 +462,7 @@ struct PropertiesModelTests {
     @Test func propertyUsedOnTwoObservationsShowsInboundNotice() async {
         let store = FakeStore()
         let property = userProperty(usedBy: 2)
-        store.observationsBySource["src-1"] = [
+        store.observationsByGraph["g-1"] = [
             observation(id: "obs-1", ref: "OBS-AAAAA", propertyID: property.id, title: "accidental"),
             observation(id: "obs-2", ref: "OBS-BBBBB", propertyID: property.id, title: "natural"),
         ]

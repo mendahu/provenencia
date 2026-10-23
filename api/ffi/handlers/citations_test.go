@@ -60,7 +60,7 @@ func citationFixture(t *testing.T) (projectDir, userID, sourceID, artifactID, pl
 	sout, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
 		ProjectDir:    dir,
 		UserId:        userID,
-		SourceId:      sourceID,
+		GraphId:       soleGraphID(t, dir, sourceID),
 		SubjectTypeId: placeTypeID,
 		Label:         "Boston",
 	}))
@@ -124,7 +124,7 @@ func likenessFixture(t *testing.T) (dir, userID, sourceID, artifactID, personID,
 		t.Fatal(err)
 	}
 	sout, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-		ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: personTypeID, Label: "Ada",
+		ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: personTypeID, Label: "Ada",
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -300,7 +300,7 @@ func TestLikenessReadHidesDamagedValue(t *testing.T) {
 					t.Fatalf("image path %q", d.GetImageRelPath())
 				}
 			}
-			gout, err := GetCitation(marshalProto(t, &engine.GetCitationRequest{ProjectDir: dir, CitationId: saved.Citation.GetId()}))
+			gout, err := GetCitation(marshalProto(t, &engine.GetCitationRequest{ProjectDir: dir, CitationId: saved.Citation.GetId(), GraphId: graphLinking(t, dir, artifactID)}))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -309,11 +309,11 @@ func TestLikenessReadHidesDamagedValue(t *testing.T) {
 				t.Fatal(err)
 			}
 			check(t, got.Observations)
-			lout, err := ListObservationsBySource(marshalProto(t, &engine.ListObservationsBySourceRequest{ProjectDir: dir, SourceId: sourceID}))
+			lout, err := ListObservationsByEvidenceGraph(marshalProto(t, &engine.ListObservationsByEvidenceGraphRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID)}))
 			if err != nil {
 				t.Fatal(err)
 			}
-			var list engine.ListObservationsBySourceResponse
+			var list engine.ListObservationsByEvidenceGraphResponse
 			if err := proto.Unmarshal(lout, &list); err != nil {
 				t.Fatal(err)
 			}
@@ -355,7 +355,7 @@ func TestCreateCitationWithObservations(t *testing.T) {
 				if created.Citation.GetTranscription() != "transcribe first" {
 					t.Fatalf("transcription %q", created.Citation.GetTranscription())
 				}
-				if created.GetEffects() == nil || len(created.GetEffects().GetSources()) == 0 {
+				if created.GetEffects() == nil || len(created.GetEffects().GetEvidenceGraphs()) == 0 {
 					t.Fatalf("effects %+v", created.GetEffects())
 				}
 				cr := req.(*engine.CreateCitationWithObservationsRequest)
@@ -530,26 +530,26 @@ func TestAddObservationsToCitation(t *testing.T) {
 	})
 }
 
-func TestListObservationsBySource(t *testing.T) {
+func TestListObservationsByEvidenceGraph(t *testing.T) {
 	var saved *engine.CreateCitationWithObservationsResponse
-	runRPC(t, ListObservationsBySource, []rpcTest{
+	runRPC(t, ListObservationsByEvidenceGraph, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
 			name: "returns a likeness",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, sourceID, artifactID, personID, likenessID := likenessFixture(t)
 				saved = saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
-				return &engine.ListObservationsBySourceRequest{ProjectDir: dir, SourceId: sourceID}
+				return &engine.ListObservationsByEvidenceGraphRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID)}
 			},
 			after: func(t *testing.T, out []byte, req proto.Message) {
-				var list engine.ListObservationsBySourceResponse
+				var list engine.ListObservationsByEvidenceGraphResponse
 				if err := proto.Unmarshal(out, &list); err != nil {
 					t.Fatal(err)
 				}
 				if len(list.Observations) != 1 {
 					t.Fatalf("%+v", list.Observations)
 				}
-				dir := req.(*engine.ListObservationsBySourceRequest).ProjectDir
+				dir := req.(*engine.ListObservationsByEvidenceGraphRequest).ProjectDir
 				checkSavedLikeness(t, dir, list.Observations[0])
 				sameLikeness(t, list.Observations[0], saved.Observations[0])
 				if err := catalogsession.Do(dir, func(c *database.Catalog) error { return c.Graph().Verify() }); err != nil {
@@ -574,13 +574,13 @@ func TestListObservationsBySource(t *testing.T) {
 				})); err != nil {
 					t.Fatal(err)
 				}
-				return &engine.ListObservationsBySourceRequest{
+				return &engine.ListObservationsByEvidenceGraphRequest{
 					ProjectDir: dir,
-					SourceId:   sourceID,
+					GraphId:    soleGraphID(t, dir, sourceID),
 				}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var list engine.ListObservationsBySourceResponse
+				var list engine.ListObservationsByEvidenceGraphResponse
 				if err := proto.Unmarshal(out, &list); err != nil {
 					t.Fatal(err)
 				}
@@ -615,7 +615,7 @@ func TestListObservationsBySource(t *testing.T) {
 					}
 				}
 				sout, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-					ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: eventTypeID, Label: "Birth of Ada",
+					ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: eventTypeID, Label: "Birth of Ada",
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -658,10 +658,10 @@ func TestListObservationsBySource(t *testing.T) {
 				})); err != nil {
 					t.Fatal(err)
 				}
-				return &engine.ListObservationsBySourceRequest{ProjectDir: dir, SourceId: sourceID}
+				return &engine.ListObservationsByEvidenceGraphRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID)}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var list engine.ListObservationsBySourceResponse
+				var list engine.ListObservationsByEvidenceGraphResponse
 				if err := proto.Unmarshal(out, &list); err != nil {
 					t.Fatal(err)
 				}
@@ -804,7 +804,7 @@ func TestGetCitation(t *testing.T) {
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
 				saved = saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
-				return &engine.GetCitationRequest{ProjectDir: dir, CitationId: saved.Citation.GetId()}
+				return &engine.GetCitationRequest{ProjectDir: dir, CitationId: saved.Citation.GetId(), GraphId: graphLinking(t, dir, artifactID)}
 			},
 			after: func(t *testing.T, out []byte, req proto.Message) {
 				var got engine.GetCitationResponse
@@ -845,6 +845,7 @@ func TestGetCitation(t *testing.T) {
 				return &engine.GetCitationRequest{
 					ProjectDir: dir,
 					CitationId: created.Citation.GetId(),
+					GraphId:    graphLinking(t, dir, artifactID),
 				}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
@@ -883,7 +884,7 @@ func TestGetCitation(t *testing.T) {
 					}
 				}
 				sout, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-					ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: eventTypeID, Label: "Birth of Ada",
+					ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: eventTypeID, Label: "Birth of Ada",
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -931,7 +932,7 @@ func TestGetCitation(t *testing.T) {
 				if err := proto.Unmarshal(createOut, &created); err != nil {
 					t.Fatal(err)
 				}
-				return &engine.GetCitationRequest{ProjectDir: dir, CitationId: created.Citation.GetId()}
+				return &engine.GetCitationRequest{ProjectDir: dir, CitationId: created.Citation.GetId(), GraphId: graphLinking(t, dir, artifactID)}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
 				var got engine.GetCitationResponse
@@ -982,7 +983,7 @@ func TestGetCitationSecondReadUsesTheLoadedSource(t *testing.T) {
 	if err := proto.Unmarshal(otherOut, &other); err != nil {
 		t.Fatal(err)
 	}
-	req := marshalProto(t, &engine.GetCitationRequest{ProjectDir: dir, CitationId: created.Citation.GetId()})
+	req := marshalProto(t, &engine.GetCitationRequest{ProjectDir: dir, CitationId: created.Citation.GetId(), GraphId: graphLinking(t, dir, artifactID)})
 	first, err := GetCitation(req)
 	if err != nil {
 		t.Fatal(err)
@@ -1018,7 +1019,7 @@ func TestGetCitationSecondReadUsesTheLoadedSource(t *testing.T) {
 	if texts["Boston"] != 1 || texts["Cambridge"] != 1 {
 		t.Fatalf("observations %+v", got.Observations)
 	}
-	otherReq := marshalProto(t, &engine.GetCitationRequest{ProjectDir: dir, CitationId: other.Citation.GetId()})
+	otherReq := marshalProto(t, &engine.GetCitationRequest{ProjectDir: dir, CitationId: other.Citation.GetId(), GraphId: graphLinking(t, dir, artifactID)})
 	otherGot, err := GetCitation(otherReq)
 	if err != nil {
 		t.Fatal(err)

@@ -52,6 +52,15 @@ struct SourcesModelTests {
     ) -> (SourcesModel, WorkspaceSession) {
         store.sourcesByProject[projectDir] = sources
         store.sourceTypesByProject[projectDir] = types
+        if store.evidenceGraphsByProject[projectDir] == nil {
+            // One Default graph per Source, linking an Artifact, with an id that is not the Source's.
+            store.evidenceGraphsByProject[projectDir] = sources.map {
+                CatalogEvidenceGraph(
+                    id: "g-\($0.id)", ref: "GPH-1", sourceID: $0.id, name: "Default", description: "",
+                    artifactIDs: ["a-\($0.id)"]
+                )
+            }
+        }
         let session = makeSession(store: store)
         let model = SourcesModel(
             session: session,
@@ -75,12 +84,17 @@ struct SourcesModelTests {
         ) {
             await waitForQuery(typesHandle)
         }
+        if let graphsHandle: QueryHandle<[CatalogEvidenceGraph]> = session.queryHandle(
+            CatalogQueryKey.evidenceGraphsList(project: session.projectKey)
+        ) {
+            await waitForQuery(graphsHandle)
+        }
         model.syncCatalogCounts()
     }
 
     private func warmProgress(_ model: SourcesModel, session: WorkspaceSession) async {
-        if let handle: QueryHandle<[String: SourceGraphProgress]> = session.queryHandle(
-            SourcesModel.sourceGraphProgressKey(for: session)
+        if let handle: QueryHandle<[String: EvidenceGraphProgress]> = session.queryHandle(
+            SourcesModel.evidenceGraphProgressKey(for: session)
         ) {
             await waitForQuery(handle)
         }
@@ -88,9 +102,9 @@ struct SourcesModelTests {
 
     private func progress(
         _ id: String, primary: Int, filed: Int
-    ) -> SourceGraphProgress {
-        SourceGraphProgress(
-            sourceId: id, subjectCount: primary, observationCount: 0,
+    ) -> EvidenceGraphProgress {
+        EvidenceGraphProgress(
+            graphId: "g-\(id)", sourceId: id, subjectCount: primary, observationCount: 0,
             primaryCount: primary, filedCount: filed
         )
     }
@@ -422,8 +436,8 @@ struct SourcesModelTests {
 
     @Test func warmListQueriesLoadsGraphProgress() async {
         let store = FakeStore()
-        store.graphProgressBySource["s1"] = SourceGraphProgress(
-            sourceId: "s1", subjectCount: 4, observationCount: 0
+        store.graphProgressByGraph["g-s1"] = EvidenceGraphProgress(
+            graphId: "g-s1", sourceId: "s1", subjectCount: 4, observationCount: 0
         )
         let (model, session) = makeModel(
             store: store,
@@ -431,12 +445,12 @@ struct SourcesModelTests {
             types: [photoType()]
         )
         await warmLists(model, session: session)
-        if let progressHandle: QueryHandle<[String: SourceGraphProgress]> = session.queryHandle(
-            SourcesModel.sourceGraphProgressKey(for: session)
+        if let progressHandle: QueryHandle<[String: EvidenceGraphProgress]> = session.queryHandle(
+            SourcesModel.evidenceGraphProgressKey(for: session)
         ) {
             await waitForQuery(progressHandle)
         }
-        #expect(model.graphProgress(for: "s1")?.subjectCount == 4)
+        #expect(model.graphProgress(for: "g-s1")?.subjectCount == 4)
         #expect(model.graphCountsLoading == false)
     }
 
@@ -449,14 +463,14 @@ struct SourcesModelTests {
         )
         #expect(
             L10n.Sources.graphZoneAccessibility(
-                progress: .zeros(sourceId: "s1"),
+                progress: .zeros(graphId: "g1"),
                 countsLoading: false
             ) == "Open graph, 0 subjects, not started"
         )
         #expect(
             L10n.Sources.graphZoneAccessibility(
-                progress: SourceGraphProgress(
-                    sourceId: "s1", subjectCount: 12, observationCount: 48
+                progress: EvidenceGraphProgress(
+                    graphId: "g1", sourceId: "s1", subjectCount: 12, observationCount: 48
                 ),
                 countsLoading: false
             ) == "Open graph, 12 subjects, 48 observations"
@@ -540,9 +554,9 @@ struct SourcesModelTests {
             sources.append(source(id: "s\(index)", title: title, typeID: typeID, ref: "SRC-0000\(index)"))
         }
         for id in ["s1", "s2", "s5"] {
-            store.graphProgressBySource[id] = progress(id, primary: 2, filed: 1)
+            store.graphProgressByGraph["g-\(id)"] = progress(id, primary: 2, filed: 1)
         }
-        store.graphProgressBySource["s3"] = progress("s3", primary: 1, filed: 1)
+        store.graphProgressByGraph["g-s3"] = progress("s3", primary: 1, filed: 1)
         let (model, session) = makeModel(
             store: store, sources: sources, types: [photoType(), bookType()]
         )
@@ -589,7 +603,7 @@ struct SourcesModelTests {
 
     @Test func statusFilterWaitsForCounts() async {
         let store = FakeStore()
-        store.graphProgressBySource["s1"] = progress("s1", primary: 1, filed: 0)
+        store.graphProgressByGraph["g-s1"] = progress("s1", primary: 1, filed: 0)
         let (model, session) = makeModel(
             store: store,
             sources: [
@@ -618,7 +632,7 @@ struct SourcesModelTests {
     @Test func statusCountsFailureSurfacesAnErrorAndUnfilteredCount() async {
         enum Boom: Error { case boom }
         let store = FakeStore()
-        store.listSourceGraphProgressError = Boom.boom
+        store.listEvidenceGraphProgressError = Boom.boom
         let (model, session) = makeModel(
             store: store,
             sources: [
@@ -634,5 +648,43 @@ struct SourcesModelTests {
         model.settings.status = .filed
         #expect(model.statusCountsError != nil)
         #expect(model.countLine(visibleCount: model.visibleSources.count) == L10n.Sources.countLine(total: 2))
+    }
+
+    @Test func graphListFailureShowsTheStatusError() async {
+        enum Boom: Error { case boom }
+        let store = FakeStore()
+        store.listEvidenceGraphsError = Boom.boom
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "A", typeID: "t1")],
+            types: [photoType()]
+        )
+        model.warmListQueries()
+        await warmProgress(model, session: session)
+        if let handle: QueryHandle<[CatalogEvidenceGraph]> = session.queryHandle(
+            CatalogQueryKey.evidenceGraphsList(project: session.projectKey)
+        ) {
+            await waitForQuery(handle)
+        }
+        model.settings.status = .empty
+        #expect(model.statusCountsError != nil)
+        #expect(!model.isAwaitingFilterData)
+    }
+
+    @Test func graphListLoadingKeepsCountsLoading() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "A", typeID: "t1")],
+            types: [photoType()]
+        )
+        // Only the progress read starts; the graph list is still pending.
+        let _: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
+            SourcesModel.evidenceGraphProgressKey(for: session)
+        )
+        await warmProgress(model, session: session)
+        model.settings.status = .empty
+        #expect(model.graphCountsLoading)
+        #expect(model.isAwaitingFilterData)
     }
 }

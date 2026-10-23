@@ -7,6 +7,7 @@ import Testing
 struct CitationComposerModelTests {
     private let projectDir = "/tmp/citation-composer-model.provenencia"
     private let sourceID = "src-1"
+    private let graphID = "g-1"
     private let subjectID = "sub-person-1"
     private let eventID = "sub-event-1"
     private let placeID = "sub-place-1"
@@ -103,7 +104,12 @@ struct CitationComposerModelTests {
                 id: sourceID, ref: "SRC-1", sourceTypeID: "stype", title: "Census", description: ""
             ),
         ]
-        store.subjectsBySource[sourceID] = [
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: ["art-0"]
+            ),
+        ]
+        store.subjectsByGraph[graphID] = [
             subject(id: subjectID, typeID: personTypeID, ref: "CPR-1", label: "Margt."),
             subject(id: eventID, typeID: eventTypeID, ref: "CEV-1", label: "Birth"),
             subject(id: placeID, typeID: placeTypeID, ref: "CPL-1", label: "Boston"),
@@ -156,7 +162,7 @@ struct CitationComposerModelTests {
             transcriptionUncertain: false,
             transcriptionNote: ""
         )
-        store.observationsBySource[sourceID] = observations
+        store.observationsByGraph[graphID] = observations
     }
 
     private func makeModel(
@@ -172,6 +178,7 @@ struct CitationComposerModelTests {
         if let connectFrom, let connectTo, let bridge {
             entry = .connect(
                 sourceID: sourceID,
+                graphID: graphID,
                 fromSubjectID: connectFrom,
                 toSubjectID: connectTo,
                 bridgeTypeKey: bridge
@@ -179,6 +186,7 @@ struct CitationComposerModelTests {
         } else if let citationID {
             entry = .edit(
                 sourceID: sourceID,
+                graphID: graphID,
                 subjectID: subjectID ?? self.subjectID,
                 citationID: citationID,
                 artifactID: "art-0",
@@ -187,6 +195,7 @@ struct CitationComposerModelTests {
         } else {
             entry = .addProperty(
                 sourceID: sourceID,
+                graphID: graphID,
                 subjectID: subjectID ?? self.subjectID,
                 artifactID: "art-0"
             )
@@ -370,7 +379,7 @@ struct CitationComposerModelTests {
         let store = makeStore()
         seedArtifact(store)
         let bridge = subject(id: "bridge-1", typeID: participationTypeID, ref: "PTN-1", label: "")
-        store.subjectsBySource[sourceID]?.append(bridge)
+        store.subjectsByGraph[graphID]?.append(bridge)
         store.subjectPositionsBySubject[bridge.id] = CatalogSubjectPosition(
             subjectID: bridge.id, gridX: 4, gridY: 0
         )
@@ -413,7 +422,7 @@ struct CitationComposerModelTests {
         let store = makeStore()
         seedArtifact(store)
         let bridge = subject(id: "bridge-1", typeID: participationTypeID, ref: "PTN-1", label: "")
-        store.subjectsBySource[sourceID]?.append(bridge)
+        store.subjectsByGraph[graphID]?.append(bridge)
         store.subjectPositionsBySubject[bridge.id] = CatalogSubjectPosition(
             subjectID: bridge.id, gridX: 4, gridY: 0
         )
@@ -801,7 +810,7 @@ struct CitationComposerModelTests {
         let store = makeStore()
         seedArtifact(store)
         let bridge = subject(id: "bridge-1", typeID: participationTypeID, ref: "PTN-1", label: "")
-        store.subjectsBySource[sourceID]?.append(bridge)
+        store.subjectsByGraph[graphID]?.append(bridge)
         store.subjectPositionsBySubject[bridge.id] = CatalogSubjectPosition(
             subjectID: bridge.id, gridX: 4, gridY: 0
         )
@@ -870,10 +879,10 @@ struct CitationComposerModelTests {
                 error: nil
             ),
         ])
-        store.subjectsBySource[sourceID]?.append(
+        store.subjectsByGraph[graphID]?.append(
             subject(id: "bridge-1", typeID: participationTypeID, ref: "PTN-1", label: "")
         )
-        store.observationsBySource[sourceID, default: []].append(
+        store.observationsByGraph[graphID, default: []].append(
             roleObservation(id: "role-1", ref: "OBS-ROLE", subjectID: "bridge-1", termID: "term-witness")
         )
         model.connections.applyTerm(connectionID: connectionID, termID: "term-witness")
@@ -909,7 +918,7 @@ struct CitationComposerModelTests {
         seedArtifact(store)
         let model = makeModel(store: store)
         await model.prepare()
-        model.session.apply(.mutatedSourceGraph(sourceId: sourceID))
+        model.session.apply(CatalogWriteEffects(evidenceGraphs: [graphID]))
         #expect(model.isGraphReloading)
         model.beginAddObservation()
         model.beginNewSubject(typeKey: "person", field: .propertySubject)
@@ -1040,11 +1049,41 @@ struct CitationComposerModelTests {
         #expect(model.citationDescription == "")
     }
 
+    /// T-18: the composer entry needs the location's graph, and an existing
+    /// Citation read straight from the store names that graph.
+    @Test func entryNeedsTheGraph() async {
+        let location = WorkspaceLocation.citationComposer(
+            sourceId: sourceID, graphId: graphID, subjectId: subjectID, artifactId: "art-0"
+        )
+        #expect(CitationComposerEntry(location: location)?.graphID == graphID)
+        #expect(CitationComposerEntry(location: location)?.sourceID == sourceID)
+        // Without a graph the location is the Source page, which is no entry.
+        let bare = WorkspaceLocation(
+            section: .sources, sourceId: sourceID, subjectId: subjectID, sourceSurface: .citationComposer
+        )
+        #expect(bare.sourceSurface == .page)
+        #expect(CitationComposerEntry(location: bare) == nil)
+
+        // A Citation on a file the Source no longer has is not in the cached
+        // lists, so the composer reads it from the store, on its graph.
+        let store = makeStore()
+        seedArtifact(store)
+        store.citationsByID["cit-gone"] = CatalogCitation(
+            id: "cit-gone", ref: "CIT-9", artifactID: "art-gone",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            transcription: "", description: "", transcriptionUncertain: false, transcriptionNote: ""
+        )
+        let model = makeModel(store: store, citationID: "cit-gone")
+        await model.prepare()
+        #expect(store.recordedCalls.contains("getCitation cit-gone graphID=\(graphID)"))
+    }
+
     @Test func connectEntryIgnoresLegacyTermAndGrid() throws {
         let json = """
         {
           "section":"sources",
           "sourceId":"\(sourceID)",
+          "graphId":"\(graphID)",
           "connectFromSubjectId":"\(subjectID)",
           "connectToSubjectId":"\(eventID)",
           "connectBridgeTypeKey":"participation",
@@ -1058,6 +1097,7 @@ struct CitationComposerModelTests {
         let entry = CitationComposerEntry(location: location)
         #expect(entry == .connect(
             sourceID: sourceID,
+            graphID: graphID,
             fromSubjectID: subjectID,
             toSubjectID: eventID,
             bridgeTypeKey: "participation"
@@ -1581,7 +1621,7 @@ struct CitationComposerModelTests {
             Issue.record("the edit dialog should still be a property observation")
             return
         }
-        let created = store.subjectsBySource[sourceID]?.last
+        let created = store.subjectsByGraph[graphID]?.last
         #expect(values.subjectID == created?.id)
         #expect(values.subjectID != subjectID)
     }

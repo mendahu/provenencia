@@ -291,7 +291,7 @@ struct WorkspaceNavigationTests {
         #expect(a != WorkspaceLocation(section: .sources, sourceId: "2"))
         #expect(
             WorkspaceLocation(section: .sources, sourceId: "1", sourceSurface: .page)
-                != WorkspaceLocation(section: .sources, sourceId: "1", sourceSurface: .graph)
+                != WorkspaceLocation(section: .sources, sourceId: "1", graphId: "g-1", sourceSurface: .graph)
         )
     }
 
@@ -304,6 +304,72 @@ struct WorkspaceNavigationTests {
         #expect(location.sourceSurface == .page)
         #expect(location.title == "Deed")
         #expect(location.listScrollAnchor == nil)
+    }
+
+    /// T-12 (AC-1.5): canvas, composer and Promote locations keep their graph
+    /// through the history file.
+    @Test func graphLocationsRoundTripTheGraph() throws {
+        let (navigation, url) = try attachedNavigation()
+        navigation.go(to: .evidenceGraph(sourceId: "src-1", graphId: "g-1", title: "Deed"))
+        navigation.go(to: .citationComposer(sourceId: "src-1", graphId: "g-1", subjectId: "sub-1"))
+        navigation.go(to: .promote(
+            sourceId: "src-1", graphId: "g-1", subjectId: "sub-1", kind: .person,
+            ref: "CPR-1", title: "James", sourceTitle: "Deed"
+        ))
+        let reloaded = WorkspaceNavigation()
+        reloaded.attachProject(uuid: projectUuid, fileURL: url)
+        for surface in [SourceSurface.promote, .citationComposer, .graph] {
+            #expect(reloaded.currentLocation.sourceSurface == surface)
+            #expect(reloaded.currentLocation.graphId == "g-1")
+            #expect(reloaded.currentLocation.sourceId == "src-1")
+            reloaded.goBack()
+        }
+    }
+
+    /// T-12 (AC-1.6): history written before graph ids named a Source with a
+    /// graph surface and no graph; it decodes as that Source's page.
+    @Test func legacyGraphSurfaceWithoutGraphDecodesAsPage() throws {
+        for surface in ["graph", "citationComposer", "promote"] {
+            let json = Data("""
+            {"section":"sources","sourceId":"src-legacy","subjectId":"sub-1","sourceSurface":"\(surface)"}
+            """.utf8)
+            let location = try JSONDecoder().decode(WorkspaceLocation.self, from: json)
+            #expect(location.sourceSurface == .page, "\(surface)")
+            #expect(location.sourceId == "src-legacy")
+            #expect(location.graphId == nil)
+        }
+        let withGraph = try JSONDecoder().decode(WorkspaceLocation.self, from: Data("""
+        {"section":"sources","sourceId":"src-1","graphId":"g-1","sourceSurface":"graph"}
+        """.utf8))
+        #expect(withGraph.sourceSurface == .graph)
+    }
+
+    /// T-23 (AC-1.6, D-11): every way a location is built applies the same rule.
+    @Test func graphSurfaceWithoutGraphBecomesThePage() {
+        for surface in [SourceSurface.graph, .citationComposer, .promote] {
+            for graphId in [nil, ""] as [String?] {
+                let location = WorkspaceLocation(
+                    section: .sources, sourceId: "src-1", graphId: graphId, sourceSurface: surface
+                )
+                #expect(location.sourceSurface == .page)
+                #expect(location.sourceId == "src-1")
+            }
+            #expect(
+                WorkspaceLocation(section: .sources, sourceId: "src-1", graphId: "g-1", sourceSurface: surface)
+                    .sourceSurface == surface
+            )
+        }
+        var proto = Provenencia_Engine_V1_WorkspaceLocation()
+        proto.section = "sources"
+        proto.sourceID = "src-1"
+        proto.sourceSurface = "graph"
+        let withoutGraph = GoStore.mapWorkspaceLocationFromProto(proto)
+        #expect(withoutGraph.sourceSurface == .page)
+        #expect(withoutGraph.sourceId == "src-1")
+        proto.graphID = "g-1"
+        let withGraph = GoStore.mapWorkspaceLocationFromProto(proto)
+        #expect(withGraph.sourceSurface == .graph)
+        #expect(withGraph.graphId == "g-1")
     }
 
     @Test func legacyHistoryMissingListScrollAnchorDecodesAsNil() throws {
@@ -401,7 +467,7 @@ struct WorkspaceNavigationTests {
     @Test func goToGraphIsDistinctPlaceFromPage() throws {
         let (navigation, _) = try attachedNavigation()
         navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .page))
-        navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .graph))
+        navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", graphId: "g-1", sourceSurface: .graph))
         #expect(navigation.currentLocation.sourceSurface == .graph)
         #expect(navigation.selectedSection == .sources)
         #expect(navigation.canGoBack)
@@ -412,11 +478,12 @@ struct WorkspaceNavigationTests {
 
     @Test func goToCitationComposerRestoresSubjectId() throws {
         let (navigation, _) = try attachedNavigation()
-        navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .graph))
+        navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", graphId: "g-1", sourceSurface: .graph))
         navigation.go(
             to: WorkspaceLocation(
                 section: .sources,
                 sourceId: "src-1",
+                graphId: "g-1",
                 subjectId: "sub-9",
                 citationId: "cit-1",
                 sourceSurface: .citationComposer,
@@ -433,11 +500,13 @@ struct WorkspaceNavigationTests {
             WorkspaceLocation(
                 section: .sources,
                 sourceId: "src-1",
+                graphId: "g-1",
                 subjectId: "sub-9",
                 sourceSurface: .citationComposer
             ) != WorkspaceLocation(
                 section: .sources,
                 sourceId: "src-1",
+                graphId: "g-1",
                 subjectId: "sub-9",
                 citationId: "cit-1",
                 sourceSurface: .citationComposer
@@ -447,11 +516,12 @@ struct WorkspaceNavigationTests {
 
     @Test func goToCitationComposerRestoresObservationId() throws {
         let (navigation, _) = try attachedNavigation()
-        navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .graph))
+        navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", graphId: "g-1", sourceSurface: .graph))
         navigation.go(
             to: WorkspaceLocation(
                 section: .sources,
                 sourceId: "src-1",
+                graphId: "g-1",
                 subjectId: "sub-9",
                 citationId: "cit-1",
                 artifactId: "art-0",
@@ -467,6 +537,7 @@ struct WorkspaceNavigationTests {
             WorkspaceLocation(
                 section: .sources,
                 sourceId: "src-1",
+                graphId: "g-1",
                 subjectId: "sub-9",
                 citationId: "cit-1",
                 observationId: "obs-a",
@@ -474,6 +545,7 @@ struct WorkspaceNavigationTests {
             ) != WorkspaceLocation(
                 section: .sources,
                 sourceId: "src-1",
+                graphId: "g-1",
                 subjectId: "sub-9",
                 citationId: "cit-1",
                 observationId: "obs-b",

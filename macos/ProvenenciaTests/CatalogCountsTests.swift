@@ -51,7 +51,7 @@ struct CatalogCountsTests {
                 description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
             ),
         ]
-        store.subjectsBySource["s1"] = [
+        store.subjectsByGraph["g1"] = [
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
             CatalogSubject(id: "sub-2", ref: "CPR-2", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
         ]
