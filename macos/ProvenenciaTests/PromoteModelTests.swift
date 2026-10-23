@@ -148,11 +148,35 @@ struct PromoteModelTests {
         await model.load()
         model.openSheet("a")
         #expect(model.sheetEvidence == .loading)
-        let loaded = await waitUntil { model.flow.row("a")?.evidence != nil }
+        let loaded = await waitUntil { model.flow.row("a")?.board != nil }
         #expect(loaded)
         #expect(store.recordedCalls.contains("getPromoteClaimEvidence subject=a handle=e1 neighbors=0"))
         #expect(model.flow.row("a")?.pins == ["l:1"])
         #expect(model.sheetEvidence == .idle)
+    }
+
+    @Test func aNameOrderChangeWhileASheetIsOpenWordsItAgain() async {
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
+        store.promoteEvidence["a"] = evidence([("l:1", true)])
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.openSheet("a")
+        _ = await waitUntil { model.flow.row("a")?.board != nil }
+        let reads = { store.recordedCalls.filter { $0.hasPrefix("getPromoteClaimEvidence") }.count }
+        #expect(reads() == 1)
+        // Nothing changed: nothing is read again.
+        model.nameFormatChanged()
+        #expect(reads() == 1)
+        model.session.nameFormat = NameFormatOrders(natural: [NameFormatPart(partType: "surname", trailingSeparator: "")], sorted: [])
+        model.nameFormatChanged()
+        _ = await waitUntil { reads() == 2 }
+        #expect(reads() == 2)
+        // With the sheet closed there is nothing to word again.
+        model.closeSheet()
+        model.session.nameFormat = NameFormatOrders()
+        model.nameFormatChanged()
+        #expect(reads() == 2)
     }
 
     @Test func aFailedEvidenceReadShowsAnError() async {
@@ -168,7 +192,7 @@ struct PromoteModelTests {
             return false
         }
         #expect(failed)
-        #expect(model.flow.row("a")?.evidence == nil)
+        #expect(model.flow.row("a")?.board == nil)
         model.closeSheet()
         #expect(model.sheetEvidence == .idle)
     }
@@ -184,10 +208,10 @@ struct PromoteModelTests {
         model.mapRest()
         model.openSheet("a")
         model.openSheet("b")
-        let loaded = await waitUntil { model.flow.row("b")?.evidence != nil }
+        let loaded = await waitUntil { model.flow.row("b")?.board != nil }
         #expect(loaded)
         try? await Task.sleep(for: .milliseconds(50))
-        #expect(model.flow.row("a")?.evidence == nil)
+        #expect(model.flow.row("a")?.board == nil)
         #expect(model.sheetEvidence == .idle)
     }
 
@@ -200,7 +224,7 @@ struct PromoteModelTests {
         await model.load()
         model.mapRest()
         model.openSheet("b")
-        _ = await waitUntil { model.flow.row("b")?.evidence != nil }
+        _ = await waitUntil { model.flow.row("b")?.board != nil }
         model.togglePin(subjectID: "b", pinIDs: ["l:2"])
         model.closeSheet()
         model.done()

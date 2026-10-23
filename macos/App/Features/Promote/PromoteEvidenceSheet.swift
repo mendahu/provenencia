@@ -20,7 +20,7 @@ struct PromoteEvidenceSheet: View {
             width: 880
         ) {
             ScrollView {
-                VStack(alignment: .leading, spacing: PVSpacing.space5) {
+                LazyVStack(alignment: .leading, spacing: PVSpacing.space5) {
                     if let readout = row.selectionReadout {
                         EvidenceTitleLines(row: row, readout: readout, model: model)
                     }
@@ -144,57 +144,62 @@ struct PromoteEvidenceSheet: View {
 
     // MARK: Evidence
 
+    /// The heading, the evidence's state, then one Card per property and per relationship. These are
+    /// siblings of the sheet's lazy stack, so a Card is built when it scrolls into view.
+    @ViewBuilder
     private func evidenceArea(title: String) -> some View {
-        let evidence = row.evidence
-        return VStack(alignment: .leading, spacing: PVSpacing.space5) {
-            PVDivider()
-            PVSectionHeader(
-                title: EvidenceTextStyle.painted(
-                    PromoteEvidenceDisplay.evidenceHeading(
-                        name: row.name, sourceTitle: model.entry.sourceTitle, kind: row.kind, recordTitle: title
-                    ),
-                    name: PVFont.display(size: PVTypeScale.h3, weight: PVFontWeight.semibold)
+        let board = row.board
+        PVDivider()
+        PVSectionHeader(
+            title: EvidenceTextStyle.painted(
+                PromoteEvidenceDisplay.evidenceHeading(
+                    name: row.name, sourceTitle: model.entry.sourceTitle, kind: row.kind, recordTitle: title
                 ),
-                titleWeight: PVFontWeight.regular,
-                meta: evidence.map {
-                    L10n.Promote.checkedCount(PromoteEvidenceDisplay.checkedCount($0, pins: row.pins))
-                }
+                name: PVFont.display(size: PVTypeScale.h3, weight: PVFontWeight.semibold)
+            ),
+            titleWeight: PVFontWeight.regular,
+            meta: board.map { L10n.Promote.checkedCount($0.checkedCount(pins: row.pins)) }
+        )
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityIdentifier("promote.sheet.heading")
+        if let board, board.hasNothingToCompare {
+            PVEmptyState(
+                icon: .searchEmpty,
+                title: L10n.Promote.nothingToCompareTitle,
+                message: L10n.string(L10n.Promote.nothingToCompareBody),
+                compact: true
             )
-            .accessibilityAddTraits(.isHeader)
-            .accessibilityIdentifier("promote.sheet.heading")
-            if let evidence, PromoteEvidenceDisplay.hasNothingToCompare(evidence) {
-                PVEmptyState(
-                    icon: .searchEmpty,
-                    title: L10n.Promote.nothingToCompareTitle,
-                    message: L10n.string(L10n.Promote.nothingToCompareBody),
-                    compact: true
-                )
+        }
+        if case .failed(let message) = model.sheetEvidence {
+            PVCallout(tone: .danger, title: L10n.Promote.evidenceUnavailable, message: message, compact: true)
+        }
+        if let board {
+            cards(board)
+        } else if model.sheetEvidence == .loading {
+            VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                PVSkeletonBar(width: nil, height: 12)
+                PVSkeletonBar(width: 320, height: 12)
+                PVSkeletonBar(width: 240, height: 12)
             }
-            if case .failed(let message) = model.sheetEvidence {
-                PVCallout(tone: .danger, title: L10n.Promote.evidenceUnavailable, message: message, compact: true)
-            }
-            if let evidence {
-                cards(evidence)
-            } else if model.sheetEvidence == .loading {
-                VStack(alignment: .leading, spacing: PVSpacing.space3) {
-                    PVSkeletonBar(width: nil, height: 12)
-                    PVSkeletonBar(width: 320, height: 12)
-                    PVSkeletonBar(width: 240, height: 12)
-                }
-                .accessibilityIdentifier("promote.sheet.loading")
-            }
+            .accessibilityIdentifier("promote.sheet.loading")
         }
     }
 
     /// The Subject's own Cards in Go's order, then one Card per relationship.
     @ViewBuilder
-    private func cards(_ evidence: CatalogClaimEvidence) -> some View {
-        let context = EvidenceContext(row: row, evidence: evidence, model: model)
-        ForEach(evidence.sections.filter { !$0.lines.isEmpty }) { section in
-            EvidenceSectionCard(context: context, section: section, expanded: $expanded)
+    private func cards(_ board: EvidenceBoard) -> some View {
+        let env = EvidenceEnv(
+            projectDir: model.session.projectKey.projectDir,
+            toggle: { model.togglePin(subjectID: row.subjectID, pinIDs: $0) },
+            setOpen: { key, open in
+                if open { expanded.insert(key) } else { expanded.remove(key) }
+            }
+        )
+        ForEach(board.cards) { card in
+            EvidenceSectionCard(group: card, pins: row.pins, expanded: expanded, env: env)
         }
-        ForEach(evidence.relationships) { relationship in
-            EvidenceRelationshipCard(context: context, relationship: relationship, expanded: $expanded)
+        ForEach(board.relationships) { relationship in
+            EvidenceRelationshipCard(relationship: relationship, pins: row.pins, expanded: expanded, env: env)
         }
     }
 
@@ -246,66 +251,39 @@ private func outcomeTone(_ outcome: EvidenceOutcome) -> PVBadgeTone {
     }
 }
 
-// MARK: - Context
+// MARK: - What the board does not carry
 
-/// What every line needs from the sheet: the row, its evidence and the model's words.
-@MainActor
-private struct EvidenceContext {
-    let row: PromoteFlow.Row
-    let evidence: CatalogClaimEvidence
-    let model: PromoteModel
+/// What a line needs from the sheet that is not in the board: where its crops are stored, and what
+/// its boxes and its disclosure do. Two of these are always equal: the closures never decide
+/// whether a line draws again.
+private struct EvidenceEnv {
+    let projectDir: String
+    /// Checks or unchecks the pins of a line, a record or a relationship together.
+    let toggle: ([String]) -> Void
+    /// Opens or closes the records behind a line, by its key.
+    let setOpen: (String, Bool) -> Void
+}
 
-    /// A value as the Conclusion page words it, in the researcher's locale and name order.
-    func worded(_ value: CatalogConclusionValue) -> String {
-        ReconciledValueDisplay.string(for: value, orders: model.session.nameFormat)
-    }
+/// A box that checks or unchecks a line's, a record's or a relationship's pins together: checked
+/// when every pin is, and a partly checked box checks them all.
+private struct EvidencePinBox: View {
+    let ids: [String]
+    /// Which of `ids` are checked.
+    let checked: Set<String>
+    let spoken: String
+    let identifier: String
+    let env: EvidenceEnv
 
-    func incomingText(_ line: CatalogClaimEvidenceLine) -> String {
-        let text = worded(line.incoming)
-        return line.incomingNegative ? L10n.Promote.negatedValue(text) : text
-    }
-
-    func propertyLabel(_ key: String) -> String {
-        model.propertyLabel(key: key, origin: CatalogOrigin.provenencia)
-    }
-
-    func sourceTitle(_ pin: CatalogClaimEvidencePin) -> String? {
-        guard let title = evidence.sourceTitles[pin.sourceID], !title.isEmpty else { return nil }
-        return title
-    }
-
-    /// A record behind a line, for the detail and the spoken labels.
-    func member(_ pin: CatalogClaimEvidencePin) -> PromoteEvidenceDisplay.Member {
-        PromoteEvidenceDisplay.Member(source: sourceTitle(pin), value: worded(pin.value))
-    }
-
-    func sentence(_ line: CatalogClaimEvidenceLine) -> String {
-        L10n.string(L10n.Promote.lineSentence(
-            relation: line.relation,
-            cause: line.cause,
-            propertyCause: line.propertyCause,
-            value: line.incoming
-        ))
-    }
-
-    /// Where a Card says what this Source has, from its lines' incoming values.
-    func thisSourcePlacement(_ section: CatalogClaimEvidenceSection) -> PromoteEvidenceDisplay.ThisSourcePlacement {
-        PromoteEvidenceDisplay.thisSourcePlacement(values: section.lines.map { line in
-            if case .depiction = line.incoming { return nil }
-            return incomingText(line)
-        })
-    }
-
-    func state(_ ids: [String]) -> PromoteEvidenceDisplay.CheckState {
-        PromoteEvidenceDisplay.checkState(pinIDs: ids, pins: row.pins)
-    }
-
-    /// Checked when every pin is; one press flips them all, and a partly checked box checks them all.
-    func binding(_ ids: [String]) -> Binding<Bool> {
-        Binding(
-            get: { state(ids) == .checked },
-            set: { _ in model.togglePin(subjectID: row.subjectID, pinIDs: ids) }
+    var body: some View {
+        let state = PromoteEvidenceDisplay.checkState(pinIDs: ids, pins: checked)
+        PVCheckbox(
+            isChecked: Binding(get: { state == .checked }, set: { _ in env.toggle(ids) }),
+            isIndeterminate: state == .partial,
+            isDisabled: ids.isEmpty,
+            accessibilitySpokenLabel: spoken
         )
+        .frame(width: EvidenceLayout.box)
+        .accessibilityIdentifier(identifier)
     }
 }
 
@@ -342,61 +320,67 @@ private struct EvidenceTitleLines: View {
 // MARK: - Property Cards
 
 private struct EvidenceSectionCard: View {
-    let context: EvidenceContext
-    let section: CatalogClaimEvidenceSection
-    @Binding var expanded: Set<String>
+    let group: EvidenceBoard.Group
+    let pins: Set<String>
+    let expanded: Set<String>
+    let env: EvidenceEnv
 
     var body: some View {
         PVCard(cornerRadius: PVRadius.sm) {
             VStack(alignment: .leading, spacing: 0) {
-                EvidenceCardHeader(
-                    title: PromoteEvidenceDisplay.similarityHeader(property: context.propertyLabel(section.propertyKey)),
-                    thisSource: placement.headerValue
-                )
-                ForEach(Array(section.lines.enumerated()), id: \.element.id) { index, line in
-                    if index > 0 { PVDivider() }
-                    EvidenceLine(context: context, line: line, showsThisSource: placement == .lines, expanded: $expanded)
-                }
+                EvidenceCardHeader(title: group.header, thisSource: group.thisSource)
+                EvidenceGroupLines(group: group, pins: pins, expanded: expanded, env: env)
             }
         }
-        .accessibilityIdentifier("promote.sheet.section.\(section.propertyKey)")
+        .accessibilityIdentifier("promote.sheet.section.\(group.id)")
     }
+}
 
-    private var placement: PromoteEvidenceDisplay.ThisSourcePlacement {
-        context.thisSourcePlacement(section)
+/// A group's lines, divided. A line draws again only when its own value, its own checked pins
+/// or its own disclosure change.
+private struct EvidenceGroupLines: View {
+    let group: EvidenceBoard.Group
+    let pins: Set<String>
+    let expanded: Set<String>
+    let env: EvidenceEnv
+
+    var body: some View {
+        ForEach(Array(group.lines.enumerated()), id: \.element.id) { index, line in
+            if index > 0 { PVDivider() }
+            EvidenceLine(
+                line: line,
+                checked: pins.intersection(line.pinIDs),
+                isOpen: expanded.contains(line.key),
+                env: env
+            )
+            .equatable()
+        }
     }
 }
 
 /// One line on the board's grid: box, value, sentence, Source and outcome. A disclosure in the
 /// Source column opens the records behind a line that bundles several.
-private struct EvidenceLine: View {
-    let context: EvidenceContext
-    let line: CatalogClaimEvidenceLine
-    /// This Source's value goes under the sentence, because the Card does not say it once.
-    let showsThisSource: Bool
-    @Binding var expanded: Set<String>
+private struct EvidenceLine: View, Equatable {
+    let line: EvidenceBoard.Line
+    /// The line's own pins that are checked.
+    let checked: Set<String>
+    let isOpen: Bool
+    let env: EvidenceEnv
 
-    private var ids: [String] { line.members.map(\.id) }
-    private var key: String { ids.first ?? line.id }
-    private var isOpen: Bool { expanded.contains(key) }
-    private var collapses: Bool { ids.count > 1 }
-    private var isLikeness: Bool {
-        if case .depiction = line.incoming { return true }
-        return false
+    static func == (lhs: EvidenceLine, rhs: EvidenceLine) -> Bool {
+        lhs.line == rhs.line && lhs.checked == rhs.checked && lhs.isOpen == rhs.isOpen
+            && lhs.env.projectDir == rhs.env.projectDir
     }
-    private var idPrefix: String { isLikeness ? "likeness" : "pin" }
+
+    private var idPrefix: String { line.isLikeness ? "likeness" : "pin" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: EvidenceLayout.gap) {
-                PVCheckbox(
-                    isChecked: context.binding(ids),
-                    isIndeterminate: context.state(ids) == .partial,
-                    isDisabled: ids.isEmpty,
-                    accessibilitySpokenLabel: spoken
+                EvidencePinBox(
+                    ids: line.pinIDs, checked: checked, spoken: line.spoken,
+                    identifier: "promote.sheet.\(idPrefix).\(line.key)", env: env
                 )
-                .frame(width: EvidenceLayout.box)
-                .accessibilityIdentifier("promote.sheet.\(idPrefix).\(key)")
                 valueColumn
                     .frame(width: EvidenceLayout.valueColumn, alignment: .leading)
                     .accessibilityHidden(true)
@@ -409,9 +393,9 @@ private struct EvidenceLine: View {
             }
             .padding(.horizontal, EvidenceLayout.inset)
             .padding(.vertical, PVSpacing.space3)
-            if collapses && isOpen {
-                ForEach(line.members) { pin in
-                    EvidenceMemberRow(context: context, pin: pin)
+            if line.collapses && isOpen {
+                ForEach(line.members) { member in
+                    EvidenceMemberRow(member: member, checked: checked, env: env)
                 }
             }
         }
@@ -420,29 +404,27 @@ private struct EvidenceLine: View {
     /// The first record's value; a likeness shows its two crops, this Source's and the record's.
     @ViewBuilder
     private var valueColumn: some View {
-        if isLikeness {
-            HStack(alignment: .top, spacing: EvidenceLayout.cropGap) {
-                EvidenceCrop(context: context, value: line.incoming)
-                if let pin = line.members.first {
-                    EvidenceCrop(context: context, value: pin.value)
-                }
-            }
-        } else if let pin = line.members.first {
-            Text(verbatim: context.worded(pin.value))
+        switch line.value {
+        case .none:
+            EmptyView()
+        case .text(let text):
+            Text(verbatim: text)
                 .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
                 .foregroundStyle(PVColor.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
+        case .crops:
+            EvidenceCrops(value: line.value, projectDir: env.projectDir)
         }
     }
 
     private var sentenceColumn: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space1) {
-            Text(verbatim: context.sentence(line))
+            Text(verbatim: line.sentence)
                 .font(PVFont.body(size: PVTypeScale.bodySmall))
                 .foregroundStyle(PVColor.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            if showsThisSource, !isLikeness {
-                Text(verbatim: L10n.Promote.thisSource(context.incomingText(line)))
+            if let thisSource = line.thisSource {
+                Text(verbatim: thisSource)
                     .font(PVFont.body(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -452,42 +434,19 @@ private struct EvidenceLine: View {
 
     @ViewBuilder
     private var sourceColumn: some View {
-        if collapses {
+        if line.collapses {
             PVDisclosureButton(
-                isOpen ? L10n.Promote.hideRecords(ids.count) : L10n.Promote.showRecords(ids.count),
-                isExpanded: openBinding
+                isOpen ? L10n.Promote.hideRecords(line.pinIDs.count) : L10n.Promote.showRecords(line.pinIDs.count),
+                isExpanded: Binding(get: { isOpen }, set: { env.setOpen(line.key, $0) })
             )
             // A ghost button's label sits inside its padding; pull it out so the label
             // starts on the Source column's edge, where the record titles start.
             .padding(.leading, -PVControlSize.sm.horizontalPadding)
-            .accessibilityIdentifier("promote.sheet.expand.\(key)")
-        } else if let pin = line.members.first {
-            EvidenceSourceTitle(title: PromoteEvidenceDisplay.recordSource(title: context.sourceTitle(pin)))
+            .accessibilityIdentifier("promote.sheet.expand.\(line.key)")
+        } else if !line.pinIDs.isEmpty {
+            EvidenceSourceTitle(title: line.source)
                 .accessibilityHidden(true)
         }
-    }
-
-    private var openBinding: Binding<Bool> {
-        Binding(
-            get: { expanded.contains(key) },
-            set: { if $0 { expanded.insert(key) } else { expanded.remove(key) } }
-        )
-    }
-
-    private var spoken: String {
-        if isLikeness {
-            return L10n.Promote.spokenLikeness(
-                source: PromoteEvidenceDisplay.recordSource(title: line.members.first.flatMap(context.sourceTitle)),
-                sentence: context.sentence(line)
-            )
-        }
-        return PromoteEvidenceDisplay.spokenLabel(
-            property: context.propertyLabel(line.propertyKey),
-            sentence: context.sentence(line),
-            here: context.incomingText(line),
-            count: line.members.count,
-            member: line.members.first.map(context.member)
-        )
     }
 }
 
@@ -535,20 +494,24 @@ private enum EvidenceTextStyle {
     }
 }
 
-/// A likeness's stored crop, with no caption.
-private struct EvidenceCrop: View {
-    let context: EvidenceContext
-    let value: CatalogConclusionValue
+/// A likeness's stored crops side by side, with no caption.
+private struct EvidenceCrops: View {
+    let value: EvidenceBoard.Value
+    let projectDir: String
 
     var body: some View {
-        if case .depiction(let depiction) = value {
-            CachedThumbnail(
-                projectDir: context.model.session.projectKey.projectDir,
-                relPath: depiction.imageRelPath,
-                size: LikenessTile<EmptyView>.crop,
-                fallbackMark: .subjectPerson
-            )
-            .accessibilityHidden(true)
+        if case .crops(let paths) = value {
+            HStack(alignment: .top, spacing: EvidenceLayout.cropGap) {
+                ForEach(Array(paths.enumerated()), id: \.offset) { _, path in
+                    CachedThumbnail(
+                        projectDir: projectDir,
+                        relPath: path,
+                        size: LikenessTile<EmptyView>.crop,
+                        fallbackMark: .subjectPerson
+                    )
+                    .accessibilityHidden(true)
+                }
+            }
         }
     }
 }
@@ -562,6 +525,7 @@ private struct EvidenceCardHeader: View {
         case group
     }
 
+    /// The header's words, without the ellipsis it is drawn after; VoiceOver reads them as they are.
     let title: String
     let thisSource: String?
     var style: Style = .card
@@ -605,24 +569,24 @@ private struct EvidenceOutcomeBadge: View {
 /// One record under an expanded line: its own box, its value (the crop, for a likeness) and its Source.
 /// Every box can be unchecked; none is disabled.
 private struct EvidenceMemberRow: View {
-    let context: EvidenceContext
-    let pin: CatalogClaimEvidencePin
+    let member: EvidenceBoard.Member
+    /// The expanded line's checked pins.
+    let checked: Set<String>
+    let env: EvidenceEnv
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             PVDivider()
             HStack(alignment: .top, spacing: EvidenceLayout.gap) {
-                PVCheckbox(
-                    isChecked: context.binding([pin.id]),
-                    accessibilitySpokenLabel: PromoteEvidenceDisplay.spokenMember(spokenSource)
+                EvidencePinBox(
+                    ids: [member.id], checked: checked, spoken: member.spoken,
+                    identifier: "promote.sheet.member.\(member.id)", env: env
                 )
-                .frame(width: EvidenceLayout.box)
-                .accessibilityIdentifier("promote.sheet.member.\(pin.id)")
                 value
                     .frame(width: EvidenceLayout.memberValueColumn, alignment: .leading)
                     .accessibilityHidden(true)
                 Spacer(minLength: 0)
-                EvidenceSourceTitle(title: PromoteEvidenceDisplay.recordSource(title: context.sourceTitle(pin)))
+                EvidenceSourceTitle(title: member.source)
                     .frame(width: EvidenceLayout.sourceColumn, alignment: .leading)
                     .accessibilityHidden(true)
                 Color.clear.frame(width: EvidenceLayout.badgeColumn, height: 0)
@@ -633,31 +597,18 @@ private struct EvidenceMemberRow: View {
         .padding(.trailing, EvidenceLayout.inset)
     }
 
-    private var isLikeness: Bool {
-        if case .depiction = pin.value { return true }
-        return false
-    }
-
-    /// The record as it is spoken: a likeness with no Source title is "a record", not "Likeness".
-    private var spokenSource: PromoteEvidenceDisplay.Member {
-        if case .depiction = pin.value {
-            return PromoteEvidenceDisplay.Member(
-                source: PromoteEvidenceDisplay.recordSource(title: context.sourceTitle(pin)),
-                value: context.worded(pin.value)
-            )
-        }
-        return context.member(pin)
-    }
-
     @ViewBuilder
     private var value: some View {
-        if isLikeness {
-            EvidenceCrop(context: context, value: pin.value)
-        } else {
-            Text(verbatim: context.worded(pin.value))
+        switch member.value {
+        case .none:
+            EmptyView()
+        case .text(let text):
+            Text(verbatim: text)
                 .font(PVFont.body(size: PVTypeScale.bodySmall))
                 .foregroundStyle(PVColor.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
+        case .crops:
+            EvidenceCrops(value: member.value, projectDir: env.projectDir)
         }
     }
 }
@@ -666,19 +617,16 @@ private struct EvidenceMemberRow: View {
 
 /// A connection this Subject and the record's members share, worded by the engine's reading of the link from the neighbor's side, with the neighbor's lines under it.
 private struct EvidenceRelationshipCard: View {
-    let context: EvidenceContext
-    let relationship: CatalogClaimEvidenceRelationship
-    @Binding var expanded: Set<String>
-
-    private var ids: [String] { relationship.bundles.map(\.id) }
-    private var neighbor: PromoteFlow.Row? { context.model.neighbor(relationship.neighborSubjectID) }
-    private var sections: [CatalogClaimEvidenceSection] { relationship.sections.filter { !$0.lines.isEmpty } }
+    let relationship: EvidenceBoard.RelationshipCard
+    let pins: Set<String>
+    let expanded: Set<String>
+    let env: EvidenceEnv
 
     var body: some View {
         PVCard(cornerRadius: PVRadius.sm) {
             VStack(alignment: .leading, spacing: 0) {
                 header
-                if sections.isEmpty {
+                if relationship.groups.isEmpty {
                     Text(L10n.Promote.nothingUnder)
                         .font(PVFont.body(size: PVTypeScale.caption))
                         .italic()
@@ -687,22 +635,14 @@ private struct EvidenceRelationshipCard: View {
                         .padding(.trailing, EvidenceLayout.inset)
                         .padding(.bottom, PVSpacing.space3)
                 } else {
-                    ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                    ForEach(relationship.groups) { group in
                         PVDivider()
-                        let placement = context.thisSourcePlacement(section)
                         VStack(alignment: .leading, spacing: 0) {
-                            EvidenceCardHeader(
-                                title: PromoteEvidenceDisplay.similarityHeader(property: context.propertyLabel(section.propertyKey)),
-                                thisSource: placement.headerValue,
-                                style: .group
-                            )
-                            ForEach(Array(section.lines.enumerated()), id: \.element.id) { lineIndex, line in
-                                if lineIndex > 0 { PVDivider() }
-                                EvidenceLine(context: context, line: line, showsThisSource: placement == .lines, expanded: $expanded)
-                            }
+                            EvidenceCardHeader(title: group.header, thisSource: group.thisSource, style: .group)
+                            EvidenceGroupLines(group: group, pins: pins, expanded: expanded, env: env)
                         }
                         .padding(.leading, EvidenceLayout.relationshipIndent)
-                        .accessibilityIdentifier("promote.sheet.section.\(relationship.id).\(section.propertyKey).\(index)")
+                        .accessibilityIdentifier("promote.sheet.section.\(group.id)")
                     }
                 }
             }
@@ -711,30 +651,17 @@ private struct EvidenceRelationshipCard: View {
 
     /// "…they share a spouse (CEV-3B5RT and PER-7QH3D)" as drawn, with the outcome as a badge.
     private var header: some View {
-        let phrase = PromoteEvidenceDisplay.sharePhrase(relationship: relationship, neighborName: neighbor?.name ?? "")
-        let title = PromoteEvidenceDisplay.shareHeader(
-            phrase: phrase,
-            ownRef: neighbor?.ref,
-            recordRef: neighbor?.target.handleRef
-        )
-        return HStack(alignment: .center, spacing: EvidenceLayout.gap) {
-            PVCheckbox(
-                isChecked: context.binding(ids),
-                isIndeterminate: context.state(ids) == .partial,
-                isDisabled: ids.isEmpty,
-                accessibilitySpokenLabel: L10n.Promote.spokenRelationship(
-                    sentence: title,
-                    link: L10n.string(L10n.Promote.outcome(relationship.outcome))
-                )
+        HStack(alignment: .center, spacing: EvidenceLayout.gap) {
+            EvidencePinBox(
+                ids: relationship.pinIDs, checked: pins.intersection(relationship.pinIDs), spoken: relationship.spoken,
+                identifier: "promote.sheet.relationship.\(relationship.neighborSubjectID).\(relationship.key)", env: env
             )
-            .frame(width: EvidenceLayout.box)
-            .accessibilityIdentifier("promote.sheet.relationship.\(relationship.neighborSubjectID).\(relationship.key)")
             HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
-                Text(verbatim: L10n.Promote.cardHeaderLead(title))
+                Text(verbatim: L10n.Promote.cardHeaderLead(relationship.header))
                     .font(PVFont.display(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
                     .foregroundStyle(PVColor.textDisplay)
-                if ids.count > 1 {
-                    Text(verbatim: L10n.Promote.recordCount(ids.count))
+                if relationship.recordCount > 1 {
+                    Text(verbatim: L10n.Promote.recordCount(relationship.recordCount))
                         .font(PVFont.body(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textMuted)
                 }

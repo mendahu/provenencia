@@ -18,14 +18,9 @@ enum PromoteEvidenceDisplay {
         return checked == pinIDs.count ? .checked : .partial
     }
 
-    /// How many of the evidence's offered pins are checked.
-    static func checkedCount(_ evidence: CatalogClaimEvidence, pins: Set<String>) -> Int {
-        pins.intersection(evidence.offeredPinIDs).count
-    }
-
-    /// Loaded, and nothing to compare: no line and no relationship.
-    static func hasNothingToCompare(_ evidence: CatalogClaimEvidence) -> Bool {
-        evidence.sections.allSatisfy { $0.lines.isEmpty } && evidence.relationships.isEmpty
+    /// How many of the offered pins are checked.
+    static func checkedCount(offered: Set<String>, pins: Set<String>) -> Int {
+        pins.intersection(offered).count
     }
 
     /// A record behind a line: its Source's title when it has one, and its worded value.

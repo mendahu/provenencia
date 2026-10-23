@@ -155,9 +155,9 @@ struct PromoteFlow: Equatable, Sendable {
         var reason: Reason
         var target: Target
         var menu: [Alternative]
-        /// The row's claim evidence against its target; nil until its sheet opens.
-        var evidence: CatalogClaimEvidence?
-        /// The pins left checked (ids from `evidence.offers`). Meaningful only once `evidence` is set.
+        /// The row's claim evidence against its target, worded for the sheet; nil until its sheet opens.
+        var board: EvidenceBoard?
+        /// The pins left checked (ids from `board.offeredPinIDs`). Meaningful only once `board` is set.
         var pins: Set<String>
         var confidenceGradeID: String?
         /// What the researcher typed; Promote drafts none.
@@ -363,7 +363,7 @@ struct PromoteFlow: Equatable, Sendable {
             // the sheet reads them again for this one. The argument is the
             // researcher's own and stays.
             rows[index].target = next
-            rows[index].evidence = nil
+            rows[index].board = nil
             rows[index].pins = []
             rows[index].contested = false
             rows[index].move = nil
@@ -401,16 +401,16 @@ struct PromoteFlow: Equatable, Sendable {
     /// Stores a row's evidence, unless its target moved on while it loaded.
     /// The first read drafts the pins the evidence checks; a later one keeps
     /// what the researcher left checked of what is still offered.
-    mutating func setEvidence(subjectID: String, handleID: String, evidence: CatalogClaimEvidence) {
+    mutating func setEvidence(subjectID: String, handleID: String, board: EvidenceBoard) {
         guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }),
               rows[index].target.handleID == handleID
         else { return }
-        if rows[index].evidence == nil {
-            rows[index].pins = evidence.checkedPinIDs
+        if rows[index].board == nil {
+            rows[index].pins = board.checkedPinIDs
         } else {
-            rows[index].pins.formIntersection(evidence.offeredPinIDs)
+            rows[index].pins.formIntersection(board.offeredPinIDs)
         }
-        rows[index].evidence = evidence
+        rows[index].board = board
     }
 
     /// Checks or unchecks every pin of a line or relationship together.
@@ -473,8 +473,8 @@ struct PromoteFlow: Equatable, Sendable {
         var defaultPins = false
         var pinIDs: [String] = []
         if case .handle = row.target {
-            defaultPins = row.evidence == nil
-            pinIDs = row.evidence == nil ? [] : row.pins.sorted()
+            defaultPins = row.board == nil
+            pinIDs = row.board == nil ? [] : row.pins.sorted()
         }
         let entityID: String?
         let target: String
@@ -563,7 +563,7 @@ struct PromoteFlow: Equatable, Sendable {
                 subjectID: fact.id, kind: fact.kind, name: fact.name, ref: fact.ref,
                 anchor: true, assessment: .strong, reason: .filed,
                 target: .handle(id: anchor.id, ref: anchor.ref, title: anchor.title),
-                menu: [], evidence: nil, pins: [], confidenceGradeID: nil, argument: "",
+                menu: [], board: nil, pins: [], confidenceGradeID: nil, argument: "",
                 decided: false, updated: false, conflictNote: nil, proposedDuplicateOf: nil, duplicateNote: nil
             )
         }
@@ -598,7 +598,7 @@ struct PromoteFlow: Equatable, Sendable {
             subjectID: fact.id, kind: fact.kind, name: fact.name, ref: fact.ref,
             anchor: false, assessment: Assessment(wire: proposal.assessment),
             reason: Reason(proposal),
-            target: drafted, menu: menu, evidence: keeps ? previous?.evidence : nil,
+            target: drafted, menu: menu, board: keeps ? previous?.board : nil,
             pins: keeps ? previous?.pins ?? [] : [], confidenceGradeID: nil, argument: previous?.argument ?? "",
             decided: false, updated: updated, conflictNote: nil,
             proposedDuplicateOf: duplicateOf(proposal), duplicateNote: nil,

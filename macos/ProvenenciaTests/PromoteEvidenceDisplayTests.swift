@@ -54,13 +54,10 @@ struct PromoteEvidenceDisplayTests {
     }
 
     @Test func checkedCountIsOfferedPinsOnly() {
-        let evidence = CatalogClaimEvidence(offers: [
-            CatalogClaimEvidenceOffer(id: "p1", checked: true),
-            CatalogClaimEvidenceOffer(id: "p2", checked: false),
-        ])
-        #expect(PromoteEvidenceDisplay.checkedCount(evidence, pins: ["p1", "x"]) == 1)
-        #expect(PromoteEvidenceDisplay.checkedCount(evidence, pins: ["p1", "p2"]) == 2)
-        #expect(PromoteEvidenceDisplay.checkedCount(evidence, pins: []) == 0)
+        let offered: Set<String> = ["p1", "p2"]
+        #expect(PromoteEvidenceDisplay.checkedCount(offered: offered, pins: ["p1", "x"]) == 1)
+        #expect(PromoteEvidenceDisplay.checkedCount(offered: offered, pins: ["p1", "p2"]) == 2)
+        #expect(PromoteEvidenceDisplay.checkedCount(offered: offered, pins: []) == 0)
     }
 
     // MARK: - T-2
@@ -207,13 +204,6 @@ struct PromoteEvidenceDisplayTests {
             #expect(label == "Name. Same name. This source: John Smith. J. Smith.")
             #expect(PromoteEvidenceDisplay.spokenMember(PromoteEvidenceDisplay.Member(source: source, value: "J. Smith")) == "J. Smith.")
         }
-    }
-
-    @Test func nothingToCompareWhenNoLineOrRelationship() {
-        #expect(PromoteEvidenceDisplay.hasNothingToCompare(CatalogClaimEvidence()))
-        #expect(PromoteEvidenceDisplay.hasNothingToCompare(CatalogClaimEvidence(sections: [CatalogClaimEvidenceSection(propertyKey: "name", lines: [])])))
-        #expect(!PromoteEvidenceDisplay.hasNothingToCompare(CatalogClaimEvidence(sections: [CatalogClaimEvidenceSection(propertyKey: "name", lines: [line()])])))
-        #expect(!PromoteEvidenceDisplay.hasNothingToCompare(CatalogClaimEvidence(relationships: [relationship()])))
     }
 
     @Test func aSourceWithoutATitleIsARecord() {

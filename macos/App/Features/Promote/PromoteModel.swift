@@ -216,13 +216,32 @@ final class PromoteModel {
                     neighbors: neighbors
                 )
                 guard generation == evidenceGeneration else { return }
-                flow.setEvidence(subjectID: subjectID, handleID: handleID, evidence: evidence)
+                flow.setEvidence(subjectID: subjectID, handleID: handleID, board: board(of: evidence))
                 sheetEvidence = .idle
             } catch {
                 guard generation == evidenceGeneration else { return }
                 sheetEvidence = .failed(L10n.Errors.message(for: error))
             }
         }
+    }
+
+    /// The evidence worded for the sheet, once: the page's names for the connected rows and the
+    /// researcher's name order.
+    private func board(of evidence: CatalogClaimEvidence) -> EvidenceBoard {
+        EvidenceBoard.build(
+            evidence: evidence,
+            neighbor: { [flow] id in flow.row(id) },
+            labels: { [self] key in propertyLabel(key: key, origin: CatalogOrigin.provenencia) },
+            worded: { [session] value in ReconciledValueDisplay.string(for: value, orders: session.nameFormat) }
+        )
+    }
+
+    /// The researcher's name order changed. An open sheet's words were made in the old one, so
+    /// its evidence is read and worded again.
+    func nameFormatChanged() {
+        guard session.nameFormat != flow.nameOrders else { return }
+        flow.nameOrders = session.nameFormat
+        if let id = flow.sheetSubjectID { setSheetSubject(id) }
     }
 
     func done() {

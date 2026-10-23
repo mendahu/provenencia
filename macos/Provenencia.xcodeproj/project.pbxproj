@@ -372,9 +372,11 @@
 		B9110000000000000000000E /* PromoteFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000D /* PromoteFlow.swift */; };
 		C1120094E727223A3EA7D87A /* PromoteEvidenceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112000400E7D14ECD8AF111 /* PromoteEvidenceSheet.swift */; };
 		C11200BD269354BE1FC4BDC0 /* PromoteEvidenceDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */; };
+		AA000000000000000005E007 /* PromoteEvidenceBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E006 /* PromoteEvidenceBoard.swift */; };
 		C11200E6D8FE13682466E995 /* PromoteReadoutBadges.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112002B53DFC6E2EF560AC7 /* PromoteReadoutBadges.swift */; };
 		B91100000000000000000010 /* PromoteFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000F /* PromoteFlowTests.swift */; };
 		C112007CF5D40430AF417EA9 /* PromoteEvidenceDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */; };
+		AA000000000000000005E005 /* PromoteEvidenceBoardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E004 /* PromoteEvidenceBoardTests.swift */; };
 		AA0000000000000000000FA2 /* StyledFormatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000FA1 /* StyledFormatTests.swift */; };
 		B02746CAC03F94127373BB92 /* DateRowDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B052AEDEE88EFC9ED8413469 /* DateRowDisplay.swift */; };
 		B0F71D26711A163E3B415FCB /* DerivedPlace.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0628D2BFA20C5351EA2685B /* DerivedPlace.swift */; };
@@ -788,9 +790,11 @@
 		B9110000000000000000000D /* PromoteFlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlow.swift; sourceTree = "<group>"; };
 		C112000400E7D14ECD8AF111 /* PromoteEvidenceSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceSheet.swift; sourceTree = "<group>"; };
 		C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceDisplay.swift; sourceTree = "<group>"; };
+		AA000000000000000005E006 /* PromoteEvidenceBoard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceBoard.swift; sourceTree = "<group>"; };
 		C112002B53DFC6E2EF560AC7 /* PromoteReadoutBadges.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteReadoutBadges.swift; sourceTree = "<group>"; };
 		B9110000000000000000000F /* PromoteFlowTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlowTests.swift; sourceTree = "<group>"; };
 		C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceDisplayTests.swift; sourceTree = "<group>"; };
+		AA000000000000000005E004 /* PromoteEvidenceBoardTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceBoardTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000FA1 /* StyledFormatTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StyledFormatTests.swift; sourceTree = "<group>"; };
 		B052AEDEE88EFC9ED8413469 /* DateRowDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateRowDisplay.swift; sourceTree = "<group>"; };
 		B0628D2BFA20C5351EA2685B /* DerivedPlace.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DerivedPlace.swift; sourceTree = "<group>"; };
@@ -1422,6 +1426,7 @@
 				B9110000000000000000000B /* PromoteModelTests.swift */,
 				B9110000000000000000000F /* PromoteFlowTests.swift */,
 				C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */,
+				AA000000000000000005E004 /* PromoteEvidenceBoardTests.swift */,
 				AA0000000000000000000FA1 /* StyledFormatTests.swift */,
 				B0D89A265AAED569EA0CA31E /* DateRowDisplayTests.swift */,
 				B042B09EC818DE35F967C981 /* DerivedPlaceTests.swift */,
@@ -1852,6 +1857,7 @@
 				B9110000000000000000000D /* PromoteFlow.swift */,
 				C112000400E7D14ECD8AF111 /* PromoteEvidenceSheet.swift */,
 				C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */,
+				AA000000000000000005E006 /* PromoteEvidenceBoard.swift */,
 				C112002B53DFC6E2EF560AC7 /* PromoteReadoutBadges.swift */,
 			);
 			path = Promote;
@@ -2257,6 +2263,7 @@
 				B9110000000000000000000E /* PromoteFlow.swift in Sources */,
 				C1120094E727223A3EA7D87A /* PromoteEvidenceSheet.swift in Sources */,
 				C11200BD269354BE1FC4BDC0 /* PromoteEvidenceDisplay.swift in Sources */,
+				AA000000000000000005E007 /* PromoteEvidenceBoard.swift in Sources */,
 				C11200E6D8FE13682466E995 /* PromoteReadoutBadges.swift in Sources */,
 				B02746CAC03F94127373BB92 /* DateRowDisplay.swift in Sources */,
 				B0F71D26711A163E3B415FCB /* DerivedPlace.swift in Sources */,
@@ -2371,6 +2378,7 @@
 				B9110000000000000000000C /* PromoteModelTests.swift in Sources */,
 				B91100000000000000000010 /* PromoteFlowTests.swift in Sources */,
 				C112007CF5D40430AF417EA9 /* PromoteEvidenceDisplayTests.swift in Sources */,
+				AA000000000000000005E005 /* PromoteEvidenceBoardTests.swift in Sources */,
 				AA0000000000000000000FA2 /* StyledFormatTests.swift in Sources */,
 				B0E27559D6CFFEBA2093C436 /* DateRowDisplayTests.swift in Sources */,
 				B0E8631619214033F0948729 /* DerivedPlaceTests.swift in Sources */,

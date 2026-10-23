@@ -653,6 +653,12 @@ enum CatalogConclusionValue: Sendable, Equatable {
     case name(CatalogNameValue)
     /// A likeness: its stored crop; the region is not sent on the evidence wire.
     case depiction(CatalogDepictionValue)
+
+    /// A likeness, drawn as a crop rather than worded.
+    var isDepiction: Bool {
+        if case .depiction = self { return true }
+        return false
+    }
 }
 
 /// One auto-reconciled value of a Property (S9-14). `.kept` is displayed;
