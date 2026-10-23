@@ -10,14 +10,15 @@ enum CatalogQueryKey: Hashable, Sendable {
     /// Identity Claim confidence grades (seeded vocabulary; S9-12).
     case confidenceGradesList(project: ProjectKey)
     case sourceWorkspace(project: ProjectKey, sourceId: String)
-    case sourceGraph(project: ProjectKey, sourceId: String)
+    /// One Evidence graph's rows: the canvas, the composer and Promote read it.
+    case evidenceGraph(project: ProjectKey, graphId: String)
     case citationCounts(project: ProjectKey, sourceId: String)
     case typeSuggestions(project: ProjectKey, typeId: String)
     case propertiesWorkspace(project: ProjectKey)
     case connectRules(project: ProjectKey)
     case propertyTerms(project: ProjectKey, propertyId: String)
     case citationsByArtifact(project: ProjectKey, artifactId: String)
-    case sourceGraphProgress(project: ProjectKey)
+    case evidenceGraphProgress(project: ProjectKey)
     /// Every Evidence graph of the project with its linked Artifact ids (S12-05).
     case evidenceGraphsList(project: ProjectKey)
     /// Every Person header, composed from the auto-reconciler cache (S9-07).
@@ -39,14 +40,14 @@ enum CatalogQueryKey: Hashable, Sendable {
         case credibilityGradesList
         case confidenceGradesList
         case sourceWorkspace
-        case sourceGraph
+        case evidenceGraph
         case citationCounts
         case typeSuggestions
         case propertiesWorkspace
         case connectRules
         case propertyTerms
         case citationsByArtifact
-        case sourceGraphProgress
+        case evidenceGraphProgress
         case evidenceGraphsList
         case personsList
         case eventsList
@@ -68,8 +69,8 @@ enum CatalogQueryKey: Hashable, Sendable {
             return .confidenceGradesList
         case .sourceWorkspace:
             return .sourceWorkspace
-        case .sourceGraph:
-            return .sourceGraph
+        case .evidenceGraph:
+            return .evidenceGraph
         case .citationCounts:
             return .citationCounts
         case .typeSuggestions:
@@ -82,8 +83,8 @@ enum CatalogQueryKey: Hashable, Sendable {
             return .propertyTerms
         case .citationsByArtifact:
             return .citationsByArtifact
-        case .sourceGraphProgress:
-            return .sourceGraphProgress
+        case .evidenceGraphProgress:
+            return .evidenceGraphProgress
         case .evidenceGraphsList:
             return .evidenceGraphsList
         case .personsList:
@@ -105,14 +106,14 @@ enum CatalogQueryKey: Hashable, Sendable {
              .credibilityGradesList(let project),
              .confidenceGradesList(let project),
              .sourceWorkspace(let project, _),
-             .sourceGraph(let project, _),
+             .evidenceGraph(let project, _),
              .citationCounts(let project, _),
              .typeSuggestions(let project, _),
              .propertiesWorkspace(let project),
              .connectRules(let project),
              .propertyTerms(let project, _),
              .citationsByArtifact(let project, _),
-             .sourceGraphProgress(let project),
+             .evidenceGraphProgress(let project),
              .evidenceGraphsList(let project),
              .personsList(let project),
              .eventsList(let project),
