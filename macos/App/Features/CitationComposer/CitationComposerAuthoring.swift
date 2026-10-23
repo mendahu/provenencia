@@ -636,10 +636,10 @@ enum CitationComposerAuthoring {
         switch rule.bridgeTypeKey {
         case EvidenceBridgeKind.relationship.rawValue:
             guard let term else { return nil }
-            if term.productKey == "spouse" {
+            if term.productKey == SeededRelationshipTypeTerm.spouse {
                 return L10n.CitationComposer.areSpouses(from.label, to.label)
             }
-            if term.productKey == "sibling" {
+            if term.productKey == SeededRelationshipTypeTerm.sibling {
                 return L10n.CitationComposer.areSiblings(from.label, to.label)
             }
             return L10n.CitationComposer.isATermOf(from.label, term.label.lowercased(), to.label)
@@ -654,10 +654,10 @@ enum CitationComposerAuthoring {
             return L10n.CitationComposer.tookPlaceAt(event.label, place.label)
         case EvidenceBridgeKind.placeRelationship.rawValue:
             guard let term else { return nil }
-            if term.productKey == "part_of" {
+            if term.productKey == SeededPlaceRelationshipTypeTerm.partOf {
                 return L10n.CitationComposer.isPartOf(from.label, to.label)
             }
-            if term.productKey == "succeeded_by" {
+            if term.productKey == SeededPlaceRelationshipTypeTerm.succeededBy {
                 return L10n.CitationComposer.wasSucceededBy(from.label, to.label)
             }
             return nil

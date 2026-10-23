@@ -807,9 +807,9 @@ struct CitationBridgeSentence: View {
 
     static func displayLabel(_ term: CatalogPropertyTerm) -> String {
         switch term.productKey {
-        case "part_of":
+        case SeededPlaceRelationshipTypeTerm.partOf:
             return L10n.string(L10n.CitationComposer.placeTermPartOf)
-        case "succeeded_by":
+        case SeededPlaceRelationshipTypeTerm.succeededBy:
             return L10n.string(L10n.CitationComposer.placeTermSucceededBy)
         default:
             return term.label.localizedLowercase
