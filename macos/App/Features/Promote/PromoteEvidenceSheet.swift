@@ -20,7 +20,7 @@ struct PromoteEvidenceSheet: View {
             width: 880
         ) {
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: PVSpacing.space5) {
+                LazyVStack(alignment: .leading, spacing: PVSpacing.space7) {
                     if let readout = row.selectionReadout {
                         EvidenceTitleLines(row: row, readout: readout, model: model)
                     }

@@ -61,7 +61,7 @@ struct PVPanel<Body: View, Footer: View, TitleAccessory: View>: View {
 
     private var headerAndBody: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space7) {
-            VStack(alignment: .leading, spacing: PVSpacing.space1) {
+            VStack(alignment: .leading, spacing: PVSpacing.space3) {
                 HStack(alignment: .top, spacing: 0) {
                     title
                         .font(PVFont.display(size: PVTypeScale.h3))

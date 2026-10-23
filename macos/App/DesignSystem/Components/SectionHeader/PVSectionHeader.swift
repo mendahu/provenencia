@@ -35,6 +35,7 @@ struct PVSectionHeader<Title: PVCopy, Aside: View, Actions: View>: View {
         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
             title.pvText
                 .font(PVFont.display(size: PVTypeScale.h3, weight: titleWeight))
+                .lineSpacing((PVLineHeight.snug - 1) * PVTypeScale.h3)
                 .foregroundStyle(PVColor.textDisplay)
             if let meta {
                 Text(verbatim: meta)
