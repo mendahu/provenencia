@@ -1,8 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// Whether a mouse-down belongs to the sheet. A system open or save panel
-/// counts as inside: its clicks are not a click away from the form.
+/// Whether a mouse-down belongs to the sheet. A sheet presented on it
+/// (`sheetParent`) and a system open or save panel
+/// count as inside: its clicks are not a click away from the form.
 @MainActor
 enum PVOutsideClick {
     static func isInsideSheet(
@@ -16,7 +17,7 @@ enum PVOutsideClick {
         var current: NSWindow? = eventWindow
         while let window = current {
             if window === sheet || window is NSSavePanel { return true }
-            current = window.parent
+            current = window.sheetParent ?? window.parent
         }
         return false
     }

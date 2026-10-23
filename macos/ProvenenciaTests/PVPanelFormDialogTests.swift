@@ -111,6 +111,21 @@ struct PVFormDialogClickTests {
         #expect(!PVOutsideClick.isInsideSheet(eventWindow: workspace, sheet: sheet, modalWindow: nil))
     }
 
+    @Test func aSheetOnASheetIsInside() {
+        let workspace = window()
+        let parentSheet = window()
+        let childSheet = window()
+        workspace.makeKeyAndOrderFront(nil)
+        workspace.beginSheet(parentSheet) { _ in }
+        parentSheet.beginSheet(childSheet) { _ in }
+        defer {
+            parentSheet.endSheet(childSheet)
+            workspace.endSheet(parentSheet)
+        }
+        #expect(PVOutsideClick.isInsideSheet(eventWindow: childSheet, sheet: parentSheet, modalWindow: nil))
+        #expect(!PVOutsideClick.isInsideSheet(eventWindow: workspace, sheet: parentSheet, modalWindow: nil))
+    }
+
     @Test func anOpenPanelModalCountsAsInside() {
         let sheet = window()
         let workspace = window()
