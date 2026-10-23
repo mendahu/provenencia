@@ -24,6 +24,7 @@ private struct PVSheetChrome<Content: View>: View {
             .background {
                 Button(action: dismiss) { EmptyView() }
                     .keyboardShortcut(.cancelAction)
+                    .focusable(false)
                     .frame(width: 0, height: 0)
                     .opacity(0)
                     .accessibilityHidden(true)
