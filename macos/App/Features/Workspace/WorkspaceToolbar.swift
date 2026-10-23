@@ -209,7 +209,7 @@ struct WorkspaceToolbar: View {
         ]
 
         if location.sourceSurface == .citationComposer || location.sourceSurface == .promote,
-           let sourceID = location.sourceId
+           let sourceID = location.sourceId, let graphID = location.graphId
         {
             let scope = location.title.flatMap { $0.nilIfEmpty }
                 ?? location.ref.flatMap { $0.nilIfEmpty }
@@ -222,14 +222,12 @@ struct WorkspaceToolbar: View {
             }
             items.append(
                 PVBreadcrumbItem(
-                    id: "graph-\(sourceID)",
+                    id: "graph-\(graphID)",
                     label: graphLabel,
                     action: {
-                        goTo(WorkspaceLocation(
-                            section: .sources,
+                        goTo(.evidenceGraph(
                             sourceId: sourceID,
-                            sourceSurface: .graph,
-                            ref: nil,
+                            graphId: graphID,
                             title: location.sourceTitle
                         ))
                     }
@@ -241,7 +239,7 @@ struct WorkspaceToolbar: View {
                     : L10n.Promote.breadcrumb(ref: location.ref.flatMap { $0.nilIfEmpty } ?? scope)
                 items.append(
                     PVBreadcrumbItem(
-                        id: "promote-\(sourceID)",
+                        id: "promote-\(graphID)",
                         label: label,
                         action: nil
                     )
@@ -249,7 +247,7 @@ struct WorkspaceToolbar: View {
             } else {
                 items.append(
                     PVBreadcrumbItem(
-                        id: "composer-\(sourceID)",
+                        id: "composer-\(graphID)",
                         label: L10n.CitationComposer.breadcrumbCitationFor(scope: scope),
                         action: nil
                     )

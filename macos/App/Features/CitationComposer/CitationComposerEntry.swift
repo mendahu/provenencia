@@ -3,9 +3,10 @@ import Foundation
 /// Frozen arrival query for the citation composer. Parsed once from
 /// `WorkspaceLocation`; identity switches do not write it back.
 enum CitationComposerEntry: Equatable, Sendable {
-    case addProperty(sourceID: String, subjectID: String, artifactID: String?)
+    case addProperty(sourceID: String, graphID: String, subjectID: String, artifactID: String?)
     case edit(
         sourceID: String,
+        graphID: String,
         subjectID: String,
         citationID: String,
         artifactID: String?,
@@ -13,6 +14,7 @@ enum CitationComposerEntry: Equatable, Sendable {
     )
     case connect(
         sourceID: String,
+        graphID: String,
         fromSubjectID: String,
         toSubjectID: String,
         bridgeTypeKey: String
@@ -20,17 +22,26 @@ enum CitationComposerEntry: Equatable, Sendable {
 
     var sourceID: String {
         switch self {
-        case .addProperty(let sourceID, _, _),
-             .edit(let sourceID, _, _, _, _),
-             .connect(let sourceID, _, _, _):
+        case .addProperty(let sourceID, _, _, _),
+             .edit(let sourceID, _, _, _, _, _),
+             .connect(let sourceID, _, _, _, _):
             return sourceID
+        }
+    }
+
+    var graphID: String {
+        switch self {
+        case .addProperty(_, let graphID, _, _),
+             .edit(_, let graphID, _, _, _, _),
+             .connect(_, let graphID, _, _, _):
+            return graphID
         }
     }
 
     var subjectID: String {
         switch self {
-        case .addProperty(_, let subjectID, _),
-             .edit(_, let subjectID, _, _, _):
+        case .addProperty(_, _, let subjectID, _),
+             .edit(_, _, let subjectID, _, _, _):
             return subjectID
         case .connect:
             return ""
@@ -39,7 +50,7 @@ enum CitationComposerEntry: Equatable, Sendable {
 
     var citationID: String? {
         switch self {
-        case .edit(_, _, let citationID, _, _):
+        case .edit(_, _, _, let citationID, _, _):
             return citationID
         case .addProperty, .connect:
             return nil
@@ -48,8 +59,8 @@ enum CitationComposerEntry: Equatable, Sendable {
 
     var artifactID: String? {
         switch self {
-        case .addProperty(_, _, let artifactID),
-             .edit(_, _, _, let artifactID, _):
+        case .addProperty(_, _, _, let artifactID),
+             .edit(_, _, _, _, let artifactID, _):
             return artifactID
         case .connect:
             return nil
@@ -58,7 +69,7 @@ enum CitationComposerEntry: Equatable, Sendable {
 
     var observationID: String? {
         switch self {
-        case .edit(_, _, _, _, let observationID):
+        case .edit(_, _, _, _, _, let observationID):
             return observationID
         case .addProperty, .connect:
             return nil
@@ -71,29 +82,29 @@ enum CitationComposerEntry: Equatable, Sendable {
     }
 
     var connectFromSubjectID: String? {
-        if case .connect(_, let from, _, _) = self { return from }
+        if case .connect(_, _, let from, _, _) = self { return from }
         return nil
     }
 
     var connectToSubjectID: String? {
-        if case .connect(_, _, let to, _) = self { return to }
+        if case .connect(_, _, _, let to, _) = self { return to }
         return nil
     }
 
     var connectBridgeTypeKey: String? {
-        if case .connect(_, _, _, let key) = self { return key }
+        if case .connect(_, _, _, _, let key) = self { return key }
         return nil
     }
 
     /// Remount key: the frozen query, not the live document.
     var identityKey: String {
         switch self {
-        case let .addProperty(sourceID, subjectID, artifactID):
-            return "add-\(sourceID)-\(subjectID)-\(artifactID ?? "")"
-        case let .edit(sourceID, subjectID, citationID, artifactID, observationID):
-            return "edit-\(sourceID)-\(subjectID)-\(citationID)-\(artifactID ?? "")-\(observationID ?? "")"
-        case let .connect(sourceID, fromID, toID, bridge):
-            return "connect-\(sourceID)-\(fromID)-\(toID)-\(bridge)"
+        case let .addProperty(_, graphID, subjectID, artifactID):
+            return "add-\(graphID)-\(subjectID)-\(artifactID ?? "")"
+        case let .edit(_, graphID, subjectID, citationID, artifactID, observationID):
+            return "edit-\(graphID)-\(subjectID)-\(citationID)-\(artifactID ?? "")-\(observationID ?? "")"
+        case let .connect(_, graphID, fromID, toID, bridge):
+            return "connect-\(graphID)-\(fromID)-\(toID)-\(bridge)"
         }
     }
 
@@ -101,12 +112,14 @@ enum CitationComposerEntry: Equatable, Sendable {
     /// Connect ignores leftover location term / grid keys (S8-11.7).
     init?(location: WorkspaceLocation) {
         guard location.sourceSurface == .citationComposer,
-              let sourceID = location.sourceId, !sourceID.isEmpty
+              let sourceID = location.sourceId, !sourceID.isEmpty,
+              let graphID = location.graphId, !graphID.isEmpty
         else { return nil }
 
         if let citationID = location.citationId, !citationID.isEmpty {
             self = .edit(
                 sourceID: sourceID,
+                graphID: graphID,
                 subjectID: location.subjectId ?? "",
                 citationID: citationID,
                 artifactID: location.artifactId,
@@ -122,6 +135,7 @@ enum CitationComposerEntry: Equatable, Sendable {
             else { return nil }
             self = .connect(
                 sourceID: sourceID,
+                graphID: graphID,
                 fromSubjectID: fromID,
                 toSubjectID: toID,
                 bridgeTypeKey: bridge
@@ -132,6 +146,7 @@ enum CitationComposerEntry: Equatable, Sendable {
         guard let subjectID = location.subjectId, !subjectID.isEmpty else { return nil }
         self = .addProperty(
             sourceID: sourceID,
+            graphID: graphID,
             subjectID: subjectID,
             artifactID: location.artifactId
         )

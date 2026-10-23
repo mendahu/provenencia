@@ -37,7 +37,7 @@ struct SourcesListView: View {
                     sourcesHandle: sourcesHandle,
                     typesHandle: typesHandle,
                     progressHandle: session.queryHandle(
-                        SourcesModel.sourceGraphProgressKey(for: session)
+                        SourcesModel.evidenceGraphProgressKey(for: session)
                     ),
                     model: model
                 )
@@ -57,7 +57,7 @@ private struct SourcesListContent: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Bindable var sourcesHandle: QueryHandle<[CatalogSource]>
     @Bindable var typesHandle: QueryHandle<[CatalogSourceType]>
-    var progressHandle: QueryHandle<[String: SourceGraphProgress]>?
+    var progressHandle: QueryHandle<[String: EvidenceGraphProgress]>?
     @Bindable var model: SourcesModel
 
     var body: some View {
@@ -314,10 +314,8 @@ private struct SourcesListContent: View {
                                     onOpenPage: {
                                         navigation.go(to: SourcesListNavigation.pageLocation(for: source))
                                     },
-                                    onOpenGraph: {
-                                        if let location = SourcesListNavigation.graphLocation(for: source) {
-                                            navigation.go(to: location)
-                                        }
+                                    onOpenGraph: model.graphLocation(for: source).map { location in
+                                        { navigation.go(to: location) }
                                     },
                                     onCopy: { model.openCopy(source) }
                                 )
@@ -412,7 +410,7 @@ private struct SourcesSplitRowProgress: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     let source: CatalogSource
     let model: SourcesModel
-    @Bindable var handle: QueryHandle<[String: SourceGraphProgress]>
+    @Bindable var handle: QueryHandle<[String: EvidenceGraphProgress]>
 
     var body: some View {
         SourcesSplitRow(
@@ -420,15 +418,13 @@ private struct SourcesSplitRowProgress: View {
             typeLabel: model.typeLabel(for: source),
             typeIconKey: model.typeIconKey(for: source),
             projectDir: model.pageProjectDir,
-            progress: handle.value?[source.id],
+            progress: model.entryGraph(for: source).flatMap { handle.value?[$0.id] },
             countsLoading: handle.value == nil && handle.status != .ready,
             onOpenPage: {
                 navigation.go(to: SourcesListNavigation.pageLocation(for: source))
             },
-            onOpenGraph: {
-                if let location = SourcesListNavigation.graphLocation(for: source) {
-                    navigation.go(to: location)
-                }
+            onOpenGraph: model.graphLocation(for: source).map { location in
+                { navigation.go(to: location) }
             },
             onCopy: { model.openCopy(source) }
         )

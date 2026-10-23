@@ -38,14 +38,13 @@ struct ReconciliationRecord: Equatable, Identifiable {
     /// The citation composer on the record's Citation, its Observation in
     /// focus. Back returns to the page that opened it.
     static func composerLocation(for outcome: CatalogReconcilerOutcome) -> WorkspaceLocation {
-        WorkspaceLocation(
-            section: .sources,
+        .citationComposer(
             sourceId: outcome.sourceID,
+            graphId: outcome.graphID,
             subjectId: outcome.subjectID,
             citationId: outcome.citationID,
             artifactId: outcome.artifactID,
             observationId: outcome.observationID,
-            sourceSurface: .citationComposer,
             ref: outcome.subjectRef,
             sourceTitle: outcome.sourceTitle
         )

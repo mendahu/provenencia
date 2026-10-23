@@ -9,7 +9,7 @@ import SwiftUI
 /// same hues (wider soft under-stroke + slightly thicker stroke) — never remaps
 /// to accent.
 struct EvidenceGraphEdgeLayer: View {
-    let snapshot: SourceGraphSnapshot
+    let snapshot: EvidenceGraphSnapshot
     var selectedBridgeID: String?
     var dragOffsets: [String: CGSize] = [:]
     /// Measured card layouts, so edges attach to the painted cards.
@@ -66,7 +66,7 @@ struct EvidenceGraphEdgeLayer: View {
 
     private func strokePrimaryToBridge(
         context: GraphicsContext,
-        primary: SourceGraphPlacedSubject,
+        primary: EvidenceGraphPlacedSubject,
         primaryRect: CGRect,
         bridgeRect: CGRect,
         selected: Bool,
@@ -111,12 +111,12 @@ struct EvidenceGraphEdgeLayer: View {
         )
     }
 
-    private func primaryFrame(_ placed: SourceGraphPlacedSubject, offset: CGSize) -> CGRect {
+    private func primaryFrame(_ placed: EvidenceGraphPlacedSubject, offset: CGSize) -> CGRect {
         EvidenceSubjectCard.edgeFrame(for: placed, dragOffset: offset, layout: layouts[placed.id])
             .offsetBy(dx: -documentOrigin.x, dy: -documentOrigin.y)
     }
 
-    private func bridgeFrame(_ placed: SourceGraphPlacedBridge, offset: CGSize) -> CGRect {
+    private func bridgeFrame(_ placed: EvidenceGraphPlacedBridge, offset: CGSize) -> CGRect {
         EvidenceBridgeCard.contentFrame(for: placed, in: snapshot, dragOffset: offset, layout: layouts[placed.id])
             .offsetBy(dx: -documentOrigin.x, dy: -documentOrigin.y)
     }
@@ -125,7 +125,7 @@ struct EvidenceGraphEdgeLayer: View {
 /// Observes AppKit live drag offsets without invalidating the card `ForEach` parent.
 struct EvidenceGraphEdgesHost: View {
     @Bindable var pointer: GraphCanvasPointerController
-    let snapshot: SourceGraphSnapshot
+    let snapshot: EvidenceGraphSnapshot
     var selectedBridgeID: String?
     var layouts: [String: EvidenceCardLayout] = [:]
     var documentOrigin: CGPoint = .zero
@@ -143,7 +143,7 @@ struct EvidenceGraphEdgesHost: View {
 
 /// Dashed rubber-band from origin card toward the cursor while waiting for B.
 struct EvidenceGraphConnectRubberBand: View {
-    let origin: SourceGraphPlacedSubject
+    let origin: EvidenceGraphPlacedSubject
     let cursor: CGPoint
     var layout: EvidenceCardLayout?
     var documentOrigin: CGPoint = .zero

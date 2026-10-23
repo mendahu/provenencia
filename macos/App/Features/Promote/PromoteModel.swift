@@ -5,6 +5,7 @@ import Observation
 /// `WorkspaceLocation` the graph card pushed.
 struct PromoteEntry: Equatable, Sendable {
     let sourceID: String
+    let graphID: String
     let subjectID: String
     let kind: EvidencePrimaryKind
     let subjectRef: String
@@ -17,10 +18,12 @@ struct PromoteEntry: Equatable, Sendable {
         guard location.section == .sources,
               location.sourceSurface == .promote,
               let sourceID = location.sourceId,
+              let graphID = location.graphId,
               let subjectID = location.subjectId,
               let kind = location.subjectTypeKey.flatMap(EvidencePrimaryKind.init(rawValue:))
         else { return nil }
         self.sourceID = sourceID
+        self.graphID = graphID
         self.subjectID = subjectID
         self.kind = kind
         let ref = Self.trimmed(location.ref) ?? ""
@@ -31,11 +34,11 @@ struct PromoteEntry: Equatable, Sendable {
     }
 
     var identityKey: String {
-        mapAll ? "promote|\(sourceID)|all" : "promote|\(sourceID)|\(subjectID)"
+        mapAll ? "promote|\(graphID)|all" : "promote|\(graphID)|\(subjectID)"
     }
 
     var graphLocation: WorkspaceLocation {
-        WorkspaceLocation(section: .sources, sourceId: sourceID, sourceSurface: .graph, title: sourceTitle)
+        .evidenceGraph(sourceId: sourceID, graphId: graphID, title: sourceTitle)
     }
 
     private static func trimmed(_ text: String?) -> String? {
@@ -47,6 +50,7 @@ struct PromoteEntry: Equatable, Sendable {
 extension WorkspaceLocation {
     static func promote(
         sourceId: String,
+        graphId: String,
         subjectId: String,
         kind: EvidencePrimaryKind,
         ref: String?,
@@ -57,6 +61,7 @@ extension WorkspaceLocation {
         WorkspaceLocation(
             section: .sources,
             sourceId: sourceId,
+            graphId: graphId,
             subjectId: subjectId,
             subjectTypeKey: kind.rawValue,
             sourceSurface: .promote,
@@ -109,7 +114,7 @@ final class PromoteModel {
     /// Bumped per proposal; only the latest one's answer is merged.
     private var proposeGeneration = 0
 
-    var graphKey: CatalogQueryKey { .sourceGraph(project: session.projectKey, sourceId: entry.sourceID) }
+    var graphKey: CatalogQueryKey { .evidenceGraph(project: session.projectKey, graphId: entry.graphID) }
     var confidenceKey: CatalogQueryKey { .confidenceGradesList(project: session.projectKey) }
     var propertiesKey: CatalogQueryKey { .propertiesWorkspace(project: session.projectKey) }
     var rulesKey: CatalogQueryKey { .connectRules(project: session.projectKey) }
@@ -367,7 +372,7 @@ final class PromoteModel {
                 seenRevision: seen,
                 rows: batch
             )
-            session.apply(.promotedSubject(sourceId: entry.sourceID))
+            session.apply(.promotedSubject(graphId: entry.graphID))
             session.noticeToast = VocabularyToast(
                 title: L10n.Promote.filedTitle(filed: flow.fileCount, connections: flow.connectionCount),
                 body: flow.skipCount > 0 ? L10n.Promote.filedBody(skipped: flow.skipCount) : "",
@@ -389,8 +394,8 @@ final class PromoteModel {
 
     /// The Source graph as a snapshot, with the property labels refreshed from the same read. Nil
     /// when the graph read isn't ready (never loaded, or failed with nothing cached).
-    private func graphSnapshot() async -> SourceGraphSnapshot? {
-        let rows: SourceGraphRows? = await session.readyValue(graphKey)
+    private func graphSnapshot() async -> EvidenceGraphSnapshot? {
+        let rows: EvidenceGraphRows? = await session.readyValue(graphKey)
         let properties: PropertiesSnapshot? = await session.readyValue(propertiesKey)
         let rules: [CatalogConnectRule]? = await session.readyValue(rulesKey)
         if let properties {
@@ -404,7 +409,7 @@ final class PromoteModel {
             }
         }
         guard let rows else { return nil }
-        return SourceGraphSnapshot.build(
+        return EvidenceGraphSnapshot.build(
             rows: rows,
             types: properties?.types ?? [],
             rules: rules ?? []
@@ -412,7 +417,7 @@ final class PromoteModel {
     }
 
     /// The snapshot's Subjects as rows read them.
-    private func subjectFacts(_ snapshot: SourceGraphSnapshot) -> [PromoteFlow.SubjectFact] {
+    private func subjectFacts(_ snapshot: EvidenceGraphSnapshot) -> [PromoteFlow.SubjectFact] {
         snapshot.subjects.map { placed -> PromoteFlow.SubjectFact in
             let anchor: PromoteFlow.Anchor?
             if let membership = placed.membership {
@@ -433,7 +438,7 @@ final class PromoteModel {
 
     /// The snapshot's connections as the page reads them, with each end named from `subjects`.
     static func bridgeFacts(
-        _ snapshot: SourceGraphSnapshot,
+        _ snapshot: EvidenceGraphSnapshot,
         subjects: [PromoteFlow.SubjectFact]
     ) -> [PromoteFlow.BridgeFact] {
         let nameByID = Dictionary(subjects.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })

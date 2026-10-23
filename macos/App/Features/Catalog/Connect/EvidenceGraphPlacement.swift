@@ -149,7 +149,7 @@ enum EvidenceGraphPlacement {
     }
 
     static func cardFrames(
-        in snapshot: SourceGraphSnapshot,
+        in snapshot: EvidenceGraphSnapshot,
         dragOffsets: [String: CGSize] = [:]
     ) -> [CGRect] {
         snapshot.subjects.map {
@@ -162,7 +162,7 @@ enum EvidenceGraphPlacement {
     /// Next empty landing cell to the right of the graph, stacking in one column.
     /// The document grows so that cell is not clamped to the 4000-point board.
     static func composerSlot(
-        in snapshot: SourceGraphSnapshot,
+        in snapshot: EvidenceGraphSnapshot,
         landingColumn: Int64?
     ) -> (cell: CatalogGridCell, landingColumn: Int64) {
         let placed = placedCells(in: snapshot)
@@ -187,7 +187,7 @@ enum EvidenceGraphPlacement {
         return (CatalogGridCell(gridX: column, gridY: row), column)
     }
 
-    private static func placedCells(in snapshot: SourceGraphSnapshot) -> [CatalogGridCell] {
+    private static func placedCells(in snapshot: EvidenceGraphSnapshot) -> [CatalogGridCell] {
         snapshot.subjects.map { CatalogGridCell(gridX: $0.gridX, gridY: $0.gridY) }
             + snapshot.bridges.map { CatalogGridCell(gridX: $0.gridX, gridY: $0.gridY) }
     }

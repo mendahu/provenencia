@@ -186,7 +186,7 @@ struct SourcePageIdentityHeader: View {
     }
 
     private var evidenceGraphJump: some View {
-        let location = model.source.flatMap(SourcesListNavigation.graphLocation(for:))
+        let location = model.evidenceGraphLocation
         return PVButton(
             L10n.Sources.jumpToEvidenceGraph,
             variant: .secondary,

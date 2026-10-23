@@ -41,8 +41,8 @@ final class SourcesModel {
             }
         }
 
-        /// A Source missing from the progress map has zero counts (Go omits it).
-        init(_ progress: SourceGraphProgress?) {
+        /// A graph missing from the progress map has zero counts (Go omits it).
+        init(_ progress: EvidenceGraphProgress?) {
             guard let progress, progress.primaryCount > 0 else {
                 self = .empty
                 return
@@ -126,21 +126,44 @@ final class SourcesModel {
         CatalogQueryKey.sourceTypesList(project: session.projectKey)
     }
 
-    static func sourceGraphProgressKey(for session: WorkspaceSession) -> CatalogQueryKey {
-        CatalogQueryKey.sourceGraphProgress(project: session.projectKey)
+    static func evidenceGraphProgressKey(for session: WorkspaceSession) -> CatalogQueryKey {
+        CatalogQueryKey.evidenceGraphProgress(project: session.projectKey)
+    }
+
+    static func evidenceGraphsKey(for session: WorkspaceSession) -> CatalogQueryKey {
+        CatalogQueryKey.evidenceGraphsList(project: session.projectKey)
     }
 
     /// Starts list queries once (`.task` / dialog). Do not call from view `body`.
     func warmListQueries() {
         let _: QueryHandle<[CatalogSource]> = session.query(Self.sourcesListKey(for: session))
         let _: QueryHandle<[CatalogSourceType]> = session.query(Self.sourceTypesListKey(for: session))
-        let _: QueryHandle<[String: SourceGraphProgress]> = session.query(
-            Self.sourceGraphProgressKey(for: session)
+        let _: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
+            Self.evidenceGraphProgressKey(for: session)
         )
+        let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(Self.evidenceGraphsKey(for: session))
     }
 
-    func graphProgress(for sourceID: String) -> SourceGraphProgress? {
-        progressHandle?.value?[sourceID]
+    /// The counts of one Evidence graph, by graph id.
+    func graphProgress(for graphID: String) -> EvidenceGraphProgress? {
+        progressHandle?.value?[graphID]
+    }
+
+    /// The graph the Source's row opens and counts (`SourcesListNavigation.entryGraph`).
+    /// Nil while the graph list has no value.
+    func entryGraph(for source: CatalogSource) -> CatalogEvidenceGraph? {
+        SourcesListNavigation.entryGraph(sourceID: source.id, in: graphs)
+    }
+
+    /// Where the row's Open graph goes; nil blocks it (no entry graph, or it
+    /// links no Artifact).
+    func graphLocation(for source: CatalogSource) -> WorkspaceLocation? {
+        SourcesListNavigation.graphLocation(for: source, graphs: graphs)
+    }
+
+    private var graphs: [CatalogEvidenceGraph] {
+        let handle: QueryHandle<[CatalogEvidenceGraph]>? = session.queryHandle(Self.evidenceGraphsKey(for: session))
+        return handle?.value ?? []
     }
 
     var graphCountsLoading: Bool {
@@ -152,8 +175,8 @@ final class SourcesModel {
         session.queryHandle(Self.sourceTypesListKey(for: session))
     }
 
-    private var progressHandle: QueryHandle<[String: SourceGraphProgress]>? {
-        session.queryHandle(Self.sourceGraphProgressKey(for: session))
+    private var progressHandle: QueryHandle<[String: EvidenceGraphProgress]>? {
+        session.queryHandle(Self.evidenceGraphProgressKey(for: session))
     }
 
     /// The progress handle's failure while a status filter needs its counts.
@@ -271,7 +294,9 @@ final class SourcesModel {
         }
         if let status = settings.status {
             let progress = progressHandle?.value
-            rows = rows.filter { EvidenceStatus(progress?[$0.id]) == status }
+            rows = rows.filter { source in
+                EvidenceStatus(entryGraph(for: source).flatMap { progress?[$0.id] }) == status
+            }
         }
         let query = TextMatch.Query(trimmedQuery)
         if !query.isEmpty {

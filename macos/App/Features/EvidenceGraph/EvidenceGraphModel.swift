@@ -20,6 +20,9 @@ final class EvidenceGraphModel {
         var error: String?
     }
 
+    /// The Evidence graph this canvas shows. Its Source reads (`sourceRow`,
+    /// citation counts, the Source page) stay on `sourceID`.
+    let graphID: String
     let sourceID: String
     let session: WorkspaceSession
     let store: any GenealogyStore
@@ -55,11 +58,11 @@ final class EvidenceGraphModel {
     private(set) var groupDragIDs: [String] = []
     @ObservationIgnored
     private var snapshotMemo: (
-        rows: SourceGraphRows,
+        rows: EvidenceGraphRows,
         types: [CatalogSubjectType],
         rules: [CatalogConnectRule],
         orders: NameFormatOrders,
-        value: SourceGraphSnapshot,
+        value: EvidenceGraphSnapshot,
         text: EvidenceGraphText
     )?
     /// Subject whose filing the Unpromote confirm names (`.pvConfirm(item:)`).
@@ -160,7 +163,7 @@ final class EvidenceGraphModel {
     }
 
     private var graphKey: CatalogQueryKey {
-        CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: sourceID)
+        CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: graphID)
     }
 
     private var fieldsKey: CatalogQueryKey {
@@ -201,11 +204,13 @@ final class EvidenceGraphModel {
     }
 
     init(
+        graphID: String,
         sourceID: String,
         session: WorkspaceSession,
         store: any GenealogyStore,
         userID: String
     ) {
+        self.graphID = graphID
         self.sourceID = sourceID
         self.session = session
         self.store = store
@@ -213,9 +218,9 @@ final class EvidenceGraphModel {
     }
 
     /// Snapshot as loaded. Edges come from cited observations.
-    func displaySnapshot(rows: SourceGraphRows?, types: [CatalogSubjectType]) -> SourceGraphSnapshot {
+    func displaySnapshot(rows: EvidenceGraphRows?, types: [CatalogSubjectType]) -> EvidenceGraphSnapshot {
         let rules = connectRules
-        let normalized = rows ?? SourceGraphRows(sourceId: sourceID)
+        let normalized = rows ?? EvidenceGraphRows(graphId: graphID)
         if let snapshotMemo,
            snapshotMemo.rows == normalized,
            snapshotMemo.types == types,
@@ -224,7 +229,7 @@ final class EvidenceGraphModel {
         {
             return snapshotMemo.value
         }
-        let value = SourceGraphSnapshot.build(
+        let value = EvidenceGraphSnapshot.build(
             rows: normalized,
             types: types,
             rules: rules
@@ -235,19 +240,19 @@ final class EvidenceGraphModel {
 
     /// Card copy for the same snapshot as ``displaySnapshot(rows:types:)``,
     /// formatted once when that snapshot is built.
-    func displayText(rows: SourceGraphRows?, types: [CatalogSubjectType]) -> EvidenceGraphText {
+    func displayText(rows: EvidenceGraphRows?, types: [CatalogSubjectType]) -> EvidenceGraphText {
         _ = displaySnapshot(rows: rows, types: types)
         return snapshotMemo?.text ?? EvidenceGraphText(snapshot: displaySnapshot(rows: rows, types: types), orders: session.nameFormat)
     }
 
     func prepare() async {
-        let _: QueryHandle<SourceGraphRows> = session.query(graphKey)
+        let _: QueryHandle<EvidenceGraphRows> = session.query(graphKey)
         let rules: QueryHandle<[CatalogConnectRule]> = session.query(connectRulesKey)
         let _: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         let _: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
         let _: QueryHandle<[String: Int]> = session.query(citationCountsKey)
-        _ = await session.readyValue(graphKey) as SourceGraphRows?
+        _ = await session.readyValue(graphKey) as EvidenceGraphRows?
         _ = await session.readyValue(fieldsKey) as PropertiesSnapshot?
         _ = await session.readyValue(connectRulesKey) as [CatalogConnectRule]?
         _ = await session.readyValue(sourcesListKey) as [CatalogSource]?
@@ -263,7 +268,7 @@ final class EvidenceGraphModel {
         if !canCite {
             disarmCiteTools()
         }
-        if let id = session.consumePendingGraphSelection(sourceID: sourceID) {
+        if let id = session.consumePendingGraphSelection(graphID: graphID) {
             selectedSubjectIDs = [id]
         }
     }
@@ -756,7 +761,7 @@ final class EvidenceGraphModel {
                 label: storedLabel,
                 description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
             )
-            session.apply(effects, .mutatedSourceGraph(sourceId: sourceID))
+            session.apply(effects)
             editingSubjectID = nil
             editingPrimaryKind = nil
             editingBridgeKind = nil
@@ -801,14 +806,13 @@ final class EvidenceGraphModel {
             title = nil
             ref = nil
         }
-        return WorkspaceLocation(
-            section: .sources,
+        return .citationComposer(
             sourceId: sourceID,
+            graphId: graphID,
             subjectId: subjectID,
             citationId: citationID,
             artifactId: artifactID,
             observationId: observationID,
-            sourceSurface: .citationComposer,
             ref: ref,
             title: title,
             sourceTitle: resolvedSourceTitle()
@@ -887,6 +891,7 @@ final class EvidenceGraphModel {
         else { return nil }
         return .promote(
             sourceId: sourceID,
+            graphId: graphID,
             subjectId: placed.id,
             kind: placed.kind,
             ref: placed.subject.ref,
@@ -907,6 +912,7 @@ final class EvidenceGraphModel {
         guard let placed else { return nil }
         return .promote(
             sourceId: sourceID,
+            graphId: graphID,
             subjectId: placed.id,
             kind: placed.kind,
             ref: placed.subject.ref,
@@ -1044,13 +1050,13 @@ final class EvidenceGraphModel {
             let (created, effects) = try await store.createSubject(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
-                sourceID: sourceID,
+                graphID: graphID,
                 subjectTypeID: typeID,
                 label: trimmed,
                 description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines),
                 placement: CatalogGridCell(gridX: pendingGridX, gridY: pendingGridY)
             )
-            session.apply(effects, .mutatedSourceGraph(sourceId: sourceID))
+            session.apply(effects)
             isCreating = false
             disarm()
             return created.id
@@ -1078,14 +1084,12 @@ final class EvidenceGraphModel {
             toTypeKey: toKind.rawValue,
             toLabel: toLabel
         )
-        return WorkspaceLocation(
-            section: .sources,
+        return .citationComposer(
             sourceId: sourceID,
-            subjectId: nil,
+            graphId: graphID,
             connectFromSubjectId: fromID,
             connectToSubjectId: toID,
             connectBridgeTypeKey: rule.bridgeTypeKey,
-            sourceSurface: .citationComposer,
             title: sentence,
             sourceTitle: resolvedSourceTitle()
         )
@@ -1102,7 +1106,7 @@ final class EvidenceGraphModel {
     /// becomes the selection. Returns the cards that move, anchor included.
     @discardableResult
     func beginGroupDrag(anchor: String) -> Set<String> {
-        let handle: QueryHandle<SourceGraphRows>? = session.queryHandle(graphKey)
+        let handle: QueryHandle<EvidenceGraphRows>? = session.queryHandle(graphKey)
         guard handle?.value != nil, let snapshot = currentSnapshot() else {
             selectSubject(id: anchor)
             groupDragIDs = [anchor]
@@ -1224,14 +1228,14 @@ final class EvidenceGraphModel {
         persistPositions(writes)
     }
 
-    func ghostPlacedSubject() -> SourceGraphPlacedSubject? {
+    func ghostPlacedSubject() -> EvidenceGraphPlacedSubject? {
         guard let kind = armedKind,
               let x = hoverGridX,
               let y = hoverGridY,
               !isCreating
         else { return nil }
         let label = typeLabelByKind[kind.rawValue] ?? kind.rawValue
-        return SourceGraphPlacedSubject(
+        return EvidenceGraphPlacedSubject(
             subject: CatalogSubject(
                 id: "ghost",
                 ref: "",
@@ -1363,14 +1367,14 @@ final class EvidenceGraphModel {
         }
     }
 
-    private func currentSnapshot() -> SourceGraphSnapshot? {
-        guard let handle: QueryHandle<SourceGraphRows> = session.queryHandle(graphKey) else {
+    private func currentSnapshot() -> EvidenceGraphSnapshot? {
+        guard let handle: QueryHandle<EvidenceGraphRows> = session.queryHandle(graphKey) else {
             return nil
         }
         return displaySnapshot(rows: handle.value, types: fieldsSnapshot?.types ?? [])
     }
 
-    private func primary(in snapshot: SourceGraphSnapshot?, id: String) -> SourceGraphPlacedSubject? {
+    private func primary(in snapshot: EvidenceGraphSnapshot?, id: String) -> EvidenceGraphPlacedSubject? {
         snapshot?.subjects.first { $0.id == id }
     }
 
@@ -1424,7 +1428,7 @@ final class EvidenceGraphModel {
     }
 
     private func applyPositionPatch(subjectID: String, gridX: Int64, gridY: Int64) {
-        if let handle: QueryHandle<SourceGraphRows> = session.queryHandle(graphKey),
+        if let handle: QueryHandle<EvidenceGraphRows> = session.queryHandle(graphKey),
            let rows = handle.value
         {
             session.setQueryValue(

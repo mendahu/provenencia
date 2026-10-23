@@ -43,8 +43,8 @@ enum EvidenceBridgeCard {
     /// Uses the card's measured `layout` when it has reported one; the wrapped-text
     /// estimate below is only the first-frame fallback.
     static func contentFrame(
-        for placed: SourceGraphPlacedBridge,
-        in snapshot: SourceGraphSnapshot,
+        for placed: EvidenceGraphPlacedBridge,
+        in snapshot: EvidenceGraphSnapshot,
         dragOffset: CGSize = .zero,
         layout: EvidenceCardLayout? = nil
     ) -> CGRect {
@@ -67,8 +67,8 @@ enum EvidenceBridgeCard {
     /// non-edge rows and Add property. No minimum floor — a frame taller than
     /// the fill strands bottom-approach edge terminals below the card.
     static func contentHeight(
-        for placed: SourceGraphPlacedBridge,
-        in snapshot: SourceGraphSnapshot
+        for placed: EvidenceGraphPlacedBridge,
+        in snapshot: EvidenceGraphSnapshot
     ) -> CGFloat {
         let header = placed.isCited ? headerContentHeightCited : headerContentHeightUncited
         let body = bodyTextHeight(for: placed, in: snapshot)
@@ -84,13 +84,13 @@ enum EvidenceBridgeCard {
         return height
     }
 
-    static func extraObservations(for placed: SourceGraphPlacedBridge) -> [CatalogObservation] {
+    static func extraObservations(for placed: EvidenceGraphPlacedBridge) -> [CatalogObservation] {
         EvidenceCitedPropertyMarks.extraObservations(in: placed.observations)
     }
 
     static func bodyTextHeight(
-        for placed: SourceGraphPlacedBridge,
-        in snapshot: SourceGraphSnapshot
+        for placed: EvidenceGraphPlacedBridge,
+        in snapshot: EvidenceGraphSnapshot
     ) -> CGFloat {
         let text = placed.isCited
             ? EvidenceBridgeEdgeSummary.sentence(for: placed, in: snapshot)
@@ -127,8 +127,8 @@ enum EvidenceBridgeCard {
     }
 
     static func actionTargets(
-        for placed: SourceGraphPlacedBridge,
-        in snapshot: SourceGraphSnapshot,
+        for placed: EvidenceGraphPlacedBridge,
+        in snapshot: EvidenceGraphSnapshot,
         canCite: Bool,
         dragOffset: CGSize = .zero,
         layout: EvidenceCardLayout? = nil
@@ -254,8 +254,8 @@ enum EvidenceBridgeCard {
     }
 
     static func accessibilityLabel(
-        for placed: SourceGraphPlacedBridge,
-        in snapshot: SourceGraphSnapshot
+        for placed: EvidenceGraphPlacedBridge,
+        in snapshot: EvidenceGraphSnapshot
     ) -> String {
         let ref = placed.subject.ref.trimmingCharacters(in: .whitespacesAndNewlines)
         if placed.isCited {

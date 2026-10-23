@@ -61,6 +61,16 @@ final class SourcePageModel {
 
     var source: CatalogSource? { context.source }
 
+    /// Where Jump to evidence graph goes: the Source's entry graph, while that
+    /// graph links an Artifact. Nil blocks the jump, including while the graph
+    /// list has no value.
+    var evidenceGraphLocation: WorkspaceLocation? {
+        guard let source else { return nil }
+        let key = CatalogQueryKey.evidenceGraphsList(project: context.session.projectKey)
+        let handle: QueryHandle<[CatalogEvidenceGraph]>? = context.session.queryHandle(key)
+        return SourcesListNavigation.graphLocation(for: source, graphs: handle?.value ?? [])
+    }
+
     /// Project folder for resolving `objects/…` thumbnail paths.
     var pageProjectDir: String { context.projectDir }
 
@@ -100,6 +110,9 @@ final class SourcePageModel {
         )
         let fields: QueryHandle<[CatalogMetadataField]> = session.query(
             .metadataFieldsList(project: session.projectKey)
+        )
+        let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(
+            .evidenceGraphsList(project: session.projectKey)
         )
         var waited: UInt64 = 0
         let step: UInt64 = 10_000_000
