@@ -191,18 +191,20 @@ struct PromoteEvidenceSheet: View {
     /// The Subject's own Cards in Go's order, then one Card per relationship.
     @ViewBuilder
     private func cards(_ board: EvidenceBoard) -> some View {
+        let projectDir = model.session.projectKey.projectDir
         let env = EvidenceEnv(
-            projectDir: model.session.projectKey.projectDir,
             toggle: { model.togglePin(subjectID: row.subjectID, pinIDs: $0) },
             setOpen: { key, open in
                 if open { expanded.insert(key) } else { expanded.remove(key) }
             }
         )
         ForEach(board.cards) { card in
-            EvidenceSectionCard(group: card, pins: row.pins, expanded: expanded, env: env)
+            EvidenceSectionCard(group: card, pins: row.pins, expanded: expanded, projectDir: projectDir, env: env)
         }
         ForEach(board.relationships) { relationship in
-            EvidenceRelationshipCard(relationship: relationship, pins: row.pins, expanded: expanded, env: env)
+            EvidenceRelationshipCard(
+                relationship: relationship, pins: row.pins, expanded: expanded, projectDir: projectDir, env: env
+            )
         }
     }
 

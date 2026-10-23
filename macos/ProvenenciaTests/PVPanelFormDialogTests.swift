@@ -5,6 +5,7 @@ import Testing
 @testable import Provenencia
 
 @Suite
+@MainActor
 struct PVPanelTests {
     @Test func storesWidthAndSunkenFooterByDefault() {
         let panel = PVPanel(
@@ -199,6 +200,7 @@ struct PVFormDialogAccessibilityTests {
 }
 
 @Suite
+@MainActor
 struct PVFormDialogContentTests {
     private func sampleCopy() -> PVFormDialogCopy {
         PVFormDialogCopy(

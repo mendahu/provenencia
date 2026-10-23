@@ -37,11 +37,9 @@ private func outcomeTone(_ outcome: EvidenceOutcome) -> PVBadgeTone {
 
 // MARK: - What the board does not carry
 
-/// What a line needs from the sheet that is not in the board: where its crops are stored, and what
-/// its boxes and its disclosure do. Two of these are always equal: the closures never decide
-/// whether a line draws again.
+/// What a line needs from the sheet that is not in the board: what its boxes and its disclosure do.
+/// The closures never decide whether a line draws again.
 struct EvidenceEnv {
-    let projectDir: String
     /// Checks or unchecks the pins of a line, a record or a relationship together.
     let toggle: ([String]) -> Void
     /// Opens or closes the records behind a line, by its key.
@@ -77,11 +75,13 @@ struct EvidenceSectionCard: View {
     let group: EvidenceBoard.Group
     let pins: Set<String>
     let expanded: Set<String>
+    /// Where a likeness's crops are stored.
+    let projectDir: String
     let env: EvidenceEnv
 
     var body: some View {
         PVCard(cornerRadius: PVRadius.sm) {
-            EvidenceSectionLines(group: group, style: .card, pins: pins, expanded: expanded, env: env)
+            EvidenceSectionLines(group: group, style: .card, pins: pins, expanded: expanded, projectDir: projectDir, env: env)
         }
         .accessibilityIdentifier("promote.sheet.section.\(group.id)")
     }
@@ -95,6 +95,7 @@ private struct EvidenceSectionLines: View {
     let style: EvidenceCardHeader.Style
     let pins: Set<String>
     let expanded: Set<String>
+    let projectDir: String
     let env: EvidenceEnv
 
     var body: some View {
@@ -106,6 +107,7 @@ private struct EvidenceSectionLines: View {
                     line: line,
                     checked: pins.intersection(line.pinIDs),
                     isOpen: expanded.contains(line.key),
+                    projectDir: projectDir,
                     env: env
                 )
                 .equatable()
@@ -121,11 +123,12 @@ private struct EvidenceLine: View, Equatable {
     /// The line's own pins that are checked.
     let checked: Set<String>
     let isOpen: Bool
+    let projectDir: String
     let env: EvidenceEnv
 
-    static func == (lhs: EvidenceLine, rhs: EvidenceLine) -> Bool {
+    nonisolated static func == (lhs: EvidenceLine, rhs: EvidenceLine) -> Bool {
         lhs.line == rhs.line && lhs.checked == rhs.checked && lhs.isOpen == rhs.isOpen
-            && lhs.env.projectDir == rhs.env.projectDir
+            && lhs.projectDir == rhs.projectDir
     }
 
     private var idPrefix: String { line.isLikeness ? "likeness" : "pin" }
@@ -151,7 +154,7 @@ private struct EvidenceLine: View, Equatable {
             .padding(.vertical, PVSpacing.space3)
             if line.collapses && isOpen {
                 ForEach(line.members) { member in
-                    EvidenceMemberRow(member: member, checked: checked, env: env)
+                    EvidenceMemberRow(member: member, checked: checked, projectDir: projectDir, env: env)
                 }
             }
         }
@@ -169,7 +172,7 @@ private struct EvidenceLine: View, Equatable {
                 .foregroundStyle(PVColor.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
         case .crops:
-            EvidenceCrops(value: line.value, projectDir: env.projectDir)
+            EvidenceCrops(value: line.value, projectDir: projectDir)
         }
     }
 
@@ -328,6 +331,7 @@ private struct EvidenceMemberRow: View {
     let member: EvidenceBoard.Member
     /// The expanded line's checked pins.
     let checked: Set<String>
+    let projectDir: String
     let env: EvidenceEnv
 
     var body: some View {
@@ -364,7 +368,7 @@ private struct EvidenceMemberRow: View {
                 .foregroundStyle(PVColor.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
         case .crops:
-            EvidenceCrops(value: member.value, projectDir: env.projectDir)
+            EvidenceCrops(value: member.value, projectDir: projectDir)
         }
     }
 }
@@ -376,6 +380,7 @@ struct EvidenceRelationshipCard: View {
     let relationship: EvidenceBoard.RelationshipCard
     let pins: Set<String>
     let expanded: Set<String>
+    let projectDir: String
     let env: EvidenceEnv
 
     var body: some View {
@@ -393,7 +398,9 @@ struct EvidenceRelationshipCard: View {
                 } else {
                     ForEach(relationship.groups) { group in
                         PVDivider()
-                        EvidenceSectionLines(group: group, style: .group, pins: pins, expanded: expanded, env: env)
+                        EvidenceSectionLines(
+                            group: group, style: .group, pins: pins, expanded: expanded, projectDir: projectDir, env: env
+                        )
                             .padding(.leading, EvidenceLayout.relationshipIndent)
                         .accessibilityIdentifier("promote.sheet.section.\(group.id)")
                     }
