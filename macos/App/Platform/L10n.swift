@@ -1589,7 +1589,7 @@ enum L10n {
             switch state {
             case .files: LocalizedStringResource("promote.connections.filed", defaultValue: "Filed", comment: "A connection that files on Done")
             case .selfLink: LocalizedStringResource("promote.connections.self", defaultValue: "Not filed · both ends are the same record", comment: "A connection whose ends resolve to one handle")
-            case .endSkipped: LocalizedStringResource("promote.connections.skipped", defaultValue: "Not filed · an end is skipped", comment: "A connection that stays unfiled because an end is not being filed")
+            case .waits: LocalizedStringResource("promote.connections.skipped", defaultValue: "Not filed · an end is skipped", comment: "A connection that stays unfiled because an end is not being filed")
             }
         }
         static func doneSummary(file: Int, skip: Int, connections: Int) -> String {
