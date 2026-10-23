@@ -16,6 +16,8 @@
 **Review:** [`S11-27-connection-subrows.review.md`](S11-27-connection-subrows.review.md) — Fits with changes / Ready with changes, 1 round (findings fixed)
 
 > **Landed.** Differences from the plan: `EvidenceBridgeEdgeSummary.isSymmetric` takes an `EvidenceGraphPlacedBridge` (the type was renamed from `SourceGraphPlacedBridge` on `main` after planning); `PromoteConnectionSubrows` also takes the host's ref, for the expander's identifier; `PromoteFlowTests` builds its bridges and rows through two small helpers (`link`, `mapped`). `Bridge` wraps a `BridgeFact` (with `state`) and reads its fields through dynamic member lookup instead of copying them (supersedes D-3); `BridgeFact.kind` has no default; a pointer announces the host row it scrolled to. Nothing else differs.
+>
+> Amended A-1 – A-5 shipped; supersedes the F-1 announcement, the F-2 expander and the earlier `Bridge`-wraps note on `kind`.
 
 > **Amended 2026-10-23 (user, after review round 2).** A connection shows under **both** of its ends, not one host, and nothing on the page hops, highlights, caps or expands. The user chose D-2's rejected alternative ("mirroring under both ends") after trying the pointer: it jumped to one host and left the rest out of view. A-1 – A-5 below replace the Decisions and ACs they name; where they differ from §2, §5, §6 or §10, they win.
 >
