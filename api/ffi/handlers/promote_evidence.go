@@ -6,7 +6,6 @@ import (
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/claimevidence"
-	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/promotealign"
@@ -78,9 +77,7 @@ func claimEvidenceProto(e claimevidence.Evidence, values promotealign.EvidenceVa
 			NeighborTermNamesNeighbor: rel.NeighborTermNamesNeighbor,
 		}
 		if rel.NeighborTerm != "" {
-			if b, ok := connectrules.LookupBridge(string(rel.Key.Type)); ok {
-				r.NeighborTerm = evidenceTermProto(values, b.Disambiguation, string(rel.NeighborTerm))
-			}
+			r.NeighborTerm = evidenceTermProto(values, string(rel.NeighborTermProperty), string(rel.NeighborTerm))
 		}
 		if rel.Key.EventType != "" {
 			r.EventType = evidenceTermProto(values, vocabkey.PropertyEventType, string(rel.Key.EventType))

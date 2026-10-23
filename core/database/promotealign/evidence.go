@@ -203,6 +203,7 @@ func readFromNeighbor(r *claimevidence.Relationship, terms segmentcompare.Terms)
 	r.NeighborEnd, r.NeighborTerm, r.NeighborTermNamesNeighbor = segmentcompare.ReadFrom(
 		r.Key, vocabkey.PropertyKey(b.Endpoints[0].PropertyKey), vocabkey.PropertyKey(b.Endpoints[1].PropertyKey), terms,
 	)
+	r.NeighborTermProperty = vocabkey.PropertyKey(b.Disambiguation)
 }
 
 // bindingOrder is each kind's bound properties in the catalog's order, from

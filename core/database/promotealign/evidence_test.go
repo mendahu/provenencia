@@ -239,12 +239,13 @@ func TestEvidenceReadsEachLinkFromTheNeighbor(t *testing.T) {
 	type read struct {
 		end   vocabkey.PropertyKey
 		term  vocabkey.BridgeTerm
+		prop  vocabkey.PropertyKey // the property the term belongs to
 		names bool
 	}
 	got := func(e claimevidence.Evidence) map[string]read {
 		out := map[string]read{}
 		for _, r := range e.Relationships {
-			out[r.Key.String()] = read{r.NeighborEnd, r.NeighborTerm, r.NeighborTermNamesNeighbor}
+			out[r.Key.String()] = read{r.NeighborEnd, r.NeighborTerm, r.NeighborTermProperty, r.NeighborTermNamesNeighbor}
 		}
 		return out
 	}
@@ -266,8 +267,8 @@ func TestEvidenceReadsEachLinkFromTheNeighbor(t *testing.T) {
 			Neighbors: []graphalign.Fixed{{SubjectID: bMary.ID, HandleID: maryHandle}},
 		})
 		want := map[string]read{
-			"relationship·spouse": {"", "spouse", true},
-			"relationship·cousin": {"", "cousin", true},
+			"relationship·spouse": {"", "spouse", "relationship_type", true},
+			"relationship·cousin": {"", "cousin", "relationship_type", true},
 		}
 		if g := got(e); !reflect.DeepEqual(g, want) {
 			t.Errorf("reads = %+v, want %+v", g, want)
@@ -288,14 +289,14 @@ func TestEvidenceReadsEachLinkFromTheNeighbor(t *testing.T) {
 			SourceID: srcB.ID, SubjectID: bJohn.ID, HandleID: johnHandle,
 			Neighbors: []graphalign.Fixed{{SubjectID: bMary.ID, HandleID: maryHandle}},
 		})
-		if g, want := got(asChild), map[string]read{"relationship·child·person": {vocabkey.PropertyRelatedTo, "parent", true}}; !reflect.DeepEqual(g, want) {
+		if g, want := got(asChild), map[string]read{"relationship·child·person": {vocabkey.PropertyRelatedTo, "parent", "relationship_type", true}}; !reflect.DeepEqual(g, want) {
 			t.Errorf("from the child = %+v, want %+v", g, want)
 		}
 		asParent := f.evidence(promotealign.EvidenceRequest{
 			SourceID: srcB.ID, SubjectID: bMary.ID, HandleID: maryHandle,
 			Neighbors: []graphalign.Fixed{{SubjectID: bJohn.ID, HandleID: johnHandle}},
 		})
-		if g, want := got(asParent), map[string]read{"relationship·child·related_to": {vocabkey.PropertyPerson, "child", true}}; !reflect.DeepEqual(g, want) {
+		if g, want := got(asParent), map[string]read{"relationship·child·related_to": {vocabkey.PropertyPerson, "child", "relationship_type", true}}; !reflect.DeepEqual(g, want) {
 			t.Errorf("from the parent = %+v, want %+v", g, want)
 		}
 	})

@@ -277,13 +277,13 @@ func TestClaimEvidenceNeighborReading(t *testing.T) {
 		}
 	}
 	spouse := rel(vocabkey.BridgeRelationship, "spouse", "")
-	spouse.NeighborTerm, spouse.NeighborTermNamesNeighbor = "spouse", true
+	spouse.NeighborTerm, spouse.NeighborTermProperty, spouse.NeighborTermNamesNeighbor = "spouse", "relationship_type", true
 	cousin := rel(vocabkey.BridgeRelationship, "cousin", "")
-	cousin.NeighborTerm, cousin.NeighborTermNamesNeighbor = "cousin", true
+	cousin.NeighborTerm, cousin.NeighborTermProperty, cousin.NeighborTermNamesNeighbor = "cousin", "relationship_type", true
 	birth := rel(vocabkey.BridgeParticipation, "subject", vocabkey.EventBirth)
 	birth.Key.End = vocabkey.PropertyPerson
 	birth.Kind = vocabkey.Event
-	birth.NeighborEnd, birth.NeighborTerm = vocabkey.PropertyEvent, "subject"
+	birth.NeighborEnd, birth.NeighborTerm, birth.NeighborTermProperty = vocabkey.PropertyEvent, "subject", "role"
 
 	var resp *engine.GetPromoteClaimEvidenceResponse
 	err := withProjectCatalog(dir, func(c *database.Catalog) error {

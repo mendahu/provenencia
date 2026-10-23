@@ -87,10 +87,13 @@ type Relationship struct {
 
 	// NeighborEnd, NeighborTerm and NeighborTermNamesNeighbor read Key from the
 	// neighbor's side (segmentcompare.ReadFrom): the endpoint the neighbor is
-	// at, the term it carries, and whether that term names the neighbor. The
-	// loader fills them after Build, from the catalog's terms.
+	// at, the term it carries, and whether that term names the neighbor.
+	// NeighborTermProperty is the property the term belongs to (the bridge
+	// type's disambiguation). The loader fills them after Build, from the
+	// catalog's terms and the connect rules.
 	NeighborEnd               vocabkey.PropertyKey
 	NeighborTerm              vocabkey.BridgeTerm
+	NeighborTermProperty      vocabkey.PropertyKey
 	NeighborTermNamesNeighbor bool
 }
 
