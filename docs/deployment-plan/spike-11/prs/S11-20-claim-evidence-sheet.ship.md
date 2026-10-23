@@ -550,3 +550,39 @@ F-30 done at `0e5a543d`: `Slots`, `KindEntry`, `Sentence` are `Sendable`, closur
 
 ## Result (after round 13)
 Gate PASS · CI see PR · open: none · manual check §10 not run
+
+## Round 14 — user requests (2026-10-22)
+1. The title badges' tooltip must match the design. The board (`Promote flow.dc.html`, `titleNode`) wraps the marks in `PVTooltip` (label = the row's reason, side left; marks focusable, help cursor). S11-D2 §5 gives the reason as "via John Smith → PER-7QH3D (spouse)", "(subject)", "(part of)": the role is the connection's term, lowercase.
+   - **Today:** `.help(reason)` is the kit's macOS tooltip (README Tooltip row), so presentation is right. The **text** is wrong: `PromoteModel.reasonText`'s `.via` puts `BridgeFact.phrase` in the parentheses. That phrase is the graph card phrase from the registry ("Participated as Subject", "Is the spouse of"). This predates S11-20; the Promote row's reason uses the same text, so both change.
+2. A click outside the evidence sheet closes it. Today it is a plain `.sheet` (`PromoteView.swift:68`). The outside-click watcher exists only privately in `PVFormDialog` (`PVFormDialogOutsideClick`).
+
+### Fix plan 14
+**F-31 — The reason names the connection by its term** (from the user)
+Files: `macos/App/Features/Catalog/Connect/ConnectionSentenceRegistry.swift`, `EvidenceBridgeEdgeSummary.swift`, `macos/App/Features/Promote/{PromoteFlow,PromoteModel}.swift`, tests.
+Failing test first: `PromoteModelTests` `aViaReasonNamesTheTermInLowercase`. A participation bridge with role Subject gives "via John Smith → PER-7QH3D (subject)". A spouse relationship gives "(spouse)", a place relationship part_of gives "(part of)". A location bridge has no term, so it reads "via Leeds → PLC-6M3FD" (`viaNeighbor`, no parentheses). A researcher's term keeps its own label, lowercased.
+Do:
+- `KindEntry` gains `reasonRole: @Sendable (String?) -> String?`. The three term kinds return the term label lowercased with the current locale (`lowercased(with: .autoupdatingCurrent)`); location returns nil.
+- `EvidenceBridgeEdgeSummary` exposes `reasonRole(for:)`, with the same origin-aware term label it already reads.
+- `PromoteFlow.BridgeFact` carries `reasonRole: String?`, set in `PromoteModel.facts()`.
+- `reasonText` uses it instead of `phrase`: nil or empty gives `viaNeighbor`.
+- If nothing else reads `BridgeFact.phrase`, remove it (grep).
+Check: test passes; scripts/check-pr.sh PASS.
+
+**F-32 — A click outside the evidence sheet closes it** (from the user)
+Files: `macos/App/DesignSystem/Components/FormDialog/PVFormDialog.swift`, a new kit file for the shared modifier (e.g. `macos/App/DesignSystem/Components/Panel/PVOutsideClick.swift`), `macos/App/DesignSystem/README.md`, `macos/App/Features/Promote/PromoteView.swift` (or `PromoteEvidenceSheet.swift`).
+Do:
+- Move `PVFormDialogOutsideClick` and its view out of `PVFormDialog` into one kit modifier, `.pvOutsideClick(isEnabled:perform:)`. Its doc: a click in the sheet's window outside its content runs `perform`; menus and popovers are not this path.
+- `PVFormDialog` uses it, with its behavior unchanged.
+- The evidence sheet's content uses it to clear the sheet binding (close; nothing to discard: pins and the claim fields already live in the model).
+- Add a README line.
+- No second copy of the watcher. `grep -rn "addLocalMonitorForEvents" macos/App/DesignSystem` shows one site for this purpose.
+Check: scripts/check-pr.sh PASS. A unit test where the existing `PVFormDialogDismiss` tests make that possible; otherwise say so (no UI target).
+
+## Round 14 — fix
+Head `d591470d` (`7e48d6b6` F-31, `d591470d` F-32). Gate PASS (orchestrator re-ran).
+- **F-31:** `aViaReasonNamesTheTermInLowercase` failed first on all five cases (subject, spouse, part of, location without a role, a researcher's "Godparent") and now passes. `BridgeFact.phrase` stays: the will-file list reads it (`PromoteFlow.swift:282`).
+- **F-32:** the watcher moved to `DesignSystem/Components/Panel/PVOutsideClick.swift` as `.pvOutsideClick(isEnabled:perform:)`. `PVFormDialog` uses it unchanged. The evidence sheet calls `model.closeSheet()`. The README line is added. The helper enum was renamed `PVFormDialogClick` → `PVOutsideClick`, and the existing click tests were updated. No UI test exists for the sheet's own outside click.
+- **Clean `build-for-testing`:** no warning in this PR's app files. The 12 warnings in `PVPanelFormDialogTests.swift` are on lines the PR does not touch, from before it.
+
+## Result (after round 14)
+Gate PASS · CI see PR · open: none · manual check §10 not run
