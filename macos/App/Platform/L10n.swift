@@ -1585,13 +1585,74 @@ enum L10n {
         static func connections(count: Int) -> String {
             L10n.format(LocalizedStringResource("promote.connections.count", defaultValue: "%lld connections will be filed", comment: "Bridge summary; argument is how many will be filed"), count)
         }
-        static func connectionState(_ state: PromoteFlow.ConnectionState) -> LocalizedStringResource {
+        /// The state text of a connection subrow: "Files on Done", or "Waits for <end>". nil for a
+        /// self-link, whose copy is the warning under the sentence. `endName` is the waiting end's
+        /// name; empty reads "its other end".
+        static func connectionState(_ state: PromoteFlow.ConnectionState, endName: String) -> String? {
             switch state {
-            case .files: LocalizedStringResource("promote.connections.filed", defaultValue: "Filed", comment: "A connection that files on Done")
-            case .selfLink: LocalizedStringResource("promote.connections.self", defaultValue: "Not filed · both ends are the same record", comment: "A connection whose ends resolve to one handle")
-            case .waits: LocalizedStringResource("promote.connections.skipped", defaultValue: "Not filed · an end is skipped", comment: "A connection that stays unfiled because an end is not being filed")
+            case .files:
+                return L10n.string(LocalizedStringResource("promote.connection.files", defaultValue: "Files on Done", comment: "Subrow state of a Promote connection that files on Done"))
+            case .waits:
+                if endName.isEmpty {
+                    return L10n.string(LocalizedStringResource("promote.connection.waitsEnd", defaultValue: "Waits for its other end", comment: "Subrow state of a Promote connection that waits when the end has no name"))
+                }
+                return L10n.format(LocalizedStringResource("promote.connection.waits", defaultValue: "Waits for %@", comment: "Subrow state of a Promote connection that waits; argument is the name of the end it waits for"), endName)
+            case .selfLink:
+                return nil
             }
         }
+        /// What VoiceOver reads for a subrow: the sentence, then why it files or waits. `endName` is
+        /// the waiting end's name; the self-link names its own record.
+        static func connectionSpoken(sentence: String, state: PromoteFlow.ConnectionState, endName: String) -> String {
+            let part: String
+            switch state {
+            case .files:
+                part = L10n.string(LocalizedStringResource("promote.connection.spoken.files", defaultValue: "Files on Done.", comment: "VoiceOver: a Promote connection that files on Done"))
+            case .waits(_, let why):
+                if endName.isEmpty {
+                    part = L10n.string(LocalizedStringResource("promote.connection.spoken.waitsEnd", defaultValue: "Waits for its other end.", comment: "VoiceOver: a Promote connection that waits when the end has no name"))
+                } else {
+                    switch why {
+                    case .skipped:
+                        part = L10n.format(LocalizedStringResource("promote.connection.spoken.skipped", defaultValue: "Waits for %@, who is skipped.", comment: "VoiceOver: a Promote connection that waits for an end that is skipped; argument is its name"), endName)
+                    case .unset:
+                        part = L10n.format(LocalizedStringResource("promote.connection.spoken.unset", defaultValue: "Waits for %@, who has no target yet.", comment: "VoiceOver: a Promote connection that waits for an end with no target yet; argument is its name"), endName)
+                    case .notOnPage:
+                        part = L10n.format(LocalizedStringResource("promote.connection.spoken.notOnPage", defaultValue: "Waits for %@, who is not on this page.", comment: "VoiceOver: a Promote connection that waits for an end that is not on the page; argument is its name"), endName)
+                    }
+                }
+            case .selfLink(let ref):
+                part = L10n.format(LocalizedStringResource("promote.connection.spoken.selfLink", defaultValue: "Not filed, both ends are %@.", comment: "VoiceOver: a Promote connection whose ends land on one record; argument is that record's ref"), ref)
+            }
+            return sentence + ". " + part
+        }
+        /// The warning under a self-link subrow; `ref` is the record both ends land on.
+        static func connectionSelfLink(ref: String) -> String {
+            L10n.format(LocalizedStringResource("promote.connection.selfLink", defaultValue: "Not filed · both ends are %@", comment: "Warning under a Promote connection whose ends land on one record; argument is that record's ref"), ref)
+        }
+        /// The note under a subrow whose other end is not a row to work on; `name` is that end.
+        static func connectionOtherEnd(name: String, filed: Bool) -> String {
+            if filed {
+                return L10n.format(LocalizedStringResource("promote.connection.otherEnd.filed", defaultValue: "%@ is already filed", comment: "Note under a Promote connection whose other end is already filed; argument is its name"), name)
+            }
+            return L10n.format(LocalizedStringResource("promote.connection.otherEnd.notOnPage", defaultValue: "%@ is not on this page", comment: "Note under a Promote connection whose other end is not on the page; argument is its name"), name)
+        }
+        /// VoiceOver name of a row's list of subrows; `name` is the host row's name.
+        static func connectionsHostedBy(name: String) -> String {
+            L10n.format(LocalizedStringResource("promote.connection.hostedBy", defaultValue: "Connections hosted by %@", comment: "VoiceOver name of the list of connections under a Promote row; argument is the row's name"), name)
+        }
+        /// The button under a row that points at connections hosted by other rows; `count` is how many.
+        static func connectionsElsewhere(count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.connection.elsewhere", defaultValue: "+%lld connections", comment: "Button under a Promote row that scrolls to connections hosted by other rows; argument is how many"), count)
+        }
+        static func connectionsElsewhereSpoken(count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.connection.elsewhereSpoken", defaultValue: "%lld connections hosted on other rows", comment: "VoiceOver label of the button that scrolls to connections hosted by other rows; argument is how many"), count)
+        }
+        /// The button that shows the subrows a row hides past its cap; `count` is how many are hidden.
+        static func moreConnections(count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.connection.more", defaultValue: "+%lld more", comment: "Button that shows the connections a Promote row hides; argument is how many"), count)
+        }
+        static let fewerConnections = LocalizedStringResource("promote.connection.fewer", defaultValue: "Show fewer", comment: "Button that hides the extra connections a Promote row showed")
         static func doneSummary(file: Int, skip: Int, connections: Int) -> String {
             L10n.format(LocalizedStringResource("promote.done.summary", defaultValue: "File %1$lld · Skip %2$lld · %3$lld connections", comment: "Footer: how many rows will be filed, skipped, and how many connections"), file, skip, connections)
         }

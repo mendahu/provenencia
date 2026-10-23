@@ -295,11 +295,13 @@ struct PromoteView: View {
                 .font(PVFont.body(size: PVTypeScale.bodySmall))
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            Text(L10n.Promote.connectionState(bridge.state))
-                .font(PVFont.body(size: PVTypeScale.caption))
-                .italic()
-                .foregroundStyle(PVColor.textMuted)
-                .multilineTextAlignment(.trailing)
+            if let text = L10n.Promote.connectionState(bridge.state, endName: bridge.name(of: bridge.state.waitingEndID)) {
+                Text(verbatim: text)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .italic()
+                    .foregroundStyle(PVColor.textMuted)
+                    .multilineTextAlignment(.trailing)
+            }
         }
         .padding(.vertical, PVSpacing.space2)
         .overlay(alignment: .top) { PVDivider() }
