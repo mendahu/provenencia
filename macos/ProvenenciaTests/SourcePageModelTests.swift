@@ -1148,6 +1148,11 @@ struct SourcePageModelTests {
             transcriptionUncertain: false,
             transcriptionNote: ""
         )
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: "g-1", ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: ["a1"]
+            ),
+        ]
         let model = makeModel(store: store)
         await model.warmFromSession()
         await model.askDeleteArtifact(id: "a1")
@@ -1157,6 +1162,7 @@ struct SourcePageModelTests {
         #expect(jump?.sourceId == sourceID)
         #expect(jump?.citationId == "c1")
         #expect(jump?.artifactId == "a1")
+        #expect(jump?.graphId == "g-1")
         #expect(jump?.sourceSurface == .citationComposer)
         #expect(model.pendingImpact?.report.groups.first?.listed.first?.title == "John Hartley, worsted weaver")
         #expect(model.pendingImpact?.report.groups.first?.listed.first?.ref == "CIT-AAAAA")

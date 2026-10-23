@@ -9,6 +9,7 @@ import Testing
 @MainActor
 struct CitationComposerDepictionTests {
     private let sourceID = "src-1"
+    private let graphID = "g-1"
     private let adaID = "sub-ada"
     private let benID = "sub-ben"
     private let claraID = "sub-clara"
@@ -49,7 +50,12 @@ struct CitationComposerDepictionTests {
         store.sourcesByProject[projectDir] = [
             CatalogSource(id: sourceID, ref: "SRC-1", sourceTypeID: "stype", title: "Wedding", description: ""),
         ]
-        store.subjectsBySource[sourceID] = [
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: ["art-0"]
+            ),
+        ]
+        store.subjectsByGraph[graphID] = [
             person(adaID, ref: "CPR-1", label: "Ada Lovelace"),
             person(benID, ref: "CPR-2", label: "Ben Ford"),
             person(claraID, ref: "CPR-3", label: "Clara Ford"),
@@ -103,13 +109,14 @@ struct CitationComposerDepictionTests {
         if let citationID {
             entry = .edit(
                 sourceID: sourceID,
+                graphID: graphID,
                 subjectID: subjectID ?? adaID,
                 citationID: citationID,
                 artifactID: "art-0",
                 observationID: observationID
             )
         } else {
-            entry = .addProperty(sourceID: sourceID, subjectID: subjectID ?? adaID, artifactID: "art-0")
+            entry = .addProperty(sourceID: sourceID, graphID: graphID, subjectID: subjectID ?? adaID, artifactID: "art-0")
         }
         return CitationComposerModel(
             entry: entry,
@@ -145,7 +152,7 @@ struct CitationComposerDepictionTests {
             transcriptionUncertain: false,
             transcriptionNote: ""
         )
-        store.observationsBySource[sourceID] = observations
+        store.observationsByGraph[graphID] = observations
     }
 
     private func likenessObservation(
@@ -569,7 +576,7 @@ struct CitationComposerDepictionTests {
 
         let call = try #require(store.recordedCalls.last { $0.hasPrefix("addObservationsToCitation") })
         #expect(call.hasSuffix(" depiction=1 depictionFile=present"))
-        let saved = try #require(store.observationsBySource[sourceID]?.last?.depiction)
+        let saved = try #require(store.observationsByGraph[graphID]?.last?.depiction)
         let sent = CitationLocatorDraft.decode(saved.regionJSON)
         #expect(sent.page == nil)
         #expect(sent.region != nil)
@@ -916,7 +923,7 @@ struct CitationComposerDepictionTests {
 
         let call = try #require(store.recordedCalls.last { $0.hasPrefix("addObservationsToCitation") })
         #expect(call.hasSuffix(" depiction=1 depictionFile=present"))
-        let saved = try #require(store.observationsBySource[sourceID]?.last?.depiction)
+        let saved = try #require(store.observationsByGraph[graphID]?.last?.depiction)
         let selectors = try JSONSerialization.jsonObject(with: Data(saved.regionJSON.utf8)) as? [String: Any]
         let types = (selectors?["selectors"] as? [[String: Any]])?.compactMap { $0["type"] as? String }
         #expect(types?.filter { $0 == "region" }.count == 1)

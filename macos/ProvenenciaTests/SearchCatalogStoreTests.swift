@@ -152,11 +152,11 @@ struct SearchCatalogStoreTests {
         store.sourcesByProject[projectDir] = [
             CatalogSource(id: "src-1", ref: "SRC-1", sourceTypeID: "", title: "Robins register", description: ""),
         ]
-        store.subjectsBySource["s1"] = [
+        store.subjectsByGraph["g1"] = [
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
             CatalogSubject(id: "sub-2", ref: "CPR-2", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
         ]
-        store.observationsBySource["s1"] = [
+        store.observationsByGraph["g1"] = [
             CatalogObservation(
                 id: "o1", ref: "OBS-1", citationID: "c1", subjectID: "sub-1", propertyID: "p-name",
                 polarity: "positive", valueText: "James Robins", valueInteger: nil, valueDateID: "",

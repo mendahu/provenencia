@@ -33,6 +33,7 @@ struct ReconciledValueDisplayTests {
         CatalogReconcilerOutcome(
             observationID: id, observationRef: "OBS-\(id)", reason: ReconcilerReason(wire: reason), valueRank: rank,
             deniedByObservationID: deniedBy, recorded: recorded, subjectID: "sub-\(id)", subjectRef: "CPR-\(id)",
+            graphID: "g-\(id)",
             citationID: "cit-\(id)", artifactID: "art-\(id)", sourceID: source, sourceTitle: title, credibilityKey: "",
             transcriptionUncertain: uncertain, claimConfidenceKey: "",
             credibilityOffset: credibilityOffset, claimConfidenceOffset: claimConfidenceOffset,

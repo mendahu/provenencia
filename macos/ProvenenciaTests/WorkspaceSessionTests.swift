@@ -242,8 +242,8 @@ struct WorkspaceSessionTests {
         let typesHandle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(
             CatalogQueryKey.sourceTypesList(project: project)
         )
-        let progressHandle: QueryHandle<[String: SourceGraphProgress]>? = session.queryHandle(
-            CatalogQueryKey.sourceGraphProgress(project: project)
+        let progressHandle: QueryHandle<[String: EvidenceGraphProgress]>? = session.queryHandle(
+            CatalogQueryKey.evidenceGraphProgress(project: project)
         )
         let fieldsHandle: QueryHandle<[CatalogMetadataField]>? = session.queryHandle(
             CatalogQueryKey.metadataFieldsList(project: project)
@@ -376,7 +376,7 @@ struct WorkspaceSessionTests {
                 candidateRefPrefix: "CPR"
             ),
         ]
-        store.subjectsBySource["s1"] = [
+        store.subjectsByGraph["g-1"] = [
             CatalogSubject(
                 id: "sub-1",
                 ref: "CPR-1",
@@ -392,12 +392,12 @@ struct WorkspaceSessionTests {
             gridY: 0
         )
         let session = makeSession(store: store)
-        let key = CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: "s1")
-        let handle: QueryHandle<SourceGraphRows> = session.query(key)
+        let key = CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-1")
+        let handle: QueryHandle<EvidenceGraphRows> = session.query(key)
         await waitForFetchComplete(handle)
         #expect(handle.value?.observations.isEmpty == true)
 
-        store.observationsBySource["s1"] = [
+        store.observationsByGraph["g-1"] = [
             CatalogObservation(
                 id: "obs-1",
                 ref: "OBS-1",
@@ -416,7 +416,7 @@ struct WorkspaceSessionTests {
                 propertyValueType: "name"
             ),
         ]
-        session.apply(CatalogWriteEffects(sources: ["s1"]))
+        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-1"]))
         await waitForFetchComplete(handle)
         #expect(handle.value?.observations.count == 1)
     }
@@ -432,7 +432,7 @@ struct WorkspaceSessionTests {
                 description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
             ),
         ]
-        store.subjectsBySource["s1"] = [
+        store.subjectsByGraph["g-1"] = [
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "Alice", description: ""),
         ]
         let session = makeSession(store: store)
@@ -441,7 +441,7 @@ struct WorkspaceSessionTests {
         #expect(handle.value?.isEmpty == true)
 
         let promoted = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
-        session.apply(.promotedSubject(sourceId: "s1"))
+        session.apply(.promotedSubject(graphId: "g-1"))
         #expect(!handle.isFetching)
         #expect(handle.value?.isEmpty == true)
 
@@ -462,7 +462,7 @@ struct WorkspaceSessionTests {
                 description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
             ),
         ]
-        store.subjectsBySource["s1"] = [
+        store.subjectsByGraph["g-1"] = [
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
             CatalogSubject(id: "sub-2", ref: "CPR-2", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
         ]
@@ -483,7 +483,7 @@ struct WorkspaceSessionTests {
         await waitForFetchComplete(secondHandle)
         #expect(secondHandle.value?.fields.first?.state == .empty)
 
-        store.observationsBySource["s1"] = [
+        store.observationsByGraph["g-1"] = [
             CatalogObservation(
                 id: "o1", ref: "OBS-1", citationID: "c1", subjectID: "sub-2", propertyID: "p-name",
                 polarity: "positive", valueText: "Jim Robins", valueInteger: nil, valueDateID: "",
@@ -496,7 +496,7 @@ struct WorkspaceSessionTests {
                 propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
             ),
         ]
-        session.apply(CatalogWriteEffects(handles: [first.entity.id, second.entity.id], sources: ["s1"]))
+        session.apply(CatalogWriteEffects(handles: [first.entity.id, second.entity.id], evidenceGraphs: ["g-1"]))
 
         // Off screen: dropped, so it reloads only when next visited.
         let evicted: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(firstKey)
@@ -513,7 +513,7 @@ struct WorkspaceSessionTests {
 
         // Leaving for the list hides the second page too.
         session.apply(location: .sectionRoot(.persons))
-        session.apply(CatalogWriteEffects(handles: [first.entity.id, second.entity.id], sources: ["s1"]))
+        session.apply(CatalogWriteEffects(handles: [first.entity.id, second.entity.id], evidenceGraphs: ["g-1"]))
         let hidden: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(secondKey)
         #expect(hidden == nil)
         await waitForFetchComplete(list)
@@ -733,13 +733,13 @@ struct WorkspaceSessionTests {
         let project = session.projectKey
         let sources = CatalogQueryKey.sourcesList(project: project)
         let propertiesKey = CatalogQueryKey.propertiesWorkspace(project: project)
-        let graphKey = CatalogQueryKey.sourceGraph(project: project, sourceId: "s1")
+        let graphKey = CatalogQueryKey.evidenceGraph(project: project, graphId: "g-1")
         let citationsKey = CatalogQueryKey.citationsByArtifact(project: project, artifactId: "a1")
         session.setQueryValue(sources, value: [
             CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "t1", title: "Alpha", description: ""),
         ])
         session.setQueryValue(propertiesKey, value: PropertiesSnapshot.empty)
-        session.setQueryValue(graphKey, value: SourceGraphRows(sourceId: "s1"))
+        session.setQueryValue(graphKey, value: EvidenceGraphRows(graphId: "g-1"))
         session.setQueryValue(citationsKey, value: [CatalogListedCitation]())
         let activity = CatalogActivity(revision: 12, at: "2026-10-15T16:00:00Z")
 
@@ -752,7 +752,7 @@ struct WorkspaceSessionTests {
         #expect(list.value?.first?.updated == activity)
         // Nothing is fetching, and a `query` finds nothing stale to reload.
         let properties: QueryHandle<PropertiesSnapshot> = session.query(propertiesKey)
-        let graph: QueryHandle<SourceGraphRows> = session.query(graphKey)
+        let graph: QueryHandle<EvidenceGraphRows> = session.query(graphKey)
         let citations: QueryHandle<[CatalogListedCitation]> = session.query(citationsKey)
         #expect(!properties.isFetching && !graph.isFetching && !citations.isFetching)
     }
@@ -766,7 +766,7 @@ struct WorkspaceSessionTests {
         let session = makeSession(store: store)
         let project = session.projectKey
         session.apply(location: WorkspaceLocation(
-            section: .sources, sourceId: "s1", sourceSurface: .graph, title: "Alpha"
+            section: .sources, sourceId: "s1", graphId: "g-1", sourceSurface: .graph, title: "Alpha"
         ))
         let propertiesKey = CatalogQueryKey.propertiesWorkspace(project: project)
         let countsKey = CatalogQueryKey.citationCounts(project: project, sourceId: "s1")
@@ -777,11 +777,11 @@ struct WorkspaceSessionTests {
         await waitForFetchComplete(properties)
         await waitForFetchComplete(counts)
 
-        session.apply(CatalogWriteEffects(sources: ["s1"]))
+        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-1"]))
         #expect(!properties.isFetching && !counts.isFetching)
 
         session.apply(CatalogWriteEffects(
-            sources: ["s1"], citationSources: ["s1"], lists: [.propertyUsage]
+            evidenceGraphs: ["g-1"], citationSources: ["s1"], lists: [.propertyUsage]
         ))
         #expect(properties.isFetching)
         #expect(counts.isFetching)
@@ -797,15 +797,15 @@ struct WorkspaceSessionTests {
         let key = CatalogQueryKey.citationsByArtifact(project: project, artifactId: "a1")
         session.setQueryValue(key, value: [CatalogListedCitation]())
         session.apply(location: WorkspaceLocation(
-            section: .sources, sourceId: "s1", citationId: "c1", sourceSurface: .citationComposer, title: "Alpha"
+            section: .sources, sourceId: "s1", graphId: "g-1", citationId: "c1", sourceSurface: .citationComposer, title: "Alpha"
         ))
         #expect(!session.visibleKeys.contains(key))
         let context = CitationComposerContext(
-            store: store, session: session, userID: "u1", sourceID: "s1"
+            store: store, session: session, userID: "u1", sourceID: "s1", graphID: "g-1"
         )
         context.artifactID = "a1"
 
-        context.applyWrite(CatalogWriteEffects(sources: ["s1"], citationSources: ["s1"]))
+        context.applyWrite(CatalogWriteEffects(evidenceGraphs: ["g-1"], citationSources: ["s1"]))
 
         let handle: QueryHandle<[CatalogListedCitation]> = try #require(session.queryHandle(key))
         #expect(handle.isFetching)
@@ -834,7 +834,7 @@ struct WorkspaceSessionTests {
         #expect(fields.value?.properties.first?.usedBy == 2)
 
         store.propertiesByProject[projectDir]?[0].usedBy = 1
-        session.apply(CatalogWriteEffects(sources: ["s1"], citationSources: ["s1"], lists: [.propertyUsage]))
+        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-1"], citationSources: ["s1"], lists: [.propertyUsage]))
 
         let _: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         await waitForFetchComplete(fields)
@@ -933,125 +933,131 @@ struct WorkspaceSessionTests {
         #expect(handle.value?.first?.id == "s1")
     }
 
-    @Test func applyMutatedSourceGraphPatchesProgressOnly() async {
+    /// T-15: a write's effects name the graphs whose progress to patch; the
+    /// other graph of the same Source keeps its entry and is not fetched.
+    @Test func applyGraphEffectsPatchProgressOnly() async {
         let store = FakeStore()
         seedStore(store)
-        store.graphProgressBySource["s1"] = SourceGraphProgress(
-            sourceId: "s1", subjectCount: 12, observationCount: 48
+        store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
+            graphId: "g-1", sourceId: "s1", subjectCount: 12, observationCount: 48
         )
-        store.graphProgressBySource["s2"] = SourceGraphProgress(
-            sourceId: "s2", subjectCount: 4, observationCount: 0
+        store.graphProgressByGraph["g-2"] = EvidenceGraphProgress(
+            graphId: "g-2", sourceId: "s1", subjectCount: 4, observationCount: 0
         )
         let session = makeSession(store: store)
         let listKey = CatalogQueryKey.sourcesList(project: session.projectKey)
-        let progressKey = CatalogQueryKey.sourceGraphProgress(project: session.projectKey)
+        let progressKey = CatalogQueryKey.evidenceGraphProgress(project: session.projectKey)
         let listHandle: QueryHandle<[CatalogSource]> = session.query(listKey)
-        let progressHandle: QueryHandle<[String: SourceGraphProgress]> = session.query(progressKey)
+        let progressHandle: QueryHandle<[String: EvidenceGraphProgress]> = session.query(progressKey)
         await waitForFetchComplete(listHandle)
         await waitForFetchComplete(progressHandle)
-        #expect(progressHandle.value?["s1"]?.subjectCount == 12)
-        #expect(progressHandle.value?["s2"]?.subjectCount == 4)
-        let listCallsBefore = store.listSourceGraphProgressCalls
+        #expect(progressHandle.value?["g-1"]?.subjectCount == 12)
+        #expect(progressHandle.value?["g-2"]?.subjectCount == 4)
+        let listCallsBefore = store.listEvidenceGraphProgressCalls
+        let getCallsBefore = store.getEvidenceGraphProgressCalls
         let sourcesAtLoad = listHandle.value
 
-        store.graphProgressBySource["s1"] = SourceGraphProgress(
-            sourceId: "s1", subjectCount: 13, observationCount: 48
+        store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
+            graphId: "g-1", sourceId: "s1", subjectCount: 99, observationCount: 48
         )
-        session.apply(.mutatedSourceGraph(sourceId: "s1"))
+        store.graphProgressByGraph["g-2"] = EvidenceGraphProgress(
+            graphId: "g-2", sourceId: "s1", subjectCount: 5, observationCount: 0
+        )
+        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-2"]))
         var waited: UInt64 = 0
         while waited < 2_000_000_000 {
-            if progressHandle.value?["s1"]?.subjectCount == 13 { break }
+            if progressHandle.value?["g-2"]?.subjectCount == 5 { break }
             await Task.yield()
             try? await Task.sleep(nanoseconds: 10_000_000)
             waited += 10_000_000
         }
-        #expect(progressHandle.value?["s1"]?.subjectCount == 13)
-        #expect(progressHandle.value?["s2"]?.subjectCount == 4)
+        #expect(progressHandle.value?["g-2"]?.subjectCount == 5)
+        #expect(progressHandle.value?["g-1"]?.subjectCount == 12)
         #expect(listHandle.value == sourcesAtLoad)
         #expect(listHandle.isFetching == false)
-        #expect(store.listSourceGraphProgressCalls == listCallsBefore)
-        #expect(store.getSourceGraphProgressCalls >= 1)
+        #expect(store.listEvidenceGraphProgressCalls == listCallsBefore)
+        #expect(store.getEvidenceGraphProgressCalls == getCallsBefore + 1)
     }
 
     @Test func applyPromotedSubjectPatchesProgress() async {
         let store = FakeStore()
         seedStore(store)
-        store.graphProgressBySource["s1"] = SourceGraphProgress(
-            sourceId: "s1", subjectCount: 2, observationCount: 1, primaryCount: 2, filedCount: 0
+        store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
+            graphId: "g-1", sourceId: "s1", subjectCount: 2, observationCount: 1, primaryCount: 2, filedCount: 0
         )
         let session = makeSession(store: store)
-        let progressHandle: QueryHandle<[String: SourceGraphProgress]> = session.query(
-            CatalogQueryKey.sourceGraphProgress(project: session.projectKey)
+        let progressHandle: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
+            CatalogQueryKey.evidenceGraphProgress(project: session.projectKey)
         )
         await waitForFetchComplete(progressHandle)
-        #expect(progressHandle.value?["s1"]?.filedCount == 0)
-        let callsBefore = store.getSourceGraphProgressCalls
+        #expect(progressHandle.value?["g-1"]?.filedCount == 0)
+        let callsBefore = store.getEvidenceGraphProgressCalls
 
-        store.graphProgressBySource["s1"] = SourceGraphProgress(
-            sourceId: "s1", subjectCount: 2, observationCount: 1, primaryCount: 2, filedCount: 2
+        store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
+            graphId: "g-1", sourceId: "s1", subjectCount: 2, observationCount: 1, primaryCount: 2, filedCount: 2
         )
-        session.apply(.promotedSubject(sourceId: "s1"))
+        session.apply(.promotedSubject(graphId: "g-1"))
         var waited: UInt64 = 0
         while waited < 2_000_000_000 {
-            if progressHandle.value?["s1"]?.filedCount == 2 { break }
+            if progressHandle.value?["g-1"]?.filedCount == 2 { break }
             await Task.yield()
             try? await Task.sleep(nanoseconds: 10_000_000)
             waited += 10_000_000
         }
-        #expect(store.getSourceGraphProgressCalls == callsBefore + 1)
-        #expect(progressHandle.value?["s1"]?.filedCount == 2)
+        #expect(store.getEvidenceGraphProgressCalls == callsBefore + 1)
+        #expect(progressHandle.value?["g-1"]?.filedCount == 2)
     }
 
     @Test func applySourceEffectsDoesNotRefetchSourcesList() async {
         let store = FakeStore()
         seedStore(store)
-        store.graphProgressBySource["s1"] = SourceGraphProgress(
-            sourceId: "s1", subjectCount: 1, observationCount: 1
+        store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
+            graphId: "g-1", sourceId: "s1", subjectCount: 1, observationCount: 1
         )
         let session = makeSession(store: store)
         let listHandle: QueryHandle<[CatalogSource]> = session.query(
             CatalogQueryKey.sourcesList(project: session.projectKey)
         )
-        let progressHandle: QueryHandle<[String: SourceGraphProgress]> = session.query(
-            CatalogQueryKey.sourceGraphProgress(project: session.projectKey)
+        let progressHandle: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
+            CatalogQueryKey.evidenceGraphProgress(project: session.projectKey)
         )
         await waitForFetchComplete(listHandle)
         await waitForFetchComplete(progressHandle)
         let sourcesAtLoad = listHandle.value
-        store.graphProgressBySource["s1"] = SourceGraphProgress(
-            sourceId: "s1", subjectCount: 1, observationCount: 2
+        store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
+            graphId: "g-1", sourceId: "s1", subjectCount: 1, observationCount: 2
         )
-        session.apply(CatalogWriteEffects(sources: ["s1"]))
+        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-1"]))
         var waited: UInt64 = 0
         while waited < 2_000_000_000 {
-            if progressHandle.value?["s1"]?.observationCount == 2 { break }
+            if progressHandle.value?["g-1"]?.observationCount == 2 { break }
             await Task.yield()
             try? await Task.sleep(nanoseconds: 10_000_000)
             waited += 10_000_000
         }
-        #expect(progressHandle.value?["s1"]?.observationCount == 2)
+        #expect(progressHandle.value?["g-1"]?.observationCount == 2)
         #expect(listHandle.value == sourcesAtLoad)
         #expect(listHandle.isFetching == false)
     }
 
-    @Test func graphCameraIsPerSource() {
+    @Test func graphCameraIsPerGraph() {
         let session = makeSession()
         let first = GraphCanvasCamera(
             magnification: 0.5,
             contentOffset: CGPoint(x: 120, y: 80)
         )
-        session.setGraphCamera(first, for: "src-a")
-        #expect(session.graphCamera(for: "src-a") == first)
-        #expect(session.graphCamera(for: "src-b") == nil)
+        session.setGraphCamera(first, for: "g-1")
+        #expect(session.graphCamera(for: "g-1") == first)
+        #expect(session.graphCamera(for: "g-2") == nil)
 
         let second = GraphCanvasCamera(
             magnification: 1.25,
             contentOffset: CGPoint(x: 10, y: 20)
         )
-        session.setGraphCamera(second, for: "src-b")
-        #expect(session.graphCamera(for: "src-a") == first)
-        #expect(session.graphCamera(for: "src-b") == second)
-        #expect(session.graphCamera(for: "src-a") != session.graphCamera(for: "src-b"))
+        session.setGraphCamera(second, for: "g-2")
+        #expect(session.graphCamera(for: "g-1") == first)
+        #expect(session.graphCamera(for: "g-2") == second)
+        #expect(session.graphCamera(for: "g-1") != session.graphCamera(for: "g-2"))
     }
 
     @Test func applyRunsNavCountsHookForTriggers() async {
@@ -1060,7 +1066,7 @@ struct WorkspaceSessionTests {
         session.onNavCountsMoved = { calls += 1 }
         session.apply(.createdSource)
         session.apply(.deletedSource(id: "s1"))
-        session.apply(.promotedSubject(sourceId: "s1"))
+        session.apply(.promotedSubject(graphId: "g-1"))
         #expect(await waitUntil { calls == 3 })
     }
 

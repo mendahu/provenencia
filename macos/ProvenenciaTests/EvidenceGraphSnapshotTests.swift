@@ -4,7 +4,7 @@ import Testing
 
 @Suite
 @MainActor
-struct SourceGraphSnapshotTests {
+struct EvidenceGraphSnapshotTests {
     private let personType = CatalogSubjectType(
         id: "type-person",
         key: "person",
@@ -59,8 +59,8 @@ struct SourceGraphSnapshotTests {
             propertyLabel: "Toponym",
             propertyValueType: "text"
         )
-        let snapshot = SourceGraphSnapshot.build(
-            sourceId: "src-1",
+        let snapshot = EvidenceGraphSnapshot.build(
+            graphId: "g-1",
             subjects: [alice],
             positions: [CatalogSubjectPosition(subjectID: alice.id, gridX: 0, gridY: 0)],
             types: [personType],
@@ -116,8 +116,8 @@ struct SourceGraphSnapshotTests {
             propertyLabel: "Name",
             propertyValueType: "name"
         )
-        let snapshot = SourceGraphSnapshot.build(
-            sourceId: "src-1",
+        let snapshot = EvidenceGraphSnapshot.build(
+            graphId: "g-1",
             subjects: [alice],
             positions: [CatalogSubjectPosition(subjectID: alice.id, gridX: 0, gridY: 0)],
             types: [personType],
@@ -161,8 +161,8 @@ struct SourceGraphSnapshotTests {
             description: ""
         )
 
-        let snapshot = SourceGraphSnapshot.build(
-            sourceId: "src-1",
+        let snapshot = EvidenceGraphSnapshot.build(
+            graphId: "g-1",
             subjects: [birth, alice, bridge, unplaced],
             positions: [
                 CatalogSubjectPosition(subjectID: alice.id, gridX: 1, gridY: 2),
@@ -209,7 +209,7 @@ struct SourceGraphSnapshotTests {
             rules: CatalogConnectRule.productMatrix
         )
 
-        #expect(snapshot.sourceId == "src-1")
+        #expect(snapshot.graphId == "g-1")
         #expect(snapshot.subjects.map(\.id) == [alice.id, birth.id])
         #expect(snapshot.subjects[0].kind == .person)
         #expect(snapshot.subjects[0].gridX == 1)
@@ -235,7 +235,7 @@ struct SourceGraphSnapshotTests {
                 CatalogConnectEdge(propertyKey: "event", endpointTypeKey: "event"),
             ]
         )
-        let ends = SourceGraphSnapshot.citedEndpoints(
+        let ends = EvidenceGraphSnapshot.citedEndpoints(
             kind: .location,
             observations: [
                 CatalogObservation(
@@ -284,6 +284,7 @@ struct SourceGraphSnapshotTests {
         {
           "section":"sources",
           "sourceId":"s1",
+          "graphId":"g1",
           "connectFromSubjectId":"p1",
           "connectToSubjectId":"e1",
           "connectBridgeTypeKey":"participation",
@@ -323,8 +324,8 @@ struct SourceGraphSnapshotTests {
             label: "Alice",
             description: ""
         )
-        let rows = SourceGraphRows(
-            sourceId: "src-1",
+        let rows = EvidenceGraphRows(
+            graphId: "g-1",
             subjects: [alice],
             positions: [CatalogSubjectPosition(subjectID: alice.id, gridX: 1, gridY: 2)]
         )
@@ -334,7 +335,7 @@ struct SourceGraphSnapshotTests {
     }
 
     @Test func accessibilityLabelIncludesUncited() {
-        let placed = SourceGraphPlacedSubject(
+        let placed = EvidenceGraphPlacedSubject(
             subject: CatalogSubject(
                 id: "s1",
                 ref: "CPR-1",
@@ -356,7 +357,7 @@ struct SourceGraphSnapshotTests {
     }
 
     @Test func accessibilityLabelIncludesCited() {
-        let placed = SourceGraphPlacedSubject(
+        let placed = EvidenceGraphPlacedSubject(
             subject: CatalogSubject(
                 id: "s1",
                 ref: "CPR-1",
@@ -387,8 +388,8 @@ struct SourceGraphSnapshotTests {
         )
         let handle = CatalogCanonicalEntity(id: "e-1", ref: "PER-7KD45", subjectTypeID: personType.id, label: "")
         let association = CatalogCanonicalEntity(id: "e-2", ref: "LOC-3TX9Q", subjectTypeID: locationType.id, label: "")
-        let snapshot = SourceGraphSnapshot.build(
-            sourceId: "src-1",
+        let snapshot = EvidenceGraphSnapshot.build(
+            graphId: "g-1",
             subjects: [alice, bob, bridge],
             positions: [
                 CatalogSubjectPosition(subjectID: alice.id, gridX: 0, gridY: 0),
@@ -413,7 +414,7 @@ struct SourceGraphSnapshotTests {
             entity: CatalogCanonicalEntity(id: "e-1", ref: "PER-7KD45", subjectTypeID: personType.id, label: ""),
             kind: "person"
         )
-        let rows = SourceGraphRows(sourceId: "src-1", memberships: [membership])
+        let rows = EvidenceGraphRows(graphId: "src-1", memberships: [membership])
             .updatingPosition(subjectID: "s-alice", gridX: 3, gridY: 3)
         #expect(rows.memberships == [membership])
     }
@@ -424,8 +425,8 @@ struct SourceGraphSnapshotTests {
         _ kind: EvidencePrimaryKind,
         label: String,
         _ observations: [CatalogObservation] = []
-    ) -> SourceGraphPlacedSubject {
-        SourceGraphPlacedSubject(
+    ) -> EvidenceGraphPlacedSubject {
+        EvidenceGraphPlacedSubject(
             subject: CatalogSubject(id: "s1", ref: "CXX-1", sourceID: "src", subjectTypeID: "t", label: label, description: ""),
             kind: kind, typeLabel: "", gridX: 0, gridY: 0, isCited: !observations.isEmpty,
             observations: observations
@@ -462,7 +463,7 @@ struct SourceGraphSnapshotTests {
         // A toponym doesn't name a Person, nor a name a Place.
         #expect(placed(.person, label: "James", [observation("toponym", text: "York")]).displayName == "James")
         #expect(placed(.place, label: "the town", [observation("name", nameForm: "York")]).displayName == "the town")
-        // An Event is titled by Go (sourceeventtitles); until it is, its label.
+        // An Event is titled by Go (grapheventtitles); until it is, its label.
         #expect(placed(.event, label: "Baptism", [observation("name", nameForm: "James")]).displayName == "Baptism")
         var titled = placed(.event, label: "Grandpa's fire", [observation("event_name", text: "The Great Fire")])
         titled.eventTitle = CatalogEventTitle(rule: .recordedName, recordedName: "The Great Fire", label: "Grandpa's fire")
@@ -482,13 +483,13 @@ struct SourceGraphSnapshotTests {
             rule: .subject, label: "Baptism", ref: "CEV-B", typeKey: "baptism", typeOrigin: CatalogOrigin.provenencia, typeLabel: "Baptism",
             subjects: [CatalogNameValue(form: "James Robins")]
         )
-        let rows = SourceGraphRows(
-            sourceId: "src-1",
+        let rows = EvidenceGraphRows(
+            graphId: "g-1",
             subjects: [james, baptism],
             positions: [james, baptism].map { CatalogSubjectPosition(subjectID: $0.id, gridX: 0, gridY: 0) },
             eventTitles: [baptism.id: baptismTitle, james.id: baptismTitle]
         )
-        let snapshot = SourceGraphSnapshot.build(rows: rows, types: [personType, eventType], rules: CatalogConnectRule.productMatrix)
+        let snapshot = EvidenceGraphSnapshot.build(rows: rows, types: [personType, eventType], rules: CatalogConnectRule.productMatrix)
         let card = snapshot.subjects.first { $0.id == baptism.id }
         #expect(card?.eventTitle == baptismTitle)
         #expect(card?.displayName == L10n.EventTitle.ofOne(type: "Baptism", subject: "James Robins"))

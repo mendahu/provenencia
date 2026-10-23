@@ -129,6 +129,37 @@ struct EvidenceGraphStoreTests {
         #expect(byID["g3"]?.artifactIDs == ["b0"])
     }
 
+    /// T-20 (D-14): a new Source has a Default graph, like the engine's, and its
+    /// first Artifact links to it; a copy's graph links the copied Artifacts.
+    @Test func createSourceMakesADefaultGraph() async throws {
+        let store = FakeStore()
+        let (created, _) = try await store.createSource(
+            projectDir: projectDir, userID: userID, sourceTypeID: "t", title: "Deed", description: ""
+        )
+        let graphs = try await store.listEvidenceGraphs(projectDir: projectDir)
+        #expect(graphs.map(\.name) == ["Default"])
+        #expect(graphs.first?.sourceID == created.id)
+        #expect(graphs.first?.id != created.id)
+        #expect(graphs.first?.artifactIDs == [])
+
+        let (artifact, _) = try await store.createArtifact(
+            projectDir: projectDir, userID: userID, sourceID: created.id,
+            fileID: "", label: "Page 1", description: "", graphIDs: []
+        )
+        let linked = try await store.listEvidenceGraphs(projectDir: projectDir)
+        #expect(linked.first?.artifactIDs == [artifact.id])
+
+        let (copy, _) = try await store.copySource(
+            projectDir: projectDir, userID: userID, sourceID: created.id, title: "Deed copy", sourceTypeID: "t",
+            copyDescription: false, copyMetadata: false, copyCredibility: false, artifactIDs: [artifact.id]
+        )
+        let all = try await store.listEvidenceGraphs(projectDir: projectDir)
+        let copied = try #require(all.first { $0.sourceID == copy.id })
+        #expect(copied.name == "Default")
+        #expect(copied.artifactIDs.count == 1)
+        #expect(copied.artifactIDs != [artifact.id])
+    }
+
     @Test func deletesDropLinksAndGraphs() async throws {
         let store = seededStore()
         store.artifactsBySource[sourceID] = [

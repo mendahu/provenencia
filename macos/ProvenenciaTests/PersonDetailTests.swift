@@ -326,11 +326,12 @@ struct PersonDetailTests {
         let location = ReconciliationRecord.composerLocation(for: outcome)
         #expect(location.section == .sources && location.sourceSurface == .citationComposer)
         let entry = try #require(CitationComposerEntry(location: location))
-        guard case let .edit(sourceID, subjectID, citationID, artifactID, observationID) = entry else {
+        guard case let .edit(sourceID, graphID, subjectID, citationID, artifactID, observationID) = entry else {
             Issue.record("expected an edit entry, got \(entry)")
             return
         }
-        #expect(sourceID == "s-bible" && subjectID == "sub-bible" && citationID == "cit-bible")
+        #expect(sourceID == "s-bible" && graphID == "g-bible" && subjectID == "sub-bible" && citationID == "cit-bible")
+        #expect(location.graphId == "g-bible")
         #expect(artifactID == "art-bible" && observationID == "bible")
     }
 }
