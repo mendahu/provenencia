@@ -287,10 +287,13 @@ enum SeededGenderTerm {
     static let nonBinary = "non_binary"
 }
 
-/// Seeded `sex_at_birth` terms the Person header colours by.
+/// Seeded `sex_at_birth` terms (`subjectvocab` seed); the Person header colours by female and male.
 enum SeededSexAtBirthTerm {
     static let female = "female"
     static let male = "male"
+    static let intersex = "intersex"
+    static let indeterminate = "indeterminate"
+    static let unknown = "unknown"
 }
 
 /// Seeded `role` terms (`subjectvocab` seed).

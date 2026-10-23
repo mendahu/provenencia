@@ -56,7 +56,7 @@ struct EventTitleDisplayTests {
         #expect(
             EventTitleDisplay.title(title(.couple, typeKey: "engagement", subjects: ["James Robins", "Mary Smith"]), locale: en)
                 == L10n.EventTitle.couple(
-                    type: L10n.string(L10n.PropertyTerm.eventTypeEngagement),
+                    type: L10n.string(L10n.PropertyTerm.eventTypeEngagement.label),
                     a: "James Robins",
                     b: "Mary Smith",
                     locale: en
@@ -83,7 +83,7 @@ struct EventTitleDisplayTests {
     }
 
     @Test func typeKeyNamesTheEventWhenTheLabelIsEmpty() {
-        let birth = L10n.string(L10n.PropertyTerm.eventTypeBirth)
+        let birth = L10n.string(L10n.PropertyTerm.eventTypeBirth.label)
         #expect(
             EventTitleDisplay.title(title(.subject, typeKey: "birth", subjects: ["Jeremiah Arthur Gumtree"]), locale: en)
                 == L10n.EventTitle.ofOne(type: birth, subject: "Jeremiah Arthur Gumtree", locale: en)
@@ -100,7 +100,7 @@ struct EventTitleDisplayTests {
         #expect(
             EventTitleDisplay.title(header, locale: en)
                 == L10n.EventTitle.ofOne(
-                    type: L10n.string(L10n.PropertyTerm.eventTypeBirth),
+                    type: L10n.string(L10n.PropertyTerm.eventTypeBirth.label),
                     subject: "Jeremiah Arthur Gumtree",
                     locale: en
                 )

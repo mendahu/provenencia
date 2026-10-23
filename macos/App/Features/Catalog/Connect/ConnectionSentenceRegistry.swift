@@ -101,57 +101,19 @@ enum ConnectionSentenceRegistry {
 
     // MARK: Share wording
 
-    private typealias ShareTerm = L10n.EvidenceGraph.ShareTerm
-
-    /// Each seeded term's own share phrase, article included ("an informant"). A role, an event
-    /// type and a relationship term of one key (child, spouse) read in their own table.
-    private static let roleShares: [String: ShareTerm] = [
-        SeededRoleTerm.subject: Text.shareRoleSubject,
-        SeededRoleTerm.father: Text.shareRoleFather,
-        SeededRoleTerm.mother: Text.shareRoleMother,
-        SeededRoleTerm.spouse: Text.shareRoleSpouse,
-        SeededRoleTerm.child: Text.shareRoleChild,
-        SeededRoleTerm.witness: Text.shareRoleWitness,
-        SeededRoleTerm.informant: Text.shareRoleInformant,
-        SeededRoleTerm.pallbearer: Text.shareRolePallbearer,
-    ]
-
-    private static let eventShares: [String: ShareTerm] = [
-        SeededEventTypeTerm.birth: Text.shareEventBirth,
-        SeededEventTypeTerm.death: Text.shareEventDeath,
-        SeededEventTypeTerm.marriage: Text.shareEventMarriage,
-        SeededEventTypeTerm.engagement: Text.shareEventEngagement,
-        SeededEventTypeTerm.baptism: Text.shareEventBaptism,
-        SeededEventTypeTerm.burial: Text.shareEventBurial,
-        SeededEventTypeTerm.funeral: Text.shareEventFuneral,
-        SeededEventTypeTerm.census: Text.shareEventCensus,
-        SeededEventTypeTerm.residence: Text.shareEventResidence,
-        SeededEventTypeTerm.migration: Text.shareEventMigration,
-        SeededEventTypeTerm.travel: Text.shareEventTravel,
-    ]
-
-    private static let relationshipShares: [String: ShareTerm] = [
-        SeededRelationshipTypeTerm.spouse: Text.shareRelationshipSpouse,
-        SeededRelationshipTypeTerm.sibling: Text.shareRelationshipSibling,
-        SeededRelationshipTypeTerm.cousin: Text.shareRelationshipCousin,
-        SeededRelationshipTypeTerm.parent: Text.shareRelationshipParent,
-        SeededRelationshipTypeTerm.child: Text.shareRelationshipChild,
-        SeededRelationshipTypeTerm.grandparent: Text.shareRelationshipGrandparent,
-        SeededRelationshipTypeTerm.grandchild: Text.shareRelationshipGrandchild,
-        SeededRelationshipTypeTerm.pibling: Text.shareRelationshipPibling,
-        SeededRelationshipTypeTerm.nibling: Text.shareRelationshipNibling,
-        SeededRelationshipTypeTerm.guardian: Text.shareRelationshipGuardian,
-        SeededRelationshipTypeTerm.ward: Text.shareRelationshipWard,
-    ]
-
     /// A term as the sheet names it: a product term by its localized name, a researcher's by its label.
     private static func termName(_ term: CatalogEvidenceTerm, property: String) -> String {
         PropertyTermDisplay.name(key: term.key, origin: term.origin, propertyKey: property, catalogLabel: term.label)
     }
 
-    /// The seeded wording of a term key; nil for a key `table` does not know.
-    private static func seededShare(_ key: String?, in table: [String: ShareTerm], similar: Bool) -> String? {
-        key.flatMap { table[$0] }.map { Text.sharePhrase($0, similar: similar) }
+    /// A product term's share phrase, whole, from the one wording table; nil for a key it has no
+    /// share phrase for.
+    private static func seededShare(property: String, key: String?, similar: Bool) -> String? {
+        guard let key,
+              let wording = L10n.PropertyTerm.wording(propertyKey: property, termKey: key),
+              let phrase = similar ? wording.shareSimilar : wording.share
+        else { return nil }
+        return L10n.string(phrase)
     }
 
     /// A term with no seeded wording (a researcher's), named as it is: "a connection (Godparent)".
@@ -191,7 +153,7 @@ enum ConnectionSentenceRegistry {
                 // row (a researcher's, with no inverse) is only named: "a connection (Godparent)".
                 guard let term = input.neighborTerm else { return nil }
                 if input.namesNeighbor,
-                   let phrase = seededShare(term.productKey, in: relationshipShares, similar: similar) {
+                   let phrase = seededShare(property: SeededPropertyKey.relationshipType, key: term.productKey, similar: similar) {
                     return phrase
                 }
                 return namedShare(termName(term, property: SeededPropertyKey.relationshipType), similar: similar)
@@ -237,12 +199,12 @@ enum ConnectionSentenceRegistry {
                 // A person neighbor is worded by its role and name; an event neighbor, by its type.
                 if input.neighborEnd == SeededPropertyKey.person {
                     guard let term = input.neighborTerm else { return nil }
-                    if let role = seededShare(term.productKey, in: roleShares, similar: similar) {
+                    if let role = seededShare(property: SeededPropertyKey.role, key: term.productKey, similar: similar) {
                         return Text.shareNamed(phrase: role, name: input.neighborName)
                     }
                     return namedShare(termName(term, property: SeededPropertyKey.role), similar: similar)
                 }
-                return seededShare(input.eventType?.productKey, in: eventShares, similar: similar)
+                return seededShare(property: SeededPropertyKey.eventType, key: input.eventType?.productKey, similar: similar)
                     ?? namedShare(input.eventType.map { termName($0, property: SeededPropertyKey.eventType) }, similar: similar)
                     ?? Text.shareEventUntyped(similar: similar)
             }

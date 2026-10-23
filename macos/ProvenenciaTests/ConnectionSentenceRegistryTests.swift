@@ -273,36 +273,20 @@ struct ConnectionSentenceRegistryTests {
         #expect(share(.participation, end: "event", eventType: term("engagement"), similar: true) == "a similar engagement event")
     }
 
-    private static let eventTypes = [
-        SeededEventTypeTerm.birth, SeededEventTypeTerm.death, SeededEventTypeTerm.marriage,
-        SeededEventTypeTerm.engagement, SeededEventTypeTerm.baptism, SeededEventTypeTerm.burial,
-        SeededEventTypeTerm.funeral, SeededEventTypeTerm.census, SeededEventTypeTerm.residence,
-        SeededEventTypeTerm.migration, SeededEventTypeTerm.travel,
-    ]
-    private static let roles = [
-        SeededRoleTerm.subject, SeededRoleTerm.father, SeededRoleTerm.mother, SeededRoleTerm.spouse,
-        SeededRoleTerm.child, SeededRoleTerm.witness, SeededRoleTerm.informant, SeededRoleTerm.pallbearer,
-    ]
-    private static let relationships = [
-        SeededRelationshipTypeTerm.spouse, SeededRelationshipTypeTerm.sibling, SeededRelationshipTypeTerm.cousin,
-        SeededRelationshipTypeTerm.parent, SeededRelationshipTypeTerm.child, SeededRelationshipTypeTerm.grandparent,
-        SeededRelationshipTypeTerm.grandchild, SeededRelationshipTypeTerm.pibling, SeededRelationshipTypeTerm.nibling,
-        SeededRelationshipTypeTerm.guardian, SeededRelationshipTypeTerm.ward,
-    ]
-
-    @Test func everySeededTermHasItsOwnSharePhrase() {
-        for key in Self.eventTypes {
-            let phrase = share(.participation, end: "event", eventType: term(key))
-            #expect(phrase.hasSuffix(" event") && !phrase.hasPrefix("a connection"), "\(key): \(phrase)")
-        }
-        for key in Self.roles {
-            let phrase = share(.participation, end: "person", term: term(key), name: "X")
-            #expect(phrase.hasSuffix(", X") && !phrase.hasPrefix("a connection"), "\(key): \(phrase)")
-        }
-        for key in Self.relationships {
-            let phrase = share(.relationship, end: "related_to", term: term(key))
-            #expect(!phrase.hasPrefix("a connection"), "\(key): \(phrase)")
-        }
+    /// T-8: a few phrases read whole from the one wording table, the similar form included.
+    @Test func aFewSharesReadWhole() {
+        let pibling = L10n.PropertyTerm.wording(propertyKey: SeededPropertyKey.relationshipType, termKey: SeededRelationshipTypeTerm.pibling)
+        #expect(pibling?.share.map(L10n.string) == "an aunt or uncle")
+        #expect(pibling?.shareSimilar.map(L10n.string) == "a similar aunt or uncle")
+        let informant = L10n.PropertyTerm.wording(propertyKey: SeededPropertyKey.role, termKey: SeededRoleTerm.informant)
+        #expect(informant?.share.map(L10n.string) == "an informant")
+        // A term with no share phrase (a place relationship, a sex at birth) still has its name.
+        let male = L10n.PropertyTerm.wording(propertyKey: SeededPropertyKey.sexAtBirth, termKey: SeededSexAtBirthTerm.male)
+        #expect(male.map { L10n.string($0.label) } == "Male")
+        #expect(male?.share == nil)
+        // A researcher's key, or a term of another property, has no wording.
+        #expect(L10n.PropertyTerm.wording(propertyKey: SeededPropertyKey.role, termKey: "godparent") == nil)
+        #expect(L10n.PropertyTerm.wording(propertyKey: SeededPropertyKey.role, termKey: SeededEventTypeTerm.birth) == nil)
     }
 
     @Test func aNeighborPersonIsNamedByRoleAndName() {

@@ -7,7 +7,7 @@ struct PropertyTermDisplayTests {
     @Test func productTermUsesL10n() {
         #expect(
             PropertyTermDisplay.name(key: "father", origin: CatalogOrigin.provenencia, propertyKey: "role", catalogLabel: "Dad")
-                == L10n.string(L10n.PropertyTerm.roleFather)
+                == L10n.string(L10n.PropertyTerm.roleFather.label)
         )
     }
 
@@ -18,7 +18,7 @@ struct PropertyTermDisplayTests {
         )
         #expect(
             PropertyTermDisplay.name(key: "subject", origin: CatalogOrigin.provenencia, propertyKey: "role", catalogLabel: "Main person")
-                == L10n.string(L10n.PropertyTerm.roleSubject)
+                == L10n.string(L10n.PropertyTerm.roleSubject.label)
         )
     }
 

@@ -35,6 +35,7 @@ import (
 // match, or a wrongly refused input.
 const (
 	swiftVocabulary = "../../macos/App/Platform/ConclusionVocabulary.swift"
+	swiftL10n       = "../../macos/App/Platform/L10n.swift"
 	swiftValueKinds = "../../macos/App/Platform/InterpretationValueKinds.swift"
 	swiftMarks      = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
 	swiftGraphKinds = "../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift"
@@ -64,6 +65,39 @@ func swiftEnumBody(t *testing.T, path, name string) string {
 		t.Fatalf("%s: enum %s does not close", path, name)
 	}
 	return src[start : start+end]
+}
+
+// swiftFuncBody returns the source from `signature` to the brace that closes
+// its body.
+func swiftFuncBody(t *testing.T, path, signature string) string {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(b)
+	start := strings.Index(src, signature)
+	if start < 0 {
+		t.Fatalf("%s: no %s", path, signature)
+	}
+	open := strings.Index(src[start:], "{")
+	if open < 0 {
+		t.Fatalf("%s: %s has no body", path, signature)
+	}
+	depth := 0
+	for i := start + open; i < len(src); i++ {
+		switch src[i] {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				return src[start : i+1]
+			}
+		}
+	}
+	t.Fatalf("%s: %s does not close", path, signature)
+	return ""
 }
 
 var (
@@ -204,10 +238,12 @@ var (
 	// swiftNamedKey reads `static let spouse = "spouse"`; swiftInverseEntry reads `parent: child,`.
 	swiftNamedKey     = regexp.MustCompile(`static let (\w+) = "([^"]*)"`)
 	swiftInverseEntry = regexp.MustCompile(`(?m)^\s+(\w+): (\w+),\s*$`)
-	rawCase           = regexp.MustCompile(`(?m)^\s+case (\w+)\s*$`)
-	unrecogniz        = regexp.MustCompile(`case unrecognized\(String\)`)
-	listCase          = regexp.MustCompile(`case \w+ = "([a-z_]+)"`)
-	subjectMark       = regexp.MustCompile(`case \w+ = "(subject_[a-z_]+)"`)
+	// wordingCase reads `case (SeededPropertyKey.role, SeededRoleTerm.spouse)`.
+	wordingCase = regexp.MustCompile(`case \(SeededPropertyKey\.\w+, (Seeded\w+Term)\.(\w+)\)`)
+	rawCase     = regexp.MustCompile(`(?m)^\s+case (\w+)\s*$`)
+	unrecogniz  = regexp.MustCompile(`case unrecognized\(String\)`)
+	listCase    = regexp.MustCompile(`case \w+ = "([a-z_]+)"`)
+	subjectMark = regexp.MustCompile(`case \w+ = "(subject_[a-z_]+)"`)
 )
 
 // subjectMarkSymbols is the sorted IconSymbol of every registry subject type;
@@ -364,16 +400,18 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			}
 		}
 	})
+	// The seeded terms the app names: a Swift constant for each, and the one wording table.
+	seededTermEnums := []struct{ enum, property string }{
+		{"SeededGenderTerm", "gender"},
+		{"SeededSexAtBirthTerm", "sex_at_birth"},
+		{"SeededRoleTerm", "role"},
+		{"SeededEventTypeTerm", "event_type"},
+		{"SeededRelationshipTypeTerm", "relationship_type"},
+		{"SeededPlaceRelationshipTypeTerm", "place_relationship_type"},
+	}
 	t.Run("seeded term keys are seeded", func(t *testing.T) {
 		c := installedCatalog(t)
-		for _, tc := range []struct{ enum, property string }{
-			{"SeededGenderTerm", "gender"},
-			{"SeededSexAtBirthTerm", "sex_at_birth"},
-			{"SeededRoleTerm", "role"},
-			{"SeededEventTypeTerm", "event_type"},
-			{"SeededRelationshipTypeTerm", "relationship_type"},
-			{"SeededPlaceRelationshipTypeTerm", "place_relationship_type"},
-		} {
+		for _, tc := range seededTermEnums {
 			keys := matches(staticLet, swiftEnumBody(t, swiftVocabulary, tc.enum))
 			if len(keys) == 0 {
 				t.Fatalf("%s: no keys read", tc.enum)
@@ -385,6 +423,43 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			for _, key := range keys {
 				if _, err := propertyterms.Lookup(c, prop.ID, key, vocabkey.OriginProvenencia); err != nil {
 					t.Errorf("Swift names %s term %q, which is not seeded: %v", tc.property, key, err)
+				}
+			}
+		}
+	})
+	t.Run("every seeded term is in Swift", func(t *testing.T) {
+		c := installedCatalog(t)
+		for _, tc := range seededTermEnums {
+			have := map[string]bool{}
+			for _, key := range matches(staticLet, swiftEnumBody(t, swiftVocabulary, tc.enum)) {
+				have[key] = true
+			}
+			prop, err := properties.Lookup(c, tc.property, vocabkey.OriginProvenencia)
+			if err != nil {
+				t.Fatal(err)
+			}
+			terms, err := propertyterms.ListByProperty(c, prop.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, term := range terms {
+				if term.Origin == vocabkey.OriginProvenencia && !have[term.Key] {
+					t.Errorf("%s term %q is seeded in Go and has no constant in Swift %s", tc.property, term.Key, tc.enum)
+				}
+			}
+		}
+	})
+	t.Run("every seeded term has wording", func(t *testing.T) {
+		body := swiftFuncBody(t, swiftL10n, "static func wording(propertyKey")
+		named := map[string]bool{}
+		for _, m := range wordingCase.FindAllStringSubmatch(body, -1) {
+			named[m[1]+"."+m[2]] = true
+		}
+		for _, tc := range seededTermEnums {
+			enumBody := swiftEnumBody(t, swiftVocabulary, tc.enum)
+			for _, m := range swiftNamedKey.FindAllStringSubmatch(enumBody, -1) {
+				if !named[tc.enum+"."+m[1]] {
+					t.Errorf("Swift %s.%s (%s term %q) has no L10n.PropertyTerm wording", tc.enum, m[1], tc.property, m[2])
 				}
 			}
 		}

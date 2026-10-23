@@ -77,6 +77,8 @@ update it in the same change as product bridges. Live Mac connect reads
 
 A new subject type also adds a `subject_<key>` case to `PVMarkKey`, its `provenencia_subject_<key>` asset, and its `accessibilityName` with an `L10n.DesignSystem` string. `TestSwiftVocabularyMatchesGo` fails until the case exists.
 
+**A seeded term the Mac app names has a Swift step too.** For a term of `gender`, `sex_at_birth`, `role`, `event_type`, `relationship_type` or `place_relationship_type`, add its `Seeded…Term` constant in `macos/App/Platform/ConclusionVocabulary.swift` and its entry in `L10n.PropertyTerm.wording` (`macos/App/Platform/L10n.swift`): the term's label, and for a role, event type or relationship type its share phrase and similar phrase, each whole, with the catalog keys (`add-localized-string`). `TestSwiftVocabularyMatchesGo` fails, naming the term, when the seed has a term with no constant or a constant has no wording. A new term-bearing Property needs the same two steps and an entry in that test's list.
+
 Uniqueness is **`UNIQUE (key, origin)`**. Lookup is always `(key, origin)`, never bare key. Domain FKs store vocabulary **`id`**, not key.
 
 ### Install semantics (pinned)
