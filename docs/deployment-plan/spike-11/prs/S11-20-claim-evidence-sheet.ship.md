@@ -843,3 +843,37 @@ Reviewers: MNT, UX (each had Fix-now majors). Scope `8aab38bf...9ad6a7f0`. CON's
 
 ## Result (after round 18)
 Gate PASS · CI see PR · open: none · to user: — · follow-ups: hand-kept seeded-term lists (idea); the relationship card takes the first same-kind bridge (CON-2); carry `inverse_key` on the wire (term-management idea) · flaky: `EvidenceCardLayoutTests/measuredLayoutMatchesThePaint("uncited")` · manual check §10 not run · design board: revised by the user; the sheet now follows it
+
+## Round 19 — user requests (2026-10-23)
+1. In the sheet's title, subtitle and evidence heading, a person reads in natural order (given name, then surname), because it sits in a sentence.
+   - Today the row's own name is natural already (`ObservationValueDisplay` uses `.natural`).
+   - The **record's** title comes from `.handle(id:ref:title:)`, built by `PromoteFlow.conclusionTitle` with `PersonHeaderDisplay.title(person, style: .sorted, …)` for the record menu (`PromoteFlow.swift:690`).
+2. The "Additional comments or arguments" text area fills the vertical space of its container: the height of the Status and Confidence column beside it. Today it is a few lines tall (`PromoteEvidenceSheet.swift:135`).
+
+### Fix plan 19
+**F-42 — The sheet's sentences read a person's record title in natural order** (from the user)
+Files: `macos/App/Features/Promote/{PromoteFlow,PromoteEvidenceSheet,PromoteEvidenceDisplay}.swift`, tests.
+Failing test first: a person row whose record header has given "John", surname "Smith" and a sorted order. The record menu still reads "Smith, John" (or the sorted form today's test pins). The sheet's title, subtitle and evidence heading read "John Smith".
+Do:
+- Each record alternative carries both forms: `title` (sorted, for the menu, unchanged) and `readingTitle` (natural: `PersonHeaderDisplay.title(person, style: .natural, orders:)`). Events and places use the same string for both.
+- Carry `readingTitle` on `.handle` (or look it up from the row's menu by id, with no second copy of the title).
+- The sheet's title, subtitle and heading read `readingTitle`.
+- The record menu and the page row are unchanged.
+Check: test passes; scripts/check-pr.sh PASS.
+
+**F-43 — The argument box fills its container's height** (from the user)
+Files: `macos/App/Features/Promote/PromoteEvidenceSheet.swift`; `macos/App/DesignSystem/Components/TextArea/PVTextArea.swift` and `macos/App/DesignSystem/README.md` only if the kit needs an option.
+Do:
+- The claim fields' `HStack` sizes to its tallest column. The argument `PVField` and its `PVTextArea` stretch to that height, top to bottom of the Status + Confidence column, using `.frame(maxHeight: .infinity)` within a row that is `.fixedSize(horizontal: false, vertical: true)`, or the kit's equivalent.
+- If `PVTextArea` sizes itself to its content and cannot fill, add one documented option (e.g. `fillsHeight: Bool`), not a sheet-local copy.
+- Text still scrolls inside it when longer than the box.
+Check: scripts/check-pr.sh PASS; say how you verified the layout (no UI test target).
+
+## Round 19 — fix
+Head `1170f33b` (`279cde5f` F-42 plus the sheet's F-43 lines, `1170f33b` `PVTextArea.fillsHeight`). Gate PASS (orchestrator re-ran).
+- **F-42:** `aPersonRecordReadsNaturallyInTheSheetAndSortedInTheMenu` failed first. `Alternative.readingTitle` is natural; `Row.readingTitle` looks it up by id and falls back to the target's title. The menu and the row are unchanged.
+- **F-43:** `PVTextArea(fillsHeight:)` (default false); the claim row is `fixedSize(vertical)` and the argument field `maxHeight: .infinity`. Not verified on screen (no UI target).
+- No new warning in changed files (fresh derived data).
+
+## Result (after round 19)
+Gate PASS · CI see PR · open: none · manual check §10 not run · F-43 layout to be checked by eye
