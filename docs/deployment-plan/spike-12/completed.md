@@ -2,6 +2,12 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-08 — Graph id end to end
+
+**Landed 2026-10-23** in [#528](https://github.com/mendahu/provenencia/pull/528). The Evidence graph canvas, the Citation composer and the Promote page open on an Evidence graph id, and the id travels the whole way: `WorkspaceLocation.graphId` (kept by Back, Forward and a relaunch; an old history entry for a graph surface with no graph opens the Source page), the app's `.evidenceGraph(graphId:)` cache key, every graph read and write RPC (renamed where they named a Source), and the write effects (`WriteEffects.evidence_graphs` replaces `sources`). A write on one graph reloads only that graph and patches only its progress; a Subject, an Observation and a claim name their own graph, and an Artifact or Citation write still names every graph of its Source. Delete-impact rows and reconciliation records link to the graph that holds them. Until per-graph Open (S12-11, S12-14) the Source page jump and the Sources list Open open the Source's first graph in the graph list; every Source has one graph today, so the researcher sees no change.
+
+**Not this PR.** Promote's RPCs and `SoleGraph` (S12-09); a required `subjects.CreateInput.GraphID` (S12-18); the composer's linked Artifacts (S12-10); graph names in breadcrumbs (S12-11).
+
 ## S12-07 — Graph-keyed reads
 
 **Landed 2026-10-22** in [#520](https://github.com/mendahu/provenencia/pull/520). The engine's Evidence graph cache, loader, Subject positions, event titles and graph progress read one Evidence graph instead of one Source, and are named for it (`graphcache.EvidenceGraph`, `graphfill`, `grapheventtitles`, `graphprogress`). Two graphs of one Source load, memoize and count apart. A write that names a Source drops every loaded graph of it, and a graph create, edit or delete now names its Source. The wire and the app do not change: each handler that takes a Source id reads that Source's one graph.

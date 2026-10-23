@@ -1,6 +1,6 @@
 # S12-08 — Graph id end to end
 
-**Status:** Planned
+**Status:** Landed in [#528](https://github.com/mendahu/provenencia/pull/528) (2026-10-23)
 **Spike / slice:** Spike 12 · Slice 3 — Graph id end to end
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the same canvas, composer, Promote page and buttons open on a graph id; no view, layout or copy changes)
@@ -387,3 +387,17 @@ None.
 
 **Title:** S12-08 — Graph id end to end
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-12/prs/S12-08-graph-id-end-to-end.md`.
+
+## Landed
+
+Differences from the plan:
+
+- The handler tests take a graph id from the engine, through two helpers in `evidence_graphs_test.go` (`soleGraphID`, `graphLinking`, both over `ListEvidenceGraphs`), not from `evidencegraphstest.SoleGraph` or `artifactstest.Split`: they hold a project directory, not a catalog.
+- `FakeStore` is lenient where the engine refuses: `createSubject` on a graph no list names takes its Source from the graph's other Subjects (or none) instead of throwing `subjects.invalid`, and `sourceOfGraph` falls back to a Subject's `sourceID`, so a test that seeds Subjects by graph id needs no graph literal. A write on a Source that no list holds still reports its graphs, with no activity. `createSource` reports no graph (as `evidence: false` did); `copySource` reports its Default graph when it copies an Artifact.
+- `FakeStore` records `getCitation <id> graphID=<id>` (it recorded the Citation id alone), so T-18 can see the graph the composer sent.
+- `SourcePageModel.evidenceGraphLocation` and `SourcesModel.graphLocation(for:)` read the graph list with `queryHandle` (they are read from `body`); `SourcePageModel.warmFromSession` and `SourcesModel.warmListQueries` start the read, as `PlaceRegistry` does for the places.
+- `EvidenceGraphContent` takes `graphID` where it took `sourceID` (it used the id only for the camera); `SourcesModel`'s status filter reads the entry graph's progress.
+- `TestSwiftVocabularyMatchesGo` (`api/ffi`) names the renamed `EvidenceGraphSnapshot.swift`.
+- The comments on `evidencegraphs.SoleGraph` and `SoleGraphTx` name S12-09 and S12-18 instead of S12-08.
+- `subjects.Create` no longer checks `SourceID` itself; `InsertTx` holds the one rule (`RequireUserID` now runs before the id checks).
+- The manual check (§10) was not run in the app.
