@@ -1,6 +1,6 @@
 # Claim Evidence
 
-**Status:** requirements; the query is built in S11-19 (`core/claimevidence`, `promotealign.Evidence`), the RPC and Go-owned pins are built in S11-25 (2026-10-21), the likeness lines in S11-32 (its lifespan line was withdrawn in S11-20 ship round 11), and the sheet in S11-20 (2026-10-22). Part of [Spike 11](README.md), after the matching algorithm is re-implemented ([`comparison-layers.md`](comparison-layers.md)). Today's model: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 (assessment sheet) and §9 (pins).
+**Status:** requirements; the query is built in S11-19 (`core/claimevidence`, `promotealign.Evidence`), the RPC and Go-owned pins are built in S11-25 (2026-10-21), the likeness lines in S11-32 (its lifespan line was withdrawn in S11-20 ship round 11), and the sheet in S11-20 (2026-10-22), audited in S11-33 (2026-10-23). Part of [Spike 11](README.md), after the matching algorithm is re-implemented ([`comparison-layers.md`](comparison-layers.md)). Today's model: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 (assessment sheet) and §9 (pins).
 
 ## Why
 
@@ -28,7 +28,7 @@ This is a different question from **"Why was this suggested?"**, which is matchi
 
 - **One line per member per property.** Five members with names give five name lines.
 - **Grouped by property, not by Subject** (decided 2026-10-17): a Name section, a Sex section, and so on. One-hop groups are their own sections (§ Evidence through relationships).
-- **Members with an identical value collapse into one line** (decided 2026-10-17): "The names match · 12 records", expandable to each member and its Source. Checking the line pins all of them; expanding lets the researcher uncheck one.
+- **Members with an identical value collapse into one line** (decided 2026-10-17): the line shows "Show 12 records" in its Source column, which expands to each member and its Source. Checking the line pins all of them; expanding lets the researcher uncheck one.
 - **No "select all".** Lines that match start checked; the researcher changes from there.
 - **Pairs compared together show as one section** (decided 2026-10-17): sex at birth with gender, and an event's `date` with `start_date` / `end_date`.
 - **What starts checked** (decided 2026-10-17):
@@ -50,19 +50,9 @@ This is a different question from **"Why was this suggested?"**, which is matchi
 
 ### Wording
 
-The copy is overhauled so the screen says what it is for. Lines are sentences built from value compare's relation and `Detail.Cause`, never from a number. Settled in [S11-D2](design/archive/S11-D2-evidence-sheet.md) (the copy table, ES-8) and built in S11-20 as `L10n.Promote.lineSentence`; a relationship is named by the connection that matched ("They share a matching connection", then the link as the page words it), not by its neighbor ("Through <name>"). The first draft:
+The copy is overhauled so the screen says what it is for. Lines are sentences built from value compare's relation and `Detail.Cause`, never from a number. Settled in [S11-D2](design/archive/S11-D2-evidence-sheet.md) (the copy table, ES-8) and built in S11-20 as `L10n.Promote.lineSentence`, which is the one place the sentences are written; this document keeps no English copy of them. A relationship is named by the connection that matched, read from the neighbor's side as the engine reports it: its Card header is "…they share <phrase> (<refs>)", where the phrase is the neighbor's part in the link ("a spouse", "a birth event", "a place within it") and the refs are the connected row's and its record's. It is not named by its neighbor ("Through <name>"). Every sentence is one whole translatable phrase, with no translated word spliced into another (S11-33).
 
-| Relation and cause | Line reads |
-|---|---|
-| `Same` | "The names match" / "The dates match" |
-| `Equivalent`, `fold` | "Same name, different spelling" |
-| `Equivalent`, `alias` | "Same name (nickname)" |
-| `Contains`, `precision` | "Same date, recorded less precisely" |
-| `Contains`, `missing_part` | "The name matches; a given name is missing" |
-| `Near` | "Similar name" / "Dates are close" |
-| `Different` | "The names differ" |
-
-**Requirement on value compare:** its cause codes must be rich enough to word every line in this table without reading the similarity number.
+**Requirement on value compare:** its cause codes must be rich enough to word every line without reading the similarity number.
 
 ### Writing pins
 
