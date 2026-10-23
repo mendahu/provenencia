@@ -265,16 +265,17 @@ struct PromoteView: View {
         guard let pointers = hosts.pointers[subjectID], !pointers.isEmpty else { return }
         let ids = Set(pointers.map(\.bridgeID))
         let hostIDs = Set(pointers.map(\.hostID))
-        guard let target = sections.flatMap(\.rows).map(\.subjectID).first(where: hostIDs.contains) else { return }
+        guard let target = sections.flatMap(\.rows).first(where: { hostIDs.contains($0.subjectID) }) else { return }
         for hostID in hostIDs {
             let list = hosts.hosted[hostID] ?? []
             if list.enumerated().contains(where: { $0.offset >= PromoteLayout.subrowCap && ids.contains($0.element.id) }) {
                 expandedHosts.insert(hostID)
             }
         }
-        withAnimation(reduceMotion ? nil : PVMotion.fastStandard) { proxy.scrollTo(target, anchor: .top) }
+        withAnimation(reduceMotion ? nil : PVMotion.fastStandard) { proxy.scrollTo(target.subjectID, anchor: .top) }
         highlighted = ids
         highlightGeneration += 1
+        AccessibilityAnnouncement.post(L10n.Promote.connectionsHostedBy(name: target.name))
     }
 
     private var columnHeaders: some View {
@@ -574,16 +575,13 @@ private struct PromoteConnectionSubrows: View {
                 subrow(connection)
             }
             if hosted.count > PromoteLayout.subrowCap {
-                if expanded {
-                    PVButton(L10n.Promote.fewerConnections, variant: .ghost, size: .sm, flushLeading: true, action: onToggleExpanded)
-                        .accessibilityIdentifier("promote.row.\(hostRef).connectionsMore")
-                } else {
-                    PVButton(
-                        L10n.Promote.moreConnections(count: hosted.count - PromoteLayout.subrowCap),
-                        variant: .ghost, size: .sm, flushLeading: true, action: onToggleExpanded
-                    )
-                    .accessibilityIdentifier("promote.row.\(hostRef).connectionsMore")
-                }
+                PVButton(
+                    expanded
+                        ? L10n.string(L10n.Promote.fewerConnections)
+                        : L10n.Promote.moreConnections(count: hosted.count - PromoteLayout.subrowCap),
+                    variant: .ghost, size: .sm, flushLeading: true, action: onToggleExpanded
+                )
+                .accessibilityIdentifier("promote.row.\(hostRef).connectionsMore")
             }
         }
         .padding(.leading, PVSpacing.space4)
@@ -607,6 +605,7 @@ private struct PromoteConnectionSubrows: View {
                     .font(PVFont.body(size: PVTypeScale.bodySmall))
                     .lineLimit(1)
                     .truncationMode(.tail)
+                    .help(Text(verbatim: bridge.sentence))
                     .foregroundStyle(files ? PVColor.textPrimary : PVColor.textMuted)
                 Spacer(minLength: PVSpacing.space4)
                 if let text = L10n.Promote.connectionState(bridge.state, endName: endName) {

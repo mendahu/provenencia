@@ -206,27 +206,16 @@ struct PromoteFlow: Equatable, Sendable {
         var shownRef: String { target.handleRef ?? ref }
     }
 
+    @dynamicMemberLookup
     struct Bridge: Equatable, Sendable, Identifiable {
-        var id: String
-        var sentence: String
-        var endAName: String
-        var endBName: String
-        var mark: PVMarkKey
-        var kind: EvidenceBridgeKind
-        /// A relationship whose term reads the same from both ends.
-        var symmetric: Bool
-        var endA: String?
-        var endB: String?
+        var fact: BridgeFact
         var state: ConnectionState
+        var id: String { fact.id }
         var files: Bool { state == .files }
 
-        /// The name of one end, as its row reads; empty when `endID` is neither end.
-        func name(of endID: String?) -> String {
-            guard let endID else { return "" }
-            if endID == endA { return endAName }
-            if endID == endB { return endBName }
-            return ""
-        }
+        subscript<T>(dynamicMember key: KeyPath<BridgeFact, T>) -> T { fact[keyPath: key] }
+
+        func name(of endID: String?) -> String { fact.name(of: endID) }
     }
 
     /// What the host row says of a connection's other end when that end is not a row to work on.
@@ -284,9 +273,17 @@ struct PromoteFlow: Equatable, Sendable {
         /// Already an accepted association. Hidden from the will-file list;
         /// Done does not file it again.
         var alreadyFiled: Bool = false
-        var kind: EvidenceBridgeKind = .relationship
+        var kind: EvidenceBridgeKind
         /// A relationship whose product term reads the same from both ends ("spouse").
         var symmetric = false
+
+        /// The name of one end, as its row reads; empty when `endID` is neither end.
+        func name(of endID: String?) -> String {
+            guard let endID else { return "" }
+            if endID == endA { return endAName }
+            if endID == endB { return endBName }
+            return ""
+        }
     }
 
     var entryID: String
@@ -333,19 +330,15 @@ struct PromoteFlow: Equatable, Sendable {
     private var scope: [Row] { visibleRows }
 
     private func lined(_ bridge: BridgeFact, _ state: ConnectionState) -> Bridge {
-        Bridge(
-            id: bridge.id, sentence: bridge.sentence,
-            endAName: bridge.endAName, endBName: bridge.endBName, mark: bridge.mark,
-            kind: bridge.kind, symmetric: bridge.symmetric,
-            endA: bridge.endA, endB: bridge.endB, state: state
-        )
+        Bridge(fact: bridge, state: state)
     }
 
     /// Every connection not yet filed, with whether it files and, if not, which end waits and why.
     var connections: [Bridge] {
-        bridges.filter { !$0.alreadyFiled }.map { bridge in
-            let left = resolve(bridge.endA)
-            let right = resolve(bridge.endB)
+        let rowByID = Dictionary(rows.map { ($0.subjectID, $0) }, uniquingKeysWith: { first, _ in first })
+        return bridges.filter { !$0.alreadyFiled }.map { bridge in
+            let left = resolve(bridge.endA, in: rowByID)
+            let right = resolve(bridge.endB, in: rowByID)
             switch (left, right) {
             case (.waits(let why), _):
                 return lined(bridge, .waits(endID: bridge.endA, why: why))
@@ -436,8 +429,8 @@ struct PromoteFlow: Equatable, Sendable {
     }
 
     /// The handle a subject will be, or why it stays unfiled. The one place that decides.
-    private func resolve(_ subjectID: String?) -> EndResolution {
-        guard let subjectID, let row = row(subjectID) else { return .waits(.notOnPage) }
+    private func resolve(_ subjectID: String?, in rowByID: [String: Row]) -> EndResolution {
+        guard let subjectID, let row = rowByID[subjectID] else { return .waits(.notOnPage) }
         if row.anchor {
             guard let id = row.target.handleID, let ref = row.target.handleRef else { return .waits(.notOnPage) }
             return .handle(id: id, ref: ref)

@@ -272,7 +272,7 @@ struct PromoteFlowTests {
             entryID: "a",
             proposal: proposal(rows: [row(id: "a"), row(id: "b", handleID: "e1")]),
             subjects: [fact("a"), fact("b")],
-            bridges: [PromoteFlow.BridgeFact(id: "br", sentence: "a wife of b", endA: "a", endB: "b")]
+            bridges: [PromoteFlow.BridgeFact(id: "br", sentence: "a wife of b", endA: "a", endB: "b", kind: .relationship)]
         )
         flow.mapRest()
         flow.setTarget(subjectID: "a", token: "handle:e2")
@@ -289,9 +289,9 @@ struct PromoteFlowTests {
     @Test func theBridgeBetweenTwoSubjectsIsTheFirstOnThePageEitherWayRound() {
         var flow = PromoteFlow(entryID: "john")
         flow.bridges = [
-            PromoteFlow.BridgeFact(id: "other", sentence: "", endA: "mary", endB: "birth"),
-            PromoteFlow.BridgeFact(id: "first", sentence: "", endA: "birth", endB: "john"),
-            PromoteFlow.BridgeFact(id: "second", sentence: "", endA: "john", endB: "birth"),
+            PromoteFlow.BridgeFact(id: "other", sentence: "", endA: "mary", endB: "birth", kind: .relationship),
+            PromoteFlow.BridgeFact(id: "first", sentence: "", endA: "birth", endB: "john", kind: .relationship),
+            PromoteFlow.BridgeFact(id: "second", sentence: "", endA: "john", endB: "birth", kind: .relationship),
         ]
         #expect(flow.bridge(between: "john", and: "birth")?.id == "first")
         #expect(flow.bridge(between: "birth", and: "john")?.id == "first")
@@ -458,7 +458,7 @@ struct PromoteFlowTests {
             entryID: "a",
             proposal: proposal(rows: [row(id: "a", handleID: "e1"), row(id: "b", handleID: "e2")]),
             subjects: [fact("a"), fact("b")],
-            bridges: [PromoteFlow.BridgeFact(id: "br", sentence: "link", endA: "a", endB: "b")]
+            bridges: [PromoteFlow.BridgeFact(id: "br", sentence: "link", endA: "a", endB: "b", kind: .relationship)]
         )
         #expect(flow.connections.first?.state == .files)
         flow.setTarget(subjectID: "b", token: "skip")
@@ -478,10 +478,9 @@ struct PromoteFlowTests {
         _ id: String, _ kind: EvidenceBridgeKind, _ a: String?, _ b: String?,
         sentence: String? = nil, symmetric: Bool = false, alreadyFiled: Bool = false
     ) -> PromoteFlow.BridgeFact {
-        var bridge = PromoteFlow.BridgeFact(id: id, sentence: sentence ?? id, endA: a, endB: b)
+        var bridge = PromoteFlow.BridgeFact(id: id, sentence: sentence ?? id, endA: a, endB: b, kind: kind)
         bridge.endAName = a ?? ""
         bridge.endBName = b ?? ""
-        bridge.kind = kind
         bridge.symmetric = symmetric
         bridge.alreadyFiled = alreadyFiled
         return bridge
@@ -551,6 +550,12 @@ struct PromoteFlowTests {
         #expect(old.connectionHosts.hosted.isEmpty)
         #expect(old.connections.isEmpty)
         #expect(old.connectionCount == 0)
+
+        // (e) Neither end is a row: nothing hosts it, nothing points at it, nothing files.
+        let neither = mapped(ids: ["xx", "ww"], bridges: [link("x", .participation, "zz", "yy")])
+        #expect(neither.connectionHosts.hosted.isEmpty)
+        #expect(neither.connectionHosts.pointers.isEmpty)
+        #expect(neither.connectionCount == 0)
     }
 
     @Test func waitingNamesTheEndAndWhy() {
@@ -625,8 +630,8 @@ struct PromoteFlowTests {
             proposal: proposal(rows: [row(id: "a"), row(id: "b")]),
             subjects: [fact("a", anchor: true, handleID: "e-a"), fact("b", anchor: true, handleID: "e-b")],
             bridges: [
-                PromoteFlow.BridgeFact(id: "old", sentence: "old", endA: "a", endB: "b", alreadyFiled: true),
-                PromoteFlow.BridgeFact(id: "new", sentence: "new", endA: "a", endB: "b"),
+                PromoteFlow.BridgeFact(id: "old", sentence: "old", endA: "a", endB: "b", alreadyFiled: true, kind: .relationship),
+                PromoteFlow.BridgeFact(id: "new", sentence: "new", endA: "a", endB: "b", kind: .relationship),
             ]
         )
         #expect(flow.visibleRows.map(\.subjectID) == ["a", "b"])

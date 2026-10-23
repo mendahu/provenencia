@@ -15,7 +15,7 @@
 **Planned:** 2026-10-23 against `main` @ `e33db0f`
 **Review:** [`S11-27-connection-subrows.review.md`](S11-27-connection-subrows.review.md) — Fits with changes / Ready with changes, 1 round (findings fixed)
 
-> **Landed.** Differences from the plan: `EvidenceBridgeEdgeSummary.isSymmetric` takes an `EvidenceGraphPlacedBridge` (the type was renamed from `SourceGraphPlacedBridge` on `main` after planning); `PromoteConnectionSubrows` also takes the host's ref, for the expander's identifier; `PromoteFlowTests` builds its bridges and rows through two small helpers (`link`, `mapped`). Nothing else differs.
+> **Landed.** Differences from the plan: `EvidenceBridgeEdgeSummary.isSymmetric` takes an `EvidenceGraphPlacedBridge` (the type was renamed from `SourceGraphPlacedBridge` on `main` after planning); `PromoteConnectionSubrows` also takes the host's ref, for the expander's identifier; `PromoteFlowTests` builds its bridges and rows through two small helpers (`link`, `mapped`). `Bridge` wraps a `BridgeFact` (with `state`) and reads its fields through dynamic member lookup instead of copying them (supersedes D-3); `BridgeFact.kind` has no default; a pointer announces the host row it scrolled to. Nothing else differs.
 
 ### Implementer — read this first
 
