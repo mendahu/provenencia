@@ -23,28 +23,21 @@ enum PromoteEvidenceDisplay {
         pins.intersection(offered).count
     }
 
-    /// A record behind a line: its Source's title, or the word for a record whose Source has none
-    /// (``recordSource(title:)``), and its worded value.
-    struct Member: Equatable {
-        var source: String
-        var value: String
-    }
-
     /// One record as VoiceOver speaks it: "Census 1851: J. Smith.", or "a record: J. Smith." when its
-    /// Source has no title.
-    static func spokenMember(_ member: Member) -> String {
-        L10n.Promote.spokenMember(source: member.source, value: member.value)
+    /// Source has no title (``recordSource(title:)``). `value` is the record's worded value.
+    static func spokenMember(source: String, value: String) -> String {
+        L10n.Promote.spokenMember(source: source, value: value)
     }
 
     /// A line as VoiceOver speaks it: with its record count when several stand behind it, else with
     /// its one record.
-    static func spokenLabel(property: String, sentence: String, here: String, count: Int, member: Member?) -> String {
+    static func spokenLabel(property: String, sentence: String, here: String, count: Int, member: (source: String, value: String)?) -> String {
         if count > 1 {
             return L10n.Promote.spokenLineCount(property: property, sentence: sentence, count: count, here: here)
         }
         let line = L10n.Promote.spokenLine(property: property, sentence: sentence, here: here)
         guard let member else { return line }
-        return L10n.Promote.spokenLineMember(line: line, member: spokenMember(member))
+        return L10n.Promote.spokenLineMember(line: line, member: spokenMember(source: member.source, value: member.value))
     }
 
     /// A relationship as VoiceOver speaks it: with its record count when it bundles several.

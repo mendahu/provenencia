@@ -178,7 +178,7 @@ struct PromoteEvidenceDisplayTests {
     @Test func spokenLabelOfOneMemberNamesItsSource() {
         let label = PromoteEvidenceDisplay.spokenLabel(
             property: "Name", sentence: "Same name", here: "John Smith", count: 1,
-            member: PromoteEvidenceDisplay.Member(source: "Census 1851", value: "J. Smith")
+            member: (source: "Census 1851", value: "J. Smith")
         )
         #expect(label == "Name. Same name. This source: John Smith. Census 1851: J. Smith.")
     }
@@ -188,10 +188,10 @@ struct PromoteEvidenceDisplayTests {
         let source = PromoteEvidenceDisplay.recordSource(title: nil)
         let label = PromoteEvidenceDisplay.spokenLabel(
             property: "Name", sentence: "Same name", here: "John Smith", count: 1,
-            member: PromoteEvidenceDisplay.Member(source: source, value: "J. Smith")
+            member: (source: source, value: "J. Smith")
         )
         #expect(label == "Name. Same name. This source: John Smith. a record: J. Smith.")
-        #expect(PromoteEvidenceDisplay.spokenMember(PromoteEvidenceDisplay.Member(source: source, value: "J. Smith")) == "a record: J. Smith.")
+        #expect(PromoteEvidenceDisplay.spokenMember(source: source, value: "J. Smith") == "a record: J. Smith.")
     }
 
     @Test func aRelationshipAndALikenessSpeakTheirCountOnlyWhenTheyBundleSeveral() {

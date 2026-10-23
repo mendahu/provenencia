@@ -110,10 +110,6 @@ struct EvidenceBoard: Equatable {
             PromoteEvidenceDisplay.recordSource(title: sourceTitle(pin))
         }
 
-        func member(_ pin: CatalogClaimEvidencePin) -> PromoteEvidenceDisplay.Member {
-            PromoteEvidenceDisplay.Member(source: recordSource(pin), value: worded(pin.value))
-        }
-
         func incomingText(_ line: CatalogClaimEvidenceLine) -> String {
             let text = worded(line.incoming)
             return line.incomingNegative ? L10n.Promote.negatedValue(text) : text
@@ -125,11 +121,13 @@ struct EvidenceBoard: Equatable {
         }
 
         func memberRow(_ pin: CatalogClaimEvidencePin) -> Member {
-            Member(
+            let source = recordSource(pin)
+            let text = worded(pin.value)
+            return Member(
                 id: pin.id,
-                value: pin.value.isDepiction ? .crops(crop(pin.value)) : .text(worded(pin.value)),
-                source: recordSource(pin),
-                spoken: PromoteEvidenceDisplay.spokenMember(member(pin))
+                value: pin.value.isDepiction ? .crops(crop(pin.value)) : .text(text),
+                source: source,
+                spoken: PromoteEvidenceDisplay.spokenMember(source: source, value: text)
             )
         }
 
@@ -139,15 +137,16 @@ struct EvidenceBoard: Equatable {
                 relation: line.relation, cause: line.cause, propertyCause: line.propertyCause, value: line.incoming
             ))
             let first = line.members.first
+            let firstSource = first.map(recordSource) ?? PromoteEvidenceDisplay.recordSource(title: nil)
+            let firstText = first.map { worded($0.value) }
             let value: Value
             if isLikeness {
                 value = .crops(crop(line.incoming) + (first.map { crop($0.value) } ?? []))
-            } else if let first {
-                value = .text(worded(first.value))
+            } else if let firstText {
+                value = .text(firstText)
             } else {
                 value = .none
             }
-            let firstSource = first.map(recordSource) ?? PromoteEvidenceDisplay.recordSource(title: nil)
             let spoken: String
             if isLikeness {
                 spoken = PromoteEvidenceDisplay.spokenLikeness(
@@ -159,7 +158,7 @@ struct EvidenceBoard: Equatable {
                     sentence: sentence,
                     here: incomingText(line),
                     count: line.members.count,
-                    member: first.map(member)
+                    member: firstText.map { (source: firstSource, value: $0) }
                 )
             }
             return Line(
