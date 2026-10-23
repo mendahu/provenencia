@@ -18405,30 +18405,6 @@
         }
       }
     },
-    "promote.sheet.conflict.title": {
-      "comment": "Evidence sheet callout when a line conflicts",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Some evidence disagrees"
-          }
-        }
-      }
-    },
-    "promote.sheet.conflict.body": {
-      "comment": "Evidence sheet callout body for a conflict",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Disagreeing lines can't be pinned. The claim can still be filed."
-          }
-        }
-      }
-    },
     "promote.sheet.whySuggested": {
       "comment": "Group name for the lines under the evidence sheet title: the Updated caption and the contested line",
       "extractionState": "manual",

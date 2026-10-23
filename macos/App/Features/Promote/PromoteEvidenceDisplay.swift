@@ -23,14 +23,6 @@ enum PromoteEvidenceDisplay {
         pins.intersection(evidence.offeredPinIDs).count
     }
 
-    /// A line anywhere in the evidence disagrees. A relationship never does.
-    static func hasConflict(_ evidence: CatalogClaimEvidence) -> Bool {
-        let related = evidence.relationships.flatMap(\.sections)
-        return (evidence.sections + related).contains { section in
-            section.lines.contains { $0.outcome == .conflict }
-        }
-    }
-
     /// The bridge on the page that joins the row and a neighbor: the first, in page order, with
     /// those two ends in either order and, when `kind` is given, of that kind.
     static func bridge(
@@ -54,11 +46,6 @@ enum PromoteEvidenceDisplay {
     ) -> PromoteFlow.BridgeFact? {
         guard let kind = EvidenceBridgeKind(rawValue: relationship.bridgeType) else { return nil }
         return bridge(between: row, and: relationship.neighborSubjectID, kind: kind, in: bridges)
-    }
-
-    /// A record's own box under a line is off when the line cannot be pinned.
-    static func memberDisabled(line: CatalogClaimEvidenceLine) -> Bool {
-        !line.pinnable
     }
 
     /// Loaded, and nothing to compare: no line and no relationship.

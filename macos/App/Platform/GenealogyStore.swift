@@ -350,7 +350,6 @@ struct CatalogClaimEvidenceLine: Sendable, Equatable, Identifiable {
     var relation: ValueRelation
     var cause: ValueCause = .none
     var points: Double = 0
-    var pinnable: Bool
     var checked: Bool
     var incomingObservationID: String
     var incoming: CatalogConclusionValue
@@ -388,7 +387,6 @@ struct CatalogClaimEvidenceRelationship: Sendable, Equatable, Identifiable {
     var outcome: EvidenceOutcome
     var cause: SegmentCause = .none
     var points: Double = 0
-    var pinnable: Bool
     var checked: Bool
     var bundles: [CatalogClaimEvidenceBundle]
     var sections: [CatalogClaimEvidenceSection] = []

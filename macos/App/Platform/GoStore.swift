@@ -1061,7 +1061,6 @@ struct GoStore: GenealogyStore {
                     outcome: EvidenceOutcome(wire: r.outcome),
                     cause: SegmentCause(wire: r.cause),
                     points: r.points,
-                    pinnable: r.pinnable,
                     checked: r.checked,
                     bundles: r.bundles.map {
                         CatalogClaimEvidenceBundle(id: $0.id, memberSubjectID: $0.memberSubjectID, sourceID: $0.sourceID)
@@ -1093,7 +1092,6 @@ struct GoStore: GenealogyStore {
                     relation: ValueRelation(wire: l.relation),
                     cause: ValueCause(wire: l.cause),
                     points: l.points,
-                    pinnable: l.pinnable,
                     checked: l.checked,
                     incomingObservationID: l.incomingObservationID,
                     incoming: mapConclusionValue(l.incoming),

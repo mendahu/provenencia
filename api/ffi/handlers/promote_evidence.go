@@ -77,7 +77,6 @@ func claimEvidenceProto(e claimevidence.Evidence, values promotealign.EvidenceVa
 			Outcome:           string(rel.Outcome),
 			Cause:             string(rel.Cause),
 			Points:            rel.Points,
-			Pinnable:          rel.Pinnable,
 			Checked:           rel.Checked,
 			Sections:          evidenceSectionsProto(rel.Kind, rel.Sections, values),
 		}
@@ -116,7 +115,6 @@ func evidenceSectionsProto(kind vocabkey.SubjectType, sections []claimevidence.S
 				Relation:              string(l.Relation),
 				Cause:                 string(l.Cause),
 				Points:                l.Points,
-				Pinnable:              l.Pinnable,
 				Checked:               l.Checked,
 				IncomingObservationId: database.UUIDString(l.Incoming.Ref),
 				Incoming:              evidenceValueProto(values.Incoming(kind, s, l)),

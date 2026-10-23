@@ -62,7 +62,7 @@ func TestEvidenceCollapsesFiveNamedMembers(t *testing.T) {
 	}
 	l := s.Lines[0]
 	want := matchregistry.Default().Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree
-	if l.Relation != valuecompare.Same || !l.Checked || !l.Pinnable || len(l.Members) != 5 || l.Points != want {
+	if l.Relation != valuecompare.Same || !l.Checked || len(l.Members) != 5 || l.Points != want {
 		t.Errorf("line = %+v", l)
 	}
 	if len(l.Incoming.Ref) != 16 {
@@ -79,12 +79,12 @@ func TestEvidenceCollapsesFiveNamedMembers(t *testing.T) {
 // bridges behind it; its dates are compared with that birth only.
 func TestEvidenceBundlesAMatchingBirth(t *testing.T) {
 	for _, tc := range []struct {
-		name       string
-		year       int
-		wantState  propertycompare.Outcome
-		checked    bool
-		dateLine   propertycompare.Outcome
-		datePinned bool
+		name        string
+		year        int
+		wantState   propertycompare.Outcome
+		checked     bool
+		dateLine    propertycompare.Outcome
+		dateChecked bool
 	}{
 		{"AC-2.1 the same year agrees", 1817, propertycompare.OutcomeAgree, true, propertycompare.OutcomeAgree, true},
 		{"AC-2.2 a different year is partial", 1830, propertycompare.OutcomePartial, false, propertycompare.OutcomeConflict, false},
@@ -111,7 +111,7 @@ func TestEvidenceBundlesAMatchingBirth(t *testing.T) {
 			}
 			r := e.Relationships[0]
 			wantKey := "participation·subject·person·birth"
-			if r.Key.String() != wantKey || r.Outcome != tc.wantState || r.Checked != tc.checked || !r.Pinnable || !bytes.Equal(r.Neighbor, bBirth.ID) {
+			if r.Key.String() != wantKey || r.Outcome != tc.wantState || r.Checked != tc.checked || !bytes.Equal(r.Neighbor, bBirth.ID) {
 				t.Errorf("relationship = %+v, want key %s outcome %s checked %v", r, wantKey, tc.wantState, tc.checked)
 			}
 			if len(r.Incoming) < 2 || len(r.Members) != 1 || len(r.Members[0].Observations) < 2 {
@@ -121,7 +121,7 @@ func TestEvidenceBundlesAMatchingBirth(t *testing.T) {
 				t.Errorf("bundle ends = %x %x", r.Members[0].Member, r.Members[0].Neighbor)
 			}
 			d := section(t, r.Sections, vocabkey.PropertyDate)
-			if len(d.Lines) != 1 || d.Lines[0].Outcome != tc.dateLine || d.Lines[0].Pinnable != tc.datePinned || d.Lines[0].Checked != tc.datePinned {
+			if len(d.Lines) != 1 || d.Lines[0].Outcome != tc.dateLine || d.Lines[0].Checked != tc.dateChecked {
 				t.Errorf("date lines = %+v", d.Lines)
 			}
 			// The defining event_type is bundled, never compared.
@@ -535,13 +535,13 @@ func TestEvidenceLikenesses(t *testing.T) {
 			t.Fatalf("likeness lines = %+v", s.Lines)
 		}
 		same, other := s.Lines[0], s.Lines[1]
-		if same.Relation != valuecompare.Same || same.Cause != valuecompare.CauseExact || same.Outcome != propertycompare.OutcomeAgree || !same.Checked || !same.Pinnable {
+		if same.Relation != valuecompare.Same || same.Cause != valuecompare.CauseExact || same.Outcome != propertycompare.OutcomeAgree || !same.Checked {
 			t.Errorf("same-image line = %+v", same)
 		}
 		if len(same.Members) != 2 {
 			t.Errorf("same-image pins = %d, want the two image-A members collapsed", len(same.Members))
 		}
-		if other.Relation != valuecompare.Unknown || other.Cause != valuecompare.CauseUnjudged || other.Outcome != propertycompare.OutcomeUnknown || !other.Pinnable || other.Checked {
+		if other.Relation != valuecompare.Unknown || other.Cause != valuecompare.CauseUnjudged || other.Outcome != propertycompare.OutcomeUnknown || other.Checked {
 			t.Errorf("other-image line = %+v", other)
 		}
 		if len(other.Members) != 1 || !bytes.Equal(other.Members[0].Subject, l.b.ID) {

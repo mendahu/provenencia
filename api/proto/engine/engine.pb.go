@@ -12587,7 +12587,6 @@ type PromoteClaimEvidenceLine struct {
 	Relation              string                     `protobuf:"bytes,4,opt,name=relation,proto3" json:"relation,omitempty"`                                // valuecompare.Relation
 	Cause                 string                     `protobuf:"bytes,5,opt,name=cause,proto3" json:"cause,omitempty"`                                      // valuecompare.Cause
 	Points                float64                    `protobuf:"fixed64,6,opt,name=points,proto3" json:"points,omitempty"`
-	Pinnable              bool                       `protobuf:"varint,7,opt,name=pinnable,proto3" json:"pinnable,omitempty"`
 	Checked               bool                       `protobuf:"varint,8,opt,name=checked,proto3" json:"checked,omitempty"`
 	IncomingObservationId string                     `protobuf:"bytes,9,opt,name=incoming_observation_id,json=incomingObservationId,proto3" json:"incoming_observation_id,omitempty"`
 	Incoming              *ConclusionValue           `protobuf:"bytes,10,opt,name=incoming,proto3" json:"incoming,omitempty"`
@@ -12667,13 +12666,6 @@ func (x *PromoteClaimEvidenceLine) GetPoints() float64 {
 		return x.Points
 	}
 	return 0
-}
-
-func (x *PromoteClaimEvidenceLine) GetPinnable() bool {
-	if x != nil {
-		return x.Pinnable
-	}
-	return false
 }
 
 func (x *PromoteClaimEvidenceLine) GetChecked() bool {
@@ -12834,7 +12826,6 @@ type PromoteClaimEvidenceRelationship struct {
 	Outcome           string                         `protobuf:"bytes,7,opt,name=outcome,proto3" json:"outcome,omitempty"`
 	Cause             string                         `protobuf:"bytes,8,opt,name=cause,proto3" json:"cause,omitempty"` // segmentcompare.Cause
 	Points            float64                        `protobuf:"fixed64,9,opt,name=points,proto3" json:"points,omitempty"`
-	Pinnable          bool                           `protobuf:"varint,10,opt,name=pinnable,proto3" json:"pinnable,omitempty"`
 	Checked           bool                           `protobuf:"varint,11,opt,name=checked,proto3" json:"checked,omitempty"`
 	Bundles           []*PromoteClaimEvidenceBundle  `protobuf:"bytes,12,rep,name=bundles,proto3" json:"bundles,omitempty"`
 	Sections          []*PromoteClaimEvidenceSection `protobuf:"bytes,13,rep,name=sections,proto3" json:"sections,omitempty"`
@@ -12933,13 +12924,6 @@ func (x *PromoteClaimEvidenceRelationship) GetPoints() float64 {
 		return x.Points
 	}
 	return 0
-}
-
-func (x *PromoteClaimEvidenceRelationship) GetPinnable() bool {
-	if x != nil {
-		return x.Pinnable
-	}
-	return false
 }
 
 func (x *PromoteClaimEvidenceRelationship) GetChecked() bool {
@@ -20385,28 +20369,27 @@ const file_engine_proto_rawDesc = "" +
 	"\x11member_subject_id\x18\x02 \x01(\tR\x0fmemberSubjectId\x122\n" +
 	"\x15member_observation_id\x18\x03 \x01(\tR\x13memberObservationId\x12\x1b\n" +
 	"\tsource_id\x18\x04 \x01(\tR\bsourceId\x12<\n" +
-	"\x05value\x18\x05 \x01(\v2&.provenencia.engine.v1.ConclusionValueR\x05value\"\xf1\x03\n" +
+	"\x05value\x18\x05 \x01(\v2&.provenencia.engine.v1.ConclusionValueR\x05value\"\xe5\x03\n" +
 	"\x18PromoteClaimEvidenceLine\x12!\n" +
 	"\fproperty_key\x18\x01 \x01(\tR\vpropertyKey\x12\x18\n" +
 	"\aoutcome\x18\x02 \x01(\tR\aoutcome\x12%\n" +
 	"\x0eproperty_cause\x18\x03 \x01(\tR\rpropertyCause\x12\x1a\n" +
 	"\brelation\x18\x04 \x01(\tR\brelation\x12\x14\n" +
 	"\x05cause\x18\x05 \x01(\tR\x05cause\x12\x16\n" +
-	"\x06points\x18\x06 \x01(\x01R\x06points\x12\x1a\n" +
-	"\bpinnable\x18\a \x01(\bR\bpinnable\x12\x18\n" +
+	"\x06points\x18\x06 \x01(\x01R\x06points\x12\x18\n" +
 	"\achecked\x18\b \x01(\bR\achecked\x126\n" +
 	"\x17incoming_observation_id\x18\t \x01(\tR\x15incomingObservationId\x12B\n" +
 	"\bincoming\x18\n" +
 	" \x01(\v2&.provenencia.engine.v1.ConclusionValueR\bincoming\x12+\n" +
 	"\x11incoming_negative\x18\v \x01(\bR\x10incomingNegative\x12H\n" +
-	"\amembers\x18\f \x03(\v2..provenencia.engine.v1.PromoteClaimEvidencePinR\amembers\"\x87\x01\n" +
+	"\amembers\x18\f \x03(\v2..provenencia.engine.v1.PromoteClaimEvidencePinR\amembersJ\x04\b\a\x10\bR\bpinnable\"\x87\x01\n" +
 	"\x1bPromoteClaimEvidenceSection\x12!\n" +
 	"\fproperty_key\x18\x01 \x01(\tR\vpropertyKey\x12E\n" +
 	"\x05lines\x18\x02 \x03(\v2/.provenencia.engine.v1.PromoteClaimEvidenceLineR\x05lines\"u\n" +
 	"\x1aPromoteClaimEvidenceBundle\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12*\n" +
 	"\x11member_subject_id\x18\x02 \x01(\tR\x0fmemberSubjectId\x12\x1b\n" +
-	"\tsource_id\x18\x03 \x01(\tR\bsourceId\"\xe5\x03\n" +
+	"\tsource_id\x18\x03 \x01(\tR\bsourceId\"\xd9\x03\n" +
 	" PromoteClaimEvidenceRelationship\x12.\n" +
 	"\x13neighbor_subject_id\x18\x01 \x01(\tR\x11neighborSubjectId\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12\x1f\n" +
@@ -20418,12 +20401,11 @@ const file_engine_proto_rawDesc = "" +
 	"event_type\x18\x06 \x01(\tR\teventType\x12\x18\n" +
 	"\aoutcome\x18\a \x01(\tR\aoutcome\x12\x14\n" +
 	"\x05cause\x18\b \x01(\tR\x05cause\x12\x16\n" +
-	"\x06points\x18\t \x01(\x01R\x06points\x12\x1a\n" +
-	"\bpinnable\x18\n" +
-	" \x01(\bR\bpinnable\x12\x18\n" +
+	"\x06points\x18\t \x01(\x01R\x06points\x12\x18\n" +
 	"\achecked\x18\v \x01(\bR\achecked\x12K\n" +
 	"\abundles\x18\f \x03(\v21.provenencia.engine.v1.PromoteClaimEvidenceBundleR\abundles\x12N\n" +
-	"\bsections\x18\r \x03(\v22.provenencia.engine.v1.PromoteClaimEvidenceSectionR\bsections\"E\n" +
+	"\bsections\x18\r \x03(\v22.provenencia.engine.v1.PromoteClaimEvidenceSectionR\bsectionsJ\x04\b\n" +
+	"\x10\vR\bpinnable\"E\n" +
 	"\x19PromoteClaimEvidenceOffer\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\achecked\x18\x02 \x01(\bR\achecked\"B\n" +

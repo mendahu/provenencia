@@ -1,6 +1,6 @@
 // Package claimevidence is the claim evidence view's policy: which lines a
-// Promote row shows for one target entity, which are pinnable and which start
-// checked, and how a relationship that corresponds through segment compare
+// Promote row shows for one target entity, and which start checked (every line
+// can be pinned), and how a relationship that corresponds through segment compare
 // bundles the Observations behind it. Pure: no I/O, no catalog, no numbers;
 // the evidence section, layers 1, 3 and 5's rules and every input (the row's
 // and its neighbors' values, the entity's accepted members) come in as
@@ -20,11 +20,8 @@ import (
 type Rules struct {
 	// Checked lists the relations whose agreeing lines start checked.
 	Checked []valuecompare.Relation
-	// Pinnable lists the relations whose partial lines can be pinned but
-	// start unchecked.
-	Pinnable []valuecompare.Relation
 	// ByEye lists the causes of an unknown line the researcher judges: the
-	// line is kept and pinnable, and never starts checked.
+	// line is kept, and never starts checked.
 	ByEye []valuecompare.Cause
 	// Defining lists, per Subject type, the properties bundled into a
 	// relationship line: the neighbor's own facts that say which one it is.
@@ -55,7 +52,6 @@ type Line struct {
 	Relation      valuecompare.Relation
 	Cause         valuecompare.Cause
 	Points        float64
-	Pinnable      bool
 	Checked       bool
 	Members       []Pin // one per member, member order
 }
@@ -84,7 +80,6 @@ type Relationship struct {
 	Outcome  propertycompare.Outcome
 	Cause    segmentcompare.Cause
 	Points   float64 // segment evidence
-	Pinnable bool
 	Checked  bool
 	Incoming [][]byte // bundled incoming Observations
 	Members  []Bundle

@@ -96,7 +96,7 @@ func TestSections(t *testing.T) {
 			ms = append(ms, member(i, vals{"name": {ref(name("John Smith"), 0x10+i)}}))
 		}
 		l := only(t, sections(vocabkey.Person, vals{"name": {ref(name("John Smith"), 1)}}, ms...), "name")
-		if l.Relation != same || l.Outcome != propertycompare.OutcomeAgree || !l.Checked || !l.Pinnable || !near(l.Points, nameW.Agree) {
+		if l.Relation != same || l.Outcome != propertycompare.OutcomeAgree || !l.Checked || !near(l.Points, nameW.Agree) {
 			t.Errorf("line = %+v", l)
 		}
 		if !bytes.Equal(pins(l), []byte{1, 2, 3, 4, 5}) {
@@ -124,7 +124,7 @@ func TestSections(t *testing.T) {
 		if a.Relation != same || !a.Checked || !bytes.Equal(pins(a), []byte{1, 2}) {
 			t.Errorf("first line = %+v", a)
 		}
-		if b.Relation != valuecompare.Near || b.Cause != valuecompare.CauseSpelling || !b.Pinnable || b.Checked || !bytes.Equal(pins(b), []byte{3}) {
+		if b.Relation != valuecompare.Near || b.Cause != valuecompare.CauseSpelling || b.Checked || !bytes.Equal(pins(b), []byte{3}) {
 			t.Errorf("second line = %+v", b)
 		}
 	})
@@ -132,24 +132,24 @@ func TestSections(t *testing.T) {
 	t.Run("AC-1.3 a folded name is equivalent and checked", func(t *testing.T) {
 		l := only(t, sections(vocabkey.Person, vals{"name": {ref(name("José Smith"), 1)}},
 			member(1, vals{"name": {ref(name("Jose Smith"), 0x11)}})), "name")
-		if l.Relation != equivalent || l.Cause != valuecompare.CauseFold || !l.Checked || !l.Pinnable {
+		if l.Relation != equivalent || l.Cause != valuecompare.CauseFold || !l.Checked {
 			t.Errorf("line = %+v", l)
 		}
 	})
 
-	t.Run("AC-1.4 an initial is contained, pinnable and unchecked", func(t *testing.T) {
+	t.Run("AC-1.4 an initial is contained and unchecked", func(t *testing.T) {
 		in, theirs := ref(name("J. Smith"), 1), ref(name("James Smith"), 0x11)
 		l := only(t, sections(vocabkey.Person, vals{"name": {in}}, member(1, vals{"name": {theirs}})), "name")
 		sim := propertycompare.Compare([]pv{in}, []pv{theirs}, subjectcomparetest.Metas()["name"], reg.Value).Similarity()
-		if l.Relation != contains || l.Cause != valuecompare.CauseInitial || !l.Pinnable || l.Checked || !near(l.Points, nameW.Agree*sim) {
+		if l.Relation != contains || l.Cause != valuecompare.CauseInitial || l.Checked || !near(l.Points, nameW.Agree*sim) {
 			t.Errorf("line = %+v, similarity %v", l, sim)
 		}
 	})
 
-	t.Run("AC-1.5 a different date is shown, not pinnable", func(t *testing.T) {
+	t.Run("AC-1.5 a different date is shown, unchecked", func(t *testing.T) {
 		l := only(t, sections(vocabkey.Event, vals{"date": {ref(date(1817), 1)}},
 			member(1, vals{"date": {ref(date(1830), 0x11)}})), "date")
-		if l.Outcome != propertycompare.OutcomeConflict || l.Relation != different || l.Pinnable || l.Checked || !near(l.Points, -dateW.Conflict) {
+		if l.Outcome != propertycompare.OutcomeConflict || l.Relation != different || l.Checked || !near(l.Points, -dateW.Conflict) {
 			t.Errorf("line = %+v", l)
 		}
 	})
@@ -166,7 +166,7 @@ func TestSections(t *testing.T) {
 	t.Run("AC-1.7 a denied name conflicts", func(t *testing.T) {
 		l := only(t, sections(vocabkey.Person, vals{"name": {propertycomparetest.Neg(ref(name("John Smith"), 1))}},
 			member(1, vals{"name": {ref(name("John Smith"), 0x11)}})), "name")
-		if l.Outcome != propertycompare.OutcomeConflict || l.PropertyCause != propertycompare.CauseNegative || l.Pinnable {
+		if l.Outcome != propertycompare.OutcomeConflict || l.PropertyCause != propertycompare.CauseNegative {
 			t.Errorf("line = %+v", l)
 		}
 	})
@@ -219,10 +219,10 @@ func TestSections(t *testing.T) {
 			t.Fatalf("sections = %+v", got)
 		}
 		a, b := got[0].Lines[0], got[0].Lines[1]
-		if a.Relation != same || a.Cause != valuecompare.CauseExact || a.Outcome != propertycompare.OutcomeAgree || !a.Checked || !a.Pinnable {
+		if a.Relation != same || a.Cause != valuecompare.CauseExact || a.Outcome != propertycompare.OutcomeAgree || !a.Checked {
 			t.Errorf("same-image line = %+v", a)
 		}
-		if b.Relation != valuecompare.Unknown || b.Cause != valuecompare.CauseUnjudged || b.Outcome != propertycompare.OutcomeUnknown || !b.Pinnable || b.Checked {
+		if b.Relation != valuecompare.Unknown || b.Cause != valuecompare.CauseUnjudged || b.Outcome != propertycompare.OutcomeUnknown || b.Checked {
 			t.Errorf("other-image line = %+v", b)
 		}
 	})

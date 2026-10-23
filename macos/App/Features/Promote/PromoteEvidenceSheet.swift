@@ -142,14 +142,6 @@ struct PromoteEvidenceSheet: View {
                         .font(PVFont.body(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    if PromoteEvidenceDisplay.hasConflict(evidence) {
-                        PVCallout(
-                            tone: .warning,
-                            title: L10n.Promote.conflictCalloutTitle,
-                            message: L10n.string(L10n.Promote.conflictCalloutBody),
-                            compact: true
-                        )
-                    }
                 }
             }
             if case .failed(let message) = model.sheetEvidence {
@@ -445,7 +437,7 @@ private struct EvidenceLine<Middle: View>: View {
                 PVCheckbox(
                     isChecked: context.binding(ids),
                     isIndeterminate: context.state(ids) == .partial,
-                    isDisabled: !line.pinnable || ids.isEmpty,
+                    isDisabled: ids.isEmpty,
                     accessibilitySpokenLabel: spoken
                 )
                 .accessibilityIdentifier("promote.sheet.\(idPrefix).\(key)")
@@ -465,7 +457,7 @@ private struct EvidenceLine<Middle: View>: View {
             .padding(.vertical, PVSpacing.space3)
             if collapses && isOpen {
                 ForEach(line.members) { pin in
-                    EvidenceMemberRow(context: context, pin: pin, isDisabled: PromoteEvidenceDisplay.memberDisabled(line: line))
+                    EvidenceMemberRow(context: context, pin: pin)
                 }
             }
         }
@@ -530,7 +522,6 @@ private struct EvidenceOutcomeBadge: View {
 private struct EvidenceMemberRow: View {
     let context: EvidenceContext
     let pin: CatalogClaimEvidencePin
-    let isDisabled: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -538,7 +529,6 @@ private struct EvidenceMemberRow: View {
             HStack(alignment: isLikeness ? .top : .center, spacing: EvidenceLayout.gap) {
                 PVCheckbox(
                     isChecked: context.binding([pin.id]),
-                    isDisabled: isDisabled,
                     accessibilitySpokenLabel: PromoteEvidenceDisplay.spokenMember(spokenSource)
                 )
                 .accessibilityIdentifier("promote.sheet.member.\(pin.id)")
@@ -655,7 +645,7 @@ private struct EvidenceRelationshipCard: View {
             PVCheckbox(
                 isChecked: context.binding(ids),
                 isIndeterminate: context.state(ids) == .partial,
-                isDisabled: !relationship.pinnable || ids.isEmpty,
+                isDisabled: ids.isEmpty,
                 accessibilitySpokenLabel: heading.spoken
             )
             .accessibilityIdentifier("promote.sheet.relationship.\(relationship.neighborSubjectID).\(relationship.key)")

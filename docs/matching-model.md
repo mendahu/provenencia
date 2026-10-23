@@ -199,8 +199,7 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `alignment.Shortlist.Dated.event.Type` | `event_type` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure)) | The term keyed with each year bucket |
 | `alignment.Shortlist.Dated.event.Date` | `date` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure)) | The date whose reach is bucketed; a period stands for it |
 | `evidence.Checked` | `Same`, `Equivalent` | decided ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md#lines)) | Relations whose lines start checked |
-| `evidence.Pinnable` | `Contains`, `Overlaps`, `Near` | decided ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md#lines)) | Pinnable but unchecked |
-| `evidence.ByEye` | `unjudged` | decided ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md#lines)) | Causes of an unknown line the researcher judges: kept, pinnable, never checked |
+| `evidence.ByEye` | `unjudged` | decided ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md#lines)) | Causes of an unknown line the researcher judges: kept, never checked |
 | `evidence.Defining` | event `event_type` | decided ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md#evidence-through-relationships)) | Neighbor properties bundled into a relationship line |
 
 ## Not knobs

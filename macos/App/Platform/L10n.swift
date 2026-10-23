@@ -1624,9 +1624,7 @@ enum L10n {
         static func sheetTitleNew(name: String, target: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.titleNew", defaultValue: "%1$@ → %2$@", comment: "Evidence sheet title for a row filed as a new record; 1 = the row's name, 2 = the New option, e.g. New person"), name, target)
         }
-        static let conflictCalloutTitle = LocalizedStringResource("promote.sheet.conflict.title", defaultValue: "Some evidence disagrees", comment: "Evidence sheet callout when a line conflicts")
         static let evidenceUnavailable = LocalizedStringResource("promote.sheet.evidenceUnavailable", defaultValue: "The evidence could not be loaded", comment: "Evidence sheet callout title when the evidence read fails")
-        static let conflictCalloutBody = LocalizedStringResource("promote.sheet.conflict.body", defaultValue: "Disagreeing lines can't be pinned. The claim can still be filed.", comment: "Evidence sheet callout body for a conflict")
         static func newOption(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
             let resource: LocalizedStringResource = switch kind {
             case .person: LocalizedStringResource("promote.new.person", defaultValue: "New Person", comment: "Promote target choice: mint a new handle")

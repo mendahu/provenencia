@@ -5218,8 +5218,6 @@ public nonisolated struct Provenencia_Engine_V1_PromoteClaimEvidenceLine: Sendab
 
   public var points: Double = 0
 
-  public var pinnable: Bool = false
-
   public var checked: Bool = false
 
   public var incomingObservationID: String = String()
@@ -5298,8 +5296,6 @@ public nonisolated struct Provenencia_Engine_V1_PromoteClaimEvidenceRelationship
   public var cause: String = String()
 
   public var points: Double = 0
-
-  public var pinnable: Bool = false
 
   public var checked: Bool = false
 
@@ -16374,7 +16370,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidencePin: SwiftProtob
 
 nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceLine: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PromoteClaimEvidenceLine"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}property_key\0\u{1}outcome\0\u{3}property_cause\0\u{1}relation\0\u{1}cause\0\u{1}points\0\u{1}pinnable\0\u{1}checked\0\u{3}incoming_observation_id\0\u{1}incoming\0\u{3}incoming_negative\0\u{1}members\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}property_key\0\u{1}outcome\0\u{3}property_cause\0\u{1}relation\0\u{1}cause\0\u{1}points\0\u{2}\u{2}checked\0\u{3}incoming_observation_id\0\u{1}incoming\0\u{3}incoming_negative\0\u{1}members\0\u{b}pinnable\0\u{c}\u{7}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16388,7 +16384,6 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceLine: SwiftProto
       case 4: try { try decoder.decodeSingularStringField(value: &self.relation) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.cause) }()
       case 6: try { try decoder.decodeSingularDoubleField(value: &self.points) }()
-      case 7: try { try decoder.decodeSingularBoolField(value: &self.pinnable) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.checked) }()
       case 9: try { try decoder.decodeSingularStringField(value: &self.incomingObservationID) }()
       case 10: try { try decoder.decodeSingularMessageField(value: &self._incoming) }()
@@ -16422,9 +16417,6 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceLine: SwiftProto
     if self.points.bitPattern != 0 {
       try visitor.visitSingularDoubleField(value: self.points, fieldNumber: 6)
     }
-    if self.pinnable != false {
-      try visitor.visitSingularBoolField(value: self.pinnable, fieldNumber: 7)
-    }
     if self.checked != false {
       try visitor.visitSingularBoolField(value: self.checked, fieldNumber: 8)
     }
@@ -16450,7 +16442,6 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceLine: SwiftProto
     if lhs.relation != rhs.relation {return false}
     if lhs.cause != rhs.cause {return false}
     if lhs.points != rhs.points {return false}
-    if lhs.pinnable != rhs.pinnable {return false}
     if lhs.checked != rhs.checked {return false}
     if lhs.incomingObservationID != rhs.incomingObservationID {return false}
     if lhs._incoming != rhs._incoming {return false}
@@ -16538,7 +16529,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceBundle: SwiftPro
 
 nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceRelationship: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PromoteClaimEvidenceRelationship"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}neighbor_subject_id\0\u{1}key\0\u{3}bridge_type\0\u{1}term\0\u{1}end\0\u{3}event_type\0\u{1}outcome\0\u{1}cause\0\u{1}points\0\u{1}pinnable\0\u{1}checked\0\u{1}bundles\0\u{1}sections\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}neighbor_subject_id\0\u{1}key\0\u{3}bridge_type\0\u{1}term\0\u{1}end\0\u{3}event_type\0\u{1}outcome\0\u{1}cause\0\u{1}points\0\u{2}\u{2}checked\0\u{1}bundles\0\u{1}sections\0\u{b}pinnable\0\u{c}\u{a}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16555,7 +16546,6 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceRelationship: Sw
       case 7: try { try decoder.decodeSingularStringField(value: &self.outcome) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.cause) }()
       case 9: try { try decoder.decodeSingularDoubleField(value: &self.points) }()
-      case 10: try { try decoder.decodeSingularBoolField(value: &self.pinnable) }()
       case 11: try { try decoder.decodeSingularBoolField(value: &self.checked) }()
       case 12: try { try decoder.decodeRepeatedMessageField(value: &self.bundles) }()
       case 13: try { try decoder.decodeRepeatedMessageField(value: &self.sections) }()
@@ -16592,9 +16582,6 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceRelationship: Sw
     if self.points.bitPattern != 0 {
       try visitor.visitSingularDoubleField(value: self.points, fieldNumber: 9)
     }
-    if self.pinnable != false {
-      try visitor.visitSingularBoolField(value: self.pinnable, fieldNumber: 10)
-    }
     if self.checked != false {
       try visitor.visitSingularBoolField(value: self.checked, fieldNumber: 11)
     }
@@ -16617,7 +16604,6 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceRelationship: Sw
     if lhs.outcome != rhs.outcome {return false}
     if lhs.cause != rhs.cause {return false}
     if lhs.points != rhs.points {return false}
-    if lhs.pinnable != rhs.pinnable {return false}
     if lhs.checked != rhs.checked {return false}
     if lhs.bundles != rhs.bundles {return false}
     if lhs.sections != rhs.sections {return false}

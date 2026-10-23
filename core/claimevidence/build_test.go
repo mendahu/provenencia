@@ -71,7 +71,7 @@ func TestBuild(t *testing.T) {
 			t.Fatalf("relationships = %+v", e.Relationships)
 		}
 		r := e.Relationships[0]
-		if r.Key != birthKey || r.Outcome != propertycompare.OutcomeAgree || !r.Checked || !r.Pinnable || r.Points <= 0 || !bytes.Equal(r.Neighbor, []byte{0x30}) {
+		if r.Key != birthKey || r.Outcome != propertycompare.OutcomeAgree || !r.Checked || r.Points <= 0 || !bytes.Equal(r.Neighbor, []byte{0x30}) {
 			t.Errorf("relationship = %+v", r)
 		}
 		// The layer link's Observations, then the defining event_type's.
@@ -98,10 +98,10 @@ func TestBuild(t *testing.T) {
 
 	t.Run("AC-2.2 a birth in another year is partial, and its date a conflict", func(t *testing.T) {
 		r := newScene(1830, birthKey, birthKey).build().Relationships[0]
-		if r.Outcome != propertycompare.OutcomePartial || r.Checked || !r.Pinnable {
+		if r.Outcome != propertycompare.OutcomePartial || r.Checked {
 			t.Errorf("relationship = %+v", r)
 		}
-		if l := only(t, r.Sections, vocabkey.PropertyDate); l.Outcome != propertycompare.OutcomeConflict || l.Pinnable {
+		if l := only(t, r.Sections, vocabkey.PropertyDate); l.Outcome != propertycompare.OutcomeConflict {
 			t.Errorf("date line = %+v", l)
 		}
 	})

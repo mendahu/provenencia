@@ -85,8 +85,8 @@ func TestSectionsInvariants(t *testing.T) {
 						t.Fatalf("run %d: pin %x is no member's ref", i, p.Observation)
 					}
 				}
-				if l.Outcome == propertycompare.OutcomeConflict && l.Pinnable {
-					t.Fatalf("run %d: a conflict is pinnable: %+v", i, l)
+				if l.Outcome == propertycompare.OutcomeConflict && l.Checked {
+					t.Fatalf("run %d: a conflict starts checked: %+v", i, l)
 				}
 			}
 			if !slices.IsSortedFunc(s.Lines, func(a, b claimevidence.Line) int { return bytes.Compare(a.Incoming.Ref, b.Incoming.Ref) }) {

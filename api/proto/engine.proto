@@ -1552,8 +1552,9 @@ message PromoteClaimEvidenceLine {
   string property_cause = 3; // propertycompare.Cause
   string relation = 4;       // valuecompare.Relation
   string cause = 5;          // valuecompare.Cause
+  reserved 7;
+  reserved "pinnable";
   double points = 6;
-  bool pinnable = 7;
   bool checked = 8;
   string incoming_observation_id = 9;
   ConclusionValue incoming = 10;
@@ -1581,8 +1582,9 @@ message PromoteClaimEvidenceRelationship {
   string event_type = 6;
   string outcome = 7;
   string cause = 8; // segmentcompare.Cause
+  reserved 10;
+  reserved "pinnable";
   double points = 9;
-  bool pinnable = 10;
   bool checked = 11;
   repeated PromoteClaimEvidenceBundle bundles = 12;
   repeated PromoteClaimEvidenceSection sections = 13;

@@ -22,7 +22,7 @@ struct PromoteEvidenceDisplayTests {
         pins: [String] = ["p1"]
     ) -> CatalogClaimEvidenceLine {
         CatalogClaimEvidenceLine(
-            propertyKey: key, outcome: outcome, relation: relation, pinnable: outcome != .conflict, checked: true,
+            propertyKey: key, outcome: outcome, relation: relation, checked: true,
             incomingObservationID: "in-1", incoming: .name(CatalogNameValue(form: "John Smith")),
             members: pins.map { pin($0) }
         )
@@ -34,7 +34,7 @@ struct PromoteEvidenceDisplayTests {
         sections: [CatalogClaimEvidenceSection] = []
     ) -> CatalogClaimEvidenceRelationship {
         CatalogClaimEvidenceRelationship(
-            neighborSubjectID: neighbor, key: "k", bridgeType: type, outcome: .agree, pinnable: true, checked: true,
+            neighborSubjectID: neighbor, key: "k", bridgeType: type, outcome: .agree, checked: true,
             bundles: [CatalogClaimEvidenceBundle(id: "b1", memberSubjectID: "m", sourceID: "s")], sections: sections
         )
     }
@@ -65,22 +65,6 @@ struct PromoteEvidenceDisplayTests {
         #expect(PromoteEvidenceDisplay.checkedCount(evidence, pins: ["p1", "x"]) == 1)
         #expect(PromoteEvidenceDisplay.checkedCount(evidence, pins: ["p1", "p2"]) == 2)
         #expect(PromoteEvidenceDisplay.checkedCount(evidence, pins: []) == 0)
-    }
-
-    @Test func aConflictAnywhereShowsTheCallout() {
-        let conflict = CatalogClaimEvidenceSection(propertyKey: "date", lines: [line("date", outcome: .conflict, relation: .different)])
-        let fine = CatalogClaimEvidenceSection(propertyKey: "name", lines: [line()])
-        let similar = CatalogClaimEvidenceSection(propertyKey: "name", lines: [line(outcome: .partial, relation: .contains)])
-        #expect(!PromoteEvidenceDisplay.hasConflict(CatalogClaimEvidence(sections: [fine])))
-        #expect(PromoteEvidenceDisplay.hasConflict(CatalogClaimEvidence(sections: [fine, conflict])))
-        // Only inside a relationship's sections.
-        #expect(PromoteEvidenceDisplay.hasConflict(CatalogClaimEvidence(
-            sections: [fine], relationships: [relationship(sections: [conflict])]
-        )))
-        // A similar relationship with no conflicting line is not a disagreement.
-        var partial = relationship(sections: [similar])
-        partial.outcome = .partial
-        #expect(!PromoteEvidenceDisplay.hasConflict(CatalogClaimEvidence(sections: [fine], relationships: [partial])))
     }
 
     @Test func bridgeForARelationship() {
@@ -236,11 +220,6 @@ struct PromoteEvidenceDisplayTests {
         #expect(PromoteEvidenceDisplay.bridge(between: "john", and: "birth", kind: nil, in: bridges.reversed())?.id == "b-r")
         #expect(PromoteEvidenceDisplay.bridge(between: "john", and: "birth", kind: .relationship, in: bridges)?.id == "b-r")
         #expect(PromoteEvidenceDisplay.bridge(between: "john", and: "death", in: bridges) == nil)
-    }
-
-    @Test func memberBoxIsDisabledUnderANonPinnableLine() {
-        #expect(PromoteEvidenceDisplay.memberDisabled(line: line(outcome: .conflict, relation: .different)))
-        #expect(!PromoteEvidenceDisplay.memberDisabled(line: line()))
     }
 
     @Test func spokenLabelOfACollapsedLineCounts() {

@@ -33,15 +33,17 @@ This is a different question from **"Why was this suggested?"**, which is matchi
 - **Pairs compared together show as one section** (decided 2026-10-17): sex at birth with gender, and an event's `date` with `start_date` / `end_date`.
 - **What starts checked** (decided 2026-10-17):
 
-  | Relation | Shown | Pinnable | Starts checked |
-  |---|---|---|---|
-  | `Same`, `Equivalent` | yes | yes | yes |
-  | `Contains`, `Overlaps`, `Near` | yes | yes | **no** |
-  | `Different`, or a negative that contradicts | yes, as a disagreement | no | — |
-  | `Unknown`, cause `unjudged` (two different likeness images) | yes, to judge by eye | yes | **no** |
-  | `Unknown`, any other cause | no | — | — |
+  | Relation | Shown | Starts checked |
+  |---|---|---|
+  | `Same`, `Equivalent` | yes | yes |
+  | `Contains`, `Overlaps`, `Near` | yes | **no** |
+  | `Different`, or a negative that contradicts | yes, as a disagreement | **no** |
+  | `Unknown`, cause `unjudged` (two different likeness images) | yes, to judge by eye | **no** |
+  | `Unknown`, any other cause | no | — |
 
-- **Likenesses are judged by eye** (S11-32). Two likeness values are `Same` (`exact`) when they are the same image File and `Unknown` (`unjudged`) otherwise; the app never calls two different images the same face. `evidence.ByEye` lists the causes of an unknown line that is kept: pinnable, never checked. The line carries the stored crop's path, not its region. Likeness has no weight in matching, so these lines never move a band.
+  Every line, member and relationship can be pinned (S11-20 round 16, from the board's notes: a conflict starts unchecked and can still be pinned). Only the default check depends on the relation.
+
+- **Likenesses are judged by eye** (S11-32). Two likeness values are `Same` (`exact`) when they are the same image File and `Unknown` (`unjudged`) otherwise; the app never calls two different images the same face. `evidence.ByEye` lists the causes of an unknown line that is kept, never checked. The line carries the stored crop's path, not its region. Likeness has no weight in matching, so these lines never move a band.
 - **Sections follow the catalog's binding order** for the kind (`subject_type_properties.sort_order`, cached with the vocabulary): the person's `name`, `likeness`, `sex_at_birth`, `gender`, `interests` as seeded, then any property with no binding, by key. Reordering a type's bindings (`ReorderSubjectTypeProperties`) shows on the next open.
 - **The lifespan is a matching signal only.** It ranks suggestions (`subjectprofile`, `subjectcompare`) and is not a sheet line: the evidence carries no lifespan, on the wire or in the app (removed in S11-20 ship round 11, at the user's request; S11-32 had carried it).
 - **Each line names the member's Source,** so the researcher sees which record agrees.
@@ -84,7 +86,7 @@ New chrome and copy: a Claude Design brief ([`add-design-brief`](../../../.agent
 The researcher wants to say "these are the same person because they have a matching birth event", then check the evidence that the births really match. The plumbing that connects them is handled for them.
 
 - **Use segments.** A relationship section exists only when the Source segment (this Subject – bridge – neighbor) corresponds to a member segment (member – bridge – neighbor's member). Correspondence comes from segment comparison (layer 5): same bridge kind, role or term, and direction, with inverse terms (parent ↔ child). A spouse only meets a spouse. Every corresponding relationship counts, ordered core first (birth, death, parents and children, spouses), then the rest.
-- **The relationship is its own checkable line,** and it says what matched and why it counts: "They have a matching birth event", "They have a matching spouse: Robert Gates". Checking it pins the bundle below. It starts checked when the segment matches, and is pinnable but unchecked when the segment is partial. It works even when there is nothing under it to check: an event's place link, or two births with no dates (decided 2026-10-17).
+- **The relationship is its own checkable line,** and it says what matched and why it counts: "They have a matching birth event", "They have a matching spouse: Robert Gates". Checking it pins the bundle below. It starts checked when the segment matches, and is unchecked (still pinnable) when the segment is partial. It works even when there is nothing under it to check: an event's place link, or two births with no dates (decided 2026-10-17).
 - **Abstracted (bundled, not shown):** everything that only connects the two, on both sides:
   - the bridge's two end Observations (who, and which event or person);
   - everything on the bridge itself: its role, its relationship type, any other bridge values;

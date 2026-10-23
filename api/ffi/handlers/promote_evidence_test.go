@@ -82,7 +82,7 @@ func TestGetPromoteClaimEvidence(t *testing.T) {
 			t.Fatalf("sections = %+v", resp.GetSections())
 		}
 		l := s.GetLines()[0]
-		if l.GetOutcome() != "agree" || l.GetRelation() != "same" || !l.GetPinnable() || !l.GetChecked() || l.GetIncomingNegative() {
+		if l.GetOutcome() != "agree" || l.GetRelation() != "same" || !l.GetChecked() || l.GetIncomingNegative() {
 			t.Fatalf("line = %+v", l)
 		}
 		if l.GetIncoming().GetTerm().GetKey() != "male" || l.GetIncoming().GetTerm().GetLabel() != "Male" {
@@ -111,7 +111,7 @@ func TestGetPromoteClaimEvidence(t *testing.T) {
 		}
 	})
 
-	t.Run("a negative sex at birth is a conflict that is not pinnable and offers nothing", func(t *testing.T) {
+	t.Run("a negative sex at birth is a conflict that is offered, unchecked", func(t *testing.T) {
 		f := newEvidenceFixture(t, observations.PolarityNegative)
 		resp := f.evidence(t)
 		s := sectionOf(resp, "sex_at_birth")
@@ -119,12 +119,12 @@ func TestGetPromoteClaimEvidence(t *testing.T) {
 			t.Fatalf("sections = %+v", resp.GetSections())
 		}
 		l := s.GetLines()[0]
-		if l.GetOutcome() != "conflict" || l.GetPinnable() || l.GetChecked() || !l.GetIncomingNegative() {
+		if l.GetOutcome() != "conflict" || l.GetChecked() || !l.GetIncomingNegative() {
 			t.Fatalf("line = %+v", l)
 		}
 		for _, p := range l.GetMembers() {
-			if offerOf(resp, p.GetId()) != nil {
-				t.Errorf("a conflict pin %s is offered", p.GetId())
+			if o := offerOf(resp, p.GetId()); o == nil || o.GetChecked() {
+				t.Errorf("a conflict pin %s offer = %+v", p.GetId(), o)
 			}
 		}
 	})

@@ -96,7 +96,6 @@ func relationships(n Neighbor, members []Member, own float64, metas subjectcompa
 			Cause:    res.Cause,
 			Points:   res.Evidence,
 			Checked:  res.Outcome == propertycompare.OutcomeAgree,
-			Pinnable: true,
 			Incoming: appendNew(slices.Clone(observations[key]), refsOf(n.Values, defining)...),
 		}
 		rel.Members, rel.Sections = bundles(n, canons, members, defining, metas, rules, subject, value, in)
