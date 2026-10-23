@@ -108,12 +108,15 @@ enum ConnectionSentenceRegistry {
 
     /// A product term's share phrase, whole, from the one wording table; nil for a key it has no
     /// share phrase for.
-    private static func seededShare(property: String, key: String?, similar: Bool) -> String? {
+    /// `namesRow` reads the phrase for a term that names the row, not the neighbor.
+    private static func seededShare(property: String, key: String?, similar: Bool, namesRow: Bool = false) -> String? {
         guard let key,
-              let wording = L10n.PropertyTerm.wording(propertyKey: property, termKey: key),
-              let phrase = similar ? wording.shareSimilar : wording.share
+              let wording = L10n.PropertyTerm.wording(propertyKey: property, termKey: key)
         else { return nil }
-        return L10n.string(phrase)
+        let phrase = namesRow
+            ? (similar ? wording.shareOtherEndSimilar : wording.shareOtherEnd)
+            : (similar ? wording.shareSimilar : wording.share)
+        return phrase.map { L10n.string($0) }
     }
 
     /// A term with no seeded wording (a researcher's), named as it is: "a connection (Godparent)".
@@ -174,13 +177,12 @@ enum ConnectionSentenceRegistry {
             share: { input, similar in
                 // The term names the row when the neighbor is the "to" end ("Leeds is part of
                 // Yorkshire": from Leeds, Yorkshire is a parent place) and the neighbor otherwise.
-                switch (input.neighborTerm?.productKey, input.namesNeighbor) {
-                case (SeededPlaceRelationshipTypeTerm.partOf, false): return Text.shareParentPlace(similar: similar)
-                case (SeededPlaceRelationshipTypeTerm.partOf, true): return Text.sharePlaceWithin(similar: similar)
-                case (SeededPlaceRelationshipTypeTerm.succeededBy, false): return Text.shareSuccessorPlace(similar: similar)
-                case (SeededPlaceRelationshipTypeTerm.succeededBy, true): return Text.sharePredecessorPlace(similar: similar)
-                default: return nil
-                }
+                seededShare(
+                    property: SeededPropertyKey.placeRelationshipType,
+                    key: input.neighborTerm?.productKey,
+                    similar: similar,
+                    namesRow: !input.namesNeighbor
+                )
             }
         ),
         KindEntry(

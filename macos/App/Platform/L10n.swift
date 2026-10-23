@@ -2307,56 +2307,28 @@ enum L10n {
         static func shareConnectionNamed(term: String, similar: Bool) -> String {
             let resource = share(similar,
                 LocalizedStringResource("evidenceGraph.share.connectionNamed", defaultValue: "a connection (%@)", comment: "What a row shares with a connected record when the connection's term is the researcher's own; the argument is that term"),
-                LocalizedStringResource("evidenceGraph.share.connectionNamedSimilar", defaultValue: "a similar connection (%@)", comment: "What a row shares with a connected record when the outcome is similar and the connection's term is the researcher's own; the argument is that term"))
+                LocalizedStringResource("evidenceGraph.share.connectionNamed.similar", defaultValue: "a similar connection (%@)", comment: "What a row shares with a connected record when the outcome is similar and the connection's term is the researcher's own; the argument is that term"))
             return L10n.format(resource, term)
         }
 
         static func shareEventUntyped(similar: Bool) -> String {
             let resource = share(similar,
                 LocalizedStringResource("evidenceGraph.share.eventUntyped", defaultValue: "an event", comment: "What a row shares with a connected record, after \"they share\", when the outcome agrees (eventUntyped)"),
-                LocalizedStringResource("evidenceGraph.share.eventUntypedSimilar", defaultValue: "a similar event", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (eventUntyped)"))
-            return L10n.string(resource)
-        }
-
-        static func shareParentPlace(similar: Bool) -> String {
-            let resource = share(similar,
-                LocalizedStringResource("evidenceGraph.share.parentPlace", defaultValue: "a parent place", comment: "What a row shares with a connected record, after \"they share\", when the outcome agrees (parentPlace)"),
-                LocalizedStringResource("evidenceGraph.share.parentPlaceSimilar", defaultValue: "a similar parent place", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (parentPlace)"))
-            return L10n.string(resource)
-        }
-
-        static func sharePlaceWithin(similar: Bool) -> String {
-            let resource = share(similar,
-                LocalizedStringResource("evidenceGraph.share.placeWithin", defaultValue: "a place within it", comment: "What a row shares with a connected record, after \"they share\", when the outcome agrees (placeWithin)"),
-                LocalizedStringResource("evidenceGraph.share.placeWithinSimilar", defaultValue: "a similar place within it", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (placeWithin)"))
-            return L10n.string(resource)
-        }
-
-        static func shareSuccessorPlace(similar: Bool) -> String {
-            let resource = share(similar,
-                LocalizedStringResource("evidenceGraph.share.successorPlace", defaultValue: "a successor place", comment: "What a row shares with a connected record, after \"they share\", when the outcome agrees (successorPlace)"),
-                LocalizedStringResource("evidenceGraph.share.successorPlaceSimilar", defaultValue: "a similar successor place", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (successorPlace)"))
-            return L10n.string(resource)
-        }
-
-        static func sharePredecessorPlace(similar: Bool) -> String {
-            let resource = share(similar,
-                LocalizedStringResource("evidenceGraph.share.predecessorPlace", defaultValue: "a predecessor place", comment: "What a row shares with a connected record, after \"they share\", when the outcome agrees (predecessorPlace)"),
-                LocalizedStringResource("evidenceGraph.share.predecessorPlaceSimilar", defaultValue: "a similar predecessor place", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (predecessorPlace)"))
+                LocalizedStringResource("evidenceGraph.share.eventUntyped.similar", defaultValue: "a similar event", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (eventUntyped)"))
             return L10n.string(resource)
         }
 
         static func shareLocation(place: String, similar: Bool) -> String {
             let resource = share(similar,
                 LocalizedStringResource("evidenceGraph.share.location", defaultValue: "a place, %@", comment: "What a row shares with a connected record, after \"they share\", when the outcome agrees (location); the place's name"),
-                LocalizedStringResource("evidenceGraph.share.locationSimilar", defaultValue: "a similar place, %@", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (location); the place's name"))
+                LocalizedStringResource("evidenceGraph.share.location.similar", defaultValue: "a similar place, %@", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (location); the place's name"))
             return L10n.format(resource, place)
         }
 
         static func shareConnection(similar: Bool) -> String {
             let resource = share(similar,
                 LocalizedStringResource("evidenceGraph.share.connection", defaultValue: "a connection", comment: "What a row shares with a connected record, after \"they share\", when the outcome agrees (connection)"),
-                LocalizedStringResource("evidenceGraph.share.connectionSimilar", defaultValue: "a similar connection", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (connection)"))
+                LocalizedStringResource("evidenceGraph.share.connection.similar", defaultValue: "a similar connection", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (connection)"))
             return L10n.string(resource)
         }
 
@@ -2550,6 +2522,12 @@ enum L10n {
             var share: LocalizedStringResource?
             /// ``share`` for a similar outcome ("a similar spouse").
             var shareSimilar: LocalizedStringResource?
+            /// What a row shares with a connected record when the term names the row, not the neighbor
+            /// (a place relationship read from the other end: "a parent place"); nil for a term whose
+            /// share reads the same from both ends.
+            var shareOtherEnd: LocalizedStringResource?
+            /// ``shareOtherEnd`` for a similar outcome.
+            var shareOtherEndSimilar: LocalizedStringResource?
         }
 
         static func wording(propertyKey: String, termKey: String) -> Wording? {
@@ -3118,6 +3096,26 @@ enum L10n {
                 "propertyTerm.place_relationship_type.part_of",
                 defaultValue: "Part of",
                 comment: "Product place_relationship_type term: part_of"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.part_of",
+                defaultValue: "a place within it",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the connected place is within the row's place (part of, naming the neighbor), with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.part_of.similar",
+                defaultValue: "a similar place within it",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the connected place is within the row's place (part of, naming the neighbor), with its own article"
+            ),
+            shareOtherEnd: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.part_of.otherEnd",
+                defaultValue: "a parent place",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the connected place is the parent of the row's place (part of, naming the row), with its own article"
+            ),
+            shareOtherEndSimilar: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.part_of.otherEnd.similar",
+                defaultValue: "a similar parent place",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the connected place is the parent of the row's place (part of, naming the row), with its own article"
             )
         )
         static let placeRelationshipSucceededBy = Wording(
@@ -3125,6 +3123,26 @@ enum L10n {
                 "propertyTerm.place_relationship_type.succeeded_by",
                 defaultValue: "Succeeded by",
                 comment: "Product place_relationship_type term: succeeded_by"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.succeeded_by",
+                defaultValue: "a predecessor place",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the connected place came before the row's place (succeeded by, naming the neighbor), with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.succeeded_by.similar",
+                defaultValue: "a similar predecessor place",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the connected place came before the row's place (succeeded by, naming the neighbor), with its own article"
+            ),
+            shareOtherEnd: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.succeeded_by.otherEnd",
+                defaultValue: "a successor place",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the connected place came after the row's place (succeeded by, naming the row), with its own article"
+            ),
+            shareOtherEndSimilar: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.succeeded_by.otherEnd.similar",
+                defaultValue: "a similar successor place",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the connected place came after the row's place (succeeded by, naming the row), with its own article"
             )
         )
         static let genderMan = Wording(

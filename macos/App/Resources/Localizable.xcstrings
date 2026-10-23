@@ -21411,7 +21411,7 @@
         }
       }
     },
-    "evidenceGraph.share.connectionNamedSimilar": {
+    "evidenceGraph.share.connectionNamed.similar": {
       "comment": "What a row shares with a connected record when the outcome is similar and the connection's term is the researcher's own; the argument is that term",
       "extractionState": "manual",
       "localizations": {
@@ -21435,7 +21435,7 @@
         }
       }
     },
-    "evidenceGraph.share.eventUntypedSimilar": {
+    "evidenceGraph.share.eventUntyped.similar": {
       "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (eventUntyped)",
       "extractionState": "manual",
       "localizations": {
@@ -21447,8 +21447,8 @@
         }
       }
     },
-    "evidenceGraph.share.parentPlace": {
-      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (parentPlace)",
+    "evidenceGraph.share.placeRelationship.part_of.otherEnd": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: the connected place is the parent of the row's place (part of, naming the row), with its own article",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -21459,8 +21459,8 @@
         }
       }
     },
-    "evidenceGraph.share.parentPlaceSimilar": {
-      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (parentPlace)",
+    "evidenceGraph.share.placeRelationship.part_of.otherEnd.similar": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar: the connected place is the parent of the row's place (part of, naming the row), with its own article",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -21471,8 +21471,8 @@
         }
       }
     },
-    "evidenceGraph.share.placeWithin": {
-      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (placeWithin)",
+    "evidenceGraph.share.placeRelationship.part_of": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: the connected place is within the row's place (part of, naming the neighbor), with its own article",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -21483,8 +21483,8 @@
         }
       }
     },
-    "evidenceGraph.share.placeWithinSimilar": {
-      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (placeWithin)",
+    "evidenceGraph.share.placeRelationship.part_of.similar": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar: the connected place is within the row's place (part of, naming the neighbor), with its own article",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -21495,8 +21495,8 @@
         }
       }
     },
-    "evidenceGraph.share.successorPlace": {
-      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (successorPlace)",
+    "evidenceGraph.share.placeRelationship.succeeded_by.otherEnd": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: the connected place came after the row's place (succeeded by, naming the row), with its own article",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -21507,8 +21507,8 @@
         }
       }
     },
-    "evidenceGraph.share.successorPlaceSimilar": {
-      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (successorPlace)",
+    "evidenceGraph.share.placeRelationship.succeeded_by.otherEnd.similar": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar: the connected place came after the row's place (succeeded by, naming the row), with its own article",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -21519,8 +21519,8 @@
         }
       }
     },
-    "evidenceGraph.share.predecessorPlace": {
-      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (predecessorPlace)",
+    "evidenceGraph.share.placeRelationship.succeeded_by": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: the connected place came before the row's place (succeeded by, naming the neighbor), with its own article",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -21531,8 +21531,8 @@
         }
       }
     },
-    "evidenceGraph.share.predecessorPlaceSimilar": {
-      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (predecessorPlace)",
+    "evidenceGraph.share.placeRelationship.succeeded_by.similar": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar: the connected place came before the row's place (succeeded by, naming the neighbor), with its own article",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -21555,7 +21555,7 @@
         }
       }
     },
-    "evidenceGraph.share.locationSimilar": {
+    "evidenceGraph.share.location.similar": {
       "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (location); the place's name",
       "extractionState": "manual",
       "localizations": {
@@ -21579,7 +21579,7 @@
         }
       }
     },
-    "evidenceGraph.share.connectionSimilar": {
+    "evidenceGraph.share.connection.similar": {
       "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (connection)",
       "extractionState": "manual",
       "localizations": {

@@ -238,8 +238,8 @@ var (
 	// swiftNamedKey reads `static let spouse = "spouse"`; swiftInverseEntry reads `parent: child,`.
 	swiftNamedKey     = regexp.MustCompile(`static let (\w+) = "([^"]*)"`)
 	swiftInverseEntry = regexp.MustCompile(`(?m)^\s+(\w+): (\w+),\s*$`)
-	// wordingCase reads `case (SeededPropertyKey.role, SeededRoleTerm.spouse)`.
-	wordingCase = regexp.MustCompile(`case \(SeededPropertyKey\.\w+, (Seeded\w+Term)\.(\w+)\)`)
+	// wordingCase reads `case (SeededPropertyKey.role, SeededRoleTerm.spouse): return roleSpouse`.
+	wordingCase = regexp.MustCompile(`case \(SeededPropertyKey\.\w+, (Seeded\w+Term)\.(\w+)\): return (\w+)`)
 	rawCase     = regexp.MustCompile(`(?m)^\s+case (\w+)\s*$`)
 	unrecogniz  = regexp.MustCompile(`case unrecognized\(String\)`)
 	listCase    = regexp.MustCompile(`case \w+ = "([a-z_]+)"`)
@@ -462,6 +462,41 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 					t.Errorf("Swift %s.%s (%s term %q) has no L10n.PropertyTerm wording", tc.enum, m[1], tc.property, m[2])
 				}
 			}
+		}
+	})
+	t.Run("every term a sentence shares has its share phrases", func(t *testing.T) {
+		body := swiftFuncBody(t, swiftL10n, "static func wording(propertyKey")
+		// A term of these enums is worded whole in "they share ...", for a similar outcome too;
+		// a place relationship term names the row from the other end as well.
+		fields := map[string][]string{
+			"SeededRoleTerm":                  {"share", "shareSimilar"},
+			"SeededEventTypeTerm":             {"share", "shareSimilar"},
+			"SeededRelationshipTypeTerm":      {"share", "shareSimilar"},
+			"SeededPlaceRelationshipTypeTerm": {"share", "shareSimilar", "shareOtherEnd", "shareOtherEndSimilar"},
+		}
+		src, err := os.ReadFile(swiftL10n)
+		if err != nil {
+			t.Fatal(err)
+		}
+		checked := 0
+		for _, m := range wordingCase.FindAllStringSubmatch(body, -1) {
+			want, ok := fields[m[1]]
+			if !ok {
+				continue
+			}
+			def := regexp.MustCompile(`(?s)static let ` + m[3] + ` = Wording\((.*?)\n        \)`).FindStringSubmatch(string(src))
+			if def == nil {
+				t.Fatalf("no Wording definition for %s", m[3])
+			}
+			for _, field := range want {
+				if !regexp.MustCompile(`\b` + field + `: LocalizedStringResource\(`).MatchString(def[1]) {
+					t.Errorf("%s.%s (%s) has no %s", m[1], m[2], m[3], field)
+				}
+			}
+			checked++
+		}
+		if checked == 0 {
+			t.Fatal("no wording read")
 		}
 	})
 	t.Run("the relationship inverse map is the seeded inverse", func(t *testing.T) {
