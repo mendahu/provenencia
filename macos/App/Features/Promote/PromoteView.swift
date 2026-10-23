@@ -65,7 +65,7 @@ struct PromoteView: View {
             let _: QueryHandle<[CatalogSourceType]> = model.session.query(model.sourceTypesKey)
             await model.load()
         }
-        .sheet(item: sheetBinding) { row in
+        .pvSheet(item: sheetBinding) { row in
             PromoteEvidenceSheet(row: row, grades: model.grades, model: model)
         }
         .pvConfirm(

@@ -2,7 +2,9 @@ import SwiftUI
 
 /// The Promote evidence sheet (S11-D2): why the row was suggested, in the
 /// title, then the evidence that this row is its record, as sentences the
-/// researcher checks or unchecks. Checked evidence is pinned on Done.
+/// researcher checks or unchecks. Checked evidence is pinned on Done. Escape
+/// and an outside click close it through `.pvSheet`; nothing is lost by closing,
+/// because pins and the claim fields already live in the model.
 struct PromoteEvidenceSheet: View {
     let row: PromoteFlow.Row
     let grades: [CatalogClaimConfidenceGrade]
@@ -41,17 +43,15 @@ struct PromoteEvidenceSheet: View {
             }
         } footer: {
             PVButton(L10n.Promote.backToRows, variant: .primary) { model.closeSheet() }
-                .accessibilityIdentifier("promote.sheet.close")
+                .accessibilityIdentifier("promote.sheet.back")
         } titleAccessory: {
             HStack(alignment: .top, spacing: PVSpacing.space4) {
                 marks
                 Spacer(minLength: PVSpacing.space4)
                 PVIconButton(.dismiss, label: L10n.Promote.closeSheet, size: .sm) { model.closeSheet() }
-                    .accessibilityIdentifier("promote.sheet.dismiss")
+                    .accessibilityIdentifier("promote.sheet.close")
             }
         }
-        // Nothing is lost by closing: pins and the claim fields already live in the model.
-        .pvOutsideClick { model.closeSheet() }
     }
 
     // MARK: Title

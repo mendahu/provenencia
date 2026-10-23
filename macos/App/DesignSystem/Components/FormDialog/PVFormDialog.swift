@@ -32,20 +32,6 @@ struct PVFormDialogCopy {
     }
 }
 
-/// What an outside click does. Running work is left alone. A dirty sheet
-/// asks before it closes. A clean or read-only sheet closes.
-enum PVFormDialogDismiss: Equatable {
-    case ignore
-    case close
-    case confirmDiscard
-
-    static func action(isRunning: Bool, isDirty: Bool) -> PVFormDialogDismiss {
-        if isRunning { return .ignore }
-        if isDirty { return .confirmDiscard }
-        return .close
-    }
-}
-
 /// Pure enablement rules for the form-dialog footer — extracted so unit tests
 /// can cover them without mounting SwiftUI.
 enum PVFormDialogControls {
@@ -53,6 +39,11 @@ enum PVFormDialogControls {
 
     static func isConfirmDisabled(isRunning: Bool, confirmDisabled: Bool) -> Bool {
         isRunning || confirmDisabled
+    }
+
+    /// What the form hands ``PVSheet``.
+    static func sheetPolicy(isRunning: Bool, isDirty: Bool) -> PVSheet.Policy {
+        PVSheet.Policy(isRunning: isRunning, isDirty: isDirty)
     }
 }
 
@@ -114,7 +105,6 @@ struct PVFormDialogContent<Form: View>: View {
                 Spacer(minLength: PVSpacing.space8)
                 Button(L10n.string(copy.cancel)) { onCancel() }
                     .buttonStyle(.pv(.secondary, size: .lg))
-                    .keyboardShortcut(.cancelAction)
                     .disabled(PVFormDialogControls.isCancelDisabled(isRunning: isRunning))
                     .focused($cancelFocused)
                     .modifier(FormDialogOptionalAccessibilityIdentifier(
@@ -166,12 +156,13 @@ private struct FormDialogOptionalAccessibilityIdentifier: ViewModifier {
 }
 
 extension View {
-    /// Sheet-based form dialog. Dismissal is left to the caller's binding so
-    /// an async Create can stay on screen while it runs and keep field errors
-    /// visible if validation or the store fails.
+    /// Sheet-based form dialog, presented through ``pvSheet(isPresented:isRunning:isDirty:accessibilityIdentifierPrefix:content:)``.
+    /// Dismissal is left to the caller's binding so an async Create can stay on
+    /// screen while it runs and keep field errors visible if validation or the
+    /// store fails.
     ///
-    /// A click outside the sheet closes it. When `isDirty` is true, that click
-    /// asks to discard or keep editing. The Cancel button still closes
+    /// Escape and a click outside the sheet close it; when `isDirty` is true
+    /// either asks to discard or keep editing. The Cancel button still closes
     /// immediately. Menus and popovers are not this path.
     func pvFormDialog<Form: View>(
         isPresented: Binding<Bool>,
@@ -184,69 +175,13 @@ extension View {
         onConfirm: @escaping () -> Void,
         @ViewBuilder form: @escaping () -> Form
     ) -> some View {
-        modifier(PVFormDialogModifier(
+        let policy = PVFormDialogControls.sheetPolicy(isRunning: isRunning, isDirty: isDirty)
+        return pvSheet(
             isPresented: isPresented,
-            copy: copy,
-            width: width,
-            isRunning: isRunning,
-            isDirty: isDirty,
-            confirmDisabled: confirmDisabled,
-            accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
-            onConfirm: onConfirm,
-            form: form
-        ))
-    }
-}
-
-private struct PVFormDialogModifier<Form: View>: ViewModifier {
-    @Binding var isPresented: Bool
-    let copy: PVFormDialogCopy
-    let width: CGFloat
-    let isRunning: Bool
-    let isDirty: Bool
-    let confirmDisabled: Bool
-    let accessibilityIdentifierPrefix: String?
-    let onConfirm: () -> Void
-    @ViewBuilder let form: () -> Form
-
-    @State private var confirmingDiscard = false
-
-    func body(content: Content) -> some View {
-        content.sheet(isPresented: $isPresented, onDismiss: { confirmingDiscard = false }) {
-            sheetBody
-                .pvOutsideClick(isEnabled: !confirmingDiscard) {
-                    switch PVFormDialogDismiss.action(isRunning: isRunning, isDirty: isDirty) {
-                    case .ignore:
-                        break
-                    case .close:
-                        isPresented = false
-                    case .confirmDiscard:
-                        confirmingDiscard = true
-                    }
-                }
-        }
-    }
-
-    @ViewBuilder
-    private var sheetBody: some View {
-        if confirmingDiscard {
-            PVConfirmContent(
-                copy: PVConfirmCopy(
-                    title: L10n.string(L10n.DesignSystem.formDialogDiscardTitle),
-                    message: L10n.string(L10n.DesignSystem.formDialogDiscardMessage),
-                    confirm: L10n.DesignSystem.formDialogDiscardConfirm,
-                    cancel: L10n.DesignSystem.formDialogDiscardKeep
-                ),
-                tone: .danger,
-                accessibilityIdentifierPrefix: PVFormDialogAccessibility.identifier(
-                    prefix: accessibilityIdentifierPrefix,
-                    suffix: "discard"
-                ),
-                onConfirm: { isPresented = false },
-                onCancel: { confirmingDiscard = false },
-                detail: { EmptyView() }
-            )
-        } else {
+            isRunning: policy.isRunning,
+            isDirty: policy.isDirty,
+            accessibilityIdentifierPrefix: accessibilityIdentifierPrefix
+        ) {
             PVFormDialogContent(
                 copy: copy,
                 width: width,
@@ -254,7 +189,7 @@ private struct PVFormDialogModifier<Form: View>: ViewModifier {
                 confirmDisabled: confirmDisabled,
                 accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
                 onConfirm: onConfirm,
-                onCancel: { isPresented = false },
+                onCancel: { isPresented.wrappedValue = false },
                 form: form
             )
         }

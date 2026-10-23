@@ -133,18 +133,50 @@ struct PVFormDialogClickTests {
 }
 
 @Suite
-struct PVFormDialogDismissTests {
-    @Test func runningWorkIgnoresAnOutsideClick() {
-        #expect(PVFormDialogDismiss.action(isRunning: true, isDirty: false) == .ignore)
-        #expect(PVFormDialogDismiss.action(isRunning: true, isDirty: true) == .ignore)
+struct PVSheetDismissTests {
+    /// T-1: the one table behind Escape and an outside click.
+    @Test func sheetDismissActionTable() {
+        for dirty in [false, true] {
+            for confirming in [false, true] {
+                #expect(PVSheetDismiss.action(isRunning: true, isDirty: dirty, isConfirmingDiscard: confirming) == .ignore)
+            }
+        }
+        for dirty in [false, true] {
+            #expect(PVSheetDismiss.action(isRunning: false, isDirty: dirty, isConfirmingDiscard: true) == .keepEditing)
+        }
+        #expect(PVSheetDismiss.action(isRunning: false, isDirty: true, isConfirmingDiscard: false) == .confirmDiscard)
+        #expect(PVSheetDismiss.action(isRunning: false, isDirty: false, isConfirmingDiscard: false) == .close)
     }
 
-    @Test func aDirtySheetConfirmsBeforeClosing() {
-        #expect(PVFormDialogDismiss.action(isRunning: false, isDirty: true) == .confirmDiscard)
+    /// T-2: both routes call `dismissRoute`, and every kit presenter hands it
+    /// the same running and dirty facts.
+    @Test func everyKitSheetPresentsThroughPVSheet() {
+        for running in [false, true] {
+            for dirty in [false, true] {
+                for confirming in [false, true] {
+                    #expect(
+                        PVSheet.dismissRoute(isRunning: running, isDirty: dirty, isConfirmingDiscard: confirming)
+                            == PVSheetDismiss.action(isRunning: running, isDirty: dirty, isConfirmingDiscard: confirming)
+                    )
+                }
+            }
+        }
+        #expect(PVFormDialogControls.sheetPolicy(isRunning: true, isDirty: true) == PVSheet.Policy(isRunning: true, isDirty: true))
+        #expect(PVConfirmControls.sheetPolicy(isRunning: true) == PVSheet.Policy(isRunning: true, isDirty: false))
+        #expect(PVDeleteImpactControls.noticePolicy == PVSheet.Policy(isRunning: false, isDirty: false))
     }
 
-    @Test func aCleanSheetCloses() {
-        #expect(PVFormDialogDismiss.action(isRunning: false, isDirty: false) == .close)
+    @Test func escapeOnACleanConfirmOrNoticeCloses() {
+        let confirm = PVConfirmControls.sheetPolicy(isRunning: false)
+        #expect(PVSheet.dismissRoute(policy: confirm, isConfirmingDiscard: false) == .close)
+        let notice = PVDeleteImpactControls.noticePolicy
+        #expect(PVSheet.dismissRoute(policy: notice, isConfirmingDiscard: false) == .close)
+    }
+
+    @Test func aDirtyFormAsksBeforeEitherRouteClosesIt() {
+        let form = PVFormDialogControls.sheetPolicy(isRunning: false, isDirty: true)
+        #expect(PVSheet.dismissRoute(policy: form, isConfirmingDiscard: false) == .confirmDiscard)
+        #expect(PVSheet.dismissRoute(policy: form, isConfirmingDiscard: true) == .keepEditing)
     }
 }
 

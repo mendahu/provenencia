@@ -81,6 +81,11 @@ enum PVConfirmTone {
 /// Pure enablement for confirm footer buttons — extracted for unit tests.
 enum PVConfirmControls {
     static func isActionDisabled(isRunning: Bool) -> Bool { isRunning }
+
+    /// What the confirm hands ``PVSheet``: nothing to lose, so never dirty.
+    static func sheetPolicy(isRunning: Bool) -> PVSheet.Policy {
+        PVSheet.Policy(isRunning: isRunning, isDirty: false)
+    }
 }
 
 /// Layout constants for the confirm sheet.
@@ -147,7 +152,6 @@ struct PVConfirmContent<Detail: View>: View {
                     Text(verbatim: copy.cancel)
                 }
                     .buttonStyle(.pv(.secondary, size: .lg))
-                    .keyboardShortcut(.cancelAction)
                     .disabled(PVConfirmControls.isActionDisabled(isRunning: isRunning))
                     .focused($cancelFocused)
                     .modifier(ConfirmOptionalAccessibilityIdentifier(
@@ -189,12 +193,13 @@ extension View {
     /// state. With a `Bool` binding the content closures read the model
     /// *live*, so the name and detail blank out the moment the state clears —
     /// a visible flash while the window is still animating away.
-    /// `.sheet(item:)` hands the closures the last non-nil record, so the
+    /// A sheet presented by item hands the closures the last non-nil record, so the
     /// sheet slides out still showing what it named.
     ///
-    /// Dismissal is left to the caller's binding so an async action can stay
-    /// on screen while it runs (`isRunning`) and report an error in `detail`
-    /// if it fails.
+    /// Presented through ``pvSheet(item:isRunning:isDirty:accessibilityIdentifierPrefix:content:)``:
+    /// Escape and a click outside close it as Cancel does. Dismissal is left to
+    /// the caller's binding so an async action can stay on screen while it runs
+    /// (`isRunning`) and report an error in `detail` if it fails.
     func pvConfirm<Item: Identifiable, Detail: View>(
         item: Binding<Item?>,
         copy: @escaping (Item) -> PVConfirmCopy,
@@ -204,7 +209,11 @@ extension View {
         onConfirm: @escaping () -> Void,
         @ViewBuilder detail: @escaping (Item) -> Detail
     ) -> some View {
-        sheet(item: item) { value in
+        pvSheet(
+            item: item,
+            isRunning: PVConfirmControls.sheetPolicy(isRunning: isRunning).isRunning,
+            isDirty: PVConfirmControls.sheetPolicy(isRunning: isRunning).isDirty
+        ) { value in
             PVConfirmContent(
                 copy: copy(value),
                 tone: tone,

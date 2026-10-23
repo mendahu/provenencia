@@ -139,6 +139,10 @@ enum PVDeleteImpactControls {
         max(0, total - listedCount)
     }
 
+    /// What the notice hands ``PVSheet``: a read-only sheet, so Escape and an
+    /// outside click close it.
+    static let noticePolicy = PVSheet.Policy(isRunning: false, isDirty: false)
+
     static func showsDestructiveAction(_ report: CatalogDeleteImpact) -> Bool {
         report.allowed
     }
@@ -356,7 +360,11 @@ extension View {
                 }
                 .accessibilityLabel(Text(verbatim: PVDeleteImpactCopy.summary(request.target, request.report)))
             }
-            .sheet(item: noticeItem) { request in
+            .pvSheet(
+                item: noticeItem,
+                isRunning: PVDeleteImpactControls.noticePolicy.isRunning,
+                isDirty: PVDeleteImpactControls.noticePolicy.isDirty
+            ) { request in
                 PVDeleteImpactNotice(
                     target: request.target,
                     report: request.report,
