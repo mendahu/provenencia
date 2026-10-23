@@ -286,8 +286,8 @@ struct PromoteEvidenceDisplayTests {
         // No font or color: the sheet owns them.
         for styled in [heading, subtitle] {
             for run in styled.runs {
-                #expect(run.font == nil)
-                #expect(run.foregroundColor == nil)
+                #expect(run[AttributeScopes.SwiftUIAttributes.FontAttribute.self] == nil)
+                #expect(run[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] == nil)
             }
         }
         let untitled = PromoteEvidenceDisplay.evidenceHeading(name: "Leeds", sourceTitle: nil, kind: .place, recordTitle: "Leeds, Yorkshire")
@@ -298,7 +298,7 @@ struct PromoteEvidenceDisplayTests {
         let subtitle = PromoteEvidenceDisplay.subtitle(
             name: "John Smith", sourceTitle: "1871 Census", kind: .person, recordTitle: "Johnny Smith"
         )
-        #expect(plain(subtitle) == "This is an identity claim to join John Smith from the 1871 Census into the concluded person Johnny Smith. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.")
+        #expect(plain(subtitle) == "This is an identity claim to join John Smith from 1871 Census into the concluded person Johnny Smith. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.")
 
         let untitled = PromoteEvidenceDisplay.subtitle(name: "Birth", sourceTitle: nil, kind: .event, recordTitle: "Birth of John")
         #expect(plain(untitled).hasPrefix("This is an identity claim to join Birth from this source into the concluded event Birth of John."))
@@ -308,7 +308,7 @@ struct PromoteEvidenceDisplayTests {
         let heading = PromoteEvidenceDisplay.evidenceHeading(
             name: "John Smith", sourceTitle: "1871 Census", kind: .person, recordTitle: "Johnny Smith"
         )
-        #expect(plain(heading) == "John Smith from the 1871 Census belongs in the concluded person Johnny Smith because…")
+        #expect(plain(heading) == "John Smith from 1871 Census belongs in the concluded person Johnny Smith because…")
         let untitled = PromoteEvidenceDisplay.evidenceHeading(name: "Leeds", sourceTitle: nil, kind: .place, recordTitle: "Leeds, Yorkshire")
         #expect(plain(untitled) == "Leeds from this source belongs in the concluded place Leeds, Yorkshire because…")
     }

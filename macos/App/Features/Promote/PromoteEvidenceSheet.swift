@@ -502,7 +502,8 @@ private struct EvidenceSourceTitle: View {
 
 /// Draws the roles ``PromoteEvidenceDisplay`` names: the one place the sheet's words get a font and a color.
 private enum EvidenceTextStyle {
-    /// `name` is the font of a name here; it differs by where the text sits.
+    /// `name` is the font of a name here; it differs by where the text sits. Typed `AttributeContainer`
+    /// subscripts, as `PVComboBox` uses, not dynamic members: those warn under Swift 6 key-path rules.
     static func painted(_ text: AttributedString, name nameFont: Font?) -> AttributedString {
         var result = text
         for run in text.runs {
@@ -510,17 +511,17 @@ private enum EvidenceTextStyle {
             var attributes = AttributeContainer()
             switch role {
             case .name:
-                attributes.font = nameFont
-                attributes.foregroundColor = PVColor.textDisplay
+                attributes[AttributeScopes.SwiftUIAttributes.FontAttribute.self] = nameFont
+                attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] = PVColor.textDisplay
             case .source:
-                attributes.inlinePresentationIntent = .emphasized
-                attributes.foregroundColor = PVColor.textLink
+                attributes[AttributeScopes.FoundationAttributes.InlinePresentationIntentAttribute.self] = .emphasized
+                attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] = PVColor.textLink
             case .muted:
-                attributes.inlinePresentationIntent = .emphasized
-                attributes.foregroundColor = PVColor.textMuted
+                attributes[AttributeScopes.FoundationAttributes.InlinePresentationIntentAttribute.self] = .emphasized
+                attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] = PVColor.textMuted
             case .ref:
-                attributes.font = PVFont.mono(size: PVTypeScale.caption)
-                attributes.foregroundColor = PVColor.textMuted
+                attributes[AttributeScopes.SwiftUIAttributes.FontAttribute.self] = PVFont.mono(size: PVTypeScale.caption)
+                attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] = PVColor.textMuted
             }
             result[run.range].mergeAttributes(attributes)
         }
