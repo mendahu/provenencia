@@ -4,7 +4,7 @@
 **Landed:** the code is one commit, not one per behavior. Round 1 differences from the plan: `PromoteFlow.row(_:)` is new and every row lookup by Subject reads it; the placed and moved sentences fall back to "after a connected row changed" when the neighbor has no record to name (beyond D-5), so a Source ref is never named as the matched record; `noteDuplicates` reads `Target.handleRef`, superseding D-6's "not touched" for those two sites.
 **Spike / slice:** Spike 11 · Slice 4 — Segments and graph alignment
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S11-D1](../design/S11-D1-promote-rows.md) §4.1 (CM-1 – CM-6), board agreed 2026-10-20
+**Brief:** [S11-D1](../design/archive/S11-D1-promote-rows.md) §4.1 (CM-1 – CM-6), board agreed 2026-10-20
 **Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), file `Promote flow.dc.html`, frames **14** "Contested, grouped by assessment" and **15** "After deciding Bill" (S11-18's; frame 06 repeats the move captions). Frames 16–19 are S11-27's. If you cannot open it, §6 macOS describes the frames in words; build from §6
 **Depends on:** S11-17 (landed [#504](https://github.com/mendahu/provenencia/pull/504)), S11-D1 (board)
 **Blocks:** —

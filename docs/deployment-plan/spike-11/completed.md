@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-27 — Connection subrows on Promote
+
+**Landed 2026-10-23** in [#530](https://github.com/mendahu/provenencia/pull/530). Each connection on the Promote page is now a subrow under a row it joins: a participation or location under its event, a place relationship under its from place, a directed relationship under the end named last and a symmetric one under the end named first, falling back to the other end when that one is not a row. Its state comes only from its ends: "Files on Done", "Waits for <name>" (muted, with VoiceOver saying why), or a warning when both ends are one record. A host shows three subrows and "+N more"; the other end shows "+N connections", which scrolls to the host and highlights them. The bottom panel and its footer button are gone; the footer reads "File 12 · Skip 3 · 22 connections" and adds "N unselected" when rows have no target.
+
 ## S11-26 — Connections file by their ends
 
 **Landed 2026-10-23** in [#527](https://github.com/mendahu/provenencia/pull/527). A connection files on Done exactly when both its ends are handles and they are two different handles. The per-connection switch on the Promote page is gone: it hid a connection that then filed itself on the next Done or claim, so the page showed something the catalog did not keep. Each row in the connections panel now shows its state ("Filed", "Not filed · an end is skipped", "Not filed · both ends are the same record"), the header reads "N filed · M not filed", and the leave guard counts only changed rows. A researcher who disputes a connection fixes it on the Evidence graph. The Apply request lost `skip_bridge_ids` (field 6 is reserved), `promote.Batch` and the bridge filing functions take no skip list, and `PromoteFlow.connections` replaces `filedBridges` and `connectionLines()`.

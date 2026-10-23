@@ -6,10 +6,9 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 ## Scheduled
 
-| Step | View | Gates | Notes |
-| --- | --- | --- | --- |
-| [S11-D1](S11-D1-promote-rows.md) | Promote page — rows | **S11-18**, **S11-27** | Board agreed 2026-10-20 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share)). Contested marker beside the band, move reasons in the Updated caption; connections as subrows ([design](../promote-connection-subrows.md)) |
+None.
 
 ## Archived
 
+- [S11-D1](archive/S11-D1-promote-rows.md) — Promote page rows; board agreed 2026-10-20, built by S11-18 (#507) and S11-27 (#530).
 - [S11-D2](archive/S11-D2-evidence-sheet.md) — Promote evidence sheet; board agreed 2026-10-22, built by S11-20 (#525).

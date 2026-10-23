@@ -5,10 +5,10 @@
 **View:** Promote page — the proposal rows
 **Implements later as:** PR **S11-18** (contested marker, move reasons) and PR **S11-27** (connection subrows)
 **Depends on:** S11-17 (landed [#504](https://github.com/mendahu/provenencia/pull/504): rows carry `contested` and `move`); S11-26 (connections file by their ends) before S11-27 ships
-**Related:** [`../promote-connection-subrows.md`](../promote-connection-subrows.md) (the subrow idea and its design questions), [`../comparison-layers.md`](../comparison-layers.md#bands) (bands and contested), [`../../../promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3. S11-D2 later redraws the evidence sheet the row opens.
+**Related:** [`../promote-connection-subrows.md`](../../promote-connection-subrows.md) (the subrow idea and its design questions), [`../comparison-layers.md`](../../comparison-layers.md#bands) (bands and contested), [`../../../promote-graph-alignment.md`](../../../../promote-graph-alignment.md) §3. S11-D2 later redraws the evidence sheet the row opens.
 **Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), agreed 2026-10-20. Frames 14–15 gate S11-18, 16–19 gate S11-27 (see §8)
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -171,7 +171,7 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 ## 7. Handoff
 
-When the board is agreed: record the board link in the S11-18 plan's **Board** line, move this brief to the spike's design archive folder when S11-27 (the last PR it gates) lands, update [`README.md`](README.md), and move S11-18 from `Blocked — on board S11-D1` to `Planned` with `plan-pr`.
+When the board is agreed: record the board link in the S11-18 plan's **Board** line, move this brief to the spike's design archive folder when S11-27 (the last PR it gates) lands, update [`README.md`](../README.md), and move S11-18 from `Blocked — on board S11-D1` to `Planned` with `plan-pr`.
 
 ---
 

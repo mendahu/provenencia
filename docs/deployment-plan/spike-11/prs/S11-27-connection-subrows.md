@@ -1,9 +1,9 @@
 # S11-27 — Connection subrows on Promote
 
-**Status:** Planned
+**Status:** Landed in [#530](https://github.com/mendahu/provenencia/pull/530) (2026-10-23)
 **Spike / slice:** Spike 11 · Slice 6 — Connection subrows
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S11-D1](../design/S11-D1-promote-rows.md) §4.2 (CS-1 – CS-9) and §8 board notes, board agreed 2026-10-20
+**Brief:** [S11-D1](../design/archive/S11-D1-promote-rows.md) §4.2 (CS-1 – CS-9) and §8 board notes, board agreed 2026-10-20
 **Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), file `Promote flow.dc.html`, frames **16** – **19** (S11-27's; 14 – 15 were S11-18's). If you cannot open it, build from §6 macOS, which describes the frames in words. Where the board and this plan differ, this plan wins: D-4 (wording) and D-5 (the other end's note) are deliberate departures the user chose on 2026-10-23
 **Depends on:** S11-26 (landed [#527](https://github.com/mendahu/provenencia/pull/527)), S11-D1 (agreed)
 **Blocks:** —
@@ -11,9 +11,11 @@
 **Version bump:** none — Spike 11 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`
-**Context:** [Connection subrows](../promote-connection-subrows.md) "The idea" and "Open questions for design"; [S11-D1](../design/S11-D1-promote-rows.md) §2 (domain facts: states, one host per connection, busy rows), §4.2, §6 inventory, §8; [`docs/promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3 ("Bridges aren't rows"); working rules "High tolerance for churn"; S11-26 [plan](S11-26-connections-by-ends.md) D-3 (`connections`)
+**Context:** [Connection subrows](../promote-connection-subrows.md) "The idea" and "Open questions for design"; [S11-D1](../design/archive/S11-D1-promote-rows.md) §2 (domain facts: states, one host per connection, busy rows), §4.2, §6 inventory, §8; [`docs/promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3 ("Bridges aren't rows"); working rules "High tolerance for churn"; S11-26 [plan](S11-26-connections-by-ends.md) D-3 (`connections`)
 **Planned:** 2026-10-23 against `main` @ `e33db0f`
 **Review:** [`S11-27-connection-subrows.review.md`](S11-27-connection-subrows.review.md) — Fits with changes / Ready with changes, 1 round (findings fixed)
+
+> **Landed.** Differences from the plan: `EvidenceBridgeEdgeSummary.isSymmetric` takes an `EvidenceGraphPlacedBridge` (the type was renamed from `SourceGraphPlacedBridge` on `main` after planning); `PromoteConnectionSubrows` also takes the host's ref, for the expander's identifier; `PromoteFlowTests` builds its bridges and rows through two small helpers (`link`, `mapped`). Nothing else differs.
 
 ### Implementer — read this first
 
