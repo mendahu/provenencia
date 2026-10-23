@@ -4,12 +4,6 @@ import SwiftUI
 struct PromoteView: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: PromoteModel
-    /// Hosts whose subrows show past the cap (subject ids).
-    @State private var expandedHosts: Set<String> = []
-    /// Bridge ids whose subrows are filled for a moment after a pointer press.
-    @State private var highlighted: Set<String> = []
-    @State private var highlightGeneration = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
         entry: PromoteEntry,
@@ -27,37 +21,30 @@ struct PromoteView: View {
 
     var body: some View {
         let model = model
-        let hosts = model.flow.connectionHosts
+        let connections = model.flow.connectionsByRow
         VStack(spacing: 0) {
             header
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: PVSpacing.space7) {
-                        notices
-                        if model.flow.mappedRest {
-                            mappedBar
-                        }
-                        ForEach(sections, id: \.id) { section in
-                            sectionBlock(section, hosts: hosts, proxy: proxy)
-                        }
-                        if !model.flow.mappedRest && model.flow.restCount > 0 {
-                            mapRest
-                        }
+            ScrollView {
+                VStack(alignment: .leading, spacing: PVSpacing.space7) {
+                    notices
+                    if model.flow.mappedRest {
+                        mappedBar
                     }
-                    .padding(.horizontal, PVSpacing.space10)
-                    .padding(.vertical, PVSpacing.space6)
-                    .frame(maxWidth: 1200, alignment: .leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    ForEach(sections, id: \.id) { section in
+                        sectionBlock(section, connections: connections)
+                    }
+                    if !model.flow.mappedRest && model.flow.restCount > 0 {
+                        mapRest
+                    }
                 }
+                .padding(.horizontal, PVSpacing.space10)
+                .padding(.vertical, PVSpacing.space6)
+                .frame(maxWidth: 1200, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             footer
         }
         .background(PVColor.surfacePage)
-        .task(id: highlightGeneration) {
-            guard highlightGeneration > 0 else { return }
-            try? await Task.sleep(for: .milliseconds(1600))
-            if !Task.isCancelled { highlighted = [] }
-        }
         .onAppear {
             model.navigation = navigation
             navigation.leaveGuard = model
@@ -212,8 +199,7 @@ struct PromoteView: View {
 
     private func sectionBlock(
         _ section: Section,
-        hosts: PromoteFlow.ConnectionHosts,
-        proxy: ScrollViewProxy
+        connections: [String: [PromoteFlow.RowConnection]]
     ) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             PVSectionHeader(title: section.title, meta: section.meta)
@@ -223,14 +209,8 @@ struct PromoteView: View {
                     PromoteAlignmentRow(
                         row: row,
                         model: model,
-                        hosted: hosts.hosted[row.subjectID] ?? [],
-                        pointerCount: hosts.pointers[row.subjectID]?.count ?? 0,
-                        expanded: expandedHosts.contains(row.subjectID),
-                        highlighted: highlighted,
-                        onPointer: { showHosted(from: row.subjectID, hosts: hosts, proxy: proxy) },
-                        onToggleExpanded: { toggleExpanded(row.subjectID) }
+                        connections: connections[row.subjectID] ?? []
                     )
-                    .id(row.subjectID)
                     .disabled(model.isSaving)
                 }
             }
@@ -249,33 +229,6 @@ struct PromoteView: View {
                 .background(PVColor.surfaceSunken)
             }
         }
-    }
-
-    private func toggleExpanded(_ hostID: String) {
-        if expandedHosts.contains(hostID) {
-            expandedHosts.remove(hostID)
-        } else {
-            expandedHosts.insert(hostID)
-        }
-    }
-
-    /// Scrolls to the first row, in page order, that hosts a connection joining this row, opens
-    /// any host that hides one past its cap, and fills those subrows for a moment.
-    private func showHosted(from subjectID: String, hosts: PromoteFlow.ConnectionHosts, proxy: ScrollViewProxy) {
-        guard let pointers = hosts.pointers[subjectID], !pointers.isEmpty else { return }
-        let ids = Set(pointers.map(\.bridgeID))
-        let hostIDs = Set(pointers.map(\.hostID))
-        guard let target = sections.flatMap(\.rows).first(where: { hostIDs.contains($0.subjectID) }) else { return }
-        for hostID in hostIDs {
-            let list = hosts.hosted[hostID] ?? []
-            if list.enumerated().contains(where: { $0.offset >= PromoteLayout.subrowCap && ids.contains($0.element.id) }) {
-                expandedHosts.insert(hostID)
-            }
-        }
-        withAnimation(reduceMotion ? nil : PVMotion.fastStandard) { proxy.scrollTo(target.subjectID, anchor: .top) }
-        highlighted = ids
-        highlightGeneration += 1
-        AccessibilityAnnouncement.post(L10n.Promote.connectionsHostedBy(name: target.name))
     }
 
     private var columnHeaders: some View {
@@ -398,13 +351,7 @@ private struct PromoteAlignmentRow: View {
     let row: PromoteFlow.Row
     let model: PromoteModel
     /// The connections shown under this row, in display order.
-    let hosted: [PromoteFlow.HostedConnection]
-    /// How many connections joining this row are hosted by other rows.
-    let pointerCount: Int
-    let expanded: Bool
-    let highlighted: Set<String>
-    let onPointer: () -> Void
-    let onToggleExpanded: () -> Void
+    let connections: [PromoteFlow.RowConnection]
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
@@ -499,27 +446,8 @@ private struct PromoteAlignmentRow: View {
                 )
                 .padding(.leading, PromoteLayout.noteIndent)
             }
-            if pointerCount > 0 {
-                PVButton(
-                    L10n.Promote.connectionsElsewhere(count: pointerCount),
-                    variant: .ghost,
-                    size: .sm,
-                    flushLeading: true,
-                    action: onPointer
-                )
-                .padding(.leading, PromoteLayout.noteIndent)
-                .accessibilityLabel(Text(verbatim: L10n.Promote.connectionsElsewhereSpoken(count: pointerCount)))
-                .accessibilityIdentifier("promote.row.\(row.ref).connections")
-            }
-            if !hosted.isEmpty {
-                PromoteConnectionSubrows(
-                    hostName: row.name,
-                    hostRef: row.ref,
-                    hosted: hosted,
-                    expanded: expanded,
-                    highlighted: highlighted,
-                    onToggleExpanded: onToggleExpanded
-                )
+            if !connections.isEmpty {
+                PromoteConnectionSubrows(rowName: row.name, rowRef: row.ref, connections: connections)
             }
         }
         .padding(.vertical, PVSpacing.space3)
@@ -554,34 +482,17 @@ private struct PromoteAlignmentRow: View {
     }
 }
 
-/// The connections a row hosts, under its notes: a rule at the note indent and one line each, with
-/// a second line for the other end or a self-link's warning.
+/// The connections that join a row, under its notes: a rule at the note indent and one line each,
+/// with a second line for the other end or a self-link's warning.
 private struct PromoteConnectionSubrows: View {
-    let hostName: String
-    let hostRef: String
-    let hosted: [PromoteFlow.HostedConnection]
-    let expanded: Bool
-    let highlighted: Set<String>
-    let onToggleExpanded: () -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private var shown: [PromoteFlow.HostedConnection] {
-        expanded ? hosted : Array(hosted.prefix(PromoteLayout.subrowCap))
-    }
+    let rowName: String
+    let rowRef: String
+    let connections: [PromoteFlow.RowConnection]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(shown) { connection in
+            ForEach(connections) { connection in
                 subrow(connection)
-            }
-            if hosted.count > PromoteLayout.subrowCap {
-                PVButton(
-                    expanded
-                        ? L10n.string(L10n.Promote.fewerConnections)
-                        : L10n.Promote.moreConnections(count: hosted.count - PromoteLayout.subrowCap),
-                    variant: .ghost, size: .sm, flushLeading: true, action: onToggleExpanded
-                )
-                .accessibilityIdentifier("promote.row.\(hostRef).connectionsMore")
             }
         }
         .padding(.leading, PVSpacing.space4)
@@ -590,10 +501,10 @@ private struct PromoteConnectionSubrows: View {
         }
         .padding(.leading, PromoteLayout.noteIndent)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(verbatim: L10n.Promote.connectionsHostedBy(name: hostName)))
+        .accessibilityLabel(Text(verbatim: L10n.Promote.connectionsOf(name: rowName)))
     }
 
-    private func subrow(_ connection: PromoteFlow.HostedConnection) -> some View {
+    private func subrow(_ connection: PromoteFlow.RowConnection) -> some View {
         let bridge = connection.bridge
         let endName = bridge.name(of: bridge.state.waitingEndID)
         let files = bridge.state == .files
@@ -626,15 +537,9 @@ private struct PromoteConnectionSubrows: View {
             }
         }
         .padding(.vertical, PVSpacing.space1)
-        .padding(.horizontal, PVSpacing.space2)
-        .background(
-            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                .fill(highlighted.contains(bridge.id) ? PVColor.surfaceSelected : Color.clear)
-        )
-        .animation(reduceMotion ? nil : PVMotion.fastStandard, value: highlighted)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: L10n.Promote.connectionSpoken(sentence: bridge.sentence, state: bridge.state, endName: endName)))
-        .accessibilityIdentifier("promote.connection.\(bridge.id)")
+        .accessibilityIdentifier("promote.row.\(rowRef).connection.\(bridge.id)")
     }
 }
 
@@ -719,8 +624,6 @@ private enum PromoteLayout {
     static let badgeColumn: CGFloat = 112
     /// Notes under a row start where its name does.
     static let noteIndent = kindTile + columnGap
-    /// Subrows a row shows before "+N more".
-    static let subrowCap = 3
 }
 
 private struct PromoteKindTile: View {

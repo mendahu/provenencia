@@ -215,31 +215,6 @@ struct EvidenceBridgeEdgeSummaryTests {
         #expect(EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap) == "Alice was born")
     }
 
-    @Test func onlyAProductSymmetricRelationshipIsSymmetric() {
-        func relationship(term key: String, origin: String) -> EvidenceGraphPlacedBridge {
-            var term = observation(propertyKey: "relationship_type", valueText: key.capitalized, valueType: "term")
-            term.valueTermKey = key
-            term.valueTermOrigin = origin
-            return bridge(kind: .relationship, observations: [
-                observation(propertyKey: "person", valueSubjectID: "p1"),
-                observation(propertyKey: "related_to", valueSubjectID: "p2"),
-                term,
-            ])
-        }
-        #expect(EvidenceBridgeEdgeSummary.isSymmetric(relationship(term: "spouse", origin: CatalogOrigin.provenencia)))
-        #expect(!EvidenceBridgeEdgeSummary.isSymmetric(relationship(term: "parent", origin: CatalogOrigin.provenencia)))
-        #expect(!EvidenceBridgeEdgeSummary.isSymmetric(relationship(term: "spouse", origin: "user")))
-        var role = observation(propertyKey: "role", valueText: "Subject", valueType: "term")
-        role.valueTermKey = "subject"
-        role.valueTermOrigin = CatalogOrigin.provenencia
-        let participation = bridge(kind: .participation, observations: [
-            observation(propertyKey: "person", valueSubjectID: "p1"),
-            observation(propertyKey: "event", valueSubjectID: "e1"),
-            role,
-        ])
-        #expect(!EvidenceBridgeEdgeSummary.isSymmetric(participation))
-    }
-
     @Test func aUserTermKeyedLikeAProductTermReadsGenerically() {
         // A researcher's own role "subject", labelled "Main person", at a product birth.
         var role = observation(propertyKey: "role", valueText: "Main person", valueType: "term")

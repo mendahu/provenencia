@@ -18573,86 +18573,14 @@
         }
       }
     },
-    "promote.connection.hostedBy": {
+    "promote.connection.of": {
       "comment": "VoiceOver name of the list of connections under a Promote row; argument is the row's name",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Connections hosted by %@"
-          }
-        }
-      }
-    },
-    "promote.connection.elsewhere": {
-      "comment": "Button under a Promote row that scrolls to connections hosted by other rows; argument is how many",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "+%lld connection"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "+%lld connections"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "promote.connection.elsewhereSpoken": {
-      "comment": "VoiceOver label of the button that scrolls to connections hosted by other rows; argument is how many",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld connection hosted on another row"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld connections hosted on other rows"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "promote.connection.more": {
-      "comment": "Button that shows the connections a Promote row hides; argument is how many",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "+%lld more"
-          }
-        }
-      }
-    },
-    "promote.connection.fewer": {
-      "comment": "Button that hides the extra connections a Promote row showed",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Show fewer"
+            "value": "Connections of %@"
           }
         }
       }

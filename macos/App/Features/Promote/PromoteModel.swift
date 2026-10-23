@@ -451,9 +451,7 @@ final class PromoteModel {
                 mark: bridge.kind.markKey,
                 endA: bridge.endpointAID,
                 endB: bridge.endpointBID,
-                alreadyFiled: bridge.membership != nil,
-                kind: bridge.kind,
-                symmetric: EvidenceBridgeEdgeSummary.isSymmetric(bridge)
+                alreadyFiled: bridge.membership != nil
             )
         }
     }

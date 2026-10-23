@@ -21,15 +21,6 @@ enum EvidenceBridgeEdgeSummary {
         )
     }
 
-    /// Whether a bridge is a relationship whose product term reads the same from both ends
-    /// ("spouse"). A researcher's own term, or none, reads as directed.
-    static func isSymmetric(_ placed: EvidenceGraphPlacedBridge) -> Bool {
-        guard placed.kind == .relationship,
-              let key = termKey(kind: placed.kind, in: placed.observations)
-        else { return false }
-        return SeededRelationshipTypeTerm.isSymmetric(key)
-    }
-
     /// The snapshot's placed Subjects by id: build once, then pass to every lookup of one pass.
     static func subjects(of snapshot: EvidenceGraphSnapshot) -> [String: EvidenceGraphPlacedSubject] {
         Dictionary(snapshot.subjects.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })

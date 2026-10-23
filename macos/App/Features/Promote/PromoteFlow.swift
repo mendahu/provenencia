@@ -225,23 +225,11 @@ struct PromoteFlow: Equatable, Sendable {
         var filed: Bool
     }
 
-    struct HostedConnection: Equatable, Sendable, Identifiable {
+    /// A connection as one row shows it.
+    struct RowConnection: Equatable, Sendable, Identifiable {
         var bridge: Bridge
         var otherEnd: OtherEnd?
         var id: String { bridge.id }
-    }
-
-    /// A row's note that a connection joining it is hosted by another row.
-    struct Pointer: Equatable, Sendable {
-        var bridgeID: String
-        var hostID: String
-    }
-
-    struct ConnectionHosts: Equatable, Sendable {
-        /// Host row's subject id to the connections shown under it, in display order.
-        var hosted: [String: [HostedConnection]] = [:]
-        /// Pointing row's subject id to the connections hosted elsewhere, in `connections` order.
-        var pointers: [String: [Pointer]] = [:]
     }
 
     struct Anchor: Equatable, Sendable {
@@ -273,9 +261,6 @@ struct PromoteFlow: Equatable, Sendable {
         /// Already an accepted association. Hidden from the will-file list;
         /// Done does not file it again.
         var alreadyFiled: Bool = false
-        var kind: EvidenceBridgeKind
-        /// A relationship whose product term reads the same from both ends ("spouse").
-        var symmetric = false
 
         /// The name of one end, as its row reads; empty when `endID` is neither end.
         func name(of endID: String?) -> String {
@@ -350,47 +335,29 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
-    /// The row that hosts each shown connection, and the rows that point at it (S11-D1 §4.2).
-    var connectionHosts: ConnectionHosts {
+    /// Each connection under every end that is a working row, keyed by the row's subject id and
+    /// ordered by state, then sentence. The other end gets a note when it is not a working row.
+    var connectionsByRow: [String: [RowConnection]] {
         let working = Set(scope.filter { !$0.anchor }.map(\.subjectID))
         let anchors = Set(rows.filter(\.anchor).map(\.subjectID))
-        var hosts = ConnectionHosts()
+        var byRow: [String: [RowConnection]] = [:]
         for bridge in connections {
-            let ruleEnd = Self.ruleHost(bridge)
-            let otherEnd = ruleEnd == bridge.endA ? bridge.endB : bridge.endA
-            let host: String
-            if let ruleEnd, working.contains(ruleEnd) {
-                host = ruleEnd
-            } else if let otherEnd, working.contains(otherEnd) {
-                host = otherEnd
-            } else {
-                continue
+            let ends = [bridge.endA, bridge.endB]
+            var seen = Set<String>()
+            for case let end? in ends where working.contains(end) && seen.insert(end).inserted {
+                let far = end == bridge.endA ? bridge.endB : bridge.endA
+                var note: OtherEnd?
+                if let far, !working.contains(far) {
+                    let name = bridge.name(of: far)
+                    if !name.isEmpty { note = OtherEnd(name: name, filed: anchors.contains(far)) }
+                }
+                byRow[end, default: []].append(RowConnection(bridge: bridge, otherEnd: note))
             }
-            let far = host == bridge.endA ? bridge.endB : bridge.endA
-            var note: OtherEnd?
-            if let far, !working.contains(far) {
-                let name = bridge.name(of: far)
-                if !name.isEmpty { note = OtherEnd(name: name, filed: anchors.contains(far)) }
-            } else if let far, far != host {
-                hosts.pointers[far, default: []].append(Pointer(bridgeID: bridge.id, hostID: host))
-            }
-            hosts.hosted[host, default: []].append(HostedConnection(bridge: bridge, otherEnd: note))
         }
-        for host in hosts.hosted.keys {
-            hosts.hosted[host]?.sort(by: Self.shownBefore)
+        for key in byRow.keys {
+            byRow[key]?.sort(by: Self.shownBefore)
         }
-        return hosts
-    }
-
-    /// The end that hosts a connection by kind: an event for a participation or location, the
-    /// from place of a place relationship, the end named last of a directed relationship and the
-    /// end named first of a symmetric one.
-    private static func ruleHost(_ bridge: Bridge) -> String? {
-        switch bridge.kind {
-        case .participation: bridge.endB
-        case .location, .placeRelationship: bridge.endA
-        case .relationship: bridge.symmetric ? bridge.endA : bridge.endB
-        }
+        return byRow
     }
 
     private static func stateRank(_ state: ConnectionState) -> Int {
@@ -401,7 +368,7 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
-    private static func shownBefore(_ a: HostedConnection, _ b: HostedConnection) -> Bool {
+    private static func shownBefore(_ a: RowConnection, _ b: RowConnection) -> Bool {
         let rankA = stateRank(a.bridge.state)
         let rankB = stateRank(b.bridge.state)
         if rankA != rankB { return rankA < rankB }

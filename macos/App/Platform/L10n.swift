@@ -1634,22 +1634,10 @@ enum L10n {
             }
             return L10n.format(LocalizedStringResource("promote.connection.otherEnd.notOnPage", defaultValue: "%@ is not on this page", comment: "Note under a Promote connection whose other end is not on the page; argument is its name"), name)
         }
-        /// VoiceOver name of a row's list of subrows; `name` is the host row's name.
-        static func connectionsHostedBy(name: String) -> String {
-            L10n.format(LocalizedStringResource("promote.connection.hostedBy", defaultValue: "Connections hosted by %@", comment: "VoiceOver name of the list of connections under a Promote row; argument is the row's name"), name)
+        /// VoiceOver name of a row's list of subrows; `name` is the row's name.
+        static func connectionsOf(name: String) -> String {
+            L10n.format(LocalizedStringResource("promote.connection.of", defaultValue: "Connections of %@", comment: "VoiceOver name of the list of connections under a Promote row; argument is the row's name"), name)
         }
-        /// The button under a row that points at connections hosted by other rows; `count` is how many.
-        static func connectionsElsewhere(count: Int) -> String {
-            L10n.format(LocalizedStringResource("promote.connection.elsewhere", defaultValue: "+%lld connections", comment: "Button under a Promote row that scrolls to connections hosted by other rows; argument is how many"), count)
-        }
-        static func connectionsElsewhereSpoken(count: Int) -> String {
-            L10n.format(LocalizedStringResource("promote.connection.elsewhereSpoken", defaultValue: "%lld connections hosted on other rows", comment: "VoiceOver label of the button that scrolls to connections hosted by other rows; argument is how many"), count)
-        }
-        /// The button that shows the subrows a row hides past its cap; `count` is how many are hidden.
-        static func moreConnections(count: Int) -> String {
-            L10n.format(LocalizedStringResource("promote.connection.more", defaultValue: "+%lld more", comment: "Button that shows the connections a Promote row hides; argument is how many"), count)
-        }
-        static let fewerConnections = LocalizedStringResource("promote.connection.fewer", defaultValue: "Show fewer", comment: "Button that hides the extra connections a Promote row showed")
         /// The footer: what Done files, skips and leaves unselected, and how many connections file.
         /// A zero skip or unselected part is left out. `connections` always shows.
         static func doneSummary(file: Int, skip: Int, unselected: Int, connections: Int) -> String {
