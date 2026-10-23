@@ -50,7 +50,22 @@ struct ConnectionSentenceRegistryTests {
             termKey: "witness",
             eventType: "baptism"
         )
-        #expect(sentence == "John Smith participated as Witness at Baptism of Don Smith")
+        #expect(sentence == "John Smith participated as witness at Baptism of Don Smith")
+    }
+
+    @Test func aTermReadsLowercaseInsideEverySentenceAndPhrase() {
+        func whole(_ kind: EvidenceBridgeKind, _ a: String, _ b: String, _ term: String) -> String {
+            ConnectionSentenceRegistry.sentence(kind: kind, endpointA: a, endpointB: b, term: term)
+        }
+        #expect(whole(.relationship, "John Smith", "Mary Smith", "Spouse") == "John Smith is the spouse of Mary Smith")
+        #expect(whole(.placeRelationship, "Leeds", "Yorkshire", "Part of") == "Leeds is part of Yorkshire")
+        #expect(
+            whole(.participation, "Mary Smith", "Baptism of John Smith", "Witness")
+                == "Mary Smith participated as witness at Baptism of John Smith"
+        )
+        #expect(ConnectionSentenceRegistry.phrase(kind: .relationship, term: "Spouse") == "Is the spouse of")
+        #expect(ConnectionSentenceRegistry.phrase(kind: .participation, term: "Witness") == "Participated as witness")
+        #expect(ConnectionSentenceRegistry.reasonRole(kind: .relationship, term: "Spouse") == "spouse")
     }
 
     @Test func lookupPrefersTheMostSpecificRow() {
@@ -115,7 +130,7 @@ struct ConnectionSentenceRegistryTests {
         )
         #expect(
             ConnectionSentenceRegistry.phrase(kind: .participation, term: "Informant", termKey: "informant", in: rows)
-                == L10n.EvidenceGraph.bridgeSummaryParticipationRoleOnly(role: "Informant")
+                == L10n.EvidenceGraph.bridgeSummaryParticipationRoleOnly(role: "informant")
         )
     }
 
@@ -209,7 +224,7 @@ struct ConnectionSentenceRegistryTests {
         )
         #expect(
             ConnectionSentenceRegistry.phrase(kind: .participation, term: "Witness")
-                == L10n.EvidenceGraph.bridgeSummaryParticipationRoleOnly(role: "Witness")
+                == L10n.EvidenceGraph.bridgeSummaryParticipationRoleOnly(role: "witness")
         )
         #expect(
             ConnectionSentenceRegistry.phrase(kind: .participation, term: nil)

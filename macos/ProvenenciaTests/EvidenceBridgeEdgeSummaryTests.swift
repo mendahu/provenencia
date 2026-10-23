@@ -216,9 +216,9 @@ struct EvidenceBridgeEdgeSummaryTests {
             primary(id: "e1", kind: .event, label: "Birth", ref: "CEV-1", observations: [eventType]),
         ])
         let sentence = EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap)
-        #expect(sentence.hasPrefix("Alice participated as Main person"))
+        #expect(sentence.hasPrefix("Alice participated as main person"))
         #expect(!sentence.contains("was born"))
-        #expect(EvidenceBridgeEdgeSummary.phrase(for: placed).contains("Main person"))
+        #expect(EvidenceBridgeEdgeSummary.phrase(for: placed).contains("main person"))
 
         // A researcher's own event type "birth" with the product's subject role.
         var productRole = observation(propertyKey: "role", valueText: "Subject", valueType: "term")
