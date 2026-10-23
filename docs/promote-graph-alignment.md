@@ -48,7 +48,7 @@ Promote is one workspace page; the choose-target screen and the separate claim s
   - **Unpromoted:** a target dropdown with the best match preselected, the next few alternatives, **New**, and **Skip**.
 - **Assessment:** each row shows **strong**, **medium**, **weak** or **no match**. Clicking it opens a **sheet** that opens with why the row was suggested (its band and Contested marks at the title, the reason as their tooltip, the Updated caption under it) and then the evidence that the row is the record. The sheet loads the row's claim evidence when it opens and draws it as sentences, with no weights: a Card per property with a line per distinct value (identical members collapse into one line that expands to each record), likenesses as two crops side by side, and a relationship line for each mapped neighbor that corresponds, named by the connection that matched. The lines and relationships that agree are preselected as pins and can be toggled.
 - **Claim fields per row:** status, confidence and argument. The argument is the researcher's own: Promote drafts none.
-- **Bridges aren't rows** (participation, relationship, location). A summary line reads "22 connections will be filed". It expands to a list where each bridge can be switched off, for a relationship the researcher doesn't accept from this Source. Filing rules: §9.1.
+- **Bridges aren't rows** (participation, relationship, location). A summary line reads "22 connections will be filed". It expands to the list of connections, each saying whether it files. Filing rules: §9.1.
 - **Possible duplicates:** two rows landing on the same existing handle, or two New rows whose properties clear the accept bar, get a warning ("these may be the same record; combine them on the Evidence graph"). A link key both rows have neighbors for suppresses the warning when none of those neighbors are the same subject or a match; a directed key compares only neighbors on the same end (a son with a son, not with a father). A row whose best record another row took starts with no target and the warning, whatever its band, so Done can't file both on one handle without a choice. There is no row-to-row option.
 - **Done** writes the whole batch in one transaction (§9).
 - **Leaving:** the leave guard covers accidental navigation. Drafts aren't persisted: re-opening re-proposes everything, and only manual changes are lost.
@@ -120,7 +120,7 @@ A layer is **one Source’s Subjects**, not one connected component. *Map the re
 | Unpromoted | Unpromoted | Alignment proposes both (seed/propagate once either end is fixed). Done may mint two handles, then file the bridge. |
 | Promoted | Unpromoted | The promoted end is a **fixed anchor**; seed walks to the unpromoted end from that handle’s canonical neighbors. |
 | Unpromoted | Promoted | Same mechanism, other direction (e.g. open Promote on a new person whose event neighbor was filed earlier). |
-| Promoted | Promoted | Not an identity proposal for those rows. It is a **missing / unfiled relationship**: the Evidence bridge exists and both ends are handles, so §9.1 files the canonical association (shown on the page as a connection that will be filed; the researcher can switch it off). |
+| Promoted | Promoted | Not an identity proposal for those rows. It is a **missing / unfiled relationship**: the Evidence bridge exists and both ends are handles, so §9.1 files the canonical association (shown on the page as a connection that will be filed). |
 
 **Orphans and disconnected islands** are expected. A primary Subject with no bridges, or a cluster that shares no path with any fixed/promoted anchor, is **unreachable** (§5 step 1): property-only matching only; a match below the bar comes back Skip, never New, and a row with no match starts unset on the page. Structure-backed scoring never assumes a path from the entry card to every row.
 
@@ -173,13 +173,13 @@ Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count foll
 - **Per row:** the Identity Claim with status, confidence and argument; a minted handle for New; nothing for Skip.
 - **Pins:** Go pins what the claim evidence offers. For a row whose sheet was never opened, Done pins the lines and relationships that start checked; for an opened row, the ones the researcher left checked (a pin the evidence no longer offers is dropped). A pin's Observations land on the new claim and on the claim of each member it names, so joining an entity with five named members pins all five. The evidence reaches **one hop through a bridge** ("her birth date matches" is pinned on the person's claim), and compares a neighbor only with the handle that neighbor is filed on, in this Done or earlier: this birth with that birth, never with another of the handle's events. A neighbor filed New or skipped pins nothing.
 - **Duplicate pins are accepted on purpose.** The same agreement may be pinned on several claims (the person's and the birth event's). The machine drafts the pins, so this costs the researcher nothing.
-- **Bridges** are filed by the rules in §9.1; switched-off bridges are skipped.
+- **Bridges** are filed by the rules in §9.1.
 
 ## 9.1 Bridge filing
 
 A bridge (participation, relationship, location, place relationship) has **no identity of its own**: once both its ends are handles, which canonical association it belongs to follows from the ends. So filing is automatic everywhere, not only on the Promote page.
 
-- **When:** after **any** claim create, every bridge Subject whose ends are now both handles is filed in the same transaction. On the Promote page the researcher can switch individual bridges off before Done. Anywhere else, filing just happens. A bridge with an end that is unpromoted, skipped or simply not recorded stays unfiled on the graph, and files when that end is promoted later.
+- **When:** after **any** claim create, every bridge Subject whose ends are now both handles is filed in the same transaction. On the Promote page and everywhere else, filing just happens. A bridge with an end that is unpromoted, skipped or simply not recorded stays unfiled on the graph, and files when that end is promoted later.
 - **Which association it joins:** an existing association of the same kind between the same two handles, matched by its key; otherwise a new one is minted.
 
   | Bridge kind | Key | Notes |
