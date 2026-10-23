@@ -371,6 +371,7 @@
 		B9110000000000000000000C /* PromoteModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000B /* PromoteModelTests.swift */; };
 		B9110000000000000000000E /* PromoteFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000D /* PromoteFlow.swift */; };
 		C1120094E727223A3EA7D87A /* PromoteEvidenceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112000400E7D14ECD8AF111 /* PromoteEvidenceSheet.swift */; };
+		AA000000000000000005E00B /* PromoteEvidenceCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E00A /* PromoteEvidenceCards.swift */; };
 		C11200BD269354BE1FC4BDC0 /* PromoteEvidenceDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */; };
 		AA000000000000000005E007 /* PromoteEvidenceBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E006 /* PromoteEvidenceBoard.swift */; };
 		C11200E6D8FE13682466E995 /* PromoteReadout.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112002B53DFC6E2EF560AC7 /* PromoteReadout.swift */; };
@@ -789,6 +790,7 @@
 		B9110000000000000000000B /* PromoteModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteModelTests.swift; sourceTree = "<group>"; };
 		B9110000000000000000000D /* PromoteFlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlow.swift; sourceTree = "<group>"; };
 		C112000400E7D14ECD8AF111 /* PromoteEvidenceSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceSheet.swift; sourceTree = "<group>"; };
+		AA000000000000000005E00A /* PromoteEvidenceCards.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceCards.swift; sourceTree = "<group>"; };
 		C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceDisplay.swift; sourceTree = "<group>"; };
 		AA000000000000000005E006 /* PromoteEvidenceBoard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceBoard.swift; sourceTree = "<group>"; };
 		C112002B53DFC6E2EF560AC7 /* PromoteReadout.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteReadout.swift; sourceTree = "<group>"; };
@@ -1856,6 +1858,7 @@
 				B91100000000000000000007 /* PromoteView.swift */,
 				B9110000000000000000000D /* PromoteFlow.swift */,
 				C112000400E7D14ECD8AF111 /* PromoteEvidenceSheet.swift */,
+				AA000000000000000005E00A /* PromoteEvidenceCards.swift */,
 				C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */,
 				AA000000000000000005E006 /* PromoteEvidenceBoard.swift */,
 				C112002B53DFC6E2EF560AC7 /* PromoteReadout.swift */,
@@ -2262,6 +2265,7 @@
 				B91100000000000000000008 /* PromoteView.swift in Sources */,
 				B9110000000000000000000E /* PromoteFlow.swift in Sources */,
 				C1120094E727223A3EA7D87A /* PromoteEvidenceSheet.swift in Sources */,
+				AA000000000000000005E00B /* PromoteEvidenceCards.swift in Sources */,
 				C11200BD269354BE1FC4BDC0 /* PromoteEvidenceDisplay.swift in Sources */,
 				AA000000000000000005E007 /* PromoteEvidenceBoard.swift in Sources */,
 				C11200E6D8FE13682466E995 /* PromoteReadout.swift in Sources */,
