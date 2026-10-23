@@ -115,4 +115,4 @@ Check: `rg -n "connectionHosts|host row" docs/deployment-plan/spike-11/deploymen
 Head `4d1f42bc`. Gate PASS (orchestrator re-ran). F-9 done; CON-1 (r3), MNT-8, MNT-9 **Resolved** (read by the orchestrator: `rg` prints nothing).
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: — · to user: UX-4 answered (dropped); pointer and cap removed by the user (A-1 – A-5) · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: — · to user: UX-4 answered (dropped); pointer and cap removed by the user (A-1 – A-5) · CON miss: none
