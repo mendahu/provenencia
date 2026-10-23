@@ -118,7 +118,7 @@ private struct EvidenceSectionLines: View {
 
 /// One line on the board's grid: box, value, sentence, Source and outcome. A disclosure in the
 /// Source column opens the records behind a line that bundles several.
-private struct EvidenceLine: View, Equatable {
+struct EvidenceLine: View, Equatable {
     let line: EvidenceBoard.Line
     /// The line's own pins that are checked.
     let checked: Set<String>
@@ -161,19 +161,8 @@ private struct EvidenceLine: View, Equatable {
     }
 
     /// The first record's value; a likeness shows its two crops, this Source's and the record's.
-    @ViewBuilder
     private var valueColumn: some View {
-        switch line.value {
-        case .none:
-            EmptyView()
-        case .text(let text):
-            Text(verbatim: text)
-                .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
-                .foregroundStyle(PVColor.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-        case .crops:
-            EvidenceCrops(value: line.value, projectDir: projectDir)
-        }
+        EvidenceValueView(value: line.value, weight: PVFontWeight.medium, projectDir: projectDir)
     }
 
     private var sentenceColumn: some View {
@@ -250,6 +239,27 @@ enum EvidenceTextStyle {
             result[run.range].mergeAttributes(attributes)
         }
         return result
+    }
+}
+
+/// A record's value in a line or under it: its words at `weight`, or a likeness's crops.
+private struct EvidenceValueView: View {
+    let value: EvidenceBoard.Value
+    let weight: CGFloat
+    let projectDir: String
+
+    var body: some View {
+        switch value {
+        case .none:
+            EmptyView()
+        case .text(let text):
+            Text(verbatim: text)
+                .font(PVFont.body(size: PVTypeScale.bodySmall, weight: weight))
+                .foregroundStyle(PVColor.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        case .crops:
+            EvidenceCrops(value: value, projectDir: projectDir)
+        }
     }
 }
 
@@ -342,7 +352,7 @@ private struct EvidenceMemberRow: View {
                     ids: [member.id], checked: checked, spoken: member.spoken,
                     identifier: "promote.sheet.member.\(member.id)", env: env
                 )
-                value
+                EvidenceValueView(value: member.value, weight: PVFontWeight.regular, projectDir: projectDir)
                     .frame(width: EvidenceLayout.memberValueColumn, alignment: .leading)
                     .accessibilityHidden(true)
                 Spacer(minLength: 0)
@@ -355,21 +365,6 @@ private struct EvidenceMemberRow: View {
         }
         .padding(.leading, EvidenceLayout.memberIndent)
         .padding(.trailing, EvidenceLayout.inset)
-    }
-
-    @ViewBuilder
-    private var value: some View {
-        switch member.value {
-        case .none:
-            EmptyView()
-        case .text(let text):
-            Text(verbatim: text)
-                .font(PVFont.body(size: PVTypeScale.bodySmall))
-                .foregroundStyle(PVColor.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-        case .crops:
-            EvidenceCrops(value: member.value, projectDir: projectDir)
-        }
     }
 }
 

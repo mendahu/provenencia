@@ -59,10 +59,13 @@ struct PromoteEvidenceBoardTests {
         return (board, flow)
     }
 
-    /// What the sheet hands one line: the line, its own checked pins and its disclosure.
-    private func inputs(_ board: EvidenceBoard, pins: Set<String>, expanded: Set<String> = []) -> [String] {
+    /// What the sheet hands each line view: the line, its own checked pins and its disclosure.
+    private func inputs(_ board: EvidenceBoard, pins: Set<String>, expanded: Set<String> = []) -> [EvidenceLine] {
         board.cards.flatMap(\.lines).map { line in
-            "\(line.id)|\(pins.intersection(line.pinIDs).sorted())|\(expanded.contains(line.key))"
+            EvidenceLine(
+                line: line, checked: pins.intersection(line.pinIDs), isOpen: expanded.contains(line.key),
+                projectDir: "", env: EvidenceEnv(toggle: { _ in }, setOpen: { _, _ in })
+            )
         }
     }
 
@@ -79,6 +82,23 @@ struct PromoteEvidenceBoardTests {
         #expect(inputs(flow.rows[0].board ?? board, pins: flow.rows[0].pins) == inputsBefore)
         board = flow.rows[0].board ?? board
         #expect(board.cards.flatMap(\.lines).count == 200)
+    }
+
+    @Test func aLineViewIsEqualOnlyForTheSameLineCheckedPinsAndDisclosure() throws {
+        let (board, _) = twoHundredLines()
+        let first = try #require(board.cards.first?.lines.first)
+        let other = try #require(board.cards.first?.lines.last)
+        func view(_ line: EvidenceBoard.Line, checked: Set<String>, isOpen: Bool) -> EvidenceLine {
+            EvidenceLine(
+                line: line, checked: checked, isOpen: isOpen,
+                projectDir: "", env: EvidenceEnv(toggle: { _ in }, setOpen: { _, _ in })
+            )
+        }
+        let base = view(first, checked: [], isOpen: false)
+        #expect(base == view(first, checked: [], isOpen: false))
+        #expect(base != view(first, checked: Set(first.pinIDs), isOpen: false))
+        #expect(base != view(first, checked: [], isOpen: true))
+        #expect(base != view(other, checked: [], isOpen: false))
     }
 
     @Test func aToggleChangesOneLine() {
