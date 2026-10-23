@@ -41,6 +41,8 @@ struct PromoteEvidenceSheet: View {
         } titleAccessory: {
             marks
         }
+        // Nothing is lost by closing: pins and the claim fields already live in the model.
+        .pvOutsideClick { model.closeSheet() }
     }
 
     // MARK: Title

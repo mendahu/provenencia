@@ -204,6 +204,13 @@ gives it none. Here `PVFormDialog` is a `.sheet` on ``PVPanel`` — same family 
 `PVConfirm` for destructive confirmations; use `PVFormDialog` for short
 create/edit forms.
 
+**A click outside a sheet** is `.pvOutsideClick(isEnabled:perform:)`
+(`Components/Panel/PVOutsideClick.swift`), the one watcher for it: a click in the
+sheet's window outside its content runs `perform`. A macOS sheet gives that click
+to no one, so the modifier watches the event stream; menus and popovers are not
+this path. `PVFormDialog` uses it (and asks first when the form is dirty); a sheet
+with nothing to lose closes in `perform`.
+
 ## The combo box subset
 
 `PVComboBox` ports `components/forms/ComboBox.jsx`, but only the
