@@ -1,7 +1,7 @@
 # Ship log — S11-27 Connection subrows on Promote
 
 **Plan:** [`S11-27-connection-subrows.md`](S11-27-connection-subrows.md) · **Branch:** `s11-27-connection-subrows` · **PR:** #530
-**State:** ready
+**State:** fixing 3 (user change)
 
 ## Round 0 — implement
 Head `17034618`. Gate PASS (orchestrator re-ran). Draft PR #530. Report: no deviations from Decisions or Scope; three small differences recorded in the plan's Landed note (`isSymmetric` takes `EvidenceGraphPlacedBridge` after a rename on `main`; `PromoteConnectionSubrows` also takes the host ref for the expander identifier; two test helpers `link` and `mapped`). AC-3.2 – 3.4 and AC-4.4 are built but need the manual check.
@@ -73,3 +73,24 @@ No new findings. Nits (logged): `MNT-7 · PromoteFlow.swift:332 · lined(_:_:) o
 
 ## Result
 Gate PASS · CI green · open: none · follow-ups: — · to user: UX-4 answered (dropped) · CON miss: none
+
+## Round 3 — user change (2026-10-23)
+After the report, the user asked to drop the "+N connections" pointer, its scroll and highlight, and the cap with "+N more" / "Show fewer", and to show each connection under both of its ends, all on this PR. Recorded in the plan as **Amended** A-1 – A-5. UX-4 was answered (dropped) before this.
+
+### Fix plan 3
+
+**F-6 — Show each connection under every end that is a row** (A-1, A-2, A-3)
+Files: `macos/App/Features/Promote/PromoteFlow.swift`, `PromoteModel.swift`, `macos/App/Features/Catalog/Connect/EvidenceBridgeEdgeSummary.swift`, `macos/App/Platform/ConclusionVocabulary.swift`, `macos/ProvenenciaTests/PromoteFlowTests.swift`, `PromoteModelTests.swift`, `EvidenceBridgeEdgeSummaryTests.swift`.
+Failing test first: rewrite `connectionsAreHostedByRule` as `connectionsShowUnderEveryEndThatIsARow`: participation John → Birth, location Birth → Toronto, place relationship Toronto → Ontario, relationship Mary → John (parent) and Ann → Bill (spouse), all ends rows → each connection's id is in `connectionsByRow` under **both** ends. Rewrite `aConnectionFallsBackToTheEndThatIsARow` as `aConnectionWithOneRowEndShowsOnlyThere`: the anchor case shows under John only with `OtherEnd(name: "b", filed: true)`; Promote on John alone shows under John with `filed: false`; both anchors, already filed, and neither end loaded → not in `connectionsByRow`. Keep `hostedConnectionsAreOrderedByStateThenSentence` (rename to `rowConnectionsAreOrderedByStateThenSentence`), reading `connectionsByRow`.
+Do: A-2's `RowConnection` and `connectionsByRow` replace `ConnectionHosts`, `HostedConnection`, `Pointer`, `connectionHosts` and `ruleHost`. For each connection, for each distinct end that is a working row, append it with `otherEnd` set only when the other end is not a working row (D-5's note, unchanged). A-3: delete `kind` and `symmetric` from `BridgeFact` and `bridgeFacts`, both `isSymmetric` functions, `onlyAProductSymmetricRelationshipIsSymmetric`, `bridgeFactsCarryKindAndSymmetry` and the test-literal `kind:` / `symmetric:` arguments and the `link` helper's `symmetric` parameter.
+Check: tests pass; `rg -n "ruleHost|ConnectionHosts|HostedConnection|connectionHosts|Pointer\b|pointers|isSymmetric|symmetric" macos` prints nothing.
+
+**F-7 — Remove the pointer, highlight and cap from the view** (A-4, A-5)
+Files: `macos/App/Features/Promote/PromoteView.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `macos/ProvenenciaTests/PromoteEvidenceDisplayTests.swift`. Skill: `add-localized-string`.
+Failing test first: in `connectionCopyIsWorded`, replace the `connectionsElsewhere` expectations with `L10n.Promote.connectionsOf(name: "John Smith") == "Connections of John Smith"`.
+Do: `PromoteAlignmentRow` and `PromoteConnectionSubrows` take `[PromoteFlow.RowConnection]` and show all of them. Delete everything A-4 lists, including `ScrollViewReader`, `.id(row.subjectID)` and `reduceMotion` if nothing else in the file reads them. Subrow identifier `promote.row.<ref>.connection.<bridgeID>`; container label `connectionsOf(name:)`. Delete the four plural keys and `promote.connection.hostedBy`; add `promote.connection.of`.
+Check: `rg -n "expandedHosts|highlighted|highlightGeneration|showHosted|subrowCap|connectionsElsewhere|moreConnections|fewerConnections|connectionsHostedBy|AccessibilityAnnouncement|onPointer|pointerCount" macos/App/Features/Promote macos/App/Platform/L10n.swift` prints nothing; `python3 scripts/check-localizable-xcstrings.py` OK.
+
+**F-8 — Docs**
+Files: `docs/deployment-plan/spike-11/prs/S11-27-connection-subrows.md` (Landed note only: add "Amended A-1 – A-5 shipped; supersedes the F-1 announcement, the F-2 expander and the earlier `Bridge`-wraps note on `kind`"), `docs/deployment-plan/spike-11/completed.md` (S11-27 paragraph: connections show under both ends that are rows; no pointer, cap or highlight), `docs/promote-graph-alignment.md` §3 "Bridges aren't rows" bullet (same), `docs/ideas/term-management.md` item 2 (remove the S11-27 sentence).
+Do not edit the plan's Amended block. Check: `python3 scripts/check-plan-docs.py` 0 errors; scripts/check-pr.sh PASS.
