@@ -682,7 +682,7 @@ private struct EvidenceRelationshipCard: View {
                 isIndeterminate: context.state(ids) == .partial,
                 isDisabled: ids.isEmpty,
                 accessibilitySpokenLabel: L10n.Promote.spokenRelationship(
-                    sentence: title,
+                    sentence: PromoteEvidenceDisplay.spokenHeader(title),
                     link: L10n.string(L10n.Promote.outcome(relationship.outcome))
                 )
             )

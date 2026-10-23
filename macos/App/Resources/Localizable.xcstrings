@@ -20515,26 +20515,770 @@
         }
       }
     },
-    "evidenceGraph.share.event": {
-      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (event); 1 = the event type, lowercase",
+    "evidenceGraph.share.role.subject": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is subject, with its own article",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "a %@ event"
+            "value": "a subject"
           }
         }
       }
     },
-    "evidenceGraph.share.eventSimilar": {
-      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (event); 1 = the event type, lowercase",
+    "evidenceGraph.share.roleNoun.subject": {
+      "comment": "The bare noun of the share phrase for a connected person's role in the event subject, after \"a similar\"",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "a similar %@ event"
+            "value": "subject"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.role.father": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is father, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a father"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.roleNoun.father": {
+      "comment": "The bare noun of the share phrase for a connected person's role in the event father, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "father"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.role.mother": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is mother, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a mother"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.roleNoun.mother": {
+      "comment": "The bare noun of the share phrase for a connected person's role in the event mother, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mother"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.role.spouse": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is spouse, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a spouse"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.roleNoun.spouse": {
+      "comment": "The bare noun of the share phrase for a connected person's role in the event spouse, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "spouse"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.role.child": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is child, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a child"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.roleNoun.child": {
+      "comment": "The bare noun of the share phrase for a connected person's role in the event child, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "child"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.role.witness": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is witness, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a witness"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.roleNoun.witness": {
+      "comment": "The bare noun of the share phrase for a connected person's role in the event witness, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "witness"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.role.informant": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is informant, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "an informant"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.roleNoun.informant": {
+      "comment": "The bare noun of the share phrase for a connected person's role in the event informant, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "informant"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.role.pallbearer": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is pallbearer, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a pallbearer"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.roleNoun.pallbearer": {
+      "comment": "The bare noun of the share phrase for a connected person's role in the event pallbearer, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pallbearer"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.event.birth": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is birth, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a birth event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.eventNoun.birth": {
+      "comment": "The bare noun of the share phrase for the type of a connected event birth, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "birth event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.event.death": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is death, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a death event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.eventNoun.death": {
+      "comment": "The bare noun of the share phrase for the type of a connected event death, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "death event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.event.marriage": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is marriage, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a marriage event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.eventNoun.marriage": {
+      "comment": "The bare noun of the share phrase for the type of a connected event marriage, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "marriage event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.event.engagement": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is engagement, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "an engagement event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.eventNoun.engagement": {
+      "comment": "The bare noun of the share phrase for the type of a connected event engagement, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "engagement event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.event.baptism": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is baptism, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a baptism event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.eventNoun.baptism": {
+      "comment": "The bare noun of the share phrase for the type of a connected event baptism, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "baptism event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.event.burial": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is burial, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a burial event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.eventNoun.burial": {
+      "comment": "The bare noun of the share phrase for the type of a connected event burial, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "burial event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.event.funeral": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is funeral, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a funeral event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.eventNoun.funeral": {
+      "comment": "The bare noun of the share phrase for the type of a connected event funeral, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "funeral event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.event.census": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is census, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a census event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.eventNoun.census": {
+      "comment": "The bare noun of the share phrase for the type of a connected event census, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "census event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.event.residence": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is residence, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a residence event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.eventNoun.residence": {
+      "comment": "The bare noun of the share phrase for the type of a connected event residence, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "residence event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.event.migration": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is migration, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a migration event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.eventNoun.migration": {
+      "comment": "The bare noun of the share phrase for the type of a connected event migration, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "migration event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.event.travel": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is travel, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a travel event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.eventNoun.travel": {
+      "comment": "The bare noun of the share phrase for the type of a connected event travel, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "travel event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationship.spouse": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is spouse, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a spouse"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationshipNoun.spouse": {
+      "comment": "The bare noun of the share phrase for a connected person's relationship spouse, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "spouse"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationship.sibling": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is sibling, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a sibling"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationshipNoun.sibling": {
+      "comment": "The bare noun of the share phrase for a connected person's relationship sibling, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sibling"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationship.cousin": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is cousin, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a cousin"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationshipNoun.cousin": {
+      "comment": "The bare noun of the share phrase for a connected person's relationship cousin, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cousin"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationship.parent": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is parent, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a parent"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationshipNoun.parent": {
+      "comment": "The bare noun of the share phrase for a connected person's relationship parent, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "parent"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationship.child": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is child, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a child"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationshipNoun.child": {
+      "comment": "The bare noun of the share phrase for a connected person's relationship child, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "child"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationship.grandparent": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is grandparent, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a grandparent"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationshipNoun.grandparent": {
+      "comment": "The bare noun of the share phrase for a connected person's relationship grandparent, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "grandparent"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationship.grandchild": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is grandchild, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a grandchild"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationshipNoun.grandchild": {
+      "comment": "The bare noun of the share phrase for a connected person's relationship grandchild, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "grandchild"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationship.pibling": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is pibling, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "an aunt or uncle"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationshipNoun.pibling": {
+      "comment": "The bare noun of the share phrase for a connected person's relationship pibling, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aunt or uncle"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationship.nibling": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is nibling, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a niece or nephew"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationshipNoun.nibling": {
+      "comment": "The bare noun of the share phrase for a connected person's relationship nibling, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "niece or nephew"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationship.guardian": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is guardian, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a guardian"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationshipNoun.guardian": {
+      "comment": "The bare noun of the share phrase for a connected person's relationship guardian, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "guardian"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationship.ward": {
+      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is ward, with its own article",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a ward"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationshipNoun.ward": {
+      "comment": "The bare noun of the share phrase for a connected person's relationship ward, after \"a similar\"",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ward"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.similarTerm": {
+      "comment": "What a row shares with a connected record when the outcome is similar; the argument is the bare noun of what they share, such as spouse",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a similar %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.named": {
+      "comment": "What a row shares with a connected person; 1 = the share phrase, such as a witness, 2 = the person's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.connectionNamed": {
+      "comment": "What a row shares with a connected record when the connection's term is the researcher's own; the argument is that term",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a connection (%@)"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.connectionNamedSimilar": {
+      "comment": "What a row shares with a connected record when the outcome is similar and the connection's term is the researcher's own; the argument is that term",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a similar connection (%@)"
           }
         }
       }
@@ -20559,54 +21303,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "a similar event"
-          }
-        }
-      }
-    },
-    "evidenceGraph.share.person": {
-      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (person); 1 = the person's role, lowercase; 2 = the person's name",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "a %1$@, %2$@"
-          }
-        }
-      }
-    },
-    "evidenceGraph.share.personSimilar": {
-      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (person); 1 = the person's role, lowercase; 2 = the person's name",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "a similar %1$@, %2$@"
-          }
-        }
-      }
-    },
-    "evidenceGraph.share.relationship": {
-      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (relationship); the neighbor's relationship to the row, lowercase, such as spouse",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "a %@"
-          }
-        }
-      }
-    },
-    "evidenceGraph.share.relationshipSimilar": {
-      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (relationship); the neighbor's relationship to the row, lowercase, such as spouse",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "a similar %@"
           }
         }
       }

@@ -200,12 +200,18 @@ enum PromoteEvidenceDisplay {
                 kind: $0.kind,
                 neighborIsA: $0.endA == neighbor,
                 termKey: $0.termKey,
-                term: $0.reasonRole,
+                term: $0.term,
+                eventTypeKey: $0.eventTypeKey,
                 eventType: $0.eventType,
                 neighborName: neighborName
             )
         }
         return ConnectionSentenceRegistry.share(input, similar: outcome == .partial)
+    }
+
+    /// A Card header as VoiceOver speaks it: without the ellipsis that opens it on screen.
+    static func spokenHeader(_ header: String) -> String {
+        header.hasPrefix("…") ? String(header.dropFirst()) : header
     }
 
     /// "…they share a spouse (CEV-3B5RT and PER-7QH3D)": the connected row's own ref, then its

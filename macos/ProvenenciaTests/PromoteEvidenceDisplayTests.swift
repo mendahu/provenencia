@@ -320,7 +320,7 @@ struct PromoteEvidenceDisplayTests {
 
     @Test func theSharePhraseComesFromTheBridgeOnThePage() {
         var spouse = bridge("b", .relationship, "mary", "john")
-        spouse.reasonRole = "spouse"
+        spouse.term = "spouse"
         spouse.termKey = "spouse"
         // The neighbor Mary is the A end of John's spouse link.
         #expect(PromoteEvidenceDisplay.sharePhrase(bridge: spouse, neighbor: "mary", neighborName: "Mary", outcome: .agree) == "a spouse")
@@ -328,8 +328,29 @@ struct PromoteEvidenceDisplayTests {
         // No bridge on the page names nothing.
         #expect(PromoteEvidenceDisplay.sharePhrase(bridge: nil, neighbor: "mary", neighborName: "Mary", outcome: .agree) == "a connection")
         var birth = bridge("p", .participation, "john", "birth")
+        birth.eventTypeKey = "birth"
         birth.eventType = "Birth"
         #expect(PromoteEvidenceDisplay.sharePhrase(bridge: birth, neighbor: "birth", neighborName: "Birth of John", outcome: .agree) == "a birth event")
+    }
+
+    @Test func aVowelInitialRoleOrEventReadsWithItsOwnArticle() {
+        var informant = bridge("i", .participation, "john", "mary")
+        informant.termKey = "informant"
+        informant.term = "informant"
+        #expect(PromoteEvidenceDisplay.sharePhrase(bridge: informant, neighbor: "john", neighborName: "John Smith", outcome: .agree) == "an informant, John Smith")
+        var engagement = bridge("e", .participation, "john", "engagement")
+        engagement.eventTypeKey = "engagement"
+        engagement.eventType = "Engagement"
+        #expect(PromoteEvidenceDisplay.sharePhrase(bridge: engagement, neighbor: "engagement", neighborName: "x", outcome: .partial) == "a similar engagement event")
+        var godparent = bridge("g", .relationship, "mary", "john")
+        godparent.term = "godparent"
+        #expect(PromoteEvidenceDisplay.sharePhrase(bridge: godparent, neighbor: "mary", neighborName: "Mary", outcome: .partial) == "a similar connection (godparent)")
+    }
+
+    @Test func theSpokenRelationshipLabelHasNoLeadingEllipsis() {
+        let header = PromoteEvidenceDisplay.shareHeader(phrase: "a spouse", ownRef: "CEV-3B5RT", recordRef: "PER-7QH3D")
+        #expect(PromoteEvidenceDisplay.spokenHeader(header) == "they share a spouse (CEV-3B5RT and PER-7QH3D)")
+        #expect(PromoteEvidenceDisplay.spokenHeader("plain") == "plain")
     }
 
     @Test func aFormatPlacesStyledArgumentsWhereTheTranslationPutsThem() {

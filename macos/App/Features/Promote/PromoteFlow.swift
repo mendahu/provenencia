@@ -219,10 +219,13 @@ struct PromoteFlow: Equatable, Sendable {
         var id: String
         var sentence: String
         var phrase: String = ""
-        /// The connection's term in lowercase ("spouse"), for a row's reason; nil when it has none.
-        var reasonRole: String?
+        /// The connection's term in lowercase ("spouse"): a row's reason names it, and a share phrase
+        /// names it when the term is a researcher's; nil when the connection has none.
+        var term: String?
         /// The connection's product term key ("spouse", "part_of"); nil for a researcher's term or none.
         var termKey: String?
+        /// A participation's event type term key ("birth"), only when it is a product term; nil otherwise.
+        var eventTypeKey: String?
         /// A participation's event type label ("Birth"); nil otherwise.
         var eventType: String?
         var endAName: String = ""

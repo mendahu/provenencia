@@ -42,6 +42,8 @@ enum ConnectionSentenceRegistry {
         var termKey: String?
         /// The term label, any case.
         var term: String?
+        /// A participation's event type term key, only when it is a product term.
+        var eventTypeKey: String?
         /// A participation's event type label, any case.
         var eventType: String?
         var neighborName: String
@@ -69,15 +71,61 @@ enum ConnectionSentenceRegistry {
         return term.lowercased(with: .autoupdatingCurrent)
     }
 
-    /// The label of the term read from the other end of a product relationship, lowercase.
-    private static func inverseLabel(of termKey: String?) -> String? {
-        guard let termKey, let inverse = SeededRelationshipTypeTerm.inverse[termKey] else { return nil }
-        return termInLowercase(PropertyTermDisplay.name(
-            key: inverse,
-            origin: CatalogOrigin.provenencia,
-            propertyKey: SeededPropertyKey.relationshipType,
-            catalogLabel: ""
-        ))
+    // MARK: Share wording
+
+    private typealias ShareTerm = L10n.EvidenceGraph.ShareTerm
+
+    /// Each seeded term's own share phrase, article included ("an informant"). A role, an event
+    /// type and a relationship term of one key (child, spouse) read in their own table.
+    private static let roleShares: [String: ShareTerm] = [
+        SeededRoleTerm.subject: Text.shareRoleSubject,
+        SeededRoleTerm.father: Text.shareRoleFather,
+        SeededRoleTerm.mother: Text.shareRoleMother,
+        SeededRoleTerm.spouse: Text.shareRoleSpouse,
+        SeededRoleTerm.child: Text.shareRoleChild,
+        SeededRoleTerm.witness: Text.shareRoleWitness,
+        SeededRoleTerm.informant: Text.shareRoleInformant,
+        SeededRoleTerm.pallbearer: Text.shareRolePallbearer,
+    ]
+
+    private static let eventShares: [String: ShareTerm] = [
+        SeededEventTypeTerm.birth: Text.shareEventBirth,
+        SeededEventTypeTerm.death: Text.shareEventDeath,
+        SeededEventTypeTerm.marriage: Text.shareEventMarriage,
+        SeededEventTypeTerm.engagement: Text.shareEventEngagement,
+        SeededEventTypeTerm.baptism: Text.shareEventBaptism,
+        SeededEventTypeTerm.burial: Text.shareEventBurial,
+        SeededEventTypeTerm.funeral: Text.shareEventFuneral,
+        SeededEventTypeTerm.census: Text.shareEventCensus,
+        SeededEventTypeTerm.residence: Text.shareEventResidence,
+        SeededEventTypeTerm.migration: Text.shareEventMigration,
+        SeededEventTypeTerm.travel: Text.shareEventTravel,
+    ]
+
+    private static let relationshipShares: [String: ShareTerm] = [
+        SeededRelationshipTypeTerm.spouse: Text.shareRelationshipSpouse,
+        SeededRelationshipTypeTerm.sibling: Text.shareRelationshipSibling,
+        SeededRelationshipTypeTerm.cousin: Text.shareRelationshipCousin,
+        SeededRelationshipTypeTerm.parent: Text.shareRelationshipParent,
+        SeededRelationshipTypeTerm.child: Text.shareRelationshipChild,
+        SeededRelationshipTypeTerm.grandparent: Text.shareRelationshipGrandparent,
+        SeededRelationshipTypeTerm.grandchild: Text.shareRelationshipGrandchild,
+        SeededRelationshipTypeTerm.pibling: Text.shareRelationshipPibling,
+        SeededRelationshipTypeTerm.nibling: Text.shareRelationshipNibling,
+        SeededRelationshipTypeTerm.guardian: Text.shareRelationshipGuardian,
+        SeededRelationshipTypeTerm.ward: Text.shareRelationshipWard,
+    ]
+
+    /// The seeded wording of a term key; nil for a key `table` does not know.
+    private static func seededShare(_ key: String?, in table: [String: ShareTerm], similar: Bool) -> String? {
+        key.flatMap { table[$0] }.map { Text.sharePhrase($0, similar: similar) }
+    }
+
+    /// A term with no seeded wording (a researcher's), named as it is: "a connection (Godparent)".
+    /// nil when it has no label.
+    private static func namedShare(_ label: String?, similar: Bool) -> String? {
+        guard let label = label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty else { return nil }
+        return Text.shareConnectionNamed(term: label, similar: similar)
     }
 
     static let entries: [KindEntry] = [
@@ -108,8 +156,15 @@ enum ConnectionSentenceRegistry {
             share: { input, similar in
                 // The neighbor's part relative to the row: the term when the neighbor is the A
                 // end, else its inverse.
-                let role = input.neighborIsA ? termInLowercase(input.term) : inverseLabel(of: input.termKey)
-                return role.map { Text.shareRelationship(term: $0, similar: similar) }
+                if input.neighborIsA {
+                    return seededShare(input.termKey, in: relationshipShares, similar: similar)
+                        ?? namedShare(input.term, similar: similar)
+                }
+                return seededShare(
+                    input.termKey.flatMap { SeededRelationshipTypeTerm.inverse[$0] },
+                    in: relationshipShares,
+                    similar: similar
+                )
             }
         ),
         KindEntry(
@@ -150,13 +205,14 @@ enum ConnectionSentenceRegistry {
             share: { input, similar in
                 // A is the person, B the event.
                 if input.neighborIsA {
-                    guard let role = termInLowercase(input.term) else { return nil }
-                    return Text.sharePerson(role: role, name: input.neighborName, similar: similar)
+                    if let role = seededShare(input.termKey, in: roleShares, similar: similar) {
+                        return Text.shareNamed(phrase: role, name: input.neighborName)
+                    }
+                    return namedShare(input.term, similar: similar)
                 }
-                guard let type = termInLowercase(input.eventType) else {
-                    return Text.shareEventUntyped(similar: similar)
-                }
-                return Text.shareEvent(type: type, similar: similar)
+                return seededShare(input.eventTypeKey, in: eventShares, similar: similar)
+                    ?? namedShare(input.eventType, similar: similar)
+                    ?? Text.shareEventUntyped(similar: similar)
             }
         ),
     ]

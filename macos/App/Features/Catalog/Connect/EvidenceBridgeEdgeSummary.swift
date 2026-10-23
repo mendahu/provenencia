@@ -26,16 +26,37 @@ enum EvidenceBridgeEdgeSummary {
         termKey(kind: placed.kind, in: placed.observations)
     }
 
+    /// The product key of a participation's event type ("birth"), from the event the bridge
+    /// reaches; nil for another kind, an event with no type, or a researcher's type.
+    static func eventTypeKey(
+        for bridge: SourceGraphPlacedBridge,
+        in snapshot: SourceGraphSnapshot,
+        subjects: [String: SourceGraphPlacedSubject]? = nil
+    ) -> String? {
+        guard bridge.kind == .participation else { return nil }
+        return productKey(of: eventTypeObservation(
+            endpointAID: bridge.endpointAID, endpointBID: bridge.endpointBID, subjects: subjects ?? Self.subjects(of: snapshot)
+        ))
+    }
+
     /// The label of a participation's event type ("birth"), from the event the bridge reaches; nil
     /// for another kind or an event with no type.
-    static func eventTypeLabel(for bridge: SourceGraphPlacedBridge, in snapshot: SourceGraphSnapshot) -> String? {
+    static func eventTypeLabel(
+        for bridge: SourceGraphPlacedBridge,
+        in snapshot: SourceGraphSnapshot,
+        subjects: [String: SourceGraphPlacedSubject]? = nil
+    ) -> String? {
         guard bridge.kind == .participation,
-              let id = bridge.endpointBID,
-              let placed = snapshot.subjects.first(where: { $0.id == id }),
-              placed.kind == .event,
-              let observation = identityObservation(on: placed)
+              let observation = eventTypeObservation(
+                endpointAID: bridge.endpointAID, endpointBID: bridge.endpointBID, subjects: subjects ?? Self.subjects(of: snapshot)
+              )
         else { return nil }
         return termLabel(of: observation, propertyKey: SeededPropertyKey.eventType)
+    }
+
+    /// The snapshot's placed Subjects by id: build once, then pass to every lookup of one pass.
+    static func subjects(of snapshot: SourceGraphSnapshot) -> [String: SourceGraphPlacedSubject] {
+        Dictionary(snapshot.subjects.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
     /// Snapshot-aware sentence. Nouns come from cited endpoints; unreadable
@@ -43,17 +64,15 @@ enum EvidenceBridgeEdgeSummary {
     static func sentence(
         for bridge: SourceGraphPlacedBridge,
         in snapshot: SourceGraphSnapshot,
-        orders: NameFormatOrders = NameFormatOrders()
+        orders: NameFormatOrders = NameFormatOrders(),
+        subjects: [String: SourceGraphPlacedSubject]? = nil
     ) -> String {
+        let subjects = subjects ?? Self.subjects(of: snapshot)
         let resolved = snapshot.bridges.first(where: { $0.id == bridge.id }) ?? bridge
         let endpointAID = bridge.endpointAID ?? resolved.endpointAID
         let endpointBID = bridge.endpointBID ?? resolved.endpointBID
-        let endpointA = noun(subjectID: endpointAID, snapshot: snapshot, orders: orders)
-        let endpointB = noun(
-            subjectID: endpointBID,
-            snapshot: snapshot,
-            orders: orders
-        )
+        let endpointA = noun(subjectID: endpointAID, subjects: subjects, orders: orders)
+        let endpointB = noun(subjectID: endpointBID, subjects: subjects, orders: orders)
         let term = termDisplay(kind: bridge.kind, in: bridge.observations)
         if endpointA == nil || endpointB == nil {
             return nonEmpty(wholeNameFallback(for: bridge))
@@ -65,8 +84,9 @@ enum EvidenceBridgeEdgeSummary {
                 endpointB: endpointB,
                 term: term,
                 termKey: termKey(kind: bridge.kind, in: bridge.observations),
-                eventType: eventTypeKey(subjectID: endpointAID, snapshot: snapshot)
-                    ?? eventTypeKey(subjectID: endpointBID, snapshot: snapshot)
+                eventType: productKey(of: eventTypeObservation(
+                    endpointAID: endpointAID, endpointBID: endpointBID, subjects: subjects
+                ))
             ),
             fallback: wholeNameFallback(for: bridge)
         )
@@ -82,12 +102,10 @@ enum EvidenceBridgeEdgeSummary {
 
     private static func noun(
         subjectID: String?,
-        snapshot: SourceGraphSnapshot,
+        subjects: [String: SourceGraphPlacedSubject],
         orders: NameFormatOrders
     ) -> String? {
-        guard let subjectID,
-              let placed = snapshot.subjects.first(where: { $0.id == subjectID })
-        else { return nil }
+        guard let subjectID, let placed = subjects[subjectID] else { return nil }
         if placed.kind == .event, let title = placed.eventTitle {
             let text = EventTitleDisplay.title(title, orders: orders)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -122,14 +140,23 @@ enum EvidenceBridgeEdgeSummary {
         return matches.first(where: isPositive) ?? matches.first
     }
 
-    /// The placed event's `event_type` term key, positive first, else nil.
-    private static func eventTypeKey(subjectID: String?, snapshot: SourceGraphSnapshot) -> String? {
-        guard let subjectID,
-              let placed = snapshot.subjects.first(where: { $0.id == subjectID }),
-              placed.kind == .event,
-              let key = productKey(of: identityObservation(on: placed))
-        else { return nil }
-        return key
+    /// The `event_type` Observation of the event a bridge reaches: the A end's, else the B end's.
+    /// The one choice of endpoint behind an event type's key and its label.
+    private static func eventTypeObservation(
+        endpointAID: String?,
+        endpointBID: String?,
+        subjects: [String: SourceGraphPlacedSubject]
+    ) -> CatalogObservation? {
+        eventTypeObservation(subjectID: endpointAID, subjects: subjects)
+            ?? eventTypeObservation(subjectID: endpointBID, subjects: subjects)
+    }
+
+    private static func eventTypeObservation(
+        subjectID: String?,
+        subjects: [String: SourceGraphPlacedSubject]
+    ) -> CatalogObservation? {
+        guard let subjectID, let placed = subjects[subjectID], placed.kind == .event else { return nil }
+        return identityObservation(on: placed)
     }
 
     private static func isPositive(_ observation: CatalogObservation) -> Bool {

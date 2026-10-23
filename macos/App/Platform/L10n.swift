@@ -2265,32 +2265,185 @@ enum L10n {
             similar ? similarly : agrees
         }
 
-        static func shareEvent(type: String, similar: Bool) -> String {
-            let resource = share(similar,
-                LocalizedStringResource("evidenceGraph.share.event", defaultValue: "a %@ event", comment: "What a row shares with a connected record, after \"they share\", when the outcome agrees (event); 1 = the event type, lowercase"),
-                LocalizedStringResource("evidenceGraph.share.eventSimilar", defaultValue: "a similar %@ event", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (event); 1 = the event type, lowercase"))
-            return L10n.format(resource, type)
+        /// How one seeded term reads after "they share": the phrase with its own article ("an
+        /// informant"), and the bare noun a similar outcome puts after "a similar".
+        struct ShareTerm {
+            let phrase: LocalizedStringResource
+            let noun: LocalizedStringResource
         }
+
+        static func sharePhrase(_ term: ShareTerm, similar: Bool) -> String {
+            similar ? L10n.format(shareSimilarTerm, L10n.string(term.noun)) : L10n.string(term.phrase)
+        }
+
+        private static let shareSimilarTerm = LocalizedStringResource("evidenceGraph.share.similarTerm", defaultValue: "a similar %@", comment: "What a row shares with a connected record when the outcome is similar; the argument is the bare noun of what they share, such as spouse")
+
+        static func shareNamed(phrase: String, name: String) -> String {
+            L10n.format(LocalizedStringResource("evidenceGraph.share.named", defaultValue: "%1$@, %2$@", comment: "What a row shares with a connected person; 1 = the share phrase, such as a witness, 2 = the person's name"), phrase, name)
+        }
+
+        static func shareConnectionNamed(term: String, similar: Bool) -> String {
+            let resource = share(similar,
+                LocalizedStringResource("evidenceGraph.share.connectionNamed", defaultValue: "a connection (%@)", comment: "What a row shares with a connected record when the connection's term is the researcher's own; the argument is that term"),
+                LocalizedStringResource("evidenceGraph.share.connectionNamedSimilar", defaultValue: "a similar connection (%@)", comment: "What a row shares with a connected record when the outcome is similar and the connection's term is the researcher's own; the argument is that term"))
+            return L10n.format(resource, term)
+        }
+
+        static let shareRoleSubject = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.role.subject", defaultValue: "a subject", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is subject, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.roleNoun.subject", defaultValue: "subject", comment: "The bare noun of the share phrase for a connected person's role in the event subject, after \"a similar\"")
+        )
+
+        static let shareRoleFather = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.role.father", defaultValue: "a father", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is father, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.roleNoun.father", defaultValue: "father", comment: "The bare noun of the share phrase for a connected person's role in the event father, after \"a similar\"")
+        )
+
+        static let shareRoleMother = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.role.mother", defaultValue: "a mother", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is mother, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.roleNoun.mother", defaultValue: "mother", comment: "The bare noun of the share phrase for a connected person's role in the event mother, after \"a similar\"")
+        )
+
+        static let shareRoleSpouse = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.role.spouse", defaultValue: "a spouse", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is spouse, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.roleNoun.spouse", defaultValue: "spouse", comment: "The bare noun of the share phrase for a connected person's role in the event spouse, after \"a similar\"")
+        )
+
+        static let shareRoleChild = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.role.child", defaultValue: "a child", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is child, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.roleNoun.child", defaultValue: "child", comment: "The bare noun of the share phrase for a connected person's role in the event child, after \"a similar\"")
+        )
+
+        static let shareRoleWitness = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.role.witness", defaultValue: "a witness", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is witness, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.roleNoun.witness", defaultValue: "witness", comment: "The bare noun of the share phrase for a connected person's role in the event witness, after \"a similar\"")
+        )
+
+        static let shareRoleInformant = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.role.informant", defaultValue: "an informant", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is informant, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.roleNoun.informant", defaultValue: "informant", comment: "The bare noun of the share phrase for a connected person's role in the event informant, after \"a similar\"")
+        )
+
+        static let shareRolePallbearer = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.role.pallbearer", defaultValue: "a pallbearer", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is pallbearer, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.roleNoun.pallbearer", defaultValue: "pallbearer", comment: "The bare noun of the share phrase for a connected person's role in the event pallbearer, after \"a similar\"")
+        )
+
+        static let shareEventBirth = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.event.birth", defaultValue: "a birth event", comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is birth, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.eventNoun.birth", defaultValue: "birth event", comment: "The bare noun of the share phrase for the type of a connected event birth, after \"a similar\"")
+        )
+
+        static let shareEventDeath = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.event.death", defaultValue: "a death event", comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is death, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.eventNoun.death", defaultValue: "death event", comment: "The bare noun of the share phrase for the type of a connected event death, after \"a similar\"")
+        )
+
+        static let shareEventMarriage = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.event.marriage", defaultValue: "a marriage event", comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is marriage, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.eventNoun.marriage", defaultValue: "marriage event", comment: "The bare noun of the share phrase for the type of a connected event marriage, after \"a similar\"")
+        )
+
+        static let shareEventEngagement = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.event.engagement", defaultValue: "an engagement event", comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is engagement, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.eventNoun.engagement", defaultValue: "engagement event", comment: "The bare noun of the share phrase for the type of a connected event engagement, after \"a similar\"")
+        )
+
+        static let shareEventBaptism = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.event.baptism", defaultValue: "a baptism event", comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is baptism, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.eventNoun.baptism", defaultValue: "baptism event", comment: "The bare noun of the share phrase for the type of a connected event baptism, after \"a similar\"")
+        )
+
+        static let shareEventBurial = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.event.burial", defaultValue: "a burial event", comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is burial, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.eventNoun.burial", defaultValue: "burial event", comment: "The bare noun of the share phrase for the type of a connected event burial, after \"a similar\"")
+        )
+
+        static let shareEventFuneral = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.event.funeral", defaultValue: "a funeral event", comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is funeral, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.eventNoun.funeral", defaultValue: "funeral event", comment: "The bare noun of the share phrase for the type of a connected event funeral, after \"a similar\"")
+        )
+
+        static let shareEventCensus = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.event.census", defaultValue: "a census event", comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is census, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.eventNoun.census", defaultValue: "census event", comment: "The bare noun of the share phrase for the type of a connected event census, after \"a similar\"")
+        )
+
+        static let shareEventResidence = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.event.residence", defaultValue: "a residence event", comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is residence, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.eventNoun.residence", defaultValue: "residence event", comment: "The bare noun of the share phrase for the type of a connected event residence, after \"a similar\"")
+        )
+
+        static let shareEventMigration = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.event.migration", defaultValue: "a migration event", comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is migration, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.eventNoun.migration", defaultValue: "migration event", comment: "The bare noun of the share phrase for the type of a connected event migration, after \"a similar\"")
+        )
+
+        static let shareEventTravel = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.event.travel", defaultValue: "a travel event", comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is travel, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.eventNoun.travel", defaultValue: "travel event", comment: "The bare noun of the share phrase for the type of a connected event travel, after \"a similar\"")
+        )
+
+        static let shareRelationshipSpouse = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.relationship.spouse", defaultValue: "a spouse", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is spouse, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.relationshipNoun.spouse", defaultValue: "spouse", comment: "The bare noun of the share phrase for a connected person's relationship spouse, after \"a similar\"")
+        )
+
+        static let shareRelationshipSibling = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.relationship.sibling", defaultValue: "a sibling", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is sibling, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.relationshipNoun.sibling", defaultValue: "sibling", comment: "The bare noun of the share phrase for a connected person's relationship sibling, after \"a similar\"")
+        )
+
+        static let shareRelationshipCousin = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.relationship.cousin", defaultValue: "a cousin", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is cousin, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.relationshipNoun.cousin", defaultValue: "cousin", comment: "The bare noun of the share phrase for a connected person's relationship cousin, after \"a similar\"")
+        )
+
+        static let shareRelationshipParent = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.relationship.parent", defaultValue: "a parent", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is parent, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.relationshipNoun.parent", defaultValue: "parent", comment: "The bare noun of the share phrase for a connected person's relationship parent, after \"a similar\"")
+        )
+
+        static let shareRelationshipChild = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.relationship.child", defaultValue: "a child", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is child, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.relationshipNoun.child", defaultValue: "child", comment: "The bare noun of the share phrase for a connected person's relationship child, after \"a similar\"")
+        )
+
+        static let shareRelationshipGrandparent = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.relationship.grandparent", defaultValue: "a grandparent", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is grandparent, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.relationshipNoun.grandparent", defaultValue: "grandparent", comment: "The bare noun of the share phrase for a connected person's relationship grandparent, after \"a similar\"")
+        )
+
+        static let shareRelationshipGrandchild = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.relationship.grandchild", defaultValue: "a grandchild", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is grandchild, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.relationshipNoun.grandchild", defaultValue: "grandchild", comment: "The bare noun of the share phrase for a connected person's relationship grandchild, after \"a similar\"")
+        )
+
+        static let shareRelationshipPibling = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.relationship.pibling", defaultValue: "an aunt or uncle", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is pibling, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.relationshipNoun.pibling", defaultValue: "aunt or uncle", comment: "The bare noun of the share phrase for a connected person's relationship pibling, after \"a similar\"")
+        )
+
+        static let shareRelationshipNibling = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.relationship.nibling", defaultValue: "a niece or nephew", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is nibling, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.relationshipNoun.nibling", defaultValue: "niece or nephew", comment: "The bare noun of the share phrase for a connected person's relationship nibling, after \"a similar\"")
+        )
+
+        static let shareRelationshipGuardian = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.relationship.guardian", defaultValue: "a guardian", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is guardian, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.relationshipNoun.guardian", defaultValue: "guardian", comment: "The bare noun of the share phrase for a connected person's relationship guardian, after \"a similar\"")
+        )
+
+        static let shareRelationshipWard = ShareTerm(
+            phrase: LocalizedStringResource("evidenceGraph.share.relationship.ward", defaultValue: "a ward", comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is ward, with its own article"),
+            noun: LocalizedStringResource("evidenceGraph.share.relationshipNoun.ward", defaultValue: "ward", comment: "The bare noun of the share phrase for a connected person's relationship ward, after \"a similar\"")
+        )
 
         static func shareEventUntyped(similar: Bool) -> String {
             let resource = share(similar,
                 LocalizedStringResource("evidenceGraph.share.eventUntyped", defaultValue: "an event", comment: "What a row shares with a connected record, after \"they share\", when the outcome agrees (eventUntyped)"),
                 LocalizedStringResource("evidenceGraph.share.eventUntypedSimilar", defaultValue: "a similar event", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (eventUntyped)"))
             return L10n.string(resource)
-        }
-
-        static func sharePerson(role: String, name: String, similar: Bool) -> String {
-            let resource = share(similar,
-                LocalizedStringResource("evidenceGraph.share.person", defaultValue: "a %1$@, %2$@", comment: "What a row shares with a connected record, after \"they share\", when the outcome agrees (person); 1 = the person's role, lowercase; 2 = the person's name"),
-                LocalizedStringResource("evidenceGraph.share.personSimilar", defaultValue: "a similar %1$@, %2$@", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (person); 1 = the person's role, lowercase; 2 = the person's name"))
-            return L10n.format(resource, role, name)
-        }
-
-        static func shareRelationship(term: String, similar: Bool) -> String {
-            let resource = share(similar,
-                LocalizedStringResource("evidenceGraph.share.relationship", defaultValue: "a %@", comment: "What a row shares with a connected record, after \"they share\", when the outcome agrees (relationship); the neighbor's relationship to the row, lowercase, such as spouse"),
-                LocalizedStringResource("evidenceGraph.share.relationshipSimilar", defaultValue: "a similar %@", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (relationship); the neighbor's relationship to the row, lowercase, such as spouse"))
-            return L10n.format(resource, term)
         }
 
         static func shareParentPlace(similar: Bool) -> String {
