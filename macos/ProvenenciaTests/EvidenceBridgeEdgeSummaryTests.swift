@@ -150,6 +150,26 @@ struct EvidenceBridgeEdgeSummaryTests {
         )
     }
 
+    @Test func aBridgeMissingAnEndpointIsCompletedFromTheSnapshotsIndex() {
+        let full = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueSubjectID: "p1"),
+            observation(propertyKey: "event", valueSubjectID: "e1"),
+        ])
+        var stripped = full
+        stripped.endpointAID = nil
+        stripped.endpointBID = nil
+        let snap = snapshot(bridge: full, subjects: [
+            primary(id: "p1", kind: .person, label: "Margt.", ref: "CPR-1"),
+            primary(id: "e1", kind: .event, label: "Birth", ref: "CEV-1"),
+        ])
+        let index = EvidenceBridgeEdgeSummary.bridges(of: snap)
+        #expect(index["bridge-1"]?.endpointAID == "p1")
+        let expected = L10n.EvidenceGraph.bridgeSummaryParticipationFallback(person: "Margt.", event: "Birth")
+        #expect(EvidenceBridgeEdgeSummary.sentence(for: stripped, in: snap, bridges: index) == expected)
+        // Without a passed index the same answer is built from the snapshot.
+        #expect(EvidenceBridgeEdgeSummary.sentence(for: stripped, in: snap) == expected)
+    }
+
     @Test func blankLabelFallsBackToTypeAndRef() {
         let placed = bridge(kind: .participation, observations: [
             observation(propertyKey: "person", valueSubjectID: "p1"),

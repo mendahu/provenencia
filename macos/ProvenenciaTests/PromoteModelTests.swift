@@ -79,6 +79,44 @@ struct PromoteModelTests {
         #expect(model.flow.visibleRows.map(\.subjectID) == ["a", "b"])
     }
 
+    @Test func reproposeKeepsBridges() async {
+        let subjects = [
+            subject("a", ref: "CPR-A", label: "Ada"),
+            subject("b", ref: "CPR-B", label: "Bea"),
+            CatalogSubject(id: "br", ref: "CPA-1", sourceID: sourceID, subjectTypeID: "type-relationship", label: "Ada and Bea", description: ""),
+        ]
+        let store = store(subjects: subjects)
+        store.subjectTypesByProject[projectDir]?.append(CatalogSubjectType(
+            id: "type-relationship", key: "relationship", origin: "provenencia", label: "Relationship",
+            description: "", refPrefix: "REL", candidateRefPrefix: "CPA"
+        ))
+        func cite(_ key: String, _ subjectID: String) -> CatalogObservation {
+            CatalogObservation(
+                id: "obs-\(key)", ref: "OBS-\(key)", citationID: "c1", subjectID: "br", propertyID: "p-\(key)",
+                polarity: "positive", valueText: "", valueInteger: nil, valueDateID: "", valueNameID: "",
+                valueSubjectID: subjectID, valueTermID: "", propertyKey: key, propertyLabel: key, propertyValueType: "subject"
+            )
+        }
+        store.observationsBySource[sourceID] = [cite("person", "a"), cite("related_to", "b")]
+        store.promoteProposals = [
+            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e1")]),
+            CatalogPromoteGraphAlignmentProposal(revision: 2, rows: [row("a", handleID: "e1"), row("b", handleID: "e9")]),
+        ]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        let loaded = model.flow.bridges
+        #expect(loaded.count == 1)
+        // The graph changes under the page, then a decision proposes again: the page keeps its connections.
+        store.observationsBySource[sourceID] = []
+        model.session.invalidate(model.graphKey)
+        let _: QueryHandle<SourceGraphRows> = model.session.query(model.graphKey)
+        model.mapRest()
+        model.setTarget(subjectID: "a", token: "handle:other")
+        let proposed = await waitUntil { model.flow.rows.first { $0.subjectID == "b" }?.updated == true }
+        #expect(proposed)
+        #expect(model.flow.bridges == loaded)
+    }
+
     @Test func retargetKeepsTheDecidedRowAndMarksTheSuggestionUpdated() async {
         let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
         let store = store(subjects: subjects)

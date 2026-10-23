@@ -26,18 +26,30 @@ enum EvidenceBridgeEdgeSummary {
         Dictionary(snapshot.subjects.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
+    /// The snapshot's placed bridges by id: build once to resolve many bridges in one pass.
+    static func bridges(of snapshot: SourceGraphSnapshot) -> [String: SourceGraphPlacedBridge] {
+        Dictionary(snapshot.bridges.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
     /// Snapshot-aware sentence. Nouns come from cited endpoints; unreadable
     /// edges fall back to the stored label or kind phrase · ref. Never empty.
+    /// A bridge that lacks an endpoint is completed from the snapshot's copy of it, found in
+    /// `bridges` (built here when not passed).
     static func sentence(
         for bridge: SourceGraphPlacedBridge,
         in snapshot: SourceGraphSnapshot,
         orders: NameFormatOrders = NameFormatOrders(),
-        subjects: [String: SourceGraphPlacedSubject]? = nil
+        subjects: [String: SourceGraphPlacedSubject]? = nil,
+        bridges: [String: SourceGraphPlacedBridge]? = nil
     ) -> String {
         let subjects = subjects ?? Self.subjects(of: snapshot)
-        let resolved = snapshot.bridges.first(where: { $0.id == bridge.id }) ?? bridge
-        let endpointAID = bridge.endpointAID ?? resolved.endpointAID
-        let endpointBID = bridge.endpointBID ?? resolved.endpointBID
+        var endpointAID = bridge.endpointAID
+        var endpointBID = bridge.endpointBID
+        if endpointAID == nil || endpointBID == nil,
+           let resolved = (bridges ?? Self.bridges(of: snapshot))[bridge.id] {
+            endpointAID = endpointAID ?? resolved.endpointAID
+            endpointBID = endpointBID ?? resolved.endpointBID
+        }
         let endpointA = noun(subjectID: endpointAID, subjects: subjects, orders: orders)
         let endpointB = noun(subjectID: endpointBID, subjects: subjects, orders: orders)
         let term = termDisplay(kind: bridge.kind, in: bridge.observations)

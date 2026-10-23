@@ -144,14 +144,18 @@ final class PromoteModel {
             )
             // Rows are built from the graph's Subjects. Without them every row
             // would drop and the page would read as empty: say so instead.
-            guard let facts = await facts() else {
+            guard let snapshot = await graphSnapshot() else {
                 loadError = L10n.string(L10n.Promote.graphUnavailable)
                 return
             }
             grades = await session.readyValue(confidenceKey) ?? []
             await attachSource()
             flow.nameOrders = session.nameFormat
-            flow.load(entryID: entry.subjectID, proposal: proposal, subjects: facts.subjects, bridges: facts.bridges)
+            let subjects = subjectFacts(snapshot)
+            flow.load(
+                entryID: entry.subjectID, proposal: proposal, subjects: subjects,
+                bridges: Self.bridgeFacts(snapshot, subjects: subjects)
+            )
             loadError = nil
         } catch {
             loadError = L10n.Errors.message(for: error)
@@ -308,10 +312,11 @@ final class PromoteModel {
                 sourceID: entry.sourceID,
                 fixed: fixed
             )
-            let facts = await facts()
+            let snapshot = await graphSnapshot()
             guard generation == proposeGeneration else { return }
-            if let facts {
-                flow.merge(proposal, subjects: facts.subjects)
+            if let snapshot {
+                // Bridges are the page's, built once at load: a proposal moves rows, not connections.
+                flow.merge(proposal, subjects: subjectFacts(snapshot))
                 proposeError = nil
             } else {
                 // Merging without the graph would drop every row and its
@@ -356,9 +361,9 @@ final class PromoteModel {
         }
     }
 
-    /// The graph's Subjects and bridges as rows read them. Nil when the
-    /// graph read isn't ready (never loaded, or failed with nothing cached).
-    private func facts() async -> (subjects: [PromoteFlow.SubjectFact], bridges: [PromoteFlow.BridgeFact])? {
+    /// The Source graph as a snapshot, with the property labels refreshed from the same read. Nil
+    /// when the graph read isn't ready (never loaded, or failed with nothing cached).
+    private func graphSnapshot() async -> SourceGraphSnapshot? {
         let rows: SourceGraphRows? = await session.readyValue(graphKey)
         let properties: PropertiesSnapshot? = await session.readyValue(propertiesKey)
         let rules: [CatalogConnectRule]? = await session.readyValue(rulesKey)
@@ -369,12 +374,16 @@ final class PromoteModel {
             )
         }
         guard let rows else { return nil }
-        let snapshot = SourceGraphSnapshot.build(
+        return SourceGraphSnapshot.build(
             rows: rows,
             types: properties?.types ?? [],
             rules: rules ?? []
         )
-        let subjects = snapshot.subjects.map { placed -> PromoteFlow.SubjectFact in
+    }
+
+    /// The snapshot's Subjects as rows read them.
+    private func subjectFacts(_ snapshot: SourceGraphSnapshot) -> [PromoteFlow.SubjectFact] {
+        snapshot.subjects.map { placed -> PromoteFlow.SubjectFact in
             let anchor: PromoteFlow.Anchor?
             if let membership = placed.membership {
                 let title = membership.name?.form ?? membership.entity.ref
@@ -390,9 +399,16 @@ final class PromoteModel {
                 anchor: anchor
             )
         }
-        let nameByID = Dictionary(uniqueKeysWithValues: subjects.map { ($0.id, $0.name) })
+    }
+
+    /// The snapshot's connections as the page reads them, with each end named from `subjects`.
+    static func bridgeFacts(
+        _ snapshot: SourceGraphSnapshot,
+        subjects: [PromoteFlow.SubjectFact]
+    ) -> [PromoteFlow.BridgeFact] {
+        let nameByID = Dictionary(subjects.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
         let placedByID = EvidenceBridgeEdgeSummary.subjects(of: snapshot)
-        let bridges = snapshot.bridges.map { bridge in
+        return snapshot.bridges.map { bridge in
             PromoteFlow.BridgeFact(
                 id: bridge.subject.id,
                 sentence: EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot, subjects: placedByID),
@@ -406,7 +422,6 @@ final class PromoteModel {
                 alreadyFiled: bridge.membership != nil
             )
         }
-        return (subjects, bridges)
     }
 
     private func attachSource() async {
