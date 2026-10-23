@@ -70,10 +70,8 @@ type Options struct {
 // valuerules. metas give each Property's value type and cardinality for
 // Options.Excluding. lifespans is the registry's Subject.Lifespans for the
 // side's kind; for each, a window and a span are added when the life events
-// give them, and the side's life (its first and last dates, or why it has no
-// lifespan) is returned beside the values. The error is Reconcile's, and only
-// Excluding runs it.
-func Build(e Entity, metas subjectcompare.Metas, reconcile valuecompare.Rules, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan, opts Options) (subjectcompare.Values, subjectcompare.LifeSide, error) {
+// give them. The error is Reconcile's, and only Excluding runs it.
+func Build(e Entity, metas subjectcompare.Metas, reconcile valuecompare.Rules, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan, opts Options) (subjectcompare.Values, error) {
 	out := subjectcompare.Values{}
 	for _, key := range slices.Sorted(maps.Keys(e.Properties)) {
 		p := e.Properties[key]
@@ -82,7 +80,7 @@ func Build(e Entity, metas subjectcompare.Metas, reconcile valuecompare.Rules, l
 			meta := metas[key]
 			res, err := autoreconcile.Reconcile(reconcile, meta.ValueType, kept, nil, meta.CardinalityOrSingle())
 			if err != nil {
-				return nil, subjectcompare.LifeSide{}, err
+				return nil, err
 			}
 			vals = res.Values
 		}
@@ -99,7 +97,8 @@ func Build(e Entity, metas subjectcompare.Metas, reconcile valuecompare.Rules, l
 			out[key] = profile
 		}
 	}
-	return out, addLifespans(out, e.Life, lifespans), nil
+	addLifespans(out, e.Life, lifespans)
+	return out, nil
 }
 
 // without returns the candidates not on an excluded member, and whether any
@@ -124,8 +123,7 @@ func without(cs []Candidate, excluding [][]byte) ([]autoreconcile.Candidate, boo
 // negative as recorded, in order. Each value's Ref is its Observation id.
 // lifespans is the registry's Subject.Lifespans for the side's kind; for each,
 // a window and a span are added when the life events give them, with no Ref.
-// The side's life is returned beside the values.
-func ForSubject(s Subject, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan) (subjectcompare.Values, subjectcompare.LifeSide) {
+func ForSubject(s Subject, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan) subjectcompare.Values {
 	out := subjectcompare.Values{}
 	for key, cs := range s.Values {
 		for _, c := range cs {
@@ -134,101 +132,86 @@ func ForSubject(s Subject, lifespans map[vocabkey.PropertyKey]subjectcompare.Lif
 			out[key] = append(out[key], v)
 		}
 	}
-	return out, addLifespans(out, s.Life, lifespans)
+	addLifespans(out, s.Life, lifespans)
+	return out
 }
 
 // addLifespans sets, for each lifespan, the window under its lead
-// and the span under its Span, one value each, when the events give them. It
-// returns the side's life from the first lead in key order, the zero LifeSide
-// when there is none.
-func addLifespans(out subjectcompare.Values, events []LifeEvent, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan) subjectcompare.LifeSide {
-	var side subjectcompare.LifeSide
-	first, _ := subjectcompare.FirstLifespanLead(lifespans)
+// and the span under its Span, one value each, when the events give them.
+func addLifespans(out subjectcompare.Values, events []LifeEvent, lifespans map[vocabkey.PropertyKey]subjectcompare.Lifespan) {
 	for lead, l := range lifespans {
-		window, span, s := lifespan(events, l)
-		if lead == first {
-			side = s
-		}
-		if s.Missing == "" {
+		if window, span, ok := lifespan(events, l); ok {
 			out[lead] = []propertycompare.Value{window}
 			out[l.Span] = []propertycompare.Value{span}
 		}
 	}
-	return side
 }
 
-// lifespan lays the dated events on one timeline. The span is the first to the
-// last date. The window starts at the earliest Starts event, or MaxYears
-// before the first date, and ends at the latest Ends event, or MaxYears after
-// the last date. The side has a lifespan exactly when side.Missing is empty;
-// its First and Last are then the dates as written that set the span's ends.
-// A side with no dated event, or whose shifted end cannot be placed, is
-// undated; one whose window or span would end before it begins, or with a date
-// wholly outside the window, contradicts itself and has no lifespan.
-func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span propertycompare.Value, side subjectcompare.LifeSide) {
-	// early and late are each date's first and last closed end, dates the
-	// date each came from; startEarly and endLate are those of the events that
-	// fix the start and the end.
-	var early, late, startEarly, endLate []valuecompare.DateEnd
-	var dates []datevalue.Value
+// lifespan lays the exact dated events on one timeline. A date with an open
+// end (BEF, AFT, a half-open range) is skipped: it is too vague to rule
+// anything out. The span is the earliest first end to the latest last end of
+// the counted dates. The window starts at the earliest first end of a Starts
+// event, else MaxYears before the span's first end, and ends at the latest
+// last end of an Ends event, else MaxYears after the span's last end; it is
+// then widened by SlackYears each way, so only an egregious case conflicts.
+// A side with no counted date, or whose shifted end cannot be placed, is undated; one
+// whose window would end before it begins, or with a counted date wholly
+// outside the window, contradicts itself and has no lifespan.
+func lifespan(events []LifeEvent, l subjectcompare.Lifespan) (window, span propertycompare.Value, ok bool) {
+	var firsts, lasts, startFirsts, endLasts []valuecompare.DateEnd
 	for _, ev := range events {
 		er := subjectcompare.EventRole{EventType: ev.EventType, Role: ev.Role}
 		for _, d := range ev.Dates {
 			first, last, ok := valuecompare.DateEnds(d)
-			if !ok {
+			if !ok || first.Open || last.Open {
 				continue
 			}
-			if first.Open {
-				first = last
-			}
-			if last.Open {
-				last = first
-			}
-			early, late, dates = append(early, first), append(late, last), append(dates, d)
+			firsts, lasts = append(firsts, first), append(lasts, last)
 			if slices.Contains(l.Starts, er) {
-				startEarly = append(startEarly, first)
+				startFirsts = append(startFirsts, first)
 			}
 			if slices.Contains(l.Ends, er) {
-				endLate = append(endLate, last)
+				endLasts = append(endLasts, last)
 			}
 		}
 	}
-	undated := subjectcompare.LifeSide{Missing: subjectcompare.LifespanUndated}
-	contradicts := subjectcompare.LifeSide{Missing: subjectcompare.LifespanContradicts}
-	spanFirst, ok := valuecompare.Earliest(early)
+	spanFirst, ok := valuecompare.Earliest(firsts)
 	if !ok {
-		return window, span, undated
+		return window, span, false
 	}
-	spanLast, _ := valuecompare.Latest(late)
-	start, ok := valuecompare.Earliest(startEarly)
+	spanLast, _ := valuecompare.Latest(lasts)
+	start, ok := valuecompare.Earliest(startFirsts)
 	if !ok {
-		if start, ok = valuecompare.ShiftYears(spanFirst, -l.MaxYears); !ok {
-			return window, span, undated
+		start = spanFirst
+		if start, ok = valuecompare.ShiftYears(start, -l.MaxYears); !ok {
+			return window, span, false
 		}
 	}
-	end, ok := valuecompare.Latest(endLate)
+	end, ok := valuecompare.Latest(endLasts)
 	if !ok {
 		if end, ok = valuecompare.ShiftYears(spanLast, l.MaxYears); !ok {
-			return window, span, undated
+			return window, span, false
 		}
 	}
-	for i := range early {
-		if late[i].Hi < start.Lo || early[i].Lo > end.Hi {
-			return window, span, contradicts
+	start, okStart := valuecompare.ShiftYears(start, -l.SlackYears)
+	end, okEnd := valuecompare.ShiftYears(end, l.SlackYears)
+	if !okStart || !okEnd {
+		return window, span, false
+	}
+	for i := range firsts {
+		if lasts[i].Hi < start.Lo || firsts[i].Lo > end.Hi {
+			return window, span, false
 		}
 	}
 	w, ok := valuecompare.EndsDate(start, end)
 	if !ok {
-		return window, span, contradicts
+		return window, span, false
 	}
 	sp, ok := valuecompare.EndsDate(spanFirst, spanLast)
 	if !ok {
-		return window, span, contradicts
+		return window, span, false
 	}
-	firstAt := slices.Index(early, spanFirst)
-	lastAt := slices.Index(late, spanLast)
-	side.First, side.Last = &dates[firstAt], &dates[lastAt]
-	return propertycompare.Value{Value: valuecompare.Value{Date: &w}}, propertycompare.Value{Value: valuecompare.Value{Date: &sp}}, side
+	return propertycompare.Value{Value: valuecompare.Value{Date: &w}}, propertycompare.Value{Value: valuecompare.Value{Date: &sp}}, true
 }
 
 // Value is the one conversion from the reconciler's value to layer 2's. Type

@@ -20,7 +20,7 @@ import (
 // Subject that corresponds, through segment compare, to a link between the
 // entity's members and the neighbor entity's. handle is the entity's profile,
 // whose evidence against the row (own) gates the segments. in carries the
-// catalog's property order for each kind and each side's life. Sources is left
+// catalog's property order for each kind. Sources is left
 // for the loader to fill.
 func Build(kind vocabkey.SubjectType, row, handle subjectcompare.Values, members []Member, neighbors []Neighbor,
 	metas subjectcompare.Metas, rules Rules, segment segmentcompare.Rules, subject subjectcompare.Rules,
@@ -28,7 +28,6 @@ func Build(kind vocabkey.SubjectType, row, handle subjectcompare.Values, members
 	out := Evidence{Kind: kind, Sections: Sections(kind, in.Order[kind], row, members, metas, rules, subject, value)}
 	compared := subjectcompare.Compare(kind, row, handle, metas, subject, value)
 	own := compared.Evidence
-	out.Lifespan = lifespanOf(kind, compared, subject, in)
 	for _, n := range neighbors {
 		out.Relationships = append(out.Relationships, relationships(n, members, own, metas, rules, segment, subject, value, in)...)
 	}
@@ -41,27 +40,6 @@ func Build(kind vocabkey.SubjectType, row, handle subjectcompare.Values, members
 		}
 		return bytes.Compare(a.Neighbor, b.Neighbor)
 	})
-	return out
-}
-
-// lifespanOf is the kind's lifespan check: the first lead, in key order, that
-// the kind derives a lifespan for. Nil for a kind with none, and when neither
-// side has dates and neither contradicts itself.
-func lifespanOf(kind vocabkey.SubjectType, compared subjectcompare.Result, subject subjectcompare.Rules, in Inputs) *Lifespan {
-	lead, ok := subjectcompare.FirstLifespanLead(subject.Lifespans[kind])
-	if !ok {
-		return nil
-	}
-	if in.Row.First == nil && in.Record.First == nil &&
-		in.Row.Missing != subjectcompare.LifespanContradicts && in.Record.Missing != subjectcompare.LifespanContradicts {
-		return nil
-	}
-	out := &Lifespan{Row: in.Row, Record: in.Record}
-	for _, p := range compared.Properties {
-		if p.Key == lead {
-			out.Outcome, out.PropertyCause, out.Relation, out.Cause = verdictOf(p.Result)
-		}
-	}
 	return out
 }
 
@@ -118,7 +96,6 @@ func relationships(n Neighbor, members []Member, own float64, metas subjectcompa
 			Cause:    res.Cause,
 			Points:   res.Evidence,
 			Checked:  res.Outcome == propertycompare.OutcomeAgree,
-			Pinnable: true,
 			Incoming: appendNew(slices.Clone(observations[key]), refsOf(n.Values, defining)...),
 		}
 		rel.Members, rel.Sections = bundles(n, canons, members, defining, metas, rules, subject, value, in)

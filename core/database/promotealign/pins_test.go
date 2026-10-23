@@ -110,7 +110,7 @@ func TestResolvePins(t *testing.T) {
 			t.Fatalf("sets = %+v", got[0].PinSets)
 		}
 	})
-	t.Run("a conflict line is dropped from the ids and from the defaults", func(t *testing.T) {
+	conflict := func(t *testing.T) (*fixture, sources.Source, subjects.Subject, []byte, promotealign.PinOffer) {
 		g := newFixture(t)
 		male := g.sexPerson(g.source, g.artifact, "male", observations.PolarityPositive)
 		h := g.promote(male).Entity.ID
@@ -118,14 +118,32 @@ func TestResolvePins(t *testing.T) {
 		denies := g.sexPerson(src, art, "male", observations.PolarityNegative)
 		ev := g.evidence(promotealign.EvidenceRequest{SourceID: src.ID, SubjectID: denies.ID, HandleID: h})
 		line := ev.Sections[0].Lines[0]
-		if line.Outcome != "conflict" || line.Pinnable {
+		if line.Outcome != "conflict" || line.Checked {
 			t.Fatalf("line = %+v", line)
 		}
-		id := promotealign.LinePinID(line, line.Members[0])
-		for _, row := range []promotealign.ApplyRow{handleRow(denies, h, true), handleRow(denies, h, false, id)} {
-			if got := g.resolve(src, row); len(got[0].PinSets) != 0 {
-				t.Fatalf("sets = %+v", got[0].PinSets)
-			}
+		offers := promotealign.PinOffers(ev)
+		if len(offers) == 0 {
+			t.Fatalf("a conflicting line offers no pin")
+		}
+		return g, src, denies, h, offers[0]
+	}
+	t.Run("a conflict line is offered, unchecked", func(t *testing.T) {
+		_, _, _, _, offer := conflict(t)
+		if offer.Checked {
+			t.Fatalf("offer = %+v", offer)
+		}
+	})
+	t.Run("a checked conflict id is kept", func(t *testing.T) {
+		g, src, denies, h, offer := conflict(t)
+		got := g.resolve(src, handleRow(denies, h, false, offer.ID))
+		if !reflect.DeepEqual(got[0].PinSets, []promote.PinSet{offer.Set}) {
+			t.Fatalf("sets = %+v", got[0].PinSets)
+		}
+	})
+	t.Run("the default pins leave a conflict unchecked", func(t *testing.T) {
+		g, src, denies, h, _ := conflict(t)
+		if got := g.resolve(src, handleRow(denies, h, true)); len(got[0].PinSets) != 0 {
+			t.Fatalf("sets = %+v", got[0].PinSets)
 		}
 	})
 	t.Run("a New or Skip row with ids is invalid", func(t *testing.T) {

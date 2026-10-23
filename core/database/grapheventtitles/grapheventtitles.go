@@ -27,10 +27,11 @@ type Title struct {
 }
 
 type naming struct {
-	text     string
-	nameID   []byte
-	termKey  string
-	termText string
+	text       string
+	nameID     []byte
+	termKey    string
+	termOrigin string
+	termText   string
 }
 
 type titledEvent struct {
@@ -40,7 +41,7 @@ type titledEvent struct {
 
 // FromStored chooses titles from a loaded Evidence graph. Term labels are
 // applied here; they are not stored on the graph.
-func FromStored(eg graphcache.EvidenceGraph, propKey map[string]string, terms map[string]struct{ Key, Label string }) []Title {
+func FromStored(eg graphcache.EvidenceGraph, propKey map[string]string, terms map[string]struct{ Key, Origin, Label string }) []Title {
 	var events []titledEvent
 	for _, s := range eg.Subjects {
 		if s.TypeKey != vocabkey.Event || s.TypeOrigin != vocabkey.OriginProvenencia {
@@ -62,7 +63,7 @@ func FromStored(eg graphcache.EvidenceGraph, propKey map[string]string, terms ma
 		}
 		n := naming{text: strings.TrimSpace(o.Text), nameID: o.NameID}
 		if t, ok := terms[string(o.TermID)]; ok {
-			n.termKey, n.termText = t.Key, t.Label
+			n.termKey, n.termOrigin, n.termText = t.Key, t.Origin, t.Label
 		}
 		usable := n.text != "" || len(n.nameID) > 0 || n.termKey != ""
 		k := key(o.SubjectID, keyName)
@@ -128,6 +129,7 @@ func assemble(events []titledEvent, first map[string]naming, people, places []gr
 		}
 		if n, ok := first[key(e.id, vocabkey.PropertyEventType)]; ok {
 			parts.TypeKey = n.termKey
+			parts.TypeOrigin = n.termOrigin
 			parts.TypeLabel = n.termText
 			if parts.TypeLabel == "" {
 				parts.TypeLabel = n.text

@@ -29,3 +29,7 @@ S12-02 added `macos/ProvenenciaTests/QueryHandleWaiting.swift` (`waitForQuery`, 
 ## Trimmed empty-string binder
 
 `datevalues.nullIfEmpty` and `audit.nullIfEmpty` are identical: each trims whitespace and binds an empty result as NULL. `database.NullString` does not trim, so they stay local. Add `database.NullTrimmed` and move both onto it when a third caller needs the trim.
+
+## One popup dismissal
+
+Sheets share one dismissal now (`.pvSheet`: Escape, a click outside, the discard question; S11-33). Menus and popups each dismiss their own way: `pvContextMenu`, `HistoryJumpMenuHost`, `OmnibarResultsHost` and `PVComboBox` each carry their own Escape and outside-click handling. One kit presenter for a popup, as `.pvSheet` is for a sheet, would give them the same rules; move each onto it when its host is next touched.

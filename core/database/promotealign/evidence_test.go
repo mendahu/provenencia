@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -16,12 +17,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertycompare"
-	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -64,7 +63,7 @@ func TestEvidenceCollapsesFiveNamedMembers(t *testing.T) {
 	}
 	l := s.Lines[0]
 	want := matchregistry.Default().Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree
-	if l.Relation != valuecompare.Same || !l.Checked || !l.Pinnable || len(l.Members) != 5 || l.Points != want {
+	if l.Relation != valuecompare.Same || !l.Checked || len(l.Members) != 5 || l.Points != want {
 		t.Errorf("line = %+v", l)
 	}
 	if len(l.Incoming.Ref) != 16 {
@@ -81,12 +80,12 @@ func TestEvidenceCollapsesFiveNamedMembers(t *testing.T) {
 // bridges behind it; its dates are compared with that birth only.
 func TestEvidenceBundlesAMatchingBirth(t *testing.T) {
 	for _, tc := range []struct {
-		name       string
-		year       int
-		wantState  propertycompare.Outcome
-		checked    bool
-		dateLine   propertycompare.Outcome
-		datePinned bool
+		name        string
+		year        int
+		wantState   propertycompare.Outcome
+		checked     bool
+		dateLine    propertycompare.Outcome
+		dateChecked bool
 	}{
 		{"AC-2.1 the same year agrees", 1817, propertycompare.OutcomeAgree, true, propertycompare.OutcomeAgree, true},
 		{"AC-2.2 a different year is partial", 1830, propertycompare.OutcomePartial, false, propertycompare.OutcomeConflict, false},
@@ -113,7 +112,7 @@ func TestEvidenceBundlesAMatchingBirth(t *testing.T) {
 			}
 			r := e.Relationships[0]
 			wantKey := "participation·subject·person·birth"
-			if r.Key.String() != wantKey || r.Outcome != tc.wantState || r.Checked != tc.checked || !r.Pinnable || !bytes.Equal(r.Neighbor, bBirth.ID) {
+			if r.Key.String() != wantKey || r.Outcome != tc.wantState || r.Checked != tc.checked || !bytes.Equal(r.Neighbor, bBirth.ID) {
 				t.Errorf("relationship = %+v, want key %s outcome %s checked %v", r, wantKey, tc.wantState, tc.checked)
 			}
 			if len(r.Incoming) < 2 || len(r.Members) != 1 || len(r.Members[0].Observations) < 2 {
@@ -123,7 +122,7 @@ func TestEvidenceBundlesAMatchingBirth(t *testing.T) {
 				t.Errorf("bundle ends = %x %x", r.Members[0].Member, r.Members[0].Neighbor)
 			}
 			d := section(t, r.Sections, vocabkey.PropertyDate)
-			if len(d.Lines) != 1 || d.Lines[0].Outcome != tc.dateLine || d.Lines[0].Pinnable != tc.datePinned || d.Lines[0].Checked != tc.datePinned {
+			if len(d.Lines) != 1 || d.Lines[0].Outcome != tc.dateLine || d.Lines[0].Checked != tc.dateChecked {
 				t.Errorf("date lines = %+v", d.Lines)
 			}
 			// The defining event_type is bundled, never compared.
@@ -231,6 +230,76 @@ func TestEvidenceSpouseNeverMeetsSibling(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A relationship carries the link read from the neighbor's side: two links to
+// one neighbor are two relationships, each with its own term, and a directed
+// link names the term the neighbor carries.
+func TestEvidenceReadsEachLinkFromTheNeighbor(t *testing.T) {
+	type read struct {
+		end   vocabkey.PropertyKey
+		term  vocabkey.BridgeTerm
+		prop  vocabkey.PropertyKey // the property the term belongs to
+		names bool
+	}
+	got := func(e claimevidence.Evidence) map[string]read {
+		out := map[string]read{}
+		for _, r := range e.Relationships {
+			out[r.Key.String()] = read{r.NeighborEnd, r.NeighborTerm, r.NeighborTermProperty, r.NeighborTermNamesNeighbor}
+		}
+		return out
+	}
+	t.Run("spouses who are also cousins give two cards", func(t *testing.T) {
+		f := newFixture(t)
+		john := f.person(f.source, f.artifact, "John Smith")
+		mary := f.person(f.source, f.artifact, "Mary Jones")
+		f.relationship(f.source, f.artifact, john, mary, "spouse")
+		f.relationship(f.source, f.artifact, john, mary, "cousin")
+		johnHandle, maryHandle := f.promote(john).Entity.ID, f.promote(mary).Entity.ID
+
+		srcB, artB := f.newSource("Obituary")
+		bJohn, bMary := f.person(srcB, artB, "John Smith"), f.person(srcB, artB, "Mary Jones")
+		f.relationship(srcB, artB, bJohn, bMary, "spouse")
+		f.relationship(srcB, artB, bJohn, bMary, "cousin")
+
+		e := f.evidence(promotealign.EvidenceRequest{
+			SourceID: srcB.ID, SubjectID: bJohn.ID, HandleID: johnHandle,
+			Neighbors: []graphalign.Fixed{{SubjectID: bMary.ID, HandleID: maryHandle}},
+		})
+		want := map[string]read{
+			"relationship·spouse": {"", "spouse", "relationship_type", true},
+			"relationship·cousin": {"", "cousin", "relationship_type", true},
+		}
+		if g := got(e); !reflect.DeepEqual(g, want) {
+			t.Errorf("reads = %+v, want %+v", g, want)
+		}
+	})
+	t.Run("a parent reads as a parent from the child's sheet and a child from the parent's", func(t *testing.T) {
+		f := newFixture(t)
+		john := f.person(f.source, f.artifact, "John Smith")
+		mary := f.person(f.source, f.artifact, "Mary Jones")
+		f.relationship(f.source, f.artifact, mary, john, "parent") // Mary is the parent of John
+		johnHandle, maryHandle := f.promote(john).Entity.ID, f.promote(mary).Entity.ID
+
+		srcB, artB := f.newSource("Obituary")
+		bJohn, bMary := f.person(srcB, artB, "John Smith"), f.person(srcB, artB, "Mary Jones")
+		f.relationship(srcB, artB, bMary, bJohn, "parent")
+
+		asChild := f.evidence(promotealign.EvidenceRequest{
+			SourceID: srcB.ID, SubjectID: bJohn.ID, HandleID: johnHandle,
+			Neighbors: []graphalign.Fixed{{SubjectID: bMary.ID, HandleID: maryHandle}},
+		})
+		if g, want := got(asChild), map[string]read{"relationship·child·person": {vocabkey.PropertyRelatedTo, "parent", "relationship_type", true}}; !reflect.DeepEqual(g, want) {
+			t.Errorf("from the child = %+v, want %+v", g, want)
+		}
+		asParent := f.evidence(promotealign.EvidenceRequest{
+			SourceID: srcB.ID, SubjectID: bMary.ID, HandleID: maryHandle,
+			Neighbors: []graphalign.Fixed{{SubjectID: bJohn.ID, HandleID: johnHandle}},
+		})
+		if g, want := got(asParent), map[string]read{"relationship·child·related_to": {vocabkey.PropertyPerson, "child", "relationship_type", true}}; !reflect.DeepEqual(g, want) {
+			t.Errorf("from the parent = %+v, want %+v", g, want)
+		}
+	})
 }
 
 // T-8: only a neighbor the page placed on an entity, and that is a layer
@@ -537,13 +606,13 @@ func TestEvidenceLikenesses(t *testing.T) {
 			t.Fatalf("likeness lines = %+v", s.Lines)
 		}
 		same, other := s.Lines[0], s.Lines[1]
-		if same.Relation != valuecompare.Same || same.Cause != valuecompare.CauseExact || same.Outcome != propertycompare.OutcomeAgree || !same.Checked || !same.Pinnable {
+		if same.Relation != valuecompare.Same || same.Cause != valuecompare.CauseExact || same.Outcome != propertycompare.OutcomeAgree || !same.Checked {
 			t.Errorf("same-image line = %+v", same)
 		}
 		if len(same.Members) != 2 {
 			t.Errorf("same-image pins = %d, want the two image-A members collapsed", len(same.Members))
 		}
-		if other.Relation != valuecompare.Unknown || other.Cause != valuecompare.CauseUnjudged || other.Outcome != propertycompare.OutcomeUnknown || !other.Pinnable || other.Checked {
+		if other.Relation != valuecompare.Unknown || other.Cause != valuecompare.CauseUnjudged || other.Outcome != propertycompare.OutcomeUnknown || other.Checked {
 			t.Errorf("other-image line = %+v", other)
 		}
 		if len(other.Members) != 1 || !bytes.Equal(other.Members[0].Subject, l.b.ID) {
@@ -568,80 +637,8 @@ func TestEvidenceLikenesses(t *testing.T) {
 	})
 }
 
-// T-7: the lifespan crosses with each side's first and last dated events or why
-// it has none, and the sections follow the catalog's order.
-func TestEvidenceLifespan(t *testing.T) {
-	// handle is a person promoted with a birth on 14 May 1817 and, for the
-	// record side, a census on 2 Apr 1871 (or any other events).
-	type event struct {
-		eventType string
-		y, m, d   int
-	}
-	build := func(t *testing.T, row []event, record []event) (*fixture, promotealign.EvidenceRequest) {
-		f := newFixture(t)
-		member := f.person(f.source, f.artifact, "John Smith")
-		var filed []subjects.Subject
-		for _, e := range record {
-			ev := f.datedOn(f.source, f.artifact, e.eventType, e.y, e.m, e.d)
-			f.participation(f.source, f.artifact, member, ev, "subject")
-			filed = append(filed, ev)
-		}
-		handle := f.promote(member).Entity.ID
-		for _, ev := range filed {
-			f.promote(ev)
-		}
-		srcB, artB := f.newSource("Obituary")
-		incoming := f.person(srcB, artB, "John Smith")
-		for _, e := range row {
-			f.participation(srcB, artB, incoming, f.datedOn(srcB, artB, e.eventType, e.y, e.m, e.d), "subject")
-		}
-		return f, promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: incoming.ID, HandleID: handle}
-	}
-	rowLife := []event{{"birth", 1817, 5, 14}, {"death", 1890, 6, 2}}
-	year := func(v *datevalue.Value) int {
-		if v == nil || v.StartYear == nil {
-			return 0
-		}
-		return *v.StartYear
-	}
-
-	t.Run("AC-2.1 agreeing sides", func(t *testing.T) {
-		f, req := build(t, rowLife, []event{{"birth", 1817, 5, 14}, {"census", 1871, 4, 2}})
-		l := f.evidence(req).Lifespan
-		if l == nil || l.Outcome != propertycompare.OutcomeAgree || l.Row.Missing != "" || l.Record.Missing != "" {
-			t.Fatalf("lifespan = %+v", l)
-		}
-		if year(l.Row.First) != 1817 || year(l.Row.Last) != 1890 || year(l.Record.First) != 1817 || year(l.Record.Last) != 1871 {
-			t.Errorf("sides = %+v", l)
-		}
-	})
-	t.Run("AC-2.2 a side that contradicts itself", func(t *testing.T) {
-		f, req := build(t, []event{{"birth", 1817, 5, 14}, {"death", 1809, 6, 2}}, []event{{"birth", 1817, 5, 14}})
-		l := f.evidence(req).Lifespan
-		if l == nil || l.Row.Missing != subjectcompare.LifespanContradicts || l.Row.First != nil || l.Outcome != propertycompare.OutcomeUnknown || l.Relation != "" || l.Cause != "" {
-			t.Fatalf("lifespan = %+v", l)
-		}
-	})
-	t.Run("AC-2.3 an undated record", func(t *testing.T) {
-		f, req := build(t, rowLife, nil)
-		l := f.evidence(req).Lifespan
-		if l == nil || l.Record.Missing != subjectcompare.LifespanUndated || l.Outcome != propertycompare.OutcomeUnknown {
-			t.Fatalf("lifespan = %+v", l)
-		}
-	})
-	t.Run("AC-2.5 lives that cannot be one person's conflict", func(t *testing.T) {
-		f, req := build(t, rowLife, []event{{"baptism", 1801, 3, 3}, {"burial", 1810, 1, 9}})
-		l := f.evidence(req).Lifespan
-		if l == nil || l.Outcome != propertycompare.OutcomeConflict {
-			t.Fatalf("lifespan = %+v", l)
-		}
-	})
-	t.Run("AC-2.4 neither side dated", func(t *testing.T) {
-		f, req := build(t, nil, nil)
-		if l := f.evidence(req).Lifespan; l != nil {
-			t.Fatalf("lifespan = %+v", l)
-		}
-	})
+// T-7: the sections follow the catalog's order.
+func TestEvidenceSectionOrder(t *testing.T) {
 	t.Run("AC-3.1 sections follow the seeded order", func(t *testing.T) {
 		f := newFixture(t)
 		sex := func(src sources.Source, art artifacts.Artifact) subjects.Subject {

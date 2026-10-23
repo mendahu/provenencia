@@ -4,13 +4,17 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/claimevidence"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/promotealign"
+	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 // T-6: a sheet value carries its catalog type and, for a term, the label the
@@ -68,6 +72,33 @@ func TestEvidenceValues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.got.Type != tc.wantType || tc.got.TermLabel != tc.wantLabel {
 				t.Errorf("got type %q label %q, want %q %q", tc.got.Type, tc.got.TermLabel, tc.wantType, tc.wantLabel)
+			}
+		})
+	}
+}
+
+// Term names a term and whose it is: the product's, a researcher's, or neither.
+func TestEvidenceValuesTerm(t *testing.T) {
+	f := newFixture(t)
+	relationshipType := f.prop("relationship_type").ID
+	_, _, err := writes.Run(f.c, writes.Op{Action: "create_property_term", UserID: userID},
+		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+			return propertyterms.Create(tx, userID, relationshipType, "Godparent", "")
+		})
+	must(t, err)
+	values, err := promotealign.NewEvidenceValues(f.c.Graph())
+	must(t, err)
+	for _, tc := range []struct {
+		name, property, key, label, origin string
+	}{
+		{"a product term", "relationship_type", "spouse", "Spouse", vocabkey.OriginProvenencia},
+		{"a researcher's term", "relationship_type", "godparent", "Godparent", vocabkey.OriginUser},
+		{"no such term", "relationship_type", "nobody", "", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			label, origin := values.Term(tc.property, tc.key)
+			if label != tc.label || origin != tc.origin {
+				t.Errorf("Term = (%q, %q), want (%q, %q)", label, origin, tc.label, tc.origin)
 			}
 		})
 	}

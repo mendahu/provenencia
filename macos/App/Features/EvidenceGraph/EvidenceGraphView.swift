@@ -424,7 +424,7 @@ private struct EvidenceGraphContent: View {
                     label: L10n.EvidenceGraph.labelField,
                     hint: L10n.EvidenceGraph.workingLabelHint,
                     error: model.labelError,
-                    required: true
+                    marker: .required
                 ) {
                     PVInput(
                         text: Binding(

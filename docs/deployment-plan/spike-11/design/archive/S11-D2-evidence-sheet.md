@@ -5,10 +5,10 @@
 **View:** Promote page — the evidence sheet a row's assessment opens
 **Implements later as:** PR **S11-20** (the sheet). The lines it draws come from S11-19, S11-25 and S11-32
 **Depends on:** S11-25 (the evidence RPC: every member's line, pin ids, relation and cause codes); S11-32 (the lifespan and likeness lines) before S11-20 ships
-**Related:** [`../claim-evidence.md`](../claim-evidence.md) (the requirements and draft wording), [`S11-D1-promote-rows.md`](S11-D1-promote-rows.md) (the rows, the band and Contested badges, the move captions), [`../../../promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3, Spike 10's likeness gallery ([decisions](../../archive/spike-10/README.md))
+**Related:** [`../claim-evidence.md`](../../claim-evidence.md) (the requirements and draft wording), [`S11-D1-promote-rows.md`](../S11-D1-promote-rows.md) (the rows, the band and Contested badges, the move captions), [`../../../promote-graph-alignment.md`](../../../../promote-graph-alignment.md) §3, Spike 10's likeness gallery ([decisions](../../../archive/spike-10/README.md))
 **Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share) (the board S11-D1 extended), agreed 2026-10-22. Frames E01 – E14 gate S11-20; where the board differs from this brief, §9 records it and the board wins
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -419,13 +419,13 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 ## 7. Handoff
 
-The board was agreed on 2026-10-22: its link is on S11-20's **Board** line and its differences are in §9. Move S11-20 from `Blocked — …` to `Planned` with `plan-pr` once S11-32 has landed. Move this brief to the spike's design archive folder when S11-20 lands, and update [`README.md`](README.md).
+The board was agreed on 2026-10-22: its link is on S11-20's **Board** line and its differences are in §9. Move S11-20 from `Blocked — …` to `Planned` with `plan-pr` once S11-32 has landed. Move this brief to the spike's design archive folder when S11-20 lands, and update [`README.md`](../README.md).
 
 ---
 
 ## 8. Review log
 
-[`../prs/S11-20-claim-evidence-sheet.review.md`](../prs/S11-20-claim-evidence-sheet.review.md) (round 1, 2026-10-22) covers this brief: inventory rows for the section header, checkbox, likeness tile and readout badges, Go-owned order, and connection wording were changed from it.
+[`../prs/S11-20-claim-evidence-sheet.review.md`](../../prs/S11-20-claim-evidence-sheet.review.md) (round 1, 2026-10-22) covers this brief: inventory rows for the section header, checkbox, likeness tile and readout badges, Go-owned order, and connection wording were changed from it.
 
 ---
 

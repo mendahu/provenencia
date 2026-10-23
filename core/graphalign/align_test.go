@@ -1774,7 +1774,7 @@ func eventVals(eventType string, year int) subjectcompare.Values {
 func withLife(v subjectcompare.Values, events ...subjectprofile.LifeEvent) subjectcompare.Values {
 	out := subjectcompare.Values{}
 	maps.Copy(out, v)
-	life, _ := subjectprofile.ForSubject(subjectprofile.Subject{Life: events}, matchregistry.Default().Subject.Lifespans[vocabkey.Person])
+	life := subjectprofile.ForSubject(subjectprofile.Subject{Life: events}, matchregistry.Default().Subject.Lifespans[vocabkey.Person])
 	maps.Copy(out, life)
 	return out
 }
@@ -1863,7 +1863,7 @@ func TestLifespanRulesOutAPerson(t *testing.T) {
 		return rowBySubject(alignWith(layer, canon, nil, matchregistry.Default().AlignConfig()), s)
 	}
 	t.Run("AC-1.4", func(t *testing.T) {
-		row := align(probe(1840))
+		row := align(probe(1830))
 		if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch {
 			t.Fatalf("died before the handle was born: %+v", row)
 		}

@@ -12,6 +12,7 @@ struct EventTitleDisplayTests {
         label: String = "",
         ref: String = "EVT-1",
         typeKey: String = "",
+        typeOrigin: String? = nil,
         typeLabel: String = "",
         subjects: [String?] = [],
         place: String = ""
@@ -22,6 +23,7 @@ struct EventTitleDisplayTests {
             label: label,
             ref: ref,
             typeKey: typeKey,
+            typeOrigin: typeOrigin ?? (typeKey.isEmpty ? "" : CatalogOrigin.provenencia),
             typeLabel: typeLabel,
             subjects: subjects.map { $0.map { CatalogNameValue(form: $0) } },
             place: place
@@ -29,6 +31,11 @@ struct EventTitleDisplayTests {
     }
 
     // Go chooses the rule (core/eventtitle); these check each rule's template.
+
+    @Test func aUserTypeKeyedLikeAProductTypeKeepsItsOwnLabel() {
+        let user = title(.subject, typeKey: "birth", typeOrigin: "user", typeLabel: "Arrival", subjects: ["James Robins"])
+        #expect(EventTitleDisplay.title(user, locale: en) == L10n.EventTitle.ofOne(type: "Arrival", subject: "James Robins", locale: en))
+    }
 
     @Test func recordedNameIsTheName() {
         #expect(EventTitleDisplay.title(title(.recordedName, recordedName: "The Great Fire", label: "Grandpa's fire"), locale: en) == "The Great Fire")
@@ -49,7 +56,7 @@ struct EventTitleDisplayTests {
         #expect(
             EventTitleDisplay.title(title(.couple, typeKey: "engagement", subjects: ["James Robins", "Mary Smith"]), locale: en)
                 == L10n.EventTitle.couple(
-                    type: L10n.string(L10n.PropertyTerm.eventTypeEngagement),
+                    type: L10n.string(L10n.PropertyTerm.eventTypeEngagement.label),
                     a: "James Robins",
                     b: "Mary Smith",
                     locale: en
@@ -76,7 +83,7 @@ struct EventTitleDisplayTests {
     }
 
     @Test func typeKeyNamesTheEventWhenTheLabelIsEmpty() {
-        let birth = L10n.string(L10n.PropertyTerm.eventTypeBirth)
+        let birth = L10n.string(L10n.PropertyTerm.eventTypeBirth.label)
         #expect(
             EventTitleDisplay.title(title(.subject, typeKey: "birth", subjects: ["Jeremiah Arthur Gumtree"]), locale: en)
                 == L10n.EventTitle.ofOne(type: birth, subject: "Jeremiah Arthur Gumtree", locale: en)
@@ -87,12 +94,13 @@ struct EventTitleDisplayTests {
         let header = CatalogEventHeader(
             entity: CatalogCanonicalEntity(id: "e", ref: "EVT-1", subjectTypeID: "t", label: ""),
             eventTypeKey: "birth",
+            eventTypeOrigin: CatalogOrigin.provenencia,
             title: title(.subject, subjects: ["Jeremiah Arthur Gumtree"])
         )
         #expect(
             EventTitleDisplay.title(header, locale: en)
                 == L10n.EventTitle.ofOne(
-                    type: L10n.string(L10n.PropertyTerm.eventTypeBirth),
+                    type: L10n.string(L10n.PropertyTerm.eventTypeBirth.label),
                     subject: "Jeremiah Arthur Gumtree",
                     locale: en
                 )

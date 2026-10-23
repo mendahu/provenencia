@@ -112,6 +112,8 @@ func listedFromSource(o graphcache.EvidenceObservation, props map[string]propert
 	}
 	if term, ok := terms[string(o.TermID)]; ok {
 		l.ValueTermLabel = term.Label
+		l.ValueTermKey = term.Key
+		l.ValueTermOrigin = term.Origin
 	}
 	if label, ok := subjectLabels[string(o.ValueSubjectID)]; ok {
 		l.ValueSubjectLabel = label

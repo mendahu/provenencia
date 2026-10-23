@@ -7,7 +7,6 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -44,38 +43,11 @@ type EventRole struct {
 // lie, and Span its first to last dated event. Compare checks each side's span
 // against the other side's window; the profile builder builds both.
 type Lifespan struct {
-	Span     vocabkey.PropertyKey // not a lead
-	MaxYears int                  // pads an end no Starts or Ends event fixes
-	Starts   []EventRole          // events that fix the start
-	Ends     []EventRole          // events that fix the end
-}
-
-// FirstLifespanLead is the smallest lead key, the lead whose lifespan stands for
-// a side where a kind has several. False when there are none.
-func FirstLifespanLead(leads map[vocabkey.PropertyKey]Lifespan) (vocabkey.PropertyKey, bool) {
-	var first vocabkey.PropertyKey
-	found := false
-	for lead := range leads {
-		if !found || lead < first {
-			first, found = lead, true
-		}
-	}
-	return first, found
-}
-
-// LifespanMissing is why a side has no lifespan.
-type LifespanMissing string
-
-const (
-	LifespanUndated     LifespanMissing = "undated"     // no dated event to build one from
-	LifespanContradicts LifespanMissing = "contradicts" // its own dated events cannot all be true
-)
-
-// LifeSide is one side's life as the profile builder read it: the earliest and
-// latest dated events as written, or why the side has no lifespan.
-type LifeSide struct {
-	First, Last *datevalue.Value // nil when Missing
-	Missing     LifespanMissing
+	Span       vocabkey.PropertyKey // not a lead
+	MaxYears   int                  // pads an end no Starts or Ends event fixes
+	SlackYears int                  // widens the window each way, so only egregious cases conflict
+	Starts     []EventRole          // events that fix the start
+	Ends       []EventRole          // events that fix the end
 }
 
 // Rules is the match registry's subject section.

@@ -234,17 +234,6 @@ struct CitationSubjectGroup: Identifiable, Equatable {
 }
 
 enum CitationComposerAuthoring {
-    static let inverseTermKey: [String: String] = [
-        "parent": "child",
-        "child": "parent",
-        "grandparent": "grandchild",
-        "grandchild": "grandparent",
-        "pibling": "nibling",
-        "nibling": "pibling",
-        "guardian": "ward",
-        "ward": "guardian",
-    ]
-
     static func preview(transcription: String, description: String) -> CitationPreview {
         let transcription = collapsed(transcription)
         if !transcription.isEmpty { return .text(transcription) }
@@ -538,22 +527,21 @@ enum CitationComposerAuthoring {
                 true
             )
         case EvidenceBridgeKind.placeRelationship.rawValue:
-            switch term?.key {
-            case "part_of":
+            switch term?.productKey {
+            case SeededPlaceRelationshipTypeTerm.partOf:
                 return (
                     L10n.string(L10n.CitationComposer.partEnd),
                     L10n.string(L10n.CitationComposer.wholeEnd),
                     true
                 )
-            case "succeeded_by":
+            case SeededPlaceRelationshipTypeTerm.succeededBy:
                 return (
                     L10n.string(L10n.CitationComposer.earlierPlace),
                     L10n.string(L10n.CitationComposer.laterPlace),
                     true
                 )
-            case .some:
-                return (term?.label ?? "", term?.label ?? "", true)
-            case nil:
+            default:
+                if let term { return (term.label, term.label, true) }
                 return (
                     L10n.string(L10n.CitationComposer.firstPlace),
                     L10n.string(L10n.CitationComposer.secondPlace),
@@ -648,10 +636,10 @@ enum CitationComposerAuthoring {
         switch rule.bridgeTypeKey {
         case EvidenceBridgeKind.relationship.rawValue:
             guard let term else { return nil }
-            if term.key == "spouse" {
+            if term.productKey == SeededRelationshipTypeTerm.spouse {
                 return L10n.CitationComposer.areSpouses(from.label, to.label)
             }
-            if term.key == "sibling" {
+            if term.productKey == SeededRelationshipTypeTerm.sibling {
                 return L10n.CitationComposer.areSiblings(from.label, to.label)
             }
             return L10n.CitationComposer.isATermOf(from.label, term.label.lowercased(), to.label)
@@ -666,10 +654,10 @@ enum CitationComposerAuthoring {
             return L10n.CitationComposer.tookPlaceAt(event.label, place.label)
         case EvidenceBridgeKind.placeRelationship.rawValue:
             guard let term else { return nil }
-            if term.key == "part_of" {
+            if term.productKey == SeededPlaceRelationshipTypeTerm.partOf {
                 return L10n.CitationComposer.isPartOf(from.label, to.label)
             }
-            if term.key == "succeeded_by" {
+            if term.productKey == SeededPlaceRelationshipTypeTerm.succeededBy {
                 return L10n.CitationComposer.wasSucceededBy(from.label, to.label)
             }
             return nil
@@ -720,7 +708,7 @@ enum CitationComposerAuthoring {
         property: CatalogProperty?,
         vocabulary: CitationComposerVocabulary
     ) -> CatalogPropertyTerm? {
-        guard let term, let property, let inverseKey = inverseTermKey[term.key] else { return nil }
-        return vocabulary.termsByPropertyID[property.id]?.first { $0.key == inverseKey }
+        guard let term, let property, let inverseKey = term.productKey.flatMap({ SeededRelationshipTypeTerm.inverse[$0] }) else { return nil }
+        return vocabulary.termsByPropertyID[property.id]?.first { $0.productKey == inverseKey }
     }
 }

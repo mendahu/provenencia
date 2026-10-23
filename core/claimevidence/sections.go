@@ -125,9 +125,6 @@ func line(p vocabkey.PropertyKey, v propertycompare.Value, res propertycompare.R
 		l.Points = subjectcompare.Points(res, r.weights)
 	}
 	l.Checked = res.Outcome == propertycompare.OutcomeAgree && slices.Contains(rules.Checked, l.Relation)
-	l.Pinnable = l.Checked ||
-		(res.Outcome == propertycompare.OutcomePartial && slices.Contains(rules.Pinnable, l.Relation)) ||
-		(res.Outcome == propertycompare.OutcomeUnknown && slices.Contains(rules.ByEye, l.Cause))
 	return l
 }
 

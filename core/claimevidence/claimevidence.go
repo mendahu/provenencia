@@ -1,7 +1,7 @@
 // Package claimevidence is the claim evidence view's policy: which lines a
-// Promote row shows for one target entity, which are pinnable and which start
-// checked, and how a relationship that corresponds through segment compare
-// bundles the Observations behind it. Pure: no I/O, no catalog, no numbers;
+// Promote row shows for one target entity, which lines start checked (every
+// line can be pinned), and how a relationship that corresponds through segment
+// compare bundles the Observations behind it. Pure: no I/O, no catalog, no numbers;
 // the evidence section, layers 1, 3 and 5's rules and every input (the row's
 // and its neighbors' values, the entity's accepted members) come in as
 // arguments. It composes layer 2 (propertycompare), layer 3's Side and Points
@@ -20,11 +20,8 @@ import (
 type Rules struct {
 	// Checked lists the relations whose agreeing lines start checked.
 	Checked []valuecompare.Relation
-	// Pinnable lists the relations whose partial lines can be pinned but
-	// start unchecked.
-	Pinnable []valuecompare.Relation
 	// ByEye lists the causes of an unknown line the researcher judges: the
-	// line is kept and pinnable, and never starts checked.
+	// line is kept, and never starts checked.
 	ByEye []valuecompare.Cause
 	// Defining lists, per Subject type, the properties bundled into a
 	// relationship line: the neighbor's own facts that say which one it is.
@@ -55,7 +52,6 @@ type Line struct {
 	Relation      valuecompare.Relation
 	Cause         valuecompare.Cause
 	Points        float64
-	Pinnable      bool
 	Checked       bool
 	Members       []Pin // one per member, member order
 }
@@ -84,30 +80,27 @@ type Relationship struct {
 	Outcome  propertycompare.Outcome
 	Cause    segmentcompare.Cause
 	Points   float64 // segment evidence
-	Pinnable bool
 	Checked  bool
 	Incoming [][]byte // bundled incoming Observations
 	Members  []Bundle
 	Sections []Section // the neighbor's other properties
+
+	// NeighborEnd, NeighborTerm and NeighborTermNamesNeighbor read Key from the
+	// neighbor's side (segmentcompare.ReadFrom): the endpoint the neighbor is
+	// at, the term it carries, and whether that term names the neighbor.
+	// NeighborTermProperty is the property the term belongs to (the bridge
+	// type's disambiguation). The loader fills them after Build, from the
+	// catalog's terms and the connect rules.
+	NeighborEnd               vocabkey.PropertyKey
+	NeighborTerm              vocabkey.BridgeTerm
+	NeighborTermProperty      vocabkey.PropertyKey
+	NeighborTermNamesNeighbor bool
 }
 
 // Inputs is what the loader reads beside the values: the catalog's property
-// order for each kind, and each side's life as the profile builder read it.
+// order for each kind.
 type Inputs struct {
-	Order       map[vocabkey.SubjectType][]vocabkey.PropertyKey // each kind's bound properties, in binding order
-	Row, Record subjectcompare.LifeSide
-}
-
-// Lifespan is the lifespan check between the row's Subject and the record
-// (the entity's profile): matching's verdict, and each side's first and last
-// dated events, or why it has none. It is not a line: it has no member and
-// is never pinned.
-type Lifespan struct {
-	Outcome       propertycompare.Outcome
-	PropertyCause propertycompare.Cause
-	Relation      valuecompare.Relation
-	Cause         valuecompare.Cause
-	Row, Record   subjectcompare.LifeSide
+	Order map[vocabkey.SubjectType][]vocabkey.PropertyKey // each kind's bound properties, in binding order
 }
 
 // Evidence is everything the sheet shows for one row.
@@ -115,7 +108,6 @@ type Evidence struct {
 	Kind          vocabkey.SubjectType // the row's kind
 	Sections      []Section
 	Relationships []Relationship
-	Lifespan      *Lifespan         // nil for a kind with no lifespan, or when neither side has dates
 	Sources       map[string]string // Source id → title; the loader fills it
 }
 

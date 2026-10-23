@@ -97,6 +97,34 @@ struct PromoteFlowTests {
         #expect(placeRow?.menu.first?.subtitle == PlaceChainDisplay.line(parents: ["Ontario", "Canada"]))
     }
 
+    @Test func aPersonRecordReadsNaturallyInTheSheetAndSortedInTheMenu() {
+        var person = row(id: "p", assessment: "medium")
+        person.person = CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
+            name: CatalogNameValue(form: "John Smith", parts: [
+                CatalogNameValuePart(value: "John", type: "given"),
+                CatalogNameValuePart(value: "Smith", type: "surname"),
+            ]),
+            nameValueCount: 1
+        )
+        var flow = PromoteFlow(entryID: "e")
+        flow.nameOrders = NameFormatOrders(
+            natural: [
+                NameFormatPart(partType: "given", trailingSeparator: ""),
+                NameFormatPart(partType: "surname", trailingSeparator: ""),
+            ],
+            sorted: [
+                NameFormatPart(partType: "surname", trailingSeparator: ", "),
+                NameFormatPart(partType: "given", trailingSeparator: ""),
+            ]
+        )
+        flow.load(entryID: "e", proposal: proposal(rows: [person]), subjects: [fact("p")], bridges: [])
+        let personRow = flow.rows.first
+        #expect(personRow?.menu.first?.title == "Smith, John")
+        #expect(personRow?.menu.first?.readingTitle == "John Smith")
+        #expect(personRow?.readingTitle == "John Smith")
+    }
+
     @Test func aMediumMatchStartsOnItsHandle() {
         var flow = PromoteFlow(entryID: "a")
         flow.load(
@@ -256,6 +284,18 @@ struct PromoteFlowTests {
         #expect(ada?.target.handleID == "e2")
         #expect(bea?.updated == true)
         #expect(bea?.decided == false)
+    }
+
+    @Test func theBridgeBetweenTwoSubjectsIsTheFirstOnThePageEitherWayRound() {
+        var flow = PromoteFlow(entryID: "john")
+        flow.bridges = [
+            PromoteFlow.BridgeFact(id: "other", sentence: "", endA: "mary", endB: "birth"),
+            PromoteFlow.BridgeFact(id: "first", sentence: "", endA: "birth", endB: "john"),
+            PromoteFlow.BridgeFact(id: "second", sentence: "", endA: "john", endB: "birth"),
+        ]
+        #expect(flow.bridge(between: "john", and: "birth")?.id == "first")
+        #expect(flow.bridge(between: "birth", and: "john")?.id == "first")
+        #expect(flow.bridge(between: "john", and: "death") == nil)
     }
 
     @Test func aContestedRowAndItsMoveReachTheFlow() {
@@ -502,8 +542,12 @@ struct PromoteFlowTests {
         }
     }
 
-    private func evidence(_ offers: [(String, Bool)]) -> CatalogClaimEvidence {
-        CatalogClaimEvidence(offers: offers.map { CatalogClaimEvidenceOffer(id: $0.0, checked: $0.1) })
+    /// A board that offers these pins, checked or not, and has nothing else to say.
+    private func evidence(_ offers: [(String, Bool)]) -> EvidenceBoard {
+        EvidenceBoard.build(
+            evidence: CatalogClaimEvidence(offers: offers.map { CatalogClaimEvidenceOffer(id: $0.0, checked: $0.1) }),
+            neighbor: { _ in nil }, labels: { $0 }, worded: { _ in "" }
+        )
     }
 
     private func loaded(_ rows: [CatalogPromoteGraphAlignmentRow] = [], ids: [String] = ["a"]) -> PromoteFlow {
@@ -520,7 +564,7 @@ struct PromoteFlowTests {
 
     @Test func aNeverOpenedRowSendsDefaultPins() {
         let flow = loaded()
-        #expect(flow.rows[0].evidence == nil)
+        #expect(flow.rows[0].board == nil)
         let line = flow.batchRows()[0]
         #expect(line.defaultPins)
         #expect(line.pinIDs.isEmpty)
@@ -528,7 +572,7 @@ struct PromoteFlowTests {
 
     @Test func openingDraftsTheCheckedPins() {
         var flow = loaded()
-        flow.setEvidence(subjectID: "a", handleID: "e1", evidence: evidence([("l:2", true), ("l:1", true), ("l:3", false)]))
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:2", true), ("l:1", true), ("l:3", false)]))
         #expect(flow.rows[0].pins == ["l:1", "l:2"])
         #expect(flow.rows[0].decided == false)
         let line = flow.batchRows()[0]
@@ -538,17 +582,17 @@ struct PromoteFlowTests {
 
     @Test func reopeningKeepsOnlyOfferedPins() {
         var flow = loaded()
-        flow.setEvidence(subjectID: "a", handleID: "e1", evidence: evidence([("l:1", true), ("l:2", true), ("l:3", true)]))
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:1", true), ("l:2", true), ("l:3", true)]))
         flow.togglePin(subjectID: "a", pinIDs: ["l:2"])
         #expect(flow.rows[0].pins == ["l:1", "l:3"])
         // The neighbor was set to Skip: l:3 is no longer offered, l:2 still is, unchecked.
-        flow.setEvidence(subjectID: "a", handleID: "e1", evidence: evidence([("l:1", true), ("l:2", true)]))
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:1", true), ("l:2", true)]))
         #expect(flow.rows[0].pins == ["l:1"])
     }
 
     @Test func aLineTogglesEveryMember() {
         var flow = loaded()
-        flow.setEvidence(subjectID: "a", handleID: "e1", evidence: evidence([("l:a", true), ("l:b", true)]))
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:a", true), ("l:b", true)]))
         flow.togglePin(subjectID: "a", pinIDs: ["l:a", "l:b"])
         #expect(flow.rows[0].pins.isEmpty)
         #expect(flow.rows[0].decided)
@@ -563,8 +607,8 @@ struct PromoteFlowTests {
     @Test func evidenceForAnOldTargetIsIgnored() {
         var flow = loaded()
         flow.setTarget(subjectID: "a", token: "handle:e2")
-        flow.setEvidence(subjectID: "a", handleID: "e1", evidence: evidence([("l:1", true)]))
-        #expect(flow.rows[0].evidence == nil)
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:1", true)]))
+        #expect(flow.rows[0].board == nil)
         #expect(flow.rows[0].pins.isEmpty)
     }
 
@@ -597,12 +641,12 @@ struct PromoteFlowTests {
 
     @Test func aRetargetClearsEvidenceAndPins() {
         var flow = loaded()
-        flow.setEvidence(subjectID: "a", handleID: "e1", evidence: evidence([("l:1", true)]))
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:1", true)]))
         #expect(flow.rows[0].pins == ["l:1"])
 
         flow.setTarget(subjectID: "a", token: "handle:e2")
         #expect(flow.rows[0].pins.isEmpty)
-        #expect(flow.rows[0].evidence == nil)
+        #expect(flow.rows[0].board == nil)
         let line = flow.batchRows()[0]
         #expect(line.defaultPins)
         #expect(line.pinIDs.isEmpty)
@@ -631,21 +675,21 @@ struct PromoteFlowTests {
 
     @Test func aManualPinOnTheSameTargetSurvivesAReproposal() {
         var flow = loaded()
-        flow.setEvidence(subjectID: "a", handleID: "e1", evidence: evidence([("l:1", true)]))
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:1", true)]))
         flow.togglePin(subjectID: "a", pinIDs: ["l:1"])
         #expect(flow.rows[0].pins.isEmpty)
         flow.merge(proposal(rows: [row(id: "a")], revision: 4), subjects: [fact("a")])
         #expect(flow.rows[0].pins.isEmpty)
-        #expect(flow.rows[0].evidence != nil)
+        #expect(flow.rows[0].board != nil)
     }
 
     @Test func anUnsettledRowKeepsItsEvidenceOnlyOnTheSameTarget() {
         var flow = loaded()
-        flow.setEvidence(subjectID: "a", handleID: "e1", evidence: evidence([("l:1", true)]))
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:1", true)]))
         flow.merge(proposal(rows: [row(id: "a")], revision: 4), subjects: [fact("a")])
         #expect(flow.rows[0].pins == ["l:1"])
         flow.merge(proposal(rows: [row(id: "a", handleID: "e2")], revision: 5), subjects: [fact("a")])
-        #expect(flow.rows[0].evidence == nil)
+        #expect(flow.rows[0].board == nil)
         #expect(flow.rows[0].pins.isEmpty)
     }
 

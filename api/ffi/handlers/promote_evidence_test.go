@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -14,11 +15,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promotealign"
-	"github.com/mendahu/provenencia/core/datevalue"
-	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
-	"github.com/mendahu/provenencia/core/propertycompare"
-	"github.com/mendahu/provenencia/core/subjectcompare"
-	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // evidenceFixture is a handle of three people who all say Mary Smith, male, on
@@ -61,6 +59,15 @@ func (f evidenceFixture) evidence(t *testing.T) *engine.GetPromoteClaimEvidenceR
 	return &resp
 }
 
+// memberObservation is the member Observation a line pin's id names: "l:<incoming>:<member>".
+func memberObservation(p *engine.PromoteClaimEvidencePin) string {
+	parts := strings.Split(p.GetId(), ":")
+	if len(parts) != 3 {
+		return ""
+	}
+	return parts[2]
+}
+
 func sectionOf(resp *engine.GetPromoteClaimEvidenceResponse, key string) *engine.PromoteClaimEvidenceSection {
 	for _, s := range resp.GetSections() {
 		if s.GetPropertyKey() == key {
@@ -89,7 +96,7 @@ func TestGetPromoteClaimEvidence(t *testing.T) {
 			t.Fatalf("sections = %+v", resp.GetSections())
 		}
 		l := s.GetLines()[0]
-		if l.GetOutcome() != "agree" || l.GetRelation() != "same" || !l.GetPinnable() || !l.GetChecked() || l.GetIncomingNegative() {
+		if l.GetOutcome() != "agree" || l.GetRelation() != "same" || l.GetIncomingNegative() {
 			t.Fatalf("line = %+v", l)
 		}
 		if l.GetIncoming().GetTerm().GetKey() != "male" || l.GetIncoming().GetTerm().GetLabel() != "Male" {
@@ -103,10 +110,10 @@ func TestGetPromoteClaimEvidence(t *testing.T) {
 			titles[src.GetId()] = src.GetTitle() != ""
 		}
 		for i, p := range l.GetMembers() {
-			if want := "l:" + l.GetIncomingObservationId() + ":" + p.GetMemberObservationId(); p.GetId() != want {
-				t.Errorf("pin id = %q, want %q", p.GetId(), want)
+			if !strings.HasPrefix(p.GetId(), "l:"+l.GetIncomingObservationId()+":") || memberObservation(p) == "" {
+				t.Errorf("pin id = %q", p.GetId())
 			}
-			if p.GetMemberSubjectId() != f.members[i] || p.GetValue().GetTerm().GetKey() != "male" || !titles[p.GetSourceId()] {
+			if p.GetValue().GetTerm().GetKey() != "male" || !titles[p.GetSourceId()] {
 				t.Errorf("pin %d = %+v", i, p)
 			}
 			if o := offerOf(resp, p.GetId()); o == nil || !o.GetChecked() {
@@ -118,7 +125,7 @@ func TestGetPromoteClaimEvidence(t *testing.T) {
 		}
 	})
 
-	t.Run("a negative sex at birth is a conflict that is not pinnable and offers nothing", func(t *testing.T) {
+	t.Run("a negative sex at birth is a conflict that is offered, unchecked", func(t *testing.T) {
 		f := newEvidenceFixture(t, observations.PolarityNegative)
 		resp := f.evidence(t)
 		s := sectionOf(resp, "sex_at_birth")
@@ -126,12 +133,12 @@ func TestGetPromoteClaimEvidence(t *testing.T) {
 			t.Fatalf("sections = %+v", resp.GetSections())
 		}
 		l := s.GetLines()[0]
-		if l.GetOutcome() != "conflict" || l.GetPinnable() || l.GetChecked() || !l.GetIncomingNegative() {
+		if l.GetOutcome() != "conflict" || !l.GetIncomingNegative() {
 			t.Fatalf("line = %+v", l)
 		}
 		for _, p := range l.GetMembers() {
-			if offerOf(resp, p.GetId()) != nil {
-				t.Errorf("a conflict pin %s is offered", p.GetId())
+			if o := offerOf(resp, p.GetId()); o == nil || o.GetChecked() {
+				t.Errorf("a conflict pin %s offer = %+v", p.GetId(), o)
 			}
 		}
 	})
@@ -184,7 +191,7 @@ func pinnedOn(t *testing.T, dir, claimID string) map[string]bool {
 }
 
 // T-10: a likeness arrives as a depiction with the stored crop's path, on the
-// line and on its pin; the lifespan is unset when no side has dates.
+// line and on its pin.
 func TestGetPromoteClaimEvidenceLikeness(t *testing.T) {
 	f := newEvidenceFixture(t, observations.PolarityPositive)
 	uid, member := uuid.MustParse(f.userID), uuid.MustParse(f.members[0])
@@ -211,15 +218,15 @@ func TestGetPromoteClaimEvidenceLikeness(t *testing.T) {
 		t.Fatalf("sections = %+v", resp.GetSections())
 	}
 	l := s.GetLines()[0]
-	if l.GetOutcome() != "agree" || l.GetRelation() != "same" || !l.GetChecked() {
+	if l.GetOutcome() != "agree" || l.GetRelation() != "same" || len(l.GetMembers()) != 1 {
 		t.Fatalf("line = %+v", l)
+	}
+	if o := offerOf(resp, l.GetMembers()[0].GetId()); o == nil || !o.GetChecked() {
+		t.Fatalf("the likeness pin offer = %+v, want checked", o)
 	}
 	if l.GetIncoming().GetDepiction().GetImageRelPath() == "" || len(l.GetMembers()) != 1 ||
 		l.GetMembers()[0].GetValue().GetDepiction().GetImageRelPath() != l.GetIncoming().GetDepiction().GetImageRelPath() {
 		t.Fatalf("depiction paths: incoming %+v, pins %+v", l.GetIncoming(), l.GetMembers())
-	}
-	if resp.GetLifespan() != nil {
-		t.Errorf("lifespan = %+v, want unset", resp.GetLifespan())
 	}
 }
 
@@ -257,29 +264,74 @@ func TestGetPromoteClaimEvidenceFollowsBindingOrder(t *testing.T) {
 	}
 }
 
-// AC-2.8: the lifespan crosses the wire with both sides' first and last dates
-// and adds no offer.
-func TestClaimEvidenceProtoCarriesTheLifespan(t *testing.T) {
-	y := func(n int) *datevalue.Value { return datevaluetest.YMD(n, 0, 0) }
-	e := claimevidence.Evidence{Lifespan: &claimevidence.Lifespan{
-		Outcome: propertycompare.OutcomeAgree, Relation: valuecompare.Overlaps, Cause: valuecompare.CauseOverlap,
-		Row:    subjectcompare.LifeSide{First: y(1817), Last: y(1890)},
-		Record: subjectcompare.LifeSide{Missing: subjectcompare.LifespanUndated},
-	}}
-	got := claimEvidenceProto(e, promotealign.EvidenceValues{}).GetLifespan()
-	if got.GetOutcome() != "agree" || got.GetRelation() != "overlaps" || got.GetCause() != "overlap" {
-		t.Fatalf("lifespan = %+v", got)
+// T-4: a relationship reaches the client read from the neighbor's side, with
+// its terms as ConclusionTerms, and the fields nothing reads are reserved.
+func TestClaimEvidenceNeighborReading(t *testing.T) {
+	dir, _, _, _ := subjectFixture(t)
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	mary := uuid.Must(uuid.NewV7())
+	rel := func(typ vocabkey.SubjectType, term vocabkey.BridgeTerm, eventType vocabkey.EventType) claimevidence.Relationship {
+		return claimevidence.Relationship{
+			Neighbor: mary[:], Kind: vocabkey.Person,
+			Key: vocabkey.BridgeKey{Type: typ, Term: term, EventType: eventType},
+		}
 	}
-	if got.GetRow().GetFirst().GetStartYear() != 1817 || got.GetRow().GetLast().GetStartYear() != 1890 || got.GetRow().GetMissing() != "" {
-		t.Errorf("row = %+v", got.GetRow())
+	spouse := rel(vocabkey.BridgeRelationship, "spouse", "")
+	spouse.NeighborTerm, spouse.NeighborTermProperty, spouse.NeighborTermNamesNeighbor = "spouse", "relationship_type", true
+	cousin := rel(vocabkey.BridgeRelationship, "cousin", "")
+	cousin.NeighborTerm, cousin.NeighborTermProperty, cousin.NeighborTermNamesNeighbor = "cousin", "relationship_type", true
+	birth := rel(vocabkey.BridgeParticipation, "subject", vocabkey.EventBirth)
+	birth.Key.End = vocabkey.PropertyPerson
+	birth.Kind = vocabkey.Event
+	birth.NeighborEnd, birth.NeighborTerm, birth.NeighborTermProperty = vocabkey.PropertyEvent, "subject", "role"
+
+	var resp *engine.GetPromoteClaimEvidenceResponse
+	err := withProjectCatalog(dir, func(c *database.Catalog) error {
+		values, err := promotealign.NewEvidenceValues(c.Graph())
+		if err != nil {
+			return err
+		}
+		resp = claimEvidenceProto(claimevidence.Evidence{
+			Kind: vocabkey.Person, Relationships: []claimevidence.Relationship{spouse, cousin, birth},
+		}, values)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if got.GetRecord().GetFirst() != nil || got.GetRecord().GetMissing() != "undated" {
-		t.Errorf("record = %+v", got.GetRecord())
+	rels := resp.GetRelationships()
+	if len(rels) != 3 {
+		t.Fatalf("relationships = %d, want 3", len(rels))
 	}
-	if len(claimEvidenceProto(e, promotealign.EvidenceValues{}).GetOffers()) != 0 {
-		t.Error("the lifespan added an offer")
+	for i, want := range []string{"spouse", "cousin"} {
+		got := rels[i].GetNeighborTerm()
+		if got.GetKey() != want || got.GetOrigin() != vocabkey.OriginProvenencia || got.GetLabel() == "" || !rels[i].GetNeighborTermNamesNeighbor() {
+			t.Errorf("relationship %d neighbor term = %+v, names neighbor %v", i, got, rels[i].GetNeighborTermNamesNeighbor())
+		}
+		if rels[i].GetEventType() != nil {
+			t.Errorf("relationship %d has an event type: %+v", i, rels[i].GetEventType())
+		}
 	}
-	if claimEvidenceProto(claimevidence.Evidence{}, promotealign.EvidenceValues{}).GetLifespan() != nil {
-		t.Error("a nil lifespan was sent")
+	b := rels[2]
+	if b.GetEventType().GetKey() != "birth" || b.GetEventType().GetLabel() != "Birth" || b.GetEventType().GetOrigin() != vocabkey.OriginProvenencia {
+		t.Errorf("event type = %+v", b.GetEventType())
 	}
+	if b.GetNeighborEnd() != "event" || b.GetNeighborTerm().GetKey() != "subject" || b.GetNeighborTermNamesNeighbor() {
+		t.Errorf("birth reading = end %q term %+v names %v", b.GetNeighborEnd(), b.GetNeighborTerm(), b.GetNeighborTermNamesNeighbor())
+	}
+
+	// The wire fields nothing reads are reserved, never reused.
+	reserved := func(message protoreflect.Name, names ...protoreflect.Name) {
+		t.Helper()
+		m := engine.File_engine_proto.Messages().ByName(message)
+		for _, n := range names {
+			if !m.ReservedNames().Has(n) {
+				t.Errorf("%s: %s is not reserved", message, n)
+			}
+		}
+	}
+	reserved("PromoteClaimEvidenceRelationship", "term", "end", "cause", "points", "pinnable", "checked")
+	reserved("PromoteClaimEvidenceLine", "points", "checked", "pinnable")
+	reserved("PromoteClaimEvidencePin", "member_subject_id", "member_observation_id")
+	reserved("PromoteClaimEvidenceBundle", "member_subject_id", "source_id")
 }

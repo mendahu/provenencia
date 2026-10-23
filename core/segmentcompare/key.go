@@ -44,3 +44,29 @@ func Key(l Link, terms Terms) vocabkey.BridgeKey {
 func Corresponds(a, b vocabkey.BridgeKey) bool {
 	return a == b
 }
+
+// ReadFrom reads the link a key stands for from the neighbor's side: the
+// endpoint the neighbor is at, the term that endpoint carries, and whether that
+// term names the neighbor ("the neighbor is the parent") rather than the row.
+// k is the key from the row's end. first and second are the bridge type's
+// endpoint properties, in the order the connect rules list them.
+//
+// k.End is the row's end in the key's reading, which is not always the end the
+// row is stored at: Key swaps a term with its inverse when the inverse sorts
+// first, and the ends with it. A symmetric same-type link has no End and reads
+// the same from both sides. Otherwise the neighbor is at the other endpoint.
+// At the first endpoint the key's term names the neighbor. At the second it
+// names the row, so the neighbor's term is the inverse when the catalog has
+// one; with none, the term still names the row and the caller says so.
+func ReadFrom(k vocabkey.BridgeKey, first, second vocabkey.PropertyKey, terms Terms) (neighborEnd vocabkey.PropertyKey, term vocabkey.BridgeTerm, namesNeighbor bool) {
+	if k.End == "" {
+		return "", k.Term, true
+	}
+	if k.End != first {
+		return first, k.Term, true
+	}
+	if inv := terms[k.Type][k.Term].Inverse; inv != "" {
+		return second, inv, true
+	}
+	return second, k.Term, false
+}

@@ -78,7 +78,7 @@ These are the calls for this spike. PR plans treat them as binding.
 ### Claim evidence
 
 - **A separate, lazy query per row** ([claim evidence](claim-evidence.md#separate-from-matching)): inputs are the page's targets, not matching internals.
-- **Lines** ([lines](claim-evidence.md#lines)): one per member per property, grouped by property, identical values collapsed; `Same` / `Equivalent` start checked, `Contains` / `Overlaps` / `Near` pinnable and unchecked, disagreements shown and not pinnable. No "select all".
+- **Lines** ([lines](claim-evidence.md#lines)): one per member per property, grouped by property, identical values collapsed; `Same` / `Equivalent` start checked; every line can be pinned, only the default check depends on the relation. No "select all".
 - **Relationships** ([relationships](claim-evidence.md#evidence-through-relationships)): a corresponding segment is its own checkable line that pins the bundled plumbing (bridge ends, everything on the bridge, the neighbor's defining properties, e.g. `event_type`); the neighbor's other properties are checkable lines under it.
 
 ## PR map
@@ -108,8 +108,9 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-18 | Contested marker on Promote rows | 4 | The marker on the page | [S11-D1](design/S11-D1-promote-rows.md) | S11-17, S11-D1 | [plan](prs/S11-18-contested-marker.md) | Landed #507 |
 | S11-19 | Claim evidence query | 5 | Go query: member lines, collapse, relationship bundles; registry evidence section | — | S11-16 | [plan](prs/S11-19-claim-evidence-query.md) | Landed #513 |
 | S11-25 | Claim evidence RPC and pin policy | 5 | Lazy per-row RPC; Go default pins at Apply; Swift drafting moves onto it; proposal field 9 and `attachExhibits` removed | — | S11-19 | [plan](prs/S11-25-claim-evidence-rpc.md) | Landed #517 |
-| S11-32 | Lifespan and likeness evidence lines | 5 | The lifespan line (not pinnable, says when a side contradicts itself) and likeness lines (depiction compare by image) in `claimevidence` and the RPC; `ConclusionValue` gains a depiction case | — | S11-25, S10-54 (landed #433) | [plan](prs/S11-32-lifespan-likeness-lines.md) | Landed #523 |
-| S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy, with likeness lines as two crops | [S11-D2](design/S11-D2-evidence-sheet.md) | S11-25, S11-32, S11-D2 | [plan](prs/S11-20-claim-evidence-sheet.md) | Planned |
+| S11-32 | Lifespan and likeness evidence lines | 5 | The lifespan line (says when a side contradicts itself) and likeness lines (depiction compare by image) in `claimevidence` and the RPC; `ConclusionValue` gains a depiction case | — | S11-25, S10-54 (landed #433) | [plan](prs/S11-32-lifespan-likeness-lines.md) | Landed #523 |
+| S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy, with likeness lines as two crops | [S11-D2](design/archive/S11-D2-evidence-sheet.md) | S11-25, S11-32, S11-D2 | [plan](prs/S11-20-claim-evidence-sheet.md) | Landed #525 |
+| S11-33 | Evidence sheet audit follow-up | 5 | Items 1 – 10, A, B, C, F, G, H, I of the evidence sheet area audit: one sheet dismissal, engine-named relationships, one seeded-term wording table, whole-phrase copy, an evidence board for responsiveness, unread wire fields removed, docs | — | S11-20 | [plan](prs/S11-33-evidence-sheet-audit.md) | Landed #525 |
 | S11-26 | Connections file by their ends | 6 | Drop the bridge switch-off: `SkipBridgeIDs`, `skip_bridge_ids`, the `skip` parameters | — | — | [plan](prs/S11-26-connections-by-ends.md) | Planned |
 | S11-27 | Connection subrows on Promote | 6 | Each connection as a subrow of a row it joins, its state from its ends; the panel and toggles go | S11-D1 | S11-26, S11-D1 | — | Scoped |
 | S11-21 | Large-Source performance check | 7 | 100-Subject benchmark; memoize only if it fails | — | S11-16 | — | Scoped |
@@ -124,7 +125,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | Brief | View | Gates | Notes |
 | --- | --- | --- | --- |
 | [S11-D1](design/S11-D1-promote-rows.md) | Promote page — rows | **S11-18**, **S11-27** | Board agreed 2026-10-20 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share)). Contested marker beside the band; move reasons in the Updated caption; connections as subrows of the rows they join, answering the [design questions](promote-connection-subrows.md#open-questions-for-design) |
-| [S11-D2](design/S11-D2-evidence-sheet.md) | Promote page — evidence sheet | **S11-20** | Board agreed 2026-10-22 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), frames E01 – E14). Whole sheet: "why suggested" marks at the title, property sections, relationship lines, collapsed members, likeness crops (from Spike 10's S10-D13), copy |
+| [S11-D2](design/archive/S11-D2-evidence-sheet.md) | Promote page — evidence sheet | **S11-20** | Board agreed 2026-10-22 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), frames E01 – E14). Whole sheet: "why suggested" marks at the title, property sections, relationship lines, collapsed members, likeness crops (from Spike 10's S10-D13), copy |
 
 ## Slices
 
@@ -415,13 +416,13 @@ Split from S11-20 when it was planned (user, 2026-10-22): the engine half of the
 
 #### S11-20 — Claim evidence sheet
 
-**Ships.** The Promote sheet as S11-D2 draws it (board agreed 2026-10-22): the band and Contested marks at the title with the reason as their tooltip, the claim fields, then "What's the evidence that this is <record>?", property sections, relationship lines with their checkboxes, expandable collapsed lines, the lifespan line, likeness lines as two crops; all copy through L10n. No engine change: the lines come from S11-25 and S11-32 (split, user 2026-10-22).
+**Ships.** The Promote sheet as S11-D2 draws it (board agreed 2026-10-22) and as S11-20's ship rounds 16 – 20 left it: the title "<row> joins <record>" with the band and Contested marks after it (the reason is their tooltip), a subtitle that states the claim, the claim fields, "<row> from <Source> belongs in the concluded <kind> <record> because…", property Cards of lines on a grid (box, value, sentence, Source, outcome) whose several records open from "Show N records", relationship Cards with the neighbor's lines under them, and likeness lines as two crops. Every line, record and relationship can be pinned; only the default check depends on the relation. All copy goes through L10n. No engine change: the lines come from S11-25 and S11-32 (split, user 2026-10-22). The sheet's audit follow-up is S11-33.
 **Naming and band (from S11-18 review M-2, M-6).** The sheet's subtitle speaks the band through `PromoteModel.assessmentText`, so a contested row reads "Strong, contested"; neighbor groups name a row by `PromoteFlow.Row.shownRef`, as the row reasons do.
-**Lifespan (from S11-12 review, carried by S11-13).** Word the person's lifespan line, and where a side has no lifespan because its own dated events contradict each other (S11-12 D-12), say so instead of leaving it out silently. S11-32 delivers the result; this PR words it.
+**Lifespan (withdrawn).** The sheet carries no lifespan line: S11-20 ship round 11 removed it from the wire and the app at the user's request (S11-32 had carried it). The lifespan stays a matching signal.
 **Empty evidence (from S11-25 review UX-3).** When a row's evidence has no lines and no relationships, say there is nothing to compare instead of drawing the column headers alone.
 **Not this PR.** Engine and wire (S11-25, S11-32). Opening the sheet from a connection subrow (not planned, decided here for S11-D1's note).
 **Check.** The sheet reads as sentences; no "Through <name>"; checking a relationship line pins it; two people with a likeness show both images.
-**Context.** [S11-D2](design/S11-D2-evidence-sheet.md); [wording](claim-evidence.md#wording); [plan](prs/S11-20-claim-evidence-sheet.md).
+**Context.** [S11-D2](design/archive/S11-D2-evidence-sheet.md); [wording](claim-evidence.md#wording); [plan](prs/S11-20-claim-evidence-sheet.md).
 
 ### Slice 3 follow-up — Sex and gender
 

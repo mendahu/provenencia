@@ -37,3 +37,7 @@ A `generation` weight slot, and one declared slot list read by both `nameformats
 - **Accent merging on the Person page** — decided 2026-10-17 (S11-06): an accent fold is value compare's `Equivalent`, which never groups or folds, so *José* and *Jose* show as two values.
 - **Collation locale.** A project setting (default `en`) whose locale orders name lists through `golang.org/x/text/collate`, so accented and unaccented names sort in that locale's order. Comparison fold is not the sort, and the match score does not change. Descoped from S10-37 (2026-10-16); nothing stores a locale today.
 - **Collation picker.** A control for that setting. A viewer who wants a locale other than the project's (a shared tree read abroad) is the same gap.
+
+## Whole-phrase copy, app-wide
+
+S11-33 made every sentence on the Promote evidence sheet one whole translatable phrase (see `add-localized-string`, "Whole phrases"): an argument is data or a complete noun phrase from one table entry, never a bare translated word the sentence must agree with. Other copy still splices a translated word into a sentence, so a language that inflects or agrees an article cannot translate it: the `EventTitle` formats (`L10n.EventTitle`), `evidenceGraph.bridge.summary.*` (a term label inside "… participated as … at …"), the `CitationComposer` term formats, `sources.sortedBy`, and `conclusions.outcomeOutvotedBy` (a count and a Sources word). Each becomes a key per sentence, or takes its word whole from `L10n.PropertyTerm.wording`, when a second language is added and the copy is next touched.

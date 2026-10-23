@@ -32,17 +32,15 @@ type PinOffer struct {
 
 // PinOffers are every pin the evidence offers, in the order the sheet shows
 // them: the row's own lines, then each relationship's bundles followed by its
-// lines. A line or relationship that is not pinnable offers nothing. This is
-// the one place that decides which pins start checked; the RPC sends the offers
-// and Apply writes them, so the sheet and a Done that never opened it agree.
+// lines. Every line and relationship offers its pins, a conflict included,
+// unchecked. This is the one place that decides which pins start checked; the
+// RPC sends the offers and Apply writes them, so the sheet and a Done that
+// never opened it agree.
 func PinOffers(e claimevidence.Evidence) []PinOffer {
 	var out []PinOffer
 	lines := func(sections []claimevidence.Section) {
 		for _, s := range sections {
 			for _, l := range s.Lines {
-				if !l.Pinnable {
-					continue
-				}
 				for _, p := range l.Members {
 					out = append(out, PinOffer{
 						ID:      LinePinID(l, p),
@@ -55,14 +53,12 @@ func PinOffers(e claimevidence.Evidence) []PinOffer {
 	}
 	lines(e.Sections)
 	for _, rel := range e.Relationships {
-		if rel.Pinnable {
-			for _, b := range rel.Members {
-				out = append(out, PinOffer{
-					ID:      BundlePinID(rel, b),
-					Checked: rel.Checked,
-					Set:     promote.PinSet{Member: b.Member, Observations: append(slices.Clone(rel.Incoming), b.Observations...)},
-				})
-			}
+		for _, b := range rel.Members {
+			out = append(out, PinOffer{
+				ID:      BundlePinID(rel, b),
+				Checked: rel.Checked,
+				Set:     promote.PinSet{Member: b.Member, Observations: append(slices.Clone(rel.Incoming), b.Observations...)},
+			})
 		}
 		lines(rel.Sections)
 	}

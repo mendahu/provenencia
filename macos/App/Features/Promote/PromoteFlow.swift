@@ -135,7 +135,10 @@ struct PromoteFlow: Equatable, Sendable {
     struct Alternative: Equatable, Sendable, Identifiable {
         var id: String
         var ref: String
+        /// The menu's form: a person sorted ("Smith, John"). Events and places read the same everywhere.
         var title: String
+        /// How a sentence reads the record: a person in natural order ("John Smith").
+        var readingTitle: String
         /// Dates, place, or other secondary line under the name.
         var subtitle: String = ""
         var assessment: Assessment = .none
@@ -152,9 +155,9 @@ struct PromoteFlow: Equatable, Sendable {
         var reason: Reason
         var target: Target
         var menu: [Alternative]
-        /// The row's claim evidence against its target; nil until its sheet opens.
-        var evidence: CatalogClaimEvidence?
-        /// The pins left checked (ids from `evidence.offers`). Meaningful only once `evidence` is set.
+        /// The row's claim evidence against its target, worded for the sheet; nil until its sheet opens.
+        var board: EvidenceBoard?
+        /// The pins left checked (ids from `board.offeredPinIDs`). Meaningful only once `board` is set.
         var pins: Set<String>
         var confidenceGradeID: String?
         /// What the researcher typed; Promote drafts none.
@@ -172,6 +175,13 @@ struct PromoteFlow: Equatable, Sendable {
         /// Why settling released an earlier pair of this row in this proposal. Not `updated`, which compares with the previous proposal.
         var move: Reason? = nil
         var id: String { subjectID }
+
+        /// The record behind the target as a sentence reads it (a person in natural order); the
+        /// target's own title when the record is not in the menu, as with a filed anchor.
+        var readingTitle: String? {
+            guard case .handle(let id, _, let title) = target else { return nil }
+            return menu.first { $0.id == id }?.readingTitle ?? title
+        }
 
         /// The selected record's band and why. Skip, New, and an empty menu show nothing.
         var selectionReadout: SelectionReadout? {
@@ -219,6 +229,9 @@ struct PromoteFlow: Equatable, Sendable {
         var id: String
         var sentence: String
         var phrase: String = ""
+        /// The connection's term in lowercase ("spouse"): a row's reason names it; nil when the
+        /// connection has none.
+        var term: String?
         var endAName: String = ""
         var endBName: String = ""
         var mark: PVMarkKey = .subjectRelationship
@@ -296,6 +309,11 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
+    /// The first bridge on the page, in page order, that joins these two Subjects (either way round).
+    func bridge(between a: String, and b: String) -> BridgeFact? {
+        bridges.first { ($0.endA == a && $0.endB == b) || ($0.endA == b && $0.endB == a) }
+    }
+
     /// The row for this Subject, or nil when it is not on the page.
     func row(_ subjectID: String?) -> Row? {
         guard let subjectID else { return nil }
@@ -345,7 +363,7 @@ struct PromoteFlow: Equatable, Sendable {
             // the sheet reads them again for this one. The argument is the
             // researcher's own and stays.
             rows[index].target = next
-            rows[index].evidence = nil
+            rows[index].board = nil
             rows[index].pins = []
             rows[index].contested = false
             rows[index].move = nil
@@ -383,16 +401,16 @@ struct PromoteFlow: Equatable, Sendable {
     /// Stores a row's evidence, unless its target moved on while it loaded.
     /// The first read drafts the pins the evidence checks; a later one keeps
     /// what the researcher left checked of what is still offered.
-    mutating func setEvidence(subjectID: String, handleID: String, evidence: CatalogClaimEvidence) {
+    mutating func setEvidence(subjectID: String, handleID: String, board: EvidenceBoard) {
         guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }),
               rows[index].target.handleID == handleID
         else { return }
-        if rows[index].evidence == nil {
-            rows[index].pins = evidence.checkedPinIDs
+        if rows[index].board == nil {
+            rows[index].pins = board.checkedPinIDs
         } else {
-            rows[index].pins.formIntersection(evidence.offeredPinIDs)
+            rows[index].pins.formIntersection(board.offeredPinIDs)
         }
-        rows[index].evidence = evidence
+        rows[index].board = board
     }
 
     /// Checks or unchecks every pin of a line or relationship together.
@@ -455,8 +473,8 @@ struct PromoteFlow: Equatable, Sendable {
         var defaultPins = false
         var pinIDs: [String] = []
         if case .handle = row.target {
-            defaultPins = row.evidence == nil
-            pinIDs = row.evidence == nil ? [] : row.pins.sorted()
+            defaultPins = row.board == nil
+            pinIDs = row.board == nil ? [] : row.pins.sorted()
         }
         let entityID: String?
         let target: String
@@ -545,7 +563,7 @@ struct PromoteFlow: Equatable, Sendable {
                 subjectID: fact.id, kind: fact.kind, name: fact.name, ref: fact.ref,
                 anchor: true, assessment: .strong, reason: .filed,
                 target: .handle(id: anchor.id, ref: anchor.ref, title: anchor.title),
-                menu: [], evidence: nil, pins: [], confidenceGradeID: nil, argument: "",
+                menu: [], board: nil, pins: [], confidenceGradeID: nil, argument: "",
                 decided: false, updated: false, conflictNote: nil, proposedDuplicateOf: nil, duplicateNote: nil
             )
         }
@@ -580,7 +598,7 @@ struct PromoteFlow: Equatable, Sendable {
             subjectID: fact.id, kind: fact.kind, name: fact.name, ref: fact.ref,
             anchor: false, assessment: Assessment(wire: proposal.assessment),
             reason: Reason(proposal),
-            target: drafted, menu: menu, evidence: keeps ? previous?.evidence : nil,
+            target: drafted, menu: menu, board: keeps ? previous?.board : nil,
             pins: keeps ? previous?.pins ?? [] : [], confidenceGradeID: nil, argument: previous?.argument ?? "",
             decided: false, updated: updated, conflictNote: nil,
             proposedDuplicateOf: duplicateOf(proposal), duplicateNote: nil,
@@ -624,14 +642,18 @@ struct PromoteFlow: Equatable, Sendable {
         if proposal.target == "handle", !proposal.handleID.isEmpty {
             out.append(Alternative(
                 id: proposal.handleID, ref: proposal.handleRef,
-                title: headerTitle(proposal, orders: orders), subtitle: headerSubtitle(proposal),
+                title: headerTitle(proposal, orders: orders, style: .sorted),
+                readingTitle: headerTitle(proposal, orders: orders, style: .natural),
+                subtitle: headerSubtitle(proposal),
                 assessment: Assessment(wire: proposal.assessment), reason: Reason(proposal)
             ))
         }
         for alt in proposal.alternatives where alt.handleID != proposal.handleID {
             out.append(Alternative(
                 id: alt.handleID, ref: alt.handleRef,
-                title: headerTitle(alt, kind: kind, orders: orders), subtitle: headerSubtitle(alt, kind: kind),
+                title: headerTitle(alt, kind: kind, orders: orders, style: .sorted),
+                readingTitle: headerTitle(alt, kind: kind, orders: orders, style: .natural),
+                subtitle: headerSubtitle(alt, kind: kind),
                 assessment: Assessment(wire: alt.assessment), reason: Reason(alt)
             ))
         }
@@ -649,21 +671,21 @@ struct PromoteFlow: Equatable, Sendable {
         conclusionSubtitle(kind: kind, person: alt.person, event: alt.event, place: alt.place)
     }
 
-    private static func headerTitle(_ row: CatalogPromoteGraphAlignmentRow, orders: NameFormatOrders) -> String {
+    private static func headerTitle(_ row: CatalogPromoteGraphAlignmentRow, orders: NameFormatOrders, style: NameDisplayStyle) -> String {
         conclusionTitle(
             kind: EvidencePrimaryKind(rawValue: row.kind),
             person: row.person, event: row.event, place: row.place,
             fallback: row.handleRef,
-            orders: orders
+            orders: orders, style: style
         )
     }
 
-    private static func headerTitle(_ alt: CatalogPromoteGraphAlignmentAlternative, kind: EvidencePrimaryKind, orders: NameFormatOrders) -> String {
+    private static func headerTitle(_ alt: CatalogPromoteGraphAlignmentAlternative, kind: EvidencePrimaryKind, orders: NameFormatOrders, style: NameDisplayStyle) -> String {
         conclusionTitle(
             kind: kind,
             person: alt.person, event: alt.event, place: alt.place,
             fallback: alt.handleRef,
-            orders: orders
+            orders: orders, style: style
         )
     }
 
@@ -673,11 +695,12 @@ struct PromoteFlow: Equatable, Sendable {
         event: CatalogEventHeader?,
         place: CatalogPlaceHeader?,
         fallback: String,
-        orders: NameFormatOrders
+        orders: NameFormatOrders,
+        style: NameDisplayStyle
     ) -> String {
         switch kind {
         case .person:
-            if let person { return PersonHeaderDisplay.title(person, style: .sorted, orders: orders) }
+            if let person { return PersonHeaderDisplay.title(person, style: style, orders: orders) }
         case .event:
             if let event { return EventTitleDisplay.title(event, orders: orders) }
         case .place:

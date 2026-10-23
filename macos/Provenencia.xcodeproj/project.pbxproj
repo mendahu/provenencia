@@ -30,6 +30,9 @@
 		AA00000000000000000C120F /* PVSkeletonBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C120E /* PVSkeletonBar.swift */; };
 		AA000000000000000000031F /* PVReorderableList.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000320 /* PVReorderableList.swift */; };
 		AA0000000000000000000305 /* PVFormDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000304 /* PVFormDialog.swift */; };
+		AA00000000000000000099A1 /* PVOutsideClick.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000099A0 /* PVOutsideClick.swift */; };
+		AA000000000000000005E003 /* PVSheetDismiss.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E002 /* PVSheetDismiss.swift */; };
+		AA000000000000000005E001 /* PVSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E000 /* PVSheet.swift */; };
 		AA0000000000000000000501 /* PVPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000500 /* PVPanel.swift */; };
 		AA0000000000000000000307 /* SourcesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000306 /* SourcesModel.swift */; };
 		AA1041000000000000000002 /* SourcesListSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1041000000000000000001 /* SourcesListSettings.swift */; };
@@ -170,6 +173,7 @@
 		A7090000000000000000000A /* EvidenceBridgeEdgeSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */; };
 		A7090000000000000000000C /* EvidenceBridgeEdgeSummaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7090000000000000000000B /* EvidenceBridgeEdgeSummaryTests.swift */; };
 		A71000000000000000000002 /* PropertyTermDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000001 /* PropertyTermDisplay.swift */; };
+		AA0000000000000000009F11 /* StyledFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000009F10 /* StyledFormat.swift */; };
 		A71100000000000000000002 /* InterpretationValueKinds.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71100000000000000000001 /* InterpretationValueKinds.swift */; };
 		A71200000000000000000002 /* CitationFieldsDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71200000000000000000001 /* CitationFieldsDraft.swift */; };
 		A71300000000000000000002 /* CitationObservationRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71300000000000000000001 /* CitationObservationRows.swift */; };
@@ -194,6 +198,8 @@
 		A71D00000000000000000006 /* VisionOCREngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000005 /* VisionOCREngine.swift */; };
 		A71D00000000000000000008 /* OCRImageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000007 /* OCRImageTests.swift */; };
 		A71D0000000000000000000A /* CitationAutoTranscribeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000009 /* CitationAutoTranscribeTests.swift */; };
+		A71C00000000000000000002 /* ConnectionSentenceRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71C00000000000000000001 /* ConnectionSentenceRegistry.swift */; };
+		A71C00000000000000000004 /* ConnectionSentenceRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71C00000000000000000003 /* ConnectionSentenceRegistryTests.swift */; };
 		A71A00000000000000000002 /* ConnectEndpointBinding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71A00000000000000000001 /* ConnectEndpointBinding.swift */; };
 		A71B00000000000000000002 /* ConnectEndpointBindingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71B00000000000000000001 /* ConnectEndpointBindingTests.swift */; };
 		A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000005 /* PropertyTermDisplayTests.swift */; };
@@ -364,7 +370,16 @@
 		B91100000000000000000008 /* PromoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91100000000000000000007 /* PromoteView.swift */; };
 		B9110000000000000000000C /* PromoteModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000B /* PromoteModelTests.swift */; };
 		B9110000000000000000000E /* PromoteFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000D /* PromoteFlow.swift */; };
+		C1120094E727223A3EA7D87A /* PromoteEvidenceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112000400E7D14ECD8AF111 /* PromoteEvidenceSheet.swift */; };
+		AA000000000000000005E00B /* PromoteEvidenceCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E00A /* PromoteEvidenceCards.swift */; };
+		C11200BD269354BE1FC4BDC0 /* PromoteEvidenceDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */; };
+		AA000000000000000005E007 /* PromoteEvidenceBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E006 /* PromoteEvidenceBoard.swift */; };
+		C11200E6D8FE13682466E995 /* PromoteReadout.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112002B53DFC6E2EF560AC7 /* PromoteReadout.swift */; };
 		B91100000000000000000010 /* PromoteFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000F /* PromoteFlowTests.swift */; };
+		C112007CF5D40430AF417EA9 /* PromoteEvidenceDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */; };
+		AA000000000000000005E009 /* TextEmphasisRenderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E008 /* TextEmphasisRenderingTests.swift */; };
+		AA000000000000000005E005 /* PromoteEvidenceBoardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E004 /* PromoteEvidenceBoardTests.swift */; };
+		AA0000000000000000000FA2 /* StyledFormatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000FA1 /* StyledFormatTests.swift */; };
 		B02746CAC03F94127373BB92 /* DateRowDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B052AEDEE88EFC9ED8413469 /* DateRowDisplay.swift */; };
 		B0F71D26711A163E3B415FCB /* DerivedPlace.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0628D2BFA20C5351EA2685B /* DerivedPlace.swift */; };
 		B071F1D64BED98AE2965E8AD /* PersonLifeDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B066DC6442EFA8875D71F9AE /* PersonLifeDisplay.swift */; };
@@ -428,6 +443,9 @@
 		AA00000000000000000C120E /* PVSkeletonBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSkeletonBar.swift; sourceTree = "<group>"; };
 		AA0000000000000000000320 /* PVReorderableList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVReorderableList.swift; sourceTree = "<group>"; };
 		AA0000000000000000000304 /* PVFormDialog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFormDialog.swift; sourceTree = "<group>"; };
+		AA00000000000000000099A0 /* PVOutsideClick.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVOutsideClick.swift; sourceTree = "<group>"; };
+		AA000000000000000005E002 /* PVSheetDismiss.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSheetDismiss.swift; sourceTree = "<group>"; };
+		AA000000000000000005E000 /* PVSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSheet.swift; sourceTree = "<group>"; };
 		AA0000000000000000000500 /* PVPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVPanel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000306 /* SourcesModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesModel.swift; sourceTree = "<group>"; };
 		AA1041000000000000000001 /* SourcesListSettings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListSettings.swift; sourceTree = "<group>"; };
@@ -586,6 +604,7 @@
 		A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceBridgeEdgeSummary.swift; sourceTree = "<group>"; };
 		A7090000000000000000000B /* EvidenceBridgeEdgeSummaryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceBridgeEdgeSummaryTests.swift; sourceTree = "<group>"; };
 		A71000000000000000000001 /* PropertyTermDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertyTermDisplay.swift; sourceTree = "<group>"; };
+		AA0000000000000000009F10 /* StyledFormat.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StyledFormat.swift; sourceTree = "<group>"; };
 		A71100000000000000000001 /* InterpretationValueKinds.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InterpretationValueKinds.swift; sourceTree = "<group>"; };
 		A71200000000000000000001 /* CitationFieldsDraft.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationFieldsDraft.swift; sourceTree = "<group>"; };
 		A71300000000000000000001 /* CitationObservationRows.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationObservationRows.swift; sourceTree = "<group>"; };
@@ -610,6 +629,8 @@
 		A71D00000000000000000005 /* VisionOCREngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = VisionOCREngine.swift; sourceTree = "<group>"; };
 		A71D00000000000000000007 /* OCRImageTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OCRImageTests.swift; sourceTree = "<group>"; };
 		A71D00000000000000000009 /* CitationAutoTranscribeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationAutoTranscribeTests.swift; sourceTree = "<group>"; };
+		A71C00000000000000000001 /* ConnectionSentenceRegistry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectionSentenceRegistry.swift; sourceTree = "<group>"; };
+		A71C00000000000000000003 /* ConnectionSentenceRegistryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectionSentenceRegistryTests.swift; sourceTree = "<group>"; };
 		A71A00000000000000000001 /* ConnectEndpointBinding.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectEndpointBinding.swift; sourceTree = "<group>"; };
 		A71B00000000000000000001 /* ConnectEndpointBindingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectEndpointBindingTests.swift; sourceTree = "<group>"; };
 		A71000000000000000000005 /* PropertyTermDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertyTermDisplayTests.swift; sourceTree = "<group>"; };
@@ -768,7 +789,16 @@
 		B91100000000000000000007 /* PromoteView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteView.swift; sourceTree = "<group>"; };
 		B9110000000000000000000B /* PromoteModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteModelTests.swift; sourceTree = "<group>"; };
 		B9110000000000000000000D /* PromoteFlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlow.swift; sourceTree = "<group>"; };
+		C112000400E7D14ECD8AF111 /* PromoteEvidenceSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceSheet.swift; sourceTree = "<group>"; };
+		AA000000000000000005E00A /* PromoteEvidenceCards.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceCards.swift; sourceTree = "<group>"; };
+		C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceDisplay.swift; sourceTree = "<group>"; };
+		AA000000000000000005E006 /* PromoteEvidenceBoard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceBoard.swift; sourceTree = "<group>"; };
+		C112002B53DFC6E2EF560AC7 /* PromoteReadout.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteReadout.swift; sourceTree = "<group>"; };
 		B9110000000000000000000F /* PromoteFlowTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlowTests.swift; sourceTree = "<group>"; };
+		C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceDisplayTests.swift; sourceTree = "<group>"; };
+		AA000000000000000005E008 /* TextEmphasisRenderingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TextEmphasisRenderingTests.swift; sourceTree = "<group>"; };
+		AA000000000000000005E004 /* PromoteEvidenceBoardTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceBoardTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000FA1 /* StyledFormatTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StyledFormatTests.swift; sourceTree = "<group>"; };
 		B052AEDEE88EFC9ED8413469 /* DateRowDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateRowDisplay.swift; sourceTree = "<group>"; };
 		B0628D2BFA20C5351EA2685B /* DerivedPlace.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DerivedPlace.swift; sourceTree = "<group>"; };
 		B066DC6442EFA8875D71F9AE /* PersonLifeDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonLifeDisplay.swift; sourceTree = "<group>"; };
@@ -836,6 +866,7 @@
 			children = (
 				A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */,
 				A71A00000000000000000001 /* ConnectEndpointBinding.swift */,
+				A71C00000000000000000001 /* ConnectionSentenceRegistry.swift */,
 				A71700000000000000000001 /* EvidenceGraphPlacement.swift */,
 			);
 			path = Connect;
@@ -1071,6 +1102,7 @@
 				AA00000000000000000000F0 /* ProjectSlug.swift */,
 				AA0000000000000000000021 /* TextMatch.swift */,
 				A71000000000000000000001 /* PropertyTermDisplay.swift */,
+				AA0000000000000000009F10 /* StyledFormat.swift */,
 				A71100000000000000000001 /* InterpretationValueKinds.swift */,
 				AA00000000000000000000E2 /* L10n.swift */,
 				AA0000000000000000000044 /* Generated */,
@@ -1356,6 +1388,7 @@
 				AA000000000000000000067F /* GraphCanvasItemLayerTests.swift */,
 				AA0000000000000000000677 /* L10nPluralTests.swift */,
 				A71B00000000000000000001 /* ConnectEndpointBindingTests.swift */,
+				A71C00000000000000000003 /* ConnectionSentenceRegistryTests.swift */,
 				A70B0000000000000000000B /* ArtifactViewerModelTests.swift */,
 				A70B00000000000000000016 /* ArtifactRegionGeometryTests.swift */,
 				A70B0000000000000000001A /* CitationLocatorDraftTests.swift */,
@@ -1393,6 +1426,10 @@
 				AA0000000000000000000681 /* PVTextAreaTests.swift */,
 				B9110000000000000000000B /* PromoteModelTests.swift */,
 				B9110000000000000000000F /* PromoteFlowTests.swift */,
+				C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */,
+				AA000000000000000005E008 /* TextEmphasisRenderingTests.swift */,
+				AA000000000000000005E004 /* PromoteEvidenceBoardTests.swift */,
+				AA0000000000000000000FA1 /* StyledFormatTests.swift */,
 				B0D89A265AAED569EA0CA31E /* DateRowDisplayTests.swift */,
 				B042B09EC818DE35F967C981 /* DerivedPlaceTests.swift */,
 			);
@@ -1643,6 +1680,9 @@
 		D5C000000000000000000021 /* Panel */ = {
 			isa = PBXGroup;
 			children = (
+				AA00000000000000000099A0 /* PVOutsideClick.swift */,
+				AA000000000000000005E002 /* PVSheetDismiss.swift */,
+				AA000000000000000005E000 /* PVSheet.swift */,
 				AA0000000000000000000500 /* PVPanel.swift */,
 			);
 			name = Panel;
@@ -1817,6 +1857,11 @@
 				B91100000000000000000005 /* PromoteModel.swift */,
 				B91100000000000000000007 /* PromoteView.swift */,
 				B9110000000000000000000D /* PromoteFlow.swift */,
+				C112000400E7D14ECD8AF111 /* PromoteEvidenceSheet.swift */,
+				AA000000000000000005E00A /* PromoteEvidenceCards.swift */,
+				C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */,
+				AA000000000000000005E006 /* PromoteEvidenceBoard.swift */,
+				C112002B53DFC6E2EF560AC7 /* PromoteReadout.swift */,
 			);
 			path = Promote;
 			sourceTree = "<group>";
@@ -1969,6 +2014,7 @@
 				AA0000000000000000000022 /* TextMatch.swift in Sources */,
 				AA00000000000000000000E5 /* L10n.swift in Sources */,
 				A71000000000000000000002 /* PropertyTermDisplay.swift in Sources */,
+				AA0000000000000000009F11 /* StyledFormat.swift in Sources */,
 				A71100000000000000000002 /* InterpretationValueKinds.swift in Sources */,
 				A71200000000000000000002 /* CitationFieldsDraft.swift in Sources */,
 				AA0000000000000000000671 /* CitationTranscriptionModel.swift in Sources */,
@@ -1983,6 +2029,7 @@
 				A71D00000000000000000006 /* VisionOCREngine.swift in Sources */,
 				A71700000000000000000002 /* EvidenceGraphPlacement.swift in Sources */,
 				A71A00000000000000000002 /* ConnectEndpointBinding.swift in Sources */,
+				A71C00000000000000000002 /* ConnectionSentenceRegistry.swift in Sources */,
 				AA0000000000000000000005 /* GenealogyStore.swift in Sources */,
 				AA0000000000000000000006 /* FakeStore.swift in Sources */,
 				AA0000000000000000000007 /* GoStore.swift in Sources */,
@@ -2133,6 +2180,9 @@
 				AA1041000000000000000008 /* PVLastUpdated.swift in Sources */,
 				AA000000000000000000031F /* PVReorderableList.swift in Sources */,
 				AA0000000000000000000305 /* PVFormDialog.swift in Sources */,
+				AA00000000000000000099A1 /* PVOutsideClick.swift in Sources */,
+				AA000000000000000005E003 /* PVSheetDismiss.swift in Sources */,
+				AA000000000000000005E001 /* PVSheet.swift in Sources */,
 				AA0000000000000000000501 /* PVPanel.swift in Sources */,
 				AA0000000000000000000307 /* SourcesModel.swift in Sources */,
 				AA1041000000000000000002 /* SourcesListSettings.swift in Sources */,
@@ -2214,6 +2264,11 @@
 				B91100000000000000000006 /* PromoteModel.swift in Sources */,
 				B91100000000000000000008 /* PromoteView.swift in Sources */,
 				B9110000000000000000000E /* PromoteFlow.swift in Sources */,
+				C1120094E727223A3EA7D87A /* PromoteEvidenceSheet.swift in Sources */,
+				AA000000000000000005E00B /* PromoteEvidenceCards.swift in Sources */,
+				C11200BD269354BE1FC4BDC0 /* PromoteEvidenceDisplay.swift in Sources */,
+				AA000000000000000005E007 /* PromoteEvidenceBoard.swift in Sources */,
+				C11200E6D8FE13682466E995 /* PromoteReadout.swift in Sources */,
 				B02746CAC03F94127373BB92 /* DateRowDisplay.swift in Sources */,
 				B0F71D26711A163E3B415FCB /* DerivedPlace.swift in Sources */,
 				B071F1D64BED98AE2965E8AD /* PersonLifeDisplay.swift in Sources */,
@@ -2289,6 +2344,7 @@
 				AA0000000000000000000682 /* PVTextAreaTests.swift in Sources */,
 				AA0000000000000000000678 /* L10nPluralTests.swift in Sources */,
 				A71B00000000000000000002 /* ConnectEndpointBindingTests.swift in Sources */,
+				A71C00000000000000000004 /* ConnectionSentenceRegistryTests.swift in Sources */,
 				A70B0000000000000000000C /* ArtifactViewerModelTests.swift in Sources */,
 				A70B00000000000000000017 /* ArtifactRegionGeometryTests.swift in Sources */,
 				A70B0000000000000000001B /* CitationLocatorDraftTests.swift in Sources */,
@@ -2324,6 +2380,10 @@
 				A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */,
 				B9110000000000000000000C /* PromoteModelTests.swift in Sources */,
 				B91100000000000000000010 /* PromoteFlowTests.swift in Sources */,
+				C112007CF5D40430AF417EA9 /* PromoteEvidenceDisplayTests.swift in Sources */,
+				AA000000000000000005E009 /* TextEmphasisRenderingTests.swift in Sources */,
+				AA000000000000000005E005 /* PromoteEvidenceBoardTests.swift in Sources */,
+				AA0000000000000000000FA2 /* StyledFormatTests.swift in Sources */,
 				B0E27559D6CFFEBA2093C436 /* DateRowDisplayTests.swift in Sources */,
 				B0E8631619214033F0948729 /* DerivedPlaceTests.swift in Sources */,
 			);

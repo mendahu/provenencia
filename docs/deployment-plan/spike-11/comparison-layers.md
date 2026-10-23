@@ -382,7 +382,7 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 **Built in S11-12.** `subjectprofile.Build` and `ForSubject` take the person's life events (event type, role, dates) and the registry's `subject.Lifespans` for the kind, and add two derived values, `lifespan` (the window) and `lifespan_span`. `subjectcompare.Compare` scores the `lifespan` lead from both directions: a conflict loses `subject.Weights.person.lifespan.Conflict`, consistent lifespans earn its `Agree`.
 
-**Built in S11-32.** The same pass returns each side's life as a `subjectcompare.LifeSide`: the first and last dated events as written, or why the side has no lifespan (`undated`: no dated event, or none a window can be built from; `contradicts`: a date outside the window or an end it refuses). `Build` and `ForSubject` return it beside the values, so the claim evidence reports a missing lifespan with its reason.
+**Matching signal only.** The lifespan is built for matching and ranking suggestions: `subjectprofile.Build` and `ForSubject` add the window and the span to the side's values and return nothing else, and the claim evidence neither shows nor reports it.
 
 **Built in S11-14.** `segmentcompare.Key(link, terms)` reads a bridge as a `vocabkey.BridgeKey`, and `Corresponds` is the one correspondence rule. `segmentcompare.Compare(a, b, placed, own, metas, rules, subject, value)` compares one layer segment with one research segment; `placed` is `Together` (the layer neighbor is placed on this research neighbor) or `Apart` (placed elsewhere). A one-cardinality link placed apart conflicts; every other link is unknown. Causes: `not_corresponding`, `gated`, `placed_apart`.
 
@@ -442,7 +442,7 @@ So every property weight is a plain registry number. The labeler can fit them la
 | `subject.go` | Per Subject type and property: agree weight, conflict penalty; pairs compared together (sex with gender, `date` with `start_date` / `end_date`); lifespan rules and constants |
 | `segment.go` | Bridge cardinality (birth and death are one), neighbor credit, link support |
 | `alignment.go` | Shortlist keys per kind, K, tie cap, accept bar, band cutoffs, settle margin and round cap |
-| `evidence.go` | Claim evidence policy: which relations start checked or are pinnable, each kind's defining properties (event: `event_type`) |
+| `evidence.go` | Claim evidence policy: which relations start checked, each kind's defining properties (event: `event_type`) |
 
 **Rules:**
 - **Each layer takes its own section as an argument** (rule 5). Tests override it without editing the defaults.

@@ -335,8 +335,6 @@ struct CatalogPromoteGraphAlignmentProposal: Sendable, Equatable {
 /// One member Observation a line would pin. `id` is Go's pin id.
 struct CatalogClaimEvidencePin: Sendable, Equatable, Identifiable {
     var id: String
-    var memberSubjectID: String
-    var observationID: String
     var sourceID: String
     var value: CatalogConclusionValue
 }
@@ -349,9 +347,6 @@ struct CatalogClaimEvidenceLine: Sendable, Equatable, Identifiable {
     var propertyCause: EvidencePropertyCause = .none
     var relation: ValueRelation
     var cause: ValueCause = .none
-    var points: Double = 0
-    var pinnable: Bool
-    var checked: Bool
     var incomingObservationID: String
     var incoming: CatalogConclusionValue
     /// The incoming value is a negative Observation: shown as "not <value>".
@@ -372,8 +367,17 @@ struct CatalogClaimEvidenceSection: Sendable, Equatable, Identifiable {
 /// One member's side of a relationship. `id` is Go's pin id.
 struct CatalogClaimEvidenceBundle: Sendable, Equatable, Identifiable {
     var id: String
-    var memberSubjectID: String
-    var sourceID: String
+}
+
+/// A term as the evidence wire names it: its key, the catalog's label, and whose term it is.
+/// `key` names a product term only when `CatalogOrigin.isProduct(origin)`.
+struct CatalogEvidenceTerm: Sendable, Equatable {
+    var key: String
+    var label: String
+    var origin: String
+
+    /// The key, when it is a product term.
+    var productKey: String? { CatalogOrigin.isProduct(origin) ? key : nil }
 }
 
 /// One link of the row's Subject that corresponds to a link between the
@@ -382,16 +386,16 @@ struct CatalogClaimEvidenceRelationship: Sendable, Equatable, Identifiable {
     var neighborSubjectID: String
     var key: String
     var bridgeType: String = ""
-    var term: String = ""
-    var end: String = ""
-    var eventType: String = ""
     var outcome: EvidenceOutcome
-    var cause: SegmentCause = .none
-    var points: Double = 0
-    var pinnable: Bool
-    var checked: Bool
     var bundles: [CatalogClaimEvidenceBundle]
     var sections: [CatalogClaimEvidenceSection] = []
+    /// The link read from the neighbor's side: the endpoint property the neighbor is at ("" for a
+    /// symmetric link), the term it carries, and whether that term names the neighbor.
+    var neighborEnd: String = ""
+    var neighborTerm: CatalogEvidenceTerm?
+    var neighborTermNamesNeighbor: Bool = false
+    /// A participation's event type.
+    var eventType: CatalogEvidenceTerm?
 
     var id: String { neighborSubjectID + "|" + key }
 }
@@ -402,32 +406,11 @@ struct CatalogClaimEvidenceOffer: Sendable, Equatable {
     var checked: Bool
 }
 
-/// One side's life on the lifespan check: its first and last dated events as
-/// written, or why it has no lifespan.
-struct CatalogClaimEvidenceLifeSide: Sendable, Equatable {
-    var first: CatalogDateValueInput?
-    var last: CatalogDateValueInput?
-    var missing: LifespanMissing
-}
-
-/// The lifespan check between the row and the record. It is never a line and
-/// never pinned.
-struct CatalogClaimEvidenceLifespan: Sendable, Equatable {
-    var outcome: EvidenceOutcome
-    var propertyCause: EvidencePropertyCause
-    var relation: ValueRelation
-    var cause: ValueCause
-    var row: CatalogClaimEvidenceLifeSide
-    var record: CatalogClaimEvidenceLifeSide
-}
-
 /// One Promote row's claim evidence against its target (`getPromoteClaimEvidence`).
 struct CatalogClaimEvidence: Sendable, Equatable {
     var sections: [CatalogClaimEvidenceSection] = []
     var relationships: [CatalogClaimEvidenceRelationship] = []
     var offers: [CatalogClaimEvidenceOffer] = []
-    /// The lifespan check; nil for a kind with no lifespan, or when neither side has dates.
-    var lifespan: CatalogClaimEvidenceLifespan?
     /// Source id → title.
     var sourceTitles: [String: String] = [:]
 
@@ -587,6 +570,8 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
     var eventName: String = ""
     var eventNameCount: Int = 0
     var eventTypeKey: String = ""
+    /// The type term's origin; `eventTypeKey` is the product's only when this is `CatalogOrigin.provenencia`.
+    var eventTypeOrigin: String = ""
     var eventTypeLabel: String = ""
     var eventTypeCount: Int = 0
     var date: CatalogDateValueInput?
@@ -627,6 +612,8 @@ struct CatalogEventTitle: Sendable, Equatable {
     var label: String = ""
     var ref: String = ""
     var typeKey: String = ""
+    /// The type term's origin; `typeKey` is the product's only when this is `CatalogOrigin.provenencia`.
+    var typeOrigin: String = ""
     var typeLabel: String = ""
     /// Subject-role persons in stable order; `nil` reads "unnamed person".
     var subjects: [CatalogNameValue?] = []
@@ -660,11 +647,18 @@ enum CatalogConclusionValue: Sendable, Equatable {
     case none
     case text(String)
     case integer(Int64)
-    case term(id: String, key: String, label: String)
+    /// `origin` is the term's: `key` names a product term only when `CatalogOrigin.isProduct(origin)`.
+    case term(id: String, key: String, label: String, origin: String)
     case date(CatalogDateValueInput)
     case name(CatalogNameValue)
     /// A likeness: its stored crop; the region is not sent on the evidence wire.
     case depiction(CatalogDepictionValue)
+
+    /// A likeness, drawn as a crop rather than worded.
+    var isDepiction: Bool {
+        if case .depiction = self { return true }
+        return false
+    }
 }
 
 /// One auto-reconciled value of a Property (S9-14). `.kept` is displayed;
@@ -803,6 +797,8 @@ struct CatalogObservation: Sendable, Equatable, Identifiable {
     var propertyValueType: String
     /// Product/user term key when `valueTermID` is set (empty when unknown).
     var valueTermKey: String = ""
+    /// The term's origin; its key is the product's only when this is `CatalogOrigin.provenencia`.
+    var valueTermOrigin: String = ""
     /// depiction_values.id when the Observation holds a depiction.
     var valueDepictionID: String = ""
     /// The saved depiction when listed; response data, never sent back to Go.
@@ -830,6 +826,10 @@ struct CatalogPropertyTerm: Sendable, Equatable, Identifiable {
     var origin: String
     var label: String
     var description: String
+
+    /// `key` when this is a product term, else nil: a researcher's own term
+    /// may be keyed like one, so only the product's names a seeded term.
+    var productKey: String? { CatalogOrigin.isProduct(origin) ? key : nil }
 }
 
 struct CatalogSubjectTypeProperty: Sendable, Equatable, Identifiable {
@@ -884,7 +884,7 @@ struct CatalogConnectRule: Sendable, Equatable {
         CatalogConnectRule(
             fromTypeKey: "person", toTypeKey: "event",
             bridgeTypeKey: "participation", edgePropertyKeys: ["person", "event"],
-            disambiguation: "role", refuse: false,
+            disambiguation: SeededPropertyKey.role, refuse: false,
             edges: [
                 CatalogConnectEdge(propertyKey: "person", endpointTypeKey: "person"),
                 CatalogConnectEdge(propertyKey: "event", endpointTypeKey: "event"),
@@ -893,7 +893,7 @@ struct CatalogConnectRule: Sendable, Equatable {
         CatalogConnectRule(
             fromTypeKey: "event", toTypeKey: "person",
             bridgeTypeKey: "participation", edgePropertyKeys: ["person", "event"],
-            disambiguation: "role", refuse: false,
+            disambiguation: SeededPropertyKey.role, refuse: false,
             edges: [
                 CatalogConnectEdge(propertyKey: "person", endpointTypeKey: "person"),
                 CatalogConnectEdge(propertyKey: "event", endpointTypeKey: "event"),

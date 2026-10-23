@@ -356,7 +356,7 @@ extension View {
                 }
                 .accessibilityLabel(Text(verbatim: PVDeleteImpactCopy.summary(request.target, request.report)))
             }
-            .sheet(item: noticeItem) { request in
+            .pvSheet(item: noticeItem) { request in
                 PVDeleteImpactNotice(
                     target: request.target,
                     report: request.report,

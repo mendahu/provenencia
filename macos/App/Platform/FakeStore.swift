@@ -899,9 +899,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 return grades
             }
             return [
-                CatalogCredibilityGrade(id: "g-low", key: "low_trust", origin: "provenencia", label: "Low trust", sortOrder: 1),
-                CatalogCredibilityGrade(id: "g-std", key: "standard", origin: "provenencia", label: "Standard", sortOrder: 2),
-                CatalogCredibilityGrade(id: "g-high", key: "high_trust", origin: "provenencia", label: "High trust", sortOrder: 3),
+                CatalogCredibilityGrade(id: "g-low", key: "low_trust", origin: CatalogOrigin.provenencia, label: "Low trust", sortOrder: 1),
+                CatalogCredibilityGrade(id: "g-std", key: "standard", origin: CatalogOrigin.provenencia, label: "Standard", sortOrder: 2),
+                CatalogCredibilityGrade(id: "g-high", key: "high_trust", origin: CatalogOrigin.provenencia, label: "High trust", sortOrder: 3),
             ]
         }
     }
@@ -957,7 +957,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if key.isEmpty {
                 throw StoreBoom.boom
             }
-            if (sourceTypesByProject[projectDir] ?? []).contains(where: { $0.origin == "user" && $0.key == key }) {
+            if (sourceTypesByProject[projectDir] ?? []).contains(where: { $0.origin == CatalogOrigin.user && $0.key == key }) {
                 throw CoreInvokeError.coded(
                     status: 1,
                     code: "sourcetypes.duplicate_key",
@@ -994,7 +994,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             guard let idx = list.firstIndex(where: { $0.id == typeID }) else {
                 throw StoreBoom.boom
             }
-            guard list[idx].origin == "user" || list[idx].origin == "provenencia" else {
+            guard list[idx].origin == CatalogOrigin.user || list[idx].origin == CatalogOrigin.provenencia else {
                 throw StoreBoom.boom
             }
             list[idx].label = label
@@ -1099,7 +1099,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if key.isEmpty {
                 throw StoreBoom.boom
             }
-            if (fieldsByProject[projectDir] ?? []).contains(where: { $0.origin == "user" && $0.key == key }) {
+            if (fieldsByProject[projectDir] ?? []).contains(where: { $0.origin == CatalogOrigin.user && $0.key == key }) {
                 throw CoreInvokeError.coded(
                     status: 1,
                     code: "metadatafields.duplicate_key",
@@ -1133,7 +1133,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             guard let idx = list.firstIndex(where: { $0.id == fieldID }) else {
                 throw StoreBoom.boom
             }
-            guard list[idx].origin == "user" || list[idx].origin == "provenencia" else {
+            guard list[idx].origin == CatalogOrigin.user || list[idx].origin == CatalogOrigin.provenencia else {
                 throw StoreBoom.boom
             }
             guard list[idx].dataType == dataType else {
@@ -1831,9 +1831,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return withState {
             markCatalogSessionHeld(projectDir)
             return [
-                CatalogClaimConfidenceGrade(id: "cg-low", key: "low_confidence", origin: "provenencia", label: "Low confidence", sortOrder: 1),
-                CatalogClaimConfidenceGrade(id: "cg-mod", key: "moderate", origin: "provenencia", label: "Moderate", sortOrder: 2),
-                CatalogClaimConfidenceGrade(id: "cg-high", key: "high_confidence", origin: "provenencia", label: "High confidence", sortOrder: 3),
+                CatalogClaimConfidenceGrade(id: "cg-low", key: "low_confidence", origin: CatalogOrigin.provenencia, label: "Low confidence", sortOrder: 1),
+                CatalogClaimConfidenceGrade(id: "cg-mod", key: "moderate", origin: CatalogOrigin.provenencia, label: "Moderate", sortOrder: 2),
+                CatalogClaimConfidenceGrade(id: "cg-high", key: "high_confidence", origin: CatalogOrigin.provenencia, label: "High confidence", sortOrder: 3),
             ]
         }
     }
@@ -2279,7 +2279,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 .filter { $0.isLetter || $0.isNumber || $0 == "-" }
             if let property = (propertiesByProject[projectDir] ?? []).first(where: { $0.id == propertyID }),
                property.key == "place_relationship_type",
-               property.origin == "provenencia"
+               property.origin == CatalogOrigin.provenencia
             {
                 throw CoreInvokeError.coded(
                     status: 1, code: "propertyterms.locked", kind: .user, params: []
@@ -3222,7 +3222,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         let propertyKey = observation.propertyKey.isEmpty
             ? (propertiesByProject[projectDir]?.first(where: { $0.id == observation.propertyID })?.key ?? "")
             : observation.propertyKey
-        return propertyKey == "role" || propertyKey == "relationship_type"
+        return propertyKey == SeededPropertyKey.role || propertyKey == SeededPropertyKey.relationshipType
     }
 
     private func fixtureContains(projectDir: String, id: String) -> Bool {
@@ -3367,7 +3367,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             propertyValueType: row.propertyValueType.isEmpty ? (property?.valueType ?? "") : row.propertyValueType,
             valueTermKey: row.valueTermKey.isEmpty
                 ? (propertyTermsByProperty[row.propertyID]?.first(where: { $0.id == row.valueTermID })?.key ?? "")
-                : row.valueTermKey
+                : row.valueTermKey,
+            valueTermOrigin: row.valueTermOrigin.isEmpty
+                ? (propertyTermsByProperty[row.propertyID]?.first(where: { $0.id == row.valueTermID })?.origin ?? "")
+                : row.valueTermOrigin
         )
     }
 
@@ -3439,7 +3442,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 propertyValueType: property?.valueType ?? "",
                 valueTermKey: propertyTermsByProperty[draft.propertyID]?
                     .first(where: { $0.id == draft.valueTermID })?
-                    .key ?? ""
+                    .key ?? "",
+                valueTermOrigin: propertyTermsByProperty[draft.propertyID]?
+                    .first(where: { $0.id == draft.valueTermID })?
+                    .origin ?? ""
             )
             if let input = draft.depiction {
                 let stored = nextFakeDepiction(input)

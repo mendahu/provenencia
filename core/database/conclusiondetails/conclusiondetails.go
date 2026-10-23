@@ -50,6 +50,8 @@ type Value struct {
 	TermID     []byte
 	TermKey    string
 	TermLabel  string
+	// TermOrigin is the term's origin: its key is the product's only when this is vocabkey.OriginProvenencia.
+	TermOrigin string
 	Date       *datevalue.Value
 	Name       *namevalue.Value
 }
@@ -126,7 +128,7 @@ const (
 
 	sqlOutcomes = `SELECT ao.property_id, ao.observation_id, o.ref, ao.reason, ao.value_rank, ao.denied_by,
 			COALESCE(ao.vote_support, 0), COALESCE(ao.vote_total, 0),
-			o.value_text, o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''),
+			o.value_text, o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''), COALESCE(t.origin, ''),
 			o.value_date_id, o.value_name_id,
 			s.id, s.ref, c.id, a.id, src.id, COALESCE(src.title, ''),
 			COALESCE(sg.key, ''), COALESCE(cg.key, ''),
@@ -316,7 +318,7 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 			v.Value.Integer, v.Value.HasInteger = rank.Integer, rank.HasInteger
 			v.Value.TermID = append([]byte(nil), rank.TermID...)
 			if name, ok := terms[string(rank.TermID)]; ok {
-				v.Value.TermKey, v.Value.TermLabel = name.Key, name.Label
+				v.Value.TermKey, v.Value.TermLabel, v.Value.TermOrigin = name.Key, name.Label, name.Origin
 			}
 			if len(rank.Date) > 0 {
 				d, err := valuecodec.UnmarshalDate(rank.Date)
@@ -364,7 +366,7 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field, leads ma
 		)
 		if err := rows.Scan(&propertyID, &o.ObservationID, &o.ObservationRef, &o.Reason, &rank, &o.DeniedBy,
 			&o.Vote.Support, &o.Vote.Of,
-			&text, &integer, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &dateID, &nameID,
+			&text, &integer, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID,
 			&o.SubjectID, &o.SubjectRef, &o.CitationID, &o.ArtifactID, &o.SourceID, &o.SourceTitle,
 			&o.CredibilityKey, &o.ClaimConfidenceKey,
 			&o.Provenance.Credibility, &o.Provenance.Uncertain, &o.Provenance.ClaimConfidence); err != nil {

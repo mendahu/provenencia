@@ -479,7 +479,7 @@ struct SourceGraphSnapshotTests {
             label: "Baptism", description: ""
         )
         let baptismTitle = CatalogEventTitle(
-            rule: .subject, label: "Baptism", ref: "CEV-B", typeKey: "baptism", typeLabel: "Baptism",
+            rule: .subject, label: "Baptism", ref: "CEV-B", typeKey: "baptism", typeOrigin: CatalogOrigin.provenencia, typeLabel: "Baptism",
             subjects: [CatalogNameValue(form: "James Robins")]
         )
         let rows = SourceGraphRows(

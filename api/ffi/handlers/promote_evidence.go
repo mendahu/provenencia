@@ -10,8 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/propertymeta"
-	"github.com/mendahu/provenencia/core/subjectcompare"
-	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
@@ -70,29 +68,25 @@ func claimEvidenceProto(e claimevidence.Evidence, values promotealign.EvidenceVa
 	out := &engine.GetPromoteClaimEvidenceResponse{Sections: evidenceSectionsProto(e.Kind, e.Sections, values)}
 	for _, rel := range e.Relationships {
 		r := &engine.PromoteClaimEvidenceRelationship{
-			NeighborSubjectId: database.UUIDString(rel.Neighbor),
-			Key:               rel.Key.String(),
-			BridgeType:        string(rel.Key.Type),
-			Term:              string(rel.Key.Term),
-			End:               string(rel.Key.End),
-			EventType:         string(rel.Key.EventType),
-			Outcome:           string(rel.Outcome),
-			Cause:             string(rel.Cause),
-			Points:            rel.Points,
-			Pinnable:          rel.Pinnable,
-			Checked:           rel.Checked,
-			Sections:          evidenceSectionsProto(rel.Kind, rel.Sections, values),
+			NeighborSubjectId:         database.UUIDString(rel.Neighbor),
+			Key:                       rel.Key.String(),
+			BridgeType:                string(rel.Key.Type),
+			Outcome:                   string(rel.Outcome),
+			Sections:                  evidenceSectionsProto(rel.Kind, rel.Sections, values),
+			NeighborEnd:               string(rel.NeighborEnd),
+			NeighborTermNamesNeighbor: rel.NeighborTermNamesNeighbor,
+		}
+		if rel.NeighborTerm != "" {
+			r.NeighborTerm = evidenceTermProto(values, string(rel.NeighborTermProperty), string(rel.NeighborTerm))
+		}
+		if rel.Key.EventType != "" {
+			r.EventType = evidenceTermProto(values, vocabkey.PropertyEventType, string(rel.Key.EventType))
 		}
 		for _, b := range rel.Members {
-			r.Bundles = append(r.Bundles, &engine.PromoteClaimEvidenceBundle{
-				Id:              promotealign.BundlePinID(rel, b),
-				MemberSubjectId: database.UUIDString(b.Member),
-				SourceId:        database.UUIDString(b.Source),
-			})
+			r.Bundles = append(r.Bundles, &engine.PromoteClaimEvidenceBundle{Id: promotealign.BundlePinID(rel, b)})
 		}
 		out.Relationships = append(out.Relationships, r)
 	}
-	out.Lifespan = lifespanProto(e.Lifespan)
 	for _, o := range promotealign.PinOffers(e) {
 		out.Offers = append(out.Offers, &engine.PromoteClaimEvidenceOffer{Id: o.ID, Checked: o.Checked})
 	}
@@ -118,20 +112,15 @@ func evidenceSectionsProto(kind vocabkey.SubjectType, sections []claimevidence.S
 				PropertyCause:         string(l.PropertyCause),
 				Relation:              string(l.Relation),
 				Cause:                 string(l.Cause),
-				Points:                l.Points,
-				Pinnable:              l.Pinnable,
-				Checked:               l.Checked,
 				IncomingObservationId: database.UUIDString(l.Incoming.Ref),
 				Incoming:              evidenceValueProto(values.Incoming(kind, s, l)),
 				IncomingNegative:      l.Incoming.Negative,
 			}
 			for _, p := range l.Members {
 				line.Members = append(line.Members, &engine.PromoteClaimEvidencePin{
-					Id:                  promotealign.LinePinID(l, p),
-					MemberSubjectId:     database.UUIDString(p.Subject),
-					MemberObservationId: database.UUIDString(p.Observation),
-					SourceId:            database.UUIDString(p.Source),
-					Value:               evidenceValueProto(values.Member(kind, s, l, p)),
+					Id:       promotealign.LinePinID(l, p),
+					SourceId: database.UUIDString(p.Source),
+					Value:    evidenceValueProto(values.Member(kind, s, l, p)),
 				})
 			}
 			sec.Lines = append(sec.Lines, line)
@@ -139,6 +128,14 @@ func evidenceSectionsProto(kind vocabkey.SubjectType, sections []claimevidence.S
 		out = append(out, sec)
 	}
 	return out
+}
+
+// evidenceTermProto is a term of a property with the label and origin the
+// catalog holds, so the client words a researcher's term by its label and a
+// product term by its key.
+func evidenceTermProto(values promotealign.EvidenceValues, property, key string) *engine.ConclusionTerm {
+	label, origin := values.Term(property, key)
+	return &engine.ConclusionTerm{Key: key, Label: label, Origin: origin}
 }
 
 // evidenceValueProto is a sheet value as a ConclusionValue, the one wire shape
@@ -161,29 +158,4 @@ func evidenceValueProto(v promotealign.EvidenceValue) *engine.ConclusionValue {
 		d.HasText, d.Text = true, v.Value.Text
 	}
 	return conclusionValueProto(d, depiction)
-}
-
-func lifespanProto(l *claimevidence.Lifespan) *engine.PromoteClaimEvidenceLifespan {
-	if l == nil {
-		return nil
-	}
-	return &engine.PromoteClaimEvidenceLifespan{
-		Outcome:       string(l.Outcome),
-		PropertyCause: string(l.PropertyCause),
-		Relation:      string(l.Relation),
-		Cause:         string(l.Cause),
-		Row:           lifeSideProto(l.Row),
-		Record:        lifeSideProto(l.Record),
-	}
-}
-
-func lifeSideProto(s subjectcompare.LifeSide) *engine.PromoteClaimEvidenceLifeSide {
-	out := &engine.PromoteClaimEvidenceLifeSide{Missing: string(s.Missing)}
-	if s.First != nil {
-		out.First = valuecodec.DateToProto(*s.First)
-	}
-	if s.Last != nil {
-		out.Last = valuecodec.DateToProto(*s.Last)
-	}
-	return out
 }

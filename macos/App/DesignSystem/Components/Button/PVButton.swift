@@ -128,6 +128,9 @@ private struct PVMenuRowButtonBody: View {
 /// `ProgressView` reads better as a real AppKit spinner than an animated
 /// SF Symbol would.
 ///
+/// `flushLeading` pulls the button left by its own horizontal padding, so a ghost button's
+/// label starts on the edge of the column it sits in instead of inside its padding.
+///
 /// `iconOnly` draws the same chrome as a square glyph button. The title is
 /// not shown; it is the accessibility label and the help tooltip, because
 /// `PVIcon` is hidden from assistive technologies. Pass an `icon`.
@@ -139,6 +142,7 @@ struct PVButton: View {
     private let iconRight: PVSymbol?
     private let loading: Bool
     private let iconOnly: Bool
+    private let flushLeading: Bool
     private let action: () -> Void
 
     init(
@@ -149,6 +153,7 @@ struct PVButton: View {
         iconRight: PVSymbol? = nil,
         loading: Bool = false,
         iconOnly: Bool = false,
+        flushLeading: Bool = false,
         action: @escaping () -> Void
     ) {
         self.title = title.pvText
@@ -158,6 +163,7 @@ struct PVButton: View {
         self.iconRight = iconRight
         self.loading = loading
         self.iconOnly = iconOnly
+        self.flushLeading = flushLeading
         self.action = action
     }
 
@@ -187,6 +193,7 @@ struct PVButton: View {
                 .help(title)
         } else {
             control
+                .padding(.leading, flushLeading ? -size.horizontalPadding : 0)
         }
     }
 }

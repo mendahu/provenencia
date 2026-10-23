@@ -1055,42 +1055,17 @@ struct GoStore: GenealogyStore {
                     neighborSubjectID: r.neighborSubjectID,
                     key: r.key,
                     bridgeType: r.bridgeType,
-                    term: r.term,
-                    end: r.end,
-                    eventType: r.eventType,
                     outcome: EvidenceOutcome(wire: r.outcome),
-                    cause: SegmentCause(wire: r.cause),
-                    points: r.points,
-                    pinnable: r.pinnable,
-                    checked: r.checked,
-                    bundles: r.bundles.map {
-                        CatalogClaimEvidenceBundle(id: $0.id, memberSubjectID: $0.memberSubjectID, sourceID: $0.sourceID)
-                    },
-                    sections: r.sections.map(Self.mapEvidenceSection)
+                    bundles: r.bundles.map { CatalogClaimEvidenceBundle(id: $0.id) },
+                    sections: r.sections.map(Self.mapEvidenceSection),
+                    neighborEnd: r.neighborEnd,
+                    neighborTerm: r.hasNeighborTerm ? Self.mapEvidenceTerm(r.neighborTerm) : nil,
+                    neighborTermNamesNeighbor: r.neighborTermNamesNeighbor,
+                    eventType: r.hasEventType ? Self.mapEvidenceTerm(r.eventType) : nil
                 )
             },
             offers: resp.offers.map { CatalogClaimEvidenceOffer(id: $0.id, checked: $0.checked) },
-            lifespan: resp.hasLifespan ? Self.mapLifespan(resp.lifespan) : nil,
             sourceTitles: Dictionary(resp.sources.map { ($0.id, $0.title) }, uniquingKeysWith: { first, _ in first })
-        )
-    }
-
-    private static func mapLifespan(_ l: Provenencia_Engine_V1_PromoteClaimEvidenceLifespan) -> CatalogClaimEvidenceLifespan {
-        CatalogClaimEvidenceLifespan(
-            outcome: EvidenceOutcome(wire: l.outcome),
-            propertyCause: EvidencePropertyCause(wire: l.propertyCause),
-            relation: ValueRelation(wire: l.relation),
-            cause: ValueCause(wire: l.cause),
-            row: mapLifeSide(l.row),
-            record: mapLifeSide(l.record)
-        )
-    }
-
-    private static func mapLifeSide(_ s: Provenencia_Engine_V1_PromoteClaimEvidenceLifeSide) -> CatalogClaimEvidenceLifeSide {
-        CatalogClaimEvidenceLifeSide(
-            first: s.hasFirst ? mapDateValue(s.first) : nil,
-            last: s.hasLast ? mapDateValue(s.last) : nil,
-            missing: LifespanMissing(wire: s.missing)
         )
     }
 
@@ -1100,6 +1075,10 @@ struct GoStore: GenealogyStore {
         row.handleID = f.handleID
         row.target = f.target
         return row
+    }
+
+    private static func mapEvidenceTerm(_ t: Provenencia_Engine_V1_ConclusionTerm) -> CatalogEvidenceTerm {
+        CatalogEvidenceTerm(key: t.key, label: t.label, origin: t.origin)
     }
 
     private static func mapEvidenceSection(_ s: Provenencia_Engine_V1_PromoteClaimEvidenceSection) -> CatalogClaimEvidenceSection {
@@ -1112,17 +1091,12 @@ struct GoStore: GenealogyStore {
                     propertyCause: EvidencePropertyCause(wire: l.propertyCause),
                     relation: ValueRelation(wire: l.relation),
                     cause: ValueCause(wire: l.cause),
-                    points: l.points,
-                    pinnable: l.pinnable,
-                    checked: l.checked,
                     incomingObservationID: l.incomingObservationID,
                     incoming: mapConclusionValue(l.incoming),
                     incomingNegative: l.incomingNegative,
                     members: l.members.map { p in
                         CatalogClaimEvidencePin(
                             id: p.id,
-                            memberSubjectID: p.memberSubjectID,
-                            observationID: p.memberObservationID,
                             sourceID: p.sourceID,
                             value: mapConclusionValue(p.value)
                         )
@@ -1224,6 +1198,7 @@ struct GoStore: GenealogyStore {
             label: t.label,
             ref: t.ref,
             typeKey: t.typeKey,
+            typeOrigin: t.typeOrigin,
             typeLabel: t.typeLabel,
             subjects: t.subjects.map { $0.hasName ? mapNameValue($0.name) : nil },
             place: t.place
@@ -1335,6 +1310,7 @@ struct GoStore: GenealogyStore {
             eventName: h.eventName,
             eventNameCount: Int(h.eventNameCount),
             eventTypeKey: h.hasEventType ? h.eventType.key : "",
+            eventTypeOrigin: h.hasEventType ? h.eventType.origin : "",
             eventTypeLabel: h.hasEventType ? h.eventType.label : "",
             eventTypeCount: Int(h.eventTypeCount),
             date: h.hasDate ? mapDateValue(h.date) : nil,
@@ -1450,7 +1426,7 @@ struct GoStore: GenealogyStore {
         switch v.kind {
         case .text(let t): return .text(t)
         case .integer(let i): return .integer(i)
-        case .term(let t): return .term(id: t.id, key: t.key, label: t.label)
+        case .term(let t): return .term(id: t.id, key: t.key, label: t.label, origin: t.origin)
         case .date(let d): return .date(mapDateValue(d))
         case .name(let n): return .name(mapNameValue(n))
         case .depiction(let d): return .depiction(mapDepictionValue(d))
@@ -2353,6 +2329,8 @@ struct GoStore: GenealogyStore {
             propertyKey: o.propertyKey,
             propertyLabel: o.propertyLabel,
             propertyValueType: o.propertyValueType,
+            valueTermKey: o.valueTermKey,
+            valueTermOrigin: o.valueTermOrigin,
             valueDepictionID: o.valueDepictionID,
             depiction: o.hasDepiction ? Self.mapDepictionValue(o.depiction) : nil
         )

@@ -12,7 +12,10 @@ enum EventTitleDisplay {
         orders: NameFormatOrders = NameFormatOrders()
     ) -> ConclusionTitleSource {
         var title = header.title
-        if title.typeKey.isEmpty { title.typeKey = header.eventTypeKey }
+        if title.typeKey.isEmpty {
+            title.typeKey = header.eventTypeKey
+            title.typeOrigin = header.eventTypeOrigin
+        }
         if title.typeLabel.isEmpty { title.typeLabel = header.eventTypeLabel }
         return titleSource(title, locale: locale, orders: orders)
     }
@@ -88,7 +91,9 @@ enum EventTitleDisplay {
         if key.isEmpty, label.isEmpty {
             return L10n.string(L10n.EventTitle.fallbackType)
         }
-        let named = PropertyTermDisplay.name(key: key, propertyKey: "event_type", catalogLabel: label)
+        let named = PropertyTermDisplay.name(
+            key: key, origin: title.typeOrigin, propertyKey: SeededPropertyKey.eventType, catalogLabel: label
+        )
         return named.isEmpty ? L10n.string(L10n.EventTitle.fallbackType) : named
     }
 }

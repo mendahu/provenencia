@@ -535,7 +535,7 @@ func TestListEvents(t *testing.T) {
 		t.Fatalf("fire %+v", got[0])
 	}
 	born := byID[string(birthID)]
-	if born.EventType == nil || born.EventType.Key != "birth" || born.EventType.Label != "Birth" || born.EventTypeCount != 1 {
+	if born.EventType == nil || born.EventType.Key != "birth" || born.EventType.Label != "Birth" || born.EventType.Origin != "provenencia" || born.Title.Parts.TypeOrigin != "provenencia" || born.EventTypeCount != 1 {
 		t.Fatalf("type %+v", born.EventType)
 	}
 	if born.Date == nil || *born.Date.StartYear != 1985 || born.StartDate != nil || born.EndDate != nil || born.StartDateCount != 1 {

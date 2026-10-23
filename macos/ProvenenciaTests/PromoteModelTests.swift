@@ -79,6 +79,44 @@ struct PromoteModelTests {
         #expect(model.flow.visibleRows.map(\.subjectID) == ["a", "b"])
     }
 
+    @Test func reproposeKeepsBridges() async {
+        let subjects = [
+            subject("a", ref: "CPR-A", label: "Ada"),
+            subject("b", ref: "CPR-B", label: "Bea"),
+            CatalogSubject(id: "br", ref: "CPA-1", sourceID: sourceID, subjectTypeID: "type-relationship", label: "Ada and Bea", description: ""),
+        ]
+        let store = store(subjects: subjects)
+        store.subjectTypesByProject[projectDir]?.append(CatalogSubjectType(
+            id: "type-relationship", key: "relationship", origin: "provenencia", label: "Relationship",
+            description: "", refPrefix: "REL", candidateRefPrefix: "CPA"
+        ))
+        func cite(_ key: String, _ subjectID: String) -> CatalogObservation {
+            CatalogObservation(
+                id: "obs-\(key)", ref: "OBS-\(key)", citationID: "c1", subjectID: "br", propertyID: "p-\(key)",
+                polarity: "positive", valueText: "", valueInteger: nil, valueDateID: "", valueNameID: "",
+                valueSubjectID: subjectID, valueTermID: "", propertyKey: key, propertyLabel: key, propertyValueType: "subject"
+            )
+        }
+        store.observationsBySource[sourceID] = [cite("person", "a"), cite("related_to", "b")]
+        store.promoteProposals = [
+            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e1")]),
+            CatalogPromoteGraphAlignmentProposal(revision: 2, rows: [row("a", handleID: "e1"), row("b", handleID: "e9")]),
+        ]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        let loaded = model.flow.bridges
+        #expect(loaded.count == 1)
+        // The graph changes under the page, then a decision proposes again: the page keeps its connections.
+        store.observationsBySource[sourceID] = []
+        model.session.invalidate(model.graphKey)
+        let _: QueryHandle<SourceGraphRows> = model.session.query(model.graphKey)
+        model.mapRest()
+        model.setTarget(subjectID: "a", token: "handle:other")
+        let proposed = await waitUntil { model.flow.rows.first { $0.subjectID == "b" }?.updated == true }
+        #expect(proposed)
+        #expect(model.flow.bridges == loaded)
+    }
+
     @Test func retargetKeepsTheDecidedRowAndMarksTheSuggestionUpdated() async {
         let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
         let store = store(subjects: subjects)
@@ -110,11 +148,46 @@ struct PromoteModelTests {
         await model.load()
         model.openSheet("a")
         #expect(model.sheetEvidence == .loading)
-        let loaded = await waitUntil { model.flow.row("a")?.evidence != nil }
+        let loaded = await waitUntil { model.flow.row("a")?.board != nil }
         #expect(loaded)
         #expect(store.recordedCalls.contains("getPromoteClaimEvidence subject=a handle=e1 neighbors=0"))
         #expect(model.flow.row("a")?.pins == ["l:1"])
         #expect(model.sheetEvidence == .idle)
+    }
+
+    @Test func aSheetOpenedAfterANameOrderChangeWordsNamesInTheNewOrder() async {
+        let name = CatalogNameValue(form: "John Smith", parts: [
+            CatalogNameValuePart(value: "John", type: "given"),
+            CatalogNameValuePart(value: "Smith", type: "surname"),
+        ])
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
+        store.promoteEvidence["a"] = CatalogClaimEvidence(
+            sections: [CatalogClaimEvidenceSection(propertyKey: "name", lines: [
+                CatalogClaimEvidenceLine(
+                    propertyKey: "name", outcome: .agree, relation: .same,
+                    incomingObservationID: "in-1", incoming: .name(name),
+                    members: [CatalogClaimEvidencePin(id: "l:1", sourceID: "src-1", value: .name(name))]
+                ),
+            ])],
+            offers: [CatalogClaimEvidenceOffer(id: "l:1", checked: true)]
+        )
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.session.nameFormat = NameFormatOrders(natural: [
+            NameFormatPart(partType: "surname", trailingSeparator: ", "),
+            NameFormatPart(partType: "given", trailingSeparator: ""),
+        ], sorted: [])
+        model.openSheet("a")
+        _ = await waitUntil { model.flow.row("a")?.board != nil }
+        #expect(model.flow.row("a")?.board?.cards.first?.lines.first?.value == .text("Smith, John"))
+        // Closed and opened under the old order again, the sheet follows that one.
+        model.closeSheet()
+        model.session.nameFormat = NameFormatOrders()
+        model.openSheet("a")
+        _ = await waitUntil { model.flow.row("a")?.board?.cards.first?.lines.first?.value == .text("John Smith") }
+        #expect(model.flow.row("a")?.board?.cards.first?.lines.first?.value == .text("John Smith"))
+        #expect(model.flow.nameOrders == NameFormatOrders())
     }
 
     @Test func aFailedEvidenceReadShowsAnError() async {
@@ -130,8 +203,59 @@ struct PromoteModelTests {
             return false
         }
         #expect(failed)
-        #expect(model.flow.row("a")?.evidence == nil)
+        #expect(model.flow.row("a")?.board == nil)
         model.closeSheet()
+        #expect(model.sheetEvidence == .idle)
+    }
+
+    // MARK: - T-12
+
+    @Test func researcherPropertyLabel() async {
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
+        store.propertiesByProject[projectDir] = [
+            CatalogProperty(
+                id: "p-user", key: "my_prop", origin: "user", label: "Occupation note", description: "", valueType: "text"
+            ),
+            CatalogProperty(
+                id: "p-name-user", key: "name", origin: "user", label: "Her own name", description: "", valueType: "text"
+            ),
+            CatalogProperty(
+                id: "p-name", key: "name", origin: "provenencia", label: "Name", description: "", valueType: "name"
+            ),
+        ]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        // A researcher's Property with no product twin is found by its key alone.
+        #expect(model.propertyLabel(key: "my_prop") == "Occupation note")
+        // A product Property wins over a researcher's with the same key.
+        #expect(model.propertyLabel(key: "name") == "Name")
+        #expect(model.propertyLabel(key: "nothing") == "nothing")
+        // With an origin the exact Property is read.
+        #expect(model.propertyLabel(key: "name", origin: "user") == "Her own name")
+        #expect(PromoteEvidenceDisplay.similarityHeader(property: model.propertyLabel(key: "my_prop")) == "they have a similarity in occupation note")
+    }
+
+    @Test func reloadEvidenceRetries() async {
+        struct Boom: Error {}
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
+        store.promoteEvidence["a"] = evidence([("l:1", true)])
+        store.promoteEvidenceError = Boom()
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.openSheet("a")
+        let failed = await waitUntil {
+            if case .failed = model.sheetEvidence { return true }
+            return false
+        }
+        #expect(failed)
+        // The read works the second time.
+        store.promoteEvidenceError = nil
+        model.reloadEvidence()
+        #expect(model.sheetEvidence == .loading)
+        let loaded = await waitUntil { model.flow.row("a")?.board != nil }
+        #expect(loaded)
         #expect(model.sheetEvidence == .idle)
     }
 
@@ -146,10 +270,10 @@ struct PromoteModelTests {
         model.mapRest()
         model.openSheet("a")
         model.openSheet("b")
-        let loaded = await waitUntil { model.flow.row("b")?.evidence != nil }
+        let loaded = await waitUntil { model.flow.row("b")?.board != nil }
         #expect(loaded)
         try? await Task.sleep(for: .milliseconds(50))
-        #expect(model.flow.row("a")?.evidence == nil)
+        #expect(model.flow.row("a")?.board == nil)
         #expect(model.sheetEvidence == .idle)
     }
 
@@ -162,7 +286,7 @@ struct PromoteModelTests {
         await model.load()
         model.mapRest()
         model.openSheet("b")
-        _ = await waitUntil { model.flow.row("b")?.evidence != nil }
+        _ = await waitUntil { model.flow.row("b")?.board != nil }
         model.togglePin(subjectID: "b", pinIDs: ["l:2"])
         model.closeSheet()
         model.done()
@@ -288,6 +412,78 @@ struct PromoteModelTests {
         #expect(model.reasonText(bea.captionReason, on: bea) == L10n.Promote.viaNeighbor(neighbor: "Ada", ref: "PER-e1"))
     }
 
+    /// Ada and Bea on one page, joined by one bridge of `kind` that carries `term`.
+    private func viaReason(
+        kind: EvidenceBridgeKind,
+        edgeKeys: (String, String),
+        term: (property: String, key: String, origin: String, label: String)?
+    ) async -> String {
+        let bridgeSubject = CatalogSubject(
+            id: "br", ref: "CPA-1", sourceID: sourceID, subjectTypeID: "type-bridge", label: "", description: ""
+        )
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea"), bridgeSubject]
+        let store = store(subjects: subjects)
+        store.subjectTypesByProject[projectDir]?.append(CatalogSubjectType(
+            id: "type-bridge", key: kind.rawValue, origin: "provenencia", label: "Bridge",
+            description: "", refPrefix: "CPA", candidateRefPrefix: "CPA"
+        ))
+        func edge(_ key: String, _ subjectID: String) -> CatalogObservation {
+            var o = CatalogObservation(
+                id: "o-\(key)", ref: "OBS-\(key)", citationID: "c", subjectID: "br", propertyID: "p-\(key)",
+                polarity: ObservationPolarity.positive.rawValue, valueText: "", valueInteger: nil, valueDateID: "",
+                valueNameID: "", valueSubjectID: subjectID, valueTermID: "", propertyKey: key,
+                propertyLabel: key, propertyValueType: PropertyValueType.subject.rawValue
+            )
+            o.valueSubjectID = subjectID
+            return o
+        }
+        var observations = [edge(edgeKeys.0, "a"), edge(edgeKeys.1, "b")]
+        if let term {
+            var o = edge(term.property, "")
+            o.id = "o-term"
+            o.valueText = term.label
+            o.valueTermID = "term-1"
+            o.valueTermKey = term.key
+            o.valueTermOrigin = term.origin
+            o.propertyValueType = PropertyValueType.term.rawValue
+            observations.append(o)
+        }
+        store.observationsBySource[sourceID] = observations
+        var viaA = row("b", handleID: "e2")
+        viaA.reason = .via
+        viaA.viaNeighborSubjectID = "a"
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), viaA])]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        let bea = model.flow.row("b")!
+        return model.reasonText(bea.captionReason, on: bea)
+    }
+
+    @Test func aViaReasonNamesTheTermInLowercase() async {
+        let provenencia = CatalogOrigin.provenencia
+        #expect(await viaReason(
+            kind: .participation, edgeKeys: ("person", "event"),
+            term: ("role", "subject", provenencia, "Subject")
+        ) == L10n.Promote.via(neighbor: "Ada", ref: "PER-e1", role: "subject"))
+        #expect(await viaReason(
+            kind: .relationship, edgeKeys: ("person", "related_to"),
+            term: ("relationship_type", "spouse", provenencia, "Spouse")
+        ) == L10n.Promote.via(neighbor: "Ada", ref: "PER-e1", role: "spouse"))
+        #expect(await viaReason(
+            kind: .placeRelationship, edgeKeys: ("from", "to"),
+            term: ("place_relationship_type", "part_of", provenencia, "Part of")
+        ) == L10n.Promote.via(neighbor: "Ada", ref: "PER-e1", role: "part of"))
+        // A location has no term, so the reason names only the neighbor.
+        #expect(await viaReason(
+            kind: .location, edgeKeys: ("event", "place"), term: nil
+        ) == L10n.Promote.viaNeighbor(neighbor: "Ada", ref: "PER-e1"))
+        // A researcher's term keeps its own label, lowercased.
+        #expect(await viaReason(
+            kind: .participation, edgeKeys: ("person", "event"),
+            term: ("role", "godparent", "user", "Godparent")
+        ) == L10n.Promote.via(neighbor: "Ada", ref: "PER-e1", role: "godparent"))
+    }
+
     @Test func movesAreWordedNamingTheNeighbor() async {
         let model = await loadedAdaAndBea(row("a", handleID: "e1"), row("b", handleID: "e2"))
         let bea = model.flow.row("b")!
@@ -312,6 +508,39 @@ struct PromoteModelTests {
         let bea = model.flow.row("b")!
         #expect(model.assessmentText(ada.selectionReadout!) == L10n.Promote.assessmentContested(L10n.string(L10n.Promote.assessment(.strong))))
         #expect(model.assessmentText(bea.selectionReadout!) == L10n.string(L10n.Promote.assessment(.strong)))
+    }
+
+    @Test func theSheetMarksSpeakTheContestedBand() async {
+        var contested = row("a", handleID: "e1")
+        contested.contested = true
+        let model = await loadedAdaAndBea(contested, row("b", handleID: "e2"), properties: [
+            CatalogProperty(id: "p-name", key: "name", origin: "provenencia", label: "Full name", description: "", valueType: "name"),
+        ])
+        let ada = model.flow.row("a")!
+        let readout = ada.selectionReadout!
+        let reason = model.reasonText(readout.reason, on: ada)
+        #expect(reason == L10n.Promote.agreesOn(property: "Full name"))
+        #expect(
+            L10n.Promote.whySuggestedSpoken(assessment: model.assessmentText(readout), reason: reason)
+                == "Why this was suggested: Strong, contested, \(reason)"
+        )
+        let bea = model.flow.row("b")!
+        #expect(model.assessmentText(bea.selectionReadout!) == "Strong")
+    }
+
+    @Test func theSheetCarriesTheRowsCaption() async {
+        var viaA = row("b", handleID: "e2")
+        viaA.reason = .via
+        viaA.viaNeighborSubjectID = "a"
+        let model = await loadedAdaAndBea(row("a", handleID: "e1"), viaA)
+        let bea = model.flow.row("b")!
+        let reason = model.reasonText(bea.captionReason, on: bea)
+        #expect(L10n.Promote.updatedDetail(reason) == "Updated · \(reason)")
+        #expect(reason == L10n.Promote.viaNeighbor(neighbor: "Ada", ref: "PER-e1"))
+        // The sheet names a relationship's neighbor by the row it is on the page.
+        #expect(model.neighbor("a")?.name == "Ada")
+        #expect(model.neighbor("a")?.shownRef == "PER-e1")
+        #expect(model.neighbor("zz") == nil)
     }
 
     @Test func leaveGuardAsksOnlyAfterAManualChange() async {

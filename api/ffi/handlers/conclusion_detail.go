@@ -149,7 +149,7 @@ func conclusionValueProto(v conclusiondetails.Value, depiction *engine.Depiction
 	case v.Date != nil:
 		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Date{Date: valuecodec.DateToProto(*v.Date)}}
 	case len(v.TermID) > 0 || v.TermKey != "":
-		term := &engine.ConclusionTerm{Key: v.TermKey, Label: v.TermLabel}
+		term := &engine.ConclusionTerm{Key: v.TermKey, Label: v.TermLabel, Origin: v.TermOrigin}
 		if len(v.TermID) > 0 {
 			term.Id = database.UUIDString(v.TermID)
 		}

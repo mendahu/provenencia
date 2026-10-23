@@ -4,8 +4,8 @@ import Testing
 struct PersonGenderTreatmentTests {
     private typealias D = ReconciledValueDisplayTests
 
-    private func term(_ key: String, _ label: String) -> CatalogConclusionValue {
-        .term(id: "t-\(key)", key: key, label: label)
+    private func term(_ key: String, _ label: String, origin: String = CatalogOrigin.provenencia) -> CatalogConclusionValue {
+        .term(id: "t-\(key)", key: key, label: label, origin: origin)
     }
 
     private func gender(_ values: [CatalogConclusionValue], state: String = "single") -> CatalogConclusionField {
@@ -30,6 +30,13 @@ struct PersonGenderTreatmentTests {
         #expect(man?.family == .man && man?.basis == .gender)
         #expect(PersonGenderTreatment.read([gender([term("non_binary", "Non-binary")])])?.family == .nonBinary)
         #expect(PersonGenderTreatment.read([gender([term("two_spirit", "Two-spirit")])])?.family == .other)
+    }
+
+    @Test func aResearchersTermKeyedLikeAProductOneKeepsTheOtherFamily() {
+        let theirs = term("woman", "Woman", origin: CatalogOrigin.user)
+        #expect(PersonGenderTreatment.read([gender([theirs])])?.family == .other)
+        let theirSex = term("female", "Female", origin: CatalogOrigin.user)
+        #expect(PersonGenderTreatment.read([sex([theirSex])])?.family == .other)
     }
 
     @Test func mixedGenderIsNeutralAndDoesNotFallBack() {

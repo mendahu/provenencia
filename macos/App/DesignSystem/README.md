@@ -152,11 +152,13 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 
 | Component | File | 
 |---|---|
-| Button | `Components/Button/PVButton.swift` (icon-left, loading spinner, and a chrome-less `link` variant added for S2-02; the label is `PVCopy`, so a formatted `String` such as Promote's "Back to Compare" works as well as a catalog resource) |
-| Disclosure | `Components/Disclosure/PVDisclosureButton.swift` (added for S9-16's Person page: a `PVButton` that owns an `isExpanded` binding, its chevron, and the spoken state; the caller places the disclosed content. `pvExpandedState(_:)` is the shared VoiceOver piece, also used by `PVSelect` and the Source page's artifact rows. No JSX twin: boards compose `Button.jsx` with `aria-expanded`) |
+| Button | `Components/Button/PVButton.swift` (icon-left, loading spinner, and a chrome-less `link` variant added for S2-02; the label is `PVCopy`, so a formatted `String` such as Promote's "Back to Compare" works as well as a catalog resource, and an `AttributedString` from `StyledFormat.attributed` carries its own styling; `flushLeading` pulls the button left by its own horizontal padding so a ghost button's label starts on its column edge) |
+| Disclosure | `Components/Disclosure/PVDisclosureButton.swift` (added for S9-16's Person page: a `PVButton` that owns an `isExpanded` binding, its chevron, and the spoken state; the caller places the disclosed content. `flushLeading` is forwarded to the button; `pvExpandedState(_:)` is the shared VoiceOver piece, also used by `PVSelect` and the Source page's artifact rows. No JSX twin: boards compose `Button.jsx` with `aria-expanded`) |
 | Icon | `Components/Icon/PVIcon.swift` |
-| Field | `Components/Field/PVField.swift` |
+| Field | `Components/Field/PVField.swift` (`marker: .required / .optional` marks the label) |
 | Input | `Components/Input/PVInput.swift` |
+| TextArea | `Components/TextArea/PVTextArea.swift` (multiline field with `PVInput`'s chrome; grows with its text between `lineLimit`'s bounds, or with `fillsHeight` takes the height its container offers, never less than the lower bound, and scrolls inside it; added for inline edit, and for the Promote sheet's argument box beside a column of fields) |
+| SectionHeader | `Components/SectionHeader/PVSectionHeader.swift` (detail-page section chrome: display title, mono meta, aside, trailing actions and a bottom rule; a `String` or localized title is semibold; an `AttributedString` title draws regular and its strongly emphasized runs carry the weight) |
 | Select | `Components/Select/PVSelect.swift` (native popup contract on `PVContextMenu`; see "The Select contract" below) |
 | ContextMenu | `Components/ContextMenu/PVContextMenu.swift`, `PVActionMenu.swift` (action menus are `PVActionMenuItem` lists: a right-click menu that opens at the pointer is one `.pvRightClickMenu`, which adds the state, the trigger and one VoiceOver action per enabled item (the toolbar's Back/Forward history menu anchors to its button and keeps its own presenter); a button-opened menu draws `PVActionMenuRows` inside `.pvContextMenu`, with `keyboardTitles` from `PVActionMenuItem.keyboardTitles`; `PVSelect` uses `.pvContextMenu` directly) |
 | Toast | `Components/Toast/PVToast.swift` |
@@ -169,11 +171,11 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Callout | `Components/Callout/PVCallout.swift` (tone / icon / title / body / compact; the title is `PVCopy`; optional `@ViewBuilder` actions under the body — call-site `PVButton`s; `onDismiss` / `detail` / `plain` deferred) |
 | Table | `Components/Table/PVTable.swift` (added for S2-22, extracted from the Metadata (then Source fields) list; see "The table tradeoff" below) |
 | Confirm | `Components/Confirm/PVConfirm.swift` (added for S2-22's delete confirmation; the macOS answer to `ConfirmDialog.jsx`, which the web spec says not to port — see "Confirmations are system chrome" below) |
-| Panel | `Components/Panel/PVPanel.swift` (sheet content shell: title / subtitle / body / optional footer; no window chrome) |
+| Panel | `Components/Panel/PVPanel.swift` (sheet content shell: title / subtitle / body / optional footer; optional title accessory, drawn after the title, filling the row; put a Spacer in it to push a control right; no window chrome); `Components/Panel/PVSheet.swift` (`.pvSheet`, the one sheet presenter: Escape, outside click and the discard question) |
 | FormDialog | `Components/FormDialog/PVFormDialog.swift` (short create/edit form sheet on `PVPanel`; optional `width`, default 480 — see note below) |
 | ComboBox | `Components/ComboBox/PVComboBox.swift` (added for S2-16's assign-field control, where the pool is the whole Metadata vocabulary; single-select subset only — see "The combo box subset" below). The box is content-agnostic: rows (`row`) and the empty line (`empty`, given the typed query) are caller-built views; the kit ships only the generic `PVComboBoxPlainRow` (label + subtext) and a plain-text empty line, and never grows domain row kinds (the web kit's `person` row lives in features as their own `row`). S9-11 added **remote results**: `onQueryChange` hands each typed query to the caller, which passes back the search results as `options`, keeping the committed option among them |
 | Radio | `Components/Radio/PVRadio.swift` (`PVRadio` label + description, and the bare `PVRadioMark` for rows that are themselves the control; added for S9-11's Promote target choice) |
-| Checkbox | `Components/Checkbox/PVCheckbox.swift` (`PVCheckbox` label + description, and the bare `PVCheckboxMark`; `isLocked` is the Properties seeded-binding lock in that same box) |
+| Checkbox | `Components/Checkbox/PVCheckbox.swift` (`PVCheckbox` label + description, and the bare `PVCheckboxMark`; `isLocked` is the Properties seeded-binding lock in that same box; `isIndeterminate` is spoken "partly checked") |
 | Switch | `Components/Switch/PVSwitch.swift` (32×18 track; immediate on/off — a saved form still uses Checkbox) |
 | List | `Components/List/PVList.swift` (added for S9-09, ported from the kit's `PVList`: navigation rows — thumbnail slot (a view; S10-35), title, secondary line, optional fixed-width detail column (icon and one line of text, with help) before the trailing mono ref, chevron — as buttons, not selection; one focus stop with ↑/↓ · Home/End · Page Up/Down · Return/Space; `PVListSkeleton` for first load. The counterpart to Table) |
 | SkeletonBar | `Components/SkeletonBar/PVSkeletonBar.swift` (added for S12-02: a rounded `borderSubtle` placeholder bar, fixed or fill width; used by `PVListSkeleton` and the Copy Source loading body) |
@@ -199,10 +201,25 @@ demand, following the pattern above, when a screen needs one:
 | SourceCitation | Research | Citation + repository + scan thumbnail + grade, as one unit |
 
 **Form dialog on macOS:** the web `Dialog.jsx` draws a scrim because the browser
-gives it none. Here `PVFormDialog` is a `.sheet` on ``PVPanel`` — same family as
-`PVConfirm`'s rich sheet — and leaves window chrome to the system. Prefer
+gives it none. Here `PVFormDialog` presents through `.pvSheet` on ``PVPanel`` — same
+family as `PVConfirm`'s rich sheet — and leaves window chrome to the system. Prefer
 `PVConfirm` for destructive confirmations; use `PVFormDialog` for short
 create/edit forms.
+
+**Every sheet presents through `.pvSheet`**
+(`Components/Panel/PVSheet.swift`, `item:` and `isPresented:` forms), and
+`pvFormDialog`, `pvConfirm` and the delete-impact notice are built on it. It owns
+the two ways a researcher closes a sheet without a button: **Escape** (a hidden
+cancel-action button) and **a click outside the sheet**
+(`.pvOutsideClick(isEnabled:perform:)`, `Components/Panel/PVOutsideClick.swift`; a
+macOS sheet gives that click to no one, so the modifier watches the event
+stream; menus and popovers are not this path). Both call one rule,
+`PVSheetDismiss.action(isRunning:isDirty:isConfirmingDiscard:)`: running work is
+ignored, a dirty sheet shows the discard question (and Escape on that question
+returns to the form), a clean sheet closes. The visible Cancel button closes at
+once and carries no key of its own. A new sheet gets all of this by presenting
+with `.pvSheet`; do not add a raw `.sheet`, `.pvOutsideClick` or
+`.keyboardShortcut(.cancelAction)` for a sheet.
 
 ## The combo box subset
 

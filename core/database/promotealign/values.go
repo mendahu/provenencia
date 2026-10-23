@@ -27,24 +27,28 @@ type EvidenceValue struct {
 // EvidenceValues types and labels the values of a claim evidence, from the
 // product vocabulary.
 type EvidenceValues struct {
-	labels map[string]string // "property|term" → label
-	types  map[vocabkey.PropertyKey]string
-	pools  map[vocabkey.SubjectType]map[vocabkey.PropertyKey][]vocabkey.PropertyKey
-	paths  map[string]string // image File id → objects/… path, from ResolvePaths
+	terms map[string]evidenceTerm // "property|term" → the term; a product term wins over a researcher's
+	types map[vocabkey.PropertyKey]string
+	pools map[vocabkey.SubjectType]map[vocabkey.PropertyKey][]vocabkey.PropertyKey
+	paths map[string]string // image File id → objects/… path, from ResolvePaths
 }
 
-// NewEvidenceValues reads the graph's product vocabulary: each property's value
-// type and each term's label (provenencia origin only: lines compare product
-// properties only).
+// evidenceTerm is a term's label and whose term it is.
+type evidenceTerm struct{ label, origin string }
+
+// NewEvidenceValues reads the graph's vocabulary: each product property's value
+// type and each term's label and origin. A line's value is labeled from product
+// terms only (lines compare product properties only); Term also names a
+// researcher's.
 func NewEvidenceValues(g *graphcache.Graph) (EvidenceValues, error) {
 	vocab, err := g.Vocabulary()
 	if err != nil {
 		return EvidenceValues{}, err
 	}
 	out := EvidenceValues{
-		labels: map[string]string{},
-		types:  map[vocabkey.PropertyKey]string{},
-		pools:  map[vocabkey.SubjectType]map[vocabkey.PropertyKey][]vocabkey.PropertyKey{},
+		terms: map[string]evidenceTerm{},
+		types: map[vocabkey.PropertyKey]string{},
+		pools: map[vocabkey.SubjectType]map[vocabkey.PropertyKey][]vocabkey.PropertyKey{},
 	}
 	for _, p := range vocab.Properties {
 		if p.Origin == vocabkey.OriginProvenencia {
@@ -52,8 +56,9 @@ func NewEvidenceValues(g *graphcache.Graph) (EvidenceValues, error) {
 		}
 	}
 	for _, t := range vocab.Terms {
-		if t.Origin == vocabkey.OriginProvenencia {
-			out.labels[t.PropertyKey+"|"+t.Key] = t.Label
+		id := t.PropertyKey + "|" + t.Key
+		if _, held := out.terms[id]; t.Origin == vocabkey.OriginProvenencia || !held {
+			out.terms[id] = evidenceTerm{label: t.Label, origin: t.Origin}
 		}
 	}
 	for kind, leads := range matchregistry.Default().Subject.Pools {
@@ -117,6 +122,14 @@ func (v EvidenceValues) Member(kind vocabkey.SubjectType, s claimevidence.Sectio
 	return v.value(l.Property, p.Value, v.search(kind, s, l.Property, false))
 }
 
+// Term is the catalog label and origin of a term of a property: the product's
+// term when there is one, else a researcher's. Both are empty for a term the
+// catalog does not know.
+func (v EvidenceValues) Term(property, key string) (label, origin string) {
+	t := v.terms[property+"|"+key]
+	return t.label, t.origin
+}
+
 // search lists the properties a term's label is looked up under.
 func (v EvidenceValues) search(kind vocabkey.SubjectType, s claimevidence.Section, property vocabkey.PropertyKey, propertyFirst bool) []vocabkey.PropertyKey {
 	rest := append([]vocabkey.PropertyKey{s.Key}, v.pools[kind][s.Key]...)
@@ -137,8 +150,8 @@ func (v EvidenceValues) value(property vocabkey.PropertyKey, val propertycompare
 	}
 	if typ == propertymeta.ValueTypeTerm {
 		for _, p := range search {
-			if label, ok := v.labels[string(p)+"|"+val.Term]; ok {
-				out.TermLabel = label
+			if t, ok := v.terms[string(p)+"|"+val.Term]; ok && t.origin == vocabkey.OriginProvenencia {
+				out.TermLabel = t.label
 				break
 			}
 		}

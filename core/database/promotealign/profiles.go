@@ -143,11 +143,9 @@ func lifeEvent(event subjectcompare.Values, role vocabkey.Role) subjectprofile.L
 	return le
 }
 
-// profile is a built handle: its values and its life, why it has no lifespan
-// or the first and last dated events.
+// profile is a built handle: its values.
 type profile struct {
 	values subjectcompare.Values
-	life   subjectcompare.LifeSide
 }
 
 // profiler builds handle profiles from the canon graph, each once for as long
@@ -299,7 +297,7 @@ func (p *profiler) keyValues(n *graphcache.Node) (subjectcompare.Values, error) 
 	if err != nil {
 		return nil, err
 	}
-	vals, _, err := subjectprofile.Build(e, p.metas, p.reconcile, nil, subjectprofile.Options{})
+	vals, err := subjectprofile.Build(e, p.metas, p.reconcile, nil, subjectprofile.Options{})
 	return vals, err
 }
 
@@ -322,11 +320,11 @@ func (p *profiler) build(n *graphcache.Node) error {
 			}
 		}
 	}
-	vals, life, err := subjectprofile.Build(e, p.metas, p.reconcile, p.rules.Lifespans[kind], subjectprofile.Options{})
+	vals, err := subjectprofile.Build(e, p.metas, p.reconcile, p.rules.Lifespans[kind], subjectprofile.Options{})
 	if err != nil {
 		return err
 	}
-	p.done[string(n.ID)] = profile{values: vals, life: life}
+	p.done[string(n.ID)] = profile{values: vals}
 	return nil
 }
 
@@ -336,9 +334,4 @@ func (p *profiler) values(id []byte) subjectcompare.Values {
 		return v.values
 	}
 	return subjectcompare.Values{}
-}
-
-// life is a built node's life.
-func (p *profiler) life(id []byte) subjectcompare.LifeSide {
-	return p.done[string(id)].life
 }

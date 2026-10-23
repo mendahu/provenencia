@@ -25,8 +25,6 @@ import (
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/raster"
-	"github.com/mendahu/provenencia/core/segmentcompare"
-	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -37,6 +35,7 @@ import (
 // match, or a wrongly refused input.
 const (
 	swiftVocabulary = "../../macos/App/Platform/ConclusionVocabulary.swift"
+	swiftL10n       = "../../macos/App/Platform/L10n.swift"
 	swiftValueKinds = "../../macos/App/Platform/InterpretationValueKinds.swift"
 	swiftMarks      = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
 	swiftGraphKinds = "../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift"
@@ -66,6 +65,39 @@ func swiftEnumBody(t *testing.T, path, name string) string {
 		t.Fatalf("%s: enum %s does not close", path, name)
 	}
 	return src[start : start+end]
+}
+
+// swiftFuncBody returns the source from `signature` to the brace that closes
+// its body.
+func swiftFuncBody(t *testing.T, path, signature string) string {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(b)
+	start := strings.Index(src, signature)
+	if start < 0 {
+		t.Fatalf("%s: no %s", path, signature)
+	}
+	open := strings.Index(src[start:], "{")
+	if open < 0 {
+		t.Fatalf("%s: %s has no body", path, signature)
+	}
+	depth := 0
+	for i := start + open; i < len(src); i++ {
+		switch src[i] {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				return src[start : i+1]
+			}
+		}
+	}
+	t.Fatalf("%s: %s does not close", path, signature)
+	return ""
 }
 
 var (
@@ -201,8 +233,13 @@ func sorted(in ...string) []string {
 }
 
 var (
-	wireCase    = regexp.MustCompile(`case "([a-z_]*)": self = `)
-	staticLet   = regexp.MustCompile(`static let \w+ = "([^"]*)"`)
+	wireCase  = regexp.MustCompile(`case "([a-z_]*)": self = `)
+	staticLet = regexp.MustCompile(`static let \w+ = "([^"]*)"`)
+	// swiftNamedKey reads `static let spouse = "spouse"`; swiftInverseEntry reads `parent: child,`.
+	swiftNamedKey     = regexp.MustCompile(`static let (\w+) = "([^"]*)"`)
+	swiftInverseEntry = regexp.MustCompile(`(?m)^\s+(\w+): (\w+),\s*$`)
+	// wordingCase reads `case (SeededPropertyKey.role, SeededRoleTerm.spouse): return roleSpouse`.
+	wordingCase = regexp.MustCompile(`case \(SeededPropertyKey\.\w+, (Seeded\w+Term)\.(\w+)\): return (\w+)`)
 	rawCase     = regexp.MustCompile(`(?m)^\s+case (\w+)\s*$`)
 	unrecogniz  = regexp.MustCompile(`case unrecognized\(String\)`)
 	listCase    = regexp.MustCompile(`case \w+ = "([a-z_]+)"`)
@@ -292,16 +329,6 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 				string(valuecompare.CauseOrder), string(valuecompare.CauseRole), string(valuecompare.CauseUnsupported), string(valuecompare.CauseUnjudged)),
 		},
 		{
-			name: "lifespan missing", path: swiftVocabulary, enum: "LifespanMissing", re: wireCase,
-			want: sorted("", string(subjectcompare.LifespanUndated), string(subjectcompare.LifespanContradicts)),
-		},
-		{
-			name: "segment causes", path: swiftVocabulary, enum: "SegmentCause", re: wireCase,
-			want: sorted("", string(segmentcompare.CauseNotCorresponding), string(segmentcompare.CauseGated),
-				string(segmentcompare.CausePlacedApart), string(segmentcompare.CauseUnplacedDiffers),
-				string(segmentcompare.CauseUnplacedUnsure)),
-		},
-		{
 			name: "date qualifiers", path: swiftVocabulary, enum: "DateQualifier", re: staticLet,
 			want: sorted(datevalue.QualifierABT, datevalue.QualifierBEF, datevalue.QualifierAFT),
 		},
@@ -348,10 +375,17 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 	}
 	t.Run("states and reasons tolerate a value this build doesn't know", func(t *testing.T) {
 		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteReasonCode",
-			"EvidenceOutcome", "EvidencePropertyCause", "ValueRelation", "ValueCause", "LifespanMissing", "SegmentCause"} {
+			"EvidenceOutcome", "EvidencePropertyCause", "ValueRelation", "ValueCause"} {
 			if !unrecogniz.MatchString(swiftEnumBody(t, swiftVocabulary, enum)) {
 				t.Fatalf("%s has no unrecognized case", enum)
 			}
+		}
+	})
+	t.Run("the product's origin is Go's", func(t *testing.T) {
+		got := matches(staticLet, swiftEnumBody(t, swiftVocabulary, "CatalogOrigin"))
+		want := []string{vocabkey.OriginProvenencia, vocabkey.OriginUser}
+		if strings.Join(got, ",") != strings.Join(want, ",") {
+			t.Fatalf("Swift CatalogOrigin %q, Go %q", got, want)
 		}
 	})
 	t.Run("seeded Property keys are seeded", func(t *testing.T) {
@@ -366,12 +400,18 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			}
 		}
 	})
+	// The seeded terms the app names: a Swift constant for each, and the one wording table.
+	seededTermEnums := []struct{ enum, property string }{
+		{"SeededGenderTerm", "gender"},
+		{"SeededSexAtBirthTerm", "sex_at_birth"},
+		{"SeededRoleTerm", "role"},
+		{"SeededEventTypeTerm", "event_type"},
+		{"SeededRelationshipTypeTerm", "relationship_type"},
+		{"SeededPlaceRelationshipTypeTerm", "place_relationship_type"},
+	}
 	t.Run("seeded term keys are seeded", func(t *testing.T) {
 		c := installedCatalog(t)
-		for _, tc := range []struct{ enum, property string }{
-			{"SeededGenderTerm", "gender"},
-			{"SeededSexAtBirthTerm", "sex_at_birth"},
-		} {
+		for _, tc := range seededTermEnums {
 			keys := matches(staticLet, swiftEnumBody(t, swiftVocabulary, tc.enum))
 			if len(keys) == 0 {
 				t.Fatalf("%s: no keys read", tc.enum)
@@ -385,6 +425,112 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 					t.Errorf("Swift names %s term %q, which is not seeded: %v", tc.property, key, err)
 				}
 			}
+		}
+	})
+	t.Run("every seeded term is in Swift", func(t *testing.T) {
+		c := installedCatalog(t)
+		for _, tc := range seededTermEnums {
+			have := map[string]bool{}
+			for _, key := range matches(staticLet, swiftEnumBody(t, swiftVocabulary, tc.enum)) {
+				have[key] = true
+			}
+			prop, err := properties.Lookup(c, tc.property, vocabkey.OriginProvenencia)
+			if err != nil {
+				t.Fatal(err)
+			}
+			terms, err := propertyterms.ListByProperty(c, prop.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, term := range terms {
+				if term.Origin == vocabkey.OriginProvenencia && !have[term.Key] {
+					t.Errorf("%s term %q is seeded in Go and has no constant in Swift %s", tc.property, term.Key, tc.enum)
+				}
+			}
+		}
+	})
+	t.Run("every seeded term has wording", func(t *testing.T) {
+		body := swiftFuncBody(t, swiftL10n, "static func wording(propertyKey")
+		named := map[string]bool{}
+		for _, m := range wordingCase.FindAllStringSubmatch(body, -1) {
+			named[m[1]+"."+m[2]] = true
+		}
+		for _, tc := range seededTermEnums {
+			enumBody := swiftEnumBody(t, swiftVocabulary, tc.enum)
+			for _, m := range swiftNamedKey.FindAllStringSubmatch(enumBody, -1) {
+				if !named[tc.enum+"."+m[1]] {
+					t.Errorf("Swift %s.%s (%s term %q) has no L10n.PropertyTerm wording", tc.enum, m[1], tc.property, m[2])
+				}
+			}
+		}
+	})
+	t.Run("every term a sentence shares has its share phrases", func(t *testing.T) {
+		body := swiftFuncBody(t, swiftL10n, "static func wording(propertyKey")
+		// A term of these enums is worded whole in "they share ...", for a similar outcome too;
+		// a place relationship term names the row from the other end as well.
+		fields := map[string][]string{
+			"SeededRoleTerm":                  {"share", "shareSimilar"},
+			"SeededEventTypeTerm":             {"share", "shareSimilar"},
+			"SeededRelationshipTypeTerm":      {"share", "shareSimilar"},
+			"SeededPlaceRelationshipTypeTerm": {"share", "shareSimilar", "shareOtherEnd", "shareOtherEndSimilar"},
+		}
+		src, err := os.ReadFile(swiftL10n)
+		if err != nil {
+			t.Fatal(err)
+		}
+		checked := 0
+		for _, m := range wordingCase.FindAllStringSubmatch(body, -1) {
+			want, ok := fields[m[1]]
+			if !ok {
+				continue
+			}
+			def := regexp.MustCompile(`(?s)static let ` + m[3] + ` = Wording\((.*?)\n        \)`).FindStringSubmatch(string(src))
+			if def == nil {
+				t.Fatalf("no Wording definition for %s", m[3])
+			}
+			for _, field := range want {
+				if !regexp.MustCompile(`\b` + field + `: LocalizedStringResource\(`).MatchString(def[1]) {
+					t.Errorf("%s.%s (%s) has no %s", m[1], m[2], m[3], field)
+				}
+			}
+			checked++
+		}
+		if checked == 0 {
+			t.Fatal("no wording read")
+		}
+	})
+	t.Run("the relationship inverse map is the seeded inverse", func(t *testing.T) {
+		body := swiftEnumBody(t, swiftVocabulary, "SeededRelationshipTypeTerm")
+		keyOf := map[string]string{}
+		for _, m := range swiftNamedKey.FindAllStringSubmatch(body, -1) {
+			keyOf[m[1]] = m[2]
+		}
+		got := map[string]string{}
+		for _, m := range swiftInverseEntry.FindAllStringSubmatch(body, -1) {
+			got[keyOf[m[1]]] = keyOf[m[2]]
+		}
+		if len(got) == 0 {
+			t.Fatal("no inverse entries read")
+		}
+		c := installedCatalog(t)
+		prop, err := properties.Lookup(c, "relationship_type", vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := map[string]string{}
+		for _, key := range keyOf {
+			term, err := propertyterms.Lookup(c, prop.ID, key, vocabkey.OriginProvenencia)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// An undirected term reads the same from both ends.
+			want[key] = key
+			if term.Directed {
+				want[key] = term.InverseKey
+			}
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("SeededRelationshipTypeTerm.inverse %v, seeded inverses %v", got, want)
 		}
 	})
 }

@@ -9,6 +9,13 @@ import SwiftUI
 /// See `DesignSystem/README.md` / `PVButton.swift` for the component
 /// pattern this follows.
 struct PVField<Content: View>: View {
+    /// What the label wears beside it: nothing, the required star, or a muted "(optional)".
+    enum Marker {
+        case none
+        case required
+        case optional
+    }
+
     private let label: LocalizedStringResource?
     private let hint: Text?
     /// Plain `String`, not `LocalizedStringResource` — unlike `label`/`hint`,
@@ -17,20 +24,20 @@ struct PVField<Content: View>: View {
     /// `L10n.Errors.message` before it reaches here. Same reasoning as
     /// `PVToast`'s `title`/`message`.
     private let error: String?
-    private let required: Bool
+    private let marker: Marker
     private let content: Content
 
     init(
         label: LocalizedStringResource? = nil,
         hint: (any PVCopy)? = nil,
         error: String? = nil,
-        required: Bool = false,
+        marker: Marker = .none,
         @ViewBuilder content: () -> Content
     ) {
         self.label = label
         self.hint = hint?.pvText
         self.error = error
-        self.required = required
+        self.marker = marker
         self.content = content()
     }
 
@@ -39,8 +46,13 @@ struct PVField<Content: View>: View {
             if let label {
                 HStack(spacing: PVSpacing.space1) {
                     Text(label)
-                    if required {
+                    switch marker {
+                    case .none:
+                        EmptyView()
+                    case .required:
                         Text(L10n.DesignSystem.requiredMarker).foregroundStyle(PVColor.danger)
+                    case .optional:
+                        Text(L10n.DesignSystem.optionalMarker).foregroundStyle(PVColor.textMuted)
                     }
                 }
                 .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
@@ -65,6 +77,15 @@ struct PVField<Content: View>: View {
 #Preview {
     PVField(label: "Researcher name", hint: "Enter your name as it should appear on every fact you assert") {
         PVInput(text: .constant("Jane Smith"))
+    }
+    .padding(PVSpacing.space9)
+    .frame(width: 320)
+    .background(PVColor.surfacePage)
+}
+
+#Preview("Optional marker") {
+    PVField(label: "Additional comments", marker: .optional) {
+        PVInput(text: .constant(""))
     }
     .padding(PVSpacing.space9)
     .frame(width: 320)

@@ -150,6 +150,28 @@ struct EvidenceBridgeEdgeSummaryTests {
         )
     }
 
+    @Test func aBridgeMissingAnEndpointIsCompletedFromTheSnapshotsIndex() {
+        let full = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueSubjectID: "p1"),
+            observation(propertyKey: "event", valueSubjectID: "e1"),
+        ])
+        var stripped = full
+        stripped.endpointAID = nil
+        stripped.endpointBID = nil
+        let snap = snapshot(bridge: full, subjects: [
+            primary(id: "p1", kind: .person, label: "Margt.", ref: "CPR-1"),
+            primary(id: "e1", kind: .event, label: "Birth", ref: "CEV-1"),
+        ])
+        let index = EvidenceBridgeEdgeSummary.bridges(of: snap)
+        #expect(index["bridge-1"]?.endpointAID == "p1")
+        let expected = L10n.EvidenceGraph.bridgeSummaryParticipationFallback(person: "Margt.", event: "Birth")
+        #expect(EvidenceBridgeEdgeSummary.sentence(for: stripped, in: snap, bridges: index) == expected)
+        // Without a passed index the same answer is built from the snapshot.
+        #expect(EvidenceBridgeEdgeSummary.sentence(for: stripped, in: snap) == expected)
+        // An empty index skips the completion: a bridge from the snapshot itself has its endpoints.
+        #expect(EvidenceBridgeEdgeSummary.sentence(for: stripped, in: snap, bridges: [:]) != expected)
+    }
+
     @Test func blankLabelFallsBackToTypeAndRef() {
         let placed = bridge(kind: .participation, observations: [
             observation(propertyKey: "person", valueSubjectID: "p1"),
@@ -165,6 +187,147 @@ struct EvidenceBridgeEdgeSummaryTests {
                     person: L10n.EvidenceGraph.bridgeNounTypeAndRef(type: "Person", ref: "CPR-F4N2P"),
                     event: "Birth"
                 )
+        )
+    }
+
+    @Test func aParticipationReadsFromTheRegistry() {
+        var role = observation(propertyKey: "role", valueText: "Subject", valueType: "term")
+        role.valueTermKey = "subject"
+        role.valueTermOrigin = CatalogOrigin.provenencia
+        var eventType = identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Birth")
+        eventType.valueTermKey = "birth"
+        eventType.valueTermOrigin = CatalogOrigin.provenencia
+        let placed = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueSubjectID: "p1"),
+            observation(propertyKey: "event", valueSubjectID: "e1"),
+            role,
+        ])
+        let snap = snapshot(bridge: placed, subjects: [
+            primary(
+                id: "p1",
+                kind: .person,
+                label: "Alice",
+                ref: "CPR-1",
+                observations: [identityObservation(subjectID: "p1", propertyKey: "name", valueText: "Alice")]
+            ),
+            primary(id: "e1", kind: .event, label: "Birth", ref: "CEV-1", observations: [eventType]),
+        ])
+        #expect(EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap) == "Alice was born")
+    }
+
+    @Test func aUserTermKeyedLikeAProductTermReadsGenerically() {
+        // A researcher's own role "subject", labelled "Main person", at a product birth.
+        var role = observation(propertyKey: "role", valueText: "Main person", valueType: "term")
+        role.valueTermKey = "subject"
+        role.valueTermOrigin = "user"
+        var eventType = identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Birth")
+        eventType.valueTermKey = "birth"
+        eventType.valueTermOrigin = CatalogOrigin.provenencia
+        let placed = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueSubjectID: "p1"),
+            observation(propertyKey: "event", valueSubjectID: "e1"),
+            role,
+        ])
+        let people = [
+            primary(
+                id: "p1", kind: .person, label: "Alice", ref: "CPR-1",
+                observations: [identityObservation(subjectID: "p1", propertyKey: "name", valueText: "Alice")]
+            ),
+        ]
+        let snap = snapshot(bridge: placed, subjects: people + [
+            primary(id: "e1", kind: .event, label: "Birth", ref: "CEV-1", observations: [eventType]),
+        ])
+        let sentence = EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap)
+        #expect(sentence.hasPrefix("Alice participated as main person"))
+        #expect(!sentence.contains("was born"))
+        #expect(EvidenceBridgeEdgeSummary.phrase(for: placed).contains("main person"))
+
+        // A researcher's own event type "birth" with the product's subject role.
+        var productRole = observation(propertyKey: "role", valueText: "Subject", valueType: "term")
+        productRole.valueTermKey = "subject"
+        productRole.valueTermOrigin = CatalogOrigin.provenencia
+        var userType = identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Arrival")
+        userType.valueTermKey = "birth"
+        userType.valueTermOrigin = "user"
+        let userPlaced = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueSubjectID: "p1"),
+            observation(propertyKey: "event", valueSubjectID: "e1"),
+            productRole,
+        ])
+        let userSnap = snapshot(bridge: userPlaced, subjects: people + [
+            primary(id: "e1", kind: .event, label: "Arrival", ref: "CEV-1", observations: [userType]),
+        ])
+        #expect(!EvidenceBridgeEdgeSummary.sentence(for: userPlaced, in: userSnap).contains("was born"))
+    }
+
+    @Test func anEventEndpointIsNamedByItsTitle() {
+        let placed = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueSubjectID: "p1"),
+            observation(propertyKey: "event", valueSubjectID: "e1"),
+        ])
+        var event = primary(
+            id: "e1",
+            kind: .event,
+            label: "Working",
+            ref: "CEV-1",
+            observations: [identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Birth")]
+        )
+        event.eventTitle = CatalogEventTitle(rule: .label, label: "Birth of Alice")
+        let snap = snapshot(bridge: placed, subjects: [
+            primary(id: "p1", kind: .person, label: "Alice", ref: "CPR-1"),
+            event,
+        ])
+        #expect(
+            EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap)
+                == L10n.EvidenceGraph.bridgeSummaryParticipationFallback(
+                    person: "Alice",
+                    event: EventTitleDisplay.title(CatalogEventTitle(rule: .label, label: "Birth of Alice"))
+                )
+        )
+    }
+
+    private func titledEventSentence(eventType: String, title: String) -> String {
+        var role = observation(propertyKey: "role", valueText: "Subject", valueType: "term")
+        role.valueTermKey = "subject"
+        role.valueTermOrigin = CatalogOrigin.provenencia
+        var typeObservation = identityObservation(
+            subjectID: "e1", propertyKey: "event_type", valueText: eventType.capitalized
+        )
+        typeObservation.valueTermKey = eventType
+        typeObservation.valueTermOrigin = CatalogOrigin.provenencia
+        let placed = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueSubjectID: "p1"),
+            observation(propertyKey: "event", valueSubjectID: "e1"),
+            role,
+        ])
+        var event = primary(
+            id: "e1", kind: .event, label: "Working", ref: "CEV-1", observations: [typeObservation]
+        )
+        event.eventTitle = CatalogEventTitle(rule: .label, label: title)
+        let snap = snapshot(bridge: placed, subjects: [
+            primary(
+                id: "p1",
+                kind: .person,
+                label: "Don Smith",
+                ref: "CPR-1",
+                observations: [identityObservation(subjectID: "p1", propertyKey: "name", valueText: "Don Smith")]
+            ),
+            event,
+        ])
+        return EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap)
+    }
+
+    @Test func aMarriageReadsWithItsTitle() {
+        #expect(
+            titledEventSentence(eventType: "marriage", title: "Marriage of Don Smith and Marion Brown")
+                == "Don Smith married (Marriage of Don Smith and Marion Brown)"
+        )
+    }
+
+    @Test func aFuneralReadsWithItsTitle() {
+        #expect(
+            titledEventSentence(eventType: "funeral", title: "Funeral of Don Smith")
+                == "Don Smith's funeral (Funeral of Don Smith)"
         )
     }
 
