@@ -5,26 +5,11 @@ import SwiftUI
 /// so Escape and a click outside the sheet follow one rule: ``PVSheetDismiss``.
 /// A dirty sheet asks before it closes, from either route; the visible Cancel
 /// button still closes at once. Menus and popovers are not this path.
-enum PVSheet {
-    /// What a presenter tells the chrome about its sheet.
-    struct Policy: Equatable {
-        var isRunning = false
-        var isDirty = false
-    }
-
-    /// The pure rule both Escape and an outside click call.
-    static func dismissRoute(isRunning: Bool, isDirty: Bool, isConfirmingDiscard: Bool) -> PVSheetDismiss {
-        PVSheetDismiss.action(isRunning: isRunning, isDirty: isDirty, isConfirmingDiscard: isConfirmingDiscard)
-    }
-
-    static func dismissRoute(policy: Policy, isConfirmingDiscard: Bool) -> PVSheetDismiss {
-        dismissRoute(isRunning: policy.isRunning, isDirty: policy.isDirty, isConfirmingDiscard: isConfirmingDiscard)
-    }
-}
-
-/// Wraps a sheet's content with both close routes and the discard question.
+///
+/// The chrome wraps a sheet's content with both close routes and the discard question.
 private struct PVSheetChrome<Content: View>: View {
-    let policy: PVSheet.Policy
+    let isRunning: Bool
+    let isDirty: Bool
     /// Prefix for the discard question's `.confirm` / `.cancel` ids.
     let accessibilityIdentifierPrefix: String?
     let close: () -> Void
@@ -71,7 +56,7 @@ private struct PVSheetChrome<Content: View>: View {
     }
 
     private func dismiss() {
-        switch PVSheet.dismissRoute(policy: policy, isConfirmingDiscard: confirmingDiscard) {
+        switch PVSheetDismiss.action(isRunning: isRunning, isDirty: isDirty, isConfirmingDiscard: confirmingDiscard) {
         case .ignore:
             break
         case .keepEditing:
@@ -98,7 +83,8 @@ extension View {
     ) -> some View {
         sheet(item: item) { value in
             PVSheetChrome(
-                policy: PVSheet.Policy(isRunning: isRunning, isDirty: isDirty),
+                isRunning: isRunning,
+                isDirty: isDirty,
                 accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
                 close: { item.wrappedValue = nil }
             ) {
@@ -117,7 +103,8 @@ extension View {
     ) -> some View {
         sheet(isPresented: isPresented) {
             PVSheetChrome(
-                policy: PVSheet.Policy(isRunning: isRunning, isDirty: isDirty),
+                isRunning: isRunning,
+                isDirty: isDirty,
                 accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
                 close: { isPresented.wrappedValue = false },
                 content: content

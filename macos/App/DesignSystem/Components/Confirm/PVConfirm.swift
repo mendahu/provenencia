@@ -81,11 +81,6 @@ enum PVConfirmTone {
 /// Pure enablement for confirm footer buttons — extracted for unit tests.
 enum PVConfirmControls {
     static func isActionDisabled(isRunning: Bool) -> Bool { isRunning }
-
-    /// What the confirm hands ``PVSheet``: nothing to lose, so never dirty.
-    static func sheetPolicy(isRunning: Bool) -> PVSheet.Policy {
-        PVSheet.Policy(isRunning: isRunning, isDirty: false)
-    }
 }
 
 /// Layout constants for the confirm sheet.
@@ -211,8 +206,7 @@ extension View {
     ) -> some View {
         pvSheet(
             item: item,
-            isRunning: PVConfirmControls.sheetPolicy(isRunning: isRunning).isRunning,
-            isDirty: PVConfirmControls.sheetPolicy(isRunning: isRunning).isDirty
+            isRunning: isRunning
         ) { value in
             PVConfirmContent(
                 copy: copy(value),

@@ -40,11 +40,6 @@ enum PVFormDialogControls {
     static func isConfirmDisabled(isRunning: Bool, confirmDisabled: Bool) -> Bool {
         isRunning || confirmDisabled
     }
-
-    /// What the form hands ``PVSheet``.
-    static func sheetPolicy(isRunning: Bool, isDirty: Bool) -> PVSheet.Policy {
-        PVSheet.Policy(isRunning: isRunning, isDirty: isDirty)
-    }
 }
 
 /// Accessibility ids for form-dialog chrome buttons.
@@ -175,11 +170,10 @@ extension View {
         onConfirm: @escaping () -> Void,
         @ViewBuilder form: @escaping () -> Form
     ) -> some View {
-        let policy = PVFormDialogControls.sheetPolicy(isRunning: isRunning, isDirty: isDirty)
-        return pvSheet(
+        pvSheet(
             isPresented: isPresented,
-            isRunning: policy.isRunning,
-            isDirty: policy.isDirty,
+            isRunning: isRunning,
+            isDirty: isDirty,
             accessibilityIdentifierPrefix: accessibilityIdentifierPrefix
         ) {
             PVFormDialogContent(
