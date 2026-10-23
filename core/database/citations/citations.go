@@ -84,10 +84,6 @@ ORDER BY cid, MIN(oid)`
 		GROUP BY c.artifact_id`
 
 	sqlArtifactExists = `SELECT 1 FROM artifacts WHERE id = ?`
-
-	sqlCitationSource = `SELECT a.source_id FROM citations c
-		INNER JOIN artifacts a ON a.id = c.artifact_id
-		WHERE c.id = ?`
 )
 
 // Citation is one citations row.
@@ -474,22 +470,6 @@ func GetTx(tx *sql.Tx, id []byte) (Citation, error) {
 		return Citation{}, ErrInvalid
 	}
 	return scanOne(tx.QueryRow(sqlGet, id))
-}
-
-// SourceID returns the Artifact source_id for a Citation.
-func SourceID(c *database.Catalog, citationID []byte) ([]byte, error) {
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
-	}
-	if len(citationID) != 16 {
-		return nil, ErrInvalid
-	}
-	var sourceID []byte
-	if err := db.QueryRow(sqlCitationSource, citationID).Scan(&sourceID); err != nil {
-		return nil, err
-	}
-	return append([]byte(nil), sourceID...), nil
 }
 
 // ListByArtifact returns Citations for an Artifact, each with its Observation count.

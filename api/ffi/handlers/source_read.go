@@ -2,12 +2,10 @@ package handlers
 
 import (
 	"bytes"
-	"errors"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
@@ -38,29 +36,6 @@ func loadPropertyInfo(c *database.Catalog) (map[string]propertyInfo, error) {
 		out[string(p.ID)] = propertyInfo{Key: p.Key, Label: p.Label, ValueType: p.ValueType, Origin: p.Origin}
 	}
 	return out, nil
-}
-
-// sourceGraphID is the Source's one Evidence graph, until S12-08 puts graph ids
-// on the wire. ok is false for a Source with no graph, which reads as empty.
-func sourceGraphID(c *database.Catalog, sourceID []byte) (graphID []byte, ok bool, err error) {
-	graphID, err = evidencegraphs.SoleGraph(c, sourceID)
-	if errors.Is(err, evidencegraphs.ErrInvalid) {
-		return nil, false, nil
-	}
-	if err != nil {
-		return nil, false, err
-	}
-	return graphID, true, nil
-}
-
-// sourceEvidenceGraph is the loaded Evidence graph of a Source's one graph. An
-// unknown Source reads as an empty graph.
-func sourceEvidenceGraph(c *database.Catalog, sourceID []byte) (graphcache.EvidenceGraph, error) {
-	graphID, ok, err := sourceGraphID(c, sourceID)
-	if err != nil || !ok {
-		return graphcache.EvidenceGraph{}, err
-	}
-	return c.Graph().EvidenceGraph(graphID)
 }
 
 // listedProtosFromGraph projects stored observations. A citation id keeps

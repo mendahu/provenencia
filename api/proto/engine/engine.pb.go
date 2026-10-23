@@ -94,7 +94,7 @@ const (
 	Method_METHOD_DELETE_PROPERTY_TERM                 Method = 66
 	Method_METHOD_CREATE_CITATION_WITH_OBSERVATIONS    Method = 67
 	Method_METHOD_ADD_OBSERVATIONS_TO_CITATION         Method = 68
-	Method_METHOD_LIST_OBSERVATIONS_BY_SOURCE          Method = 69
+	Method_METHOD_LIST_OBSERVATIONS_BY_EVIDENCE_GRAPH  Method = 69
 	Method_METHOD_GET_CITATION                         Method = 70
 	Method_METHOD_CREATE_CITED_BRIDGE                  Method = 72
 	Method_METHOD_CITATION_COUNTS_BY_SOURCE            Method = 73
@@ -103,8 +103,8 @@ const (
 	Method_METHOD_UPDATE_OBSERVATION                   Method = 76
 	Method_METHOD_DELETE_OBSERVATION                   Method = 77
 	Method_METHOD_GET_PROPERTIES_WORKSPACE             Method = 78
-	Method_METHOD_LIST_SOURCE_GRAPH_PROGRESS           Method = 79
-	Method_METHOD_GET_SOURCE_GRAPH_PROGRESS            Method = 80
+	Method_METHOD_LIST_EVIDENCE_GRAPH_PROGRESS         Method = 79
+	Method_METHOD_GET_EVIDENCE_GRAPH_PROGRESS          Method = 80
 	Method_METHOD_GET_DELETE_IMPACT                    Method = 81
 	Method_METHOD_DELETE_SOURCE                        Method = 82
 	Method_METHOD_DELETE_ARTIFACT                      Method = 83
@@ -116,7 +116,7 @@ const (
 	Method_METHOD_GET_CONCLUSION_DETAIL                Method = 90
 	Method_METHOD_LIST_EVENT_HEADERS                   Method = 91
 	Method_METHOD_LIST_PLACE_HEADERS                   Method = 93
-	Method_METHOD_LIST_SOURCE_EVENT_TITLES             Method = 96
+	Method_METHOD_LIST_EVIDENCE_GRAPH_EVENT_TITLES     Method = 96
 	Method_METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT      Method = 97
 	Method_METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT        Method = 98
 	Method_METHOD_GET_NAME_FORMAT                      Method = 99
@@ -205,7 +205,7 @@ var (
 		66:  "METHOD_DELETE_PROPERTY_TERM",
 		67:  "METHOD_CREATE_CITATION_WITH_OBSERVATIONS",
 		68:  "METHOD_ADD_OBSERVATIONS_TO_CITATION",
-		69:  "METHOD_LIST_OBSERVATIONS_BY_SOURCE",
+		69:  "METHOD_LIST_OBSERVATIONS_BY_EVIDENCE_GRAPH",
 		70:  "METHOD_GET_CITATION",
 		72:  "METHOD_CREATE_CITED_BRIDGE",
 		73:  "METHOD_CITATION_COUNTS_BY_SOURCE",
@@ -214,8 +214,8 @@ var (
 		76:  "METHOD_UPDATE_OBSERVATION",
 		77:  "METHOD_DELETE_OBSERVATION",
 		78:  "METHOD_GET_PROPERTIES_WORKSPACE",
-		79:  "METHOD_LIST_SOURCE_GRAPH_PROGRESS",
-		80:  "METHOD_GET_SOURCE_GRAPH_PROGRESS",
+		79:  "METHOD_LIST_EVIDENCE_GRAPH_PROGRESS",
+		80:  "METHOD_GET_EVIDENCE_GRAPH_PROGRESS",
 		81:  "METHOD_GET_DELETE_IMPACT",
 		82:  "METHOD_DELETE_SOURCE",
 		83:  "METHOD_DELETE_ARTIFACT",
@@ -227,7 +227,7 @@ var (
 		90:  "METHOD_GET_CONCLUSION_DETAIL",
 		91:  "METHOD_LIST_EVENT_HEADERS",
 		93:  "METHOD_LIST_PLACE_HEADERS",
-		96:  "METHOD_LIST_SOURCE_EVENT_TITLES",
+		96:  "METHOD_LIST_EVIDENCE_GRAPH_EVENT_TITLES",
 		97:  "METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT",
 		98:  "METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT",
 		99:  "METHOD_GET_NAME_FORMAT",
@@ -313,7 +313,7 @@ var (
 		"METHOD_DELETE_PROPERTY_TERM":                 66,
 		"METHOD_CREATE_CITATION_WITH_OBSERVATIONS":    67,
 		"METHOD_ADD_OBSERVATIONS_TO_CITATION":         68,
-		"METHOD_LIST_OBSERVATIONS_BY_SOURCE":          69,
+		"METHOD_LIST_OBSERVATIONS_BY_EVIDENCE_GRAPH":  69,
 		"METHOD_GET_CITATION":                         70,
 		"METHOD_CREATE_CITED_BRIDGE":                  72,
 		"METHOD_CITATION_COUNTS_BY_SOURCE":            73,
@@ -322,8 +322,8 @@ var (
 		"METHOD_UPDATE_OBSERVATION":                   76,
 		"METHOD_DELETE_OBSERVATION":                   77,
 		"METHOD_GET_PROPERTIES_WORKSPACE":             78,
-		"METHOD_LIST_SOURCE_GRAPH_PROGRESS":           79,
-		"METHOD_GET_SOURCE_GRAPH_PROGRESS":            80,
+		"METHOD_LIST_EVIDENCE_GRAPH_PROGRESS":         79,
+		"METHOD_GET_EVIDENCE_GRAPH_PROGRESS":          80,
 		"METHOD_GET_DELETE_IMPACT":                    81,
 		"METHOD_DELETE_SOURCE":                        82,
 		"METHOD_DELETE_ARTIFACT":                      83,
@@ -335,7 +335,7 @@ var (
 		"METHOD_GET_CONCLUSION_DETAIL":                90,
 		"METHOD_LIST_EVENT_HEADERS":                   91,
 		"METHOD_LIST_PLACE_HEADERS":                   93,
-		"METHOD_LIST_SOURCE_EVENT_TITLES":             96,
+		"METHOD_LIST_EVIDENCE_GRAPH_EVENT_TITLES":     96,
 		"METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT":      97,
 		"METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT":        98,
 		"METHOD_GET_NAME_FORMAT":                      99,
@@ -8893,13 +8893,13 @@ type CreateSubjectRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
 	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	SourceId      string                 `protobuf:"bytes,3,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
 	SubjectTypeId string                 `protobuf:"bytes,4,opt,name=subject_type_id,json=subjectTypeId,proto3" json:"subject_type_id,omitempty"`
 	Label         string                 `protobuf:"bytes,5,opt,name=label,proto3" json:"label,omitempty"`
 	Description   string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
 	HasPlacement  bool                   `protobuf:"varint,7,opt,name=has_placement,json=hasPlacement,proto3" json:"has_placement,omitempty"`
 	GridX         int64                  `protobuf:"varint,8,opt,name=grid_x,json=gridX,proto3" json:"grid_x,omitempty"`
 	GridY         int64                  `protobuf:"varint,9,opt,name=grid_y,json=gridY,proto3" json:"grid_y,omitempty"`
+	GraphId       string                 `protobuf:"bytes,10,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -8948,13 +8948,6 @@ func (x *CreateSubjectRequest) GetUserId() string {
 	return ""
 }
 
-func (x *CreateSubjectRequest) GetSourceId() string {
-	if x != nil {
-		return x.SourceId
-	}
-	return ""
-}
-
 func (x *CreateSubjectRequest) GetSubjectTypeId() string {
 	if x != nil {
 		return x.SubjectTypeId
@@ -8995,6 +8988,13 @@ func (x *CreateSubjectRequest) GetGridY() int64 {
 		return x.GridY
 	}
 	return 0
+}
+
+func (x *CreateSubjectRequest) GetGraphId() string {
+	if x != nil {
+		return x.GraphId
+	}
+	return ""
 }
 
 type CreateSubjectResponse struct {
@@ -10196,30 +10196,30 @@ func (x *EventTitle) GetTypeOrigin() string {
 	return ""
 }
 
-// ListSourceEventTitles titles every Event Subject on one Source's Evidence
-// graph from what that Source cites, by the same rule as Event headers.
-type ListSourceEventTitlesRequest struct {
+// ListEvidenceGraphEventTitles titles every Event Subject on one Evidence
+// graph from what its Source cites, by the same rule as Event headers.
+type ListEvidenceGraphEventTitlesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	GraphId       string                 `protobuf:"bytes,3,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListSourceEventTitlesRequest) Reset() {
-	*x = ListSourceEventTitlesRequest{}
+func (x *ListEvidenceGraphEventTitlesRequest) Reset() {
+	*x = ListEvidenceGraphEventTitlesRequest{}
 	mi := &file_engine_proto_msgTypes[152]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListSourceEventTitlesRequest) String() string {
+func (x *ListEvidenceGraphEventTitlesRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListSourceEventTitlesRequest) ProtoMessage() {}
+func (*ListEvidenceGraphEventTitlesRequest) ProtoMessage() {}
 
-func (x *ListSourceEventTitlesRequest) ProtoReflect() protoreflect.Message {
+func (x *ListEvidenceGraphEventTitlesRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[152]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -10231,21 +10231,21 @@ func (x *ListSourceEventTitlesRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListSourceEventTitlesRequest.ProtoReflect.Descriptor instead.
-func (*ListSourceEventTitlesRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListEvidenceGraphEventTitlesRequest.ProtoReflect.Descriptor instead.
+func (*ListEvidenceGraphEventTitlesRequest) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{152}
 }
 
-func (x *ListSourceEventTitlesRequest) GetProjectDir() string {
+func (x *ListEvidenceGraphEventTitlesRequest) GetProjectDir() string {
 	if x != nil {
 		return x.ProjectDir
 	}
 	return ""
 }
 
-func (x *ListSourceEventTitlesRequest) GetSourceId() string {
+func (x *ListEvidenceGraphEventTitlesRequest) GetGraphId() string {
 	if x != nil {
-		return x.SourceId
+		return x.GraphId
 	}
 	return ""
 }
@@ -10302,27 +10302,27 @@ func (x *SourceEventTitle) GetTitle() *EventTitle {
 	return nil
 }
 
-type ListSourceEventTitlesResponse struct {
+type ListEvidenceGraphEventTitlesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Titles        []*SourceEventTitle    `protobuf:"bytes,1,rep,name=titles,proto3" json:"titles,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListSourceEventTitlesResponse) Reset() {
-	*x = ListSourceEventTitlesResponse{}
+func (x *ListEvidenceGraphEventTitlesResponse) Reset() {
+	*x = ListEvidenceGraphEventTitlesResponse{}
 	mi := &file_engine_proto_msgTypes[154]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListSourceEventTitlesResponse) String() string {
+func (x *ListEvidenceGraphEventTitlesResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListSourceEventTitlesResponse) ProtoMessage() {}
+func (*ListEvidenceGraphEventTitlesResponse) ProtoMessage() {}
 
-func (x *ListSourceEventTitlesResponse) ProtoReflect() protoreflect.Message {
+func (x *ListEvidenceGraphEventTitlesResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[154]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -10334,12 +10334,12 @@ func (x *ListSourceEventTitlesResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListSourceEventTitlesResponse.ProtoReflect.Descriptor instead.
-func (*ListSourceEventTitlesResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListEvidenceGraphEventTitlesResponse.ProtoReflect.Descriptor instead.
+func (*ListEvidenceGraphEventTitlesResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{154}
 }
 
-func (x *ListSourceEventTitlesResponse) GetTitles() []*SourceEventTitle {
+func (x *ListEvidenceGraphEventTitlesResponse) GetTitles() []*SourceEventTitle {
 	if x != nil {
 		return x.Titles
 	}
@@ -10351,7 +10351,7 @@ func (x *ListSourceEventTitlesResponse) GetTitles() []*SourceEventTitle {
 type ListSubjectMembershipsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	GraphId       string                 `protobuf:"bytes,3,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10393,9 +10393,9 @@ func (x *ListSubjectMembershipsRequest) GetProjectDir() string {
 	return ""
 }
 
-func (x *ListSubjectMembershipsRequest) GetSourceId() string {
+func (x *ListSubjectMembershipsRequest) GetGraphId() string {
 	if x != nil {
-		return x.SourceId
+		return x.GraphId
 	}
 	return ""
 }
@@ -13838,7 +13838,7 @@ func (x *ApplyPromoteGraphAlignmentResponse) GetWritten() []*ApplyPromoteGraphAl
 type ListSubjectsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	GraphId       string                 `protobuf:"bytes,3,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -13880,9 +13880,9 @@ func (x *ListSubjectsRequest) GetProjectDir() string {
 	return ""
 }
 
-func (x *ListSubjectsRequest) GetSourceId() string {
+func (x *ListSubjectsRequest) GetGraphId() string {
 	if x != nil {
-		return x.SourceId
+		return x.GraphId
 	}
 	return ""
 }
@@ -14134,7 +14134,7 @@ func (*ClearSubjectPositionResponse) Descriptor() ([]byte, []int) {
 type ListSubjectPositionsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	GraphId       string                 `protobuf:"bytes,3,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -14176,9 +14176,9 @@ func (x *ListSubjectPositionsRequest) GetProjectDir() string {
 	return ""
 }
 
-func (x *ListSubjectPositionsRequest) GetSourceId() string {
+func (x *ListSubjectPositionsRequest) GetGraphId() string {
 	if x != nil {
-		return x.SourceId
+		return x.GraphId
 	}
 	return ""
 }
@@ -17287,28 +17287,28 @@ func (x *AddObservationsToCitationResponse) GetEffects() *WriteEffects {
 	return nil
 }
 
-type ListObservationsBySourceRequest struct {
+type ListObservationsByEvidenceGraphRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	GraphId       string                 `protobuf:"bytes,3,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListObservationsBySourceRequest) Reset() {
-	*x = ListObservationsBySourceRequest{}
+func (x *ListObservationsByEvidenceGraphRequest) Reset() {
+	*x = ListObservationsByEvidenceGraphRequest{}
 	mi := &file_engine_proto_msgTypes[251]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListObservationsBySourceRequest) String() string {
+func (x *ListObservationsByEvidenceGraphRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListObservationsBySourceRequest) ProtoMessage() {}
+func (*ListObservationsByEvidenceGraphRequest) ProtoMessage() {}
 
-func (x *ListObservationsBySourceRequest) ProtoReflect() protoreflect.Message {
+func (x *ListObservationsByEvidenceGraphRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[251]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -17320,46 +17320,46 @@ func (x *ListObservationsBySourceRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListObservationsBySourceRequest.ProtoReflect.Descriptor instead.
-func (*ListObservationsBySourceRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListObservationsByEvidenceGraphRequest.ProtoReflect.Descriptor instead.
+func (*ListObservationsByEvidenceGraphRequest) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{251}
 }
 
-func (x *ListObservationsBySourceRequest) GetProjectDir() string {
+func (x *ListObservationsByEvidenceGraphRequest) GetProjectDir() string {
 	if x != nil {
 		return x.ProjectDir
 	}
 	return ""
 }
 
-func (x *ListObservationsBySourceRequest) GetSourceId() string {
+func (x *ListObservationsByEvidenceGraphRequest) GetGraphId() string {
 	if x != nil {
-		return x.SourceId
+		return x.GraphId
 	}
 	return ""
 }
 
-type ListObservationsBySourceResponse struct {
+type ListObservationsByEvidenceGraphResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Observations  []*Observation         `protobuf:"bytes,1,rep,name=observations,proto3" json:"observations,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListObservationsBySourceResponse) Reset() {
-	*x = ListObservationsBySourceResponse{}
+func (x *ListObservationsByEvidenceGraphResponse) Reset() {
+	*x = ListObservationsByEvidenceGraphResponse{}
 	mi := &file_engine_proto_msgTypes[252]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListObservationsBySourceResponse) String() string {
+func (x *ListObservationsByEvidenceGraphResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListObservationsBySourceResponse) ProtoMessage() {}
+func (*ListObservationsByEvidenceGraphResponse) ProtoMessage() {}
 
-func (x *ListObservationsBySourceResponse) ProtoReflect() protoreflect.Message {
+func (x *ListObservationsByEvidenceGraphResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[252]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -17371,12 +17371,12 @@ func (x *ListObservationsBySourceResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListObservationsBySourceResponse.ProtoReflect.Descriptor instead.
-func (*ListObservationsBySourceResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListObservationsByEvidenceGraphResponse.ProtoReflect.Descriptor instead.
+func (*ListObservationsByEvidenceGraphResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{252}
 }
 
-func (x *ListObservationsBySourceResponse) GetObservations() []*Observation {
+func (x *ListObservationsByEvidenceGraphResponse) GetObservations() []*Observation {
 	if x != nil {
 		return x.Observations
 	}
@@ -17692,6 +17692,7 @@ type GetCitationRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
 	CitationId    string                 `protobuf:"bytes,2,opt,name=citation_id,json=citationId,proto3" json:"citation_id,omitempty"`
+	GraphId       string                 `protobuf:"bytes,3,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -17736,6 +17737,13 @@ func (x *GetCitationRequest) GetProjectDir() string {
 func (x *GetCitationRequest) GetCitationId() string {
 	if x != nil {
 		return x.CitationId
+	}
+	return ""
+}
+
+func (x *GetCitationRequest) GetGraphId() string {
+	if x != nil {
+		return x.GraphId
 	}
 	return ""
 }
@@ -17804,7 +17812,6 @@ type CreateCitedBridgeRequest struct {
 	state                  protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir             string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
 	UserId                 string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	SourceId               string                 `protobuf:"bytes,3,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
 	FromSubjectId          string                 `protobuf:"bytes,4,opt,name=from_subject_id,json=fromSubjectId,proto3" json:"from_subject_id,omitempty"`
 	ToSubjectId            string                 `protobuf:"bytes,5,opt,name=to_subject_id,json=toSubjectId,proto3" json:"to_subject_id,omitempty"`
 	BridgeTypeKey          string                 `protobuf:"bytes,6,opt,name=bridge_type_key,json=bridgeTypeKey,proto3" json:"bridge_type_key,omitempty"`
@@ -17862,13 +17869,6 @@ func (x *CreateCitedBridgeRequest) GetProjectDir() string {
 func (x *CreateCitedBridgeRequest) GetUserId() string {
 	if x != nil {
 		return x.UserId
-	}
-	return ""
-}
-
-func (x *CreateCitedBridgeRequest) GetSourceId() string {
-	if x != nil {
-		return x.SourceId
 	}
 	return ""
 }
@@ -18574,31 +18574,33 @@ func (x *GetPropertiesWorkspaceResponse) GetGroups() []*SubjectTypePropertiesGro
 	return nil
 }
 
-type SourceGraphProgress struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	SourceId         string                 `protobuf:"bytes,1,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
-	SubjectCount     int32                  `protobuf:"varint,2,opt,name=subject_count,json=subjectCount,proto3" json:"subject_count,omitempty"`
-	ObservationCount int32                  `protobuf:"varint,3,opt,name=observation_count,json=observationCount,proto3" json:"observation_count,omitempty"`
-	PrimaryCount     int32                  `protobuf:"varint,5,opt,name=primary_count,json=primaryCount,proto3" json:"primary_count,omitempty"`
-	FiledCount       int32                  `protobuf:"varint,6,opt,name=filed_count,json=filedCount,proto3" json:"filed_count,omitempty"`
+type EvidenceGraphProgress struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The graph's Source.
+	SourceId         string `protobuf:"bytes,1,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	SubjectCount     int32  `protobuf:"varint,2,opt,name=subject_count,json=subjectCount,proto3" json:"subject_count,omitempty"`
+	ObservationCount int32  `protobuf:"varint,3,opt,name=observation_count,json=observationCount,proto3" json:"observation_count,omitempty"`
+	PrimaryCount     int32  `protobuf:"varint,5,opt,name=primary_count,json=primaryCount,proto3" json:"primary_count,omitempty"`
+	FiledCount       int32  `protobuf:"varint,6,opt,name=filed_count,json=filedCount,proto3" json:"filed_count,omitempty"`
+	GraphId          string `protobuf:"bytes,7,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
 
-func (x *SourceGraphProgress) Reset() {
-	*x = SourceGraphProgress{}
+func (x *EvidenceGraphProgress) Reset() {
+	*x = EvidenceGraphProgress{}
 	mi := &file_engine_proto_msgTypes[272]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SourceGraphProgress) String() string {
+func (x *EvidenceGraphProgress) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SourceGraphProgress) ProtoMessage() {}
+func (*EvidenceGraphProgress) ProtoMessage() {}
 
-func (x *SourceGraphProgress) ProtoReflect() protoreflect.Message {
+func (x *EvidenceGraphProgress) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[272]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -18610,67 +18612,74 @@ func (x *SourceGraphProgress) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SourceGraphProgress.ProtoReflect.Descriptor instead.
-func (*SourceGraphProgress) Descriptor() ([]byte, []int) {
+// Deprecated: Use EvidenceGraphProgress.ProtoReflect.Descriptor instead.
+func (*EvidenceGraphProgress) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{272}
 }
 
-func (x *SourceGraphProgress) GetSourceId() string {
+func (x *EvidenceGraphProgress) GetSourceId() string {
 	if x != nil {
 		return x.SourceId
 	}
 	return ""
 }
 
-func (x *SourceGraphProgress) GetSubjectCount() int32 {
+func (x *EvidenceGraphProgress) GetSubjectCount() int32 {
 	if x != nil {
 		return x.SubjectCount
 	}
 	return 0
 }
 
-func (x *SourceGraphProgress) GetObservationCount() int32 {
+func (x *EvidenceGraphProgress) GetObservationCount() int32 {
 	if x != nil {
 		return x.ObservationCount
 	}
 	return 0
 }
 
-func (x *SourceGraphProgress) GetPrimaryCount() int32 {
+func (x *EvidenceGraphProgress) GetPrimaryCount() int32 {
 	if x != nil {
 		return x.PrimaryCount
 	}
 	return 0
 }
 
-func (x *SourceGraphProgress) GetFiledCount() int32 {
+func (x *EvidenceGraphProgress) GetFiledCount() int32 {
 	if x != nil {
 		return x.FiledCount
 	}
 	return 0
 }
 
-type ListSourceGraphProgressRequest struct {
+func (x *EvidenceGraphProgress) GetGraphId() string {
+	if x != nil {
+		return x.GraphId
+	}
+	return ""
+}
+
+type ListEvidenceGraphProgressRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListSourceGraphProgressRequest) Reset() {
-	*x = ListSourceGraphProgressRequest{}
+func (x *ListEvidenceGraphProgressRequest) Reset() {
+	*x = ListEvidenceGraphProgressRequest{}
 	mi := &file_engine_proto_msgTypes[273]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListSourceGraphProgressRequest) String() string {
+func (x *ListEvidenceGraphProgressRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListSourceGraphProgressRequest) ProtoMessage() {}
+func (*ListEvidenceGraphProgressRequest) ProtoMessage() {}
 
-func (x *ListSourceGraphProgressRequest) ProtoReflect() protoreflect.Message {
+func (x *ListEvidenceGraphProgressRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[273]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -18682,39 +18691,39 @@ func (x *ListSourceGraphProgressRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListSourceGraphProgressRequest.ProtoReflect.Descriptor instead.
-func (*ListSourceGraphProgressRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListEvidenceGraphProgressRequest.ProtoReflect.Descriptor instead.
+func (*ListEvidenceGraphProgressRequest) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{273}
 }
 
-func (x *ListSourceGraphProgressRequest) GetProjectDir() string {
+func (x *ListEvidenceGraphProgressRequest) GetProjectDir() string {
 	if x != nil {
 		return x.ProjectDir
 	}
 	return ""
 }
 
-type ListSourceGraphProgressResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Rows          []*SourceGraphProgress `protobuf:"bytes,1,rep,name=rows,proto3" json:"rows,omitempty"`
+type ListEvidenceGraphProgressResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Rows          []*EvidenceGraphProgress `protobuf:"bytes,1,rep,name=rows,proto3" json:"rows,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListSourceGraphProgressResponse) Reset() {
-	*x = ListSourceGraphProgressResponse{}
+func (x *ListEvidenceGraphProgressResponse) Reset() {
+	*x = ListEvidenceGraphProgressResponse{}
 	mi := &file_engine_proto_msgTypes[274]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListSourceGraphProgressResponse) String() string {
+func (x *ListEvidenceGraphProgressResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListSourceGraphProgressResponse) ProtoMessage() {}
+func (*ListEvidenceGraphProgressResponse) ProtoMessage() {}
 
-func (x *ListSourceGraphProgressResponse) ProtoReflect() protoreflect.Message {
+func (x *ListEvidenceGraphProgressResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[274]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -18726,40 +18735,40 @@ func (x *ListSourceGraphProgressResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListSourceGraphProgressResponse.ProtoReflect.Descriptor instead.
-func (*ListSourceGraphProgressResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListEvidenceGraphProgressResponse.ProtoReflect.Descriptor instead.
+func (*ListEvidenceGraphProgressResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{274}
 }
 
-func (x *ListSourceGraphProgressResponse) GetRows() []*SourceGraphProgress {
+func (x *ListEvidenceGraphProgressResponse) GetRows() []*EvidenceGraphProgress {
 	if x != nil {
 		return x.Rows
 	}
 	return nil
 }
 
-type GetSourceGraphProgressRequest struct {
+type GetEvidenceGraphProgressRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	GraphId       string                 `protobuf:"bytes,3,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetSourceGraphProgressRequest) Reset() {
-	*x = GetSourceGraphProgressRequest{}
+func (x *GetEvidenceGraphProgressRequest) Reset() {
+	*x = GetEvidenceGraphProgressRequest{}
 	mi := &file_engine_proto_msgTypes[275]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetSourceGraphProgressRequest) String() string {
+func (x *GetEvidenceGraphProgressRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetSourceGraphProgressRequest) ProtoMessage() {}
+func (*GetEvidenceGraphProgressRequest) ProtoMessage() {}
 
-func (x *GetSourceGraphProgressRequest) ProtoReflect() protoreflect.Message {
+func (x *GetEvidenceGraphProgressRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[275]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -18771,46 +18780,46 @@ func (x *GetSourceGraphProgressRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetSourceGraphProgressRequest.ProtoReflect.Descriptor instead.
-func (*GetSourceGraphProgressRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetEvidenceGraphProgressRequest.ProtoReflect.Descriptor instead.
+func (*GetEvidenceGraphProgressRequest) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{275}
 }
 
-func (x *GetSourceGraphProgressRequest) GetProjectDir() string {
+func (x *GetEvidenceGraphProgressRequest) GetProjectDir() string {
 	if x != nil {
 		return x.ProjectDir
 	}
 	return ""
 }
 
-func (x *GetSourceGraphProgressRequest) GetSourceId() string {
+func (x *GetEvidenceGraphProgressRequest) GetGraphId() string {
 	if x != nil {
-		return x.SourceId
+		return x.GraphId
 	}
 	return ""
 }
 
-type GetSourceGraphProgressResponse struct {
+type GetEvidenceGraphProgressResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Progress      *SourceGraphProgress   `protobuf:"bytes,1,opt,name=progress,proto3" json:"progress,omitempty"`
+	Progress      *EvidenceGraphProgress `protobuf:"bytes,1,opt,name=progress,proto3" json:"progress,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetSourceGraphProgressResponse) Reset() {
-	*x = GetSourceGraphProgressResponse{}
+func (x *GetEvidenceGraphProgressResponse) Reset() {
+	*x = GetEvidenceGraphProgressResponse{}
 	mi := &file_engine_proto_msgTypes[276]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetSourceGraphProgressResponse) String() string {
+func (x *GetEvidenceGraphProgressResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetSourceGraphProgressResponse) ProtoMessage() {}
+func (*GetEvidenceGraphProgressResponse) ProtoMessage() {}
 
-func (x *GetSourceGraphProgressResponse) ProtoReflect() protoreflect.Message {
+func (x *GetEvidenceGraphProgressResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[276]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -18822,12 +18831,12 @@ func (x *GetSourceGraphProgressResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetSourceGraphProgressResponse.ProtoReflect.Descriptor instead.
-func (*GetSourceGraphProgressResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetEvidenceGraphProgressResponse.ProtoReflect.Descriptor instead.
+func (*GetEvidenceGraphProgressResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{276}
 }
 
-func (x *GetSourceGraphProgressResponse) GetProgress() *SourceGraphProgress {
+func (x *GetEvidenceGraphProgressResponse) GetProgress() *EvidenceGraphProgress {
 	if x != nil {
 		return x.Progress
 	}
@@ -19988,18 +19997,19 @@ const file_engine_proto_rawDesc = "" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\"T\n" +
 	"\x18ListSubjectTypesResponse\x128\n" +
-	"\x05types\x18\x01 \x03(\v2\".provenencia.engine.v1.SubjectTypeR\x05types\"\xa0\x02\n" +
+	"\x05types\x18\x01 \x03(\v2\".provenencia.engine.v1.SubjectTypeR\x05types\"\xaf\x02\n" +
 	"\x14CreateSubjectRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1b\n" +
-	"\tsource_id\x18\x03 \x01(\tR\bsourceId\x12&\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12&\n" +
 	"\x0fsubject_type_id\x18\x04 \x01(\tR\rsubjectTypeId\x12\x14\n" +
 	"\x05label\x18\x05 \x01(\tR\x05label\x12 \n" +
 	"\vdescription\x18\x06 \x01(\tR\vdescription\x12#\n" +
 	"\rhas_placement\x18\a \x01(\bR\fhasPlacement\x12\x15\n" +
 	"\x06grid_x\x18\b \x01(\x03R\x05gridX\x12\x15\n" +
-	"\x06grid_y\x18\t \x01(\x03R\x05gridY\"\x90\x01\n" +
+	"\x06grid_y\x18\t \x01(\x03R\x05gridY\x12\x19\n" +
+	"\bgraph_id\x18\n" +
+	" \x01(\tR\agraphIdJ\x04\b\x03\x10\x04R\tsource_id\"\x90\x01\n" +
 	"\x15CreateSubjectResponse\x128\n" +
 	"\asubject\x18\x01 \x01(\v2\x1e.provenencia.engine.v1.SubjectR\asubject\x12=\n" +
 	"\aeffects\x18\x02 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xa7\x01\n" +
@@ -20096,21 +20106,21 @@ const file_engine_proto_rawDesc = "" +
 	"\bsubjects\x18\a \x03(\v2(.provenencia.engine.v1.EventTitleSubjectR\bsubjects\x12\x14\n" +
 	"\x05place\x18\b \x01(\tR\x05place\x12\x1f\n" +
 	"\vtype_origin\x18\t \x01(\tR\n" +
-	"typeOrigin\"\\\n" +
-	"\x1cListSourceEventTitlesRequest\x12\x1f\n" +
+	"typeOrigin\"r\n" +
+	"#ListEvidenceGraphEventTitlesRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\x12\x1b\n" +
-	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"j\n" +
+	"projectDir\x12\x19\n" +
+	"\bgraph_id\x18\x03 \x01(\tR\agraphIdJ\x04\b\x02\x10\x03R\tsource_id\"j\n" +
 	"\x10SourceEventTitle\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x127\n" +
-	"\x05title\x18\x02 \x01(\v2!.provenencia.engine.v1.EventTitleR\x05title\"`\n" +
-	"\x1dListSourceEventTitlesResponse\x12?\n" +
-	"\x06titles\x18\x01 \x03(\v2'.provenencia.engine.v1.SourceEventTitleR\x06titles\"]\n" +
+	"\x05title\x18\x02 \x01(\v2!.provenencia.engine.v1.EventTitleR\x05title\"g\n" +
+	"$ListEvidenceGraphEventTitlesResponse\x12?\n" +
+	"\x06titles\x18\x01 \x03(\v2'.provenencia.engine.v1.SourceEventTitleR\x06titles\"l\n" +
 	"\x1dListSubjectMembershipsRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\x12\x1b\n" +
-	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"l\n" +
+	"projectDir\x12\x19\n" +
+	"\bgraph_id\x18\x03 \x01(\tR\agraphIdJ\x04\b\x02\x10\x03R\tsource_id\"l\n" +
 	"\x1eListSubjectMembershipsResponse\x12J\n" +
 	"\vmemberships\x18\x01 \x03(\v2(.provenencia.engine.v1.SubjectMembershipR\vmemberships\"\xc5\x01\n" +
 	"\vHeaderPlace\x12\x14\n" +
@@ -20419,11 +20429,11 @@ const file_engine_proto_rawDesc = "" +
 	"\x04pins\x18\x03 \x01(\x05R\x04pins\"\x94\x01\n" +
 	"\"ApplyPromoteGraphAlignmentResponse\x12\x1a\n" +
 	"\brevision\x18\x01 \x01(\x03R\brevision\x12R\n" +
-	"\awritten\x18\x02 \x03(\v28.provenencia.engine.v1.ApplyPromoteGraphAlignmentWrittenR\awritten\"S\n" +
+	"\awritten\x18\x02 \x03(\v28.provenencia.engine.v1.ApplyPromoteGraphAlignmentWrittenR\awritten\"b\n" +
 	"\x13ListSubjectsRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\x12\x1b\n" +
-	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"R\n" +
+	"projectDir\x12\x19\n" +
+	"\bgraph_id\x18\x03 \x01(\tR\agraphIdJ\x04\b\x02\x10\x03R\tsource_id\"R\n" +
 	"\x14ListSubjectsResponse\x12:\n" +
 	"\bsubjects\x18\x01 \x03(\v2\x1e.provenencia.engine.v1.SubjectR\bsubjects\"\x89\x01\n" +
 	"\x19SetSubjectPositionRequest\x12\x1f\n" +
@@ -20440,11 +20450,11 @@ const file_engine_proto_rawDesc = "" +
 	"projectDir\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x02 \x01(\tR\tsubjectId\"\x1e\n" +
-	"\x1cClearSubjectPositionResponse\"[\n" +
+	"\x1cClearSubjectPositionResponse\"j\n" +
 	"\x1bListSubjectPositionsRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\x12\x1b\n" +
-	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"d\n" +
+	"projectDir\x12\x19\n" +
+	"\bgraph_id\x18\x03 \x01(\tR\agraphIdJ\x04\b\x02\x10\x03R\tsource_id\"d\n" +
 	"\x1cListSubjectPositionsResponse\x12D\n" +
 	"\tpositions\x18\x01 \x03(\v2&.provenencia.engine.v1.SubjectPositionR\tpositions\"\xd6\x01\n" +
 	"\bProperty\x12\x0e\n" +
@@ -20715,12 +20725,12 @@ const file_engine_proto_rawDesc = "" +
 	"\fobservations\x18\x04 \x03(\v2'.provenencia.engine.v1.ObservationDraftR\fobservations\"\xaa\x01\n" +
 	"!AddObservationsToCitationResponse\x12F\n" +
 	"\fobservations\x18\x01 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\x12=\n" +
-	"\aeffects\x18\x02 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"_\n" +
-	"\x1fListObservationsBySourceRequest\x12\x1f\n" +
+	"\aeffects\x18\x02 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"u\n" +
+	"&ListObservationsByEvidenceGraphRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\x12\x1b\n" +
-	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"j\n" +
-	" ListObservationsBySourceResponse\x12F\n" +
+	"projectDir\x12\x19\n" +
+	"\bgraph_id\x18\x03 \x01(\tR\agraphIdJ\x04\b\x02\x10\x03R\tsource_id\"q\n" +
+	"'ListObservationsByEvidenceGraphResponse\x12F\n" +
 	"\fobservations\x18\x01 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"]\n" +
 	"\x1dCitationCountsBySourceRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
@@ -20742,21 +20752,21 @@ const file_engine_proto_rawDesc = "" +
 	"\vartifact_id\x18\x02 \x01(\tR\n" +
 	"artifactId\"f\n" +
 	"\x1fListCitationsByArtifactResponse\x12C\n" +
-	"\tcitations\x18\x01 \x03(\v2%.provenencia.engine.v1.ListedCitationR\tcitations\"V\n" +
+	"\tcitations\x18\x01 \x03(\v2%.provenencia.engine.v1.ListedCitationR\tcitations\"q\n" +
 	"\x12GetCitationRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x1f\n" +
 	"\vcitation_id\x18\x02 \x01(\tR\n" +
-	"citationId\"\xb0\x01\n" +
+	"citationId\x12\x19\n" +
+	"\bgraph_id\x18\x03 \x01(\tR\agraphId\"\xb0\x01\n" +
 	"\x13GetCitationResponse\x12;\n" +
 	"\bcitation\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.CitationR\bcitation\x12\x14\n" +
 	"\x05notes\x18\x02 \x03(\tR\x05notes\x12F\n" +
-	"\fobservations\x18\x03 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"\xbe\x05\n" +
+	"\fobservations\x18\x03 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"\xb2\x05\n" +
 	"\x18CreateCitedBridgeRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1b\n" +
-	"\tsource_id\x18\x03 \x01(\tR\bsourceId\x12&\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12&\n" +
 	"\x0ffrom_subject_id\x18\x04 \x01(\tR\rfromSubjectId\x12\"\n" +
 	"\rto_subject_id\x18\x05 \x01(\tR\vtoSubjectId\x12&\n" +
 	"\x0fbridge_type_key\x18\x06 \x01(\tR\rbridgeTypeKey\x12 \n" +
@@ -20771,9 +20781,9 @@ const file_engine_proto_rawDesc = "" +
 	"\x0ecitation_notes\x18\x11 \x03(\tR\rcitationNotes\x12K\n" +
 	"\fobservations\x18\x12 \x03(\v2'.provenencia.engine.v1.ObservationDraftR\fobservations\x12\x1f\n" +
 	"\vcitation_id\x18\x13 \x01(\tR\n" +
-	"citationIdJ\x04\b\a\x10\bJ\x04\b\t\x10\n" +
+	"citationIdJ\x04\b\x03\x10\x04J\x04\b\a\x10\bJ\x04\b\t\x10\n" +
 	"J\x04\b\n" +
-	"\x10\vR\x05labelR\x06grid_xR\x06grid_y\"\x99\x02\n" +
+	"\x10\vR\tsource_idR\x05labelR\x06grid_xR\x06grid_y\"\x99\x02\n" +
 	"\x19CreateCitedBridgeResponse\x128\n" +
 	"\asubject\x18\x01 \x01(\v2\x1e.provenencia.engine.v1.SubjectR\asubject\x12;\n" +
 	"\bcitation\x18\x02 \x01(\v2\x1f.provenencia.engine.v1.CitationR\bcitation\x12F\n" +
@@ -20823,25 +20833,26 @@ const file_engine_proto_rawDesc = "" +
 	"properties\x18\x01 \x03(\v2\x1f.provenencia.engine.v1.PropertyR\n" +
 	"properties\x128\n" +
 	"\x05types\x18\x02 \x03(\v2\".provenencia.engine.v1.SubjectTypeR\x05types\x12I\n" +
-	"\x06groups\x18\x03 \x03(\v21.provenencia.engine.v1.SubjectTypePropertiesGroupR\x06groups\"\xdf\x01\n" +
-	"\x13SourceGraphProgress\x12\x1b\n" +
+	"\x06groups\x18\x03 \x03(\v21.provenencia.engine.v1.SubjectTypePropertiesGroupR\x06groups\"\xfc\x01\n" +
+	"\x15EvidenceGraphProgress\x12\x1b\n" +
 	"\tsource_id\x18\x01 \x01(\tR\bsourceId\x12#\n" +
 	"\rsubject_count\x18\x02 \x01(\x05R\fsubjectCount\x12+\n" +
 	"\x11observation_count\x18\x03 \x01(\x05R\x10observationCount\x12#\n" +
 	"\rprimary_count\x18\x05 \x01(\x05R\fprimaryCount\x12\x1f\n" +
 	"\vfiled_count\x18\x06 \x01(\x05R\n" +
-	"filedCountJ\x04\b\x04\x10\x05R\runcited_count\"A\n" +
-	"\x1eListSourceGraphProgressRequest\x12\x1f\n" +
+	"filedCount\x12\x19\n" +
+	"\bgraph_id\x18\a \x01(\tR\agraphIdJ\x04\b\x04\x10\x05R\runcited_count\"C\n" +
+	" ListEvidenceGraphProgressRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\"a\n" +
-	"\x1fListSourceGraphProgressResponse\x12>\n" +
-	"\x04rows\x18\x01 \x03(\v2*.provenencia.engine.v1.SourceGraphProgressR\x04rows\"]\n" +
-	"\x1dGetSourceGraphProgressRequest\x12\x1f\n" +
+	"projectDir\"e\n" +
+	"!ListEvidenceGraphProgressResponse\x12@\n" +
+	"\x04rows\x18\x01 \x03(\v2,.provenencia.engine.v1.EvidenceGraphProgressR\x04rows\"n\n" +
+	"\x1fGetEvidenceGraphProgressRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\x12\x1b\n" +
-	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"h\n" +
-	"\x1eGetSourceGraphProgressResponse\x12F\n" +
-	"\bprogress\x18\x01 \x01(\v2*.provenencia.engine.v1.SourceGraphProgressR\bprogress\"]\n" +
+	"projectDir\x12\x19\n" +
+	"\bgraph_id\x18\x03 \x01(\tR\agraphIdJ\x04\b\x02\x10\x03R\tsource_id\"l\n" +
+	" GetEvidenceGraphProgressResponse\x12H\n" +
+	"\bprogress\x18\x01 \x01(\v2,.provenencia.engine.v1.EvidenceGraphProgressR\bprogress\"]\n" +
 	"\x16GetDeleteImpactRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x12\n" +
@@ -20874,7 +20885,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x124\n" +
 	"\x04kind\x18\x02 \x01(\x0e2 .provenencia.engine.v1.ErrorKindR\x04kind\x12\x16\n" +
-	"\x06params\x18\x03 \x03(\tR\x06params*\x89\x1d\n" +
+	"\x06params\x18\x03 \x03(\tR\x06params*\x9d\x1d\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -20944,8 +20955,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x1bMETHOD_UPDATE_PROPERTY_TERM\x10A\x12\x1f\n" +
 	"\x1bMETHOD_DELETE_PROPERTY_TERM\x10B\x12,\n" +
 	"(METHOD_CREATE_CITATION_WITH_OBSERVATIONS\x10C\x12'\n" +
-	"#METHOD_ADD_OBSERVATIONS_TO_CITATION\x10D\x12&\n" +
-	"\"METHOD_LIST_OBSERVATIONS_BY_SOURCE\x10E\x12\x17\n" +
+	"#METHOD_ADD_OBSERVATIONS_TO_CITATION\x10D\x12.\n" +
+	"*METHOD_LIST_OBSERVATIONS_BY_EVIDENCE_GRAPH\x10E\x12\x17\n" +
 	"\x13METHOD_GET_CITATION\x10F\x12\x1e\n" +
 	"\x1aMETHOD_CREATE_CITED_BRIDGE\x10H\x12$\n" +
 	" METHOD_CITATION_COUNTS_BY_SOURCE\x10I\x12%\n" +
@@ -20953,9 +20964,9 @@ const file_engine_proto_rawDesc = "" +
 	"\x16METHOD_UPDATE_CITATION\x10K\x12\x1d\n" +
 	"\x19METHOD_UPDATE_OBSERVATION\x10L\x12\x1d\n" +
 	"\x19METHOD_DELETE_OBSERVATION\x10M\x12#\n" +
-	"\x1fMETHOD_GET_PROPERTIES_WORKSPACE\x10N\x12%\n" +
-	"!METHOD_LIST_SOURCE_GRAPH_PROGRESS\x10O\x12$\n" +
-	" METHOD_GET_SOURCE_GRAPH_PROGRESS\x10P\x12\x1c\n" +
+	"\x1fMETHOD_GET_PROPERTIES_WORKSPACE\x10N\x12'\n" +
+	"#METHOD_LIST_EVIDENCE_GRAPH_PROGRESS\x10O\x12&\n" +
+	"\"METHOD_GET_EVIDENCE_GRAPH_PROGRESS\x10P\x12\x1c\n" +
 	"\x18METHOD_GET_DELETE_IMPACT\x10Q\x12\x18\n" +
 	"\x14METHOD_DELETE_SOURCE\x10R\x12\x1a\n" +
 	"\x16METHOD_DELETE_ARTIFACT\x10S\x12\x1a\n" +
@@ -20966,8 +20977,8 @@ const file_engine_proto_rawDesc = "" +
 	"#METHOD_LIST_CLAIM_CONFIDENCE_GRADES\x10Y\x12 \n" +
 	"\x1cMETHOD_GET_CONCLUSION_DETAIL\x10Z\x12\x1d\n" +
 	"\x19METHOD_LIST_EVENT_HEADERS\x10[\x12\x1d\n" +
-	"\x19METHOD_LIST_PLACE_HEADERS\x10]\x12#\n" +
-	"\x1fMETHOD_LIST_SOURCE_EVENT_TITLES\x10`\x12*\n" +
+	"\x19METHOD_LIST_PLACE_HEADERS\x10]\x12+\n" +
+	"'METHOD_LIST_EVIDENCE_GRAPH_EVENT_TITLES\x10`\x12*\n" +
 	"&METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT\x10a\x12(\n" +
 	"$METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT\x10b\x12\x1a\n" +
 	"\x16METHOD_GET_NAME_FORMAT\x10c\x12\x1c\n" +
@@ -21180,9 +21191,9 @@ var file_engine_proto_goTypes = []any{
 	(*SubjectMembership)(nil),                         // 153: provenencia.engine.v1.SubjectMembership
 	(*EventTitleSubject)(nil),                         // 154: provenencia.engine.v1.EventTitleSubject
 	(*EventTitle)(nil),                                // 155: provenencia.engine.v1.EventTitle
-	(*ListSourceEventTitlesRequest)(nil),              // 156: provenencia.engine.v1.ListSourceEventTitlesRequest
+	(*ListEvidenceGraphEventTitlesRequest)(nil),       // 156: provenencia.engine.v1.ListEvidenceGraphEventTitlesRequest
 	(*SourceEventTitle)(nil),                          // 157: provenencia.engine.v1.SourceEventTitle
-	(*ListSourceEventTitlesResponse)(nil),             // 158: provenencia.engine.v1.ListSourceEventTitlesResponse
+	(*ListEvidenceGraphEventTitlesResponse)(nil),      // 158: provenencia.engine.v1.ListEvidenceGraphEventTitlesResponse
 	(*ListSubjectMembershipsRequest)(nil),             // 159: provenencia.engine.v1.ListSubjectMembershipsRequest
 	(*ListSubjectMembershipsResponse)(nil),            // 160: provenencia.engine.v1.ListSubjectMembershipsResponse
 	(*HeaderPlace)(nil),                               // 161: provenencia.engine.v1.HeaderPlace
@@ -21279,8 +21290,8 @@ var file_engine_proto_goTypes = []any{
 	(*CreateCitationWithObservationsResponse)(nil),    // 252: provenencia.engine.v1.CreateCitationWithObservationsResponse
 	(*AddObservationsToCitationRequest)(nil),          // 253: provenencia.engine.v1.AddObservationsToCitationRequest
 	(*AddObservationsToCitationResponse)(nil),         // 254: provenencia.engine.v1.AddObservationsToCitationResponse
-	(*ListObservationsBySourceRequest)(nil),           // 255: provenencia.engine.v1.ListObservationsBySourceRequest
-	(*ListObservationsBySourceResponse)(nil),          // 256: provenencia.engine.v1.ListObservationsBySourceResponse
+	(*ListObservationsByEvidenceGraphRequest)(nil),    // 255: provenencia.engine.v1.ListObservationsByEvidenceGraphRequest
+	(*ListObservationsByEvidenceGraphResponse)(nil),   // 256: provenencia.engine.v1.ListObservationsByEvidenceGraphResponse
 	(*CitationCountsBySourceRequest)(nil),             // 257: provenencia.engine.v1.CitationCountsBySourceRequest
 	(*ArtifactCitationCount)(nil),                     // 258: provenencia.engine.v1.ArtifactCitationCount
 	(*CitationCountsBySourceResponse)(nil),            // 259: provenencia.engine.v1.CitationCountsBySourceResponse
@@ -21300,11 +21311,11 @@ var file_engine_proto_goTypes = []any{
 	(*GetPropertiesWorkspaceRequest)(nil),             // 273: provenencia.engine.v1.GetPropertiesWorkspaceRequest
 	(*SubjectTypePropertiesGroup)(nil),                // 274: provenencia.engine.v1.SubjectTypePropertiesGroup
 	(*GetPropertiesWorkspaceResponse)(nil),            // 275: provenencia.engine.v1.GetPropertiesWorkspaceResponse
-	(*SourceGraphProgress)(nil),                       // 276: provenencia.engine.v1.SourceGraphProgress
-	(*ListSourceGraphProgressRequest)(nil),            // 277: provenencia.engine.v1.ListSourceGraphProgressRequest
-	(*ListSourceGraphProgressResponse)(nil),           // 278: provenencia.engine.v1.ListSourceGraphProgressResponse
-	(*GetSourceGraphProgressRequest)(nil),             // 279: provenencia.engine.v1.GetSourceGraphProgressRequest
-	(*GetSourceGraphProgressResponse)(nil),            // 280: provenencia.engine.v1.GetSourceGraphProgressResponse
+	(*EvidenceGraphProgress)(nil),                     // 276: provenencia.engine.v1.EvidenceGraphProgress
+	(*ListEvidenceGraphProgressRequest)(nil),          // 277: provenencia.engine.v1.ListEvidenceGraphProgressRequest
+	(*ListEvidenceGraphProgressResponse)(nil),         // 278: provenencia.engine.v1.ListEvidenceGraphProgressResponse
+	(*GetEvidenceGraphProgressRequest)(nil),           // 279: provenencia.engine.v1.GetEvidenceGraphProgressRequest
+	(*GetEvidenceGraphProgressResponse)(nil),          // 280: provenencia.engine.v1.GetEvidenceGraphProgressResponse
 	(*GetDeleteImpactRequest)(nil),                    // 281: provenencia.engine.v1.GetDeleteImpactRequest
 	(*GetDeleteImpactResponse)(nil),                   // 282: provenencia.engine.v1.GetDeleteImpactResponse
 	(*DeleteImpactGroup)(nil),                         // 283: provenencia.engine.v1.DeleteImpactGroup
@@ -21401,7 +21412,7 @@ var file_engine_proto_depIdxs = []int32{
 	1,   // 83: provenencia.engine.v1.EventTitle.rule:type_name -> provenencia.engine.v1.EventTitleRule
 	154, // 84: provenencia.engine.v1.EventTitle.subjects:type_name -> provenencia.engine.v1.EventTitleSubject
 	155, // 85: provenencia.engine.v1.SourceEventTitle.title:type_name -> provenencia.engine.v1.EventTitle
-	157, // 86: provenencia.engine.v1.ListSourceEventTitlesResponse.titles:type_name -> provenencia.engine.v1.SourceEventTitle
+	157, // 86: provenencia.engine.v1.ListEvidenceGraphEventTitlesResponse.titles:type_name -> provenencia.engine.v1.SourceEventTitle
 	153, // 87: provenencia.engine.v1.ListSubjectMembershipsResponse.memberships:type_name -> provenencia.engine.v1.SubjectMembership
 	142, // 88: provenencia.engine.v1.HeaderPlace.entity:type_name -> provenencia.engine.v1.CanonicalEntity
 	38,  // 89: provenencia.engine.v1.LifeFacts.date:type_name -> provenencia.engine.v1.DateValueInput
@@ -21506,7 +21517,7 @@ var file_engine_proto_depIdxs = []int32{
 	250, // 188: provenencia.engine.v1.AddObservationsToCitationRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
 	249, // 189: provenencia.engine.v1.AddObservationsToCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
 	91,  // 190: provenencia.engine.v1.AddObservationsToCitationResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	249, // 191: provenencia.engine.v1.ListObservationsBySourceResponse.observations:type_name -> provenencia.engine.v1.Observation
+	249, // 191: provenencia.engine.v1.ListObservationsByEvidenceGraphResponse.observations:type_name -> provenencia.engine.v1.Observation
 	258, // 192: provenencia.engine.v1.CitationCountsBySourceResponse.counts:type_name -> provenencia.engine.v1.ArtifactCitationCount
 	248, // 193: provenencia.engine.v1.ListedCitation.citation:type_name -> provenencia.engine.v1.Citation
 	260, // 194: provenencia.engine.v1.ListCitationsByArtifactResponse.citations:type_name -> provenencia.engine.v1.ListedCitation
@@ -21529,8 +21540,8 @@ var file_engine_proto_depIdxs = []int32{
 	208, // 211: provenencia.engine.v1.GetPropertiesWorkspaceResponse.properties:type_name -> provenencia.engine.v1.Property
 	131, // 212: provenencia.engine.v1.GetPropertiesWorkspaceResponse.types:type_name -> provenencia.engine.v1.SubjectType
 	274, // 213: provenencia.engine.v1.GetPropertiesWorkspaceResponse.groups:type_name -> provenencia.engine.v1.SubjectTypePropertiesGroup
-	276, // 214: provenencia.engine.v1.ListSourceGraphProgressResponse.rows:type_name -> provenencia.engine.v1.SourceGraphProgress
-	276, // 215: provenencia.engine.v1.GetSourceGraphProgressResponse.progress:type_name -> provenencia.engine.v1.SourceGraphProgress
+	276, // 214: provenencia.engine.v1.ListEvidenceGraphProgressResponse.rows:type_name -> provenencia.engine.v1.EvidenceGraphProgress
+	276, // 215: provenencia.engine.v1.GetEvidenceGraphProgressResponse.progress:type_name -> provenencia.engine.v1.EvidenceGraphProgress
 	2,   // 216: provenencia.engine.v1.GetDeleteImpactResponse.gate:type_name -> provenencia.engine.v1.DeleteImpactGate
 	283, // 217: provenencia.engine.v1.GetDeleteImpactResponse.groups:type_name -> provenencia.engine.v1.DeleteImpactGroup
 	283, // 218: provenencia.engine.v1.GetDeleteImpactResponse.cascades:type_name -> provenencia.engine.v1.DeleteImpactGroup

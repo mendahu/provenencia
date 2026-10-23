@@ -105,6 +105,10 @@ func GetCitation(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	graphID, err := parseID(req.GetGraphId())
+	if err != nil {
+		return nil, err
+	}
 	var out *engine.GetCitationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		cit, err := citations.Get(c, citationID)
@@ -115,11 +119,7 @@ func GetCitation(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		sourceID, err := citations.SourceID(c, citationID)
-		if err != nil {
-			return err
-		}
-		eg, err := sourceEvidenceGraph(c, sourceID)
+		eg, err := c.Graph().EvidenceGraph(graphID)
 		if err != nil {
 			return err
 		}

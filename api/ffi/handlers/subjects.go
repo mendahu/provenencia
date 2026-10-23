@@ -43,7 +43,7 @@ func CreateSubject(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func CreateSubject(in []byte) ([]byte, error) {
 		s, wrote, err := writes.Run(c, writes.Op{Action: "create_subject", UserID: userID},
 			func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 				return subjects.Create(tx, userID, subjects.CreateInput{
-					SourceID:      sourceID,
+					GraphID:       graphID,
 					SubjectTypeID: typeID,
 					Label:         req.GetLabel(),
 					Description:   req.GetDescription(),
@@ -151,13 +151,13 @@ func ListSubjects(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("list_subjects", err)
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
 	var out *engine.ListSubjectsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		eg, err := sourceEvidenceGraph(c, sourceID)
+		eg, err := c.Graph().EvidenceGraph(graphID)
 		if err != nil {
 			return err
 		}
@@ -231,17 +231,13 @@ func ListSubjectPositions(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("list_subject_positions", err)
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
 	var out *engine.ListSubjectPositionsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		out = &engine.ListSubjectPositionsResponse{}
-		graphID, ok, err := sourceGraphID(c, sourceID)
-		if err != nil || !ok {
-			return err
-		}
 		rows, err := subjectpositions.ListByEvidenceGraph(c, graphID)
 		if err != nil {
 			return err

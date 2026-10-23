@@ -83,7 +83,7 @@ enum Method {
   METHOD_DELETE_PROPERTY_TERM = 66;
   METHOD_CREATE_CITATION_WITH_OBSERVATIONS = 67;
   METHOD_ADD_OBSERVATIONS_TO_CITATION = 68;
-  METHOD_LIST_OBSERVATIONS_BY_SOURCE = 69;
+  METHOD_LIST_OBSERVATIONS_BY_EVIDENCE_GRAPH = 69;
   METHOD_GET_CITATION = 70;
   METHOD_CREATE_CITED_BRIDGE = 72;
   METHOD_CITATION_COUNTS_BY_SOURCE = 73;
@@ -92,8 +92,8 @@ enum Method {
   METHOD_UPDATE_OBSERVATION = 76;
   METHOD_DELETE_OBSERVATION = 77;
   METHOD_GET_PROPERTIES_WORKSPACE = 78;
-  METHOD_LIST_SOURCE_GRAPH_PROGRESS = 79;
-  METHOD_GET_SOURCE_GRAPH_PROGRESS = 80;
+  METHOD_LIST_EVIDENCE_GRAPH_PROGRESS = 79;
+  METHOD_GET_EVIDENCE_GRAPH_PROGRESS = 80;
   METHOD_GET_DELETE_IMPACT = 81;
   METHOD_DELETE_SOURCE = 82;
   METHOD_DELETE_ARTIFACT = 83;
@@ -105,7 +105,7 @@ enum Method {
   METHOD_GET_CONCLUSION_DETAIL = 90;
   METHOD_LIST_EVENT_HEADERS = 91;
   METHOD_LIST_PLACE_HEADERS = 93;
-  METHOD_LIST_SOURCE_EVENT_TITLES = 96;
+  METHOD_LIST_EVIDENCE_GRAPH_EVENT_TITLES = 96;
   METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT = 97;
   METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT = 98;
   METHOD_GET_NAME_FORMAT = 99;
@@ -1054,13 +1054,15 @@ message ListSubjectTypesResponse {
 message CreateSubjectRequest {
   string project_dir = 1;
   string user_id = 2;
-  string source_id = 3;
+  reserved 3;
+  reserved "source_id";
   string subject_type_id = 4;
   string label = 5;
   string description = 6;
   bool has_placement = 7;
   int64 grid_x = 8;
   int64 grid_y = 9;
+  string graph_id = 10;
 }
 
 message CreateSubjectResponse {
@@ -1215,11 +1217,13 @@ message EventTitle {
   string type_origin = 9; // with type_key: the term's origin
 }
 
-// ListSourceEventTitles titles every Event Subject on one Source's Evidence
-// graph from what that Source cites, by the same rule as Event headers.
-message ListSourceEventTitlesRequest {
+// ListEvidenceGraphEventTitles titles every Event Subject on one Evidence
+// graph from what its Source cites, by the same rule as Event headers.
+message ListEvidenceGraphEventTitlesRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
+  string graph_id = 3;
 }
 
 message SourceEventTitle {
@@ -1227,7 +1231,7 @@ message SourceEventTitle {
   EventTitle title = 2;
 }
 
-message ListSourceEventTitlesResponse {
+message ListEvidenceGraphEventTitlesResponse {
   repeated SourceEventTitle titles = 1;
 }
 
@@ -1235,7 +1239,9 @@ message ListSourceEventTitlesResponse {
 // Source's Evidence graph. Unpromoted Subjects are absent.
 message ListSubjectMembershipsRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
+  string graph_id = 3;
 }
 
 message ListSubjectMembershipsResponse {
@@ -1719,7 +1725,9 @@ message ApplyPromoteGraphAlignmentResponse {
 
 message ListSubjectsRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
+  string graph_id = 3;
 }
 
 message ListSubjectsResponse {
@@ -1746,7 +1754,9 @@ message ClearSubjectPositionResponse {}
 
 message ListSubjectPositionsRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
+  string graph_id = 3;
 }
 
 message ListSubjectPositionsResponse {
@@ -2082,12 +2092,14 @@ message AddObservationsToCitationResponse {
   WriteEffects effects = 2;
 }
 
-message ListObservationsBySourceRequest {
+message ListObservationsByEvidenceGraphRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
+  string graph_id = 3;
 }
 
-message ListObservationsBySourceResponse {
+message ListObservationsByEvidenceGraphResponse {
   repeated Observation observations = 1;
 }
 
@@ -2124,6 +2136,7 @@ message ListCitationsByArtifactResponse {
 message GetCitationRequest {
   string project_dir = 1;
   string citation_id = 2;
+  string graph_id = 3;
 }
 
 message GetCitationResponse {
@@ -2135,12 +2148,11 @@ message GetCitationResponse {
 message CreateCitedBridgeRequest {
   string project_dir = 1;
   string user_id = 2;
-  string source_id = 3;
   string from_subject_id = 4;
   string to_subject_id = 5;
   string bridge_type_key = 6;
-  reserved 7, 9, 10;
-  reserved "label", "grid_x", "grid_y";
+  reserved 3, 7, 9, 10;
+  reserved "source_id", "label", "grid_x", "grid_y";
   string description = 8;
   string artifact_id = 11;
   string locator_json = 12;
@@ -2209,7 +2221,8 @@ message GetPropertiesWorkspaceResponse {
   repeated SubjectTypePropertiesGroup groups = 3;
 }
 
-message SourceGraphProgress {
+message EvidenceGraphProgress {
+  // The graph's Source.
   string source_id = 1;
   int32 subject_count = 2;
   int32 observation_count = 3;
@@ -2217,23 +2230,26 @@ message SourceGraphProgress {
   reserved "uncited_count";
   int32 primary_count = 5;
   int32 filed_count = 6;
+  string graph_id = 7;
 }
 
-message ListSourceGraphProgressRequest {
+message ListEvidenceGraphProgressRequest {
   string project_dir = 1;
 }
 
-message ListSourceGraphProgressResponse {
-  repeated SourceGraphProgress rows = 1;
+message ListEvidenceGraphProgressResponse {
+  repeated EvidenceGraphProgress rows = 1;
 }
 
-message GetSourceGraphProgressRequest {
+message GetEvidenceGraphProgressRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
+  string graph_id = 3;
 }
 
-message GetSourceGraphProgressResponse {
-  SourceGraphProgress progress = 1;
+message GetEvidenceGraphProgressResponse {
+  EvidenceGraphProgress progress = 1;
 }
 
 enum DeleteImpactGate {

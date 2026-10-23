@@ -437,7 +437,7 @@ func TestListSubjectMembershipsCarriesAutoReconciledName(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	out, err := ListSubjectMemberships(marshalProto(t, &engine.ListSubjectMembershipsRequest{ProjectDir: dir, SourceId: sourceID}))
+	out, err := ListSubjectMemberships(marshalProto(t, &engine.ListSubjectMembershipsRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID)}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -536,13 +536,13 @@ func TestEventTitlesUseOneRule(t *testing.T) {
 			t.Fatalf("%+v", title)
 		}
 	})
-	runRPC(t, ListSourceEventTitles, []rpcTest{
+	runRPC(t, ListEvidenceGraphEventTitles, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
 			name: "bad source id",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, _, _ := subjectFixture(t)
-				return &engine.ListSourceEventTitlesRequest{ProjectDir: dir, SourceId: "nope"}
+				return &engine.ListEvidenceGraphEventTitlesRequest{ProjectDir: dir, GraphId: "nope"}
 			},
 			wantErr: true,
 		},
@@ -550,10 +550,10 @@ func TestEventTitlesUseOneRule(t *testing.T) {
 			name: "the Source's Event card is titled by the same rule",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _ := citedEvent(t)
-				return &engine.ListSourceEventTitlesRequest{ProjectDir: dir, SourceId: eventSourceID(t, dir)}
+				return &engine.ListEvidenceGraphEventTitlesRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, eventSourceID(t, dir))}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var resp engine.ListSourceEventTitlesResponse
+				var resp engine.ListEvidenceGraphEventTitlesResponse
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}

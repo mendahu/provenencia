@@ -14,18 +14,18 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func ListObservationsBySource(in []byte) ([]byte, error) {
-	var req engine.ListObservationsBySourceRequest
+func ListObservationsByEvidenceGraph(in []byte) ([]byte, error) {
+	var req engine.ListObservationsByEvidenceGraphRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("list_observations_by_source", err)
+		return nil, unmarshalErr("list_observations_by_evidence_graph", err)
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
-	var out *engine.ListObservationsBySourceResponse
+	var out *engine.ListObservationsByEvidenceGraphResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		eg, err := sourceEvidenceGraph(c, sourceID)
+		eg, err := c.Graph().EvidenceGraph(graphID)
 		if err != nil {
 			return err
 		}
@@ -33,7 +33,7 @@ func ListObservationsBySource(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.ListObservationsBySourceResponse{Observations: rows}
+		out = &engine.ListObservationsByEvidenceGraphResponse{Observations: rows}
 		return nil
 	})
 	if err != nil {

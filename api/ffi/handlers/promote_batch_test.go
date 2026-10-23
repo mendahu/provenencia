@@ -27,7 +27,7 @@ func TestApplyPromoteGraphAlignment(t *testing.T) {
 	t.Run("mints a person in one revision", func(t *testing.T) {
 		dir, userID, sourceID, typeID := subjectFixture(t)
 		out, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-			ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: typeID, Label: "Ada",
+			ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: typeID, Label: "Ada",
 		}))
 		if err != nil {
 			t.Fatal(err)

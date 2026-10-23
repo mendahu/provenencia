@@ -8,8 +8,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func TestListSourceGraphProgress(t *testing.T) {
-	runRPC(t, ListSourceGraphProgress, []rpcTest{
+func TestListEvidenceGraphProgress(t *testing.T) {
+	runRPC(t, ListEvidenceGraphProgress, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
 			name: "lists worked source and omits empty",
@@ -47,10 +47,10 @@ func TestListSourceGraphProgress(t *testing.T) {
 				})); err != nil {
 					t.Fatal(err)
 				}
-				return &engine.ListSourceGraphProgressRequest{ProjectDir: dir}
+				return &engine.ListEvidenceGraphProgressRequest{ProjectDir: dir}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var list engine.ListSourceGraphProgressResponse
+				var list engine.ListEvidenceGraphProgressResponse
 				if err := proto.Unmarshal(out, &list); err != nil {
 					t.Fatal(err)
 				}
@@ -69,20 +69,20 @@ func TestListSourceGraphProgress(t *testing.T) {
 	})
 }
 
-func TestGetSourceGraphProgress(t *testing.T) {
-	runRPC(t, GetSourceGraphProgress, []rpcTest{
+func TestGetEvidenceGraphProgress(t *testing.T) {
+	runRPC(t, GetEvidenceGraphProgress, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
 			name: "zeros for empty source",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, sourceID, _ := subjectFixture(t)
-				return &engine.GetSourceGraphProgressRequest{
+				return &engine.GetEvidenceGraphProgressRequest{
 					ProjectDir: dir,
-					SourceId:   sourceID,
+					GraphId:    soleGraphID(t, dir, sourceID),
 				}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var got engine.GetSourceGraphProgressResponse
+				var got engine.GetEvidenceGraphProgressResponse
 				if err := proto.Unmarshal(out, &got); err != nil {
 					t.Fatal(err)
 				}
@@ -92,17 +92,17 @@ func TestGetSourceGraphProgress(t *testing.T) {
 			},
 		},
 		{
-			name: "zeros with the request's id for a Source no row names",
+			name: "zeros with the request's graph id and no Source for a graph no row names",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, _, _ := subjectFixture(t)
-				return &engine.GetSourceGraphProgressRequest{ProjectDir: dir, SourceId: uuid.Must(uuid.NewV7()).String()}
+				return &engine.GetEvidenceGraphProgressRequest{ProjectDir: dir, GraphId: uuid.Must(uuid.NewV7()).String()}
 			},
 			after: func(t *testing.T, out []byte, req proto.Message) {
-				var got engine.GetSourceGraphProgressResponse
+				var got engine.GetEvidenceGraphProgressResponse
 				if err := proto.Unmarshal(out, &got); err != nil {
 					t.Fatal(err)
 				}
-				want := &engine.SourceGraphProgress{SourceId: req.(*engine.GetSourceGraphProgressRequest).GetSourceId()}
+				want := &engine.EvidenceGraphProgress{GraphId: req.(*engine.GetEvidenceGraphProgressRequest).GetGraphId()}
 				if !proto.Equal(got.Progress, want) {
 					t.Fatalf("%+v, want %+v", got.Progress, want)
 				}
@@ -125,13 +125,13 @@ func TestGetSourceGraphProgress(t *testing.T) {
 				})); err != nil {
 					t.Fatal(err)
 				}
-				return &engine.GetSourceGraphProgressRequest{
+				return &engine.GetEvidenceGraphProgressRequest{
 					ProjectDir: dir,
-					SourceId:   sourceID,
+					GraphId:    soleGraphID(t, dir, sourceID),
 				}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var got engine.GetSourceGraphProgressResponse
+				var got engine.GetEvidenceGraphProgressResponse
 				if err := proto.Unmarshal(out, &got); err != nil {
 					t.Fatal(err)
 				}
@@ -141,4 +141,38 @@ func TestGetSourceGraphProgress(t *testing.T) {
 			},
 		},
 	})
+}
+
+// Two graphs of one Source count apart, and each row names its graph and its Source.
+func TestEvidenceGraphProgressPerGraph(t *testing.T) {
+	f := newGraphFixture(t)
+	jones := f.createGraph(t, "Jones", f.page2).GetGraph().GetId()
+	var subs engine.ListSubjectsResponse
+	mustRPC(t, ListSubjects, &engine.ListSubjectsRequest{ProjectDir: f.dir, GraphId: f.defaultGraphID}, &subs)
+	var created engine.CreateSubjectResponse
+	mustRPC(t, CreateSubject, &engine.CreateSubjectRequest{
+		ProjectDir: f.dir, UserId: f.userID, GraphId: jones,
+		SubjectTypeId: subs.Subjects[0].GetSubjectTypeId(), Label: "Bea",
+	}, &created)
+
+	var got engine.GetEvidenceGraphProgressResponse
+	mustRPC(t, GetEvidenceGraphProgress, &engine.GetEvidenceGraphProgressRequest{ProjectDir: f.dir, GraphId: jones}, &got)
+	if p := got.GetProgress(); p.GetGraphId() != jones || p.GetSourceId() != f.sourceID || p.GetSubjectCount() != 1 || p.GetObservationCount() != 0 {
+		t.Fatalf("Jones progress %+v", p)
+	}
+
+	var list engine.ListEvidenceGraphProgressResponse
+	mustRPC(t, ListEvidenceGraphProgress, &engine.ListEvidenceGraphProgressRequest{ProjectDir: f.dir}, &list)
+	byGraph := map[string]*engine.EvidenceGraphProgress{}
+	for _, row := range list.GetRows() {
+		byGraph[row.GetGraphId()] = row
+	}
+	if len(byGraph) != 2 {
+		t.Fatalf("rows %+v", list.GetRows())
+	}
+	for _, id := range []string{f.defaultGraphID, jones} {
+		if row := byGraph[id]; row == nil || row.GetSourceId() != f.sourceID {
+			t.Fatalf("row for %s: %+v", id, row)
+		}
+	}
 }

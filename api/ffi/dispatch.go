@@ -77,7 +77,7 @@ const (
 	MethodDeletePropertyTerm                = int32(engine.Method_METHOD_DELETE_PROPERTY_TERM)
 	MethodCreateCitationWithObservations    = int32(engine.Method_METHOD_CREATE_CITATION_WITH_OBSERVATIONS)
 	MethodAddObservationsToCitation         = int32(engine.Method_METHOD_ADD_OBSERVATIONS_TO_CITATION)
-	MethodListObservationsBySource          = int32(engine.Method_METHOD_LIST_OBSERVATIONS_BY_SOURCE)
+	MethodListObservationsByEvidenceGraph   = int32(engine.Method_METHOD_LIST_OBSERVATIONS_BY_EVIDENCE_GRAPH)
 	MethodGetCitation                       = int32(engine.Method_METHOD_GET_CITATION)
 	MethodCreateCitedBridge                 = int32(engine.Method_METHOD_CREATE_CITED_BRIDGE)
 	MethodCitationCountsBySource            = int32(engine.Method_METHOD_CITATION_COUNTS_BY_SOURCE)
@@ -86,8 +86,8 @@ const (
 	MethodUpdateObservation                 = int32(engine.Method_METHOD_UPDATE_OBSERVATION)
 	MethodDeleteObservation                 = int32(engine.Method_METHOD_DELETE_OBSERVATION)
 	MethodGetPropertiesWorkspace            = int32(engine.Method_METHOD_GET_PROPERTIES_WORKSPACE)
-	MethodListSourceGraphProgress           = int32(engine.Method_METHOD_LIST_SOURCE_GRAPH_PROGRESS)
-	MethodGetSourceGraphProgress            = int32(engine.Method_METHOD_GET_SOURCE_GRAPH_PROGRESS)
+	MethodListEvidenceGraphProgress         = int32(engine.Method_METHOD_LIST_EVIDENCE_GRAPH_PROGRESS)
+	MethodGetEvidenceGraphProgress          = int32(engine.Method_METHOD_GET_EVIDENCE_GRAPH_PROGRESS)
 	MethodGetDeleteImpact                   = int32(engine.Method_METHOD_GET_DELETE_IMPACT)
 	MethodDeleteSource                      = int32(engine.Method_METHOD_DELETE_SOURCE)
 	MethodDeleteArtifact                    = int32(engine.Method_METHOD_DELETE_ARTIFACT)
@@ -114,7 +114,7 @@ const (
 	MethodGetConclusionDetail               = int32(engine.Method_METHOD_GET_CONCLUSION_DETAIL)
 	MethodListEventHeaders                  = int32(engine.Method_METHOD_LIST_EVENT_HEADERS)
 	MethodListPlaceHeaders                  = int32(engine.Method_METHOD_LIST_PLACE_HEADERS)
-	MethodListSourceEventTitles             = int32(engine.Method_METHOD_LIST_SOURCE_EVENT_TITLES)
+	MethodListEvidenceGraphEventTitles      = int32(engine.Method_METHOD_LIST_EVIDENCE_GRAPH_EVENT_TITLES)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -254,8 +254,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.CreateCitationWithObservations(in)
 	case MethodAddObservationsToCitation:
 		return handlers.AddObservationsToCitation(in)
-	case MethodListObservationsBySource:
-		return handlers.ListObservationsBySource(in)
+	case MethodListObservationsByEvidenceGraph:
+		return handlers.ListObservationsByEvidenceGraph(in)
 	case MethodGetCitation:
 		return handlers.GetCitation(in)
 	case MethodCreateCitedBridge:
@@ -272,10 +272,10 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.DeleteObservation(in)
 	case MethodGetPropertiesWorkspace:
 		return handlers.GetPropertiesWorkspace(in)
-	case MethodListSourceGraphProgress:
-		return handlers.ListSourceGraphProgress(in)
-	case MethodGetSourceGraphProgress:
-		return handlers.GetSourceGraphProgress(in)
+	case MethodListEvidenceGraphProgress:
+		return handlers.ListEvidenceGraphProgress(in)
+	case MethodGetEvidenceGraphProgress:
+		return handlers.GetEvidenceGraphProgress(in)
 	case MethodGetDeleteImpact:
 		return handlers.GetDeleteImpact(in)
 	case MethodDeleteSource:
@@ -328,8 +328,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.ListEventHeaders(in)
 	case MethodListPlaceHeaders:
 		return handlers.ListPlaceHeaders(in)
-	case MethodListSourceEventTitles:
-		return handlers.ListSourceEventTitles(in)
+	case MethodListEvidenceGraphEventTitles:
+		return handlers.ListEvidenceGraphEventTitles(in)
 	default:
 		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}

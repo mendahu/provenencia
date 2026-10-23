@@ -335,3 +335,21 @@ func soleGraphID(t *testing.T, dir, sourceID string) string {
 	}
 	return ids[0]
 }
+
+// graphLinking is the id of the Evidence graph an Artifact is linked to; the
+// test fails unless exactly one graph links it.
+func graphLinking(t *testing.T, dir, artifactID string) string {
+	t.Helper()
+	var resp engine.ListEvidenceGraphsResponse
+	mustRPC(t, ListEvidenceGraphs, &engine.ListEvidenceGraphsRequest{ProjectDir: dir}, &resp)
+	var ids []string
+	for _, g := range resp.GetGraphs() {
+		if slices.Contains(g.GetArtifactIds(), artifactID) {
+			ids = append(ids, g.GetId())
+		}
+	}
+	if len(ids) != 1 {
+		t.Fatalf("Artifact %s is on %d graphs, want 1", artifactID, len(ids))
+	}
+	return ids[0]
+}

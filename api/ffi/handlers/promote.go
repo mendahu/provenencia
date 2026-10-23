@@ -124,13 +124,13 @@ func ListSubjectMemberships(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("list_subject_memberships", err)
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
 	var out *engine.ListSubjectMembershipsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		eg, err := sourceEvidenceGraph(c, sourceID)
+		eg, err := c.Graph().EvidenceGraph(graphID)
 		if err != nil {
 			return err
 		}

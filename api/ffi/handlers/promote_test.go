@@ -28,7 +28,7 @@ func promotableSubject(t *testing.T) *engine.PromoteSubjectRequest {
 	t.Helper()
 	dir, userID, sourceID, typeID := subjectFixture(t)
 	out, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-		ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: typeID, Label: "James",
+		ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: typeID, Label: "James",
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -112,7 +112,7 @@ func TestUnpromoteSubject(t *testing.T) {
 		}
 		n := 0
 		for _, src := range list.Sources {
-			out, err := ListSubjectMemberships(marshalProto(t, &engine.ListSubjectMembershipsRequest{ProjectDir: dir, SourceId: src.GetId()}))
+			out, err := ListSubjectMemberships(marshalProto(t, &engine.ListSubjectMembershipsRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, src.GetId())}))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -191,7 +191,7 @@ func TestUnpromoteSubject(t *testing.T) {
 					}
 				}
 				out, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-					ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: relID, Label: "bridge",
+					ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: relID, Label: "bridge",
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -248,7 +248,7 @@ func TestListSubjectMemberships(t *testing.T) {
 		dir, userID, sourceID, typeID := subjectFixture(t)
 		create := func(label string) string {
 			out, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-				ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: typeID, Label: label,
+				ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: typeID, Label: label,
 			}))
 			if err != nil {
 				t.Fatal(err)
@@ -278,7 +278,7 @@ func TestListSubjectMemberships(t *testing.T) {
 	t.Run("promoted listed with handle and kind, unpromoted absent", func(t *testing.T) {
 		f := setup(t)
 		out, err := ListSubjectMemberships(marshalProto(t, &engine.ListSubjectMembershipsRequest{
-			ProjectDir: f.dir, SourceId: f.sourceID,
+			ProjectDir: f.dir, GraphId: soleGraphID(t, f.dir, f.sourceID),
 		}))
 		if err != nil {
 			t.Fatal(err)
@@ -308,7 +308,7 @@ func TestListSubjectMemberships(t *testing.T) {
 			name: "bad source id",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, _, _ := subjectFixture(t)
-				return &engine.ListSubjectMembershipsRequest{ProjectDir: dir, SourceId: "nope"}
+				return &engine.ListSubjectMembershipsRequest{ProjectDir: dir, GraphId: "nope"}
 			},
 			wantErr: true,
 		},

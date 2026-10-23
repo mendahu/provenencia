@@ -41,18 +41,18 @@ func eventTitleProto(p eventtitle.Plan) *engine.EventTitle {
 	return out
 }
 
-func ListSourceEventTitles(in []byte) ([]byte, error) {
-	var req engine.ListSourceEventTitlesRequest
+func ListEvidenceGraphEventTitles(in []byte) ([]byte, error) {
+	var req engine.ListEvidenceGraphEventTitlesRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("list_source_event_titles", err)
+		return nil, unmarshalErr("list_evidence_graph_event_titles", err)
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
-	out := &engine.ListSourceEventTitlesResponse{}
+	out := &engine.ListEvidenceGraphEventTitlesResponse{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		eg, err := sourceEvidenceGraph(c, sourceID)
+		eg, err := c.Graph().EvidenceGraph(graphID)
 		if err != nil {
 			return err
 		}
