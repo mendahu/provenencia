@@ -218,7 +218,7 @@ struct PromoteFlow: Equatable, Sendable {
         func name(of endID: String?) -> String { fact.name(of: endID) }
     }
 
-    /// What the host row says of a connection's other end when that end is not a row to work on.
+    /// What a row says of a connection's other end when that end is not a row to work on.
     struct OtherEnd: Equatable, Sendable {
         var name: String
         /// The end is already filed (an anchor), not just missing from the page.

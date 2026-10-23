@@ -443,7 +443,7 @@ Split from S11-20 when it was planned (user, 2026-10-22): the engine half of the
 
 #### S11-27 — Connection subrows on Promote
 
-**Ships.** Each connection shows as a subrow under a row it joins, as S11-D1 draws it, with its state from `ConnectionState` (files, waits, self-link). `PromoteFlow.connectionHosts` (hosts and pointers, built once per render); the bottom connections panel goes; the footer keeps its count, with an unselected part (board frame 19). A subrow words its connection with the existing connection sentence (user, 2026-10-23). VoiceOver reads why a connection waits.
+**Ships.** Each connection shows as a subrow under a row it joins, as S11-D1 draws it, with its state from `ConnectionState` (files, waits, self-link). `PromoteFlow.connectionsByRow` (each connection under every end that is a row, built once per render, no pointers); the bottom connections panel goes; the footer keeps its count, with an unselected part (board frame 19). A subrow words its connection with the existing connection sentence (user, 2026-10-23). VoiceOver reads why a connection waits.
 **Not this PR.** Opening the evidence sheet at a relationship line (S11-20 decides).
 **Check.** Setting John to Skip dims his connections; setting him to New turns them on; a self-link warns.
 **Context.** [Connection subrows](promote-connection-subrows.md); S11-D1.
