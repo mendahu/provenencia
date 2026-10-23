@@ -663,7 +663,7 @@ private struct EvidenceMemberRow: View {
 
 // MARK: - Relationships
 
-/// A connection this Subject and the record's members share, worded by the link on the page, with the neighbor's lines under it.
+/// A connection this Subject and the record's members share, worded by the engine's reading of the link from the neighbor's side, with the neighbor's lines under it.
 private struct EvidenceRelationshipCard: View {
     let context: EvidenceContext
     let relationship: CatalogClaimEvidenceRelationship
@@ -710,12 +710,7 @@ private struct EvidenceRelationshipCard: View {
 
     /// "…they share a spouse (CEV-3B5RT and PER-7QH3D)", with the outcome as a badge.
     private var header: some View {
-        let phrase = PromoteEvidenceDisplay.sharePhrase(
-            bridge: PromoteEvidenceDisplay.bridge(for: relationship, row: context.row.subjectID, in: context.model.flow.bridges),
-            neighbor: relationship.neighborSubjectID,
-            neighborName: neighbor?.name ?? "",
-            outcome: relationship.outcome
-        )
+        let phrase = PromoteEvidenceDisplay.sharePhrase(relationship: relationship, neighborName: neighbor?.name ?? "")
         let title = PromoteEvidenceDisplay.shareHeader(
             phrase: phrase,
             ownRef: neighbor?.ref,

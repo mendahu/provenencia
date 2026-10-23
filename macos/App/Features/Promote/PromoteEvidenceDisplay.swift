@@ -23,31 +23,6 @@ enum PromoteEvidenceDisplay {
         pins.intersection(evidence.offeredPinIDs).count
     }
 
-    /// The bridge on the page that joins the row and a neighbor: the first, in page order, with
-    /// those two ends in either order and, when `kind` is given, of that kind.
-    static func bridge(
-        between row: String,
-        and neighbor: String?,
-        kind: EvidenceBridgeKind? = nil,
-        in bridges: [PromoteFlow.BridgeFact]
-    ) -> PromoteFlow.BridgeFact? {
-        let ends: Set<String?> = [row, neighbor]
-        return bridges.first { bridge in
-            (kind == nil || bridge.kind == kind) && Set<String?>([bridge.endA, bridge.endB]) == ends
-        }
-    }
-
-    /// The bridge on the page a relationship stands for: the first, in page order, of the
-    /// relationship's kind that joins the row and the neighbor.
-    static func bridge(
-        for relationship: CatalogClaimEvidenceRelationship,
-        row: String,
-        in bridges: [PromoteFlow.BridgeFact]
-    ) -> PromoteFlow.BridgeFact? {
-        guard let kind = EvidenceBridgeKind(rawValue: relationship.bridgeType) else { return nil }
-        return bridge(between: row, and: relationship.neighborSubjectID, kind: kind, in: bridges)
-    }
-
     /// Loaded, and nothing to compare: no line and no relationship.
     static func hasNothingToCompare(_ evidence: CatalogClaimEvidence) -> Bool {
         evidence.sections.allSatisfy { $0.lines.isEmpty } && evidence.relationships.isEmpty
@@ -184,26 +159,13 @@ enum PromoteEvidenceDisplay {
         return worded.allSatisfy { $0 == first } ? .header(first) : .lines
     }
 
-    /// What the row shares with a connected row, after "they share": the bridge on the page that
-    /// joins them says it; with none, "a connection".
-    static func sharePhrase(
-        bridge: PromoteFlow.BridgeFact?,
-        neighbor: String,
-        neighborName: String,
-        outcome: EvidenceOutcome
-    ) -> String {
-        let input = bridge.map {
-            ConnectionSentenceRegistry.ShareInput(
-                kind: $0.kind,
-                neighborIsA: $0.endA == neighbor,
-                termKey: $0.termKey,
-                term: $0.term,
-                eventTypeKey: $0.eventTypeKey,
-                eventType: $0.eventType,
-                neighborName: neighborName
-            )
-        }
-        return ConnectionSentenceRegistry.share(input, similar: outcome == .partial)
+    /// What the row shares with a connected row, after "they share": the engine's reading of the
+    /// link from the neighbor's side says it; with none the sheet can word, "a connection".
+    static func sharePhrase(relationship: CatalogClaimEvidenceRelationship, neighborName: String) -> String {
+        ConnectionSentenceRegistry.share(
+            ConnectionSentenceRegistry.ShareInput(relationship, neighborName: neighborName),
+            similar: relationship.outcome == .partial
+        )
     }
 
     /// A Card header as VoiceOver speaks it: without the ellipsis that opens it on screen.

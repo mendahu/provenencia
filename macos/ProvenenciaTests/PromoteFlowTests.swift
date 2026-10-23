@@ -286,6 +286,18 @@ struct PromoteFlowTests {
         #expect(bea?.decided == false)
     }
 
+    @Test func theBridgeBetweenTwoSubjectsIsTheFirstOnThePageEitherWayRound() {
+        var flow = PromoteFlow(entryID: "john")
+        flow.bridges = [
+            PromoteFlow.BridgeFact(id: "other", sentence: "", endA: "mary", endB: "birth"),
+            PromoteFlow.BridgeFact(id: "first", sentence: "", endA: "birth", endB: "john"),
+            PromoteFlow.BridgeFact(id: "second", sentence: "", endA: "john", endB: "birth"),
+        ]
+        #expect(flow.bridge(between: "john", and: "birth")?.id == "first")
+        #expect(flow.bridge(between: "birth", and: "john")?.id == "first")
+        #expect(flow.bridge(between: "john", and: "death") == nil)
+    }
+
     @Test func aContestedRowAndItsMoveReachTheFlow() {
         var a = row(id: "a")
         a.contested = true

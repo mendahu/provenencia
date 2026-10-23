@@ -271,6 +271,13 @@ enum SeededPropertyKey {
     static let eventType = "event_type"
     static let relationshipType = "relationship_type"
     static let placeRelationshipType = "place_relationship_type"
+    /// The endpoint Properties of the four bridge types: where a neighbor sits on a link.
+    static let person = "person"
+    static let relatedTo = "related_to"
+    static let event = "event"
+    static let place = "place"
+    static let from = "from"
+    static let to = "to"
 }
 
 /// Seeded `gender` terms the Person header colours by (`subjectvocab` seed).

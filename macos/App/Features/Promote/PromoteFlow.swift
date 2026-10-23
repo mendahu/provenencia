@@ -229,22 +229,14 @@ struct PromoteFlow: Equatable, Sendable {
         var id: String
         var sentence: String
         var phrase: String = ""
-        /// The connection's term in lowercase ("spouse"): a row's reason names it, and a share phrase
-        /// names it when the term is a researcher's; nil when the connection has none.
+        /// The connection's term in lowercase ("spouse"): a row's reason names it; nil when the
+        /// connection has none.
         var term: String?
-        /// The connection's product term key ("spouse", "part_of"); nil for a researcher's term or none.
-        var termKey: String?
-        /// A participation's event type term key ("birth"), only when it is a product term; nil otherwise.
-        var eventTypeKey: String?
-        /// A participation's event type label ("Birth"); nil otherwise.
-        var eventType: String?
         var endAName: String = ""
         var endBName: String = ""
         var mark: PVMarkKey = .subjectRelationship
         var endA: String?
         var endB: String?
-        /// The kind of link this is; the evidence sheet matches a relationship to its bridge by it.
-        var kind: EvidenceBridgeKind = .relationship
         /// Already an accepted association. Hidden from the will-file list;
         /// Done does not file it again.
         var alreadyFiled: Bool = false
@@ -315,6 +307,11 @@ struct PromoteFlow: Equatable, Sendable {
             }
             return lined(bridge, .files)
         }
+    }
+
+    /// The first bridge on the page, in page order, that joins these two Subjects (either way round).
+    func bridge(between a: String, and b: String) -> BridgeFact? {
+        bridges.first { ($0.endA == a && $0.endB == b) || ($0.endA == b && $0.endB == a) }
     }
 
     /// The row for this Subject, or nil when it is not on the page.

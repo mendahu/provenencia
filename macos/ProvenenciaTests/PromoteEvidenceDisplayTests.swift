@@ -43,10 +43,6 @@ struct PromoteEvidenceDisplayTests {
         CatalogDateValueInput(kind: "point", startYear: year, startMonth: month, startDay: day)
     }
 
-    private func bridge(_ id: String, _ kind: EvidenceBridgeKind, _ a: String, _ b: String) -> PromoteFlow.BridgeFact {
-        PromoteFlow.BridgeFact(id: id, sentence: "", endA: a, endB: b, kind: kind)
-    }
-
     // MARK: - T-1
 
     @Test func checkStateFollowsThePins() {
@@ -65,21 +61,6 @@ struct PromoteEvidenceDisplayTests {
         #expect(PromoteEvidenceDisplay.checkedCount(evidence, pins: ["p1", "x"]) == 1)
         #expect(PromoteEvidenceDisplay.checkedCount(evidence, pins: ["p1", "p2"]) == 2)
         #expect(PromoteEvidenceDisplay.checkedCount(evidence, pins: []) == 0)
-    }
-
-    @Test func bridgeForARelationship() {
-        let participation = bridge("b-p", .participation, "john", "birth")
-        let spouse = bridge("b-r", .relationship, "birth", "john")
-        let other = bridge("b-o", .participation, "mary", "birth")
-        let bridges = [other, spouse, participation]
-        let found = PromoteEvidenceDisplay.bridge(for: relationship(neighbor: "birth", type: "participation"), row: "john", in: bridges)
-        #expect(found?.id == "b-p")
-        // Ends in either order; the first of the kind in page order.
-        let twice = [bridge("first", .participation, "birth", "john")] + bridges
-        #expect(PromoteEvidenceDisplay.bridge(for: relationship(neighbor: "birth", type: "participation"), row: "john", in: twice)?.id == "first")
-        #expect(PromoteEvidenceDisplay.bridge(for: relationship(neighbor: "birth", type: "relationship"), row: "john", in: bridges)?.id == "b-r")
-        #expect(PromoteEvidenceDisplay.bridge(for: relationship(neighbor: "death", type: "participation"), row: "john", in: bridges) == nil)
-        #expect(PromoteEvidenceDisplay.bridge(for: relationship(neighbor: "birth", type: "nonsense"), row: "john", in: bridges) == nil)
     }
 
     // MARK: - T-2
@@ -201,16 +182,6 @@ struct PromoteEvidenceDisplayTests {
     }
 
     // MARK: - Round 1
-
-    @Test func bridgeBetweenIgnoresKindWhenNoneIsGiven() {
-        let participation = bridge("b-p", .participation, "john", "birth")
-        let spouse = bridge("b-r", .relationship, "birth", "john")
-        let bridges = [participation, spouse]
-        #expect(PromoteEvidenceDisplay.bridge(between: "john", and: "birth", in: bridges)?.id == "b-p")
-        #expect(PromoteEvidenceDisplay.bridge(between: "john", and: "birth", kind: nil, in: bridges.reversed())?.id == "b-r")
-        #expect(PromoteEvidenceDisplay.bridge(between: "john", and: "birth", kind: .relationship, in: bridges)?.id == "b-r")
-        #expect(PromoteEvidenceDisplay.bridge(between: "john", and: "death", in: bridges) == nil)
-    }
 
     @Test func spokenLabelOfACollapsedLineCounts() {
         let label = PromoteEvidenceDisplay.spokenLabel(
@@ -343,33 +314,57 @@ struct PromoteEvidenceDisplayTests {
         #expect(PromoteEvidenceDisplay.shareHeader(phrase: phrase, ownRef: nil, recordRef: nil) == "…they share a spouse")
     }
 
-    @Test func theSharePhraseComesFromTheBridgeOnThePage() {
-        var spouse = bridge("b", .relationship, "mary", "john")
-        spouse.term = "spouse"
-        spouse.termKey = "spouse"
-        // The neighbor Mary is the A end of John's spouse link.
-        #expect(PromoteEvidenceDisplay.sharePhrase(bridge: spouse, neighbor: "mary", neighborName: "Mary", outcome: .agree) == "a spouse")
-        #expect(PromoteEvidenceDisplay.sharePhrase(bridge: spouse, neighbor: "mary", neighborName: "Mary", outcome: .partial) == "a similar spouse")
-        // No bridge on the page names nothing.
-        #expect(PromoteEvidenceDisplay.sharePhrase(bridge: nil, neighbor: "mary", neighborName: "Mary", outcome: .agree) == "a connection")
-        var birth = bridge("p", .participation, "john", "birth")
-        birth.eventTypeKey = "birth"
-        birth.eventType = "Birth"
-        #expect(PromoteEvidenceDisplay.sharePhrase(bridge: birth, neighbor: "birth", neighborName: "Birth of John", outcome: .agree) == "a birth event")
+    /// A relationship as the engine reports it from the neighbor's side.
+    private func shared(
+        type: String,
+        end: String = "",
+        term: CatalogEvidenceTerm? = nil,
+        names: Bool = true,
+        eventType: CatalogEvidenceTerm? = nil,
+        outcome: EvidenceOutcome = .agree
+    ) -> CatalogClaimEvidenceRelationship {
+        var r = relationship(type: type)
+        r.outcome = outcome
+        r.neighborEnd = end
+        r.neighborTerm = term
+        r.neighborTermNamesNeighbor = names
+        r.eventType = eventType
+        return r
+    }
+
+    private func product(_ key: String) -> CatalogEvidenceTerm {
+        CatalogEvidenceTerm(key: key, label: key.capitalized, origin: CatalogOrigin.provenencia)
+    }
+
+    @Test func relationshipShareFromTheEngine() {
+        func phrase(_ r: CatalogClaimEvidenceRelationship, _ name: String = "Mary") -> String {
+            PromoteEvidenceDisplay.sharePhrase(relationship: r, neighborName: name)
+        }
+        // Spouses who are also cousins: one phrase for each of the two cards.
+        #expect(phrase(shared(type: "relationship", term: product("spouse"))) == "a spouse")
+        #expect(phrase(shared(type: "relationship", term: product("cousin"))) == "a cousin")
+        #expect(phrase(shared(type: "relationship", term: product("spouse"), outcome: .partial)) == "a similar spouse")
+        // Mary is the parent of John: from John's sheet she is "a parent".
+        #expect(phrase(shared(type: "relationship", end: "related_to", term: product("parent"))) == "a parent")
+        // A researcher's directed term with no inverse names the connection.
+        let godparent = CatalogEvidenceTerm(key: "godparent", label: "Godparent", origin: CatalogOrigin.user)
+        #expect(phrase(shared(type: "relationship", end: "related_to", term: godparent, names: false)) == "a connection (Godparent)")
+        #expect(phrase(shared(type: "relationship", end: "related_to", term: godparent, names: false, outcome: .partial)) == "a similar connection (Godparent)")
+        // The neighbor is John's birth event.
+        #expect(phrase(shared(type: "participation", end: "event", term: product("subject"), names: false, eventType: product("birth")), "Birth of John") == "a birth event")
+        // Leeds is part of Yorkshire: Yorkshire is a parent place, and from its sheet Leeds is within it.
+        #expect(phrase(shared(type: "place_relationship", end: "to", term: product("part_of"), names: false)) == "a parent place")
+        #expect(phrase(shared(type: "place_relationship", end: "from", term: product("part_of"))) == "a place within it")
+        // A bridge type this build cannot word, or no reading at all, is a connection.
+        #expect(phrase(shared(type: "nonsense")) == "a connection")
+        #expect(phrase(shared(type: "relationship")) == "a connection")
     }
 
     @Test func aVowelInitialRoleOrEventReadsWithItsOwnArticle() {
-        var informant = bridge("i", .participation, "john", "mary")
-        informant.termKey = "informant"
-        informant.term = "informant"
-        #expect(PromoteEvidenceDisplay.sharePhrase(bridge: informant, neighbor: "john", neighborName: "John Smith", outcome: .agree) == "an informant, John Smith")
-        var engagement = bridge("e", .participation, "john", "engagement")
-        engagement.eventTypeKey = "engagement"
-        engagement.eventType = "Engagement"
-        #expect(PromoteEvidenceDisplay.sharePhrase(bridge: engagement, neighbor: "engagement", neighborName: "x", outcome: .partial) == "a similar engagement event")
-        var godparent = bridge("g", .relationship, "mary", "john")
-        godparent.term = "godparent"
-        #expect(PromoteEvidenceDisplay.sharePhrase(bridge: godparent, neighbor: "mary", neighborName: "Mary", outcome: .partial) == "a similar connection (godparent)")
+        let informant = shared(type: "participation", end: "person", term: product("informant"))
+        #expect(PromoteEvidenceDisplay.sharePhrase(relationship: informant, neighborName: "John Smith") == "an informant, John Smith")
+        let engagement = shared(type: "participation", end: "event", eventType: product("engagement"), outcome: .partial)
+        #expect(PromoteEvidenceDisplay.sharePhrase(relationship: engagement, neighborName: "x") == "a similar engagement event")
     }
 
     @Test func theSpokenRelationshipLabelHasNoLeadingEllipsis() {

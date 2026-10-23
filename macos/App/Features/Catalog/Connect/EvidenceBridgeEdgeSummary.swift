@@ -21,39 +21,6 @@ enum EvidenceBridgeEdgeSummary {
         )
     }
 
-    /// The bridge's term key, only when it is a product term; nil otherwise.
-    static func productTermKey(for placed: SourceGraphPlacedBridge) -> String? {
-        termKey(kind: placed.kind, in: placed.observations)
-    }
-
-    /// The product key of a participation's event type ("birth"), from the event the bridge
-    /// reaches; nil for another kind, an event with no type, or a researcher's type.
-    static func eventTypeKey(
-        for bridge: SourceGraphPlacedBridge,
-        in snapshot: SourceGraphSnapshot,
-        subjects: [String: SourceGraphPlacedSubject]? = nil
-    ) -> String? {
-        guard bridge.kind == .participation else { return nil }
-        return productKey(of: eventTypeObservation(
-            endpointAID: bridge.endpointAID, endpointBID: bridge.endpointBID, subjects: subjects ?? Self.subjects(of: snapshot)
-        ))
-    }
-
-    /// The label of a participation's event type ("birth"), from the event the bridge reaches; nil
-    /// for another kind or an event with no type.
-    static func eventTypeLabel(
-        for bridge: SourceGraphPlacedBridge,
-        in snapshot: SourceGraphSnapshot,
-        subjects: [String: SourceGraphPlacedSubject]? = nil
-    ) -> String? {
-        guard bridge.kind == .participation,
-              let observation = eventTypeObservation(
-                endpointAID: bridge.endpointAID, endpointBID: bridge.endpointBID, subjects: subjects ?? Self.subjects(of: snapshot)
-              )
-        else { return nil }
-        return termLabel(of: observation, propertyKey: SeededPropertyKey.eventType)
-    }
-
     /// The snapshot's placed Subjects by id: build once, then pass to every lookup of one pass.
     static func subjects(of snapshot: SourceGraphSnapshot) -> [String: SourceGraphPlacedSubject] {
         Dictionary(snapshot.subjects.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })

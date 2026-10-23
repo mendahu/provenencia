@@ -193,22 +193,6 @@ struct EvidenceBridgeEdgeSummaryTests {
         #expect(EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap) == "Alice was born")
     }
 
-    @Test func theEventTypeKeyAndLabelComeFromTheSameEvent() {
-        var eventType = identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Birth")
-        eventType.valueTermKey = "birth"
-        eventType.valueTermOrigin = CatalogOrigin.provenencia
-        let placed = bridge(kind: .participation, observations: [
-            observation(propertyKey: "person", valueSubjectID: "p1"),
-            observation(propertyKey: "event", valueSubjectID: "e1"),
-        ])
-        let snap = snapshot(bridge: placed, subjects: [
-            primary(id: "p1", kind: .person, label: "Alice", ref: "CPR-1", observations: []),
-            primary(id: "e1", kind: .event, label: "Birth", ref: "CEV-1", observations: [eventType]),
-        ])
-        #expect(EvidenceBridgeEdgeSummary.eventTypeKey(for: placed, in: snap) == "birth")
-        #expect(EvidenceBridgeEdgeSummary.eventTypeLabel(for: placed, in: snap) != nil)
-    }
-
     @Test func aUserTermKeyedLikeAProductTermReadsGenerically() {
         // A researcher's own role "subject", labelled "Main person", at a product birth.
         var role = observation(propertyKey: "role", valueText: "Main person", valueType: "term")

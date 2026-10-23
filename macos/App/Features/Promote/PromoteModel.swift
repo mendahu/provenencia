@@ -249,7 +249,7 @@ final class PromoteModel {
             guard let neighbor = neighbor(neighborID) else {
                 return L10n.string(L10n.Promote.reasonVia)
             }
-            let role = PromoteEvidenceDisplay.bridge(between: row.subjectID, and: neighborID, in: flow.bridges)?.term ?? ""
+            let role = flow.bridge(between: row.subjectID, and: neighborID)?.term ?? ""
             return role.isEmpty
                 ? L10n.Promote.viaNeighbor(neighbor: neighbor.name, ref: neighbor.shownRef)
                 : L10n.Promote.via(neighbor: neighbor.name, ref: neighbor.shownRef, role: role)
@@ -398,15 +398,11 @@ final class PromoteModel {
                 sentence: EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot, subjects: placedByID),
                 phrase: EvidenceBridgeEdgeSummary.phrase(for: bridge),
                 term: EvidenceBridgeEdgeSummary.reasonRole(for: bridge),
-                termKey: EvidenceBridgeEdgeSummary.productTermKey(for: bridge),
-                eventTypeKey: EvidenceBridgeEdgeSummary.eventTypeKey(for: bridge, in: snapshot, subjects: placedByID),
-                eventType: EvidenceBridgeEdgeSummary.eventTypeLabel(for: bridge, in: snapshot, subjects: placedByID),
                 endAName: bridge.endpointAID.flatMap { nameByID[$0] } ?? "",
                 endBName: bridge.endpointBID.flatMap { nameByID[$0] } ?? "",
                 mark: bridge.kind.markKey,
                 endA: bridge.endpointAID,
                 endB: bridge.endpointBID,
-                kind: bridge.kind,
                 alreadyFiled: bridge.membership != nil
             )
         }
