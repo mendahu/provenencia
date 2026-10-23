@@ -288,6 +288,78 @@ struct PromoteModelTests {
         #expect(model.reasonText(bea.captionReason, on: bea) == L10n.Promote.viaNeighbor(neighbor: "Ada", ref: "PER-e1"))
     }
 
+    /// Ada and Bea on one page, joined by one bridge of `kind` that carries `term`.
+    private func viaReason(
+        kind: EvidenceBridgeKind,
+        edgeKeys: (String, String),
+        term: (property: String, key: String, origin: String, label: String)?
+    ) async -> String {
+        let bridgeSubject = CatalogSubject(
+            id: "br", ref: "CPA-1", sourceID: sourceID, subjectTypeID: "type-bridge", label: "", description: ""
+        )
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea"), bridgeSubject]
+        let store = store(subjects: subjects)
+        store.subjectTypesByProject[projectDir]?.append(CatalogSubjectType(
+            id: "type-bridge", key: kind.rawValue, origin: "provenencia", label: "Bridge",
+            description: "", refPrefix: "CPA", candidateRefPrefix: "CPA"
+        ))
+        func edge(_ key: String, _ subjectID: String) -> CatalogObservation {
+            var o = CatalogObservation(
+                id: "o-\(key)", ref: "OBS-\(key)", citationID: "c", subjectID: "br", propertyID: "p-\(key)",
+                polarity: ObservationPolarity.positive.rawValue, valueText: "", valueInteger: nil, valueDateID: "",
+                valueNameID: "", valueSubjectID: subjectID, valueTermID: "", propertyKey: key,
+                propertyLabel: key, propertyValueType: PropertyValueType.subject.rawValue
+            )
+            o.valueSubjectID = subjectID
+            return o
+        }
+        var observations = [edge(edgeKeys.0, "a"), edge(edgeKeys.1, "b")]
+        if let term {
+            var o = edge(term.property, "")
+            o.id = "o-term"
+            o.valueText = term.label
+            o.valueTermID = "term-1"
+            o.valueTermKey = term.key
+            o.valueTermOrigin = term.origin
+            o.propertyValueType = PropertyValueType.term.rawValue
+            observations.append(o)
+        }
+        store.observationsBySource[sourceID] = observations
+        var viaA = row("b", handleID: "e2")
+        viaA.reason = .via
+        viaA.viaNeighborSubjectID = "a"
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), viaA])]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        let bea = model.flow.row("b")!
+        return model.reasonText(bea.captionReason, on: bea)
+    }
+
+    @Test func aViaReasonNamesTheTermInLowercase() async {
+        let provenencia = CatalogOrigin.provenencia
+        #expect(await viaReason(
+            kind: .participation, edgeKeys: ("person", "event"),
+            term: ("role", "subject", provenencia, "Subject")
+        ) == L10n.Promote.via(neighbor: "Ada", ref: "PER-e1", role: "subject"))
+        #expect(await viaReason(
+            kind: .relationship, edgeKeys: ("person", "related_to"),
+            term: ("relationship_type", "spouse", provenencia, "Spouse")
+        ) == L10n.Promote.via(neighbor: "Ada", ref: "PER-e1", role: "spouse"))
+        #expect(await viaReason(
+            kind: .placeRelationship, edgeKeys: ("from", "to"),
+            term: ("place_relationship_type", "part_of", provenencia, "Part of")
+        ) == L10n.Promote.via(neighbor: "Ada", ref: "PER-e1", role: "part of"))
+        // A location has no term, so the reason names only the neighbor.
+        #expect(await viaReason(
+            kind: .location, edgeKeys: ("event", "place"), term: nil
+        ) == L10n.Promote.viaNeighbor(neighbor: "Ada", ref: "PER-e1"))
+        // A researcher's term keeps its own label, lowercased.
+        #expect(await viaReason(
+            kind: .participation, edgeKeys: ("person", "event"),
+            term: ("role", "godparent", "user", "Godparent")
+        ) == L10n.Promote.via(neighbor: "Ada", ref: "PER-e1", role: "godparent"))
+    }
+
     @Test func movesAreWordedNamingTheNeighbor() async {
         let model = await loadedAdaAndBea(row("a", handleID: "e1"), row("b", handleID: "e2"))
         let bea = model.flow.row("b")!

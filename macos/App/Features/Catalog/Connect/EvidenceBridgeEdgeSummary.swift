@@ -12,6 +12,15 @@ enum EvidenceBridgeEdgeSummary {
         )
     }
 
+    /// The bridge's term as a reason names it: "spouse", "subject". nil when
+    /// the bridge has none.
+    static func reasonRole(for placed: SourceGraphPlacedBridge) -> String? {
+        ConnectionSentenceRegistry.reasonRole(
+            kind: placed.kind,
+            term: termDisplay(kind: placed.kind, in: placed.observations)
+        )
+    }
+
     /// Snapshot-aware sentence. Nouns come from cited endpoints; unreadable
     /// edges fall back to the stored label or kind phrase · ref. Never empty.
     static func sentence(

@@ -219,6 +219,8 @@ struct PromoteFlow: Equatable, Sendable {
         var id: String
         var sentence: String
         var phrase: String = ""
+        /// The connection's term in lowercase ("spouse"), for a row's reason; nil when it has none.
+        var reasonRole: String?
         var endAName: String = ""
         var endBName: String = ""
         var mark: PVMarkKey = .subjectRelationship

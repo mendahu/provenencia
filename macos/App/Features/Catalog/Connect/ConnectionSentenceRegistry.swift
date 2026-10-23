@@ -26,6 +26,9 @@ enum ConnectionSentenceRegistry {
         var noTerm: (@Sendable (Slots) -> String)?
         /// The relational phrase on a card, given the term label.
         var phrase: @Sendable (String?) -> String
+        /// The term as a sentence reads it mid-line ("spouse"); nil when the
+        /// kind has no term to name.
+        var reasonRole: @Sendable (String?) -> String?
     }
 
     /// Wording for one term key (and optionally one event type) of a kind.
@@ -42,12 +45,19 @@ enum ConnectionSentenceRegistry {
 
     private typealias Text = L10n.EvidenceGraph
 
+    /// The term label lowercased for the current locale; blank is nil.
+    private static let termInLowercase: @Sendable (String?) -> String? = { term in
+        guard let term = term?.trimmingCharacters(in: .whitespacesAndNewlines), !term.isEmpty else { return nil }
+        return term.lowercased(with: .autoupdatingCurrent)
+    }
+
     static let entries: [KindEntry] = [
         KindEntry(
             kind: .location,
             termProperty: SeededPropertyKey.role,
             sentence: { Text.bridgeSummaryLocation(event: $0.a, place: $0.b) },
-            phrase: { _ in L10n.string(Text.bridgeSummaryLocationBare) }
+            phrase: { _ in L10n.string(Text.bridgeSummaryLocationBare) },
+            reasonRole: { _ in nil }
         ),
         KindEntry(
             kind: .relationship,
@@ -59,7 +69,8 @@ enum ConnectionSentenceRegistry {
             phrase: { term in
                 guard let term else { return L10n.string(Text.bridgeSummaryRelationshipBare) }
                 return Text.bridgeSummaryRelationshipTypeOnly(type: term)
-            }
+            },
+            reasonRole: termInLowercase
         ),
         KindEntry(
             kind: .placeRelationship,
@@ -71,7 +82,8 @@ enum ConnectionSentenceRegistry {
             phrase: { term in
                 guard let term else { return L10n.string(Text.bridgeSummaryPlaceRelationshipBare) }
                 return Text.bridgeSummaryPlaceRelationshipTypeOnly(type: term)
-            }
+            },
+            reasonRole: termInLowercase
         ),
         KindEntry(
             kind: .participation,
@@ -83,7 +95,8 @@ enum ConnectionSentenceRegistry {
             phrase: { term in
                 guard let term else { return L10n.string(Text.bridgeSummaryParticipationBare) }
                 return Text.bridgeSummaryParticipationRoleOnly(role: term)
-            }
+            },
+            reasonRole: termInLowercase
         ),
     ]
 
@@ -152,6 +165,12 @@ enum ConnectionSentenceRegistry {
     ) -> String {
         let specific = lookup(kind: kind, term: termKey, eventType: eventType, in: sentences)
         return (specific?.phrase ?? entry(kind).phrase)(term)
+    }
+
+    /// The term as a reason names the connection: "spouse", "subject". nil
+    /// when the kind or the term gives nothing to name.
+    static func reasonRole(kind: EvidenceBridgeKind, term: String?) -> String? {
+        entry(kind).reasonRole(term)
     }
 
     /// The sentence for a kind's endpoints (A/B as `Slots` documents). With an

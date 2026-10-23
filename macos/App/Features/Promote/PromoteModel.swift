@@ -249,10 +249,10 @@ final class PromoteModel {
             guard let neighbor = neighbor(neighborID) else {
                 return L10n.string(L10n.Promote.reasonVia)
             }
-            let phrase = PromoteEvidenceDisplay.bridge(between: row.subjectID, and: neighborID, in: flow.bridges)?.phrase ?? ""
-            return phrase.isEmpty
+            let role = PromoteEvidenceDisplay.bridge(between: row.subjectID, and: neighborID, in: flow.bridges)?.reasonRole ?? ""
+            return role.isEmpty
                 ? L10n.Promote.viaNeighbor(neighbor: neighbor.name, ref: neighbor.shownRef)
-                : L10n.Promote.via(neighbor: neighbor.name, ref: neighbor.shownRef, role: phrase)
+                : L10n.Promote.via(neighbor: neighbor.name, ref: neighbor.shownRef, role: role)
         case .filed: return L10n.string(L10n.Promote.alreadyFiled)
         case .decided: return L10n.string(L10n.Promote.reasonDecided)
         case .agrees(let key, let origin): return L10n.Promote.agreesOn(property: propertyLabel(key: key, origin: origin))
@@ -396,6 +396,7 @@ final class PromoteModel {
                 id: bridge.subject.id,
                 sentence: EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot),
                 phrase: EvidenceBridgeEdgeSummary.phrase(for: bridge),
+                reasonRole: EvidenceBridgeEdgeSummary.reasonRole(for: bridge),
                 endAName: bridge.endpointAID.flatMap { nameByID[$0] } ?? "",
                 endBName: bridge.endpointBID.flatMap { nameByID[$0] } ?? "",
                 mark: bridge.kind.markKey,
