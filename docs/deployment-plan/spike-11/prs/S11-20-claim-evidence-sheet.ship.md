@@ -538,3 +538,15 @@ Merged `origin/main` @ `d36060a0` (S11-26 plan). One conflict in the map (`deplo
 
 ## Result (after round 12)
 Gate PASS · CI see PR · open: none · to user: — · manual check §10 not run · follow-ups: none
+
+## Round 13 — user report (2026-10-22)
+Two Swift 6 concurrency warnings from the user's build: `ConnectionSentenceRegistry.entries` (line 45) and `.sentences` (line 90) are static arrays of non-`Sendable` structs (their closure fields). A clean `build-for-testing` (scratch derived data) shows these as the only warnings in Swift files this PR changed; the other 101 are in files it does not touch. The gate missed them because `xcode-test` builds incrementally and prints no warnings for files it does not recompile.
+
+**F-30 — The registry's rows are Sendable** (from the user)
+Files: `macos/App/Features/Catalog/Connect/ConnectionSentenceRegistry.swift`.
+Do: `Slots`, `KindEntry` and `Sentence` conform to `Sendable`; every closure field is `@Sendable` (`(Slots) -> String` → `@Sendable (Slots) -> String`, likewise `phrase` and `noTerm`). No `nonisolated(unsafe)`, no `@MainActor` on the enum. Nothing else changes.
+Check: a clean build with `-derivedDataPath` in the scratch dir prints no warning for `ConnectionSentenceRegistry.swift`; scripts/check-pr.sh PASS.
+F-30 done at `0e5a543d`: `Slots`, `KindEntry`, `Sentence` are `Sendable`, closure fields `@Sendable` (and the private `subjectSentence` helper's parameter). A `build-for-testing` that recompiled the file prints no registry warning; gate PASS (orchestrator re-ran).
+
+## Result (after round 13)
+Gate PASS · CI see PR · open: none · manual check §10 not run
