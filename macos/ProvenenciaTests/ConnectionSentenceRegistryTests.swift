@@ -235,4 +235,74 @@ struct ConnectionSentenceRegistryTests {
                 == L10n.string(L10n.EvidenceGraph.bridgeSummaryLocationBare)
         )
     }
+
+    // MARK: - What a row shares with a connected record
+
+    private func share(
+        _ kind: EvidenceBridgeKind,
+        neighborIsA: Bool,
+        termKey: String? = nil,
+        term: String? = nil,
+        eventType: String? = nil,
+        name: String = "Mary Smith",
+        similar: Bool = false
+    ) -> String {
+        ConnectionSentenceRegistry.share(
+            ConnectionSentenceRegistry.ShareInput(
+                kind: kind, neighborIsA: neighborIsA, termKey: termKey, term: term, eventType: eventType, neighborName: name
+            ),
+            similar: similar
+        )
+    }
+
+    @Test func aNeighborEventIsNamedByItsType() {
+        #expect(share(.participation, neighborIsA: false, eventType: "Birth") == "a birth event")
+        #expect(share(.participation, neighborIsA: false, eventType: "Birth", similar: true) == "a similar birth event")
+        #expect(share(.participation, neighborIsA: false) == "an event")
+        #expect(share(.participation, neighborIsA: false, similar: true) == "a similar event")
+    }
+
+    @Test func aNeighborPersonIsNamedByRoleAndName() {
+        #expect(share(.participation, neighborIsA: true, term: "Subject") == "a subject, Mary Smith")
+        #expect(share(.participation, neighborIsA: true, term: "Subject", similar: true) == "a similar subject, Mary Smith")
+        // No role to name: nothing to word.
+        #expect(share(.participation, neighborIsA: true) == "a connection")
+    }
+
+    @Test func aRelationshipIsTheNeighborsPartRelativeToTheRow() {
+        // The A end is the term itself; the B end is its inverse.
+        #expect(share(.relationship, neighborIsA: true, termKey: "spouse", term: "Spouse") == "a spouse")
+        #expect(share(.relationship, neighborIsA: true, termKey: "spouse", term: "Spouse", similar: true) == "a similar spouse")
+        #expect(share(.relationship, neighborIsA: true, termKey: "parent", term: "Parent") == "a parent")
+        #expect(share(.relationship, neighborIsA: false, termKey: "parent", term: "Parent") == "a child")
+        #expect(share(.relationship, neighborIsA: false, termKey: "grandparent", term: "Grandparent") == "a grandchild")
+        // Spouse, sibling and cousin are their own inverse.
+        for key in ["spouse", "sibling", "cousin"] {
+            #expect(share(.relationship, neighborIsA: false, termKey: key, term: key.capitalized) == "a \(key)")
+        }
+        // A researcher's term has no inverse; from the A end it still reads as itself.
+        #expect(share(.relationship, neighborIsA: true, term: "Godparent") == "a godparent")
+        #expect(share(.relationship, neighborIsA: false, term: "Godparent") == "a connection")
+    }
+
+    @Test func aPlaceRelationshipIsParentWithinSuccessorOrPredecessor() {
+        #expect(share(.placeRelationship, neighborIsA: false, termKey: "part_of") == "a parent place")
+        #expect(share(.placeRelationship, neighborIsA: false, termKey: "part_of", similar: true) == "a similar parent place")
+        #expect(share(.placeRelationship, neighborIsA: true, termKey: "part_of") == "a place within it")
+        #expect(share(.placeRelationship, neighborIsA: false, termKey: "succeeded_by") == "a successor place")
+        #expect(share(.placeRelationship, neighborIsA: true, termKey: "succeeded_by") == "a predecessor place")
+        #expect(share(.placeRelationship, neighborIsA: true, termKey: "succeeded_by", similar: true) == "a similar predecessor place")
+        #expect(share(.placeRelationship, neighborIsA: true) == "a connection")
+    }
+
+    @Test func aLocationNamesThePlace() {
+        #expect(share(.location, neighborIsA: false, name: "Leeds") == "a place, Leeds")
+        #expect(share(.location, neighborIsA: false, name: "Leeds", similar: true) == "a similar place, Leeds")
+        #expect(share(.location, neighborIsA: true, name: "Leeds") == "a connection")
+    }
+
+    @Test func nothingNamedIsAConnection() {
+        #expect(ConnectionSentenceRegistry.share(nil, similar: false) == "a connection")
+        #expect(ConnectionSentenceRegistry.share(nil, similar: true) == "a similar connection")
+    }
 }

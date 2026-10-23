@@ -21,6 +21,23 @@ enum EvidenceBridgeEdgeSummary {
         )
     }
 
+    /// The bridge's term key, only when it is a product term; nil otherwise.
+    static func productTermKey(for placed: SourceGraphPlacedBridge) -> String? {
+        termKey(kind: placed.kind, in: placed.observations)
+    }
+
+    /// The label of a participation's event type ("birth"), from the event the bridge reaches; nil
+    /// for another kind or an event with no type.
+    static func eventTypeLabel(for bridge: SourceGraphPlacedBridge, in snapshot: SourceGraphSnapshot) -> String? {
+        guard bridge.kind == .participation,
+              let id = bridge.endpointBID,
+              let placed = snapshot.subjects.first(where: { $0.id == id }),
+              placed.kind == .event,
+              let observation = identityObservation(on: placed)
+        else { return nil }
+        return termLabel(of: observation, propertyKey: SeededPropertyKey.eventType)
+    }
+
     /// Snapshot-aware sentence. Nouns come from cited endpoints; unreadable
     /// edges fall back to the stored label or kind phrase · ref. Never empty.
     static func sentence(
@@ -164,10 +181,13 @@ enum EvidenceBridgeEdgeSummary {
         kind: EvidenceBridgeKind,
         in observations: [CatalogObservation]
     ) -> String? {
-        let key = ConnectionSentenceRegistry.termProperty(for: kind)
         guard let observation = termObservation(kind: kind, in: observations) else {
             return nil
         }
+        return termLabel(of: observation, propertyKey: ConnectionSentenceRegistry.termProperty(for: kind))
+    }
+
+    private static func termLabel(of observation: CatalogObservation, propertyKey key: String) -> String? {
         let catalog = ObservationValueDisplay.string(for: observation)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let termKey = observation.valueTermKey

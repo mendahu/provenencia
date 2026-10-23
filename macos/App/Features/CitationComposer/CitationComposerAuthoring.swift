@@ -234,17 +234,6 @@ struct CitationSubjectGroup: Identifiable, Equatable {
 }
 
 enum CitationComposerAuthoring {
-    static let inverseTermKey: [String: String] = [
-        "parent": "child",
-        "child": "parent",
-        "grandparent": "grandchild",
-        "grandchild": "grandparent",
-        "pibling": "nibling",
-        "nibling": "pibling",
-        "guardian": "ward",
-        "ward": "guardian",
-    ]
-
     static func preview(transcription: String, description: String) -> CitationPreview {
         let transcription = collapsed(transcription)
         if !transcription.isEmpty { return .text(transcription) }
@@ -719,7 +708,7 @@ enum CitationComposerAuthoring {
         property: CatalogProperty?,
         vocabulary: CitationComposerVocabulary
     ) -> CatalogPropertyTerm? {
-        guard let term, let property, let inverseKey = term.productKey.flatMap({ inverseTermKey[$0] }) else { return nil }
+        guard let term, let property, let inverseKey = term.productKey.flatMap({ SeededRelationshipTypeTerm.inverse[$0] }) else { return nil }
         return vocabulary.termsByPropertyID[property.id]?.first { $0.productKey == inverseKey }
     }
 }

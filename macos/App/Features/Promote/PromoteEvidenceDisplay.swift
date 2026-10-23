@@ -1,7 +1,8 @@
 import Foundation
+import SwiftUI
 
-/// The evidence sheet's choices, made without a view: which boxes are
-/// checked, whether a line disagrees, and which bridge a relationship names.
+/// The evidence sheet's choices and words, made without a view: which boxes are
+/// checked, which bridge a relationship names, and the sentences the sheet reads.
 enum PromoteEvidenceDisplay {
     /// How much of a line's or relationship's pins are checked.
     enum CheckState: Equatable {
@@ -64,19 +65,6 @@ enum PromoteEvidenceDisplay {
         }
     }
 
-    /// "Source: value", or the value alone when the Source has no title.
-    static func memberText(_ member: Member) -> String {
-        guard let title = member.title else { return member.value }
-        return L10n.Promote.onSource(source: title, value: member.value)
-    }
-
-    /// The muted line under a sentence: this source's value, then, for one record, its Source and value.
-    static func detail(here: String, member: Member?) -> String {
-        var parts = [L10n.Promote.thisSource(here)]
-        if let member { parts.append(memberText(member)) }
-        return L10n.Promote.lineDetail(parts: parts)
-    }
-
     /// One record as VoiceOver speaks it; the value alone when its Source has no title.
     static func spokenMember(_ member: Member) -> String {
         guard let title = member.title else { return L10n.Promote.spokenMemberUntitled(value: member.value) }
@@ -100,33 +88,137 @@ enum PromoteEvidenceDisplay {
         return title
     }
 
-    /// A relationship card's heading: what the card shows and how VoiceOver speaks it.
-    struct RelationshipHeader: Equatable {
-        var title: String
-        var subtitle: String?
-        var spoken: String
+    // MARK: Title, subtitle and heading
+
+    private static func names(size: CGFloat) -> AttributeContainer {
+        var attributes = AttributeContainer()
+        attributes.font = PVFont.body(size: size, weight: PVFontWeight.semibold)
+        attributes.foregroundColor = PVColor.textDisplay
+        return attributes
     }
 
-    /// The bridge's sentence with the outcome as a badge; with no bridge, the outcome's sentence
-    /// over the neighbor's name.
-    static func relationshipHeader(
+    private static var sourceTitleStyle: AttributeContainer {
+        var attributes = AttributeContainer()
+        attributes.inlinePresentationIntent = .emphasized
+        attributes.foregroundColor = PVColor.textLink
+        return attributes
+    }
+
+    private static var heading: AttributeContainer {
+        var attributes = AttributeContainer()
+        attributes.foregroundColor = PVColor.textDisplay
+        return attributes
+    }
+
+    /// "<name> joins <record title> <REF>": "joins" muted italic, the ref muted mono.
+    static func title(name: String, recordTitle: String, ref: String) -> AttributedString {
+        var joins = AttributeContainer()
+        joins.inlinePresentationIntent = .emphasized
+        joins.foregroundColor = PVColor.textMuted
+        var refStyle = AttributeContainer()
+        refStyle.font = PVFont.mono(size: PVTypeScale.caption)
+        refStyle.foregroundColor = PVColor.textMuted
+        return StyledFormat.attributed(L10n.Promote.titleHandle, [
+            .init(text: name),
+            .init(text: L10n.string(L10n.Promote.titleJoins), attributes: joins),
+            .init(text: recordTitle),
+            .init(text: ref, attributes: refStyle),
+        ])
+    }
+
+    /// The subtitle under the title: the claim in one sentence. A Source with no title is "this source".
+    static func subtitle(name: String, sourceTitle: String?, kind: EvidencePrimaryKind, recordTitle: String) -> AttributedString {
+        let bold = names(size: PVTypeScale.bodySmall)
+        let kindWord = StyledFormat.Argument(text: L10n.Promote.kindWord(kind))
+        if let sourceTitle {
+            return StyledFormat.attributed(L10n.Promote.subtitle, [
+                .init(text: name, attributes: bold),
+                .init(text: sourceTitle, attributes: sourceTitleStyle),
+                kindWord,
+                .init(text: recordTitle, attributes: bold),
+            ])
+        }
+        return StyledFormat.attributed(L10n.Promote.subtitleUntitled, [
+            .init(text: name, attributes: bold), kindWord, .init(text: recordTitle, attributes: bold),
+        ])
+    }
+
+    /// The evidence heading: what the lines below argue.
+    static func evidenceHeading(name: String, sourceTitle: String?, kind: EvidencePrimaryKind, recordTitle: String) -> AttributedString {
+        let kindWord = StyledFormat.Argument(text: L10n.Promote.kindWord(kind))
+        if let sourceTitle {
+            return StyledFormat.attributed(L10n.Promote.evidenceHeading, [
+                .init(text: name, attributes: heading),
+                .init(text: sourceTitle, attributes: sourceTitleStyle),
+                kindWord,
+                .init(text: recordTitle, attributes: heading),
+            ])
+        }
+        return StyledFormat.attributed(L10n.Promote.evidenceHeadingUntitled, [
+            .init(text: name, attributes: heading), kindWord, .init(text: recordTitle, attributes: heading),
+        ])
+    }
+
+    // MARK: Cards
+
+    /// "…they have a similarity in name": the property's label in lowercase for the current locale.
+    static func similarityHeader(property: String) -> String {
+        L10n.Promote.similarityIn(property: property.lowercased(with: .autoupdatingCurrent))
+    }
+
+    /// Where a Card says what this Source has: once in its header when every line agrees on it,
+    /// else under each line's sentence. A Card with a likeness says it nowhere.
+    enum ThisSourcePlacement: Equatable {
+        case nowhere
+        case header(String)
+        case lines
+
+        /// What the Card's header says, when it says it.
+        var headerValue: String? {
+            if case .header(let value) = self { return value }
+            return nil
+        }
+    }
+
+    /// `values` are the lines' incoming values as worded; nil for a likeness.
+    static func thisSourcePlacement(values: [String?]) -> ThisSourcePlacement {
+        let worded = values.compactMap { $0 }
+        guard let first = worded.first, worded.count == values.count else { return .nowhere }
+        return worded.allSatisfy { $0 == first } ? .header(first) : .lines
+    }
+
+    /// What the row shares with a connected row, after "they share": the bridge on the page that
+    /// joins them says it; with none, "a connection".
+    static func sharePhrase(
         bridge: PromoteFlow.BridgeFact?,
-        outcome: EvidenceOutcome,
-        neighborName: String?
-    ) -> RelationshipHeader {
-        if let bridge {
-            return RelationshipHeader(
-                title: bridge.sentence,
-                subtitle: nil,
-                spoken: L10n.Promote.spokenRelationship(sentence: bridge.sentence, link: L10n.string(L10n.Promote.outcome(outcome)))
+        neighbor: String,
+        neighborName: String,
+        outcome: EvidenceOutcome
+    ) -> String {
+        let input = bridge.map {
+            ConnectionSentenceRegistry.ShareInput(
+                kind: $0.kind,
+                neighborIsA: $0.endA == neighbor,
+                termKey: $0.termKey,
+                term: $0.reasonRole,
+                eventType: $0.eventType,
+                neighborName: neighborName
             )
         }
-        let title = L10n.string(L10n.Promote.relationshipSentence(outcome))
-        let link = L10n.Promote.relationshipWith(neighborName ?? L10n.string(L10n.Promote.sheetNeighbor))
-        return RelationshipHeader(
-            title: title,
-            subtitle: link,
-            spoken: L10n.Promote.spokenRelationship(sentence: title, link: link)
-        )
+        return ConnectionSentenceRegistry.share(input, similar: outcome == .partial)
+    }
+
+    /// "…they share a spouse (CEV-3B5RT and PER-7QH3D)": the connected row's own ref, then its
+    /// record's. Only the refs that are known and differ are named.
+    static func shareHeader(phrase: String, ownRef: String?, recordRef: String?) -> String {
+        var refs: [String] = []
+        for ref in [ownRef, recordRef] {
+            if let ref, !ref.isEmpty, !refs.contains(ref) { refs.append(ref) }
+        }
+        switch refs.count {
+        case 0: return L10n.Promote.shareHeaderBare(phrase: phrase)
+        case 1: return L10n.Promote.shareHeaderOne(phrase: phrase, ref: refs[0])
+        default: return L10n.Promote.shareHeader(phrase: phrase, first: refs[0], second: refs[1])
+        }
     }
 }

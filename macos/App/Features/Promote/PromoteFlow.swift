@@ -221,6 +221,10 @@ struct PromoteFlow: Equatable, Sendable {
         var phrase: String = ""
         /// The connection's term in lowercase ("spouse"), for a row's reason; nil when it has none.
         var reasonRole: String?
+        /// The connection's product term key ("spouse", "part_of"); nil for a researcher's term or none.
+        var termKey: String?
+        /// A participation's event type label ("Birth"); nil otherwise.
+        var eventType: String?
         var endAName: String = ""
         var endBName: String = ""
         var mark: PVMarkKey = .subjectRelationship

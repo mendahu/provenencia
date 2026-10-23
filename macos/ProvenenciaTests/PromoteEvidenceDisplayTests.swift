@@ -146,14 +146,11 @@ struct PromoteEvidenceDisplayTests {
 
     // MARK: - T-3
 
-    @Test func relationshipSentences() {
-        #expect(L10n.string(L10n.Promote.relationshipSentence(.agree)) == "They share a matching connection")
-        #expect(L10n.string(L10n.Promote.relationshipSentence(.partial)) == "They share a similar connection")
+    @Test func connectionLinkJoinsItsThreeParts() {
         #expect(
             L10n.Promote.connectionLink(first: "John Smith", phrase: "subject of", second: "Birth of John Smith")
                 == "John Smith · subject of · Birth of John Smith"
         )
-        #expect(L10n.Promote.relationshipWith("Mary Smith") == "with Mary Smith")
     }
 
     @Test func countsArePlural() {
@@ -161,18 +158,11 @@ struct PromoteEvidenceDisplayTests {
         #expect(L10n.Promote.recordCount(5) == "· 5 records")
         #expect(L10n.Promote.checkedCount(4) == "4 checked")
         #expect(L10n.Promote.showRecords(5) == "Show 5 records")
-        #expect(L10n.Promote.evidenceHeading(ref: "PER-7QH3D", title: "John Smith") == "What's the evidence that this is PER-7QH3D John Smith?")
+        #expect(L10n.Promote.hideRecords(1) == "Hide 1 record")
+        #expect(L10n.Promote.hideRecords(4) == "Hide 4 records")
     }
 
     // MARK: - T-7, T-6
-
-    @Test func aLineDetailJoinsItsParts() {
-        let here = "This source: John Smith"
-        let member = "1871 England Census — Leeds, Briggate: J. Smith"
-        #expect(L10n.Promote.lineDetail(parts: [here, member]) == "\(here) · \(member)")
-        #expect(L10n.Promote.lineDetail(parts: [here]) == here)
-        #expect(L10n.Promote.lineDetail(parts: []) == "")
-    }
 
     @Test func anOptionalFieldSaysSo() {
         #expect(L10n.string(L10n.DesignSystem.optionalMarker) == "(optional)")
@@ -193,9 +183,9 @@ struct PromoteEvidenceDisplayTests {
         #expect(L10n.Promote.spokenMember(source: "Census 1851", value: "John Smith") == "Census 1851: John Smith.")
         #expect(
             L10n.Promote.spokenRelationship(
-                sentence: L10n.string(L10n.Promote.relationshipAgrees),
-                link: "John Smith · subject of · Birth of John Smith"
-            ) == "They share a matching connection. John Smith · subject of · Birth of John Smith."
+                sentence: "…they share a spouse (CEV-3B5RT and PER-7QH3D)",
+                link: "Agrees"
+            ) == "…they share a spouse (CEV-3B5RT and PER-7QH3D). Agrees."
         )
     }
 
@@ -248,33 +238,6 @@ struct PromoteEvidenceDisplayTests {
         }
     }
 
-    @Test func detailPartsOfOneMemberLine() {
-        let member = PromoteEvidenceDisplay.Member(source: "Census 1851", value: "J. Smith")
-        #expect(PromoteEvidenceDisplay.detail(here: "John Smith", member: member) == "This source: John Smith · Census 1851: J. Smith")
-        #expect(PromoteEvidenceDisplay.detail(here: "John Smith", member: nil) == "This source: John Smith")
-        let untitled = PromoteEvidenceDisplay.Member(source: nil, value: "J. Smith")
-        #expect(PromoteEvidenceDisplay.detail(here: "John Smith", member: untitled) == "This source: John Smith · J. Smith")
-    }
-
-    @Test func relationshipHeaderIsTheBridgeSentence() {
-        var found = bridge("b", .relationship, "marion", "don")
-        found.sentence = "Marion Smith is the mother of Don Smith"
-        let agrees = PromoteEvidenceDisplay.relationshipHeader(bridge: found, outcome: .agree, neighborName: "Don")
-        #expect(agrees.title == "Marion Smith is the mother of Don Smith")
-        #expect(agrees.subtitle == nil)
-        #expect(agrees.spoken == "Marion Smith is the mother of Don Smith. Agrees.")
-        let similar = PromoteEvidenceDisplay.relationshipHeader(bridge: found, outcome: .partial, neighborName: "Don")
-        #expect(similar.spoken == "Marion Smith is the mother of Don Smith. Similar.")
-
-        let named = PromoteEvidenceDisplay.relationshipHeader(bridge: nil, outcome: .agree, neighborName: "Birth")
-        #expect(named.title == "They share a matching connection")
-        #expect(named.subtitle == "with Birth")
-        #expect(named.spoken == L10n.Promote.spokenRelationship(sentence: "They share a matching connection", link: "with Birth"))
-        let unnamed = PromoteEvidenceDisplay.relationshipHeader(bridge: nil, outcome: .partial, neighborName: nil)
-        #expect(unnamed.title == "They share a similar connection")
-        #expect(unnamed.subtitle == "with a connected record")
-    }
-
     @Test func nothingToCompareWhenNoLineOrRelationship() {
         #expect(PromoteEvidenceDisplay.hasNothingToCompare(CatalogClaimEvidence()))
         #expect(PromoteEvidenceDisplay.hasNothingToCompare(CatalogClaimEvidence(sections: [CatalogClaimEvidenceSection(propertyKey: "name", lines: [])])))
@@ -286,5 +249,99 @@ struct PromoteEvidenceDisplayTests {
         #expect(PromoteEvidenceDisplay.likenessSource(title: "Funeral card") == "Funeral card")
         #expect(PromoteEvidenceDisplay.likenessSource(title: nil) == "a record")
         #expect(PromoteEvidenceDisplay.likenessSource(title: "") == "a record")
+    }
+
+    // MARK: - Round 16
+
+    private func plain(_ text: AttributedString) -> String { String(text.characters) }
+
+    @Test func theTitleJoinsTheRowToItsRecord() {
+        let title = PromoteEvidenceDisplay.title(name: "John Smith", recordTitle: "Johnny Smith", ref: "PER-7QH3D")
+        #expect(plain(title) == "John Smith joins Johnny Smith PER-7QH3D")
+        // "joins" is its own run; the ref is another.
+        let runs = title.runs.map { String(title.characters[$0.range]) }
+        #expect(runs.contains("joins"))
+        #expect(runs.contains("PER-7QH3D"))
+    }
+
+    @Test func theSubtitleNamesTheSourceAndTheConcludedRecord() {
+        let subtitle = PromoteEvidenceDisplay.subtitle(
+            name: "John Smith", sourceTitle: "1871 Census", kind: .person, recordTitle: "Johnny Smith"
+        )
+        #expect(plain(subtitle) == "This is an identity claim to join John Smith from the 1871 Census into the concluded person Johnny Smith. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.")
+        let census = subtitle.runs.first { String(subtitle.characters[$0.range]) == "1871 Census" }
+        #expect(census?.inlinePresentationIntent == .emphasized)
+        let name = subtitle.runs.first { String(subtitle.characters[$0.range]) == "John Smith" }
+        #expect(name?.inlinePresentationIntent == nil)
+        #expect(name?.font != nil)
+
+        let untitled = PromoteEvidenceDisplay.subtitle(name: "Birth", sourceTitle: nil, kind: .event, recordTitle: "Birth of John")
+        #expect(plain(untitled).hasPrefix("This is an identity claim to join Birth from this source into the concluded event Birth of John."))
+    }
+
+    @Test func theHeadingSaysWhyTheRowBelongs() {
+        let heading = PromoteEvidenceDisplay.evidenceHeading(
+            name: "John Smith", sourceTitle: "1871 Census", kind: .person, recordTitle: "Johnny Smith"
+        )
+        #expect(plain(heading) == "John Smith from the 1871 Census belongs in the concluded person Johnny Smith because…")
+        let untitled = PromoteEvidenceDisplay.evidenceHeading(name: "Leeds", sourceTitle: nil, kind: .place, recordTitle: "Leeds, Yorkshire")
+        #expect(plain(untitled) == "Leeds from this source belongs in the concluded place Leeds, Yorkshire because…")
+    }
+
+    @Test func aCardHeaderReadsTheLowercasePropertyLabel() {
+        #expect(PromoteEvidenceDisplay.similarityHeader(property: "Name") == "…they have a similarity in name")
+        #expect(PromoteEvidenceDisplay.similarityHeader(property: "Sex at birth") == "…they have a similarity in sex at birth")
+    }
+
+    @Test func thisSourceIsSaidOnceWhenEveryLineAgreesOnIt() {
+        #expect(PromoteEvidenceDisplay.thisSourcePlacement(values: ["John Smith"]) == .header("John Smith"))
+        #expect(PromoteEvidenceDisplay.thisSourcePlacement(values: ["John Smith", "John Smith"]) == .header("John Smith"))
+        #expect(PromoteEvidenceDisplay.thisSourcePlacement(values: ["John Smith", "J. Smith"]) == .lines)
+        // A likeness says it nowhere; an empty Card has nothing to say.
+        #expect(PromoteEvidenceDisplay.thisSourcePlacement(values: [nil]) == .nowhere)
+        #expect(PromoteEvidenceDisplay.thisSourcePlacement(values: []) == .nowhere)
+        #expect(PromoteEvidenceDisplay.ThisSourcePlacement.header("x").headerValue == "x")
+        #expect(PromoteEvidenceDisplay.ThisSourcePlacement.lines.headerValue == nil)
+    }
+
+    @Test func aRelationshipHeaderNamesTheRefsItKnows() {
+        let phrase = "a spouse"
+        #expect(PromoteEvidenceDisplay.shareHeader(phrase: phrase, ownRef: "CEV-3B5RT", recordRef: "PER-7QH3D")
+            == "…they share a spouse (CEV-3B5RT and PER-7QH3D)")
+        // A neighbor not yet filed on a record has only its own ref.
+        #expect(PromoteEvidenceDisplay.shareHeader(phrase: phrase, ownRef: "CEV-3B5RT", recordRef: nil)
+            == "…they share a spouse (CEV-3B5RT)")
+        #expect(PromoteEvidenceDisplay.shareHeader(phrase: phrase, ownRef: "CEV-3B5RT", recordRef: "CEV-3B5RT")
+            == "…they share a spouse (CEV-3B5RT)")
+        #expect(PromoteEvidenceDisplay.shareHeader(phrase: phrase, ownRef: nil, recordRef: "PER-7QH3D")
+            == "…they share a spouse (PER-7QH3D)")
+        #expect(PromoteEvidenceDisplay.shareHeader(phrase: phrase, ownRef: nil, recordRef: nil) == "…they share a spouse")
+    }
+
+    @Test func theSharePhraseComesFromTheBridgeOnThePage() {
+        var spouse = bridge("b", .relationship, "mary", "john")
+        spouse.reasonRole = "spouse"
+        spouse.termKey = "spouse"
+        // The neighbor Mary is the A end of John's spouse link.
+        #expect(PromoteEvidenceDisplay.sharePhrase(bridge: spouse, neighbor: "mary", neighborName: "Mary", outcome: .agree) == "a spouse")
+        #expect(PromoteEvidenceDisplay.sharePhrase(bridge: spouse, neighbor: "mary", neighborName: "Mary", outcome: .partial) == "a similar spouse")
+        // No bridge on the page names nothing.
+        #expect(PromoteEvidenceDisplay.sharePhrase(bridge: nil, neighbor: "mary", neighborName: "Mary", outcome: .agree) == "a connection")
+        var birth = bridge("p", .participation, "john", "birth")
+        birth.eventType = "Birth"
+        #expect(PromoteEvidenceDisplay.sharePhrase(bridge: birth, neighbor: "birth", neighborName: "Birth of John", outcome: .agree) == "a birth event")
+    }
+
+    @Test func aFormatPlacesStyledArgumentsWhereTheTranslationPutsThem() {
+        var bold = AttributeContainer()
+        bold.inlinePresentationIntent = .stronglyEmphasized
+        let styled = StyledFormat.attributed(format: "%2$@ of %1$@, 100%% sure, %@", [
+            .init(text: "A", attributes: bold), .init(text: "B"),
+        ])
+        #expect(String(styled.characters) == "B of A, 100% sure, A")
+        let a = styled.runs.first { String(styled.characters[$0.range]) == "A" }
+        #expect(a?.inlinePresentationIntent == .stronglyEmphasized)
+        let b = styled.runs.first { String(styled.characters[$0.range]).hasPrefix("B of") }
+        #expect(b?.inlinePresentationIntent == nil)
     }
 }

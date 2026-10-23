@@ -17769,18 +17769,6 @@
         }
       }
     },
-    "promote.sheet.neighbor": {
-      "comment": "Names a relationship’s neighbor on the evidence sheet when its row is not on the page",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "a connected record"
-          }
-        }
-      }
-    },
     "promote.sheet.status": {
       "comment": "Claim status field",
       "extractionState": "manual",
@@ -18381,18 +18369,6 @@
         }
       }
     },
-    "promote.sheet.titleHandle": {
-      "comment": "Evidence sheet title for a row filed on an existing record; 1 = the row's name, 2 = the record's ref, 3 = the record's title",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ → %2$@ %3$@"
-          }
-        }
-      }
-    },
     "promote.sheet.titleNew": {
       "comment": "Evidence sheet title for a row filed as a new record; 1 = the row's name, 2 = the New option, e.g. New person",
       "extractionState": "manual",
@@ -18437,30 +18413,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Something below disagrees with this record."
-          }
-        }
-      }
-    },
-    "promote.sheet.evidenceIntro": {
-      "comment": "Sentence under the evidence heading on the Promote sheet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Check every line that supports this match. Checked lines are pinned to the claim when you press Done."
-          }
-        }
-      }
-    },
-    "promote.sheet.evidenceHeading": {
-      "comment": "Heading of the evidence on the Promote sheet; 1 = the record ref, 2 = the record title",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What's the evidence that this is %1$@ %2$@?"
           }
         }
       }
@@ -18537,18 +18489,6 @@
         }
       }
     },
-    "promote.sheet.hideRecords": {
-      "comment": "Button that collapses an expanded evidence line",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hide records"
-          }
-        }
-      }
-    },
     "promote.sheet.thisSource": {
       "comment": "Muted detail under an evidence sentence: the value on the Source being promoted",
       "extractionState": "manual",
@@ -18557,78 +18497,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "This source: %@"
-          }
-        }
-      }
-    },
-    "promote.sheet.onSource": {
-      "comment": "Muted detail under an evidence sentence: a record's Source, then its value",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@: %2$@"
-          }
-        }
-      }
-    },
-    "promote.sheet.thisSourceCaption": {
-      "comment": "Caption under the Source being promoted's likeness crop",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This source"
-          }
-        }
-      }
-    },
-    "promote.sheet.lineDetail": {
-      "comment": "Joins the muted detail parts of an evidence line",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · %2$@"
-          }
-        }
-      }
-    },
-    "promote.sheet.relationshipAgrees": {
-      "comment": "Relationship line whose connection matches",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "They share a matching connection"
-          }
-        }
-      }
-    },
-    "promote.sheet.relationshipSimilar": {
-      "comment": "Relationship line whose connection matches but the neighbor's own facts disagree",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "They share a similar connection"
-          }
-        }
-      }
-    },
-    "promote.sheet.relationshipWith": {
-      "comment": "Second line of a relationship when the page has no name for the link; argument is the neighbor's name",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "with %@"
           }
         }
       }
@@ -20643,6 +20511,438 @@
           "stringUnit": {
             "state": "translated",
             "value": "Clear filters"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.event": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (event); 1 = the event type, lowercase",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a %@ event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.eventSimilar": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (event); 1 = the event type, lowercase",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a similar %@ event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.eventUntyped": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (eventUntyped)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "an event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.eventUntypedSimilar": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (eventUntyped)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a similar event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.person": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (person); 1 = the person's role, lowercase; 2 = the person's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.personSimilar": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (person); 1 = the person's role, lowercase; 2 = the person's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a similar %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationship": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (relationship); the neighbor's relationship to the row, lowercase, such as spouse",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.relationshipSimilar": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (relationship); the neighbor's relationship to the row, lowercase, such as spouse",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a similar %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.parentPlace": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (parentPlace)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a parent place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.parentPlaceSimilar": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (parentPlace)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a similar parent place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.placeWithin": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (placeWithin)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a place within it"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.placeWithinSimilar": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (placeWithin)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a similar place within it"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.successorPlace": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (successorPlace)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a successor place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.successorPlaceSimilar": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (successorPlace)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a similar successor place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.predecessorPlace": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (predecessorPlace)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a predecessor place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.predecessorPlaceSimilar": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (predecessorPlace)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a similar predecessor place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.location": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (location); the place's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a place, %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.locationSimilar": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (location); the place's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a similar place, %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.connection": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome agrees (connection)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a connection"
+          }
+        }
+      }
+    },
+    "evidenceGraph.share.connectionSimilar": {
+      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar (connection)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a similar connection"
+          }
+        }
+      }
+    },
+    "promote.sheet.titleHandle": {
+      "comment": "Evidence sheet title for a row filed on an existing record; 1 = the row's name, 2 = the joining word, 3 = the record's title, 4 = the record's ref. Each is styled separately.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@ %3$@ %4$@"
+          }
+        }
+      }
+    },
+    "promote.sheet.titleJoins": {
+      "comment": "The word between a row's name and the record it joins in the evidence sheet title; muted italic",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "joins"
+          }
+        }
+      }
+    },
+    "promote.sheet.subtitle": {
+      "comment": "Evidence sheet subtitle; 1 = the row's name, 2 = the Source title, 3 = person, event or place, 4 = the record's title. Names are bold, the Source title italic.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is an identity claim to join %1$@ from the %2$@ into the concluded %3$@ %4$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file."
+          }
+        }
+      }
+    },
+    "promote.sheet.subtitleUntitled": {
+      "comment": "Evidence sheet subtitle when the Source has no title; 1 = the row's name, 2 = person, event or place, 3 = the record's title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is an identity claim to join %1$@ from this source into the concluded %2$@ %3$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file."
+          }
+        }
+      }
+    },
+    "promote.sheet.evidenceHeading": {
+      "comment": "Heading of the evidence on the Promote sheet; 1 = the row's name, 2 = the Source title, 3 = person, event or place, 4 = the record's title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ from the %2$@ belongs in the concluded %3$@ %4$@ because…"
+          }
+        }
+      }
+    },
+    "promote.sheet.evidenceHeadingUntitled": {
+      "comment": "Heading of the evidence on the Promote sheet when the Source has no title; 1 = the row's name, 2 = person, event or place, 3 = the record's title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ from this source belongs in the concluded %2$@ %3$@ because…"
+          }
+        }
+      }
+    },
+    "promote.sheet.kind.person": {
+      "comment": "The kind of a concluded record, in lowercase, inside the evidence sheet subtitle and heading",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "person"
+          }
+        }
+      }
+    },
+    "promote.sheet.kind.event": {
+      "comment": "The kind of a concluded record, in lowercase, inside the evidence sheet subtitle and heading",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "event"
+          }
+        }
+      }
+    },
+    "promote.sheet.kind.place": {
+      "comment": "The kind of a concluded record, in lowercase, inside the evidence sheet subtitle and heading",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "place"
+          }
+        }
+      }
+    },
+    "promote.sheet.similarityIn": {
+      "comment": "Header of a property Card on the evidence sheet; the argument is the property's name in lowercase",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "…they have a similarity in %@"
+          }
+        }
+      }
+    },
+    "promote.sheet.shareHeader": {
+      "comment": "Header of a relationship Card; 1 = what they share, such as a spouse, 2 = the connected row's ref on this Source, 3 = the connected record's ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "…they share %1$@ (%2$@ and %3$@)"
+          }
+        }
+      }
+    },
+    "promote.sheet.shareHeaderOne": {
+      "comment": "Header of a relationship Card when the connected row has only one ref to show; 1 = what they share, 2 = that ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "…they share %1$@ (%2$@)"
+          }
+        }
+      }
+    },
+    "promote.sheet.shareHeaderBare": {
+      "comment": "Header of a relationship Card when the connected row is not on the page; the argument is what they share",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "…they share %@"
+          }
+        }
+      }
+    },
+    "promote.sheet.close": {
+      "comment": "Closes the Promote evidence sheet from its title row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        }
+      }
+    },
+    "promote.sheet.hideRecords": {
+      "comment": "Button that collapses an expanded evidence line; the argument is how many records it hides",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Hide %lld record"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Hide %lld records"
+                }
+              }
+            }
           }
         }
       }

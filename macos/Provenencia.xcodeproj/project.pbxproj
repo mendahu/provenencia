@@ -171,6 +171,7 @@
 		A7090000000000000000000A /* EvidenceBridgeEdgeSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */; };
 		A7090000000000000000000C /* EvidenceBridgeEdgeSummaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7090000000000000000000B /* EvidenceBridgeEdgeSummaryTests.swift */; };
 		A71000000000000000000002 /* PropertyTermDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000001 /* PropertyTermDisplay.swift */; };
+		AA0000000000000000009F11 /* StyledFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000009F10 /* StyledFormat.swift */; };
 		A71100000000000000000002 /* InterpretationValueKinds.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71100000000000000000001 /* InterpretationValueKinds.swift */; };
 		A71200000000000000000002 /* CitationFieldsDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71200000000000000000001 /* CitationFieldsDraft.swift */; };
 		A71300000000000000000002 /* CitationObservationRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71300000000000000000001 /* CitationObservationRows.swift */; };
@@ -595,6 +596,7 @@
 		A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceBridgeEdgeSummary.swift; sourceTree = "<group>"; };
 		A7090000000000000000000B /* EvidenceBridgeEdgeSummaryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceBridgeEdgeSummaryTests.swift; sourceTree = "<group>"; };
 		A71000000000000000000001 /* PropertyTermDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertyTermDisplay.swift; sourceTree = "<group>"; };
+		AA0000000000000000009F10 /* StyledFormat.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StyledFormat.swift; sourceTree = "<group>"; };
 		A71100000000000000000001 /* InterpretationValueKinds.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InterpretationValueKinds.swift; sourceTree = "<group>"; };
 		A71200000000000000000001 /* CitationFieldsDraft.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationFieldsDraft.swift; sourceTree = "<group>"; };
 		A71300000000000000000001 /* CitationObservationRows.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationObservationRows.swift; sourceTree = "<group>"; };
@@ -1088,6 +1090,7 @@
 				AA00000000000000000000F0 /* ProjectSlug.swift */,
 				AA0000000000000000000021 /* TextMatch.swift */,
 				A71000000000000000000001 /* PropertyTermDisplay.swift */,
+				AA0000000000000000009F10 /* StyledFormat.swift */,
 				A71100000000000000000001 /* InterpretationValueKinds.swift */,
 				AA00000000000000000000E2 /* L10n.swift */,
 				AA0000000000000000000044 /* Generated */,
@@ -1993,6 +1996,7 @@
 				AA0000000000000000000022 /* TextMatch.swift in Sources */,
 				AA00000000000000000000E5 /* L10n.swift in Sources */,
 				A71000000000000000000002 /* PropertyTermDisplay.swift in Sources */,
+				AA0000000000000000009F11 /* StyledFormat.swift in Sources */,
 				A71100000000000000000002 /* InterpretationValueKinds.swift in Sources */,
 				A71200000000000000000002 /* CitationFieldsDraft.swift in Sources */,
 				AA0000000000000000000671 /* CitationTranscriptionModel.swift in Sources */,

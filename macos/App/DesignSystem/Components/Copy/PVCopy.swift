@@ -19,3 +19,7 @@ extension LocalizedStringResource: PVCopy {
 extension String: PVCopy {
     var pvText: Text { Text(verbatim: self) }
 }
+
+extension AttributedString: PVCopy {
+    var pvText: Text { Text(self) }
+}

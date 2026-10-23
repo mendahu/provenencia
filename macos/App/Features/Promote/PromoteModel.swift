@@ -397,6 +397,8 @@ final class PromoteModel {
                 sentence: EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot),
                 phrase: EvidenceBridgeEdgeSummary.phrase(for: bridge),
                 reasonRole: EvidenceBridgeEdgeSummary.reasonRole(for: bridge),
+                termKey: EvidenceBridgeEdgeSummary.productTermKey(for: bridge),
+                eventType: EvidenceBridgeEdgeSummary.eventTypeLabel(for: bridge, in: snapshot),
                 endAName: bridge.endpointAID.flatMap { nameByID[$0] } ?? "",
                 endBName: bridge.endpointBID.flatMap { nameByID[$0] } ?? "",
                 mark: bridge.kind.markKey,

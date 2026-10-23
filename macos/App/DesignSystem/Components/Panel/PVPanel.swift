@@ -9,6 +9,17 @@ enum PVPanelFooterChrome {
     case plain
 }
 
+/// Where ``PVPanel`` draws its title accessory.
+///
+/// - ``trailing``: at the right end of the title row.
+/// - ``afterTitle``: right after the title, taking the rest of the row, so the
+///   accessory can follow the title with inline marks and end with a control
+///   (the Promote sheet's band marks and its close button).
+enum PVPanelTitleAccessoryPlacement {
+    case trailing
+    case afterTitle
+}
+
 /// Content-agnostic sheet **panel** primitive: title, optional subtitle, body
 /// slot, optional footer. Draws the warm ``PVColor/surfaceCard`` fill so sheet
 /// content matches the design kit; **does not** redraw corner radius, shadow,
@@ -16,8 +27,9 @@ enum PVPanelFooterChrome {
 struct PVPanel<Body: View, Footer: View, TitleAccessory: View>: View {
     let title: Text
     let subtitle: Text?
-    /// Drawn at the right end of the title row, top-aligned (the Promote sheet's band marks).
+    /// Drawn in the title row, top-aligned (the Promote sheet's band marks and close button).
     let titleAccessory: TitleAccessory
+    let titleAccessoryPlacement: PVPanelTitleAccessoryPlacement
     let width: CGFloat
     let footerChrome: PVPanelFooterChrome
     @ViewBuilder let panelBody: () -> Body
@@ -31,6 +43,7 @@ struct PVPanel<Body: View, Footer: View, TitleAccessory: View>: View {
         subtitle: Text? = nil,
         width: CGFloat,
         footerChrome: PVPanelFooterChrome = .sunken,
+        titleAccessoryPlacement: PVPanelTitleAccessoryPlacement = .trailing,
         @ViewBuilder body: @escaping () -> Body,
         @ViewBuilder footer: @escaping () -> Footer,
         @ViewBuilder titleAccessory: () -> TitleAccessory
@@ -38,6 +51,7 @@ struct PVPanel<Body: View, Footer: View, TitleAccessory: View>: View {
         self.title = title
         self.subtitle = subtitle
         self.titleAccessory = titleAccessory()
+        self.titleAccessoryPlacement = titleAccessoryPlacement
         self.width = width
         self.footerChrome = footerChrome
         self.panelBody = body
@@ -68,8 +82,15 @@ struct PVPanel<Body: View, Footer: View, TitleAccessory: View>: View {
                         .foregroundStyle(PVColor.textDisplay)
                         .fixedSize(horizontal: false, vertical: true)
                     if TitleAccessory.self != EmptyView.self {
-                        Spacer(minLength: PVSpacing.space6)
-                        titleAccessory
+                        switch titleAccessoryPlacement {
+                        case .trailing:
+                            Spacer(minLength: PVSpacing.space6)
+                            titleAccessory
+                        case .afterTitle:
+                            titleAccessory
+                                .padding(.leading, PVSpacing.space4)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                     }
                 }
                 if let subtitle {
@@ -133,6 +154,7 @@ extension PVPanel where Footer == EmptyView, TitleAccessory == EmptyView {
         self.title = title
         self.subtitle = subtitle
         self.titleAccessory = EmptyView()
+        self.titleAccessoryPlacement = .trailing
         self.width = width
         self.footerChrome = footerChrome
         self.panelBody = body

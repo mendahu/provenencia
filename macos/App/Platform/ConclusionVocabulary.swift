@@ -351,6 +351,22 @@ enum SeededRelationshipTypeTerm {
     static let nibling = "nibling"
     static let guardian = "guardian"
     static let ward = "ward"
+
+    /// The term read from the other end of the link: a parent's child is a child's parent. A
+    /// symmetric term is its own inverse. The one inverse map.
+    static let inverse: [String: String] = [
+        spouse: spouse,
+        sibling: sibling,
+        cousin: cousin,
+        parent: child,
+        child: parent,
+        grandparent: grandchild,
+        grandchild: grandparent,
+        pibling: nibling,
+        nibling: pibling,
+        guardian: ward,
+        ward: guardian,
+    ]
 }
 
 /// Seeded `place_relationship_type` terms.
