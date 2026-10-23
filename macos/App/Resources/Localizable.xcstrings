@@ -21482,7 +21482,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This is an identity claim to join %1$@ from the %2$@ into the concluded %3$@ %4$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file."
+            "value": "This is an identity claim to join %1$@ from %2$@ into the concluded %3$@ %4$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file."
           }
         }
       }
@@ -21506,7 +21506,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ from the %2$@ belongs in the concluded %3$@ %4$@ because…"
+            "value": "%1$@ from %2$@ belongs in the concluded %3$@ %4$@ because…"
           }
         }
       }
