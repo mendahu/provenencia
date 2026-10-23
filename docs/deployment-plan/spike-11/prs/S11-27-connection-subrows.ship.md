@@ -72,4 +72,4 @@ Reviewers: UX (UX-1, UX-2), MNT (MNT-1). Not sent back: CON, SEC+PRF (minors onl
 No new findings. Nits (logged): `MNT-7 · PromoteFlow.swift:332 · lined(_:_:) only forwards to Bridge(fact:state:); inline it`
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: — · to user: UX-4 (restore a quiet "dispute on the Evidence graph" cue, or confirm the drop) · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: — · to user: UX-4 (restore a quiet "dispute on the Evidence graph" cue, or confirm the drop) · CON miss: none
