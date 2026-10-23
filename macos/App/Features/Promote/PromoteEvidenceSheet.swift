@@ -33,7 +33,7 @@ struct PromoteEvidenceSheet: View {
                     if showsClaimFields {
                         claimFields
                     }
-                    if case .handle(_, _, let title) = row.target {
+                    if let title = row.readingTitle {
                         evidenceArea(title: title)
                     }
                 }
@@ -59,7 +59,8 @@ struct PromoteEvidenceSheet: View {
     /// "<row name> joins <record title> <REF>" for a record; the row's name and its New option otherwise.
     private var titleText: Text {
         switch row.target {
-        case .handle(_, let ref, let title):
+        case .handle(_, let ref, _):
+            let title = row.readingTitle ?? ""
             return Text(EvidenceTextStyle.painted(
                 PromoteEvidenceDisplay.title(name: row.name, recordTitle: title, ref: ref), name: nil
             ))
@@ -72,7 +73,7 @@ struct PromoteEvidenceSheet: View {
 
     /// The claim in one sentence, under the title of a row filed on a record.
     private var subtitleText: Text? {
-        guard case .handle(_, _, let title) = row.target else { return nil }
+        guard let title = row.readingTitle else { return nil }
         return Text(EvidenceTextStyle.painted(
             PromoteEvidenceDisplay.subtitle(
                 name: row.name, sourceTitle: model.entry.sourceTitle, kind: row.kind, recordTitle: title
@@ -114,6 +115,7 @@ struct PromoteEvidenceSheet: View {
     }
 
     private var claimFields: some View {
+        // The argument box is as tall as the Status and Confidence column beside it.
         HStack(alignment: .top, spacing: PVSpacing.space6) {
             VStack(alignment: .leading, spacing: PVSpacing.space4) {
                 PVField(label: L10n.Promote.status) {
@@ -132,11 +134,12 @@ struct PromoteEvidenceSheet: View {
             }
             .frame(width: 200)
             PVField(label: L10n.Promote.argument, marker: .optional) {
-                PVTextArea(text: argumentBinding)
+                PVTextArea(text: argumentBinding, fillsHeight: true)
                     .accessibilityIdentifier("promote.sheet.argument")
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: Evidence

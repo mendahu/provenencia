@@ -97,6 +97,34 @@ struct PromoteFlowTests {
         #expect(placeRow?.menu.first?.subtitle == PlaceChainDisplay.line(parents: ["Ontario", "Canada"]))
     }
 
+    @Test func aPersonRecordReadsNaturallyInTheSheetAndSortedInTheMenu() {
+        var person = row(id: "p", assessment: "medium")
+        person.person = CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
+            name: CatalogNameValue(form: "John Smith", parts: [
+                CatalogNameValuePart(value: "John", type: "given"),
+                CatalogNameValuePart(value: "Smith", type: "surname"),
+            ]),
+            nameValueCount: 1
+        )
+        var flow = PromoteFlow(entryID: "e")
+        flow.nameOrders = NameFormatOrders(
+            natural: [
+                NameFormatPart(partType: "given", trailingSeparator: ""),
+                NameFormatPart(partType: "surname", trailingSeparator: ""),
+            ],
+            sorted: [
+                NameFormatPart(partType: "surname", trailingSeparator: ", "),
+                NameFormatPart(partType: "given", trailingSeparator: ""),
+            ]
+        )
+        flow.load(entryID: "e", proposal: proposal(rows: [person]), subjects: [fact("p")], bridges: [])
+        let personRow = flow.rows.first
+        #expect(personRow?.menu.first?.title == "Smith, John")
+        #expect(personRow?.menu.first?.readingTitle == "John Smith")
+        #expect(personRow?.readingTitle == "John Smith")
+    }
+
     @Test func aMediumMatchStartsOnItsHandle() {
         var flow = PromoteFlow(entryID: "a")
         flow.load(

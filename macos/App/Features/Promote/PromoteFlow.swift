@@ -135,7 +135,10 @@ struct PromoteFlow: Equatable, Sendable {
     struct Alternative: Equatable, Sendable, Identifiable {
         var id: String
         var ref: String
+        /// The menu's form: a person sorted ("Smith, John"). Events and places read the same everywhere.
         var title: String
+        /// How a sentence reads the record: a person in natural order ("John Smith").
+        var readingTitle: String
         /// Dates, place, or other secondary line under the name.
         var subtitle: String = ""
         var assessment: Assessment = .none
@@ -174,6 +177,13 @@ struct PromoteFlow: Equatable, Sendable {
         var id: String { subjectID }
 
         /// The selected record's band and why. Skip, New, and an empty menu show nothing.
+        /// The record behind the target as a sentence reads it (a person in natural order); the
+        /// target's own title when the record is not in the menu, as with a filed anchor.
+        var readingTitle: String? {
+            guard case .handle(let id, _, let title) = target else { return nil }
+            return menu.first { $0.id == id }?.readingTitle ?? title
+        }
+
         var selectionReadout: SelectionReadout? {
             guard case .handle(let id, _, _) = target,
                   let alt = menu.first(where: { $0.id == id }) else { return nil }
@@ -635,14 +645,18 @@ struct PromoteFlow: Equatable, Sendable {
         if proposal.target == "handle", !proposal.handleID.isEmpty {
             out.append(Alternative(
                 id: proposal.handleID, ref: proposal.handleRef,
-                title: headerTitle(proposal, orders: orders), subtitle: headerSubtitle(proposal),
+                title: headerTitle(proposal, orders: orders, style: .sorted),
+                readingTitle: headerTitle(proposal, orders: orders, style: .natural),
+                subtitle: headerSubtitle(proposal),
                 assessment: Assessment(wire: proposal.assessment), reason: Reason(proposal)
             ))
         }
         for alt in proposal.alternatives where alt.handleID != proposal.handleID {
             out.append(Alternative(
                 id: alt.handleID, ref: alt.handleRef,
-                title: headerTitle(alt, kind: kind, orders: orders), subtitle: headerSubtitle(alt, kind: kind),
+                title: headerTitle(alt, kind: kind, orders: orders, style: .sorted),
+                readingTitle: headerTitle(alt, kind: kind, orders: orders, style: .natural),
+                subtitle: headerSubtitle(alt, kind: kind),
                 assessment: Assessment(wire: alt.assessment), reason: Reason(alt)
             ))
         }
@@ -660,21 +674,21 @@ struct PromoteFlow: Equatable, Sendable {
         conclusionSubtitle(kind: kind, person: alt.person, event: alt.event, place: alt.place)
     }
 
-    private static func headerTitle(_ row: CatalogPromoteGraphAlignmentRow, orders: NameFormatOrders) -> String {
+    private static func headerTitle(_ row: CatalogPromoteGraphAlignmentRow, orders: NameFormatOrders, style: NameDisplayStyle) -> String {
         conclusionTitle(
             kind: EvidencePrimaryKind(rawValue: row.kind),
             person: row.person, event: row.event, place: row.place,
             fallback: row.handleRef,
-            orders: orders
+            orders: orders, style: style
         )
     }
 
-    private static func headerTitle(_ alt: CatalogPromoteGraphAlignmentAlternative, kind: EvidencePrimaryKind, orders: NameFormatOrders) -> String {
+    private static func headerTitle(_ alt: CatalogPromoteGraphAlignmentAlternative, kind: EvidencePrimaryKind, orders: NameFormatOrders, style: NameDisplayStyle) -> String {
         conclusionTitle(
             kind: kind,
             person: alt.person, event: alt.event, place: alt.place,
             fallback: alt.handleRef,
-            orders: orders
+            orders: orders, style: style
         )
     }
 
@@ -684,11 +698,12 @@ struct PromoteFlow: Equatable, Sendable {
         event: CatalogEventHeader?,
         place: CatalogPlaceHeader?,
         fallback: String,
-        orders: NameFormatOrders
+        orders: NameFormatOrders,
+        style: NameDisplayStyle
     ) -> String {
         switch kind {
         case .person:
-            if let person { return PersonHeaderDisplay.title(person, style: .sorted, orders: orders) }
+            if let person { return PersonHeaderDisplay.title(person, style: style, orders: orders) }
         case .event:
             if let event { return EventTitleDisplay.title(event, orders: orders) }
         case .place:
