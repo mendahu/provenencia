@@ -690,6 +690,8 @@ struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
     var recorded: CatalogConclusionValue
     var subjectID: String
     var subjectRef: String
+    /// The Evidence graph of the Observation's Subject.
+    var graphID: String = ""
     var citationID: String
     var artifactID: String = ""
     var sourceID: String
@@ -1333,7 +1335,7 @@ protocol GenealogyStore: Sendable {
     func createSubject(
         projectDir: String,
         userID: String,
-        sourceID: String,
+        graphID: String,
         subjectTypeID: String,
         label: String,
         description: String,
@@ -1393,10 +1395,10 @@ protocol GenealogyStore: Sendable {
     ) async throws -> CatalogPromoteBatchResult
     /// The claim confidence scale, in order.
     func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade]
-    /// Accepted handle of every promoted Subject on one Source's Evidence graph.
-    func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership]
-    /// The title of every Event Subject on one Source's Evidence graph, keyed by Subject id.
-    func listSourceEventTitles(projectDir: String, sourceID: String) async throws -> [String: CatalogEventTitle]
+    /// Accepted handle of every promoted Subject on one Evidence graph.
+    func listSubjectMemberships(projectDir: String, graphID: String) async throws -> [CatalogSubjectMembership]
+    /// The title of every Event Subject on one Evidence graph, keyed by Subject id.
+    func listEvidenceGraphEventTitles(projectDir: String, graphID: String) async throws -> [String: CatalogEventTitle]
     /// Every unmerged Person as a row header, in Go's list order (by shown title, then ref-only by ref).
     func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader]
     func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader]
@@ -1404,7 +1406,7 @@ protocol GenealogyStore: Sendable {
     /// One handle's fields, auto-reconciled values and outcomes. Throws
     /// `conclusiondetails.not_found` for an unknown or merged handle.
     func getConclusionDetail(projectDir: String, entityID: String) async throws -> CatalogConclusionDetail
-    func listSubjects(projectDir: String, sourceID: String) async throws -> [CatalogSubject]
+    func listSubjects(projectDir: String, graphID: String) async throws -> [CatalogSubject]
     func setSubjectPosition(
         projectDir: String,
         subjectID: String,
@@ -1412,7 +1414,7 @@ protocol GenealogyStore: Sendable {
         gridY: Int64
     ) async throws -> CatalogSubjectPosition
     func clearSubjectPosition(projectDir: String, subjectID: String) async throws
-    func listSubjectPositions(projectDir: String, sourceID: String) async throws -> [CatalogSubjectPosition]
+    func listSubjectPositions(projectDir: String, graphID: String) async throws -> [CatalogSubjectPosition]
 
     func createProperty(
         projectDir: String,
@@ -1457,7 +1459,6 @@ protocol GenealogyStore: Sendable {
     func createCitedBridge(
         projectDir: String,
         userID: String,
-        sourceID: String,
         fromSubjectID: String,
         toSubjectID: String,
         bridgeTypeKey: String,
@@ -1488,6 +1489,7 @@ protocol GenealogyStore: Sendable {
 
     func getCitation(
         projectDir: String,
+        graphID: String,
         citationID: String
     ) async throws -> (CatalogCitation, [String], [CatalogObservation])
 
@@ -1523,22 +1525,24 @@ protocol GenealogyStore: Sendable {
         observations: [CatalogObservationDraft]
     ) async throws -> ([CatalogObservation], CatalogWriteEffects)
 
-    func listObservationsBySource(projectDir: String, sourceID: String) async throws -> [CatalogObservation]
+    func listObservationsByEvidenceGraph(projectDir: String, graphID: String) async throws -> [CatalogObservation]
 
     func citationCountsBySource(projectDir: String, sourceID: String) async throws -> [String: Int]
 
     func listCitationsByArtifact(projectDir: String, artifactID: String) async throws -> [CatalogListedCitation]
 
-    func listSourceGraphProgress(projectDir: String) async throws -> [SourceGraphProgress]
+    func listEvidenceGraphProgress(projectDir: String) async throws -> [EvidenceGraphProgress]
 
-    func getSourceGraphProgress(projectDir: String, sourceID: String) async throws -> SourceGraphProgress
+    func getEvidenceGraphProgress(projectDir: String, graphID: String) async throws -> EvidenceGraphProgress
 
     func getDeleteImpact(projectDir: String, kind: String, id: String) async throws -> CatalogDeleteImpact
 }
 
-/// Per-Source Evidence-graph counts for the Sources list (S8-08).
-struct SourceGraphProgress: Sendable, Equatable, Identifiable {
-    var id: String { sourceId }
+/// Per-graph Evidence-graph counts for the Sources list (S8-08).
+struct EvidenceGraphProgress: Sendable, Equatable, Identifiable {
+    var id: String { graphId }
+    var graphId: String
+    /// The graph's Source; empty when no graph has this id.
     var sourceId: String
     var subjectCount: Int
     var observationCount: Int
@@ -1547,8 +1551,8 @@ struct SourceGraphProgress: Sendable, Equatable, Identifiable {
     /// Primary subjects with an accepted Identity Claim.
     var filedCount: Int = 0
 
-    static func zeros(sourceId: String) -> SourceGraphProgress {
-        SourceGraphProgress(sourceId: sourceId, subjectCount: 0, observationCount: 0)
+    static func zeros(graphId: String) -> EvidenceGraphProgress {
+        EvidenceGraphProgress(graphId: graphId, sourceId: "", subjectCount: 0, observationCount: 0)
     }
 
     var isZero: Bool {

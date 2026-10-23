@@ -837,7 +837,7 @@ struct GoStore: GenealogyStore {
     func createSubject(
         projectDir: String,
         userID: String,
-        sourceID: String,
+        graphID: String,
         subjectTypeID: String,
         label: String,
         description: String,
@@ -846,7 +846,7 @@ struct GoStore: GenealogyStore {
         var req = Provenencia_Engine_V1_CreateSubjectRequest()
         req.projectDir = projectDir
         req.userID = userID
-        req.sourceID = sourceID
+        req.graphID = graphID
         req.subjectTypeID = subjectTypeID
         req.label = label
         req.description_p = description
@@ -1164,12 +1164,12 @@ struct GoStore: GenealogyStore {
         }
     }
 
-    func listSourceEventTitles(projectDir: String, sourceID: String) async throws -> [String: CatalogEventTitle] {
-        var req = Provenencia_Engine_V1_ListSourceEventTitlesRequest()
+    func listEvidenceGraphEventTitles(projectDir: String, graphID: String) async throws -> [String: CatalogEventTitle] {
+        var req = Provenencia_Engine_V1_ListEvidenceGraphEventTitlesRequest()
         req.projectDir = projectDir
-        req.sourceID = sourceID
-        let resp: Provenencia_Engine_V1_ListSourceEventTitlesResponse = try await provenenciaCall(
-            method: CoreMethod.listSourceEventTitles,
+        req.graphID = graphID
+        let resp: Provenencia_Engine_V1_ListEvidenceGraphEventTitlesResponse = try await provenenciaCall(
+            method: CoreMethod.listEvidenceGraphEventTitles,
             request: req
         )
         return Dictionary(
@@ -1203,10 +1203,10 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership] {
+    func listSubjectMemberships(projectDir: String, graphID: String) async throws -> [CatalogSubjectMembership] {
         var req = Provenencia_Engine_V1_ListSubjectMembershipsRequest()
         req.projectDir = projectDir
-        req.sourceID = sourceID
+        req.graphID = graphID
         let resp: Provenencia_Engine_V1_ListSubjectMembershipsResponse = try await provenenciaCall(
             method: CoreMethod.listSubjectMemberships,
             request: req
@@ -1406,6 +1406,7 @@ struct GoStore: GenealogyStore {
             recorded: mapConclusionValue(o.recorded),
             subjectID: o.subjectID,
             subjectRef: o.subjectRef,
+            graphID: o.graphID,
             citationID: o.citationID,
             artifactID: o.artifactID,
             sourceID: o.sourceID,
@@ -1444,10 +1445,10 @@ struct GoStore: GenealogyStore {
         CatalogCanonicalEntity(id: e.id, ref: e.ref, subjectTypeID: e.subjectTypeID, label: e.label)
     }
 
-    func listSubjects(projectDir: String, sourceID: String) async throws -> [CatalogSubject] {
+    func listSubjects(projectDir: String, graphID: String) async throws -> [CatalogSubject] {
         var req = Provenencia_Engine_V1_ListSubjectsRequest()
         req.projectDir = projectDir
-        req.sourceID = sourceID
+        req.graphID = graphID
         let resp: Provenencia_Engine_V1_ListSubjectsResponse = try await provenenciaCall(
             method: CoreMethod.listSubjects,
             request: req
@@ -1483,10 +1484,10 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    func listSubjectPositions(projectDir: String, sourceID: String) async throws -> [CatalogSubjectPosition] {
+    func listSubjectPositions(projectDir: String, graphID: String) async throws -> [CatalogSubjectPosition] {
         var req = Provenencia_Engine_V1_ListSubjectPositionsRequest()
         req.projectDir = projectDir
-        req.sourceID = sourceID
+        req.graphID = graphID
         let resp: Provenencia_Engine_V1_ListSubjectPositionsResponse = try await provenenciaCall(
             method: CoreMethod.listSubjectPositions,
             request: req
@@ -1628,7 +1629,6 @@ struct GoStore: GenealogyStore {
     func createCitedBridge(
         projectDir: String,
         userID: String,
-        sourceID: String,
         fromSubjectID: String,
         toSubjectID: String,
         bridgeTypeKey: String,
@@ -1646,7 +1646,6 @@ struct GoStore: GenealogyStore {
         var req = Provenencia_Engine_V1_CreateCitedBridgeRequest()
         req.projectDir = projectDir
         req.userID = userID
-        req.sourceID = sourceID
         req.fromSubjectID = fromSubjectID
         req.toSubjectID = toSubjectID
         req.bridgeTypeKey = bridgeTypeKey
@@ -1708,10 +1707,12 @@ struct GoStore: GenealogyStore {
 
     func getCitation(
         projectDir: String,
+        graphID: String,
         citationID: String
     ) async throws -> (CatalogCitation, [String], [CatalogObservation]) {
         var req = Provenencia_Engine_V1_GetCitationRequest()
         req.projectDir = projectDir
+        req.graphID = graphID
         req.citationID = citationID
         let resp: Provenencia_Engine_V1_GetCitationResponse = try await provenenciaCall(
             method: CoreMethod.getCitation,
@@ -1745,12 +1746,12 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    func listObservationsBySource(projectDir: String, sourceID: String) async throws -> [CatalogObservation] {
-        var req = Provenencia_Engine_V1_ListObservationsBySourceRequest()
+    func listObservationsByEvidenceGraph(projectDir: String, graphID: String) async throws -> [CatalogObservation] {
+        var req = Provenencia_Engine_V1_ListObservationsByEvidenceGraphRequest()
         req.projectDir = projectDir
-        req.sourceID = sourceID
-        let resp: Provenencia_Engine_V1_ListObservationsBySourceResponse = try await provenenciaCall(
-            method: CoreMethod.listObservationsBySource,
+        req.graphID = graphID
+        let resp: Provenencia_Engine_V1_ListObservationsByEvidenceGraphResponse = try await provenenciaCall(
+            method: CoreMethod.listObservationsByEvidenceGraph,
             request: req
         )
         return resp.observations.map(Self.mapObservation)
@@ -1771,14 +1772,14 @@ struct GoStore: GenealogyStore {
         return counts
     }
 
-    func listSourceGraphProgress(projectDir: String) async throws -> [SourceGraphProgress] {
-        var req = Provenencia_Engine_V1_ListSourceGraphProgressRequest()
+    func listEvidenceGraphProgress(projectDir: String) async throws -> [EvidenceGraphProgress] {
+        var req = Provenencia_Engine_V1_ListEvidenceGraphProgressRequest()
         req.projectDir = projectDir
-        let resp: Provenencia_Engine_V1_ListSourceGraphProgressResponse = try await provenenciaCall(
-            method: CoreMethod.listSourceGraphProgress,
+        let resp: Provenencia_Engine_V1_ListEvidenceGraphProgressResponse = try await provenenciaCall(
+            method: CoreMethod.listEvidenceGraphProgress,
             request: req
         )
-        return resp.rows.map(Self.mapSourceGraphProgress)
+        return resp.rows.map(Self.mapEvidenceGraphProgress)
     }
 
     func getDeleteImpact(projectDir: String, kind: String, id: String) async throws -> CatalogDeleteImpact {
@@ -1814,22 +1815,23 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    func getSourceGraphProgress(projectDir: String, sourceID: String) async throws -> SourceGraphProgress {
-        var req = Provenencia_Engine_V1_GetSourceGraphProgressRequest()
+    func getEvidenceGraphProgress(projectDir: String, graphID: String) async throws -> EvidenceGraphProgress {
+        var req = Provenencia_Engine_V1_GetEvidenceGraphProgressRequest()
         req.projectDir = projectDir
-        req.sourceID = sourceID
-        let resp: Provenencia_Engine_V1_GetSourceGraphProgressResponse = try await provenenciaCall(
-            method: CoreMethod.getSourceGraphProgress,
+        req.graphID = graphID
+        let resp: Provenencia_Engine_V1_GetEvidenceGraphProgressResponse = try await provenenciaCall(
+            method: CoreMethod.getEvidenceGraphProgress,
             request: req
         )
         if resp.hasProgress {
-            return Self.mapSourceGraphProgress(resp.progress)
+            return Self.mapEvidenceGraphProgress(resp.progress)
         }
-        return .zeros(sourceId: sourceID)
+        return .zeros(graphId: graphID)
     }
 
-    private static func mapSourceGraphProgress(_ row: Provenencia_Engine_V1_SourceGraphProgress) -> SourceGraphProgress {
-        SourceGraphProgress(
+    private static func mapEvidenceGraphProgress(_ row: Provenencia_Engine_V1_EvidenceGraphProgress) -> EvidenceGraphProgress {
+        EvidenceGraphProgress(
+            graphId: row.graphID,
             sourceId: row.sourceID,
             subjectCount: Int(row.subjectCount),
             observationCount: Int(row.observationCount),
@@ -1916,7 +1918,7 @@ struct GoStore: GenealogyStore {
     private static func mapWriteEffects(_ effects: Provenencia_Engine_V1_WriteEffects) -> CatalogWriteEffects {
         CatalogWriteEffects(
             handles: effects.handles,
-            sources: effects.sources,
+            evidenceGraphs: effects.evidenceGraphs,
             citationSources: effects.citationSources,
             lists: Set(effects.lists.compactMap(CatalogList.init(rawValue:))),
             structure: effects.structure,
@@ -1985,6 +1987,7 @@ struct GoStore: GenealogyStore {
         var p = Provenencia_Engine_V1_WorkspaceLocation()
         p.section = loc.section.rawValue
         p.sourceID = loc.sourceId ?? ""
+        p.graphID = loc.graphId ?? ""
         p.fieldID = loc.fieldId ?? ""
         p.typeID = loc.typeId ?? ""
         p.ref = loc.ref ?? ""
@@ -2011,6 +2014,7 @@ struct GoStore: GenealogyStore {
         WorkspaceLocation(
             section: WorkspaceSection(id: p.section) ?? .sources,
             sourceId: p.sourceID,
+            graphId: p.graphID,
             fieldId: p.fieldID,
             typeId: p.typeID,
             subjectId: p.subjectID,
