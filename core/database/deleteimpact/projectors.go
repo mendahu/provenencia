@@ -66,11 +66,18 @@ func projectKind(tx *sql.Tx, kind catalogmodel.Kind, row probeRow) (string, Loca
 	}
 }
 
+// sqlFirstArtifactGraph is the first graph, by name, an Artifact is linked to.
+const sqlFirstArtifactGraph = `SELECT ega.graph_id FROM evidence_graph_artifacts ega
+	JOIN evidence_graphs g ON g.id = ega.graph_id
+	WHERE ega.artifact_id = ?
+	ORDER BY g.name COLLATE NOCASE, g.id
+	LIMIT 1`
+
 func projectObservation(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
 	var (
-		propLabel, value, subLabel, srcTitle, srcID, citID, subID string
-		propLabelN, valueN, subLabelN, srcTitleN                  sql.NullString
-		srcIDB, citIDB, subIDB                                    []byte
+		propLabel, value, subLabel, srcTitle, srcID, citID, subID, graphID string
+		propLabelN, valueN, subLabelN, srcTitleN                           sql.NullString
+		srcIDB, citIDB, subIDB, graphIDB                                   []byte
 	)
 	err := tx.QueryRow(`
 		SELECT p.label,
@@ -79,7 +86,7 @@ func projectObservation(tx *sql.Tx, id []byte, ref string) (string, Location, er
 				NULLIF(TRIM(dv.phrase), ''),
 				CASE WHEN dv.start_year IS NOT NULL THEN CAST(dv.start_year AS TEXT) END,
 				''),
-			sub.label, src.title, src.id, o.citation_id, o.subject_id
+			sub.label, src.title, src.id, o.citation_id, o.subject_id, sub.graph_id
 		FROM observations o
 		JOIN properties p ON p.id = o.property_id
 		JOIN citations c ON c.id = o.citation_id
@@ -91,7 +98,7 @@ func projectObservation(tx *sql.Tx, id []byte, ref string) (string, Location, er
 		LEFT JOIN subjects vs ON vs.id = o.value_subject_id
 		LEFT JOIN date_values dv ON dv.id = o.value_date_id
 		WHERE o.id = ?`, id,
-	).Scan(&propLabelN, &valueN, &subLabelN, &srcTitleN, &srcIDB, &citIDB, &subIDB)
+	).Scan(&propLabelN, &valueN, &subLabelN, &srcTitleN, &srcIDB, &citIDB, &subIDB, &graphIDB)
 	if err == sql.ErrNoRows {
 		return ref, Location{
 			Section: sectionSources, SourceSurface: surfaceCitationComposer,
@@ -108,6 +115,7 @@ func projectObservation(tx *sql.Tx, id []byte, ref string) (string, Location, er
 	srcID = database.UUIDString(srcIDB)
 	citID = database.UUIDString(citIDB)
 	subID = database.UUIDString(subIDB)
+	graphID = database.UUIDString(graphIDB)
 	title := propLabel
 	if value != "" {
 		title = propLabel + ": " + value
@@ -118,6 +126,7 @@ func projectObservation(tx *sql.Tx, id []byte, ref string) (string, Location, er
 	return title, Location{
 		Section:       sectionSources,
 		SourceID:      srcID,
+		GraphID:       graphID,
 		SubjectID:     subID,
 		CitationID:    citID,
 		ObservationID: database.UUIDString(id),
@@ -130,9 +139,9 @@ func projectObservation(tx *sql.Tx, id []byte, ref string) (string, Location, er
 
 func projectSubject(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
 	var label string
-	var srcID []byte
-	err := tx.QueryRow(`SELECT COALESCE(label, ''), source_id FROM subjects WHERE id = ?`, id).
-		Scan(&label, &srcID)
+	var srcID, graphID []byte
+	err := tx.QueryRow(`SELECT COALESCE(label, ''), source_id, graph_id FROM subjects WHERE id = ?`, id).
+		Scan(&label, &srcID, &graphID)
 	if err == sql.ErrNoRows {
 		return ref, Location{Section: sectionSources, SourceSurface: surfaceGraph, SubjectID: database.UUIDString(id), Ref: ref}, nil
 	}
@@ -143,6 +152,7 @@ func projectSubject(tx *sql.Tx, id []byte, ref string) (string, Location, error)
 	return title, Location{
 		Section:       sectionSources,
 		SourceID:      database.UUIDString(srcID),
+		GraphID:       database.UUIDString(graphID),
 		SubjectID:     database.UUIDString(id),
 		SourceSurface: surfaceGraph,
 		Ref:           ref,
@@ -167,18 +177,26 @@ func projectCitation(tx *sql.Tx, id []byte, ref string) (string, Location, error
 		return "", Location{}, err
 	}
 	locTitle := ref
-	var subID []byte
+	var subID, graphID []byte
 	var subLabel sql.NullString
 	obsErr := tx.QueryRow(`
-		SELECT o.subject_id, sub.label
+		SELECT o.subject_id, sub.label, sub.graph_id
 		FROM observations o
 		JOIN subjects sub ON sub.id = o.subject_id
 		WHERE o.citation_id = ?
 		ORDER BY o.ref COLLATE NOCASE
 		LIMIT 1`, id,
-	).Scan(&subID, &subLabel)
+	).Scan(&subID, &subLabel, &graphID)
 	if obsErr != nil && obsErr != sql.ErrNoRows {
 		return "", Location{}, obsErr
+	}
+	if obsErr == sql.ErrNoRows {
+		// No Observation: the first graph the Artifact is linked to, so the
+		// link still opens the composer.
+		err := tx.QueryRow(sqlFirstArtifactGraph, artID).Scan(&graphID)
+		if err != nil && err != sql.ErrNoRows {
+			return "", Location{}, err
+		}
 	}
 	if label := strings.TrimSpace(subLabel.String); label != "" {
 		locTitle = label
@@ -193,6 +211,7 @@ func projectCitation(tx *sql.Tx, id []byte, ref string) (string, Location, error
 	return title, Location{
 		Section:       sectionSources,
 		SourceID:      database.UUIDString(srcID),
+		GraphID:       database.UUIDString(graphID),
 		SubjectID:     database.UUIDString(subID),
 		CitationID:    database.UUIDString(id),
 		ArtifactID:    database.UUIDString(artID),
@@ -255,8 +274,7 @@ func projectSource(tx *sql.Tx, id []byte, ref string) (string, Location, error) 
 	}, nil
 }
 
-// projectEvidenceGraph opens the graph's Source page: a graph is not a place
-// of its own until S12-08.
+// projectEvidenceGraph opens the graph itself: its canvas.
 func projectEvidenceGraph(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
 	var name string
 	var sourceID []byte
@@ -271,7 +289,8 @@ func projectEvidenceGraph(tx *sql.Tx, id []byte, ref string) (string, Location, 
 	return title, Location{
 		Section:       sectionSources,
 		SourceID:      database.UUIDString(sourceID),
-		SourceSurface: surfacePage,
+		GraphID:       database.UUIDString(id),
+		SourceSurface: surfaceGraph,
 		Ref:           ref,
 		Title:         title,
 	}, nil

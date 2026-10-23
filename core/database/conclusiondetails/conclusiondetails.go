@@ -80,6 +80,7 @@ type Outcome struct {
 	Recorded           Value              // what the record said
 	SubjectID          []byte
 	SubjectRef         string
+	GraphID            []byte // the Evidence graph of the Observation's Subject
 	CitationID         []byte
 	ArtifactID         []byte
 	SourceID           []byte
@@ -130,7 +131,7 @@ const (
 			COALESCE(ao.vote_support, 0), COALESCE(ao.vote_total, 0),
 			o.value_text, o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''), COALESCE(t.origin, ''),
 			o.value_date_id, o.value_name_id,
-			s.id, s.ref, c.id, a.id, src.id, COALESCE(src.title, ''),
+			s.id, s.ref, s.graph_id, c.id, a.id, src.id, COALESCE(src.title, ''),
 			COALESCE(sg.key, ''), COALESCE(cg.key, ''),
 			COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
 				WHERE key = 'standard' AND origin = 'provenencia'), 0),
@@ -367,7 +368,7 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field, leads ma
 		if err := rows.Scan(&propertyID, &o.ObservationID, &o.ObservationRef, &o.Reason, &rank, &o.DeniedBy,
 			&o.Vote.Support, &o.Vote.Of,
 			&text, &integer, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID,
-			&o.SubjectID, &o.SubjectRef, &o.CitationID, &o.ArtifactID, &o.SourceID, &o.SourceTitle,
+			&o.SubjectID, &o.SubjectRef, &o.GraphID, &o.CitationID, &o.ArtifactID, &o.SourceID, &o.SourceTitle,
 			&o.CredibilityKey, &o.ClaimConfidenceKey,
 			&o.Provenance.Credibility, &o.Provenance.Uncertain, &o.Provenance.ClaimConfidence); err != nil {
 			_ = rows.Close()

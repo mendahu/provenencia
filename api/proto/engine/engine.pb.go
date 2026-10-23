@@ -8094,6 +8094,7 @@ type WorkspaceLocation struct {
 	SubjectTypeKey       string                 `protobuf:"bytes,16,opt,name=subject_type_key,json=subjectTypeKey,proto3" json:"subject_type_key,omitempty"` // Properties type-strip category; empty = All properties
 	PropertyId           string                 `protobuf:"bytes,17,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`               // Properties inspector row
 	EntityId             string                 `protobuf:"bytes,18,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`                     // Conclusion handle (persons / events / places)
+	GraphId              string                 `protobuf:"bytes,19,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`                        // the Evidence graph of a graph, citationComposer or promote surface
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -8250,6 +8251,13 @@ func (x *WorkspaceLocation) GetPropertyId() string {
 func (x *WorkspaceLocation) GetEntityId() string {
 	if x != nil {
 		return x.EntityId
+	}
+	return ""
+}
+
+func (x *WorkspaceLocation) GetGraphId() string {
+	if x != nil {
+		return x.GraphId
 	}
 	return ""
 }
@@ -11772,8 +11780,9 @@ type ReconcilerOutcomeDetail struct {
 	ArtifactId            string `protobuf:"bytes,17,opt,name=artifact_id,json=artifactId,proto3" json:"artifact_id,omitempty"`
 	// For "outvoted": the winning value's Sources of every Source that voted
 	// on that unit (for a name, the part it lost on). 0 otherwise.
-	VoteSupport   int32 `protobuf:"varint,18,opt,name=vote_support,json=voteSupport,proto3" json:"vote_support,omitempty"`
-	VoteTotal     int32 `protobuf:"varint,19,opt,name=vote_total,json=voteTotal,proto3" json:"vote_total,omitempty"`
+	VoteSupport   int32  `protobuf:"varint,18,opt,name=vote_support,json=voteSupport,proto3" json:"vote_support,omitempty"`
+	VoteTotal     int32  `protobuf:"varint,19,opt,name=vote_total,json=voteTotal,proto3" json:"vote_total,omitempty"`
+	GraphId       string `protobuf:"bytes,20,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"` // the Evidence graph of the Observation's Subject
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11939,6 +11948,13 @@ func (x *ReconcilerOutcomeDetail) GetVoteTotal() int32 {
 		return x.VoteTotal
 	}
 	return 0
+}
+
+func (x *ReconcilerOutcomeDetail) GetGraphId() string {
+	if x != nil {
+		return x.GraphId
+	}
+	return ""
 }
 
 // ConclusionField is one Property of a handle: its state (single, merged,
@@ -19922,7 +19938,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x1aCloseCatalogSessionRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\"\x1d\n" +
-	"\x1bCloseCatalogSessionResponse\"\x81\x05\n" +
+	"\x1bCloseCatalogSessionResponse\"\x9c\x05\n" +
 	"\x11WorkspaceLocation\x12\x18\n" +
 	"\asection\x18\x01 \x01(\tR\asection\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12\x19\n" +
@@ -19946,7 +19962,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x10subject_type_key\x18\x10 \x01(\tR\x0esubjectTypeKey\x12\x1f\n" +
 	"\vproperty_id\x18\x11 \x01(\tR\n" +
 	"propertyId\x12\x1b\n" +
-	"\tentity_id\x18\x12 \x01(\tR\bentityId\"\xa9\x01\n" +
+	"\tentity_id\x18\x12 \x01(\tR\bentityId\x12\x19\n" +
+	"\bgraph_id\x18\x13 \x01(\tR\agraphId\"\xa9\x01\n" +
 	"\x14SearchCatalogRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x14\n" +
@@ -20233,7 +20250,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x18\n" +
 	"\asupport\x18\x03 \x01(\x05R\asupport\x12\x18\n" +
 	"\aagainst\x18\x04 \x01(\x05R\aagainst\x12<\n" +
-	"\x05value\x18\x05 \x01(\v2&.provenencia.engine.v1.ConclusionValueR\x05value\"\x9c\x06\n" +
+	"\x05value\x18\x05 \x01(\v2&.provenencia.engine.v1.ConclusionValueR\x05value\"\xb7\x06\n" +
 	"\x17ReconcilerOutcomeDetail\x12%\n" +
 	"\x0eobservation_id\x18\x01 \x01(\tR\robservationId\x12'\n" +
 	"\x0fobservation_ref\x18\x02 \x01(\tR\x0eobservationRef\x12\x16\n" +
@@ -20260,7 +20277,8 @@ const file_engine_proto_rawDesc = "" +
 	"artifactId\x12!\n" +
 	"\fvote_support\x18\x12 \x01(\x05R\vvoteSupport\x12\x1d\n" +
 	"\n" +
-	"vote_total\x18\x13 \x01(\x05R\tvoteTotal\"\xb2\x02\n" +
+	"vote_total\x18\x13 \x01(\x05R\tvoteTotal\x12\x19\n" +
+	"\bgraph_id\x18\x14 \x01(\tR\agraphId\"\xb2\x02\n" +
 	"\x0fConclusionField\x12\x1f\n" +
 	"\vproperty_id\x18\x01 \x01(\tR\n" +
 	"propertyId\x12!\n" +

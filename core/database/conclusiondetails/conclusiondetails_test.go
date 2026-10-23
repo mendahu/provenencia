@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -376,6 +377,10 @@ func TestForEntityEvidence(t *testing.T) {
 	if o := outcomeOf(name, weak.ID); o.Reason != "weak" || o.CredibilityKey != "low_trust" ||
 		!o.Provenance.Weak() || o.Provenance.Credibility >= 0 || o.Provenance.Uncertain || o.Provenance.ClaimConfidence != 0 {
 		t.Fatalf("weak outcome %+v", o)
+	}
+	// An outcome names the Evidence graph of its Observation's Subject.
+	if o := outcomeOf(name, weak.ID); !bytes.Equal(o.GraphID, evidencegraphstest.SoleGraph(t, f.c, register.ID).ID) {
+		t.Fatalf("outcome graph %x, want the Register's graph", o.GraphID)
 	}
 	if o := outcomeOf(name, denied.ID); o.Reason != "denied" || !bytes.Equal(o.DeniedBy, negative.ID) {
 		t.Fatalf("denied outcome %+v", o)

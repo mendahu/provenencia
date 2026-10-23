@@ -3379,6 +3379,12 @@ public nonisolated struct Provenencia_Engine_V1_WorkspaceLocation: @unchecked Se
     set {_uniqueStorage()._entityID = newValue}
   }
 
+  /// the Evidence graph of a graph, citationComposer or promote surface
+  public var graphID: String {
+    get {_storage._graphID}
+    set {_uniqueStorage()._graphID = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -4943,6 +4949,12 @@ public nonisolated struct Provenencia_Engine_V1_ReconcilerOutcomeDetail: @unchec
   public var voteTotal: Int32 {
     get {_storage._voteTotal}
     set {_uniqueStorage()._voteTotal = newValue}
+  }
+
+  /// the Evidence graph of the Observation's Subject
+  public var graphID: String {
+    get {_storage._graphID}
+    set {_uniqueStorage()._graphID = newValue}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -12981,7 +12993,7 @@ nonisolated extension Provenencia_Engine_V1_CloseCatalogSessionResponse: SwiftPr
 
 nonisolated extension Provenencia_Engine_V1_WorkspaceLocation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WorkspaceLocation"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}section\0\u{3}source_id\0\u{3}field_id\0\u{3}type_id\0\u{1}ref\0\u{1}title\0\u{3}subject_id\0\u{3}citation_id\0\u{3}artifact_id\0\u{3}observation_id\0\u{3}source_surface\0\u{3}connect_from_subject_id\0\u{3}connect_to_subject_id\0\u{3}connect_bridge_type_key\0\u{3}source_title\0\u{3}subject_type_key\0\u{3}property_id\0\u{3}entity_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}section\0\u{3}source_id\0\u{3}field_id\0\u{3}type_id\0\u{1}ref\0\u{1}title\0\u{3}subject_id\0\u{3}citation_id\0\u{3}artifact_id\0\u{3}observation_id\0\u{3}source_surface\0\u{3}connect_from_subject_id\0\u{3}connect_to_subject_id\0\u{3}connect_bridge_type_key\0\u{3}source_title\0\u{3}subject_type_key\0\u{3}property_id\0\u{3}entity_id\0\u{3}graph_id\0")
 
   fileprivate class _StorageClass {
     var _section: String = String()
@@ -13002,6 +13014,7 @@ nonisolated extension Provenencia_Engine_V1_WorkspaceLocation: SwiftProtobuf.Mes
     var _subjectTypeKey: String = String()
     var _propertyID: String = String()
     var _entityID: String = String()
+    var _graphID: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -13030,6 +13043,7 @@ nonisolated extension Provenencia_Engine_V1_WorkspaceLocation: SwiftProtobuf.Mes
       _subjectTypeKey = source._subjectTypeKey
       _propertyID = source._propertyID
       _entityID = source._entityID
+      _graphID = source._graphID
     }
   }
 
@@ -13066,6 +13080,7 @@ nonisolated extension Provenencia_Engine_V1_WorkspaceLocation: SwiftProtobuf.Mes
         case 16: try { try decoder.decodeSingularStringField(value: &_storage._subjectTypeKey) }()
         case 17: try { try decoder.decodeSingularStringField(value: &_storage._propertyID) }()
         case 18: try { try decoder.decodeSingularStringField(value: &_storage._entityID) }()
+        case 19: try { try decoder.decodeSingularStringField(value: &_storage._graphID) }()
         default: break
         }
       }
@@ -13128,6 +13143,9 @@ nonisolated extension Provenencia_Engine_V1_WorkspaceLocation: SwiftProtobuf.Mes
       if !_storage._entityID.isEmpty {
         try visitor.visitSingularStringField(value: _storage._entityID, fieldNumber: 18)
       }
+      if !_storage._graphID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._graphID, fieldNumber: 19)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -13155,6 +13173,7 @@ nonisolated extension Provenencia_Engine_V1_WorkspaceLocation: SwiftProtobuf.Mes
         if _storage._subjectTypeKey != rhs_storage._subjectTypeKey {return false}
         if _storage._propertyID != rhs_storage._propertyID {return false}
         if _storage._entityID != rhs_storage._entityID {return false}
+        if _storage._graphID != rhs_storage._graphID {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -15706,7 +15725,7 @@ nonisolated extension Provenencia_Engine_V1_ReconciledValueDetail: SwiftProtobuf
 
 nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ReconcilerOutcomeDetail"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}observation_id\0\u{3}observation_ref\0\u{1}reason\0\u{3}value_rank\0\u{3}denied_by_observation_id\0\u{1}recorded\0\u{3}subject_id\0\u{3}subject_ref\0\u{3}citation_id\0\u{3}source_id\0\u{3}source_title\0\u{3}credibility_key\0\u{3}transcription_uncertain\0\u{3}claim_confidence_key\0\u{3}credibility_offset\0\u{3}claim_confidence_offset\0\u{3}artifact_id\0\u{3}vote_support\0\u{3}vote_total\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}observation_id\0\u{3}observation_ref\0\u{1}reason\0\u{3}value_rank\0\u{3}denied_by_observation_id\0\u{1}recorded\0\u{3}subject_id\0\u{3}subject_ref\0\u{3}citation_id\0\u{3}source_id\0\u{3}source_title\0\u{3}credibility_key\0\u{3}transcription_uncertain\0\u{3}claim_confidence_key\0\u{3}credibility_offset\0\u{3}claim_confidence_offset\0\u{3}artifact_id\0\u{3}vote_support\0\u{3}vote_total\0\u{3}graph_id\0")
 
   fileprivate class _StorageClass {
     var _observationID: String = String()
@@ -15728,6 +15747,7 @@ nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtob
     var _artifactID: String = String()
     var _voteSupport: Int32 = 0
     var _voteTotal: Int32 = 0
+    var _graphID: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -15757,6 +15777,7 @@ nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtob
       _artifactID = source._artifactID
       _voteSupport = source._voteSupport
       _voteTotal = source._voteTotal
+      _graphID = source._graphID
     }
   }
 
@@ -15794,6 +15815,7 @@ nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtob
         case 17: try { try decoder.decodeSingularStringField(value: &_storage._artifactID) }()
         case 18: try { try decoder.decodeSingularInt32Field(value: &_storage._voteSupport) }()
         case 19: try { try decoder.decodeSingularInt32Field(value: &_storage._voteTotal) }()
+        case 20: try { try decoder.decodeSingularStringField(value: &_storage._graphID) }()
         default: break
         }
       }
@@ -15863,6 +15885,9 @@ nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtob
       if _storage._voteTotal != 0 {
         try visitor.visitSingularInt32Field(value: _storage._voteTotal, fieldNumber: 19)
       }
+      if !_storage._graphID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._graphID, fieldNumber: 20)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -15891,6 +15916,7 @@ nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtob
         if _storage._artifactID != rhs_storage._artifactID {return false}
         if _storage._voteSupport != rhs_storage._voteSupport {return false}
         if _storage._voteTotal != rhs_storage._voteTotal {return false}
+        if _storage._graphID != rhs_storage._graphID {return false}
         return true
       }
       if !storagesAreEqual {return false}

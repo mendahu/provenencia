@@ -99,6 +99,7 @@ func locationFromImpact(loc deleteimpact.Location) *engine.WorkspaceLocation {
 	return &engine.WorkspaceLocation{
 		Section:              loc.Section,
 		SourceId:             loc.SourceID,
+		GraphId:              loc.GraphID,
 		FieldId:              loc.FieldID,
 		TypeId:               loc.TypeID,
 		SubjectId:            loc.SubjectID,
