@@ -606,3 +606,240 @@ F-33 done at `6763b144`; gate PASS (orchestrator re-ran). `aTermReadsLowercaseIn
 
 ## Result (after round 15)
 Gate PASS · CI see PR · open: none · manual check §10 not run · design board: "S11-20 as built" brief posted to the project's chat panel, not yet applied
+
+## Round 16 — board revision (2026-10-23)
+The user revised the S11-D2 board after using the built sheet with real data, and asked for a top-to-bottom re-review, with any new data requirements implemented on this PR. Board read via the Claude Design connector: `Promote flow.dc.html` (etag `1792762007305273`, the `sheets` frames and `build()`) and `EvidenceCard.dc.html` (same etag). The board chat's tail could not be read (the transcript exceeds the connector's cap), so the board files are the spec. Where the board still draws something the user later replaced, this PR's later decisions stand: no lifespan line (round 11); "Show N records" wording.
+
+### What the board now draws (diff against the built sheet)
+**Title row**
+- `PVPanel` title reads "<row name> *joins* <record title> <REF>" ("joins" muted italic; the ref in mono, muted).
+- The band and Contested badges follow the ref inline, with the reason as their tooltip.
+- A ghost close button (`x`, "Close") sits at the far right of the title row.
+- The footer keeps "Back to all rows".
+
+**Subtitle (new):** "This is an identity claim to join **<row name>** from the *<Source title>* into the concluded <person|event|place> **<record title>**. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file."
+- Names: semibold, display ink. The Source title: italic, link ink. Same weights in the evidence heading.
+
+**Under the title:** the Updated and contested lines, then the claim fields. Unchanged.
+
+**Evidence heading**
+- A divider precedes the evidence.
+- The section header reads "**<row name>** from the *<Source title>* belongs in the concluded <kind> **<record title>** because…", with meta "N checked".
+- The intro sentence ("Check every line…") is **gone**. The conflict Callout ("Some evidence disagrees") is **gone**.
+
+**Property card header (sunken):** "…they have a similarity in <property label, lowercase>" (Newsreader 14/500), with "This source: <value>" after it.
+
+**Line grid:** box 18 · value 200 · sentence (flex) · source 200 · badge 116.
+- **Value:** the first member's value (primary, 500). A likeness line shows its two 96 pt crops here, gap 8, no captions.
+- **Sentence:** secondary ink, 400. Below it, "This source: X" only when the line's incoming value differs from the card's.
+- **Source:**
+  - one member: the record's Source title, italic and muted;
+  - several members: a ghost disclosure, "Show N records" / "Hide N records".
+- The "· N records" suffix on the sentence is **gone**.
+
+**Expanded members:** grid box · value 170 · (empty) · source 200, italic and muted · (empty), indented 44. **No box is ever disabled.**
+
+**Relationship card header (sunken):** box · "…they share <phrase> (<this-source ref> and <record ref>)" with " · N records" when bundled · outcome badge.
+- The phrases by board example:
+  - "a birth event" (the neighbor is an event; its type, lowercase);
+  - "a subject, John Smith" (the neighbor is a person; the role, then the name);
+  - "a spouse";
+  - "a parent place".
+- A similar outcome inserts "similar": "a similar marriage event".
+- With no named connection, "a connection".
+- The refs: the neighbor row's ref on this Source (CEV-3B5RT) and its record's handle ref (EVT-4RJ9T).
+- Group labels under the relationship: "…they have a similarity in <property>" (Newsreader 13, secondary) + "This source: X", indented 28.
+- "Nothing else to compare." stays.
+
+**Pinning (the data requirement):** board notes E03 and E05 say a conflicting line starts unchecked and *can still be pinned*. `build()` never disables a box. Today Go marks only checked, `evidence.Pinnable` partial, and by-eye lines pinnable. So:
+- the pin policy changes in Go: every line, member and relationship can be pinned;
+- the default check is unchanged (`evidence.Checked`, by eye).
+
+**States:** loading, failed, New, Skip and nothing-to-compare are unchanged, apart from the heading copy.
+
+### Fix plan 16
+**F-34 — Every line can be pinned; Go owns it** (board E03/E05)
+Files:
+- Go: `core/claimevidence/{claimevidence,sections,build}.go`, `core/database/promotealign/pins.go` (+ tests), `core/matchregistry/evidence.go` (+ test).
+- Docs and wire: `docs/matching-model.md` (drop the `evidence.Pinnable` row), `docs/deployment-plan/spike-11/claim-evidence.md` (Lines: every line pinnable, conflicts start unchecked), `api/proto/engine.proto` (drop `pinnable` on the line and relationship messages; reserve their numbers and names).
+- Swift: regenerated code, `api/ffi/handlers/promote_evidence.go`, `GenealogyStore`/`GoStore`/`FakeStore`, and Swift tests.
+Failing tests first:
+- Go: `PinOffers` offers a conflicting line's member ids.
+- Go: `ResolvePins` keeps a checked conflict id.
+- Go: the default pins still leave a conflict unchecked.
+Do:
+- Delete `Line.Pinnable`, `Relationship.Pinnable` and the `Rules.Pinnable` knob, and every reader. `PinOffers` offers every line's ids.
+- In Swift, delete `memberDisabled`, the disabled-box logic and `hasConflict`.
+- Knob inventory and matching tests updated.
+
+**F-35 — The sheet as the board draws it** (board E01 – E14)
+Files: `macos/App/Features/Promote/{PromoteEvidenceSheet,PromoteEvidenceDisplay}.swift`, `macos/App/DesignSystem/Components/Panel/PVPanel.swift` (only if the title row needs it), `macos/App/Platform/L10n.swift`, `Localizable.xcstrings`, Swift tests. Skills: `add-ui-component`, `add-localized-string`.
+Do, in the order of the section above:
+1. **Title row:**
+   - "<name> joins <record title> <REF>", then the badges (tooltip and spoken label unchanged), then the close button (`PVIconButton`, `x`, label "Close", calls `model.closeSheet()`, identifier `promote.sheet.dismiss`).
+   - If `PVPanel` cannot place inline badges after the title text, give it a title-view initializer. One kit change, documented in the README.
+2. **Subtitle and heading:**
+   - Each is one localizable format with styled arguments: names semibold in display ink, the Source title italic in link ink. One helper builds the `AttributedString` from a format and styled arguments, so translators can reorder.
+   - Kind word: person / event / place from the row's kind.
+   - The Source title is `model.sourceTitle`. When it is nil, use "this source" (a new key) in plain ink.
+   - Delete the intro sentence and the conflict Callout with their keys.
+3. **Card headers:**
+   - "…they have a similarity in %@": the property's display label, lowercased with the current locale.
+   - Show "This source: X" in the header when every line in the card has the same incoming value; otherwise per line, under the sentence.
+4. **Line grid as specified:**
+   - The value is the first member's worded value; a likeness shows its crops.
+   - Source column: the single member's Source title, or the "Show N records" / "Hide N records" disclosure (new "Hide %lld records" plural key).
+   - Remove the count suffix.
+   - Expanded member rows use the board's columns.
+   - Spoken labels keep their content: card title, sentence, count when bundled, this source.
+5. **Relationship header: a registry-driven share phrase.**
+   - Add to `ConnectionSentenceRegistry` a `share` wording per kind and the neighbor's side, with an agreeing and a similar format each (so "similar" is never spliced in):
+     - participation, the neighbor is the event: "a %@ event" / "a similar %@ event" (its event-type label, lowercase); with no type, "an event" / "a similar event";
+     - participation, the neighbor is the person: "a %1$@, %2$@" (role lowercase, name);
+     - relationship: "a %@" with the neighbor's role relative to the row. That is the term when the neighbor is the A end; otherwise its inverse. Move `CitationComposerAuthoring.inverseTermKey` into `ConclusionVocabulary.swift` as the one inverse map (same-pass), with spouse, sibling and cousin as their own inverse;
+     - place relationship: part_of with the neighbor as the containing place gives "a parent place"; the other end gives "a place within it"; succeeded_by gives "a successor place" / "a predecessor place";
+     - location: "a place, %@".
+     - Fallback: "a connection" / "a similar connection".
+   - The header reads "…they share %1$@ (%2$@ and %3$@)": phrase, the neighbor row's own ref, then the record ref. With no neighbor row, only the record ref: "(%@)".
+   - This replaces `relationshipHeader` and its fallback lines on the sheet. The bridge sentence stays for the graph and the page.
+6. Group labels under relationships use the same "…they have a similarity in %@".
+7. Delete keys and helpers left without a reader (grep).
+Failing tests first, in `PromoteEvidenceDisplayTests` and `ConnectionSentenceRegistryTests`:
+- the subtitle and heading formats with and without a Source title;
+- `…they have a similarity in name`;
+- "This source" placement: one value → header; mixed → lines;
+- each share phrase above, including similar, inverse and fallback;
+- the relationship header with two refs and with one;
+- "Hide 4 records".
+Check: tests pass; `grep -rn "conflictCallout\|evidenceIntro\|memberDisabled\|hasConflict" macos/App` prints nothing; scripts/check-pr.sh PASS; a clean build shows no new warning in changed files.
+
+## Round 16 — fix
+Head `8aab38bf` (`0818810b` F-34, `8aab38bf` F-35). Orchestrator gate: the first run FAILed in `EvidenceCardLayoutTests/measuredLayoutMatchesThePaint("uncited")`, a 1.69 pt height mismatch in a graph card this round does not touch. The next two runs PASSed. Logged as flaky.
+- **F-34:** the Go tests failed first.
+- **F-35:** tests written after the code (the implementer's deviation 1).
+Deviations accepted:
+- untitled-Source formats instead of a "this source" argument;
+- "joins" its own key;
+- location share phrase only from the place side;
+- one ref when the neighbor has no record or the refs match;
+- `PVPanel.titleAccessoryPlacement: .afterTitle`;
+- `Platform/StyledFormat.swift`;
+- `BridgeFact.termKey`/`eventType`.
+No new warning in changed files (the implementer's clean build).
+
+## Round 16 — review
+Reviewers: CON (Sonnet), MNT, UX. Scope `0b2f4dab...8aab38bf`. Skipped SEC+PRF: `promotealign/pins.go` only drops a filter. There is no new input, loop or query.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| UX-1 | UX | major | Share phrases put "a" before vowel-initial terms ("a informant", "a engagement event", "a aunt / uncle") | Fix now → F-36 | verified: `L10n.swift:2270,2284,2291` fixed "a %@…"; seeded `informant`, `engagement`, `pibling` |
+| UX-2 | UX | major | Source titles cut off in the 200 pt column have no tooltip (likeness regression of `LikenessTile`'s `.help`) | Fix now → F-37 | verified `EvidenceSourceTitle` `lineLimit(2)`, no `.help` |
+| CON-1, MNT-4 | CON, MNT | major | Skill and four docs still describe `evidence.Pinnable` / "not pinnable" | Fix now → F-38 | verified by grep at the lines quoted |
+| MNT-1 | MNT | major | `PVPanel` has two accessory placements; `.trailing` has no caller | Fix now → F-37 | verified: only caller passes `.afterTitle` |
+| MNT-2 | MNT | major | `StyledFormat` / `AttributedString: PVCopy` not in `add-localized-string` or README; tests not beside the helper | Fix now → F-38 | new pattern, Q10 |
+| MNT-3 | MNT | major | Swift inverse map mirrors Go's seeded `Inverse` with no parity test | Fix now → F-38 (parity test); Follow-up: carry `inverse_key` on the wire term (`docs/ideas/term-management.md` item 2) | `.cursor/rules/macos-client.mdc:20` |
+| MNT-5 | MNT | major | `eventTypeLabel` re-implements `eventTypeKey`'s lookup, and they pick endpoints differently | Fix now → F-36 | verified `EvidenceBridgeEdgeSummary.swift:31-39` vs `:122-130` |
+| UX-3, CON-4 | UX, CON | minor | Heading names not set apart by weight (section header is all semibold) | Fix now → F-37 | spec: names semibold against lighter text |
+| UX-4 | UX | minor | Long title may wrap at half width beside a flexible accessory | Fix now → F-37 | layout priority |
+| UX-5 | UX | minor | Untitled Source: blank on a line, "a record" on a likeness | Fix now → F-37 | one rule |
+| UX-7 | UX | minor | Spoken relationship label starts with "…" | Fix now → F-36 | spoken variant without the ellipsis |
+| MNT-6 | MNT | minor | `PromoteEvidenceDisplay` owns fonts and colors | Fix now → F-37 | file this PR adds |
+| MNT-7 | MNT | minor | Group label re-draws `EvidenceCardHeader` | Fix now → F-37 | |
+| MNT-8 | MNT | minor | `BridgeFact.reasonRole` read for the share phrase | Fix now → F-36 | rename to `term` |
+| MNT-9 | MNT | minor | `endTitles` switches on `"part_of"`/`"succeeded_by"` literals | Fix now → F-38 | file this PR changed; seeded keys belong in `ConclusionVocabulary` |
+| PRF (MNT outside) | PRF | minor | A linear subject scan per bridge on each page build | Fix now → F-36 | one id→subject dictionary |
+| UX-6 | UX | minor | "from the The Times…" when a Source title starts with "The" | To user | board copy |
+| CON-2 | CON | minor | Two same-kind connections between one pair both take the first one's phrase | Follow-up | not new; needs the relationship to carry its bridge id |
+| CON-3 | CON | minor | A researcher term with no inverse falls back to "a connection" on the B side | Rejected | accepted deviation; F-36 gives researcher terms an article-free form |
+| CON-5 | CON | minor | F-35 tests after code | Logged | accepted deviation |
+
+Nits (logged): none beyond the minors above.
+
+### Fix plan 17
+**F-36 — Share phrases carry their own article; one event-type lookup** (from UX-1, MNT-5, MNT-8, UX-7, PRF)
+Files: `ConnectionSentenceRegistry.swift`, `EvidenceBridgeEdgeSummary.swift`, `PromoteFlow.swift`, `PromoteModel.swift`, `PromoteEvidenceSheet.swift`, `L10n.swift`, `Localizable.xcstrings`, tests.
+Failing tests first:
+- "…they share an informant, John Smith";
+- "…they share an engagement event";
+- "…they share an aunt or uncle" (pibling, neighbor at the A end; the seeded label "Aunt / uncle" reads "aunt or uncle" in the phrase key);
+- "…they share a similar engagement event";
+- a researcher role, event type or relationship term reads "a connection (Godparent)" / "a similar connection (Godparent)";
+- the spoken relationship label has no leading ellipsis.
+Do:
+- Each seeded role, event type and relationship term gets its own share phrase key, with the article in the key, in the registry's term table. Use `Seeded…Term` constants, never literals.
+- The similar form is "a similar %@" over a per-term bare noun key, so English needs no article logic.
+- A term with no seeded phrase (a researcher's term) uses the article-free fallback above.
+- The shared share formats that spliced "a %@" are deleted.
+- Extract `eventTypeObservation(subjectID:snapshot:)`. `eventTypeKey` and `eventTypeLabel` both build on it and choose the endpoint the same way (A, then B).
+- Build one id→placed-subject dictionary per snapshot and use it in the summary's lookups during `facts()`.
+- Rename `BridgeFact.reasonRole` to `term`, documented for both readers.
+- The spoken label drops the leading "…".
+
+**F-37 — Sheet polish and one PVPanel placement** (from UX-2, MNT-1, UX-3, UX-4, UX-5, MNT-6, MNT-7)
+Files: `PVPanel.swift`, `macos/App/DesignSystem/README.md`, `PromoteEvidenceSheet.swift`, `PromoteEvidenceDisplay.swift`, tests.
+Do:
+- `EvidenceSourceTitle` gets `.help(Text(verbatim: title))`.
+- An untitled Source shows "a record" (`untitledRecord`) on every line and member row, likeness or not.
+- `PVPanel` draws the accessory after the title, always. Delete `PVPanelTitleAccessoryPlacement` and its parameter. The title gets `.layoutPriority(1)`. Update the README row: "after the title, filling the row; put a Spacer in it to push a control right".
+- The heading's names and record title are semibold display ink over a regular-weight base. If `PVSectionHeader` forces semibold, give it a title-weight option or let an `AttributedString` title carry its own weights, one kit change, documented.
+- `PromoteEvidenceDisplay` returns words and semantic roles (name, source, muted, ref). The sheet maps the roles to fonts and colors. No SwiftUI import in the display helper.
+- `EvidenceCardHeader` gains a style (card / group). The relationship group label uses it.
+Check: scripts/check-pr.sh PASS; `grep -n "import SwiftUI" macos/App/Features/Promote/PromoteEvidenceDisplay.swift` prints nothing; `grep -rn "titleAccessoryPlacement" macos/App` prints nothing.
+
+**F-38 — Docs, skills and vocabulary guards** (from CON-1, MNT-4, MNT-2, MNT-3, MNT-9)
+Files: `.agents/skills/add-match-rule/SKILL.md`, `docs/deployment-plan/spike-11/{claim-evidence,comparison-layers,deployment-plan,completed}.md`, `.agents/skills/add-localized-string/SKILL.md`, `macos/App/DesignSystem/README.md`, `macos/ProvenenciaTests/StyledFormatTests.swift` *(new, moved from `PromoteEvidenceDisplayTests`)*, `api/ffi/swift_vocabulary_test.go`, `macos/App/Features/CitationComposer/CitationComposerAuthoring.swift`, `docs/ideas/term-management.md`.
+Do:
+- Remove `evidence.Pinnable` from the skill's inventory list. Reword the four doc lines to "every line can be pinned; only the default check depends on the relation".
+- Add a "Styled arguments" section to `add-localized-string`: when to use `StyledFormat.attributed`, its `%@` / `%n$@` / `%%`-only grammar, and that `AttributedString` is accepted wherever `PVCopy` is. Mention `AttributedString` in the README's `PVCopy` line.
+- Add a Go subtest that reads `SeededRelationshipTypeTerm.inverse` and compares it with `subjectvocab`'s `Inverse` (undirected terms map to themselves). Add one line to `docs/ideas/term-management.md` item 2: carry `inverse_key` on the wire term and delete the Swift map.
+- `endTitles` switches on `SeededPlaceRelationshipTypeTerm` constants.
+Check: `git grep -n -i "evidence.Pinnable\|not pinnable" -- ':!*.ship.md' ':!docs/deployment-plan/spike-11/design/archive' ':!docs/deployment-plan/spike-11/prs/S11-3*' ':!docs/deployment-plan/spike-11/prs/S11-19*' ':!docs/deployment-plan/spike-11/prs/S11-25*'` prints nothing; `go test -tags fts5 ./api/ffi/...` PASS; scripts/check-pr.sh PASS.
+
+## Round 17 — fix
+Head `a5007da0` (`2bda0162` F-36, `ee727c98` F-37, `a5007da0` F-38). Gate PASS (orchestrator re-ran). Failing-first was run for F-36 and F-37 (behind stubs). The F-38 inverse-parity test fails when the map is corrupted.
+Deviations:
+- F-38's grep also cleared the landed S11-01 plan's `evidence.Pinnable` inventory row. Accepted: it is the knob inventory others copy.
+- Seeded terms outside the share tables fall back to "a connection (Label)".
+- Two `"part_of"`/`"succeeded_by"` literals remain at `CitationComposerAuthoring.swift:657,660` → F-40.
+- **New warnings.** A clean build (scratch derived data `dd2`) shows 244 Swift 6 warnings at `<unknown>:0`: "cannot form key path that captures non-Sendable type `KeyPath<…FontAttribute / ForegroundColorAttribute / InlinePresentationIntentAttribute>`". The clean build after round 14 had none. The attribute writes added in rounds 16–17 (`StyledFormat.swift`, `PromoteEvidenceDisplay.swift`, `PromoteEvidenceSheet.swift`, `StyledFormatTests.swift`) run outside the main actor. The pre-existing `PVComboBox` writes run in a `View` and do not warn. → F-39.
+
+### Fix plan 18
+**F-39 — Styled text builds without Swift 6 warnings** (orchestrator, from the clean build)
+Files: `macos/App/Platform/StyledFormat.swift`, `macos/App/Features/Promote/{PromoteEvidenceSheet,PromoteEvidenceDisplay}.swift`, `macos/ProvenenciaTests/StyledFormatTests.swift`.
+Do:
+- Make every place that sets an `AttributedString` attribute through a key path run in a main-actor context, as `PVComboBox` does: mark the style-mapping functions `@MainActor` (or the type that owns them), and the tests that call them.
+- Alternatively, apply attributes without dynamic key paths, if that is simpler and keeps one way.
+- No `nonisolated(unsafe)`, no `@preconcurrency` suppression.
+- `PromoteEvidenceDisplay` stays SwiftUI-free. Its semantic `Role` attribute must not warn either; if it does, make it a custom `AttributedStringKey` that is `Sendable`.
+Check: a clean `build-for-testing` with a fresh `-derivedDataPath` prints 0 `<unknown>:0` key-path warnings and no warning in any file this PR changed; scripts/check-pr.sh PASS.
+
+**F-40 — No seeded-key literals left in the composer** (from MNT-9, deviation above)
+Files: `macos/App/Features/CitationComposer/CitationComposerAuthoring.swift`.
+Do: replace the `"part_of"` / `"succeeded_by"` literals at lines 657 and 660 (and any other seeded key literal in the file) with `SeededPlaceRelationshipTypeTerm` / `SeededRelationshipTypeTerm` constants.
+Check: `grep -nE '"(part_of|succeeded_by|spouse|sibling|parent|child)"' macos/App/Features/CitationComposer` prints nothing; scripts/check-pr.sh PASS.
+
+**F-41 — "from <Source title>", without "the"** (UX-6, user decision 2026-10-23: "Just drop the 'the' from that copy.")
+Files: `macos/App/Platform/L10n.swift`, `Localizable.xcstrings`, the tests that pin the subtitle and heading.
+Do:
+- In the titled subtitle and evidence heading formats, "from the %2$@" becomes "from %2$@": "This is an identity claim to join **John Smith** from *Leeds Mercury obituary* into…", "**John Smith** from *Leeds Mercury obituary* belongs in…".
+- The untitled variants keep "from this source".
+Check: tests updated and pass; scripts/check-pr.sh PASS.
+
+## Round 18 — fix
+Head `9ad6a7f0` (`ce65f4d1` F-39, `86256b23` F-40, `9ad6a7f0` F-41). Gate PASS (orchestrator re-ran).
+- **F-39:** `<unknown>:0` key-path warnings went from 244 to 0 on a fresh derived-data build. `@MainActor` did not clear them; typed `AttributeContainer` subscripts did, the way `PVComboBox` writes them.
+- **F-40:** no seeded-key literal left in `Features/CitationComposer`.
+- **F-41:** "from %2$@" in the titled subtitle and heading.
+- **CON-1:** **Resolved**. The orchestrator's `git grep` for `evidence.Pinnable` / "not pinnable" prints nothing.
+
+## Round 17/18 — review 2
+Reviewers: MNT, UX (each had Fix-now majors). Scope `8aab38bf...9ad6a7f0`. CON's only major (docs) is checked above.
+- **UX:** UX-1 and UX-2 **Resolved**; UX-3 – UX-7 done. All 59 `evidenceGraph.share.*` strings read correctly. Nits: `UX-9 · L10n.swift:1543 · untitledRecord comment says likeness` · `UX-10 · PromoteEvidenceDisplay.swift:210 · spokenHeader strips a hard-coded "…"` · `UX-11 · PromoteEvidenceDisplay.swift:69 · untitled non-likeness member spoken as the value only`.
+- **MNT:** MNT-1, -2, -3, -5 **Resolved**; MNT-6 – MNT-9 done. One mechanism each for share phrases (registry tables) and attribute styling (typed `AttributeContainer` subscripts). Nits: `MNT-10 · EvidenceBridgeEdgeSummary.swift:17 · reasonRole(for:) feeds BridgeFact.term` · `MNT-11 · add-localized-string · say to use typed AttributeContainer subscripts` · `spokenHeader edits localized output` · `the sheet repeats PVSectionHeader's h3 size for the heading names` · `a researcher's event type keeps its case where roles are lowercased`.
+- **Follow-up (MNT, logged):** seeded terms are listed by hand in four Swift places: the `Seeded…Term` enum, `L10n.PropertyTerm`, the share tables and the share test. The Go test checks Swift ⊆ seed, not seed ⊆ Swift, and `add-seeded-vocabulary` names none of these steps. An idea, not this PR.
+
+## Finish (round 18)
+`main` unchanged since `d36060a0`. Gate PASS on `9ad6a7f0`.
+
+## Result (after round 18)
+Gate PASS · CI see PR · open: none · to user: — · follow-ups: hand-kept seeded-term lists (idea); the relationship card takes the first same-kind bridge (CON-2); carry `inverse_key` on the wire (term-management idea) · flaky: `EvidenceCardLayoutTests/measuredLayoutMatchesThePaint("uncited")` · manual check §10 not run · design board: revised by the user; the sheet now follows it
