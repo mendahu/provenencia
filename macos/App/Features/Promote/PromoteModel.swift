@@ -184,8 +184,6 @@ final class PromoteModel {
         flow.setConfidence(subjectID: subjectID, gradeID: gradeID)
     }
 
-    func toggleBridge(_ id: String) { flow.toggleBridge(id) }
-
     func openSheet(_ subjectID: String) { setSheetSubject(subjectID) }
     func closeSheet() { setSheetSubject(nil) }
 
@@ -367,8 +365,7 @@ final class PromoteModel {
                 userID: userID,
                 sourceID: entry.sourceID,
                 seenRevision: seen,
-                rows: batch,
-                skipBridgeIDs: flow.skipBridgeIDs()
+                rows: batch
             )
             session.apply(.promotedSubject(sourceId: entry.sourceID))
             session.noticeToast = VocabularyToast(

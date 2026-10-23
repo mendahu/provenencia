@@ -47,10 +47,6 @@ func ApplyPromoteGraphAlignment(in []byte) ([]byte, error) {
 		}
 		rows = append(rows, promotealign.ApplyRow{BatchRow: br, DefaultPins: row.GetDefaultPins(), PinIDs: row.GetPinIds()})
 	}
-	skip, err := parseIDs(req.GetSkipBridgeIds())
-	if err != nil {
-		return nil, err
-	}
 
 	var out *engine.ApplyPromoteGraphAlignmentResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
@@ -62,10 +58,9 @@ func ApplyPromoteGraphAlignment(in []byte) ([]byte, error) {
 		}
 		res, result, err := writes.Run(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
 			return promote.SaveBatch(tx, userID, promote.Batch{
-				SourceID:      sourceID,
-				SeenRevision:  req.GetSeenRevision(),
-				Rows:          resolved,
-				SkipBridgeIDs: skip,
+				SourceID:     sourceID,
+				SeenRevision: req.GetSeenRevision(),
+				Rows:         resolved,
 			})
 		})
 		if err != nil {

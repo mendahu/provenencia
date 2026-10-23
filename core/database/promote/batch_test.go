@@ -259,7 +259,7 @@ func TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bridge := f.participation(person, event)
+	f.participation(person, event)
 	if f.bridgeClaims("participation") != 0 {
 		t.Fatal("bridge filed before the batch")
 	}
@@ -274,34 +274,25 @@ func TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted(t *testing.T) {
 	if f.bridgeClaims("participation") != 1 {
 		t.Fatalf("participation claims %d, want 1", f.bridgeClaims("participation"))
 	}
-
-	// A second Done with the bridge switched off does not file another copy.
-	// (Already filed, so this also checks idempotence.) The skip path is the
-	// unfiled case below.
-	_ = bridge
 }
 
-func TestSaveBatchSkipsSwitchedOffBridge(t *testing.T) {
+func TestSaveBatchLeavesBridgeWithASkippedEndUnfiled(t *testing.T) {
 	f := newBatchFixture(t)
 	person := f.bare("person")
 	event := f.bare("event")
-	if _, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: person.ID})
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: event.ID})
-	}); err != nil {
-		t.Fatal(err)
-	}
-	bridge := f.participation(person, event)
+	f.participation(person, event)
 	f.save(promote.Batch{
 		SourceID: f.source.ID, SeenRevision: f.revision(),
-		SkipBridgeIDs: [][]byte{bridge.ID},
+		Rows: []promote.BatchRow{
+			{SubjectID: person.ID, Target: promote.TargetNew},
+			{SubjectID: event.ID, Target: promote.TargetSkip},
+		},
 	})
 	if n := f.bridgeClaims("participation"); n != 0 {
-		t.Fatalf("skipped bridge filed %d claims", n)
+		t.Fatalf("bridge with a skipped end filed %d claims", n)
+	}
+	if !f.hasClaim(person.ID) {
+		t.Fatal("person was not filed")
 	}
 }
 

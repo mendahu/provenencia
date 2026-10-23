@@ -618,8 +618,7 @@ private struct ThrowingStore: GenealogyStore {
         userID _: String,
         sourceID _: String,
         seenRevision _: Int64,
-        rows _: [CatalogPromoteBatchRow],
-        skipBridgeIDs _: [String]
+        rows _: [CatalogPromoteBatchRow]
     ) async throws -> CatalogPromoteBatchResult {
         throw StoreBoom.boom
     }

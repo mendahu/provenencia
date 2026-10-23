@@ -1111,15 +1111,13 @@ struct GoStore: GenealogyStore {
         userID: String,
         sourceID: String,
         seenRevision: Int64,
-        rows: [CatalogPromoteBatchRow],
-        skipBridgeIDs: [String]
+        rows: [CatalogPromoteBatchRow]
     ) async throws -> CatalogPromoteBatchResult {
         var req = Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRequest()
         req.projectDir = projectDir
         req.userID = userID
         req.sourceID = sourceID
         req.seenRevision = seenRevision
-        req.skipBridgeIds = skipBridgeIDs
         req.rows = rows.map { row in
             var proto = Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRow()
             proto.subjectID = row.subjectID

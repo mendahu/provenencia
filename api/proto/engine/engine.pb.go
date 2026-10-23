@@ -13559,7 +13559,6 @@ type ApplyPromoteGraphAlignmentRequest struct {
 	SourceId      string                           `protobuf:"bytes,3,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
 	SeenRevision  int64                            `protobuf:"varint,4,opt,name=seen_revision,json=seenRevision,proto3" json:"seen_revision,omitempty"`
 	Rows          []*ApplyPromoteGraphAlignmentRow `protobuf:"bytes,5,rep,name=rows,proto3" json:"rows,omitempty"`
-	SkipBridgeIds []string                         `protobuf:"bytes,6,rep,name=skip_bridge_ids,json=skipBridgeIds,proto3" json:"skip_bridge_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -13625,13 +13624,6 @@ func (x *ApplyPromoteGraphAlignmentRequest) GetSeenRevision() int64 {
 func (x *ApplyPromoteGraphAlignmentRequest) GetRows() []*ApplyPromoteGraphAlignmentRow {
 	if x != nil {
 		return x.Rows
-	}
-	return nil
-}
-
-func (x *ApplyPromoteGraphAlignmentRequest) GetSkipBridgeIds() []string {
-	if x != nil {
-		return x.SkipBridgeIds
 	}
 	return nil
 }
@@ -20403,15 +20395,14 @@ const file_engine_proto_rawDesc = "" +
 	"\"\x87\x01\n" +
 	"$ProposePromoteGraphAlignmentResponse\x12C\n" +
 	"\x04rows\x18\x01 \x03(\v2/.provenencia.engine.v1.PromoteGraphAlignmentRowR\x04rows\x12\x1a\n" +
-	"\brevision\x18\x02 \x01(\x03R\brevision\"\x91\x02\n" +
+	"\brevision\x18\x02 \x01(\x03R\brevision\"\x80\x02\n" +
 	"!ApplyPromoteGraphAlignmentRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1b\n" +
 	"\tsource_id\x18\x03 \x01(\tR\bsourceId\x12#\n" +
 	"\rseen_revision\x18\x04 \x01(\x03R\fseenRevision\x12H\n" +
-	"\x04rows\x18\x05 \x03(\v24.provenencia.engine.v1.ApplyPromoteGraphAlignmentRowR\x04rows\x12&\n" +
-	"\x0fskip_bridge_ids\x18\x06 \x03(\tR\rskipBridgeIds\"\x81\x02\n" +
+	"\x04rows\x18\x05 \x03(\v24.provenencia.engine.v1.ApplyPromoteGraphAlignmentRowR\x04rowsJ\x04\b\x06\x10\aR\x0fskip_bridge_ids\"\x81\x02\n" +
 	"\x1dApplyPromoteGraphAlignmentRow\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x16\n" +

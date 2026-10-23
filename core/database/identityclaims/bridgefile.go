@@ -20,11 +20,10 @@ import (
 // Role stays off the key (it is reconciled on the association). A relationship
 // type, and any later non-role disambiguation such as place_relationship_type,
 // is part of the key; a directed term keeps order and a symmetric one does not.
-// skip names bridge Subjects the caller switched off; nil files every bridge.
 //
 // Returned association ids are the handles whose cache the caller recomputes.
 // Changes belong on the caller's revision. Does not commit.
-func FileBridgesTx(tx *sql.Tx, subjectID []byte, skip map[string]struct{}) (assocIDs [][]byte, changes []rowchange.Change, err error) {
+func FileBridgesTx(tx *sql.Tx, subjectID []byte) (assocIDs [][]byte, changes []rowchange.Change, err error) {
 	if len(subjectID) != 16 {
 		return nil, nil, nil
 	}
@@ -32,13 +31,13 @@ func FileBridgesTx(tx *sql.Tx, subjectID []byte, skip map[string]struct{}) (asso
 	if err != nil {
 		return nil, nil, err
 	}
-	return fileHeads(tx, bridges, skip)
+	return fileHeads(tx, bridges)
 }
 
 // FileSourceBridgesTx files every unfiled bridge homed to sourceID whose ends
 // are both handles, including a bridge whose ends were claimed before this
-// call. skip names bridge Subjects to leave unfiled. Does not commit.
-func FileSourceBridgesTx(tx *sql.Tx, sourceID []byte, skip map[string]struct{}) (assocIDs [][]byte, changes []rowchange.Change, err error) {
+// call. Does not commit.
+func FileSourceBridgesTx(tx *sql.Tx, sourceID []byte) (assocIDs [][]byte, changes []rowchange.Change, err error) {
 	if len(sourceID) != 16 {
 		return nil, nil, nil
 	}
@@ -74,15 +73,12 @@ func FileSourceBridgesTx(tx *sql.Tx, sourceID []byte, skip map[string]struct{}) 
 		return nil, nil, err
 	}
 	_ = rows.Close()
-	return fileHeads(tx, heads, skip)
+	return fileHeads(tx, heads)
 }
 
-func fileHeads(tx *sql.Tx, bridges []bridgeHead, skip map[string]struct{}) (assocIDs [][]byte, changes []rowchange.Change, err error) {
+func fileHeads(tx *sql.Tx, bridges []bridgeHead) (assocIDs [][]byte, changes []rowchange.Change, err error) {
 	seen := map[string]bool{}
 	for _, b := range bridges {
-		if _, off := skip[string(b.id)]; off {
-			continue
-		}
 		id, ch, filed, err := fileBridge(tx, b)
 		if err != nil {
 			return nil, nil, err

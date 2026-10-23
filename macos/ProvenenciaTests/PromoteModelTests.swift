@@ -292,7 +292,7 @@ struct PromoteModelTests {
         model.done()
         let filed = await waitUntil { store.lastPromoteBatch != nil }
         #expect(filed)
-        let rows = store.lastPromoteBatch?.rows ?? []
+        let rows = store.lastPromoteBatch ?? []
         let ada = rows.first { $0.subjectID == "a" }
         let bea = rows.first { $0.subjectID == "b" }
         #expect(ada?.defaultPins == true)

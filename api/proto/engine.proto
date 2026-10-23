@@ -1687,7 +1687,8 @@ message ApplyPromoteGraphAlignmentRequest {
   string source_id = 3;
   int64 seen_revision = 4;
   repeated ApplyPromoteGraphAlignmentRow rows = 5;
-  repeated string skip_bridge_ids = 6;
+  reserved 6;
+  reserved "skip_bridge_ids";
 }
 
 message ApplyPromoteGraphAlignmentRow {

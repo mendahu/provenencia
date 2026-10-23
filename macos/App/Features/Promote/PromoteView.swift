@@ -73,10 +73,7 @@ struct PromoteView: View {
             copy: { _ in
                 PVConfirmCopy(
                     title: L10n.string(L10n.Promote.leaveTitle),
-                    message: L10n.Promote.leaveDetail(
-                        rows: model.flow.rows.filter(\.decided).count,
-                        connections: model.flow.bridgeOff.count
-                    ),
+                    message: L10n.Promote.leaveDetail(rows: model.flow.rows.filter(\.decided).count),
                     confirm: L10n.Promote.leaveConfirm,
                     cancel: L10n.Promote.leaveCancel
                 )
@@ -265,7 +262,7 @@ struct PromoteView: View {
             }
             ScrollView {
                 VStack(spacing: 0) {
-                    ForEach(model.flow.connectionLines()) { bridge in
+                    ForEach(model.flow.connections) { bridge in
                         connectionRow(bridge)
                     }
                 }
@@ -298,34 +295,23 @@ struct PromoteView: View {
                 .font(PVFont.body(size: PVTypeScale.bodySmall))
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            if bridge.state == .files || bridge.state == .off {
-                PVSwitch(
-                    L10n.Promote.connectionState(bridge.state),
-                    isOn: bridgeOn(bridge.id),
-                    isDisabled: model.isSaving
-                )
-                .accessibilityIdentifier("promote.connection.\(bridge.id)")
-            } else {
-                Text(L10n.Promote.connectionState(bridge.state))
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .italic()
-                    .foregroundStyle(PVColor.textMuted)
-                    .multilineTextAlignment(.trailing)
-            }
+            Text(L10n.Promote.connectionState(bridge.state))
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .italic()
+                .foregroundStyle(PVColor.textMuted)
+                .multilineTextAlignment(.trailing)
         }
         .padding(.vertical, PVSpacing.space2)
         .overlay(alignment: .top) { PVDivider() }
-        // One element: the connection's sentence, then its switch or why it won't file.
+        // One element: the connection's sentence, then whether it files.
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("promote.connection.\(bridge.id)")
     }
 
     private var connectionMeta: String {
-        let lines = model.flow.connectionLines()
-        return L10n.Promote.connectionsMeta(
-            filed: lines.filter(\.files).count,
-            off: lines.filter { $0.state == .off }.count,
-            unfiled: lines.filter { $0.state == .endSkipped || $0.state == .selfLink }.count
-        )
+        let lines = model.flow.connections
+        let filed = lines.filter(\.files).count
+        return L10n.Promote.connectionsMeta(filed: filed, unfiled: lines.count - filed)
     }
 
     private var footer: some View {
@@ -420,13 +406,6 @@ struct PromoteView: View {
 
     private var bridgesOpen: Binding<Bool> {
         Binding(get: { model.flow.bridgesOpen }, set: { model.setBridgesOpen($0) })
-    }
-
-    private func bridgeOn(_ id: String) -> Binding<Bool> {
-        Binding(
-            get: { !model.flow.bridgeOff.contains(id) },
-            set: { _ in model.toggleBridge(id) }
-        )
     }
 
     private var sheetBinding: Binding<PromoteFlow.Row?> {

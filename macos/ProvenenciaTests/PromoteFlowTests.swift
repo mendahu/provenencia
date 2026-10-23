@@ -451,21 +451,27 @@ struct PromoteFlowTests {
         #expect(reason(.unrecognized("later_code")) == .empty)
     }
 
-    @Test func doneSendsPinsAndASwitchedOffBridge() {
+    @Test func doneSendsDefaultPinsAndConnectionsFollowEnds() {
         var flow = PromoteFlow(entryID: "a")
+        flow.mappedRest = true
         flow.load(
             entryID: "a",
-            proposal: proposal(rows: [row(id: "a")]),
-            subjects: [fact("a")],
-            bridges: [PromoteFlow.BridgeFact(id: "br", sentence: "link", endA: "a", endB: "a")]
+            proposal: proposal(rows: [row(id: "a", handleID: "e1"), row(id: "b", handleID: "e2")]),
+            subjects: [fact("a"), fact("b")],
+            bridges: [PromoteFlow.BridgeFact(id: "br", sentence: "link", endA: "a", endB: "b")]
         )
-        flow.toggleBridge("br")
+        #expect(flow.connections.first?.state == .files)
+        flow.setTarget(subjectID: "b", token: "skip")
+        #expect(flow.connections.first?.state == .endSkipped)
         let batch = flow.batchRows()
-        #expect(batch.count == 1)
+        #expect(batch.count == 2)
+        #expect(batch[0].subjectID == "a")
         #expect(batch[0].defaultPins)
         #expect(batch[0].pinIDs.isEmpty)
-        #expect(flow.skipBridgeIDs() == ["br"])
-        #expect(flow.connectionLines().first?.state == .off)
+        #expect(batch[1].subjectID == "b")
+        #expect(batch[1].target == "skip")
+        flow.setTarget(subjectID: "b", token: "new")
+        #expect(flow.connections.first?.state == .files)
     }
 
     @Test func promoteAllStartsExpandedAndHidesFiledBridges() {
@@ -482,10 +488,9 @@ struct PromoteFlowTests {
         )
         #expect(flow.visibleRows.map(\.subjectID) == ["a", "b"])
         #expect(flow.targetsChosen)
-        #expect(flow.connectionLines().map(\.id) == ["new"])
-        #expect(flow.connectionLines().first?.state == .files)
+        #expect(flow.connections.map(\.id) == ["new"])
+        #expect(flow.connections.first?.state == .files)
         #expect(flow.connectionCount == 1)
-        #expect(flow.skipBridgeIDs().isEmpty)
     }
 
     @Test func anchorsAreReadOnly() {
