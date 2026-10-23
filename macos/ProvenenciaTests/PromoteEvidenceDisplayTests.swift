@@ -195,15 +195,24 @@ struct PromoteEvidenceDisplayTests {
         #expect(label == "Name. Same name. This source: John Smith. Census 1851: J. Smith.")
     }
 
-    @Test func spokenLabelWithoutASourceTitleSpeaksTheValue() {
-        for source in [nil, ""] as [String?] {
-            let label = PromoteEvidenceDisplay.spokenLabel(
-                property: "Name", sentence: "Same name", here: "John Smith", count: 1,
-                member: PromoteEvidenceDisplay.Member(source: source, value: "J. Smith")
-            )
-            #expect(label == "Name. Same name. This source: John Smith. J. Smith.")
-            #expect(PromoteEvidenceDisplay.spokenMember(PromoteEvidenceDisplay.Member(source: source, value: "J. Smith")) == "J. Smith.")
-        }
+    @Test func spokenLabelWithoutASourceTitleSpeaksAnUntitledRecord() {
+        // The one rule: a Source with no title is "a record", on the line and on its member.
+        let source = PromoteEvidenceDisplay.recordSource(title: nil)
+        let label = PromoteEvidenceDisplay.spokenLabel(
+            property: "Name", sentence: "Same name", here: "John Smith", count: 1,
+            member: PromoteEvidenceDisplay.Member(source: source, value: "J. Smith")
+        )
+        #expect(label == "Name. Same name. This source: John Smith. a record: J. Smith.")
+        #expect(PromoteEvidenceDisplay.spokenMember(PromoteEvidenceDisplay.Member(source: source, value: "J. Smith")) == "a record: J. Smith.")
+    }
+
+    @Test func aRelationshipAndALikenessSpeakTheirCountOnlyWhenTheyBundleSeveral() {
+        #expect(PromoteEvidenceDisplay.spokenRelationship(header: "they share a spouse", outcome: .agree, count: 1) == "they share a spouse. Agrees.")
+        #expect(PromoteEvidenceDisplay.spokenRelationship(header: "they share a spouse", outcome: .agree, count: 3) == "they share a spouse. Agrees, 3 records.")
+        #expect(PromoteEvidenceDisplay.spokenLikeness(source: "Funeral card", sentence: "Same likeness", count: 1)
+            == "Likeness from this source and Funeral card. Same likeness.")
+        #expect(PromoteEvidenceDisplay.spokenLikeness(source: "Funeral card", sentence: "Same likeness", count: 2)
+            == "Likeness from this source and Funeral card. Same likeness, 2 records.")
     }
 
     @Test func aSourceWithoutATitleIsARecord() {

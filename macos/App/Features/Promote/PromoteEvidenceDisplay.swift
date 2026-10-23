@@ -23,21 +23,17 @@ enum PromoteEvidenceDisplay {
         pins.intersection(offered).count
     }
 
-    /// A record behind a line: its Source's title when it has one, and its worded value.
+    /// A record behind a line: its Source's title, or the word for a record whose Source has none
+    /// (``recordSource(title:)``), and its worded value.
     struct Member: Equatable {
-        var source: String?
+        var source: String
         var value: String
-
-        var title: String? {
-            guard let source, !source.isEmpty else { return nil }
-            return source
-        }
     }
 
-    /// One record as VoiceOver speaks it; the value alone when its Source has no title.
+    /// One record as VoiceOver speaks it: "Census 1851: J. Smith.", or "a record: J. Smith." when its
+    /// Source has no title.
     static func spokenMember(_ member: Member) -> String {
-        guard let title = member.title else { return L10n.Promote.spokenMemberUntitled(value: member.value) }
-        return L10n.Promote.spokenMember(source: title, value: member.value)
+        L10n.Promote.spokenMember(source: member.source, value: member.value)
     }
 
     /// A line as VoiceOver speaks it: with its record count when several stand behind it, else with
@@ -51,7 +47,23 @@ enum PromoteEvidenceDisplay {
         return L10n.Promote.spokenLineMember(line: line, member: spokenMember(member))
     }
 
-    /// A record's Source title, or a word for it when the Source has none: on every line and member row.
+    /// A relationship as VoiceOver speaks it: with its record count when it bundles several.
+    static func spokenRelationship(header: String, outcome: EvidenceOutcome, count: Int) -> String {
+        let link = L10n.string(L10n.Promote.outcome(outcome))
+        return count > 1
+            ? L10n.Promote.spokenRelationshipCount(sentence: header, link: link, count: count)
+            : L10n.Promote.spokenRelationship(sentence: header, link: link)
+    }
+
+    /// A likeness line as VoiceOver speaks it: with its record count when it bundles several.
+    static func spokenLikeness(source: String, sentence: String, count: Int) -> String {
+        count > 1
+            ? L10n.Promote.spokenLikenessCount(source: source, sentence: sentence, count: count)
+            : L10n.Promote.spokenLikeness(source: source, sentence: sentence)
+    }
+
+    /// A record's Source title, or a word for it when the Source has none: the one rule, for every
+    /// line, member and spoken label.
     static func recordSource(title: String?) -> String {
         guard let title, !title.isEmpty else { return L10n.string(L10n.Promote.untitledRecord) }
         return title

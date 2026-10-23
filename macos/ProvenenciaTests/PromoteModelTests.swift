@@ -197,6 +197,57 @@ struct PromoteModelTests {
         #expect(model.sheetEvidence == .idle)
     }
 
+    // MARK: - T-12
+
+    @Test func researcherPropertyLabel() async {
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
+        store.propertiesByProject[projectDir] = [
+            CatalogProperty(
+                id: "p-user", key: "my_prop", origin: "user", label: "Occupation note", description: "", valueType: "text"
+            ),
+            CatalogProperty(
+                id: "p-name-user", key: "name", origin: "user", label: "Her own name", description: "", valueType: "text"
+            ),
+            CatalogProperty(
+                id: "p-name", key: "name", origin: "provenencia", label: "Name", description: "", valueType: "name"
+            ),
+        ]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        // A researcher's Property with no product twin is found by its key alone.
+        #expect(model.propertyLabel(key: "my_prop") == "Occupation note")
+        // A product Property wins over a researcher's with the same key.
+        #expect(model.propertyLabel(key: "name") == "Name")
+        #expect(model.propertyLabel(key: "nothing") == "nothing")
+        // With an origin the exact Property is read.
+        #expect(model.propertyLabel(key: "name", origin: "user") == "Her own name")
+        #expect(PromoteEvidenceDisplay.similarityHeader(property: model.propertyLabel(key: "my_prop")) == "they have a similarity in occupation note")
+    }
+
+    @Test func reloadEvidenceRetries() async {
+        struct Boom: Error {}
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
+        store.promoteEvidence["a"] = evidence([("l:1", true)])
+        store.promoteEvidenceError = Boom()
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.openSheet("a")
+        let failed = await waitUntil {
+            if case .failed = model.sheetEvidence { return true }
+            return false
+        }
+        #expect(failed)
+        // The read works the second time.
+        store.promoteEvidenceError = nil
+        model.reloadEvidence()
+        #expect(model.sheetEvidence == .loading)
+        let loaded = await waitUntil { model.flow.row("a")?.board != nil }
+        #expect(loaded)
+        #expect(model.sheetEvidence == .idle)
+    }
+
     @Test func aLateAnswerForAnotherSheetIsDropped() async {
         let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
         let store = store(subjects: subjects)

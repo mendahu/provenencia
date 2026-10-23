@@ -18538,7 +18538,7 @@
       }
     },
     "promote.sheet.recordCount": {
-      "comment": "After a collapsed line or a relationship: how many records stand behind it",
+      "comment": "After a relationship that bundles records: how many stand behind it",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -18991,18 +18991,6 @@
         }
       }
     },
-    "promote.sheet.spokenMemberUntitled": {
-      "comment": "VoiceOver label of one record under an expanded line whose Source has no title; the argument is its value",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@."
-          }
-        }
-      }
-    },
     "promote.sheet.spokenLineMember": {
       "comment": "VoiceOver label of an evidence line with its one record; 1 = the line, 2 = the record",
       "extractionState": "manual",
@@ -19016,7 +19004,7 @@
       }
     },
     "promote.sheet.untitledRecord": {
-      "comment": "Names a likeness record on the evidence sheet when its Source has no title",
+      "comment": "A record whose Source has no title, on any line or member",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -19028,13 +19016,47 @@
       }
     },
     "promote.sheet.spokenRelationship": {
-      "comment": "VoiceOver label of a relationship line; 1 = sentence, 2 = the connection",
+      "comment": "VoiceOver label of a relationship line; 1 = the sentence, 2 = the outcome word",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$@. %2$@."
+          }
+        }
+      }
+    },
+    "promote.sheet.spokenRelationshipCount": {
+      "comment": "VoiceOver label of a relationship line that bundles several records; 1 = sentence, 2 = the outcome word, 3 = record count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@. %2$@, %#@n@."
+          },
+          "substitutions": {
+            "n": {
+              "argNum": 3,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg record"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg records"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -19051,6 +19073,40 @@
         }
       }
     },
+    "promote.sheet.spokenLikenessCount": {
+      "comment": "VoiceOver label of a likeness line that bundles several records; 1 = the record's Source, 2 = sentence, 3 = record count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Likeness from this source and %1$@. %2$@, %#@n@."
+          },
+          "substitutions": {
+            "n": {
+              "argNum": 3,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg record"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg records"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "promote.sheet.evidenceUnavailable": {
       "comment": "Evidence sheet callout title when the evidence read fails",
       "extractionState": "manual",
@@ -19059,6 +19115,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "The evidence could not be loaded"
+          }
+        }
+      }
+    },
+    "promote.sheet.retry": {
+      "comment": "Button under the evidence-unavailable callout that reads the evidence again",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try again"
           }
         }
       }

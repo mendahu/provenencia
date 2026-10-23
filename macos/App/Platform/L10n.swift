@@ -1521,7 +1521,7 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.sheet.checkedCount", defaultValue: "%lld checked", comment: "Meta of the evidence heading: how many pieces of evidence are checked"), count)
         }
         static func recordCount(_ count: Int) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.recordCount", defaultValue: "· %lld records", comment: "After a collapsed line or a relationship: how many records stand behind it"), count)
+            L10n.format(LocalizedStringResource("promote.sheet.recordCount", defaultValue: "· %lld records", comment: "After a relationship that bundles records: how many stand behind it"), count)
         }
         static func showRecords(_ count: Int) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.showRecords", defaultValue: "Show %lld records", comment: "Button that expands a collapsed evidence line to its records"), count)
@@ -1568,19 +1568,23 @@ enum L10n {
         static func spokenMember(source: String, value: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.spokenMember", defaultValue: "%1$@: %2$@.", comment: "VoiceOver label of one record under an expanded line; 1 = its Source, 2 = its value"), source, value)
         }
-        static func spokenMemberUntitled(value: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.spokenMemberUntitled", defaultValue: "%@.", comment: "VoiceOver label of one record under an expanded line whose Source has no title; the argument is its value"), value)
-        }
         static func spokenLineMember(line: String, member: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.spokenLineMember", defaultValue: "%1$@ %2$@", comment: "VoiceOver label of an evidence line with its one record; 1 = the line, 2 = the record"), line, member)
         }
-        static let untitledRecord = LocalizedStringResource("promote.sheet.untitledRecord", defaultValue: "a record", comment: "Names a likeness record on the evidence sheet when its Source has no title")
+        static let untitledRecord = LocalizedStringResource("promote.sheet.untitledRecord", defaultValue: "a record", comment: "A record whose Source has no title, on any line or member")
         static func spokenRelationship(sentence: String, link: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.spokenRelationship", defaultValue: "%1$@. %2$@.", comment: "VoiceOver label of a relationship line; 1 = sentence, 2 = the connection"), sentence, link)
+            L10n.format(LocalizedStringResource("promote.sheet.spokenRelationship", defaultValue: "%1$@. %2$@.", comment: "VoiceOver label of a relationship line; 1 = the sentence, 2 = the outcome word"), sentence, link)
+        }
+        static func spokenRelationshipCount(sentence: String, link: String, count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenRelationshipCount", defaultValue: "%1$@. %2$@, %#@n@.", comment: "VoiceOver label of a relationship line that bundles several records; 1 = sentence, 2 = the connection, 3 = record count"), sentence, link, count)
         }
         static func spokenLikeness(source: String, sentence: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.spokenLikeness", defaultValue: "Likeness from this source and %1$@. %2$@.", comment: "VoiceOver label of a likeness line; 1 = the record's Source, 2 = sentence"), source, sentence)
         }
+        static func spokenLikenessCount(source: String, sentence: String, count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenLikenessCount", defaultValue: "Likeness from this source and %1$@. %2$@, %#@n@.", comment: "VoiceOver label of a likeness line that bundles several records; 1 = the record's Source, 2 = sentence, 3 = record count"), source, sentence, count)
+        }
+        static let evidenceRetry = LocalizedStringResource("promote.sheet.retry", defaultValue: "Try again", comment: "Button under the evidence-unavailable callout that reads the evidence again")
         static func connections(count: Int) -> String {
             L10n.format(LocalizedStringResource("promote.connections.count", defaultValue: "%lld connections will be filed", comment: "Bridge summary; argument is how many will be filed"), count)
         }

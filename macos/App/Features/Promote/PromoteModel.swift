@@ -96,6 +96,8 @@ final class PromoteModel {
     private(set) var sourceMark: PVMarkKey = .defaultTypeMark
     /// Property labels by "key|origin", from the Properties snapshot.
     private(set) var propertyLabels: [String: String] = [:]
+    /// Property labels by key alone: the product's, else a researcher's.
+    private var propertyLabelsByKey: [String: String] = [:]
     private(set) var loadError: String?
     private(set) var saveError: String?
     private(set) var proposeError: String?
@@ -192,6 +194,9 @@ final class PromoteModel {
 
     func setBridgesOpen(_ open: Bool) { flow.bridgesOpen = open }
 
+    /// Reads the open sheet's evidence again, after a failed read.
+    func reloadEvidence() { setSheetSubject(flow.sheetSubjectID) }
+
     /// Opens, switches or closes the sheet. A row filed on a handle reads its
     /// claim evidence each time its sheet opens; any other row has none.
     func setSheetSubject(_ id: String?) {
@@ -231,7 +236,7 @@ final class PromoteModel {
         EvidenceBoard.build(
             evidence: evidence,
             neighbor: { [flow] id in flow.row(id) },
-            labels: { [self] key in propertyLabel(key: key, origin: CatalogOrigin.provenencia) },
+            labels: { [self] key in propertyLabel(key: key) },
             worded: { [session] value in ReconciledValueDisplay.string(for: value, orders: session.nameFormat) }
         )
     }
@@ -310,6 +315,12 @@ final class PromoteModel {
     /// The catalog label for a Property, or its key when the snapshot lacks it.
     func propertyLabel(key: String, origin: String) -> String {
         propertyLabels[key + "|" + origin] ?? key
+    }
+
+    /// The label for a Property known by its key alone: the product's Property, else a researcher's
+    /// own with that key, else the key.
+    func propertyLabel(key: String) -> String {
+        propertyLabelsByKey[key] ?? key
     }
 
     private func nextProposal() -> Int {
@@ -391,6 +402,10 @@ final class PromoteModel {
                 properties.properties.map { ($0.key + "|" + $0.origin, $0.label) },
                 uniquingKeysWith: { first, _ in first }
             )
+            propertyLabelsByKey = [:]
+            for property in properties.properties where propertyLabelsByKey[property.key] == nil || CatalogOrigin.isProduct(property.origin) {
+                propertyLabelsByKey[property.key] = property.label
+            }
         }
         guard let rows else { return nil }
         return SourceGraphSnapshot.build(

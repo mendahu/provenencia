@@ -168,7 +168,10 @@ struct PromoteEvidenceSheet: View {
             )
         }
         if case .failed(let message) = model.sheetEvidence {
-            PVCallout(tone: .danger, title: L10n.Promote.evidenceUnavailable, message: message, compact: true)
+            PVCallout(tone: .danger, title: L10n.Promote.evidenceUnavailable, message: message, compact: true) {
+                PVButton(L10n.Promote.evidenceRetry, variant: .secondary, size: .sm) { model.reloadEvidence() }
+                    .accessibilityIdentifier("promote.sheet.retry")
+            }
         }
         if let board {
             cards(board)
@@ -178,6 +181,9 @@ struct PromoteEvidenceSheet: View {
                 PVSkeletonBar(width: 320, height: 12)
                 PVSkeletonBar(width: 240, height: 12)
             }
+            // One element: VoiceOver says "Loading" once, not once per bar.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(L10n.DesignSystem.listLoading))
             .accessibilityIdentifier("promote.sheet.loading")
         }
     }

@@ -141,6 +141,43 @@ struct PromoteEvidenceBoardTests {
         #expect(first.members.map(\.source) == ["a record", "a record"])
     }
 
+    // MARK: - T-11
+
+    @Test func spokenCountsAndUntitled() {
+        func spouse(_ bundles: Int) -> CatalogClaimEvidenceRelationship {
+            CatalogClaimEvidenceRelationship(
+                neighborSubjectID: "n1", key: "relationship·spouse", bridgeType: "relationship", outcome: .agree,
+                bundles: (0..<bundles).map { CatalogClaimEvidenceBundle(id: "b\($0)") }
+            )
+        }
+        let three = build(CatalogClaimEvidence(relationships: [spouse(3)])).relationships[0].spoken
+        #expect(three.hasSuffix("Agrees, 3 records."))
+        let one = build(CatalogClaimEvidence(relationships: [spouse(1)])).relationships[0].spoken
+        #expect(one.hasSuffix("Agrees.") && !one.contains("records"))
+
+        // A likeness of two records.
+        func crop(_ path: String) -> CatalogConclusionValue {
+            .depiction(CatalogDepictionValue(regionJSON: "", imageRelPath: path))
+        }
+        var likeness = line("in-1", pins: [], incoming: crop("objects/a.png"))
+        likeness.propertyKey = "likeness"
+        likeness.members = [pin("p1", value: crop("objects/b.png")), pin("p2", value: crop("objects/c.png"))]
+        let board = build(CatalogClaimEvidence(
+            sections: [CatalogClaimEvidenceSection(propertyKey: "likeness", lines: [likeness])],
+            sourceTitles: ["src-1": "Funeral card"]
+        ))
+        #expect(board.cards[0].lines[0].spoken.hasSuffix(", 2 records."))
+        #expect(board.cards[0].lines[0].spoken.hasPrefix("Likeness from this source and Funeral card."))
+
+        // A member under an untitled Source is spoken as shown.
+        let untitled = build(CatalogClaimEvidence(
+            sections: [CatalogClaimEvidenceSection(propertyKey: "name", lines: [line("in-2", pins: ["p1", "p2"])])],
+            sourceTitles: [:]
+        ))
+        #expect(untitled.cards[0].lines[0].members.map(\.spoken) == ["a record: John Smith.", "a record: John Smith."])
+        #expect(untitled.cards[0].lines[0].members.map(\.source) == ["a record", "a record"])
+    }
+
     @Test func aLikenessShowsItsTwoCropsAndSaysNoThisSource() {
         let crop = CatalogConclusionValue.depiction(CatalogDepictionValue(regionJSON: "", imageRelPath: "objects/a.png"))
         let memberCrop = CatalogConclusionValue.depiction(CatalogDepictionValue(regionJSON: "", imageRelPath: "objects/b.png"))
