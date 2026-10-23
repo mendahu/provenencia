@@ -445,7 +445,7 @@ final class PromoteModel {
         return snapshot.bridges.map { bridge in
             PromoteFlow.BridgeFact(
                 id: bridge.subject.id,
-                sentence: EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot, subjects: placedByID),
+                sentence: EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot, subjects: placedByID, bridges: [:]),
                 phrase: EvidenceBridgeEdgeSummary.phrase(for: bridge),
                 term: EvidenceBridgeEdgeSummary.reasonRole(for: bridge),
                 endAName: bridge.endpointAID.flatMap { nameByID[$0] } ?? "",

@@ -33,8 +33,10 @@ enum EvidenceBridgeEdgeSummary {
 
     /// Snapshot-aware sentence. Nouns come from cited endpoints; unreadable
     /// edges fall back to the stored label or kind phrase · ref. Never empty.
-    /// A bridge that lacks an endpoint is completed from the snapshot's copy of it, found in
-    /// `bridges` (built here when not passed).
+    /// A bridge that lacks an endpoint is completed from the snapshot's copy of it: found in
+    /// `bridges` when a caller that sentences many bridges passes the index (an empty one skips the
+    /// completion, for bridges that come from the snapshot itself), else by one scan of the
+    /// snapshot, made only when an endpoint is missing.
     static func sentence(
         for bridge: SourceGraphPlacedBridge,
         in snapshot: SourceGraphSnapshot,
@@ -46,7 +48,7 @@ enum EvidenceBridgeEdgeSummary {
         var endpointAID = bridge.endpointAID
         var endpointBID = bridge.endpointBID
         if endpointAID == nil || endpointBID == nil,
-           let resolved = (bridges ?? Self.bridges(of: snapshot))[bridge.id] {
+           let resolved = bridges.map({ $0[bridge.id] }) ?? snapshot.bridges.first(where: { $0.id == bridge.id }) {
             endpointAID = endpointAID ?? resolved.endpointAID
             endpointBID = endpointBID ?? resolved.endpointBID
         }

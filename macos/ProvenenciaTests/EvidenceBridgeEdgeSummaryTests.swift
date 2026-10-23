@@ -168,6 +168,8 @@ struct EvidenceBridgeEdgeSummaryTests {
         #expect(EvidenceBridgeEdgeSummary.sentence(for: stripped, in: snap, bridges: index) == expected)
         // Without a passed index the same answer is built from the snapshot.
         #expect(EvidenceBridgeEdgeSummary.sentence(for: stripped, in: snap) == expected)
+        // An empty index skips the completion: a bridge from the snapshot itself has its endpoints.
+        #expect(EvidenceBridgeEdgeSummary.sentence(for: stripped, in: snap, bridges: [:]) != expected)
     }
 
     @Test func blankLabelFallsBackToTypeAndRef() {
