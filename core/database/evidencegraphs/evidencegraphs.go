@@ -54,6 +54,7 @@ const (
 	sqlUpdate = `UPDATE evidence_graphs SET name = ?, description = ? WHERE id = ?`
 
 	sqlSubjectGraph = `SELECT graph_id FROM subjects WHERE id = ?`
+	sqlGraphSource  = `SELECT source_id FROM evidence_graphs WHERE id = ?`
 	sqlIsLinked     = `SELECT 1 FROM evidence_graph_artifacts WHERE graph_id = ? AND artifact_id = ?`
 	sqlLinkSources  = `SELECT g.source_id, a.source_id FROM evidence_graphs g, artifacts a
 		WHERE g.id = ? AND a.id = ?`
@@ -451,6 +452,23 @@ func SubjectGraphTx(tx *sql.Tx, subjectID []byte) ([]byte, error) {
 	}
 	var id []byte
 	err := tx.QueryRow(sqlSubjectGraph, subjectID).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrInvalid
+	}
+	if err != nil {
+		return nil, err
+	}
+	return id, nil
+}
+
+// SourceOf returns the Source a graph belongs to. ErrInvalid for a nil
+// querier, a malformed id or no such graph.
+func SourceOf(q database.Querier, graphID []byte) ([]byte, error) {
+	if q == nil || len(graphID) != 16 {
+		return nil, ErrInvalid
+	}
+	var id []byte
+	err := q.QueryRow(sqlGraphSource, graphID).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrInvalid
 	}

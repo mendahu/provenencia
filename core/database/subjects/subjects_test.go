@@ -539,3 +539,73 @@ func TestSubjects(t *testing.T) {
 		})
 	}
 }
+
+func TestInsertReadsTheGraphsSource(t *testing.T) {
+	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Jake", r); err != nil {
+		t.Fatal(err)
+	}
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	newSource := func(title string) sources.Source {
+		t.Helper()
+		src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: title})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return src
+	}
+	src, other := newSource("Deed"), newSource("Other")
+	art, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID}, func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+		return artifacts.Create(tx, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	jones := evidencegraphstest.Create(t, c, userID, src.ID, "Jones", art.ID)
+	person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unknown := make([]byte, 16)
+	unknown[0] = 9
+	create := func(in CreateInput) (Subject, error) {
+		in.SubjectTypeID, in.Label = person.ID, "X"
+		return writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+			return Create(tx, userID, in, nil)
+		})
+	}
+
+	s, err := create(CreateInput{GraphID: jones.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(s.SourceID, src.ID) || !bytes.Equal(s.GraphID, jones.ID) {
+		t.Fatalf("subject on %x of %x, want %x of %x", s.GraphID, s.SourceID, jones.ID, src.ID)
+	}
+	for name, in := range map[string]CreateInput{
+		"another Source's id": {GraphID: jones.ID, SourceID: other.ID},
+		"neither id":          {},
+		"unknown graph":       {GraphID: unknown},
+	} {
+		if _, err := create(in); !errors.Is(err, ErrInvalid) {
+			t.Fatalf("%s: got %v want ErrInvalid", name, err)
+		}
+	}
+}

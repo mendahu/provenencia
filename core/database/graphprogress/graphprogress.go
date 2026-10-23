@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -36,8 +37,6 @@ const (
 		FROM observations o
 		JOIN subjects s ON s.id = o.subject_id
 		GROUP BY s.graph_id, s.source_id`
-
-	sqlGraphSource = `SELECT source_id FROM evidence_graphs WHERE id = ?`
 
 	sqlCountObservationsOne = `SELECT COUNT(*)
 		FROM observations o
@@ -102,9 +101,11 @@ func Get(c *database.Catalog, graphID []byte) (Progress, error) {
 		return Progress{}, ErrInvalid
 	}
 	p := Progress{GraphID: append([]byte(nil), graphID...)}
-	if err := db.QueryRow(sqlGraphSource, graphID).Scan(&p.SourceID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+	sourceID, err := evidencegraphs.SourceOf(db, graphID)
+	if err != nil && !errors.Is(err, evidencegraphs.ErrInvalid) {
 		return Progress{}, err
 	}
+	p.SourceID = sourceID
 	if err := scanSubjectsOne(db, graphID, &p); err != nil {
 		return Progress{}, err
 	}

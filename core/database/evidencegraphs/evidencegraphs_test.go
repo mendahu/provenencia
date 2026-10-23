@@ -141,6 +141,54 @@ func TestCreateDefault(t *testing.T) {
 	}
 }
 
+func TestSourceOf(t *testing.T) {
+	f := newFixture(t)
+	src, _ := f.createSource(t, "Census 1881")
+	def := graphRows(t, f.c, src.ID)[0].id
+	page, err := writes.Call(f.c, writes.Op{Action: "create_artifact", UserID: userID}, func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+		return artifacts.Create(tx, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Jones"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	jones := evidencegraphstest.Create(t, f.c, userID, src.ID, "Jones", page.ID).ID
+	unknown := make([]byte, 16)
+	unknown[0] = 9
+
+	db, err := f.c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	check := func(name string, q database.Querier) {
+		for _, id := range [][]byte{def, jones} {
+			got, err := evidencegraphs.SourceOf(q, id)
+			if err != nil {
+				t.Fatalf("%s: %v", name, err)
+			}
+			if !bytes.Equal(got, src.ID) {
+				t.Fatalf("%s: got %x want %x", name, got, src.ID)
+			}
+		}
+		for _, bad := range [][]byte{unknown, unknown[:3]} {
+			if _, err := evidencegraphs.SourceOf(q, bad); !errors.Is(err, evidencegraphs.ErrInvalid) {
+				t.Fatalf("%s: id %x: got %v want ErrInvalid", name, bad, err)
+			}
+		}
+	}
+	// The catalog has one connection, so the read on the catalog runs before
+	// the transaction opens.
+	check("db", db)
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	check("tx", tx)
+	if _, err := evidencegraphs.SourceOf(nil, def); !errors.Is(err, evidencegraphs.ErrInvalid) {
+		t.Fatalf("nil querier: got %v", err)
+	}
+}
+
 func TestSoleGraphTx(t *testing.T) {
 	f := newFixture(t)
 	src, _ := f.createSource(t, "Census 1881")

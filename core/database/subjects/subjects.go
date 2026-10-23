@@ -78,9 +78,6 @@ func Create(tx *database.Tx, userID []byte, in CreateInput, placement *Placement
 	}
 	in.Label = strings.TrimSpace(in.Label)
 	in.Description = strings.TrimSpace(in.Description)
-	if len(in.SourceID) != 16 || len(in.SubjectTypeID) != 16 {
-		return Subject{}, nil, ErrInvalid
-	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Subject{}, nil, err
 	}
@@ -104,23 +101,44 @@ func Create(tx *database.Tx, userID []byte, in CreateInput, placement *Placement
 func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 	in.Label = strings.TrimSpace(in.Label)
 	in.Description = strings.TrimSpace(in.Description)
-	if len(in.SourceID) != 16 || len(in.SubjectTypeID) != 16 {
+	if len(in.SubjectTypeID) != 16 {
+		return Subject{}, rowchange.Change{}, ErrInvalid
+	}
+	// One of the two ids names the Source: a Subject's Source is its graph's
+	// Source. A given SourceID that is not the graph's is refused by the
+	// composite foreign key.
+	if len(in.SourceID) != 0 && len(in.SourceID) != 16 {
+		return Subject{}, rowchange.Change{}, ErrInvalid
+	}
+	graphID := in.GraphID
+	switch len(graphID) {
+	case 16:
+		if len(in.SourceID) == 0 {
+			sourceID, err := evidencegraphs.SourceOf(tx, graphID)
+			if errors.Is(err, evidencegraphs.ErrInvalid) {
+				return Subject{}, rowchange.Change{}, ErrInvalid
+			}
+			if err != nil {
+				return Subject{}, rowchange.Change{}, err
+			}
+			in.SourceID = sourceID
+		}
+	case 0:
+		if len(in.SourceID) != 16 {
+			return Subject{}, rowchange.Change{}, ErrInvalid
+		}
+	default:
 		return Subject{}, rowchange.Change{}, ErrInvalid
 	}
 	if err := requireSource(tx, in.SourceID); err != nil {
 		return Subject{}, rowchange.Change{}, err
 	}
-	graphID := in.GraphID
-	switch len(graphID) {
-	case 16:
-	case 0:
+	if len(graphID) == 0 {
 		var err error
 		graphID, err = evidencegraphs.SoleGraphTx(tx, in.SourceID)
 		if err != nil {
 			return Subject{}, rowchange.Change{}, err
 		}
-	default:
-		return Subject{}, rowchange.Change{}, ErrInvalid
 	}
 	prefix, err := requireTypePrefix(tx, in.SubjectTypeID)
 	if err != nil {
