@@ -108,7 +108,7 @@ Shared Swift state is **`DeleteImpactFlow`** (next to the recipe). Models call `
 - On `*.in_use`, the flow refetches Impact so the same sheet becomes a notice instead of leaving a confirm that can no longer succeed.
 - Confirm deletes `request.target.id` (catalog id), never a live selection that may have moved (`activeCitationID`, selected row).
 - Listed-row `activate` dismisses first, then navigates on the next run loop (`then:` is injectable in tests).
-- Subject erase applies `.deletedSubject(sourceId:)` so Observation `usedBy` and citation lists reload; source erase also busts `sourceWorkspace` / `sourceGraph`; type erase busts `typeSuggestions`.
+- Subject erase applies `.deletedSubject(sourceId:)` so Observation `usedBy` and citation lists reload; source erase also busts `sourceWorkspace` / `evidenceGraph`; type erase busts `typeSuggestions`.
 
 ## Do not
 

@@ -56,6 +56,8 @@ Add an optional stable id field (e.g. `artifactId`, `nodeId`). Keep denormalized
 
 Update `==` to include the new id (still **ignore** `ref` / `title`).
 
+A graph, citationComposer or promote location carries `graphId` beside `sourceId` and is built with `WorkspaceLocation.evidenceGraph(…)`, `.citationComposer(…)` or `.promote(…)`; one without `graphId` becomes the Source page in `init`.
+
 JSON under Application Support is v1 `Codable` — new optional keys are fine;
 do not bump casually. See `NavigationHistoryStore` / `NavigationHistoryDocument`.
 
