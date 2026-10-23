@@ -5646,8 +5646,6 @@ public nonisolated struct Provenencia_Engine_V1_ApplyPromoteGraphAlignmentReques
 
   public var rows: [Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRow] = []
 
-  public var skipBridgeIds: [String] = []
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -17170,7 +17168,7 @@ nonisolated extension Provenencia_Engine_V1_ProposePromoteGraphAlignmentResponse
 
 nonisolated extension Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ApplyPromoteGraphAlignmentRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}source_id\0\u{3}seen_revision\0\u{1}rows\0\u{3}skip_bridge_ids\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}source_id\0\u{3}seen_revision\0\u{1}rows\0\u{b}skip_bridge_ids\0\u{c}\u{6}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -17183,7 +17181,6 @@ nonisolated extension Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRequest: S
       case 3: try { try decoder.decodeSingularStringField(value: &self.sourceID) }()
       case 4: try { try decoder.decodeSingularInt64Field(value: &self.seenRevision) }()
       case 5: try { try decoder.decodeRepeatedMessageField(value: &self.rows) }()
-      case 6: try { try decoder.decodeRepeatedStringField(value: &self.skipBridgeIds) }()
       default: break
       }
     }
@@ -17205,9 +17202,6 @@ nonisolated extension Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRequest: S
     if !self.rows.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.rows, fieldNumber: 5)
     }
-    if !self.skipBridgeIds.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.skipBridgeIds, fieldNumber: 6)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -17217,7 +17211,6 @@ nonisolated extension Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRequest: S
     if lhs.sourceID != rhs.sourceID {return false}
     if lhs.seenRevision != rhs.seenRevision {return false}
     if lhs.rows != rhs.rows {return false}
-    if lhs.skipBridgeIds != rhs.skipBridgeIds {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

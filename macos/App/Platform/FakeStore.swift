@@ -43,7 +43,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// Thrown by `getPromoteClaimEvidence` when set.
     var promoteEvidenceError: Error?
     /// The last Done the page filed, for tests.
-    var lastPromoteBatch: (rows: [CatalogPromoteBatchRow], skipBridgeIDs: [String])?
+    var lastPromoteBatch: [CatalogPromoteBatchRow]?
     /// Event and Place headers as Go would compose them, seeded by tests in
     /// list order. FakeStore does not reconcile, walk, or title them; Go owns
     /// those rules (`conclusionheaders`, `eventtitle`) and their tests.
@@ -1741,13 +1741,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         userID _: String,
         sourceID: String,
         seenRevision: Int64,
-        rows: [CatalogPromoteBatchRow],
-        skipBridgeIDs: [String]
+        rows: [CatalogPromoteBatchRow]
     ) async throws -> CatalogPromoteBatchResult {
         try withState {
             markCatalogSessionHeld(projectDir)
             recordedCalls.append("applyPromoteGraphAlignment source=\(sourceID) rows=\(rows.count)")
-            lastPromoteBatch = (rows, skipBridgeIDs)
+            lastPromoteBatch = rows
             let current = nextAuditRevision - 1
             guard seenRevision == current else {
                 throw CoreInvokeError.coded(status: 1, code: "promote.stale", kind: .conflict, params: [])

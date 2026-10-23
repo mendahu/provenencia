@@ -367,8 +367,7 @@ final class PromoteModel {
                 userID: userID,
                 sourceID: entry.sourceID,
                 seenRevision: seen,
-                rows: batch,
-                skipBridgeIDs: flow.skipBridgeIDs()
+                rows: batch
             )
             session.apply(.promotedSubject(sourceId: entry.sourceID))
             session.noticeToast = VocabularyToast(

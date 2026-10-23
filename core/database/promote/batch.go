@@ -35,13 +35,11 @@ type BatchRow struct {
 }
 
 // Batch is one Done for a Source. SeenRevision is the audit revision the
-// proposal was read at. SkipBridgeIDs are Evidence bridges the researcher
-// switched off.
+// proposal was read at.
 type Batch struct {
-	SourceID      []byte
-	SeenRevision  int64
-	Rows          []BatchRow
-	SkipBridgeIDs [][]byte
+	SourceID     []byte
+	SeenRevision int64
+	Rows         []BatchRow
 }
 
 // Written is one claim the batch filed.
@@ -59,7 +57,7 @@ type BatchResult struct {
 }
 
 // SaveBatch files one Done in a single transaction: claims, pin sets,
-// and bridges (except switched-off ones). The caller records the returned
+// and bridges whose ends are both handles. The caller records the returned
 // changes as promote_batch. Revision on the result is SeenRevision; the
 // caller replaces it with the revision it recorded when that is non-zero,
 // so an all-skip batch still reports the revision the proposal was read at.
@@ -73,13 +71,6 @@ func SaveBatch(tx *database.Tx, userID []byte, in Batch) (BatchResult, []rowchan
 	}
 	if len(in.SourceID) != 16 {
 		return BatchResult{}, nil, ErrInvalid
-	}
-	skip := map[string]struct{}{}
-	for _, id := range in.SkipBridgeIDs {
-		if len(id) != 16 {
-			return BatchResult{}, nil, ErrInvalid
-		}
-		skip[string(id)] = struct{}{}
 	}
 
 	q := tx.Tx
@@ -114,7 +105,7 @@ func SaveBatch(tx *database.Tx, userID []byte, in Batch) (BatchResult, []rowchan
 		written = append(written, *w)
 	}
 
-	_, filed, err := identityclaims.FileSourceBridgesTx(q, in.SourceID, skip)
+	_, filed, err := identityclaims.FileSourceBridgesTx(q, in.SourceID)
 	if err != nil {
 		return BatchResult{}, nil, err
 	}

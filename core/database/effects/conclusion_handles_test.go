@@ -342,7 +342,7 @@ func TestConclusionHandleSets(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		assocs, filed, err := identityclaims.FileSourceBridgesTx(tx.Tx, src.ID, nil)
+		assocs, filed, err := identityclaims.FileSourceBridgesTx(tx.Tx, src.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
