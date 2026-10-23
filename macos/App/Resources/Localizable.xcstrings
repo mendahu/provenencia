@@ -18134,9 +18134,21 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You chose targets on %lld rows. Nothing has been filed; opening Promote again proposes the graph afresh."
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "You chose a target on %lld row. Nothing has been filed; opening Promote again proposes the graph afresh."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "You chose targets on %lld rows. Nothing has been filed; opening Promote again proposes the graph afresh."
+                }
+              }
+            }
           }
         }
       }

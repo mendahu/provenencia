@@ -128,6 +128,8 @@ struct PromoteEvidenceDisplayTests {
         #expect(L10n.Promote.showRecords(5) == "Show 5 records")
         #expect(L10n.Promote.hideRecords(1) == "Hide 1 record")
         #expect(L10n.Promote.hideRecords(4) == "Hide 4 records")
+        #expect(L10n.Promote.leaveDetail(rows: 1) == "You chose a target on 1 row. Nothing has been filed; opening Promote again proposes the graph afresh.")
+        #expect(L10n.Promote.leaveDetail(rows: 3) == "You chose targets on 3 rows. Nothing has been filed; opening Promote again proposes the graph afresh.")
     }
 
 
