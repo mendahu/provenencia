@@ -877,3 +877,6 @@ Head `1170f33b` (`279cde5f` F-42 plus the sheet's F-43 lines, `1170f33b` `PVText
 
 ## Result (after round 19)
 Gate PASS · CI see PR · open: none · manual check §10 not run · F-43 layout to be checked by eye
+
+## Round 20 — user request (2026-10-23)
+"Show N records" sat 10 pt right of the Source titles below it: the ghost `PVDisclosureButton` keeps `PVControlSize.sm.horizontalPadding` inside its label. At the user's request this was a quick fix without a review round, made by the orchestrator: `.padding(.leading, -PVControlSize.sm.horizontalPadding)` on the disclosure in `EvidenceLine.sourceColumn`. Gate PASS. Not checked on screen.

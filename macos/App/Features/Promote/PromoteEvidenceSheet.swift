@@ -457,6 +457,9 @@ private struct EvidenceLine: View {
                 isOpen ? L10n.Promote.hideRecords(ids.count) : L10n.Promote.showRecords(ids.count),
                 isExpanded: openBinding
             )
+            // A ghost button's label sits inside its padding; pull it out so the label
+            // starts on the Source column's edge, where the record titles start.
+            .padding(.leading, -PVControlSize.sm.horizontalPadding)
             .accessibilityIdentifier("promote.sheet.expand.\(key)")
         } else if let pin = line.members.first {
             EvidenceSourceTitle(title: PromoteEvidenceDisplay.recordSource(title: context.sourceTitle(pin)))
