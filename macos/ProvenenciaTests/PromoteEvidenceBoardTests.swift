@@ -4,6 +4,7 @@ import Testing
 
 /// The evidence board: the sheet's words, made once per load.
 @Suite
+@MainActor
 struct PromoteEvidenceBoardTests {
     // MARK: - Fixtures
 
