@@ -18,7 +18,7 @@ Reviewers: CON (Sonnet), MNT, UX, SEC+PRF. Skipped: none. UX: `macos/App/**` and
 | PRF-1, MNT outside-lens | PRF | minor | `connections` resolves ends with a linear `row(_:)` scan, twice per body | Fix now → F-4 | verified: `row(_:)` is `rows.first`; `connections` is walked by `connectionHosts` and `connectionCount` in the same pass. D-6 meant to close S11-26 PRF-1; the fix plan touches `PromoteFlow.swift` anyway |
 | CON-1 | CON | minor | AC-1.9 "neither end is a row" has no test | Fix now → F-5 | verified: T-2 case (c) covers only anchors |
 | UX-3 | UX | minor | A truncated subrow sentence can't be read with the mouse | Fix now → F-2 | verified: no `.help` on the sentence; neighbors use `.help(Text(verbatim:))` |
-| UX-4 | UX | minor | Dropping `connectionsHint` leaves no cue that a connection is disputed on the Evidence graph | To user | the plan's Deletes list removes `connectionsHint` on purpose; restoring copy is a product call. Minor and independent of the fixes, so the loop continues and it goes to the user in the report |
+| UX-4 | UX | minor | Dropping `connectionsHint` leaves no cue that a connection is disputed on the Evidence graph | Rejected (user, 2026-10-23) | the connection was drawn by the researcher on this Source's graph and its sentence now sits under the row; a fix-it cue belongs on the subrow as the planned "open on Evidence graph" action. Was To user: the plan's Deletes list removes `connectionsHint` on purpose; restoring copy is a product call. Minor and independent of the fixes, so the loop continues and it goes to the user in the report |
 
 Nits (logged): `CON-2 · PromoteFlowTests.swift · T-1 uses Set, no order asserted (T-5 covers it)` · `MNT-3 · PromoteView.swift subrow · 14 repeats PVMark size; make it a PromoteLayout constant` · `MNT-5 · PromoteView.swift subrow(_:) · use bridge.files` · `MNT-6 · PromoteFlowTests.swift · unset cases still hand-roll load beside mapped(...)` · `UX-5 · PromoteView.swift:510 · pointer needs .accessibilityInputLabels with visible title` · `UX-6 · PromoteView.swift:582 · "+1 more" reads with no noun`
 
@@ -72,4 +72,4 @@ Reviewers: UX (UX-1, UX-2), MNT (MNT-1). Not sent back: CON, SEC+PRF (minors onl
 No new findings. Nits (logged): `MNT-7 · PromoteFlow.swift:332 · lined(_:_:) only forwards to Bridge(fact:state:); inline it`
 
 ## Result
-Gate PASS · CI green · open: none · follow-ups: — · to user: UX-4 (restore a quiet "dispute on the Evidence graph" cue, or confirm the drop) · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: — · to user: UX-4 answered (dropped) · CON miss: none
