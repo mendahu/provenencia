@@ -309,10 +309,9 @@ struct PromoteView: View {
     }
 
     private var connectionMeta: String {
-        L10n.Promote.connectionsMeta(
-            filed: model.flow.connectionCount,
-            unfiled: model.flow.connections.count - model.flow.connectionCount
-        )
+        let lines = model.flow.connections
+        let filed = lines.filter(\.files).count
+        return L10n.Promote.connectionsMeta(filed: filed, unfiled: lines.count - filed)
     }
 
     private var footer: some View {
