@@ -75,8 +75,8 @@ struct PVSectionHeader<Title: PVCopy, Aside: View, Actions: View>: View {
         title: "John Smith from Leeds Mercury obituary belongs in the concluded person John Smith because…" as String,
         meta: "4 checked"
     )
-        .padding(PVSpacing.space9)
-        .background(PVColor.surfacePage)
+    .padding(PVSpacing.space9)
+    .background(PVColor.surfacePage)
 }
 
 #Preview("Aside") {

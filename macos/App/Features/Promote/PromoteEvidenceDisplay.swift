@@ -1,7 +1,7 @@
 import Foundation
 
 /// The evidence sheet's choices and words, made without a view: which boxes are
-/// checked, which bridge a relationship names, and the sentences the sheet reads.
+/// checked and the sentences the sheet reads.
 enum PromoteEvidenceDisplay {
     /// How much of a line's or relationship's pins are checked.
     enum CheckState: Equatable {
@@ -42,10 +42,10 @@ enum PromoteEvidenceDisplay {
 
     /// A relationship as VoiceOver speaks it: with its record count when it bundles several.
     static func spokenRelationship(header: String, outcome: EvidenceOutcome, count: Int) -> String {
-        let link = L10n.string(L10n.Promote.outcome(outcome))
+        let word = L10n.string(L10n.Promote.outcome(outcome))
         return count > 1
-            ? L10n.Promote.spokenRelationshipCount(sentence: header, link: link, count: count)
-            : L10n.Promote.spokenRelationship(sentence: header, link: link)
+            ? L10n.Promote.spokenRelationshipCount(sentence: header, outcome: word, count: count)
+            : L10n.Promote.spokenRelationship(sentence: header, outcome: word)
     }
 
     /// A likeness line as VoiceOver speaks it: with its record count when it bundles several.

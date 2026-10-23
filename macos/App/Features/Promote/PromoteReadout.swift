@@ -2,7 +2,7 @@ import SwiftUI
 
 /// What a Promote row says beside its name, drawn once for the Promote row and the evidence
 /// sheet's title: its band and, when it applies, its Contested mark (what the proposal says about
-/// the pair), and the Updated caption.
+/// the pair).
 struct PromoteReadoutBadges: View {
     let readout: PromoteFlow.SelectionReadout
 

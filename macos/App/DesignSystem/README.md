@@ -201,8 +201,8 @@ demand, following the pattern above, when a screen needs one:
 | SourceCitation | Research | Citation + repository + scan thumbnail + grade, as one unit |
 
 **Form dialog on macOS:** the web `Dialog.jsx` draws a scrim because the browser
-gives it none. Here `PVFormDialog` is a `.sheet` on ``PVPanel`` — same family as
-`PVConfirm`'s rich sheet — and leaves window chrome to the system. Prefer
+gives it none. Here `PVFormDialog` presents through `.pvSheet` on ``PVPanel`` — same
+family as `PVConfirm`'s rich sheet — and leaves window chrome to the system. Prefer
 `PVConfirm` for destructive confirmations; use `PVFormDialog` for short
 create/edit forms.
 

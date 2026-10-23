@@ -21652,7 +21652,7 @@
       }
     },
     "promote.sheet.subtitle.event": {
-      "comment": "Evidence sheet subtitle for a event row; 1 = the row's name, 2 = the Source title, 3 = the record's title. Names are bold, the Source title italic.",
+      "comment": "Evidence sheet subtitle for an event row; 1 = the row's name, 2 = the Source title, 3 = the record's title. Names are bold, the Source title italic.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -21664,7 +21664,7 @@
       }
     },
     "promote.sheet.subtitleUntitled.event": {
-      "comment": "Evidence sheet subtitle for a event row when the Source has no title; 1 = the row's name, 2 = the record's title",
+      "comment": "Evidence sheet subtitle for an event row when the Source has no title; 1 = the row's name, 2 = the record's title",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -21676,7 +21676,7 @@
       }
     },
     "promote.sheet.evidenceHeading.event": {
-      "comment": "Heading of the evidence on the Promote sheet for a event row; 1 = the row's name, 2 = the Source title, 3 = the record's title",
+      "comment": "Heading of the evidence on the Promote sheet for an event row; 1 = the row's name, 2 = the Source title, 3 = the record's title",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -21688,7 +21688,7 @@
       }
     },
     "promote.sheet.evidenceHeadingUntitled.event": {
-      "comment": "Heading of the evidence on the Promote sheet for a event row when the Source has no title; 1 = the row's name, 2 = the record's title",
+      "comment": "Heading of the evidence on the Promote sheet for an event row when the Source has no title; 1 = the row's name, 2 = the record's title",
       "extractionState": "manual",
       "localizations": {
         "en": {

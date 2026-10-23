@@ -150,7 +150,7 @@ struct PromoteEvidenceDisplayTests {
         #expect(
             L10n.Promote.spokenRelationship(
                 sentence: "…they share a spouse (CEV-3B5RT and PER-7QH3D)",
-                link: "Agrees"
+                outcome: "Agrees"
             ) == "…they share a spouse (CEV-3B5RT and PER-7QH3D). Agrees."
         )
     }
