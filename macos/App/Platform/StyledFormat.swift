@@ -12,18 +12,31 @@ enum StyledFormat {
 
     /// The resource's format with `arguments` filled in. `%1$@` names an argument by position;
     /// a plain `%@` takes the next one; `%%` is a percent sign. Text outside an argument has no
-    /// attributes.
-    static func attributed(_ resource: LocalizedStringResource, _ arguments: [Argument]) -> AttributedString {
-        attributed(format: L10n.string(resource), arguments)
+    /// attributes, unless `literal` says how it is drawn: a sentence that styles its connecting
+    /// word ("joins") keeps that word inside the one translatable format.
+    static func attributed(
+        _ resource: LocalizedStringResource,
+        _ arguments: [Argument],
+        literal: AttributeContainer = AttributeContainer()
+    ) -> AttributedString {
+        attributed(format: L10n.string(resource), arguments, literal: literal)
     }
 
-    /// ``attributed(_:_:)`` for a format already resolved.
-    static func attributed(format: String, _ arguments: [Argument]) -> AttributedString {
+    /// ``attributed(_:_:literal:)`` for a format already resolved.
+    static func attributed(
+        format: String,
+        _ arguments: [Argument],
+        literal literalAttributes: AttributeContainer = AttributeContainer()
+    ) -> AttributedString {
         var result = AttributedString()
         var literal = ""
         var next = 0
         func flush() {
-            if !literal.isEmpty { result += AttributedString(literal) }
+            if !literal.isEmpty {
+                var piece = AttributedString(literal)
+                piece.mergeAttributes(literalAttributes)
+                result += piece
+            }
             literal = ""
         }
         func append(_ index: Int) {

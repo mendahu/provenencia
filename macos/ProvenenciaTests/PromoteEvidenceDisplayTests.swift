@@ -229,11 +229,11 @@ struct PromoteEvidenceDisplayTests {
     @Test func theTitleJoinsTheRowToItsRecord() {
         let title = PromoteEvidenceDisplay.title(name: "John Smith", recordTitle: "Johnny Smith", ref: "PER-7QH3D")
         #expect(plain(title) == "John Smith joins Johnny Smith PER-7QH3D")
-        // "joins" is its own run; the ref is another.
+        // The connecting word is its own run; the ref is another.
         let runs = title.runs.map { String(title.characters[$0.range]) }
-        #expect(runs.contains("joins"))
+        #expect(runs.contains(" joins "))
         #expect(runs.contains("PER-7QH3D"))
-        #expect(role(of: "joins", in: title) == .muted)
+        #expect(role(of: " joins ", in: title) == .muted)
         #expect(role(of: "PER-7QH3D", in: title) == .ref)
     }
 
@@ -285,8 +285,8 @@ struct PromoteEvidenceDisplayTests {
     }
 
     @Test func aCardHeaderReadsTheLowercasePropertyLabel() {
-        #expect(PromoteEvidenceDisplay.similarityHeader(property: "Name") == "…they have a similarity in name")
-        #expect(PromoteEvidenceDisplay.similarityHeader(property: "Sex at birth") == "…they have a similarity in sex at birth")
+        #expect(PromoteEvidenceDisplay.similarityHeader(property: "Name") == "they have a similarity in name")
+        #expect(PromoteEvidenceDisplay.similarityHeader(property: "Sex at birth") == "they have a similarity in sex at birth")
     }
 
     @Test func thisSourceIsSaidOnceWhenEveryLineAgreesOnIt() {
@@ -303,15 +303,15 @@ struct PromoteEvidenceDisplayTests {
     @Test func aRelationshipHeaderNamesTheRefsItKnows() {
         let phrase = "a spouse"
         #expect(PromoteEvidenceDisplay.shareHeader(phrase: phrase, ownRef: "CEV-3B5RT", recordRef: "PER-7QH3D")
-            == "…they share a spouse (CEV-3B5RT and PER-7QH3D)")
+            == "they share a spouse (CEV-3B5RT and PER-7QH3D)")
         // A neighbor not yet filed on a record has only its own ref.
         #expect(PromoteEvidenceDisplay.shareHeader(phrase: phrase, ownRef: "CEV-3B5RT", recordRef: nil)
-            == "…they share a spouse (CEV-3B5RT)")
+            == "they share a spouse (CEV-3B5RT)")
         #expect(PromoteEvidenceDisplay.shareHeader(phrase: phrase, ownRef: "CEV-3B5RT", recordRef: "CEV-3B5RT")
-            == "…they share a spouse (CEV-3B5RT)")
+            == "they share a spouse (CEV-3B5RT)")
         #expect(PromoteEvidenceDisplay.shareHeader(phrase: phrase, ownRef: nil, recordRef: "PER-7QH3D")
-            == "…they share a spouse (PER-7QH3D)")
-        #expect(PromoteEvidenceDisplay.shareHeader(phrase: phrase, ownRef: nil, recordRef: nil) == "…they share a spouse")
+            == "they share a spouse (PER-7QH3D)")
+        #expect(PromoteEvidenceDisplay.shareHeader(phrase: phrase, ownRef: nil, recordRef: nil) == "they share a spouse")
     }
 
     /// A relationship as the engine reports it from the neighbor's side.
@@ -367,9 +367,32 @@ struct PromoteEvidenceDisplayTests {
         #expect(PromoteEvidenceDisplay.sharePhrase(relationship: engagement, neighborName: "x") == "a similar engagement event")
     }
 
-    @Test func theSpokenRelationshipLabelHasNoLeadingEllipsis() {
+    @Test func aCardHeaderIsDrawnAfterAnEllipsisAndSpokenWithout() {
         let header = PromoteEvidenceDisplay.shareHeader(phrase: "a spouse", ownRef: "CEV-3B5RT", recordRef: "PER-7QH3D")
-        #expect(PromoteEvidenceDisplay.spokenHeader(header) == "they share a spouse (CEV-3B5RT and PER-7QH3D)")
-        #expect(PromoteEvidenceDisplay.spokenHeader("plain") == "plain")
+        #expect(L10n.Promote.cardHeaderLead(header) == "…they share a spouse (CEV-3B5RT and PER-7QH3D)")
+        #expect(!header.hasPrefix("…"))
+        #expect(L10n.Promote.cardHeaderLead(PromoteEvidenceDisplay.similarityHeader(property: "Name")) == "…they have a similarity in name")
+    }
+
+    @Test func subtitleAndHeadingPerKind() {
+        for (kind, word) in [(EvidencePrimaryKind.person, "person"), (.event, "event"), (.place, "place")] {
+            // One key per kind and per titled or untitled Source, each a whole sentence.
+            #expect(L10n.Promote.subtitle(kind).key == "promote.sheet.subtitle.\(word)")
+            #expect(L10n.Promote.subtitleUntitled(kind).key == "promote.sheet.subtitleUntitled.\(word)")
+            #expect(L10n.Promote.evidenceHeading(kind).key == "promote.sheet.evidenceHeading.\(word)")
+            #expect(L10n.Promote.evidenceHeadingUntitled(kind).key == "promote.sheet.evidenceHeadingUntitled.\(word)")
+            let titled = PromoteEvidenceDisplay.subtitle(name: "A", sourceTitle: "Census", kind: kind, recordTitle: "B")
+            #expect(plain(titled).contains("from Census into the concluded \(word) B."))
+            let untitled = PromoteEvidenceDisplay.evidenceHeading(name: "A", sourceTitle: nil, kind: kind, recordTitle: "B")
+            #expect(plain(untitled) == "A from this source belongs in the concluded \(word) B because…")
+        }
+    }
+
+    @Test func titleHoldsJoins() {
+        let title = PromoteEvidenceDisplay.title(name: "John Smith", recordTitle: "John Smith", ref: "PER-7QH3D")
+        #expect(plain(title) == "John Smith joins John Smith PER-7QH3D")
+        #expect(L10n.Promote.titleHandle.key == "promote.sheet.titleHandle")
+        // "joins" lives inside the one format, not in a second key.
+        #expect(role(of: " joins ", in: title) == .muted)
     }
 }

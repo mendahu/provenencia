@@ -140,11 +140,15 @@ StyledFormat.attributed(L10n.Promote.titleHandle, [
 ])
 ```
 
-- `StyledFormat.attributed(_:_:)` (`Platform/StyledFormat.swift`) fills a `LocalizedStringResource` format with `StyledFormat.Argument`s (text plus an `AttributeContainer`). Text outside an argument has no attributes.
+- `StyledFormat.attributed(_:_:)` (`Platform/StyledFormat.swift`) fills a `LocalizedStringResource` format with `StyledFormat.Argument`s (text plus an `AttributeContainer`). Text outside an argument has no attributes, unless the call passes `literal:` to style it (a muted "joins" inside the format).
 - Its grammar is only `%@` (the next argument), `%n$@` (argument n, 1-based) and `%%` (a percent sign). Any other specifier stays literal, so a styled format has no `%lld`.
 - The catalog value follows the usual rule: more than one argument means numbered placeholders (`%1$@ … %2$@`).
 - An `AttributedString` is accepted wherever `PVCopy` is (`PVSectionHeader` titles, `Text(_:)`), so the result goes straight to the component.
 - Keep fonts and colors out of the helper that builds the string: mark runs with a semantic role attribute, and map roles to design tokens where the view is drawn (`PromoteEvidenceDisplay.Role`).
+
+## Whole phrases
+
+A format's argument is **data** (a name, a title, a count) or a **complete noun phrase** owned by one table entry (a share phrase with its article: "an informant"). It never takes a bare translated word that the sentence must agree with. A word that changes the sentence is a key per sentence, not an argument: the evidence sheet's subtitle is `promote.sheet.subtitle.person`, `.event` and `.place`, each a whole sentence, not one format with a "person" or "event" argument. A phrase that changes with an outcome carries the changed form whole too ("an informant" and "a similar informant" are two entries, not "a similar %@"). A language that inflects the kind or agrees an article then translates a sentence, not a splice. Existing splices outside the evidence sheet are listed in `docs/ideas/international-names.md`.
 
 ## Do not
 

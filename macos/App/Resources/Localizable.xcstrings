@@ -21536,157 +21536,217 @@
       }
     },
     "promote.sheet.titleHandle": {
-      "comment": "Evidence sheet title for a row filed on an existing record; 1 = the row's name, 2 = the joining word, 3 = the record's title, 4 = the record's ref. Each is styled separately.",
+      "comment": "Evidence sheet title for a row filed on an existing record; 1 = the row's name, 2 = the record's title, 3 = the record's ref. The word joins is muted italic, the ref a ref.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ %2$@ %3$@ %4$@"
+            "value": "%1$@ joins %2$@ %3$@"
           }
         }
       }
     },
-    "promote.sheet.titleJoins": {
-      "comment": "The word between a row's name and the record it joins in the evidence sheet title; muted italic",
+    "promote.sheet.subtitle.person": {
+      "comment": "Evidence sheet subtitle for a person row; 1 = the row's name, 2 = the Source title, 3 = the record's title. Names are bold, the Source title italic.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "joins"
+            "value": "This is an identity claim to join %1$@ from %2$@ into the concluded person %3$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file."
           }
         }
       }
     },
-    "promote.sheet.subtitle": {
-      "comment": "Evidence sheet subtitle; 1 = the row's name, 2 = the Source title, 3 = person, event or place, 4 = the record's title. Names are bold, the Source title italic.",
+    "promote.sheet.subtitleUntitled.person": {
+      "comment": "Evidence sheet subtitle for a person row when the Source has no title; 1 = the row's name, 2 = the record's title",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This is an identity claim to join %1$@ from %2$@ into the concluded %3$@ %4$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file."
+            "value": "This is an identity claim to join %1$@ from this source into the concluded person %2$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file."
           }
         }
       }
     },
-    "promote.sheet.subtitleUntitled": {
-      "comment": "Evidence sheet subtitle when the Source has no title; 1 = the row's name, 2 = person, event or place, 3 = the record's title",
+    "promote.sheet.evidenceHeading.person": {
+      "comment": "Heading of the evidence on the Promote sheet for a person row; 1 = the row's name, 2 = the Source title, 3 = the record's title",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This is an identity claim to join %1$@ from this source into the concluded %2$@ %3$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file."
+            "value": "%1$@ from %2$@ belongs in the concluded person %3$@ because…"
           }
         }
       }
     },
-    "promote.sheet.evidenceHeading": {
-      "comment": "Heading of the evidence on the Promote sheet; 1 = the row's name, 2 = the Source title, 3 = person, event or place, 4 = the record's title",
+    "promote.sheet.evidenceHeadingUntitled.person": {
+      "comment": "Heading of the evidence on the Promote sheet for a person row when the Source has no title; 1 = the row's name, 2 = the record's title",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ from %2$@ belongs in the concluded %3$@ %4$@ because…"
+            "value": "%1$@ from this source belongs in the concluded person %2$@ because…"
           }
         }
       }
     },
-    "promote.sheet.evidenceHeadingUntitled": {
-      "comment": "Heading of the evidence on the Promote sheet when the Source has no title; 1 = the row's name, 2 = person, event or place, 3 = the record's title",
+    "promote.sheet.subtitle.event": {
+      "comment": "Evidence sheet subtitle for a event row; 1 = the row's name, 2 = the Source title, 3 = the record's title. Names are bold, the Source title italic.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ from this source belongs in the concluded %2$@ %3$@ because…"
+            "value": "This is an identity claim to join %1$@ from %2$@ into the concluded event %3$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file."
           }
         }
       }
     },
-    "promote.sheet.kind.person": {
-      "comment": "The kind of a concluded record, in lowercase, inside the evidence sheet subtitle and heading",
+    "promote.sheet.subtitleUntitled.event": {
+      "comment": "Evidence sheet subtitle for a event row when the Source has no title; 1 = the row's name, 2 = the record's title",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "person"
+            "value": "This is an identity claim to join %1$@ from this source into the concluded event %2$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file."
           }
         }
       }
     },
-    "promote.sheet.kind.event": {
-      "comment": "The kind of a concluded record, in lowercase, inside the evidence sheet subtitle and heading",
+    "promote.sheet.evidenceHeading.event": {
+      "comment": "Heading of the evidence on the Promote sheet for a event row; 1 = the row's name, 2 = the Source title, 3 = the record's title",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "event"
+            "value": "%1$@ from %2$@ belongs in the concluded event %3$@ because…"
           }
         }
       }
     },
-    "promote.sheet.kind.place": {
-      "comment": "The kind of a concluded record, in lowercase, inside the evidence sheet subtitle and heading",
+    "promote.sheet.evidenceHeadingUntitled.event": {
+      "comment": "Heading of the evidence on the Promote sheet for a event row when the Source has no title; 1 = the row's name, 2 = the record's title",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "place"
+            "value": "%1$@ from this source belongs in the concluded event %2$@ because…"
+          }
+        }
+      }
+    },
+    "promote.sheet.subtitle.place": {
+      "comment": "Evidence sheet subtitle for a place row; 1 = the row's name, 2 = the Source title, 3 = the record's title. Names are bold, the Source title italic.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is an identity claim to join %1$@ from %2$@ into the concluded place %3$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file."
+          }
+        }
+      }
+    },
+    "promote.sheet.subtitleUntitled.place": {
+      "comment": "Evidence sheet subtitle for a place row when the Source has no title; 1 = the row's name, 2 = the record's title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is an identity claim to join %1$@ from this source into the concluded place %2$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file."
+          }
+        }
+      }
+    },
+    "promote.sheet.evidenceHeading.place": {
+      "comment": "Heading of the evidence on the Promote sheet for a place row; 1 = the row's name, 2 = the Source title, 3 = the record's title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ from %2$@ belongs in the concluded place %3$@ because…"
+          }
+        }
+      }
+    },
+    "promote.sheet.evidenceHeadingUntitled.place": {
+      "comment": "Heading of the evidence on the Promote sheet for a place row when the Source has no title; 1 = the row's name, 2 = the record's title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ from this source belongs in the concluded place %2$@ because…"
           }
         }
       }
     },
     "promote.sheet.similarityIn": {
-      "comment": "Header of a property Card on the evidence sheet; the argument is the property's name in lowercase",
+      "comment": "Header of a property Card on the evidence sheet, after the leading ellipsis; the argument is the property's name in lowercase",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "…they have a similarity in %@"
+            "value": "they have a similarity in %@"
           }
         }
       }
     },
     "promote.sheet.shareHeader": {
-      "comment": "Header of a relationship Card; 1 = what they share, such as a spouse, 2 = the connected row's ref on this Source, 3 = the connected record's ref",
+      "comment": "Header of a relationship Card, after the leading ellipsis; 1 = what they share, such as a spouse, 2 = the connected row's ref on this Source, 3 = the connected record's ref",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "…they share %1$@ (%2$@ and %3$@)"
+            "value": "they share %1$@ (%2$@ and %3$@)"
           }
         }
       }
     },
     "promote.sheet.shareHeaderOne": {
-      "comment": "Header of a relationship Card when the connected row has only one ref to show; 1 = what they share, 2 = that ref",
+      "comment": "Header of a relationship Card when the connected row has only one ref to show, after the leading ellipsis; 1 = what they share, 2 = that ref",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "…they share %1$@ (%2$@)"
+            "value": "they share %1$@ (%2$@)"
           }
         }
       }
     },
     "promote.sheet.shareHeaderBare": {
-      "comment": "Header of a relationship Card when the connected row is not on the page; the argument is what they share",
+      "comment": "Header of a relationship Card when the connected row is not on the page, after the leading ellipsis; the argument is what they share",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "…they share %@"
+            "value": "they share %@"
+          }
+        }
+      }
+    },
+    "promote.sheet.cardHeaderLead": {
+      "comment": "A Card header on the evidence sheet as it is drawn: an ellipsis, then the header; the argument is the header",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "…%@"
           }
         }
       }

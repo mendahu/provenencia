@@ -568,11 +568,12 @@ private struct EvidenceCardHeader: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
-            Text(verbatim: title)
+            Text(verbatim: L10n.Promote.cardHeaderLead(title))
                 .font(style == .card
                     ? PVFont.display(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium)
                     : PVFont.display(size: PVTypeScale.caption))
                 .foregroundStyle(style == .card ? PVColor.textDisplay : PVColor.textSecondary)
+                .accessibilityLabel(Text(verbatim: title))
             if let thisSource {
                 Text(verbatim: L10n.Promote.thisSource(thisSource))
                     .font(PVFont.body(size: PVTypeScale.caption))
@@ -708,7 +709,7 @@ private struct EvidenceRelationshipCard: View {
         }
     }
 
-    /// "…they share a spouse (CEV-3B5RT and PER-7QH3D)", with the outcome as a badge.
+    /// "…they share a spouse (CEV-3B5RT and PER-7QH3D)" as drawn, with the outcome as a badge.
     private var header: some View {
         let phrase = PromoteEvidenceDisplay.sharePhrase(relationship: relationship, neighborName: neighbor?.name ?? "")
         let title = PromoteEvidenceDisplay.shareHeader(
@@ -722,14 +723,14 @@ private struct EvidenceRelationshipCard: View {
                 isIndeterminate: context.state(ids) == .partial,
                 isDisabled: ids.isEmpty,
                 accessibilitySpokenLabel: L10n.Promote.spokenRelationship(
-                    sentence: PromoteEvidenceDisplay.spokenHeader(title),
+                    sentence: title,
                     link: L10n.string(L10n.Promote.outcome(relationship.outcome))
                 )
             )
             .frame(width: EvidenceLayout.box)
             .accessibilityIdentifier("promote.sheet.relationship.\(relationship.neighborSubjectID).\(relationship.key)")
             HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
-                Text(verbatim: title)
+                Text(verbatim: L10n.Promote.cardHeaderLead(title))
                     .font(PVFont.display(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
                     .foregroundStyle(PVColor.textDisplay)
                 if ids.count > 1 {

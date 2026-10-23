@@ -1452,32 +1452,66 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.sheet.whySuggestedSpoken", defaultValue: "Why this was suggested: %1$@, %2$@", comment: "VoiceOver label of the band and Contested marks in the evidence sheet title; 1 = band, 2 = reason"), assessment, reason)
         }
         static let somethingDisagrees = LocalizedStringResource("promote.sheet.somethingDisagrees", defaultValue: "Something below disagrees with this record.", comment: "Line under the evidence sheet title when the row is contested")
-        static let titleHandle = LocalizedStringResource("promote.sheet.titleHandle", defaultValue: "%1$@ %2$@ %3$@ %4$@", comment: "Evidence sheet title for a row filed on an existing record; 1 = the row's name, 2 = the joining word, 3 = the record's title, 4 = the record's ref. Each is styled separately.")
-        static let titleJoins = LocalizedStringResource("promote.sheet.titleJoins", defaultValue: "joins", comment: "The word between a row's name and the record it joins in the evidence sheet title; muted italic")
-        static let subtitle = LocalizedStringResource("promote.sheet.subtitle", defaultValue: "This is an identity claim to join %1$@ from %2$@ into the concluded %3$@ %4$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.", comment: "Evidence sheet subtitle; 1 = the row's name, 2 = the Source title, 3 = person, event or place, 4 = the record's title. Names are bold, the Source title italic.")
-        static let subtitleUntitled = LocalizedStringResource("promote.sheet.subtitleUntitled", defaultValue: "This is an identity claim to join %1$@ from this source into the concluded %2$@ %3$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.", comment: "Evidence sheet subtitle when the Source has no title; 1 = the row's name, 2 = person, event or place, 3 = the record's title")
-        static let evidenceHeading = LocalizedStringResource("promote.sheet.evidenceHeading", defaultValue: "%1$@ from %2$@ belongs in the concluded %3$@ %4$@ because…", comment: "Heading of the evidence on the Promote sheet; 1 = the row's name, 2 = the Source title, 3 = person, event or place, 4 = the record's title")
-        static let evidenceHeadingUntitled = LocalizedStringResource("promote.sheet.evidenceHeadingUntitled", defaultValue: "%1$@ from this source belongs in the concluded %2$@ %3$@ because…", comment: "Heading of the evidence on the Promote sheet when the Source has no title; 1 = the row's name, 2 = person, event or place, 3 = the record's title")
-        /// The kind of a concluded record in lowercase, as the subtitle and heading name it.
-        static func kindWord(_ kind: EvidencePrimaryKind) -> String {
-            let resource: LocalizedStringResource = switch kind {
-            case .person: LocalizedStringResource("promote.sheet.kind.person", defaultValue: "person", comment: "The kind of a concluded record, in lowercase, inside the evidence sheet subtitle and heading")
-            case .event: LocalizedStringResource("promote.sheet.kind.event", defaultValue: "event", comment: "The kind of a concluded record, in lowercase, inside the evidence sheet subtitle and heading")
-            case .place: LocalizedStringResource("promote.sheet.kind.place", defaultValue: "place", comment: "The kind of a concluded record, in lowercase, inside the evidence sheet subtitle and heading")
+        static let titleHandle = LocalizedStringResource("promote.sheet.titleHandle", defaultValue: "%1$@ joins %2$@ %3$@", comment: "Evidence sheet title for a row filed on an existing record; 1 = the row's name, 2 = the record's title, 3 = the record's ref. The word joins is muted italic, the ref a ref.")
+        private static let subtitlePerson = LocalizedStringResource("promote.sheet.subtitle.person", defaultValue: "This is an identity claim to join %1$@ from %2$@ into the concluded person %3$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.", comment: "Evidence sheet subtitle for a person row; 1 = the row's name, 2 = the Source title, 3 = the record's title. Names are bold, the Source title italic.")
+        private static let subtitleUntitledPerson = LocalizedStringResource("promote.sheet.subtitleUntitled.person", defaultValue: "This is an identity claim to join %1$@ from this source into the concluded person %2$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.", comment: "Evidence sheet subtitle for a person row when the Source has no title; 1 = the row's name, 2 = the record's title")
+        private static let evidenceHeadingPerson = LocalizedStringResource("promote.sheet.evidenceHeading.person", defaultValue: "%1$@ from %2$@ belongs in the concluded person %3$@ because…", comment: "Heading of the evidence on the Promote sheet for a person row; 1 = the row's name, 2 = the Source title, 3 = the record's title")
+        private static let evidenceHeadingUntitledPerson = LocalizedStringResource("promote.sheet.evidenceHeadingUntitled.person", defaultValue: "%1$@ from this source belongs in the concluded person %2$@ because…", comment: "Heading of the evidence on the Promote sheet for a person row when the Source has no title; 1 = the row's name, 2 = the record's title")
+        private static let subtitleEvent = LocalizedStringResource("promote.sheet.subtitle.event", defaultValue: "This is an identity claim to join %1$@ from %2$@ into the concluded event %3$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.", comment: "Evidence sheet subtitle for a event row; 1 = the row's name, 2 = the Source title, 3 = the record's title. Names are bold, the Source title italic.")
+        private static let subtitleUntitledEvent = LocalizedStringResource("promote.sheet.subtitleUntitled.event", defaultValue: "This is an identity claim to join %1$@ from this source into the concluded event %2$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.", comment: "Evidence sheet subtitle for a event row when the Source has no title; 1 = the row's name, 2 = the record's title")
+        private static let evidenceHeadingEvent = LocalizedStringResource("promote.sheet.evidenceHeading.event", defaultValue: "%1$@ from %2$@ belongs in the concluded event %3$@ because…", comment: "Heading of the evidence on the Promote sheet for a event row; 1 = the row's name, 2 = the Source title, 3 = the record's title")
+        private static let evidenceHeadingUntitledEvent = LocalizedStringResource("promote.sheet.evidenceHeadingUntitled.event", defaultValue: "%1$@ from this source belongs in the concluded event %2$@ because…", comment: "Heading of the evidence on the Promote sheet for a event row when the Source has no title; 1 = the row's name, 2 = the record's title")
+        private static let subtitlePlace = LocalizedStringResource("promote.sheet.subtitle.place", defaultValue: "This is an identity claim to join %1$@ from %2$@ into the concluded place %3$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.", comment: "Evidence sheet subtitle for a place row; 1 = the row's name, 2 = the Source title, 3 = the record's title. Names are bold, the Source title italic.")
+        private static let subtitleUntitledPlace = LocalizedStringResource("promote.sheet.subtitleUntitled.place", defaultValue: "This is an identity claim to join %1$@ from this source into the concluded place %2$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.", comment: "Evidence sheet subtitle for a place row when the Source has no title; 1 = the row's name, 2 = the record's title")
+        private static let evidenceHeadingPlace = LocalizedStringResource("promote.sheet.evidenceHeading.place", defaultValue: "%1$@ from %2$@ belongs in the concluded place %3$@ because…", comment: "Heading of the evidence on the Promote sheet for a place row; 1 = the row's name, 2 = the Source title, 3 = the record's title")
+        private static let evidenceHeadingUntitledPlace = LocalizedStringResource("promote.sheet.evidenceHeadingUntitled.place", defaultValue: "%1$@ from this source belongs in the concluded place %2$@ because…", comment: "Heading of the evidence on the Promote sheet for a place row when the Source has no title; 1 = the row's name, 2 = the record's title")
+        /// The subtitle under the title for a row of this kind, with the Source titled. One whole sentence per kind, so a translation inflects the kind word itself.
+        static func subtitle(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            switch kind {
+            case .person: subtitlePerson
+            case .event: subtitleEvent
+            case .place: subtitlePlace
             }
-            return L10n.string(resource)
+        }
+        /// The subtitle for a row of this kind when its Source has no title. One whole sentence per kind, so a translation inflects the kind word itself.
+        static func subtitleUntitled(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            switch kind {
+            case .person: subtitleUntitledPerson
+            case .event: subtitleUntitledEvent
+            case .place: subtitleUntitledPlace
+            }
+        }
+        /// The evidence heading for a row of this kind, with the Source titled. One whole sentence per kind, so a translation inflects the kind word itself.
+        static func evidenceHeading(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            switch kind {
+            case .person: evidenceHeadingPerson
+            case .event: evidenceHeadingEvent
+            case .place: evidenceHeadingPlace
+            }
+        }
+        /// The evidence heading for a row of this kind when its Source has no title. One whole sentence per kind, so a translation inflects the kind word itself.
+        static func evidenceHeadingUntitled(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            switch kind {
+            case .person: evidenceHeadingUntitledPerson
+            case .event: evidenceHeadingUntitledEvent
+            case .place: evidenceHeadingUntitledPlace
+            }
         }
         static func similarityIn(property: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.similarityIn", defaultValue: "…they have a similarity in %@", comment: "Header of a property Card on the evidence sheet; the argument is the property's name in lowercase"), property)
+            L10n.format(LocalizedStringResource("promote.sheet.similarityIn", defaultValue: "they have a similarity in %@", comment: "Header of a property Card on the evidence sheet, after the leading ellipsis; the argument is the property's name in lowercase"), property)
         }
         static func shareHeader(phrase: String, first: String, second: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.shareHeader", defaultValue: "…they share %1$@ (%2$@ and %3$@)", comment: "Header of a relationship Card; 1 = what they share, such as a spouse, 2 = the connected row's ref on this Source, 3 = the connected record's ref"), phrase, first, second)
+            L10n.format(LocalizedStringResource("promote.sheet.shareHeader", defaultValue: "they share %1$@ (%2$@ and %3$@)", comment: "Header of a relationship Card, after the leading ellipsis; 1 = what they share, such as a spouse, 2 = the connected row's ref on this Source, 3 = the connected record's ref"), phrase, first, second)
         }
         static func shareHeaderOne(phrase: String, ref: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.shareHeaderOne", defaultValue: "…they share %1$@ (%2$@)", comment: "Header of a relationship Card when the connected row has only one ref to show; 1 = what they share, 2 = that ref"), phrase, ref)
+            L10n.format(LocalizedStringResource("promote.sheet.shareHeaderOne", defaultValue: "they share %1$@ (%2$@)", comment: "Header of a relationship Card when the connected row has only one ref to show, after the leading ellipsis; 1 = what they share, 2 = that ref"), phrase, ref)
         }
         static func shareHeaderBare(phrase: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.shareHeaderBare", defaultValue: "…they share %@", comment: "Header of a relationship Card when the connected row is not on the page; the argument is what they share"), phrase)
+            L10n.format(LocalizedStringResource("promote.sheet.shareHeaderBare", defaultValue: "they share %@", comment: "Header of a relationship Card when the connected row is not on the page, after the leading ellipsis; the argument is what they share"), phrase)
+        }
+        /// A Card header as it is drawn: led by an ellipsis, as if finishing "this row and the record's other sources…". VoiceOver reads the header without it.
+        static func cardHeaderLead(_ header: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.cardHeaderLead", defaultValue: "…%@", comment: "A Card header on the evidence sheet as it is drawn: an ellipsis, then the header; the argument is the header"), header)
         }
         static let closeSheet = LocalizedStringResource("promote.sheet.close", defaultValue: "Close", comment: "Closes the Promote evidence sheet from its title row")
         static func hideRecords(_ count: Int) -> String {

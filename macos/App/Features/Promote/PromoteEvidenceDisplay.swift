@@ -89,26 +89,25 @@ enum PromoteEvidenceDisplay {
         return attributes
     }
 
-    /// "<name> joins <record title> <REF>": "joins" muted, the ref a ref.
+    /// "<name> joins <record title> <REF>": the connecting word muted, the ref a ref.
     static func title(name: String, recordTitle: String, ref: String) -> AttributedString {
         StyledFormat.attributed(L10n.Promote.titleHandle, [
             .init(text: name),
-            .init(text: L10n.string(L10n.Promote.titleJoins), attributes: styled(.muted)),
             .init(text: recordTitle),
             .init(text: ref, attributes: styled(.ref)),
-        ])
+        ], literal: styled(.muted))
     }
 
     /// The subtitle under the title: the claim in one sentence. A Source with no title is "this source".
     static func subtitle(name: String, sourceTitle: String?, kind: EvidencePrimaryKind, recordTitle: String) -> AttributedString {
-        claim(L10n.Promote.subtitle, untitled: L10n.Promote.subtitleUntitled,
-              name: name, sourceTitle: sourceTitle, kind: kind, recordTitle: recordTitle)
+        claim(L10n.Promote.subtitle(kind), untitled: L10n.Promote.subtitleUntitled(kind),
+              name: name, sourceTitle: sourceTitle, recordTitle: recordTitle)
     }
 
     /// The evidence heading: what the lines below argue.
     static func evidenceHeading(name: String, sourceTitle: String?, kind: EvidencePrimaryKind, recordTitle: String) -> AttributedString {
-        claim(L10n.Promote.evidenceHeading, untitled: L10n.Promote.evidenceHeadingUntitled,
-              name: name, sourceTitle: sourceTitle, kind: kind, recordTitle: recordTitle)
+        claim(L10n.Promote.evidenceHeading(kind), untitled: L10n.Promote.evidenceHeadingUntitled(kind),
+              name: name, sourceTitle: sourceTitle, recordTitle: recordTitle)
     }
 
     /// A sentence about the row, its Source and the record: names as names, the Source title as a source.
@@ -117,23 +116,22 @@ enum PromoteEvidenceDisplay {
         untitled: LocalizedStringResource,
         name: String,
         sourceTitle: String?,
-        kind: EvidencePrimaryKind,
         recordTitle: String
     ) -> AttributedString {
-        let kindWord = StyledFormat.Argument(text: L10n.Promote.kindWord(kind))
         let name = StyledFormat.Argument(text: name, attributes: styled(.name))
         let record = StyledFormat.Argument(text: recordTitle, attributes: styled(.name))
         guard let sourceTitle else {
-            return StyledFormat.attributed(untitled, [name, kindWord, record])
+            return StyledFormat.attributed(untitled, [name, record])
         }
         return StyledFormat.attributed(format, [
-            name, .init(text: sourceTitle, attributes: styled(.source)), kindWord, record,
+            name, .init(text: sourceTitle, attributes: styled(.source)), record,
         ])
     }
 
     // MARK: Cards
 
-    /// "…they have a similarity in name": the property's label in lowercase for the current locale.
+    /// "they have a similarity in name": the property's label in lowercase for the current locale.
+    /// The Card draws it after an ellipsis (`L10n.Promote.cardHeaderLead`); VoiceOver reads it as is.
     static func similarityHeader(property: String) -> String {
         L10n.Promote.similarityIn(property: property.lowercased(with: .autoupdatingCurrent))
     }
@@ -168,13 +166,9 @@ enum PromoteEvidenceDisplay {
         )
     }
 
-    /// A Card header as VoiceOver speaks it: without the ellipsis that opens it on screen.
-    static func spokenHeader(_ header: String) -> String {
-        header.hasPrefix("…") ? String(header.dropFirst()) : header
-    }
-
-    /// "…they share a spouse (CEV-3B5RT and PER-7QH3D)": the connected row's own ref, then its
-    /// record's. Only the refs that are known and differ are named.
+    /// "they share a spouse (CEV-3B5RT and PER-7QH3D)": the connected row's own ref, then its
+    /// record's. Only the refs that are known and differ are named. The Card draws it after an
+    /// ellipsis; VoiceOver reads it as is.
     static func shareHeader(phrase: String, ownRef: String?, recordRef: String?) -> String {
         var refs: [String] = []
         for ref in [ownRef, recordRef] {
