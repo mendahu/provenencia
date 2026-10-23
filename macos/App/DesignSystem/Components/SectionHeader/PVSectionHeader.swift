@@ -5,20 +5,24 @@ import SwiftUI
 /// page during structural cleanup — not a direct port of a web-kit
 /// component (the kit has no SectionHeader). Use on any detail surface
 /// that stacks titled sections (Sources, later People / Facts / etc.).
-/// Call sites own `.accessibilityIdentifier`.
+/// Call sites own `.accessibilityIdentifier`. The title is semibold; `titleWeight` sets a lighter
+/// base for an `AttributedString` title whose names carry their own weight.
 struct PVSectionHeader<Title: PVCopy, Aside: View, Actions: View>: View {
     private let title: Title
+    private let titleWeight: CGFloat
     private let meta: String?
     private let aside: Aside
     private let actions: Actions
 
     init(
         title: Title,
+        titleWeight: CGFloat = PVFontWeight.semibold,
         meta: String? = nil,
         @ViewBuilder aside: () -> Aside = { EmptyView() },
         @ViewBuilder actions: () -> Actions = { EmptyView() }
     ) {
         self.title = title
+        self.titleWeight = titleWeight
         self.meta = meta
         self.aside = aside()
         self.actions = actions()
@@ -27,7 +31,7 @@ struct PVSectionHeader<Title: PVCopy, Aside: View, Actions: View>: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
             title.pvText
-                .font(PVFont.display(size: PVTypeScale.h3, weight: PVFontWeight.semibold))
+                .font(PVFont.display(size: PVTypeScale.h3, weight: titleWeight))
                 .foregroundStyle(PVColor.textDisplay)
             if let meta {
                 Text(verbatim: meta)

@@ -245,10 +245,10 @@ struct PromoteEvidenceDisplayTests {
         #expect(!PromoteEvidenceDisplay.hasNothingToCompare(CatalogClaimEvidence(relationships: [relationship()])))
     }
 
-    @Test func likenessMemberWithoutTitleUsesFallback() {
-        #expect(PromoteEvidenceDisplay.likenessSource(title: "Funeral card") == "Funeral card")
-        #expect(PromoteEvidenceDisplay.likenessSource(title: nil) == "a record")
-        #expect(PromoteEvidenceDisplay.likenessSource(title: "") == "a record")
+    @Test func aSourceWithoutATitleIsARecord() {
+        #expect(PromoteEvidenceDisplay.recordSource(title: "Funeral card") == "Funeral card")
+        #expect(PromoteEvidenceDisplay.recordSource(title: nil) == "a record")
+        #expect(PromoteEvidenceDisplay.recordSource(title: "") == "a record")
     }
 
     // MARK: - Round 16
@@ -262,6 +262,36 @@ struct PromoteEvidenceDisplayTests {
         let runs = title.runs.map { String(title.characters[$0.range]) }
         #expect(runs.contains("joins"))
         #expect(runs.contains("PER-7QH3D"))
+        #expect(role(of: "joins", in: title) == .muted)
+        #expect(role(of: "PER-7QH3D", in: title) == .ref)
+    }
+
+    private func role(of text: String, in styled: AttributedString) -> PromoteEvidenceDisplay.Role? {
+        styled.runs.first { String(styled.characters[$0.range]) == text }?[PromoteEvidenceDisplay.RoleAttribute.self]
+    }
+
+    @Test func theDisplayHelperNamesRolesAndStylesNothing() {
+        let subtitle = PromoteEvidenceDisplay.subtitle(
+            name: "John Smith", sourceTitle: "1871 Census", kind: .person, recordTitle: "Johnny Smith"
+        )
+        #expect(role(of: "John Smith", in: subtitle) == .name)
+        #expect(role(of: "1871 Census", in: subtitle) == .source)
+        #expect(role(of: "Johnny Smith", in: subtitle) == .name)
+        let heading = PromoteEvidenceDisplay.evidenceHeading(
+            name: "John Smith", sourceTitle: "1871 Census", kind: .person, recordTitle: "Johnny Smith"
+        )
+        #expect(role(of: "John Smith", in: heading) == .name)
+        #expect(role(of: "1871 Census", in: heading) == .source)
+        #expect(role(of: "Johnny Smith", in: heading) == .name)
+        // No font or color: the sheet owns them.
+        for styled in [heading, subtitle] {
+            for run in styled.runs {
+                #expect(run.font == nil)
+                #expect(run.foregroundColor == nil)
+            }
+        }
+        let untitled = PromoteEvidenceDisplay.evidenceHeading(name: "Leeds", sourceTitle: nil, kind: .place, recordTitle: "Leeds, Yorkshire")
+        #expect(role(of: "Leeds", in: untitled) == .name)
     }
 
     @Test func theSubtitleNamesTheSourceAndTheConcludedRecord() {
@@ -269,11 +299,6 @@ struct PromoteEvidenceDisplayTests {
             name: "John Smith", sourceTitle: "1871 Census", kind: .person, recordTitle: "Johnny Smith"
         )
         #expect(plain(subtitle) == "This is an identity claim to join John Smith from the 1871 Census into the concluded person Johnny Smith. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.")
-        let census = subtitle.runs.first { String(subtitle.characters[$0.range]) == "1871 Census" }
-        #expect(census?.inlinePresentationIntent == .emphasized)
-        let name = subtitle.runs.first { String(subtitle.characters[$0.range]) == "John Smith" }
-        #expect(name?.inlinePresentationIntent == nil)
-        #expect(name?.font != nil)
 
         let untitled = PromoteEvidenceDisplay.subtitle(name: "Birth", sourceTitle: nil, kind: .event, recordTitle: "Birth of John")
         #expect(plain(untitled).hasPrefix("This is an identity claim to join Birth from this source into the concluded event Birth of John."))

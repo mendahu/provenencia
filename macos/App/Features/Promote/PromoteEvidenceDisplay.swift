@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 
 /// The evidence sheet's choices and words, made without a view: which boxes are
 /// checked, which bridge a relationship names, and the sentences the sheet reads.
@@ -82,80 +81,78 @@ enum PromoteEvidenceDisplay {
         return L10n.Promote.spokenLineMember(line: line, member: spokenMember(member))
     }
 
-    /// A likeness record's Source title, or a word for it when the Source has none.
-    static func likenessSource(title: String?) -> String {
+    /// A record's Source title, or a word for it when the Source has none: on every line and member row.
+    static func recordSource(title: String?) -> String {
         guard let title, !title.isEmpty else { return L10n.string(L10n.Promote.untitledRecord) }
         return title
     }
 
     // MARK: Title, subtitle and heading
 
-    private static func names(size: CGFloat) -> AttributeContainer {
+    /// What a styled run of the title, subtitle or heading is, as a role. The sheet maps a role to
+    /// a font and a color; this file knows no view type.
+    enum Role: String, Hashable, Codable, Sendable {
+        /// A subject's or record's name.
+        case name
+        /// A Source's title.
+        case source
+        /// Connecting words set back from the names.
+        case muted
+        /// A ref.
+        case ref
+    }
+
+    /// The attribute that carries a run's ``Role``.
+    enum RoleAttribute: AttributedStringKey {
+        typealias Value = Role
+        static let name = "promoteEvidenceRole"
+    }
+
+    private static func styled(_ role: Role) -> AttributeContainer {
         var attributes = AttributeContainer()
-        attributes.font = PVFont.body(size: size, weight: PVFontWeight.semibold)
-        attributes.foregroundColor = PVColor.textDisplay
+        attributes[RoleAttribute.self] = role
         return attributes
     }
 
-    private static var sourceTitleStyle: AttributeContainer {
-        var attributes = AttributeContainer()
-        attributes.inlinePresentationIntent = .emphasized
-        attributes.foregroundColor = PVColor.textLink
-        return attributes
-    }
-
-    private static var heading: AttributeContainer {
-        var attributes = AttributeContainer()
-        attributes.foregroundColor = PVColor.textDisplay
-        return attributes
-    }
-
-    /// "<name> joins <record title> <REF>": "joins" muted italic, the ref muted mono.
+    /// "<name> joins <record title> <REF>": "joins" muted, the ref a ref.
     static func title(name: String, recordTitle: String, ref: String) -> AttributedString {
-        var joins = AttributeContainer()
-        joins.inlinePresentationIntent = .emphasized
-        joins.foregroundColor = PVColor.textMuted
-        var refStyle = AttributeContainer()
-        refStyle.font = PVFont.mono(size: PVTypeScale.caption)
-        refStyle.foregroundColor = PVColor.textMuted
-        return StyledFormat.attributed(L10n.Promote.titleHandle, [
+        StyledFormat.attributed(L10n.Promote.titleHandle, [
             .init(text: name),
-            .init(text: L10n.string(L10n.Promote.titleJoins), attributes: joins),
+            .init(text: L10n.string(L10n.Promote.titleJoins), attributes: styled(.muted)),
             .init(text: recordTitle),
-            .init(text: ref, attributes: refStyle),
+            .init(text: ref, attributes: styled(.ref)),
         ])
     }
 
     /// The subtitle under the title: the claim in one sentence. A Source with no title is "this source".
     static func subtitle(name: String, sourceTitle: String?, kind: EvidencePrimaryKind, recordTitle: String) -> AttributedString {
-        let bold = names(size: PVTypeScale.bodySmall)
-        let kindWord = StyledFormat.Argument(text: L10n.Promote.kindWord(kind))
-        if let sourceTitle {
-            return StyledFormat.attributed(L10n.Promote.subtitle, [
-                .init(text: name, attributes: bold),
-                .init(text: sourceTitle, attributes: sourceTitleStyle),
-                kindWord,
-                .init(text: recordTitle, attributes: bold),
-            ])
-        }
-        return StyledFormat.attributed(L10n.Promote.subtitleUntitled, [
-            .init(text: name, attributes: bold), kindWord, .init(text: recordTitle, attributes: bold),
-        ])
+        claim(L10n.Promote.subtitle, untitled: L10n.Promote.subtitleUntitled,
+              name: name, sourceTitle: sourceTitle, kind: kind, recordTitle: recordTitle)
     }
 
     /// The evidence heading: what the lines below argue.
     static func evidenceHeading(name: String, sourceTitle: String?, kind: EvidencePrimaryKind, recordTitle: String) -> AttributedString {
+        claim(L10n.Promote.evidenceHeading, untitled: L10n.Promote.evidenceHeadingUntitled,
+              name: name, sourceTitle: sourceTitle, kind: kind, recordTitle: recordTitle)
+    }
+
+    /// A sentence about the row, its Source and the record: names as names, the Source title as a source.
+    private static func claim(
+        _ format: LocalizedStringResource,
+        untitled: LocalizedStringResource,
+        name: String,
+        sourceTitle: String?,
+        kind: EvidencePrimaryKind,
+        recordTitle: String
+    ) -> AttributedString {
         let kindWord = StyledFormat.Argument(text: L10n.Promote.kindWord(kind))
-        if let sourceTitle {
-            return StyledFormat.attributed(L10n.Promote.evidenceHeading, [
-                .init(text: name, attributes: heading),
-                .init(text: sourceTitle, attributes: sourceTitleStyle),
-                kindWord,
-                .init(text: recordTitle, attributes: heading),
-            ])
+        let name = StyledFormat.Argument(text: name, attributes: styled(.name))
+        let record = StyledFormat.Argument(text: recordTitle, attributes: styled(.name))
+        guard let sourceTitle else {
+            return StyledFormat.attributed(untitled, [name, kindWord, record])
         }
-        return StyledFormat.attributed(L10n.Promote.evidenceHeadingUntitled, [
-            .init(text: name, attributes: heading), kindWord, .init(text: recordTitle, attributes: heading),
+        return StyledFormat.attributed(format, [
+            name, .init(text: sourceTitle, attributes: styled(.source)), kindWord, record,
         ])
     }
 

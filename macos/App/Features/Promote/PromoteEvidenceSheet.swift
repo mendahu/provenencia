@@ -15,8 +15,7 @@ struct PromoteEvidenceSheet: View {
         PVPanel(
             title: titleText,
             subtitle: subtitleText,
-            width: 880,
-            titleAccessoryPlacement: .afterTitle
+            width: 880
         ) {
             ScrollView {
                 VStack(alignment: .leading, spacing: PVSpacing.space5) {
@@ -61,7 +60,9 @@ struct PromoteEvidenceSheet: View {
     private var titleText: Text {
         switch row.target {
         case .handle(_, let ref, let title):
-            return Text(PromoteEvidenceDisplay.title(name: row.name, recordTitle: title, ref: ref))
+            return Text(EvidenceTextStyle.painted(
+                PromoteEvidenceDisplay.title(name: row.name, recordTitle: title, ref: ref), name: nil
+            ))
         case .newKind:
             return Text(verbatim: L10n.Promote.sheetTitleNew(name: row.name, target: L10n.string(L10n.Promote.newOption(row.kind))))
         case .skip, .unset:
@@ -72,8 +73,11 @@ struct PromoteEvidenceSheet: View {
     /// The claim in one sentence, under the title of a row filed on a record.
     private var subtitleText: Text? {
         guard case .handle(_, _, let title) = row.target else { return nil }
-        return Text(PromoteEvidenceDisplay.subtitle(
-            name: row.name, sourceTitle: model.entry.sourceTitle, kind: row.kind, recordTitle: title
+        return Text(EvidenceTextStyle.painted(
+            PromoteEvidenceDisplay.subtitle(
+                name: row.name, sourceTitle: model.entry.sourceTitle, kind: row.kind, recordTitle: title
+            ),
+            name: PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold)
         ))
     }
 
@@ -142,9 +146,13 @@ struct PromoteEvidenceSheet: View {
         return VStack(alignment: .leading, spacing: PVSpacing.space5) {
             PVDivider()
             PVSectionHeader(
-                title: PromoteEvidenceDisplay.evidenceHeading(
-                    name: row.name, sourceTitle: model.entry.sourceTitle, kind: row.kind, recordTitle: title
+                title: EvidenceTextStyle.painted(
+                    PromoteEvidenceDisplay.evidenceHeading(
+                        name: row.name, sourceTitle: model.entry.sourceTitle, kind: row.kind, recordTitle: title
+                    ),
+                    name: PVFont.display(size: PVTypeScale.h3, weight: PVFontWeight.semibold)
                 ),
+                titleWeight: PVFontWeight.regular,
                 meta: evidence.map {
                     L10n.Promote.checkedCount(PromoteEvidenceDisplay.checkedCount($0, pins: row.pins))
                 }
@@ -448,7 +456,7 @@ private struct EvidenceLine: View {
             )
             .accessibilityIdentifier("promote.sheet.expand.\(key)")
         } else if let pin = line.members.first {
-            EvidenceSourceTitle(title: isLikeness ? PromoteEvidenceDisplay.likenessSource(title: context.sourceTitle(pin)) : context.sourceTitle(pin))
+            EvidenceSourceTitle(title: PromoteEvidenceDisplay.recordSource(title: context.sourceTitle(pin)))
                 .accessibilityHidden(true)
         }
     }
@@ -463,7 +471,7 @@ private struct EvidenceLine: View {
     private var spoken: String {
         if isLikeness {
             return L10n.Promote.spokenLikeness(
-                source: PromoteEvidenceDisplay.likenessSource(title: line.members.first.flatMap(context.sourceTitle)),
+                source: PromoteEvidenceDisplay.recordSource(title: line.members.first.flatMap(context.sourceTitle)),
                 sentence: context.sentence(line)
             )
         }
@@ -477,19 +485,46 @@ private struct EvidenceLine: View {
     }
 }
 
-/// A Source's title, italic and muted; nothing when there is none.
+/// A Source's title, italic and muted, with the whole title as its tooltip when the column cuts it off.
 private struct EvidenceSourceTitle: View {
-    let title: String?
+    let title: String
 
     var body: some View {
-        if let title, !title.isEmpty {
-            Text(verbatim: title)
-                .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                .foregroundStyle(PVColor.textMuted)
-                .lineLimit(2)
-                .truncationMode(.middle)
-                .fixedSize(horizontal: false, vertical: true)
+        Text(verbatim: title)
+            .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+            .foregroundStyle(PVColor.textMuted)
+            .lineLimit(2)
+            .truncationMode(.middle)
+            .fixedSize(horizontal: false, vertical: true)
+            .help(Text(verbatim: title))
+    }
+}
+
+/// Draws the roles ``PromoteEvidenceDisplay`` names: the one place the sheet's words get a font and a color.
+private enum EvidenceTextStyle {
+    /// `name` is the font of a name here; it differs by where the text sits.
+    static func painted(_ text: AttributedString, name nameFont: Font?) -> AttributedString {
+        var result = text
+        for run in text.runs {
+            guard let role = run[PromoteEvidenceDisplay.RoleAttribute.self] else { continue }
+            var attributes = AttributeContainer()
+            switch role {
+            case .name:
+                attributes.font = nameFont
+                attributes.foregroundColor = PVColor.textDisplay
+            case .source:
+                attributes.inlinePresentationIntent = .emphasized
+                attributes.foregroundColor = PVColor.textLink
+            case .muted:
+                attributes.inlinePresentationIntent = .emphasized
+                attributes.foregroundColor = PVColor.textMuted
+            case .ref:
+                attributes.font = PVFont.mono(size: PVTypeScale.caption)
+                attributes.foregroundColor = PVColor.textMuted
+            }
+            result[run.range].mergeAttributes(attributes)
         }
+        return result
     }
 }
 
@@ -511,16 +546,26 @@ private struct EvidenceCrop: View {
     }
 }
 
-/// The sunken title row at the top of a Card, with what this Source has after it when every line agrees on it.
+/// The title row of a Card or of a group under a relationship, with what this Source has after it
+/// when every line agrees on it.
 private struct EvidenceCardHeader: View {
+    /// The sunken row at the top of a Card, or the lighter label over a relationship's group.
+    enum Style {
+        case card
+        case group
+    }
+
     let title: String
     let thisSource: String?
+    var style: Style = .card
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
             Text(verbatim: title)
-                .font(PVFont.display(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
-                .foregroundStyle(PVColor.textDisplay)
+                .font(style == .card
+                    ? PVFont.display(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium)
+                    : PVFont.display(size: PVTypeScale.caption))
+                .foregroundStyle(style == .card ? PVColor.textDisplay : PVColor.textSecondary)
             if let thisSource {
                 Text(verbatim: L10n.Promote.thisSource(thisSource))
                     .font(PVFont.body(size: PVTypeScale.caption))
@@ -528,11 +573,12 @@ private struct EvidenceCardHeader: View {
             }
         }
         .padding(.horizontal, EvidenceLayout.inset)
-        .padding(.vertical, PVSpacing.space3)
+        .padding(.top, PVSpacing.space3)
+        .padding(.bottom, style == .card ? PVSpacing.space3 : 0)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(PVColor.surfaceSunken)
+        .background(style == .card ? PVColor.surfaceSunken : Color.clear)
         .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
+        .accessibilityAddTraits(style == .card ? .isHeader : [])
     }
 }
 
@@ -568,7 +614,7 @@ private struct EvidenceMemberRow: View {
                     .frame(width: EvidenceLayout.memberValueColumn, alignment: .leading)
                     .accessibilityHidden(true)
                 Spacer(minLength: 0)
-                EvidenceSourceTitle(title: isLikeness ? PromoteEvidenceDisplay.likenessSource(title: context.sourceTitle(pin)) : context.sourceTitle(pin))
+                EvidenceSourceTitle(title: PromoteEvidenceDisplay.recordSource(title: context.sourceTitle(pin)))
                     .frame(width: EvidenceLayout.sourceColumn, alignment: .leading)
                     .accessibilityHidden(true)
                 Color.clear.frame(width: EvidenceLayout.badgeColumn, height: 0)
@@ -588,7 +634,7 @@ private struct EvidenceMemberRow: View {
     private var spokenSource: PromoteEvidenceDisplay.Member {
         if case .depiction = pin.value {
             return PromoteEvidenceDisplay.Member(
-                source: PromoteEvidenceDisplay.likenessSource(title: context.sourceTitle(pin)),
+                source: PromoteEvidenceDisplay.recordSource(title: context.sourceTitle(pin)),
                 value: context.worded(pin.value)
             )
         }
@@ -637,19 +683,11 @@ private struct EvidenceRelationshipCard: View {
                         PVDivider()
                         let placement = context.thisSourcePlacement(section)
                         VStack(alignment: .leading, spacing: 0) {
-                            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
-                                Text(verbatim: PromoteEvidenceDisplay.similarityHeader(property: context.propertyLabel(section.propertyKey)))
-                                    .font(PVFont.display(size: PVTypeScale.caption))
-                                    .foregroundStyle(PVColor.textSecondary)
-                                if let value = placement.headerValue {
-                                    Text(verbatim: L10n.Promote.thisSource(value))
-                                        .font(PVFont.body(size: PVTypeScale.caption))
-                                        .foregroundStyle(PVColor.textMuted)
-                                }
-                            }
-                            .padding(.horizontal, EvidenceLayout.inset)
-                            .padding(.top, PVSpacing.space3)
-                            .accessibilityElement(children: .combine)
+                            EvidenceCardHeader(
+                                title: PromoteEvidenceDisplay.similarityHeader(property: context.propertyLabel(section.propertyKey)),
+                                thisSource: placement.headerValue,
+                                style: .group
+                            )
                             ForEach(Array(section.lines.enumerated()), id: \.element.id) { lineIndex, line in
                                 if lineIndex > 0 { PVDivider() }
                                 EvidenceLine(context: context, line: line, showsThisSource: placement == .lines, expanded: $expanded)
