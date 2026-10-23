@@ -110,4 +110,17 @@ New blockers: none (MNT, UX, SEC+PRF all Clean).
 Outside-lens notes (logged): `UX → MNT/PRF · SourcesModel.swift:162-170 · cache keyed on revision only; safe while .evidenceGraphsList is never evicted` · `MNT → UX · SourcePageIdentityHeader.swift:201 · disabled jump with an Artifact gives no reason`
 
 ## Result
-Gate PASS · CI pending · open: UX-2 (minor) · follow-ups: PRF-2 · to user: UX-2 · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: PRF-2 · to user: UX-2 (answered: fixed, U-1) · CON miss: none
+
+## User fix — UX-2
+The user asked (2026-10-23): "Fix UX-2 on PR #528: show the disabled Open graph hint only when the graph list has a value, and give the Source page's disabled jump the same reason."
+
+### Fix plan U
+**U-1 — One rule for why Open graph / Jump to evidence graph is blocked** (from UX-2, MNT outside-lens note on `SourcePageIdentityHeader.swift:201`)
+Files: `macos/App/Features/Sources/SourcesListNavigation.swift`, `SourcesModel.swift`, `SourcePageModel.swift`, `SourcesSplitRow.swift`, `SourcesListView.swift`, `SourcePageIdentityHeader.swift`; tests in `macos/ProvenenciaTests/SourcesListNavigationTests.swift`. Skill: `add-swift-test`.
+Failing test first: `SourcesListNavigationTests.graphBlockedReasonNeedsTheGraphList` — (a) no Artifact → the needs-Artifact reason; (b) has an Artifact, graph list has no value (loading or failed), no location → nil; (c) has an Artifact, graph list has a value, no location → the needs-Artifact reason; (d) a location → nil.
+Do: add one function on `SourcesListNavigation`, e.g. `graphBlockedReason(hasArtifact: Bool, graphListLoaded: Bool, location: WorkspaceLocation?) -> String?`, returning `L10n.string(L10n.Sources.needsArtifactTooltip)` per the cases above. "Graph list has a value" is `.evidenceGraphsList`'s handle `value != nil`; expose it once (e.g. a `graphListLoaded` on `SourcesModel` reading the handle it already holds, and the same on `SourcePageModel` through the session helper's handle) rather than re-deriving it at each view. `SourcesSplitRow`: the disabled zone's `.help` / `.accessibilityHint` come from that function (passed in from `SourcesListView` as the reason, or as the inputs), replacing `graphBlockedReason`'s `countsLoading` test; no hint when it returns nil. `SourcePageIdentityHeader.evidenceGraphJump`: `.help(reason ?? L10n.string(L10n.Sources.jumpToEvidenceGraph))` and the same `.accessibilityHint` when the reason is non-nil. Existing strings only; no new copy.
+Check: the test passes; `rg -n 'needsArtifactTooltip' macos/App/Features/Sources` shows the reason coming from the one function at the row's graph zone and the page's jump (the row's separate no-Artifact branch may keep its own use); scripts/check-pr.sh PASS.
+
+## User fix — implement
+Head `9a12e073`. Gate PASS (orchestrator run). U-1 done: `SourcesListNavigation.graphBlockedReason(hasArtifact:graphListLoaded:location:)` feeds the row's disabled zone and the Source page's jump (`.help` and `.accessibilityHint`); no hint while the graph list has no value. Test `SourcesListNavigationTests.graphBlockedReasonNeedsTheGraphList` (cases a–d); it could only fail to compile before the function existed. Orchestrator read the diff: matches the user's ask. UX-2 **Resolved**.
