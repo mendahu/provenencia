@@ -5995,14 +5995,12 @@ func (x *DeleteCitationResponse) GetEffects() *WriteEffects {
 }
 
 // WriteEffects is the catalog the write touched. Swift invalidates those
-// handles and Sources instead of a broad citation refetch.
+// handles and Evidence graphs instead of a broad citation refetch.
 type WriteEffects struct {
-	state   protoimpl.MessageState `protogen:"open.v1"`
-	Handles []string               `protobuf:"bytes,1,rep,name=handles,proto3" json:"handles,omitempty"`
-	// Sources whose graph changed: what the Source graph and graph progress load.
-	Sources       []string `protobuf:"bytes,2,rep,name=sources,proto3" json:"sources,omitempty"`
-	Structure     bool     `protobuf:"varint,5,opt,name=structure,proto3" json:"structure,omitempty"`
-	HeaderHandles []string `protobuf:"bytes,6,rep,name=header_handles,json=headerHandles,proto3" json:"header_handles,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Handles       []string               `protobuf:"bytes,1,rep,name=handles,proto3" json:"handles,omitempty"`
+	Structure     bool                   `protobuf:"varint,5,opt,name=structure,proto3" json:"structure,omitempty"`
+	HeaderHandles []string               `protobuf:"bytes,6,rep,name=header_handles,json=headerHandles,proto3" json:"header_handles,omitempty"`
 	// Handles whose last-updated revision this write moved. Swift patches those
 	// rows in the cached People, Events, and Places lists with (revision,
 	// revision_at); it reloads nothing and leaves detail pages alone.
@@ -6019,9 +6017,12 @@ type WriteEffects struct {
 	CitationSources []string `protobuf:"bytes,11,rep,name=citation_sources,json=citationSources,proto3" json:"citation_sources,omitempty"`
 	// Catalog-wide lists this write changed: effects.List values ("vocabulary",
 	// "property_usage", "evidence_graphs"). Swift drops the reads that show each.
-	Lists         []string `protobuf:"bytes,13,rep,name=lists,proto3" json:"lists,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Lists []string `protobuf:"bytes,13,rep,name=lists,proto3" json:"lists,omitempty"`
+	// Evidence graphs whose loaded rows this write changed: what the graph's rows
+	// and graph progress read.
+	EvidenceGraphs []string `protobuf:"bytes,14,rep,name=evidence_graphs,json=evidenceGraphs,proto3" json:"evidence_graphs,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *WriteEffects) Reset() {
@@ -6057,13 +6058,6 @@ func (*WriteEffects) Descriptor() ([]byte, []int) {
 func (x *WriteEffects) GetHandles() []string {
 	if x != nil {
 		return x.Handles
-	}
-	return nil
-}
-
-func (x *WriteEffects) GetSources() []string {
-	if x != nil {
-		return x.Sources
 	}
 	return nil
 }
@@ -6120,6 +6114,13 @@ func (x *WriteEffects) GetCitationSources() []string {
 func (x *WriteEffects) GetLists() []string {
 	if x != nil {
 		return x.Lists
+	}
+	return nil
+}
+
+func (x *WriteEffects) GetEvidenceGraphs() []string {
+	if x != nil {
+		return x.EvidenceGraphs
 	}
 	return nil
 }
@@ -19760,10 +19761,9 @@ const file_engine_proto_rawDesc = "" +
 	"\vcitation_id\x18\x03 \x01(\tR\n" +
 	"citationId\"W\n" +
 	"\x16DeleteCitationResponse\x12=\n" +
-	"\aeffects\x18\x01 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xe1\x02\n" +
+	"\aeffects\x18\x01 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xff\x02\n" +
 	"\fWriteEffects\x12\x18\n" +
-	"\ahandles\x18\x01 \x03(\tR\ahandles\x12\x18\n" +
-	"\asources\x18\x02 \x03(\tR\asources\x12\x1c\n" +
+	"\ahandles\x18\x01 \x03(\tR\ahandles\x12\x1c\n" +
 	"\tstructure\x18\x05 \x01(\bR\tstructure\x12%\n" +
 	"\x0eheader_handles\x18\x06 \x03(\tR\rheaderHandles\x12#\n" +
 	"\rhandle_scopes\x18\a \x03(\tR\fhandleScopes\x12\x1a\n" +
@@ -19773,7 +19773,8 @@ const file_engine_proto_rawDesc = "" +
 	"\rsource_scopes\x18\n" +
 	" \x03(\tR\fsourceScopes\x12)\n" +
 	"\x10citation_sources\x18\v \x03(\tR\x0fcitationSources\x12\x14\n" +
-	"\x05lists\x18\r \x03(\tR\x05listsJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\f\x10\r\"\x8a\x01\n" +
+	"\x05lists\x18\r \x03(\tR\x05lists\x12'\n" +
+	"\x0fevidence_graphs\x18\x0e \x03(\tR\x0eevidenceGraphsJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\f\x10\rR\asources\"\x8a\x01\n" +
 	"\x19IngestArtifactFileRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +

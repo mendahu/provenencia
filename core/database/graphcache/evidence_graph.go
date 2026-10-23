@@ -122,26 +122,23 @@ func (g *Graph) EvidenceGraph(graphID []byte) (EvidenceGraph, error) {
 	return loaded, nil
 }
 
-// dropGraphsOfSources removes every loaded Evidence graph of each Source, with
-// its memos. Set.Sources names Sources until effects carry graph ids.
-func (g *Graph) dropGraphsOfSources(ids [][]byte) {
-	if g == nil || len(ids) == 0 {
+// dropEvidenceGraphs removes each loaded Evidence graph, with its memos.
+func (g *Graph) dropEvidenceGraphs(ids [][]byte) {
+	if g == nil {
 		return
 	}
-	for key, eg := range g.evidenceGraphs {
-		for _, id := range ids {
-			if len(id) == 16 && bytes.Equal(eg.SourceID, id) {
-				delete(g.evidenceGraphs, key)
-				delete(g.memos, key)
-				break
-			}
+	for _, id := range ids {
+		if len(id) != 16 {
+			continue
 		}
+		delete(g.evidenceGraphs, string(id))
+		delete(g.memos, string(id))
 	}
 }
 
 // EvidenceGraphMemo returns what a feature stored for a loaded Evidence graph
 // under key. It is held only while the graph is loaded: a commit that names
-// the graph's Source, Drop, a vocabulary commit and SetAliasTables clear it. A
+// the graph, Drop, a vocabulary commit and SetAliasTables clear it. A
 // memoized value is shared, so every reader treats it as read-only.
 func (g *Graph) EvidenceGraphMemo(graphID []byte, key string) (any, bool) {
 	if g == nil {

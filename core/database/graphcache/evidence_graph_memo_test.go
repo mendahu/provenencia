@@ -8,12 +8,11 @@ import (
 )
 
 // T-20: an Evidence graph's memo lives as long as the graph is loaded, and a
-// drop of its Source, Drop, a vocabulary change and SetAliasTables each clear it.
+// drop of the graph, Drop, a vocabulary change and SetAliasTables each clear it.
 func TestEvidenceGraphMemoDroppedWithSource(t *testing.T) {
 	f := newWalkFixture(t)
 	g := f.c.Graph()
 	id := evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID
-	sourceID := f.src.ID
 	load := func(t *testing.T) {
 		t.Helper()
 		if _, err := g.EvidenceGraph(id); err != nil {
@@ -46,24 +45,24 @@ func TestEvidenceGraphMemoDroppedWithSource(t *testing.T) {
 			t.Error("another Source's memo was held")
 		}
 	})
-	t.Run("a Source drop", func(t *testing.T) {
+	t.Run("a graph drop", func(t *testing.T) {
 		g.Drop()
 		load(t)
-		if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 1}, Effects: effects.Set{Sources: [][]byte{sourceID}}}); err != nil {
+		if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 1}, Effects: effects.Set{EvidenceGraphs: [][]byte{id}}}); err != nil {
 			t.Fatal(err)
 		}
 		if held() {
-			t.Error("a commit that names the Source left its memo")
+			t.Error("a commit that names the graph left its memo")
 		}
 	})
-	t.Run("a commit that names another Source", func(t *testing.T) {
+	t.Run("a commit that names another graph", func(t *testing.T) {
 		g.Drop()
 		load(t)
-		if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 2}, Effects: effects.Set{Sources: [][]byte{make([]byte, 16)}}}); err != nil {
+		if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 2}, Effects: effects.Set{EvidenceGraphs: [][]byte{make([]byte, 16)}}}); err != nil {
 			t.Fatal(err)
 		}
 		if !held() {
-			t.Error("a commit on another Source dropped this memo")
+			t.Error("a commit on another graph dropped this memo")
 		}
 	})
 	t.Run("Drop", func(t *testing.T) {

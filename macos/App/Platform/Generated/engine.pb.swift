@@ -2593,16 +2593,13 @@ public nonisolated struct Provenencia_Engine_V1_DeleteCitationResponse: Sendable
 }
 
 /// WriteEffects is the catalog the write touched. Swift invalidates those
-/// handles and Sources instead of a broad citation refetch.
+/// handles and Evidence graphs instead of a broad citation refetch.
 public nonisolated struct Provenencia_Engine_V1_WriteEffects: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var handles: [String] = []
-
-  /// Sources whose graph changed: what the Source graph and graph progress load.
-  public var sources: [String] = []
 
   public var structure: Bool = false
 
@@ -2630,6 +2627,10 @@ public nonisolated struct Provenencia_Engine_V1_WriteEffects: Sendable {
   /// Catalog-wide lists this write changed: effects.List values ("vocabulary",
   /// "property_usage", "evidence_graphs"). Swift drops the reads that show each.
   public var lists: [String] = []
+
+  /// Evidence graphs whose loaded rows this write changed: what the graph's rows
+  /// and graph progress read.
+  public var evidenceGraphs: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -11555,7 +11556,7 @@ nonisolated extension Provenencia_Engine_V1_DeleteCitationResponse: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WriteEffects"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}handles\0\u{1}sources\0\u{2}\u{3}structure\0\u{3}header_handles\0\u{3}handle_scopes\0\u{1}revision\0\u{3}revision_at\0\u{3}source_scopes\0\u{3}citation_sources\0\u{2}\u{2}lists\0\u{c}\u{3}\u{1}\u{c}\u{4}\u{1}\u{c}\u{c}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}handles\0\u{2}\u{4}structure\0\u{3}header_handles\0\u{3}handle_scopes\0\u{1}revision\0\u{3}revision_at\0\u{3}source_scopes\0\u{3}citation_sources\0\u{2}\u{2}lists\0\u{3}evidence_graphs\0\u{b}sources\0\u{c}\u{2}\u{1}\u{c}\u{3}\u{1}\u{c}\u{4}\u{1}\u{c}\u{c}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11564,7 +11565,6 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedStringField(value: &self.handles) }()
-      case 2: try { try decoder.decodeRepeatedStringField(value: &self.sources) }()
       case 5: try { try decoder.decodeSingularBoolField(value: &self.structure) }()
       case 6: try { try decoder.decodeRepeatedStringField(value: &self.headerHandles) }()
       case 7: try { try decoder.decodeRepeatedStringField(value: &self.handleScopes) }()
@@ -11573,6 +11573,7 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
       case 10: try { try decoder.decodeRepeatedStringField(value: &self.sourceScopes) }()
       case 11: try { try decoder.decodeRepeatedStringField(value: &self.citationSources) }()
       case 13: try { try decoder.decodeRepeatedStringField(value: &self.lists) }()
+      case 14: try { try decoder.decodeRepeatedStringField(value: &self.evidenceGraphs) }()
       default: break
       }
     }
@@ -11581,9 +11582,6 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.handles.isEmpty {
       try visitor.visitRepeatedStringField(value: self.handles, fieldNumber: 1)
-    }
-    if !self.sources.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.sources, fieldNumber: 2)
     }
     if self.structure != false {
       try visitor.visitSingularBoolField(value: self.structure, fieldNumber: 5)
@@ -11609,12 +11607,14 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
     if !self.lists.isEmpty {
       try visitor.visitRepeatedStringField(value: self.lists, fieldNumber: 13)
     }
+    if !self.evidenceGraphs.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.evidenceGraphs, fieldNumber: 14)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_WriteEffects, rhs: Provenencia_Engine_V1_WriteEffects) -> Bool {
     if lhs.handles != rhs.handles {return false}
-    if lhs.sources != rhs.sources {return false}
     if lhs.structure != rhs.structure {return false}
     if lhs.headerHandles != rhs.headerHandles {return false}
     if lhs.handleScopes != rhs.handleScopes {return false}
@@ -11623,6 +11623,7 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
     if lhs.sourceScopes != rhs.sourceScopes {return false}
     if lhs.citationSources != rhs.citationSources {return false}
     if lhs.lists != rhs.lists {return false}
+    if lhs.evidenceGraphs != rhs.evidenceGraphs {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

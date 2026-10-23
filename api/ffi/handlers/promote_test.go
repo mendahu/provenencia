@@ -158,7 +158,7 @@ func TestUnpromoteSubject(t *testing.T) {
 					t.Fatal(err)
 				}
 				e := resp.GetEffects()
-				if len(e.GetSources()) == 0 || len(e.GetHandles()) == 0 {
+				if len(e.GetEvidenceGraphs()) == 0 || len(e.GetHandles()) == 0 {
 					t.Fatalf("effects %+v", e)
 				}
 				in := req.(*engine.UnpromoteSubjectRequest)

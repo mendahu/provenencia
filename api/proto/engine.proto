@@ -717,12 +717,11 @@ message DeleteCitationResponse {
 }
 
 // WriteEffects is the catalog the write touched. Swift invalidates those
-// handles and Sources instead of a broad citation refetch.
+// handles and Evidence graphs instead of a broad citation refetch.
 message WriteEffects {
   repeated string handles = 1;
-  // Sources whose graph changed: what the Source graph and graph progress load.
-  repeated string sources = 2;
-  reserved 3, 4, 12;
+  reserved 2, 3, 4, 12;
+  reserved "sources";
   bool structure = 5;
   repeated string header_handles = 6;
   // Handles whose last-updated revision this write moved. Swift patches those
@@ -742,6 +741,9 @@ message WriteEffects {
   // Catalog-wide lists this write changed: effects.List values ("vocabulary",
   // "property_usage", "evidence_graphs"). Swift drops the reads that show each.
   repeated string lists = 13;
+  // Evidence graphs whose loaded rows this write changed: what the graph's rows
+  // and graph progress read.
+  repeated string evidence_graphs = 14;
 }
 
 message IngestArtifactFileRequest {

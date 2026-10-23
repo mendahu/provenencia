@@ -317,3 +317,21 @@ func TestGetEvidenceGraphUnlinkImpact(t *testing.T) {
 		}
 	})
 }
+
+// soleGraphID is the id of a Source's one Evidence graph, read through the
+// engine as the app does; the test fails if it has none or several.
+func soleGraphID(t *testing.T, dir, sourceID string) string {
+	t.Helper()
+	var resp engine.ListEvidenceGraphsResponse
+	mustRPC(t, ListEvidenceGraphs, &engine.ListEvidenceGraphsRequest{ProjectDir: dir}, &resp)
+	var ids []string
+	for _, g := range resp.GetGraphs() {
+		if g.GetSourceId() == sourceID {
+			ids = append(ids, g.GetId())
+		}
+	}
+	if len(ids) != 1 {
+		t.Fatalf("Source %s has %d graphs, want 1", sourceID, len(ids))
+	}
+	return ids[0]
+}

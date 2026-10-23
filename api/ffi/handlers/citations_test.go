@@ -355,7 +355,7 @@ func TestCreateCitationWithObservations(t *testing.T) {
 				if created.Citation.GetTranscription() != "transcribe first" {
 					t.Fatalf("transcription %q", created.Citation.GetTranscription())
 				}
-				if created.GetEffects() == nil || len(created.GetEffects().GetSources()) == 0 {
+				if created.GetEffects() == nil || len(created.GetEffects().GetEvidenceGraphs()) == 0 {
 					t.Fatalf("effects %+v", created.GetEffects())
 				}
 				cr := req.(*engine.CreateCitationWithObservationsRequest)

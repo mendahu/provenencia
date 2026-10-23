@@ -50,10 +50,10 @@ var Lists = []List{ListVocabulary, ListPropertyUsage, ListEvidenceGraphs}
 // job has nothing to do. Lists and Structure are the catalog-wide fields.
 type Set struct {
 	Handles [][]byte
-	// Sources are the Sources whose Evidence graphs changed (Effect.Source):
-	// graphcache drops every loaded graph of each, and graph progress counts
+	// EvidenceGraphs are the Evidence graphs whose loaded rows changed
+	// (Effect.EvidenceGraph): graphcache drops each, and graph progress counts
 	// them.
-	Sources [][]byte
+	EvidenceGraphs [][]byte
 	// CitationSources are the Sources whose citation reads (citation counts,
 	// citations by artifact) a change moves (Effect.CitationSource).
 	CitationSources [][]byte
@@ -82,10 +82,10 @@ type Set struct {
 // bucket that has no effects.
 type Effect struct {
 	Entity string
-	// Source is the Source whose Evidence graphs this change changes: graphcache
-	// drops every loaded graph of it, and graph progress counts it. A table
-	// neither loads leaves it empty.
-	Source Path
+	// EvidenceGraph is the Evidence graph whose loaded rows this change moves
+	// (a Path that ends at evidence_graphs): graphcache drops it, and graph
+	// progress counts it. A table neither loads leaves it empty.
+	EvidenceGraph Path
 	// CitationSource is the Source whose citation reads (citation counts,
 	// citations by artifact) load the table. A table neither loads leaves it
 	// empty.
@@ -150,6 +150,20 @@ func valueMembers(col string) Path {
 	return chain(inbound("observations", col), field("subject_id"), membersOf)
 }
 
+// observationGraph is an Observation to the Evidence graph of its Subject.
+var observationGraph = up("subject_id", "graph_id")
+
+// graphsOfSource is a path ending at a Source, to every Evidence graph of it.
+func graphsOfSource(p Path) Path {
+	return chain(p, inbound("evidence_graphs", "source_id"))
+}
+
+// valueGraph is a value row to the Evidence graphs of the Observations that
+// hold it in col.
+func valueGraph(col string) Path {
+	return chain(inbound("observations", col), observationGraph)
+}
+
 // valueSource is a value row to the Source of the Observations that hold it
 // in col. Both Source and SourceScope walk it.
 func valueSource(col string) Path {
@@ -161,7 +175,7 @@ func valueSource(col string) Path {
 func ownedValue(entity, col string) Effect {
 	return Effect{
 		Entity:         entity,
-		Source:         valueSource(col),
+		EvidenceGraph:  valueGraph(col),
 		CitationSource: valueSource(col),
 		SourceScope:    valueSource(col),
 		Handles:        valueMembers(col),
@@ -191,10 +205,10 @@ var observers = chain(
 
 var registry = map[string]Effect{
 	"sources": {
-		Entity:      "source",
-		Source:      onField("title", self()),
-		SourceScope: self(),
-		Search:      []SearchDoc{{Kind: DocSource, Path: self()}},
+		Entity:        "source",
+		EvidenceGraph: onField("title", graphsOfSource(self())),
+		SourceScope:   self(),
+		Search:        []SearchDoc{{Kind: DocSource, Path: self()}},
 	},
 	"source_notes": {
 		Entity:      "source_note",
@@ -219,14 +233,14 @@ var registry = map[string]Effect{
 	},
 	"artifacts": {
 		Entity:         "artifact",
-		Source:         field("source_id"),
+		EvidenceGraph:  graphsOfSource(field("source_id")),
 		CitationSource: field("source_id"),
 		SourceScope:    field("source_id"),
 		Search:         []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
 	},
 	"citations": {
 		Entity:         "citation",
-		Source:         up("artifact_id", "source_id"),
+		EvidenceGraph:  graphsOfSource(up("artifact_id", "source_id")),
 		CitationSource: up("artifact_id", "source_id"),
 		SourceScope:    up("artifact_id", "source_id"),
 		Handles:        onField("transcription_uncertain", sqlPath(sqlHandlesForCitation)),
@@ -234,7 +248,7 @@ var registry = map[string]Effect{
 	"citation_notes": {Entity: "citation_note", SourceScope: up("citation_id", "artifact_id", "source_id")},
 	"observations": {
 		Entity:         "observation",
-		Source:         up("citation_id", "artifact_id", "source_id"),
+		EvidenceGraph:  observationGraph,
 		CitationSource: up("citation_id", "artifact_id", "source_id"),
 		Lists:          []List{ListPropertyUsage},
 		ListsOnField:   "property_id",
@@ -247,12 +261,12 @@ var registry = map[string]Effect{
 		SourceScope: up("observation_id", "citation_id", "artifact_id", "source_id"),
 		HandleScope: chain(up("observation_id", "subject_id"), membersOf),
 	},
-	"subjects": {Entity: "subject", Source: field("source_id"), SourceScope: field("source_id")},
+	"subjects": {Entity: "subject", EvidenceGraph: field("graph_id"), SourceScope: field("source_id")},
 	"evidence_graphs": {
-		Entity:      "evidence_graph",
-		Source:      field("source_id"),
-		SourceScope: field("source_id"),
-		Lists:       []List{ListEvidenceGraphs},
+		Entity:        "evidence_graph",
+		EvidenceGraph: self(),
+		SourceScope:   field("source_id"),
+		Lists:         []List{ListEvidenceGraphs},
 	},
 	"evidence_graph_artifacts": {
 		Entity:      "evidence_graph_artifact",
@@ -300,8 +314,8 @@ var registry = map[string]Effect{
 	},
 	"canonical_entities": {Entity: "canonical_entity", Handles: self(), HandleScope: self()},
 	"identity_claims": {
-		Entity: "identity_claim",
-		Source: from("subject_id", field("source_id")),
+		Entity:        "identity_claim",
+		EvidenceGraph: from("subject_id", field("graph_id")),
 		Handles: union(
 			field("entity_id"),
 			onStatus("accepted", from("subject_id", observers)),
@@ -309,10 +323,10 @@ var registry = map[string]Effect{
 		HandleScope: field("entity_id"),
 	},
 	"identity_claim_evidence": {
-		Entity:      "identity_claim_evidence",
-		Source:      up("identity_claim_id", "subject_id", "source_id"),
-		Handles:     up("identity_claim_id", "entity_id"),
-		HandleScope: up("identity_claim_id", "entity_id"),
+		Entity:        "identity_claim_evidence",
+		EvidenceGraph: up("identity_claim_id", "subject_id", "graph_id"),
+		Handles:       up("identity_claim_id", "entity_id"),
+		HandleScope:   up("identity_claim_id", "entity_id"),
 	},
 
 	"source_credibility_grades":   {None: true},
@@ -371,7 +385,7 @@ func init() {
 
 // paths lists every path field of the effect.
 func (e Effect) paths() []Path {
-	return []Path{e.Source, e.CitationSource, e.SourceScope, e.Handles, e.HandleScope, e.Structure}
+	return []Path{e.EvidenceGraph, e.CitationSource, e.SourceScope, e.Handles, e.HandleScope, e.Structure}
 }
 
 func (e Effect) validate(table string) error {
