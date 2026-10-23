@@ -132,7 +132,6 @@ final class PromoteModel {
         self.store = store
         self.userID = userID
         var flow = PromoteFlow(entryID: entry.subjectID)
-        flow.nameOrders = session.nameFormat
         flow.mappedRest = entry.mapAll
         self.flow = flow
     }
@@ -152,7 +151,7 @@ final class PromoteModel {
             }
             grades = await session.readyValue(confidenceKey) ?? []
             await attachSource()
-            flow.nameOrders = session.nameFormat
+            syncNameOrders()
             let subjects = subjectFacts(snapshot)
             flow.load(
                 entryID: entry.subjectID, proposal: proposal, subjects: subjects,
@@ -202,6 +201,7 @@ final class PromoteModel {
     func setSheetSubject(_ id: String?) {
         evidenceGeneration += 1
         sheetEvidence = .idle
+        syncNameOrders()
         flow.sheetSubjectID = id
         guard let id, let row = flow.row(id), !row.anchor, case .handle(let handleID, _, _) = row.target else { return }
         loadEvidence(subjectID: id, handleID: handleID)
@@ -241,12 +241,10 @@ final class PromoteModel {
         )
     }
 
-    /// The researcher's name order changed. An open sheet's words were made in the old one, so
-    /// its evidence is read and worded again.
-    func nameFormatChanged() {
-        guard session.nameFormat != flow.nameOrders else { return }
+    /// The one place the page takes the researcher's name order from the session: when it loads,
+    /// proposes again and opens a sheet, whose evidence is worded in the same order.
+    private func syncNameOrders() {
         flow.nameOrders = session.nameFormat
-        if let id = flow.sheetSubjectID { setSheetSubject(id) }
     }
 
     func done() {
@@ -345,6 +343,7 @@ final class PromoteModel {
             let snapshot = await graphSnapshot()
             guard generation == proposeGeneration else { return }
             if let snapshot {
+                syncNameOrders()
                 // Bridges are the page's, built once at load: a proposal moves rows, not connections.
                 flow.merge(proposal, subjects: subjectFacts(snapshot))
                 proposeError = nil

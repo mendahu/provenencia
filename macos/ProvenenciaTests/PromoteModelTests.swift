@@ -155,28 +155,39 @@ struct PromoteModelTests {
         #expect(model.sheetEvidence == .idle)
     }
 
-    @Test func aNameOrderChangeWhileASheetIsOpenWordsItAgain() async {
+    @Test func aSheetOpenedAfterANameOrderChangeWordsNamesInTheNewOrder() async {
+        let name = CatalogNameValue(form: "John Smith", parts: [
+            CatalogNameValuePart(value: "John", type: "given"),
+            CatalogNameValuePart(value: "Smith", type: "surname"),
+        ])
         let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
         store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
-        store.promoteEvidence["a"] = evidence([("l:1", true)])
+        store.promoteEvidence["a"] = CatalogClaimEvidence(
+            sections: [CatalogClaimEvidenceSection(propertyKey: "name", lines: [
+                CatalogClaimEvidenceLine(
+                    propertyKey: "name", outcome: .agree, relation: .same,
+                    incomingObservationID: "in-1", incoming: .name(name),
+                    members: [CatalogClaimEvidencePin(id: "l:1", sourceID: "src-1", value: .name(name))]
+                ),
+            ])],
+            offers: [CatalogClaimEvidenceOffer(id: "l:1", checked: true)]
+        )
         let model = model(store: store, subjectID: "a")
         await model.load()
+        model.session.nameFormat = NameFormatOrders(natural: [
+            NameFormatPart(partType: "surname", trailingSeparator: ", "),
+            NameFormatPart(partType: "given", trailingSeparator: ""),
+        ], sorted: [])
         model.openSheet("a")
         _ = await waitUntil { model.flow.row("a")?.board != nil }
-        let reads = { store.recordedCalls.filter { $0.hasPrefix("getPromoteClaimEvidence") }.count }
-        #expect(reads() == 1)
-        // Nothing changed: nothing is read again.
-        model.nameFormatChanged()
-        #expect(reads() == 1)
-        model.session.nameFormat = NameFormatOrders(natural: [NameFormatPart(partType: "surname", trailingSeparator: "")], sorted: [])
-        model.nameFormatChanged()
-        _ = await waitUntil { reads() == 2 }
-        #expect(reads() == 2)
-        // With the sheet closed there is nothing to word again.
+        #expect(model.flow.row("a")?.board?.cards.first?.lines.first?.value == .text("Smith, John"))
+        // Closed and opened under the old order again, the sheet follows that one.
         model.closeSheet()
         model.session.nameFormat = NameFormatOrders()
-        model.nameFormatChanged()
-        #expect(reads() == 2)
+        model.openSheet("a")
+        _ = await waitUntil { model.flow.row("a")?.board?.cards.first?.lines.first?.value == .text("John Smith") }
+        #expect(model.flow.row("a")?.board?.cards.first?.lines.first?.value == .text("John Smith"))
+        #expect(model.flow.nameOrders == NameFormatOrders())
     }
 
     @Test func aFailedEvidenceReadShowsAnError() async {
