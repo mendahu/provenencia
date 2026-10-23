@@ -266,7 +266,7 @@ private struct ConclusionDetailLikenessSection: View {
 
     private func tileView(_ tile: ConclusionDetailLikeness) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space3) {
-            LikenessTile(
+            LikenessTileView(
                 projectDir: projectDir,
                 relPath: tile.imageRelPath,
                 caption: tile.sourceTitle,
@@ -434,6 +434,51 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
                 .font(PVFont.mono(size: PVTypeScale.h1, weight: PVFontWeight.medium))
                 .foregroundStyle(PVColor.textDisplay)
                 .accessibilityAddTraits(.isHeader)
+        }
+    }
+}
+
+/// One likeness: its crop over a one-line muted caption. The gallery passes the button that opens
+/// the Citation as `overlay` (drawn over the crop only).
+private struct LikenessTileView<Overlay: View>: View {
+    let projectDir: String
+    let relPath: String
+    let caption: String
+    let captionWidth: CGFloat
+    private let overlay: Overlay
+
+    init(
+        projectDir: String,
+        relPath: String,
+        caption: String,
+        captionWidth: CGFloat,
+        @ViewBuilder overlay: () -> Overlay
+    ) {
+        self.projectDir = projectDir
+        self.relPath = relPath
+        self.caption = caption
+        self.captionWidth = captionWidth
+        self.overlay = overlay()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space3) {
+            CachedThumbnail(
+                projectDir: projectDir,
+                relPath: relPath,
+                size: CachedThumbnail.likenessCrop,
+                fallbackMark: .subjectPerson
+            )
+            .accessibilityHidden(true)
+            .overlay { overlay }
+            Text(verbatim: caption)
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textMuted)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: captionWidth, alignment: .leading)
+                .help(Text(verbatim: caption))
+                .accessibilityHidden(true)
         }
     }
 }

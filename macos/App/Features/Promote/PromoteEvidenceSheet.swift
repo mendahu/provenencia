@@ -62,7 +62,7 @@ struct PromoteEvidenceSheet: View {
         case .handle(_, let ref, _):
             let title = row.readingTitle ?? ""
             return Text(EvidenceTextStyle.painted(
-                PromoteEvidenceDisplay.title(name: row.name, recordTitle: title, ref: ref), name: nil
+                PromoteEvidenceDisplay.title(name: row.name, recordTitle: title, ref: ref)
             ))
         case .newKind:
             return Text(verbatim: L10n.Promote.sheetTitleNew(name: row.name, target: L10n.string(L10n.Promote.newOption(row.kind))))
@@ -77,8 +77,7 @@ struct PromoteEvidenceSheet: View {
         return Text(EvidenceTextStyle.painted(
             PromoteEvidenceDisplay.subtitle(
                 name: row.name, sourceTitle: model.entry.sourceTitle, kind: row.kind, recordTitle: title
-            ),
-            name: PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold)
+            )
         ))
     }
 
@@ -154,10 +153,8 @@ struct PromoteEvidenceSheet: View {
             title: EvidenceTextStyle.painted(
                 PromoteEvidenceDisplay.evidenceHeading(
                     name: row.name, sourceTitle: model.entry.sourceTitle, kind: row.kind, recordTitle: title
-                ),
-                name: PVFont.display(size: PVTypeScale.h3, weight: PVFontWeight.semibold)
+                )
             ),
-            titleWeight: PVFontWeight.regular,
             meta: board.map { L10n.Promote.checkedCount($0.checkedCount(pins: row.pins)) }
         )
         .accessibilityAddTraits(.isHeader)
@@ -225,21 +222,23 @@ struct PromoteEvidenceSheet: View {
 // MARK: - Layout
 
 private enum EvidenceLayout {
-    /// The outcome Badge's column, so every line's Badge lines up.
-    static let badgeColumn: CGFloat = 116
-    static let box: CGFloat = 18
     static let inset = PVSpacing.space4
     static let gap = PVSpacing.space4
-    /// A line's value column, and the Source column on the right of every line.
+    /// A relationship's own properties start here.
+    static let relationshipIndent = PVSpacing.space6 + PVSpacing.space5
+    // The board's grid: no token equals these, so each is named once with where it comes from.
+    /// The checkbox column (board: 18 px).
+    static let box: CGFloat = 18
+    /// The outcome Badge's column, so every line's Badge lines up (board: 116 px).
+    static let badgeColumn: CGFloat = 116
+    /// A line's value column, and the Source column on the right of every line (board: 200 px each).
     static let valueColumn: CGFloat = 200
     static let sourceColumn: CGFloat = 200
-    /// An expanded record's value column, and where it starts.
+    /// An expanded record's value column (board: 170 px), and where it starts (board: 44 px).
     static let memberValueColumn: CGFloat = 170
     static let memberIndent: CGFloat = 44
-    /// A relationship's own properties start here.
-    static let relationshipIndent: CGFloat = 28
     /// A likeness's crops sit side by side in the value column.
-    static let cropGap: CGFloat = 8
+    static let cropGap = PVSpacing.space4
 }
 
 private func outcomeTone(_ outcome: EvidenceOutcome) -> PVBadgeTone {
@@ -299,10 +298,7 @@ private struct EvidenceTitleLines: View {
         if row.updated || readout.contested {
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
                 if row.updated {
-                    Text(verbatim: L10n.Promote.updatedDetail(model.reasonText(row.captionReason, on: row)))
-                        .font(PVFont.body(size: PVTypeScale.caption))
-                        .italic()
-                        .foregroundStyle(PVColor.infoForeground)
+                    PromoteUpdatedCaption(reason: model.reasonText(row.captionReason, on: row))
                 }
                 if readout.contested {
                     Text(L10n.Promote.somethingDisagrees)
@@ -327,33 +323,35 @@ private struct EvidenceSectionCard: View {
 
     var body: some View {
         PVCard(cornerRadius: PVRadius.sm) {
-            VStack(alignment: .leading, spacing: 0) {
-                EvidenceCardHeader(title: group.header, thisSource: group.thisSource)
-                EvidenceGroupLines(group: group, pins: pins, expanded: expanded, env: env)
-            }
+            EvidenceSectionLines(group: group, style: .card, pins: pins, expanded: expanded, env: env)
         }
         .accessibilityIdentifier("promote.sheet.section.\(group.id)")
     }
 }
 
-/// A group's lines, divided. A line draws again only when its own value, its own checked pins
-/// or its own disclosure change.
-private struct EvidenceGroupLines: View {
+/// One property's header and its lines, divided: the body of a Card and of a group under a
+/// relationship. A line draws again only when its own value, its own checked pins or its own
+/// disclosure change.
+private struct EvidenceSectionLines: View {
     let group: EvidenceBoard.Group
+    let style: EvidenceCardHeader.Style
     let pins: Set<String>
     let expanded: Set<String>
     let env: EvidenceEnv
 
     var body: some View {
-        ForEach(Array(group.lines.enumerated()), id: \.element.id) { index, line in
-            if index > 0 { PVDivider() }
-            EvidenceLine(
-                line: line,
-                checked: pins.intersection(line.pinIDs),
-                isOpen: expanded.contains(line.key),
-                env: env
-            )
-            .equatable()
+        VStack(alignment: .leading, spacing: 0) {
+            EvidenceCardHeader(title: group.header, thisSource: group.thisSource, style: style)
+            ForEach(Array(group.lines.enumerated()), id: \.element.id) { index, line in
+                if index > 0 { PVDivider() }
+                EvidenceLine(
+                    line: line,
+                    checked: pins.intersection(line.pinIDs),
+                    isOpen: expanded.contains(line.key),
+                    env: env
+                )
+                .equatable()
+            }
         }
     }
 }
@@ -435,13 +433,12 @@ private struct EvidenceLine: View, Equatable {
     @ViewBuilder
     private var sourceColumn: some View {
         if line.collapses {
+            // The label starts on the Source column's edge, where the record titles start.
             PVDisclosureButton(
                 isOpen ? L10n.Promote.hideRecords(line.pinIDs.count) : L10n.Promote.showRecords(line.pinIDs.count),
-                isExpanded: Binding(get: { isOpen }, set: { env.setOpen(line.key, $0) })
+                isExpanded: Binding(get: { isOpen }, set: { env.setOpen(line.key, $0) }),
+                flushLeading: true
             )
-            // A ghost button's label sits inside its padding; pull it out so the label
-            // starts on the Source column's edge, where the record titles start.
-            .padding(.leading, -PVControlSize.sm.horizontalPadding)
             .accessibilityIdentifier("promote.sheet.expand.\(line.key)")
         } else if !line.pinIDs.isEmpty {
             EvidenceSourceTitle(title: line.source)
@@ -465,18 +462,19 @@ private struct EvidenceSourceTitle: View {
     }
 }
 
-/// Draws the roles ``PromoteEvidenceDisplay`` names: the one place the sheet's words get a font and a color.
+/// Draws the roles ``PromoteEvidenceDisplay`` names: the one place the sheet's words get a color
+/// and an emphasis. A name is set by weight, so it takes the size of the text around it. Typed
+/// `AttributeContainer` subscripts, as `PVComboBox` uses, not dynamic members: those warn under
+/// Swift 6 key-path rules.
 private enum EvidenceTextStyle {
-    /// `name` is the font of a name here; it differs by where the text sits. Typed `AttributeContainer`
-    /// subscripts, as `PVComboBox` uses, not dynamic members: those warn under Swift 6 key-path rules.
-    static func painted(_ text: AttributedString, name nameFont: Font?) -> AttributedString {
+    static func painted(_ text: AttributedString) -> AttributedString {
         var result = text
         for run in text.runs {
             guard let role = run[PromoteEvidenceDisplay.RoleAttribute.self] else { continue }
             var attributes = AttributeContainer()
             switch role {
             case .name:
-                attributes[AttributeScopes.SwiftUIAttributes.FontAttribute.self] = nameFont
+                attributes[AttributeScopes.FoundationAttributes.InlinePresentationIntentAttribute.self] = .stronglyEmphasized
                 attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] = PVColor.textDisplay
             case .source:
                 attributes[AttributeScopes.FoundationAttributes.InlinePresentationIntentAttribute.self] = .emphasized
@@ -506,7 +504,7 @@ private struct EvidenceCrops: View {
                     CachedThumbnail(
                         projectDir: projectDir,
                         relPath: path,
-                        size: LikenessTile<EmptyView>.crop,
+                        size: CachedThumbnail.likenessCrop,
                         fallbackMark: .subjectPerson
                     )
                     .accessibilityHidden(true)
@@ -637,11 +635,8 @@ private struct EvidenceRelationshipCard: View {
                 } else {
                     ForEach(relationship.groups) { group in
                         PVDivider()
-                        VStack(alignment: .leading, spacing: 0) {
-                            EvidenceCardHeader(title: group.header, thisSource: group.thisSource, style: .group)
-                            EvidenceGroupLines(group: group, pins: pins, expanded: expanded, env: env)
-                        }
-                        .padding(.leading, EvidenceLayout.relationshipIndent)
+                        EvidenceSectionLines(group: group, style: .group, pins: pins, expanded: expanded, env: env)
+                            .padding(.leading, EvidenceLayout.relationshipIndent)
                         .accessibilityIdentifier("promote.sheet.section.\(group.id)")
                     }
                 }

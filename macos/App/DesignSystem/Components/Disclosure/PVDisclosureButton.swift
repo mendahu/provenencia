@@ -16,17 +16,20 @@ struct PVDisclosureButton<Title: PVCopy>: View {
     @Binding private var isExpanded: Bool
     private let variant: PVButtonVariant
     private let size: PVControlSize
+    private let flushLeading: Bool
 
     init(
         _ title: Title,
         isExpanded: Binding<Bool>,
         variant: PVButtonVariant = .ghost,
-        size: PVControlSize = .sm
+        size: PVControlSize = .sm,
+        flushLeading: Bool = false
     ) {
         self.title = title
         self._isExpanded = isExpanded
         self.variant = variant
         self.size = size
+        self.flushLeading = flushLeading
     }
 
     /// Opens a closed section, closes an open one.
@@ -35,8 +38,11 @@ struct PVDisclosureButton<Title: PVCopy>: View {
     }
 
     var body: some View {
-        PVButton(title, variant: variant, size: size, iconRight: PVExpandedState.chevron(isExpanded: isExpanded), action: toggle)
-            .pvExpandedState(isExpanded)
+        PVButton(
+            title, variant: variant, size: size, iconRight: PVExpandedState.chevron(isExpanded: isExpanded),
+            flushLeading: flushLeading, action: toggle
+        )
+        .pvExpandedState(isExpanded)
     }
 }
 

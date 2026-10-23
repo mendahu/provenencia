@@ -12,6 +12,9 @@ struct CachedThumbnail: View {
         case well
     }
 
+    /// A likeness's stored crop, as the Person gallery and the Promote evidence sheet draw it.
+    static let likenessCrop: CGFloat = 96
+
     /// Glyph size inside a card well. The board draws the type or file mark at 56.
     static let wellGlyph: CGFloat = 56
 

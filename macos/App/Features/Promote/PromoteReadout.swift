@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// A row's band and, when it applies, its Contested mark: what the proposal
-/// says about the pair, drawn once for the Promote row and the evidence
-/// sheet's title.
+/// What a Promote row says beside its name, drawn once for the Promote row and the evidence
+/// sheet's title: its band and, when it applies, its Contested mark (what the proposal says about
+/// the pair), and the Updated caption.
 struct PromoteReadoutBadges: View {
     let readout: PromoteFlow.SelectionReadout
 
@@ -22,6 +22,20 @@ struct PromoteReadoutBadges: View {
         case .weak: .warning
         case .none: .neutral
         }
+    }
+}
+
+/// "Updated · …": why a suggested row moved on the last proposal. Drawn under the Promote row and
+/// under the evidence sheet's title.
+struct PromoteUpdatedCaption: View {
+    /// Why it moved, as `PromoteModel.reasonText` words it.
+    let reason: String
+
+    var body: some View {
+        Text(verbatim: L10n.Promote.updatedDetail(reason))
+            .font(PVFont.body(size: PVTypeScale.caption))
+            .italic()
+            .foregroundStyle(PVColor.infoForeground)
     }
 }
 

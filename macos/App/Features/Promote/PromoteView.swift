@@ -521,10 +521,7 @@ private struct PromoteAlignmentRow: View {
                 .frame(width: PromoteLayout.badgeColumn, alignment: .trailing)
             }
             if row.updated {
-                Text(verbatim: L10n.Promote.updatedDetail(model.reasonText(row.captionReason, on: row)))
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .italic()
-                    .foregroundStyle(PVColor.infoForeground)
+                PromoteUpdatedCaption(reason: model.reasonText(row.captionReason, on: row))
                     .padding(.leading, PromoteLayout.noteIndent)
             }
             if let ref = row.conflictNote {
