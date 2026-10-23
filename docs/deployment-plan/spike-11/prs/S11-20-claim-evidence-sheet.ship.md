@@ -586,3 +586,23 @@ Head `d591470d` (`7e48d6b6` F-31, `d591470d` F-32). Gate PASS (orchestrator re-r
 
 ## Result (after round 14)
 Gate PASS · CI see PR · open: none · manual check §10 not run
+
+## Round 15 — user request (2026-10-23)
+The connection sentences print the term label capitalized mid-sentence ("John Smith is the Spouse of Mary Smith", "Leeds is Part of Yorkshire", "participated as Witness at"). The user asked: lowercase the term inside the sentences, the same way the reason does. The "as built" brief posted to the design board (chat "S11-20 as built", 2026-10-23) already describes the lowercase wording.
+
+**F-33 — A term reads lowercase inside every connection phrase** (from the user)
+Files: `macos/App/Features/Catalog/Connect/ConnectionSentenceRegistry.swift`, `EvidenceBridgeEdgeSummary.swift`, `macos/ProvenenciaTests/ConnectionSentenceRegistryTests.swift`, `EvidenceBridgeEdgeSummaryTests.swift`, and any other test that pins a capitalized term inside a sentence.
+Failing tests first:
+- "John Smith is the spouse of Mary Smith".
+- "Leeds is part of Yorkshire".
+- "Mary Smith participated as witness at Baptism of John Smith".
+- The card phrases lowercase the term too, with the phrase's first word still capitalized: "Is the spouse of", "Participated as witness".
+Do:
+- Lowercase the term label once, where it enters the registry. Use `lowercased(with: .autoupdatingCurrent)`, as `reasonRole` does.
+- Every sentence, phrase and the reason read that one value; `reasonRole` drops its own lowercasing.
+- Endpoint names (people, places, event titles) are never lowercased.
+Check: tests pass; `grep -n "lowercased" macos/App/Features/Catalog/Connect` shows one site; scripts/check-pr.sh PASS.
+F-33 done at `6763b144`; gate PASS (orchestrator re-ran). `aTermReadsLowercaseInsideEverySentenceAndPhrase` failed first and passes. One lowercasing site (`ConnectionSentenceRegistry.termInLowercase`); `KindEntry.reasonRole` closure became `namesTerm: Bool`. Four assertions pinning capitalized terms were updated to lowercase. No new warning in the Connect files.
+
+## Result (after round 15)
+Gate PASS · CI see PR · open: none · manual check §10 not run · design board: "S11-20 as built" brief posted to the project's chat panel, not yet applied
