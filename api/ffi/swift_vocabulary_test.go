@@ -38,7 +38,7 @@ const (
 	swiftL10n       = "../../macos/App/Platform/L10n.swift"
 	swiftValueKinds = "../../macos/App/Platform/InterpretationValueKinds.swift"
 	swiftMarks      = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
-	swiftGraphKinds = "../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift"
+	swiftGraphKinds = "../../macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift"
 	swiftCatalogMut = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
 
 	swiftRegionGeometry = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
