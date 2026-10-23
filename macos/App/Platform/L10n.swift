@@ -1529,9 +1529,6 @@ enum L10n {
         static func thisSource(_ value: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.thisSource", defaultValue: "This source: %@", comment: "Muted detail under an evidence sentence: the value on the Source being promoted"), value)
         }
-        static func connectionLink(first: String, phrase: String, second: String) -> String {
-            L10n.format(LocalizedStringResource("promote.connection.link", defaultValue: "%1$@ · %2$@ · %3$@", comment: "A connection as the page words it: one end, the link, the other end; shared by the Promote evidence sheet and connection subrows"), first, phrase, second)
-        }
         static let nothingUnder = LocalizedStringResource("promote.sheet.nothingUnder", defaultValue: "Nothing else to compare.", comment: "Caption under a relationship that has no lines of its own")
         static let pickRecordTitle = LocalizedStringResource("promote.sheet.pickRecord.title", defaultValue: "Pick a record to see its evidence", comment: "Empty state title on the evidence sheet of a row with no record")
         static let pickRecordBody = LocalizedStringResource("promote.sheet.pickRecord.body", defaultValue: "Choose a record in this row's menu. New and Skip file no evidence.", comment: "Empty state body on the evidence sheet of a row with no record")

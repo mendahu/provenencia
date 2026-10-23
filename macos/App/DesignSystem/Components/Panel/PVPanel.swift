@@ -166,7 +166,7 @@ extension PVPanel where Footer == EmptyView, TitleAccessory == EmptyView {
 
 #Preview("Panel — title accessory") {
     PVPanel(
-        title: Text(verbatim: "John Smith → PER-7QH3D John Smith"),
+        title: Text(verbatim: "John Smith joins John Smith PER-7QH3D"),
         width: 640
     ) {
         Text(verbatim: "Body")

@@ -26,9 +26,9 @@ type Registry struct {
 	Segment segmentcompare.Rules
 	// Alignment is layer 6: candidates, the accept bar, bands and settling.
 	Alignment graphalign.Rules
-	// Evidence is the claim evidence view: which lines start checked or can
-	// be pinned, and what a relationship line bundles. It is not evidence
-	// points; no comparison layer reads it.
+	// Evidence is the claim evidence view: which lines start checked, and what
+	// a relationship line bundles. It is not evidence points; no comparison
+	// layer reads it.
 	Evidence claimevidence.Rules
 }
 

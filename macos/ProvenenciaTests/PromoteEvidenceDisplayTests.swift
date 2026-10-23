@@ -43,7 +43,6 @@ struct PromoteEvidenceDisplayTests {
         CatalogDateValueInput(kind: "point", startYear: year, startMonth: month, startDay: day)
     }
 
-    // MARK: - T-1
 
     @Test func checkStateFollowsThePins() {
         let ids = ["p1", "p2", "p3", "p4", "p5"]
@@ -53,14 +52,13 @@ struct PromoteEvidenceDisplayTests {
         #expect(PromoteEvidenceDisplay.checkState(pinIDs: [], pins: ["p1"]) == .unchecked)
     }
 
-    @Test func checkedCountIsOfferedPinsOnly() {
+    @Test func checkedCountCountsCheckedOffers() {
         let offered: Set<String> = ["p1", "p2"]
         #expect(PromoteEvidenceDisplay.checkedCount(offered: offered, pins: ["p1", "x"]) == 1)
         #expect(PromoteEvidenceDisplay.checkedCount(offered: offered, pins: ["p1", "p2"]) == 2)
         #expect(PromoteEvidenceDisplay.checkedCount(offered: offered, pins: []) == 0)
     }
 
-    // MARK: - T-2
 
     private func sentence(
         _ relation: ValueRelation,
@@ -122,14 +120,6 @@ struct PromoteEvidenceDisplayTests {
         #expect(L10n.string(L10n.Promote.notCompared) == "Not compared")
     }
 
-    // MARK: - T-3
-
-    @Test func connectionLinkJoinsItsThreeParts() {
-        #expect(
-            L10n.Promote.connectionLink(first: "John Smith", phrase: "subject of", second: "Birth of John Smith")
-                == "John Smith · subject of · Birth of John Smith"
-        )
-    }
 
     @Test func countsArePlural() {
         #expect(L10n.Promote.recordCount(1) == "· 1 record")
@@ -140,7 +130,6 @@ struct PromoteEvidenceDisplayTests {
         #expect(L10n.Promote.hideRecords(4) == "Hide 4 records")
     }
 
-    // MARK: - T-7, T-6
 
     @Test func anOptionalFieldSaysSo() {
         #expect(L10n.string(L10n.DesignSystem.optionalMarker) == "(optional)")
@@ -150,7 +139,6 @@ struct PromoteEvidenceDisplayTests {
         #expect(L10n.string(L10n.DesignSystem.checkboxPartlyChecked) == "partly checked")
     }
 
-    // MARK: - T-5
 
     @Test func spokenLabelsReadTheLine() {
         #expect(

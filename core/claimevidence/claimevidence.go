@@ -1,7 +1,7 @@
 // Package claimevidence is the claim evidence view's policy: which lines a
-// Promote row shows for one target entity, and which start checked (every line
-// can be pinned), and how a relationship that corresponds through segment compare
-// bundles the Observations behind it. Pure: no I/O, no catalog, no numbers;
+// Promote row shows for one target entity, which lines start checked (every
+// line can be pinned), and how a relationship that corresponds through segment
+// compare bundles the Observations behind it. Pure: no I/O, no catalog, no numbers;
 // the evidence section, layers 1, 3 and 5's rules and every input (the row's
 // and its neighbors' values, the entity's accepted members) come in as
 // arguments. It composes layer 2 (propertycompare), layer 3's Side and Points

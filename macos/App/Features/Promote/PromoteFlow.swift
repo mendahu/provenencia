@@ -176,7 +176,6 @@ struct PromoteFlow: Equatable, Sendable {
         var move: Reason? = nil
         var id: String { subjectID }
 
-        /// The selected record's band and why. Skip, New, and an empty menu show nothing.
         /// The record behind the target as a sentence reads it (a person in natural order); the
         /// target's own title when the record is not in the menu, as with a filed anchor.
         var readingTitle: String? {
@@ -184,6 +183,7 @@ struct PromoteFlow: Equatable, Sendable {
             return menu.first { $0.id == id }?.readingTitle ?? title
         }
 
+        /// The selected record's band and why. Skip, New, and an empty menu show nothing.
         var selectionReadout: SelectionReadout? {
             guard case .handle(let id, _, _) = target,
                   let alt = menu.first(where: { $0.id == id }) else { return nil }

@@ -18597,18 +18597,6 @@
         }
       }
     },
-    "promote.connection.link": {
-      "comment": "A connection as the page words it: one end, the link, the other end; shared by the Promote evidence sheet and connection subrows",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · %2$@ · %3$@"
-          }
-        }
-      }
-    },
     "promote.sheet.nothingUnder": {
       "comment": "Caption under a relationship that has no lines of its own",
       "extractionState": "manual",

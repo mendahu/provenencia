@@ -157,6 +157,8 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Icon | `Components/Icon/PVIcon.swift` |
 | Field | `Components/Field/PVField.swift` (`marker: .required / .optional` marks the label) |
 | Input | `Components/Input/PVInput.swift` |
+| TextArea | `Components/TextArea/PVTextArea.swift` (multiline field with `PVInput`'s chrome; grows with its text between `lineLimit`'s bounds, or with `fillsHeight` takes the height its container offers, never less than the lower bound, and scrolls inside it; added for inline edit, and for the Promote sheet's argument box beside a column of fields) |
+| SectionHeader | `Components/SectionHeader/PVSectionHeader.swift` (detail-page section chrome: display title, mono meta, aside, trailing actions and a bottom rule; the title is semibold and may be an `AttributedString` carrying its own emphasis) |
 | Select | `Components/Select/PVSelect.swift` (native popup contract on `PVContextMenu`; see "The Select contract" below) |
 | ContextMenu | `Components/ContextMenu/PVContextMenu.swift`, `PVActionMenu.swift` (action menus are `PVActionMenuItem` lists: a right-click menu that opens at the pointer is one `.pvRightClickMenu`, which adds the state, the trigger and one VoiceOver action per enabled item (the toolbar's Back/Forward history menu anchors to its button and keeps its own presenter); a button-opened menu draws `PVActionMenuRows` inside `.pvContextMenu`, with `keyboardTitles` from `PVActionMenuItem.keyboardTitles`; `PVSelect` uses `.pvContextMenu` directly) |
 | Toast | `Components/Toast/PVToast.swift` |

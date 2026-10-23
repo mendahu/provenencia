@@ -65,7 +65,10 @@ struct PVSectionHeader<Title: PVCopy, Aside: View, Actions: View>: View {
 }
 
 #Preview("Title from a formatted String") {
-    PVSectionHeader(title: "What's the evidence that this is PER-7QH3D John Smith?" as String, meta: "4 checked")
+    PVSectionHeader(
+        title: "John Smith from Leeds Mercury obituary belongs in the concluded person John Smith because…" as String,
+        meta: "4 checked"
+    )
         .padding(PVSpacing.space9)
         .background(PVColor.surfacePage)
 }

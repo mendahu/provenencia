@@ -32,10 +32,10 @@ type PinOffer struct {
 
 // PinOffers are every pin the evidence offers, in the order the sheet shows
 // them: the row's own lines, then each relationship's bundles followed by its
-// lines. Every line and relationship offers its pins, a conflict
-// included, unchecked. This is
-// the one place that decides which pins start checked; the RPC sends the offers
-// and Apply writes them, so the sheet and a Done that never opened it agree.
+// lines. Every line and relationship offers its pins, a conflict included,
+// unchecked. This is the one place that decides which pins start checked; the
+// RPC sends the offers and Apply writes them, so the sheet and a Done that
+// never opened it agree.
 func PinOffers(e claimevidence.Evidence) []PinOffer {
 	var out []PinOffer
 	lines := func(sections []claimevidence.Section) {
