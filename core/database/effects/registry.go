@@ -165,13 +165,15 @@ func valueGraph(col string) Path {
 }
 
 // valueSource is a value row to the Source of the Observations that hold it
-// in col. Both Source and SourceScope walk it.
+// in col, through each Observation's Citation. CitationSource and SourceScope
+// walk it; EvidenceGraph walks valueGraph, through the Observation's Subject.
 func valueSource(col string) Path {
 	return chain(inbound("observations", col), up("citation_id", "artifact_id", "source_id"))
 }
 
 // ownedValue is the effect of a value row an Observation owns in col: the
-// change carries the Source and handles of the Observations that hold it.
+// change carries the Evidence graphs, the Source and the handles of the
+// Observations that hold it.
 func ownedValue(entity, col string) Effect {
 	return Effect{
 		Entity:         entity,

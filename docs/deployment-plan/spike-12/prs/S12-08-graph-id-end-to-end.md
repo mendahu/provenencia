@@ -393,7 +393,7 @@ None.
 Differences from the plan:
 
 - The handler tests take a graph id from the engine, through two helpers in `evidence_graphs_test.go` (`soleGraphID`, `graphLinking`, both over `ListEvidenceGraphs`), not from `evidencegraphstest.SoleGraph` or `artifactstest.Split`: they hold a project directory, not a catalog.
-- `FakeStore` is lenient where the engine refuses: `createSubject` on a graph no list names takes its Source from the graph's other Subjects (or none) instead of throwing `subjects.invalid`, and `sourceOfGraph` falls back to a Subject's `sourceID`, so a test that seeds Subjects by graph id needs no graph literal. A write on a Source that no list holds still reports its graphs, with no activity. `createSource` reports no graph (as `evidence: false` did); `copySource` reports its Default graph when it copies an Artifact.
+- `FakeStore` refuses and reports as the engine does: `createSubject` on a graph no list names throws `subjects.invalid`, `sourceOfGraph` reads the graph lists only, and `createSource` reports its Default graph like `copySource`. A write on a Source that no list holds still reports its graphs, with no activity.
 - `FakeStore` records `getCitation <id> graphID=<id>` (it recorded the Citation id alone), so T-18 can see the graph the composer sent.
 - `SourcePageModel.evidenceGraphLocation` and `SourcesModel.graphLocation(for:)` read the graph list with `queryHandle` (they are read from `body`); `SourcePageModel.warmFromSession` and `SourcesModel.warmListQueries` start the read, as `PlaceRegistry` does for the places.
 - `EvidenceGraphContent` takes `graphID` where it took `sourceID` (it used the id only for the camera); `SourcesModel`'s status filter reads the entry graph's progress.

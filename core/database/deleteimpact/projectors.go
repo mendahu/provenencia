@@ -67,10 +67,12 @@ func projectKind(tx *sql.Tx, kind catalogmodel.Kind, row probeRow) (string, Loca
 }
 
 // sqlFirstArtifactGraph is the first graph, by name, an Artifact is linked to.
+// The order is the graph list's (evidencegraphs.sqlListOrder): name without
+// case, then ref, then id.
 const sqlFirstArtifactGraph = `SELECT ega.graph_id FROM evidence_graph_artifacts ega
 	JOIN evidence_graphs g ON g.id = ega.graph_id
 	WHERE ega.artifact_id = ?
-	ORDER BY g.name COLLATE NOCASE, g.id
+	ORDER BY g.name COLLATE NOCASE, g.ref, g.id
 	LIMIT 1`
 
 func projectObservation(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
