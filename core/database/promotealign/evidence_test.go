@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -229,6 +230,75 @@ func TestEvidenceSpouseNeverMeetsSibling(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A relationship carries the link read from the neighbor's side: two links to
+// one neighbor are two relationships, each with its own term, and a directed
+// link names the term the neighbor carries.
+func TestEvidenceReadsEachLinkFromTheNeighbor(t *testing.T) {
+	type read struct {
+		end   vocabkey.PropertyKey
+		term  vocabkey.BridgeTerm
+		names bool
+	}
+	got := func(e claimevidence.Evidence) map[string]read {
+		out := map[string]read{}
+		for _, r := range e.Relationships {
+			out[r.Key.String()] = read{r.NeighborEnd, r.NeighborTerm, r.NeighborTermNamesNeighbor}
+		}
+		return out
+	}
+	t.Run("spouses who are also cousins give two cards", func(t *testing.T) {
+		f := newFixture(t)
+		john := f.person(f.source, f.artifact, "John Smith")
+		mary := f.person(f.source, f.artifact, "Mary Jones")
+		f.relationship(f.source, f.artifact, john, mary, "spouse")
+		f.relationship(f.source, f.artifact, john, mary, "cousin")
+		johnHandle, maryHandle := f.promote(john).Entity.ID, f.promote(mary).Entity.ID
+
+		srcB, artB := f.newSource("Obituary")
+		bJohn, bMary := f.person(srcB, artB, "John Smith"), f.person(srcB, artB, "Mary Jones")
+		f.relationship(srcB, artB, bJohn, bMary, "spouse")
+		f.relationship(srcB, artB, bJohn, bMary, "cousin")
+
+		e := f.evidence(promotealign.EvidenceRequest{
+			SourceID: srcB.ID, SubjectID: bJohn.ID, HandleID: johnHandle,
+			Neighbors: []graphalign.Fixed{{SubjectID: bMary.ID, HandleID: maryHandle}},
+		})
+		want := map[string]read{
+			"relationship·spouse": {"", "spouse", true},
+			"relationship·cousin": {"", "cousin", true},
+		}
+		if g := got(e); !reflect.DeepEqual(g, want) {
+			t.Errorf("reads = %+v, want %+v", g, want)
+		}
+	})
+	t.Run("a parent reads as a parent from the child's sheet and a child from the parent's", func(t *testing.T) {
+		f := newFixture(t)
+		john := f.person(f.source, f.artifact, "John Smith")
+		mary := f.person(f.source, f.artifact, "Mary Jones")
+		f.relationship(f.source, f.artifact, mary, john, "parent") // Mary is the parent of John
+		johnHandle, maryHandle := f.promote(john).Entity.ID, f.promote(mary).Entity.ID
+
+		srcB, artB := f.newSource("Obituary")
+		bJohn, bMary := f.person(srcB, artB, "John Smith"), f.person(srcB, artB, "Mary Jones")
+		f.relationship(srcB, artB, bMary, bJohn, "parent")
+
+		asChild := f.evidence(promotealign.EvidenceRequest{
+			SourceID: srcB.ID, SubjectID: bJohn.ID, HandleID: johnHandle,
+			Neighbors: []graphalign.Fixed{{SubjectID: bMary.ID, HandleID: maryHandle}},
+		})
+		if g, want := got(asChild), map[string]read{"relationship·child·person": {vocabkey.PropertyRelatedTo, "parent", true}}; !reflect.DeepEqual(g, want) {
+			t.Errorf("from the child = %+v, want %+v", g, want)
+		}
+		asParent := f.evidence(promotealign.EvidenceRequest{
+			SourceID: srcB.ID, SubjectID: bMary.ID, HandleID: maryHandle,
+			Neighbors: []graphalign.Fixed{{SubjectID: bJohn.ID, HandleID: johnHandle}},
+		})
+		if g, want := got(asParent), map[string]read{"relationship·child·related_to": {vocabkey.PropertyPerson, "child", true}}; !reflect.DeepEqual(g, want) {
+			t.Errorf("from the parent = %+v, want %+v", g, want)
+		}
+	})
 }
 
 // T-8: only a neighbor the page placed on an entity, and that is a layer

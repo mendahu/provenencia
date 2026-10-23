@@ -83,6 +83,54 @@ func TestKey(t *testing.T) {
 	}
 }
 
+func TestReadFrom(t *testing.T) {
+	terms := segmentcomparetest.Terms()
+	// A researcher's directed term with no inverse.
+	terms[vocabkey.BridgeRelationship]["godparent"] = segmentcompare.Term{Directed: true}
+	rel := func(term vocabkey.BridgeTerm, end, other vocabkey.PropertyKey) segmentcompare.Link {
+		return segmentcompare.Link{Type: vocabkey.BridgeRelationship, Term: term, End: end, Other: other, SameType: true}
+	}
+	place := func(end, other vocabkey.PropertyKey) segmentcompare.Link {
+		return segmentcompare.Link{Type: vocabkey.BridgePlaceRelationship, Term: vocabkey.TermPartOf, End: end, Other: other, SameType: true}
+	}
+	partic := func(end, other vocabkey.PropertyKey) segmentcompare.Link {
+		return segmentcompare.Link{Type: vocabkey.BridgeParticipation, Term: "subject", End: end, Other: other, EventType: vocabkey.EventBirth}
+	}
+	const (
+		person    vocabkey.PropertyKey = vocabkey.PropertyPerson
+		relatedTo vocabkey.PropertyKey = vocabkey.PropertyRelatedTo
+		from      vocabkey.PropertyKey = vocabkey.PropertyFrom
+		to        vocabkey.PropertyKey = vocabkey.PropertyTo
+		event     vocabkey.PropertyKey = vocabkey.PropertyEvent
+	)
+	tests := []struct {
+		name          string
+		link          segmentcompare.Link
+		first, second vocabkey.PropertyKey
+		end           vocabkey.PropertyKey
+		term          vocabkey.BridgeTerm
+		names         bool
+	}{
+		{"row is the child", rel("parent", relatedTo, person), person, relatedTo, relatedTo, "parent", true},
+		{"row is the parent", rel("parent", person, relatedTo), person, relatedTo, person, "child", true},
+		{"a symmetric spouse link has no end", rel("spouse", person, relatedTo), person, relatedTo, "", "spouse", true},
+		{"row is the part", place(from, to), from, to, to, vocabkey.TermPartOf, false},
+		{"row is the whole", place(to, from), from, to, from, vocabkey.TermPartOf, true},
+		{"row is the person in a birth", partic(person, event), person, event, event, "subject", false},
+		{"row is the birth", partic(event, person), person, event, person, "subject", true},
+		{"a researcher's term with no inverse", rel("godparent", person, relatedTo), person, relatedTo, relatedTo, "godparent", false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			k := segmentcompare.Key(tc.link, terms)
+			end, term, names := segmentcompare.ReadFrom(k, tc.first, tc.second, terms)
+			if end != tc.end || term != tc.term || names != tc.names {
+				t.Errorf("ReadFrom(%s) = (%q, %q, %v), want (%q, %q, %v)", k, end, term, names, tc.end, tc.term, tc.names)
+			}
+		})
+	}
+}
+
 func TestCompare(t *testing.T) {
 	metas := subjectcomparetest.Metas()
 	reg := matchregistry.Default()

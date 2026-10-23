@@ -335,8 +335,6 @@ struct CatalogPromoteGraphAlignmentProposal: Sendable, Equatable {
 /// One member Observation a line would pin. `id` is Go's pin id.
 struct CatalogClaimEvidencePin: Sendable, Equatable, Identifiable {
     var id: String
-    var memberSubjectID: String
-    var observationID: String
     var sourceID: String
     var value: CatalogConclusionValue
 }
@@ -349,8 +347,6 @@ struct CatalogClaimEvidenceLine: Sendable, Equatable, Identifiable {
     var propertyCause: EvidencePropertyCause = .none
     var relation: ValueRelation
     var cause: ValueCause = .none
-    var points: Double = 0
-    var checked: Bool
     var incomingObservationID: String
     var incoming: CatalogConclusionValue
     /// The incoming value is a negative Observation: shown as "not <value>".
@@ -371,8 +367,17 @@ struct CatalogClaimEvidenceSection: Sendable, Equatable, Identifiable {
 /// One member's side of a relationship. `id` is Go's pin id.
 struct CatalogClaimEvidenceBundle: Sendable, Equatable, Identifiable {
     var id: String
-    var memberSubjectID: String
-    var sourceID: String
+}
+
+/// A term as the evidence wire names it: its key, the catalog's label, and whose term it is.
+/// `key` names a product term only when `CatalogOrigin.isProduct(origin)`.
+struct CatalogEvidenceTerm: Sendable, Equatable {
+    var key: String
+    var label: String
+    var origin: String
+
+    /// The key, when it is a product term.
+    var productKey: String? { CatalogOrigin.isProduct(origin) ? key : nil }
 }
 
 /// One link of the row's Subject that corresponds to a link between the
@@ -381,15 +386,16 @@ struct CatalogClaimEvidenceRelationship: Sendable, Equatable, Identifiable {
     var neighborSubjectID: String
     var key: String
     var bridgeType: String = ""
-    var term: String = ""
-    var end: String = ""
-    var eventType: String = ""
     var outcome: EvidenceOutcome
-    var cause: SegmentCause = .none
-    var points: Double = 0
-    var checked: Bool
     var bundles: [CatalogClaimEvidenceBundle]
     var sections: [CatalogClaimEvidenceSection] = []
+    /// The link read from the neighbor's side: the endpoint property the neighbor is at ("" for a
+    /// symmetric link), the term it carries, and whether that term names the neighbor.
+    var neighborEnd: String = ""
+    var neighborTerm: CatalogEvidenceTerm?
+    var neighborTermNamesNeighbor: Bool = false
+    /// A participation's event type.
+    var eventType: CatalogEvidenceTerm?
 
     var id: String { neighborSubjectID + "|" + key }
 }

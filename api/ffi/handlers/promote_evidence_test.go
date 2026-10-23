@@ -2,16 +2,21 @@ package handlers
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/claimevidence"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
+	"github.com/mendahu/provenencia/core/database/promotealign"
+	"github.com/mendahu/provenencia/core/vocabkey"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // evidenceFixture is a handle of three people who all say Mary Smith, male, on
@@ -54,6 +59,15 @@ func (f evidenceFixture) evidence(t *testing.T) *engine.GetPromoteClaimEvidenceR
 	return &resp
 }
 
+// memberObservation is the member Observation a line pin's id names: "l:<incoming>:<member>".
+func memberObservation(p *engine.PromoteClaimEvidencePin) string {
+	parts := strings.Split(p.GetId(), ":")
+	if len(parts) != 3 {
+		return ""
+	}
+	return parts[2]
+}
+
 func sectionOf(resp *engine.GetPromoteClaimEvidenceResponse, key string) *engine.PromoteClaimEvidenceSection {
 	for _, s := range resp.GetSections() {
 		if s.GetPropertyKey() == key {
@@ -82,7 +96,7 @@ func TestGetPromoteClaimEvidence(t *testing.T) {
 			t.Fatalf("sections = %+v", resp.GetSections())
 		}
 		l := s.GetLines()[0]
-		if l.GetOutcome() != "agree" || l.GetRelation() != "same" || !l.GetChecked() || l.GetIncomingNegative() {
+		if l.GetOutcome() != "agree" || l.GetRelation() != "same" || l.GetIncomingNegative() {
 			t.Fatalf("line = %+v", l)
 		}
 		if l.GetIncoming().GetTerm().GetKey() != "male" || l.GetIncoming().GetTerm().GetLabel() != "Male" {
@@ -96,10 +110,10 @@ func TestGetPromoteClaimEvidence(t *testing.T) {
 			titles[src.GetId()] = src.GetTitle() != ""
 		}
 		for i, p := range l.GetMembers() {
-			if want := "l:" + l.GetIncomingObservationId() + ":" + p.GetMemberObservationId(); p.GetId() != want {
-				t.Errorf("pin id = %q, want %q", p.GetId(), want)
+			if !strings.HasPrefix(p.GetId(), "l:"+l.GetIncomingObservationId()+":") || memberObservation(p) == "" {
+				t.Errorf("pin id = %q", p.GetId())
 			}
-			if p.GetMemberSubjectId() != f.members[i] || p.GetValue().GetTerm().GetKey() != "male" || !titles[p.GetSourceId()] {
+			if p.GetValue().GetTerm().GetKey() != "male" || !titles[p.GetSourceId()] {
 				t.Errorf("pin %d = %+v", i, p)
 			}
 			if o := offerOf(resp, p.GetId()); o == nil || !o.GetChecked() {
@@ -119,7 +133,7 @@ func TestGetPromoteClaimEvidence(t *testing.T) {
 			t.Fatalf("sections = %+v", resp.GetSections())
 		}
 		l := s.GetLines()[0]
-		if l.GetOutcome() != "conflict" || l.GetChecked() || !l.GetIncomingNegative() {
+		if l.GetOutcome() != "conflict" || !l.GetIncomingNegative() {
 			t.Fatalf("line = %+v", l)
 		}
 		for _, p := range l.GetMembers() {
@@ -204,8 +218,11 @@ func TestGetPromoteClaimEvidenceLikeness(t *testing.T) {
 		t.Fatalf("sections = %+v", resp.GetSections())
 	}
 	l := s.GetLines()[0]
-	if l.GetOutcome() != "agree" || l.GetRelation() != "same" || !l.GetChecked() {
+	if l.GetOutcome() != "agree" || l.GetRelation() != "same" || len(l.GetMembers()) != 1 {
 		t.Fatalf("line = %+v", l)
+	}
+	if o := offerOf(resp, l.GetMembers()[0].GetId()); o == nil || !o.GetChecked() {
+		t.Fatalf("the likeness pin offer = %+v, want checked", o)
 	}
 	if l.GetIncoming().GetDepiction().GetImageRelPath() == "" || len(l.GetMembers()) != 1 ||
 		l.GetMembers()[0].GetValue().GetDepiction().GetImageRelPath() != l.GetIncoming().GetDepiction().GetImageRelPath() {
@@ -245,4 +262,76 @@ func TestGetPromoteClaimEvidenceFollowsBindingOrder(t *testing.T) {
 	if got := keys(); len(got) != 2 || got[0] != "sex_at_birth" || got[1] != "name" {
 		t.Fatalf("sections after reorder = %v, want sex_at_birth then name", got)
 	}
+}
+
+// T-4: a relationship reaches the client read from the neighbor's side, with
+// its terms as ConclusionTerms, and the fields nothing reads are reserved.
+func TestClaimEvidenceNeighborReading(t *testing.T) {
+	dir, _, _, _ := subjectFixture(t)
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	mary := uuid.Must(uuid.NewV7())
+	rel := func(typ vocabkey.SubjectType, term vocabkey.BridgeTerm, eventType vocabkey.EventType) claimevidence.Relationship {
+		return claimevidence.Relationship{
+			Neighbor: mary[:], Kind: vocabkey.Person,
+			Key: vocabkey.BridgeKey{Type: typ, Term: term, EventType: eventType},
+		}
+	}
+	spouse := rel(vocabkey.BridgeRelationship, "spouse", "")
+	spouse.NeighborTerm, spouse.NeighborTermNamesNeighbor = "spouse", true
+	cousin := rel(vocabkey.BridgeRelationship, "cousin", "")
+	cousin.NeighborTerm, cousin.NeighborTermNamesNeighbor = "cousin", true
+	birth := rel(vocabkey.BridgeParticipation, "subject", vocabkey.EventBirth)
+	birth.Key.End = vocabkey.PropertyPerson
+	birth.Kind = vocabkey.Event
+	birth.NeighborEnd, birth.NeighborTerm = vocabkey.PropertyEvent, "subject"
+
+	var resp *engine.GetPromoteClaimEvidenceResponse
+	err := withProjectCatalog(dir, func(c *database.Catalog) error {
+		values, err := promotealign.NewEvidenceValues(c.Graph())
+		if err != nil {
+			return err
+		}
+		resp = claimEvidenceProto(claimevidence.Evidence{
+			Kind: vocabkey.Person, Relationships: []claimevidence.Relationship{spouse, cousin, birth},
+		}, values)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rels := resp.GetRelationships()
+	if len(rels) != 3 {
+		t.Fatalf("relationships = %d, want 3", len(rels))
+	}
+	for i, want := range []string{"spouse", "cousin"} {
+		got := rels[i].GetNeighborTerm()
+		if got.GetKey() != want || got.GetOrigin() != vocabkey.OriginProvenencia || got.GetLabel() == "" || !rels[i].GetNeighborTermNamesNeighbor() {
+			t.Errorf("relationship %d neighbor term = %+v, names neighbor %v", i, got, rels[i].GetNeighborTermNamesNeighbor())
+		}
+		if rels[i].GetEventType() != nil {
+			t.Errorf("relationship %d has an event type: %+v", i, rels[i].GetEventType())
+		}
+	}
+	b := rels[2]
+	if b.GetEventType().GetKey() != "birth" || b.GetEventType().GetLabel() != "Birth" || b.GetEventType().GetOrigin() != vocabkey.OriginProvenencia {
+		t.Errorf("event type = %+v", b.GetEventType())
+	}
+	if b.GetNeighborEnd() != "event" || b.GetNeighborTerm().GetKey() != "subject" || b.GetNeighborTermNamesNeighbor() {
+		t.Errorf("birth reading = end %q term %+v names %v", b.GetNeighborEnd(), b.GetNeighborTerm(), b.GetNeighborTermNamesNeighbor())
+	}
+
+	// The wire fields nothing reads are reserved, never reused.
+	reserved := func(message protoreflect.Name, names ...protoreflect.Name) {
+		t.Helper()
+		m := engine.File_engine_proto.Messages().ByName(message)
+		for _, n := range names {
+			if !m.ReservedNames().Has(n) {
+				t.Errorf("%s: %s is not reserved", message, n)
+			}
+		}
+	}
+	reserved("PromoteClaimEvidenceRelationship", "term", "end", "cause", "points", "pinnable", "checked")
+	reserved("PromoteClaimEvidenceLine", "points", "checked", "pinnable")
+	reserved("PromoteClaimEvidencePin", "member_subject_id", "member_observation_id")
+	reserved("PromoteClaimEvidenceBundle", "member_subject_id", "source_id")
 }

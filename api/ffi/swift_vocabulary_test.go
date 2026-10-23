@@ -25,7 +25,6 @@ import (
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/raster"
-	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -294,12 +293,6 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 				string(valuecompare.CauseOrder), string(valuecompare.CauseRole), string(valuecompare.CauseUnsupported), string(valuecompare.CauseUnjudged)),
 		},
 		{
-			name: "segment causes", path: swiftVocabulary, enum: "SegmentCause", re: wireCase,
-			want: sorted("", string(segmentcompare.CauseNotCorresponding), string(segmentcompare.CauseGated),
-				string(segmentcompare.CausePlacedApart), string(segmentcompare.CauseUnplacedDiffers),
-				string(segmentcompare.CauseUnplacedUnsure)),
-		},
-		{
 			name: "date qualifiers", path: swiftVocabulary, enum: "DateQualifier", re: staticLet,
 			want: sorted(datevalue.QualifierABT, datevalue.QualifierBEF, datevalue.QualifierAFT),
 		},
@@ -346,7 +339,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 	}
 	t.Run("states and reasons tolerate a value this build doesn't know", func(t *testing.T) {
 		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteReasonCode",
-			"EvidenceOutcome", "EvidencePropertyCause", "ValueRelation", "ValueCause", "SegmentCause"} {
+			"EvidenceOutcome", "EvidencePropertyCause", "ValueRelation", "ValueCause"} {
 			if !unrecogniz.MatchString(swiftEnumBody(t, swiftVocabulary, enum)) {
 				t.Fatalf("%s has no unrecognized case", enum)
 			}

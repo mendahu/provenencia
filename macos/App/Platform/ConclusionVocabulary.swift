@@ -223,31 +223,6 @@ enum ValueCause: Sendable, Equatable {
     }
 }
 
-/// Why a relationship adds nothing or subtracts (`segmentcompare.Cause`).
-enum SegmentCause: Sendable, Equatable {
-    /// No cause: the code is empty.
-    case none
-    case notCorresponding
-    case gated
-    case placedApart
-    case unplacedDiffers
-    case unplacedUnsure
-    /// A code this build doesn't know.
-    case unrecognized(String)
-
-    init(wire: String) {
-        switch wire {
-        case "": self = .none
-        case "not_corresponding": self = .notCorresponding
-        case "gated": self = .gated
-        case "placed_apart": self = .placedApart
-        case "unplaced_differs": self = .unplacedDiffers
-        case "unplaced_unsure": self = .unplacedUnsure
-        default: self = .unrecognized(wire)
-        }
-    }
-}
-
 // A Property's value type is `PropertyValueType` (InterpretationValueKinds.swift).
 
 /// The `origin` namespace shared by every catalog vocabulary row

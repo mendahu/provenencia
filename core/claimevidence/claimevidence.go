@@ -84,6 +84,14 @@ type Relationship struct {
 	Incoming [][]byte // bundled incoming Observations
 	Members  []Bundle
 	Sections []Section // the neighbor's other properties
+
+	// NeighborEnd, NeighborTerm and NeighborTermNamesNeighbor read Key from the
+	// neighbor's side (segmentcompare.ReadFrom): the endpoint the neighbor is
+	// at, the term it carries, and whether that term names the neighbor. The
+	// loader fills them after Build, from the catalog's terms.
+	NeighborEnd               vocabkey.PropertyKey
+	NeighborTerm              vocabkey.BridgeTerm
+	NeighborTermNamesNeighbor bool
 }
 
 // Inputs is what the loader reads beside the values: the catalog's property

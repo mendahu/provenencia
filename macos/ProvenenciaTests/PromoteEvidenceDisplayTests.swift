@@ -10,7 +10,7 @@ struct PromoteEvidenceDisplayTests {
 
     private func pin(_ id: String, source: String = "src-1", value: String = "John Smith") -> CatalogClaimEvidencePin {
         CatalogClaimEvidencePin(
-            id: id, memberSubjectID: "m-\(id)", observationID: "o-\(id)", sourceID: source,
+            id: id, sourceID: source,
             value: .name(CatalogNameValue(form: value))
         )
     }
@@ -22,7 +22,7 @@ struct PromoteEvidenceDisplayTests {
         pins: [String] = ["p1"]
     ) -> CatalogClaimEvidenceLine {
         CatalogClaimEvidenceLine(
-            propertyKey: key, outcome: outcome, relation: relation, checked: true,
+            propertyKey: key, outcome: outcome, relation: relation,
             incomingObservationID: "in-1", incoming: .name(CatalogNameValue(form: "John Smith")),
             members: pins.map { pin($0) }
         )
@@ -34,8 +34,8 @@ struct PromoteEvidenceDisplayTests {
         sections: [CatalogClaimEvidenceSection] = []
     ) -> CatalogClaimEvidenceRelationship {
         CatalogClaimEvidenceRelationship(
-            neighborSubjectID: neighbor, key: "k", bridgeType: type, outcome: .agree, checked: true,
-            bundles: [CatalogClaimEvidenceBundle(id: "b1", memberSubjectID: "m", sourceID: "s")], sections: sections
+            neighborSubjectID: neighbor, key: "k", bridgeType: type, outcome: .agree,
+            bundles: [CatalogClaimEvidenceBundle(id: "b1")], sections: sections
         )
     }
 

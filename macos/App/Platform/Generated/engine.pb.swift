@@ -5175,10 +5175,6 @@ public nonisolated struct Provenencia_Engine_V1_PromoteClaimEvidencePin: Sendabl
 
   public var id: String = String()
 
-  public var memberSubjectID: String = String()
-
-  public var memberObservationID: String = String()
-
   public var sourceID: String = String()
 
   public var value: Provenencia_Engine_V1_ConclusionValue {
@@ -5215,10 +5211,6 @@ public nonisolated struct Provenencia_Engine_V1_PromoteClaimEvidenceLine: Sendab
 
   /// valuecompare.Cause
   public var cause: String = String()
-
-  public var points: Double = 0
-
-  public var checked: Bool = false
 
   public var incomingObservationID: String = String()
 
@@ -5263,10 +5255,6 @@ public nonisolated struct Provenencia_Engine_V1_PromoteClaimEvidenceBundle: Send
 
   public var id: String = String()
 
-  public var memberSubjectID: String = String()
-
-  public var sourceID: String = String()
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -5284,28 +5272,46 @@ public nonisolated struct Provenencia_Engine_V1_PromoteClaimEvidenceRelationship
 
   public var bridgeType: String = String()
 
-  public var term: String = String()
-
-  public var end: String = String()
-
-  public var eventType: String = String()
-
   public var outcome: String = String()
-
-  /// segmentcompare.Cause
-  public var cause: String = String()
-
-  public var points: Double = 0
-
-  public var checked: Bool = false
 
   public var bundles: [Provenencia_Engine_V1_PromoteClaimEvidenceBundle] = []
 
   public var sections: [Provenencia_Engine_V1_PromoteClaimEvidenceSection] = []
 
+  /// The link read from the neighbor's side (segmentcompare.ReadFrom): the
+  /// endpoint property the neighbor is at ("" for a symmetric link), the term it
+  /// carries, and whether that term names the neighbor. The term is absent for a
+  /// bridge type with no term.
+  public var neighborEnd: String = String()
+
+  public var neighborTerm: Provenencia_Engine_V1_ConclusionTerm {
+    get {_neighborTerm ?? Provenencia_Engine_V1_ConclusionTerm()}
+    set {_neighborTerm = newValue}
+  }
+  /// Returns true if `neighborTerm` has been explicitly set.
+  public var hasNeighborTerm: Bool {self._neighborTerm != nil}
+  /// Clears the value of `neighborTerm`. Subsequent reads from it will return its default value.
+  public mutating func clearNeighborTerm() {self._neighborTerm = nil}
+
+  public var neighborTermNamesNeighbor: Bool = false
+
+  /// A participation's event type (17 replaces the string at 6); absent for any
+  /// other bridge type.
+  public var eventType: Provenencia_Engine_V1_ConclusionTerm {
+    get {_eventType ?? Provenencia_Engine_V1_ConclusionTerm()}
+    set {_eventType = newValue}
+  }
+  /// Returns true if `eventType` has been explicitly set.
+  public var hasEventType: Bool {self._eventType != nil}
+  /// Clears the value of `eventType`. Subsequent reads from it will return its default value.
+  public mutating func clearEventType() {self._eventType = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _neighborTerm: Provenencia_Engine_V1_ConclusionTerm? = nil
+  fileprivate var _eventType: Provenencia_Engine_V1_ConclusionTerm? = nil
 }
 
 /// A pin the evidence offers; checked ones are the defaults.
@@ -16316,7 +16322,7 @@ nonisolated extension Provenencia_Engine_V1_GetPromoteClaimEvidenceRequest: Swif
 
 nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidencePin: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PromoteClaimEvidencePin"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}member_subject_id\0\u{3}member_observation_id\0\u{3}source_id\0\u{1}value\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{4}\u{3}source_id\0\u{1}value\0\u{b}member_subject_id\0\u{b}member_observation_id\0\u{c}\u{2}\u{1}\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16325,8 +16331,6 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidencePin: SwiftProtob
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.memberSubjectID) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.memberObservationID) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.sourceID) }()
       case 5: try { try decoder.decodeSingularMessageField(value: &self._value) }()
       default: break
@@ -16342,12 +16346,6 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidencePin: SwiftProtob
     if !self.id.isEmpty {
       try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
-    if !self.memberSubjectID.isEmpty {
-      try visitor.visitSingularStringField(value: self.memberSubjectID, fieldNumber: 2)
-    }
-    if !self.memberObservationID.isEmpty {
-      try visitor.visitSingularStringField(value: self.memberObservationID, fieldNumber: 3)
-    }
     if !self.sourceID.isEmpty {
       try visitor.visitSingularStringField(value: self.sourceID, fieldNumber: 4)
     }
@@ -16359,8 +16357,6 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidencePin: SwiftProtob
 
   public static func ==(lhs: Provenencia_Engine_V1_PromoteClaimEvidencePin, rhs: Provenencia_Engine_V1_PromoteClaimEvidencePin) -> Bool {
     if lhs.id != rhs.id {return false}
-    if lhs.memberSubjectID != rhs.memberSubjectID {return false}
-    if lhs.memberObservationID != rhs.memberObservationID {return false}
     if lhs.sourceID != rhs.sourceID {return false}
     if lhs._value != rhs._value {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -16370,7 +16366,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidencePin: SwiftProtob
 
 nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceLine: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PromoteClaimEvidenceLine"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}property_key\0\u{1}outcome\0\u{3}property_cause\0\u{1}relation\0\u{1}cause\0\u{1}points\0\u{2}\u{2}checked\0\u{3}incoming_observation_id\0\u{1}incoming\0\u{3}incoming_negative\0\u{1}members\0\u{b}pinnable\0\u{c}\u{7}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}property_key\0\u{1}outcome\0\u{3}property_cause\0\u{1}relation\0\u{1}cause\0\u{4}\u{4}incoming_observation_id\0\u{1}incoming\0\u{3}incoming_negative\0\u{1}members\0\u{b}pinnable\0\u{b}points\0\u{b}checked\0\u{c}\u{6}\u{1}\u{c}\u{7}\u{1}\u{c}\u{8}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16383,8 +16379,6 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceLine: SwiftProto
       case 3: try { try decoder.decodeSingularStringField(value: &self.propertyCause) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.relation) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.cause) }()
-      case 6: try { try decoder.decodeSingularDoubleField(value: &self.points) }()
-      case 8: try { try decoder.decodeSingularBoolField(value: &self.checked) }()
       case 9: try { try decoder.decodeSingularStringField(value: &self.incomingObservationID) }()
       case 10: try { try decoder.decodeSingularMessageField(value: &self._incoming) }()
       case 11: try { try decoder.decodeSingularBoolField(value: &self.incomingNegative) }()
@@ -16414,12 +16408,6 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceLine: SwiftProto
     if !self.cause.isEmpty {
       try visitor.visitSingularStringField(value: self.cause, fieldNumber: 5)
     }
-    if self.points.bitPattern != 0 {
-      try visitor.visitSingularDoubleField(value: self.points, fieldNumber: 6)
-    }
-    if self.checked != false {
-      try visitor.visitSingularBoolField(value: self.checked, fieldNumber: 8)
-    }
     if !self.incomingObservationID.isEmpty {
       try visitor.visitSingularStringField(value: self.incomingObservationID, fieldNumber: 9)
     }
@@ -16441,8 +16429,6 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceLine: SwiftProto
     if lhs.propertyCause != rhs.propertyCause {return false}
     if lhs.relation != rhs.relation {return false}
     if lhs.cause != rhs.cause {return false}
-    if lhs.points != rhs.points {return false}
-    if lhs.checked != rhs.checked {return false}
     if lhs.incomingObservationID != rhs.incomingObservationID {return false}
     if lhs._incoming != rhs._incoming {return false}
     if lhs.incomingNegative != rhs.incomingNegative {return false}
@@ -16489,7 +16475,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceSection: SwiftPr
 
 nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceBundle: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PromoteClaimEvidenceBundle"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}member_subject_id\0\u{3}source_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{b}member_subject_id\0\u{b}source_id\0\u{c}\u{2}\u{1}\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16498,8 +16484,6 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceBundle: SwiftPro
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.memberSubjectID) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.sourceID) }()
       default: break
       }
     }
@@ -16509,19 +16493,11 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceBundle: SwiftPro
     if !self.id.isEmpty {
       try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
-    if !self.memberSubjectID.isEmpty {
-      try visitor.visitSingularStringField(value: self.memberSubjectID, fieldNumber: 2)
-    }
-    if !self.sourceID.isEmpty {
-      try visitor.visitSingularStringField(value: self.sourceID, fieldNumber: 3)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_PromoteClaimEvidenceBundle, rhs: Provenencia_Engine_V1_PromoteClaimEvidenceBundle) -> Bool {
     if lhs.id != rhs.id {return false}
-    if lhs.memberSubjectID != rhs.memberSubjectID {return false}
-    if lhs.sourceID != rhs.sourceID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -16529,7 +16505,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceBundle: SwiftPro
 
 nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceRelationship: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PromoteClaimEvidenceRelationship"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}neighbor_subject_id\0\u{1}key\0\u{3}bridge_type\0\u{1}term\0\u{1}end\0\u{3}event_type\0\u{1}outcome\0\u{1}cause\0\u{1}points\0\u{2}\u{2}checked\0\u{1}bundles\0\u{1}sections\0\u{b}pinnable\0\u{c}\u{a}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}neighbor_subject_id\0\u{1}key\0\u{3}bridge_type\0\u{2}\u{4}outcome\0\u{2}\u{5}bundles\0\u{1}sections\0\u{3}neighbor_end\0\u{3}neighbor_term\0\u{3}neighbor_term_names_neighbor\0\u{3}event_type\0\u{b}term\0\u{b}end\0\u{b}cause\0\u{b}points\0\u{b}pinnable\0\u{b}checked\0\u{c}\u{4}\u{1}\u{c}\u{5}\u{1}\u{c}\u{6}\u{1}\u{c}\u{8}\u{1}\u{c}\u{9}\u{1}\u{c}\u{a}\u{1}\u{c}\u{b}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16540,21 +16516,23 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceRelationship: Sw
       case 1: try { try decoder.decodeSingularStringField(value: &self.neighborSubjectID) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.key) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.bridgeType) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.term) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.end) }()
-      case 6: try { try decoder.decodeSingularStringField(value: &self.eventType) }()
       case 7: try { try decoder.decodeSingularStringField(value: &self.outcome) }()
-      case 8: try { try decoder.decodeSingularStringField(value: &self.cause) }()
-      case 9: try { try decoder.decodeSingularDoubleField(value: &self.points) }()
-      case 11: try { try decoder.decodeSingularBoolField(value: &self.checked) }()
       case 12: try { try decoder.decodeRepeatedMessageField(value: &self.bundles) }()
       case 13: try { try decoder.decodeRepeatedMessageField(value: &self.sections) }()
+      case 14: try { try decoder.decodeSingularStringField(value: &self.neighborEnd) }()
+      case 15: try { try decoder.decodeSingularMessageField(value: &self._neighborTerm) }()
+      case 16: try { try decoder.decodeSingularBoolField(value: &self.neighborTermNamesNeighbor) }()
+      case 17: try { try decoder.decodeSingularMessageField(value: &self._eventType) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.neighborSubjectID.isEmpty {
       try visitor.visitSingularStringField(value: self.neighborSubjectID, fieldNumber: 1)
     }
@@ -16564,26 +16542,8 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceRelationship: Sw
     if !self.bridgeType.isEmpty {
       try visitor.visitSingularStringField(value: self.bridgeType, fieldNumber: 3)
     }
-    if !self.term.isEmpty {
-      try visitor.visitSingularStringField(value: self.term, fieldNumber: 4)
-    }
-    if !self.end.isEmpty {
-      try visitor.visitSingularStringField(value: self.end, fieldNumber: 5)
-    }
-    if !self.eventType.isEmpty {
-      try visitor.visitSingularStringField(value: self.eventType, fieldNumber: 6)
-    }
     if !self.outcome.isEmpty {
       try visitor.visitSingularStringField(value: self.outcome, fieldNumber: 7)
-    }
-    if !self.cause.isEmpty {
-      try visitor.visitSingularStringField(value: self.cause, fieldNumber: 8)
-    }
-    if self.points.bitPattern != 0 {
-      try visitor.visitSingularDoubleField(value: self.points, fieldNumber: 9)
-    }
-    if self.checked != false {
-      try visitor.visitSingularBoolField(value: self.checked, fieldNumber: 11)
     }
     if !self.bundles.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.bundles, fieldNumber: 12)
@@ -16591,6 +16551,18 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceRelationship: Sw
     if !self.sections.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.sections, fieldNumber: 13)
     }
+    if !self.neighborEnd.isEmpty {
+      try visitor.visitSingularStringField(value: self.neighborEnd, fieldNumber: 14)
+    }
+    try { if let v = self._neighborTerm {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+    } }()
+    if self.neighborTermNamesNeighbor != false {
+      try visitor.visitSingularBoolField(value: self.neighborTermNamesNeighbor, fieldNumber: 16)
+    }
+    try { if let v = self._eventType {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -16598,15 +16570,13 @@ nonisolated extension Provenencia_Engine_V1_PromoteClaimEvidenceRelationship: Sw
     if lhs.neighborSubjectID != rhs.neighborSubjectID {return false}
     if lhs.key != rhs.key {return false}
     if lhs.bridgeType != rhs.bridgeType {return false}
-    if lhs.term != rhs.term {return false}
-    if lhs.end != rhs.end {return false}
-    if lhs.eventType != rhs.eventType {return false}
     if lhs.outcome != rhs.outcome {return false}
-    if lhs.cause != rhs.cause {return false}
-    if lhs.points != rhs.points {return false}
-    if lhs.checked != rhs.checked {return false}
     if lhs.bundles != rhs.bundles {return false}
     if lhs.sections != rhs.sections {return false}
+    if lhs.neighborEnd != rhs.neighborEnd {return false}
+    if lhs._neighborTerm != rhs._neighborTerm {return false}
+    if lhs.neighborTermNamesNeighbor != rhs.neighborTermNamesNeighbor {return false}
+    if lhs._eventType != rhs._eventType {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

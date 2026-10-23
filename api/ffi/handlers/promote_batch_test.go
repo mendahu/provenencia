@@ -96,11 +96,11 @@ func TestApplyPromoteGraphAlignment(t *testing.T) {
 				t.Errorf("the new claim lacks the incoming Observation")
 			}
 			for i, p := range line.GetMembers() {
-				if !created[p.GetMemberObservationId()] {
+				if !created[memberObservation(p)] {
 					t.Errorf("the new claim lacks member %d's Observation", i)
 				}
 				member := pinnedOn(t, f.dir, f.claims[i])
-				if !member[line.GetIncomingObservationId()] || !member[p.GetMemberObservationId()] {
+				if !member[line.GetIncomingObservationId()] || !member[memberObservation(p)] {
 					t.Errorf("member %d's claim pins %v", i, member)
 				}
 			}
@@ -142,7 +142,7 @@ func TestApplyPromoteGraphAlignment(t *testing.T) {
 				t.Errorf("the conflict's incoming Observation was pinned")
 			}
 			for _, p := range line.GetMembers() {
-				if created[p.GetMemberObservationId()] {
+				if created[memberObservation(p)] {
 					t.Errorf("a conflict member Observation was pinned")
 				}
 			}

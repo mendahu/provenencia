@@ -1540,8 +1540,8 @@ message GetPromoteClaimEvidenceRequest {
 
 message PromoteClaimEvidencePin {
   string id = 1;
-  string member_subject_id = 2;
-  string member_observation_id = 3;
+  reserved 2, 3;
+  reserved "member_subject_id", "member_observation_id";
   string source_id = 4;
   ConclusionValue value = 5;
 }
@@ -1552,10 +1552,8 @@ message PromoteClaimEvidenceLine {
   string property_cause = 3; // propertycompare.Cause
   string relation = 4;       // valuecompare.Relation
   string cause = 5;          // valuecompare.Cause
-  reserved 7;
-  reserved "pinnable";
-  double points = 6;
-  bool checked = 8;
+  reserved 6, 7, 8;
+  reserved "pinnable", "points", "checked";
   string incoming_observation_id = 9;
   ConclusionValue incoming = 10;
   bool incoming_negative = 11;
@@ -1569,25 +1567,29 @@ message PromoteClaimEvidenceSection {
 
 message PromoteClaimEvidenceBundle {
   string id = 1;
-  string member_subject_id = 2;
-  string source_id = 3;
+  reserved 2, 3;
+  reserved "member_subject_id", "source_id";
 }
 
 message PromoteClaimEvidenceRelationship {
   string neighbor_subject_id = 1;
   string key = 2; // BridgeKey.String(): identity only
   string bridge_type = 3;
-  string term = 4;
-  string end = 5;
-  string event_type = 6;
+  reserved 4, 5, 6, 8, 9, 10, 11;
+  reserved "term", "end", "cause", "points", "pinnable", "checked";
   string outcome = 7;
-  string cause = 8; // segmentcompare.Cause
-  reserved 10;
-  reserved "pinnable";
-  double points = 9;
-  bool checked = 11;
   repeated PromoteClaimEvidenceBundle bundles = 12;
   repeated PromoteClaimEvidenceSection sections = 13;
+  // The link read from the neighbor's side (segmentcompare.ReadFrom): the
+  // endpoint property the neighbor is at ("" for a symmetric link), the term it
+  // carries, and whether that term names the neighbor. The term is absent for a
+  // bridge type with no term.
+  string neighbor_end = 14;
+  ConclusionTerm neighbor_term = 15;
+  bool neighbor_term_names_neighbor = 16;
+  // A participation's event type (17 replaces the string at 6); absent for any
+  // other bridge type.
+  ConclusionTerm event_type = 17;
 }
 
 // A pin the evidence offers; checked ones are the defaults.

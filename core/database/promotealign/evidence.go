@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/subjectprofile"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -182,10 +183,26 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 		in.cfg.Segment, in.cfg.Subject, in.cfg.Value, claimevidence.Inputs{
 			Order: kindOrder,
 		})
+	for i := range out.Relationships {
+		readFromNeighbor(&out.Relationships[i], in.terms)
+	}
 	if out.Sources, err = q.titles(out); err != nil {
 		return claimevidence.Evidence{}, err
 	}
 	return out, nil
+}
+
+// readFromNeighbor fills a relationship's neighbor-side reading from its key,
+// with the bridge type's endpoints in connect-rule order. A bridge type the
+// rules do not know is left unread.
+func readFromNeighbor(r *claimevidence.Relationship, terms segmentcompare.Terms) {
+	b, ok := connectrules.LookupBridge(string(r.Key.Type))
+	if !ok || len(b.Endpoints) != 2 {
+		return
+	}
+	r.NeighborEnd, r.NeighborTerm, r.NeighborTermNamesNeighbor = segmentcompare.ReadFrom(
+		r.Key, vocabkey.PropertyKey(b.Endpoints[0].PropertyKey), vocabkey.PropertyKey(b.Endpoints[1].PropertyKey), terms,
+	)
 }
 
 // bindingOrder is each kind's bound properties in the catalog's order, from

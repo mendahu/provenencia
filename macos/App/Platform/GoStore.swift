@@ -1055,17 +1055,13 @@ struct GoStore: GenealogyStore {
                     neighborSubjectID: r.neighborSubjectID,
                     key: r.key,
                     bridgeType: r.bridgeType,
-                    term: r.term,
-                    end: r.end,
-                    eventType: r.eventType,
                     outcome: EvidenceOutcome(wire: r.outcome),
-                    cause: SegmentCause(wire: r.cause),
-                    points: r.points,
-                    checked: r.checked,
-                    bundles: r.bundles.map {
-                        CatalogClaimEvidenceBundle(id: $0.id, memberSubjectID: $0.memberSubjectID, sourceID: $0.sourceID)
-                    },
-                    sections: r.sections.map(Self.mapEvidenceSection)
+                    bundles: r.bundles.map { CatalogClaimEvidenceBundle(id: $0.id) },
+                    sections: r.sections.map(Self.mapEvidenceSection),
+                    neighborEnd: r.neighborEnd,
+                    neighborTerm: r.hasNeighborTerm ? Self.mapEvidenceTerm(r.neighborTerm) : nil,
+                    neighborTermNamesNeighbor: r.neighborTermNamesNeighbor,
+                    eventType: r.hasEventType ? Self.mapEvidenceTerm(r.eventType) : nil
                 )
             },
             offers: resp.offers.map { CatalogClaimEvidenceOffer(id: $0.id, checked: $0.checked) },
@@ -1081,6 +1077,10 @@ struct GoStore: GenealogyStore {
         return row
     }
 
+    private static func mapEvidenceTerm(_ t: Provenencia_Engine_V1_ConclusionTerm) -> CatalogEvidenceTerm {
+        CatalogEvidenceTerm(key: t.key, label: t.label, origin: t.origin)
+    }
+
     private static func mapEvidenceSection(_ s: Provenencia_Engine_V1_PromoteClaimEvidenceSection) -> CatalogClaimEvidenceSection {
         CatalogClaimEvidenceSection(
             propertyKey: s.propertyKey,
@@ -1091,16 +1091,12 @@ struct GoStore: GenealogyStore {
                     propertyCause: EvidencePropertyCause(wire: l.propertyCause),
                     relation: ValueRelation(wire: l.relation),
                     cause: ValueCause(wire: l.cause),
-                    points: l.points,
-                    checked: l.checked,
                     incomingObservationID: l.incomingObservationID,
                     incoming: mapConclusionValue(l.incoming),
                     incomingNegative: l.incomingNegative,
                     members: l.members.map { p in
                         CatalogClaimEvidencePin(
                             id: p.id,
-                            memberSubjectID: p.memberSubjectID,
-                            observationID: p.memberObservationID,
                             sourceID: p.sourceID,
                             value: mapConclusionValue(p.value)
                         )

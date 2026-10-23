@@ -6,6 +6,7 @@ import (
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/claimevidence"
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/promotealign"
@@ -68,24 +69,24 @@ func claimEvidenceProto(e claimevidence.Evidence, values promotealign.EvidenceVa
 	out := &engine.GetPromoteClaimEvidenceResponse{Sections: evidenceSectionsProto(e.Kind, e.Sections, values)}
 	for _, rel := range e.Relationships {
 		r := &engine.PromoteClaimEvidenceRelationship{
-			NeighborSubjectId: database.UUIDString(rel.Neighbor),
-			Key:               rel.Key.String(),
-			BridgeType:        string(rel.Key.Type),
-			Term:              string(rel.Key.Term),
-			End:               string(rel.Key.End),
-			EventType:         string(rel.Key.EventType),
-			Outcome:           string(rel.Outcome),
-			Cause:             string(rel.Cause),
-			Points:            rel.Points,
-			Checked:           rel.Checked,
-			Sections:          evidenceSectionsProto(rel.Kind, rel.Sections, values),
+			NeighborSubjectId:         database.UUIDString(rel.Neighbor),
+			Key:                       rel.Key.String(),
+			BridgeType:                string(rel.Key.Type),
+			Outcome:                   string(rel.Outcome),
+			Sections:                  evidenceSectionsProto(rel.Kind, rel.Sections, values),
+			NeighborEnd:               string(rel.NeighborEnd),
+			NeighborTermNamesNeighbor: rel.NeighborTermNamesNeighbor,
+		}
+		if rel.NeighborTerm != "" {
+			if b, ok := connectrules.LookupBridge(string(rel.Key.Type)); ok {
+				r.NeighborTerm = evidenceTermProto(values, b.Disambiguation, string(rel.NeighborTerm))
+			}
+		}
+		if rel.Key.EventType != "" {
+			r.EventType = evidenceTermProto(values, vocabkey.PropertyEventType, string(rel.Key.EventType))
 		}
 		for _, b := range rel.Members {
-			r.Bundles = append(r.Bundles, &engine.PromoteClaimEvidenceBundle{
-				Id:              promotealign.BundlePinID(rel, b),
-				MemberSubjectId: database.UUIDString(b.Member),
-				SourceId:        database.UUIDString(b.Source),
-			})
+			r.Bundles = append(r.Bundles, &engine.PromoteClaimEvidenceBundle{Id: promotealign.BundlePinID(rel, b)})
 		}
 		out.Relationships = append(out.Relationships, r)
 	}
@@ -114,19 +115,15 @@ func evidenceSectionsProto(kind vocabkey.SubjectType, sections []claimevidence.S
 				PropertyCause:         string(l.PropertyCause),
 				Relation:              string(l.Relation),
 				Cause:                 string(l.Cause),
-				Points:                l.Points,
-				Checked:               l.Checked,
 				IncomingObservationId: database.UUIDString(l.Incoming.Ref),
 				Incoming:              evidenceValueProto(values.Incoming(kind, s, l)),
 				IncomingNegative:      l.Incoming.Negative,
 			}
 			for _, p := range l.Members {
 				line.Members = append(line.Members, &engine.PromoteClaimEvidencePin{
-					Id:                  promotealign.LinePinID(l, p),
-					MemberSubjectId:     database.UUIDString(p.Subject),
-					MemberObservationId: database.UUIDString(p.Observation),
-					SourceId:            database.UUIDString(p.Source),
-					Value:               evidenceValueProto(values.Member(kind, s, l, p)),
+					Id:       promotealign.LinePinID(l, p),
+					SourceId: database.UUIDString(p.Source),
+					Value:    evidenceValueProto(values.Member(kind, s, l, p)),
 				})
 			}
 			sec.Lines = append(sec.Lines, line)
@@ -134,6 +131,14 @@ func evidenceSectionsProto(kind vocabkey.SubjectType, sections []claimevidence.S
 		out = append(out, sec)
 	}
 	return out
+}
+
+// evidenceTermProto is a term of a property with the label and origin the
+// catalog holds, so the client words a researcher's term by its label and a
+// product term by its key.
+func evidenceTermProto(values promotealign.EvidenceValues, property, key string) *engine.ConclusionTerm {
+	label, origin := values.Term(property, key)
+	return &engine.ConclusionTerm{Key: key, Label: label, Origin: origin}
 }
 
 // evidenceValueProto is a sheet value as a ConclusionValue, the one wire shape
