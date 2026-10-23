@@ -176,6 +176,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     static func evidenceGraph(
         sourceId: String,
         graphId: String,
+        subjectId: String? = nil,
         ref: String? = nil,
         title: String? = nil,
         sourceTitle: String? = nil
@@ -184,6 +185,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
             section: .sources,
             sourceId: sourceId,
             graphId: graphId,
+            subjectId: subjectId,
             sourceSurface: .graph,
             ref: ref,
             title: title,

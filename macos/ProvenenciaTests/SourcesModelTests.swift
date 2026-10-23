@@ -85,7 +85,7 @@ struct SourcesModelTests {
             await waitForQuery(typesHandle)
         }
         if let graphsHandle: QueryHandle<[CatalogEvidenceGraph]> = session.queryHandle(
-            SourcesModel.evidenceGraphsKey(for: session)
+            CatalogQueryKey.evidenceGraphsList(project: session.projectKey)
         ) {
             await waitForQuery(graphsHandle)
         }
@@ -648,5 +648,43 @@ struct SourcesModelTests {
         model.settings.status = .filed
         #expect(model.statusCountsError != nil)
         #expect(model.countLine(visibleCount: model.visibleSources.count) == L10n.Sources.countLine(total: 2))
+    }
+
+    @Test func graphListFailureShowsTheStatusError() async {
+        enum Boom: Error { case boom }
+        let store = FakeStore()
+        store.listEvidenceGraphsError = Boom.boom
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "A", typeID: "t1")],
+            types: [photoType()]
+        )
+        model.warmListQueries()
+        await warmProgress(model, session: session)
+        if let handle: QueryHandle<[CatalogEvidenceGraph]> = session.queryHandle(
+            CatalogQueryKey.evidenceGraphsList(project: session.projectKey)
+        ) {
+            await waitForQuery(handle)
+        }
+        model.settings.status = .empty
+        #expect(model.statusCountsError != nil)
+        #expect(!model.isAwaitingFilterData)
+    }
+
+    @Test func graphListLoadingKeepsCountsLoading() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "A", typeID: "t1")],
+            types: [photoType()]
+        )
+        // Only the progress read starts; the graph list is still pending.
+        let _: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
+            SourcesModel.evidenceGraphProgressKey(for: session)
+        )
+        await warmProgress(model, session: session)
+        model.settings.status = .empty
+        #expect(model.graphCountsLoading)
+        #expect(model.isAwaitingFilterData)
     }
 }

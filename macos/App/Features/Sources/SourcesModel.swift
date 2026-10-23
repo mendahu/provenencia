@@ -130,10 +130,6 @@ final class SourcesModel {
         CatalogQueryKey.evidenceGraphProgress(project: session.projectKey)
     }
 
-    static func evidenceGraphsKey(for session: WorkspaceSession) -> CatalogQueryKey {
-        CatalogQueryKey.evidenceGraphsList(project: session.projectKey)
-    }
-
     /// Starts list queries once (`.task` / dialog). Do not call from view `body`.
     func warmListQueries() {
         let _: QueryHandle<[CatalogSource]> = session.query(Self.sourcesListKey(for: session))
@@ -141,7 +137,7 @@ final class SourcesModel {
         let _: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
             Self.evidenceGraphProgressKey(for: session)
         )
-        let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(Self.evidenceGraphsKey(for: session))
+        let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(CatalogQueryKey.evidenceGraphsList(project: session.projectKey))
     }
 
     /// The counts of one Evidence graph, by graph id.
@@ -152,23 +148,38 @@ final class SourcesModel {
     /// The graph the Source's row opens and counts (`SourcesListNavigation.entryGraph`).
     /// Nil while the graph list has no value.
     func entryGraph(for source: CatalogSource) -> CatalogEvidenceGraph? {
-        SourcesListNavigation.entryGraph(sourceID: source.id, in: graphs)
+        SourcesListNavigation.entryGraph(sourceID: source.id, in: graphsBySource)
     }
 
     /// Where the row's Open graph goes; nil blocks it (no entry graph, or it
     /// links no Artifact).
     func graphLocation(for source: CatalogSource) -> WorkspaceLocation? {
-        SourcesListNavigation.graphLocation(for: source, graphs: graphs)
+        SourcesListNavigation.graphLocation(for: source, graphs: graphsBySource)
     }
 
-    private var graphs: [CatalogEvidenceGraph] {
-        let handle: QueryHandle<[CatalogEvidenceGraph]>? = session.queryHandle(Self.evidenceGraphsKey(for: session))
-        return handle?.value ?? []
+    /// The graph list grouped by Source, rebuilt only when the handle's value
+    /// changes so row builders do a dictionary read. Not observed: filling it
+    /// while the view reads must not invalidate that view.
+    @ObservationIgnored private var graphsBySourceCache: (revision: Int, map: [String: [CatalogEvidenceGraph]])?
+
+    private var graphsBySource: [String: [CatalogEvidenceGraph]] {
+        guard let handle = graphsHandle, let rows = handle.value else { return [:] }
+        if let cache = graphsBySourceCache, cache.revision == handle.revision { return cache.map }
+        let map = SourcesListNavigation.graphsBySource(rows)
+        graphsBySourceCache = (handle.revision, map)
+        return map
     }
 
+    private var graphsHandle: QueryHandle<[CatalogEvidenceGraph]>? {
+        session.queryHandle(CatalogQueryKey.evidenceGraphsList(project: session.projectKey))
+    }
+
+    /// Counts and the entry graph both come from queries; true while either
+    /// has neither a value nor a failure.
     var graphCountsLoading: Bool {
-        guard let handle = progressHandle else { return true }
-        return handle.value == nil && handle.status != .ready
+        guard let progress = progressHandle, let graphs = graphsHandle else { return true }
+        return (progress.value == nil && progress.status != .ready && progress.status != .error)
+            || (graphs.value == nil && graphs.status != .ready && graphs.status != .error)
     }
 
     private var typesHandle: QueryHandle<[CatalogSourceType]>? {
@@ -182,6 +193,7 @@ final class SourcesModel {
     /// The progress handle's failure while a status filter needs its counts.
     var statusCountsError: Error? {
         guard settings.status != nil else { return nil }
+        if let handle = graphsHandle, handle.status == .error { return handle.error }
         guard let handle = progressHandle, handle.status == .error else { return nil }
         return handle.error
     }
@@ -294,8 +306,11 @@ final class SourcesModel {
         }
         if let status = settings.status {
             let progress = progressHandle?.value
+            let graphs = graphsBySource
             rows = rows.filter { source in
-                EvidenceStatus(entryGraph(for: source).flatMap { progress?[$0.id] }) == status
+                EvidenceStatus(
+                    SourcesListNavigation.entryGraph(sourceID: source.id, in: graphs).flatMap { progress?[$0.id] }
+                ) == status
             }
         }
         let query = TextMatch.Query(trimmedQuery)

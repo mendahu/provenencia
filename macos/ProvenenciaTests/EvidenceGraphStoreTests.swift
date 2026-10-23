@@ -133,10 +133,11 @@ struct EvidenceGraphStoreTests {
     /// first Artifact links to it; a copy's graph links the copied Artifacts.
     @Test func createSourceMakesADefaultGraph() async throws {
         let store = FakeStore()
-        let (created, _) = try await store.createSource(
+        let (created, createdEffects) = try await store.createSource(
             projectDir: projectDir, userID: userID, sourceTypeID: "t", title: "Deed", description: ""
         )
         let graphs = try await store.listEvidenceGraphs(projectDir: projectDir)
+        #expect(createdEffects.evidenceGraphs == graphs.map(\.id))
         #expect(graphs.map(\.name) == ["Default"])
         #expect(graphs.first?.sourceID == created.id)
         #expect(graphs.first?.id != created.id)
@@ -158,6 +159,16 @@ struct EvidenceGraphStoreTests {
         #expect(copied.name == "Default")
         #expect(copied.artifactIDs.count == 1)
         #expect(copied.artifactIDs != [artifact.id])
+    }
+
+    @Test func createSubjectOnAnUnknownGraphThrows() async {
+        let store = seededStore()
+        await #expect(throws: (any Error).self) {
+            _ = try await store.createSubject(
+                projectDir: projectDir, userID: userID, graphID: sourceID,
+                subjectTypeID: "t", label: "Ann", description: "", placement: nil
+            )
+        }
     }
 
     @Test func deletesDropLinksAndGraphs() async throws {

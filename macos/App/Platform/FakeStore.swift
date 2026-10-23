@@ -98,6 +98,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// Optional override for graph-progress rows by graph id (tests). Missing keys compute from subjects/observations.
     var graphProgressByGraph: [String: EvidenceGraphProgress] = [:]
     var listEvidenceGraphProgressError: Error?
+    var listEvidenceGraphsError: Error?
     var getEvidenceGraphProgressError: Error?
     /// Monotonic stand-in for audit_transactions.revision (Sources Updated sort).
     private var nextAuditRevision: Int64 = 1
@@ -369,7 +370,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 title: title,
                 description: description
             )
-            return insertSource(source, projectDir: projectDir, reportsGraph: false)
+            return insertSource(source, projectDir: projectDir)
         }
     }
 
@@ -417,7 +418,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 }
                 copy.hasArtifact = true
             }
-            return insertSource(copy, projectDir: projectDir, reportsGraph: !chosen.isEmpty)
+            return insertSource(copy, projectDir: projectDir)
         }
     }
 
@@ -727,12 +728,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func listEvidenceGraphs(projectDir: String) async throws -> [CatalogEvidenceGraph] {
-        withState {
+        try withState {
+            if let listEvidenceGraphsError { throw listEvidenceGraphsError }
             markCatalogSessionHeld(projectDir)
-            return (evidenceGraphsByProject[projectDir] ?? []).sorted {
-                let order = $0.name.localizedCaseInsensitiveCompare($1.name)
-                return order == .orderedSame ? $0.ref < $1.ref : order == .orderedAscending
-            }
+            return (evidenceGraphsByProject[projectDir] ?? []).sorted(by: Self.graphListOrder)
         }
     }
 
@@ -748,15 +747,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             markCatalogSessionHeld(projectDir)
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty, !artifactIDs.isEmpty else { throw StoreBoom.boom }
-            let graph = CatalogEvidenceGraph(
-                id: UUID().uuidString.lowercased(),
-                ref: "GPH-FAKE1",
-                sourceID: sourceID,
-                name: trimmed,
-                description: description,
+            let graph = appendGraph(
+                projectDir: projectDir, sourceID: sourceID, name: trimmed, description: description,
                 artifactIDs: artifactIDs
             )
-            evidenceGraphsByProject[projectDir, default: []].append(graph)
             return (graph, Self.graphEffects)
         }
     }
@@ -1485,10 +1479,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         description: String,
         placement: CatalogGridCell?
     ) async throws -> (CatalogSubject, CatalogWriteEffects) {
-        return withState {
+        return try withState {
             recordedCalls.append("createSubject typeID=\(subjectTypeID) placement=\(placement.map { "\($0.gridX),\($0.gridY)" } ?? "nil")")
             markCatalogSessionHeld(projectDir)
-            let sourceID = sourceOfGraph(graphID) ?? ""
+            guard let sourceID = sourceOfGraph(graphID) else {
+                throw CoreInvokeError.coded(status: 1, code: "subjects.invalid", kind: .user, params: [])
+            }
             let subject = CatalogSubject(
                 id: UUID().uuidString.lowercased(),
                 ref: "CPR-FAKE1",
@@ -1604,7 +1600,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             markCatalogSessionHeld(projectDir)
             recordedCalls.append("unpromoteSubject id=\(subjectID)")
             if let unpromoteSubjectError { throw unpromoteSubjectError }
-            guard let graphID = subjectsByGraph.first(where: { $0.value.contains { $0.id == subjectID } })?.key else {
+            guard let graphID = graphOfSubject(subjectID) else {
                 throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
             }
             guard membershipBySubject[subjectID] != nil else { return .empty }
@@ -2467,7 +2463,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             let midX = Self.floorDiv(fromPos.gridX + toPos.gridX + 1, 2)
             let midY = Self.floorDiv(fromPos.gridY + toPos.gridY + 1, 2)
             // The bridge lands on its from-end's graph.
-            let graphID = subjectsByGraph.first(where: { $0.value.contains { $0.id == from.id } })?.key ?? ""
+            let graphID = graphOfSubject(from.id) ?? ""
             return (rule, type.id, CatalogGridCell(gridX: midX, gridY: midY), graphID, from.sourceID)
         }
         let (subject, _) = try await createSubject(
@@ -2628,9 +2624,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             withState {
                 let owner = owningSource(ofCitation: citationID).map { [$0] } ?? []
                 // The Observations land on their Subjects' graphs.
-                let graphs = written.compactMap { obs in
-                    subjectsByGraph.first(where: { $0.value.contains { $0.id == obs.subjectID } })?.key
-                }
+                let graphs = written.compactMap { graphOfSubject($0.subjectID) }
                 return CatalogWriteEffects(
                     evidenceGraphs: Self.unique(graphs),
                     citationSources: owner,
@@ -2895,13 +2889,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                             kind: "subject",
                             total: subs.count,
                             listed: subs.prefix(20).map { subject in
-                                var location = WorkspaceLocation.evidenceGraph(
+                                let location = WorkspaceLocation.evidenceGraph(
                                     sourceId: id,
                                     graphId: graphOfSubject(subject.id) ?? "",
+                                    subjectId: subject.id,
                                     ref: subject.ref,
                                     title: subject.label
                                 )
-                                location.subjectId = subject.id
                                 return CatalogDeleteImpactListed(
                                     id: subject.id,
                                     ref: subject.ref,
@@ -3428,8 +3422,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
         var created: [CatalogObservation] = []
         for draft in drafts {
-            guard let graphID = subjectsByGraph.first(where: { $0.value.contains { $0.id == draft.subjectID } })?.key
-            else {
+            guard let graphID = graphOfSubject(draft.subjectID) else {
                 throw StoreBoom.boom
             }
             let property = propertiesByProject[projectDir]?.first(where: { $0.id == draft.propertyID })
@@ -3489,35 +3482,47 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     /// Appends a new Source with its Default graph, which links the Source's
-    /// Artifacts (a copy's), and bumps it like the engine's `sources` insert.
-    /// `reportsGraph` puts the Default graph in the write's effects. Call
-    /// inside `withState`.
+    /// Artifacts (a copy's), and bumps it like the engine's `sources` insert,
+    /// reporting the Default graph. Call inside `withState`.
     private func insertSource(
         _ source: CatalogSource,
-        projectDir: String,
-        reportsGraph: Bool
+        projectDir: String
     ) -> (CatalogSource, CatalogWriteEffects) {
         sourcesByProject[projectDir, default: []].append(source)
-        let graph = CatalogEvidenceGraph(
-            id: UUID().uuidString.lowercased(),
-            ref: "GPH-FAKE1",
-            sourceID: source.id,
-            name: "Default",
-            description: "",
+        let graph = appendGraph(
+            projectDir: projectDir, sourceID: source.id, name: "Default", description: "",
             artifactIDs: (artifactsBySource[source.id] ?? []).map(\.id)
         )
-        evidenceGraphsByProject[projectDir, default: []].append(graph)
-        let effects = bumpSource(source.id, graphs: reportsGraph ? [graph.id] : [])
+        let effects = bumpSource(source.id, graphs: [graph.id])
         return (sourcesByProject[projectDir]?.first { $0.id == source.id } ?? source, effects)
     }
 
-    /// The Source of an Evidence graph, over every project's graph list. A graph
-    /// no list holds falls back to the Source its Subjects name. Call inside `withState`.
+    /// Appends an Evidence graph to the project's list. Call inside `withState`.
+    private func appendGraph(
+        projectDir: String,
+        sourceID: String,
+        name: String,
+        description: String,
+        artifactIDs: [String]
+    ) -> CatalogEvidenceGraph {
+        let graph = CatalogEvidenceGraph(
+            id: UUID().uuidString.lowercased(),
+            ref: "GPH-FAKE1",
+            sourceID: sourceID,
+            name: name,
+            description: description,
+            artifactIDs: artifactIDs
+        )
+        evidenceGraphsByProject[projectDir, default: []].append(graph)
+        return graph
+    }
+
+    /// The Source of an Evidence graph, over every project's graph list. Call inside `withState`.
     private func sourceOfGraph(_ graphID: String) -> String? {
         for graphs in evidenceGraphsByProject.values {
             if let graph = graphs.first(where: { $0.id == graphID }) { return graph.sourceID }
         }
-        return subjectsByGraph[graphID]?.first?.sourceID
+        return nil
     }
 
     /// The ids of every Evidence graph of a Source. Call inside `withState`.
@@ -3539,11 +3544,19 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         subjectsByGraph.first(where: { $0.value.contains { $0.id == subjectID } })?.key
     }
 
+    /// The graph list order, as `evidencegraphs.sqlListOrder`: name without
+    /// case, then ref, then id.
+    private static func graphListOrder(_ a: CatalogEvidenceGraph, _ b: CatalogEvidenceGraph) -> Bool {
+        let order = a.name.localizedCaseInsensitiveCompare(b.name)
+        if order != .orderedSame { return order == .orderedAscending }
+        return a.ref == b.ref ? a.id < b.id : a.ref < b.ref
+    }
+
     /// The first graph, by name, an Artifact is linked to. Call inside `withState`.
     private func firstGraphID(ofArtifact artifactID: String) -> String? {
         evidenceGraphsByProject.values.flatMap { $0 }
             .filter { $0.artifactIDs.contains(artifactID) }
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            .sorted(by: Self.graphListOrder)
             .first?.id
     }
 

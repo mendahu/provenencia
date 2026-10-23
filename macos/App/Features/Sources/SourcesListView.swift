@@ -419,7 +419,7 @@ private struct SourcesSplitRowProgress: View {
             typeIconKey: model.typeIconKey(for: source),
             projectDir: model.pageProjectDir,
             progress: model.entryGraph(for: source).flatMap { handle.value?[$0.id] },
-            countsLoading: handle.value == nil && handle.status != .ready,
+            countsLoading: model.graphCountsLoading,
             onOpenPage: {
                 navigation.go(to: SourcesListNavigation.pageLocation(for: source))
             },

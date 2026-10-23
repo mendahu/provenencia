@@ -199,7 +199,7 @@ struct SourcePageIdentityHeader: View {
         }
         .disabled(location == nil)
         .help(
-            location == nil
+            model.source?.hasArtifact == false
                 ? L10n.string(L10n.Sources.needsArtifactTooltip)
                 : L10n.string(L10n.Sources.jumpToEvidenceGraph)
         )

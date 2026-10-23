@@ -66,9 +66,9 @@ final class SourcePageModel {
     /// list has no value.
     var evidenceGraphLocation: WorkspaceLocation? {
         guard let source else { return nil }
-        let key = CatalogQueryKey.evidenceGraphsList(project: context.session.projectKey)
-        let handle: QueryHandle<[CatalogEvidenceGraph]>? = context.session.queryHandle(key)
-        return SourcesListNavigation.graphLocation(for: source, graphs: handle?.value ?? [])
+        return SourcesListNavigation.graphLocation(
+            for: source, graphs: SourcesListNavigation.graphsBySource(in: context.session)
+        )
     }
 
     /// Project folder for resolving `objects/…` thumbnail paths.

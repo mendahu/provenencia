@@ -21,6 +21,11 @@ struct PromoteModelTests {
                 description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
             ),
         ]
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: []
+            ),
+        ]
         store.subjectsByGraph[graphID] = subjects
         for (index, subject) in subjects.enumerated() {
             store.subjectPositionsBySubject[subject.id] = CatalogSubjectPosition(

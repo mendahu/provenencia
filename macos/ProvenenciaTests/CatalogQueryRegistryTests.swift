@@ -416,6 +416,9 @@ struct CatalogQueryRegistryTests {
                 description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
             ),
         ]
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(id: "g-1", ref: "GPH-1", sourceID: "s1", name: "Default", description: "", artifactIDs: []),
+        ]
         store.subjectsByGraph["g-1"] = [
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
         ]

@@ -112,10 +112,19 @@ struct SourcesSplitRow: View {
         )
     }
 
+    /// Why a Source with an Artifact still cannot open its graph: the entry
+    /// graph links none. Empty while the counts load or the graph can open.
+    private var graphBlockedReason: String {
+        onOpenGraph == nil && !countsLoading ? L10n.string(L10n.Sources.needsArtifactTooltip) : ""
+    }
+
     @ViewBuilder
     private var graphZone: some View {
         if source.hasArtifact {
-            Button(action: { onOpenGraph?() }) {
+            Button {
+                guard let onOpenGraph else { return }
+                onOpenGraph()
+            } label: {
                 HStack(alignment: .top, spacing: PVSpacing.space3 + PVSpacing.spacePx) {
                     PVIcon(.network, size: 16)
                     VStack(alignment: .leading, spacing: PVSpacing.space1) {
@@ -132,6 +141,8 @@ struct SourcesSplitRow: View {
             }
             .buttonStyle(SourcesSplitZoneButtonStyle(emphasizeOnHover: true))
             .disabled(onOpenGraph == nil)
+            .help(graphBlockedReason)
+            .accessibilityHint(Text(graphBlockedReason))
             .accessibilityLabel(Text(verbatim: L10n.Sources.graphZoneAccessibility(
                 progress: progress,
                 countsLoading: countsLoading

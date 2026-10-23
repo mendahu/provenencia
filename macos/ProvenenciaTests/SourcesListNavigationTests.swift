@@ -39,22 +39,36 @@ struct SourcesListNavigationTests {
             graph("g-2", name: "Jones", artifactIDs: ["a2"]),
             graph("g-9", name: "Other Source's", sourceID: "s2"),
         ]
-        let location = SourcesListNavigation.graphLocation(for: source(), graphs: graphs)
+        let location = SourcesListNavigation.graphLocation(for: source(), graphs: SourcesListNavigation.graphsBySource(graphs))
         #expect(location?.sourceSurface == .graph)
         #expect(location?.sourceId == "s1")
         #expect(location?.graphId == "g-1")
         #expect(location?.ref == "SRC-AAAAA")
         #expect(location?.title == "Passport")
-        #expect(SourcesListNavigation.entryGraph(sourceID: "s2", in: graphs)?.id == "g-9")
+        #expect(SourcesListNavigation.entryGraph(sourceID: "s2", in: SourcesListNavigation.graphsBySource(graphs))?.id == "g-9")
+    }
+
+    @Test func graphsBySourceKeepsListOrder() {
+        let map = SourcesListNavigation.graphsBySource([
+            graph("g-1", name: "Default", sourceID: "A"),
+            graph("g-2", name: "Default", sourceID: "B"),
+            graph("g-3", name: "Jones", sourceID: "A"),
+        ])
+        #expect(map["A"]?.map(\.id) == ["g-1", "g-3"])
+        #expect(map["B"]?.map(\.id) == ["g-2"])
+        #expect(SourcesListNavigation.entryGraph(sourceID: "A", in: map)?.id == "g-1")
+        #expect(SourcesListNavigation.entryGraph(sourceID: "C", in: map) == nil)
     }
 
     @Test func graphLocationBlockedWithoutArtifact() {
         // The entry graph links no Artifact: Open stays blocked, though a later graph links one.
         let noLinks = [graph("g-1", name: "Default", artifactIDs: []), graph("g-2", name: "Jones")]
-        #expect(SourcesListNavigation.graphLocation(for: source(), graphs: noLinks) == nil)
+        #expect(SourcesListNavigation.graphLocation(for: source(), graphs: SourcesListNavigation.graphsBySource(noLinks)) == nil)
         // The Source has no graph in the list (not loaded, or none).
-        #expect(SourcesListNavigation.graphLocation(for: source(), graphs: []) == nil)
-        #expect(SourcesListNavigation.graphLocation(for: source(id: "s3"), graphs: [graph("g-1", name: "Default")]) == nil)
+        #expect(SourcesListNavigation.graphLocation(for: source(), graphs: [:]) == nil)
+        #expect(SourcesListNavigation.graphLocation(
+            for: source(id: "s3"), graphs: SourcesListNavigation.graphsBySource([graph("g-1", name: "Default")])
+        ) == nil)
     }
 }
 
