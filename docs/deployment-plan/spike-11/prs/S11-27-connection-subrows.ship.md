@@ -1,7 +1,7 @@
 # Ship log — S11-27 Connection subrows on Promote
 
 **Plan:** [`S11-27-connection-subrows.md`](S11-27-connection-subrows.md) · **Branch:** `s11-27-connection-subrows` · **PR:** #530
-**State:** fixing 3 (user change)
+**State:** ready
 
 ## Round 0 — implement
 Head `17034618`. Gate PASS (orchestrator re-ran). Draft PR #530. Report: no deviations from Decisions or Scope; three small differences recorded in the plan's Landed note (`isSymmetric` takes `EvidenceGraphPlacedBridge` after a rename on `main`; `PromoteConnectionSubrows` also takes the host ref for the expander identifier; two test helpers `link` and `mapped`). AC-3.2 – 3.4 and AC-4.4 are built but need the manual check.
@@ -71,9 +71,6 @@ Reviewers: UX (UX-1, UX-2), MNT (MNT-1). Not sent back: CON, SEC+PRF (minors onl
 
 No new findings. Nits (logged): `MNT-7 · PromoteFlow.swift:332 · lined(_:_:) only forwards to Bridge(fact:state:); inline it`
 
-## Result
-Gate PASS · CI green · open: none · follow-ups: — · to user: UX-4 answered (dropped) · CON miss: none
-
 ## Round 3 — user change (2026-10-23)
 After the report, the user asked to drop the "+N connections" pointer, its scroll and highlight, and the cap with "+N more" / "Show fewer", and to show each connection under both of its ends, all on this PR. Recorded in the plan as **Amended** A-1 – A-5. UX-4 was answered (dropped) before this.
 
@@ -94,3 +91,28 @@ Check: `rg -n "expandedHosts|highlighted|highlightGeneration|showHosted|subrowCa
 **F-8 — Docs**
 Files: `docs/deployment-plan/spike-11/prs/S11-27-connection-subrows.md` (Landed note only: add "Amended A-1 – A-5 shipped; supersedes the F-1 announcement, the F-2 expander and the earlier `Bridge`-wraps note on `kind`"), `docs/deployment-plan/spike-11/completed.md` (S11-27 paragraph: connections show under both ends that are rows; no pointer, cap or highlight), `docs/promote-graph-alignment.md` §3 "Bridges aren't rows" bullet (same), `docs/ideas/term-management.md` item 2 (remove the S11-27 sentence).
 Do not edit the plan's Amended block. Check: `python3 scripts/check-plan-docs.py` 0 errors; scripts/check-pr.sh PASS.
+
+## Round 3 — fix
+Head `bc58b4a4`. Gate PASS (orchestrator re-ran). F-6 – F-8 done (code+tests in `1907c59b`, docs in `bc58b4a4`). Deviations: no red-first run; `PromoteModelTests.swift`, `EvidenceBridgeEdgeSummaryTests.swift`, `ConclusionVocabulary.swift` and `EvidenceBridgeEdgeSummary.swift` back to `main`; `link` lost `kind` too; added case (f) (both ends one row, shown once); subrow lost its 8pt horizontal padding with the highlight fill.
+
+## Round 3 — review
+Reviewers: CON (Sonnet), MNT, UX. Skipped: SEC+PRF — the change deletes code and keeps the one pass over `connections`; each connection now lands in at most two row lists, so the work stays bounded by the page.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| CON-1 (r3), MNT-9 | CON, MNT | minor | Spike map's S11-27 "Ships." line names the deleted `connectionHosts` | Fix now → F-9 | verified: `deployment-plan.md:446` |
+| MNT-8 | MNT | nit (raised: stale comment in a changed file) | `OtherEnd` doc comment says "host row" | Fix now → F-9 | verified: `PromoteFlow.swift:220` |
+
+Earlier majors: MNT-1 still resolved; UX-1, UX-2/MNT-4 superseded by A-4 (code removed). UX: subrow padding judged correct (4pt removed; content at noteIndent + space4 as §6 says). Nits (logged): `CON-2 (r3) · plan Landed note lists superseded differences above the supersedes line; fine`.
+
+### Fix plan 4
+**F-9 — Stale "host" wording** (from CON-1 r3, MNT-9, MNT-8)
+Files: `docs/deployment-plan/spike-11/deployment-plan.md` (S11-27 "Ships." paragraph), `macos/App/Features/Promote/PromoteFlow.swift` (`OtherEnd` doc comment).
+Do: reword the Ships line to say `PromoteFlow.connectionsByRow` (each connection under every end that is a row, built once per render), no pointers. Change the comment to "What a row says of a connection's other end when that end is not a row to work on." Leave the archived S11-D1 brief alone.
+Check: `rg -n "connectionHosts|host row" docs/deployment-plan/spike-11/deployment-plan.md macos/App/Features/Promote` prints nothing; scripts/check-pr.sh PASS.
+
+## Round 4 — fix
+Head `4d1f42bc`. Gate PASS (orchestrator re-ran). F-9 done; CON-1 (r3), MNT-8, MNT-9 **Resolved** (read by the orchestrator: `rg` prints nothing).
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: — · to user: UX-4 answered (dropped); pointer and cap removed by the user (A-1 – A-5) · CON miss: none
