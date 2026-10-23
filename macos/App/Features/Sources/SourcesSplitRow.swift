@@ -37,6 +37,8 @@ struct SourcesSplitRow: View {
     /// Nil blocks the Open graph zone: the entry graph links no Artifact, or the
     /// graph list has not loaded.
     var onOpenGraph: (() -> Void)?
+    /// Why Open graph is blocked (`SourcesListNavigation.graphBlockedReason`); nil shows no hint.
+    var graphBlockedReason: String?
     var onCopy: () -> Void
 
     private var updatedAt: String { source.updated.at }
@@ -112,12 +114,6 @@ struct SourcesSplitRow: View {
         )
     }
 
-    /// Why a Source with an Artifact still cannot open its graph: the entry
-    /// graph links none. Empty while the counts load or the graph can open.
-    private var graphBlockedReason: String {
-        onOpenGraph == nil && !countsLoading ? L10n.string(L10n.Sources.needsArtifactTooltip) : ""
-    }
-
     @ViewBuilder
     private var graphZone: some View {
         if source.hasArtifact {
@@ -141,8 +137,8 @@ struct SourcesSplitRow: View {
             }
             .buttonStyle(SourcesSplitZoneButtonStyle(emphasizeOnHover: true))
             .disabled(onOpenGraph == nil)
-            .help(graphBlockedReason)
-            .accessibilityHint(Text(graphBlockedReason))
+            .help(graphBlockedReason ?? "")
+            .accessibilityHint(Text(graphBlockedReason ?? ""))
             .accessibilityLabel(Text(verbatim: L10n.Sources.graphZoneAccessibility(
                 progress: progress,
                 countsLoading: countsLoading

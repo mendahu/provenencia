@@ -48,6 +48,15 @@ struct SourcesListNavigationTests {
         #expect(SourcesListNavigation.entryGraph(sourceID: "s2", in: SourcesListNavigation.graphsBySource(graphs))?.id == "g-9")
     }
 
+    @Test func graphBlockedReasonNeedsTheGraphList() {
+        let reason = L10n.string(L10n.Sources.needsArtifactTooltip)
+        let location = WorkspaceLocation.evidenceGraph(sourceId: "s1", graphId: "g-1", ref: "SRC-AAAAA", title: "Passport")
+        #expect(SourcesListNavigation.graphBlockedReason(hasArtifact: false, graphListLoaded: false, location: nil) == reason)
+        #expect(SourcesListNavigation.graphBlockedReason(hasArtifact: true, graphListLoaded: false, location: nil) == nil)
+        #expect(SourcesListNavigation.graphBlockedReason(hasArtifact: true, graphListLoaded: true, location: nil) == reason)
+        #expect(SourcesListNavigation.graphBlockedReason(hasArtifact: true, graphListLoaded: true, location: location) == nil)
+    }
+
     @Test func graphsBySourceKeepsListOrder() {
         let map = SourcesListNavigation.graphsBySource([
             graph("g-1", name: "Default", sourceID: "A"),

@@ -157,6 +157,16 @@ final class SourcesModel {
         SourcesListNavigation.graphLocation(for: source, graphs: graphsBySource)
     }
 
+    /// Why the row's Open graph is blocked; nil when open or unknown (the
+    /// graph list has no value).
+    func graphBlockedReason(for source: CatalogSource) -> String? {
+        SourcesListNavigation.graphBlockedReason(
+            hasArtifact: source.hasArtifact,
+            graphListLoaded: graphsHandle?.value != nil,
+            location: graphLocation(for: source)
+        )
+    }
+
     /// The graph list grouped by Source, rebuilt only when the handle's value
     /// changes so row builders do a dictionary read. Not observed: filling it
     /// while the view reads must not invalidate that view.

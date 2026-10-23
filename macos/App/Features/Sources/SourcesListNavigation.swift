@@ -36,6 +36,26 @@ enum SourcesListNavigation {
         return graphsBySource(handle?.value ?? [])
     }
 
+    /// Why Open graph / Jump to evidence graph is blocked, or nil when it is
+    /// open or the reason is not yet known. With no location, a Source without
+    /// an Artifact, or one whose graph list has a value but whose entry graph
+    /// links none, needs an Artifact; while the graph list has no value
+    /// (loading or failed) the reason is unknown.
+    static func graphBlockedReason(hasArtifact: Bool, graphListLoaded: Bool, location: WorkspaceLocation?) -> String? {
+        guard location == nil else { return nil }
+        guard !hasArtifact || graphListLoaded else { return nil }
+        return L10n.string(L10n.Sources.needsArtifactTooltip)
+    }
+
+    /// True once the session's graph list has a value.
+    @MainActor
+    static func graphListLoaded(in session: WorkspaceSession) -> Bool {
+        let handle: QueryHandle<[CatalogEvidenceGraph]>? = session.queryHandle(
+            CatalogQueryKey.evidenceGraphsList(project: session.projectKey)
+        )
+        return handle?.value != nil
+    }
+
     /// Opens the entry graph's canvas when that graph links at least one
     /// Artifact. Returns `nil` when the graph zone should stay blocked.
     static func graphLocation(for source: CatalogSource, graphs: [String: [CatalogEvidenceGraph]]) -> WorkspaceLocation? {

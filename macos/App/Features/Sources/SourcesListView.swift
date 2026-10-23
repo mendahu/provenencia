@@ -317,6 +317,7 @@ private struct SourcesListContent: View {
                                     onOpenGraph: model.graphLocation(for: source).map { location in
                                         { navigation.go(to: location) }
                                     },
+                                    graphBlockedReason: model.graphBlockedReason(for: source),
                                     onCopy: { model.openCopy(source) }
                                 )
                                 .id(source.id)
@@ -426,6 +427,7 @@ private struct SourcesSplitRowProgress: View {
             onOpenGraph: model.graphLocation(for: source).map { location in
                 { navigation.go(to: location) }
             },
+            graphBlockedReason: model.graphBlockedReason(for: source),
             onCopy: { model.openCopy(source) }
         )
     }

@@ -71,6 +71,15 @@ final class SourcePageModel {
         )
     }
 
+    /// Why Jump to evidence graph is blocked; nil when open or unknown.
+    var evidenceGraphBlockedReason: String? {
+        SourcesListNavigation.graphBlockedReason(
+            hasArtifact: source?.hasArtifact ?? false,
+            graphListLoaded: SourcesListNavigation.graphListLoaded(in: context.session),
+            location: evidenceGraphLocation
+        )
+    }
+
     /// Project folder for resolving `objects/…` thumbnail paths.
     var pageProjectDir: String { context.projectDir }
 

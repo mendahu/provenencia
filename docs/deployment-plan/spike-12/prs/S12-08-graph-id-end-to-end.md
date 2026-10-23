@@ -401,3 +401,4 @@ Differences from the plan:
 - The comments on `evidencegraphs.SoleGraph` and `SoleGraphTx` name S12-09 and S12-18 instead of S12-08.
 - `subjects.Create` no longer checks `SourceID` itself; `InsertTx` holds the one rule (`RequireUserID` now runs before the id checks).
 - The manual check (§10) was not run in the app.
+- The disabled Open graph and Jump to evidence graph share one reason, `SourcesListNavigation.graphBlockedReason`: the needs-Artifact hint shows only when the Source has no Artifact or the graph list has a value and the entry graph links none; while the list is loading or failed there is no hint. The Source page's jump carries it too.

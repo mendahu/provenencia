@@ -187,6 +187,7 @@ struct SourcePageIdentityHeader: View {
 
     private var evidenceGraphJump: some View {
         let location = model.evidenceGraphLocation
+        let reason = model.evidenceGraphBlockedReason
         return PVButton(
             L10n.Sources.jumpToEvidenceGraph,
             variant: .secondary,
@@ -198,11 +199,8 @@ struct SourcePageIdentityHeader: View {
             }
         }
         .disabled(location == nil)
-        .help(
-            model.source?.hasArtifact == false
-                ? L10n.string(L10n.Sources.needsArtifactTooltip)
-                : L10n.string(L10n.Sources.jumpToEvidenceGraph)
-        )
+        .help(reason ?? L10n.string(L10n.Sources.jumpToEvidenceGraph))
+        .accessibilityHint(Text(reason ?? ""))
         .accessibilityIdentifier("sources.page.jumpToEvidenceGraph")
     }
 
