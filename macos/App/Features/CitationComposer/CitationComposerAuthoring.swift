@@ -528,13 +528,13 @@ enum CitationComposerAuthoring {
             )
         case EvidenceBridgeKind.placeRelationship.rawValue:
             switch term?.productKey {
-            case "part_of":
+            case SeededPlaceRelationshipTypeTerm.partOf:
                 return (
                     L10n.string(L10n.CitationComposer.partEnd),
                     L10n.string(L10n.CitationComposer.wholeEnd),
                     true
                 )
-            case "succeeded_by":
+            case SeededPlaceRelationshipTypeTerm.succeededBy:
                 return (
                     L10n.string(L10n.CitationComposer.earlierPlace),
                     L10n.string(L10n.CitationComposer.laterPlace),

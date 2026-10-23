@@ -152,7 +152,7 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 
 | Component | File | 
 |---|---|
-| Button | `Components/Button/PVButton.swift` (icon-left, loading spinner, and a chrome-less `link` variant added for S2-02; the label is `PVCopy`, so a formatted `String` such as Promote's "Back to Compare" works as well as a catalog resource) |
+| Button | `Components/Button/PVButton.swift` (icon-left, loading spinner, and a chrome-less `link` variant added for S2-02; the label is `PVCopy`, so a formatted `String` such as Promote's "Back to Compare" works as well as a catalog resource, and an `AttributedString` from `StyledFormat.attributed` carries its own styling) |
 | Disclosure | `Components/Disclosure/PVDisclosureButton.swift` (added for S9-16's Person page: a `PVButton` that owns an `isExpanded` binding, its chevron, and the spoken state; the caller places the disclosed content. `pvExpandedState(_:)` is the shared VoiceOver piece, also used by `PVSelect` and the Source page's artifact rows. No JSX twin: boards compose `Button.jsx` with `aria-expanded`) |
 | Icon | `Components/Icon/PVIcon.swift` |
 | Field | `Components/Field/PVField.swift` (`marker: .required / .optional` marks the label) |

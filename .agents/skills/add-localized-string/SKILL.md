@@ -128,6 +128,24 @@ PVIconButton(.dismiss, label: L10n.NameValue.partRemove(position: 2)) { … }  /
 7. Accessibility: keep `.accessibilityIdentifier("dotted.name")`. Do not UI-test by localized title. For interpolated a11y *values*, use `Text(verbatim:)` (same extractor trap as ordinals).
 8. Go/FFI failures arrive as protobuf `Error` codes. Add `L10n.Errors` + catalog keys (`error.<domain>.<name>`) when introducing a new user-visible code; map via `L10n.Errors.message`.
 
+## Styled arguments
+
+When a sentence styles some of its words (a name in semibold, a Source title in italic link ink), keep it **one** translatable format and let the arguments carry the styling, so a translation can reorder them. Never split the sentence into pieces joined in Swift.
+
+```swift
+StyledFormat.attributed(L10n.Promote.titleHandle, [
+    .init(text: name),
+    .init(text: joins, attributes: muted),   // an AttributeContainer
+    .init(text: recordTitle),
+])
+```
+
+- `StyledFormat.attributed(_:_:)` (`Platform/StyledFormat.swift`) fills a `LocalizedStringResource` format with `StyledFormat.Argument`s (text plus an `AttributeContainer`). Text outside an argument has no attributes.
+- Its grammar is only `%@` (the next argument), `%n$@` (argument n, 1-based) and `%%` (a percent sign). Any other specifier stays literal, so a styled format has no `%lld`.
+- The catalog value follows the usual rule: more than one argument means numbered placeholders (`%1$@ … %2$@`).
+- An `AttributedString` is accepted wherever `PVCopy` is (`PVSectionHeader` titles, `Text(_:)`), so the result goes straight to the component.
+- Keep fonts and colors out of the helper that builds the string: mark runs with a semantic role attribute, and map roles to design tokens where the view is drawn (`PromoteEvidenceDisplay.Role`).
+
 ## Do not
 
 - Put user-facing string literals in views/models (except non-copy data: names, paths, IDs)

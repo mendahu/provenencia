@@ -237,7 +237,6 @@ None — docs only.
 | `alignment.Shortlist.event` | event type + year bucket | decided ([`comparison-layers.md`](../comparison-layers.md#layer-6-procedure)) | Shortlist keys for an event |
 | `alignment.Shortlist.place` | toponym | decided ([`comparison-layers.md`](../comparison-layers.md#layer-6-procedure)) | Shortlist keys for a place |
 | `evidence.Checked` | `Same`, `Equivalent` | decided ([`claim-evidence.md`](../claim-evidence.md#lines)) | Relations whose lines start checked |
-| `evidence.Pinnable` | `Contains`, `Overlaps`, `Near` | decided ([`claim-evidence.md`](../claim-evidence.md#lines)) | Pinnable but unchecked |
 | `evidence.Defining.event` | `event_type` | decided ([`claim-evidence.md`](../claim-evidence.md#evidence-through-relationships)) | Neighbor properties bundled into a relationship line |
 
 ### Not knobs

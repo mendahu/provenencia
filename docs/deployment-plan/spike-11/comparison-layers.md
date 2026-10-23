@@ -442,7 +442,7 @@ So every property weight is a plain registry number. The labeler can fit them la
 | `subject.go` | Per Subject type and property: agree weight, conflict penalty; pairs compared together (sex with gender, `date` with `start_date` / `end_date`); lifespan rules and constants |
 | `segment.go` | Bridge cardinality (birth and death are one), neighbor credit, link support |
 | `alignment.go` | Shortlist keys per kind, K, tie cap, accept bar, band cutoffs, settle margin and round cap |
-| `evidence.go` | Claim evidence policy: which relations start checked or are pinnable, each kind's defining properties (event: `event_type`) |
+| `evidence.go` | Claim evidence policy: which relations start checked, each kind's defining properties (event: `event_type`) |
 
 **Rules:**
 - **Each layer takes its own section as an argument** (rule 5). Tests override it without editing the defaults.

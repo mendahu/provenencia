@@ -200,12 +200,15 @@ func sorted(in ...string) []string {
 }
 
 var (
-	wireCase    = regexp.MustCompile(`case "([a-z_]*)": self = `)
-	staticLet   = regexp.MustCompile(`static let \w+ = "([^"]*)"`)
-	rawCase     = regexp.MustCompile(`(?m)^\s+case (\w+)\s*$`)
-	unrecogniz  = regexp.MustCompile(`case unrecognized\(String\)`)
-	listCase    = regexp.MustCompile(`case \w+ = "([a-z_]+)"`)
-	subjectMark = regexp.MustCompile(`case \w+ = "(subject_[a-z_]+)"`)
+	wireCase  = regexp.MustCompile(`case "([a-z_]*)": self = `)
+	staticLet = regexp.MustCompile(`static let \w+ = "([^"]*)"`)
+	// swiftNamedKey reads `static let spouse = "spouse"`; swiftInverseEntry reads `parent: child,`.
+	swiftNamedKey     = regexp.MustCompile(`static let (\w+) = "([^"]*)"`)
+	swiftInverseEntry = regexp.MustCompile(`(?m)^\s+(\w+): (\w+),\s*$`)
+	rawCase           = regexp.MustCompile(`(?m)^\s+case (\w+)\s*$`)
+	unrecogniz        = regexp.MustCompile(`case unrecognized\(String\)`)
+	listCase          = regexp.MustCompile(`case \w+ = "([a-z_]+)"`)
+	subjectMark       = regexp.MustCompile(`case \w+ = "(subject_[a-z_]+)"`)
 )
 
 // subjectMarkSymbols is the sorted IconSymbol of every registry subject type;
@@ -391,6 +394,40 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 					t.Errorf("Swift names %s term %q, which is not seeded: %v", tc.property, key, err)
 				}
 			}
+		}
+	})
+	t.Run("the relationship inverse map is the seeded inverse", func(t *testing.T) {
+		body := swiftEnumBody(t, swiftVocabulary, "SeededRelationshipTypeTerm")
+		keyOf := map[string]string{}
+		for _, m := range swiftNamedKey.FindAllStringSubmatch(body, -1) {
+			keyOf[m[1]] = m[2]
+		}
+		got := map[string]string{}
+		for _, m := range swiftInverseEntry.FindAllStringSubmatch(body, -1) {
+			got[keyOf[m[1]]] = keyOf[m[2]]
+		}
+		if len(got) == 0 {
+			t.Fatal("no inverse entries read")
+		}
+		c := installedCatalog(t)
+		prop, err := properties.Lookup(c, "relationship_type", vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := map[string]string{}
+		for _, key := range keyOf {
+			term, err := propertyterms.Lookup(c, prop.ID, key, vocabkey.OriginProvenencia)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// An undirected term reads the same from both ends.
+			want[key] = key
+			if term.Directed {
+				want[key] = term.InverseKey
+			}
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("SeededRelationshipTypeTerm.inverse %v, seeded inverses %v", got, want)
 		}
 	})
 }
