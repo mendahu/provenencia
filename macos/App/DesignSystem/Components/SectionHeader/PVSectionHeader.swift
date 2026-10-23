@@ -5,8 +5,10 @@ import SwiftUI
 /// page during structural cleanup — not a direct port of a web-kit
 /// component (the kit has no SectionHeader). Use on any detail surface
 /// that stacks titled sections (Sources, later People / Facts / etc.).
-/// Call sites own `.accessibilityIdentifier`. The title is semibold; an `AttributedString` title
-/// may carry its own emphasis inside it.
+/// Call sites own `.accessibilityIdentifier`. A `String` or localized title is
+/// semibold. An `AttributedString` title draws regular and its strongly
+/// emphasized runs carry the weight (emphasis cannot make a semibold display
+/// face heavier), so a name inside the title stands out.
 struct PVSectionHeader<Title: PVCopy, Aside: View, Actions: View>: View {
     private let title: Title
     private let meta: String?
@@ -25,10 +27,14 @@ struct PVSectionHeader<Title: PVCopy, Aside: View, Actions: View>: View {
         self.actions = actions()
     }
 
+    private var titleWeight: CGFloat {
+        title is AttributedString ? PVFontWeight.regular : PVFontWeight.semibold
+    }
+
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
             title.pvText
-                .font(PVFont.display(size: PVTypeScale.h3, weight: PVFontWeight.semibold))
+                .font(PVFont.display(size: PVTypeScale.h3, weight: titleWeight))
                 .foregroundStyle(PVColor.textDisplay)
             if let meta {
                 Text(verbatim: meta)
