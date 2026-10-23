@@ -17973,30 +17973,6 @@
         }
       }
     },
-    "promote.connections.count": {
-      "comment": "Bridge summary; argument is how many will be filed",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld connections will be filed"
-          }
-        }
-      }
-    },
-    "promote.done.summary": {
-      "comment": "Footer: how many rows will be filed, skipped, and how many connections",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "File %1$lld · Skip %2$lld · %3$lld connections"
-          }
-        }
-      }
-    },
     "promote.done.filing": {
       "comment": "Done button while the batch is writing",
       "extractionState": "manual",
@@ -18005,6 +17981,66 @@
           "stringUnit": {
             "state": "translated",
             "value": "Filing"
+          }
+        }
+      }
+    },
+    "promote.done.file": {
+      "comment": "Footer part: how many rows Done files",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File %lld"
+          }
+        }
+      }
+    },
+    "promote.done.skip": {
+      "comment": "Footer part: how many rows are skipped",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip %lld"
+          }
+        }
+      }
+    },
+    "promote.done.unselected": {
+      "comment": "Footer part: how many rows have no target yet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld unselected"
+          }
+        }
+      }
+    },
+    "promote.done.connections": {
+      "comment": "Footer part: how many connections Done files",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld connection"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld connections"
+                }
+              }
+            }
           }
         }
       }
@@ -18389,42 +18425,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "This choice is kept."
-          }
-        }
-      }
-    },
-    "promote.connections.title": {
-      "comment": "Title of the connections list",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connections"
-          }
-        }
-      }
-    },
-    "promote.connections.meta": {
-      "comment": "Connections list summary; 1 = filed, 2 = not filed",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld filed · %2$lld not filed"
-          }
-        }
-      }
-    },
-    "promote.connections.hint": {
-      "comment": "Hint in the connections list",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A connection files once both its ends are filed; to dispute one, change it on the Evidence graph"
           }
         }
       }

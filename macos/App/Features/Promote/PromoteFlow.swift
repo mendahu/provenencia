@@ -209,7 +209,6 @@ struct PromoteFlow: Equatable, Sendable {
     struct Bridge: Equatable, Sendable, Identifiable {
         var id: String
         var sentence: String
-        var phrase: String
         var endAName: String
         var endBName: String
         var mark: PVMarkKey
@@ -274,7 +273,6 @@ struct PromoteFlow: Equatable, Sendable {
     struct BridgeFact: Equatable, Sendable {
         var id: String
         var sentence: String
-        var phrase: String = ""
         /// The connection's term in lowercase ("spouse"): a row's reason names it; nil when the
         /// connection has none.
         var term: String?
@@ -302,7 +300,6 @@ struct PromoteFlow: Equatable, Sendable {
     var pendingLeave: PendingNavigation?
     var sheetSubjectID: String?
     var group = Grouping.kind
-    var bridgesOpen = false
 
     var visibleRows: [Row] {
         guard mappedRest else { return rows.filter { $0.subjectID == entryID } }
@@ -337,7 +334,7 @@ struct PromoteFlow: Equatable, Sendable {
 
     private func lined(_ bridge: BridgeFact, _ state: ConnectionState) -> Bridge {
         Bridge(
-            id: bridge.id, sentence: bridge.sentence, phrase: bridge.phrase,
+            id: bridge.id, sentence: bridge.sentence,
             endAName: bridge.endAName, endBName: bridge.endBName, mark: bridge.mark,
             kind: bridge.kind, symmetric: bridge.symmetric,
             endA: bridge.endA, endB: bridge.endB, state: state

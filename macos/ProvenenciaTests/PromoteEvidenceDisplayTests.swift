@@ -386,6 +386,9 @@ struct PromoteEvidenceDisplayTests {
     }
 
     @Test func connectionCopyIsWorded() {
+        #expect(L10n.Promote.doneSummary(file: 12, skip: 3, unselected: 0, connections: 22) == "File 12 · Skip 3 · 22 connections")
+        #expect(L10n.Promote.doneSummary(file: 12, skip: 0, unselected: 2, connections: 1) == "File 12 · 2 unselected · 1 connection")
+        #expect(L10n.Promote.doneSummary(file: 5, skip: 0, unselected: 0, connections: 0) == "File 5 · 0 connections")
         #expect(L10n.Promote.connectionsElsewhere(count: 1) == "+1 connection")
         #expect(L10n.Promote.connectionsElsewhere(count: 2) == "+2 connections")
         #expect(L10n.Promote.connectionsElsewhereSpoken(count: 2) == "2 connections hosted on other rows")

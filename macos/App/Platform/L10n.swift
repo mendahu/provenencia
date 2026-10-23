@@ -1582,9 +1582,6 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.sheet.spokenLikenessCount", defaultValue: "Likeness from this source and %1$@. %2$@, %#@n@.", comment: "VoiceOver label of a likeness line that bundles several records; 1 = the record's Source, 2 = sentence, 3 = record count"), source, sentence, count)
         }
         static let evidenceRetry = LocalizedStringResource("promote.sheet.retry", defaultValue: "Try again", comment: "Button under the evidence-unavailable callout that reads the evidence again")
-        static func connections(count: Int) -> String {
-            L10n.format(LocalizedStringResource("promote.connections.count", defaultValue: "%lld connections will be filed", comment: "Bridge summary; argument is how many will be filed"), count)
-        }
         /// The state text of a connection subrow: "Files on Done", or "Waits for <end>". nil for a
         /// self-link, whose copy is the warning under the sentence. `endName` is the waiting end's
         /// name; empty reads "its other end".
@@ -1653,8 +1650,18 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.connection.more", defaultValue: "+%lld more", comment: "Button that shows the connections a Promote row hides; argument is how many"), count)
         }
         static let fewerConnections = LocalizedStringResource("promote.connection.fewer", defaultValue: "Show fewer", comment: "Button that hides the extra connections a Promote row showed")
-        static func doneSummary(file: Int, skip: Int, connections: Int) -> String {
-            L10n.format(LocalizedStringResource("promote.done.summary", defaultValue: "File %1$lld · Skip %2$lld · %3$lld connections", comment: "Footer: how many rows will be filed, skipped, and how many connections"), file, skip, connections)
+        /// The footer: what Done files, skips and leaves unselected, and how many connections file.
+        /// A zero skip or unselected part is left out. `connections` always shows.
+        static func doneSummary(file: Int, skip: Int, unselected: Int, connections: Int) -> String {
+            var parts = [L10n.format(LocalizedStringResource("promote.done.file", defaultValue: "File %lld", comment: "Footer part: how many rows Done files"), file)]
+            if skip > 0 {
+                parts.append(L10n.format(LocalizedStringResource("promote.done.skip", defaultValue: "Skip %lld", comment: "Footer part: how many rows are skipped"), skip))
+            }
+            if unselected > 0 {
+                parts.append(L10n.format(LocalizedStringResource("promote.done.unselected", defaultValue: "%lld unselected", comment: "Footer part: how many rows have no target yet"), unselected))
+            }
+            parts.append(L10n.format(LocalizedStringResource("promote.done.connections", defaultValue: "%lld connections", comment: "Footer part: how many connections Done files"), connections))
+            return parts.joined(separator: " · ")
         }
         static let filing = LocalizedStringResource("promote.done.filing", defaultValue: "Filing", comment: "Done button while the batch is writing")
         static let done = LocalizedStringResource("promote.done.action", defaultValue: "Done", comment: "Files the Promote page")
@@ -1713,11 +1720,6 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.warning.conflictTitle", defaultValue: "A stronger match is %@", comment: "Warning title when a decided row disagrees with a new proposal; argument is the other handle ref"), ref)
         }
         static let conflictBody = LocalizedStringResource("promote.warning.conflictBody", defaultValue: "This choice is kept.", comment: "Warning body when a decided row disagrees with a new proposal")
-        static let connectionsTitle = LocalizedStringResource("promote.connections.title", defaultValue: "Connections", comment: "Title of the connections list")
-        static func connectionsMeta(filed: Int, unfiled: Int) -> String {
-            L10n.format(LocalizedStringResource("promote.connections.meta", defaultValue: "%1$lld filed · %2$lld not filed", comment: "Connections list summary; 1 = filed, 2 = not filed"), filed, unfiled)
-        }
-        static let connectionsHint = LocalizedStringResource("promote.connections.hint", defaultValue: "A connection files once both its ends are filed; to dispute one, change it on the Evidence graph", comment: "Hint in the connections list")
         static func sheetTitleNew(name: String, target: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.titleNew", defaultValue: "%1$@ → %2$@", comment: "Evidence sheet title for a row filed as a new record; 1 = the row's name, 2 = the New option, e.g. New person"), name, target)
         }
