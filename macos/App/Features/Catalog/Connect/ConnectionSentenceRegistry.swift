@@ -8,36 +8,36 @@ enum ConnectionSentenceRegistry {
     /// The two endpoint nouns in the kind's A/B order (participation A = person,
     /// B = event; location A = event, B = place; relationship and place
     /// relationship A = from, B = to) and the term's display label.
-    struct Slots {
+    struct Slots: Sendable {
         var a: String
         var b: String
         var termLabel: String?
     }
 
     /// What a kind always has: where its term lives and its default wording.
-    struct KindEntry {
+    struct KindEntry: Sendable {
         var kind: EvidenceBridgeKind
         /// Property key whose Observation carries the role / type term.
         var termProperty: String
         /// The sentence when both endpoints and a term label are known.
-        var sentence: (Slots) -> String
+        var sentence: @Sendable (Slots) -> String
         /// The sentence when both endpoints are known but there is no term
         /// (the kind's `sentence` when nil).
-        var noTerm: ((Slots) -> String)?
+        var noTerm: (@Sendable (Slots) -> String)?
         /// The relational phrase on a card, given the term label.
-        var phrase: (String?) -> String
+        var phrase: @Sendable (String?) -> String
     }
 
     /// Wording for one term key (and optionally one event type) of a kind.
-    struct Sentence {
+    struct Sentence: Sendable {
         var kind: EvidenceBridgeKind
         /// Role / relationship type term key.
         var term: String
         /// Event type term key (participation only); nil matches any event.
         var eventType: String?
-        var sentence: (Slots) -> String
+        var sentence: @Sendable (Slots) -> String
         /// The card phrase; the kind's when nil.
-        var phrase: ((String?) -> String)?
+        var phrase: (@Sendable (String?) -> String)?
     }
 
     private typealias Text = L10n.EvidenceGraph
@@ -102,7 +102,7 @@ enum ConnectionSentenceRegistry {
 
     private static func subjectSentence(
         _ eventType: String,
-        sentence: @escaping (Slots) -> String
+        sentence: @escaping @Sendable (Slots) -> String
     ) -> Sentence {
         Sentence(kind: .participation, term: SeededRoleTerm.subject, eventType: eventType, sentence: sentence)
     }
