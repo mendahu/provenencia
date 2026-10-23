@@ -1,6 +1,6 @@
 # S11-26 — Connections file by their ends
 
-**Status:** Planned
+**Status:** In progress ([#527](https://github.com/mendahu/provenencia/pull/527))
 **Spike / slice:** Spike 11 · Slice 6 — Connection subrows
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the connections panel loses its per-row switch and shows the state caption it already shows for unfiled rows; the panel itself is replaced by S11-27 under S11-D1)
