@@ -203,7 +203,7 @@ private extension EvidenceCardView {
         let cardRect = CGRect(x: 0, y: 0, width: width, height: y)
         painter?.beginClip(cardRect, radius: PVRadius.md)
         paintHeader(
-            title: displayLabel(placed), typeLine: typeLine(placed),
+            title: placed.titleOrTypeLabel, typeLine: typeLine(placed),
             chipFill: style.chip, chipInk: style.ink,
             chipLine: placed.isCited ? style.line : PVColor.borderDefault,
             mark: placed.kind.markKey, chipSize: 28, markSize: 15, citedChip: placed.isCited,
@@ -289,8 +289,7 @@ private extension EvidenceCardView {
         )
         painter?.beginClip(rect, radius: PVRadius.md)
 
-        let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        let working = label.isEmpty ? placed.typeLabel : label
+        let working = placed.titleOrTypeLabel
         if placed.isCited {
             paintHeader(
                 title: nil, typeLine: typeRef(placed),
@@ -446,8 +445,8 @@ private extension EvidenceCardView {
         valueWidth: CGFloat,
         leading: CGFloat,
         trailing: CGFloat,
-        orders: NameFormatOrders = NameFormatOrders(),
-        projectDir: String = "",
+        orders: NameFormatOrders,
+        projectDir: String,
         painter: PVPainter?
     ) {
         guard let painter else { return }
@@ -548,7 +547,7 @@ private extension EvidenceCardView {
         style: EvidenceSubjectKindStyle,
         hovered: String?,
         pressed: String?,
-        orders: NameFormatOrders = NameFormatOrders(),
+        orders: NameFormatOrders,
         painter: PVPainter?
     ) {
         guard let painter else { return }
@@ -621,10 +620,6 @@ private extension EvidenceCardView {
     }
     static var addPropertyRowHeight: CGFloat { PVTextMetrics.fontLineHeight(PVFont.nsBody(size: 12)) + 20 }
 
-    static func displayLabel(_ placed: EvidenceGraphPlacedSubject) -> String {
-        let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? placed.typeLabel : trimmed
-    }
     static func typeLine(_ placed: EvidenceGraphPlacedSubject) -> String {
         let ref = placed.subject.ref.trimmingCharacters(in: .whitespacesAndNewlines)
         return ref.isEmpty ? placed.typeLabel : "\(placed.typeLabel) · \(ref)"
@@ -635,13 +630,11 @@ private extension EvidenceCardView {
     }
     static func titleBlockHeight(_ placed: EvidenceGraphPlacedSubject) -> CGFloat {
         let width = EvidenceSubjectCard.width - EvidenceSubjectCard.shellPaddingX * 2 - 78
-        let title = PVTextMetrics.textHeight(displayLabel(placed), width: width, font: PVFont.nsDisplay(size: 16, weight: PVFontWeight.medium), maxLines: 2)
+        let title = PVTextMetrics.textHeight(placed.titleOrTypeLabel, width: width, font: PVFont.nsDisplay(size: 16, weight: PVFontWeight.medium), maxLines: 2)
         return title + 2 + PVTextMetrics.fontLineHeight(PVFont.nsMono(size: 10))
     }
     static func bridgeTitleBlock(_ placed: EvidenceGraphPlacedBridge) -> CGFloat {
-        let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        let title = label.isEmpty ? placed.typeLabel : label
-        return PVTextMetrics.textHeight(title, width: bridgeBodyWidth, font: PVFont.nsDisplay(size: 14, weight: PVFontWeight.medium), maxLines: 2) + 1 + PVTextMetrics.fontLineHeight(PVFont.nsMono(size: 9.5))
+        PVTextMetrics.textHeight(placed.titleOrTypeLabel, width: bridgeBodyWidth, font: PVFont.nsDisplay(size: 14, weight: PVFontWeight.medium), maxLines: 2) + 1 + PVTextMetrics.fontLineHeight(PVFont.nsMono(size: 9.5))
     }
     /// Side of a likeness row's image tile.
     static var likenessTile: CGFloat { 32 }
@@ -657,7 +650,7 @@ private extension EvidenceCardView {
         _ observation: CatalogObservation,
         valueWidth: CGFloat,
         valueFont: NSFont,
-        orders: NameFormatOrders = NameFormatOrders()
+        orders: NameFormatOrders
     ) -> CGFloat {
         if likenessRelPath(observation) != nil {
             return max(EvidenceSubjectCard.propertyRowHeight, PVTextMetrics.fontLineHeight(PVFont.nsMono(size: 9)) + 3 + likenessTile + 16)

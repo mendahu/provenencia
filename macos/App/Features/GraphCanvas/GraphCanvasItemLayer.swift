@@ -51,7 +51,7 @@ final class GraphCanvasItemLayer {
     private var origins: [String: CGPoint] = [:]
     private var dragOffsets: [String: CGSize] = [:]
     /// Item ids in the host's order (bottom to top before raising).
-    private(set) var order: [String] = []
+    private var order: [String] = []
     /// Each item's place among the views, bottom to top; see ``stackIndex(of:)``.
     private var stackIndices: [String: Int] = [:]
     private var rotorEntries: [String: GraphCanvasRotorEntry] = [:]

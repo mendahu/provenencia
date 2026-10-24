@@ -226,33 +226,19 @@ final class GraphCanvasNSScrollView: NSScrollView {
             viewportSize: contentView.frame.size
         )
         minMagnification = floor
-        if let camera {
-            magnification = GraphCanvasCoordinates.clampMagnification(
-                camera.magnification,
-                minimum: floor
-            )
-            let visible = contentView.bounds.size
-            let origin = GraphCanvasCoordinates.clampedContentOrigin(
-                proposed: camera.contentOffset,
-                documentSize: contentSize,
-                visibleSize: visible
-            )
-            contentView.scroll(to: origin)
-            reflectScrolledClipView(contentView)
-        } else {
-            magnification = GraphCanvasCoordinates.clampMagnification(1, minimum: floor)
-            let visible = contentView.bounds.size
-            let origin = GraphCanvasCoordinates.clampedContentOrigin(
-                proposed: CGPoint(
-                    x: (contentSize.width - visible.width) / 2,
-                    y: (contentSize.height - visible.height) / 2
-                ),
-                documentSize: contentSize,
-                visibleSize: visible
-            )
-            contentView.scroll(to: origin)
-            reflectScrolledClipView(contentView)
-        }
+        magnification = GraphCanvasCoordinates.clampMagnification(camera?.magnification ?? 1, minimum: floor)
+        let visible = contentView.bounds.size
+        let proposed = camera?.contentOffset ?? CGPoint(
+            x: (contentSize.width - visible.width) / 2,
+            y: (contentSize.height - visible.height) / 2
+        )
+        let origin = GraphCanvasCoordinates.clampedContentOrigin(
+            proposed: proposed,
+            documentSize: contentSize,
+            visibleSize: visible
+        )
+        contentView.scroll(to: origin)
+        reflectScrolledClipView(contentView)
     }
 
     override func reflectScrolledClipView(_ clipView: NSClipView) {

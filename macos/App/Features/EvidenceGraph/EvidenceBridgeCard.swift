@@ -246,8 +246,7 @@ enum EvidenceBridgeCard {
             }
             return "\(placed.typeLabel), \(ref), \(summary)"
         }
-        let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        let name = trimmed.isEmpty ? placed.typeLabel : trimmed
+        let name = placed.titleOrTypeLabel
         let honesty = L10n.string(L10n.EvidenceGraph.bridgeHonestyAccessibility)
         if ref.isEmpty {
             return "\(placed.typeLabel), \(name), \(honesty)"

@@ -293,8 +293,7 @@ enum EvidenceSubjectCard {
 
     /// VoiceOver / rotor label for a placed subject.
     static func accessibilityLabel(for placed: EvidenceGraphPlacedSubject) -> String {
-        let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        let name = trimmed.isEmpty ? placed.typeLabel : trimmed
+        let name = placed.titleOrTypeLabel
         let citation = placed.isCited
             ? L10n.string(L10n.EvidenceGraph.citedAccessibility)
             : L10n.string(L10n.EvidenceGraph.uncitedAccessibility)

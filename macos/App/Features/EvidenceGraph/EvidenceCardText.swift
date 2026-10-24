@@ -81,3 +81,19 @@ struct EvidenceGraphText: Equatable, Sendable {
         cards[placed.id] ?? EvidenceCardText(bridge: placed, in: snapshot, orders: orders)
     }
 }
+
+extension EvidenceGraphPlacedSubject {
+    /// The trimmed label, or the type label when the Subject has none yet.
+    var titleOrTypeLabel: String {
+        let trimmed = subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? typeLabel : trimmed
+    }
+}
+
+extension EvidenceGraphPlacedBridge {
+    /// The trimmed label, or the type label when the Subject has none yet.
+    var titleOrTypeLabel: String {
+        let trimmed = subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? typeLabel : trimmed
+    }
+}
