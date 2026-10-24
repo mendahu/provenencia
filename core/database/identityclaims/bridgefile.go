@@ -3,7 +3,6 @@ package identityclaims
 import (
 	"bytes"
 	"database/sql"
-	"errors"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
@@ -72,6 +71,8 @@ type bridgeHead struct {
 	id      []byte
 	typeKey string
 	typeID  []byte
+	// claimID is the head's accepted claim, nil when it has none.
+	claimID []byte
 }
 
 // touchesEnd is true for a bridge Subject s (alias) that has subject ? as an
@@ -102,14 +103,10 @@ func UnfileBridges(tx *database.Tx, subjectID []byte) ([]rowchange.Change, error
 	}
 	var changes []rowchange.Change
 	for _, head := range heads {
-		claim, err := AcceptedEntityForSubjectTx(tx.Tx, head.id)
-		if errors.Is(err, sql.ErrNoRows) {
+		if head.claimID == nil {
 			continue
 		}
-		if err != nil {
-			return nil, err
-		}
-		released, err := deleteimpact.ReleaseClaim(tx, claim.ID)
+		released, err := deleteimpact.ReleaseClaim(tx, head.claimID)
 		if err != nil {
 			return nil, err
 		}
@@ -138,11 +135,12 @@ func bridgeHeads(tx *sql.Tx, cond string, condArgs ...any) ([]bridgeHead, error)
 	var out []bridgeHead
 	for rows.Next() {
 		var b bridgeHead
-		if err := rows.Scan(&b.id, &b.typeKey, &b.typeID); err != nil {
+		if err := rows.Scan(&b.id, &b.typeKey, &b.typeID, &b.claimID); err != nil {
 			return nil, err
 		}
 		b.id = append([]byte(nil), b.id...)
 		b.typeID = append([]byte(nil), b.typeID...)
+		b.claimID = append([]byte(nil), b.claimID...)
 		out = append(out, b)
 	}
 	return out, rows.Err()
@@ -449,9 +447,10 @@ func queryAssociation(tx *sql.Tx, typeKey string, ends []endpoint, termKey strin
 // order the join, it starts at the type index and reads every bridge Subject
 // in the catalog (see graphcache/load.go linkLoadSQL).
 func bridgeHeadsSQL(cond string, nKeys int) string {
-	return `SELECT s.id, st.key, s.subject_type_id
+	return `SELECT s.id, st.key, s.subject_type_id, ic.id
 		FROM subjects s
 		CROSS JOIN subject_types st ON st.id = s.subject_type_id AND st.origin = 'provenencia'
+		LEFT JOIN identity_claims ic ON ic.subject_id = s.id AND ic.status = 'accepted'
 		WHERE st.key IN (` + database.SQLInPlaceholders(nKeys) + `)
 		  AND (` + cond + `)
 		ORDER BY s.id`
