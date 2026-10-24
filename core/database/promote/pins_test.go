@@ -134,12 +134,13 @@ func (f *pinFixture) revision() int64 {
 	return rev
 }
 
-// batch files one Done of the fixture's Source, the one pin write.
+// batch files one Done of the fixture's Evidence graph, the one pin write.
 func (f *pinFixture) batch(rows ...promote.BatchRow) (promote.BatchResult, error) {
 	f.t.Helper()
 	seen := f.revision()
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, f.artifact.SourceID).ID
 	return writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
-		return promote.SaveBatch(tx, userID, promote.Batch{SourceID: f.artifact.SourceID, SeenRevision: seen, Rows: rows})
+		return promote.SaveBatch(tx, userID, promote.Batch{GraphID: graph, SeenRevision: seen, Rows: rows})
 	})
 }
 

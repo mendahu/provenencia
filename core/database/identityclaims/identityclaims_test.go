@@ -3,12 +3,15 @@ package identityclaims_test
 import (
 	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
@@ -380,5 +383,51 @@ func TestAcceptedClaimsAreSourceMembers(t *testing.T) {
 	}
 	if _, ok := bySubject[string(f.york.ID)]; ok || len(eg.Members) != 2 {
 		t.Fatalf("provisional subject listed: %+v", eg.Members)
+	}
+}
+
+// TestBridgeHeadQueryPlans: each bridge-head query seeks its Subjects by id
+// (or graph) instead of starting at the subject type index, which would read
+// every bridge Subject in the catalog.
+func TestBridgeHeadQueryPlans(t *testing.T) {
+	f := newFixture(t)
+	db, err := f.c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	keys := connectrules.BridgeTypeKeys()
+	id := make([]byte, 16)
+	tests := []struct {
+		name, cond string
+		nArgs      int
+		seek       string
+	}{
+		{"file", identityclaims.FileCond, 2, "sqlite_autoindex_subjects_1"},
+		{"graph", identityclaims.GraphCond, 1, "subjects_graph_id_idx"},
+		{"unfile", identityclaims.UnfileCond, 1, "sqlite_autoindex_subjects_1"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			args := make([]any, 0, len(keys)+tc.nArgs)
+			for _, k := range keys {
+				args = append(args, k)
+			}
+			for range tc.nArgs {
+				args = append(args, id)
+			}
+			seeks := false
+			for _, detail := range dbtest.QueryPlan(t, db, identityclaims.BridgeHeadsSQL(tc.cond, len(keys)), args...) {
+				t.Log(detail)
+				if strings.Contains(detail, "subjects_subject_type_id_idx") || strings.HasPrefix(detail, "SCAN s") {
+					t.Errorf("plan starts at the type index or scans: %s", detail)
+				}
+				if strings.HasPrefix(detail, "SEARCH s ") && strings.Contains(detail, tc.seek) {
+					seeks = true
+				}
+			}
+			if !seeks {
+				t.Errorf("subjects step does not seek %s", tc.seek)
+			}
+		})
 	}
 }

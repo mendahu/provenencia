@@ -1371,25 +1371,25 @@ protocol GenealogyStore: Sendable {
         entityID: String,
         observationID: String
     ) async throws -> CatalogWriteEffects
-    /// Propose a handle, New, or Skip for every primary Subject on one Source (graph alignment).
+    /// Propose a handle, New, or Skip for every primary Subject on one Evidence graph (graph alignment).
     func proposePromoteGraphAlignment(
         projectDir: String,
-        sourceID: String,
+        graphID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogPromoteGraphAlignmentProposal
-    /// One row's claim evidence against its target. `neighbors` are the targets the page holds for its other rows.
+    /// One row's claim evidence against its target, on one Evidence graph. `neighbors` are the targets the page holds for its other rows.
     func getPromoteClaimEvidence(
         projectDir: String,
-        sourceID: String,
+        graphID: String,
         subjectID: String,
         handleID: String,
         neighbors: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogClaimEvidence
-    /// File one Done: claims, pins, and bridges. `seenRevision` is the proposal's revision.
+    /// File one Done for one Evidence graph: claims, pins, and bridges. `seenRevision` is the proposal's revision.
     func applyPromoteGraphAlignment(
         projectDir: String,
         userID: String,
-        sourceID: String,
+        graphID: String,
         seenRevision: Int64,
         rows: [CatalogPromoteBatchRow]
     ) async throws -> CatalogPromoteBatchResult

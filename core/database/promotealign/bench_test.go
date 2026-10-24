@@ -40,7 +40,7 @@ func BenchmarkProposeColdHub(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		f.c.Graph().Drop()
 		runtime.GC()
-		_, _, err := promotealign.Propose(f.c, f.source.ID, nil)
+		_, _, err := promotealign.Propose(f.c, f.graph(f.source), nil)
 		must(b, err)
 		runtime.GC()
 		var ms runtime.MemStats
@@ -62,12 +62,12 @@ func BenchmarkProposeWarmHub(b *testing.B) {
 	db, err := f.c.DB()
 	must(b, err)
 	must(b, bulkCanon(db, hub))
-	_, _, err = promotealign.Propose(f.c, f.source.ID, nil)
+	_, _, err = promotealign.Propose(f.c, f.graph(f.source), nil)
 	must(b, err)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _, err := promotealign.Propose(f.c, f.source.ID, nil)
+		_, _, err := promotealign.Propose(f.c, f.graph(f.source), nil)
 		must(b, err)
 	}
 	b.StopTimer()
@@ -93,7 +93,7 @@ func BenchmarkProposeAfterCommit(b *testing.B) {
 		b.StopTimer()
 		f.promote(f.person(f.source, f.artifact, fmt.Sprintf("Added%d Person", i)))
 		b.StartTimer()
-		_, _, err := promotealign.Propose(f.c, f.source.ID, nil)
+		_, _, err := promotealign.Propose(f.c, f.graph(f.source), nil)
 		must(b, err)
 	}
 }

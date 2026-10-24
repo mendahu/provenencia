@@ -13,11 +13,11 @@ func TestApplyPromoteGraphAlignment(t *testing.T) {
 	runRPC(t, ApplyPromoteGraphAlignment, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
-			name: "bad source id",
+			name: "bad graph id",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, _, _ := subjectFixture(t)
 				return &engine.ApplyPromoteGraphAlignmentRequest{
-					ProjectDir: dir, UserId: userID, SourceId: "nope",
+					ProjectDir: dir, UserId: userID, GraphId: "nope",
 				}
 			},
 			wantErr: true,
@@ -37,7 +37,7 @@ func TestApplyPromoteGraphAlignment(t *testing.T) {
 			t.Fatal(err)
 		}
 		proposed, err := ProposePromoteGraphAlignment(marshalProto(t, &engine.ProposePromoteGraphAlignmentRequest{
-			ProjectDir: dir, SourceId: sourceID,
+			ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID),
 		}))
 		if err != nil {
 			t.Fatal(err)
@@ -50,7 +50,7 @@ func TestApplyPromoteGraphAlignment(t *testing.T) {
 			t.Fatal("proposal revision")
 		}
 		applied, err := ApplyPromoteGraphAlignment(marshalProto(t, &engine.ApplyPromoteGraphAlignmentRequest{
-			ProjectDir: dir, UserId: userID, SourceId: sourceID, SeenRevision: proposal.GetRevision(),
+			ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SeenRevision: proposal.GetRevision(),
 			Rows: []*engine.ApplyPromoteGraphAlignmentRow{{
 				SubjectId: created.Subject.GetId(), Target: "new",
 			}},
@@ -75,11 +75,11 @@ func TestApplyPromoteGraphAlignment(t *testing.T) {
 		apply := func(t *testing.T, f evidenceFixture, row *engine.ApplyPromoteGraphAlignmentRow) *engine.ApplyPromoteGraphAlignmentResponse {
 			t.Helper()
 			var proposal engine.ProposePromoteGraphAlignmentResponse
-			mustRPC(t, ProposePromoteGraphAlignment, &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: f.dir, SourceId: f.sourceID}, &proposal)
+			mustRPC(t, ProposePromoteGraphAlignment, &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: f.dir, GraphId: f.graphID}, &proposal)
 			row.SubjectId, row.Target, row.EntityId = f.incoming, "handle", f.handle
 			var res engine.ApplyPromoteGraphAlignmentResponse
 			err := rpc(t, ApplyPromoteGraphAlignment, &engine.ApplyPromoteGraphAlignmentRequest{
-				ProjectDir: f.dir, UserId: f.userID, SourceId: f.sourceID, SeenRevision: proposal.GetRevision(),
+				ProjectDir: f.dir, UserId: f.userID, GraphId: f.graphID, SeenRevision: proposal.GetRevision(),
 				Rows: []*engine.ApplyPromoteGraphAlignmentRow{row},
 			}, &res)
 			if err != nil {
@@ -124,9 +124,9 @@ func TestApplyPromoteGraphAlignment(t *testing.T) {
 			f := newEvidenceFixture(t, observations.PolarityPositive)
 			ids := []string{f.evidence(t).GetOffers()[0].GetId()}
 			var proposal engine.ProposePromoteGraphAlignmentResponse
-			mustRPC(t, ProposePromoteGraphAlignment, &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: f.dir, SourceId: f.sourceID}, &proposal)
+			mustRPC(t, ProposePromoteGraphAlignment, &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: f.dir, GraphId: f.graphID}, &proposal)
 			err := rpc(t, ApplyPromoteGraphAlignment, &engine.ApplyPromoteGraphAlignmentRequest{
-				ProjectDir: f.dir, UserId: f.userID, SourceId: f.sourceID, SeenRevision: proposal.GetRevision(),
+				ProjectDir: f.dir, UserId: f.userID, GraphId: f.graphID, SeenRevision: proposal.GetRevision(),
 				Rows: []*engine.ApplyPromoteGraphAlignmentRow{{SubjectId: f.incoming, Target: "handle", EntityId: f.handle, DefaultPins: true, PinIds: ids}},
 			}, &engine.ApplyPromoteGraphAlignmentResponse{})
 			if err == nil {

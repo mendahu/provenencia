@@ -76,10 +76,10 @@ type ApplyRow struct {
 // writes, from the page's final targets: the other rows' targets are the
 // neighbors. A row that asks for DefaultPins gets every checked offer; a row
 // with PinIDs gets the offers those ids name, and an id the evidence no longer
-// offers is dropped. A row already filed on the Source gets none. A New or Skip
+// offers is dropped. A row already filed on the graph gets none. A New or Skip
 // row with PinIDs, or a row with both DefaultPins and PinIDs, is
 // promote.ErrInvalid. Rows keep their order; sets keep the offers' order.
-func ResolvePins(c *database.Catalog, sourceID []byte, rows []ApplyRow) ([]promote.BatchRow, error) {
+func ResolvePins(c *database.Catalog, graphID []byte, rows []ApplyRow) ([]promote.BatchRow, error) {
 	out := make([]promote.BatchRow, len(rows))
 	var (
 		in    inputs
@@ -98,7 +98,7 @@ func ResolvePins(c *database.Catalog, sourceID []byte, rows []ApplyRow) ([]promo
 		}
 		if !ready {
 			var err error
-			if in, err = loadInputs(c, sourceID); err != nil {
+			if in, err = loadInputs(c, graphID); err != nil {
 				return nil, err
 			}
 			if r, err = newEvidenceReader(c.Graph(), in); err != nil {
@@ -112,7 +112,7 @@ func ResolvePins(c *database.Catalog, sourceID []byte, rows []ApplyRow) ([]promo
 		if slices.ContainsFunc(eg.Members, func(m graphcache.EvidenceMember) bool { return string(m.SubjectID) == string(row.SubjectID) }) {
 			continue
 		}
-		req := EvidenceRequest{SourceID: sourceID, SubjectID: row.SubjectID, HandleID: row.EntityID}
+		req := EvidenceRequest{GraphID: graphID, SubjectID: row.SubjectID, HandleID: row.EntityID}
 		for j, other := range rows {
 			if j != i {
 				req.Neighbors = append(req.Neighbors, graphalign.Fixed{

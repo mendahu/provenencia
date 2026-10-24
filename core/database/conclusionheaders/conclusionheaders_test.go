@@ -22,6 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -107,10 +108,7 @@ func (f *fixture) person(forms ...string) (subjects.Subject, []observations.Obse
 		must(f.t, err)
 		obs = res.Observations
 	}
-	p, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
-	})
-	must(f.t, err)
+	p := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
 	return s, obs, p.Entity.ID
 }
 
@@ -198,10 +196,7 @@ func TestListPersonsSortsBySortedPartsNotForm(t *testing.T) {
 		}})
 	})
 	must(t, err)
-	_, err = writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
-	})
-	must(t, err)
+	promotetest.Save(t, f.c, userID, promote.Input{SubjectID: s.ID})
 
 	got := f.list()
 	if len(got) != 3 {
@@ -475,10 +470,7 @@ func (f *fixture) event(in ...observations.Input) []byte {
 		})
 		must(f.t, err)
 	}
-	p, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
-	})
-	must(f.t, err)
+	p := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
 	return p.Entity.ID
 }
 
@@ -628,10 +620,7 @@ func (f *fixture) place(art artifacts.Artifact, names ...string) []byte {
 	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
 	s := subjectstest.OfType(f.t, f.c, userID, graph, placeType, "")
 	f.citeToponyms(art, s.ID, names...)
-	p, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
-	})
-	must(f.t, err)
+	p := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
 	return p.Entity.ID
 }
 
@@ -657,10 +646,7 @@ func (f *fixture) joinPlace(art artifacts.Artifact, entityID []byte, names ...st
 	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
 	s := subjectstest.OfType(f.t, f.c, userID, graph, placeType, "")
 	f.citeToponyms(art, s.ID, names...)
-	_, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
-	})
-	must(f.t, err)
+	promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
 }
 
 func (f *fixture) places() []conclusionheaders.PlaceHeader {

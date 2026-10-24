@@ -1637,7 +1637,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// already-promoted Subjects are Target handle with their membership.
     func proposePromoteGraphAlignment(
         projectDir: String,
-        sourceID: String,
+        graphID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogPromoteGraphAlignmentProposal {
         // Delay and scripted rows are one claim. Concurrent calls must not
@@ -1645,7 +1645,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         let claimed: (delay: Duration?, proposal: CatalogPromoteGraphAlignmentProposal?) = withState {
             markCatalogSessionHeld(projectDir)
             lastPromoteFixed = fixed
-            recordedCalls.append("proposePromoteGraphAlignment")
+            recordedCalls.append("proposePromoteGraphAlignment graph=\(graphID)")
             let delay: Duration? = promoteProposeDelays.isEmpty ? nil : promoteProposeDelays.removeFirst()
             guard !promoteProposals.isEmpty else { return (delay, nil) }
             let next = promoteProposals.count > 1 ? promoteProposals.removeFirst() : promoteProposals[0]
@@ -1654,12 +1654,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
         if let delay = claimed.delay { try? await Task.sleep(for: delay) }
         if let proposal = claimed.proposal { return proposal }
-        return buildPromoteProposal(projectDir: projectDir, sourceID: sourceID, fixed: fixed)
+        return buildPromoteProposal(projectDir: projectDir, graphID: graphID, fixed: fixed)
     }
 
     private func buildPromoteProposal(
         projectDir: String,
-        sourceID: String,
+        graphID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
     ) -> CatalogPromoteGraphAlignmentProposal {
         withState {
@@ -1669,7 +1669,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 return CatalogPromoteGraphAlignmentProposal(revision: nextAuditRevision - 1, rows: next.rows)
             }
             let fixedBySubject = Dictionary(uniqueKeysWithValues: fixed.map { ($0.subjectID, $0.handleID) })
-            let subjects = subjectsOfSource(sourceID)
+            let subjects = subjectsByGraph[graphID] ?? []
             let types = Dictionary(uniqueKeysWithValues: (subjectTypesByProject[projectDir] ?? []).map { ($0.id, $0) })
             let rows = subjects.compactMap { subject -> CatalogPromoteGraphAlignmentRow? in
                 guard let type = types[subject.subjectTypeID],
@@ -1727,14 +1727,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func getPromoteClaimEvidence(
         projectDir: String,
-        sourceID _: String,
+        graphID: String,
         subjectID: String,
         handleID: String,
         neighbors: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogClaimEvidence {
         try withState {
             markCatalogSessionHeld(projectDir)
-            recordedCalls.append("getPromoteClaimEvidence subject=\(subjectID) handle=\(handleID) neighbors=\(neighbors.count)")
+            recordedCalls.append("getPromoteClaimEvidence graph=\(graphID) subject=\(subjectID) handle=\(handleID) neighbors=\(neighbors.count)")
             if let promoteEvidenceError { throw promoteEvidenceError }
             return promoteEvidence[subjectID] ?? CatalogClaimEvidence()
         }
@@ -1744,13 +1744,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func applyPromoteGraphAlignment(
         projectDir: String,
         userID _: String,
-        sourceID: String,
+        graphID: String,
         seenRevision: Int64,
         rows: [CatalogPromoteBatchRow]
     ) async throws -> CatalogPromoteBatchResult {
         try withState {
             markCatalogSessionHeld(projectDir)
-            recordedCalls.append("applyPromoteGraphAlignment source=\(sourceID) rows=\(rows.count)")
+            recordedCalls.append("applyPromoteGraphAlignment graph=\(graphID) rows=\(rows.count)")
             lastPromoteBatch = rows
             let current = nextAuditRevision - 1
             guard seenRevision == current else {
@@ -1774,7 +1774,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 default:
                     throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
                 }
-                guard let subject = subjectsOfSource(sourceID).first(where: { $0.id == row.subjectID }),
+                guard let subject = (subjectsByGraph[graphID] ?? []).first(where: { $0.id == row.subjectID }),
                       let type = subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID }),
                       Self.primaryTypeKeys.contains(type.key)
                 else {

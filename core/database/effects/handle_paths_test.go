@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -94,30 +95,10 @@ func TestHandlePaths(t *testing.T) {
 	eve := mk(personType.ID, "Eve", 14)
 	boston := mk(placeType.ID, "Boston", 16)
 
-	aliceRes, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: alice.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	bobRes, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: bob.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	eveRes, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: eve.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	bostonRes, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: boston.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	aliceRes := promotetest.Save(t, c, userID, promote.Input{SubjectID: alice.ID})
+	bobRes := promotetest.Save(t, c, userID, promote.Input{SubjectID: bob.ID})
+	eveRes := promotetest.Save(t, c, userID, promote.Input{SubjectID: eve.ID})
+	bostonRes := promotetest.Save(t, c, userID, promote.Input{SubjectID: boston.ID})
 	if _, err := writes.Call(c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
 		return identityclaims.Create(tx, userID, identityclaims.CreateInput{
 			SubjectID: cara.ID, EntityID: aliceRes.Entity.ID, Status: identityclaims.StatusRejected,

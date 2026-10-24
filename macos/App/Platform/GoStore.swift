@@ -958,12 +958,12 @@ struct GoStore: GenealogyStore {
 
     func proposePromoteGraphAlignment(
         projectDir: String,
-        sourceID: String,
+        graphID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogPromoteGraphAlignmentProposal {
         var req = Provenencia_Engine_V1_ProposePromoteGraphAlignmentRequest()
         req.projectDir = projectDir
-        req.sourceID = sourceID
+        req.graphID = graphID
         req.fixed = fixed.map(Self.mapFixed)
         let resp: Provenencia_Engine_V1_ProposePromoteGraphAlignmentResponse = try await provenenciaCall(
             method: CoreMethod.proposePromoteGraphAlignment,
@@ -1033,14 +1033,14 @@ struct GoStore: GenealogyStore {
 
     func getPromoteClaimEvidence(
         projectDir: String,
-        sourceID: String,
+        graphID: String,
         subjectID: String,
         handleID: String,
         neighbors: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogClaimEvidence {
         var req = Provenencia_Engine_V1_GetPromoteClaimEvidenceRequest()
         req.projectDir = projectDir
-        req.sourceID = sourceID
+        req.graphID = graphID
         req.subjectID = subjectID
         req.handleID = handleID
         req.neighbors = neighbors.map(Self.mapFixed)
@@ -1109,14 +1109,14 @@ struct GoStore: GenealogyStore {
     func applyPromoteGraphAlignment(
         projectDir: String,
         userID: String,
-        sourceID: String,
+        graphID: String,
         seenRevision: Int64,
         rows: [CatalogPromoteBatchRow]
     ) async throws -> CatalogPromoteBatchResult {
         var req = Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRequest()
         req.projectDir = projectDir
         req.userID = userID
-        req.sourceID = sourceID
+        req.graphID = graphID
         req.seenRevision = seenRevision
         req.rows = rows.map { row in
             var proto = Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRow()

@@ -22,6 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -183,22 +184,12 @@ func (w *bridgeWorld) bridge(kind string, from, to subjects.Subject, obs []obser
 
 func (w *bridgeWorld) promote(s subjects.Subject) promote.Result {
 	w.t.Helper()
-	res, err := writes.Call(w.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
-	})
-	if err != nil {
-		w.t.Fatal(err)
-	}
-	return res
+	return promotetest.Save(w.t, w.c, userID, promote.Input{SubjectID: s.ID})
 }
 
 func (w *bridgeWorld) join(s subjects.Subject, entityID []byte) {
 	w.t.Helper()
-	if _, err := writes.Call(w.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
-	}); err != nil {
-		w.t.Fatal(err)
-	}
+	promotetest.Save(w.t, w.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
 }
 
 func (w *bridgeWorld) handles(typeKey string) [][]byte {

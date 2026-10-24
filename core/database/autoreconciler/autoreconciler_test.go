@@ -23,6 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -232,19 +233,13 @@ func associationOf(f *fixture, typeKey string) []byte {
 
 func (f *fixture) promote(s subjects.Subject) []byte {
 	f.t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
-	})
-	must(f.t, err)
+	res := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
 	return res.Entity.ID
 }
 
 func (f *fixture) join(s subjects.Subject, entityID []byte) {
 	f.t.Helper()
-	_, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
-	})
-	must(f.t, err)
+	promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
 }
 
 // nameIn is a name Observation from "type=value" parts separated by "|"
@@ -991,10 +986,7 @@ func TestReconciledEvidence(t *testing.T) {
 		f.cite(nameIn(a, f.props["name"], "given=Jake|surname=Robins"))
 		f.cite(nameIn(b, f.props["name"], "given=James|surname=Robins"))
 		p6a4 := promote.Input{SubjectID: a.ID, ConfidenceGradeID: f.grade("low_confidence")}
-		res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, p6a4)
-		})
-		must(t, err)
+		res := promotetest.Save(t, f.c, userID, p6a4)
 		f.join(b, res.Entity.ID)
 		names := rowsFor(f.rows(), res.Entity.ID, f.props["name"].ID)
 		if len(names) != 2 || names[0].Reason != "kept" || names[1].Reason != "weak" {

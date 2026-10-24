@@ -141,26 +141,6 @@ func TestUnpromote(t *testing.T) {
 		}
 	})
 
-	t.Run("a bridge on another Source stays filed", func(t *testing.T) {
-		w := newBridgeWorld(t)
-		h := newHousehold(w)
-		other := make([]byte, 16)
-		other[0] = 0x7f
-		_, err := writes.Call(w.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			ch, err := identityclaims.UnfileBridges(tx, other, h.james.ID)
-			if len(ch) != 0 {
-				t.Fatalf("changes %d", len(ch))
-			}
-			return struct{}{}, ch, err
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !w.filed(h.sonOf) {
-			t.Fatal("son-of unfiled")
-		}
-	})
-
 	t.Run("no accepted claim writes nothing and is not an error", func(t *testing.T) {
 		w := newBridgeWorld(t)
 		james := w.node("person", "James", 0, 0)

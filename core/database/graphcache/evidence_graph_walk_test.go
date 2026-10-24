@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -278,12 +279,7 @@ func TestWalkEvidenceGraphStaysOnItsGraph(t *testing.T) {
 func TestMemberSourceAndGraph(t *testing.T) {
 	check := func(t *testing.T, f *walkFixture, james subjects.Subject, wantGraph []byte) {
 		t.Helper()
-		res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: walkUser}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, walkUser, promote.Input{SubjectID: james.ID})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		res := promotetest.Save(t, f.c, walkUser, promote.Input{SubjectID: james.ID})
 		g := f.c.Graph()
 		g.Drop()
 		n, err := g.Node(res.Entity.ID)

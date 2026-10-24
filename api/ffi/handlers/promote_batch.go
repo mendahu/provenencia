@@ -10,7 +10,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// ApplyPromoteGraphAlignment files one Done for a Source (S9-43).
+// ApplyPromoteGraphAlignment files one Done for an Evidence graph (S9-43).
 func ApplyPromoteGraphAlignment(in []byte) ([]byte, error) {
 	var req engine.ApplyPromoteGraphAlignmentRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
@@ -20,7 +20,7 @@ func ApplyPromoteGraphAlignment(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
@@ -52,13 +52,13 @@ func ApplyPromoteGraphAlignment(in []byte) ([]byte, error) {
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		// The pins are read here, outside the write; a write between the two is
 		// refused by SaveBatch's SeenRevision check (promote.stale).
-		resolved, err := promotealign.ResolvePins(c, sourceID, rows)
+		resolved, err := promotealign.ResolvePins(c, graphID, rows)
 		if err != nil {
 			return err
 		}
 		res, result, err := writes.Run(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
 			return promote.SaveBatch(tx, userID, promote.Batch{
-				SourceID:     sourceID,
+				GraphID:      graphID,
 				SeenRevision: req.GetSeenRevision(),
 				Rows:         resolved,
 			})

@@ -1149,8 +1149,8 @@ message PromoteSubjectResponse {
 }
 
 // UnpromoteSubject deletes a primary Subject's accepted claim and, in the same
-// revision, the accepted claims of the bridges on its Source that have it as an
-// end. No handle is deleted. A Subject with no accepted claim writes nothing.
+// revision, the accepted claims of the bridges on its Evidence graph that have
+// it as an end. No handle is deleted. A Subject with no accepted claim writes nothing.
 message UnpromoteSubjectRequest {
   string project_dir = 1;
   string user_id = 2;
@@ -1521,13 +1521,15 @@ message ConclusionDetail {
   repeated LikenessDetail likenesses = 7;
 }
 
-// ProposePromoteGraphAlignment loads one Source's Evidence layer and proposes
+// ProposePromoteGraphAlignment loads one Evidence graph's layer and proposes
 // a handle, New, or Skip for every primary Subject (S9-42). fixed are decided
 // or already-chosen anchors; already-promoted Subjects are free anchors too.
 message ProposePromoteGraphAlignmentRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
   repeated PromoteGraphAlignmentFixed fixed = 3;
+  string graph_id = 4;
 }
 
 // A decided row Align holds as given. target is handle (handle_id set), new,
@@ -1542,10 +1544,12 @@ message PromoteGraphAlignmentFixed {
 // target, from the targets the page holds for its rows (S11-25).
 message GetPromoteClaimEvidenceRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
   string subject_id = 3;
   string handle_id = 4;
   repeated PromoteGraphAlignmentFixed neighbors = 5;
+  string graph_id = 6;
 }
 
 message PromoteClaimEvidencePin {
@@ -1694,11 +1698,11 @@ message ProposePromoteGraphAlignmentResponse {
 message ApplyPromoteGraphAlignmentRequest {
   string project_dir = 1;
   string user_id = 2;
-  string source_id = 3;
   int64 seen_revision = 4;
   repeated ApplyPromoteGraphAlignmentRow rows = 5;
-  reserved 6;
-  reserved "skip_bridge_ids";
+  reserved 3, 6;
+  reserved "source_id", "skip_bridge_ids";
+  string graph_id = 7;
 }
 
 message ApplyPromoteGraphAlignmentRow {

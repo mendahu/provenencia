@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
@@ -227,25 +228,11 @@ func TestLoadLinksUsesTheEdgeIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 	q, args := graphcache.LinkLoadSQL([][]byte{make([]byte, 16)})
-	rows, err := db.Query(`EXPLAIN QUERY PLAN `+q, args...)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var plans []string
-	for rows.Next() {
-		var id, parent, notUsed int
-		var detail string
-		if err := rows.Scan(&id, &parent, &notUsed, &detail); err != nil {
-			t.Fatal(err)
-		}
-		plans = append(plans, detail)
+	plans := dbtest.QueryPlan(t, db, q, args...)
+	for _, detail := range plans {
 		if strings.HasPrefix(detail, "SCAN ") && !strings.Contains(detail, "CONSTANT") {
 			t.Fatalf("full scan: %s", detail)
 		}
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
 	}
 	joined := strings.Join(plans, "\n")
 	if !strings.Contains(joined, "auto_reconciler_values_edge_idx") {

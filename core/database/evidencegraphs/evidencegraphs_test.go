@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
@@ -188,93 +189,6 @@ func TestSourceOf(t *testing.T) {
 	if _, err := evidencegraphs.SourceOf(nil, def); !errors.Is(err, evidencegraphs.ErrInvalid) {
 		t.Fatalf("nil querier: got %v", err)
 	}
-}
-
-func TestSoleGraphTx(t *testing.T) {
-	f := newFixture(t)
-	src, _ := f.createSource(t, "Census 1881")
-	want := graphRows(t, f.c, src.ID)[0].id
-
-	unknown := make([]byte, 16)
-	unknown[0] = 9
-	tests := []struct {
-		name     string
-		sourceID []byte
-		want     []byte
-		wantErr  error
-	}{
-		{name: "the Default graph", sourceID: src.ID, want: want},
-		{name: "unknown Source", sourceID: unknown, wantErr: evidencegraphs.ErrInvalid},
-		{name: "short id", sourceID: unknown[:15], wantErr: evidencegraphs.ErrInvalid},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			db, err := f.c.DB()
-			if err != nil {
-				t.Fatal(err)
-			}
-			tx, err := db.Begin()
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer tx.Rollback()
-			got, err := evidencegraphs.SoleGraphTx(tx, tt.sourceID)
-			if tt.wantErr != nil {
-				if !errors.Is(err, tt.wantErr) {
-					t.Fatalf("got %v want %v", err, tt.wantErr)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(got, tt.want) {
-				t.Fatalf("got %x want %x", got, tt.want)
-			}
-		})
-		t.Run(tt.name+" over a catalog", func(t *testing.T) {
-			got, err := evidencegraphs.SoleGraph(f.c, tt.sourceID)
-			if tt.wantErr != nil {
-				if !errors.Is(err, tt.wantErr) {
-					t.Fatalf("got %v want %v", err, tt.wantErr)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(got, tt.want) {
-				t.Fatalf("got %x want %x", got, tt.want)
-			}
-		})
-	}
-
-	t.Run("two graphs is not ErrInvalid", func(t *testing.T) {
-		db, err := f.c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
-		second, err := uuid.NewV7()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := db.Exec(`INSERT INTO evidence_graphs (id, source_id, name) VALUES (?, ?, 'Second')`, second[:], src.ID); err != nil {
-			t.Fatal(err)
-		}
-		// The catalog has one connection: read over it before a transaction holds it.
-		if _, err := evidencegraphs.SoleGraph(f.c, src.ID); err == nil || errors.Is(err, evidencegraphs.ErrInvalid) {
-			t.Fatalf("SoleGraph got %v", err)
-		}
-		tx, err := db.Begin()
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer tx.Rollback()
-		_, err = evidencegraphs.SoleGraphTx(tx, src.ID)
-		if err == nil || errors.Is(err, evidencegraphs.ErrInvalid) {
-			t.Fatalf("got %v", err)
-		}
-	})
 }
 
 const pageLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
@@ -1305,23 +1219,10 @@ func TestListQueryPlan(t *testing.T) {
 		for i := range args {
 			args[i] = s.ID
 		}
-		rows, err := db.Query("EXPLAIN QUERY PLAN "+q, args...)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for rows.Next() {
-			var id, parent, unused int
-			var detail string
-			if err := rows.Scan(&id, &parent, &unused, &detail); err != nil {
-				t.Fatal(err)
-			}
+		for _, detail := range dbtest.QueryPlan(t, db, q, args...) {
 			if strings.HasPrefix(detail, "SCAN") {
 				t.Errorf("%s query plan scans: %s", name, detail)
 			}
 		}
-		if err := rows.Err(); err != nil {
-			t.Fatal(err)
-		}
-		rows.Close()
 	}
 }

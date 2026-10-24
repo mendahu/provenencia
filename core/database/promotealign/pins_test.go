@@ -22,9 +22,9 @@ func handleRow(s subjects.Subject, handle []byte, defaultPins bool, ids ...strin
 	}
 }
 
-func (f *fixture) resolve(src sources.Source, rows ...promotealign.ApplyRow) []promote.BatchRow {
+func (f *fixture) resolve(graphID []byte, rows ...promotealign.ApplyRow) []promote.BatchRow {
 	f.t.Helper()
-	out, err := promotealign.ResolvePins(f.c, src.ID, rows)
+	out, err := promotealign.ResolvePins(f.c, graphID, rows)
 	must(f.t, err)
 	return out
 }
@@ -45,7 +45,7 @@ func TestResolvePins(t *testing.T) {
 	handle, members := f.namedMembers(5, "John Smith")
 	srcB, artB := f.newSource("Obituary")
 	incoming := f.person(srcB, artB, "John Smith")
-	e := f.evidence(promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: incoming.ID, HandleID: handle})
+	e := f.evidence(promotealign.EvidenceRequest{GraphID: f.graph(srcB), SubjectID: incoming.ID, HandleID: handle})
 	offers := promotealign.PinOffers(e)
 	if len(offers) != 5 {
 		t.Fatalf("offers = %d, want 5", len(offers))
@@ -80,7 +80,7 @@ func TestResolvePins(t *testing.T) {
 	other := offers[0].ID + "x" // an id nothing offers
 
 	t.Run("a row never opened pins every checked offer", func(t *testing.T) {
-		got := f.resolve(srcB, handleRow(incoming, handle, true))
+		got := f.resolve(f.graph(srcB), handleRow(incoming, handle, true))
 		if !reflect.DeepEqual(got[0].PinSets, sets(offers...)) {
 			t.Fatalf("sets = %+v, want %+v", got[0].PinSets, sets(offers...))
 		}
@@ -88,24 +88,24 @@ func TestResolvePins(t *testing.T) {
 	t.Run("a caller's pin sets are dropped", func(t *testing.T) {
 		row := handleRow(incoming, handle, false)
 		row.PinSets = []promote.PinSet{offers[0].Set}
-		if got := f.resolve(srcB, row); len(got[0].PinSets) != 0 {
+		if got := f.resolve(f.graph(srcB), row); len(got[0].PinSets) != 0 {
 			t.Fatalf("sets = %+v", got[0].PinSets)
 		}
 	})
 	t.Run("an opened row pins the ids it kept", func(t *testing.T) {
-		got := f.resolve(srcB, handleRow(incoming, handle, false, offers[2].ID))
+		got := f.resolve(f.graph(srcB), handleRow(incoming, handle, false, offers[2].ID))
 		if !reflect.DeepEqual(got[0].PinSets, sets(offers[2])) {
 			t.Fatalf("sets = %+v", got[0].PinSets)
 		}
 	})
 	t.Run("an id the evidence no longer offers is dropped", func(t *testing.T) {
-		got := f.resolve(srcB, handleRow(incoming, handle, false, other, offers[1].ID, other))
+		got := f.resolve(f.graph(srcB), handleRow(incoming, handle, false, other, offers[1].ID, other))
 		if !reflect.DeepEqual(got[0].PinSets, sets(offers[1])) {
 			t.Fatalf("sets = %+v", got[0].PinSets)
 		}
 	})
 	t.Run("a row that kept nothing pins nothing", func(t *testing.T) {
-		got := f.resolve(srcB, handleRow(incoming, handle, false))
+		got := f.resolve(f.graph(srcB), handleRow(incoming, handle, false))
 		if len(got[0].PinSets) != 0 {
 			t.Fatalf("sets = %+v", got[0].PinSets)
 		}
@@ -116,7 +116,7 @@ func TestResolvePins(t *testing.T) {
 		h := g.promote(male).Entity.ID
 		src, art := g.newSource("Denial")
 		denies := g.sexPerson(src, art, "male", observations.PolarityNegative)
-		ev := g.evidence(promotealign.EvidenceRequest{SourceID: src.ID, SubjectID: denies.ID, HandleID: h})
+		ev := g.evidence(promotealign.EvidenceRequest{GraphID: g.graph(src), SubjectID: denies.ID, HandleID: h})
 		line := ev.Sections[0].Lines[0]
 		if line.Outcome != "conflict" || line.Checked {
 			t.Fatalf("line = %+v", line)
@@ -135,33 +135,39 @@ func TestResolvePins(t *testing.T) {
 	})
 	t.Run("a checked conflict id is kept", func(t *testing.T) {
 		g, src, denies, h, offer := conflict(t)
-		got := g.resolve(src, handleRow(denies, h, false, offer.ID))
+		got := g.resolve(g.graph(src), handleRow(denies, h, false, offer.ID))
 		if !reflect.DeepEqual(got[0].PinSets, []promote.PinSet{offer.Set}) {
 			t.Fatalf("sets = %+v", got[0].PinSets)
 		}
 	})
 	t.Run("the default pins leave a conflict unchecked", func(t *testing.T) {
 		g, src, denies, h, _ := conflict(t)
-		if got := g.resolve(src, handleRow(denies, h, true)); len(got[0].PinSets) != 0 {
+		if got := g.resolve(g.graph(src), handleRow(denies, h, true)); len(got[0].PinSets) != 0 {
 			t.Fatalf("sets = %+v", got[0].PinSets)
 		}
 	})
 	t.Run("a New or Skip row with ids is invalid", func(t *testing.T) {
 		for _, target := range []string{promote.TargetNew, promote.TargetSkip} {
 			row := promotealign.ApplyRow{BatchRow: promote.BatchRow{SubjectID: incoming.ID, Target: target}, PinIDs: []string{offers[0].ID}}
-			if _, err := promotealign.ResolvePins(f.c, srcB.ID, []promotealign.ApplyRow{row}); !errors.Is(err, promote.ErrInvalid) {
+			if _, err := promotealign.ResolvePins(f.c, f.graph(srcB), []promotealign.ApplyRow{row}); !errors.Is(err, promote.ErrInvalid) {
 				t.Errorf("%s: err = %v", target, err)
 			}
 		}
 	})
+	t.Run("an unknown graph is invalid", func(t *testing.T) {
+		row := handleRow(incoming, handle, true)
+		if _, err := promotealign.ResolvePins(f.c, make([]byte, 16), []promotealign.ApplyRow{row}); !errors.Is(err, promote.ErrInvalid) {
+			t.Errorf("err = %v, want promote.ErrInvalid", err)
+		}
+	})
 	t.Run("default pins with ids is invalid", func(t *testing.T) {
-		if _, err := promotealign.ResolvePins(f.c, srcB.ID, []promotealign.ApplyRow{handleRow(incoming, handle, true, offers[0].ID)}); !errors.Is(err, promote.ErrInvalid) {
+		if _, err := promotealign.ResolvePins(f.c, f.graph(srcB), []promotealign.ApplyRow{handleRow(incoming, handle, true, offers[0].ID)}); !errors.Is(err, promote.ErrInvalid) {
 			t.Errorf("err = %v", err)
 		}
 	})
-	t.Run("a row already filed on the Source gets no pins", func(t *testing.T) {
+	t.Run("a row already filed on the graph gets no pins", func(t *testing.T) {
 		f.join(incoming, handle)
-		got := f.resolve(srcB, handleRow(incoming, handle, true))
+		got := f.resolve(f.graph(srcB), handleRow(incoming, handle, true))
 		if len(got[0].PinSets) != 0 {
 			t.Fatalf("sets = %+v", got[0].PinSets)
 		}
@@ -205,7 +211,7 @@ func TestResolvePinsBundlesARelationship(t *testing.T) {
 		return []promotealign.ApplyRow{handleRow(w.bPerson, w.personHandle, true), birth}
 	}
 	t.Run("both rows default: the person row pins the bundle and the date", func(t *testing.T) {
-		got := f.resolve(w.srcB, rows(handleRow(w.bBirth, w.birthHandle, true))...)
+		got := f.resolve(f.graph(w.srcB), rows(handleRow(w.bBirth, w.birthHandle, true))...)
 		if !reflect.DeepEqual(got[0].PinSets, func() (out []promote.PinSet) {
 			for _, o := range offers {
 				out = append(out, o.Set)
@@ -217,7 +223,7 @@ func TestResolvePinsBundlesARelationship(t *testing.T) {
 	})
 	t.Run("a birth filed New is no neighbor", func(t *testing.T) {
 		birth := promotealign.ApplyRow{BatchRow: promote.BatchRow{SubjectID: w.bBirth.ID, Target: promote.TargetNew}}
-		got := f.resolve(w.srcB, rows(birth)...)
+		got := f.resolve(f.graph(w.srcB), rows(birth)...)
 		for _, set := range got[0].PinSets {
 			if bytes.Equal(set.Member, w.member.ID) && len(set.Observations) > 2 {
 				t.Fatalf("a bundle was pinned: %+v", set)
@@ -254,7 +260,7 @@ func TestResolvePinsBundlesARelationship(t *testing.T) {
 		for _, o := range offers {
 			ids = append(ids, o.ID)
 		}
-		got := f.resolve(w.srcB, handleRow(w.bPerson, w.personHandle, false, ids...), handleRow(w.bBirth, w.birthHandle, true))
+		got := f.resolve(f.graph(w.srcB), handleRow(w.bPerson, w.personHandle, false, ids...), handleRow(w.bBirth, w.birthHandle, true))
 		if len(got[0].PinSets) != len(offers) {
 			t.Fatalf("sets = %d, want %d", len(got[0].PinSets), len(offers))
 		}
@@ -279,7 +285,7 @@ func TestResolvePinsReadsThePageOnce(t *testing.T) {
 		rows = append(rows, handleRow(in, h, true))
 	}
 	for i := range subs {
-		req := promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: subs[i].ID, HandleID: handles[i]}
+		req := promotealign.EvidenceRequest{GraphID: f.graph(srcB), SubjectID: subs[i].ID, HandleID: handles[i]}
 		for j := range subs {
 			if j != i {
 				req.Neighbors = append(req.Neighbors, graphalign.Fixed{SubjectID: subs[j].ID, HandleID: handles[j]})
@@ -297,10 +303,10 @@ func TestResolvePinsReadsThePageOnce(t *testing.T) {
 	for i := range subs {
 		fixed = append(fixed, graphalign.Fixed{SubjectID: subs[i].ID, HandleID: handles[i]})
 	}
-	f.propose(srcB.ID, fixed)
+	f.propose(f.graph(srcB), fixed)
 	n := 0
 	f.c.Graph().SetQueryCounterForTest(func() { n++ })
-	got := f.resolve(srcB, rows...)
+	got := f.resolve(f.graph(srcB), rows...)
 	if n != 0 {
 		t.Fatalf("ResolvePins issued %d graph queries", n)
 	}
@@ -344,7 +350,7 @@ func TestResolvePinsLikeness(t *testing.T) {
 		t.Fatalf("checked likeness offers = %d, want 1", checked)
 	}
 	likeness := section(t, e.Sections, "likeness").Lines[0].Incoming.Ref
-	got := l.f.resolve(l.srcB, handleRow(l.incoming, l.handle, true))
+	got := l.f.resolve(l.f.graph(l.srcB), handleRow(l.incoming, l.handle, true))
 	pinned := map[string]bool{}
 	for _, set := range got[0].PinSets {
 		for _, o := range set.Observations {

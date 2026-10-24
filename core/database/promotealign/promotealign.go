@@ -4,11 +4,9 @@ package promotealign
 
 import (
 	"bytes"
-	"errors"
 	"sort"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/valuerules"
@@ -17,21 +15,21 @@ import (
 	"github.com/mendahu/provenencia/core/segmentcompare"
 )
 
-// Propose loads the Evidence layer for sourceID, walks the catalog's canonical
+// Propose loads the Evidence layer of graphID, walks the catalog's canonical
 // graph from the fixed anchors and each unfixed kind's top property matches,
 // and runs graphalign.Align. The int64 is MAX(audit_transactions.revision) at
-// load time, the stamp Done sends back. An unknown or empty sourceID is
+// load time, the stamp Done sends back. An unknown or empty graphID is
 // promote.ErrInvalid. A graph read error is returned instead of a proposal.
-func Propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (graphalign.Proposal, int64, error) {
-	prop, rev, _, err := propose(c, sourceID, fixed)
+func Propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed) (graphalign.Proposal, int64, error) {
+	prop, rev, _, err := propose(c, graphID, fixed)
 	return prop, rev, err
 }
 
 // propose is Propose, and the profiler it used, for a test that reads which
-// handles were profiled. The profiler is nil when the Source has no Subject to
+// handles were profiled. The profiler is nil when the graph has no Subject to
 // place.
-func propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (graphalign.Proposal, int64, *profiler, error) {
-	if c == nil || len(sourceID) != 16 {
+func propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed) (graphalign.Proposal, int64, *profiler, error) {
+	if c == nil || len(graphID) != 16 {
 		return graphalign.Proposal{}, 0, nil, promote.ErrInvalid
 	}
 	db, err := c.DB()
@@ -42,7 +40,7 @@ func propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 	if err := db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev); err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}
-	in, err := loadInputs(c, sourceID)
+	in, err := loadInputs(c, graphID)
 	if err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}
@@ -70,7 +68,7 @@ func propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 }
 
 // inputs is what a proposal and a claim evidence query both read first: the
-// Source's Evidence layer and the rules and vocabulary it was built with.
+// Evidence graph's layer and the rules and vocabulary it was built with.
 type inputs struct {
 	graphID     []byte
 	cfg         graphalign.Config
@@ -80,12 +78,11 @@ type inputs struct {
 	primary     map[string]primarySubject
 }
 
-// loadInputs checks the catalog and Source id (promote.ErrInvalid for a nil
-// catalog, an id that is not 16 bytes, or a Source that does not exist) and
-// loads the layer of the Source's one Evidence graph, until S12-09 takes the
-// graph id from the request. A Source with more than one graph is an error.
-func loadInputs(c *database.Catalog, sourceID []byte) (inputs, error) {
-	if c == nil || len(sourceID) != 16 {
+// loadInputs checks the catalog and graph id (promote.ErrInvalid for a nil
+// catalog, an id that is not 16 bytes, or a graph that does not exist) and
+// loads the graph's layer.
+func loadInputs(c *database.Catalog, graphID []byte) (inputs, error) {
+	if c == nil || len(graphID) != 16 {
 		return inputs{}, promote.ErrInvalid
 	}
 	db, err := c.DB()
@@ -93,13 +90,6 @@ func loadInputs(c *database.Catalog, sourceID []byte) (inputs, error) {
 		return inputs{}, err
 	}
 	var q database.Querier = db
-	graphID, err := evidencegraphs.SoleGraph(c, sourceID)
-	if errors.Is(err, evidencegraphs.ErrInvalid) {
-		return inputs{}, promote.ErrInvalid
-	}
-	if err != nil {
-		return inputs{}, err
-	}
 	eg, err := c.Graph().EvidenceGraph(graphID)
 	if err != nil {
 		return inputs{}, err
@@ -167,7 +157,7 @@ func mergeFixed(g *graphcache.Graph, graphID []byte, primary map[string]primaryS
 }
 
 // checkFixed validates one caller pair and returns it with its ids copied: the
-// Subject must be a primary Subject of the Source; New and Skip carry no
+// Subject must be a primary Subject of the graph; New and Skip carry no
 // handle; any other pair names a handle of 16 bytes that the graph cache has
 // unmerged and of the Subject's kind. Anything else is promote.ErrInvalid.
 func checkFixed(g *graphcache.Graph, primary map[string]primarySubject, f graphalign.Fixed) (graphalign.Fixed, error) {

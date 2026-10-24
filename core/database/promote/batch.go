@@ -10,6 +10,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
@@ -34,10 +35,10 @@ type BatchRow struct {
 	PinSets           []PinSet
 }
 
-// Batch is one Done for a Source. SeenRevision is the audit revision the
-// proposal was read at.
+// Batch is one Done for an Evidence graph. SeenRevision is the audit revision
+// the proposal was read at.
 type Batch struct {
-	SourceID     []byte
+	GraphID      []byte
 	SeenRevision int64
 	Rows         []BatchRow
 }
@@ -69,14 +70,10 @@ func SaveBatch(tx *database.Tx, userID []byte, in Batch) (BatchResult, []rowchan
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return BatchResult{}, nil, err
 	}
-	if len(in.SourceID) != 16 {
-		return BatchResult{}, nil, ErrInvalid
-	}
 
 	q := tx.Tx
-	var exists int
-	if err := q.QueryRow(`SELECT 1 FROM sources WHERE id = ?`, in.SourceID).Scan(&exists); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+	if _, err := evidencegraphs.SourceOf(q, in.GraphID); err != nil {
+		if errors.Is(err, evidencegraphs.ErrInvalid) {
 			return BatchResult{}, nil, ErrInvalid
 		}
 		return BatchResult{}, nil, err
@@ -94,7 +91,7 @@ func SaveBatch(tx *database.Tx, userID []byte, in Batch) (BatchResult, []rowchan
 		written []Written
 	)
 	for _, row := range in.Rows {
-		w, rowChanges, _, err := applyRow(q, in.SourceID, row)
+		w, rowChanges, _, err := applyRow(q, in.GraphID, row)
 		if err != nil {
 			return BatchResult{}, nil, err
 		}
@@ -105,7 +102,7 @@ func SaveBatch(tx *database.Tx, userID []byte, in Batch) (BatchResult, []rowchan
 		written = append(written, *w)
 	}
 
-	_, filed, err := identityclaims.FileSourceBridgesTx(q, in.SourceID)
+	_, filed, err := identityclaims.FileEvidenceGraphBridgesTx(q, in.GraphID)
 	if err != nil {
 		return BatchResult{}, nil, err
 	}
@@ -120,7 +117,7 @@ func latestRevision(tx *sql.Tx) (int64, error) {
 }
 
 // applyRow files one claim. A nil Written is an anchor or a skip.
-func applyRow(tx *sql.Tx, sourceID []byte, row BatchRow) (*Written, []rowchange.Change, []byte, error) {
+func applyRow(tx *sql.Tx, graphID []byte, row BatchRow) (*Written, []rowchange.Change, []byte, error) {
 	switch row.Target {
 	case TargetSkip:
 		if len(row.EntityID) != 0 || len(row.PinSets) != 0 || len(row.ConfidenceGradeID) != 0 || row.Argument != "" {
@@ -152,7 +149,7 @@ func applyRow(tx *sql.Tx, sourceID []byte, row BatchRow) (*Written, []rowchange.
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if !bytes.Equal(subject.SourceID, sourceID) {
+	if !bytes.Equal(subject.GraphID, graphID) {
 		return nil, nil, nil, ErrInvalid
 	}
 	st, err := subjecttypes.GetByIDTx(tx, subject.SubjectTypeID)

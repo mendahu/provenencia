@@ -9750,8 +9750,8 @@ func (x *PromoteSubjectResponse) GetClaim() *IdentityClaim {
 }
 
 // UnpromoteSubject deletes a primary Subject's accepted claim and, in the same
-// revision, the accepted claims of the bridges on its Source that have it as an
-// end. No handle is deleted. A Subject with no accepted claim writes nothing.
+// revision, the accepted claims of the bridges on its Evidence graph that have
+// it as an end. No handle is deleted. A Subject with no accepted claim writes nothing.
 type UnpromoteSubjectRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
@@ -12317,14 +12317,14 @@ func (*ConclusionDetail_Event) isConclusionDetail_Header() {}
 
 func (*ConclusionDetail_Place) isConclusionDetail_Header() {}
 
-// ProposePromoteGraphAlignment loads one Source's Evidence layer and proposes
+// ProposePromoteGraphAlignment loads one Evidence graph's layer and proposes
 // a handle, New, or Skip for every primary Subject (S9-42). fixed are decided
 // or already-chosen anchors; already-promoted Subjects are free anchors too.
 type ProposePromoteGraphAlignmentRequest struct {
 	state         protoimpl.MessageState        `protogen:"open.v1"`
 	ProjectDir    string                        `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	SourceId      string                        `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
 	Fixed         []*PromoteGraphAlignmentFixed `protobuf:"bytes,3,rep,name=fixed,proto3" json:"fixed,omitempty"`
+	GraphId       string                        `protobuf:"bytes,4,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -12366,18 +12366,18 @@ func (x *ProposePromoteGraphAlignmentRequest) GetProjectDir() string {
 	return ""
 }
 
-func (x *ProposePromoteGraphAlignmentRequest) GetSourceId() string {
-	if x != nil {
-		return x.SourceId
-	}
-	return ""
-}
-
 func (x *ProposePromoteGraphAlignmentRequest) GetFixed() []*PromoteGraphAlignmentFixed {
 	if x != nil {
 		return x.Fixed
 	}
 	return nil
+}
+
+func (x *ProposePromoteGraphAlignmentRequest) GetGraphId() string {
+	if x != nil {
+		return x.GraphId
+	}
+	return ""
 }
 
 // A decided row Align holds as given. target is handle (handle_id set), new,
@@ -12447,10 +12447,10 @@ func (x *PromoteGraphAlignmentFixed) GetTarget() string {
 type GetPromoteClaimEvidenceRequest struct {
 	state         protoimpl.MessageState        `protogen:"open.v1"`
 	ProjectDir    string                        `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	SourceId      string                        `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
 	SubjectId     string                        `protobuf:"bytes,3,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
 	HandleId      string                        `protobuf:"bytes,4,opt,name=handle_id,json=handleId,proto3" json:"handle_id,omitempty"`
 	Neighbors     []*PromoteGraphAlignmentFixed `protobuf:"bytes,5,rep,name=neighbors,proto3" json:"neighbors,omitempty"`
+	GraphId       string                        `protobuf:"bytes,6,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -12492,13 +12492,6 @@ func (x *GetPromoteClaimEvidenceRequest) GetProjectDir() string {
 	return ""
 }
 
-func (x *GetPromoteClaimEvidenceRequest) GetSourceId() string {
-	if x != nil {
-		return x.SourceId
-	}
-	return ""
-}
-
 func (x *GetPromoteClaimEvidenceRequest) GetSubjectId() string {
 	if x != nil {
 		return x.SubjectId
@@ -12518,6 +12511,13 @@ func (x *GetPromoteClaimEvidenceRequest) GetNeighbors() []*PromoteGraphAlignment
 		return x.Neighbors
 	}
 	return nil
+}
+
+func (x *GetPromoteClaimEvidenceRequest) GetGraphId() string {
+	if x != nil {
+		return x.GraphId
+	}
+	return ""
 }
 
 type PromoteClaimEvidencePin struct {
@@ -13573,9 +13573,9 @@ type ApplyPromoteGraphAlignmentRequest struct {
 	state         protoimpl.MessageState           `protogen:"open.v1"`
 	ProjectDir    string                           `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
 	UserId        string                           `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	SourceId      string                           `protobuf:"bytes,3,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
 	SeenRevision  int64                            `protobuf:"varint,4,opt,name=seen_revision,json=seenRevision,proto3" json:"seen_revision,omitempty"`
 	Rows          []*ApplyPromoteGraphAlignmentRow `protobuf:"bytes,5,rep,name=rows,proto3" json:"rows,omitempty"`
+	GraphId       string                           `protobuf:"bytes,7,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -13624,13 +13624,6 @@ func (x *ApplyPromoteGraphAlignmentRequest) GetUserId() string {
 	return ""
 }
 
-func (x *ApplyPromoteGraphAlignmentRequest) GetSourceId() string {
-	if x != nil {
-		return x.SourceId
-	}
-	return ""
-}
-
 func (x *ApplyPromoteGraphAlignmentRequest) GetSeenRevision() int64 {
 	if x != nil {
 		return x.SeenRevision
@@ -13643,6 +13636,13 @@ func (x *ApplyPromoteGraphAlignmentRequest) GetRows() []*ApplyPromoteGraphAlignm
 		return x.Rows
 	}
 	return nil
+}
+
+func (x *ApplyPromoteGraphAlignmentRequest) GetGraphId() string {
+	if x != nil {
+		return x.GraphId
+	}
+	return ""
 }
 
 type ApplyPromoteGraphAlignmentRow struct {
@@ -20308,25 +20308,25 @@ const file_engine_proto_rawDesc = "" +
 	"\n" +
 	"likenesses\x18\a \x03(\v2%.provenencia.engine.v1.LikenessDetailR\n" +
 	"likenessesB\b\n" +
-	"\x06header\"\xac\x01\n" +
+	"\x06header\"\xbb\x01\n" +
 	"#ProposePromoteGraphAlignmentRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\x12\x1b\n" +
-	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12G\n" +
-	"\x05fixed\x18\x03 \x03(\v21.provenencia.engine.v1.PromoteGraphAlignmentFixedR\x05fixed\"p\n" +
+	"projectDir\x12G\n" +
+	"\x05fixed\x18\x03 \x03(\v21.provenencia.engine.v1.PromoteGraphAlignmentFixedR\x05fixed\x12\x19\n" +
+	"\bgraph_id\x18\x04 \x01(\tR\agraphIdJ\x04\b\x02\x10\x03R\tsource_id\"p\n" +
 	"\x1aPromoteGraphAlignmentFixed\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x1b\n" +
 	"\thandle_id\x18\x02 \x01(\tR\bhandleId\x12\x16\n" +
-	"\x06target\x18\x03 \x01(\tR\x06target\"\xeb\x01\n" +
+	"\x06target\x18\x03 \x01(\tR\x06target\"\xfa\x01\n" +
 	"\x1eGetPromoteClaimEvidenceRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\x12\x1b\n" +
-	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12\x1d\n" +
+	"projectDir\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x03 \x01(\tR\tsubjectId\x12\x1b\n" +
 	"\thandle_id\x18\x04 \x01(\tR\bhandleId\x12O\n" +
-	"\tneighbors\x18\x05 \x03(\v21.provenencia.engine.v1.PromoteGraphAlignmentFixedR\tneighbors\"\xba\x01\n" +
+	"\tneighbors\x18\x05 \x03(\v21.provenencia.engine.v1.PromoteGraphAlignmentFixedR\tneighbors\x12\x19\n" +
+	"\bgraph_id\x18\x06 \x01(\tR\agraphIdJ\x04\b\x02\x10\x03R\tsource_id\"\xba\x01\n" +
 	"\x17PromoteClaimEvidencePin\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tsource_id\x18\x04 \x01(\tR\bsourceId\x12<\n" +
@@ -20424,14 +20424,14 @@ const file_engine_proto_rawDesc = "" +
 	"\"\x87\x01\n" +
 	"$ProposePromoteGraphAlignmentResponse\x12C\n" +
 	"\x04rows\x18\x01 \x03(\v2/.provenencia.engine.v1.PromoteGraphAlignmentRowR\x04rows\x12\x1a\n" +
-	"\brevision\x18\x02 \x01(\x03R\brevision\"\x80\x02\n" +
+	"\brevision\x18\x02 \x01(\x03R\brevision\"\x8f\x02\n" +
 	"!ApplyPromoteGraphAlignmentRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1b\n" +
-	"\tsource_id\x18\x03 \x01(\tR\bsourceId\x12#\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12#\n" +
 	"\rseen_revision\x18\x04 \x01(\x03R\fseenRevision\x12H\n" +
-	"\x04rows\x18\x05 \x03(\v24.provenencia.engine.v1.ApplyPromoteGraphAlignmentRowR\x04rowsJ\x04\b\x06\x10\aR\x0fskip_bridge_ids\"\x81\x02\n" +
+	"\x04rows\x18\x05 \x03(\v24.provenencia.engine.v1.ApplyPromoteGraphAlignmentRowR\x04rows\x12\x19\n" +
+	"\bgraph_id\x18\a \x01(\tR\agraphIdJ\x04\b\x03\x10\x04J\x04\b\x06\x10\aR\tsource_idR\x0fskip_bridge_ids\"\x81\x02\n" +
 	"\x1dApplyPromoteGraphAlignmentRow\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x16\n" +

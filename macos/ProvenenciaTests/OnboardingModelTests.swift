@@ -599,14 +599,14 @@ private struct ThrowingStore: GenealogyStore {
     }
     func proposePromoteGraphAlignment(
         projectDir _: String,
-        sourceID _: String,
+        graphID _: String,
         fixed _: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogPromoteGraphAlignmentProposal {
         throw StoreBoom.boom
     }
     func getPromoteClaimEvidence(
         projectDir _: String,
-        sourceID _: String,
+        graphID _: String,
         subjectID _: String,
         handleID _: String,
         neighbors _: [CatalogPromoteGraphAlignmentFixed]
@@ -616,7 +616,7 @@ private struct ThrowingStore: GenealogyStore {
     func applyPromoteGraphAlignment(
         projectDir _: String,
         userID _: String,
-        sourceID _: String,
+        graphID _: String,
         seenRevision _: Int64,
         rows _: [CatalogPromoteBatchRow]
     ) async throws -> CatalogPromoteBatchResult {
