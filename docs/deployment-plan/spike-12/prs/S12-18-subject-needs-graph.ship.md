@@ -78,4 +78,4 @@ Gate: first run FAIL in `xcode-test` on `GraphCanvasEdgeGeometryTests.bottomAppr
 `origin/main` has not moved since the branch was cut (`1843cd4f`); no merge needed.
 
 ## Result
-Gate PASS · CI <pending> · open: none · follow-ups: flaky `GraphCanvasEdgeGeometryTests.bottomApproachEndsUnderTheBridgeFill()`; `docs/ideas/test-subject-fixtures.md` "One placement write" · to user: MNT-1 (fold now, 2026-10-23), MNT-1 r2 (finish fold, Fix plan 2 for a major, 2026-10-23) · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: flaky `GraphCanvasEdgeGeometryTests.bottomApproachEndsUnderTheBridgeFill()`; `docs/ideas/test-subject-fixtures.md` "One placement write" · to user: MNT-1 (fold now, 2026-10-23), MNT-1 r2 (finish fold, Fix plan 2 for a major, 2026-10-23) · CON miss: none
