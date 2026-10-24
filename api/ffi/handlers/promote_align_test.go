@@ -107,7 +107,7 @@ func TestProposeSendsContested(t *testing.T) {
 				handle := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: handleSubject})
 				var sourceID string
 				sourceID, incoming = personOnNewSource(t, dir, userID, typeID, "male", tc.polarity)
-				req := &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, SourceId: sourceID}
+				req := &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID)}
 				if tc.fix {
 					req.Fixed = []*engine.PromoteGraphAlignmentFixed{{SubjectId: incoming, HandleId: handle.Entity.GetId()}}
 				}
@@ -169,18 +169,26 @@ func TestProposePromoteGraphAlignment(t *testing.T) {
 	runRPC(t, ProposePromoteGraphAlignment, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
-			name: "bad source id",
+			name: "bad graph id",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, _, _ := subjectFixture(t)
-				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, SourceId: "nope"}
+				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, GraphId: "nope"}
 			},
 			wantErr: true,
 		},
 		{
-			name: "empty source returns no rows",
+			name: "unknown graph",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, _ := subjectFixture(t)
+				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, GraphId: uuid.NewString()}
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty graph returns no rows",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, sourceID, _ := subjectFixture(t)
-				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, SourceId: sourceID}
+				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID)}
 			},
 			want: &engine.ProposePromoteGraphAlignmentResponse{},
 		},
@@ -195,7 +203,7 @@ func TestProposePromoteGraphAlignment(t *testing.T) {
 					promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: handleSubject})
 				}
 				sourceID, _ := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
-				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, SourceId: sourceID}
+				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID)}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
 				var resp engine.ProposePromoteGraphAlignmentResponse

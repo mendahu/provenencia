@@ -23,8 +23,8 @@ import (
 // whose Target is New or Skip, or whose Subject is not a layer neighbor of the
 // row's Subject, contributes nothing.
 type EvidenceRequest struct {
-	SourceID, SubjectID, HandleID []byte
-	Neighbors                     []graphalign.Fixed
+	GraphID, SubjectID, HandleID []byte
+	Neighbors                    []graphalign.Fixed
 }
 
 // Evidence computes one row's claim evidence: a line per accepted member of
@@ -32,12 +32,12 @@ type EvidenceRequest struct {
 // for each link to a mapped neighbor that corresponds to a link between the
 // entity's members and the neighbor entity's. It only reads the catalog and
 // the graph cache, and runs no alignment; the decisions are
-// claimevidence.Build's. An unknown Source, a row Subject that is not a primary
+// claimevidence.Build's. An unknown graph, a row Subject that is not a primary
 // Subject on it, an empty row handle, or a row or neighbor handle that is
-// missing, merged or of another kind, or more neighbors than the Source has
+// missing, merged or of another kind, or more neighbors than the graph has
 // primary Subjects, is promote.ErrInvalid.
 func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence, error) {
-	in, err := loadInputs(c, req.SourceID)
+	in, err := loadInputs(c, req.GraphID)
 	if err != nil {
 		return claimevidence.Evidence{}, err
 	}
@@ -52,7 +52,7 @@ func Evidence(c *database.Catalog, req EvidenceRequest) (claimevidence.Evidence,
 // evidence is Evidence over inputs and a reader the caller loaded, so a page
 // of rows loads once. The neighbors are the request's, de-duplicated (a
 // Subject named twice keeps its last target at its first position), plus every
-// Subject the Source already filed, on its handle: the row's own Subject is
+// Subject the graph already filed, on its handle: the row's own Subject is
 // never its own neighbor.
 func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceRequest) (claimevidence.Evidence, error) {
 	row, err := checkFixed(g, in.primary, graphalign.Fixed{SubjectID: req.SubjectID, HandleID: req.HandleID})

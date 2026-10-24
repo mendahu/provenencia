@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
@@ -404,46 +403,6 @@ func graphFields(g Graph) map[string]any {
 		"name":        g.Name,
 		"description": database.NullString(g.Description),
 	}
-}
-
-// SoleGraphTx returns the id of the one graph of a Source.
-//
-// The one bridge left: Promote's alignment reads it through SoleGraph until
-// S12-09, which deletes both.
-func SoleGraphTx(tx *sql.Tx, sourceID []byte) ([]byte, error) {
-	if tx == nil || len(sourceID) != 16 {
-		return nil, ErrInvalid
-	}
-	graphs, err := list(tx, sourceID)
-	if err != nil {
-		return nil, err
-	}
-	switch len(graphs) {
-	case 0:
-		return nil, ErrInvalid
-	case 1:
-		return graphs[0].ID, nil
-	default:
-		return nil, fmt.Errorf("evidencegraphs: source %x has more than one graph", sourceID)
-	}
-}
-
-// SoleGraph returns the id of the one graph of a Source, in its own read
-// transaction, the way List wraps list. S12-09 deletes it with SoleGraphTx.
-func SoleGraph(c *database.Catalog, sourceID []byte) ([]byte, error) {
-	if len(sourceID) != 16 {
-		return nil, ErrInvalid
-	}
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	return SoleGraphTx(tx, sourceID)
 }
 
 // SubjectGraphTx returns the graph a Subject belongs to.

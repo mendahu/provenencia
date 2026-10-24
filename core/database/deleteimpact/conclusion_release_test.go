@@ -103,7 +103,7 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 		t.Fatal(err)
 	}
 	batch, err := writes.Call(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
-		return promote.SaveBatch(tx, userID, promote.Batch{SourceID: src.ID, SeenRevision: rev, Rows: []promote.BatchRow{{
+		return promote.SaveBatch(tx, userID, promote.Batch{GraphID: b.GraphID, SeenRevision: rev, Rows: []promote.BatchRow{{
 			SubjectID: b.ID, Target: promote.TargetHandle, EntityID: grounding.Entity.ID,
 			PinSets: []promote.PinSet{{Member: a.ID, Observations: [][]byte{obsB, obsA}}},
 		}}})

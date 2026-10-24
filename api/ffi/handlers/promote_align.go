@@ -10,14 +10,14 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// ProposePromoteGraphAlignment loads one Source's Evidence layer and returns
+// ProposePromoteGraphAlignment loads one Evidence graph's layer and returns
 // Align's proposal (S9-42).
 func ProposePromoteGraphAlignment(in []byte) ([]byte, error) {
 	var req engine.ProposePromoteGraphAlignmentRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("propose_promote_graph_alignment", err)
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +28,7 @@ func ProposePromoteGraphAlignment(in []byte) ([]byte, error) {
 
 	var out *engine.ProposePromoteGraphAlignmentResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		prop, rev, err := promotealign.Propose(c, sourceID, fixed)
+		prop, rev, err := promotealign.Propose(c, graphID, fixed)
 		if err != nil {
 			return err
 		}

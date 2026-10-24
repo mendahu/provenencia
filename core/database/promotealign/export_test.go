@@ -4,16 +4,14 @@ import (
 	"slices"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 )
 
-// LayerBridges exposes the bridges the loader reads for one Source's one
-// Evidence graph.
-func LayerBridges(c *database.Catalog, sourceID []byte) ([]graphalign.Bridge, error) {
+// LayerBridges exposes the bridges the loader reads for one Evidence graph.
+func LayerBridges(c *database.Catalog, graphID []byte) ([]graphalign.Bridge, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, err
@@ -28,10 +26,6 @@ func LayerBridges(c *database.Catalog, sourceID []byte) ([]graphalign.Bridge, er
 	if err != nil {
 		return nil, err
 	}
-	graphID, err := evidencegraphs.SoleGraph(c, sourceID)
-	if err != nil {
-		return nil, err
-	}
 	layer, _, err := loadLayer(c.Graph(), graphID, cfg, namePattern, terms)
 	if err != nil {
 		return nil, err
@@ -39,10 +33,10 @@ func LayerBridges(c *database.Catalog, sourceID []byte) ([]graphalign.Bridge, er
 	return layer.Bridges, nil
 }
 
-// ProfiledRefsForTest proposes for the Source with no fixed rows and returns,
+// ProfiledRefsForTest proposes for the graph with no fixed rows and returns,
 // sorted, the Ref of every handle whose full profile was built.
-func ProfiledRefsForTest(c *database.Catalog, sourceID []byte) ([]string, error) {
-	_, _, prof, err := propose(c, sourceID, nil)
+func ProfiledRefsForTest(c *database.Catalog, graphID []byte) ([]string, error) {
+	_, _, prof, err := propose(c, graphID, nil)
 	if err != nil || prof == nil {
 		return nil, err
 	}

@@ -8,7 +8,6 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/effects"
-	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promotealign"
@@ -43,7 +42,7 @@ func newWarmFixture(t *testing.T) *warmFixture {
 
 func (w *warmFixture) request() promotealign.EvidenceRequest {
 	return promotealign.EvidenceRequest{
-		SourceID: w.srcB.ID, SubjectID: w.bPerson.ID, HandleID: w.personHandle,
+		GraphID: w.f.graph(w.srcB), SubjectID: w.bPerson.ID, HandleID: w.personHandle,
 		Neighbors: []graphalign.Fixed{{SubjectID: w.bBirth.ID, HandleID: w.birthHandle}},
 	}
 }
@@ -71,10 +70,10 @@ func TestEvidenceWarmIssuesNoQuery(t *testing.T) {
 // issues no query through the graph. The first built the shortlist index.
 func TestProposeWarmIssuesNoQuery(t *testing.T) {
 	w := newWarmFixture(t)
-	cold := w.f.propose(w.srcB.ID, nil)
+	cold := w.f.propose(w.f.graph(w.srcB), nil)
 	n := 0
 	w.f.c.Graph().SetQueryCounterForTest(func() { n++ })
-	warm := w.f.propose(w.srcB.ID, nil)
+	warm := w.f.propose(w.f.graph(w.srcB), nil)
 	if n != 0 {
 		t.Fatalf("the second Propose issued %d graph queries", n)
 	}
@@ -91,16 +90,16 @@ func TestMemoFollowsCommit(t *testing.T) {
 	compare := func(t *testing.T, w *warmFixture, commit func()) {
 		t.Helper()
 		beforeE, errE := promotealign.Evidence(w.f.c, w.request())
-		beforeP := w.f.propose(w.srcB.ID, nil)
+		beforeP := w.f.propose(w.f.graph(w.srcB), nil)
 		if errE != nil {
 			t.Fatal(errE)
 		}
 		commit()
 		warmE, warmErr := promotealign.Evidence(w.f.c, w.request())
-		warmP, _, warmPErr := promotealign.Propose(w.f.c, w.srcB.ID, nil)
+		warmP, _, warmPErr := promotealign.Propose(w.f.c, w.f.graph(w.srcB), nil)
 		w.f.c.Graph().Drop()
 		freshE, freshErr := promotealign.Evidence(w.f.c, w.request())
-		freshP, _, freshPErr := promotealign.Propose(w.f.c, w.srcB.ID, nil)
+		freshP, _, freshPErr := promotealign.Propose(w.f.c, w.f.graph(w.srcB), nil)
 		if !sameErr(warmErr, freshErr) || !sameErr(warmPErr, freshPErr) {
 			t.Fatalf("errors differ: warm %v / %v, fresh %v / %v", warmErr, warmPErr, freshErr, freshPErr)
 		}
@@ -188,15 +187,15 @@ func sameErr(a, b error) bool {
 func TestMemoIsNotMutated(t *testing.T) {
 	w := newWarmFixture(t)
 	w.f.evidence(w.request())
-	w.f.propose(w.srcB.ID, nil)
-	w.f.evidence(promotealign.EvidenceRequest{SourceID: w.srcB.ID, SubjectID: w.bPerson.ID, HandleID: w.personHandle})
+	w.f.propose(w.f.graph(w.srcB), nil)
+	w.f.evidence(promotealign.EvidenceRequest{GraphID: w.f.graph(w.srcB), SubjectID: w.bPerson.ID, HandleID: w.personHandle})
 	first := w.snapshot(t)
 	if !first.LayerOK || len(first.Layer.Subjects) == 0 || len(first.Members) == 0 {
 		t.Fatalf("nothing was memoized: %+v", first)
 	}
 	before := memoJSON(t, w)
 	for i := 0; i < 2; i++ {
-		w.f.propose(w.srcB.ID, []graphalign.Fixed{{SubjectID: w.bPerson.ID, HandleID: w.personHandle}})
+		w.f.propose(w.f.graph(w.srcB), []graphalign.Fixed{{SubjectID: w.bPerson.ID, HandleID: w.personHandle}})
 		w.f.evidence(w.request())
 		if after := memoJSON(t, w); after != before {
 			t.Fatalf("a read changed the memo:\nbefore %s\nafter  %s", before, after)
@@ -214,8 +213,7 @@ func TestMemoIsNotMutated(t *testing.T) {
 func (w *warmFixture) snapshot(t *testing.T) promotealign.MemoSnapshot {
 	t.Helper()
 	return promotealign.MemoSnapshotForTest(w.f.c,
-		evidencegraphstest.SoleGraph(t, w.f.c, w.srcB.ID).ID,
-		evidencegraphstest.SoleGraph(t, w.f.c, w.f.source.ID).ID)
+		w.f.graph(w.srcB), w.f.graph(w.f.source))
 }
 
 func memoJSON(t *testing.T, w *warmFixture) string {

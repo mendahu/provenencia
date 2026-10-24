@@ -94,7 +94,7 @@ func newPinnedHandle(t *testing.T) pinnedHandle {
 	must(err)
 	must(db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev))
 	batch, err := writes.Call(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
-		return promote.SaveBatch(tx, userID, promote.Batch{SourceID: src.ID, SeenRevision: rev, Rows: []promote.BatchRow{{
+		return promote.SaveBatch(tx, userID, promote.Batch{GraphID: graph, SeenRevision: rev, Rows: []promote.BatchRow{{
 			SubjectID: b.ID, Target: promote.TargetHandle, EntityID: grounding.Entity.ID,
 			PinSets: []promote.PinSet{{Member: a.ID, Observations: [][]byte{h.bName, h.aName, h.bAlt, h.aAlt}}},
 		}}})

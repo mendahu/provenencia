@@ -57,7 +57,7 @@ func TestEvidenceCollapsesFiveNamedMembers(t *testing.T) {
 	srcB, artB := f.newSource("Obituary")
 	incoming := f.person(srcB, artB, "John Smith")
 
-	e := f.evidence(promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: incoming.ID, HandleID: handle})
+	e := f.evidence(promotealign.EvidenceRequest{GraphID: f.graph(srcB), SubjectID: incoming.ID, HandleID: handle})
 	s := section(t, e.Sections, vocabkey.PropertyName)
 	if len(s.Lines) != 1 {
 		t.Fatalf("name lines = %d, want 1: %+v", len(s.Lines), s.Lines)
@@ -105,7 +105,7 @@ func TestEvidenceBundlesAMatchingBirth(t *testing.T) {
 			f.participation(srcB, artB, bPerson, bBirth, "subject")
 
 			e := f.evidence(promotealign.EvidenceRequest{
-				SourceID: srcB.ID, SubjectID: bPerson.ID, HandleID: personHandle,
+				GraphID: f.graph(srcB), SubjectID: bPerson.ID, HandleID: personHandle,
 				Neighbors: []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: birthHandle}},
 			})
 			if len(e.Relationships) != 1 {
@@ -151,16 +151,16 @@ func TestEvidenceInvalidRequest(t *testing.T) {
 		name string
 		req  promotealign.EvidenceRequest
 	}{
-		{"no such Source", promotealign.EvidenceRequest{SourceID: missing, SubjectID: b.ID, HandleID: handle}},
-		{"a Subject of another Source", promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: aPerson.ID, HandleID: handle}},
-		{"an empty row handle", promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: b.ID}},
-		{"a missing row handle", promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: b.ID, HandleID: missing}},
-		{"a row handle of another kind", promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: b.ID, HandleID: birthHandle}},
-		{"a missing neighbor handle", promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: b.ID, HandleID: handle,
+		{"no such graph", promotealign.EvidenceRequest{GraphID: missing, SubjectID: b.ID, HandleID: handle}},
+		{"a Subject of another graph", promotealign.EvidenceRequest{GraphID: f.graph(srcB), SubjectID: aPerson.ID, HandleID: handle}},
+		{"an empty row handle", promotealign.EvidenceRequest{GraphID: f.graph(srcB), SubjectID: b.ID}},
+		{"a missing row handle", promotealign.EvidenceRequest{GraphID: f.graph(srcB), SubjectID: b.ID, HandleID: missing}},
+		{"a row handle of another kind", promotealign.EvidenceRequest{GraphID: f.graph(srcB), SubjectID: b.ID, HandleID: birthHandle}},
+		{"a missing neighbor handle", promotealign.EvidenceRequest{GraphID: f.graph(srcB), SubjectID: b.ID, HandleID: handle,
 			Neighbors: []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: missing}}}},
-		{"a neighbor handle of another kind", promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: b.ID, HandleID: handle,
+		{"a neighbor handle of another kind", promotealign.EvidenceRequest{GraphID: f.graph(srcB), SubjectID: b.ID, HandleID: handle,
 			Neighbors: []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: handle}}}},
-		{"more neighbors than primary Subjects", promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: b.ID, HandleID: handle,
+		{"more neighbors than primary Subjects", promotealign.EvidenceRequest{GraphID: f.graph(srcB), SubjectID: b.ID, HandleID: handle,
 			Neighbors: []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: birthHandle}, {SubjectID: bBirth.ID, HandleID: birthHandle}, {SubjectID: bBirth.ID, HandleID: birthHandle}}}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -169,7 +169,7 @@ func TestEvidenceInvalidRequest(t *testing.T) {
 			}
 		})
 	}
-	if _, err := promotealign.Evidence(nil, promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: b.ID, HandleID: handle}); !errors.Is(err, promote.ErrInvalid) {
+	if _, err := promotealign.Evidence(nil, promotealign.EvidenceRequest{GraphID: f.graph(srcB), SubjectID: b.ID, HandleID: handle}); !errors.Is(err, promote.ErrInvalid) {
 		t.Errorf("nil catalog: err = %v, want promote.ErrInvalid", err)
 	}
 }
@@ -223,7 +223,7 @@ func TestEvidenceSpouseNeverMeetsSibling(t *testing.T) {
 			f.relationship(srcB, artB, bPerson, bOther, tc.typ)
 
 			e := f.evidence(promotealign.EvidenceRequest{
-				SourceID: srcB.ID, SubjectID: bPerson.ID, HandleID: personHandle,
+				GraphID: f.graph(srcB), SubjectID: bPerson.ID, HandleID: personHandle,
 				Neighbors: []graphalign.Fixed{{SubjectID: bOther.ID, HandleID: spouseHandle}},
 			})
 			if len(e.Relationships) != tc.want {
@@ -264,7 +264,7 @@ func TestEvidenceReadsEachLinkFromTheNeighbor(t *testing.T) {
 		f.relationship(srcB, artB, bJohn, bMary, "cousin")
 
 		e := f.evidence(promotealign.EvidenceRequest{
-			SourceID: srcB.ID, SubjectID: bJohn.ID, HandleID: johnHandle,
+			GraphID: f.graph(srcB), SubjectID: bJohn.ID, HandleID: johnHandle,
 			Neighbors: []graphalign.Fixed{{SubjectID: bMary.ID, HandleID: maryHandle}},
 		})
 		want := map[string]read{
@@ -287,14 +287,14 @@ func TestEvidenceReadsEachLinkFromTheNeighbor(t *testing.T) {
 		f.relationship(srcB, artB, bMary, bJohn, "parent")
 
 		asChild := f.evidence(promotealign.EvidenceRequest{
-			SourceID: srcB.ID, SubjectID: bJohn.ID, HandleID: johnHandle,
+			GraphID: f.graph(srcB), SubjectID: bJohn.ID, HandleID: johnHandle,
 			Neighbors: []graphalign.Fixed{{SubjectID: bMary.ID, HandleID: maryHandle}},
 		})
 		if g, want := got(asChild), map[string]read{"relationship·child·person": {vocabkey.PropertyRelatedTo, "parent", "relationship_type", true}}; !reflect.DeepEqual(g, want) {
 			t.Errorf("from the child = %+v, want %+v", g, want)
 		}
 		asParent := f.evidence(promotealign.EvidenceRequest{
-			SourceID: srcB.ID, SubjectID: bMary.ID, HandleID: maryHandle,
+			GraphID: f.graph(srcB), SubjectID: bMary.ID, HandleID: maryHandle,
 			Neighbors: []graphalign.Fixed{{SubjectID: bJohn.ID, HandleID: johnHandle}},
 		})
 		if g, want := got(asParent), map[string]read{"relationship·child·related_to": {vocabkey.PropertyPerson, "child", "relationship_type", true}}; !reflect.DeepEqual(g, want) {
@@ -328,7 +328,7 @@ func TestEvidenceOnlyMappedNeighbors(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e, err := promotealign.Evidence(f.c, promotealign.EvidenceRequest{
-				SourceID: srcB.ID, SubjectID: bPerson.ID, HandleID: personHandle, Neighbors: tc.neighbors,
+				GraphID: f.graph(srcB), SubjectID: bPerson.ID, HandleID: personHandle, Neighbors: tc.neighbors,
 			})
 			must(t, err)
 			if len(e.Relationships) != tc.want {
@@ -368,7 +368,7 @@ func TestEvidenceRelationshipBundles(t *testing.T) {
 			f.participation(srcB, artB, bPerson, bBirth, "subject")
 
 			e := f.evidence(promotealign.EvidenceRequest{
-				SourceID: srcB.ID, SubjectID: bPerson.ID, HandleID: personHandle,
+				GraphID: f.graph(srcB), SubjectID: bPerson.ID, HandleID: personHandle,
 				Neighbors: []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: birthHandle}},
 			})
 			if len(e.Relationships) != 1 {
@@ -397,7 +397,7 @@ func TestEvidenceNamesEverySource(t *testing.T) {
 	f.participation(srcB, artB, bPerson, bBirth, "subject")
 
 	e := f.evidence(promotealign.EvidenceRequest{
-		SourceID: srcB.ID, SubjectID: bPerson.ID, HandleID: personHandle,
+		GraphID: f.graph(srcB), SubjectID: bPerson.ID, HandleID: personHandle,
 		Neighbors: []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: birthHandle}},
 	})
 	named := map[string]bool{}
@@ -476,7 +476,7 @@ func TestEvidenceBridgeEndpoints(t *testing.T) {
 			f.participation(srcB, artB, bPerson, bBirth, "subject")
 
 			e := f.evidence(promotealign.EvidenceRequest{
-				SourceID: srcB.ID, SubjectID: bPerson.ID, HandleID: personHandle,
+				GraphID: f.graph(srcB), SubjectID: bPerson.ID, HandleID: personHandle,
 				Neighbors: []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: birthHandle}},
 			})
 			got := 0
@@ -511,7 +511,7 @@ func TestEvidenceLoadsOnlyBridgedNeighborMembers(t *testing.T) {
 	bBirth := f.datedBirth(srcB, artB, 1817)
 	f.participation(srcB, artB, bPerson, bBirth, "subject")
 	e := f.evidence(promotealign.EvidenceRequest{
-		SourceID: srcB.ID, SubjectID: bPerson.ID, HandleID: personHandle,
+		GraphID: f.graph(srcB), SubjectID: bPerson.ID, HandleID: personHandle,
 		Neighbors: []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: birthHandle}},
 	})
 	if len(e.Relationships) != 1 || len(e.Relationships[0].Members) != 1 {
@@ -538,7 +538,7 @@ func TestEvidenceReadsMemberGraph(t *testing.T) {
 
 	srcB, artB := f.newSource("Obituary")
 	incoming := f.person(srcB, artB, "John Smith")
-	e := f.evidence(promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: incoming.ID, HandleID: handle})
+	e := f.evidence(promotealign.EvidenceRequest{GraphID: f.graph(srcB), SubjectID: incoming.ID, HandleID: handle})
 
 	s := section(t, e.Sections, vocabkey.PropertyName)
 	if len(s.Lines) != 1 || len(s.Lines[0].Members) != 1 {
@@ -554,6 +554,24 @@ func TestEvidenceReadsMemberGraph(t *testing.T) {
 	}
 	if got := e.Sources[string(census.ID)]; got != "Census 1851" {
 		t.Errorf("Sources[census] = %q", got)
+	}
+}
+
+// A row Subject must be a primary Subject of the request's graph, not just of
+// its Source.
+func TestEvidenceRefusesASubjectOfAnotherGraph(t *testing.T) {
+	f := newFixture(t)
+	h := f.promote(f.person(f.source, f.artifact, "John Smith")).Entity.ID
+	census, censusArt := f.newSource("Census")
+	def, jones, _ := artifactstest.Split(t, f.c, userID, census.ID, "Jones")
+	smith := subjectstest.On(t, f.c, userID, def.ID, "person", "")
+	f.cite(censusArt, smith, observations.Input{PropertyID: f.prop("name").ID, Name: namevaluetest.Western("John Smith")})
+
+	if _, err := promotealign.Evidence(f.c, promotealign.EvidenceRequest{GraphID: jones.ID, SubjectID: smith.ID, HandleID: h}); !errors.Is(err, promote.ErrInvalid) {
+		t.Errorf("Jones graph: err = %v, want promote.ErrInvalid", err)
+	}
+	if _, err := promotealign.Evidence(f.c, promotealign.EvidenceRequest{GraphID: def.ID, SubjectID: smith.ID, HandleID: h}); err != nil {
+		t.Errorf("Default graph: err = %v", err)
 	}
 }
 
@@ -594,7 +612,7 @@ func newLikenessFixture(t *testing.T, third uint8) likenessFixture {
 }
 
 func (l likenessFixture) evidence() claimevidence.Evidence {
-	return l.f.evidence(promotealign.EvidenceRequest{SourceID: l.srcB.ID, SubjectID: l.incoming.ID, HandleID: l.handle})
+	return l.f.evidence(promotealign.EvidenceRequest{GraphID: l.f.graph(l.srcB), SubjectID: l.incoming.ID, HandleID: l.handle})
 }
 
 // T-6: a Source person's likeness meets each member's: the same image is a
@@ -651,7 +669,7 @@ func TestEvidenceSectionOrder(t *testing.T) {
 		handle := f.promote(member).Entity.ID
 		srcB, artB := f.newSource("Obituary")
 		incoming := sex(srcB, artB)
-		e := f.evidence(promotealign.EvidenceRequest{SourceID: srcB.ID, SubjectID: incoming.ID, HandleID: handle})
+		e := f.evidence(promotealign.EvidenceRequest{GraphID: f.graph(srcB), SubjectID: incoming.ID, HandleID: handle})
 		var keys []vocabkey.PropertyKey
 		for _, s := range e.Sections {
 			keys = append(keys, s.Key)

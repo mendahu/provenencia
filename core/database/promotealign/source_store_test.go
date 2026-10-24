@@ -4,14 +4,13 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestEvidenceGraphSecondReadIssuesNoQueries(t *testing.T) {
 	f := newFixture(t)
-	graphID := evidencegraphstest.SoleGraph(t, f.c, f.source.ID).ID
+	graphID := f.graph(f.source)
 	s := f.person(f.source, f.artifact, "Ann Lee")
 	res := f.promote(s)
 	g := f.c.Graph()
@@ -43,7 +42,7 @@ func TestEvidenceGraphSecondReadIssuesNoQueries(t *testing.T) {
 
 func TestPromoteDropsTheSource(t *testing.T) {
 	f := newFixture(t)
-	graphID := evidencegraphstest.SoleGraph(t, f.c, f.source.ID).ID
+	graphID := f.graph(f.source)
 	s := f.person(f.source, f.artifact, "Ann Lee")
 	g := f.c.Graph()
 	g.Drop()
@@ -62,7 +61,7 @@ func TestPromoteDropsTheSource(t *testing.T) {
 
 func TestHandleLabelDoesNotDropTheSource(t *testing.T) {
 	f := newFixture(t)
-	graphID := evidencegraphstest.SoleGraph(t, f.c, f.source.ID).ID
+	graphID := f.graph(f.source)
 	s := f.person(f.source, f.artifact, "Ann Lee")
 	res := f.promote(s)
 	g := f.c.Graph()

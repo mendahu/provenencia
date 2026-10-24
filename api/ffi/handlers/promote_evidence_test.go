@@ -26,6 +26,7 @@ type evidenceFixture struct {
 	handle              string
 	members, claims     []string // Subject ids and their accepted claims' ids
 	sourceID, incoming  string
+	graphID             string // the Evidence graph of sourceID
 }
 
 func newEvidenceFixture(t *testing.T, polarity string) evidenceFixture {
@@ -45,11 +46,12 @@ func newEvidenceFixture(t *testing.T, polarity string) evidenceFixture {
 		f.claims = append(f.claims, res.Claim.GetId())
 	}
 	f.sourceID, f.incoming = personOnNewSource(t, dir, userID, typeID, "male", polarity)
+	f.graphID = soleGraphID(t, dir, f.sourceID)
 	return f
 }
 
 func (f evidenceFixture) request() *engine.GetPromoteClaimEvidenceRequest {
-	return &engine.GetPromoteClaimEvidenceRequest{ProjectDir: f.dir, SourceId: f.sourceID, SubjectId: f.incoming, HandleId: f.handle}
+	return &engine.GetPromoteClaimEvidenceRequest{ProjectDir: f.dir, GraphId: f.graphID, SubjectId: f.incoming, HandleId: f.handle}
 }
 
 func (f evidenceFixture) evidence(t *testing.T) *engine.GetPromoteClaimEvidenceResponse {
@@ -146,11 +148,12 @@ func TestGetPromoteClaimEvidence(t *testing.T) {
 	t.Run("a request that names nothing valid is promote.invalid", func(t *testing.T) {
 		f := newEvidenceFixture(t, observations.PolarityPositive)
 		otherSource, _ := personOnNewSource(t, f.dir, f.userID, f.typeID, "male", observations.PolarityPositive)
+		otherGraph := soleGraphID(t, f.dir, otherSource)
 		for name, mutate := range map[string]func(*engine.GetPromoteClaimEvidenceRequest){
-			"an unknown Source":           func(r *engine.GetPromoteClaimEvidenceRequest) { r.SourceId = uuid.Must(uuid.NewV7()).String() },
-			"a Subject not on the Source": func(r *engine.GetPromoteClaimEvidenceRequest) { r.SourceId = otherSource },
-			"an empty handle":             func(r *engine.GetPromoteClaimEvidenceRequest) { r.HandleId = "" },
-			"an unknown handle":           func(r *engine.GetPromoteClaimEvidenceRequest) { r.HandleId = uuid.Must(uuid.NewV7()).String() },
+			"an unknown graph":           func(r *engine.GetPromoteClaimEvidenceRequest) { r.GraphId = uuid.Must(uuid.NewV7()).String() },
+			"a Subject not on the graph": func(r *engine.GetPromoteClaimEvidenceRequest) { r.GraphId = otherGraph },
+			"an empty handle":            func(r *engine.GetPromoteClaimEvidenceRequest) { r.HandleId = "" },
+			"an unknown handle":          func(r *engine.GetPromoteClaimEvidenceRequest) { r.HandleId = uuid.Must(uuid.NewV7()).String() },
 		} {
 			req := f.request()
 			mutate(req)
@@ -165,7 +168,7 @@ func TestGetPromoteClaimEvidence(t *testing.T) {
 
 	runRPC(t, GetPromoteClaimEvidence, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
-		{name: "bad source id", req: &engine.GetPromoteClaimEvidenceRequest{SourceId: "nope"}, wantErr: true},
+		{name: "bad graph id", req: &engine.GetPromoteClaimEvidenceRequest{GraphId: "nope"}, wantErr: true},
 	})
 }
 
@@ -334,4 +337,5 @@ func TestClaimEvidenceNeighborReading(t *testing.T) {
 	reserved("PromoteClaimEvidenceLine", "points", "checked", "pinnable")
 	reserved("PromoteClaimEvidencePin", "member_subject_id", "member_observation_id")
 	reserved("PromoteClaimEvidenceBundle", "member_subject_id", "source_id")
+	reserved("GetPromoteClaimEvidenceRequest", "source_id")
 }

@@ -323,11 +323,8 @@ func TestSourceScopes(t *testing.T) {
 				}
 				linkWrite := func(action string, fn func(tx *database.Tx, graphID []byte) ([]rowchange.Change, error)) {
 					t.Helper()
+					graphID := evidencegraphstest.SoleGraph(t, s.c, s.a.ID).ID
 					if _, err := writes.Call(s.c, writes.Op{Action: action, UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-						graphID, err := evidencegraphs.SoleGraphTx(tx.Tx, s.a.ID)
-						if err != nil {
-							return struct{}{}, nil, err
-						}
 						changes, err := fn(tx, graphID)
 						return struct{}{}, changes, err
 					}); err != nil {

@@ -23,7 +23,7 @@ func GetPromoteClaimEvidence(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("get_promote_claim_evidence", err)
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func GetPromoteClaimEvidence(in []byte) ([]byte, error) {
 	var out *engine.GetPromoteClaimEvidenceResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		e, err := promotealign.Evidence(c, promotealign.EvidenceRequest{
-			SourceID: sourceID, SubjectID: subjectID, HandleID: handleID, Neighbors: neighbors,
+			GraphID: graphID, SubjectID: subjectID, HandleID: handleID, Neighbors: neighbors,
 		})
 		if err != nil {
 			return err

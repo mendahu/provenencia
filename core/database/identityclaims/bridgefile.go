@@ -3,6 +3,7 @@ package identityclaims
 import (
 	"bytes"
 	"database/sql"
+	"errors"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/mendahu/provenencia/core/connectrules"
@@ -27,52 +28,24 @@ func FileBridgesTx(tx *sql.Tx, subjectID []byte) (assocIDs [][]byte, changes []r
 	if len(subjectID) != 16 {
 		return nil, nil, nil
 	}
-	bridges, err := bridgesTouching(tx, subjectID)
+	bridges, err := bridgeHeads(tx, "s.id = ? OR "+touchesEnd, subjectID, subjectID)
 	if err != nil {
 		return nil, nil, err
 	}
 	return fileHeads(tx, bridges)
 }
 
-// FileSourceBridgesTx files every unfiled bridge homed to sourceID whose ends
-// are both handles, including a bridge whose ends were claimed before this
-// call. Does not commit.
-func FileSourceBridgesTx(tx *sql.Tx, sourceID []byte) (assocIDs [][]byte, changes []rowchange.Change, err error) {
-	if len(sourceID) != 16 {
+// FileEvidenceGraphBridgesTx files every unfiled bridge on the Evidence graph
+// whose ends are both handles, including a bridge whose ends were claimed
+// before this call. Does not commit.
+func FileEvidenceGraphBridgesTx(tx *sql.Tx, graphID []byte) (assocIDs [][]byte, changes []rowchange.Change, err error) {
+	if len(graphID) != 16 {
 		return nil, nil, nil
 	}
-	keys := connectrules.BridgeTypeKeys()
-	if len(keys) == 0 {
-		return nil, nil, nil
-	}
-	args := make([]any, 0, len(keys)+1)
-	args = append(args, sourceID)
-	for _, k := range keys {
-		args = append(args, k)
-	}
-	rows, err := tx.Query(`SELECT s.id, st.key, s.subject_type_id
-		FROM subjects s
-		JOIN subject_types st ON st.id = s.subject_type_id AND st.origin = 'provenencia'
-		WHERE s.source_id = ? AND st.key IN (`+database.SQLInPlaceholders(len(keys))+`)`, args...)
+	heads, err := bridgeHeads(tx, "s.graph_id = ?", graphID)
 	if err != nil {
 		return nil, nil, err
 	}
-	var heads []bridgeHead
-	for rows.Next() {
-		var b bridgeHead
-		if err := rows.Scan(&b.id, &b.typeKey, &b.typeID); err != nil {
-			_ = rows.Close()
-			return nil, nil, err
-		}
-		b.id = append([]byte(nil), b.id...)
-		b.typeID = append([]byte(nil), b.typeID...)
-		heads = append(heads, b)
-	}
-	if err := rows.Err(); err != nil {
-		_ = rows.Close()
-		return nil, nil, err
-	}
-	_ = rows.Close()
 	return fileHeads(tx, heads)
 }
 
@@ -110,46 +83,28 @@ const touchesEnd = `EXISTS (
 		    )`
 
 // UnfileBridges is the inverse of FileBridgesTx: it deletes, audited, the
-// accepted claim of every bridge on sourceID that has subjectID as an end,
-// pins first, in bridge Subject id order. The bridges' handles (their
-// associations) are left alone. Does not commit.
-func UnfileBridges(tx *database.Tx, sourceID, subjectID []byte) ([]rowchange.Change, error) {
-	keys := connectrules.BridgeTypeKeys()
-	if len(keys) == 0 || len(sourceID) != 16 || len(subjectID) != 16 {
+// accepted claim of every bridge that has subjectID as an end, pins first, in
+// bridge Subject id order. A bridge is on its ends' Evidence graph, so this is
+// per graph. The bridges' handles (their associations) are left alone. Does
+// not commit.
+func UnfileBridges(tx *database.Tx, subjectID []byte) ([]rowchange.Change, error) {
+	if len(subjectID) != 16 {
 		return nil, nil
 	}
-	args := make([]any, 0, len(keys)+2)
-	args = append(args, sourceID)
-	for _, k := range keys {
-		args = append(args, k)
-	}
-	args = append(args, subjectID)
-	rows, err := tx.Query(`SELECT ic.id FROM subjects s
-		JOIN subject_types st ON st.id = s.subject_type_id AND st.origin = 'provenencia'
-		JOIN identity_claims ic ON ic.subject_id = s.id AND ic.status = 'accepted'
-		WHERE s.source_id = ? AND st.key IN (`+database.SQLInPlaceholders(len(keys))+`)
-		  AND `+touchesEnd+`
-		ORDER BY s.id`, args...)
+	heads, err := bridgeHeads(tx.Tx, touchesEnd, subjectID)
 	if err != nil {
 		return nil, err
 	}
-	var claimIDs [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			_ = rows.Close()
+	var changes []rowchange.Change
+	for _, head := range heads {
+		claim, err := AcceptedEntityForSubjectTx(tx.Tx, head.id)
+		if errors.Is(err, sql.ErrNoRows) {
+			continue
+		}
+		if err != nil {
 			return nil, err
 		}
-		claimIDs = append(claimIDs, append([]byte(nil), id...))
-	}
-	if err := rows.Err(); err != nil {
-		_ = rows.Close()
-		return nil, err
-	}
-	_ = rows.Close()
-	var changes []rowchange.Change
-	for _, id := range claimIDs {
-		released, err := deleteimpact.ReleaseClaim(tx, id)
+		released, err := deleteimpact.ReleaseClaim(tx, claim.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -158,25 +113,24 @@ func UnfileBridges(tx *database.Tx, sourceID, subjectID []byte) ([]rowchange.Cha
 	return changes, nil
 }
 
-func bridgesTouching(tx *sql.Tx, subjectID []byte) ([]bridgeHead, error) {
+// bridgeHeads lists the bridge Subjects (product-seeded bridge types) that
+// satisfy cond, in Subject id order. cond is a SQL condition over the alias s.
+func bridgeHeads(tx *sql.Tx, cond string, condArgs ...any) ([]bridgeHead, error) {
 	keys := connectrules.BridgeTypeKeys()
 	if len(keys) == 0 {
 		return nil, nil
 	}
-	args := make([]any, 0, len(keys)+2)
+	args := make([]any, 0, len(keys)+len(condArgs))
 	for _, k := range keys {
 		args = append(args, k)
 	}
-	args = append(args, subjectID, subjectID)
-	q := `SELECT s.id, st.key, s.subject_type_id
+	args = append(args, condArgs...)
+	rows, err := tx.Query(`SELECT s.id, st.key, s.subject_type_id
 		FROM subjects s
 		JOIN subject_types st ON st.id = s.subject_type_id AND st.origin = 'provenencia'
-		WHERE st.key IN (` + database.SQLInPlaceholders(len(keys)) + `)
-		  AND (
-		    s.id = ?
-		    OR ` + touchesEnd + `
-		  )`
-	rows, err := tx.Query(q, args...)
+		WHERE st.key IN (`+database.SQLInPlaceholders(len(keys))+`)
+		  AND (`+cond+`)
+		ORDER BY s.id`, args...)
 	if err != nil {
 		return nil, err
 	}
