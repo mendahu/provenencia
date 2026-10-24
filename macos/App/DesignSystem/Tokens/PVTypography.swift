@@ -67,8 +67,8 @@ enum PVTracking {
 /// Resolves Provenencia's brand fonts by family name + numeric weight
 /// against whatever weight faces are registered (see
 /// `PVFontRegistration.registerBundledFontsIfNeeded()`), falling back to
-/// the closest system serif/monospace face if a bundled font is somehow
-/// unavailable (e.g. running in a context that skipped registration) —
+/// the system font (display and body) or the system monospaced face (mono)
+/// if a bundled font is somehow unavailable (e.g. running in a context that skipped registration) —
 /// never crashes.
 enum PVFont {
     static func display(size: CGFloat = PVTypeScale.h2, weight: CGFloat = PVFontWeight.semibold) -> Font {
@@ -107,12 +107,12 @@ enum PVFont {
 
     /// Resolved AppKit faces, reused so card paint and SwiftUI bodies do not
     /// rebuild a descriptor and font on every call. Lock-guarded because
-    /// `nsResolved` is reached from SwiftUI bodies as well as `draw(_:)`.
+    /// `PVFont` is not actor-isolated, so any thread may call it.
     private static let fontLock = NSLock()
     nonisolated(unsafe) private static var nsFonts: [NSFontKey: NSFont] = [:]
 
     #if DEBUG
-    static func nsIsCachedForTest(family: String, size: CGFloat, weight: CGFloat, italic: Bool) -> Bool {
+    static func nsIsCachedForTesting(family: String, size: CGFloat, weight: CGFloat, italic: Bool) -> Bool {
         fontLock.lock()
         defer { fontLock.unlock() }
         return nsFonts[NSFontKey(family: family, size: size, weight: weight, italic: italic)] != nil

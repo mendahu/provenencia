@@ -27,7 +27,7 @@ enum EvidenceCardSymbols {
     }
 
     #if DEBUG
-    static func isCachedForTest(_ symbol: PVSymbol, pointSize: CGFloat) -> Bool {
+    static func isCachedForTesting(_ symbol: PVSymbol, pointSize: CGFloat) -> Bool {
         images[Key(symbol: symbol, pointSize: pointSize)] != nil
     }
     #endif

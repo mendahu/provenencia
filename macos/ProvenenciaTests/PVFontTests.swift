@@ -8,7 +8,7 @@ struct PVFontTests {
     @Test func bodyFontIsCached() {
         PVFontRegistration.registerBundledFontsIfNeeded()
         func cached(_ size: CGFloat) -> Bool {
-            PVFont.nsIsCachedForTest(family: PVFontFamily.body, size: size, weight: PVFontWeight.regular, italic: false)
+            PVFont.nsIsCachedForTesting(family: PVFontFamily.body, size: size, weight: PVFontWeight.regular, italic: false)
         }
         #expect(!cached(12.25))
         let first = PVFont.nsBody(size: 12.25)
