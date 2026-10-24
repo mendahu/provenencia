@@ -1309,9 +1309,6 @@ enum L10n {
         static func mapRest(count: Int) -> String {
             L10n.format(LocalizedStringResource("promote.page.mapRest", defaultValue: "Map the rest of this graph (%lld)", comment: "Adds every other person, event, and place; argument is how many"), count)
         }
-        static let groupKind = LocalizedStringResource("promote.page.group.kind", defaultValue: "Kind", comment: "Group Promote rows by person, event, or place")
-        static let groupAssessment = LocalizedStringResource("promote.page.group.assessment", defaultValue: "Assessment", comment: "Group Promote rows by how sure the match is")
-        static let groupLabel = LocalizedStringResource("promote.page.group.label", defaultValue: "Group rows", comment: "Accessibility label for the Promote grouping menu")
         static let kindPerson = LocalizedStringResource("promote.page.kind.person", defaultValue: "People", comment: "Promote section of person rows")
         static let kindEvent = LocalizedStringResource("promote.page.kind.event", defaultValue: "Events", comment: "Promote section of event rows")
         static let kindPlace = LocalizedStringResource("promote.page.kind.place", defaultValue: "Places", comment: "Promote section of place rows")
@@ -1684,8 +1681,6 @@ enum L10n {
         static let columnSource = LocalizedStringResource("promote.page.column.source", defaultValue: "On this Source", comment: "Promote row column: the subject on this Source")
         static let columnTarget = LocalizedStringResource("promote.page.column.target", defaultValue: "Files on", comment: "Promote row column: the handle the subject will file on")
         static let columnAssessment = LocalizedStringResource("promote.page.column.assessment", defaultValue: "Assessment", comment: "Promote row column: how sure the match is")
-        static let groupedByKind = LocalizedStringResource("promote.page.grouped.kind", defaultValue: "Grouped by kind", comment: "Closed label of the grouping menu when rows are grouped by kind")
-        static let groupedByAssessment = LocalizedStringResource("promote.page.grouped.assessment", defaultValue: "Grouped by assessment", comment: "Closed label of the grouping menu when rows are grouped by assessment")
         static func sectionCount(_ count: Int) -> String {
             L10n.format(LocalizedStringResource("promote.section.count", defaultValue: "%lld", comment: "How many rows are in a Promote section"), count)
         }

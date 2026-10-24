@@ -27,8 +27,8 @@ struct PromoteView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: PVSpacing.space7) {
                     notices
-                    if model.flow.mappedRest {
-                        mappedBar
+                    if model.flow.mappedRest && !model.entry.mapAll {
+                        openedFromNote
                     }
                     ForEach(sections, id: \.id) { section in
                         sectionBlock(section, connections: connections)
@@ -158,31 +158,11 @@ struct PromoteView: View {
         return L10n.Promote.singleSummary(more: model.flow.restCount)
     }
 
-    private var mappedBar: some View {
-        HStack(alignment: .center) {
-            if !model.entry.mapAll {
-                Text(verbatim: L10n.Promote.openedFrom(name: model.entry.subjectName))
-                    .font(PVFont.body(size: PVTypeScale.bodySmall))
-                    .italic()
-                    .foregroundStyle(PVColor.textSecondary)
-            }
-            Spacer(minLength: PVSpacing.space4)
-            PVSelect(
-                selection: groupBinding,
-                options: [
-                    PVSelectOption(value: PromoteFlow.Grouping.kind.rawValue, label: L10n.string(L10n.Promote.groupKind)),
-                    PVSelectOption(value: PromoteFlow.Grouping.assessment.rawValue, label: L10n.string(L10n.Promote.groupAssessment)),
-                ],
-                icon: .layers,
-                displayLabel: model.flow.group == .assessment
-                    ? L10n.string(L10n.Promote.groupedByAssessment)
-                    : L10n.string(L10n.Promote.groupedByKind),
-                fillsWidth: false,
-                accessibilityLabel: L10n.Promote.groupLabel,
-                accessibilityIdentifier: "promote.group"
-            )
-            .disabled(model.isSaving)
-        }
+    private var openedFromNote: some View {
+        Text(verbatim: L10n.Promote.openedFrom(name: model.entry.subjectName))
+            .font(PVFont.body(size: PVTypeScale.bodySmall))
+            .italic()
+            .foregroundStyle(PVColor.textSecondary)
     }
 
     private var mapRest: some View {
@@ -288,11 +268,6 @@ struct PromoteView: View {
     private var sections: [Section] {
         let working = model.flow.visibleRows.filter { !$0.anchor }
         let anchors = model.flow.mappedRest ? model.flow.rows.filter(\.anchor) : []
-        if model.flow.group == .assessment {
-            return [PromoteFlow.Assessment.strong, .medium, .weak, .none].map { band in
-                section(band.rawValue, L10n.Promote.assessment(band), working.filter { $0.assessment == band }, [])
-            }.filter { !$0.rows.isEmpty }
-        }
         return [
             kindSection("person", L10n.Promote.kindPerson, .person, working, anchors),
             kindSection("event", L10n.Promote.kindEvent, .event, working, anchors),
@@ -309,27 +284,11 @@ struct PromoteView: View {
     ) -> Section {
         let rows = working.filter { $0.kind == kind }
         let filed = anchors.filter { $0.kind == kind }
-        return section(id, title, rows, filed)
-    }
-
-    private func section(
-        _ id: String,
-        _ title: LocalizedStringResource,
-        _ rows: [PromoteFlow.Row],
-        _ anchors: [PromoteFlow.Row]
-    ) -> Section {
-        let total = rows.count + anchors.count
-        let meta = anchors.isEmpty
+        let total = rows.count + filed.count
+        let meta = filed.isEmpty
             ? L10n.Promote.sectionCount(total)
-            : L10n.Promote.sectionCountFiled(rows: total, filed: anchors.count)
-        return Section(id: id, title: title, meta: meta, rows: rows, anchors: anchors)
-    }
-
-    private var groupBinding: Binding<String> {
-        Binding(
-            get: { model.flow.group.rawValue },
-            set: { model.setGroup(PromoteFlow.Grouping(rawValue: $0) ?? .kind) }
-        )
+            : L10n.Promote.sectionCountFiled(rows: total, filed: filed.count)
+        return Section(id: id, title: title, meta: meta, rows: rows, anchors: filed)
     }
 
     private var sheetBinding: Binding<PromoteFlow.Row?> {

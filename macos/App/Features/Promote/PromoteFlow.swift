@@ -101,10 +101,6 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
-    enum Grouping: String, Equatable, Sendable {
-        case kind, assessment
-    }
-
     /// Why a connection's end does not file.
     enum WaitReason: Equatable, Sendable {
         case skipped, unset, notOnPage
@@ -281,7 +277,6 @@ struct PromoteFlow: Equatable, Sendable {
     var manual = false
     var pendingLeave: PendingNavigation?
     var sheetSubjectID: String?
-    var group = Grouping.kind
 
     var visibleRows: [Row] {
         guard mappedRest else { return rows.filter { $0.subjectID == entryID } }

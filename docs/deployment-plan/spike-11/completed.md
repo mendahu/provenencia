@@ -4,7 +4,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 
 ## S11-27 — Connection subrows on Promote
 
-**Landed 2026-10-23** in [#530](https://github.com/mendahu/provenencia/pull/530). Each connection on the Promote page is now a subrow under every end that is a row on the page, so a connection between two rows shows under both, and one with a single row end shows under that end with a note that the other end is filed or not on the page. Nothing hops, highlights, caps or expands. Its state comes only from its ends: "Files on Done", "Waits for <name>" (muted, with VoiceOver saying why), or a warning when both ends are one record. The bottom panel and its footer button are gone; the footer reads "File 12 · Skip 3 · 22 connections" and adds "N unselected" when rows have no target.
+**Landed 2026-10-23** in [#530](https://github.com/mendahu/provenencia/pull/530). Each connection on the Promote page is now a subrow under every end that is a row on the page, so a connection between two rows shows under both, and one with a single row end shows under that end with a note that the other end is filed or not on the page. Nothing hops, highlights, caps or expands, and rows are always grouped by kind; the grouping menu is gone. Its state comes only from its ends: "Files on Done", "Waits for <name>" (muted, with VoiceOver saying why), or a warning when both ends are one record. The bottom panel and its footer button are gone; the footer reads "File 12 · Skip 3 · 22 connections" and adds "N unselected" when rows have no target.
 
 ## S11-26 — Connections file by their ends
 

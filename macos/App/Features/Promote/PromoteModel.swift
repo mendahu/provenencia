@@ -192,8 +192,6 @@ final class PromoteModel {
     func openSheet(_ subjectID: String) { setSheetSubject(subjectID) }
     func closeSheet() { setSheetSubject(nil) }
 
-    func setGroup(_ group: PromoteFlow.Grouping) { flow.group = group }
-
     /// Reads the open sheet's evidence again, after a failed read.
     func reloadEvidence() { setSheetSubject(flow.sheetSubjectID) }
 

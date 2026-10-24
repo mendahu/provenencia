@@ -17469,42 +17469,6 @@
         }
       }
     },
-    "promote.page.group.kind": {
-      "comment": "Group Promote rows by person, event, or place",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kind"
-          }
-        }
-      }
-    },
-    "promote.page.group.assessment": {
-      "comment": "Group Promote rows by how sure the match is",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Assessment"
-          }
-        }
-      }
-    },
-    "promote.page.group.label": {
-      "comment": "Accessibility label for the Promote grouping menu",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Group rows"
-          }
-        }
-      }
-    },
     "promote.page.kind.person": {
       "comment": "Promote section of person rows",
       "extractionState": "manual",
@@ -18281,30 +18245,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Assessment"
-          }
-        }
-      }
-    },
-    "promote.page.grouped.kind": {
-      "comment": "Closed label of the grouping menu when rows are grouped by kind",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grouped by kind"
-          }
-        }
-      }
-    },
-    "promote.page.grouped.assessment": {
-      "comment": "Closed label of the grouping menu when rows are grouped by assessment",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grouped by assessment"
           }
         }
       }
