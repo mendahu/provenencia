@@ -136,6 +136,18 @@ func TestSubjects(t *testing.T) {
 				if len(created) == 0 || created[0].Fields["graph_id"].New != database.UUIDJSON(jones.ID) {
 					t.Fatalf("create change graph_id: %+v", created)
 				}
+				var deleted []rowchange.Change
+				if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := Delete(tx, userID, s.ID)
+					deleted = changes
+					return struct{}{}, changes, err
+				}); err != nil {
+					t.Fatal(err)
+				}
+				last := deleted[len(deleted)-1]
+				if last.EntityType != "subject" || last.Fields["graph_id"].Old != database.UUIDJSON(jones.ID) {
+					t.Fatalf("delete change graph_id: %+v", last)
+				}
 			},
 		},
 		{
