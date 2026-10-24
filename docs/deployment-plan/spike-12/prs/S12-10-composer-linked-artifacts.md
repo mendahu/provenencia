@@ -11,7 +11,7 @@
 **Version bump:** none — Spike 11 and 12 PRs leave `VERSION` at 0.2.0 until a release is cut, as S12-01 to S12-09 did; no schema change, so the catalog format stays 55 ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-catalog-query`](../../../../.agents/skills/add-catalog-query/SKILL.md), [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md), [`use-catalog-session`](../../../../.agents/skills/use-catalog-session/SKILL.md), [`add-workspace-place`](../../../../.agents/skills/add-workspace-place/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/catalog-queries.mdc`, `.cursor/rules/ffi-handlers.mdc`, `.cursor/rules/swift-tests.mdc`
-**Context:** [data model § rules](../source-structure.md#rules), [`source-layer-data-model.md`](../../../source-layer-data-model.md) § 7 (the graph rules list), the S12-08 [plan](S12-08-graph-id-end-to-end.md) D-1 (how a Source-keyed RPC is re-keyed) and D-8 (keys); working rules: "The Citation composer offers only the graph's linked Artifacts", "One graph list", "Graphs are fully isolated", "A re-keyed symbol is renamed in the PR that re-keys it", "High tolerance for churn", "Each PR updates the docs and skills it makes false"
+**Context:** [data model § rules](../source-structure.md#rules), [`source-layer-data-model.md`](../../../source-layer-data-model.md) § 7.1 (the graph rules list), the S12-08 [plan](S12-08-graph-id-end-to-end.md) D-1 (how a Source-keyed RPC is re-keyed) and D-8 (keys); working rules: "The Citation composer offers only the graph's linked Artifacts", "One graph list", "Graphs are fully isolated", "A re-keyed symbol is renamed in the PR that re-keys it", "High tolerance for churn", "Each PR updates the docs and skills it makes false"
 **Planned:** 2026-10-24 against `main` @ `7a1398c`
 **Review:** — (not reviewed yet)
 
@@ -46,7 +46,7 @@ In a census with a Jones graph and a Smith graph, the Citation composer opened o
 | AC-1.2 | Same Source; graph Default links art-1 and art-2 | The picker lists `Page 1`, `Page 2`, in the Source page's Artifact order |
 | AC-1.3 | Source has art-1; graph Smith links no Artifact (its only Artifact was deleted) | The composer shows the empty callout: title "This evidence graph has no artifacts", message "Every citation needs an artifact linked to this evidence graph. Add one from the Source page, then return here.", button "Go to Source page" |
 | AC-1.4 | Source has no Artifact; Default links none | The same callout as AC-1.3 |
-| AC-1.5 | A Back entry opens the composer on Jones with `artifactId` = art-1 (not linked to Jones) | The composer opens on `Page 2` with a new Citation, as a gone Artifact does today (`ghostArtifactResetsToANewCitation`) |
+| AC-1.5 | An Add property entry (`CitationComposerEntry.addProperty`) opens the composer on Jones with `artifactID` = art-1 (not linked to Jones; a stale Back entry) | The composer opens on `Page 2` with a new Citation: `prepare` drops the unlisted Artifact and the one-Artifact branch selects `Page 2` |
 | AC-1.6 | The project's graph list fails to load | The composer shows its load-failed state with "catalogUnavailable" copy, as when the graph rows fail today |
 
 **US-2.** As a researcher, when a page is linked to two graphs, the composer on one graph steps only through that graph's Citations, so the other graph's work does not mix into mine.
@@ -69,11 +69,11 @@ In a census with a Jones graph and a Smith graph, the Citation composer opened o
 | `CatalogEvidenceGraph.linkedArtifacts(_:)` *(new)*; the composer's `artifacts` reads the graph list (D-7, D-8) | STEP-5, AC-1.1 – AC-1.6 |
 | Composer place keys and warm include the graph list (D-8) | STEP-5, AC-1.6 |
 | Empty callout copy names the graph (D-9) | STEP-6, AC-1.3, AC-1.4 |
-| `source-layer-data-model.md` § 7 rule for a graph's Citations | STEP-8 |
+| `source-layer-data-model.md` § 7.1 rule for a graph's Citations | STEP-8 |
 
 | Out | Home |
 | --- | --- |
-| The canvas's cite gate (`EvidenceGraphModel.canCite`) and Files list (`fileRows`) reading the graph's linked Artifacts | S12-13 (scope entry gains it in this PR's STEP-8) |
+| The canvas's cite gate (`EvidenceGraphModel.canCite`) and Files list (`fileRows`) reading the graph's linked Artifacts | S12-13 (its scope entry already says so) |
 | Editing links in the UI | S12-12, S12-13 |
 | Deleting a Citation whose Observations span two graphs from one graph's composer | not planned — `citations.Delete` already refuses a Citation with Observations (`deleteimpact`), so no cross-graph delete is reachable |
 | Replacing `WriteEffects.citation_sources` with graph ids (D-6) | not planned |
@@ -117,7 +117,7 @@ Verified at `7a1398c`.
 | D-7 | `extension CatalogEvidenceGraph { func linkedArtifacts(_ artifacts: [CatalogArtifact]) -> [CatalogArtifact] }` *(new)* in `GenealogyStore.swift`, after the struct: returns `artifacts` filtered to `artifactIDs`, in the order of `artifacts` | One rule for "the graph's Artifacts" that S12-13 reuses for the canvas; order stays the Source page's | Filtering inline in the composer — S12-13 would copy it; ordering by `artifactIDs` — that order is the link order, not page order |
 | D-8 | Composer: `artifacts` = the graph list entry with `id == graphID` → `linkedArtifacts(workspace.artifacts)`; `[]` when the workspace or the entry is missing. `evidenceGraphsKey` *(new)* = `.evidenceGraphsList(project:)`; `warmCatalogHandles` queries it and throws `CatalogWarmError.handleMissing` when it has no ready value. The `.sourceCitationComposer` place adds `.evidenceGraphsList(project:)` | Working rule "One graph list": the composer filter reads it; `GetSourceWorkspace` does not gain graphs. A missing list is a load failure like the graph rows | Falling back to every Artifact while the list loads — would offer pages the engine refuses |
 | D-9 | Copy, keys unchanged: `citationComposer.noArtifactsTitle` = "This evidence graph has no artifacts" (comment "Callout title when the Evidence graph links no Artifacts"); `citationComposer.noArtifactsCallout` = "Every citation needs an artifact linked to this evidence graph. Add one from the Source page, then return here." (comment "Left-pane callout when the Evidence graph links no Artifacts"). One gate for both cases | User, 2026-10-24: graph wording always. "Add one" is true today: a new Artifact links to every graph (S12-05) | Two copies, Source and graph — user chose one |
-| D-10 | FakeStore mirrors D-1 / D-2: a Citation is in a graph when `observationsByGraph[graphID]` holds one of its Observations, or no graph holds any; `observationCount` and names count only `observationsByGraph[graphID]`. Counts: Artifacts of the graph's Source (graph from `evidenceGraphsByProject[projectDir]`) | Swift tests exercise the same rule the engine holds | — |
+| D-10 | FakeStore mirrors D-1 / D-2 through one private helper `citationIsInGraph(_ citationID: String, graphID: String) -> Bool` *(new)*: true when `observationsByGraph[graphID]` holds one of its Observations, or no entry of `observationsByGraph` holds any. `listCitationsByArtifact(projectDir:graphID:artifactID:)` filters with it; `observationCount` counts only `observationsByGraph[graphID]`; `personNames(for:graphID:projectDir:)` reads only `observationsByGraph[graphID]` and `subjectsByGraph[graphID]`. `citationCountsByEvidenceGraph(projectDir:graphID:)` finds the graph in `evidenceGraphsByProject[projectDir]` (no graph → `[:]`), takes `artifactsBySource[graph.sourceID]`, and counts Citations on those Artifacts that pass the same helper | Swift tests exercise the same rule the engine holds; list and counts cannot drift | — |
 
 ## 6. Design
 
@@ -179,27 +179,27 @@ Changed values: `L10n.CitationComposer.noArtifactsTitle`, `L10n.CitationComposer
 
 **STEP-1 — Citation reads per graph (Go)**
 Files: `core/database/citations/citations.go`, `core/database/citations/citations_test.go`. Skill: `add-catalog-query`.
-Do: D-1, D-2, D-4's `CountByEvidenceGraph`; delete `CountBySource` and `sqlCountBySource`. Move the existing "list by artifact" and count cases onto the graph from `evidencegraphstest.SoleGraph`; add T-1 – T-3.
+Do: D-1, D-2, D-4's `CountByEvidenceGraph`; delete `CountBySource` and `sqlCountBySource`. `sqlInGraph` is a `const` concatenated into `sqlListByArtifact`, `sqlCountByEvidenceGraph` *(renamed)* and both branches of `sqlPersonNamesByArtifact`; bind order is the order of `?` in the final string (list: graph, artifact, graph; names: per branch graph, artifact, graph; count: graph, graph). Each existing case that calls `ListByArtifact` (lines 426, 461) gets the graph from `evidencegraphstest.SoleGraph(t, c, s.artifact.SourceID)`; the two `CountBySource` cases become `CountByEvidenceGraph` cases on that graph. Add T-1 – T-3.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/citations/...` passes. `api/` does not build yet; that is STEP-2.
 
 **STEP-2 — Proto and handlers**
 Files: `api/proto/engine.proto`, generated Go and Swift, `api/ffi/handlers/citations.go`, `api/ffi/handlers/citations_test.go`, `api/ffi/dispatch.go`. Skill: `add-ffi-handler`.
-Do: D-4; `./scripts/generate-proto.sh`. `TestCitationCountsBySource` → `TestCitationCountsByEvidenceGraph`; add the `graph_id` cases to `TestListCitationsByArtifact` (T-4) and pass `GraphId` at line 245.
+Do: D-4; `./scripts/generate-proto.sh`. `TestCitationCountsBySource` → `TestCitationCountsByEvidenceGraph`; add the `graph_id` cases to `TestListCitationsByArtifact` (T-4) and pass `GraphId` at line 245 (`TestCreateCitationRefusesSymlinkedCrop`): read it with `ListEvidenceGraphs` for the project, the one graph of the fixture's Source.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./api/... ./core/...` and `go vet -tags fts5 ./api/... ./core/...` pass.
 
 **STEP-3 — Swift store and keys**
-Files: `GenealogyStore.swift`, `GoStore.swift`, `FakeStore.swift`, `CoreInvoke.swift`, `CatalogQueryKey.swift`, `CatalogQueryRegistry.swift`, `WorkspaceSession.swift` (only if a case pattern needs the new arity), `PlaceRegistry.swift`, `EvidenceGraphModel.swift` (`citationCountsKey`), `CitationComposerModel.swift` (`citationCountsKey`, `citationsKey`), `CitationComposerContext.swift` (`applyWrite`, `reloadListedCitations`), `macos/ProvenenciaTests/OnboardingModelTests.swift`. Skill: `use-catalog-session`.
-Do: D-5, D-10. Every caller passes its `graphID`.
+Files: `GenealogyStore.swift`, `GoStore.swift`, `FakeStore.swift`, `CoreInvoke.swift`, `CatalogQueryKey.swift`, `CatalogQueryRegistry.swift` (fetch cases and D-6), `WorkspaceSession.swift` (only if a case pattern needs the new arity), `PlaceRegistry.swift`, `EvidenceGraphModel.swift` (`citationCountsKey`), `CitationComposerModel.swift` (`citationCountsKey`, `citationsKey`), `CitationComposerContext.swift` (`applyWrite`, `reloadListedCitations`), `macos/ProvenenciaTests/OnboardingModelTests.swift`. Skill: `use-catalog-session`.
+Do: D-5, D-6, D-10. Every caller passes its `graphID`, including `cachedCitation(id:)`'s loop in `CitationComposerModel.swift` (lines 1107 – 1123).
 Check: the app builds (`xcodebuild build -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS'`).
 
-**STEP-4 — Invalidation**
-Files: `CatalogQueryRegistry.swift`, `CatalogQueryRegistryTests.swift`, `PlaceRegistryTests.swift`, `WorkspaceSessionTests.swift`.
-Do: D-6. Update the listed tests to the new keys and T-5.
+**STEP-4 — Key and invalidation tests**
+Files: `CatalogQueryRegistryTests.swift`, `PlaceRegistryTests.swift`, `WorkspaceSessionTests.swift`.
+Do: update the §4 test lines to the new keys (pass a graph id such as `"g1"`); add T-5. No app code changes in this step.
 Check: `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/CatalogQueryRegistryTests -only-testing:ProvenenciaTests/PlaceRegistryTests -only-testing:ProvenenciaTests/WorkspaceSessionTests` passes.
 
 **STEP-5 — Composer lists the graph's Artifacts**
 Files: `GenealogyStore.swift` (D-7), `CitationComposerModel.swift`, `PlaceRegistry.swift`, `CitationComposerModelTests.swift`. Skill: `add-workspace-place`, `add-swift-test`.
-Do: D-7, D-8. Add T-6 – T-9.
+Do: D-7, D-8. In `CitationComposerModelTests.makeStore`, the fixture graph links `["art-0", "art-1"]` (every Artifact any test seeds, so `steppingWithDirtyCitationFieldsAsks` keeps selecting art-1); T-6 – T-9 set `store.evidenceGraphsByProject[projectDir]` themselves. Add T-6 – T-9.
 Check: `xcodebuild test … -only-testing:ProvenenciaTests/CitationComposerModelTests -only-testing:ProvenenciaTests/CitationComposerDepictionTests -only-testing:ProvenenciaTests/PlaceRegistryTests` passes.
 
 **STEP-6 — Empty callout copy**
@@ -209,12 +209,12 @@ Check: `python3 scripts/check-localizable-xcstrings.py` passes.
 
 **STEP-7 — Composer Citations per graph**
 Files: `CitationComposerModelTests.swift`.
-Do: T-10, T-11 against the FakeStore rule (D-10); no model change beyond STEP-3.
+Do: add to `CitationComposerModelTests`: `makeModel` gains `graphID: String? = nil` (nil → `self.graphID`), passed to every entry case; `seedSecondGraph(_ store: FakeStore)` *(new)* appends graph `g-2` (ref `GPH-2`, name `Smith`, Source `src-1`, links `["art-0"]`) to `evidenceGraphsByProject[projectDir]` and person `sub-person-2` (ref `CPR-2`, label `Clara`) to `subjectsByGraph["g-2"]`. T-10, T-11 against the FakeStore rule (D-10); no model change beyond STEP-3.
 Check: `xcodebuild test … -only-testing:ProvenenciaTests/CitationComposerModelTests` passes.
 
 **STEP-8 — Docs**
-Files: `docs/source-layer-data-model.md` § 7 rules list, `deployment-plan.md` (S12-10 row and scope entry; S12-13 scope entry), `completed.md`, this plan.
-Do: Add after the `Unlink` bullet: "A graph's Citations on an Artifact are those with an Observation on a Subject of the graph, plus those with no Observation yet; `citations.ListByArtifact` and `CountByEvidenceGraph` read them, and the Citation composer lists only the graph's linked Artifacts." S12-13's **Ships** gains "The canvas's cite gate and Files list read the graph's linked Artifacts (`CatalogEvidenceGraph.linkedArtifacts`, moved from S12-10)." Then the Definition of done.
+Files: `docs/source-layer-data-model.md` § 7.1 rules list, `docs/deployment-plan/spike-12/deployment-plan.md` (S12-10 row status only; the scope entries are already current), `docs/deployment-plan/spike-12/completed.md`, this plan.
+Do: add after the `Unlink` bullet (line 420): "A graph's Citations on an Artifact are those with an Observation on a Subject of the graph, plus those with no Observation yet; `citations.ListByArtifact` and `CountByEvidenceGraph` read them, and the Citation composer lists only the graph's linked Artifacts." Then the Definition of done.
 Check: links resolve; `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-12/prs/S12-10-composer-linked-artifacts.md` reports no errors.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
@@ -223,17 +223,17 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/database/citations/citations_test.go` `TestCitations` "list by artifact is per graph" *(new)* | `evidencegraphstest.Create` a second graph Smith linked to the Artifact; Subjects via `subjectstest.On`; CIT-A with an Observation on the Default Subject, CIT-B on the Smith Subject, CIT-C with none → Default lists A, C; Smith lists B, C | AC-2.1, D-1 |
-| T-2 | Go | same, "list counts and names the graph's Observations" *(new)* | CIT-A: 2 Observations on Default persons Ada, Ben; 1 on Smith person Clara → Default count 2, names [Ada, Ben]; Smith count 1, names [Clara] | AC-2.2, D-2 |
+| T-1 | Go | `core/database/citations/citations_test.go` `TestCitations` "list by artifact is per graph" *(new)* | From `mustSeed`: Default = `evidencegraphstest.SoleGraph(t, c, s.artifact.SourceID)`; `evidencegraphstest.Create` a second graph Smith linked to `s.artifact`; a Smith person via `subjectstest.On(t, c, userID, smith.ID, "person", "Clara")`; the Default Subject is `s.person`; CIT-A with an Observation on the Default Subject, CIT-B on the Smith Subject, CIT-C with none → Default lists A, C; Smith lists B, C | AC-2.1, D-1 |
+| T-2 | Go | same, "list counts and names the graph's Observations" *(new)* | CIT-A: Observations on Default persons `s.person` (Alice) and a second Default person Ben (`subjectstest.On`), 1 on Smith person Clara → Default count 2, names [Alice, Ben]; Smith count 1, names [Clara] | AC-2.2, D-2 |
 | T-3 | Go | same, "count by evidence graph" *(new; replaces the CountBySource cases)* | T-1 data → Default {art: 2}, Smith {art: 2}; one-graph Source → today's counts; 1-byte id → `ErrInvalid` | AC-2.3, AC-2.4, D-4 |
 | T-4 | Go | `api/ffi/handlers/citations_test.go` `TestCitationCountsByEvidenceGraph` *(renamed)*, `TestListCitationsByArtifact` | missing or bad `graph_id` → error; valid → the T-1 rows | D-4 |
 | T-5 | Swift | `CatalogQueryRegistryTests` effects test (lines 886 – 907) | effects with `citationSources: ["s1"]` → `.allCached(.citationCounts)`, `.allCached(.citationsByArtifact)`; `.deletedSubject(sourceId:)` → `.allCached(.citationCounts)` | AC-2.5, D-6 |
 | T-6 | Swift | `CitationComposerModelTests` `composerListsOnlyTheGraphsLinkedArtifacts` *(new)* | art-0, art-1 on the Source; graph links art-1 → `artifacts.map(\.id) == ["art-1"]`, `selectedArtifactID == "art-1"` | AC-1.1, D-7, D-8 |
 | T-7 | Swift | same, `composerKeepsPageOrderForLinkedArtifacts` *(new)* | links [art-1, art-0] → `["art-0", "art-1"]` | AC-1.2, D-7 |
 | T-8 | Swift | same, `graphWithNoLinksShowsTheNoArtifactGate` *(new)* | Source has art-0; graph links none → `phase == .compose`, `hasNoArtifacts` | AC-1.3, AC-1.4 |
-| T-9 | Swift | same, `unlinkedEntryArtifactOpensANewCitation` *(new)*; `graphListFailureFailsTheLoad` *(new)* | entry `artifactID: "art-0"`, graph links art-1 → `selectedArtifactID == "art-1"`, `activeCitationID == nil`; `listEvidenceGraphsError` set → `phase == .loadFailed` | AC-1.5, AC-1.6, D-8 |
-| T-10 | Swift | same, `stepperListsOnlyThisGraphsCitations` *(new)* | FakeStore T-1 data → `listedCitations` refs on graph 1 = [CIT-A, CIT-C] | AC-2.1, D-10 |
-| T-11 | Swift | same, `firstObservationMovesANewCitationIntoTheGraph` *(new)* | save the first Observation on a new Citation → listed on this graph; a second model on the other graph does not list it | AC-2.5 |
+| T-9 | Swift | same, `unlinkedEntryArtifactOpensANewCitation` *(new)*; `graphListFailureFailsTheLoad` *(new)* | `seedArtifact` plus art-1 on the Source; graph `g-1` links art-1 only; `makeModel(store:)` (the `.addProperty` entry with `artifactID: "art-0"`) → `selectedArtifactID == "art-1"`, `activeCitationID == nil`; `listEvidenceGraphsError` set → `phase == .loadFailed` | AC-1.5, AC-1.6, D-8 |
+| T-10 | Swift | same, `stepperListsOnlyThisGraphsCitations` *(new)* | `seedArtifact`, `seedSecondGraph`; `citationsByID`: `cit-a` (CIT-A), `cit-b` (CIT-B), `cit-c` (CIT-C) on art-0; `observationsByGraph["g-1"]` holds one Observation of cit-a on `subjectID`, `observationsByGraph["g-2"]` one of cit-b on `sub-person-2` → on `g-1` `listedCitations` refs = [CIT-A, CIT-C], `listedCount(for: "art-0") == 2`; on `g-2` = [CIT-B, CIT-C] | AC-2.1, D-10 |
+| T-11 | Swift | same, `firstObservationMovesANewCitationIntoTheGraph` *(new)* | `seedArtifact`, `seedSecondGraph`; on `g-1`, save the first Observation (as `firstRowSaveOnNewCreatesCitationAndExposesRef` does) → the new Citation is in `listedCitations`; `makeModel(store:graphID: "g-2", subjectID: "sub-person-2")` after `prepare()` does not list it | AC-2.5 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `CitationComposerModelTests` (fixture graph links only art-0, line 109), `CitationComposerDepictionTests`, `PlaceRegistryTests`, `WorkspaceSessionTests`.
 
