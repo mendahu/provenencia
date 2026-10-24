@@ -16,7 +16,8 @@ catalog types so geometry stays extractable (design note §13).
 | `GraphCanvasGridMapping` | Grid cell ↔ content point (snap unit) |
 | `GraphCanvasScrollView` | AppKit magnification bridge |
 | `GraphCanvasDocumentView` | Scroll document; owns mouse; hosts the base SwiftUI layer and the item layer; canvas accessibility group and rotors |
-| `GraphCanvasItemLayer` / `GraphCanvasItem` | One `NSView` per item, built by the host (`makeView`), positioned by AppKit; rebuilt only when the item's `Equatable` model changes; owns each item's layer and its scale |
+| `GraphCanvasItemView` | Base for item views: `paint()` renders into an image its layer shows, through `updateLayer` |
+| `GraphCanvasItemLayer` / `GraphCanvasItem` | One `NSView` per item, built by the host (`makeView`, a `GraphCanvasItemView`), positioned by AppKit; rebuilt only when the item's `Equatable` model changes; owns each item's layer and its scale |
 | `GraphCanvasPointerController` | Hit-test, select, drag (one card, or a group of peers that move with the anchor), empty-canvas pan, selection rectangle (marquee), Shift tracking, Shift-click toggle, place, connect |
 | `GraphCanvasHitTarget` / `GraphCanvasPointerHitTesting` | Document rects + pure helpers |
 | `GraphCanvasViewportController` | Pan deltas + live AppKit `convert` under cursor |
@@ -53,8 +54,9 @@ pointer event. An item's view is rebuilt only when its `model` changes, so push
 every item whenever anything they draw changes (selection, hover, data, drag
 start/end), never per drag frame.
 
-Each item is its own layer, drawn when it is built, when it asks, or when the
-settled zoom changes its scale; a pan composites those layers.
+Item views subclass `GraphCanvasItemView` and paint in `paint()`. Each item is its
+own layer, painted when it is built, on `needsDisplay`, or when the settled zoom
+or the appearance changes; a pan moves those layers and paints nothing.
 
 **Never read `GraphCanvasPointerController.offsets` in a view body** that does
 more than draw live geometry. Observation is per property: one read re-runs that
