@@ -197,7 +197,8 @@ func (st *state) newPairSegments(a, b *Subject, own float64) (float64, bool) {
 				if !same {
 					placed = segmentcompare.Unplaced
 				}
-				res := st.compare(la.key, sa.Kind, sa.Values, lb.key, sb.Kind, sb.Values, placed, own)
+				res := st.compare(la.key, sa.Kind, sa.Values, lb.key, sb.Kind, sb.Values, placed, own,
+					func() subjectcompare.Result { return st.evaluate(sa.Kind, sa.Values, sb.Values) })
 				if !same && res.Outcome != propertycompare.OutcomeAgree && res.Outcome != propertycompare.OutcomePartial {
 					continue
 				}

@@ -58,7 +58,7 @@ type state struct {
 	// pairs remembers the subject compare of a layer Subject and a handle for
 	// the length of one Align: values do not change during a run, and the same
 	// pair is compared by its own score and by every neighbor's segments.
-	pairs map[pairKey]subjectcompare.Result
+	pairs map[string]map[string]subjectcompare.Result
 
 	// cands are each Subject's candidates by handle, with their latest score
 	cands map[string]map[string]*cand
@@ -72,9 +72,6 @@ type state struct {
 	releasedFrom map[string][]byte
 	move         map[string]Move
 }
-
-// A pairKey names a layer Subject and a handle by id.
-type pairKey struct{ subject, handle string }
 
 // An adjLink is one end's view of an edge: the neighbor and the bridge's key
 // read from this end.
@@ -121,7 +118,7 @@ func newState(layer Layer, canon Canon, fixed []Fixed, cfg Config) *state {
 		owner:        map[string]string{},
 		held:         map[string]Target{},
 		lostTo:       map[string]string{},
-		pairs:        map[pairKey]subjectcompare.Result{},
+		pairs:        map[string]map[string]subjectcompare.Result{},
 		cands:        map[string]map[string]*cand{},
 		dirty:        map[string]mark{},
 		releasedFrom: map[string][]byte{},
@@ -526,12 +523,16 @@ func (st *state) viaOf(sk string, c *cand) ([]byte, vocabkey.BridgeKey) {
 // pair is subject compare of layer Subject s and handle h, computed once for
 // the run.
 func (st *state) pair(s *Subject, h *Handle) subjectcompare.Result {
-	k := pairKey{subject: string(s.ID), handle: string(h.ID)}
-	if r, ok := st.pairs[k]; ok {
+	if r, ok := st.pairs[string(s.ID)][string(h.ID)]; ok {
 		return r
 	}
 	r := st.evaluate(s.Kind, s.Values, h.Values)
-	st.pairs[k] = r
+	byHandle := st.pairs[string(s.ID)]
+	if byHandle == nil {
+		byHandle = map[string]subjectcompare.Result{}
+		st.pairs[string(s.ID)] = byHandle
+	}
+	byHandle[string(h.ID)] = r
 	return r
 }
 
@@ -608,19 +609,18 @@ func (st *state) segments(subjectID []byte, h *Handle, own float64, placedOf fun
 
 // compareSegments is layer 5 on one layer link and one canon link.
 func (st *state) compareSegments(l adjLink, ns *Subject, ce adjLink, nh *Handle, placed segmentcompare.Placement, own float64) segmentcompare.Result {
-	return segmentcompare.CompareNeighbor(
-		segmentcompare.Segment{Key: l.key, NeighborKind: vocabkey.SubjectType(ns.Kind), Neighbor: ns.Values},
-		segmentcompare.Segment{Key: ce.key, NeighborKind: vocabkey.SubjectType(nh.Kind), Neighbor: nh.Values},
-		placed, own, func() subjectcompare.Result { return st.pair(ns, nh) }, st.cfg.Segment)
+	return st.compare(l.key, ns.Kind, ns.Values, ce.key, nh.Kind, nh.Values, placed, own,
+		func() subjectcompare.Result { return st.pair(ns, nh) })
 }
 
 // compare is the one call to layer 5: two segments, each a key, the neighbor's
-// kind and its values.
-func (st *state) compare(keyA vocabkey.BridgeKey, kindA string, valuesA subjectcompare.Values, keyB vocabkey.BridgeKey, kindB string, valuesB subjectcompare.Values, placed segmentcompare.Placement, own float64) segmentcompare.Result {
-	return segmentcompare.Compare(
+// kind and its values. neighbor gives the neighbors' subject compare, so a
+// caller with a memo of it can share the work.
+func (st *state) compare(keyA vocabkey.BridgeKey, kindA string, valuesA subjectcompare.Values, keyB vocabkey.BridgeKey, kindB string, valuesB subjectcompare.Values, placed segmentcompare.Placement, own float64, neighbor func() subjectcompare.Result) segmentcompare.Result {
+	return segmentcompare.CompareNeighbor(
 		segmentcompare.Segment{Key: keyA, NeighborKind: vocabkey.SubjectType(kindA), Neighbor: valuesA},
 		segmentcompare.Segment{Key: keyB, NeighborKind: vocabkey.SubjectType(kindB), Neighbor: valuesB},
-		placed, own, st.metas, st.cfg.Segment, st.cfg.Subject, st.cfg.Value)
+		placed, own, neighbor, st.cfg.Segment)
 }
 
 // lostContest reports whether another Subject already holds the handle, and
