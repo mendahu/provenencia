@@ -26,6 +26,7 @@ final class GraphCanvasDocumentView: NSView {
         self.pointer = pointer
         super.init(frame: frame)
         wantsLayer = true
+        pointer.stackIndex = { [weak self] in self?.items.stackIndex(of: $0) }
     }
 
     @available(*, unavailable)

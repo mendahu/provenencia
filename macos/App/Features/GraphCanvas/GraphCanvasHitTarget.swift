@@ -19,7 +19,8 @@ struct GraphCanvasActionTarget: Equatable, Sendable, Identifiable {
 
 /// Document-space hit rect for AppKit pointer routing (product-agnostic).
 ///
-/// Array order is bottom → top; the last matching frame wins.
+/// Among overlapping targets the one drawn on top wins: the highest item stack
+/// index, then array order for targets that are not items.
 struct GraphCanvasHitTarget: Equatable, Sendable, Identifiable {
     var id: String
     var frame: CGRect
@@ -45,16 +46,23 @@ enum GraphCanvasPointerHitTesting {
     static let dragThreshold: CGFloat = 4
 
     /// Topmost target whose frame contains `point`, or `nil` on a miss.
+    ///
+    /// `stackIndex` is where the item with that id is drawn (higher is on top).
+    /// A target with no stack index is base-layer content, under every item;
+    /// ties go to the later target in the array.
     static func topmostTarget(
         at point: CGPoint,
-        in targets: [GraphCanvasHitTarget]
+        in targets: [GraphCanvasHitTarget],
+        stackIndex: (String) -> Int?
     ) -> GraphCanvasHitTarget? {
-        for target in targets.reversed() {
-            if target.frame.contains(point) {
-                return target
+        var best: (target: GraphCanvasHitTarget, rank: Int)?
+        for target in targets where target.frame.contains(point) {
+            let rank = stackIndex(target.id) ?? -1
+            if best == nil || rank >= best!.rank {
+                best = (target, rank)
             }
         }
-        return nil
+        return best?.target
     }
 
     /// First action whose frame contains `point` (topmost action wins).

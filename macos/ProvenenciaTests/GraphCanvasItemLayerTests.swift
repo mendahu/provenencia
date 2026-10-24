@@ -118,6 +118,100 @@ struct GraphCanvasItemLayerTests {
         #expect(container.subviews.last === layer.view(for: "a"))
     }
 
+    /// The item ids in the container's subview order, bottom to top.
+    private func stackOrder(_ container: NSView, _ layer: GraphCanvasItemLayer, _ ids: [String]) -> [String] {
+        container.subviews.compactMap { subview in ids.first { layer.view(for: $0) === subview } }
+    }
+
+    @Test func itemsKeepHostOrderAcrossARebuildAndARaise() {
+        let container = flippedContainer()
+        let layer = GraphCanvasItemLayer(container: container)
+        let ids = ["a", "b", "c"]
+        let origins = [CGPoint(x: 0, y: 0), CGPoint(x: 10, y: 0), CGPoint(x: 20, y: 0)]
+        func push(model b: String = "v1", raised: String? = nil) {
+            layer.update(zip(ids, origins).map { id, origin in
+                item(id, at: origin, model: id == "b" ? b : "v1", raised: id == raised)
+            })
+        }
+
+        push()
+        #expect(stackOrder(container, layer, ids) == ["a", "b", "c"])
+
+        // A rebuilt view goes back where it was, not on top.
+        let before = layer.view(for: "b")
+        push(model: "v2")
+        #expect(layer.view(for: "b") !== before)
+        #expect(stackOrder(container, layer, ids) == ["a", "b", "c"])
+
+        push(model: "v2", raised: "c")
+        #expect(stackOrder(container, layer, ids) == ["a", "b", "c"])
+        push(model: "v2", raised: "a")
+        #expect(stackOrder(container, layer, ids) == ["b", "c", "a"])
+        #expect(ids.map { layer.stackIndex(of: $0) } == [2, 0, 1])
+
+        // A lowered item comes back down.
+        push(model: "v2")
+        #expect(stackOrder(container, layer, ids) == ["a", "b", "c"])
+        #expect(ids.map { layer.stackIndex(of: $0) } == [0, 1, 2])
+        #expect(layer.stackIndex(of: "missing") == nil)
+    }
+
+    @Test func restackingPaintsNothing() throws {
+        final class Counting: GraphCanvasItemView {
+            var paints = 0
+            override func paint() { paints += 1 }
+        }
+        let container = flippedContainer()
+        let layer = GraphCanvasItemLayer(container: container)
+        func push(raised: String?) {
+            layer.update(["a", "b", "c"].map { id in
+                GraphCanvasItem(id: id, origin: .zero, isRaised: id == raised, model: "v1", makeView: {
+                    Counting(contentSize: CGSize(width: 10, height: 10))
+                })
+            })
+        }
+        push(raised: nil)
+        for id in ["a", "b", "c"] {
+            let view = try #require(layer.view(for: id) as? Counting)
+            view.layer?.contentsScale = 1
+            view.updateLayer()
+        }
+        func paints() -> [Int] {
+            ["a", "b", "c"].map { (layer.view(for: $0) as? Counting)?.paints ?? -1 }
+        }
+        #expect(paints() == [1, 1, 1])
+
+        push(raised: "a")
+        push(raised: nil)
+        for id in ["a", "b", "c"] { layer.view(for: id)?.updateLayer() }
+        #expect(paints() == [1, 1, 1])
+    }
+
+    @Test func hitTestingPicksTheTopmostPaintedItem() {
+        let container = flippedContainer()
+        let layer = GraphCanvasItemLayer(container: container)
+        let frame = CGRect(x: 0, y: 0, width: 50, height: 50)
+        let targets = ["a", "b", "c"].map { GraphCanvasHitTarget(id: $0, frame: frame, acceptsConnect: true) }
+        func hit() -> String? {
+            GraphCanvasPointerHitTesting.topmostTarget(
+                at: CGPoint(x: 10, y: 10), in: targets, stackIndex: { layer.stackIndex(of: $0) }
+            )?.id
+        }
+        func push(raised: String?, bModel: String = "v1") {
+            layer.update(["a", "b", "c"].map { id in
+                item(id, at: .zero, model: id == "b" ? bModel : "v1", raised: id == raised)
+            })
+        }
+        push(raised: nil)
+        #expect(hit() == "c")
+        push(raised: nil, bModel: "v2")
+        #expect(hit() == "c")
+        push(raised: "a")
+        #expect(hit() == "a")
+        push(raised: nil)
+        #expect(hit() == "c")
+    }
+
     @Test func rotorFilterIgnoresCaseAndAccents() throws {
         let container = flippedContainer()
         let layer = GraphCanvasItemLayer(container: container)

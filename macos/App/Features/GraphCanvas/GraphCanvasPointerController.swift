@@ -12,8 +12,12 @@ import Observation
 @MainActor
 @Observable
 final class GraphCanvasPointerController {
-    /// Bottom → top document hit rects.
+    /// Document hit rects, bottom → top for targets that are not items.
     var hitTargets: [GraphCanvasHitTarget] = []
+    /// Where the item with an id is drawn among the items (higher is on top);
+    /// nil for an id that is not an item. The document view wires it to its
+    /// item layer, so a click hits the card drawn on top.
+    var stackIndex: (String) -> Int? = { _ in nil }
     /// Exclusive tool mode from the product host.
     var mode: GraphCanvasPointerToolMode = .idle
 
@@ -159,17 +163,17 @@ final class GraphCanvasPointerController {
         switch mode {
         case .placing:
             // Card under cursor blocks place (click is ignored).
-            let hit = GraphCanvasPointerHitTesting.topmostTarget(at: documentPoint, in: hitTargets)
+            let hit = GraphCanvasPointerHitTesting.topmostTarget(at: documentPoint, in: hitTargets, stackIndex: stackIndex)
             gesture = .pendingClick(start: documentPoint, targetID: hit?.id, shiftDown: shiftDown)
         case .connecting:
-            let hit = GraphCanvasPointerHitTesting.topmostTarget(at: documentPoint, in: hitTargets)
+            let hit = GraphCanvasPointerHitTesting.topmostTarget(at: documentPoint, in: hitTargets, stackIndex: stackIndex)
             if let hit, hit.acceptsConnect {
                 gesture = .pendingClick(start: documentPoint, targetID: hit.id, shiftDown: shiftDown)
             } else {
                 gesture = .pendingClick(start: documentPoint, targetID: nil, shiftDown: shiftDown)
             }
         case .idle, .selecting:
-            let hit = GraphCanvasPointerHitTesting.topmostTarget(at: documentPoint, in: hitTargets)
+            let hit = GraphCanvasPointerHitTesting.topmostTarget(at: documentPoint, in: hitTargets, stackIndex: stackIndex)
             gesture = .pendingClick(start: documentPoint, targetID: hit?.id, shiftDown: shiftDown)
             if let hit, let action = GraphCanvasPointerHitTesting.action(at: documentPoint, in: hit) {
                 pressedCardAction = (hit.id, action.id)
@@ -321,7 +325,8 @@ final class GraphCanvasPointerController {
     private func updateHoveredAction(at documentPoint: CGPoint) {
         guard let target = GraphCanvasPointerHitTesting.topmostTarget(
             at: documentPoint,
-            in: hitTargets
+            in: hitTargets,
+            stackIndex: stackIndex
         ),
             let action = GraphCanvasPointerHitTesting.action(at: documentPoint, in: target)
         else {

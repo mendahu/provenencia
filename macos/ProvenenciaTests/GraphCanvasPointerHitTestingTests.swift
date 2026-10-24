@@ -24,9 +24,42 @@ struct GraphCanvasPointerHitTestingTests {
         )
         let hit = GraphCanvasPointerHitTesting.topmostTarget(
             at: CGPoint(x: 30, y: 30),
-            in: [bottom, top]
+            in: [bottom, top],
+            stackIndex: { _ in nil }
         )
         #expect(hit?.id == "top")
+    }
+
+    private func target(_ id: String) -> GraphCanvasHitTarget {
+        GraphCanvasHitTarget(id: id, frame: CGRect(x: 0, y: 0, width: 50, height: 50), acceptsConnect: true)
+    }
+
+    @Test func topmostTargetPrefersTheHigherStackIndexOverArrayOrder() {
+        let stack = ["first": 1, "second": 0]
+        let hit = GraphCanvasPointerHitTesting.topmostTarget(
+            at: CGPoint(x: 10, y: 10),
+            in: [target("first"), target("second")],
+            stackIndex: { stack[$0] }
+        )
+        #expect(hit?.id == "first")
+    }
+
+    @Test func topmostTargetRanksATargetWithNoItemBelowEveryItem() {
+        let hit = GraphCanvasPointerHitTesting.topmostTarget(
+            at: CGPoint(x: 10, y: 10),
+            in: [target("item"), target("base")],
+            stackIndex: { $0 == "item" ? 0 : nil }
+        )
+        #expect(hit?.id == "item")
+    }
+
+    @Test func topmostTargetFallsBackToArrayOrderWithoutStackIndexes() {
+        let hit = GraphCanvasPointerHitTesting.topmostTarget(
+            at: CGPoint(x: 10, y: 10),
+            in: [target("under"), target("over")],
+            stackIndex: { _ in nil }
+        )
+        #expect(hit?.id == "over")
     }
 
     @Test func topmostTargetReturnsNilOnMiss() {
@@ -37,7 +70,8 @@ struct GraphCanvasPointerHitTestingTests {
         )
         let hit = GraphCanvasPointerHitTesting.topmostTarget(
             at: CGPoint(x: 0, y: 0),
-            in: [target]
+            in: [target],
+            stackIndex: { _ in nil }
         )
         #expect(hit == nil)
     }

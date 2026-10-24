@@ -47,6 +47,8 @@ final class GraphCanvasItemLayer {
     private var dragOffsets: [String: CGSize] = [:]
     /// Item ids in the host's order (bottom to top before raising).
     private(set) var order: [String] = []
+    /// Each item's place among the views, bottom to top; see ``stackIndex(of:)``.
+    private var stackIndices: [String: Int] = [:]
     private var rotorEntries: [String: GraphCanvasRotorEntry] = [:]
 
     /// The scale every item's layer renders at. The scroll view sets it to the
@@ -104,8 +106,27 @@ final class GraphCanvasItemLayer {
         }
         order = items.map(\.id)
 
-        for item in items where item.isRaised {
-            guard let view = views[item.id], container.subviews.last !== view else { continue }
+        restack(items.filter { !$0.isRaised }.map(\.id) + items.filter(\.isRaised).map(\.id))
+    }
+
+    /// Where `id` is drawn among the items, 0 at the bottom; nil for an id that
+    /// is not an item. Follows the host's order with raised items last, so the
+    /// pointer can pick the card drawn on top.
+    func stackIndex(of id: String) -> Int? {
+        stackIndices[id]
+    }
+
+    /// Puts the views in `stack` order (bottom to top), adding only the views
+    /// from the first one that is out of place, so an unchanged order moves
+    /// nothing.
+    private func restack(_ stack: [String]) {
+        guard let container else { return }
+        stackIndices = Dictionary(uniqueKeysWithValues: stack.enumerated().map { ($1, $0) })
+        let desired = stack.compactMap { views[$0] }
+        let known = Set(desired.map(ObjectIdentifier.init))
+        let current = container.subviews.filter { known.contains(ObjectIdentifier($0)) }
+        guard let first = desired.indices.first(where: { current[$0] !== desired[$0] }) else { return }
+        for view in desired[first...] {
             container.addSubview(view, positioned: .above, relativeTo: nil)
         }
     }
