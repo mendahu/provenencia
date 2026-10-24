@@ -1,7 +1,7 @@
 # Review — S12-09 Promote per graph
 
-**Verdict:** Fits with changes — Ready with changes (round 1)
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
@@ -9,7 +9,7 @@ None.
 
 ## Writer's own calls
 
-- **D-2 (from review M-2).** `identityclaims.UnfileBridges` takes only the Subject. It is not re-keyed to a graph id. Isolation keeps every bridge on its ends' graph, so unfiling is per graph by construction, and the working rule "filing and unfiling bridges is per graph" holds without a parameter. A caller can no longer pass a graph that disagrees with the Subject. Veto it, and D-2 goes back to `UnfileBridges(tx, graphID, subjectID)`.
+- **D-2 (from review M-2, M-5).** `identityclaims.UnfileBridges` takes only the Subject and selects bridges through the shared `bridgeHeads`. It is not re-keyed to a graph id. Isolation keeps every bridge on its ends' graph, so unfiling is per graph by construction, and the working rule "filing and unfiling bridges is per graph" holds without a parameter. A caller can no longer pass a graph that disagrees with the Subject. Veto it, and D-2 goes back to `UnfileBridges(tx, graphID, subjectID)`.
 - **Waiting bridges on another graph.** Done files only the waiting bridges on its own graph (D-1, T-4). A waiting bridge on another graph files on that graph's Done, or when a claim completes it.
 - **No graph on `UnpromoteSubjectRequest`** (D-4). The engine reads the graph from the Subject.
 - **Renames.** `FileSourceBridgesTx` becomes `FileEvidenceGraphBridgesTx`. The "graph alignment" RPC and type names stay: "graph" there means `graphalign`.
@@ -62,3 +62,29 @@ None.
 
 ### X-9 · nit · Adjacent edits covered
 **Answer:** Logged.
+
+## Round 2
+
+Both reviewers confirmed the round-1 answers against the code. The maintainability reviewer checked D-2's isolation argument: `observations.requireSameGraph`, edge rows never exempt, reification Subjects never primary, and nothing moving a Subject between graphs. It also checked D-1's argument order for `bridgeHeads`.
+
+### M-5 · blocker · `UnfileBridges` keeps a third copy of the bridge-type filter
+**Better shape:** `UnfileBridges` calls `bridgeHeads(tx.Tx, touchesEnd, subjectID)`, reads each head's claim with `AcceptedEntityForSubjectTx`, and releases it. `bridgeHeads` orders by `s.id`.
+**Answer:** Fixed. D-2 is rewritten. D-1 adds `ORDER BY s.id`. The Codebase fit row ("all three copies") and Deletes are updated.
+
+### X-10 · minor · D-12 did not say `batch_test.go` cites nothing
+**Answer:** Fixed. The round-1 edit to D-12 had been lost when the plan was written back; D-12 now carries it.
+
+### X-11 · minor · T-4 error subtests cannot use `f.save`
+**Answer:** Fixed. D-12 says to call `writes.Call` around `SaveBatch` directly, as `TestSaveBatchStaleWritesNothing` does.
+
+### X-12 · minor · Generated-code and Xcode checks cannot run in the review sandbox
+**Answer:** Declined, as X-6. §11 covers it.
+
+### X-13 · minor · The reserved-field assertion helper is not named
+**Answer:** Fixed. STEP-5 adds `reserved("GetPromoteClaimEvidenceRequest", "source_id")` in `TestClaimEvidenceNeighborReading`, and no other assertion.
+
+### X-14 · nit · Some direct `Propose` calls are not listed
+**Answer:** Logged. "Every call" in D-9 covers them. `TestProposeInvalidSource`'s 16 zero bytes stays valid as an unknown graph.
+
+### X-15 · nit · Apostrophe in the § 5.1 edit
+**Answer:** Fixed. D-15 keeps the file's curly apostrophe.
