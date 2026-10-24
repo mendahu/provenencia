@@ -80,7 +80,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **shortlist key** | A normalized value used for that lookup: a name word, an event type and year bucket, a toponym word; made by layer 1 (`valuecompare.WordKeys`, `YearReach`) and indexed by `core/shortlist` |
 | **shortlisted handle** | A handle the lookup returned; nothing has been compared yet |
 | **nominated handle** | A handle reached through a link from an accepted pair; no lookup needed |
-| **candidate** | A shortlisted or nominated handle that has been scored and kept (top K) |
+| **candidate** | A shortlisted or nominated handle that has been scored and kept (top K of a shortlist, or of one placed pair's nominations) |
 | **anchor** | A pair already placed (a decided row or an accepted pair) whose segments add evidence to its neighbors |
 | **accept bar** | The least evidence for the walk to place a pair |
 | **queue** | The one best-first list of candidate pairs the walk pops |
@@ -188,8 +188,8 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `alignment.Bands.Medium` | 3 | `graphalign` `MediumScore` | Medium band |
 | `alignment.Bands.Weak` | 2 | `graphalign` `WeakScore` | Weak band; below is no match |
 | `alignment.MinSimilarity` | 0.5 | estimate: at least half alike; a name with a sex conflict is 0.71, a birth against a death 0.09 | Least similarity for a shortlisted handle to be a candidate |
-| `alignment.TopK` | 5 | `promotealign` `seedCandidateLimit` | Candidates kept per Subject after shortlisting |
-| `alignment.TieCap` | 20 | estimate: room for a common name's ties without unbounded work | Most candidates kept when ties pass K |
+| `alignment.TopK` | 5 | `promotealign` `seedCandidateLimit` | Candidates kept per Subject after shortlisting, and per layer neighbor of a placed pair |
+| `alignment.TieCap` | 20 | estimate: room for a common name's ties without unbounded work | Most candidates kept when ties pass K, and per layer neighbor of a placed pair |
 | `alignment.Alternatives` | 3 | `graphalign` `AlternativeLimit` | Alternatives shown per row |
 | `alignment.SettleMargin` | 1 | estimate: one point, a third of a band | Lead a rival needs to displace a placed pair |
 | `alignment.SettleRounds` | 10 | estimate: a safety cap; dirty pairs normally settle in two or three | Most settle rounds |
