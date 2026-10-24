@@ -12,7 +12,7 @@
 **Skills to load:** [`add-match-rule`](../../../../.agents/skills/add-match-rule/SKILL.md) (graphalign and segmentcompare change; no new knob), [`use-catalog-session`](../../../../.agents/skills/use-catalog-session/SKILL.md) (the open-time warm in `catalogsession`)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`, `.cursor/rules/catalog-session.mdc`
 **Context:** [Layer 6 procedure](../comparison-layers.md#layer-6-procedure) steps 2–6; [`docs/promote-graph-alignment.md`](../../../promote-graph-alignment.md) §4 steps 1 and 4, "Thresholds and bands"; [`docs/matching-model.md`](../../../matching-model.md) glossary and knob inventory (`alignment.TopK`, `alignment.TieCap`); ship logs S11-13 PRF-1, S11-15 PRF-1 and PRF-3, S11-16 PRF-1 and PRF-2, S11-19 round 3 CON-1; working rules "Registry numbers: carry over, then estimate", "One match registry", "High tolerance for churn"; dogfood bar 3 ("Fast, and it explains itself")
-**Planned:** 2026-10-24 against `main` @ `c93b3fb`
+**Planned:** 2026-10-24 against `main` @ `1843cd4` (measured at `c93b3fb`; no Go change between)
 **Review:** [`S11-21-large-source-performance.review.md`](S11-21-large-source-performance.review.md) — Fits with changes / Ready with changes, 1 round (all findings fixed)
 
 ### Implementer — read this first
@@ -146,7 +146,7 @@ The prototype is not in the repo; the numbers are what this PR's test reproduces
 | Graphalign tests | `core/graphalign/align_test.go` `alignWith`, `locLink`, `edge`, `bridge`, `vals`, `termProp`, `dateProp`, `eventMetas`, `placeMetas`, `mergeMetas`; `invariants_test.go` | Every golden and invariant this PR must keep green |
 | Docs | `docs/promote-graph-alignment.md` §4 step 1 ("nominated at any score"), step 4 ("Placing a pair nominates the handles its links point at"), "Thresholds and bands" bullet; `docs/deployment-plan/spike-11/comparison-layers.md` "Built in S11-16" paragraph (`place` "nominates the handles a placed pair's links point at"); `docs/matching-model.md` glossary row **candidate** ("kept (top K)") and knob rows `alignment.TopK`, `alignment.TieCap` | None of them says how many handles a placed pair nominates; read with the code, every corresponding neighbor |
 
-S11-27 is in progress on `s11-27-connection-subrows` and changes only Swift and docs (`deployment-plan.md`, `completed.md`); this PR's Go files do not overlap it. Rebase the docs step on whatever has landed.
+S11-27 landed in [#530](https://github.com/mendahu/provenencia/pull/530) and changed only Swift and docs; no file under `core/` or `api/` changed between `c93b3fb` and `1843cd4`.
 
 **Precedent.** S11-19 D-21 / D-22 ([#513](https://github.com/mendahu/provenencia/pull/513)): the layer and member memos on the Evidence graph memo, and profiles shared through the match index with `profilesPattern` as their check. Copy the memo shape of `loadLayerMemo` (key constant with the name pattern after it, a read-only value, rebuild and store on a miss) for D-8. `namealiases.Warm`, `Invalidate`, `Rules` and `TestDropLeavesAliasTables` for D-9. `core/locator/validate_test.go` `TestValidateDocCapBeforeCrossing` is the repo's one wall-clock budget in a `Test…`: `time.Now()` / `time.Since`, fail over the budget.
 
