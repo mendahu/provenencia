@@ -1,7 +1,7 @@
 # S11-21 — Large-Source performance check
 
 **Status:** Landed in [#536](https://github.com/mendahu/provenencia/pull/536) (2026-10-24)
-**Landed:** none — the code matches the plan. `namealiases.withAliases` stays as a thin wrapper over `buildIndex`.
+**Landed:** differences from the plan: `benchShape()` is a function (a fresh `rand` stream per benchmark); `largeShape(r, names)` takes the shared `*zipfNames`; `zipfNames` and `largeShape` live in `bench_test.go`, not `perf_test.go`; the hub page uses the "Hub page" Source that promotes the hub place, not a second Source; the pair memo is a nested map, not `[2]string` (`TestLayerPackages` allows no numeric literal but 0 and 1); `place` de-duplicates fresh nominations by handle id before ranking; `warmFixture` gained `artB` for T-6; `evidence warm` landed in the STEP-8 commit; round 0 stopped on AC-3.1 and D-12 / D-12a / STEP-9 were added (ship log); "a new open-time warm is one line in `WarmOnOpen`" holds for the call, but a new warm also needs its own graph slot; `withAliases` is inlined into `Rules`; `st.compare` takes the neighbor closure so `graphalign` makes one call to layer 5; `memberValues` is copy-on-write; the candidates memo has its own loader, `loadCandidatesMemo`.
 **Spike / slice:** Spike 11 · Slice 7 — Performance
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: engine timing, caching and one test; nothing on screen changes)
