@@ -179,3 +179,12 @@ Check: T-15 passes; scripts/check-pr.sh PASS.
 Files: `core/database/promotealign/bench_test.go`, `macos/App/Features/EvidenceGraph/EvidenceCardView.swift`.
 Do: move `// letters is the lowercase base 26 of k…` to sit directly above `func letters`; `loadMissingLikenesses`' doc names `invalidatePaint()`.
 Check: `go vet -tags fts5 ./core/database/promotealign/` clean; scripts/check-pr.sh PASS.
+
+## Fix plan 5 — result
+Head `c102c773`. Gate PASS (orchestrator). F-11, F-12 done; F-11's test ran red first (2.71 vs 2.5). Zoom check, user driving (Retina): pinch out and back in to 1.25×: **7** paints, all at 2× and none at 2.5×; user: "felt good", "Everything looks great". Memory 336 MB. So the scale never settled to 2.5 after the pinch-in. The earlier zoom log (diag at `3089fe81`) shows 4 `.began` and 16 `.changed` magnify events and no `.ended`; the run at `9e1c40ae` did settle (spring-back repaints at 2.52–2.71). The pinch end reaches `magnify(with:)` unreliably, and a missed end leaves `isPinching` set, which also blocks backing-change updates (moving the window between displays) → F-13.
+
+### Fix plan 6
+**F-13 — Settle the item scale on a timer, not on the pinch end**
+Files: `macos/App/Features/GraphCanvas/GraphCanvasScrollView.swift`, `macos/App/Features/GraphCanvas/README.md` (zoom-cap clause), `docs/deployment-plan/spike-11/prs/S11-21-large-source-performance.md` (Landed line).
+Do: delete `isPinching`, `itemScaleSyncPending` and the `magnify(with:)` override. Add `static let itemScaleSettleDelay: TimeInterval = 0.15` and `private var itemScaleSettle: DispatchWorkItem?`. `scheduleItemContentsScale()` *(replaces `syncItemContentsScale()`)* cancels the pending item and schedules a new one on the main queue after the delay (inside `MainActor.assumeIsolated`), which calls `applyItemContentsScale()`. The `magnification` `didSet` calls it. `viewDidMoveToWindow` and `viewDidChangeBackingProperties` call `applyItemContentsScale()` at once and then `scheduleItemContentsScale()` (to catch an AppKit reset). `applyItemContentsScale()` guards only on `let window`. Doc comments say why a timer: a pinch, a wheel step and the spring-back all change `magnification`, and the end of a pinch is not a reliable event.
+Check: `git grep -n "isPinching\|magnify(with" -- macos/App` prints nothing; scripts/check-pr.sh PASS; manual: a pinch in to 1.25× logs one paint per card at 2.5×, and moving the window between displays after a pinch repaints at the new scale.
