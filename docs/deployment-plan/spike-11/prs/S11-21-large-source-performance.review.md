@@ -190,3 +190,20 @@ Executability (sonnet): **Ready with changes**. **X-1 · blocker · `cardView(fo
 Maintainability (opus): **Fits with changes**. **M-7 · major · the cache across `updateLayer` has no measured reason and adds a second signal** — **Fixed:** dropped; `updateLayer` always renders, `needsDisplay` is the one signal; the prototype's under-200 count is the evidence, AC-5.8 rechecks it. M-8 (= X-1), M-9 README sentence replaced not added, M-10 nits (D-13 wording, `isOpaque` on the base, empty-bounds guard) — **Fixed.**
 
 **Addition verdict:** Fits — Ready. Round cap reached; no open blocker. To user after STEP-13's numbers: the memory trade (PRF-1).
+
+## Addition 2026-10-24 — image reuse across refreshes (D-18, STEP-14)
+
+A zoom log showed AppKit calling `updateLayer` about 25 times per card per pinch with no scale change (plan §4 "Card layers after STEP-13"), which is the evidence M-7 (cached item image round 2) asked for before keeping a cache. Reviewers: maintainability (opus), executability (sonnet).
+
+### Round 1
+**X-1 / M-1 · blocker / major · T-16 and AC-5.7 still expect a repaint on the second call** — **Fixed:** both expect one paint; STEP-14's Do changes the existing test.
+**X-2 · blocker · T-17's appearance step depends on the machine** — **Fixed:** the test sets `.aqua` first, then `.darkAqua`, and calls `updateLayer()` itself.
+**X-3 / M-2 · major · pixel-size rule copied** — **Fixed:** `pixelSize(scale:)` shared by the render and the key.
+**X-4 · major · nil render and reuse path** — **Fixed:** nil clears image and key; reuse re-assigns `layer.contents`.
+**X-5 · major · red first** — **Fixed:** compile-level, then T-16's reuse case.
+**X-6 / M-3 · comments D-18 makes false** — **Fixed:** class, `makeView`, `insert`, `contentsScale`, `loadMissingLikenesses` docs and the README paragraph are named with their wording.
+**M-4 · minor · D-17 still binds the old contract** — **Fixed:** D-17 points to D-18.
+**M-5 · minor · stale-card guard checks one file** — **Fixed:** the Check greps every `GraphCanvasItemView` subclass; the README names the trap.
+**M-6 · nit** — **Fixed.** X-7 (AC-5.10 needs hardware), X-8 — logged.
+
+Round 2 not run: both round-1 blockers were a test expectation and a test setup line, and the gate's Xcode tests check both directly. **Addition verdict:** Fits — Ready.
