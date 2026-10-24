@@ -89,3 +89,27 @@ Gate PASS (`21d94329`) · CI pending · open: none · follow-ups: MNT-5 (one key
 
 ## After ready — vocabulary (user, 2026-10-24)
 User: "strike that word from the record… refer to the data using the terms we already have." "Hub" was never an approved term. It is gone from the code and the records: the test data is "a Source whose births are all located at one place with many filed events" (the one-place Source), and its place is the city. Renamed: `catalogShape.Cities` / `CityEvents`, `BenchmarkProposeColdCity` / `WarmCity`, subtests `births at one place cold` / `warm`, `TestPlaceWithManyEventsProposalStaysOnTheLayer`, the `align_test.go` place ids. Docs rewritten in this plan, its review and ship logs, the map, and the S11-15 and S11-16 plans and ship logs. Unrelated meanings left alone: the "Hubert" nickname, a film reel's hub (`L10n.swift`), "generational hubs" in `docs/narrative-layer-data-model.md`, a code "hub package" (S11-02 review). `promote-connection-subrows.md` also called an event "the hub that ties people and places"; reworded.
+
+## STEP-11 — card symbol and font caches (user, 2026-10-24)
+User: "I would like to try caching the symbols and fonts… plan that and implement it on this same S11-21 performance PR." Plan addition (US-5, D-13, D-14, STEP-11, T-12, T-13) reviewed: Fits / Ready, 2 rounds (review log, "Addition 2026-10-24"). Implemented at `eed784e7`; gate PASS (orchestrator). Red-first was compile-level only (the tests' `isCached` hooks did not exist). `abc57274` alone does not build (`nsMono` and the pbxproj entries arrive in `71b32326`); the head does.
+
+Reviewers: CON (sonnet), MNT, UX, SEC+PRF — all Clean.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| PRF-1 | PRF | minor | No after-profile; vector draw in `drawTinted` remains | Fix now → re-profile with the user (§10 step 5) | reviewer's sample split: caches remove ~900–1,100 of 3,309 `draw` samples; ~890 of glyph rasterizing remain, owned by the §3 Out bitmap row |
+| UX-1 | UX | minor | SwiftUI mono fallback is now monospaced; Landed note silent | Fix now → F-8 | verified `PVTypography.swift:151-153` |
+| MNT-1 | MNT | nit → minor | Lock comment gives the wrong reason | Fix now → F-8 | stale comment in a file this PR changes; `PVFont` is not actor-isolated |
+| MNT-3 | MNT | nit → minor | Landed note lists a non-difference | Fix now → F-8 | D-13 already says nil for a `pv.` glyph |
+
+Nits (logged): `CON-1 · PVFontTests · 13.75 never asked for` · `MNT-2 · …ForTest vs …ForTesting suffix` (rides F-8) · `MNT-4 · README/PVTypography say serif/monospace fallback; display and body fall back to sans` (rides F-8)
+
+### Fix plan 3
+**F-8 — Comments and the Landed note say what the code does** (from UX-1, MNT-1, MNT-2, MNT-3, MNT-4)
+Files: `macos/App/DesignSystem/Tokens/PVTypography.swift`, `macos/App/DesignSystem/README.md`, `macos/App/Features/EvidenceGraph/EvidenceCardSymbols.swift`, `macos/ProvenenciaTests/EvidenceCardSymbolsTests.swift`, `macos/ProvenenciaTests/PVFontTests.swift`, `docs/deployment-plan/spike-11/prs/S11-21-large-source-performance.md` (Landed line).
+Do: the font-cache lock comment says `PVFont` is not actor-isolated, so any thread may call it. Rename `isCachedForTest` / `nsIsCachedForTest` to `isCachedForTesting` / `nsIsCachedForTesting`, as `ArtifactViewerModel.installImageRasterForTesting` is named. The README `PVFont` paragraph and the `PVTypography.swift` comment near line 66 say display and body fall back to the system font and mono to the system monospaced face. In the Landed line, drop "`Painter.symbol` returns early when the symbol is not an SF Symbol" and add "the SwiftUI `PVFont.mono` fallback is now the system monospaced face (only when IBM Plex Mono is missing)".
+Check: scripts/check-pr.sh PASS.
+
+## Round STEP-11 — fix and re-profile
+Head `a25697b4`. Gate PASS (orchestrator). F-8 done. UX-1, MNT-1, MNT-3 **Resolved** (read by the orchestrator).
+PRF-1 **Resolved** — re-profile with the user driving (same 110-Subject Source, 20 s pan, optimized Debug build): hitch total 12.5 s → 9.4 s, worst 427 → 400 ms, hitches over 100 ms 43 → 49, main thread busy 4.3 → 3.8 s, card draw share 81 % → 72 %. Symbol and font creation are gone; `drawTinted` (vector symbol drawn on every paint) is 48 % and is the next cost. User: "I wouldn't describe it as particularly improved from an anecdotal perspective." The §3 Out row (keep each card's painted bitmap so panning never re-runs `draw(_:)`) is the fix that removes the repaint itself.
