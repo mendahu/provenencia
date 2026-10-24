@@ -50,8 +50,7 @@ struct EvidenceGraphPlacedSubject: Identifiable, Sendable, Equatable {
         if let named = observations.lazy.compactMap(Self.namingValue(for: kind, orders: orders)).first {
             return named
         }
-        let label = subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        return label.isEmpty ? subject.ref : label
+        return subject.trimmedLabel ?? subject.ref
     }
 
     /// The value of an asserted Observation that names a subject of this kind.

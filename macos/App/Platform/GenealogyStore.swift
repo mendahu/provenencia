@@ -215,6 +215,12 @@ struct CatalogSubject: Sendable, Equatable, Identifiable {
     var subjectTypeID: String
     var label: String
     var description: String
+
+    /// The label without surrounding whitespace; nil when it is blank.
+    var trimmedLabel: String? {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
 }
 
 /// A Conclusion handle (PER-…, EVT-…, PLC-…).

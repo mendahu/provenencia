@@ -85,15 +85,13 @@ struct EvidenceGraphText: Equatable, Sendable {
 extension EvidenceGraphPlacedSubject {
     /// The trimmed label, or the type label when the Subject has none yet.
     var titleOrTypeLabel: String {
-        let trimmed = subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? typeLabel : trimmed
+        subject.trimmedLabel ?? typeLabel
     }
 }
 
 extension EvidenceGraphPlacedBridge {
     /// The trimmed label, or the type label when the Subject has none yet.
     var titleOrTypeLabel: String {
-        let trimmed = subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? typeLabel : trimmed
+        subject.trimmedLabel ?? typeLabel
     }
 }

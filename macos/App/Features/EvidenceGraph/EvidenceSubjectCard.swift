@@ -313,9 +313,8 @@ enum EvidenceSubjectCard {
             let target = membershipName(membership, orders: orders).map { "\($0), \(membership.entity.ref)" } ?? membership.entity.ref
             return L10n.EvidenceGraph.openHandleAccessibility(kind: placed.kind, ref: target)
         }
-        let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return L10n.EvidenceGraph.promoteAccessibility(
-            label: label.isEmpty ? placed.subject.ref : label,
+            label: placed.subject.trimmedLabel ?? placed.subject.ref,
             ref: placed.subject.ref
         )
     }

@@ -621,12 +621,14 @@ private extension EvidenceCardView {
     static var addPropertyRowHeight: CGFloat { PVTextMetrics.fontLineHeight(PVFont.nsBody(size: 12)) + 20 }
 
     static func typeLine(_ placed: EvidenceGraphPlacedSubject) -> String {
-        let ref = placed.subject.ref.trimmingCharacters(in: .whitespacesAndNewlines)
-        return ref.isEmpty ? placed.typeLabel : "\(placed.typeLabel) · \(ref)"
+        typeAndRef(typeLabel: placed.typeLabel, ref: placed.subject.ref)
     }
     static func typeRef(_ placed: EvidenceGraphPlacedBridge) -> String {
-        let ref = placed.subject.ref.trimmingCharacters(in: .whitespacesAndNewlines)
-        return ref.isEmpty ? placed.typeLabel : "\(placed.typeLabel) · \(ref)"
+        typeAndRef(typeLabel: placed.typeLabel, ref: placed.subject.ref)
+    }
+    private static func typeAndRef(typeLabel: String, ref: String) -> String {
+        let ref = ref.trimmingCharacters(in: .whitespacesAndNewlines)
+        return ref.isEmpty ? typeLabel : "\(typeLabel) · \(ref)"
     }
     static func titleBlockHeight(_ placed: EvidenceGraphPlacedSubject) -> CGFloat {
         let width = EvidenceSubjectCard.width - EvidenceSubjectCard.shellPaddingX * 2 - 78
