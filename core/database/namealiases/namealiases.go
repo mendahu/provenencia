@@ -214,12 +214,8 @@ func Rules(g *graphcache.Graph, q Querier, base valuecompare.Rules) (valuecompar
 	if err != nil {
 		return valuecompare.Rules{}, err
 	}
-	return withAliases(base, tables), nil
-}
-
-func withAliases(base valuecompare.Rules, tables []valuecompare.AliasTable) valuecompare.Rules {
 	base.Names.Aliases = buildIndex(tables)
-	return base
+	return base, nil
 }
 
 // buildIndex keys the tables with valueWords, the word rules that already key

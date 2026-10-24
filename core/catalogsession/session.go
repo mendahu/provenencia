@@ -65,8 +65,9 @@ func ReconcileOnOpen(c *database.Catalog) error {
 }
 
 // WarmOnOpen loads what Promote and the lists read on every call onto the
-// catalog graph, once, when a project opens: the alias tables, then the default
-// name format. One list, so a catalog opened for a test warms what the app does.
+// catalog graph, once, when a project opens: the built alias index, then the
+// default name format. One list, so a catalog opened for a test warms what the
+// app does.
 func WarmOnOpen(c *database.Catalog) error {
 	if err := namealiases.Warm(c); err != nil {
 		return err
