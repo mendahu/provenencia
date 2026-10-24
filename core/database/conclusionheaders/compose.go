@@ -259,7 +259,7 @@ func persons(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PersonHeader
 	if err != nil {
 		return nil, err
 	}
-	loaded, err := nameformats.Load(g)
+	loaded, err := nameformats.LoadFor(g, g)
 	if err != nil {
 		return nil, err
 	}

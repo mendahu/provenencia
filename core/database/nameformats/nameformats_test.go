@@ -7,6 +7,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/databasetest"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -226,5 +228,61 @@ func TestSeedMatchesRegistryWestern(t *testing.T) {
 		if got, ok := weights[w.Slot]; !ok || got != w.Weight {
 			t.Errorf("weight %q: seed %v, registry %v (%v)", w.Slot, w.Weight, got, ok)
 		}
+	}
+}
+
+// LoadFor reads the graph's warm copy without a query, and the catalog when the
+// graph is nil or cold; both give Load's answer.
+func TestLoadFor(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	if err := Install(c); err != nil {
+		t.Fatal(err)
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := Load(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want.Builtin {
+		t.Fatal("Install stored no default name format")
+	}
+	selects := databasetest.CountSelects(t, c)
+
+	tests := []struct {
+		name    string
+		warm    bool
+		graph   func() *graphcache.Graph
+		selects bool
+	}{
+		{"a warm graph reads no SELECT", true, c.Graph, false},
+		{"a nil graph reads the catalog", false, func() *graphcache.Graph { return nil }, true},
+		{"a cold graph reads the catalog", false, func() *graphcache.Graph { return graphcache.New(nil) }, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.warm {
+				if err := Warm(c); err != nil {
+					t.Fatal(err)
+				}
+			}
+			selects.Reset()
+			got, err := LoadFor(tt.graph(), db)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("LoadFor = %+v, Load = %+v", got, want)
+			}
+			if n := selects.N(); (n > 0) != tt.selects {
+				t.Fatalf("LoadFor issued %d SELECTs", n)
+			}
+		})
 	}
 }

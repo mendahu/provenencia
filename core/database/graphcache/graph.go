@@ -55,6 +55,11 @@ type Graph struct {
 	aliases   any
 	aliasesOK bool
 
+	// nameFormat is the catalog's default name format, warmed the same way.
+	// nameformats owns the concrete value.
+	nameFormat   any
+	nameFormatOK bool
+
 	entityTable string
 	claimTable  string
 	valueTable  string
@@ -181,7 +186,8 @@ func (g *Graph) clear() {
 	g.labelsOK = false
 	g.labels = nil
 	g.activity = map[string]map[string]effects.Activity{}
-	// Alias tables stay. They follow the catalog connection, not a rebuild.
+	// Alias tables and the name format stay. They follow the catalog connection,
+	// not a rebuild.
 }
 
 // Drop empties nodes, holders, kind indexes, and the match index. The next read fills
@@ -278,6 +284,27 @@ func (g *Graph) SetAliasTables(tables any) {
 	g.dropDerived()
 	g.aliases = tables
 	g.aliasesOK = true
+}
+
+// NameFormat returns the catalog's default name format warmed for this open
+// catalog. The bool is false until nameformats.Warm stores it.
+func (g *Graph) NameFormat() (any, bool) {
+	if g == nil || !g.nameFormatOK {
+		return nil, false
+	}
+	return g.nameFormat, true
+}
+
+// SetNameFormat stores the catalog's default name format until the catalog
+// closes. Drop does not clear it. The match index and Evidence graph memos read
+// the name format's part roles, so a new one drops them.
+func (g *Graph) SetNameFormat(v any) {
+	if g == nil {
+		return
+	}
+	g.dropDerived()
+	g.nameFormat = v
+	g.nameFormatOK = true
 }
 
 // SetMatchIndex stores the match index until the next handle commit,

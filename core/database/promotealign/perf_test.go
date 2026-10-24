@@ -1,13 +1,16 @@
 package promotealign_test
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
+	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/promotealign"
@@ -21,6 +24,7 @@ const (
 	budgetCold        = 2500 * time.Millisecond
 	budgetWarm        = 250 * time.Millisecond
 	budgetAfterCommit = 1500 * time.Millisecond
+	budgetEvidence    = 100 * time.Millisecond
 	budgetHubCold     = 5 * time.Second
 	budgetHubWarm     = 3 * time.Second
 )
@@ -42,7 +46,7 @@ func newLargeFixture(t *testing.T) *largeFixture {
 	f := newFixture(t)
 	must(t, nameformats.Install(f.c))
 	must(t, namealiases.Install(f.c))
-	must(t, namealiases.Warm(f.c))
+	must(t, catalogsession.WarmOnOpen(f.c))
 
 	hubSrc, hubArt := f.newSource("Hub page")
 	hubPlace := f.place(hubSrc, hubArt, "Hub")
@@ -203,6 +207,13 @@ func TestLargeSourceBudgets(t *testing.T) {
 		}
 	}
 
+	t.Run("evidence warm", func(t *testing.T) {
+		reqs := evidenceRequests()
+		pass(reqs)
+		d := fastest(3, func() time.Duration { return since(func() { pass(reqs) }) })
+		over(t, fmt.Sprintf("warm Evidence on %d handle rows", len(reqs)), d, budgetEvidence)
+	})
+
 	t.Run("warm queries", func(t *testing.T) {
 		reqs := evidenceRequests()
 		pass(reqs)
@@ -210,10 +221,18 @@ func TestLargeSourceBudgets(t *testing.T) {
 		n := 0
 		f.c.Graph().SetQueryCounterForTest(func() { n++ })
 		defer f.c.Graph().SetQueryCounterForTest(nil)
+		selects := databasetest.CountSelects(t, f.c)
 		pass(reqs)
+		if n != 0 || selects.N() != 0 {
+			t.Errorf("warm Evidence issued %d graph queries and %d SELECTs, want 0 and 0", n, selects.N())
+		}
+		selects.Reset()
 		propose()
 		if n != 0 {
-			t.Errorf("warm Evidence and Propose issued %d graph queries, want 0", n)
+			t.Errorf("a warm Propose issued %d graph queries, want 0", n)
+		}
+		if selects.N() != 1 {
+			t.Errorf("a warm Propose issued %d SELECTs, want 1 (MAX(revision))", selects.N())
 		}
 	})
 

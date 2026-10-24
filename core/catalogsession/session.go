@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/namealiases"
+	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -63,6 +64,16 @@ func ReconcileOnOpen(c *database.Catalog) error {
 	return searchindex.EnsureCatalog(c)
 }
 
+// WarmOnOpen loads what Promote and the lists read on every call onto the
+// catalog graph, once, when a project opens: the alias tables, then the default
+// name format. One list, so a catalog opened for a test warms what the app does.
+func WarmOnOpen(c *database.Catalog) error {
+	if err := namealiases.Warm(c); err != nil {
+		return err
+	}
+	return nameformats.Warm(c)
+}
+
 func openResearcher(projectDir string) (*database.Catalog, error) {
 	c, err := database.Open(projectDir)
 	if err != nil {
@@ -72,8 +83,8 @@ func openResearcher(projectDir string) (*database.Catalog, error) {
 		_ = c.Close()
 		return nil, err
 	}
-	// Alias tables stay warm for the life of this project. Close drops them.
-	if err := namealiases.Warm(c); err != nil {
+	// What scoring reads stays warm for the life of this project. Close drops it.
+	if err := WarmOnOpen(c); err != nil {
 		_ = c.Close()
 		return nil, err
 	}
