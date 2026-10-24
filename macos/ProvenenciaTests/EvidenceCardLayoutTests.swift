@@ -41,14 +41,9 @@ struct EvidenceCardLayoutTests {
         )
     }
 
-    /// Renders `view` in an offscreen window and returns its bitmap.
+    /// Renders `view` at scale 1 and returns its bitmap.
     private func bitmap(of view: EvidenceCardView) throws -> NSBitmapImageRep {
-        let window = NSWindow(contentRect: CGRect(origin: .zero, size: view.intrinsicContentSize), styleMask: [], backing: .buffered, defer: false)
-        view.frame = window.contentView!.bounds
-        window.contentView = view
-        let rep = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
-        view.cacheDisplay(in: view.bounds, to: rep)
-        return rep
+        NSBitmapImageRep(cgImage: try #require(view.renderImage(scale: 1)))
     }
 
     /// Builds the live card and returns the layout it measured plus the height
