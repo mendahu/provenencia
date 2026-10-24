@@ -9750,8 +9750,8 @@ func (x *PromoteSubjectResponse) GetClaim() *IdentityClaim {
 }
 
 // UnpromoteSubject deletes a primary Subject's accepted claim and, in the same
-// revision, the accepted claims of the bridges on its Evidence graph that have it as an
-// end. No handle is deleted. A Subject with no accepted claim writes nothing.
+// revision, the accepted claims of the bridges on its Evidence graph that have
+// it as an end. No handle is deleted. A Subject with no accepted claim writes nothing.
 type UnpromoteSubjectRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`

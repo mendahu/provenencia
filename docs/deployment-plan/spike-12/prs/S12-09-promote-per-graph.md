@@ -316,3 +316,12 @@ None.
 
 **Title:** S12-09 — Promote per graph
 **Body:** objective in one sentence; what shipped against US-1 and US-2; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-12/prs/S12-09-promote-per-graph.md`.
+
+## Landed
+
+Round 1 review changed these against the plan; nothing else differs.
+
+- **Bridge-head query shape (F-1; supersedes D-1 and D-2's query shape only).** `bridgeHeads` joins `subject_types` with `CROSS JOIN` so SQLite starts at `subjects` through the condition's seek, not at the type index (which read every bridge Subject in the catalog). The touch condition is `s.id IN (SELECT o.subject_id FROM observations o WHERE o.value_subject_id = ?)`; `FileBridgesTx`'s is `s.id IN (SELECT ? UNION ALL SELECT o.subject_id ...)`. `TestBridgeHeadQueryPlans` pins the plans.
+- **Shared promote test helper (F-2; supersedes the Codebase-fit list, which named no shared helper).** New package `core/database/promote/promotetest` with `Save`; the copies of the promote-in-a-write block in tests across `core` and `api` now call it, and `(*batchFixture).promoteOne` is deleted. Sites that assert on `Save`'s error stay as they were: the error-path cases in `promote_test.go`, and the random-operation walk in `autoreconciler_test.go`, which tolerates errors.
+- **Unfile reads claims with the heads (F-3).** `bridgeHead` carries the accepted claim id from a `LEFT JOIN identity_claims`; `UnfileBridges` no longer runs one `AcceptedEntityForSubjectTx` per bridge. Behavior is unchanged.
+- **Comment and import tidy (F-4).** Three comments re-wrapped (`engine.proto`, `batch.go`, `unpromote.go`) and the `rowchange` import moved into the module group of `bridgefile.go`.

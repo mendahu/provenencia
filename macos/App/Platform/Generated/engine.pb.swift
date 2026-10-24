@@ -3939,8 +3939,8 @@ public nonisolated struct Provenencia_Engine_V1_PromoteSubjectResponse: Sendable
 }
 
 /// UnpromoteSubject deletes a primary Subject's accepted claim and, in the same
-/// revision, the accepted claims of the bridges on its Evidence graph that have it as an
-/// end. No handle is deleted. A Subject with no accepted claim writes nothing.
+/// revision, the accepted claims of the bridges on its Evidence graph that have
+/// it as an end. No handle is deleted. A Subject with no accepted claim writes nothing.
 public nonisolated struct Provenencia_Engine_V1_UnpromoteSubjectRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

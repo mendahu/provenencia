@@ -35,8 +35,8 @@ type BatchRow struct {
 	PinSets           []PinSet
 }
 
-// Batch is one Done for an Evidence graph. SeenRevision is the audit revision the
-// proposal was read at.
+// Batch is one Done for an Evidence graph. SeenRevision is the audit revision
+// the proposal was read at.
 type Batch struct {
 	GraphID      []byte
 	SeenRevision int64
