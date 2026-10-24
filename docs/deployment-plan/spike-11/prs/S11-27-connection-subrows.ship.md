@@ -1,7 +1,7 @@
 # Ship log — S11-27 Connection subrows on Promote
 
 **Plan:** [`S11-27-connection-subrows.md`](S11-27-connection-subrows.md) · **Branch:** `s11-27-connection-subrows` · **PR:** #530
-**State:** ready
+**State:** fixing 5 (user change)
 
 ## Round 0 — implement
 Head `17034618`. Gate PASS (orchestrator re-ran). Draft PR #530. Report: no deviations from Decisions or Scope; three small differences recorded in the plan's Landed note (`isSymmetric` takes `EvidenceGraphPlacedBridge` after a rename on `main`; `PromoteConnectionSubrows` also takes the host ref for the expander identifier; two test helpers `link` and `mapped`). AC-3.2 – 3.4 and AC-4.4 are built but need the manual check.
@@ -116,3 +116,13 @@ Head `4d1f42bc`. Gate PASS (orchestrator re-ran). F-9 done; CON-1 (r3), MNT-8, M
 
 ## Result
 Gate PASS · CI green · open: none · follow-ups: — · to user: UX-4 answered (dropped); pointer and cap removed by the user (A-1 – A-5) · CON miss: none
+
+## Round 5 — user change (2026-10-23)
+The user asked to remove the grouping selector ("Grouped by kind / assessment") and its logic: kind is the default and only grouping. Recorded in the plan as **Amended** A-6. (S11-D1 had kept both groupings; the user's call supersedes it.)
+
+### Fix plan 5
+**F-10 — Rows always grouped by kind** (A-6)
+Files: `macos/App/Features/Promote/PromoteView.swift`, `PromoteFlow.swift`, `PromoteModel.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, any test that sets `group`. Docs: `docs/deployment-plan/spike-11/promote-connection-subrows.md` item 5 (note the grouping was removed in S11-27), `docs/deployment-plan/spike-11/completed.md` S11-27 paragraph (one clause: rows are always grouped by kind; the grouping menu is gone), plan Landed note (one clause naming A-6). Skill: `add-localized-string`.
+Failing test first: none (removal; existing tests stay green).
+Do: delete the `PVSelect` in `mappedBar` and everything A-6 lists. `sections` returns the three kind sections only. When `model.entry.mapAll` is true the mapped bar has nothing left: do not draw it (no empty row of padding). Keep `section(...)` and `kindSection(...)` if still used; inline `section` into `kindSection` only if it then has one caller. Keep `L10n.Promote.assessment(_:)`.
+Check: `rg -n "Grouping|setGroup|groupBinding|groupKind|groupAssessment|groupLabel|groupedByKind|groupedByAssessment|promote\.page\.group" macos` prints nothing; `python3 scripts/check-localizable-xcstrings.py` OK; scripts/check-pr.sh PASS.
