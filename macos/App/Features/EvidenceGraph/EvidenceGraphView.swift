@@ -699,7 +699,8 @@ private struct EvidenceGraphLabeledHeaderWidthKey: PreferenceKey {
 // MARK: - Document (paint-only; AppKit owns pointer)
 
 /// Reads live drag offsets so the document can grow before the drop, without
-/// the card `ForEach` following every pointer event.
+/// the SwiftUI base layer following every pointer event (cards are canvas
+/// items, not part of it).
 private struct EvidenceGraphDragCanvasSize: View {
     let snapshot: EvidenceGraphSnapshot
     @Bindable var pointer: GraphCanvasPointerController

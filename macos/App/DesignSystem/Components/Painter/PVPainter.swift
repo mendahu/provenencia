@@ -156,9 +156,10 @@ final class PVPainter {
     /// Recolors a template image in the view's current context.
     ///
     /// An intermediate `NSImage` rasterizes the SVG mark at one pixel per
-    /// point. Panning and zooming then scale that bitmap, so the mark stays
-    /// soft until some later redraw. A transparency layer tints the vector
-    /// at the same scale as the rest of the card.
+    /// point. The canvas renders items at up to 2.5x (backing scale times the
+    /// zoom), so that bitmap would be scaled up and the mark would go soft. A
+    /// transparency layer tints the vector at the same scale as the rest of the
+    /// item.
     private func drawTinted(_ image: NSImage, in rect: CGRect, color: NSColor) {
         guard let context = NSGraphicsContext.current else { return }
         context.saveGraphicsState()

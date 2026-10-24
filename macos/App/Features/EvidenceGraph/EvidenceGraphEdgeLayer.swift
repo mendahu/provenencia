@@ -125,7 +125,8 @@ struct EvidenceGraphEdgeLayer: View {
     }
 }
 
-/// Observes AppKit live drag offsets without invalidating the card `ForEach` parent.
+/// Observes AppKit live drag offsets without invalidating the SwiftUI base layer
+/// (cards are canvas items, not part of it).
 struct EvidenceGraphEdgesHost: View {
     @Bindable var pointer: GraphCanvasPointerController
     let snapshot: EvidenceGraphSnapshot

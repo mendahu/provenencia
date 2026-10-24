@@ -158,13 +158,7 @@ enum PVFont {
     /// raw value, so `NSFontDescriptor` resolution asks for the same weight
     /// tier the family actually ships faces for.
     private static func nsWeight(for weight: CGFloat) -> CGFloat {
-        switch weight {
-        case ..<PVFontWeight.regular: return NSFont.Weight.light.rawValue
-        case PVFontWeight.regular..<PVFontWeight.medium: return NSFont.Weight.regular.rawValue
-        case PVFontWeight.medium..<PVFontWeight.semibold: return NSFont.Weight.medium.rawValue
-        case PVFontWeight.semibold..<PVFontWeight.bold: return NSFont.Weight.semibold.rawValue
-        default: return NSFont.Weight.bold.rawValue
-        }
+        systemNSWeight(for: weight).rawValue
     }
 
     private static func systemNSWeight(for weight: CGFloat) -> NSFont.Weight {
