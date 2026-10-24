@@ -88,7 +88,7 @@ These are the calls for this spike. PR plans treat them as binding.
   - Deleting an Artifact keeps today's rule (refused while Citations use it) and may leave a graph with no links.
 
   Binds S12-03, S12-04, S12-05.
-- **The Citation composer offers only the graph's linked Artifacts.** Binds S12-10.
+- **The Citation composer offers only the graph's linked Artifacts**, and on each only the graph's Citations: those with an Observation on one of its Subjects, plus those with none yet (Citations added at S12-10 planning, user 2026-10-24). Binds S12-10.
 - **Promote is per graph.** A Promote layer is one graph's Subjects; filing and unfiling bridges is per graph. Binds S12-09.
 - **Agreement counts per Source.** The auto-reconciler keeps counting distinct Sources, not graphs. Binds S12-07, S12-09 (nothing in the reconciler changes).
 - **Credibility stays per Source.** No per-graph grade this spike.
@@ -120,7 +120,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S12-08 | Graph id end to end | 3 | RPCs, effects, wire and Swift mutations take graph ids together; per-graph query keys; `WorkspaceLocation` carries the graph, Promote's included; the handlers' bridge goes | — | S12-05, S12-07 | [Plan](prs/S12-08-graph-id-end-to-end.md) | Landed #528 |
 | S12-18 | A Subject needs its graph | 3 | `subjects.CreateInput.GraphID` required (Source read from the graph), `InsertTx`'s `SoleGraphTx` fallback deleted; test literals move onto graph ids | — | S12-08 | [Plan](prs/S12-18-subject-needs-graph.md) | Landed #532 |
 | S12-09 | Promote per graph | 3 | Proposal, Apply, bridge filing, unpromote and the Promote RPCs per graph; `SoleGraph` / `SoleGraphTx` deleted | — | S12-08, S12-18, S11-17, S11-25, S11-26, S11-27 | [Plan](prs/S12-09-promote-per-graph.md) | Landed #535 |
-| S12-10 | Composer offers linked Artifacts | 3 | The Citation composer lists only the graph's linked Artifacts | — | S12-05, S12-08 | — | Scoped |
+| S12-10 | Composer offers linked Artifacts | 3 | The Citation composer lists only the graph's linked Artifacts, and on each only the graph's Citations (citation list and counts re-keyed by graph) | — | S12-05, S12-08 | [Plan](prs/S12-10-composer-linked-artifacts.md) | Scoped |
 | S12-11 | Source page Graphs section | 4 | List graphs with Open and Delete; remove the header jump | S12-D2 | S12-05, S12-08, S12-D2 | — | Scoped |
 | S12-12 | Graph form | 4 | Create and edit a graph: name, description, the shared Artifact checklist | S12-D3 | S12-02, S12-11, S12-D3 | — | Scoped |
 | S12-13 | Artifact graph checkboxes | 4 | Graph checkboxes in the Add Artifact dialog and Artifact card edit, shown with two or more graphs; Swift only | S12-D4 | S12-12, S12-D4 | — | Scoped |
@@ -305,8 +305,8 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-10 — Composer offers linked Artifacts
 
-**Ships.** The Citation composer's Artifact picker lists only the current graph's linked Artifacts, read from the graph list.
-**Not this PR.** Editing links (S12-12, S12-13).
+**Ships.** The Citation composer's Artifact picker lists only the current graph's linked Artifacts, read from the graph list. On a shared Artifact the Citation stepper lists only the graph's Citations: `ListCitationsByArtifact` takes the graph and `CitationCountsBySource` becomes `CitationCountsByEvidenceGraph` (added at planning, user 2026-10-24). The empty callout names the graph.
+**Not this PR.** Editing links (S12-12, S12-13); the canvas's cite gate and Files list (S12-13).
 **Check.** With two graphs linked to different Artifacts, each composer offers only its own.
 **Context.** Working rules "The Citation composer offers only the graph's linked Artifacts", "One graph list".
 
@@ -328,7 +328,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-13 — Artifact graph checkboxes
 
-**Ships.** One checkbox per graph in the Add Artifact dialog (all on, sent as `graph_ids`) and in an Artifact card's edit (through link and unlink), shown only when the Source has two or more graphs. Swift only.
+**Ships.** One checkbox per graph in the Add Artifact dialog (all on, sent as `graph_ids`) and in an Artifact card's edit (through link and unlink), shown only when the Source has two or more graphs. Swift only. The canvas's cite gate and Files list read the graph's linked Artifacts (`CatalogEvidenceGraph.linkedArtifacts`; moved from S12-10 at its planning, user 2026-10-24).
 **Not this PR.** Graph creation (S12-12).
 **Check.** On a one-graph Source nothing changes; on a three-graph Source a new page can be linked to one graph only.
 **Context.** Working rule "Single-graph Sources hide link checkboxes"; brief S12-D4.
