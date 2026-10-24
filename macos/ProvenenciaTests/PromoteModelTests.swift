@@ -46,10 +46,10 @@ struct PromoteModelTests {
         )
     }
 
-    private func model(store: FakeStore, subjectID: String) -> PromoteModel {
+    private func model(store: FakeStore, subjectID: String, graphID: String? = nil) -> PromoteModel {
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let entry = PromoteEntry(location: .promote(
-            sourceId: sourceID, graphId: graphID, subjectId: subjectID, kind: .person, ref: "CPR-1", title: "James", sourceTitle: "Census"
+            sourceId: sourceID, graphId: graphID ?? self.graphID, subjectId: subjectID, kind: .person, ref: "CPR-1", title: "James", sourceTitle: "Census"
         ))!
         let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1")
         let _: QueryHandle<EvidenceGraphRows> = session.query(model.graphKey)
@@ -156,9 +156,33 @@ struct PromoteModelTests {
         #expect(model.sheetEvidence == .loading)
         let loaded = await waitUntil { model.flow.row("a")?.board != nil }
         #expect(loaded)
-        #expect(store.recordedCalls.contains("getPromoteClaimEvidence subject=a handle=e1 neighbors=0"))
+        #expect(store.recordedCalls.contains("getPromoteClaimEvidence graph=g-1 subject=a handle=e1 neighbors=0"))
         #expect(model.flow.row("a")?.pins == ["l:1"])
         #expect(model.sheetEvidence == .idle)
+    }
+
+    @Test func promoteSendsItsGraph() async {
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.evidenceGraphsByProject[projectDir]?.append(CatalogEvidenceGraph(
+            id: "g-2", ref: "GPH-2", sourceID: sourceID, name: "Jones", description: "", artifactIDs: []
+        ))
+        store.subjectsByGraph["g-2"] = [subject("z", ref: "CPR-Z", label: "Zed")]
+        store.subjectPositionsBySubject["z"] = CatalogSubjectPosition(subjectID: "z", gridX: 0, gridY: 0)
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("z", handleID: "e1")])]
+        store.promoteEvidence["z"] = evidence([("l:1", true)])
+        let model = model(store: store, subjectID: "z", graphID: "g-2")
+        await model.load()
+        model.openSheet("z")
+        let loaded = await waitUntil { model.flow.row("z")?.board != nil }
+        #expect(loaded)
+        model.closeSheet()
+        model.done()
+        let filed = await waitUntil { store.lastPromoteBatch != nil }
+        #expect(filed)
+        #expect(store.recordedCalls.contains("proposePromoteGraphAlignment graph=g-2"))
+        #expect(store.recordedCalls.contains("getPromoteClaimEvidence graph=g-2 subject=z handle=e1 neighbors=0"))
+        #expect(store.recordedCalls.contains("applyPromoteGraphAlignment graph=g-2 rows=1"))
+        #expect((store.lastPromoteBatch ?? []).map(\.subjectID) == ["z"])
     }
 
     @Test func aSheetOpenedAfterANameOrderChangeWordsNamesInTheNewOrder() async {
@@ -346,7 +370,7 @@ struct PromoteModelTests {
         // call takes a slot. Otherwise the newer request can sleep on the
         // older answer and, being current, keep it.
         let claimed = await waitUntil {
-            store.recordedCalls.filter { $0 == "proposePromoteGraphAlignment" }.count >= 2
+            store.recordedCalls.filter { $0 == "proposePromoteGraphAlignment graph=g-1" }.count >= 2
         }
         #expect(claimed)
         model.setTarget(subjectID: "a", token: "handle:e1")

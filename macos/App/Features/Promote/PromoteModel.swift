@@ -145,7 +145,7 @@ final class PromoteModel {
         do {
             let proposal = try await store.proposePromoteGraphAlignment(
                 projectDir: session.projectKey.projectDir,
-                sourceID: entry.sourceID,
+                graphID: entry.graphID,
                 fixed: []
             )
             // Rows are built from the graph's Subjects. Without them every row
@@ -214,7 +214,7 @@ final class PromoteModel {
             do {
                 let evidence = try await store.getPromoteClaimEvidence(
                     projectDir: session.projectKey.projectDir,
-                    sourceID: entry.sourceID,
+                    graphID: entry.graphID,
                     subjectID: subjectID,
                     handleID: handleID,
                     neighbors: neighbors
@@ -336,7 +336,7 @@ final class PromoteModel {
         do {
             let proposal = try await store.proposePromoteGraphAlignment(
                 projectDir: session.projectKey.projectDir,
-                sourceID: entry.sourceID,
+                graphID: entry.graphID,
                 fixed: fixed
             )
             let snapshot = await graphSnapshot()
@@ -364,7 +364,7 @@ final class PromoteModel {
             _ = try await store.applyPromoteGraphAlignment(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
-                sourceID: entry.sourceID,
+                graphID: entry.graphID,
                 seenRevision: seen,
                 rows: batch
             )
