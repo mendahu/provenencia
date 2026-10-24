@@ -141,23 +141,23 @@ struct GraphCanvasPointerPressTests {
     @Test func pressOnActionIsHeldUntilRelease() {
         let pointer = controller()
         pointer.mouseDown(gridPoint: CGPoint(x: 10, y: 70), windowPoint: .zero)
-        #expect(pointer.pressedCardAction?.cardID == "card")
-        #expect(pointer.pressedCardAction?.actionID == "promote")
+        #expect(pointer.pressedItemAction?.itemID == "card")
+        #expect(pointer.pressedItemAction?.actionID == "promote")
         pointer.mouseUp(gridPoint: CGPoint(x: 10, y: 70), windowPoint: .zero)
-        #expect(pointer.pressedCardAction == nil)
+        #expect(pointer.pressedItemAction == nil)
     }
 
     @Test func pressOffAnActionIsNotHeld() {
         let pointer = controller()
         pointer.mouseDown(gridPoint: CGPoint(x: 10, y: 10), windowPoint: .zero)
-        #expect(pointer.pressedCardAction == nil)
+        #expect(pointer.pressedItemAction == nil)
     }
 
     @Test func dragClearsThePress() {
         let pointer = controller()
         pointer.mouseDown(gridPoint: CGPoint(x: 10, y: 70), windowPoint: .zero)
         pointer.mouseDragged(gridPoint: CGPoint(x: 40, y: 70), windowPoint: .zero)
-        #expect(pointer.pressedCardAction == nil)
+        #expect(pointer.pressedItemAction == nil)
     }
 
     @Test func hoverExposesTargetHelp() {
@@ -301,7 +301,7 @@ struct GraphCanvasPointerPressTests {
         let pointer = controller()
         pointer.onToggleSelect = { _ in toggled += 1 }
         pointer.onSelect = { _ in selected += 1 }
-        pointer.onCardAction = { _, _ in actions += 1 }
+        pointer.onItemAction = { _, _ in actions += 1 }
         pointer.mouseDown(gridPoint: CGPoint(x: 50, y: 70), windowPoint: .zero, shiftDown: true)
         pointer.mouseUp(gridPoint: CGPoint(x: 50, y: 70), windowPoint: .zero)
         #expect(toggled == 1)

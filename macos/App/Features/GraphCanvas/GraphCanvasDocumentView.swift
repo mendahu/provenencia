@@ -7,7 +7,7 @@ import SwiftUI
 /// steal pointer events. Empty-canvas drag pans via ``GraphCanvasPointerController``.
 ///
 /// Two layers of content: the host's base SwiftUI view (grid, edges, overlays)
-/// at the bottom, and ``items`` — one view per card — above it. A card
+/// at the bottom, and ``items`` — one view per item — above it. An item
 /// drag moves its item view directly; no SwiftUI runs per pointer event.
 final class GraphCanvasDocumentView: NSView {
     let pointer: GraphCanvasPointerController

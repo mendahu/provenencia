@@ -19,34 +19,34 @@ final class GraphCanvasPointerController {
     var hitTargets: [GraphCanvasHitTarget] = []
     /// Where the item with an id is drawn among the items (higher is on top);
     /// nil for an id that is not an item. The document view wires it to its
-    /// item layer, so a click hits the card drawn on top.
+    /// item layer, so a click hits the item drawn on top.
     var stackIndex: (String) -> Int? = { _ in nil }
     /// Exclusive tool mode from the product host.
     var mode: GraphCanvasPointerToolMode = .idle
 
-    /// Mid-gesture card offsets, keyed by hit target id. A drag delta is the
+    /// Mid-gesture item offsets, keyed by hit target id. A drag delta is the
     /// same in grid and document space.
     /// Changes on every pointer event during a drag.
     private(set) var offsets: [String: CGSize] = [:]
     /// The item being dragged (the anchor), if any. Changes only at drag start and end.
     private(set) var draggingItemID: String?
-    /// Items that move with the anchor. Empty for a one-card drag. Changes only
+    /// Items that move with the anchor. Empty for a one-item drag. Changes only
     /// at drag start and end.
     private(set) var draggingPeerIDs: Set<String> = []
-    /// Idle hover over a nested card action (`cardID`, `actionID`), for paint.
-    private(set) var hoveredCardAction: (cardID: String, actionID: String)?
-    /// Tool-tip text of the hovered nested card action; nil when none is hovered
-    /// or the action has no help. Reads ``hoveredCardAction``, so every path that
+    /// Idle hover over a nested item action (`itemID`, `actionID`), for paint.
+    private(set) var hoveredItemAction: (itemID: String, actionID: String)?
+    /// Tool-tip text of the hovered nested item action; nil when none is hovered
+    /// or the action has no help. Reads ``hoveredItemAction``, so every path that
     /// clears hover clears it.
     var hoveredHelp: String? {
-        guard let hovered = hoveredCardAction,
-              let target = hitTargets.first(where: { $0.id == hovered.cardID })
+        guard let hovered = hoveredItemAction,
+              let target = hitTargets.first(where: { $0.id == hovered.itemID })
         else { return nil }
         return target.actions.first(where: { $0.id == hovered.actionID })?.help
     }
-    /// Idle press held on a nested card action, for pressed paint. Cleared on
-    /// release and when the press becomes a card drag.
-    private(set) var pressedCardAction: (cardID: String, actionID: String)?
+    /// Idle press held on a nested item action, for pressed paint. Cleared on
+    /// release and when the press becomes an item drag.
+    private(set) var pressedItemAction: (itemID: String, actionID: String)?
     /// Shift is down, as reported by the document view.
     private(set) var shiftHeld = false
     /// The selection rectangle being drawn, normalized, in grid space.
@@ -56,12 +56,12 @@ final class GraphCanvasPointerController {
     weak var viewport: GraphCanvasViewportController?
 
     var onSelect: ((String) -> Void)?
-    /// A card drag started on this id. Returns every id that moves, anchor included.
+    /// An item drag started on this id. Returns every id that moves, anchor included.
     var onDragBegan: ((String) -> Set<String>)?
     var onDeselect: (() -> Void)?
     var onDragEnded: ((String, CGSize) -> Void)?
     /// Shift-click on a hit target: add it to the selection or take it out.
-    /// Replaces ``onSelect`` and the card action for that click.
+    /// Replaces ``onSelect`` and the item action for that click.
     var onToggleSelect: ((String) -> Void)?
     /// An empty-canvas rectangle was released: ids of the hit targets it overlaps,
     /// and whether Shift was down at press (add to the selection).
@@ -71,15 +71,15 @@ final class GraphCanvasPointerController {
     var onShiftHeldChanged: ((Bool) -> Void)?
     var onPlace: ((CGPoint) -> Void)?
     var onConnectPick: ((String) -> Void)?
-    /// Idle click on a nested card action (edit / Add property); `(targetID, actionID)`.
-    var onCardAction: ((String, String) -> Void)?
+    /// Idle click on a nested item action (an edit pencil); `(targetID, actionID)`.
+    var onItemAction: ((String, String) -> Void)?
     /// Grid point while hovering in place/connect; `nil` when pointer leaves.
     var onHover: ((CGPoint?) -> Void)?
 
     private enum Gesture {
         case none
         case pendingClick(start: CGPoint, targetID: String?, shiftDown: Bool)
-        case draggingCard(id: String, start: CGPoint, peers: Set<String>)
+        case draggingItem(id: String, start: CGPoint, peers: Set<String>)
         /// Empty-canvas selection rectangle between two grid points.
         case marquee(origin: CGPoint, current: CGPoint, additive: Bool)
         /// Empty-canvas pan (idle only); `lastWindow` for incremental deltas.
@@ -89,8 +89,8 @@ final class GraphCanvasPointerController {
     private var gesture: Gesture = .none
     private var panCursorPushed = false
 
-    /// One dictionary write for the anchor and every card moving with it.
-    /// Assigning each id on its own notifies observers once per card.
+    /// One dictionary write for the anchor and every item moving with it.
+    /// Assigning each id on its own notifies observers once per item.
     private func replaceDragOffsets(anchor: String, peers: Set<String>, offset: CGSize) {
         var next: [String: CGSize] = [:]
         next.reserveCapacity(peers.count + 1)
@@ -126,7 +126,7 @@ final class GraphCanvasPointerController {
 
     func setPointerInside(_ inside: Bool) {
         if !inside {
-            hoveredCardAction = nil
+            hoveredItemAction = nil
             onHover?(nil)
         }
     }
@@ -137,7 +137,7 @@ final class GraphCanvasPointerController {
         _ = windowPoint
         switch mode {
         case .placing:
-            // Card under cursor blocks place (click is ignored).
+            // Item under cursor blocks place (click is ignored).
             let hit = GraphCanvasPointerHitTesting.topmostTarget(at: gridPoint, in: hitTargets, stackIndex: stackIndex)
             gesture = .pendingClick(start: gridPoint, targetID: hit?.id, shiftDown: shiftDown)
         case .connecting:
@@ -151,7 +151,7 @@ final class GraphCanvasPointerController {
             let hit = GraphCanvasPointerHitTesting.topmostTarget(at: gridPoint, in: hitTargets, stackIndex: stackIndex)
             gesture = .pendingClick(start: gridPoint, targetID: hit?.id, shiftDown: shiftDown)
             if let hit, let action = GraphCanvasPointerHitTesting.action(at: gridPoint, in: hit) {
-                pressedCardAction = (hit.id, action.id)
+                pressedItemAction = (hit.id, action.id)
             }
         }
     }
@@ -174,9 +174,9 @@ final class GraphCanvasPointerController {
             guard GraphCanvasPointerHitTesting.isDrag(from: start, to: gridPoint) else { return }
             let pointsAtCards = mode == .idle || mode == .selecting
             if pointsAtCards, let targetID {
-                pressedCardAction = nil
+                pressedItemAction = nil
                 let peers = (onDragBegan?(targetID) ?? [targetID]).subtracting([targetID])
-                gesture = .draggingCard(id: targetID, start: start, peers: peers)
+                gesture = .draggingItem(id: targetID, start: start, peers: peers)
                 draggingItemID = targetID
                 draggingPeerIDs = peers
                 let offset = CGSize(
@@ -195,11 +195,11 @@ final class GraphCanvasPointerController {
                     pushPanCursor()
                 }
             } else {
-                // Past threshold with no card drag (place/connect): cancel click.
+                // Past threshold with no item drag (place/connect): cancel click.
                 gesture = .none
             }
 
-        case .draggingCard(let id, let start, let peers):
+        case .draggingItem(let id, let start, let peers):
             let offset = CGSize(
                 width: gridPoint.x - start.x,
                 height: gridPoint.y - start.y
@@ -213,7 +213,7 @@ final class GraphCanvasPointerController {
 
     func mouseUp(gridPoint: CGPoint, windowPoint: CGPoint) {
         _ = windowPoint
-        pressedCardAction = nil
+        pressedItemAction = nil
         switch gesture {
         case .backgroundPanning:
             popPanCursor()
@@ -253,7 +253,7 @@ final class GraphCanvasPointerController {
                        )
                     {
                         onSelect?(targetID)
-                        onCardAction?(targetID, action.id)
+                        onItemAction?(targetID, action.id)
                     } else {
                         onSelect?(targetID)
                     }
@@ -262,7 +262,7 @@ final class GraphCanvasPointerController {
                 }
             }
 
-        case .draggingCard(let id, let start, let peers):
+        case .draggingItem(let id, let start, let peers):
             let delta = CGSize(
                 width: gridPoint.x - start.x,
                 height: gridPoint.y - start.y
@@ -282,7 +282,7 @@ final class GraphCanvasPointerController {
     func mouseMoved(gridPoint: CGPoint) {
         switch mode {
         case .placing, .connecting:
-            hoveredCardAction = nil
+            hoveredItemAction = nil
             onHover?(gridPoint)
         case .idle, .selecting:
             updateHoveredAction(at: gridPoint)
@@ -305,14 +305,14 @@ final class GraphCanvasPointerController {
         ),
             let action = GraphCanvasPointerHitTesting.action(at: gridPoint, in: target)
         else {
-            if hoveredCardAction != nil {
-                hoveredCardAction = nil
+            if hoveredItemAction != nil {
+                hoveredItemAction = nil
             }
             return
         }
-        let next = (cardID: target.id, actionID: action.id)
-        if hoveredCardAction?.cardID != next.cardID || hoveredCardAction?.actionID != next.actionID {
-            hoveredCardAction = next
+        let next = (itemID: target.id, actionID: action.id)
+        if hoveredItemAction?.itemID != next.itemID || hoveredItemAction?.actionID != next.actionID {
+            hoveredItemAction = next
         }
     }
 

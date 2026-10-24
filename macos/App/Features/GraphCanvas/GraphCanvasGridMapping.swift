@@ -12,7 +12,7 @@ enum GraphCanvasGridMapping {
 
     /// Grid-space center of the cell at integer `(gridX, gridY)`.
     ///
-    /// Cell `(0, 0)` is centered at `(spacing/2, spacing/2)` so a card sits in
+    /// Cell `(0, 0)` is centered at `(spacing/2, spacing/2)` so an item sits in
     /// the first grid square rather than on the origin corner.
     static func gridPoint(
         gridX: Int64,

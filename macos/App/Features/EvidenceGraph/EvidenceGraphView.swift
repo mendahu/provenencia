@@ -929,7 +929,7 @@ private struct EvidenceGraphDocumentBody: View {
                 }
             }
         }
-        pointer.onCardAction = { id, actionID in
+        pointer.onItemAction = { id, actionID in
             if let location = model.performCardAction(subjectID: id, actionID: actionID) {
                 navigation.go(to: location)
             }
@@ -1014,8 +1014,8 @@ private struct EvidenceGraphDocumentBody: View {
     /// What every card draws, bridges first so subjects paint above them.
     private var cards: [EvidenceCanvasCard] {
         let text = text
-        let hovered = pointer.hoveredCardAction
-        let pressed = pointer.pressedCardAction
+        let hovered = pointer.hoveredItemAction
+        let pressed = pointer.pressedItemAction
         func state(_ id: String) -> EvidenceCanvasCard.State {
             EvidenceCanvasCard.State(
                 isSelected: model.selectedSubjectIDs.contains(id),
@@ -1023,8 +1023,8 @@ private struct EvidenceGraphDocumentBody: View {
                 isConnectingFrom: model.connectOriginID == id,
                 isDragging: pointer.draggingItemID == id || pointer.draggingPeerIDs.contains(id),
                 canCite: model.canCite,
-                hoveredActionID: hovered?.cardID == id ? hovered?.actionID : nil,
-                pressedActionID: pressed?.cardID == id ? pressed?.actionID : nil
+                hoveredActionID: hovered?.itemID == id ? hovered?.actionID : nil,
+                pressedActionID: pressed?.itemID == id ? pressed?.actionID : nil
             )
         }
         return bridges.map { placed in

@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-/// Nested clickable region inside a card hit target (edit pencil, Add property).
+/// Nested clickable region inside an item hit target (an edit pencil).
 struct GraphCanvasActionTarget: Equatable, Sendable, Identifiable {
     var id: String
     var frame: CGRect
@@ -16,7 +16,7 @@ struct GraphCanvasActionTarget: Equatable, Sendable, Identifiable {
 struct GraphCanvasHitTarget: Equatable, Sendable, Identifiable {
     var id: String
     var frame: CGRect
-    /// When `false`, connecting mode ignores this target (e.g. bridge cards).
+    /// When `false`, connecting mode ignores this target (e.g. decorative items).
     var acceptsConnect: Bool
     /// Grid-space action zones; idle clicks prefer these over select.
     var actions: [GraphCanvasActionTarget] = []
@@ -27,7 +27,7 @@ enum GraphCanvasPointerToolMode: Equatable, Sendable {
     case idle
     case placing
     case connecting
-    /// Card click, drag, and hover match ``idle``; an empty-canvas drag draws a
+    /// Item click, drag, and hover match ``idle``; an empty-canvas drag draws a
     /// selection rectangle instead of panning.
     case selecting
 }

@@ -1,10 +1,10 @@
 import CoreGraphics
 import Foundation
 
-/// Pure edge helpers for canvas documents (card-edge attachment + cubic path).
+/// Pure edge helpers for canvas documents (item-edge attachment + cubic path).
 ///
 /// Keep catalog / product types out — callers pass rectangles and points.
-/// Endpoints tuck under the card fill along the hit-edge normal so diagonal
+/// Endpoints tuck under the item fill along the hit-edge normal so diagonal
 /// approaches still end inside the chrome (not merely toward the rect center).
 enum GraphCanvasEdgeGeometry {
     /// Inward distance from the AABB edge under the fill.
@@ -78,7 +78,7 @@ enum GraphCanvasEdgeGeometry {
         return path
     }
 
-    /// Segment between two card frames: attach on each rect edge, tuck under
+    /// Segment between two item frames: attach on each rect edge, tuck under
     /// the fill along the edge normal, then draw a cubic.
     ///
     /// `start` lies on `fromRect`, `end` on `toRect`.

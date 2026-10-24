@@ -1,6 +1,6 @@
 @preconcurrency import AppKit
 
-/// One host-drawn item the canvas positions in AppKit — a graph card.
+/// One host-drawn item the canvas positions in AppKit — a graph item.
 ///
 /// Each item is a ``GraphCanvasItemView`` the host builds with ``makeView``, sized by its
 /// `contentSize` plus ``GraphCanvasItemView/paintOutset`` on every side,
@@ -28,7 +28,7 @@ struct GraphCanvasItem {
 
 /// An item's entry in a document-level VoiceOver rotor.
 struct GraphCanvasRotorEntry: Equatable {
-    /// The rotor's name ("Subjects"); items sharing it form one rotor.
+    /// The rotor's name ("Subjects", say); items sharing it form one rotor.
     var rotor: String
     /// What VoiceOver reads for this item in the rotor.
     var label: String
@@ -77,7 +77,7 @@ final class GraphCanvasItemLayer {
     static let previewID = "graphCanvas.preview"
 
     /// A translucent stand-in the host shows while it waits for the researcher
-    /// (the card a click would create). It goes through the same build, scale
+    /// (the item a click would create). It goes through the same build, scale
     /// and placement as an item, but is not one: it has no rotor entry or stack
     /// index, `update` never removes it, a drag never moves it, and it is
     /// always on top. Its view is rebuilt only when its model changes, so
@@ -132,7 +132,7 @@ final class GraphCanvasItemLayer {
 
     /// Where `id` is drawn among the items, 0 at the bottom; nil for an id that
     /// is not an item. Follows the host's order with raised items last, so the
-    /// pointer can pick the card drawn on top.
+    /// pointer can pick the item drawn on top.
     func stackIndex(of id: String) -> Int? {
         stackIndices[id]
     }
