@@ -113,8 +113,8 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-33 | Evidence sheet audit follow-up | 5 | Items 1 – 10, A, B, C, F, G, H, I of the evidence sheet area audit: one sheet dismissal, engine-named relationships, one seeded-term wording table, whole-phrase copy, an evidence board for responsiveness, unread wire fields removed, docs | — | S11-20 | [plan](prs/S11-33-evidence-sheet-audit.md) | Landed #525 |
 | S11-26 | Connections file by their ends | 6 | Drop the bridge switch-off: `SkipBridgeIDs`, `skip_bridge_ids`, the `skip` parameters | — | — | [plan](prs/S11-26-connections-by-ends.md) | Landed #527 |
 | S11-27 | Connection subrows on Promote | 6 | Each connection as a subrow of a row it joins, its state from its ends; the panel and toggles go | S11-D1 | S11-26, S11-D1 | [plan](prs/S11-27-connection-subrows.md) | Landed #530 |
-| S11-21 | Large-Source performance check | 7 | 100-Subject benchmark; memoize only if it fails | — | S11-16 | — | Scoped |
-| S11-31 | Bound the Source cache | 7 | Loaded Source graphs and their memos are evicted least recently used beyond a cap | — | S11-19 | — | Scoped |
+| S11-21 | Large-Source performance check | 7 | 100-Subject budgeted test; bound nominations, memoize candidates, warm the name format | — | S11-16, S11-19 | [plan](prs/S11-21-large-source-performance.md) | Planned |
+| S11-31 | Bound the Source cache | 7 | Loaded Source graphs and their memos are evicted least recently used beyond a cap | — | S11-19, S11-21 | — | Scoped |
 | S11-28 | Fold a nickname into its given name | 2 | Reconciler folds a nickname or abbreviation into its formal name, keeping the set's head; a reviewed table directs two-way pairs; cache reads the product alias tables | — | S11-06 | [plan](prs/S11-28-alias-fold.md) | Planned |
 | S11-29 | Quote nicknames and add former surnames | 2 | Nicknames in quotes everywhere; `former_surname` part type in parentheses, italic on the Person titles | — | — | [plan](prs/S11-29-name-display.md) | Planned |
 | S11-30 | Gender meets sex at birth in its own words | 3 | The sex / gender pool maps gender terms into sex at birth terms through a registry crosswalk; `man` agrees with `male` | — | S11-10 | — (bugfix, user 2026-10-21) | In review |
@@ -210,7 +210,7 @@ S11-13 ──▶ S11-14 ──┐
 S11-13 ──▶ S11-15 ──┴──▶ S11-16 ──▶ S11-17 ──▶ S11-18
                             ├──▶ S11-19 ──▶ S11-25 ──▶ S11-32 ──▶ S11-20
                             └──▶ S11-21
-S11-19 ──▶ S11-31
+S11-19, S11-21 ──▶ S11-31
 S11-D1 ──▶ S11-18, S11-27
 S11-26 ──▶ S11-27
 S10-54 ──▶ S11-32   (Spike 10)
