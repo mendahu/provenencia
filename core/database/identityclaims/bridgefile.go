@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
-	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 )
 
 // FileBridgesTx files every unfiled bridge whose ends touch subjectID, in
@@ -28,7 +28,7 @@ func FileBridgesTx(tx *sql.Tx, subjectID []byte) (assocIDs [][]byte, changes []r
 	if len(subjectID) != 16 {
 		return nil, nil, nil
 	}
-	bridges, err := bridgeHeads(tx, "s.id = ? OR "+touchesEnd, subjectID, subjectID)
+	bridges, err := bridgeHeads(tx, fileCond, subjectID, subjectID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -42,7 +42,7 @@ func FileEvidenceGraphBridgesTx(tx *sql.Tx, graphID []byte) (assocIDs [][]byte, 
 	if len(graphID) != 16 {
 		return nil, nil, nil
 	}
-	heads, err := bridgeHeads(tx, "s.graph_id = ?", graphID)
+	heads, err := bridgeHeads(tx, graphCond, graphID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -76,11 +76,16 @@ type bridgeHead struct {
 
 // touchesEnd is true for a bridge Subject s (alias) that has subject ? as an
 // end: one of its Observations names that Subject as its value. It takes one
-// argument and applies no polarity filter, as filing reads none.
-const touchesEnd = `EXISTS (
-		      SELECT 1 FROM observations o
-		      WHERE o.subject_id = s.id AND o.value_subject_id = ?
-		    )`
+// argument and applies no polarity filter, as filing reads none. The IN
+// subquery lets SQLite seek the Observations by value and then s by id.
+const touchesEnd = `s.id IN (SELECT o.subject_id FROM observations o WHERE o.value_subject_id = ?)`
+
+// fileCond is subject ? itself or a bridge touching it (two arguments, the
+// same id twice). The UNION ALL keeps the seek on s.id.
+const fileCond = `s.id IN (SELECT ? UNION ALL SELECT o.subject_id FROM observations o WHERE o.value_subject_id = ?)`
+
+// graphCond is a bridge on Evidence graph ? (one argument).
+const graphCond = `s.graph_id = ?`
 
 // UnfileBridges is the inverse of FileBridgesTx: it deletes, audited, the
 // accepted claim of every bridge that has subjectID as an end, pins first, in
@@ -125,12 +130,7 @@ func bridgeHeads(tx *sql.Tx, cond string, condArgs ...any) ([]bridgeHead, error)
 		args = append(args, k)
 	}
 	args = append(args, condArgs...)
-	rows, err := tx.Query(`SELECT s.id, st.key, s.subject_type_id
-		FROM subjects s
-		JOIN subject_types st ON st.id = s.subject_type_id AND st.origin = 'provenencia'
-		WHERE st.key IN (`+database.SQLInPlaceholders(len(keys))+`)
-		  AND (`+cond+`)
-		ORDER BY s.id`, args...)
+	rows, err := tx.Query(bridgeHeadsSQL(cond, len(keys)), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -442,4 +442,17 @@ func queryAssociation(tx *sql.Tx, typeKey string, ends []endpoint, termKey strin
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil
+}
+
+// bridgeHeadsSQL is the bridgeHeads query for nKeys bridge type keys. CROSS
+// JOIN keeps SQLite starting at s through cond's selective seek; left to
+// order the join, it starts at the type index and reads every bridge Subject
+// in the catalog (see graphcache/load.go linkLoadSQL).
+func bridgeHeadsSQL(cond string, nKeys int) string {
+	return `SELECT s.id, st.key, s.subject_type_id
+		FROM subjects s
+		CROSS JOIN subject_types st ON st.id = s.subject_type_id AND st.origin = 'provenencia'
+		WHERE st.key IN (` + database.SQLInPlaceholders(nKeys) + `)
+		  AND (` + cond + `)
+		ORDER BY s.id`
 }
