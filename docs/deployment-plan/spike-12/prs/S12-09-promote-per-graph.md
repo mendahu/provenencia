@@ -1,6 +1,6 @@
 # S12-09 — Promote per graph
 
-**Status:** Planned
+**Status:** Landed in [#535](https://github.com/mendahu/provenencia/pull/535) (2026-10-24)
 **Spike / slice:** Spike 12 · Slice 3 — Graph id end to end
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the Promote page looks and behaves as today; only the id it sends changes)

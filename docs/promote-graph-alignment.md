@@ -111,7 +111,7 @@ The work is about (Subjects + bridges) × candidates × log: well under a millis
 
 ## 5.1 Layer shape: every bridge pair, and orphans
 
-A layer is **one Source’s Subjects**, not one connected component. *Map the rest of this graph* lists every primary Subject on that Source, including stragglers.
+A layer is **one Evidence graph’s Subjects**, not one connected component. *Map the rest of this graph* lists every primary Subject on that graph, including stragglers.
 
 **Every Evidence bridge is a pair** of primary ends (call them subject and object). Promotion status is independent on each end. Graph alignment and bridge filing together cover all four:
 
@@ -147,7 +147,7 @@ A line starts pinned only when value compare says the values are the same; the r
 
 There are no database calls during the walk. Everything it reads is loaded first:
 
-1. **The layer:** the Source's one Evidence graph's Subjects, bridges, Observations and provenance, held on the catalog's in-memory graph (`graphcache`, `g.EvidenceGraph`).
+1. **The layer:** one Evidence graph's Subjects, bridges, Observations and provenance, held on the catalog's in-memory graph (`graphcache`, `g.EvidenceGraph`).
 2. **Seed handles:**
    - the fixed pairs;
    - the handles of already-promoted Subjects;

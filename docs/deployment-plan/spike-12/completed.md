@@ -2,6 +2,12 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-09 — Promote per graph
+
+**Landed 2026-10-24** in [#535](https://github.com/mendahu/provenencia/pull/535). Promote works on one Evidence graph: the proposal, the claim evidence sheet, Done (claims, pins and the bridges it files) and Unpromote's bridge unfiling each read or write the Subjects of one graph, and the three Promote requests carry `graph_id` in place of `source_id` (old numbers reserved). On a Source with two graphs a Done files only its own graph's Subjects, and a waiting bridge on the other graph stays unfiled until that graph's own Done. `FileSourceBridgesTx` is now `FileEvidenceGraphBridgesTx`, filing and unfiling share one `bridgeHeads` query, `UnfileBridges` takes only the Subject, and `evidencegraphs.SoleGraph` and `SoleGraphTx` are deleted. The Promote page sends the graph id it already held; the researcher sees no change.
+
+**Not this PR.** A Promote entry point per graph on the Source page or Sources list (S12-11, S12-14); graph names in Promote breadcrumbs (S12-11); layer memoization for large Sources (S11-21).
+
 ## S12-18 — A Subject needs its graph
 
 **Landed 2026-10-24** in [#532](https://github.com/mendahu/provenencia/pull/532). `subjects.CreateInput` loses `SourceID` and `GraphID` is required: a new Subject names the Evidence graph it joins and the engine reads its Source from that graph, so a second graph on a Source can never send a Subject to the wrong one. `subjects.InsertTx`'s `SoleGraphTx` fallback is deleted, and the cited bridge takes only its endpoints' graph. Every test that built a Subject now passes a graph id, and the copied test helpers that create one Subject share `subjectstest.On` / `OfType`. The researcher sees no change.
