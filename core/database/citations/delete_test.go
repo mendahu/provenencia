@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -16,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -72,22 +74,9 @@ func TestCitationDeleteConnectionOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	alice, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
-		}, &subjects.Placement{GridX: 0, GridY: 0})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	wedding, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Wedding",
-		}, &subjects.Placement{GridX: 4, GridY: 4})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+	alice := subjectstest.At(t, c, userID, graph, personType.ID, "Alice", subjects.Placement{GridX: 0, GridY: 0})
+	wedding := subjectstest.At(t, c, userID, graph, eventType.ID, "Wedding", subjects.Placement{GridX: 4, GridY: 4})
 	roleProp, err := properties.Lookup(c, "role", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)

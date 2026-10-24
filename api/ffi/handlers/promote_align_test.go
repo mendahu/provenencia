@@ -10,12 +10,13 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -45,12 +46,8 @@ func personOnNewSource(t *testing.T, dir, userID, typeID, sexKey, polarity strin
 		if err != nil {
 			return err
 		}
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: uid[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, uid[:], subjects.CreateInput{SourceID: src.ID, SubjectTypeID: tid[:]}, nil)
-		})
-		if err != nil {
-			return err
-		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+		s := subjectstest.OfType(t, c, uid[:], graph, tid[:], "")
 		name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err

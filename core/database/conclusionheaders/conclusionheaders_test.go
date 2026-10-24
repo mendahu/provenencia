@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -29,6 +30,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -49,6 +51,7 @@ type fixture struct {
 	c        *database.Catalog
 	source   sources.Source
 	artifact artifacts.Artifact
+	graph    []byte // the Source's one Evidence graph
 	name     properties.Property
 }
 
@@ -78,7 +81,7 @@ func newFixture(t *testing.T) *fixture {
 	must(t, err)
 	name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 	must(t, err)
-	return &fixture{t: t, c: c, source: src, artifact: art, name: name}
+	return &fixture{t: t, c: c, source: src, artifact: art, graph: evidencegraphstest.SoleGraph(t, c, src.ID).ID, name: name}
 }
 
 func (f *fixture) typeID(key string) []byte {
@@ -91,10 +94,7 @@ func (f *fixture) typeID(key string) []byte {
 func (f *fixture) person(forms ...string) (subjects.Subject, []observations.Observation, []byte) {
 	f.t.Helper()
 	personType := f.typeID("person")
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: personType}, nil)
-	})
-	must(f.t, err)
+	s := subjectstest.OfType(f.t, f.c, userID, f.graph, personType, "")
 	var obs []observations.Observation
 	if len(forms) > 0 {
 		var in []observations.Input
@@ -191,11 +191,8 @@ func TestListPersonsSortsBySortedPartsNotForm(t *testing.T) {
 	f.person("Zachary Adams")
 	formOnly := &namevalue.Value{Form: "Aaron Aardvark"}
 	personType := f.typeID("person")
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: personType}, nil)
-	})
-	must(t, err)
-	_, err = writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+	s := subjectstest.OfType(t, f.c, userID, f.graph, personType, "")
+	_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, []observations.Input{{
 			SubjectID: s.ID, PropertyID: f.name.ID, Name: formOnly,
 		}})
@@ -288,7 +285,7 @@ func TestHeadersShowKeptValuesOnly(t *testing.T) {
 				return canonicalentities.Create(tx, userID, p6a4)
 			})
 			must(t, err)
-			s := f.bare(tt.kind)
+			s := subjectstest.On(f.t, f.c, userID, f.graph, tt.kind, "")
 			f.cite(s, tt.cite(f)...)
 			_, err = writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
 				return identityclaims.Create(tx, userID, identityclaims.CreateInput{
@@ -468,15 +465,12 @@ func pointYear(year int) *datevalue.Value {
 func (f *fixture) event(in ...observations.Input) []byte {
 	f.t.Helper()
 	eventType := f.typeID("event")
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: eventType}, nil)
-	})
-	must(f.t, err)
+	s := subjectstest.OfType(f.t, f.c, userID, f.graph, eventType, "")
 	if len(in) > 0 {
 		for i := range in {
 			in[i].SubjectID = s.ID
 		}
-		_, err = writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
 		})
 		must(f.t, err)
@@ -631,10 +625,8 @@ func (f *fixture) lowTrust(src sources.Source) {
 func (f *fixture) place(art artifacts.Artifact, names ...string) []byte {
 	f.t.Helper()
 	placeType := f.typeID("place")
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: art.SourceID, SubjectTypeID: placeType}, nil)
-	})
-	must(f.t, err)
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
+	s := subjectstest.OfType(f.t, f.c, userID, graph, placeType, "")
 	f.citeToponyms(art, s.ID, names...)
 	p, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
 		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
@@ -662,12 +654,10 @@ func (f *fixture) citeToponyms(art artifacts.Artifact, subjectID []byte, names .
 func (f *fixture) joinPlace(art artifacts.Artifact, entityID []byte, names ...string) {
 	f.t.Helper()
 	placeType := f.typeID("place")
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: art.SourceID, SubjectTypeID: placeType}, nil)
-	})
-	must(f.t, err)
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
+	s := subjectstest.OfType(f.t, f.c, userID, graph, placeType, "")
 	f.citeToponyms(art, s.ID, names...)
-	_, err = writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+	_, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
 		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
 	})
 	must(f.t, err)

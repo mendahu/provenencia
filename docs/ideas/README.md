@@ -25,7 +25,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`text-quote-locators.md`](text-quote-locators.md)
 - [`audio-video-sources.md`](audio-video-sources.md)
 - [`shared-list-helpers.md`](shared-list-helpers.md) — one list of graph mutations (the other two items are in Spike 11)
-- [`test-subject-fixtures.md`](test-subject-fixtures.md) — about 25 Go test helpers copy one Subject create; fold them into one `subjectstest` fixture
+- [`test-subject-fixtures.md`](test-subject-fixtures.md) — test Subject helpers that place a Subject do it in a second write; let `subjectstest` take a placement
 - [`settled-list-count-publish.md`](settled-list-count-publish.md) — Properties badge is off by one after create or delete; one publish-on-settled rule for Sources, Properties and Metadata
 - [`depictions-and-likenesses.md`](depictions-and-likenesses.md) — leftovers after Spike 10 (other keys, signature, transparent crop, Windows PDF draw)
 - [`coverage-aware-similarity.md`](coverage-aware-similarity.md) — a match on one shared property (a surname-only record) scores similarity 1 and shows as an unbanded alternative

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/google/uuid"
@@ -225,30 +226,10 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	place, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: placeType.ID, Label: "Leeds",
-		}, nil)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	alice, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
-		}, &subjects.Placement{GridX: 0, GridY: 0})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	wedding, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Wedding",
-		}, &subjects.Placement{GridX: 4, GridY: 4})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+	place := subjectstest.OfType(t, c, userID, graph, placeType.ID, "Leeds")
+	alice := subjectstest.At(t, c, userID, graph, personType.ID, "Alice", subjects.Placement{GridX: 0, GridY: 0})
+	wedding := subjectstest.At(t, c, userID, graph, eventType.ID, "Wedding", subjects.Placement{GridX: 4, GridY: 4})
 	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
@@ -517,14 +498,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bob, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Bob",
-			}, &subjects.Placement{GridX: 8, GridY: 0})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		bob := subjectstest.At(t, c, userID, graph, personType.ID, "Bob", subjects.Placement{GridX: 8, GridY: 0})
 		if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 				ArtifactID: art.ID, LocatorJSON: testLocator,
@@ -751,18 +725,8 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sub, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: empty.ID, SubjectTypeID: personType.ID, Label: "Alice",
-		}, nil)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	graph := evidencegraphstest.SoleGraph(t, c, empty.ID).ID
+	sub := subjectstest.On(t, c, userID, graph, "person", "Alice")
 
 	t.Run("source blocked by subject", func(t *testing.T) {
 		got := mustImpact(t, c, catalogmodel.KindSource, empty.ID)
@@ -799,19 +763,8 @@ func TestImpactEvidenceGraph(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sub, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
-		}, nil)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	def := evidencegraphstest.SoleGraph(t, c, src.ID)
+	sub := subjectstest.On(t, c, userID, def.ID, "person", "Alice")
 
 	t.Run("a Source's only graph is last_graph", func(t *testing.T) {
 		got := mustImpact(t, c, catalogmodel.KindEvidenceGraph, def.ID)
@@ -1098,7 +1051,7 @@ func TestLocationsNameTheirGraph(t *testing.T) {
 		t.Fatal(err)
 	}
 	def, jones, page := artifactstest.Split(t, c, userID, src.ID, "Jones")
-	subject := artifactstest.SubjectOn(t, c, userID, src.ID, jones.ID, "place", "Leeds")
+	subject := subjectstest.On(t, c, userID, jones.ID, "place", "Leeds")
 	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)

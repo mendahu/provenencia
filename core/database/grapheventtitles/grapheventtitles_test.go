@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
@@ -21,7 +22,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/eventtitle"
@@ -72,13 +72,9 @@ func newFixture(t *testing.T) *fixture {
 
 func (f *fixture) subject(kind, label string, in ...observations.Input) subjects.Subject {
 	f.t.Helper()
-	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
-	must(f.t, err)
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.src.ID, SubjectTypeID: st.ID, Label: label}, nil)
-	})
-	must(f.t, err)
-	_, err = writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, f.src.ID).ID
+	s := subjectstest.On(f.t, f.c, userID, graph, kind, label)
+	_, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
 		return subjectpositions.Set(tx, s.ID, 0, f.y)
 	})
 	must(f.t, err)
@@ -282,7 +278,7 @@ func TestForEvidenceGraph(t *testing.T) {
 		f := newFixture(t)
 		f.subject("event", "Default event")
 		_, jones, _ := artifactstest.Split(t, f.c, userID, f.src.ID, "Jones")
-		jonesEvent := artifactstest.SubjectOn(t, f.c, userID, f.src.ID, jones.ID, "event", "Jones event")
+		jonesEvent := subjectstest.On(t, f.c, userID, jones.ID, "event", "Jones event")
 		eg, err := f.c.Graph().EvidenceGraph(jones.ID)
 		must(t, err)
 		got := grapheventtitles.FromStored(eg, nil, nil)

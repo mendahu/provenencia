@@ -414,7 +414,7 @@ CREATE TABLE evidence_graph_artifacts (
 Rules the schema and `core/database/evidencegraphs` hold today:
 
 - Every Source has at least one graph. `sources.Create` mints one named `Default` with a fresh id and a `GPH-` ref. Migration 55 gave each existing Source a `Default` graph with a fresh id of its own; `evidencegraphs.EnsureRefs` mints those graphs' refs when the project next opens.
-- A new Subject joins the graph in `subjects.CreateInput.GraphID` when given, else its Source's graph through `evidencegraphs.SoleGraphTx`, the one bridge until a Subject must name its graph.
+- A new Subject joins the graph in `subjects.CreateInput.GraphID`, which is required; its Source is the graph's Source.
 - Graphs are isolated at write time: `observations.requireSameGraph` refuses an Observation whose Subject, Subject value or Citation Artifact is not in, or linked to, one graph (`observations.other_graph`). A reification (`source`) Subject may be the value of a non-edge Observation in any graph.
 - A new Artifact is linked to every graph of its Source, or to the graphs in `CreateInput.GraphIDs`. A graph of another Source, an unknown id or a repeated id is `evidencegraphs.invalid` and the whole write rolls back.
 - `Link` refuses an Artifact of another Source. `Unlink` is refused while a Citation on the Artifact has an Observation on a Subject of that graph (`evidencegraphs.artifact_in_use`) and when it is the graph's only link (`evidencegraphs.last_artifact`). Linking a linked pair and unlinking an unlinked pair change nothing.

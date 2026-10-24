@@ -36,8 +36,7 @@ const (
 		FROM subjects WHERE id = ?`
 	sqlGetByRef = `SELECT id, ref, source_id, graph_id, subject_type_id, COALESCE(label, ''), COALESCE(description, '')
 		FROM subjects WHERE ref = ?`
-	sqlSourceExists = `SELECT 1 FROM sources WHERE id = ?`
-	sqlTypePrefix   = `SELECT candidate_ref_prefix FROM subject_types WHERE id = ?`
+	sqlTypePrefix = `SELECT candidate_ref_prefix FROM subject_types WHERE id = ?`
 )
 
 // Subject is one subjects row.
@@ -53,9 +52,8 @@ type Subject struct {
 
 // CreateInput is the mutable fields for a new Subject.
 type CreateInput struct {
-	SourceID []byte
-	// GraphID is the Evidence graph the Subject joins. Empty means the
-	// Source's sole graph (SoleGraphTx).
+	// GraphID is the Evidence graph the Subject joins. Required; the
+	// Subject's Source is the graph's Source.
 	GraphID       []byte
 	SubjectTypeID []byte
 	Label         string
@@ -104,41 +102,15 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 	if len(in.SubjectTypeID) != 16 {
 		return Subject{}, rowchange.Change{}, ErrInvalid
 	}
-	// One of the two ids names the Source: a Subject's Source is its graph's
-	// Source. A given SourceID that is not the graph's is refused by the
-	// composite foreign key.
-	if len(in.SourceID) != 0 && len(in.SourceID) != 16 {
+	if len(in.GraphID) != 16 {
 		return Subject{}, rowchange.Change{}, ErrInvalid
 	}
-	graphID := in.GraphID
-	switch len(graphID) {
-	case 16:
-		if len(in.SourceID) == 0 {
-			sourceID, err := evidencegraphs.SourceOf(tx, graphID)
-			if errors.Is(err, evidencegraphs.ErrInvalid) {
-				return Subject{}, rowchange.Change{}, ErrInvalid
-			}
-			if err != nil {
-				return Subject{}, rowchange.Change{}, err
-			}
-			in.SourceID = sourceID
-		}
-	case 0:
-		if len(in.SourceID) != 16 {
-			return Subject{}, rowchange.Change{}, ErrInvalid
-		}
-	default:
+	sourceID, err := evidencegraphs.SourceOf(tx, in.GraphID)
+	if errors.Is(err, evidencegraphs.ErrInvalid) {
 		return Subject{}, rowchange.Change{}, ErrInvalid
 	}
-	if err := requireSource(tx, in.SourceID); err != nil {
+	if err != nil {
 		return Subject{}, rowchange.Change{}, err
-	}
-	if len(graphID) == 0 {
-		var err error
-		graphID, err = evidencegraphs.SoleGraphTx(tx, in.SourceID)
-		if err != nil {
-			return Subject{}, rowchange.Change{}, err
-		}
 	}
 	prefix, err := requireTypePrefix(tx, in.SubjectTypeID)
 	if err != nil {
@@ -152,7 +124,7 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 	idBytes := id[:]
 
 	subjectRef, err := database.InsertWithRef(database.Minter(prefix), func(storedRef string) error {
-		_, err := tx.Exec(sqlInsert, idBytes, storedRef, in.SourceID, graphID, in.SubjectTypeID, database.NullString(in.Label), database.NullString(in.Description))
+		_, err := tx.Exec(sqlInsert, idBytes, storedRef, sourceID, in.GraphID, in.SubjectTypeID, database.NullString(in.Label), database.NullString(in.Description))
 		return err
 	})
 	if errors.Is(err, database.ErrRefsExhausted) {
@@ -169,8 +141,8 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 		Fields: rowchange.FullRow(map[string]any{
 			"id":              id.String(),
 			"ref":             subjectRef,
-			"source_id":       database.UUIDJSON(in.SourceID),
-			"graph_id":        database.UUIDJSON(graphID),
+			"source_id":       database.UUIDJSON(sourceID),
+			"graph_id":        database.UUIDJSON(in.GraphID),
 			"subject_type_id": database.UUIDJSON(in.SubjectTypeID),
 			"label":           database.NullString(in.Label),
 			"description":     database.NullString(in.Description),
@@ -179,8 +151,8 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 	return Subject{
 		ID:            append([]byte(nil), idBytes...),
 		Ref:           subjectRef,
-		SourceID:      append([]byte(nil), in.SourceID...),
-		GraphID:       append([]byte(nil), graphID...),
+		SourceID:      append([]byte(nil), sourceID...),
+		GraphID:       append([]byte(nil), in.GraphID...),
 		SubjectTypeID: append([]byte(nil), in.SubjectTypeID...),
 		Label:         in.Label,
 		Description:   in.Description,
@@ -359,15 +331,6 @@ func scanSubject(row rowScanner) (Subject, error) {
 		return Subject{}, err
 	}
 	return s, nil
-}
-
-func requireSource(tx *sql.Tx, sourceID []byte) error {
-	var one int
-	err := tx.QueryRow(sqlSourceExists, sourceID).Scan(&one)
-	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
-	}
-	return err
 }
 
 func requireTypePrefix(tx *sql.Tx, typeID []byte) (string, error) {

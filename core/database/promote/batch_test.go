@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -22,7 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
@@ -38,6 +39,7 @@ type batchFixture struct {
 	c        *database.Catalog
 	source   sources.Source
 	artifact artifacts.Artifact
+	graph    []byte // the Source's one Evidence graph
 	y        int64
 }
 
@@ -72,7 +74,7 @@ func newBatchFixture(t *testing.T) *batchFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &batchFixture{t: t, c: c, source: src, artifact: art}
+	return &batchFixture{t: t, c: c, source: src, artifact: art, graph: evidencegraphstest.SoleGraph(t, c, src.ID).ID}
 }
 
 func (f *batchFixture) prop(key string) properties.Property {
@@ -95,16 +97,7 @@ func (f *batchFixture) term(propKey, termKey string) propertyterms.Term {
 
 func (f *batchFixture) bare(kind string) subjects.Subject {
 	f.t.Helper()
-	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
-	if err != nil {
-		f.t.Fatal(err)
-	}
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: st.ID}, nil)
-	})
-	if err != nil {
-		f.t.Fatal(err)
-	}
+	s := subjectstest.On(f.t, f.c, userID, f.graph, kind, "")
 	if _, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
 		return subjectpositions.Set(tx, s.ID, 0, f.y)
 	}); err != nil {

@@ -14,22 +14,11 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/writes"
 )
-
-func (f *fixture) bare(kind string) subjects.Subject {
-	f.t.Helper()
-	typeID := f.typeID(kind)
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: f.source.ID, SubjectTypeID: typeID,
-		}, nil)
-	})
-	must(f.t, err)
-	return s
-}
 
 func (f *fixture) cite(s subjects.Subject, in ...observations.Input) {
 	f.t.Helper()
@@ -97,40 +86,40 @@ func (f *fixture) named(s subjects.Subject, form string) {
 
 func TestCanonicalWalks(t *testing.T) {
 	f := newFixture(t)
-	james := f.bare("person")
+	james := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 	f.named(james, "James Robins")
 	f.at(james, 0, 0)
-	mary := f.bare("person")
+	mary := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 	f.named(mary, "Mary Smith")
 	f.at(mary, 0, 2)
-	ann := f.bare("person")
+	ann := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 	f.named(ann, "Ann Lee")
 	f.at(ann, 0, 4)
-	unnamed := f.bare("person")
+	unnamed := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 	f.at(unnamed, 0, 6)
-	witness := f.bare("person")
+	witness := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 	f.named(witness, "Witness Webb")
 	f.at(witness, 0, 8)
 
-	birth := f.bare("event")
+	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(birth,
 		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
 		observations.Input{PropertyID: f.prop("date").ID, Date: pointYear(1817)},
 	)
 	f.at(birth, 4, 0)
-	death := f.bare("event")
+	death := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(death,
 		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "death").ID},
 		observations.Input{PropertyID: f.prop("start_date").ID, Date: pointYear(1880)},
 	)
 	f.at(death, 4, 2)
-	marriage := f.bare("event")
+	marriage := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(marriage, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "marriage").ID})
 	f.at(marriage, 4, 4)
-	census := f.bare("event")
+	census := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(census, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "census").ID})
 	f.at(census, 4, 6)
-	baptism := f.bare("event")
+	baptism := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(baptism, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "baptism").ID})
 	f.at(baptism, 4, 8)
 	eventTypeID := f.prop("event_type").ID
@@ -139,17 +128,17 @@ func TestCanonicalWalks(t *testing.T) {
 			return propertyterms.Create(tx, userID, eventTypeID, "Fire", "")
 		})
 	must(t, err)
-	fire := f.bare("event")
+	fire := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(fire, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: fireTerm.ID})
 	f.at(fire, 4, 10)
 
-	york := f.bare("place")
+	york := subjectstest.On(f.t, f.c, userID, f.graph, "place", "")
 	f.cite(york,
 		observations.Input{PropertyID: f.prop("toponym").ID, ValueText: "York", HasText: true},
 		observations.Input{PropertyID: f.prop("toponym").ID, ValueText: "Tkaronto", HasText: true},
 	)
 	f.at(york, 8, 0)
-	toronto := f.bare("place")
+	toronto := subjectstest.On(f.t, f.c, userID, f.graph, "place", "")
 	f.cite(toronto, observations.Input{PropertyID: f.prop("toponym").ID, ValueText: "Toronto", HasText: true})
 	f.at(toronto, 8, 2)
 
@@ -403,12 +392,12 @@ func TestCompetingLifeEvents(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
-			james := f.bare("person")
+			james := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 			f.named(james, "James Robins")
 			f.at(james, 0, 0)
 			var births []subjects.Subject
 			for i, year := range tt.years {
-				birth := f.bare("event")
+				birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 				in := []observations.Input{{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID}}
 				if year != 0 {
 					in = append(in, observations.Input{PropertyID: f.prop("date").ID, Date: pointYear(year)})

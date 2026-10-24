@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
@@ -23,6 +24,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -107,30 +109,10 @@ func TestObservations(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		person, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Bob",
-			}, &subjects.Placement{GridX: 0, GridY: 0})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		place, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: placeType.ID,
-			}, &subjects.Placement{GridX: 4, GridY: 0})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		event, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Birth",
-			}, &subjects.Placement{GridX: 2, GridY: 4})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+		person := subjectstest.At(t, c, userID, graph, personType.ID, "Bob", subjects.Placement{GridX: 0, GridY: 0})
+		place := subjectstest.At(t, c, userID, graph, placeType.ID, "", subjects.Placement{GridX: 4, GridY: 0})
+		event := subjectstest.At(t, c, userID, graph, eventType.ID, "Birth", subjects.Placement{GridX: 2, GridY: 4})
 		toponymProp, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
@@ -1392,14 +1374,10 @@ func TestObservationsStayInOneGraph(t *testing.T) {
 	}
 	newSubject := func(src sources.Source, graphID []byte, typeKey, label string) subjects.Subject {
 		typeID := typeOf(typeKey)
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, GraphID: graphID, SubjectTypeID: typeID, Label: label,
-			}, nil)
-		})
-		if err != nil {
-			t.Fatal(err)
+		if graphID == nil {
+			graphID = evidencegraphstest.SoleGraph(t, c, src.ID).ID
 		}
+		s := subjectstest.OfType(t, c, userID, graphID, typeID, label)
 		return s
 	}
 	ann := newSubject(census, def.ID, "person", "Ann")

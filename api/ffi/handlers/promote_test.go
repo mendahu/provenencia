@@ -15,7 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
@@ -327,16 +327,11 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		if err != nil {
 			return err
 		}
-		var sourceID, typeID []byte
-		if err := db.QueryRow(`SELECT source_id, subject_type_id FROM subjects WHERE id = ?`, first[:]).Scan(&sourceID, &typeID); err != nil {
+		var graphID, typeID []byte
+		if err := db.QueryRow(`SELECT graph_id, subject_type_id FROM subjects WHERE id = ?`, first[:]).Scan(&graphID, &typeID); err != nil {
 			return err
 		}
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID[:], subjects.CreateInput{SourceID: sourceID, SubjectTypeID: typeID}, nil)
-		})
-		if err != nil {
-			return err
-		}
+		s := subjectstest.OfType(t, c, userID[:], graphID, typeID, "")
 		id = s.ID
 		if len(forms) == 0 {
 			return nil
@@ -345,7 +340,7 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		if err != nil {
 			return err
 		}
-		art, err := artifactstest.Create(c, userID[:], artifacts.CreateInput{SourceID: sourceID, Label: "Scan"})
+		art, err := artifactstest.Create(c, userID[:], artifacts.CreateInput{SourceID: s.SourceID, Label: "Scan"})
 		if err != nil {
 			return err
 		}

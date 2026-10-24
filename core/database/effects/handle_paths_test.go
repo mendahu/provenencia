@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -19,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -82,15 +84,8 @@ func TestHandlePaths(t *testing.T) {
 	}
 	mk := func(typeID []byte, label string, x int64) subjects.Subject {
 		t.Helper()
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: typeID, Label: label,
-			}, &subjects.Placement{GridX: x, GridY: 0})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		return s
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+		return subjectstest.At(t, c, userID, graph, typeID, label, subjects.Placement{GridX: x, GridY: 0})
 	}
 	alice := mk(personType.ID, "Alice", 0)
 	bob := mk(personType.ID, "Bob", 4)

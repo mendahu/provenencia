@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -95,9 +96,10 @@ func newScopeSeed(t *testing.T) scopeSeed {
 		t.Fatal(err)
 	}
 	mkSubject := func(typeID []byte, label string, x int64) subjects.Subject {
+		graph := evidencegraphstest.SoleGraph(t, c, a.ID).ID
 		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: scopeUserID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 			return subjects.Create(tx, scopeUserID, subjects.CreateInput{
-				SourceID: a.ID, SubjectTypeID: typeID, Label: label,
+				GraphID: graph, SubjectTypeID: typeID, Label: label,
 			}, &subjects.Placement{GridX: x, GridY: 0})
 		})
 		if err != nil {
@@ -382,9 +384,10 @@ func TestSourceScopes(t *testing.T) {
 			run: func(t *testing.T, s scopeSeed) {
 				var subj subjects.Subject
 				s.bumpsA(t, func() {
+					graph := evidencegraphstest.SoleGraph(t, s.c, s.a.ID).ID
 					got, err := writes.Call(s.c, writes.Op{Action: "create_subject", UserID: scopeUserID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 						return subjects.Create(tx, scopeUserID, subjects.CreateInput{
-							SourceID: s.a.ID, SubjectTypeID: s.personTy, Label: "Cy",
+							GraphID: graph, SubjectTypeID: s.personTy, Label: "Cy",
 						}, &subjects.Placement{GridX: 16, GridY: 0})
 					})
 					if err != nil {

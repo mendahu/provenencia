@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -20,7 +21,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
@@ -36,6 +37,7 @@ type handleFixture struct {
 	user     []byte
 	source   []byte
 	artifact []byte
+	graph    []byte // the Source's one Evidence graph
 }
 
 func newHandleFixture(t *testing.T) *handleFixture {
@@ -60,7 +62,7 @@ func newHandleFixture(t *testing.T) *handleFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &handleFixture{t: t, c: c, user: user, source: src.ID, artifact: art.ID}
+	return &handleFixture{t: t, c: c, user: user, source: src.ID, artifact: art.ID, graph: evidencegraphstest.SoleGraph(t, c, src.ID).ID}
 }
 
 func (f *handleFixture) prop(key string) properties.Property {
@@ -75,16 +77,7 @@ func (f *handleFixture) prop(key string) properties.Property {
 // subject creates a Subject of kind with the given Observations.
 func (f *handleFixture) subject(kind string, in func(s subjects.Subject) []observations.Input) subjects.Subject {
 	f.t.Helper()
-	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
-	if err != nil {
-		f.t.Fatal(err)
-	}
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: f.user}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, f.user, subjects.CreateInput{SourceID: f.source, SubjectTypeID: st.ID}, nil)
-	})
-	if err != nil {
-		f.t.Fatal(err)
-	}
+	s := subjectstest.On(f.t, f.c, f.user, f.graph, kind, "")
 	if in != nil {
 		obs := in(s)
 		if _, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: f.user}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {

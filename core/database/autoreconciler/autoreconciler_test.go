@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/likenesses"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -32,6 +33,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -146,11 +148,8 @@ func (f *fixture) subject(kind string) subjects.Subject { return f.subjectOn(f.s
 
 func (f *fixture) subjectOn(src sources.Source, kind string) subjects.Subject {
 	f.t.Helper()
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: f.types[kind].ID}, nil)
-	})
-	must(f.t, err)
-	return s
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
+	return subjectstest.OfType(f.t, f.c, userID, graph, f.types[kind].ID, "")
 }
 
 // cite files the Observations on one new Citation, on the Artifact of the

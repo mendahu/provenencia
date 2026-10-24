@@ -11,9 +11,10 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
-	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -745,13 +746,11 @@ func TestSourceDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: uncited.ID, SubjectTypeID: personType.ID, Label: "Alice",
-		}, nil)
-	}); err != nil {
-		t.Fatal(err)
+	graphs, err := evidencegraphs.List(c, uncited.ID)
+	if err != nil || len(graphs) != 1 {
+		t.Fatalf("source %x has %d graphs, want 1", uncited.ID, len(graphs))
 	}
+	subjectstest.OfType(t, c, userID, graphs[0].ID, personType.ID, "Alice")
 	if err := runDelete(c, userID, uncited.ID); !errors.Is(err, ErrInUse) {
 		t.Fatalf("subject inbound %v", err)
 	}

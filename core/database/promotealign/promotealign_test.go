@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
@@ -25,7 +26,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
@@ -107,13 +108,9 @@ func (f *fixture) term(propKey, termKey string) propertyterms.Term {
 
 func (f *fixture) bare(src sources.Source, kind string) subjects.Subject {
 	f.t.Helper()
-	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
-	must(f.t, err)
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: st.ID}, nil)
-	})
-	must(f.t, err)
-	_, err = writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
+	s := subjectstest.On(f.t, f.c, userID, graph, kind, "")
+	_, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
 		return subjectpositions.Set(tx, s.ID, 0, f.y)
 	})
 	must(f.t, err)

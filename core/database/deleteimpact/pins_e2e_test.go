@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/google/uuid"
@@ -65,15 +67,9 @@ func newPinnedHandle(t *testing.T) pinnedHandle {
 	must(err)
 	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	must(err)
-	mk := func(label string) subjects.Subject {
-		t.Helper()
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: place.ID, Label: label}, nil)
-		})
-		must(err)
-		return s
-	}
-	a, b := mk("York"), mk("York (U.C.)")
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+	a := subjectstest.OfType(t, c, userID, graph, place.ID, "York")
+	b := subjectstest.OfType(t, c, userID, graph, place.ID, "York (U.C.)")
 	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York, otherwise Toronto",

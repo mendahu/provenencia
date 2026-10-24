@@ -13,6 +13,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
@@ -21,8 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
-	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ingest"
@@ -185,15 +185,8 @@ func seedObituary(t *testing.T) (c *database.Catalog, userID []byte, orig source
 	if err := subjectvocab.Install(c); err != nil {
 		t.Fatal(err)
 	}
-	person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: orig.ID, SubjectTypeID: person.ID, Label: "Ann"}, nil)
-	}); err != nil {
-		t.Fatal(err)
-	}
+	graph := evidencegraphstest.SoleGraph(t, c, orig.ID).ID
+	subjectstest.On(t, c, userID, graph, "person", "Ann")
 	orig, err = sources.Get(c, orig.ID)
 	if err != nil {
 		t.Fatal(err)

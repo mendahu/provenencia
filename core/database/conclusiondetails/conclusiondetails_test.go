@@ -27,6 +27,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -95,11 +96,8 @@ func (f *fixture) source(title string) sources.Source {
 
 func (f *fixture) personOn(src sources.Source) subjects.Subject {
 	f.t.Helper()
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: f.person.ID}, nil)
-	})
-	must(f.t, err)
-	return s
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
+	return subjectstest.OfType(f.t, f.c, userID, graph, f.person.ID, "")
 }
 
 // name files a name Observation from "type=value|…" parts (or "form:…").

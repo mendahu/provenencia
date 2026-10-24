@@ -1,6 +1,5 @@
 // Package artifactstest holds shared Artifact fixtures for tests: creating an
-// Artifact, splitting an Evidence graph off a Source, and putting a Subject on
-// a graph.
+// Artifact and splitting an Evidence graph off a Source.
 package artifactstest
 
 import (
@@ -11,9 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
-	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -38,20 +34,4 @@ func Split(t testing.TB, c *database.Catalog, userID, sourceID []byte, name stri
 	}
 	def, graph = evidencegraphstest.Split(t, c, userID, sourceID, name, page.ID)
 	return def, graph, page
-}
-
-// SubjectOn creates a Subject of the provenencia type typeKey on the graph.
-func SubjectOn(t testing.TB, c *database.Catalog, userID, sourceID, graphID []byte, typeKey, label string) subjects.Subject {
-	t.Helper()
-	typ, err := subjecttypes.Lookup(c, typeKey, vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: sourceID, GraphID: graphID, SubjectTypeID: typ.ID, Label: label}, nil)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return s
 }

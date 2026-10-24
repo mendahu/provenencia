@@ -19,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -105,15 +106,8 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		create := func(typeID []byte, label string, x, y int64) subjects.Subject {
 			t.Helper()
-			s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-				return subjects.Create(tx, userID, subjects.CreateInput{
-					SourceID: src.ID, SubjectTypeID: typeID, Label: label,
-				}, &subjects.Placement{GridX: x, GridY: y})
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			return s
+			graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+			return subjectstest.At(t, c, userID, graph, typeID, label, subjects.Placement{GridX: x, GridY: y})
 		}
 		personProp := lookupProp("person")
 		eventProp := lookupProp("event")
@@ -424,15 +418,7 @@ func TestCreateCitedBridge(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			sub, err := writes.Call(s.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-				return subjects.Create(tx, userID, subjects.CreateInput{
-					SourceID: s.source.ID, GraphID: jones.ID, SubjectTypeID: typ.ID, Label: label,
-				}, &subjects.Placement{GridX: x, GridY: y})
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			return sub
+			return subjectstest.At(t, s.c, userID, jones.ID, typ.ID, label, subjects.Placement{GridX: x, GridY: y})
 		}
 		return twoGraph{
 			seed: s, p2: p2, jones: jones,

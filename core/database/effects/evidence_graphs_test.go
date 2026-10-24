@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -70,6 +71,7 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	baseGraph := evidencegraphstest.SoleGraph(t, c, base.ID).ID
 	nameProp, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
@@ -221,7 +223,7 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 
 	// No other write flags the list.
 	_, otherChanges, err := subjects.Create(tx, userID, subjects.CreateInput{
-		SourceID: base.ID, SubjectTypeID: personType.ID, Label: "Ada",
+		GraphID: baseGraph, SubjectTypeID: personType.ID, Label: "Ada",
 	}, nil)
 	if err != nil {
 		t.Fatal(err)

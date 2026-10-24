@@ -132,7 +132,6 @@ func CreateCitedBridge(tx *database.Tx, userID []byte, in CreateInput) (Result, 
 		return Result{}, nil, ErrInvalid
 	}
 	bridge, subjectChange, err := subjects.InsertTx(q, subjects.CreateInput{
-		SourceID:      from.SourceID,
 		GraphID:       from.GraphID,
 		SubjectTypeID: bridgeType.ID,
 		Description:   in.Description,

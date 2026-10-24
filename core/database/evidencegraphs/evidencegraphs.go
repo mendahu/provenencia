@@ -408,8 +408,8 @@ func graphFields(g Graph) map[string]any {
 
 // SoleGraphTx returns the id of the one graph of a Source.
 //
-// The one bridge left: Promote's alignment (S12-09) and the empty-GraphID
-// fallback of subjects.InsertTx (S12-18) still read it. Both PRs delete it.
+// The one bridge left: Promote's alignment reads it through SoleGraph until
+// S12-09, which deletes both.
 func SoleGraphTx(tx *sql.Tx, sourceID []byte) ([]byte, error) {
 	if tx == nil || len(sourceID) != 16 {
 		return nil, ErrInvalid

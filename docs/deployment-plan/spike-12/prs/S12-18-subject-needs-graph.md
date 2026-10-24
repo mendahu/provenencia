@@ -1,6 +1,6 @@
 # S12-18 — A Subject needs its graph
 
-**Status:** Planned
+**Status:** Landed in [#532](https://github.com/mendahu/provenencia/pull/532) (2026-10-24)
 **Spike / slice:** Spike 12 · Slice 3 — Graph id end to end
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: Go only; no view, RPC or copy changes)
@@ -249,3 +249,13 @@ None.
 
 **Title:** S12-18 — A Subject needs its graph
 **Body:** objective in one sentence; what shipped against US-1; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-12/prs/S12-18-subject-needs-graph.md`.
+
+## Landed
+
+Differences from the plan:
+
+- `personBeside` in `api/ffi/handlers/promote_test.go` still files its Citation's Artifact on the Source, so it takes the Source id from the created Subject (`s.SourceID`) instead of selecting `source_id` as well (D-9 selects `graph_id` and `subject_type_id` only).
+- The `newSubject` closures in `core/database/graphfill/load_test.go` and `core/database/observations/observations_test.go` already took a `src` and sometimes a nil graph id; they read `evidencegraphstest.SoleGraph` on a nil graph id (D-5 b) instead of changing their callers.
+- Deleting the "create joins the Source's graph" case (D-10) dropped its check that the Subject's create and delete changes carry `graph_id`; "graph id given" now checks both (ship review, CON).
+- MNT-1 (ship review): user ruled 2026-10-23 to fold the copied create helpers into `subjectstest` on this PR, superseding D-5's deferral and the Out line. `artifactstest.SubjectOn` moved to `subjectstest.On`, with `subjectstest.OfType` beside it. The fixture also gained `subjectstest.At` for single-write creates that pass a `Placement`. Creates inside a larger transaction still call `subjects.Create` directly.
+- The manual check (§10) was not run in the app.

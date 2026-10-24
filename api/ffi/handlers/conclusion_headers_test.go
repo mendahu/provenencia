@@ -13,12 +13,13 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/eventtitle"
@@ -226,16 +227,8 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 	}
 	var subjectID []byte
 	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
-		st, err := subjecttypes.Lookup(c, "event", vocabkey.OriginProvenencia)
-		if err != nil {
-			return err
-		}
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID[:], subjects.CreateInput{SourceID: source[:], SubjectTypeID: st.ID}, nil)
-		})
-		if err != nil {
-			return err
-		}
+		graph := evidencegraphstest.SoleGraph(t, c, source[:]).ID
+		s := subjectstest.On(t, c, userID[:], graph, "event", "")
 		subjectID = s.ID
 		name, err := properties.Lookup(c, "event_name", vocabkey.OriginProvenencia)
 		if err != nil {
@@ -334,16 +327,8 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		t.Fatal(err)
 	}
 	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
-		st, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
-		if err != nil {
-			return err
-		}
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID[:], subjects.CreateInput{SourceID: source[:], SubjectTypeID: st.ID}, nil)
-		})
-		if err != nil {
-			return err
-		}
+		graph := evidencegraphstest.SoleGraph(t, c, source[:]).ID
+		s := subjectstest.On(t, c, userID[:], graph, "place", "")
 		toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err

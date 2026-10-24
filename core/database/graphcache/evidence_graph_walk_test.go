@@ -19,7 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -71,16 +71,8 @@ func (f *walkFixture) newSource(typeID []byte, title string) (sources.Source, ar
 
 func (f *walkFixture) subject(src sources.Source, name, kind string) subjects.Subject {
 	f.t.Helper()
-	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
-	if err != nil {
-		f.t.Fatal(err)
-	}
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: walkUser}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, walkUser, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: st.ID}, nil)
-	})
-	if err != nil {
-		f.t.Fatal(err)
-	}
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
+	s := subjectstest.On(f.t, f.c, walkUser, graph, kind, "")
 	if _, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
 		return subjectpositions.Set(tx, s.ID, 0, f.y)
 	}); err != nil {
@@ -318,7 +310,7 @@ func TestMemberSourceAndGraph(t *testing.T) {
 	t.Run("a Split graph", func(t *testing.T) {
 		f := newWalkFixture(t)
 		_, jones, _ := artifactstest.Split(t, f.c, walkUser, f.src.ID, "Jones")
-		james := artifactstest.SubjectOn(t, f.c, walkUser, f.src.ID, jones.ID, "person", "")
+		james := subjectstest.On(t, f.c, walkUser, jones.ID, "person", "")
 		check(t, f, james, jones.ID)
 	})
 }
