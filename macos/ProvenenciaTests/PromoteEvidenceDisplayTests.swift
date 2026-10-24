@@ -384,4 +384,18 @@ struct PromoteEvidenceDisplayTests {
         // "joins" lives inside the one format, not in a second key.
         #expect(role(of: " joins ", in: title) == .muted)
     }
+
+    @Test func connectionCopyIsWorded() {
+        #expect(L10n.Promote.doneSummary(file: 12, skip: 3, unselected: 0, connections: 22) == "File 12 · Skip 3 · 22 connections")
+        #expect(L10n.Promote.doneSummary(file: 12, skip: 0, unselected: 2, connections: 1) == "File 12 · 2 unselected · 1 connection")
+        #expect(L10n.Promote.doneSummary(file: 5, skip: 0, unselected: 0, connections: 0) == "File 5 · 0 connections")
+        #expect(L10n.Promote.connectionsOf(name: "John Smith") == "Connections of John Smith")
+        #expect(
+            L10n.Promote.connectionSpoken(
+                sentence: "Mary Smith is the parent of John Smith",
+                state: .waits(endID: "j", why: .skipped),
+                endName: "John Smith"
+            ) == "Mary Smith is the parent of John Smith. Waits for John Smith, who is skipped."
+        )
+    }
 }

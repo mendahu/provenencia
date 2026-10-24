@@ -1,9 +1,9 @@
 # S11-27 — Connection subrows on Promote
 
-**Status:** Planned
+**Status:** Landed in [#530](https://github.com/mendahu/provenencia/pull/530) (2026-10-23)
 **Spike / slice:** Spike 11 · Slice 6 — Connection subrows
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S11-D1](../design/S11-D1-promote-rows.md) §4.2 (CS-1 – CS-9) and §8 board notes, board agreed 2026-10-20
+**Brief:** [S11-D1](../design/archive/S11-D1-promote-rows.md) §4.2 (CS-1 – CS-9) and §8 board notes, board agreed 2026-10-20
 **Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), file `Promote flow.dc.html`, frames **16** – **19** (S11-27's; 14 – 15 were S11-18's). If you cannot open it, build from §6 macOS, which describes the frames in words. Where the board and this plan differ, this plan wins: D-4 (wording) and D-5 (the other end's note) are deliberate departures the user chose on 2026-10-23
 **Depends on:** S11-26 (landed [#527](https://github.com/mendahu/provenencia/pull/527)), S11-D1 (agreed)
 **Blocks:** —
@@ -11,9 +11,26 @@
 **Version bump:** none — Spike 11 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`
-**Context:** [Connection subrows](../promote-connection-subrows.md) "The idea" and "Open questions for design"; [S11-D1](../design/S11-D1-promote-rows.md) §2 (domain facts: states, one host per connection, busy rows), §4.2, §6 inventory, §8; [`docs/promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3 ("Bridges aren't rows"); working rules "High tolerance for churn"; S11-26 [plan](S11-26-connections-by-ends.md) D-3 (`connections`)
+**Context:** [Connection subrows](../promote-connection-subrows.md) "The idea" and "Open questions for design"; [S11-D1](../design/archive/S11-D1-promote-rows.md) §2 (domain facts: states, one host per connection, busy rows), §4.2, §6 inventory, §8; [`docs/promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3 ("Bridges aren't rows"); working rules "High tolerance for churn"; S11-26 [plan](S11-26-connections-by-ends.md) D-3 (`connections`)
 **Planned:** 2026-10-23 against `main` @ `e33db0f`
 **Review:** [`S11-27-connection-subrows.review.md`](S11-27-connection-subrows.review.md) — Fits with changes / Ready with changes, 1 round (findings fixed)
+
+> **Landed.** Differences from the plan: `EvidenceBridgeEdgeSummary.isSymmetric` takes an `EvidenceGraphPlacedBridge` (the type was renamed from `SourceGraphPlacedBridge` on `main` after planning); `PromoteConnectionSubrows` also takes the host's ref, for the expander's identifier; `PromoteFlowTests` builds its bridges and rows through two small helpers (`link`, `mapped`). `Bridge` wraps a `BridgeFact` (with `state`) and reads its fields through dynamic member lookup instead of copying them (supersedes D-3); `BridgeFact.kind` has no default; a pointer announces the host row it scrolled to. Nothing else differs.
+>
+> Amended A-1 – A-6 shipped (A-6: rows are always grouped by kind, the grouping menu is gone); supersedes the F-1 announcement, the F-2 expander and the earlier `Bridge`-wraps note on `kind`.
+
+> **Amended 2026-10-23 (user, after review round 2).** A connection shows under **both** of its ends, not one host, and nothing on the page hops, highlights, caps or expands; rows are always grouped by kind (A-6). The user chose D-2's rejected alternative ("mirroring under both ends") after trying the pointer: it jumped to one host and left the rest out of view. A-1 – A-6 below replace the Decisions and ACs they name; where they differ from §2, §5, §6 or §10, they win.
+>
+> | ID | Replaces | Decision |
+> | --- | --- | --- |
+> | A-1 | D-2, AC-1.1 – 1.7, AC-3.2, AC-3.3 | A connection shows under **every end that is a working row** (D-2's definition). Both ends working rows: under both (once when both ends are the same row). One end a working row: under that end only, with D-5's other-end note. No working end: nowhere, still counted (AC-1.9, D-7 unchanged). There is no host rule and no pointer |
+> | A-2 | D-6 | *(new)* `struct RowConnection: Equatable, Sendable, Identifiable { var bridge: Bridge; var otherEnd: OtherEnd?; var id: String { bridge.id } }` and `var connectionsByRow: [String: [RowConnection]]` on `PromoteFlow`, built from `connections` in one pass, keyed by the row's subject id, each list sorted as D-6 says. The view reads it once per `body`. `ConnectionHosts`, `HostedConnection`, `Pointer`, `ruleHost` and `connectionHosts` are deleted |
+> | A-3 | D-3 | Reverted: `BridgeFact.kind` and `.symmetric`, `SeededRelationshipTypeTerm.isSymmetric`, `EvidenceBridgeEdgeSummary.isSymmetric`, their assignments in `PromoteModel.bridgeFacts`, and T-7 are deleted; their only reader was the host rule. `mark` stays. The S11-27 sentence in `docs/ideas/term-management.md` item 2 is removed |
+> | A-4 | D-10 – D-13, AC-3.1 – 3.3, AC-4.5, review fixes F-1 and the F-2 expander | Every connection of a row shows; no cap. Deleted: `expandedHosts`, `highlighted`, `highlightGeneration` and its `.task`, `showHosted`, the expand toggle, the pointer button, the expander, `PromoteLayout.subrowCap`, the `AccessibilityAnnouncement` call, and `reduceMotion`, `ScrollViewReader` and `.id(row.subjectID)` where nothing else uses them. Strings deleted: `promote.connection.elsewhere`, `.elsewhereSpoken`, `.more`, `.fewer` and their `L10n.Promote` functions. (AC-3.4 was kept here, then dropped by A-6.) |
+> | A-5 | D-14, AC-4.4 | A subrow's identifier is `promote.row.<ref>.connection.<bridgeID>` (one connection can now be under two rows). The container is named by *(new)* `L10n.Promote.connectionsOf(name:)`, key `promote.connection.of`, "Connections of %@" ("Connections of John Smith"); `connectionsHostedBy` and `promote.connection.hostedBy` are deleted |
+> | A-6 | §1 "What stays" (both groupings), AC-3.4, §10 step 5 | *(user, 2026-10-23)* The page always groups rows by kind (person, event, place). The "Grouped by kind / Grouped by assessment" `PVSelect` in the mapped bar is removed, with `PromoteFlow.Grouping`, `PromoteFlow.group`, `PromoteModel.setGroup`, `groupBinding`, the assessment branch of `sections`, and the strings `promote.page.group.kind`, `.group.assessment`, `.group.label`, `promote.page.grouped.kind`, `.grouped.assessment` (`L10n.Promote.assessment(_:)` stays: the band badge reads it). The mapped bar keeps its "Opened from …" text; with nothing left in it on Promote all, it is not drawn. AC-3.4 is dropped |
+>
+> §10 steps 1 – 2 become: "1. Promote all. The participation John → Birth shows under both John and Birth; the parent relationship under both Mary and John; 'Toronto is part of Ontario' only under Toronto, with 'Ontario is already filed'. Birth shows all four participations, with no '+N more'. 2. No row shows '+N connections'; nothing scrolls or highlights." Step 6 drops AC-4.5. Step 5 becomes: "No grouping menu; rows are under Person, Event, Place. The footer reads as AC-5.1 with no button; there is no bottom panel."
 
 ### Implementer — read this first
 

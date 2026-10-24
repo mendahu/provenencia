@@ -192,10 +192,6 @@ final class PromoteModel {
     func openSheet(_ subjectID: String) { setSheetSubject(subjectID) }
     func closeSheet() { setSheetSubject(nil) }
 
-    func setGroup(_ group: PromoteFlow.Grouping) { flow.group = group }
-
-    func setBridgesOpen(_ open: Bool) { flow.bridgesOpen = open }
-
     /// Reads the open sheet's evidence again, after a failed read.
     func reloadEvidence() { setSheetSubject(flow.sheetSubjectID) }
 
@@ -447,7 +443,6 @@ final class PromoteModel {
             PromoteFlow.BridgeFact(
                 id: bridge.subject.id,
                 sentence: EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot, subjects: placedByID, bridges: [:]),
-                phrase: EvidenceBridgeEdgeSummary.phrase(for: bridge),
                 term: EvidenceBridgeEdgeSummary.reasonRole(for: bridge),
                 endAName: bridge.endpointAID.flatMap { nameByID[$0] } ?? "",
                 endBName: bridge.endpointBID.flatMap { nameByID[$0] } ?? "",

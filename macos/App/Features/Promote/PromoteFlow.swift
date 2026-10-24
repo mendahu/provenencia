@@ -101,17 +101,24 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
-    enum Grouping: String, Equatable, Sendable {
-        case kind, assessment
+    /// Why a connection's end does not file.
+    enum WaitReason: Equatable, Sendable {
+        case skipped, unset, notOnPage
     }
 
     /// Whether a connection files on Done, and if not, why.
     enum ConnectionState: Equatable, Sendable {
         case files
-        /// An end is skipped or not on the page.
-        case endSkipped
-        /// Both ends land on one handle.
-        case selfLink
+        /// An end does not file: `endID` is the Subject that waits (the connection's first end when both do).
+        case waits(endID: String?, why: WaitReason)
+        /// Both ends land on one record; `ref` is that record's.
+        case selfLink(ref: String)
+
+        /// The Subject the connection waits for; nil when it files or is a self-link.
+        var waitingEndID: String? {
+            if case .waits(let endID, _) = self { return endID }
+            return nil
+        }
     }
 
     /// Why a row may be the same entity as another row on this page.
@@ -195,17 +202,30 @@ struct PromoteFlow: Equatable, Sendable {
         var shownRef: String { target.handleRef ?? ref }
     }
 
+    @dynamicMemberLookup
     struct Bridge: Equatable, Sendable, Identifiable {
-        var id: String
-        var sentence: String
-        var phrase: String
-        var endAName: String
-        var endBName: String
-        var mark: PVMarkKey
-        var endA: String?
-        var endB: String?
+        var fact: BridgeFact
         var state: ConnectionState
+        var id: String { fact.id }
         var files: Bool { state == .files }
+
+        subscript<T>(dynamicMember key: KeyPath<BridgeFact, T>) -> T { fact[keyPath: key] }
+
+        func name(of endID: String?) -> String { fact.name(of: endID) }
+    }
+
+    /// What a row says of a connection's other end when that end is not a row to work on.
+    struct OtherEnd: Equatable, Sendable {
+        var name: String
+        /// The end is already filed (an anchor), not just missing from the page.
+        var filed: Bool
+    }
+
+    /// A connection as one row shows it.
+    struct RowConnection: Equatable, Sendable, Identifiable {
+        var bridge: Bridge
+        var otherEnd: OtherEnd?
+        var id: String { bridge.id }
     }
 
     struct Anchor: Equatable, Sendable {
@@ -226,7 +246,6 @@ struct PromoteFlow: Equatable, Sendable {
     struct BridgeFact: Equatable, Sendable {
         var id: String
         var sentence: String
-        var phrase: String = ""
         /// The connection's term in lowercase ("spouse"): a row's reason names it; nil when the
         /// connection has none.
         var term: String?
@@ -238,6 +257,14 @@ struct PromoteFlow: Equatable, Sendable {
         /// Already an accepted association. Hidden from the will-file list;
         /// Done does not file it again.
         var alreadyFiled: Bool = false
+
+        /// The name of one end, as its row reads; empty when `endID` is neither end.
+        func name(of endID: String?) -> String {
+            guard let endID else { return "" }
+            if endID == endA { return endAName }
+            if endID == endB { return endBName }
+            return ""
+        }
     }
 
     var entryID: String
@@ -250,8 +277,6 @@ struct PromoteFlow: Equatable, Sendable {
     var manual = false
     var pendingLeave: PendingNavigation?
     var sheetSubjectID: String?
-    var group = Grouping.kind
-    var bridgesOpen = false
 
     var visibleRows: [Row] {
         guard mappedRest else { return rows.filter { $0.subjectID == entryID } }
@@ -272,9 +297,12 @@ struct PromoteFlow: Equatable, Sendable {
 
     var skipCount: Int { scope.filter { !$0.anchor && $0.target == .skip }.count }
 
+    /// Rows with no target yet.
+    var unsetCount: Int { scope.filter { !$0.anchor && $0.target == .unset }.count }
+
     /// Every visible row has a target. An unselected no-match menu blocks Done.
     var targetsChosen: Bool {
-        scope.allSatisfy { $0.anchor || $0.target != .unset }
+        unsetCount == 0
     }
 
     var connectionCount: Int { connections.filter(\.files).count }
@@ -282,22 +310,67 @@ struct PromoteFlow: Equatable, Sendable {
     private var scope: [Row] { visibleRows }
 
     private func lined(_ bridge: BridgeFact, _ state: ConnectionState) -> Bridge {
-        Bridge(
-            id: bridge.id, sentence: bridge.sentence, phrase: bridge.phrase,
-            endAName: bridge.endAName, endBName: bridge.endBName, mark: bridge.mark,
-            endA: bridge.endA, endB: bridge.endB, state: state
-        )
+        Bridge(fact: bridge, state: state)
     }
 
+    /// Every connection not yet filed, with whether it files and, if not, which end waits and why.
     var connections: [Bridge] {
-        bridges.filter { !$0.alreadyFiled }.map { bridge in
-            guard let left = resolve(bridge.endA), let right = resolve(bridge.endB) else {
-                return lined(bridge, .endSkipped)
+        let rowByID = Dictionary(rows.map { ($0.subjectID, $0) }, uniquingKeysWith: { first, _ in first })
+        return bridges.filter { !$0.alreadyFiled }.map { bridge in
+            let left = resolve(bridge.endA, in: rowByID)
+            let right = resolve(bridge.endB, in: rowByID)
+            switch (left, right) {
+            case (.waits(let why), _):
+                return lined(bridge, .waits(endID: bridge.endA, why: why))
+            case (_, .waits(let why)):
+                return lined(bridge, .waits(endID: bridge.endB, why: why))
+            case (.handle(let leftID, let ref), .handle(let rightID, _)):
+                return lined(bridge, leftID == rightID ? .selfLink(ref: ref) : .files)
             }
-            if left == right {
-                return lined(bridge, .selfLink)
+        }
+    }
+
+    /// Each connection under every end that is a working row, keyed by the row's subject id and
+    /// ordered by state, then sentence. The other end gets a note when it is not a working row.
+    var connectionsByRow: [String: [RowConnection]] {
+        let working = Set(scope.filter { !$0.anchor }.map(\.subjectID))
+        let anchors = Set(rows.filter(\.anchor).map(\.subjectID))
+        var byRow: [String: [RowConnection]] = [:]
+        for bridge in connections {
+            let ends = [bridge.endA, bridge.endB]
+            var seen = Set<String>()
+            for case let end? in ends where working.contains(end) && seen.insert(end).inserted {
+                let far = end == bridge.endA ? bridge.endB : bridge.endA
+                var note: OtherEnd?
+                if let far, !working.contains(far) {
+                    let name = bridge.name(of: far)
+                    if !name.isEmpty { note = OtherEnd(name: name, filed: anchors.contains(far)) }
+                }
+                byRow[end, default: []].append(RowConnection(bridge: bridge, otherEnd: note))
             }
-            return lined(bridge, .files)
+        }
+        for key in byRow.keys {
+            byRow[key]?.sort(by: Self.shownBefore)
+        }
+        return byRow
+    }
+
+    private static func stateRank(_ state: ConnectionState) -> Int {
+        switch state {
+        case .files: 0
+        case .waits: 1
+        case .selfLink: 2
+        }
+    }
+
+    private static func shownBefore(_ a: RowConnection, _ b: RowConnection) -> Bool {
+        let rankA = stateRank(a.bridge.state)
+        let rankB = stateRank(b.bridge.state)
+        if rankA != rankB { return rankA < rankB }
+        switch a.bridge.sentence.localizedStandardCompare(b.bridge.sentence) {
+        case .orderedAscending: return true
+        case .orderedDescending: return false
+        case .orderedSame: return a.id < b.id
         }
     }
 
@@ -312,15 +385,24 @@ struct PromoteFlow: Equatable, Sendable {
         return rows.first { $0.subjectID == subjectID }
     }
 
-    /// The handle a subject will be, or nil when it stays unfiled.
-    private func resolve(_ subjectID: String?) -> String? {
-        guard let subjectID, let row = row(subjectID) else { return nil }
-        if row.anchor { return row.target.handleID }
-        if !mappedRest && subjectID != entryID { return nil }
+    private enum EndResolution: Equatable {
+        case handle(id: String, ref: String)
+        case waits(WaitReason)
+    }
+
+    /// The handle a subject will be, or why it stays unfiled. The one place that decides.
+    private func resolve(_ subjectID: String?, in rowByID: [String: Row]) -> EndResolution {
+        guard let subjectID, let row = rowByID[subjectID] else { return .waits(.notOnPage) }
+        if row.anchor {
+            guard let id = row.target.handleID, let ref = row.target.handleRef else { return .waits(.notOnPage) }
+            return .handle(id: id, ref: ref)
+        }
+        if !mappedRest && subjectID != entryID { return .waits(.notOnPage) }
         switch row.target {
-        case .handle(let id, _, _): return id
-        case .newKind: return "new:" + subjectID
-        case .skip, .unset: return nil
+        case .handle(let id, let ref, _): return .handle(id: id, ref: ref)
+        case .newKind: return .handle(id: "new:" + subjectID, ref: row.ref)
+        case .skip: return .waits(.skipped)
+        case .unset: return .waits(.unset)
         }
     }
 

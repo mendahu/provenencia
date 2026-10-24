@@ -462,7 +462,7 @@ struct PromoteFlowTests {
         )
         #expect(flow.connections.first?.state == .files)
         flow.setTarget(subjectID: "b", token: "skip")
-        #expect(flow.connections.first?.state == .endSkipped)
+        #expect(flow.connections.first?.state == .waits(endID: "b", why: .skipped))
         let batch = flow.batchRows()
         #expect(batch.count == 2)
         #expect(batch[0].subjectID == "a")
@@ -472,6 +472,158 @@ struct PromoteFlowTests {
         #expect(batch[1].target == "skip")
         flow.setTarget(subjectID: "b", token: "new")
         #expect(flow.connections.first?.state == .files)
+    }
+
+    private func link(
+        _ id: String, _ a: String?, _ b: String?,
+        sentence: String? = nil, alreadyFiled: Bool = false
+    ) -> PromoteFlow.BridgeFact {
+        var bridge = PromoteFlow.BridgeFact(id: id, sentence: sentence ?? id, endA: a, endB: b)
+        bridge.endAName = a ?? ""
+        bridge.endBName = b ?? ""
+        bridge.alreadyFiled = alreadyFiled
+        return bridge
+    }
+
+    private func mapped(
+        ids: [String], handleBy: (String) -> String = { "e-" + $0 }, anchors: Set<String> = [],
+        bridges: [PromoteFlow.BridgeFact]
+    ) -> PromoteFlow {
+        var flow = PromoteFlow(entryID: ids[0])
+        flow.mappedRest = true
+        flow.load(
+            entryID: ids[0],
+            proposal: proposal(rows: ids.map { row(id: $0, handleID: handleBy($0)) }),
+            subjects: ids.map { fact($0, anchor: anchors.contains($0), handleID: handleBy($0)) },
+            bridges: bridges
+        )
+        return flow
+    }
+
+    @Test func connectionsShowUnderEveryEndThatIsARow() {
+        let flow = mapped(ids: ["j", "b", "t", "o", "m", "n", "a", "c"], bridges: [
+            link("pa", "j", "b"),
+            link("lo", "b", "t"),
+            link("pr", "t", "o"),
+            link("di", "m", "n"),
+            link("sy", "a", "c"),
+        ])
+        let byRow = flow.connectionsByRow
+        #expect(Set(byRow["j"]?.map(\.id) ?? []) == ["pa"])
+        #expect(Set(byRow["b"]?.map(\.id) ?? []) == ["pa", "lo"])
+        #expect(Set(byRow["t"]?.map(\.id) ?? []) == ["lo", "pr"])
+        #expect(Set(byRow["o"]?.map(\.id) ?? []) == ["pr"])
+        #expect(Set(byRow["m"]?.map(\.id) ?? []) == ["di"])
+        #expect(Set(byRow["n"]?.map(\.id) ?? []) == ["di"])
+        #expect(Set(byRow["a"]?.map(\.id) ?? []) == ["sy"])
+        #expect(Set(byRow["c"]?.map(\.id) ?? []) == ["sy"])
+        #expect(byRow.values.joined().allSatisfy { $0.otherEnd == nil })
+    }
+
+    @Test func aConnectionWithOneRowEndShowsOnlyThere() {
+        // (a) The event is an anchor: it shows under the person only, with a note that it is filed.
+        let filed = mapped(ids: ["j", "b"], anchors: ["b"], bridges: [link("pa", "j", "b")])
+        let filedRows = filed.connectionsByRow
+        #expect(filedRows.keys.sorted() == ["j"])
+        #expect(filedRows["j"]?.first?.otherEnd == PromoteFlow.OtherEnd(name: "b", filed: true))
+        #expect(filedRows["j"]?.first?.bridge.state == .files)
+
+        // (b) Not mapped: the other end is not on this page.
+        var alone = PromoteFlow(entryID: "j")
+        alone.load(
+            entryID: "j",
+            proposal: proposal(rows: [row(id: "j"), row(id: "b", handleID: "e2")]),
+            subjects: [fact("j"), fact("b")],
+            bridges: [link("pa", "j", "b")]
+        )
+        let shown = alone.connectionsByRow
+        #expect(shown.keys.sorted() == ["j"])
+        #expect(shown["j"]?.first?.bridge.state == .waits(endID: "b", why: .notOnPage))
+        #expect(shown["j"]?.first?.otherEnd == PromoteFlow.OtherEnd(name: "b", filed: false))
+
+        // (c) Both ends anchors: shown nowhere, still counted.
+        let both = mapped(ids: ["a", "b"], anchors: ["a", "b"], bridges: [link("x", "a", "b")])
+        #expect(both.connectionsByRow.isEmpty)
+        #expect(both.connectionCount == 1)
+
+        // (d) Already filed: neither shown nor counted.
+        let old = mapped(ids: ["a", "b"], bridges: [link("old", "a", "b", alreadyFiled: true)])
+        #expect(old.connectionsByRow.isEmpty)
+        #expect(old.connections.isEmpty)
+        #expect(old.connectionCount == 0)
+
+        // (e) Neither end is a row: shown nowhere, nothing files.
+        let neither = mapped(ids: ["xx", "ww"], bridges: [link("x", "zz", "yy")])
+        #expect(neither.connectionsByRow.isEmpty)
+        #expect(neither.connectionCount == 0)
+
+        // (f) Both ends are one row: shown once.
+        let same = mapped(ids: ["a"], bridges: [link("r", "a", "a")])
+        #expect(same.connectionsByRow["a"]?.map(\.id) == ["r"])
+    }
+
+    @Test func waitingNamesTheEndAndWhy() {
+        let bridges = [link("r", "a", "b")]
+        var flow = mapped(ids: ["a", "b"], bridges: bridges)
+        flow.setTarget(subjectID: "b", token: "skip")
+        #expect(flow.connections.first?.state == .waits(endID: "b", why: .skipped))
+        flow.setTarget(subjectID: "a", token: "skip")
+        #expect(flow.connections.first?.state == .waits(endID: "a", why: .skipped))
+
+        var unset = PromoteFlow(entryID: "a")
+        unset.mappedRest = true
+        unset.load(
+            entryID: "a",
+            proposal: proposal(rows: [row(id: "a", handleID: "e1"), row(id: "b", handleID: "", assessment: "none")]),
+            subjects: [fact("a"), fact("b")],
+            bridges: bridges
+        )
+        #expect(unset.connections.first?.state == .waits(endID: "b", why: .unset))
+
+        let missing = mapped(ids: ["a", "b"], bridges: [link("r", "a", nil)])
+        #expect(missing.connections.first?.state == .waits(endID: nil, why: .notOnPage))
+    }
+
+    @Test func bothEndsOnOneRecordNameTheRecord() {
+        let flow = mapped(ids: ["a", "b"], handleBy: { _ in "e1" }, bridges: [link("r", "a", "b")])
+        #expect(flow.connections.first?.state == .selfLink(ref: "PER-1"))
+        #expect(flow.connectionCount == 0)
+    }
+
+    @Test func rowConnectionsAreOrderedByStateThenSentence() {
+        var flow = mapped(
+            ids: ["b", "p1", "p2", "p3", "p4", "p5"],
+            handleBy: { $0 == "p5" ? "e-b" : "e-" + $0 },
+            bridges: [
+                link("x1", "p1", "b", sentence: "d"),
+                link("x2", "p2", "b", sentence: "c"),
+                link("x3", "p3", "b", sentence: "b"),
+                link("x4", "p4", "b", sentence: "a"),
+                link("x5", "p5", "b", sentence: "e"),
+            ]
+        )
+        flow.setTarget(subjectID: "p2", token: "skip")
+        flow.setTarget(subjectID: "p3", token: "skip")
+        #expect(flow.connectionsByRow["b"]?.map(\.bridge.sentence) == ["a", "d", "b", "c", "e"])
+    }
+
+    @Test func theUnsetCountCountsRowsWithNoTarget() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.mappedRest = true
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [
+                row(id: "a", handleID: "e1"),
+                row(id: "b", handleID: "", assessment: "none"),
+                row(id: "c"),
+            ]),
+            subjects: [fact("a"), fact("b"), fact("c", anchor: true)],
+            bridges: []
+        )
+        #expect(flow.unsetCount == 1)
+        #expect(!flow.targetsChosen)
+        flow.setTarget(subjectID: "b", token: "new")
+        #expect(flow.unsetCount == 0)
     }
 
     @Test func promoteAllStartsExpandedAndHidesFiledBridges() {

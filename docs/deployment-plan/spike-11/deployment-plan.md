@@ -105,14 +105,14 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-15 | Shortlist index | 4 | Key → handles per kind on `graphcache`; registry shortlist keys | — | S11-13 | [plan](prs/S11-15-shortlist-index.md) | Landed #497 |
 | S11-16 | Rewrite graph alignment | 4 | Layer 6 procedure, bands from evidence, accept bar; old walk and registry deleted | — | S11-14, S11-15 | [plan](prs/S11-16-graph-alignment.md) | Landed #501 |
 | S11-17 | Contested flag through FFI | 4 | Proposal rows carry contested and move reasons to Swift | — | S11-16 | [plan](prs/S11-17-contested-ffi.md) | Landed #504 |
-| S11-18 | Contested marker on Promote rows | 4 | The marker on the page | [S11-D1](design/S11-D1-promote-rows.md) | S11-17, S11-D1 | [plan](prs/S11-18-contested-marker.md) | Landed #507 |
+| S11-18 | Contested marker on Promote rows | 4 | The marker on the page | [S11-D1](design/archive/S11-D1-promote-rows.md) | S11-17, S11-D1 | [plan](prs/S11-18-contested-marker.md) | Landed #507 |
 | S11-19 | Claim evidence query | 5 | Go query: member lines, collapse, relationship bundles; registry evidence section | — | S11-16 | [plan](prs/S11-19-claim-evidence-query.md) | Landed #513 |
 | S11-25 | Claim evidence RPC and pin policy | 5 | Lazy per-row RPC; Go default pins at Apply; Swift drafting moves onto it; proposal field 9 and `attachExhibits` removed | — | S11-19 | [plan](prs/S11-25-claim-evidence-rpc.md) | Landed #517 |
 | S11-32 | Lifespan and likeness evidence lines | 5 | The lifespan line (says when a side contradicts itself) and likeness lines (depiction compare by image) in `claimevidence` and the RPC; `ConclusionValue` gains a depiction case | — | S11-25, S10-54 (landed #433) | [plan](prs/S11-32-lifespan-likeness-lines.md) | Landed #523 |
 | S11-20 | Claim evidence sheet | 5 | The sheet's new layout and copy, with likeness lines as two crops | [S11-D2](design/archive/S11-D2-evidence-sheet.md) | S11-25, S11-32, S11-D2 | [plan](prs/S11-20-claim-evidence-sheet.md) | Landed #525 |
 | S11-33 | Evidence sheet audit follow-up | 5 | Items 1 – 10, A, B, C, F, G, H, I of the evidence sheet area audit: one sheet dismissal, engine-named relationships, one seeded-term wording table, whole-phrase copy, an evidence board for responsiveness, unread wire fields removed, docs | — | S11-20 | [plan](prs/S11-33-evidence-sheet-audit.md) | Landed #525 |
 | S11-26 | Connections file by their ends | 6 | Drop the bridge switch-off: `SkipBridgeIDs`, `skip_bridge_ids`, the `skip` parameters | — | — | [plan](prs/S11-26-connections-by-ends.md) | Landed #527 |
-| S11-27 | Connection subrows on Promote | 6 | Each connection as a subrow of a row it joins, its state from its ends; the panel and toggles go | S11-D1 | S11-26, S11-D1 | [plan](prs/S11-27-connection-subrows.md) | Planned |
+| S11-27 | Connection subrows on Promote | 6 | Each connection as a subrow of a row it joins, its state from its ends; the panel and toggles go | S11-D1 | S11-26, S11-D1 | [plan](prs/S11-27-connection-subrows.md) | Landed #530 |
 | S11-21 | Large-Source performance check | 7 | 100-Subject benchmark; memoize only if it fails | — | S11-16 | — | Scoped |
 | S11-31 | Bound the Source cache | 7 | Loaded Source graphs and their memos are evicted least recently used beyond a cap | — | S11-19 | — | Scoped |
 | S11-28 | Fold a nickname into its given name | 2 | Reconciler folds a nickname or abbreviation into its formal name, keeping the set's head; a reviewed table directs two-way pairs; cache reads the product alias tables | — | S11-06 | [plan](prs/S11-28-alias-fold.md) | Planned |
@@ -124,7 +124,7 @@ These are the calls for this spike. PR plans treat them as binding.
 
 | Brief | View | Gates | Notes |
 | --- | --- | --- | --- |
-| [S11-D1](design/S11-D1-promote-rows.md) | Promote page — rows | **S11-18**, **S11-27** | Board agreed 2026-10-20 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share)). Contested marker beside the band; move reasons in the Updated caption; connections as subrows of the rows they join, answering the [design questions](promote-connection-subrows.md#open-questions-for-design) |
+| [S11-D1](design/archive/S11-D1-promote-rows.md) | Promote page — rows | **S11-18**, **S11-27** | Board agreed 2026-10-20 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share)). Contested marker beside the band; move reasons in the Updated caption; connections as subrows of the rows they join, answering the [design questions](promote-connection-subrows.md#open-questions-for-design) |
 | [S11-D2](design/archive/S11-D2-evidence-sheet.md) | Promote page — evidence sheet | **S11-20** | Board agreed 2026-10-22 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), frames E01 – E14). Whole sheet: "why suggested" marks at the title, property sections, relationship lines, collapsed members, likeness crops (from Spike 10's S10-D13), copy |
 
 ## Slices
@@ -443,7 +443,7 @@ Split from S11-20 when it was planned (user, 2026-10-22): the engine half of the
 
 #### S11-27 — Connection subrows on Promote
 
-**Ships.** Each connection shows as a subrow under a row it joins, as S11-D1 draws it, with its state from `ConnectionState` (files, waits, self-link). `PromoteFlow.connectionHosts` (hosts and pointers, built once per render); the bottom connections panel goes; the footer keeps its count, with an unselected part (board frame 19). A subrow words its connection with the existing connection sentence (user, 2026-10-23). VoiceOver reads why a connection waits.
+**Ships.** Each connection shows as a subrow under a row it joins, as S11-D1 draws it, with its state from `ConnectionState` (files, waits, self-link). `PromoteFlow.connectionsByRow` (each connection under every end that is a row, built once per render, no pointers); the bottom connections panel goes; the footer keeps its count, with an unselected part (board frame 19). A subrow words its connection with the existing connection sentence (user, 2026-10-23). VoiceOver reads why a connection waits.
 **Not this PR.** Opening the evidence sheet at a relationship line (S11-20 decides).
 **Check.** Setting John to Skip dims his connections; setting him to New turns them on; a self-link warns.
 **Context.** [Connection subrows](promote-connection-subrows.md); S11-D1.

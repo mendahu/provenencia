@@ -17469,42 +17469,6 @@
         }
       }
     },
-    "promote.page.group.kind": {
-      "comment": "Group Promote rows by person, event, or place",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kind"
-          }
-        }
-      }
-    },
-    "promote.page.group.assessment": {
-      "comment": "Group Promote rows by how sure the match is",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Assessment"
-          }
-        }
-      }
-    },
-    "promote.page.group.label": {
-      "comment": "Accessibility label for the Promote grouping menu",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Group rows"
-          }
-        }
-      }
-    },
     "promote.page.kind.person": {
       "comment": "Promote section of person rows",
       "extractionState": "manual",
@@ -17973,66 +17937,6 @@
         }
       }
     },
-    "promote.connections.count": {
-      "comment": "Bridge summary; argument is how many will be filed",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld connections will be filed"
-          }
-        }
-      }
-    },
-    "promote.connections.filed": {
-      "comment": "A connection that files on Done",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filed"
-          }
-        }
-      }
-    },
-    "promote.connections.self": {
-      "comment": "A connection whose ends resolve to one handle",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not filed · both ends are the same record"
-          }
-        }
-      }
-    },
-    "promote.connections.skipped": {
-      "comment": "A connection that stays unfiled because an end is not being filed",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not filed · an end is skipped"
-          }
-        }
-      }
-    },
-    "promote.done.summary": {
-      "comment": "Footer: how many rows will be filed, skipped, and how many connections",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "File %1$lld · Skip %2$lld · %3$lld connections"
-          }
-        }
-      }
-    },
     "promote.done.filing": {
       "comment": "Done button while the batch is writing",
       "extractionState": "manual",
@@ -18041,6 +17945,66 @@
           "stringUnit": {
             "state": "translated",
             "value": "Filing"
+          }
+        }
+      }
+    },
+    "promote.done.file": {
+      "comment": "Footer part: how many rows Done files",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File %lld"
+          }
+        }
+      }
+    },
+    "promote.done.skip": {
+      "comment": "Footer part: how many rows are skipped",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip %lld"
+          }
+        }
+      }
+    },
+    "promote.done.unselected": {
+      "comment": "Footer part: how many rows have no target yet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld unselected"
+          }
+        }
+      }
+    },
+    "promote.done.connections": {
+      "comment": "Footer part: how many connections Done files",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld connection"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld connections"
+                }
+              }
+            }
           }
         }
       }
@@ -18285,30 +18249,6 @@
         }
       }
     },
-    "promote.page.grouped.kind": {
-      "comment": "Closed label of the grouping menu when rows are grouped by kind",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grouped by kind"
-          }
-        }
-      }
-    },
-    "promote.page.grouped.assessment": {
-      "comment": "Closed label of the grouping menu when rows are grouped by assessment",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grouped by assessment"
-          }
-        }
-      }
-    },
     "promote.section.count": {
       "comment": "How many rows are in a Promote section",
       "extractionState": "manual",
@@ -18429,38 +18369,158 @@
         }
       }
     },
-    "promote.connections.title": {
-      "comment": "Title of the connections list",
+    "promote.connection.files": {
+      "comment": "Subrow state of a Promote connection that files on Done",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Connections"
+            "value": "Files on Done"
           }
         }
       }
     },
-    "promote.connections.meta": {
-      "comment": "Connections list summary; 1 = filed, 2 = not filed",
+    "promote.connection.waits": {
+      "comment": "Subrow state of a Promote connection that waits; argument is the name of the end it waits for",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$lld filed · %2$lld not filed"
+            "value": "Waits for %@"
           }
         }
       }
     },
-    "promote.connections.hint": {
-      "comment": "Hint in the connections list",
+    "promote.connection.waitsEnd": {
+      "comment": "Subrow state of a Promote connection that waits when the end has no name",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A connection files once both its ends are filed; to dispute one, change it on the Evidence graph"
+            "value": "Waits for its other end"
+          }
+        }
+      }
+    },
+    "promote.connection.spoken.files": {
+      "comment": "VoiceOver: a Promote connection that files on Done",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Files on Done."
+          }
+        }
+      }
+    },
+    "promote.connection.spoken.skipped": {
+      "comment": "VoiceOver: a Promote connection that waits for an end that is skipped; argument is its name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waits for %@, who is skipped."
+          }
+        }
+      }
+    },
+    "promote.connection.spoken.unset": {
+      "comment": "VoiceOver: a Promote connection that waits for an end with no target yet; argument is its name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waits for %@, who has no target yet."
+          }
+        }
+      }
+    },
+    "promote.connection.spoken.notOnPage": {
+      "comment": "VoiceOver: a Promote connection that waits for an end that is not on the page; argument is its name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waits for %@, who is not on this page."
+          }
+        }
+      }
+    },
+    "promote.connection.spoken.waitsEnd": {
+      "comment": "VoiceOver: a Promote connection that waits when the end has no name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waits for its other end."
+          }
+        }
+      }
+    },
+    "promote.connection.spoken.selfLink": {
+      "comment": "VoiceOver: a Promote connection whose ends land on one record; argument is that record's ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not filed, both ends are %@."
+          }
+        }
+      }
+    },
+    "promote.connection.selfLink": {
+      "comment": "Warning under a Promote connection whose ends land on one record; argument is that record's ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not filed · both ends are %@"
+          }
+        }
+      }
+    },
+    "promote.connection.otherEnd.filed": {
+      "comment": "Note under a Promote connection whose other end is already filed; argument is its name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is already filed"
+          }
+        }
+      }
+    },
+    "promote.connection.otherEnd.notOnPage": {
+      "comment": "Note under a Promote connection whose other end is not on the page; argument is its name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is not on this page"
+          }
+        }
+      }
+    },
+    "promote.connection.of": {
+      "comment": "VoiceOver name of the list of connections under a Promote row; argument is the row's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connections of %@"
           }
         }
       }

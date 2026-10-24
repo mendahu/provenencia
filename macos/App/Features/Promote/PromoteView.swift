@@ -21,16 +21,17 @@ struct PromoteView: View {
 
     var body: some View {
         let model = model
+        let connections = model.flow.connectionsByRow
         VStack(spacing: 0) {
             header
             ScrollView {
                 VStack(alignment: .leading, spacing: PVSpacing.space7) {
                     notices
-                    if model.flow.mappedRest {
-                        mappedBar
+                    if model.flow.mappedRest && !model.entry.mapAll {
+                        openedFromNote
                     }
                     ForEach(sections, id: \.id) { section in
-                        sectionBlock(section)
+                        sectionBlock(section, connections: connections)
                     }
                     if !model.flow.mappedRest && model.flow.restCount > 0 {
                         mapRest
@@ -40,9 +41,6 @@ struct PromoteView: View {
                 .padding(.vertical, PVSpacing.space6)
                 .frame(maxWidth: 1200, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            if bridgesOpen.wrappedValue {
-                connectionsPanel
             }
             footer
         }
@@ -160,31 +158,11 @@ struct PromoteView: View {
         return L10n.Promote.singleSummary(more: model.flow.restCount)
     }
 
-    private var mappedBar: some View {
-        HStack(alignment: .center) {
-            if !model.entry.mapAll {
-                Text(verbatim: L10n.Promote.openedFrom(name: model.entry.subjectName))
-                    .font(PVFont.body(size: PVTypeScale.bodySmall))
-                    .italic()
-                    .foregroundStyle(PVColor.textSecondary)
-            }
-            Spacer(minLength: PVSpacing.space4)
-            PVSelect(
-                selection: groupBinding,
-                options: [
-                    PVSelectOption(value: PromoteFlow.Grouping.kind.rawValue, label: L10n.string(L10n.Promote.groupKind)),
-                    PVSelectOption(value: PromoteFlow.Grouping.assessment.rawValue, label: L10n.string(L10n.Promote.groupAssessment)),
-                ],
-                icon: .layers,
-                displayLabel: model.flow.group == .assessment
-                    ? L10n.string(L10n.Promote.groupedByAssessment)
-                    : L10n.string(L10n.Promote.groupedByKind),
-                fillsWidth: false,
-                accessibilityLabel: L10n.Promote.groupLabel,
-                accessibilityIdentifier: "promote.group"
-            )
-            .disabled(model.isSaving)
-        }
+    private var openedFromNote: some View {
+        Text(verbatim: L10n.Promote.openedFrom(name: model.entry.subjectName))
+            .font(PVFont.body(size: PVTypeScale.bodySmall))
+            .italic()
+            .foregroundStyle(PVColor.textSecondary)
     }
 
     private var mapRest: some View {
@@ -199,14 +177,21 @@ struct PromoteView: View {
         }
     }
 
-    private func sectionBlock(_ section: Section) -> some View {
+    private func sectionBlock(
+        _ section: Section,
+        connections: [String: [PromoteFlow.RowConnection]]
+    ) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             PVSectionHeader(title: section.title, meta: section.meta)
             if !section.rows.isEmpty {
                 columnHeaders
                 ForEach(section.rows) { row in
-                    PromoteAlignmentRow(row: row, model: model)
-                        .disabled(model.isSaving)
+                    PromoteAlignmentRow(
+                        row: row,
+                        model: model,
+                        connections: connections[row.subjectID] ?? []
+                    )
+                    .disabled(model.isSaving)
                 }
             }
             if !section.anchors.isEmpty {
@@ -246,90 +231,13 @@ struct PromoteView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var connectionsPanel: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space3) {
-            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
-                Text(L10n.Promote.connectionsTitle)
-                    .font(PVFont.display(size: PVTypeScale.h4, weight: PVFontWeight.semibold))
-                    .foregroundStyle(PVColor.textDisplay)
-                Text(verbatim: connectionMeta)
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textMuted)
-                Text(L10n.Promote.connectionsHint)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall))
-                    .italic()
-                    .foregroundStyle(PVColor.textSecondary)
-            }
-            ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(model.flow.connections) { bridge in
-                        connectionRow(bridge)
-                    }
-                }
-            }
-            .frame(maxHeight: 420)
-        }
-        .padding(.horizontal, PVSpacing.space10)
-        .padding(.vertical, PVSpacing.space4)
-        .background(PVColor.surfaceCard)
-        .overlay(alignment: .top) { PVDivider() }
-    }
-
-    private func connectionRow(_ bridge: PromoteFlow.Bridge) -> some View {
-        HStack(alignment: .center, spacing: PromoteLayout.columnGap) {
-            PVMark(bridge.mark, size: 16, decorative: true)
-                .foregroundStyle(PVColor.textMuted)
-                .frame(width: 20)
-            if bridge.endAName.isEmpty || bridge.endBName.isEmpty {
-                Text(verbatim: bridge.sentence)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                HStack(spacing: PVSpacing.space2) {
-                    Text(verbatim: bridge.endAName)
-                    Text(verbatim: bridge.phrase)
-                        .italic()
-                        .foregroundStyle(PVColor.textSecondary)
-                    Text(verbatim: bridge.endBName)
-                }
-                .font(PVFont.body(size: PVTypeScale.bodySmall))
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            Text(L10n.Promote.connectionState(bridge.state))
-                .font(PVFont.body(size: PVTypeScale.caption))
-                .italic()
-                .foregroundStyle(PVColor.textMuted)
-                .multilineTextAlignment(.trailing)
-        }
-        .padding(.vertical, PVSpacing.space2)
-        .overlay(alignment: .top) { PVDivider() }
-        // One element: the connection's sentence, then whether it files.
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("promote.connection.\(bridge.id)")
-    }
-
-    private var connectionMeta: String {
-        let lines = model.flow.connections
-        let filed = lines.filter(\.files).count
-        return L10n.Promote.connectionsMeta(filed: filed, unfiled: lines.count - filed)
-    }
-
     private var footer: some View {
         HStack(spacing: PVSpacing.space4) {
-            PVButton(
-                L10n.Promote.connections(count: model.flow.connectionCount),
-                variant: .ghost,
-                size: .sm,
-                iconRight: bridgesOpen.wrappedValue ? .chevronUp : .chevronDown
-            ) {
-                model.setBridgesOpen(!model.flow.bridgesOpen)
-            }
-            .disabled(model.isSaving)
-            .accessibilityIdentifier("promote.connections.toggle")
             Spacer()
             Text(verbatim: L10n.Promote.doneSummary(
                 file: model.flow.fileCount,
                 skip: model.flow.skipCount,
+                unselected: model.flow.unsetCount,
                 connections: model.flow.connectionCount
             ))
             .font(PVFont.mono(size: PVTypeScale.caption))
@@ -360,11 +268,6 @@ struct PromoteView: View {
     private var sections: [Section] {
         let working = model.flow.visibleRows.filter { !$0.anchor }
         let anchors = model.flow.mappedRest ? model.flow.rows.filter(\.anchor) : []
-        if model.flow.group == .assessment {
-            return [PromoteFlow.Assessment.strong, .medium, .weak, .none].map { band in
-                section(band.rawValue, L10n.Promote.assessment(band), working.filter { $0.assessment == band }, [])
-            }.filter { !$0.rows.isEmpty }
-        }
         return [
             kindSection("person", L10n.Promote.kindPerson, .person, working, anchors),
             kindSection("event", L10n.Promote.kindEvent, .event, working, anchors),
@@ -381,31 +284,11 @@ struct PromoteView: View {
     ) -> Section {
         let rows = working.filter { $0.kind == kind }
         let filed = anchors.filter { $0.kind == kind }
-        return section(id, title, rows, filed)
-    }
-
-    private func section(
-        _ id: String,
-        _ title: LocalizedStringResource,
-        _ rows: [PromoteFlow.Row],
-        _ anchors: [PromoteFlow.Row]
-    ) -> Section {
-        let total = rows.count + anchors.count
-        let meta = anchors.isEmpty
+        let total = rows.count + filed.count
+        let meta = filed.isEmpty
             ? L10n.Promote.sectionCount(total)
-            : L10n.Promote.sectionCountFiled(rows: total, filed: anchors.count)
-        return Section(id: id, title: title, meta: meta, rows: rows, anchors: anchors)
-    }
-
-    private var groupBinding: Binding<String> {
-        Binding(
-            get: { model.flow.group.rawValue },
-            set: { model.setGroup(PromoteFlow.Grouping(rawValue: $0) ?? .kind) }
-        )
-    }
-
-    private var bridgesOpen: Binding<Bool> {
-        Binding(get: { model.flow.bridgesOpen }, set: { model.setBridgesOpen($0) })
+            : L10n.Promote.sectionCountFiled(rows: total, filed: filed.count)
+        return Section(id: id, title: title, meta: meta, rows: rows, anchors: filed)
     }
 
     private var sheetBinding: Binding<PromoteFlow.Row?> {
@@ -426,6 +309,8 @@ struct PromoteView: View {
 private struct PromoteAlignmentRow: View {
     let row: PromoteFlow.Row
     let model: PromoteModel
+    /// The connections shown under this row, in display order.
+    let connections: [PromoteFlow.RowConnection]
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
@@ -520,6 +405,9 @@ private struct PromoteAlignmentRow: View {
                 )
                 .padding(.leading, PromoteLayout.noteIndent)
             }
+            if !connections.isEmpty {
+                PromoteConnectionSubrows(rowName: row.name, rowRef: row.ref, connections: connections)
+            }
         }
         .padding(.vertical, PVSpacing.space3)
         .overlay(alignment: .top) { PVDivider() }
@@ -550,6 +438,67 @@ private struct PromoteAlignmentRow: View {
             get: { row.target.token },
             set: { model.setTarget(subjectID: row.subjectID, token: $0) }
         )
+    }
+}
+
+/// The connections that join a row, under its notes: a rule at the note indent and one line each,
+/// with a second line for the other end or a self-link's warning.
+private struct PromoteConnectionSubrows: View {
+    let rowName: String
+    let rowRef: String
+    let connections: [PromoteFlow.RowConnection]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(connections) { connection in
+                subrow(connection)
+            }
+        }
+        .padding(.leading, PVSpacing.space4)
+        .overlay(alignment: .leading) {
+            Rectangle().fill(PVColor.borderSubtle).frame(width: 1)
+        }
+        .padding(.leading, PromoteLayout.noteIndent)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(verbatim: L10n.Promote.connectionsOf(name: rowName)))
+    }
+
+    private func subrow(_ connection: PromoteFlow.RowConnection) -> some View {
+        let bridge = connection.bridge
+        let endName = bridge.name(of: bridge.state.waitingEndID)
+        let files = bridge.state == .files
+        return VStack(alignment: .leading, spacing: PVSpacing.space1) {
+            HStack(spacing: PVSpacing.space3) {
+                PVMark(bridge.mark, size: 14, decorative: true)
+                    .foregroundStyle(PVColor.textMuted)
+                Text(verbatim: bridge.sentence)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .help(Text(verbatim: bridge.sentence))
+                    .foregroundStyle(files ? PVColor.textPrimary : PVColor.textMuted)
+                Spacer(minLength: PVSpacing.space4)
+                if let text = L10n.Promote.connectionState(bridge.state, endName: endName) {
+                    Text(verbatim: text)
+                        .font(PVFont.body(size: PVTypeScale.caption))
+                        .italic()
+                        .foregroundStyle(files ? PVColor.textSecondary : PVColor.textMuted)
+                }
+            }
+            if let other = connection.otherEnd {
+                Text(verbatim: L10n.Promote.connectionOtherEnd(name: other.name, filed: other.filed))
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+                    .padding(.leading, 14 + PVSpacing.space3)
+            }
+            if case .selfLink(let ref) = bridge.state {
+                PVCallout(tone: .warning, message: L10n.Promote.connectionSelfLink(ref: ref), compact: true)
+            }
+        }
+        .padding(.vertical, PVSpacing.space1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: L10n.Promote.connectionSpoken(sentence: bridge.sentence, state: bridge.state, endName: endName)))
+        .accessibilityIdentifier("promote.row.\(rowRef).connection.\(bridge.id)")
     }
 }
 
