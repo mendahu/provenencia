@@ -116,3 +116,31 @@ Executability (sonnet): **Ready with changes**, no new blocker.
 - X-16 nit — logged.
 
 **Refresh verdict:** Fits — Ready. No open blocker; no To user item.
+
+## Addition 2026-10-24 — card symbol and font caches (US-5, D-13, D-14, STEP-11)
+
+The user asked for the two caches on this PR after a profile of evidence-graph panning (plan §4 "Card painting"). Reviewers: maintainability (opus), executability (sonnet).
+
+### Round 1
+**X-1 · blocker · `Painter` is not main-actor, so a `@MainActor` cache will not compile** — **Fixed:** D-13 makes `Painter` `@MainActor`; it is built only in `draw(_:)` and the static `measure`, both on the `NSView`'s main actor.
+**M-1 · major · key the symbol cache by `PVSymbol`** — **Fixed:** `Painter.symbol(_ symbol: PVSymbol, …)` like `mark`; callers drop `.rawValue`; T-12 uses `.penLine`, `.trash`, `.imageUp`.
+**M-2 · major · two cache mechanisms; D-13 rejects what D-14 adopts** — **Fixed:** D-14 uses a `Hashable` key and a lock-guarded dictionary, the shape of `TimestampFormat`; `NSCache` is gone from both.
+**X-2 · major · `===` cannot prove a cache; `!==` pairs may share an instance** — **Fixed:** DEBUG miss counters; T-12 and T-13 assert misses, red first; `!==` cases dropped.
+**X-3 · major · `nsMono` family check under-specified** — **Fixed:** `familyName == PVFontFamily.mono` in the hosted test (the host registers the bundled fonts); the stop condition now names T-13.
+**X-4 · major · pbxproj wiring and IDs** — **Fixed:** STEP-11 names the four entries per file, the groups and phases, and free IDs `FA`–`FF`.
+**M-3 · minor · `PVFont.mono` through `nsMono`** — **Fixed.**
+**M-4 · minor · test file name** — **Fixed:** `PVFontTests.swift`.
+**X-5 · minor · bare `mono(` callers** — **Fixed:** STEP-11 says every bare call; the build is the check.
+**X-6 · minor · cache details** — **Fixed:** each raw weight is its own key; fallbacks are cached; §6 notes the mono fallback change.
+**X-7 · minor · checks** — **Declined in part:** AC-5.3 and the visual check stay manual (§10 step 5), with the user driving the app as for the first profile.
+**X-8 · nit · temptations** — `Painter.mark` gets an Out line; the README sentence is in D-14.
+
+### Round 2
+Executability (sonnet): **Ready with changes**, no new blocker; X-1's answer confirmed (every `Painter` use is main-actor) and the pbxproj IDs confirmed.
+- X-9 §6 signature — **Fixed:** `image(_:pointSize:)`.
+- X-10 grep misses multi-line calls — **Fixed:** greps for `PVSymbol.x.rawValue`; the build also catches a leftover.
+- X-11 global counters flake under parallel tests — **Fixed:** per-key DEBUG `isCached` checks on sizes no card uses, replacing the counters.
+- X-12 cached fallbacks stick — **Fixed:** stop condition added.
+- X-13 nit — logged.
+
+**Addition verdict:** Fits — Ready. No open blocker; no To user item.
