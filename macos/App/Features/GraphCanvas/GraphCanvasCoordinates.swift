@@ -8,6 +8,11 @@ import CoreGraphics
 /// This enum stays the pure math seam for camera transforms, magnification clamp,
 /// and scroll-origin clamp shared by pan + zoom.
 enum GraphCanvasCoordinates {
+    /// Two magnifications (or scales) closer than this are the same one.
+    static let magnificationTolerance: CGFloat = 0.000_1
+    /// Floor under any divide by magnification, so a zero never reaches it.
+    static let minimumMagnification: CGFloat = 0.000_1
+
     static func clampMagnification(
         _ value: CGFloat,
         minimum: CGFloat = GraphCanvasCamera.minMagnification
@@ -48,7 +53,7 @@ enum GraphCanvasCoordinates {
     /// `NSScrollView` scales the document, so a stroke of `1 / magnification`
     /// stays one screen point at every zoom.
     static func screenPixelDocumentWidth(magnification: CGFloat) -> CGFloat {
-        1 / max(magnification, 0.000_1)
+        1 / max(magnification, minimumMagnification)
     }
 
     /// Opacity for a repeated grid cell. The pattern stays fully visible while

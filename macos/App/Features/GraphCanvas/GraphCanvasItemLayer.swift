@@ -65,7 +65,7 @@ final class GraphCanvasItemLayer {
         didSet {
             for view in views.values + (previewView.map { [$0] } ?? []) {
                 guard let layer = view.layer,
-                      abs(layer.contentsScale - contentsScale) > 0.000_1
+                      abs(layer.contentsScale - contentsScale) > GraphCanvasCoordinates.magnificationTolerance
                 else { continue }
                 layer.contentsScale = contentsScale
                 view.needsDisplay = true

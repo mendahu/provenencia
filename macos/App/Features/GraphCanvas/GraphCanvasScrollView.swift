@@ -202,7 +202,7 @@ final class GraphCanvasNSScrollView: NSScrollView {
 
     override var magnification: CGFloat {
         didSet {
-            guard abs(oldValue - magnification) > 0.000_1 else { return }
+            guard abs(oldValue - magnification) > GraphCanvasCoordinates.magnificationTolerance else { return }
             scheduleItemContentsScale()
             let value = magnification
             let viewport = viewport
@@ -276,10 +276,10 @@ final class GraphCanvasNSScrollView: NSScrollView {
             documentSize: document.frame.size,
             viewportSize: contentView.frame.size
         )
-        if abs(minMagnification - floor) > 0.000_1 {
+        if abs(minMagnification - floor) > GraphCanvasCoordinates.magnificationTolerance {
             minMagnification = floor
         }
-        guard magnification + 0.000_1 < floor else { return }
+        guard magnification + GraphCanvasCoordinates.magnificationTolerance < floor else { return }
         let clip = contentView
         let center = clip.convert(CGPoint(x: clip.bounds.midX, y: clip.bounds.midY), to: nil)
         zoom(to: floor, windowLocation: center)
@@ -362,7 +362,7 @@ final class GraphCanvasNSScrollView: NSScrollView {
             magnification * factor,
             minimum: minMagnification
         )
-        guard abs(target - magnification) > 0.000_1 else { return }
+        guard abs(target - magnification) > GraphCanvasCoordinates.magnificationTolerance else { return }
         zoom(to: target, windowLocation: event.locationInWindow)
     }
 
@@ -377,7 +377,7 @@ final class GraphCanvasNSScrollView: NSScrollView {
             newMagnification,
             minimum: minMagnification
         )
-        guard abs(newMag - oldMag) > 0.000_1 else { return }
+        guard abs(newMag - oldMag) > GraphCanvasCoordinates.magnificationTolerance else { return }
 
         let clip = contentView
         let anchor = clip.convert(windowLocation, from: nil)
@@ -425,7 +425,7 @@ final class GraphCanvasViewportController {
     /// pixel of content.
     func panByViewDelta(_ delta: CGSize) {
         guard let scrollView, let document = scrollView.documentView else { return }
-        let mag = max(scrollView.magnification, 0.000_1)
+        let mag = max(scrollView.magnification, GraphCanvasCoordinates.minimumMagnification)
         let clip = scrollView.contentView
         var origin = clip.bounds.origin
         origin.x -= delta.width / mag
