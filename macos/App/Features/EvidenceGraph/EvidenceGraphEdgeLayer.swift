@@ -150,8 +150,12 @@ struct EvidenceGraphConnectRubberBand: View {
     let gridCursor: CGPoint
     var layout: EvidenceCardLayout?
     @Environment(\.graphCanvasContentOrigin) private var contentOrigin
+    @Environment(\.graphCanvasViewport) private var viewport
 
     var body: some View {
+        let pixel = GraphCanvasCoordinates.screenPixelDocumentWidth(
+            magnification: viewport?.magnification ?? 1
+        )
         let cursor = GraphCanvasCoordinates.documentPoint(gridCursor, origin: contentOrigin)
         Canvas { context, _ in
             let fromRect = GraphCanvasCoordinates.documentRect(
@@ -172,7 +176,7 @@ struct EvidenceGraphConnectRubberBand: View {
                     startPoint: start,
                     endPoint: cursor
                 ),
-                style: StrokeStyle(lineWidth: 1.75, lineCap: .round, dash: [5, 4])
+                style: StrokeStyle(lineWidth: 1.75 * pixel, lineCap: .round, dash: [5, 4])
             )
         }
         .allowsHitTesting(false)
