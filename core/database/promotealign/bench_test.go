@@ -49,6 +49,13 @@ func largeShape(r *rand.Rand, names *zipfNames) catalogShape {
 }
 
 // letters is the lowercase base 26 of k: a for 0, ba for 26.
+// benchRef is a canonical entity ref the fixture writes. The "U" cannot appear
+// in a ref core/ref mints (its alphabet leaves out I, L, O and U), so a fixture
+// ref never equals a ref the test mints at random.
+func benchRef(prefix string, n int) string {
+	return prefix + "-U" + fmt.Sprintf("%05d", n)
+}
+
 func letters(k int) string {
 	if k == 0 {
 		return "a"
@@ -324,7 +331,7 @@ func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 	cities[0] = city
 	for i := 1; i < shape.Cities; i++ {
 		id := benchID(i)
-		if _, err := ent.Exec(id, placeT, fmt.Sprintf("PLC-%05d", i)); err != nil {
+		if _, err := ent.Exec(id, placeT, benchRef("PLC", i)); err != nil {
 			return err
 		}
 		cities[i] = id
@@ -332,7 +339,7 @@ func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 	towns := make([][]byte, shape.Towns)
 	for k := range towns {
 		id := benchID(900000 + k)
-		if _, err := ent.Exec(id, placeT, fmt.Sprintf("PLC-T%04d", k)); err != nil {
+		if _, err := ent.Exec(id, placeT, benchRef("PLC", 90000+k)); err != nil {
 			return err
 		}
 		if _, err := textVal.Exec(id, toponymP, "Town"+letters(k)); err != nil {
@@ -344,7 +351,7 @@ func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 	birthYear := make([]int, shape.Persons)
 	for i := 0; i < shape.Persons; i++ {
 		id := benchID(100 + i)
-		if _, err := ent.Exec(id, personT, fmt.Sprintf("PER-%05d", i)); err != nil {
+		if _, err := ent.Exec(id, personT, benchRef("PER", i)); err != nil {
 			return err
 		}
 		persons[i] = id
@@ -367,9 +374,9 @@ func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 	}
 	// event writes one event with its subject participation, its place and,
 	// when it has one, its date.
-	event := func(eventID, partID, locID, n int, ref string, person, place, typeTerm []byte, d *datevalue.Value) error {
+	event := func(eventID, partID, locID, n, refN int, person, place, typeTerm []byte, d *datevalue.Value) error {
 		ev := benchID(eventID + n)
-		if _, err := ent.Exec(ev, eventT, "EVT-"+ref); err != nil {
+		if _, err := ent.Exec(ev, eventT, benchRef("EVT", refN)); err != nil {
 			return err
 		}
 		if _, err := val.Exec(ev, typeP, typeTerm, nil); err != nil {
@@ -385,7 +392,7 @@ func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 			}
 		}
 		part := benchID(partID + n)
-		if _, err := ent.Exec(part, partT, "PAR-"+ref); err != nil {
+		if _, err := ent.Exec(part, partT, benchRef("PAR", refN)); err != nil {
 			return err
 		}
 		if _, err := val.Exec(part, personP, nil, person); err != nil {
@@ -398,7 +405,7 @@ func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 			return err
 		}
 		loc := benchID(locID + n)
-		if _, err := ent.Exec(loc, locT, "LOC-"+ref); err != nil {
+		if _, err := ent.Exec(loc, locT, benchRef("LOC", refN)); err != nil {
 			return err
 		}
 		if _, err := val.Exec(loc, eventP, nil, ev); err != nil {
@@ -421,14 +428,14 @@ func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 			p, term = i%shape.Persons, deathTerm
 			year = deathYear[p]
 		}
-		if err := event(100000, 200000, 400000, i, fmt.Sprintf("%05d", i), persons[p], cities[i%shape.Cities], term, dateFor(year)); err != nil {
+		if err := event(100000, 200000, 400000, i, i, persons[p], cities[i%shape.Cities], term, dateFor(year)); err != nil {
 			return err
 		}
 	}
 	for j := 0; j < shape.TownEvents; j++ {
 		p := r.IntN(shape.Persons)
 		k := r.IntN(shape.Towns)
-		if err := event(600000, 700000, 800000, j, fmt.Sprintf("T%05d", j), persons[p], towns[k], deathTerm, dateFor(deathYear[p])); err != nil {
+		if err := event(600000, 700000, 800000, j, 500000+j, persons[p], towns[k], deathTerm, dateFor(deathYear[p])); err != nil {
 			return err
 		}
 	}
