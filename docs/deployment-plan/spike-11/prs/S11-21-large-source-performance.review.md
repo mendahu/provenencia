@@ -144,3 +144,30 @@ Executability (sonnet): **Ready with changes**, no new blocker; X-1's answer con
 - X-13 nit — logged.
 
 **Addition verdict:** Fits — Ready. No open blocker; no To user item.
+
+## Addition 2026-10-24 — card layers (D-15, D-16, STEP-12)
+
+A draw log showed every card repainting on every pan frame, drawn into the document's layer (plan §4 "Card layers"). The user asked for the fix on this PR. Reviewers: maintainability (opus), executability (sonnet).
+
+### Round 1
+**X-1 · blocker · how the scroll view reaches the item layer** / **M-1 · major · two classes compute the scale** — **Fixed:** D-16 puts every trigger in `GraphCanvasNSScrollView` behind `syncItemContentsScale()`; it reaches the items through `weak var items`, set in `makeNSView` from the document it creates. `GraphCanvasDocumentView` drops out.
+**X-2 · blocker · the scale source; AC-5.4 vs T-14** — **Fixed:** the item layer applies the `contentsScale` it is given; AC-5.4 and T-14 agree; opening may draw a card twice (AC-5.6).
+**X-3 · blocker · live-magnify observer lifecycle** / **M-3 · minor · "settled" means two things** — **Fixed:** no notifications; `magnify(with:)`'s phase sets `isPinching`; every other source goes through one per-run-loop coalesce.
+**X-4 · wheel and restored-camera repaints** — **Fixed:** stated as accepted costs in D-16.
+**X-5 / M-2 · empty `viewDidChangeBackingProperties` override** — **Fixed:** deleted; the reason moves to `contentsScale`'s doc comment; the Check greps for it.
+**X-6 · checks** — **Fixed in part:** red first is compile-level (stated); AppKit resetting a layer's scale is covered by comparing every layer on each sync, plus a stop condition for a display move.
+**X-7 · Current state** — **Fixed:** `syncBackingScale` is noted as likely a no-op today.
+**X-8 / M-4 · README and stale plan text** — **Fixed:** the README edits are named; §4 "Card painting" points at "Card layers"; the Out row names `GraphCanvasItemLayer` as its home.
+**M-5 · nit · property, not setter** — **Fixed:** `contentsScale` is a property.
+
+### Round 2
+Maintainability (opus): **Fits with changes**. **M-6 · blocker · a rebuilt card keeps the backing scale while zoomed past 1×** — **Fixed:** `GraphCanvasItemLayer.insert` sets the scale after `addSubview`; both build sites call it; stop condition and manual check cover a selection at 1.25×. Animated zooms outside `magnify(with:)` named as an accepted cost.
+Executability (sonnet): **Ready with changes**, no new blocker.
+- X-9 open draw count — **Fixed:** two per card on Retina, one on 1×.
+- X-10 no scroll-view test — **Declined:** a hosted `NSScrollView` in a window is flaky for what AC-5.6 checks by hand; stated in D-16.
+- X-11 nil window and stuck pinch flag — **Fixed:** sync returns with no window; `viewDidMoveToWindow` clears `isPinching`.
+- X-12 tolerance — **Fixed:** `0.000_1`, as the magnification code.
+- X-13 sub-steps and README anchors — **Fixed.**
+- X-14 nit — logged; covered by the stop condition.
+
+**Addition verdict:** Fits — Ready. Round cap reached; no open blocker; no To user item.
