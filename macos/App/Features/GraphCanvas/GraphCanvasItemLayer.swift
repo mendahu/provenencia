@@ -65,6 +65,8 @@ final class GraphCanvasItemLayer {
     private var order: [String] = []
     /// Each item's place among the views, bottom to top; see ``stackIndex(of:)``.
     private var stackIndices: [String: Int] = [:]
+    /// Item ids bottom to top, as last restacked.
+    private var stack: [String] = []
     private var rotorEntries: [String: GraphCanvasRotorEntry] = [:]
 
     /// The scale every item's layer renders at. The scroll view sets it to the
@@ -87,8 +89,8 @@ final class GraphCanvasItemLayer {
     /// The stand-in the host shows while it waits for the researcher (the item
     /// a click would create). It goes through the same build, scale and
     /// placement as an item, but is not one: it has no id, rotor entry or stack
-    /// index, `update` never removes it, a drag never moves it, and it is
-    /// always on top. Its view is rebuilt only when its model changes, so
+    /// index, `update` never removes it, a drag never moves it, and it sits
+    /// below every item, so a card covers it and its frame never lies over one. Its view is rebuilt only when its model changes, so
     /// moving it only moves the frame. Nil removes it.
     var preview: GraphCanvasPreview? {
         didSet { applyPreview(replacing: oldValue) }
@@ -106,6 +108,7 @@ final class GraphCanvasItemLayer {
     func update(_ items: [GraphCanvasItem]) {
         guard let container else { return }
         let ids = Set(items.map(\.id))
+        let stack = items.filter { !$0.isRaised }.map(\.id) + items.filter(\.isRaised).map(\.id)
         for (id, view) in views where !ids.contains(id) {
             view.removeFromSuperview()
             views[id] = nil
@@ -120,12 +123,12 @@ final class GraphCanvasItemLayer {
             if let existing = views[item.id] {
                 if let previous = models[item.id], !item.model.isEqual(to: previous) {
                     existing.removeFromSuperview()
-                    view = insert(item.makeView())
+                    view = insert(item.makeView(), forID: item.id, in: stack)
                 } else {
                     view = existing
                 }
             } else {
-                view = insert(item.makeView())
+                view = insert(item.makeView(), forID: item.id, in: stack)
             }
             views[item.id] = view
             models[item.id] = item.model
@@ -135,7 +138,7 @@ final class GraphCanvasItemLayer {
         }
         order = items.map(\.id)
 
-        restack(items.filter { !$0.isRaised }.map(\.id) + items.filter(\.isRaised).map(\.id))
+        restack(stack)
     }
 
     /// Where `id` is drawn among the items, 0 at the bottom; nil for an id that
@@ -145,26 +148,65 @@ final class GraphCanvasItemLayer {
         stackIndices[id]
     }
 
-    /// Puts the views in `stack` order (bottom to top), adding only the views
-    /// from the first one that is out of place, so an unchanged order moves
-    /// nothing.
+    /// Puts the views in `stack` order (bottom to top), moving only the views
+    /// that are out of place: the longest run already in order stays, so a
+    /// raised item goes to the top and a lowered one back into place, and an
+    /// unchanged order moves nothing.
     private func restack(_ stack: [String]) {
         guard let container else { return }
+        self.stack = stack
         stackIndices = Dictionary(uniqueKeysWithValues: stack.enumerated().map { ($1, $0) })
         let desired = stack.compactMap { views[$0] }
-        let known = Set(desired.map(ObjectIdentifier.init))
-        let current = container.subviews.filter { known.contains(ObjectIdentifier($0)) }
-        if let first = desired.indices.first(where: { current[$0] !== desired[$0] }) {
-            for view in desired[first...] {
-                container.addSubview(view, positioned: .above, relativeTo: nil)
+        let currentIndex = Dictionary(
+            uniqueKeysWithValues: container.subviews.enumerated().map { (ObjectIdentifier($1), $0) }
+        )
+        let positions = desired.map { currentIndex[ObjectIdentifier($0)] ?? Int.max }
+        let stays = Set(Self.longestIncreasingRun(positions))
+        for (index, view) in desired.enumerated() where !stays.contains(index) {
+            if index > 0 {
+                container.addSubview(view, positioned: .above, relativeTo: desired[index - 1])
+            } else {
+                container.addSubview(view, positioned: .below, relativeTo: desired.count > 1 ? desired[1] : nil)
             }
         }
-        raisePreview()
+        settlePreview()
     }
 
-    private func raisePreview() {
-        guard let container, let previewView, container.subviews.last !== previewView else { return }
-        container.addSubview(previewView, positioned: .above, relativeTo: nil)
+    /// The indices of a longest strictly increasing subsequence of `values`.
+    private static func longestIncreasingRun(_ values: [Int]) -> [Int] {
+        var tails: [Int] = []
+        var previous = [Int?](repeating: nil, count: values.count)
+        for (index, value) in values.enumerated() {
+            var low = 0
+            var high = tails.count
+            while low < high {
+                let mid = (low + high) / 2
+                if values[tails[mid]] < value { low = mid + 1 } else { high = mid }
+            }
+            if low > 0 { previous[index] = tails[low - 1] }
+            if low == tails.count { tails.append(index) } else { tails[low] = index }
+        }
+        var run: [Int] = []
+        var cursor = tails.last
+        while let at = cursor {
+            run.append(at)
+            cursor = previous[at]
+        }
+        return run
+    }
+
+    /// The lowest item view, which the preview sits directly below.
+    private var lowestItemView: GraphCanvasItemView? {
+        stack.first.flatMap { views[$0] }
+    }
+
+    /// Keeps the preview directly below the lowest item view, so cards cover it.
+    private func settlePreview() {
+        guard let container, let previewView, let lowest = lowestItemView,
+              let at = container.subviews.firstIndex(of: lowest),
+              at == 0 || container.subviews[at - 1] !== previewView
+        else { return }
+        container.addSubview(previewView, positioned: .below, relativeTo: lowest)
     }
 
     /// Builds, moves or removes the preview view for the new ``preview``.
@@ -176,11 +218,16 @@ final class GraphCanvasItemLayer {
         }
         if let previewView, let previous, item.model.isEqual(to: previous.model) {
             place(previewView, at: item.origin, offset: .zero)
-            raisePreview()
             return
         }
         previewView?.removeFromSuperview()
-        let view = insert(item.makeView())
+        let view = item.makeView()
+        if let lowest = lowestItemView {
+            container?.addSubview(view, positioned: .below, relativeTo: lowest)
+        } else {
+            container?.addSubview(view, positioned: .above, relativeTo: nil)
+        }
+        view.layer?.contentsScale = contentsScale
         previewView = view
         place(view, at: item.origin, offset: .zero)
     }
@@ -229,12 +276,22 @@ final class GraphCanvasItemLayer {
         }
     }
 
-    /// Builds the item's view, which is its own layer (``GraphCanvasItemView``)
-    /// painted when built, when its pixel size or appearance changes, or on
-    /// `invalidatePaint()`, so a pan or a zoom step composites cached layers.
-    /// It goes above the other items at the current ``contentsScale``.
-    private func insert(_ view: GraphCanvasItemView) -> GraphCanvasItemView {
-        container?.addSubview(view, positioned: .above, relativeTo: nil)
+    /// Adds the item's view (its own layer, ``GraphCanvasItemView``, painted
+    /// when built, when its pixel size or appearance changes, or on
+    /// `invalidatePaint()`, so a pan or a zoom step composites cached layers)
+    /// at the current ``contentsScale``, straight into its place in `stack`:
+    /// below the next item already placed, else above the last one before it.
+    private func insert(_ view: GraphCanvasItemView, forID id: String, in stack: [String]) -> GraphCanvasItemView {
+        if let container, let position = stack.firstIndex(of: id) {
+            func placed(_ ids: some Sequence<String>) -> GraphCanvasItemView? {
+                ids.lazy.compactMap { self.views[$0] }.first { $0.superview === container }
+            }
+            if let next = placed(stack[(position + 1)...]) {
+                container.addSubview(view, positioned: .below, relativeTo: next)
+            } else {
+                container.addSubview(view, positioned: .above, relativeTo: placed(stack[..<position].reversed()))
+            }
+        }
         view.layer?.contentsScale = contentsScale
         return view
     }

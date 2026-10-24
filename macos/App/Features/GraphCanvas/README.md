@@ -61,8 +61,8 @@ or a zoom step shows the last image again.
 
 A host can show one stand-in while it waits for the researcher, such as the item a
 click would create: set `GraphCanvasItemLayer.preview` to a
-`GraphCanvasPreview(origin:model:makeView:)`. It is placed like an item and drawn above all of
-them, but is not one: no id, rotor entry or stack index, and `update` leaves it alone.
+`GraphCanvasPreview(origin:model:makeView:)`. It is placed like an item and drawn below
+every item, so cards cover it, but is not one: no id, rotor entry or stack index, and `update` leaves it alone.
 Nil removes it.
 
 **Never read `GraphCanvasPointerController.offsets` in a view body** that does

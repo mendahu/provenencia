@@ -176,7 +176,7 @@ struct EvidenceGraphConnectRubberBand: View {
                     startPoint: start,
                     endPoint: cursor
                 ),
-                style: StrokeStyle(lineWidth: 1.75 * pixel, lineCap: .round, dash: [5, 4])
+                style: StrokeStyle(lineWidth: 1.75 * pixel, lineCap: .round, dash: [5 * pixel, 4 * pixel])
             )
         }
         .allowsHitTesting(false)

@@ -248,7 +248,7 @@ struct GraphCanvasItemLayerTests {
         #expect(view.frame.origin == CGPoint(x: 130 - outset, y: 70 - outset))
     }
 
-    @Test func aPreviewIsPlacedLikeAnItemAndStaysOnTop() throws {
+    @Test func aPreviewIsPlacedLikeAnItemAndStaysBelowEveryItem() throws {
         let container = flippedContainer()
         let layer = GraphCanvasItemLayer(container: container)
         let outset = GraphCanvasItemView.paintOutset
@@ -260,16 +260,19 @@ struct GraphCanvasItemLayerTests {
         let preview = try #require(layer.previewView)
         #expect(preview.superview === container)
         #expect(preview.frame.origin == CGPoint(x: 30 - outset, y: 20 - outset))
-        #expect(container.subviews.last === preview)
+        #expect(container.subviews.first === preview)
         #expect(preview.layer?.contentsScale == 1)
 
-        // Above every item and raised item, across pushes; an update that does
+        // Below every item and raised item, across pushes; an update that does
         // not list it leaves it alone.
         layer.update([item("a", at: CGPoint(x: 130, y: 70), raised: true), item("b", at: CGPoint(x: 200, y: 70))])
-        #expect(container.subviews.last === preview)
+        #expect(container.subviews.first === preview)
         layer.update([item("b", at: CGPoint(x: 200, y: 70), model: "v2")])
         #expect(layer.previewView === preview)
-        #expect(container.subviews.last === preview)
+        #expect(container.subviews.first === preview)
+        layer.update([item("c", at: CGPoint(x: 300, y: 70)), item("b", at: CGPoint(x: 200, y: 70), model: "v2")])
+        #expect(container.subviews.first === preview)
+        #expect(container.subviews.count == 3)
 
         // No rotor entry, no stack index, not an item.
         #expect(layer.rotorNames.isEmpty)
@@ -284,7 +287,7 @@ struct GraphCanvasItemLayerTests {
         #expect(layer.previewView !== preview)
         #expect(preview.superview == nil)
         #expect(counter.counts["preview"] == 2)
-        #expect(container.subviews.last === layer.previewView)
+        #expect(container.subviews.first === layer.previewView)
 
         // It follows the content origin and the render scale like an item.
         layer.contentOrigin = { CGPoint(x: 0, y: 0) }
@@ -296,7 +299,55 @@ struct GraphCanvasItemLayerTests {
         layer.preview = nil
         #expect(layer.previewView == nil)
         #expect(container.subviews.allSatisfy { $0 !== preview })
-        #expect(container.subviews.count == 1)
+        #expect(container.subviews.count == 2)
+    }
+
+    /// A container that records every view the layer adds or moves in it.
+    private final class RecordingContainer: NSView {
+        var added: [NSView] = []
+        override var isFlipped: Bool { true }
+        override func addSubview(_ view: NSView, positioned place: NSWindow.OrderingMode, relativeTo otherView: NSView?) {
+            added.append(view)
+            super.addSubview(view, positioned: place, relativeTo: otherView)
+        }
+    }
+
+    @Test func aRebuildAndARaiseMoveOnlyTheViewsThatChanged() throws {
+        let container = RecordingContainer(frame: CGRect(x: 0, y: 0, width: 2_000, height: 2_000))
+        let layer = GraphCanvasItemLayer(container: container)
+        var middleModel = "v1"
+        func push(raised: String? = nil) {
+            layer.update(["a", "b", "c"].enumerated().map { index, id in
+                item(id, at: CGPoint(x: 100 * index, y: 0), model: id == "b" ? middleModel : "v1", raised: id == raised)
+            })
+        }
+        push()
+        let a = try #require(layer.view(for: "a"))
+        let b = try #require(layer.view(for: "b"))
+        let c = try #require(layer.view(for: "c"))
+        #expect(container.subviews == [a, b, c])
+
+        // A selection-style rebuild of the middle item: its new view goes
+        // straight into its place and nothing else moves.
+        container.added = []
+        middleModel = "v2"
+        push()
+        let b2 = try #require(layer.view(for: "b"))
+        #expect(b2 !== b)
+        #expect(container.added == [b2])
+        #expect(container.subviews == [a, b2, c])
+
+        // Raising the first item moves only that item, to the top.
+        container.added = []
+        push(raised: "a")
+        #expect(container.added == [a])
+        #expect(container.subviews == [b2, c, a])
+
+        // Lowering it again moves only it back.
+        container.added = []
+        push()
+        #expect(container.added == [a])
+        #expect(container.subviews == [a, b2, c])
     }
 
     @Test func rotorFilterIgnoresCaseAndAccents() throws {
