@@ -19,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -86,10 +87,7 @@ func (f *pinFixture) must(err error) {
 func (f *pinFixture) record(st subjecttypes.Type, prop properties.Property, values ...string) (subjects.Subject, []observations.Observation) {
 	f.t.Helper()
 	graph := evidencegraphstest.SoleGraph(f.t, f.c, f.artifact.SourceID).ID
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graph, SubjectTypeID: st.ID}, nil)
-	})
-	f.must(err)
+	s := subjectstest.OfType(f.t, f.c, userID, graph, st.ID, "")
 	var in []observations.Input
 	for _, v := range values {
 		if prop.ValueType == propertymeta.ValueTypeName {

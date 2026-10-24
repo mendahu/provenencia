@@ -19,7 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -71,17 +71,8 @@ func (f *walkFixture) newSource(typeID []byte, title string) (sources.Source, ar
 
 func (f *walkFixture) subject(src sources.Source, name, kind string) subjects.Subject {
 	f.t.Helper()
-	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
-	if err != nil {
-		f.t.Fatal(err)
-	}
 	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: walkUser}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, walkUser, subjects.CreateInput{GraphID: graph, SubjectTypeID: st.ID}, nil)
-	})
-	if err != nil {
-		f.t.Fatal(err)
-	}
+	s := subjectstest.On(f.t, f.c, walkUser, graph, kind, "")
 	if _, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
 		return subjectpositions.Set(tx, s.ID, 0, f.y)
 	}); err != nil {
@@ -219,7 +210,7 @@ func TestWalkEvidenceGraphEdges(t *testing.T) {
 		{name: "no from Subjects", hop: participates},
 	}
 	g := f.c.Graph()
-	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(f.t, f.c, f.src.ID).ID)
+	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -266,7 +257,7 @@ func TestWalkEvidenceGraphStaysOnItsGraph(t *testing.T) {
 	}
 	other, _ := f.newSource(typeID, "Elsewhere")
 	g := f.c.Graph()
-	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(f.t, f.c, other.ID).ID)
+	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(t, f.c, other.ID).ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -314,12 +305,12 @@ func TestMemberSourceAndGraph(t *testing.T) {
 	t.Run("the Default graph", func(t *testing.T) {
 		f := newWalkFixture(t)
 		james := f.subject(f.src, "james", "person")
-		check(t, f, james, evidencegraphstest.SoleGraph(f.t, f.c, f.src.ID).ID)
+		check(t, f, james, evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID)
 	})
 	t.Run("a Split graph", func(t *testing.T) {
 		f := newWalkFixture(t)
 		_, jones, _ := artifactstest.Split(t, f.c, walkUser, f.src.ID, "Jones")
-		james := artifactstest.SubjectOn(t, f.c, walkUser, jones.ID, "person", "")
+		james := subjectstest.On(t, f.c, walkUser, jones.ID, "person", "")
 		check(t, f, james, jones.ID)
 	})
 }

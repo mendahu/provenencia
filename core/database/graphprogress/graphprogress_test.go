@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -93,29 +94,9 @@ func TestGraphProgress(t *testing.T) {
 			t.Fatal(err)
 		}
 		graph := evidencegraphstest.SoleGraph(t, c, worked.ID).ID
-		person, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				GraphID: graph, SubjectTypeID: personType.ID, Label: "Alice",
-			}, nil)
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		place, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				GraphID: graph, SubjectTypeID: placeType.ID, Label: "Boston",
-			}, nil)
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				GraphID: graph, SubjectTypeID: sourceType.ID, Label: "Reify",
-			}, nil)
-		}); err != nil {
-			t.Fatal(err)
-		}
+		person := subjectstest.OfType(t, c, userID, graph, personType.ID, "Alice")
+		place := subjectstest.OfType(t, c, userID, graph, placeType.ID, "Boston")
+		subjectstest.OfType(t, c, userID, graph, sourceType.ID, "Reify")
 		art, err := artifactstest.Create(c, userID, artifacts.CreateInput{
 			SourceID: worked.ID, Label: "Scan",
 		})
@@ -229,9 +210,9 @@ func TestGraphProgress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ada := artifactstest.SubjectOn(t, s.c, userID, def.ID, "person", "Ada")
-		artifactstest.SubjectOn(t, s.c, userID, def.ID, "person", "Ann")
-		artifactstest.SubjectOn(t, s.c, userID, jones.ID, "place", "Hull")
+		ada := subjectstest.On(t, s.c, userID, def.ID, "person", "Ada")
+		subjectstest.On(t, s.c, userID, def.ID, "person", "Ann")
+		subjectstest.On(t, s.c, userID, jones.ID, "place", "Hull")
 		db, err := s.c.DB()
 		if err != nil {
 			t.Fatal(err)
@@ -349,19 +330,8 @@ func TestPrimaryAndFiledCounts(t *testing.T) {
 	}
 	newSubject := func(src sources.Source, typeKey, label string) subjects.Subject {
 		t.Helper()
-		st, err := subjecttypes.Lookup(c, typeKey, vocabkey.OriginProvenencia)
-		if err != nil {
-			t.Fatal(err)
-		}
 		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
-		sub, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				GraphID: graph, SubjectTypeID: st.ID, Label: label,
-			}, nil)
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		sub := subjectstest.On(t, c, userID, graph, typeKey, label)
 		return sub
 	}
 	entityN := 0

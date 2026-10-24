@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -344,13 +345,7 @@ func lookupType(t *testing.T, c *database.Catalog, key string) subjecttypes.Type
 func mustSubject(t *testing.T, c *database.Catalog, sourceID, typeID []byte, label string) subjects.Subject {
 	t.Helper()
 	graph := evidencegraphstest.SoleGraph(t, c, sourceID).ID
-	s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graph, SubjectTypeID: typeID, Label: label}, nil)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return s
+	return subjectstest.OfType(t, c, userID, graph, typeID, label)
 }
 
 func mustEntity(t *testing.T, c *database.Catalog, typeID []byte) canonicalentities.Entity {

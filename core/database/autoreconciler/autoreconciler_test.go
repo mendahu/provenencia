@@ -33,6 +33,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -148,11 +149,7 @@ func (f *fixture) subject(kind string) subjects.Subject { return f.subjectOn(f.s
 func (f *fixture) subjectOn(src sources.Source, kind string) subjects.Subject {
 	f.t.Helper()
 	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graph, SubjectTypeID: f.types[kind].ID}, nil)
-	})
-	must(f.t, err)
-	return s
+	return subjectstest.OfType(f.t, f.c, userID, graph, f.types[kind].ID, "")
 }
 
 // cite files the Observations on one new Citation, on the Artifact of the

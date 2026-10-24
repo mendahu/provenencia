@@ -24,6 +24,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -1397,14 +1398,7 @@ func TestObservationsStayInOneGraph(t *testing.T) {
 		if graphID == nil {
 			graphID = evidencegraphstest.SoleGraph(t, c, src.ID).ID
 		}
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				GraphID: graphID, SubjectTypeID: typeID, Label: label,
-			}, nil)
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		s := subjectstest.OfType(t, c, userID, graphID, typeID, label)
 		return s
 	}
 	ann := newSubject(census, def.ID, "person", "Ann")

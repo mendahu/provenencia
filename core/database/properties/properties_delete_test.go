@@ -16,7 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
-	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/subjectvocab/subjectvocabtest"
@@ -352,14 +352,7 @@ func insertObservationOn(t *testing.T, c *database.Catalog, userID, propertyID [
 		t.Fatal(err)
 	}
 	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
-	place, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			GraphID: graph, SubjectTypeID: placeType.ID, Label: "Leeds",
-		}, nil)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	place := subjectstest.OfType(t, c, userID, graph, placeType.ID, "Leeds")
 	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "Leeds",

@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -89,22 +90,8 @@ func TestCitations(t *testing.T) {
 			t.Fatal(err)
 		}
 		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
-		person, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				GraphID: graph, SubjectTypeID: personType.ID, Label: "Alice",
-			}, nil)
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		place, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				GraphID: graph, SubjectTypeID: placeType.ID, Label: "Boston",
-			}, nil)
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		person := subjectstest.OfType(t, c, userID, graph, personType.ID, "Alice")
+		place := subjectstest.OfType(t, c, userID, graph, placeType.ID, "Boston")
 		toponymProp, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)

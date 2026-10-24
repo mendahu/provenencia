@@ -15,7 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
@@ -391,17 +391,8 @@ func newCatalog(t *testing.T) (*database.Catalog, func(key string) subjects.Subj
 	}
 	return c, func(key string) subjects.Subject {
 		t.Helper()
-		st, err := subjecttypes.Lookup(c, key, vocabkey.OriginProvenencia)
-		if err != nil {
-			t.Fatal(err)
-		}
 		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graph, SubjectTypeID: st.ID}, nil)
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		s := subjectstest.On(t, c, userID, graph, key, "")
 		return s
 	}
 }

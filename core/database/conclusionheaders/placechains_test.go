@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 
 	// placeSubject cites a Place (and optional period) but does not promote — call
 	// promoteSubject after placeRel so bridges file with the ends.
@@ -22,7 +23,7 @@ func year(y int) *int { return &y }
 
 func (f *fixture) placeSubject(name string, start, end *int, x, y int64) subjects.Subject {
 	f.t.Helper()
-	s := f.bare("place")
+	s := subjectstest.On(f.t, f.c, userID, f.graph, "place", "")
 	f.at(s, x, y)
 	in := []observations.Input{
 		{PropertyID: f.prop("toponym").ID, ValueText: name, HasText: true},
@@ -217,10 +218,10 @@ func TestBirthLocationsFoldWhenPartOf(t *testing.T) {
 	scotland := f.placeSubject("Scotland", nil, nil, 4, 0)
 	f.placeRel(toronto, ontario, propertyterms.KeyPartOf, nil, nil)
 
-	person := f.bare("person")
+	person := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 	f.named(person, "James")
 	f.at(person, 0, 4)
-	birth := f.bare("event")
+	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.at(birth, 4, 4)
 	f.cite(birth,
 		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
@@ -251,13 +252,13 @@ func TestBirthLocationsFoldWhenPartOf(t *testing.T) {
 	}
 
 	// Unrelated Scotland stays a competing value.
-	birth2 := f.bare("event")
+	birth2 := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.at(birth2, 4, 6)
 	f.cite(birth2,
 		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
 		observations.Input{PropertyID: f.prop("date").ID, Date: pointYear(1850)},
 	)
-	person2 := f.bare("person")
+	person2 := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 	f.named(person2, "Mary")
 	f.at(person2, 0, 6)
 	f.participation(person2, birth2, "subject")
@@ -290,10 +291,10 @@ func TestSiblingBirthPlacesStayCompetingUnderASharedParent(t *testing.T) {
 	f.placeRel(toronto, ontario, propertyterms.KeyPartOf, nil, nil)
 	f.placeRel(hamilton, ontario, propertyterms.KeyPartOf, nil, nil)
 
-	person := f.bare("person")
+	person := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 	f.named(person, "James")
 	f.at(person, 0, 4)
-	birth := f.bare("event")
+	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.at(birth, 4, 4)
 	f.cite(birth,
 		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},

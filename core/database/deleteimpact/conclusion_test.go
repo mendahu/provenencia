@@ -20,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -52,14 +53,7 @@ func TestImpactConclusion(t *testing.T) {
 		t.Fatal(err)
 	}
 	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
-	york, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			GraphID: graph, SubjectTypeID: place.ID, Label: "York",
-		}, nil)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	york := subjectstest.OfType(t, c, userID, graph, place.ID, "York")
 	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
@@ -113,14 +107,7 @@ func TestImpactConclusion(t *testing.T) {
 
 	t.Run("allowed promoted subject still names the handle it leaves", func(t *testing.T) {
 		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
-		leeds, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				GraphID: graph, SubjectTypeID: place.ID, Label: "Leeds",
-			}, nil)
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		leeds := subjectstest.OfType(t, c, userID, graph, place.ID, "Leeds")
 		got := mustImpact(t, c, catalogmodel.KindSubject, leeds.ID)
 		if !got.Allowed || len(got.Cascades) != 0 {
 			t.Fatalf("unpromoted %+v", got)

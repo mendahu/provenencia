@@ -27,6 +27,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -96,11 +97,7 @@ func (f *fixture) source(title string) sources.Source {
 func (f *fixture) personOn(src sources.Source) subjects.Subject {
 	f.t.Helper()
 	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graph, SubjectTypeID: f.person.ID}, nil)
-	})
-	must(f.t, err)
-	return s
+	return subjectstest.OfType(f.t, f.c, userID, graph, f.person.ID, "")
 }
 
 // name files a name Observation from "type=value|…" parts (or "form:…").
@@ -380,7 +377,7 @@ func TestForEntityEvidence(t *testing.T) {
 		t.Fatalf("weak outcome %+v", o)
 	}
 	// An outcome names the Evidence graph of its Observation's Subject.
-	if o := outcomeOf(name, weak.ID); !bytes.Equal(o.GraphID, evidencegraphstest.SoleGraph(f.t, f.c, register.ID).ID) {
+	if o := outcomeOf(name, weak.ID); !bytes.Equal(o.GraphID, evidencegraphstest.SoleGraph(t, f.c, register.ID).ID) {
 		t.Fatalf("outcome graph %x, want the Register's graph", o.GraphID)
 	}
 	if o := outcomeOf(name, denied.ID); o.Reason != "denied" || !bytes.Equal(o.DeniedBy, negative.ID) {

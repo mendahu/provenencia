@@ -15,7 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
@@ -331,12 +331,7 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		if err := db.QueryRow(`SELECT graph_id, subject_type_id FROM subjects WHERE id = ?`, first[:]).Scan(&graphID, &typeID); err != nil {
 			return err
 		}
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID[:], subjects.CreateInput{GraphID: graphID, SubjectTypeID: typeID}, nil)
-		})
-		if err != nil {
-			return err
-		}
+		s := subjectstest.OfType(t, c, userID[:], graphID, typeID, "")
 		id = s.ID
 		if len(forms) == 0 {
 			return nil

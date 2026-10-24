@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -229,12 +230,7 @@ func newTwoGraphs(t *testing.T) twoGraphs {
 		if graphID == nil {
 			graphID = evidencegraphstest.SoleGraph(t, c, src.ID).ID
 		}
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graphID, SubjectTypeID: typeID, Label: label}, nil)
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		s := subjectstest.OfType(t, c, userID, graphID, typeID, label)
 		return s
 	}
 	f.src = newSource("Register")
@@ -244,8 +240,8 @@ func newTwoGraphs(t *testing.T) twoGraphs {
 	}
 	var page2 artifacts.Artifact
 	f.def, f.jones, page2 = artifactstest.Split(t, c, userID, f.src.ID, "Jones")
-	f.ada = artifactstest.SubjectOn(t, c, userID, f.def.ID, "person", "Ada")
-	f.bea = artifactstest.SubjectOn(t, c, userID, f.jones.ID, "place", "Bea")
+	f.ada = subjectstest.On(t, c, userID, f.def.ID, "person", "Ada")
+	f.bea = subjectstest.On(t, c, userID, f.jones.ID, "place", "Bea")
 	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
@@ -319,15 +315,7 @@ func TestGraphWriteDropsOnlyThatGraph(t *testing.T) {
 			t.Fatalf("memo for %x not held", id)
 		}
 	}
-	person, err := subjecttypes.Lookup(f.c, "person", vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: f.jones.ID, SubjectTypeID: person.ID, Label: "Cal"}, nil)
-	}); err != nil {
-		t.Fatal(err)
-	}
+	subjectstest.On(t, f.c, userID, f.jones.ID, "person", "Cal")
 	if g.LoadedEvidenceGraphForTest(f.jones.ID) {
 		t.Fatal("the written graph is still loaded")
 	}

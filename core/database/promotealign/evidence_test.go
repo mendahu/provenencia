@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
@@ -531,7 +532,7 @@ func TestEvidenceReadsMemberGraph(t *testing.T) {
 	f := newFixture(t)
 	census, _ := f.newSource("Census 1851")
 	_, jones, page2 := artifactstest.Split(t, f.c, userID, census.ID, "Jones")
-	member := artifactstest.SubjectOn(t, f.c, userID, jones.ID, "person", "")
+	member := subjectstest.On(t, f.c, userID, jones.ID, "person", "")
 	f.cite(page2, member, observations.Input{PropertyID: f.prop("name").ID, Name: namevaluetest.Western("John Smith")})
 	handle := f.promote(member).Entity.ID
 

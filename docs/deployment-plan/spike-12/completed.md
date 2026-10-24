@@ -4,9 +4,9 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 
 ## S12-18 — A Subject needs its graph
 
-**Landed 2026-10-24** in [#532](https://github.com/mendahu/provenencia/pull/532). `subjects.CreateInput` loses `SourceID` and `GraphID` is required: a new Subject names the Evidence graph it joins and the engine reads its Source from that graph, so a second graph on a Source can never send a Subject to the wrong one. `subjects.InsertTx`'s `SoleGraphTx` fallback is deleted, and the cited bridge takes only its endpoints' graph. Every test that built a Subject now passes a graph id. The researcher sees no change.
+**Landed 2026-10-24** in [#532](https://github.com/mendahu/provenencia/pull/532). `subjects.CreateInput` loses `SourceID` and `GraphID` is required: a new Subject names the Evidence graph it joins and the engine reads its Source from that graph, so a second graph on a Source can never send a Subject to the wrong one. `subjects.InsertTx`'s `SoleGraphTx` fallback is deleted, and the cited bridge takes only its endpoints' graph. Every test that built a Subject now passes a graph id, and the copied test helpers that create one Subject share `subjectstest.On` / `OfType`. The researcher sees no change.
 
-**Not this PR.** Promote's `SoleGraph` use and deleting `SoleGraph` / `SoleGraphTx` (S12-09); folding the copied test Subject helpers into one fixture ([`test-subject-fixtures.md`](../../ideas/test-subject-fixtures.md)).
+**Not this PR.** Promote's `SoleGraph` use and deleting `SoleGraph` / `SoleGraphTx` (S12-09); placing a test Subject in the same write as its create ([`test-subject-fixtures.md`](../../ideas/test-subject-fixtures.md)).
 
 ## S12-08 — Graph id end to end
 

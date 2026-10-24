@@ -16,7 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -47,12 +47,7 @@ func personOnNewSource(t *testing.T, dir, userID, typeID, sexKey, polarity strin
 			return err
 		}
 		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: uid[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, uid[:], subjects.CreateInput{GraphID: graph, SubjectTypeID: tid[:]}, nil)
-		})
-		if err != nil {
-			return err
-		}
+		s := subjectstest.OfType(t, c, uid[:], graph, tid[:], "")
 		name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err

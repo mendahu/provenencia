@@ -23,6 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -348,14 +349,7 @@ func (f fixture) subjectAndCitation(t *testing.T, src sources.Source, artifactID
 		t.Fatal(err)
 	}
 	graph := evidencegraphstest.SoleGraph(t, f.c, src.ID).ID
-	subject, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			GraphID: graph, SubjectTypeID: person.ID, Label: "Ada",
-		}, nil)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	subject := subjectstest.OfType(t, f.c, userID, graph, person.ID, "Ada")
 	res, err := writes.Call(f.c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 			ArtifactID: artifactID, LocatorJSON: pageLocator,

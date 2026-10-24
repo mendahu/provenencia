@@ -24,6 +24,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -82,11 +83,7 @@ func (f *fixture) source(title string) sources.Source {
 func (f *fixture) personOn(src sources.Source) subjects.Subject {
 	f.t.Helper()
 	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graph, SubjectTypeID: f.person.ID}, nil)
-	})
-	must(f.t, err)
-	return s
+	return subjectstest.OfType(f.t, f.c, userID, graph, f.person.ID, "")
 }
 
 func (f *fixture) promote(s subjects.Subject, onto []byte) []byte {

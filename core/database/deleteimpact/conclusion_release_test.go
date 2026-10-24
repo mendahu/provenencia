@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -70,14 +71,7 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	mkSubject := func(label string) subjects.Subject {
 		t.Helper()
 		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				GraphID: graph, SubjectTypeID: place.ID, Label: label,
-			}, nil)
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		s := subjectstest.OfType(t, c, userID, graph, place.ID, label)
 		return s
 	}
 	a, b := mkSubject("York"), mkSubject("York (U.C.)")
