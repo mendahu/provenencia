@@ -948,7 +948,6 @@ func datedEvent(f *fixture, src sources.Source, art artifacts.Artifact, eventTyp
 // datedOn is an event cited as an event type on a date (m and d 0 for a year).
 func (f *fixture) datedOn(src sources.Source, art artifacts.Artifact, eventType string, y, m, d int) subjects.Subject {
 	f.t.Helper()
-	s := f.bare(src, "event")
 	date := datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
 	if m != 0 {
 		date.StartMonth = &m
@@ -956,10 +955,18 @@ func (f *fixture) datedOn(src sources.Source, art artifacts.Artifact, eventType 
 	if d != 0 {
 		date.StartDay = &d
 	}
-	f.cite(art, s,
-		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", eventType).ID},
-		observations.Input{PropertyID: f.prop("date").ID, Date: &date},
-	)
+	return f.eventOn(src, art, eventType, &date)
+}
+
+// eventOn is an event cited as an event type, on a date when d is not nil.
+func (f *fixture) eventOn(src sources.Source, art artifacts.Artifact, eventType string, d *datevalue.Value) subjects.Subject {
+	f.t.Helper()
+	s := f.bare(src, "event")
+	in := []observations.Input{{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", eventType).ID}}
+	if d != nil {
+		in = append(in, observations.Input{PropertyID: f.prop("date").ID, Date: d})
+	}
+	f.cite(art, s, in...)
 	return s
 }
 
