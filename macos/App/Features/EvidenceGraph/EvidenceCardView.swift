@@ -5,7 +5,7 @@ import SwiftUI
 ///
 /// The canvas hosts one of these per card. Text measurement
 /// here is also the hit layout edges and the pointer read, so a wrapped title
-/// or value moves its band with the paint. The placement ghost is this view built with ``init(ghostOf:)``.
+/// or value moves its band with the paint. The placement preview is this view built with ``init(ghostOf:)``.
 final class EvidenceCardView: GraphCanvasItemView {
     let layout: EvidenceCardLayout
     private let card: EvidenceCanvasCard

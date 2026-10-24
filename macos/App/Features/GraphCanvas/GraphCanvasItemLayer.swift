@@ -63,7 +63,7 @@ final class GraphCanvasItemLayer {
     /// key, so it repaints at it.
     var contentsScale: CGFloat = 1 {
         didSet {
-            for view in views.values {
+            for view in views.values + (previewView.map { [$0] } ?? []) {
                 guard let layer = view.layer,
                       abs(layer.contentsScale - contentsScale) > 0.000_1
                 else { continue }
@@ -72,6 +72,22 @@ final class GraphCanvasItemLayer {
             }
         }
     }
+
+    /// The id a host gives the ``preview`` item. It is never an item's id.
+    static let previewID = "graphCanvas.preview"
+
+    /// A translucent stand-in the host shows while it waits for the researcher
+    /// (the card a click would create). It goes through the same build, scale
+    /// and placement as an item, but is not one: it has no rotor entry or stack
+    /// index, `update` never removes it, a drag never moves it, and it is
+    /// always on top. Its view is rebuilt only when its model changes, so
+    /// moving it only moves the frame. Nil removes it.
+    var preview: GraphCanvasItem? {
+        didSet { applyPreview(replacing: oldValue) }
+    }
+
+    /// The preview's view, for tests.
+    private(set) var previewView: GraphCanvasItemView?
 
     init(container: NSView) {
         self.container = container
@@ -96,12 +112,12 @@ final class GraphCanvasItemLayer {
             if let existing = views[item.id] {
                 if let previous = models[item.id], !item.model.isEqual(to: previous) {
                     existing.removeFromSuperview()
-                    view = insert(item)
+                    view = insert(item.makeView())
                 } else {
                     view = existing
                 }
             } else {
-                view = insert(item)
+                view = insert(item.makeView())
             }
             views[item.id] = view
             models[item.id] = item.model
@@ -130,10 +146,35 @@ final class GraphCanvasItemLayer {
         let desired = stack.compactMap { views[$0] }
         let known = Set(desired.map(ObjectIdentifier.init))
         let current = container.subviews.filter { known.contains(ObjectIdentifier($0)) }
-        guard let first = desired.indices.first(where: { current[$0] !== desired[$0] }) else { return }
-        for view in desired[first...] {
-            container.addSubview(view, positioned: .above, relativeTo: nil)
+        if let first = desired.indices.first(where: { current[$0] !== desired[$0] }) {
+            for view in desired[first...] {
+                container.addSubview(view, positioned: .above, relativeTo: nil)
+            }
         }
+        raisePreview()
+    }
+
+    private func raisePreview() {
+        guard let container, let previewView, container.subviews.last !== previewView else { return }
+        container.addSubview(previewView, positioned: .above, relativeTo: nil)
+    }
+
+    /// Builds, moves or removes the preview view for the new ``preview``.
+    private func applyPreview(replacing previous: GraphCanvasItem?) {
+        guard let item = preview else {
+            previewView?.removeFromSuperview()
+            previewView = nil
+            return
+        }
+        if let previewView, let previous, item.model.isEqual(to: previous.model) {
+            place(previewView, at: item.origin, offset: .zero)
+            raisePreview()
+            return
+        }
+        previewView?.removeFromSuperview()
+        let view = insert(item.makeView())
+        previewView = view
+        place(view, at: item.origin, offset: .zero)
     }
 
     /// Moves items by live drag offsets (a delta, the same in grid and document space). Items missing from
@@ -150,6 +191,9 @@ final class GraphCanvasItemLayer {
     func placeAll() {
         for id in views.keys {
             place(id)
+        }
+        if let previewView, let preview {
+            place(previewView, at: preview.origin, offset: .zero)
         }
     }
 
@@ -181,8 +225,7 @@ final class GraphCanvasItemLayer {
     /// painted when built, when its pixel size or appearance changes, or on
     /// `invalidatePaint()`, so a pan or a zoom step composites cached layers.
     /// It goes above the other items at the current ``contentsScale``.
-    private func insert(_ item: GraphCanvasItem) -> GraphCanvasItemView {
-        let view = item.makeView()
+    private func insert(_ view: GraphCanvasItemView) -> GraphCanvasItemView {
         container?.addSubview(view, positioned: .above, relativeTo: nil)
         view.layer?.contentsScale = contentsScale
         return view
@@ -190,7 +233,11 @@ final class GraphCanvasItemLayer {
 
     private func place(_ id: String) {
         guard let view = views[id], let origin = origins[id] else { return }
-        let offset = dragOffsets[id] ?? .zero
+        place(view, at: origin, offset: dragOffsets[id] ?? .zero)
+    }
+
+    /// Puts `view` at the grid `origin`, shown relative to the content origin.
+    private func place(_ view: GraphCanvasItemView, at origin: CGPoint, offset: CGSize) {
         let contentOrigin = contentOrigin()
         view.setFrameOrigin(CGPoint(
             x: origin.x - contentOrigin.x + offset.width - GraphCanvasItemView.paintOutset,

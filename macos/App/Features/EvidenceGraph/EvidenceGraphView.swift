@@ -776,7 +776,7 @@ private struct EvidenceGraphDocument: View {
     }
 }
 
-/// The graph's base layer (grid, edges, ghost, rubber band, empty state) and
+/// The graph's base layer (grid, edges, rubber band, empty state), the placement preview and
 /// the controller for its cards.
 ///
 /// Cards are ``GraphCanvasItem``s: AppKit hosts and positions each one, and a
@@ -850,16 +850,6 @@ private struct EvidenceGraphDocumentBody: View {
                     .frame(width: contentSize.width, height: contentSize.height)
             }
 
-            if let ghost = model.ghostPlacedSubject() {
-                let center = EvidenceSubjectCard.contentCenter(gridX: ghost.gridX, gridY: ghost.gridY)
-                EvidenceGhostCard(card: .ghost(ghost, presentation: model.presentation(for: ghost.kind.rawValue)))
-                    .id(ghost.kind.rawValue)
-                    .fixedSize()
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
-                    .position(CGPoint(x: center.x - canvas.origin.x, y: center.y - canvas.origin.y))
-            }
-
             if subjects.isEmpty, bridges.isEmpty, graphHandle.status == .ready, inputMode == .idle {
                 emptyOverlay
             }
@@ -878,6 +868,11 @@ private struct EvidenceGraphDocumentBody: View {
         }
         .onChange(of: pointer.draggingItemID) { _, _ in
             publishHitTargets()
+        }
+        // The placement preview is an item: it moves with the hover cell and is
+        // rebuilt only when the armed kind changes.
+        .onChange(of: previewToken, initial: true) { _, _ in
+            pushPreview()
         }
         // Cards change only when what they draw does — never per drag frame.
         .onChange(of: cards, initial: true) { _, cards in
@@ -1050,6 +1045,34 @@ private struct EvidenceGraphDocumentBody: View {
         }
     }
 
+    /// What the preview shows: the armed kind at the hovered cell.
+    private struct PreviewToken: Equatable {
+        var kind: String
+        var gridX: Int64
+        var gridY: Int64
+    }
+
+    private var previewToken: PreviewToken? {
+        model.ghostPlacedSubject().map {
+            PreviewToken(kind: $0.kind.rawValue, gridX: $0.gridX, gridY: $0.gridY)
+        }
+    }
+
+    /// Shows the card a click would create, at the origin it would have.
+    private func pushPreview() {
+        guard let ghost = model.ghostPlacedSubject() else {
+            items.preview = nil
+            return
+        }
+        let card = EvidenceCanvasCard.ghost(ghost, presentation: model.presentation(for: ghost.kind.rawValue))
+        items.preview = GraphCanvasItem(
+            id: GraphCanvasItemLayer.previewID,
+            origin: card.origin,
+            model: ghost.kind.rawValue,
+            makeView: { EvidenceCardView(ghostOf: card) }
+        )
+    }
+
     private func pushItems(_ cards: [EvidenceCanvasCard]) {
         let content = EvidenceCanvasCardContent(model: model, navigation: navigation, layouts: cardLayouts)
         let subjectsRotor = L10n.string(L10n.EvidenceGraph.subjectsRotor)
@@ -1201,13 +1224,4 @@ enum EvidenceGraphHitRefresh {
         let ids = observations.map(\.id).joined(separator: ",")
         return "\(id)@\(gridX),\(gridY):\(ids)"
     }
-}
-
-/// The placement ghost: the live card, built in its ghost mode. The look
-/// depends only on the armed kind, so SwiftUI never needs to update it.
-private struct EvidenceGhostCard: NSViewRepresentable {
-    let card: EvidenceCanvasCard
-
-    func makeNSView(context: Context) -> EvidenceCardView { EvidenceCardView(ghostOf: card) }
-    func updateNSView(_ view: EvidenceCardView, context: Context) {}
 }

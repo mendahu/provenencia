@@ -237,6 +237,59 @@ struct GraphCanvasItemLayerTests {
         #expect(view.frame.origin == CGPoint(x: 130 - outset, y: 70 - outset))
     }
 
+    @Test func aPreviewIsPlacedLikeAnItemAndStaysOnTop() throws {
+        let container = flippedContainer()
+        let layer = GraphCanvasItemLayer(container: container)
+        let outset = GraphCanvasItemView.paintOutset
+        let counter = BuildCounter()
+        let previewID = GraphCanvasItemLayer.previewID
+        layer.contentOrigin = { CGPoint(x: 100, y: 50) }
+        layer.update([item("a", at: CGPoint(x: 130, y: 70)), item("b", at: CGPoint(x: 200, y: 70))])
+
+        layer.preview = item(previewID, at: CGPoint(x: 130, y: 70), model: "person", rotor: "Subjects", counter: counter)
+        let preview = try #require(layer.previewView)
+        #expect(preview.superview === container)
+        #expect(preview.frame.origin == CGPoint(x: 30 - outset, y: 20 - outset))
+        #expect(container.subviews.last === preview)
+        #expect(preview.layer?.contentsScale == 1)
+
+        // Above every item and raised item, across pushes; an update that does
+        // not list it leaves it alone.
+        layer.update([item("a", at: CGPoint(x: 130, y: 70), raised: true), item("b", at: CGPoint(x: 200, y: 70))])
+        #expect(container.subviews.last === preview)
+        layer.update([item("b", at: CGPoint(x: 200, y: 70), model: "v2")])
+        #expect(layer.previewView === preview)
+        #expect(container.subviews.last === preview)
+
+        // No rotor entry, no stack index, not an item.
+        #expect(layer.rotorNames.isEmpty)
+        #expect(layer.stackIndex(of: previewID) == nil)
+        #expect(layer.view(for: previewID) == nil)
+
+        // A move reuses the view; a new model rebuilds it.
+        layer.preview = item(previewID, at: CGPoint(x: 170, y: 110), model: "person", counter: counter)
+        #expect(layer.previewView === preview)
+        #expect(preview.frame.origin == CGPoint(x: 70 - outset, y: 60 - outset))
+        #expect(counter.counts[previewID] == 1)
+        layer.preview = item(previewID, at: CGPoint(x: 170, y: 110), model: "event", counter: counter)
+        #expect(layer.previewView !== preview)
+        #expect(preview.superview == nil)
+        #expect(counter.counts[previewID] == 2)
+        #expect(container.subviews.last === layer.previewView)
+
+        // It follows the content origin and the render scale like an item.
+        layer.contentOrigin = { CGPoint(x: 0, y: 0) }
+        layer.placeAll()
+        #expect(layer.previewView?.frame.origin == CGPoint(x: 170 - outset, y: 110 - outset))
+        layer.contentsScale = 2
+        #expect(layer.previewView?.layer?.contentsScale == 2)
+
+        layer.preview = nil
+        #expect(layer.previewView == nil)
+        #expect(container.subviews.allSatisfy { $0 !== layer.view(for: previewID) })
+        #expect(container.subviews.count == 1)
+    }
+
     @Test func rotorFilterIgnoresCaseAndAccents() throws {
         let container = flippedContainer()
         let layer = GraphCanvasItemLayer(container: container)

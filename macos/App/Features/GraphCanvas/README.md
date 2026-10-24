@@ -13,13 +13,13 @@ catalog types so geometry stays extractable (design note §13).
 | `GraphCanvasCamera` | Magnification + content offset (value type) |
 | `GraphCanvasCoordinates` | Pure camera math, mag clamp, scroll-origin clamp (layout / tests) |
 | `GraphCanvasScrollInput` | Trackpad-vs-wheel classification (pure) |
-| `GraphCanvasGridMapping` | Grid cell ↔ content point (snap unit) |
+| `GraphCanvasGridMapping` | Grid cell ↔ grid point (snap unit) |
 | `GraphCanvasScrollView` | AppKit magnification bridge |
 | `GraphCanvasDocumentView` | Scroll document; owns mouse; hosts the base SwiftUI layer and the item layer; canvas accessibility group and rotors |
-| `GraphCanvasItemView` | Base for item views: `paint()` renders into an image its layer shows, through `updateLayer` |
-| `GraphCanvasItemLayer` / `GraphCanvasItem` | One `GraphCanvasItemView` per item, built by the host (`makeView`, a `GraphCanvasItemView`), positioned by AppKit; rebuilt only when the item's `Equatable` model changes; owns each item's layer and its scale |
+| `GraphCanvasItemView` | Base for item views, built with `init(contentSize:)`: the view is the content plus `paintOutset` on every side, and `paint()` draws in content coordinates; it renders into an image its layer shows, through `updateLayer` |
+| `GraphCanvasItemLayer` / `GraphCanvasItem` | One `GraphCanvasItemView` per item, built by the host (`makeView`, a `GraphCanvasItemView`), positioned by AppKit; rebuilt only when the item's `Equatable` model changes; owns each item's layer and its scale, their stack order (host order, raised items last; `stackIndex(of:)`), and the placement `preview` |
 | `GraphCanvasPointerController` | Hit-test, select, drag (one card, or a group of peers that move with the anchor), empty-canvas pan, selection rectangle (marquee), Shift tracking, Shift-click toggle, place, connect |
-| `GraphCanvasHitTarget` / `GraphCanvasPointerHitTesting` | Document rects + pure helpers |
+| `GraphCanvasHitTarget` / `GraphCanvasPointerHitTesting` | Grid-space rects + pure helpers; a click hits the card drawn on top |
 | `GraphCanvasViewportController` | Pan deltas + live AppKit `convert` under cursor |
 | `GraphCanvasGridView` | Optional grid underlay: one repeated cell, not a document-sized bitmap |
 | `GraphCanvasEdgeGeometry` | Cubic edges + tuck-under endpoints |
@@ -58,6 +58,12 @@ Item views subclass `GraphCanvasItemView` and paint in `paint()`. Each item is i
 own layer showing an image of that paint; it repaints when built, when its pixel
 size or appearance changes, or on `invalidatePaint()`. `needsDisplay` alone, a pan
 or a zoom step shows the last image again.
+
+A host can show one stand-in while it waits for the researcher, such as the card a
+click would create: set `GraphCanvasItemLayer.preview` to an item with id
+`GraphCanvasItemLayer.previewID`. It is placed like an item and drawn above all of
+them, but is not one: no rotor entry, no stack index, and `update` leaves it alone.
+Nil removes it.
 
 **Never read `GraphCanvasPointerController.offsets` in a view body** that does
 more than draw live geometry. Observation is per property: one read re-runs that
