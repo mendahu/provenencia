@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -209,19 +210,11 @@ func TestWalk(t *testing.T) {
 	t.Run("the walk reads indexes, not whole tables", func(t *testing.T) {
 		for _, hop := range []hops.Hop{participates, asSubject, located.Reverse()} {
 			query, args := canonicalgraph.WalkSQL(hop, [][]byte{jamesID, birthID})
-			rows, err := db.Query(`EXPLAIN QUERY PLAN `+query, args...)
-			must(t, err)
-			for rows.Next() {
-				var id, parent, notUsed int
-				var detail string
-				must(t, rows.Scan(&id, &parent, &notUsed, &detail))
+			for _, detail := range dbtest.QueryPlan(t, db, query, args...) {
 				if strings.HasPrefix(detail, "SCAN ") {
-					_ = rows.Close()
 					t.Fatalf("full scan: %s", detail)
 				}
 			}
-			must(t, rows.Err())
-			_ = rows.Close()
 		}
 	})
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
@@ -1218,23 +1219,10 @@ func TestListQueryPlan(t *testing.T) {
 		for i := range args {
 			args[i] = s.ID
 		}
-		rows, err := db.Query("EXPLAIN QUERY PLAN "+q, args...)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for rows.Next() {
-			var id, parent, unused int
-			var detail string
-			if err := rows.Scan(&id, &parent, &unused, &detail); err != nil {
-				t.Fatal(err)
-			}
+		for _, detail := range dbtest.QueryPlan(t, db, q, args...) {
 			if strings.HasPrefix(detail, "SCAN") {
 				t.Errorf("%s query plan scans: %s", name, detail)
 			}
 		}
-		if err := rows.Err(); err != nil {
-			t.Fatal(err)
-		}
-		rows.Close()
 	}
 }

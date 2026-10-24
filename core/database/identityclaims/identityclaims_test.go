@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
@@ -414,18 +415,8 @@ func TestBridgeHeadQueryPlans(t *testing.T) {
 			for range tc.nArgs {
 				args = append(args, id)
 			}
-			rows, err := db.Query("EXPLAIN QUERY PLAN "+identityclaims.BridgeHeadsSQL(tc.cond, len(keys)), args...)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer rows.Close()
 			seeks := false
-			for rows.Next() {
-				var nid, parent, unused int
-				var detail string
-				if err := rows.Scan(&nid, &parent, &unused, &detail); err != nil {
-					t.Fatal(err)
-				}
+			for _, detail := range dbtest.QueryPlan(t, db, identityclaims.BridgeHeadsSQL(tc.cond, len(keys)), args...) {
 				t.Log(detail)
 				if strings.Contains(detail, "subjects_subject_type_id_idx") || strings.HasPrefix(detail, "SCAN s") {
 					t.Errorf("plan starts at the type index or scans: %s", detail)
@@ -433,9 +424,6 @@ func TestBridgeHeadQueryPlans(t *testing.T) {
 				if strings.HasPrefix(detail, "SEARCH s ") && strings.Contains(detail, tc.seek) {
 					seeks = true
 				}
-			}
-			if err := rows.Err(); err != nil {
-				t.Fatal(err)
 			}
 			if !seeks {
 				t.Errorf("subjects step does not seek %s", tc.seek)
