@@ -137,6 +137,7 @@ final class EvidenceCardView: NSView {
 
 // MARK: - Painter
 
+@MainActor
 private final class Painter {
     let outset: CGFloat
     init(outset: CGFloat) { self.outset = outset }
@@ -207,11 +208,8 @@ private final class Painter {
             .draw(with: box, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine])
     }
 
-    func symbol(_ name: String, in rect: CGRect, _ color: Color) {
-        guard let base = NSImage(systemSymbolName: name, accessibilityDescription: nil) else { return }
-        let image = base.withSymbolConfiguration(
-            NSImage.SymbolConfiguration(pointSize: min(rect.width, rect.height), weight: .regular)
-        ) ?? base
+    func symbol(_ symbol: PVSymbol, in rect: CGRect, _ color: Color) {
+        guard let image = EvidenceCardSymbols.image(symbol, pointSize: min(rect.width, rect.height)) else { return }
         drawTinted(image, in: place(rect), color: ns(color))
     }
 
@@ -326,11 +324,11 @@ private extension EvidenceCardView {
 
         if state.isConnectingFrom {
             y += EvidenceSubjectCard.headerToBodyGap
-            let line = lineHeight(mono(11))
+            let line = lineHeight(PVFont.nsMono(size: 11))
             painter?.text(
                 L10n.string(L10n.EvidenceGraph.connectingFrom),
                 in: CGRect(x: EvidenceSubjectCard.shellPaddingX, y: y, width: width - 26, height: line),
-                font: mono(11), color: PVColor.accent, lines: 1
+                font: PVFont.nsMono(size: 11), color: PVColor.accent, lines: 1
             )
             y += line
         } else {
@@ -491,7 +489,7 @@ private extension EvidenceCardView {
         painter?.text(body, in: bodyRect, font: bodyFont, color: placed.isCited ? PVColor.textPrimary : PVColor.textMuted, lines: 3)
         if let pencil = regions[EvidenceBridgeCard.editCitationActionID] {
             painter?.symbol(
-                PVSymbol.penLine.rawValue, in: pencil,
+                PVSymbol.penLine, in: pencil,
                 state.hoveredActionID == EvidenceBridgeCard.editCitationActionID ? PVColor.accent : PVColor.textMuted
             )
         }
@@ -593,9 +591,9 @@ private extension EvidenceCardView {
             painter.fillRound(badge, radius: 7, citedChip ? chipInk : PVColor.surfaceCard)
             painter.strokeRound(badge, radius: 7, PVColor.surfaceCard, width: 1.5)
             if citedChip {
-                painter.symbol(PVSymbol.check.rawValue, in: badge.insetBy(dx: 2.5, dy: 2.5), chipFill)
+                painter.symbol(PVSymbol.check, in: badge.insetBy(dx: 2.5, dy: 2.5), chipFill)
             } else {
-                painter.symbol(PVSymbol.circleDashed.rawValue, in: badge.insetBy(dx: 1, dy: 1), PVColor.evidenceUndocumented)
+                painter.symbol(PVSymbol.circleDashed, in: badge.insetBy(dx: 1, dy: 1), PVColor.evidenceUndocumented)
             }
         }
         let titleX = chipRect.maxX + 10
@@ -604,14 +602,14 @@ private extension EvidenceCardView {
             let titleFont = PVFont.nsDisplay(size: titleSize, weight: PVFontWeight.medium)
             let titleHeight = wrappedHeight(title, width: titleWidth, font: titleFont, maxLines: 2)
             painter.text(title, in: CGRect(x: titleX, y: header.minY, width: titleWidth, height: titleHeight), font: titleFont, color: titleCited ? PVColor.textPrimary : PVColor.textSecondary, lines: 2)
-            painter.text(typeLine, in: CGRect(x: titleX, y: header.minY + titleHeight + 2, width: titleWidth, height: 14), font: mono(typeSize), color: chipInk, lines: 1, kern: typeKern, uppercased: true)
+            painter.text(typeLine, in: CGRect(x: titleX, y: header.minY + titleHeight + 2, width: titleWidth, height: 14), font: PVFont.nsMono(size: typeSize), color: chipInk, lines: 1, kern: typeKern, uppercased: true)
         } else {
-            painter.text(typeLine, in: CGRect(x: titleX, y: header.midY - 6, width: titleWidth, height: 14), font: mono(typeSize), color: PVColor.textMuted, lines: 1, kern: typeKern, uppercased: true)
+            painter.text(typeLine, in: CGRect(x: titleX, y: header.midY - 6, width: titleWidth, height: 14), font: PVFont.nsMono(size: typeSize), color: PVColor.textMuted, lines: 1, kern: typeKern, uppercased: true)
         }
         let iconY = header.minY + 2
         let deleteX = width - paddingX - 12
-        painter.symbol(PVSymbol.penLine.rawValue, in: CGRect(x: deleteX - 18, y: iconY, width: 12, height: 12), PVColor.textMuted)
-        painter.symbol(PVSymbol.trash.rawValue, in: CGRect(x: deleteX, y: iconY, width: 12, height: 12), deleteHovered ? PVColor.danger : PVColor.textMuted)
+        painter.symbol(PVSymbol.penLine, in: CGRect(x: deleteX - 18, y: iconY, width: 12, height: 12), PVColor.textMuted)
+        painter.symbol(PVSymbol.trash, in: CGRect(x: deleteX, y: iconY, width: 12, height: 12), deleteHovered ? PVColor.danger : PVColor.textMuted)
     }
 
     static func paintRows(
@@ -638,7 +636,7 @@ private extension EvidenceCardView {
             painter.text(
                 label.isEmpty ? observation.propertyKey : label,
                 in: CGRect(x: leading, y: rect.minY + 8, width: valueWidth, height: 12),
-                font: mono(9), color: PVColor.textMuted, lines: 1, kern: 0.7, uppercased: true
+                font: PVFont.nsMono(size: 9), color: PVColor.textMuted, lines: 1, kern: 0.7, uppercased: true
             )
             let negated = EvidenceCitedPropertyMarks.isNegated(observation)
             var valueX = leading
@@ -662,7 +660,7 @@ private extension EvidenceCardView {
                     color: negated ? PVColor.danger : PVColor.textPrimary, lines: 2
                 )
             }
-            painter.symbol(PVSymbol.penLine.rawValue, in: CGRect(x: width - trailing - 12, y: rect.midY - 6, width: 12, height: 12), PVColor.textFaint)
+            painter.symbol(PVSymbol.penLine, in: CGRect(x: width - trailing - 12, y: rect.midY - 6, width: 12, height: 12), PVColor.textFaint)
         }
         let observations = rows.map(\.0)
         for run in EvidenceCitedPropertyMarks.conflictRuns(in: observations) {
@@ -690,7 +688,7 @@ private extension EvidenceCardView {
         if hot { painter.fill(CGRect(x: 0, y: rect.minY, width: 2, height: rect.height), ink) }
         let color: Color = canCite ? (hovered ? PVColor.textPrimary : PVColor.textMuted) : PVColor.textFaint
         let y = quiet ? rect.minY + 4 : rect.minY + 9
-        painter.symbol(PVSymbol.plus.rawValue, in: CGRect(x: paddingX, y: y, width: 12, height: 12), color)
+        painter.symbol(PVSymbol.plus, in: CGRect(x: paddingX, y: y, width: 12, height: 12), color)
         painter.text(
             L10n.string(L10n.EvidenceGraph.addProperty),
             in: CGRect(x: paddingX + 18, y: y - 1, width: rect.width - paddingX - 24, height: 16),
@@ -736,7 +734,7 @@ private extension EvidenceCardView {
             let down = pressed == EvidenceSubjectCard.openHandleActionID
             let hot = hovered == EvidenceSubjectCard.openHandleActionID
             if hot || down { painter.fill(parts.handle, style.ink.opacity(down ? 0.18 : 0.10)) }
-            painter.text(membership.entity.ref, in: CGRect(x: EvidenceSubjectCard.shellPaddingX, y: rect.midY - 7, width: 72, height: 14), font: mono(10), color: style.ink, lines: 1)
+            painter.text(membership.entity.ref, in: CGRect(x: EvidenceSubjectCard.shellPaddingX, y: rect.midY - 7, width: 72, height: 14), font: PVFont.nsMono(size: 10), color: style.ink, lines: 1)
             let stored = EvidenceSubjectCard.membershipName(membership, orders: orders)
             let name = stored ?? L10n.string(L10n.EvidenceGraph.openHandlePage(kind: placed.kind))
             painter.text(
@@ -744,7 +742,7 @@ private extension EvidenceCardView {
                 in: CGRect(x: EvidenceSubjectCard.shellPaddingX + 78, y: rect.midY - 8, width: parts.handle.width - 120, height: 16),
                 font: PVFont.nsBody(size: 12.5, italic: stored == nil), color: style.ink, lines: 1
             )
-            painter.symbol(PVSymbol.chevronForward.rawValue, in: CGRect(x: parts.handle.maxX - 27, y: rect.midY - 7, width: 14, height: 14), style.ink)
+            painter.symbol(PVSymbol.chevronForward, in: CGRect(x: parts.handle.maxX - 27, y: rect.midY - 7, width: 14, height: 14), style.ink)
             painter.fill(parts.hairline, style.line)
             let unpromoteDown = pressed == EvidenceSubjectCard.unpromoteActionID
             if unpromoteDown || hovered == EvidenceSubjectCard.unpromoteActionID {
@@ -756,7 +754,7 @@ private extension EvidenceCardView {
             }
             let glyph = PVControlSize.sm.iconGlyphSize
             painter.symbol(
-                PVSymbol.unpromote.rawValue,
+                PVSymbol.unpromote,
                 in: CGRect(x: parts.slot.midX - glyph / 2, y: parts.slot.midY - glyph / 2, width: glyph, height: glyph),
                 style.ink
             )
@@ -772,7 +770,7 @@ private extension EvidenceCardView {
             let icon: CGFloat = 13
             let x = EvidenceSubjectCard.shellPaddingX
             painter.symbol(
-                PVSymbol.promote.rawValue,
+                PVSymbol.promote,
                 in: CGRect(x: x, y: rect.midY - icon / 2, width: icon, height: icon),
                 PVColor.textSecondary
             )
@@ -814,12 +812,12 @@ private extension EvidenceCardView {
     static func titleBlockHeight(_ placed: EvidenceGraphPlacedSubject) -> CGFloat {
         let width = EvidenceSubjectCard.width - EvidenceSubjectCard.shellPaddingX * 2 - 78
         let title = wrappedHeight(displayLabel(placed), width: width, font: PVFont.nsDisplay(size: 16, weight: PVFontWeight.medium), maxLines: 2)
-        return title + 2 + lineHeight(mono(10))
+        return title + 2 + lineHeight(PVFont.nsMono(size: 10))
     }
     static func bridgeTitleBlock(_ placed: EvidenceGraphPlacedBridge) -> CGFloat {
         let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         let title = label.isEmpty ? placed.typeLabel : label
-        return wrappedHeight(title, width: bridgeBodyWidth, font: PVFont.nsDisplay(size: 14, weight: PVFontWeight.medium), maxLines: 2) + 1 + lineHeight(mono(9.5))
+        return wrappedHeight(title, width: bridgeBodyWidth, font: PVFont.nsDisplay(size: 14, weight: PVFontWeight.medium), maxLines: 2) + 1 + lineHeight(PVFont.nsMono(size: 9.5))
     }
     /// Side of a likeness row's image tile.
     static var likenessTile: CGFloat { 32 }
@@ -838,7 +836,7 @@ private extension EvidenceCardView {
         orders: NameFormatOrders = NameFormatOrders()
     ) -> CGFloat {
         if likenessRelPath(observation) != nil {
-            return max(EvidenceSubjectCard.propertyRowHeight, lineHeight(mono(9)) + 3 + likenessTile + 16)
+            return max(EvidenceSubjectCard.propertyRowHeight, lineHeight(PVFont.nsMono(size: 9)) + 3 + likenessTile + 16)
         }
         let valueHeight = wrappedHeight(
             ObservationValueDisplay.string(for: observation, orders: orders),
@@ -846,14 +844,7 @@ private extension EvidenceCardView {
             font: valueFont,
             maxLines: 2
         )
-        return max(EvidenceSubjectCard.propertyRowHeight, lineHeight(mono(9)) + 3 + valueHeight + 16)
-    }
-    static func mono(_ size: CGFloat) -> NSFont {
-        let descriptor = NSFontDescriptor(fontAttributes: [
-            .family: PVFontFamily.mono,
-            .traits: [NSFontDescriptor.TraitKey.weight: NSFont.Weight.regular.rawValue],
-        ])
-        return NSFont(descriptor: descriptor, size: size) ?? NSFont.monospacedSystemFont(ofSize: size, weight: .regular)
+        return max(EvidenceSubjectCard.propertyRowHeight, lineHeight(PVFont.nsMono(size: 9)) + 3 + valueHeight + 16)
     }
     static func lineHeight(_ font: NSFont) -> CGFloat { max(font.boundingRectForFont.height, 1) }
     static func wrappedHeight(_ text: String, width: CGFloat, font: NSFont, maxLines: Int) -> CGFloat {
