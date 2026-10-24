@@ -1,6 +1,6 @@
 # Name candidates: records Promote should have offered
 
-**Status:** pulled into [Spike 11](deployment-plan.md) on 2026-10-24 (S11-43, S11-44, S11-46, S11-45), from two dogfood cases the user raised that day.
+**Status:** pulled into [Spike 11](deployment-plan.md) on 2026-10-24 (S11-43, S11-44, S11-46, S11-45, S11-47), from two dogfood cases the user raised that day.
 
 Matching today: [`comparison-layers.md`](comparison-layers.md) (layer 1 names, layer 6 candidates), [`matching-model.md`](../../matching-model.md) (knob inventory).
 
@@ -26,7 +26,7 @@ Measured with the shipped registry on 2026-10-24. Similarity should fall as the 
 
 **Two levers:**
 
-- **Lower the gate** (`MinSimilarity`). This only changes who becomes a candidate. Bands come from evidence, and evidence does not read the gate, so no band moves. The row's default does move: with a candidate below the accept bar the row opens Skip (`weak`) with the record as an alternative, where it opened New (`no_match`) with an empty menu (`graphalign/rows.go`). No test or golden flips at 0.4 (map review, 2026-10-24). At 0.4, a Subject's one given name reaches a record with up to three extra given names and a surname.
+- **Lower the gate** (`MinSimilarity`). This only changes who becomes a candidate. Bands come from evidence, and evidence does not read the gate, so no band moves. The row still opens unset, now with the record in its menu ([Promote suggests a record or nothing](#promote-suggests-a-record-or-nothing)). No test or golden flips at 0.4 (map review, 2026-10-24). At 0.4, a Subject's one given name reaches a record with up to three extra given names and a surname.
 - **Relax the curve** (count words only one side has at less than full weight). This also raises evidence for every partial name match, because a name's points are its weight times its similarity (Amy: 2.5 × 0.44 = 1.1), so bands move and the goldens move with them.
 
 The gate is the narrower change, so the spike ships it (S11-43) and holds the curve until dogfood shows it is still needed (user, 2026-10-24).
@@ -64,6 +64,10 @@ With `{desiree, des}` as a nickname set, the pair shortlists and compares at sim
 3. **New product nicknames reach an existing catalog by a command.** No backfill on open, so `add-seeded-vocabulary`'s rule stands and no marker is stored (S11-44).
 4. **Prefixes from two letters** (`PrefixMinLength` 2).
 
-## Open questions
+## Promote suggests a record or nothing
 
-1. **Skip or New with a weak alternative.** Lowering the gate makes "Amy" open Skip with "Amy Lee Anne Long" offered, where it opened New. Proposed: accept it; that is how every row with a weak candidate already opens.
+Go today gives every row it does not place a target: Skip (`weak`) when a candidate fell short, New (`no_match`) when there was none (`graphalign/rows.go`). Swift drafts neither. A row with no band opens unset (`PromoteFlow.draftTarget`), and the Skip / New it receives survive only in a rare fallback (an unplaced row with a band that was not taken falls through to Skip). The user's call (2026-10-24): remove it (S11-47). A proposal row carries a handle or no target; its alternatives stay. New and Skip are only ever the researcher's choice. A decided New or Skip still goes to Go as a fixed pair (`PromoteGraphAlignmentFixed`), unchanged.
+
+So lowering the gate does not change how a row opens: "Amy" still opens unset, now with "Amy Lee Anne Long" in its menu.
+
+Go's possible-duplicate check (`rows.go`, two look-alike rows that would both be new records) finds its rows by `TargetNew` today; S11-47 finds them as unplaced rows instead, so the "also new" note still works.

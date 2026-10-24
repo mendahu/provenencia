@@ -1,6 +1,6 @@
 # Deployment Plan — Spike 11
 
-Promote's matching is rebuilt as a stack of pure, registry-driven layers that the rest of the app borrows from, and the old matching code is deleted as each layer lands. The design is in [`comparison-layers.md`](comparison-layers.md) (layers 1–6, bands, the match registry, the reuse inventory) and [`claim-evidence.md`](claim-evidence.md) (the Promote sheet's pins). It pulls in the "make the algorithm graspable" part of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md), [connection subrows](promote-connection-subrows.md) on the Promote page, Spike 10's likeness crops on the evidence sheet (S10-36), and, added 2026-10-24, the evidence button's hover that S11-27 missed (S11-34) [find another record](promote-find-another-record.md) in the target menu (S11-35 – S11-37), and [kinship shapes](kinship-shapes.md): a shared marriage, a birth's parents and a parent chain match spouse, parent and grandparent links (S11-38 – S11-42), and [name candidates](name-candidates.md): a fuller record and a shortened given name reach the target menu (S11-43 – S11-46). PRs follow a build-then-migrate rhythm: a PR builds a layer, the next moves every caller onto it and deletes what it replaces.
+Promote's matching is rebuilt as a stack of pure, registry-driven layers that the rest of the app borrows from, and the old matching code is deleted as each layer lands. The design is in [`comparison-layers.md`](comparison-layers.md) (layers 1–6, bands, the match registry, the reuse inventory) and [`claim-evidence.md`](claim-evidence.md) (the Promote sheet's pins). It pulls in the "make the algorithm graspable" part of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md), [connection subrows](promote-connection-subrows.md) on the Promote page, Spike 10's likeness crops on the evidence sheet (S10-36), and, added 2026-10-24, the evidence button's hover that S11-27 missed (S11-34) [find another record](promote-find-another-record.md) in the target menu (S11-35 – S11-37), and [kinship shapes](kinship-shapes.md): a shared marriage, a birth's parents and a parent chain match spouse, parent and grandparent links (S11-38 – S11-42), and [name candidates](name-candidates.md): a fuller record and a shortened given name reach the target menu (S11-43 – S11-47). PRs follow a build-then-migrate rhythm: a PR builds a layer, the next moves every caller onto it and deletes what it replaces.
 
 **A brief covers one view.** A PR that changes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
 
@@ -26,7 +26,7 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 10. **The rows match their board.** The Promote row's evidence button answers the pointer as S11-D1 draws it.
 11. **Any record can be the target.** A Subject Promote offers nothing for (Promote says New) can be filed on a record the researcher finds by search. The row holds that record through later decisions and shows its band, Contested when it conflicts, and its evidence.
 12. **One kinship fact, any shape.** A Source that records a marriage proposes its two people on a couple the tree records as spouses at the band a spouse relationship would get, and the reverse. A birth record naming the father matches a tree that says he is the child's parent. A Source with A parent of B and B parent of C matches a tree that records A as C's grandparent. A fact recorded twice on one side counts once.
-13. **A plausible name is offered.** A Subject named Amy is offered Amy Lee Anne Long, and one named Desiree is offered Des, as alternatives in the target menu even with nothing else to compare (the row opens Skip with the record offered, as any row with a weak candidate does).
+13. **A plausible name is offered.** A Subject named Amy is offered Amy Lee Anne Long, and one named Desiree is offered Des, as alternatives in the target menu even with nothing else to compare. Promote never drafts New or Skip; a row it does not place opens unset.
 
 ## Where the notes went
 
@@ -41,7 +41,7 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 | Spike 10 S10-36 — Promote compares two likeness crops (moved 2026-10-17) | S11-32 (lines), S11-20 (crops) | S11-D2 |
 | Reuse inventory ([`comparison-layers.md`](comparison-layers.md#reuse-across-the-app)) | S11-05 – S11-08, S11-13, S11-19 | — |
 | S11-27 follow-up — the evidence button's hover on the S11-D1 board was not built (user, 2026-10-24) | S11-34 | — (S11-D1, agreed) |
-| Dogfood, 2026-10-24: "Amy" not offered "Amy Lee Anne Long"; "Desiree" not offered "Des" ([name candidates](name-candidates.md)) | S11-43, S11-44, S11-46, S11-45 | — |
+| Dogfood, 2026-10-24: "Amy" not offered "Amy Lee Anne Long"; "Desiree" not offered "Des" ([name candidates](name-candidates.md)) | S11-43, S11-44, S11-46, S11-45, S11-47 | — |
 | [Kinship shapes](kinship-shapes.md) (was `ideas/relationships-from-shared-events.md`, from S11-14; grandparent added by the user; pulled in 2026-10-24) | S11-41, S11-38, S11-39, S11-40, S11-42 | — |
 | [Find another record](promote-find-another-record.md) (was `ideas/promote-find-another-record.md`, from S11-05 D-16; pulled in 2026-10-24) | S11-35, S11-37, S11-36 | S11-D3 |
 
@@ -102,8 +102,9 @@ These are the calls for this spike. PR plans treat them as binding.
 
 ### Name candidates
 
-- **The candidate gate drops to 0.4** (user, 2026-10-24; [case 1](name-candidates.md#case-1--amy-against-amy-lee-anne-long)). `alignment.MinSimilarity` 0.5 → 0.4, so a one-name Subject reaches a record with three more names. The gate only picks candidates; no band moves, but such a row opens Skip with the record offered instead of New.
+- **The candidate gate drops to 0.4** (user, 2026-10-24; [case 1](name-candidates.md#case-1--amy-against-amy-lee-anne-long)). `alignment.MinSimilarity` 0.5 → 0.4, so a one-name Subject reaches a record with three more names. The gate only picks candidates; no band moves, and the row still opens unset (S11-47).
 - **Des is a nickname of Desiree and of Desirae** (user, 2026-10-24): two sets, `{desiree, des}` and `{desirae, des}`, in `nicknameSets`, the product's already-reviewed edit of the upstream list, with a `CacheVersion` bump. An existing catalog gains new product nicknames by a command the researcher runs, over `AddProductNicknames`; nothing backfills on open (S11-44).
+- **Promote suggests a record or nothing** (user, 2026-10-24; [detail](name-candidates.md#promote-suggests-a-record-or-nothing)). A proposal row carries a handle or no target, with its alternatives; Go no longer sends New or Skip, nor the row reasons `weak` and `no_match`, and Swift never drafts them. New and Skip are only the researcher's choice, still sent back as fixed pairs.
 - **Gate only; the curve is held** (user, 2026-10-24) until dogfood after S11-43 shows a fuller record still missing.
 - **A prefix is an initial generalised** (user, 2026-10-24; [prefix rule](name-candidates.md#prefix-rule-in-detail)). A word of a given, nickname or untyped part (the alias tables' roles) of at least `PrefixMinLength` letters that is the exact start of another, after folding, is `Contains` at `PrefixCredit` with `CausePrefix`, checked after alias, fold and spelling. No surname prefixes; text compare never gets it. Both knobs live in the registry's value section. `PrefixMinLength` is 2 (user, 2026-10-24). A prefix folds in the reconciler like an initial (user, 2026-10-24). The shortlist finds prefixes both ways through separate index and lookup keys (S11-46).
 
@@ -161,6 +162,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-42 | Implied links on the evidence sheet | 9 | The sheet words S11-40's line ("both are spouses in the marriage on …") in the existing relationship Card; L10n | — | S11-40 | — | Scoped |
 | S11-43 | Lower the candidate gate | 10 | `alignment.MinSimilarity` 0.5 → 0.4 with its inventory row; a test that "Amy" gets "Amy Lee Anne Long" as an alternative | — | — | — | Scoped |
 | S11-44 | Des as a nickname of Desiree and Desirae | 10 | `{desiree, des}` and `{desirae, des}` in `nicknameSets` with a `CacheVersion` bump; a command copies new product nicknames into the open catalog through `AddProductNicknames` | — | S11-28 | — | Scoped |
+| S11-47 | Promote suggests a record or nothing | 10 | Unplaced proposal rows carry no target and no `weak` / `no_match` reason; possible duplicates found among unplaced rows; Swift drafts a handle or unset only | — | — | — | Scoped |
 | S11-46 | Prefix keys in the shortlist | 10 | `WordKeys` splits into index and lookup lists; given-name words are filed and looked up under their prefixes both ways; `PrefixMinLength`; extra keys measured | — | — | — | Scoped |
 | S11-45 | Prefix names | 10 | A given name that starts another is a `Contains` hit at `PrefixCredit` (`CausePrefix`), with the broader side right; the cause worded on the sheet; the reconciler's call | — | S11-46, S11-28 | — | Scoped |
 | S11-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
@@ -262,6 +264,7 @@ SLICE 9 — Kinship shapes
 SLICE 10 — Name candidates
   S11-43  Lower the candidate gate              (any time)
   S11-44  Des as a nickname of Desiree and Desirae   (after S11-28)
+  S11-47  Promote suggests a record or nothing  (any time)
   S11-46  Prefix keys in the shortlist          (any time)
   S11-45  Prefix names
   Check: "Amy" is offered "Amy Lee Anne Long"; "Desiree" and "Desirae" are offered
@@ -271,7 +274,7 @@ SLICE 10 — Name candidates
 S11-99 — Dogfood close / docs
 ```
 
-Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 7 after S11-16; slice 6 any time (S11-26 has no dependency); S11-34 any time after S11-27; S11-43 and S11-46 any time, S11-44 and S11-45 after S11-28; S11-41 any time, and slice 9 runs beside slice 8; S11-35 and S11-37 any time, in parallel, and S11-D3 can be drawn while they run. S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
+Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 7 after S11-16; slice 6 any time (S11-26 has no dependency); S11-34 any time after S11-27; S11-43, S11-46 and S11-47 any time, S11-44 and S11-45 after S11-28; S11-41 any time, and slice 9 runs beside slice 8; S11-35 and S11-37 any time, in parallel, and S11-D3 can be drawn while they run. S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
 
 ### Dependencies at a glance
 
@@ -645,7 +648,7 @@ From dogfood on 2026-10-24. Design and diagnosis: [`name-candidates.md`](name-ca
 
 #### S11-43 — Lower the candidate gate
 
-**Ships.** `alignment.MinSimilarity` 0.4 in `core/matchregistry/alignment.go`; its comment (and the inventory row in [`matching-model.md`](../../matching-model.md)) drops "at least half alike" and gives the Amy case as the reason. A `graphalign` test: a one-given-name Subject and a record with three more names is a candidate, and the row opens Skip (`weak`) with it as an alternative; a record whose first given name differs is still not a candidate. The obituary golden and sparse cases keep their targets (the map review ran the suite at 0.4 with no flips).
+**Ships.** `alignment.MinSimilarity` 0.4 in `core/matchregistry/alignment.go`; its comment (and the inventory row in [`matching-model.md`](../../matching-model.md)) drops "at least half alike" and gives the Amy case as the reason. A `graphalign` test: a one-given-name Subject and a record with three more names is a candidate and shows as an alternative on an unplaced row; a record whose first given name differs is still not a candidate. The obituary golden and sparse cases keep their targets (the map review ran the suite at 0.4 with no flips).
 **Not this PR.** The name curve (held, user 2026-10-24; [what stays later](name-candidates.md#what-stays-later)). Surname-only ties ([`ideas/coverage-aware-similarity.md`](../../ideas/coverage-aware-similarity.md)).
 **Check.** On a real project, a row for "Amy" lists "Amy Lee Anne Long".
 **Context.** [Case 1](name-candidates.md#case-1--amy-against-amy-lee-anne-long); [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md).
@@ -656,6 +659,14 @@ From dogfood on 2026-10-24. Design and diagnosis: [`name-candidates.md`](name-ca
 **Not this PR.** An editor for alias tables.
 **Check.** In a catalog created before this PR, after the command, "Desiree" and "Desirae" are offered "Des"; running it again adds nothing; a new catalog has both sets.
 **Context.** [Case 2](name-candidates.md#case-2--desiree-against-des); S11-28 (the reviewed table beside upstream).
+
+#### S11-47 — Promote suggests a record or nothing
+
+The user's call on 2026-10-24, answering S11-43's open question.
+**Ships.** `graphalign/rows.go`: a row Align does not place has no target (neither `TargetSkip` nor `TargetNew`) and no row reason `weak` or `no_match`; its alternatives stay as they are, each with its own reason (`ReasonWeak` on an alternative stays). The possible-duplicate check finds unplaced rows instead of `TargetNew` rows. `TargetNew` and `TargetSkip` stay for `Fixed`. `PromoteGraphAlignmentRow.target`'s comment says it is `handle` or empty; the handler and `FakeStore` follow. Swift: `PromoteFlow.draftTarget` drafts the proposed handle, the weak-band first alternative as today, or unset, never `.skip` or `.newKind`; `Reason`'s row cases `weak` and `noMatch` and their L10n go if nothing else reads them (`ConclusionVocabulary.swift`, `swift_vocabulary_test.go`, `PromoteModel.reasonText`). Tests asserting `TargetNew` / `TargetSkip` / `ReasonNoMatch` on a proposal row (for example `TestLifespanRulesOutAPerson`) assert an unplaced row instead. [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 says Promote drafts no New or Skip.
+**Not this PR.** Decided rows: New and Skip as fixed pairs are unchanged. Which record a weak band drafts.
+**Check.** A row with no candidate and a row whose candidate fell short both open unset; two look-alike unplaced rows still get the "also new" note once both are set to New; Done files a decided New and leaves a decided Skip off.
+**Context.** [Promote suggests a record or nothing](name-candidates.md#promote-suggests-a-record-or-nothing); [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md).
 
 #### S11-46 — Prefix keys in the shortlist
 
