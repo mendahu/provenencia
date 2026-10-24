@@ -207,3 +207,31 @@ A zoom log showed AppKit calling `updateLayer` about 25 times per card per pinch
 **M-6 · nit** — **Fixed.** X-7 (AC-5.10 needs hardware), X-8 — logged.
 
 Round 2 not run: both round-1 blockers were a test expectation and a test setup line, and the gate's Xcode tests check both directly. **Addition verdict:** Fits — Ready.
+
+## Addition 2026-10-24 — canvas health (D-19 – D-23, STEP-15 – STEP-17)
+
+From a maintainability area audit and a family-tree reuse dry run of the canvas; the user chose groups A (dead code, docs), B (canvas contracts) and C (drawing toolkit) for this PR and parked D in `docs/ideas/graph-canvas-second-host.md`. Reviewers: maintainability (opus), executability (sonnet).
+
+### Round 1
+**M-1 · blocker · the content origin stored four times, converted in every base view** — **Fixed:** `GraphCanvasDocumentView.contentOrigin` is the one copy; its mouse handlers convert once; the item layer reads it from its container; SwiftUI gets it from `hostedRoot`'s environment value. Declined in part: offsetting the whole SwiftUI root by the origin would make the edge `Canvas` and grid origin + size wide (recorded in D-20's rejected column).
+**M-2 / X-4 · blocker / major · a new `DesignSystem/Paint/` root breaks the layering rule** — **Fixed:** `Components/Painter/` (`PVPainter`, `PVTextMetrics`) and `Components/Icon/PVSymbolImages`.
+**X-1 · blocker · AC-5.7, T-16 and the item-view tests contradict D-19** — **Fixed:** restated in content coordinates (176 × 156, red at 48, 48); empty content renders nil.
+**X-2 · blocker · hit-order plumbing on the wrong class** — **Fixed:** `GraphCanvasPointerController.stackIndex` closure, set by `GraphCanvasDocumentView.init`; `topmostTarget`'s parameter defaults to none.
+**M-3 · major · raw shadow tuple and literal radius** — **Fixed:** `PVShadowLayer` input with a pinned one-to-one map; `tile` radius from `PVRadius`.
+**M-4 · major · implicit appearance; the grid's second resolver** — **Fixed:** `color(_:in:)` with a current-drawing default; the grid uses it.
+**M-5 · major · three words for two spaces** — **Fixed:** grid and document space defined; `contentPoint` renames; stale "Document-space" comments listed.
+**M-6 / X-9 · major / minor · dead code left behind** — **Fixed:** `mapFrame` and its test; the keyboard-focus observer chain; `contentPointUnderCursor`; stored `pointerInside`.
+**M-7 · major · three sources for an item's size** — **Fixed:** `contentSize` only; `intrinsicContentSize` final; `makeView` keeps the init frame.
+**X-3 · major · origin re-placement and first push** — **Fixed:** set in `makeNSView` and `updateNSView`; `didSet` re-places; the origin `onChange` is deleted.
+**X-5 / M-10 · major / minor · preview model, origin, push site, path** — **Fixed:** model `armedKind.rawValue`, origin from the measured ghost size around the cell centre, pushed on kind and cell change, through the layer's own `insert` / `place` / scale.
+**X-6 · major · model test inputs** — **Fixed:** (4100, 4140), same expected cell. **X-7 · major · origin-shift test** — **Fixed:** becomes T-23. **X-8 · major · renames reach a test file** — **Fixed:** in Files; `performCardAction` stays.
+**M-8 · minor · `PVPainter` stateless; text rules split; `lineHeight` name** — **Fixed in part:** `fontLineHeight` / `textHeight`, and `text` caps with the same rule. Declined: an `enum` — the card's nil-painter measure pass needs an optional instance.
+**M-9 · minor · fallback for targets with no item** — **Fixed:** they rank below items; the idea file records the seam's exit.
+**M-11 · minor · one name for two jobs** — **Fixed:** `magnificationTolerance` and `minimumMagnification`. **M-12 · nit** — **Fixed:** `PVPainterTests`; the DesignSystem README links the GraphCanvas README.
+**X-10 – X-14** — **Fixed** (2/3 rule kept invisible, empty-text rule kept per caller, tests' expected changes stated, helper home named, comment texts given, `offsets` readers named, minimal restack with a paint-count check). Stale Current state line numbers — logged.
+
+### Round 2
+Maintainability (opus): **Fits with changes**. M-1 blocker (origin still stored twice; layer read undecided) — **Fixed:** the layer reads a closure the document view sets; `installedContentOrigin` deleted; AC-6.3 / T-20 build a real document view. M-2 blocker (a second placement rule for the preview) — **Fixed:** the preview uses `card.origin`, so it shows where the created card lands (a small visible change, flagged to the user). M-3 blocker (Checks could not pass; `gridCell(contentPoint:)` unnamed) — **Fixed.** Smaller: `tile` radius required; stale docs listed; idea file `invalidatePaint()`; `stackIndex` with no default — **Fixed.** "content" naming of `contentOrigin` / `contentSize` — logged.
+Executability (sonnet): **Not ready** → settled: X-15 (= M-1), X-16 (= M-3) **Fixed**; X-17 rename signatures, X-18 preview storage, X-19 conversion function and its test, X-20 origin set before `installHostingRoot`, X-21 painter signatures and shadow `x`, X-22 two label extensions, X-23 STEP-15 split into 15a – 15d, X-24 specifics — **Fixed** in the "Settled in review round 2" block.
+
+**Addition verdict:** Fits — Ready after settling; round cap reached, no open blocker. To user (informational): the preview's vertical position now matches the created card.
