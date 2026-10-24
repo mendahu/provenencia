@@ -1,6 +1,6 @@
 # Deployment Plan — Spike 11
 
-Promote's matching is rebuilt as a stack of pure, registry-driven layers that the rest of the app borrows from, and the old matching code is deleted as each layer lands. The design is in [`comparison-layers.md`](comparison-layers.md) (layers 1–6, bands, the match registry, the reuse inventory) and [`claim-evidence.md`](claim-evidence.md) (the Promote sheet's pins). It pulls in the "make the algorithm graspable" part of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md), [connection subrows](promote-connection-subrows.md) on the Promote page, Spike 10's likeness crops on the evidence sheet (S10-36), and, added 2026-10-24, the evidence button's hover that S11-27 missed (S11-34) [find another record](promote-find-another-record.md) in the target menu (S11-35 – S11-37), and [kinship shapes](kinship-shapes.md): a shared marriage, a birth's parents and a parent chain match spouse, parent and grandparent links (S11-38 – S11-42). PRs follow a build-then-migrate rhythm: a PR builds a layer, the next moves every caller onto it and deletes what it replaces.
+Promote's matching is rebuilt as a stack of pure, registry-driven layers that the rest of the app borrows from, and the old matching code is deleted as each layer lands. The design is in [`comparison-layers.md`](comparison-layers.md) (layers 1–6, bands, the match registry, the reuse inventory) and [`claim-evidence.md`](claim-evidence.md) (the Promote sheet's pins). It pulls in the "make the algorithm graspable" part of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md), [connection subrows](promote-connection-subrows.md) on the Promote page, Spike 10's likeness crops on the evidence sheet (S10-36), and, added 2026-10-24, the evidence button's hover that S11-27 missed (S11-34) [find another record](promote-find-another-record.md) in the target menu (S11-35 – S11-37), and [kinship shapes](kinship-shapes.md): a shared marriage, a birth's parents and a parent chain match spouse, parent and grandparent links (S11-38 – S11-42), and [name candidates](name-candidates.md): a fuller record and a shortened given name reach the target menu (S11-43 – S11-45). PRs follow a build-then-migrate rhythm: a PR builds a layer, the next moves every caller onto it and deletes what it replaces.
 
 **A brief covers one view.** A PR that changes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
 
@@ -26,6 +26,7 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 10. **The rows match their board.** The Promote row's evidence button answers the pointer as S11-D1 draws it.
 11. **Any record can be the target.** A Subject Promote offers nothing for (Promote says New) can be filed on a record the researcher finds by search. The row holds that record through later decisions and shows its band, Contested when it conflicts, and its evidence.
 12. **One kinship fact, any shape.** A Source that records a marriage proposes its two people on a couple the tree records as spouses at the band a spouse relationship would get, and the reverse. A birth record naming the father matches a tree that says he is the child's parent. A Source with A parent of B and B parent of C matches a tree that records A as C's grandparent. A fact recorded twice on one side counts once.
+13. **A plausible name is offered.** A Subject named Amy is offered Amy Lee Anne Long, and one named Desiree is offered Des, as alternatives in the target menu even with nothing else to compare.
 
 ## Where the notes went
 
@@ -40,6 +41,7 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 | Spike 10 S10-36 — Promote compares two likeness crops (moved 2026-10-17) | S11-32 (lines), S11-20 (crops) | S11-D2 |
 | Reuse inventory ([`comparison-layers.md`](comparison-layers.md#reuse-across-the-app)) | S11-05 – S11-08, S11-13, S11-19 | — |
 | S11-27 follow-up — the evidence button's hover on the S11-D1 board was not built (user, 2026-10-24) | S11-34 | — (S11-D1, agreed) |
+| Dogfood, 2026-10-24: "Amy" not offered "Amy Lee Anne Long"; "Desiree" not offered "Des" ([name candidates](name-candidates.md)) | S11-43, S11-44, S11-45 | — |
 | [Kinship shapes](kinship-shapes.md) (was `ideas/relationships-from-shared-events.md`, from S11-14; grandparent added by the user; pulled in 2026-10-24) | S11-41, S11-38, S11-39, S11-40, S11-42 | — |
 | [Find another record](promote-find-another-record.md) (was `ideas/promote-find-another-record.md`, from S11-05 D-16; pulled in 2026-10-24) | S11-35, S11-37, S11-36 | S11-D3 |
 
@@ -98,6 +100,12 @@ These are the calls for this spike. PR plans treat them as binding.
 - **One fact, one link per side.** A direct link and an implied one between the same two people with the same key merge into one link carrying both shapes' bridge Subjects, credited once, through the loaders' existing merge (`edgeSeenKey`), not a second one in `core/kinship`.
 - **No new knob.** An implied link weighs as the direct link it stands for (the segment registry's Other pair).
 
+### Name candidates
+
+- **The candidate gate drops to 0.4** (user, 2026-10-24; [case 1](name-candidates.md#case-1--amy-against-amy-lee-anne-long)). `alignment.MinSimilarity` 0.5 → 0.4, so a one-name Subject reaches a record with three more names. The gate only picks candidates; no band moves.
+- **Des is a nickname of Desiree** (user, 2026-10-24). It goes in a reviewed product set beside the upstream list, which is not edited (S11-28's rule), and reaches existing catalogs as well as new ones (S11-44).
+- **A prefix is an initial generalised** (user, 2026-10-24; [prefix rule](name-candidates.md#prefix-rule-in-detail)). A given name or nickname of at least `PrefixMinLength` letters that is the exact start of another, after folding, is `Contains` at `PrefixCredit` with `CausePrefix`, beside the initial rule and after alias hits. No surname prefixes. Both knobs live in the registry's value section, and the shortlist keys given names under their prefixes.
+
 ### Claim evidence
 
 - **A separate, lazy query per row** ([claim evidence](claim-evidence.md#separate-from-matching)): inputs are the page's targets, not matching internals.
@@ -150,6 +158,9 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-39 | Matching reads kinship shapes | 9 | The layer loader and `loadCanon` add implied links through their existing merge; goldens for marriage ↔ spouse, birth parents ↔ parent, chain ↔ grandparent; derivation cost measured | — | S11-38 | — | Scoped |
 | S11-40 | Implied links in claim evidence | 9 | `canonLinks` derives too; a corresponding implied link gives a relationship line with how each side recorded it and the event behind it, a bundle of every bridge behind it, through the RPC to Swift | — | S11-39 | — | Scoped |
 | S11-42 | Implied links on the evidence sheet | 9 | The sheet words S11-40's line ("both are spouses in the marriage on …") in the existing relationship Card; L10n | — | S11-40 | — | Scoped |
+| S11-43 | Lower the candidate gate | 10 | `alignment.MinSimilarity` 0.5 → 0.4 with its inventory row; a test that "Amy" gets "Amy Lee Anne Long" as an alternative | — | — | — | Scoped |
+| S11-44 | Des as a nickname of Desiree | 10 | A reviewed product nickname set beside the upstream list, starting with `{desiree, des}`; existing catalogs gain new product sets | — | — | — | Scoped |
+| S11-45 | Prefix names | 10 | A given name that starts another is a `Contains` hit at `PrefixCredit` (`CausePrefix`); shortlist prefix keys; the cause worded on the sheet | — | S11-43 | — | Scoped |
 | S11-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -246,10 +257,18 @@ SLICE 9 — Kinship shapes
          chain matches a grandparent link; the sheet says "both are spouses in the
          marriage…" and checking it pins both participations.
 
+SLICE 10 — Name candidates
+  S11-43  Lower the candidate gate              (any time)
+  S11-44  Des as a nickname of Desiree          (any time, parallel)
+  S11-45  Prefix names
+  Check: "Amy" is offered "Amy Lee Anne Long"; "Desiree" is offered "Des" in a
+         catalog that existed before S11-44; a three-letter start of a given name
+         with no nickname set is offered through the prefix rule, and the sheet says why.
+
 S11-99 — Dogfood close / docs
 ```
 
-Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 7 after S11-16; slice 6 any time (S11-26 has no dependency); S11-34 any time after S11-27; S11-41 any time, and slice 9 runs beside slice 8; S11-35 and S11-37 any time, in parallel, and S11-D3 can be drawn while they run. S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
+Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 7 after S11-16; slice 6 any time (S11-26 has no dependency); S11-34 any time after S11-27; S11-43 and S11-44 any time; S11-41 any time, and slice 9 runs beside slice 8; S11-35 and S11-37 any time, in parallel, and S11-D3 can be drawn while they run. S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
 
 ### Dependencies at a glance
 
@@ -274,6 +293,7 @@ S11-35 ──┐
 S11-37 ──┤
 S11-D3 ──┴──▶ S11-36
 S11-41 ──▶ S11-38 ──▶ S11-39 ──▶ S11-40 ──▶ S11-42
+S11-43 ──▶ S11-45
 ```
 
 ---
@@ -614,3 +634,28 @@ Preparatory refactor, from the slice 9 map review (K-4, 2026-10-24).
 **Not this PR.** Engine or wire (S11-40).
 **Check.** A Source marriage against a filed spouse relationship shows "…both are spouses in the marriage on <date>"; checking it pins both participations.
 **Context.** [On the evidence sheet](kinship-shapes.md#on-the-evidence-sheet); [`claim-evidence.md`](claim-evidence.md#evidence-through-relationships); [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).
+
+### Slice 10 — Name candidates
+
+From dogfood on 2026-10-24. Design and diagnosis: [`name-candidates.md`](name-candidates.md).
+
+#### S11-43 — Lower the candidate gate
+
+**Ships.** `alignment.MinSimilarity` 0.4 in `core/matchregistry/alignment.go`, its comment and its row in the [`matching-model.md`](../../matching-model.md) knob inventory. A `graphalign` test: a one-given-name Subject and a record with three more names is a candidate and shows as an unbanded alternative, and a record whose first given name differs is still not. The obituary golden and sparse cases keep their targets.
+**Not this PR.** The name curve ([open question 1](name-candidates.md#open-questions)). Surname-only ties ([`ideas/coverage-aware-similarity.md`](../../ideas/coverage-aware-similarity.md)).
+**Check.** On a real project, a row for "Amy" lists "Amy Lee Anne Long".
+**Context.** [Case 1](name-candidates.md#case-1--amy-against-amy-lee-anne-long); [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md).
+
+#### S11-44 — Des as a nickname of Desiree
+
+**Ships.** A reviewed product nickname list in `core/database/namealiases` beside `nicknameSets` (which stays as upstream gives it), starting with `{desiree, des}`, written by `Install` with the rest. An existing catalog gains product sets it lacks through `AddProductNicknames`, which has no caller today; the plan wires it as [open question 3](name-candidates.md#open-questions) is answered. [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md) and [`seeded-vocabulary.md`](../../seeded-vocabulary.md) say where reviewed additions go.
+**Not this PR.** An editor for alias tables.
+**Check.** In a catalog created before this PR, "Desiree" is offered "Des"; a new catalog has the set.
+**Context.** [Case 2](name-candidates.md#case-2--desiree-against-des); S11-28 (the reviewed table beside upstream).
+
+#### S11-45 — Prefix names
+
+**Ships.** The prefix rule ([detail](name-candidates.md#prefix-rule-in-detail)): in `valuecompare`'s word comparer beside the initial rule and after alias hits, for given and nickname roles; `PrefixMinLength` and `PrefixCredit` in the registry value section with inventory rows; `CausePrefix`; `core/shortlist` keys given-name words under their prefixes, measured on S11-21's fixture or `bench_test.go`'s. The cause joins `ConclusionVocabulary.swift` under `swift_vocabulary_test.go`, worded through L10n on the sheet's existing name line. The reconciler follows [open question 2](name-candidates.md#open-questions). Extends the name ladders in `name_test.go` and the contract tests.
+**Not this PR.** Surname or two-letter prefixes.
+**Check.** "Desiree" against "Des" (no nickname set) is `Contains` with `CausePrefix` and is offered; "Desmond" against "Desiree" is not a prefix; "Mac" does not reach "MacDonald".
+**Context.** [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md); [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).
