@@ -82,7 +82,7 @@ final class EvidenceCardView: GraphCanvasItemView {
         }()
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current?.cgContext.setAlpha(alpha)
-        _ = Self.measure(card, painter: Painter())
+        _ = Self.measure(card, painter: PVPainter())
         NSGraphicsContext.restoreGraphicsState()
     }
 
@@ -95,7 +95,7 @@ final class EvidenceCardView: GraphCanvasItemView {
         return observations.compactMap(likenessRelPath)
     }
 
-    private static func measure(_ card: EvidenceCanvasCard, painter: Painter? = nil) -> EvidenceCardLayout {
+    private static func measure(_ card: EvidenceCanvasCard, painter: PVPainter? = nil) -> EvidenceCardLayout {
         switch card.placed {
         case .subject(let placed, let presentation):
             subject(placed, presentation: presentation, card: card, painter: painter)
@@ -107,126 +107,8 @@ final class EvidenceCardView: GraphCanvasItemView {
 
 // MARK: - Painter
 
-@MainActor
-private final class Painter {
-    func fill(_ rect: CGRect, _ color: Color) {
-        ns(color).setFill()
-        rect.fill()
-    }
-
-    func fillRound(_ rect: CGRect, radius: CGFloat, _ color: Color, shadow: (CGFloat, CGFloat, CGFloat)? = nil) {
-        let path = continuous(rect, radius: radius)
-        if let shadow {
-            NSGraphicsContext.saveGraphicsState()
-            let shade = NSShadow()
-            shade.shadowBlurRadius = shadow.0
-            shade.shadowOffset = NSSize(width: 0, height: shadow.1)
-            shade.shadowColor = NSColor.black.withAlphaComponent(shadow.2)
-            shade.set()
-            ns(color).setFill()
-            path.fill()
-            NSGraphicsContext.restoreGraphicsState()
-        } else {
-            ns(color).setFill()
-            path.fill()
-        }
-    }
-
-    func beginClip(_ rect: CGRect, radius: CGFloat) {
-        NSGraphicsContext.saveGraphicsState()
-        continuous(rect, radius: radius).setClip()
-    }
-
-    func endClip() {
-        NSGraphicsContext.restoreGraphicsState()
-    }
-
-    func strokeRound(_ rect: CGRect, radius: CGFloat, _ color: Color, width: CGFloat, dash: [CGFloat] = []) {
-        let path = continuous(rect, radius: radius)
-        path.lineWidth = width
-        if !dash.isEmpty { path.setLineDash(dash, count: dash.count, phase: 0) }
-        ns(color).setStroke()
-        path.stroke()
-    }
-
-    func text(
-        _ string: String,
-        in rect: CGRect,
-        font: NSFont,
-        color: Color,
-        lines: Int,
-        kern: CGFloat = 0,
-        uppercased: Bool = false
-    ) {
-        let style = NSMutableParagraphStyle()
-        style.lineBreakMode = .byWordWrapping
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .foregroundColor: ns(color),
-            .paragraphStyle: style,
-            .kern: kern,
-        ]
-        let line = max(font.boundingRectForFont.height, 1)
-        var box = rect
-        box.size.height = min(box.height, ceil(line) * CGFloat(max(lines, 1)))
-        NSAttributedString(string: uppercased ? string.uppercased() : string, attributes: attributes)
-            .draw(with: box, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine])
-    }
-
-    func symbol(_ symbol: PVSymbol, in rect: CGRect, _ color: Color) {
-        guard let image = EvidenceCardSymbols.image(symbol, pointSize: min(rect.width, rect.height)) else { return }
-        drawTinted(image, in: rect, color: ns(color))
-    }
-
-    /// An aspect-fit image in a rounded tile; the placeholder fill when not loaded.
-    func tile(_ image: NSImage?, in rect: CGRect) {
-        let target = rect
-        NSGraphicsContext.saveGraphicsState()
-        let clip = NSBezierPath(roundedRect: target, xRadius: 4, yRadius: 4)
-        clip.addClip()
-        ns(PVColor.surfaceHover).setFill()
-        target.fill()
-        if let image, image.size.width > 0, image.size.height > 0 {
-            let fit = min(target.width / image.size.width, target.height / image.size.height)
-            let size = CGSize(width: image.size.width * fit, height: image.size.height * fit)
-            let drawRect = CGRect(
-                x: target.midX - size.width / 2, y: target.midY - size.height / 2,
-                width: size.width, height: size.height
-            )
-            image.draw(in: drawRect, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
-        }
-        NSGraphicsContext.restoreGraphicsState()
-    }
-
-    func mark(_ key: PVMarkKey, in rect: CGRect, _ color: Color) {
-        guard let image = NSImage(named: key.assetName) else { return }
-        drawTinted(image, in: rect, color: ns(color))
-    }
-
-    /// Recolors a template image in the view's current context.
-    ///
-    /// An intermediate `NSImage` rasterizes the SVG mark at one pixel per
-    /// point. Panning and zooming then scale that bitmap, so the mark stays
-    /// soft until some later redraw. A transparency layer tints the vector
-    /// at the same scale as the rest of the card.
-    private func drawTinted(_ image: NSImage, in rect: CGRect, color: NSColor) {
-        guard let context = NSGraphicsContext.current else { return }
-        context.saveGraphicsState()
-        context.cgContext.beginTransparencyLayer(in: rect, auxiliaryInfo: nil)
-        image.draw(
-            in: rect,
-            from: .zero,
-            operation: .sourceOver,
-            fraction: 1,
-            respectFlipped: true,
-            hints: [.interpolation: NSImageInterpolation.high]
-        )
-        color.setFill()
-        rect.fill(using: .sourceAtop)
-        context.cgContext.endTransparencyLayer()
-        context.restoreGraphicsState()
-    }
-
+extension PVPainter {
+    /// The conflict bracket beside a run of rows that disagree.
     func bracket(_ rect: CGRect) {
         let box = rect
         let x = box.minX + 8
@@ -240,32 +122,9 @@ private final class Painter {
         path.lineWidth = 1.5
         path.lineCapStyle = .round
         path.lineJoinStyle = .round
-        ns(PVColor.warning).setStroke()
+        Self.color(PVColor.warning).setStroke()
         path.stroke()
     }
-}
-
-/// Resolves a dynamic color to the appearance currently being drawn, so a
-/// tint baked into an image does not stick on the default (black or accent).
-private func ns(_ color: Color) -> NSColor {
-    let dynamic = NSColor(color)
-    return NSColor(cgColor: dynamic.cgColor) ?? dynamic
-}
-
-private func continuous(_ rect: CGRect, radius: CGFloat) -> NSBezierPath {
-    let path = NSBezierPath()
-    Path(roundedRect: rect, cornerRadius: radius, style: .continuous).forEach { element in
-        switch element {
-        case .move(let point): path.move(to: point)
-        case .line(let point): path.line(to: point)
-        case .quadCurve(let point, let control):
-            path.curve(to: point, controlPoint1: control, controlPoint2: control)
-        case .curve(let point, let control1, let control2):
-            path.curve(to: point, controlPoint1: control1, controlPoint2: control2)
-        case .closeSubpath: path.close()
-        }
-    }
-    return path
 }
 
 // MARK: - Layout and paint
@@ -275,7 +134,7 @@ private extension EvidenceCardView {
         _ placed: EvidenceGraphPlacedSubject,
         presentation: CatalogSubjectTypePresentation?,
         card: EvidenceCanvasCard,
-        painter: Painter?
+        painter: PVPainter?
     ) -> EvidenceCardLayout {
         let style = EvidenceSubjectKindStyle.resolve(typeKey: placed.kind.rawValue, presentation: presentation)
         let width = EvidenceSubjectCard.width
@@ -289,7 +148,7 @@ private extension EvidenceCardView {
 
         if state.isConnectingFrom {
             y += EvidenceSubjectCard.headerToBodyGap
-            let line = lineHeight(PVFont.nsMono(size: 11))
+            let line = PVTextMetrics.fontLineHeight(PVFont.nsMono(size: 11))
             painter?.text(
                 L10n.string(L10n.EvidenceGraph.connectingFrom),
                 in: CGRect(x: EvidenceSubjectCard.shellPaddingX, y: y, width: width - 26, height: line),
@@ -302,7 +161,7 @@ private extension EvidenceCardView {
                 y += EvidenceSubjectCard.headerToBodyGap
                 let bodyWidth = width - EvidenceSubjectCard.shellPaddingX * 2
                 let font = PVFont.nsBody(size: 12.5, italic: true)
-                let height = wrappedHeight(description, width: bodyWidth, font: font, maxLines: 3)
+                let height = PVTextMetrics.textHeight(description, width: bodyWidth, font: font, maxLines: 3)
                 painter?.text(
                     description,
                     in: CGRect(x: EvidenceSubjectCard.shellPaddingX, y: y, width: bodyWidth, height: height),
@@ -379,7 +238,7 @@ private extension EvidenceCardView {
         return EvidenceCardLayout(size: CGSize(width: width, height: y), regions: regions)
     }
 
-    static func bridge(_ placed: EvidenceGraphPlacedBridge, card: EvidenceCanvasCard, painter: Painter?) -> EvidenceCardLayout {
+    static func bridge(_ placed: EvidenceGraphPlacedBridge, card: EvidenceCanvasCard, painter: PVPainter?) -> EvidenceCardLayout {
         let width = EvidenceBridgeCard.width
         let state = card.state
         let selected = state.isSelected || state.isActivated || state.isDragging
@@ -387,7 +246,7 @@ private extension EvidenceCardView {
         let bodyFont = placed.isCited
             ? PVFont.nsDisplay(size: 14.5, weight: PVFontWeight.medium)
             : PVFont.nsBody(size: 11.5, italic: true)
-        let bodyHeight = wrappedHeight(body, width: bridgeBodyWidth, font: bodyFont, maxLines: 3)
+        let bodyHeight = PVTextMetrics.textHeight(body, width: bridgeBodyWidth, font: bodyFont, maxLines: 3)
         let headerHeight = placed.isCited
             ? EvidenceBridgeCard.headerContentHeightCited
             : max(EvidenceBridgeCard.headerContentHeightUncited, bridgeTitleBlock(placed))
@@ -479,7 +338,7 @@ private extension EvidenceCardView {
         selected: Bool,
         dragging: Bool,
         height: CGFloat,
-        painter: Painter?
+        painter: PVPainter?
     ) {
         let rect = CGRect(x: 0, y: 0, width: EvidenceSubjectCard.width, height: height)
         if selected {
@@ -500,10 +359,10 @@ private extension EvidenceCardView {
         restingAlpha: CGFloat,
         restingBlur: CGFloat,
         restingY: CGFloat
-    ) -> (CGFloat, CGFloat, CGFloat)? {
-        if dragging { return (10, 4, 0.1) }
+    ) -> PVShadowLayer? {
+        if dragging { return PVShadowLayer(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 4) }
         if selected || restingAlpha <= 0 { return nil }
-        return (restingBlur, restingY, restingAlpha)
+        return PVShadowLayer(color: Color.black.opacity(restingAlpha), radius: restingBlur, x: 0, y: restingY)
     }
 
     /// Inside stroke, drawn after the body so rows and the footer do not cover
@@ -513,7 +372,7 @@ private extension EvidenceCardView {
         color: Color,
         width: CGFloat,
         dash: [CGFloat] = [],
-        painter: Painter?
+        painter: PVPainter?
     ) {
         let inset = width / 2
         painter?.strokeRound(
@@ -543,7 +402,7 @@ private extension EvidenceCardView {
         titleSize: CGFloat = 16,
         typeSize: CGFloat = 10,
         typeKern: CGFloat = 0.6,
-        painter: Painter?
+        painter: PVPainter?
     ) {
         guard let painter else { return }
         let chipRect = CGRect(x: paddingX, y: header.minY, width: chipSize, height: chipSize)
@@ -565,7 +424,7 @@ private extension EvidenceCardView {
         let titleWidth = width - titleX - paddingX - 40
         if let title {
             let titleFont = PVFont.nsDisplay(size: titleSize, weight: PVFontWeight.medium)
-            let titleHeight = wrappedHeight(title, width: titleWidth, font: titleFont, maxLines: 2)
+            let titleHeight = PVTextMetrics.textHeight(title, width: titleWidth, font: titleFont, maxLines: 2)
             painter.text(title, in: CGRect(x: titleX, y: header.minY, width: titleWidth, height: titleHeight), font: titleFont, color: titleCited ? PVColor.textPrimary : PVColor.textSecondary, lines: 2)
             painter.text(typeLine, in: CGRect(x: titleX, y: header.minY + titleHeight + 2, width: titleWidth, height: 14), font: PVFont.nsMono(size: typeSize), color: chipInk, lines: 1, kern: typeKern, uppercased: true)
         } else {
@@ -589,7 +448,7 @@ private extension EvidenceCardView {
         trailing: CGFloat,
         orders: NameFormatOrders = NameFormatOrders(),
         projectDir: String = "",
-        painter: Painter?
+        painter: PVPainter?
     ) {
         guard let painter else { return }
         for (observation, rect) in rows {
@@ -616,7 +475,7 @@ private extension EvidenceCardView {
             }
             if let relPath = likenessRelPath(observation) {
                 let image = ThumbnailCache.shared.cachedImage(projectDir: projectDir, relPath: relPath)
-                painter.tile(image, in: CGRect(x: valueX, y: rect.minY + 22, width: likenessTile, height: likenessTile))
+                painter.tile(image, in: CGRect(x: valueX, y: rect.minY + 22, width: likenessTile, height: likenessTile), radius: 4)
             } else {
                 painter.text(
                     ObservationValueDisplay.string(for: observation, orders: orders),
@@ -645,7 +504,7 @@ private extension EvidenceCardView {
         chip: Color,
         ink: Color,
         paddingX: CGFloat,
-        painter: Painter?
+        painter: PVPainter?
     ) {
         guard let painter else { return }
         let hot = hovered && canCite
@@ -690,7 +549,7 @@ private extension EvidenceCardView {
         hovered: String?,
         pressed: String?,
         orders: NameFormatOrders = NameFormatOrders(),
-        painter: Painter?
+        painter: PVPainter?
     ) {
         guard let painter else { return }
         painter.fill(rect, style.band)
@@ -731,7 +590,7 @@ private extension EvidenceCardView {
                 painter.fill(CGRect(x: 0, y: rect.minY, width: 2, height: rect.height), style.ink)
             }
             let font = PVFont.nsBody(size: 13, weight: PVFontWeight.medium)
-            let line = lineHeight(font)
+            let line = PVTextMetrics.fontLineHeight(font)
             let icon: CGFloat = 13
             let x = EvidenceSubjectCard.shellPaddingX
             painter.symbol(
@@ -760,7 +619,7 @@ private extension EvidenceCardView {
     static var bridgeBodyWidth: CGFloat {
         EvidenceBridgeCard.width - EvidenceBridgeCard.shellPaddingX * 2 - 20
     }
-    static var addPropertyRowHeight: CGFloat { lineHeight(PVFont.nsBody(size: 12)) + 20 }
+    static var addPropertyRowHeight: CGFloat { PVTextMetrics.fontLineHeight(PVFont.nsBody(size: 12)) + 20 }
 
     static func displayLabel(_ placed: EvidenceGraphPlacedSubject) -> String {
         let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -776,13 +635,13 @@ private extension EvidenceCardView {
     }
     static func titleBlockHeight(_ placed: EvidenceGraphPlacedSubject) -> CGFloat {
         let width = EvidenceSubjectCard.width - EvidenceSubjectCard.shellPaddingX * 2 - 78
-        let title = wrappedHeight(displayLabel(placed), width: width, font: PVFont.nsDisplay(size: 16, weight: PVFontWeight.medium), maxLines: 2)
-        return title + 2 + lineHeight(PVFont.nsMono(size: 10))
+        let title = PVTextMetrics.textHeight(displayLabel(placed), width: width, font: PVFont.nsDisplay(size: 16, weight: PVFontWeight.medium), maxLines: 2)
+        return title + 2 + PVTextMetrics.fontLineHeight(PVFont.nsMono(size: 10))
     }
     static func bridgeTitleBlock(_ placed: EvidenceGraphPlacedBridge) -> CGFloat {
         let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         let title = label.isEmpty ? placed.typeLabel : label
-        return wrappedHeight(title, width: bridgeBodyWidth, font: PVFont.nsDisplay(size: 14, weight: PVFontWeight.medium), maxLines: 2) + 1 + lineHeight(PVFont.nsMono(size: 9.5))
+        return PVTextMetrics.textHeight(title, width: bridgeBodyWidth, font: PVFont.nsDisplay(size: 14, weight: PVFontWeight.medium), maxLines: 2) + 1 + PVTextMetrics.fontLineHeight(PVFont.nsMono(size: 9.5))
     }
     /// Side of a likeness row's image tile.
     static var likenessTile: CGFloat { 32 }
@@ -801,26 +660,14 @@ private extension EvidenceCardView {
         orders: NameFormatOrders = NameFormatOrders()
     ) -> CGFloat {
         if likenessRelPath(observation) != nil {
-            return max(EvidenceSubjectCard.propertyRowHeight, lineHeight(PVFont.nsMono(size: 9)) + 3 + likenessTile + 16)
+            return max(EvidenceSubjectCard.propertyRowHeight, PVTextMetrics.fontLineHeight(PVFont.nsMono(size: 9)) + 3 + likenessTile + 16)
         }
-        let valueHeight = wrappedHeight(
+        let valueHeight = PVTextMetrics.textHeight(
             ObservationValueDisplay.string(for: observation, orders: orders),
             width: valueWidth,
             font: valueFont,
             maxLines: 2
         )
-        return max(EvidenceSubjectCard.propertyRowHeight, lineHeight(PVFont.nsMono(size: 9)) + 3 + valueHeight + 16)
-    }
-    static func lineHeight(_ font: NSFont) -> CGFloat { max(font.boundingRectForFont.height, 1) }
-    static func wrappedHeight(_ text: String, width: CGFloat, font: NSFont, maxLines: Int) -> CGFloat {
-        if text.isEmpty { return lineHeight(font) }
-        let style = NSMutableParagraphStyle()
-        style.lineBreakMode = .byWordWrapping
-        let rect = (text as NSString).boundingRect(
-            with: CGSize(width: max(width, 1), height: .greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            attributes: [.font: font, .paragraphStyle: style]
-        )
-        return min(ceil(rect.height), ceil(lineHeight(font)) * CGFloat(maxLines))
+        return max(EvidenceSubjectCard.propertyRowHeight, PVTextMetrics.fontLineHeight(PVFont.nsMono(size: 9)) + 3 + valueHeight + 16)
     }
 }

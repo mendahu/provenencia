@@ -97,7 +97,7 @@ final class GraphCanvasGridPatternView: NSView {
         )
         var stroke = NSColor.gray.withAlphaComponent(0.7)
         appearance.performAsCurrentDrawingAppearance {
-            stroke = NSColor(PVColor.borderSubtle).withAlphaComponent(0.7)
+            stroke = PVPainter.color(PVColor.borderSubtle).withAlphaComponent(0.7)
         }
         guard let color = stroke.usingColorSpace(.sRGB)?.cgColor else { return nil }
         return GraphCanvasGridPattern.color(spacing: cell, lineWidth: lineWidth, stroke: color)

@@ -5,7 +5,7 @@ import AppKit
 /// across paints. The card still draws the vector through `drawTinted`, so
 /// icons stay crisp at any zoom; only the image object is cached.
 @MainActor
-enum EvidenceCardSymbols {
+enum PVSymbolImages {
     private struct Key: Hashable {
         let symbol: PVSymbol
         let pointSize: CGFloat

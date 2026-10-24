@@ -188,11 +188,14 @@
 		A71800000000000000000002 /* EvidenceGraphPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */; };
 		AA00000000000000000000F7 /* EvidenceSubjectCardFooterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000F6 /* EvidenceSubjectCardFooterTests.swift */; };
 		AA00000000000000000000F9 /* EvidenceCardLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000F8 /* EvidenceCardLayoutTests.swift */; };
-		AA00000000000000000000FB /* EvidenceCardSymbols.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000FA /* EvidenceCardSymbols.swift */; };
-		AA00000000000000000000FD /* EvidenceCardSymbolsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000FC /* EvidenceCardSymbolsTests.swift */; };
+		AA00000000000000000000FB /* PVSymbolImages.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000FA /* PVSymbolImages.swift */; };
+		AA00000000000000000000FD /* PVSymbolImagesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000FC /* PVSymbolImagesTests.swift */; };
 		AA00000000000000000000FF /* PVFontTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000FE /* PVFontTests.swift */; };
 		AA0000000000000000000673 /* L10nResolutionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000672 /* L10nResolutionTests.swift */; };
 		AA0000000000000000000680 /* GraphCanvasItemLayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000067F /* GraphCanvasItemLayerTests.swift */; };
+		AA0000000000000000000112 /* PVPainterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000111 /* PVPainterTests.swift */; };
+		AA000000000000000000010E /* PVPainter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000010D /* PVPainter.swift */; };
+		AA0000000000000000000110 /* PVTextMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000010F /* PVTextMetrics.swift */; };
 		AA000000000000000000010B /* GraphCanvasItemViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000010A /* GraphCanvasItemViewTests.swift */; };
 		AA0000000000000000000682 /* PVTextAreaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000681 /* PVTextAreaTests.swift */; };
 		AA0000000000000000000678 /* L10nPluralTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000677 /* L10nPluralTests.swift */; };
@@ -625,12 +628,15 @@
 		AA00000000000000000000F6 /* EvidenceSubjectCardFooterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceSubjectCardFooterTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000672 /* L10nResolutionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = L10nResolutionTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000067F /* GraphCanvasItemLayerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasItemLayerTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000111 /* PVPainterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVPainterTests.swift; sourceTree = "<group>"; };
+		AA000000000000000000010D /* PVPainter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVPainter.swift; sourceTree = "<group>"; };
+		AA000000000000000000010F /* PVTextMetrics.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVTextMetrics.swift; sourceTree = "<group>"; };
 		AA000000000000000000010A /* GraphCanvasItemViewTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasItemViewTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000681 /* PVTextAreaTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVTextAreaTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000677 /* L10nPluralTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = L10nPluralTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000000F8 /* EvidenceCardLayoutTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceCardLayoutTests.swift; sourceTree = "<group>"; };
-		AA00000000000000000000FA /* EvidenceCardSymbols.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceCardSymbols.swift; sourceTree = "<group>"; };
-		AA00000000000000000000FC /* EvidenceCardSymbolsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceCardSymbolsTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000000FA /* PVSymbolImages.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSymbolImages.swift; sourceTree = "<group>"; };
+		AA00000000000000000000FC /* PVSymbolImagesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSymbolImagesTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000000FE /* PVFontTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFontTests.swift; sourceTree = "<group>"; };
 		A71900000000000000000001 /* CitationComposerContext.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerContext.swift; sourceTree = "<group>"; };
 		A71D00000000000000000001 /* OCREngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OCREngine.swift; sourceTree = "<group>"; };
@@ -1190,7 +1196,6 @@
 				AA0000000000000000000A10 /* EvidenceCardView.swift */,
 				A80600000000000000000001 /* EvidenceCitedPropertyMarks.swift */,
 				A90400000000000000000001 /* EvidenceCardLayout.swift */,
-				AA00000000000000000000FA /* EvidenceCardSymbols.swift */,
 				AA0000000000000000000679 /* EvidenceCardText.swift */,
 				AA000000000000000000067B /* EvidenceCanvasCard.swift */,
 				A70900000000000000000005 /* ObservationValueDisplay.swift */,
@@ -1396,11 +1401,12 @@
 				A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */,
 				AA00000000000000000000F6 /* EvidenceSubjectCardFooterTests.swift */,
 				AA00000000000000000000F8 /* EvidenceCardLayoutTests.swift */,
-				AA00000000000000000000FC /* EvidenceCardSymbolsTests.swift */,
+				AA00000000000000000000FC /* PVSymbolImagesTests.swift */,
 				AA00000000000000000000FE /* PVFontTests.swift */,
 				AA0000000000000000000672 /* L10nResolutionTests.swift */,
 				AA000000000000000000067F /* GraphCanvasItemLayerTests.swift */,
 				AA000000000000000000010A /* GraphCanvasItemViewTests.swift */,
+				AA0000000000000000000111 /* PVPainterTests.swift */,
 				AA0000000000000000000677 /* L10nPluralTests.swift */,
 				A71B00000000000000000001 /* ConnectEndpointBindingTests.swift */,
 				A71C00000000000000000003 /* ConnectionSentenceRegistryTests.swift */,
@@ -1463,10 +1469,21 @@
 			path = Button;
 			sourceTree = "<group>";
 		};
+		AA000000000000000000010C /* Painter */ = {
+			isa = PBXGroup;
+			children = (
+				AA000000000000000000010D /* PVPainter.swift */,
+				AA000000000000000000010F /* PVTextMetrics.swift */,
+			);
+			name = Painter;
+			path = Painter;
+			sourceTree = "<group>";
+		};
 		D5C000000000000000000001 /* Icon */ = {
 			isa = PBXGroup;
 			children = (
 				36412B0A6A6851ADB45A7AA8 /* PVIcon.swift */,
+				AA00000000000000000000FA /* PVSymbolImages.swift */,
 			);
 			name = Icon;
 			path = Icon;
@@ -1791,6 +1808,7 @@
 			children = (
 				D5C000000000000000000006 /* Button */,
 				D5C000000000000000000001 /* Icon */,
+				AA000000000000000000010C /* Painter */,
 				D5C00000000000000000000E /* LogoMark */,
 				D5C00000000000000000000F /* IconButton */,
 				D5C000000000000000000015 /* HoverEffect */,
@@ -2058,6 +2076,8 @@
 				01574F7767F9B0AF5550AFAD /* PVMotion.swift in Sources */,
 				CA918E2A0BCB420DA8CD87E5 /* PVButton.swift in Sources */,
 				6D245285E4AB8AAFDE78E313 /* PVIcon.swift in Sources */,
+				AA000000000000000000010E /* PVPainter.swift in Sources */,
+				AA0000000000000000000110 /* PVTextMetrics.swift in Sources */,
 				080D24179717B185C273478D /* PVField.swift in Sources */,
 				ECC25906B62C6453A5CB9D25 /* PVInput.swift in Sources */,
 				AA0000000000000000000371 /* PVInlineEdit.swift in Sources */,
@@ -2144,7 +2164,7 @@
 				AA0000000000000000000A11 /* EvidenceCardView.swift in Sources */,
 				A80600000000000000000002 /* EvidenceCitedPropertyMarks.swift in Sources */,
 				A90400000000000000000002 /* EvidenceCardLayout.swift in Sources */,
-				AA00000000000000000000FB /* EvidenceCardSymbols.swift in Sources */,
+				AA00000000000000000000FB /* PVSymbolImages.swift in Sources */,
 				AA000000000000000000067A /* EvidenceCardText.swift in Sources */,
 				AA000000000000000000067C /* EvidenceCanvasCard.swift in Sources */,
 				A70900000000000000000006 /* ObservationValueDisplay.swift in Sources */,
@@ -2356,11 +2376,12 @@
 				A71800000000000000000002 /* EvidenceGraphPlacementTests.swift in Sources */,
 				AA00000000000000000000F7 /* EvidenceSubjectCardFooterTests.swift in Sources */,
 				AA00000000000000000000F9 /* EvidenceCardLayoutTests.swift in Sources */,
-				AA00000000000000000000FD /* EvidenceCardSymbolsTests.swift in Sources */,
+				AA00000000000000000000FD /* PVSymbolImagesTests.swift in Sources */,
 				AA00000000000000000000FF /* PVFontTests.swift in Sources */,
 				AA0000000000000000000673 /* L10nResolutionTests.swift in Sources */,
 				AA0000000000000000000680 /* GraphCanvasItemLayerTests.swift in Sources */,
 				AA000000000000000000010B /* GraphCanvasItemViewTests.swift in Sources */,
+				AA0000000000000000000112 /* PVPainterTests.swift in Sources */,
 				AA0000000000000000000682 /* PVTextAreaTests.swift in Sources */,
 				AA0000000000000000000678 /* L10nPluralTests.swift in Sources */,
 				A71B00000000000000000002 /* ConnectEndpointBindingTests.swift in Sources */,
