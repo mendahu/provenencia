@@ -6,7 +6,7 @@ import Testing
 @Suite
 @MainActor
 struct GraphCanvasItemLayerTests {
-    private final class SizedView: NSView {
+    private final class SizedView: GraphCanvasItemView {
         override var intrinsicContentSize: NSSize {
             NSSize(
                 width: 100 + 2 * GraphCanvasItemLayer.paintOutset,

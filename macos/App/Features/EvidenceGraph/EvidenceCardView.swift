@@ -6,7 +6,7 @@ import SwiftUI
 /// The canvas hosts one of these per card. Text measurement
 /// here is also the hit layout edges and the pointer read, so a wrapped title
 /// or value moves its band with the paint. The placement ghost is this view built with ``init(ghostOf:)``.
-final class EvidenceCardView: NSView {
+final class EvidenceCardView: GraphCanvasItemView {
     let layout: EvidenceCardLayout
     private let card: EvidenceCanvasCard
     private let isGhost: Bool
@@ -52,9 +52,6 @@ final class EvidenceCardView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    override var isFlipped: Bool { true }
-    override var isOpaque: Bool { false }
-
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if window == nil {
@@ -87,7 +84,7 @@ final class EvidenceCardView: NSView {
         )
     }
 
-    override func draw(_ dirtyRect: NSRect) {
+    override func paint() {
         let alpha: CGFloat = {
             if isGhost { return 0.62 }
             if card.state.isDragging { return 0.92 }

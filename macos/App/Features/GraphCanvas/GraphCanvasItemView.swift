@@ -31,6 +31,15 @@ class GraphCanvasItemView: NSView {
         paint()
     }
 
+    /// `cacheDisplay` and printing paint directly through ``draw(_:)`` instead
+    /// of sampling the layer's image, so they are exact at any scale.
+    override func displayIgnoringOpacity(_ rect: NSRect, in context: NSGraphicsContext) {
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        draw(rect)
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
     /// The paint as an image `scale` pixels per point, top row first, or nil
     /// for an empty view.
     func renderImage(scale: CGFloat) -> CGImage? {
