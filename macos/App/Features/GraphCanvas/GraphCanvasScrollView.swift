@@ -193,13 +193,14 @@ final class GraphCanvasNSScrollView: NSScrollView {
     private var isUpdatingMagnificationFloor = false
     /// The item layer whose render scale follows the settled zoom.
     weak var items: GraphCanvasItemLayer?
-    private var isPinching = false
-    private var itemScaleSyncPending = false
+    /// How long the zoom must hold still before the items re-render at it.
+    static let itemScaleSettleDelay: TimeInterval = 0.15
+    private var itemScaleSettle: DispatchWorkItem?
 
     override var magnification: CGFloat {
         didSet {
             guard abs(oldValue - magnification) > 0.000_1 else { return }
-            syncItemContentsScale()
+            scheduleItemContentsScale()
             let value = magnification
             let viewport = viewport
             MainActor.assumeIsolated {
@@ -294,47 +295,38 @@ final class GraphCanvasNSScrollView: NSScrollView {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         viewport?.observeWindow(window)
-        isPinching = false
         applyItemContentsScale()
-        syncItemContentsScale()
+        scheduleItemContentsScale()
     }
 
     override func viewDidChangeBackingProperties() {
         super.viewDidChangeBackingProperties()
         applyItemContentsScale()
-        syncItemContentsScale()
+        scheduleItemContentsScale()
     }
 
-    override func magnify(with event: NSEvent) {
-        if event.phase.contains(.began) { isPinching = true }
-        super.magnify(with: event)
-        if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
-            isPinching = false
-            syncItemContentsScale()
-        }
-    }
-
-    /// Sets the items' render scale to the window's backing scale times the
-    /// zoom past 1x, once per run-loop turn and never mid-pinch, so a pinch
-    /// does not repaint every card per frame. The hop also runs after AppKit's
-    /// own backing-scale update.
-    private func syncItemContentsScale() {
-        guard !isPinching, window != nil, !itemScaleSyncPending else { return }
-        itemScaleSyncPending = true
-        DispatchQueue.main.async { [weak self] in
+    /// Applies the items' render scale once the zoom has held still for
+    /// ``itemScaleSettleDelay``. A pinch, a wheel step and the spring-back all
+    /// change `magnification`, and the end of a pinch is not a reliable event,
+    /// so each change restarts a timer instead of waiting for an end. Every
+    /// zoom source and a backing change share this one settle path, and it
+    /// runs after AppKit's own backing-scale update.
+    private func scheduleItemContentsScale() {
+        itemScaleSettle?.cancel()
+        let work = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated {
-                guard let self else { return }
-                self.itemScaleSyncPending = false
-                self.applyItemContentsScale()
+                self?.applyItemContentsScale()
             }
         }
+        itemScaleSettle = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.itemScaleSettleDelay, execute: work)
     }
 
     /// Sets the items' render scale at once. A window or backing-scale change
-    /// calls this and then ``syncItemContentsScale()``, so a layer AppKit resets
-    /// after this call is put back on the next turn.
+    /// calls this and then ``scheduleItemContentsScale()``, so a layer AppKit
+    /// resets after this call is put back when the timer fires.
     private func applyItemContentsScale() {
-        guard !isPinching, let window else { return }
+        guard let window else { return }
         items?.contentsScale = GraphCanvasCoordinates.itemContentsScale(
             backingScale: window.backingScaleFactor,
             magnification: magnification
