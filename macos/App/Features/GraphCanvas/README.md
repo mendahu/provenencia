@@ -117,7 +117,7 @@ large graph, then back toward identity. The zoom-out floor rises when `0.25` wou
 make the document smaller than the window, so the area past the canvas edge stays
 out of view. Hosts may choose different clamps.
 Deliberate zoom-*in* past ~125% is capped in the default camera so layer-scaled
-SwiftUI content does not go soft. Items re-render once the zoom has held still for 0.15 s (the scroll
+SwiftUI content does not go soft. Items re-render once the zoom has held still for 0.15 s (a magnification change or the end of a live pinch restarts the timer; the scroll
 view sets `GraphCanvasItemLayer.contentsScale`); the cap protects the base SwiftUI layer.
 
 `GraphCanvasViewportController.magnification` is the live zoom. The grid fades as a whole when a cell would be under about a screen point; product strokes that should stay one screen point wide use `GraphCanvasCoordinates.screenPixelDocumentWidth`.

@@ -196,6 +196,11 @@ final class GraphCanvasNSScrollView: NSScrollView {
     /// How long the zoom must hold still before the items re-render at it.
     static let itemScaleSettleDelay: TimeInterval = 0.15
     private var itemScaleSettle: DispatchWorkItem?
+    nonisolated(unsafe) private var liveMagnifyEndObserver: Any?
+
+    deinit {
+        if let liveMagnifyEndObserver { NotificationCenter.default.removeObserver(liveMagnifyEndObserver) }
+    }
 
     override var magnification: CGFloat {
         didSet {
@@ -295,6 +300,15 @@ final class GraphCanvasNSScrollView: NSScrollView {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         viewport?.observeWindow(window)
+        if liveMagnifyEndObserver == nil {
+            liveMagnifyEndObserver = NotificationCenter.default.addObserver(
+                forName: NSScrollView.didEndLiveMagnifyNotification,
+                object: self,
+                queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.scheduleItemContentsScale() }
+            }
+        }
         applyItemContentsScale()
         scheduleItemContentsScale()
     }
@@ -308,7 +322,10 @@ final class GraphCanvasNSScrollView: NSScrollView {
     /// Applies the items' render scale once the zoom has held still for
     /// ``itemScaleSettleDelay``. A pinch, a wheel step and the spring-back all
     /// change `magnification`, and the end of a pinch is not a reliable event,
-    /// so each change restarts a timer instead of waiting for an end. Every
+    /// so each change restarts a timer instead of waiting for an end. A live
+    /// pinch does not call the `magnification` setter, so its end comes from
+    /// `NSScrollView.didEndLiveMagnifyNotification`; wheel steps and the
+    /// spring-back come through the setter. Every
     /// zoom source and a backing change share this one settle path, and it
     /// runs after AppKit's own backing-scale update.
     private func scheduleItemContentsScale() {
