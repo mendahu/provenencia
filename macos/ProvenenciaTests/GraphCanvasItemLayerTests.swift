@@ -212,6 +212,31 @@ struct GraphCanvasItemLayerTests {
         #expect(hit() == "c")
     }
 
+    @Test func gridOriginsAreShownRelativeToTheDocumentsContentOrigin() throws {
+        let pointer = GraphCanvasPointerController()
+        let document = GraphCanvasDocumentView(pointer: pointer, frame: CGRect(x: 0, y: 0, width: 600, height: 600))
+        let outset = GraphCanvasItemView.paintOutset
+        document.contentOrigin = CGPoint(x: 100, y: 50)
+        document.items.update([item("a", at: CGPoint(x: 130, y: 70))])
+        let view = try #require(document.items.view(for: "a"))
+        #expect(view.frame.origin == CGPoint(x: 30 - outset, y: 20 - outset))
+
+        #expect(document.gridPoint(forDocumentPoint: CGPoint(x: 35, y: 25)) == CGPoint(x: 135, y: 75))
+        pointer.hitTargets = [
+            GraphCanvasHitTarget(id: "a", frame: CGRect(x: 130, y: 70, width: 40, height: 30), acceptsConnect: true),
+        ]
+        var selected: String?
+        pointer.onSelect = { selected = $0 }
+        let grid = document.gridPoint(forDocumentPoint: CGPoint(x: 35, y: 25))
+        pointer.mouseDown(gridPoint: grid, windowPoint: .zero)
+        pointer.mouseUp(gridPoint: grid, windowPoint: .zero)
+        #expect(selected == "a")
+
+        // Moving the origin re-places the item without a new push.
+        document.contentOrigin = CGPoint(x: 0, y: 0)
+        #expect(view.frame.origin == CGPoint(x: 130 - outset, y: 70 - outset))
+    }
+
     @Test func rotorFilterIgnoresCaseAndAccents() throws {
         let container = flippedContainer()
         let layer = GraphCanvasItemLayer(container: container)

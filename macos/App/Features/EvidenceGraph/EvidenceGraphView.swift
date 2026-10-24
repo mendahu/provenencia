@@ -156,9 +156,6 @@ private struct EvidenceGraphContent: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilityGraphLabel)
         .vocabularyToastOverlay($model.toast, identifier: "evidenceGraph.toast")
-        .onChange(of: canvas.origin, initial: true) { _, origin in
-            model.canvasOrigin = origin
-        }
         .pvFormDialog(
             isPresented: sheetPresented,
             copy: PVFormDialogCopy(
@@ -727,14 +724,17 @@ private struct EvidenceGraphDragCanvasSize: View {
     }
 }
 
-/// The selection rectangle, in document space so it scales with zoom. This is
-/// the only reader of ``GraphCanvasPointerController/marqueeRect``: the document
-/// body must not follow a property that changes every pointer event.
+/// The selection rectangle, drawn in the document so it scales with zoom. This
+/// is the only reader of ``GraphCanvasPointerController/marqueeRect`` (grid
+/// space): the document body must not follow a property that changes every
+/// pointer event.
 private struct EvidenceGraphMarquee: View {
     @Bindable var pointer: GraphCanvasPointerController
+    @Environment(\.graphCanvasContentOrigin) private var origin
 
     var body: some View {
-        if let rect = pointer.marqueeRect {
+        if let grid = pointer.marqueeRect {
+            let rect = GraphCanvasCoordinates.documentRect(grid, origin: origin)
             Rectangle()
                 .fill(PVColor.accent.opacity(0.09))
                 .overlay(Rectangle().stroke(PVColor.accent, lineWidth: 1.5))
@@ -824,11 +824,6 @@ private struct EvidenceGraphDocumentBody: View {
 
     private var contentSize: CGSize { canvas.size }
 
-    /// Grid-space frames are drawn at `frame − canvas.origin`.
-    private func inDocument(_ rect: CGRect) -> CGRect {
-        rect.offsetBy(dx: -canvas.origin.x, dy: -canvas.origin.y)
-    }
-
     var body: some View {
         ZStack(alignment: .topLeading) {
             GraphCanvasGridView(contentSize: contentSize)
@@ -838,8 +833,7 @@ private struct EvidenceGraphDocumentBody: View {
                 pointer: pointer,
                 snapshot: snapshot,
                 selectedBridgeID: selectedBridgeID,
-                layouts: cardLayouts.layouts,
-                documentOrigin: canvas.origin
+                layouts: cardLayouts.layouts
             )
             .frame(width: contentSize.width, height: contentSize.height)
 
@@ -850,9 +844,8 @@ private struct EvidenceGraphDocumentBody: View {
             {
                 EvidenceGraphConnectRubberBand(
                     origin: origin,
-                    cursor: cursor,
-                    layout: cardLayouts.layout(for: origin.id),
-                    documentOrigin: canvas.origin
+                    gridCursor: cursor,
+                    layout: cardLayouts.layout(for: origin.id)
                 )
                     .frame(width: contentSize.width, height: contentSize.height)
             }
@@ -889,10 +882,6 @@ private struct EvidenceGraphDocumentBody: View {
         // Cards change only when what they draw does — never per drag frame.
         .onChange(of: cards, initial: true) { _, cards in
             pushItems(cards)
-        }
-        .onChange(of: canvas.origin) { _, _ in
-            pushItems(cards)
-            publishHitTargets()
         }
         .onChange(of: EvidenceGraphHitRefresh.token(subjects: subjects, bridges: bridges)) { _, _ in
             cardLayouts.retain(only: Set(subjects.map(\.id) + bridges.map(\.id)))
@@ -954,13 +943,13 @@ private struct EvidenceGraphDocumentBody: View {
             switch model.inputMode {
             case .placing:
                 if let point {
-                    model.updateHover(contentPoint: point)
+                    model.updateHover(gridPoint: point)
                 } else {
                     model.clearHover()
                 }
             case .connecting:
                 if let point {
-                    model.updateConnectHover(contentPoint: point)
+                    model.updateConnectHover(gridPoint: point)
                 } else {
                     model.clearHover()
                 }
@@ -992,12 +981,10 @@ private struct EvidenceGraphDocumentBody: View {
             targets.append(
                 GraphCanvasHitTarget(
                     id: placed.id,
-                    frame: inDocument(
-                        EvidenceBridgeCard.contentFrame(
-                            for: placed,
-                            in: snapshot,
-                            layout: cardLayouts.layout(for: placed.id)
-                        )
+                    frame: EvidenceBridgeCard.contentFrame(
+                        for: placed,
+                        in: snapshot,
+                        layout: cardLayouts.layout(for: placed.id)
                     ),
                     acceptsConnect: false,
                     actions: EvidenceBridgeCard.actionTargets(
@@ -1005,9 +992,7 @@ private struct EvidenceGraphDocumentBody: View {
                         in: snapshot,
                         canCite: model.canCite,
                         layout: cardLayouts.layout(for: placed.id)
-                    ).map { action in
-                        action.mapFrame(inDocument)
-                    }
+                    )
                 )
             )
         }
@@ -1015,20 +1000,16 @@ private struct EvidenceGraphDocumentBody: View {
             targets.append(
                 GraphCanvasHitTarget(
                     id: placed.id,
-                    frame: inDocument(
-                        EvidenceSubjectCard.edgeFrame(
-                            for: placed,
-                            layout: cardLayouts.layout(for: placed.id)
-                        )
+                    frame: EvidenceSubjectCard.edgeFrame(
+                        for: placed,
+                        layout: cardLayouts.layout(for: placed.id)
                     ),
                     acceptsConnect: true,
                     actions: EvidenceSubjectCard.actionTargets(
                         for: placed,
                         canCite: model.canCite,
                         layout: cardLayouts.layout(for: placed.id)
-                    ).map { action in
-                        action.mapFrame(inDocument)
-                    }
+                    )
                 )
             )
         }
@@ -1076,10 +1057,7 @@ private struct EvidenceGraphDocumentBody: View {
         items.update(cards.map { card in
             GraphCanvasItem(
                 id: card.id,
-                origin: CGPoint(
-                    x: card.origin.x - canvas.origin.x,
-                    y: card.origin.y - canvas.origin.y
-                ),
+                origin: card.origin,
                 isRaised: card.state.isDragging || card.state.isActivated,
                 rotor: GraphCanvasRotorEntry(
                     rotor: card.isBridge ? linksRotor : subjectsRotor,

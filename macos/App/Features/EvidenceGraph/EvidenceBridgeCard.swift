@@ -28,7 +28,7 @@ enum EvidenceBridgeCard {
     static let bodyActionHitHeight: CGFloat = 28
 
     static func contentCenter(gridX: Int64, gridY: Int64) -> CGPoint {
-        GraphCanvasGridMapping.contentPoint(gridX: gridX, gridY: gridY)
+        GraphCanvasGridMapping.gridPoint(gridX: gridX, gridY: gridY)
     }
 
     static func topLeadingOffset(gridX: Int64, gridY: Int64) -> CGSize {
@@ -39,7 +39,7 @@ enum EvidenceBridgeCard {
         )
     }
 
-    /// Document-space frame used for edge attachment and AppKit hit targets.
+    /// Grid-space frame used for edge attachment and AppKit hit targets.
     /// Uses the card's measured `layout` when it has reported one; the wrapped-text
     /// estimate below is only the first-frame fallback.
     static func contentFrame(

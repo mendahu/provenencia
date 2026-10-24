@@ -43,7 +43,7 @@ struct GraphCanvasCoordinatesTests {
 
     @Test func identityMagnificationMapsViewToContentWithOffset() {
         let camera = GraphCanvasCamera(magnification: 1, contentOffset: CGPoint(x: 100, y: 40))
-        let content = GraphCanvasCoordinates.contentPoint(
+        let content = GraphCanvasCoordinates.documentPoint(
             fromViewPoint: CGPoint(x: 20, y: 10),
             camera: camera
         )
@@ -52,7 +52,7 @@ struct GraphCanvasCoordinatesTests {
 
     @Test func magnifiedCameraScalesViewDeltaInContent() {
         let camera = GraphCanvasCamera(magnification: 1.25, contentOffset: CGPoint(x: 10, y: 20))
-        let content = GraphCanvasCoordinates.contentPoint(
+        let content = GraphCanvasCoordinates.documentPoint(
             fromViewPoint: CGPoint(x: 40, y: 60),
             camera: camera
         )
@@ -62,15 +62,23 @@ struct GraphCanvasCoordinatesTests {
     @Test func viewAndContentRoundTrip() {
         let camera = GraphCanvasCamera(magnification: 1.25, contentOffset: CGPoint(x: 80, y: 12))
         let original = CGPoint(x: 200, y: 90)
-        let view = GraphCanvasCoordinates.viewPoint(fromContentPoint: original, camera: camera)
-        let back = GraphCanvasCoordinates.contentPoint(fromViewPoint: view, camera: camera)
+        let view = GraphCanvasCoordinates.viewPoint(fromDocumentPoint: original, camera: camera)
+        let back = GraphCanvasCoordinates.documentPoint(fromViewPoint: view, camera: camera)
         #expect(abs(back.x - original.x) < 0.0001)
         #expect(abs(back.y - original.y) < 0.0001)
     }
 
+    @Test func documentRectAndPointSubtractTheContentOrigin() {
+        let origin = CGPoint(x: 100, y: 50)
+        let grid = CGRect(x: 130, y: 70, width: 40, height: 30)
+        #expect(GraphCanvasCoordinates.documentRect(grid, origin: origin) == CGRect(x: 30, y: 20, width: 40, height: 30))
+        #expect(GraphCanvasCoordinates.documentPoint(CGPoint(x: 135, y: 75), origin: origin) == CGPoint(x: 35, y: 25))
+        #expect(GraphCanvasCoordinates.documentRect(grid, origin: .zero) == grid)
+    }
+
     @Test func halfMagnificationDoublesViewDeltaInContent() {
         let camera = GraphCanvasCamera(magnification: 0.5, contentOffset: .zero)
-        let content = GraphCanvasCoordinates.contentPoint(
+        let content = GraphCanvasCoordinates.documentPoint(
             fromViewPoint: CGPoint(x: 50, y: 25),
             camera: camera
         )

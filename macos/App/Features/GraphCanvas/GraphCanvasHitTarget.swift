@@ -7,17 +7,9 @@ struct GraphCanvasActionTarget: Equatable, Sendable, Identifiable {
     var frame: CGRect
     /// Tool-tip text shown while the pointer is over this action; nil shows none.
     var help: String? = nil
-
-    /// A copy with only `frame` transformed (e.g. into document space), so
-    /// every other field survives the mapping.
-    func mapFrame(_ transform: (CGRect) -> CGRect) -> GraphCanvasActionTarget {
-        var copy = self
-        copy.frame = transform(frame)
-        return copy
-    }
 }
 
-/// Document-space hit rect for AppKit pointer routing (product-agnostic).
+/// Grid-space hit rect for AppKit pointer routing (product-agnostic).
 ///
 /// Among overlapping targets the one drawn on top wins: the highest item stack
 /// index, then array order for targets that are not items.
@@ -26,7 +18,7 @@ struct GraphCanvasHitTarget: Equatable, Sendable, Identifiable {
     var frame: CGRect
     /// When `false`, connecting mode ignores this target (e.g. bridge cards).
     var acceptsConnect: Bool
-    /// Document-space action zones; idle clicks prefer these over select.
+    /// Grid-space action zones; idle clicks prefer these over select.
     var actions: [GraphCanvasActionTarget] = []
 }
 
@@ -42,7 +34,7 @@ enum GraphCanvasPointerToolMode: Equatable, Sendable {
 
 /// Pure hit-test / click-vs-drag helpers (unit-tested).
 enum GraphCanvasPointerHitTesting {
-    /// Movement (document points) before a press becomes a drag.
+    /// Movement (points) before a press becomes a drag.
     static let dragThreshold: CGFloat = 4
 
     /// Topmost target whose frame contains `point`, or `nil` on a miss.

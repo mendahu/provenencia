@@ -4,7 +4,7 @@ import SwiftUI
 /// Painted geometry of one graph card, measured by ``EvidenceCardView``.
 ///
 /// Cards are paint-only: AppKit (``GraphCanvasPointerController``) owns every
-/// click and routes it through document-space hit rects. Those rects come
+/// click and routes it through grid-space hit rects. Those rects come
 /// from this measured layout, not from row-height constants, so a hit target
 /// moves with the painted piece it belongs to — wrapped titles, wrapped values,
 /// and taller rows included. Coordinates are card-local (origin = the card's
@@ -15,19 +15,19 @@ struct EvidenceCardLayout: Equatable, Sendable {
     /// Action id → painted rect of that piece.
     var regions: [String: CGRect]
 
-    /// Document-space frame of the whole card whose top-leading corner sits at `origin`.
+    /// Grid-space frame of the whole card whose top-leading corner sits at `origin`.
     func cardFrame(origin: CGPoint) -> CGRect {
         CGRect(origin: origin, size: size)
     }
 
-    /// Document-space hit band for a region: full card width, at the
+    /// Grid-space hit band for a region: full card width, at the
     /// region's painted top and height. `nil` when the region is not painted.
     func band(_ id: String, origin: CGPoint) -> CGRect? {
         guard let rect = regions[id] else { return nil }
         return CGRect(x: origin.x, y: origin.y + rect.minY, width: size.width, height: rect.height)
     }
 
-    /// Document-space hit centered on a control. Grows to `minSize` on
+    /// Grid-space hit centered on a control. Grows to `minSize` on
     /// each axis when the painted piece is smaller than the hit. `nil` when
     /// the region is not painted.
     func centeredHit(_ id: String, origin: CGPoint, minSize: CGFloat) -> CGRect? {

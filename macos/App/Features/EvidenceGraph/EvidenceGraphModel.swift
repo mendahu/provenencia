@@ -90,7 +90,7 @@ final class EvidenceGraphModel {
     var createError: String?
     var hoverGridX: Int64?
     var hoverGridY: Int64?
-    /// Content-space point for the connect rubber-band (under cursor).
+    /// Grid-space point for the connect rubber-band (under cursor).
     var connectHoverPoint: CGPoint?
     /// Selected cards. A click or a rotor pick holds one; a rectangle holds several.
     private(set) var selectedSubjectIDs: Set<String> = []
@@ -111,11 +111,6 @@ final class EvidenceGraphModel {
     /// Canvas while a drag has carried a card past the resting document.
     /// Cleared when the drop lands; the snapshot's own fit takes over.
     var liveCanvas: EvidenceGraphCanvas?
-    /// Grid-space point the scroll document's top-left stands on.
-    var canvasOrigin: CGPoint = CGPoint(
-        x: EvidenceGraphPlacement.originReserve,
-        y: EvidenceGraphPlacement.originReserve
-    )
 
     /// Seeded type ids keyed by primary or bridge kind rawValue.
     var typeIDByKind: [String: String] {
@@ -595,19 +590,19 @@ final class EvidenceGraphModel {
         )
     }
 
-    func updateHover(contentPoint: CGPoint) {
+    func updateHover(gridPoint: CGPoint) {
         guard armedKind != nil, !isCreating else { return }
-        let cell = gridCell(atDocument: contentPoint)
+        let cell = GraphCanvasGridMapping.gridCell(gridPoint: gridPoint)
         hoverGridX = cell.gridX
         hoverGridY = cell.gridY
     }
 
-    func updateConnectHover(contentPoint: CGPoint) {
+    func updateConnectHover(gridPoint: CGPoint) {
         guard armedConnect, connectOriginID != nil, !isCreating else {
             connectHoverPoint = nil
             return
         }
-        connectHoverPoint = contentPoint
+        connectHoverPoint = gridPoint
     }
 
     func clearHover() {
@@ -616,17 +611,10 @@ final class EvidenceGraphModel {
         connectHoverPoint = nil
     }
 
-    /// Document points are `grid point − canvasOrigin`.
-    private func gridCell(atDocument point: CGPoint) -> (gridX: Int64, gridY: Int64) {
-        GraphCanvasGridMapping.gridCell(
-            contentPoint: CGPoint(x: point.x + canvasOrigin.x, y: point.y + canvasOrigin.y)
-        )
-    }
-
     /// Opens the create dialog at the snapped cell (tool must be armed).
-    func beginCreate(at contentPoint: CGPoint) {
+    func beginCreate(at gridPoint: CGPoint) {
         guard canCite, let kind = armedKind, !isCreating, !isSaving, editingSubjectID == nil else { return }
-        let cell = gridCell(atDocument: contentPoint)
+        let cell = GraphCanvasGridMapping.gridCell(gridPoint: gridPoint)
         pendingGridX = cell.gridX
         pendingGridY = cell.gridY
         draft = CreateDraft(
@@ -1393,12 +1381,12 @@ final class EvidenceGraphModel {
         originGridY: Int64,
         documentDelta: CGSize
     ) -> (gridX: Int64, gridY: Int64, generation: Int) {
-        let origin = GraphCanvasGridMapping.contentPoint(gridX: originGridX, gridY: originGridY)
+        let origin = GraphCanvasGridMapping.gridPoint(gridX: originGridX, gridY: originGridY)
         let dropped = CGPoint(
             x: origin.x + documentDelta.width,
             y: origin.y + documentDelta.height
         )
-        let cell = GraphCanvasGridMapping.gridCell(contentPoint: dropped)
+        let cell = GraphCanvasGridMapping.gridCell(gridPoint: dropped)
         let generation = bumpPositionGeneration(subjectID: subjectID)
         applyPositionPatch(subjectID: subjectID, gridX: cell.gridX, gridY: cell.gridY)
         return (cell.gridX, cell.gridY, generation)

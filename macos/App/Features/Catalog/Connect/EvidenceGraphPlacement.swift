@@ -235,7 +235,7 @@ enum EvidenceGraphPlacement {
         halfHeight: CGFloat,
         dragOffset: CGSize
     ) -> CGRect {
-        let center = GraphCanvasGridMapping.contentPoint(gridX: gridX, gridY: gridY)
+        let center = GraphCanvasGridMapping.gridPoint(gridX: gridX, gridY: gridY)
         return CGRect(
             x: center.x - width / 2 + dragOffset.width,
             y: center.y - halfHeight + dragOffset.height,

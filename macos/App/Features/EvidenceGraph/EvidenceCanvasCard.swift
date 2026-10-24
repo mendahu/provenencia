@@ -63,7 +63,7 @@ struct EvidenceCanvasCard: Equatable {
         return false
     }
 
-    /// Document-space top-leading corner of the card at its grid cell.
+    /// Grid-space top-leading corner of the card at its grid cell.
     @MainActor
     var origin: CGPoint {
         let offset = switch placed {

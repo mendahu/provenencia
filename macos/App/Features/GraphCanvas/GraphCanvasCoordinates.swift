@@ -1,9 +1,9 @@
 import CoreGraphics
 
-/// Pure view ↔ content coordinate helpers for layout and unit tests.
+/// Pure view ↔ document ↔ grid coordinate helpers for layout and unit tests.
 ///
 /// **Live hit-testing** under a magnified `NSScrollView` uses AppKit
-/// `NSView.convert(_:from:)` via `GraphCanvasViewportController.contentPointUnderCursor()`
+/// `NSView.convert(_:from:)` via `GraphCanvasViewportController.documentPointUnderCursor()`
 /// — do not route pointer place/ghost through these helpers alone (design note §7.2).
 /// This enum stays the pure math seam for camera transforms, magnification clamp,
 /// and scroll-origin clamp shared by pan + zoom.
@@ -77,14 +77,25 @@ enum GraphCanvasCoordinates {
         )
     }
 
-    /// Converts a point in the scroll view's visible/clip space into content
-    /// (document) coordinates.
+    /// A grid-space rectangle in document space: the document's top-left stands
+    /// on grid point `origin`.
+    static func documentRect(_ grid: CGRect, origin: CGPoint) -> CGRect {
+        grid.offsetBy(dx: -origin.x, dy: -origin.y)
+    }
+
+    /// A grid-space point in document space.
+    static func documentPoint(_ grid: CGPoint, origin: CGPoint) -> CGPoint {
+        CGPoint(x: grid.x - origin.x, y: grid.y - origin.y)
+    }
+
+    /// Converts a point in the scroll view's visible/clip space into document
+    /// coordinates.
     ///
     /// - Parameters:
     ///   - viewPoint: Location in the unmagnified clip view (points from the
     ///     visible top-leading corner).
-    ///   - camera: Current magnification and content-space visible origin.
-    static func contentPoint(fromViewPoint viewPoint: CGPoint, camera: GraphCanvasCamera) -> CGPoint {
+    ///   - camera: Current magnification and document-space visible origin.
+    static func documentPoint(fromViewPoint viewPoint: CGPoint, camera: GraphCanvasCamera) -> CGPoint {
         let m = clampMagnification(camera.magnification)
         return CGPoint(
             x: camera.contentOffset.x + viewPoint.x / m,
@@ -92,12 +103,12 @@ enum GraphCanvasCoordinates {
         )
     }
 
-    /// Converts a content (document) point into the scroll view's visible/clip space.
-    static func viewPoint(fromContentPoint contentPoint: CGPoint, camera: GraphCanvasCamera) -> CGPoint {
+    /// Converts a document point into the scroll view's visible/clip space.
+    static func viewPoint(fromDocumentPoint documentPoint: CGPoint, camera: GraphCanvasCamera) -> CGPoint {
         let m = clampMagnification(camera.magnification)
         return CGPoint(
-            x: (contentPoint.x - camera.contentOffset.x) * m,
-            y: (contentPoint.y - camera.contentOffset.y) * m
+            x: (documentPoint.x - camera.contentOffset.x) * m,
+            y: (documentPoint.y - camera.contentOffset.y) * m
         )
     }
 }

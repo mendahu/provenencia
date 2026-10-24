@@ -1,6 +1,6 @@
 # GraphCanvas
 
-Reusable spatial canvas **tooling** — pan/zoom (`NSScrollView`), content-space
+Reusable spatial canvas **tooling** — pan/zoom (`NSScrollView`), grid-space
 coordinates, AppKit pointer ownership, and a plain grid underlay.
 
 Not a product destination. Workspace places (Evidence graph today; later a
@@ -92,10 +92,12 @@ first-responder and cancelled mid-drag under magnification.
 
 | Seam | Use |
 | --- | --- |
+| Grid space | What hosts speak: item origins, hit targets, gesture points (`onPlace`, `onHover`, `marqueeRect`), and the input to base-layer drawing |
+| Document space | The AppKit document view's own coordinates. `GraphCanvasDocumentView.contentOrigin` is the grid point its top-left stands on; the document view converts each mouse event to a grid point once (`gridPoint(forDocumentPoint:)`) and places each item at `origin − contentOrigin`. SwiftUI base content reads the origin from `\.graphCanvasContentOrigin` and converts with `GraphCanvasCoordinates.documentRect(_:origin:)` / `documentPoint(_:origin:)` |
 | AppKit `NSView.convert` on the document | Live pointer hit-test under magnification |
 | `GraphCanvasCoordinates` | Pure layout transforms, magnification clamp, pan/zoom clamp, unit tests |
 
-Do not treat `GraphCanvasCoordinates.contentPoint(fromViewPoint:)` as the
+Do not treat `GraphCanvasCoordinates.documentPoint(fromViewPoint:)` as the
 runtime pointer path — `NSScrollView` magnification does not map SwiftUI
 gesture locations into the hosted document correctly (design note §7.2).
 
@@ -107,7 +109,7 @@ gesture locations into the hosted document correctly (design note §7.2).
 | Trackpad pinch | Zoom |
 | Mouse wheel | Zoom toward cursor (manual anchor; not `centeredAt:`) |
 | Click-drag on empty document | Pan (idle mode, Shift up) |
-| Shift-drag on empty document, or any empty-document drag in `.selecting` mode | Marquee: a document-space rectangle. On release the pointer calls `onMarqueeEnded` with the ids of the hit targets it overlaps (a shared edge is not a hit) and whether Shift was down at press (additive). A drag that starts on a hit target never marquees |
+| Shift-drag on empty document, or any empty-document drag in `.selecting` mode | Marquee: a grid-space rectangle. On release the pointer calls `onMarqueeEnded` with the ids of the hit targets it overlaps (a shared edge is not a hit) and whether Shift was down at press (additive). A drag that starts on a hit target never marquees |
 | Shift-click on a hit target | `onToggleSelect` (no `onSelect`, no card action) |
 | Shift key | Document view reports it through `onShiftHeldChanged` (local `flagsChanged` monitor; `false` while a text field has focus or the window is not key) |
 | Click / drag on hit targets | Product callbacks (select, move, place, connect) |

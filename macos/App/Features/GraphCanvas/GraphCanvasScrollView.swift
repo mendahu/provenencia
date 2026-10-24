@@ -13,6 +13,12 @@ import SwiftUI
 /// `rootView` freely; there is no SwiftUI `DragGesture` to cancel.
 ///
 /// **Coordinate seams**
+/// - Grid space: what hosts speak — item origins, hit targets, gesture points,
+///   base-layer drawing input. Two hosts agree on a grid point whatever the
+///   document's size or position.
+/// - Document space: the AppKit document view's own coordinates. The document's
+///   top-left stands on grid point ``contentOrigin``; the document view converts
+///   each mouse event once, and places each item at `origin − contentOrigin`.
 /// - Live pointer: AppKit `convert` on the document view
 /// - Pure layout / unit tests: ``GraphCanvasCoordinates``
 ///
@@ -68,14 +74,14 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
             pointer: coordinator.pointer,
             frame: CGRect(origin: .zero, size: contentSize)
         )
+        document.contentOrigin = contentOrigin
         document.setAccessibilityLabel(accessibilityLabel)
-        document.installHostingRoot(hostedRoot(context: context, items: document.items))
+        document.installHostingRoot(hostedRoot(context: context, items: document.items, origin: contentOrigin))
         scrollView.documentView = document
         scrollView.items = document.items
         coordinator.documentView = document
         coordinator.installedContentID = contentID
         coordinator.installedContentSize = contentSize
-        coordinator.installedContentOrigin = contentOrigin
 
         let restored = restoredCamera
         DispatchQueue.main.async {
@@ -96,19 +102,21 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
 
         let idChanged = coordinator.installedContentID != contentID
         let sizeChanged = coordinator.installedContentSize != contentSize
-        let previousOrigin = coordinator.installedContentOrigin ?? contentOrigin
+        let previousOrigin = coordinator.documentView?.contentOrigin ?? contentOrigin
         let originDelta = CGSize(
             width: previousOrigin.x - contentOrigin.x,
             height: previousOrigin.y - contentOrigin.y
         )
         coordinator.installedContentID = contentID
         coordinator.installedContentSize = contentSize
-        coordinator.installedContentOrigin = contentOrigin
 
-        // Paint updates every representable pass — safe now that AppKit owns gestures.
+        // The origin is set before the root, so the root and the items are
+        // built against the new one. Paint updates every representable pass —
+        // safe now that AppKit owns gestures.
         if let document = coordinator.documentView {
+            document.contentOrigin = contentOrigin
             document.setAccessibilityLabel(accessibilityLabel)
-            document.installHostingRoot(hostedRoot(context: context, items: document.items))
+            document.installHostingRoot(hostedRoot(context: context, items: document.items, origin: contentOrigin))
         }
 
         if sizeChanged {
@@ -119,16 +127,16 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         // the same grid point in view.
         if originDelta != .zero, !idChanged {
             Self.shiftVisibleOrigin(in: scrollView, by: originDelta, contentSize: contentSize)
-            coordinator.pointer.shiftActiveDocumentOrigin(by: originDelta)
         }
         if idChanged {
             scrollView.applyOpeningCamera(restoredCamera, contentSize: contentSize)
         }
     }
 
-    private func hostedRoot(context: Context, items: GraphCanvasItemLayer) -> AnyView {
+    private func hostedRoot(context: Context, items: GraphCanvasItemLayer, origin: CGPoint) -> AnyView {
         AnyView(
             content()
+                .environment(\.graphCanvasContentOrigin, origin)
                 .environment(\.graphCanvasViewport, context.coordinator.viewport)
                 .environment(\.graphCanvasPointer, context.coordinator.pointer)
                 .environment(\.graphCanvasItems, items)
@@ -168,7 +176,6 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         var documentView: GraphCanvasDocumentView?
         var installedContentID: AnyHashable?
         var installedContentSize: CGSize?
-        var installedContentOrigin: CGPoint?
         var onCameraChange: (GraphCanvasCamera) -> Void = { _ in }
         let viewport: GraphCanvasViewportController
         let pointer: GraphCanvasPointerController
@@ -448,7 +455,7 @@ final class GraphCanvasViewportController: NSObject {
     }
 
     /// Document-space point under the cursor via AppKit conversion.
-    func contentPointUnderCursor() -> CGPoint? {
+    func documentPointUnderCursor() -> CGPoint? {
         guard let scrollView,
               let window = scrollView.window,
               let document = scrollView.documentView
@@ -507,6 +514,10 @@ private struct GraphCanvasPointerKey: EnvironmentKey {
     static let defaultValue: GraphCanvasPointerController? = nil
 }
 
+private struct GraphCanvasContentOriginKey: EnvironmentKey {
+    static let defaultValue: CGPoint = .zero
+}
+
 private struct GraphCanvasItemsKey: EnvironmentKey {
     static let defaultValue: GraphCanvasItemLayer? = nil
 }
@@ -520,6 +531,14 @@ extension EnvironmentValues {
     var graphCanvasPointer: GraphCanvasPointerController? {
         get { self[GraphCanvasPointerKey.self] }
         set { self[GraphCanvasPointerKey.self] = newValue }
+    }
+
+    /// The grid point the canvas document's top-left stands on. The host's base
+    /// view draws grid-space input at `grid − origin`
+    /// (``GraphCanvasCoordinates/documentRect(_:origin:)``).
+    var graphCanvasContentOrigin: CGPoint {
+        get { self[GraphCanvasContentOriginKey.self] }
+        set { self[GraphCanvasContentOriginKey.self] = newValue }
     }
 
     /// The canvas item layer, so the host's base view can push its items.

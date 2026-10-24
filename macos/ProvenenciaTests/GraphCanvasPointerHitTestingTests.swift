@@ -140,23 +140,23 @@ struct GraphCanvasPointerPressTests {
 
     @Test func pressOnActionIsHeldUntilRelease() {
         let pointer = controller()
-        pointer.mouseDown(documentPoint: CGPoint(x: 10, y: 70), windowPoint: .zero)
+        pointer.mouseDown(gridPoint: CGPoint(x: 10, y: 70), windowPoint: .zero)
         #expect(pointer.pressedCardAction?.cardID == "card")
         #expect(pointer.pressedCardAction?.actionID == "promote")
-        pointer.mouseUp(documentPoint: CGPoint(x: 10, y: 70), windowPoint: .zero)
+        pointer.mouseUp(gridPoint: CGPoint(x: 10, y: 70), windowPoint: .zero)
         #expect(pointer.pressedCardAction == nil)
     }
 
     @Test func pressOffAnActionIsNotHeld() {
         let pointer = controller()
-        pointer.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero)
+        pointer.mouseDown(gridPoint: CGPoint(x: 10, y: 10), windowPoint: .zero)
         #expect(pointer.pressedCardAction == nil)
     }
 
     @Test func dragClearsThePress() {
         let pointer = controller()
-        pointer.mouseDown(documentPoint: CGPoint(x: 10, y: 70), windowPoint: .zero)
-        pointer.mouseDragged(documentPoint: CGPoint(x: 40, y: 70), windowPoint: .zero)
+        pointer.mouseDown(gridPoint: CGPoint(x: 10, y: 70), windowPoint: .zero)
+        pointer.mouseDragged(gridPoint: CGPoint(x: 40, y: 70), windowPoint: .zero)
         #expect(pointer.pressedCardAction == nil)
     }
 
@@ -173,18 +173,13 @@ struct GraphCanvasPointerPressTests {
                 ]
             ),
         ]
-        pointer.mouseMoved(documentPoint: CGPoint(x: 70, y: 70))
+        pointer.mouseMoved(gridPoint: CGPoint(x: 70, y: 70))
         #expect(pointer.hoveredHelp == "Unpromote")
-        pointer.mouseMoved(documentPoint: CGPoint(x: 10, y: 70))
+        pointer.mouseMoved(gridPoint: CGPoint(x: 10, y: 70))
         #expect(pointer.hoveredHelp == nil)
-        pointer.mouseMoved(documentPoint: CGPoint(x: 70, y: 70))
+        pointer.mouseMoved(gridPoint: CGPoint(x: 70, y: 70))
         pointer.mouseExited()
         #expect(pointer.hoveredHelp == nil)
-
-        let moved = GraphCanvasActionTarget(id: "a", frame: .zero, help: "Help")
-            .mapFrame { $0.offsetBy(dx: 5, dy: 6) }
-        #expect(moved.frame == CGRect(x: 5, y: 6, width: 0, height: 0))
-        #expect(moved.help == "Help")
     }
 
     // MARK: Marquee (S10-20)
@@ -207,41 +202,41 @@ struct GraphCanvasPointerPressTests {
         let pointer = marqueeController()
         pointer.onSelect = { _ in selectionChanges += 1 }
         pointer.onDeselect = { selectionChanges += 1 }
-        pointer.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: true)
-        pointer.mouseDragged(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        pointer.mouseDown(gridPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: true)
+        pointer.mouseDragged(gridPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
         #expect(pointer.marqueeRect == CGRect(x: 10, y: 10, width: 70, height: 80))
         #expect(pointer.draggingItemID == nil)
-        pointer.mouseUp(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        pointer.mouseUp(gridPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
         #expect(selectionChanges == 0)
 
         // Without Shift the same drag pans, and the selection stays.
         let panning = marqueeController()
         panning.onSelect = { _ in selectionChanges += 1 }
         panning.onDeselect = { selectionChanges += 1 }
-        panning.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: false)
-        panning.mouseDragged(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        panning.mouseDown(gridPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: false)
+        panning.mouseDragged(gridPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
         #expect(panning.marqueeRect == nil)
-        panning.mouseUp(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        panning.mouseUp(gridPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
         #expect(selectionChanges == 0)
 
         // A Shift press that starts on a card is a card drag.
         let onCard = marqueeController()
-        onCard.mouseDown(documentPoint: CGPoint(x: 220, y: 220), windowPoint: .zero, shiftDown: true)
-        onCard.mouseDragged(documentPoint: CGPoint(x: 260, y: 260), windowPoint: .zero)
+        onCard.mouseDown(gridPoint: CGPoint(x: 220, y: 220), windowPoint: .zero, shiftDown: true)
+        onCard.mouseDragged(gridPoint: CGPoint(x: 260, y: 260), windowPoint: .zero)
         #expect(onCard.draggingItemID == "card")
         #expect(onCard.marqueeRect == nil)
     }
 
     @Test func selectingModeMarqueesWithoutShift() {
         let pointer = marqueeController(mode: .selecting)
-        pointer.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero)
-        pointer.mouseDragged(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        pointer.mouseDown(gridPoint: CGPoint(x: 10, y: 10), windowPoint: .zero)
+        pointer.mouseDragged(gridPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
         #expect(pointer.marqueeRect != nil)
 
         // A drag that starts on a card still moves the card.
         let onCard = marqueeController(mode: .selecting)
-        onCard.mouseDown(documentPoint: CGPoint(x: 220, y: 220), windowPoint: .zero)
-        onCard.mouseDragged(documentPoint: CGPoint(x: 260, y: 260), windowPoint: .zero)
+        onCard.mouseDown(gridPoint: CGPoint(x: 220, y: 220), windowPoint: .zero)
+        onCard.mouseDragged(gridPoint: CGPoint(x: 260, y: 260), windowPoint: .zero)
         #expect(onCard.draggingItemID == "card")
         #expect(onCard.marqueeRect == nil)
     }
@@ -261,9 +256,9 @@ struct GraphCanvasPointerPressTests {
             delivered = ids
             deliveredAdditive = additive
         }
-        pointer.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: true)
-        pointer.mouseDragged(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
-        pointer.mouseUp(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        pointer.mouseDown(gridPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: true)
+        pointer.mouseDragged(gridPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        pointer.mouseUp(gridPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
         #expect(delivered == ["inside"])
         #expect(deliveredAdditive == true)
         #expect(pointer.marqueeRect == nil)
@@ -273,15 +268,15 @@ struct GraphCanvasPointerPressTests {
         var additives: [Bool] = []
         let shifted = marqueeController()
         shifted.onMarqueeEnded = { _, additive in additives.append(additive) }
-        shifted.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: true)
-        shifted.mouseDragged(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
-        shifted.mouseUp(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        shifted.mouseDown(gridPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: true)
+        shifted.mouseDragged(gridPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        shifted.mouseUp(gridPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
 
         let plain = marqueeController(mode: .selecting)
         plain.onMarqueeEnded = { _, additive in additives.append(additive) }
-        plain.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero)
-        plain.mouseDragged(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
-        plain.mouseUp(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        plain.mouseDown(gridPoint: CGPoint(x: 10, y: 10), windowPoint: .zero)
+        plain.mouseDragged(gridPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        plain.mouseUp(gridPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
         #expect(additives == [true, false])
     }
 
@@ -292,8 +287,8 @@ struct GraphCanvasPointerPressTests {
             let pointer = marqueeController(mode: mode)
             pointer.onToggleSelect = { toggled.append($0) }
             pointer.onSelect = { selected.append($0) }
-            pointer.mouseDown(documentPoint: CGPoint(x: 220, y: 220), windowPoint: .zero, shiftDown: true)
-            pointer.mouseUp(documentPoint: CGPoint(x: 220, y: 220), windowPoint: .zero)
+            pointer.mouseDown(gridPoint: CGPoint(x: 220, y: 220), windowPoint: .zero, shiftDown: true)
+            pointer.mouseUp(gridPoint: CGPoint(x: 220, y: 220), windowPoint: .zero)
             #expect(toggled == ["card"])
             #expect(selected.isEmpty)
         }
@@ -307,14 +302,14 @@ struct GraphCanvasPointerPressTests {
         pointer.onToggleSelect = { _ in toggled += 1 }
         pointer.onSelect = { _ in selected += 1 }
         pointer.onCardAction = { _, _ in actions += 1 }
-        pointer.mouseDown(documentPoint: CGPoint(x: 50, y: 70), windowPoint: .zero, shiftDown: true)
-        pointer.mouseUp(documentPoint: CGPoint(x: 50, y: 70), windowPoint: .zero)
+        pointer.mouseDown(gridPoint: CGPoint(x: 50, y: 70), windowPoint: .zero, shiftDown: true)
+        pointer.mouseUp(gridPoint: CGPoint(x: 50, y: 70), windowPoint: .zero)
         #expect(toggled == 1)
         #expect(selected == 0)
         #expect(actions == 0)
 
-        pointer.mouseDown(documentPoint: CGPoint(x: 50, y: 70), windowPoint: .zero)
-        pointer.mouseUp(documentPoint: CGPoint(x: 50, y: 70), windowPoint: .zero)
+        pointer.mouseDown(gridPoint: CGPoint(x: 50, y: 70), windowPoint: .zero)
+        pointer.mouseUp(gridPoint: CGPoint(x: 50, y: 70), windowPoint: .zero)
         #expect(toggled == 1)
         #expect(selected == 1)
         #expect(actions == 1)
@@ -327,8 +322,8 @@ struct GraphCanvasPointerPressTests {
         pointer.onDeselect = { deselects += 1 }
         pointer.onToggleSelect = { _ in toggles += 1 }
         for shift in [false, true] {
-            pointer.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: shift)
-            pointer.mouseUp(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero)
+            pointer.mouseDown(gridPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: shift)
+            pointer.mouseUp(gridPoint: CGPoint(x: 10, y: 10), windowPoint: .zero)
         }
         #expect(deselects == 2)
         #expect(toggles == 0)
@@ -345,12 +340,24 @@ struct GraphCanvasPointerPressTests {
         #expect(pointer.shiftHeld == false)
     }
 
-    @Test func marqueeFollowsADocumentOriginShift() {
+    @MainActor
+    @Test func aContentOriginChangeLeavesGestureGridPointsAlone() {
         let pointer = marqueeController()
-        pointer.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: true)
-        pointer.mouseDragged(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
-        pointer.shiftActiveDocumentOrigin(by: CGSize(width: 100, height: 0))
-        #expect(pointer.marqueeRect == CGRect(x: 110, y: 10, width: 70, height: 80))
+        let document = GraphCanvasDocumentView(pointer: pointer, frame: CGRect(x: 0, y: 0, width: 600, height: 600))
+        pointer.mouseDown(gridPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: true)
+        pointer.mouseDragged(gridPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        document.contentOrigin = CGPoint(x: 100, y: 0)
+        #expect(pointer.marqueeRect == CGRect(x: 10, y: 10, width: 70, height: 80))
+        pointer.mouseDragged(gridPoint: CGPoint(x: 90, y: 100), windowPoint: .zero)
+        #expect(pointer.marqueeRect == CGRect(x: 10, y: 10, width: 80, height: 90))
+        pointer.mouseUp(gridPoint: CGPoint(x: 90, y: 100), windowPoint: .zero)
+
+        // A card drag keeps its anchor too.
+        pointer.mouseDown(gridPoint: CGPoint(x: 220, y: 220), windowPoint: .zero)
+        pointer.mouseDragged(gridPoint: CGPoint(x: 260, y: 230), windowPoint: .zero)
+        document.contentOrigin = CGPoint(x: 300, y: 40)
+        pointer.mouseDragged(gridPoint: CGPoint(x: 270, y: 240), windowPoint: .zero)
+        #expect(pointer.offsets["card"] == CGSize(width: 50, height: 20))
     }
 
     @Test func dragPeersShareTheAnchorOffset() {
@@ -369,14 +376,14 @@ struct GraphCanvasPointerPressTests {
         }
         var ended: (String, CGSize)?
         pointer.onDragEnded = { ended = ($0, $1) }
-        pointer.mouseDown(documentPoint: CGPoint(x: 220, y: 220), windowPoint: .zero)
-        pointer.mouseDragged(documentPoint: CGPoint(x: 260, y: 230), windowPoint: .zero)
+        pointer.mouseDown(gridPoint: CGPoint(x: 220, y: 220), windowPoint: .zero)
+        pointer.mouseDragged(gridPoint: CGPoint(x: 260, y: 230), windowPoint: .zero)
         #expect(began == "card")
         #expect(pointer.draggingItemID == "card")
         #expect(pointer.draggingPeerIDs == ["peer"])
         #expect(pointer.offsets["card"] == CGSize(width: 40, height: 10))
         #expect(pointer.offsets["peer"] == pointer.offsets["card"])
-        pointer.mouseUp(documentPoint: CGPoint(x: 260, y: 230), windowPoint: .zero)
+        pointer.mouseUp(gridPoint: CGPoint(x: 260, y: 230), windowPoint: .zero)
         #expect(pointer.offsets["card"] == nil)
         #expect(pointer.offsets["peer"] == nil)
         #expect(pointer.draggingPeerIDs.isEmpty)

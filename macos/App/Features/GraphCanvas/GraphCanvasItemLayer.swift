@@ -9,7 +9,7 @@
 /// rebuilt only when ``model`` changes.
 struct GraphCanvasItem {
     let id: String
-    /// Document-space top-leading corner of the item's content.
+    /// Grid-space top-leading corner of the item's content.
     var origin: CGPoint
     /// Drawn above every other item (the item being dragged or activated).
     var isRaised: Bool = false
@@ -37,6 +37,11 @@ struct GraphCanvasRotorEntry: Equatable {
 /// Hosts ``GraphCanvasItem``s as AppKit subviews of the canvas document.
 @MainActor
 final class GraphCanvasItemLayer {
+    /// The grid point the document's top-left stands on. Items are pushed at
+    /// grid origins and placed at `origin − contentOrigin`; the document view
+    /// wires this to its own ``GraphCanvasDocumentView/contentOrigin``.
+    var contentOrigin: () -> CGPoint = { .zero }
+
     /// Called when VoiceOver moves to an item through a rotor.
     var onRotorSelect: ((String) -> Void)?
 
@@ -131,12 +136,19 @@ final class GraphCanvasItemLayer {
         }
     }
 
-    /// Moves items by live drag offsets (document space). Items missing from
+    /// Moves items by live drag offsets (a delta, the same in grid and document space). Items missing from
     /// `offsets` return to their pushed origin.
     func applyDragOffsets(_ offsets: [String: CGSize]) {
         let changed = Set(dragOffsets.keys).union(offsets.keys)
         dragOffsets = offsets
         for id in changed {
+            place(id)
+        }
+    }
+
+    /// Places every item again, after the content origin moved.
+    func placeAll() {
+        for id in views.keys {
             place(id)
         }
     }
@@ -179,9 +191,10 @@ final class GraphCanvasItemLayer {
     private func place(_ id: String) {
         guard let view = views[id], let origin = origins[id] else { return }
         let offset = dragOffsets[id] ?? .zero
+        let contentOrigin = contentOrigin()
         view.setFrameOrigin(CGPoint(
-            x: origin.x + offset.width - GraphCanvasItemView.paintOutset,
-            y: origin.y + offset.height - GraphCanvasItemView.paintOutset
+            x: origin.x - contentOrigin.x + offset.width - GraphCanvasItemView.paintOutset,
+            y: origin.y - contentOrigin.y + offset.height - GraphCanvasItemView.paintOutset
         ))
     }
 }

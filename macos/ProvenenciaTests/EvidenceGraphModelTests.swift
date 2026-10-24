@@ -215,7 +215,7 @@ struct EvidenceGraphModelTests {
         )
 
         model.toggleArm(.person)
-        model.beginCreate(at: CGPoint(x: 100, y: 140))
+        model.beginCreate(at: CGPoint(x: 4_100, y: 4_140))
         let gridX = 2 + EvidenceGraphPlacement.originReserveCells
         let gridY = 3 + EvidenceGraphPlacement.originReserveCells
         #expect(model.isCreating)

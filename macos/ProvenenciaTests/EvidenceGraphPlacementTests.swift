@@ -249,7 +249,7 @@ struct EvidenceGraphPlacementTests {
     }
 
     private func cardFrame(x: Int64, y: Int64) -> CGRect {
-        let center = GraphCanvasGridMapping.contentPoint(gridX: x, gridY: y)
+        let center = GraphCanvasGridMapping.gridPoint(gridX: x, gridY: y)
         return CGRect(
             x: center.x - EvidenceSubjectCard.width / 2,
             y: center.y - EvidenceSubjectCard.approximateHalfHeight,
