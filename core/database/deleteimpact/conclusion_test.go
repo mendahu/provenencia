@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -112,12 +113,7 @@ func TestImpactConclusion(t *testing.T) {
 		if !got.Allowed || len(got.Cascades) != 0 {
 			t.Fatalf("unpromoted %+v", got)
 		}
-		res, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: leeds.ID})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		res := promotetest.Save(t, c, userID, promote.Input{SubjectID: leeds.ID})
 		got = mustImpact(t, c, catalogmodel.KindSubject, leeds.ID)
 		if !got.Allowed || len(got.Groups) != 0 {
 			t.Fatalf("%+v", got)

@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -101,12 +102,7 @@ func (f *handleFixture) person(forms ...string) subjects.Subject {
 
 func (f *handleFixture) promote(s subjects.Subject, onto []byte) promote.Result {
 	f.t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: f.user}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, f.user, promote.Input{SubjectID: s.ID, EntityID: onto})
-	})
-	if err != nil {
-		f.t.Fatal(err)
-	}
+	res := promotetest.Save(f.t, f.c, f.user, promote.Input{SubjectID: s.ID, EntityID: onto})
 	return res
 }
 

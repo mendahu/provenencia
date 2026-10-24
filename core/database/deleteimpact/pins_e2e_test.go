@@ -9,6 +9,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 
@@ -85,10 +86,7 @@ func newPinnedHandle(t *testing.T) pinnedHandle {
 	h := pinnedHandle{c: c, userID: userID, a: a, b: b,
 		aName: o[0].ID, aAlt: o[1].ID, bName: o[2].ID, bAlt: o[3].ID}
 
-	grounding, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: a.ID, Argument: "The gazetteer entry."})
-	})
-	must(err)
+	grounding := promotetest.Save(t, c, userID, promote.Input{SubjectID: a.ID, Argument: "The gazetteer entry."})
 	rev := int64(0)
 	db, err := c.DB()
 	must(err)

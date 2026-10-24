@@ -19,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -248,10 +249,7 @@ func (f *fixture) sexOnly(src sources.Source, art artifacts.Artifact, sex string
 
 func (f *fixture) promote(s subjects.Subject) promote.Result {
 	f.t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
-	})
-	must(f.t, err)
+	res := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
 	return res
 }
 
@@ -833,10 +831,7 @@ func (f *fixture) namedMembers(n int, name string) (handle []byte, members []sub
 
 func (f *fixture) join(s subjects.Subject, entityID []byte) {
 	f.t.Helper()
-	_, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
-	})
-	must(f.t, err)
+	promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
 }
 
 func comparisonOutcome(t *testing.T, row graphalign.Row, key string) propertycompare.Outcome {

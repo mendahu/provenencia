@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -107,11 +108,7 @@ func TestEvidenceHandleSets(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, s := range []subjects.Subject{person, place} {
-		if _, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
-		}); err != nil {
-			t.Fatal(err)
-		}
+		promotetest.Save(t, c, userID, promote.Input{SubjectID: s.ID})
 	}
 
 	nameProp, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)

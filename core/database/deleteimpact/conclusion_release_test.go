@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -88,12 +89,7 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	}
 	obsA, obsB := res.Observations[0].ID, res.Observations[1].ID
 
-	grounding, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: a.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	grounding := promotetest.Save(t, c, userID, promote.Input{SubjectID: a.ID})
 	// A confirmed pin set: B joins with its toponym pinned against A's, so
 	// Promote pins both Observations on both claims (backfill).
 	rev := int64(0)

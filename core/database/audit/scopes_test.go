@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -203,12 +204,7 @@ func (s scopeSeed) textObs(subject subjects.Subject, text string) observations.I
 // promote promotes a Subject to a new handle and returns the handle id.
 func (s scopeSeed) promote(t *testing.T, subject subjects.Subject) []byte {
 	t.Helper()
-	res, err := writes.Call(s.c, writes.Op{Action: "promote_subject", UserID: scopeUserID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, scopeUserID, promote.Input{SubjectID: subject.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	res := promotetest.Save(t, s.c, scopeUserID, promote.Input{SubjectID: subject.ID})
 	return res.Entity.ID
 }
 

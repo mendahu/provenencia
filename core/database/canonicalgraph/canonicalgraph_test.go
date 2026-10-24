@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -143,10 +144,7 @@ func (f *fixture) participation(person, event subjects.Subject, role string) {
 
 func (f *fixture) promote(s subjects.Subject) []byte {
 	f.t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
-	})
-	must(f.t, err)
+	res := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
 	return res.Entity.ID
 }
 

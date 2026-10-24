@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
@@ -88,10 +89,7 @@ func (f *fixture) personOn(src sources.Source) subjects.Subject {
 
 func (f *fixture) promote(s subjects.Subject, onto []byte) []byte {
 	f.t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: onto})
-	})
-	must(f.t, err)
+	res := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID, EntityID: onto})
 	return res.Entity.ID
 }
 

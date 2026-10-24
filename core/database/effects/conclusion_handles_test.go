@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -142,12 +143,7 @@ func TestConclusionHandleSets(t *testing.T) {
 		}); err != nil {
 		t.Fatal(err)
 	}
-	adaPromoted, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: ada.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	adaPromoted := promotetest.Save(t, c, userID, promote.Input{SubjectID: ada.ID})
 	bridge := func(from, to subjects.Subject) {
 		t.Helper()
 		_, _, err := writes.Run(c, writes.Op{Action: "create_cited_bridge", UserID: userID},

@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -263,12 +264,7 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		p, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID[:]}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID[:], promote.Input{SubjectID: subjectID})
-		})
-		if err != nil {
-			return err
-		}
+		p := promotetest.Save(t, c, userID[:], promote.Input{SubjectID: subjectID})
 		entityID = database.UUIDString(p.Entity.ID)
 		return nil
 	}); err != nil {
@@ -348,12 +344,7 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		p, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID[:]}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID[:], promote.Input{SubjectID: s.ID})
-		})
-		if err != nil {
-			return err
-		}
+		p := promotetest.Save(t, c, userID[:], promote.Input{SubjectID: s.ID})
 		entityID = database.UUIDString(p.Entity.ID)
 		return nil
 	}); err != nil {

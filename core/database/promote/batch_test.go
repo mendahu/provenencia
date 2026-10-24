@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -241,18 +242,8 @@ func TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted(t *testing.T) {
 	f := newBatchFixture(t)
 	person := f.bare("person")
 	event := f.bare("event")
-	per, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: person.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	evt, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: event.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	per := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: person.ID})
+	evt := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: event.ID})
 	f.participation(person, event)
 	if f.bridgeClaims("participation") != 0 {
 		t.Fatal("bridge filed before the batch")
@@ -317,18 +308,8 @@ func TestSaveBatchPinsANeighborRecord(t *testing.T) {
 	birth := f.bare("event")
 	birthDate := f.cite(birth, observations.Input{PropertyID: f.prop("date").ID, Date: yearDate(1849)})
 	f.participation(person, birth)
-	per, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: person.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	birthH, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: birth.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	per := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: person.ID})
+	birthH := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: birth.ID})
 
 	// A second layer: the birth date sits on the event, one hop from the person.
 	personB := f.bare("person")
@@ -406,17 +387,6 @@ func cacheLines(t *testing.T, q interface {
 	return out
 }
 
-// promoteOne files subject on a new handle outside a batch, the way a
-// researcher's earlier Promote did.
-func (f *batchFixture) promoteOne(s subjects.Subject) {
-	f.t.Helper()
-	if _, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
-	}); err != nil {
-		f.t.Fatal(err)
-	}
-}
-
 // A Done files the Subjects of its own graph and the bridges between them; a
 // waiting bridge on another graph of the Source stays unfiled until that
 // graph's own Done.
@@ -424,8 +394,8 @@ func TestSaveBatchFilesOnlyItsGraph(t *testing.T) {
 	f := newBatchFixture(t)
 	person := f.bare("person")
 	event := f.bare("event")
-	f.promoteOne(person)
-	f.promoteOne(event)
+	promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: person.ID})
+	promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: event.ID})
 	f.participation(person, event)
 	if n := f.bridgeClaims("participation"); n != 0 {
 		t.Fatalf("participation claims %d before any Done, want 0", n)

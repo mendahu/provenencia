@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -34,12 +35,7 @@ func TestSave(t *testing.T) {
 			name: "person mints a PER handle with one accepted member",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
 				james := mk("person")
-				res, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, promote.Input{SubjectID: james.ID})
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
+				res := promotetest.Save(t, c, userID, promote.Input{SubjectID: james.ID})
 				if !ref.Valid(res.Entity.Ref) || !strings.HasPrefix(res.Entity.Ref, "PER-") {
 					t.Fatalf("ref %q", res.Entity.Ref)
 				}
@@ -60,12 +56,7 @@ func TestSave(t *testing.T) {
 			name: "one promote_subject revision with two changes",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
 				p6a1 := promote.Input{SubjectID: mk("person").ID}
-				res, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a1)
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
+				res := promotetest.Save(t, c, userID, p6a1)
 				db, err := c.DB()
 				if err != nil {
 					t.Fatal(err)
@@ -106,13 +97,8 @@ func TestSave(t *testing.T) {
 			name: "second promote of a member refused without minting",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
 				james := mk("person")
-				first, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, promote.Input{SubjectID: james.ID})
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
-				_, err = writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+				first := promotetest.Save(t, c, userID, promote.Input{SubjectID: james.ID})
+				_, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
 					return promote.Save(tx, userID, promote.Input{SubjectID: james.ID})
 				})
 				if !errors.Is(err, identityclaims.ErrAlreadyMember) {
@@ -129,12 +115,7 @@ func TestSave(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
 				for key, prefix := range map[string]string{"event": "EVT-", "place": "PLC-"} {
 					p6a2 := promote.Input{SubjectID: mk(key).ID}
-					res, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-						return promote.Save(tx, userID, p6a2)
-					})
-					if err != nil {
-						t.Fatal(err)
-					}
+					res := promotetest.Save(t, c, userID, p6a2)
 					if !strings.HasPrefix(res.Entity.Ref, prefix) {
 						t.Fatalf("%s ref %q", key, res.Entity.Ref)
 					}
@@ -145,19 +126,9 @@ func TestSave(t *testing.T) {
 			name: "join files a claim onto the existing handle without minting",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
 				p6a5 := promote.Input{SubjectID: mk("person").ID}
-				first, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a5)
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
+				first := promotetest.Save(t, c, userID, p6a5)
 				second := mk("person")
-				res, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, promote.Input{SubjectID: second.ID, EntityID: first.Entity.ID})
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
+				res := promotetest.Save(t, c, userID, promote.Input{SubjectID: second.ID, EntityID: first.Entity.ID})
 				if string(res.Entity.ID) != string(first.Entity.ID) || res.Entity.Ref != first.Entity.Ref {
 					t.Fatalf("joined %+v, want %+v", res.Entity, first.Entity)
 				}
@@ -181,14 +152,9 @@ func TestSave(t *testing.T) {
 			name: "join onto another type's handle refused without writing",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
 				p6a6 := promote.Input{SubjectID: mk("event").ID}
-				event, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a6)
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
+				event := promotetest.Save(t, c, userID, p6a6)
 				james := mk("person")
-				_, err = writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+				_, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
 					return promote.Save(tx, userID, promote.Input{SubjectID: james.ID, EntityID: event.Entity.ID})
 				})
 				if !errors.Is(err, identityclaims.ErrTypeMismatch) {
@@ -215,19 +181,9 @@ func TestSave(t *testing.T) {
 					t.Fatalf("short id: %v", err)
 				}
 				p6a8 := promote.Input{SubjectID: mk("person").ID}
-				a, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a8)
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
+				a := promotetest.Save(t, c, userID, p6a8)
 				p6a9 := promote.Input{SubjectID: mk("person").ID}
-				b, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a9)
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
+				b := promotetest.Save(t, c, userID, p6a9)
 				db, err := c.DB()
 				if err != nil {
 					t.Fatal(err)
@@ -255,23 +211,11 @@ func TestSave(t *testing.T) {
 				p6a10 := promote.Input{
 					SubjectID: mk("person").ID, ConfidenceGradeID: high.ID, Argument: "  Grounding entry.  ",
 				}
-				minted, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a10)
-				})
-
-				if err != nil {
-					t.Fatal(err)
-				}
+				minted := promotetest.Save(t, c, userID, p6a10)
 				p6a11 := promote.Input{
 					SubjectID: mk("person").ID, EntityID: minted.Entity.ID, ConfidenceGradeID: high.ID, Argument: "Same name and age.",
 				}
-				joined, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a11)
-				})
-
-				if err != nil {
-					t.Fatal(err)
-				}
+				joined := promotetest.Save(t, c, userID, p6a11)
 				for _, tc := range []struct {
 					claim identityclaims.Claim
 					arg   string
