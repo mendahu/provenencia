@@ -76,6 +76,14 @@ struct GraphCanvasCoordinatesTests {
         #expect(GraphCanvasCoordinates.documentRect(grid, origin: .zero) == grid)
     }
 
+    @Test func gridPointRoundTripsWithDocumentPoint() {
+        let origin = CGPoint(x: 100, y: 50)
+        let grid = CGPoint(x: 135, y: 75)
+        let document = GraphCanvasCoordinates.documentPoint(grid, origin: origin)
+        #expect(GraphCanvasCoordinates.gridPoint(document, origin: origin) == grid)
+        #expect(GraphCanvasCoordinates.gridPoint(CGPoint(x: 35, y: 25), origin: origin) == grid)
+    }
+
     @Test func halfMagnificationDoublesViewDeltaInContent() {
         let camera = GraphCanvasCamera(magnification: 0.5, contentOffset: .zero)
         let content = GraphCanvasCoordinates.documentPoint(

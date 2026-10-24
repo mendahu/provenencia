@@ -1,6 +1,6 @@
 @preconcurrency import AppKit
 
-/// One host-drawn item the canvas positions in AppKit — a graph item.
+/// One item the host draws and the canvas positions in AppKit, such as a card.
 ///
 /// Each item is a ``GraphCanvasItemView`` the host builds with ``makeView``, sized by its
 /// `contentSize` plus ``GraphCanvasItemView/paintOutset`` on every side,
@@ -26,9 +26,20 @@ struct GraphCanvasItem {
     var makeView: @MainActor () -> GraphCanvasItemView
 }
 
+/// A translucent stand-in the host shows while it waits for the researcher,
+/// such as the item a click would create. See ``GraphCanvasItemLayer/preview``.
+struct GraphCanvasPreview {
+    /// Grid-space top-leading corner of the preview's content.
+    var origin: CGPoint
+    /// Everything the view draws. The view is rebuilt only when this changes.
+    var model: any Equatable
+    /// Builds the preview's view for ``model``.
+    var makeView: @MainActor () -> GraphCanvasItemView
+}
+
 /// An item's entry in a document-level VoiceOver rotor.
 struct GraphCanvasRotorEntry: Equatable {
-    /// The rotor's name ("Subjects", say); items sharing it form one rotor.
+    /// The rotor's name ("Cards", say); items sharing it form one rotor.
     var rotor: String
     /// What VoiceOver reads for this item in the rotor.
     var label: String
@@ -73,16 +84,13 @@ final class GraphCanvasItemLayer {
         }
     }
 
-    /// The id a host gives the ``preview`` item. It is never an item's id.
-    static let previewID = "graphCanvas.preview"
-
-    /// A translucent stand-in the host shows while it waits for the researcher
-    /// (the item a click would create). It goes through the same build, scale
-    /// and placement as an item, but is not one: it has no rotor entry or stack
+    /// The stand-in the host shows while it waits for the researcher (the item
+    /// a click would create). It goes through the same build, scale and
+    /// placement as an item, but is not one: it has no id, rotor entry or stack
     /// index, `update` never removes it, a drag never moves it, and it is
     /// always on top. Its view is rebuilt only when its model changes, so
     /// moving it only moves the frame. Nil removes it.
-    var preview: GraphCanvasItem? {
+    var preview: GraphCanvasPreview? {
         didSet { applyPreview(replacing: oldValue) }
     }
 
@@ -160,7 +168,7 @@ final class GraphCanvasItemLayer {
     }
 
     /// Builds, moves or removes the preview view for the new ``preview``.
-    private func applyPreview(replacing previous: GraphCanvasItem?) {
+    private func applyPreview(replacing previous: GraphCanvasPreview?) {
         guard let item = preview else {
             previewView?.removeFromSuperview()
             previewView = nil
@@ -238,10 +246,10 @@ final class GraphCanvasItemLayer {
 
     /// Puts `view` at the grid `origin`, shown relative to the content origin.
     private func place(_ view: GraphCanvasItemView, at origin: CGPoint, offset: CGSize) {
-        let contentOrigin = contentOrigin()
+        let document = GraphCanvasCoordinates.documentPoint(origin, origin: contentOrigin())
         view.setFrameOrigin(CGPoint(
-            x: origin.x - contentOrigin.x + offset.width - GraphCanvasItemView.paintOutset,
-            y: origin.y - contentOrigin.y + offset.height - GraphCanvasItemView.paintOutset
+            x: document.x + offset.width - GraphCanvasItemView.paintOutset,
+            y: document.y + offset.height - GraphCanvasItemView.paintOutset
         ))
     }
 }

@@ -21,6 +21,11 @@ struct GraphCanvasItemViewTests {
         return view
     }
 
+    @Test func intrinsicContentSizeIsTheFrameSize() {
+        let view = view(contentSize: CGSize(width: 40, height: 30.4))
+        #expect(view.intrinsicContentSize == view.frame.size)
+    }
+
     @Test func updateLayerPaintsOncePerCallAndSetsContents() {
         let view = view()
         view.updateLayer()

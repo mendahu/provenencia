@@ -118,7 +118,7 @@ final class PVPainter {
             .kern: kern,
         ]
         var box = rect
-        box.size.height = min(box.height, ceil(PVTextMetrics.fontLineHeight(font)) * CGFloat(max(lines, 1)))
+        box.size.height = min(box.height, PVTextMetrics.maxHeight(font: font, lines: lines))
         NSAttributedString(string: uppercased ? string.uppercased() : string, attributes: attributes)
             .draw(with: box, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine])
     }
@@ -131,7 +131,7 @@ final class PVPainter {
     /// An aspect-fit image in a rounded tile; the placeholder fill when not loaded.
     func tile(_ image: NSImage?, in rect: CGRect, radius: CGFloat) {
         NSGraphicsContext.saveGraphicsState()
-        NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).addClip()
+        Self.continuous(rect, radius: radius).addClip()
         Self.color(PVColor.surfaceHover).setFill()
         rect.fill()
         if let image, image.size.width > 0, image.size.height > 0 {

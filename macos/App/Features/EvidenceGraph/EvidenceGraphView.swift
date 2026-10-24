@@ -917,7 +917,7 @@ private struct EvidenceGraphDocumentBody: View {
         }
         model.setShiftSelectHeld(pointer.shiftHeld)
         pointer.onDragEnded = { id, delta in
-            _ = model.commitGroupDrag(anchor: id, documentDelta: delta)
+            _ = model.commitGroupDrag(anchor: id, delta: delta)
         }
         pointer.onPlace = { point in
             model.beginCreate(at: point)
@@ -1066,8 +1066,7 @@ private struct EvidenceGraphDocumentBody: View {
             return
         }
         let card = EvidenceCanvasCard.ghost(ghost, presentation: model.presentation(for: ghost.kind.rawValue))
-        items.preview = GraphCanvasItem(
-            id: GraphCanvasItemLayer.previewID,
+        items.preview = GraphCanvasPreview(
             origin: card.origin,
             model: ghost.kind.rawValue,
             makeView: { EvidenceCardView(ghostOf: card) }

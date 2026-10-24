@@ -25,4 +25,12 @@ struct PVPainterTests {
         let font = PVFont.nsBody(size: 12)
         #expect(PVTextMetrics.textHeight("", width: 100, font: font, maxLines: 3) == PVTextMetrics.fontLineHeight(font))
     }
+
+    @Test func maxHeightIsLinesOfTheCeiledLineHeightAndTreatsZeroAsOne() {
+        let font = PVFont.nsBody(size: 12)
+        let line = ceil(PVTextMetrics.fontLineHeight(font))
+        #expect(PVTextMetrics.maxHeight(font: font, lines: 2) == line * 2)
+        #expect(PVTextMetrics.maxHeight(font: font, lines: 1) == line)
+        #expect(PVTextMetrics.maxHeight(font: font, lines: 0) == line)
+    }
 }

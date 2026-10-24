@@ -19,7 +19,6 @@ class GraphCanvasItemView: NSView {
     /// The size of the content, without the margin.
     let contentSize: CGSize
 
-
     private struct PaintKey: Equatable {
         var pixelWidth: Int
         var pixelHeight: Int
@@ -31,14 +30,17 @@ class GraphCanvasItemView: NSView {
 
     init(contentSize: CGSize) {
         self.contentSize = contentSize
-        let outset = Self.paintOutset
-        super.init(frame: NSRect(
-            x: 0, y: 0,
-            width: ceil(contentSize.width + 2 * outset),
-            height: ceil(contentSize.height + 2 * outset)
-        ))
+        super.init(frame: NSRect(origin: .zero, size: Self.frameSize(for: contentSize)))
         wantsLayer = true
         layerContentsRedrawPolicy = .onSetNeedsDisplay
+    }
+
+    /// The content plus the margin on every side, in whole points.
+    private static func frameSize(for contentSize: CGSize) -> NSSize {
+        NSSize(
+            width: ceil(contentSize.width + 2 * paintOutset),
+            height: ceil(contentSize.height + 2 * paintOutset)
+        )
     }
 
     @available(*, unavailable)
@@ -57,10 +59,7 @@ class GraphCanvasItemView: NSView {
 
     /// The content plus the margin on every side.
     final override var intrinsicContentSize: NSSize {
-        NSSize(
-            width: contentSize.width + 2 * Self.paintOutset,
-            height: contentSize.height + 2 * Self.paintOutset
-        )
+        Self.frameSize(for: contentSize)
     }
 
     /// Draws the item in the current `NSGraphicsContext`, flipped, in content

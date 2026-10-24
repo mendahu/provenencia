@@ -172,8 +172,8 @@ final class GraphCanvasPointerController {
 
         case .pendingClick(let start, let targetID, let shiftDown):
             guard GraphCanvasPointerHitTesting.isDrag(from: start, to: gridPoint) else { return }
-            let pointsAtCards = mode == .idle || mode == .selecting
-            if pointsAtCards, let targetID {
+            let pointsAtItems = mode == .idle || mode == .selecting
+            if pointsAtItems, let targetID {
                 pressedItemAction = nil
                 let peers = (onDragBegan?(targetID) ?? [targetID]).subtracting([targetID])
                 gesture = .draggingItem(id: targetID, start: start, peers: peers)
@@ -184,7 +184,7 @@ final class GraphCanvasPointerController {
                     height: gridPoint.y - start.y
                 )
                 replaceDragOffsets(anchor: targetID, peers: peers, offset: offset)
-            } else if pointsAtCards, targetID == nil {
+            } else if pointsAtItems, targetID == nil {
                 if mode == .selecting || shiftDown {
                     // Select armed, or Shift held: draw a rectangle.
                     gesture = .marquee(origin: start, current: gridPoint, additive: shiftDown)

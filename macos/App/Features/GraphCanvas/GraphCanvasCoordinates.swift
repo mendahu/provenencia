@@ -3,7 +3,7 @@ import CoreGraphics
 /// Pure view ↔ document ↔ grid coordinate helpers for layout and unit tests.
 ///
 /// **Live hit-testing** under a magnified `NSScrollView` uses AppKit
-/// `NSView.convert(_:from:)` — do not route pointer place/ghost through these
+/// `NSView.convert(_:from:)` — do not route pointer place/preview through these
 /// helpers alone (design note §7.2).
 /// This enum stays the pure math seam for camera transforms, magnification clamp,
 /// and scroll-origin clamp shared by pan + zoom.
@@ -91,6 +91,11 @@ enum GraphCanvasCoordinates {
     /// A grid-space point in document space.
     static func documentPoint(_ grid: CGPoint, origin: CGPoint) -> CGPoint {
         CGPoint(x: grid.x - origin.x, y: grid.y - origin.y)
+    }
+
+    /// A document-space point in grid space: the inverse of ``documentPoint(_:origin:)``.
+    static func gridPoint(_ document: CGPoint, origin: CGPoint) -> CGPoint {
+        CGPoint(x: document.x + origin.x, y: document.y + origin.y)
     }
 
     /// Converts a point in the scroll view's visible/clip space into document

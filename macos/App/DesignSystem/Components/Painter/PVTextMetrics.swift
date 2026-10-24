@@ -9,6 +9,11 @@ enum PVTextMetrics {
         max(font.boundingRectForFont.height, 1)
     }
 
+    /// The height of `lines` lines of `font` (at least one), each a whole point.
+    static func maxHeight(font: NSFont, lines: Int) -> CGFloat {
+        ceil(fontLineHeight(font)) * CGFloat(max(lines, 1))
+    }
+
     /// The height `text` wraps to at `width`, capped at `maxLines` lines. Empty
     /// text measures one line.
     static func textHeight(_ text: String, width: CGFloat, font: NSFont, maxLines: Int) -> CGFloat {
@@ -20,6 +25,6 @@ enum PVTextMetrics {
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             attributes: [.font: font, .paragraphStyle: style]
         )
-        return min(ceil(rect.height), ceil(fontLineHeight(font)) * CGFloat(maxLines))
+        return min(ceil(rect.height), maxHeight(font: font, lines: maxLines))
     }
 }

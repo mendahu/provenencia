@@ -59,7 +59,7 @@ final class GraphCanvasDocumentView: NSView {
 
     /// The grid point under a point in this view's own coordinates.
     func gridPoint(forDocumentPoint point: CGPoint) -> CGPoint {
-        CGPoint(x: point.x + contentOrigin.x, y: point.y + contentOrigin.y)
+        GraphCanvasCoordinates.gridPoint(point, origin: contentOrigin)
     }
 
     private func gridPoint(for event: NSEvent) -> CGPoint {
