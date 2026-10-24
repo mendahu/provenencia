@@ -295,11 +295,13 @@ final class GraphCanvasNSScrollView: NSScrollView {
         super.viewDidMoveToWindow()
         viewport?.observeWindow(window)
         isPinching = false
+        applyItemContentsScale()
         syncItemContentsScale()
     }
 
     override func viewDidChangeBackingProperties() {
         super.viewDidChangeBackingProperties()
+        applyItemContentsScale()
         syncItemContentsScale()
     }
 
@@ -323,12 +325,20 @@ final class GraphCanvasNSScrollView: NSScrollView {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 self.itemScaleSyncPending = false
-                self.items?.contentsScale = GraphCanvasCoordinates.itemContentsScale(
-                    backingScale: self.window?.backingScaleFactor ?? 1,
-                    magnification: self.magnification
-                )
+                self.applyItemContentsScale()
             }
         }
+    }
+
+    /// Sets the items' render scale at once. A window or backing-scale change
+    /// calls this and then ``syncItemContentsScale()``, so a layer AppKit resets
+    /// after this call is put back on the next turn.
+    private func applyItemContentsScale() {
+        guard !isPinching, window != nil else { return }
+        items?.contentsScale = GraphCanvasCoordinates.itemContentsScale(
+            backingScale: window?.backingScaleFactor ?? 1,
+            magnification: magnification
+        )
     }
 
     override func scrollWheel(with event: NSEvent) {
