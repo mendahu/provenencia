@@ -88,3 +88,47 @@ The user accepted the preparatory PRs and splits. An ideas-folder pass then adde
 
 #### K-8 · minor · No skill update for a second `SearchCatalog` consumer
 **Answer:** Fixed. S11-37 updates `add-searchable-kind`.
+
+## Map review — slice 9, kinship shapes (2026-10-24)
+
+**Verdict:** Fits with changes. **Rounds:** 1. **Reviewers:** maintainability (fresh agent, map questions), over S11-38 – S11-40, the "Kinship shapes" rules, bar 12 and [`kinship-shapes.md`](kinship-shapes.md).
+
+### To user
+
+- **One preparatory PR added: S11-41 (one link reading for bridges).** Recommendation: keep it. `core/kinship` needs the key a direct link would have, and today only `promotealign`'s private `linkOf` builds it.
+- **S11-40 split into S11-40 (claim evidence engine and wire) and S11-42 (the sheet's sentences).** Recommendation: keep it. The line needs a new field across the FFI, so it is not copy alone.
+
+### Round 1
+
+#### K-1 · major · The evidence query never reads `Canon.Edges`
+**Answer:** Fixed. `canonLinks` is the third caller of `core/kinship`, in S11-40; working rule updated.
+
+#### K-2 · major · A bundle is one bridge to one neighbor member
+**Answer:** Fixed in scope. S11-40 carries the event on the implied link and its plan decides the bundle's shape and pin id.
+
+#### K-3 · major · S11-40 is a wire change
+**Answer:** Fixed. S11-40 lists the proto field, handler, store mappings and vocabulary; the Swift copy is S11-42.
+
+#### K-4 · major · `linkOf` and `eventEndpoint` are private to `promotealign`
+**Answer:** Fixed. S11-41 moves them to `segmentcompare`; `core/kinship` takes `Terms` and keys through `Key`.
+
+#### K-5 · major · A second merge beside the loaders'
+**Answer:** Fixed. `core/kinship` returns only implied links; the loaders' existing merge (`edgeSeenKey`) counts a fact once.
+
+#### K-6 · minor · Canon reach already covers grandparent
+**Answer:** Fixed. `loadCanon` walks the whole component; S11-39 times the derivation, not extra reach.
+
+#### K-7 · minor · "via" can name a neighbor with no subrow
+**Answer:** Fixed. S11-39 pins what the via reason says through an implied link, and notes implied bridges are never filed or shown.
+
+#### K-8 · minor · The terms are already seeded
+**Answer:** Fixed. S11-38 adds `vocabkey` constants only, checked by `TestVocabKeysMatchSeed`.
+
+#### K-9 · minor · `add-match-rule` must learn `core/kinship`
+**Answer:** Fixed in S11-38.
+
+#### K-10 · minor · Bar 12 overclaimed "strong"
+**Answer:** Fixed. Bar 12 says "at the band a spouse relationship would get".
+
+#### K-11 · minor · Event type passed twice
+**Answer:** Fixed. It is `BridgeKey.EventType`; dropped from the input.

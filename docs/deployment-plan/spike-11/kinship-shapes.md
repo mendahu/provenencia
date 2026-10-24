@@ -1,6 +1,6 @@
 # Kinship shapes: one fact, several ways to record it
 
-**Status:** pulled into [Spike 11](deployment-plan.md) on 2026-10-24 (S11-38, S11-39, S11-40). Idea first written 2026-10-19 while shipping S11-14, as `docs/ideas/relationships-from-shared-events.md`; grandparent added by the user on 2026-10-24. What stays later is in [`ideas/kinship-view.md`](../../ideas/kinship-view.md).
+**Status:** pulled into [Spike 11](deployment-plan.md) on 2026-10-24 (S11-41, S11-38, S11-39, S11-40, S11-42). Idea first written 2026-10-19 while shipping S11-14, as `docs/ideas/relationships-from-shared-events.md`; grandparent added by the user on 2026-10-24. What stays later is in [`ideas/kinship-view.md`](../../ideas/kinship-view.md).
 
 Matching today: [`comparison-layers.md`](comparison-layers.md#segments-layer-5-and-graph-alignment-layer-6) (segments, layer 6). Seeded terms: [`seeded-vocabulary.md`](../../seeded-vocabulary.md).
 
@@ -29,15 +29,15 @@ Matching does not know these are one fact. `segmentcompare.Corresponds` lines up
 - **Directed where the roles say so.** Birth roles name the parent end (`father`, `mother`) and the child end (`subject`), so the implied parent link is directed like a recorded one, and reads through `segmentcompare.Key` with its inverse (`child`).
 - **One way only.** A chain implies a grandparent. A grandparent link does not imply a parent in between; there is no one to name.
 - **Grandparent stops at two generations.** Great-grandparent and deeper are not seeded terms and are not derived.
-- **Seeded terms only.** The patterns name product terms through `core/vocabkey` constants. `birth` and `subject` exist; S11-38 adds `marriage`, the roles `father`, `mother` and `spouse`, and the relationship terms `spouse`, `parent` and `grandparent`, with a seed check that each is a seeded term. A catalog's own terms imply nothing.
+- **Seeded terms only.** The patterns name product terms through `core/vocabkey` constants. Every term is already seeded (`subjectvocab/registry.go`); `birth` and `subject` have `vocabkey` constants, and S11-38 adds constants for `marriage`, the roles `father`, `mother` and `spouse`, and the relationship terms `spouse`, `parent` and `grandparent`, checked by `TestVocabKeysMatchSeed`. A catalog's own terms imply nothing.
 
-**Derived, not stored.** Implied links are worked out when a side is loaded: the Source layer by `promotealign`'s layer loader, the canon neighborhood by `loadCanon`. Nothing is written to the catalog, and nothing on the Evidence graph changes.
+**Derived, not stored.** Implied links are worked out when a side is loaded: the Source layer by `promotealign`'s layer loader, the canon neighborhood by `loadCanon` (which already loads the whole connected component, so grandparent needs no extra reach), and the evidence query's canon side by `canonLinks`. Nothing is written to the catalog, and nothing on the Evidence graph changes.
 
-**One pure package.** `core/kinship` holds the pattern table and the derivation: it takes a side's links (each with its two ends, its key and its bridge Subjects) and returns the implied ones, each carrying the links it was made from. It imports no `core/database`, joins the one purity guard, and is the place a family tree or a person page will read later ([`ideas/kinship-view.md`](../../ideas/kinship-view.md)).
+**One pure package.** `core/kinship` holds the pattern table and the derivation: it takes a side's links (each with its two ends, its key and its bridge Subjects) and the catalog's `segmentcompare.Terms`, and returns only the implied ones, each carrying the links and the event it was made from. Their keys come from `segmentcompare.Key` over the same link reading the loaders use (moved to `segmentcompare` by S11-41), never built by hand. It imports no `core/database`, joins the one purity guard, and is the place a family tree or a person page will read later ([`ideas/kinship-view.md`](../../ideas/kinship-view.md)).
 
 ## Counting once
 
-- **One fact, one link per side.** When a side records the same fact in two shapes (a spouse relationship and a shared marriage between the same two people), the side carries one spouse link between them, whose bridge Subjects are both shapes'. It is credited once.
+- **One fact, one link per side.** When a side records the same fact in two shapes (a spouse relationship and a shared marriage between the same two people), the side carries one spouse link between them, whose bridge Subjects are both shapes'. It is credited once. The loaders already merge same-ends, same-key edges (`layer.go`'s merge on `edgeSeenKey`, `loadCanon`'s dedupe); implied links go through that merge, so there is no second one.
 - **The event path still counts on its own.** When both sides record the marriage, the people still meet through the marriage event (a participation link to a different neighbor). The implied spouse link adds its own small credit (the segment registry's Other pair, 0.25 support and 0.25 credit) on top. That is the same as recording the marriage and the relationship on both sides today. Proposed: accept it; the credit is small and the facts agree.
 
 ## Weight
@@ -51,7 +51,7 @@ A relationship line today comes from a corresponding segment ([`claim-evidence.m
 - "They are spouses: both are spouses in the marriage on 12 May 1842" (an implied link on the Source side), or "…the record has them as spouses" (direct).
 - Checking the line pins its bundle: every bridge behind the implied link (both participations, or both parent links of a chain), and the event's defining properties, as a relationship bundle does today.
 
-The line is drawn by the sheet's existing relationship Card; only its sentence is new. No new chrome.
+The line is drawn by the sheet's existing relationship Card. No new chrome, but it is a wire change: `claimevidence.Relationship` gains how each side recorded the fact and the event behind it, which crosses the FFI to Swift (S11-40), and the sheet words it (S11-42). Today a bundle is one bridge between a member and the neighbor's member (`claimevidence/build.go` `bundles`, `BundlePinID`); an implied link has several bridges and passes through an event, so S11-40 decides the bundle's shape and its pin id.
 
 ## What stays later
 
