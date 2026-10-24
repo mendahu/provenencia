@@ -110,30 +110,9 @@ func TestObservations(t *testing.T) {
 			t.Fatal(err)
 		}
 		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
-		person, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				GraphID: graph, SubjectTypeID: personType.ID, Label: "Bob",
-			}, &subjects.Placement{GridX: 0, GridY: 0})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		place, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				GraphID: graph, SubjectTypeID: placeType.ID,
-			}, &subjects.Placement{GridX: 4, GridY: 0})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		event, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				GraphID: graph, SubjectTypeID: eventType.ID, Label: "Birth",
-			}, &subjects.Placement{GridX: 2, GridY: 4})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		person := subjectstest.At(t, c, userID, graph, personType.ID, "Bob", subjects.Placement{GridX: 0, GridY: 0})
+		place := subjectstest.At(t, c, userID, graph, placeType.ID, "", subjects.Placement{GridX: 4, GridY: 0})
+		event := subjectstest.At(t, c, userID, graph, eventType.ID, "Birth", subjects.Placement{GridX: 2, GridY: 4})
 		toponymProp, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)

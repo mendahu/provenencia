@@ -228,22 +228,8 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	}
 	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	place := subjectstest.OfType(t, c, userID, graph, placeType.ID, "Leeds")
-	alice, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			GraphID: graph, SubjectTypeID: personType.ID, Label: "Alice",
-		}, &subjects.Placement{GridX: 0, GridY: 0})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	wedding, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			GraphID: graph, SubjectTypeID: eventType.ID, Label: "Wedding",
-		}, &subjects.Placement{GridX: 4, GridY: 4})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	alice := subjectstest.At(t, c, userID, graph, personType.ID, "Alice", subjects.Placement{GridX: 0, GridY: 0})
+	wedding := subjectstest.At(t, c, userID, graph, eventType.ID, "Wedding", subjects.Placement{GridX: 4, GridY: 4})
 	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
@@ -512,14 +498,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bob, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				GraphID: graph, SubjectTypeID: personType.ID, Label: "Bob",
-			}, &subjects.Placement{GridX: 8, GridY: 0})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		bob := subjectstest.At(t, c, userID, graph, personType.ID, "Bob", subjects.Placement{GridX: 8, GridY: 0})
 		if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 				ArtifactID: art.ID, LocatorJSON: testLocator,

@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -89,16 +90,7 @@ func TestEvidenceHandleSets(t *testing.T) {
 	mk := func(typeID []byte, label string, x int64) subjects.Subject {
 		t.Helper()
 		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
-		s, _, err := writes.Run(c, writes.Op{Action: "create_subject", UserID: userID},
-			func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-				return subjects.Create(tx, userID, subjects.CreateInput{
-					GraphID: graph, SubjectTypeID: typeID, Label: label,
-				}, &subjects.Placement{GridX: x, GridY: 0})
-			})
-		if err != nil {
-			t.Fatal(err)
-		}
-		return s
+		return subjectstest.At(t, c, userID, graph, typeID, label, subjects.Placement{GridX: x, GridY: 0})
 	}
 	person := mk(personType.ID, "Ada", 0)
 	place := mk(placeType.ID, "York", 4)

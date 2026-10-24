@@ -27,8 +27,19 @@ func On(t testing.TB, c *database.Catalog, userID, graphID []byte, typeKey, labe
 // a caller that already holds the type id.
 func OfType(t testing.TB, c *database.Catalog, userID, graphID, subjectTypeID []byte, label string) subjects.Subject {
 	t.Helper()
+	return create(t, c, userID, graphID, subjectTypeID, label, nil)
+}
+
+// At is OfType for a Subject created with a Placement.
+func At(t testing.TB, c *database.Catalog, userID, graphID, subjectTypeID []byte, label string, at subjects.Placement) subjects.Subject {
+	t.Helper()
+	return create(t, c, userID, graphID, subjectTypeID, label, &at)
+}
+
+func create(t testing.TB, c *database.Catalog, userID, graphID, subjectTypeID []byte, label string, at *subjects.Placement) subjects.Subject {
+	t.Helper()
 	s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graphID, SubjectTypeID: subjectTypeID, Label: label}, nil)
+		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graphID, SubjectTypeID: subjectTypeID, Label: label}, at)
 	})
 	if err != nil {
 		t.Fatal(err)

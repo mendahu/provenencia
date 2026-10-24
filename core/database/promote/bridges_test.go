@@ -28,6 +28,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -124,15 +125,7 @@ func (w *bridgeWorld) node(kind, label string, x, y int64) subjects.Subject {
 	if err != nil {
 		w.t.Fatal(err)
 	}
-	s, err := writes.Call(w.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			GraphID: w.graph, SubjectTypeID: st.ID, Label: label,
-		}, &subjects.Placement{GridX: x, GridY: y})
-	})
-	if err != nil {
-		w.t.Fatal(err)
-	}
-	return s
+	return subjectstest.At(w.t, w.c, userID, w.graph, st.ID, label, subjects.Placement{GridX: x, GridY: y})
 }
 
 func (w *bridgeWorld) participation(person, event subjects.Subject, role propertyterms.Term) connect.Result {
