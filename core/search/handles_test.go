@@ -102,8 +102,7 @@ func (f *handleFixture) person(forms ...string) subjects.Subject {
 
 func (f *handleFixture) promote(s subjects.Subject, onto []byte) promote.Result {
 	f.t.Helper()
-	res := promotetest.Save(f.t, f.c, f.user, promote.Input{SubjectID: s.ID, EntityID: onto})
-	return res
+	return promotetest.Save(f.t, f.c, f.user, promote.Input{SubjectID: s.ID, EntityID: onto})
 }
 
 func (f *handleFixture) search(text string, kinds ...string) []Hit {

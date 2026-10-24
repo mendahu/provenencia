@@ -184,8 +184,7 @@ func (w *bridgeWorld) bridge(kind string, from, to subjects.Subject, obs []obser
 
 func (w *bridgeWorld) promote(s subjects.Subject) promote.Result {
 	w.t.Helper()
-	res := promotetest.Save(w.t, w.c, userID, promote.Input{SubjectID: s.ID})
-	return res
+	return promotetest.Save(w.t, w.c, userID, promote.Input{SubjectID: s.ID})
 }
 
 func (w *bridgeWorld) join(s subjects.Subject, entityID []byte) {

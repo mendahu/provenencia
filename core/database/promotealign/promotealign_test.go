@@ -249,8 +249,7 @@ func (f *fixture) sexOnly(src sources.Source, art artifacts.Artifact, sex string
 
 func (f *fixture) promote(s subjects.Subject) promote.Result {
 	f.t.Helper()
-	res := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
-	return res
+	return promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
 }
 
 // graph is the one Evidence graph of src. Call it outside a write closure.
