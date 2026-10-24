@@ -144,15 +144,6 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         )
     }
 
-    /// Reads the live camera from an `NSScrollView` for conversion / future tools.
-    static func camera(from scrollView: NSScrollView) -> GraphCanvasCamera {
-        let origin = scrollView.documentVisibleRect.origin
-        return GraphCanvasCamera(
-            magnification: scrollView.magnification,
-            contentOffset: origin
-        )
-    }
-
     /// Keeps the same grid point in view when the document's origin moves.
     private static func shiftVisibleOrigin(
         in scrollView: NSScrollView,
@@ -306,7 +297,6 @@ final class GraphCanvasNSScrollView: NSScrollView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        viewport?.observeWindow(window)
         if liveMagnifyEndObserver == nil {
             liveMagnifyEndObserver = NotificationCenter.default.addObserver(
                 forName: NSScrollView.didEndLiveMagnifyNotification,
@@ -425,13 +415,10 @@ final class GraphCanvasNSScrollView: NSScrollView {
 /// Bridges pan deltas into the hosting `NSScrollView`.
 @MainActor
 @Observable
-final class GraphCanvasViewportController: NSObject {
+final class GraphCanvasViewportController {
     weak var scrollView: NSScrollView?
     /// Live `NSScrollView` magnification. Grid fade and screen-space strokes read this.
     var magnification: CGFloat = 1
-    /// True while the window first responder is inside this canvas document.
-    private(set) var documentContainsKeyboardFocus = false
-    private var observedWindow: NSWindow?
 
     /// Pans by a delta measured in **window / view** points (Y down).
     /// Divides by magnification so one screen pixel of drag moves one screen
@@ -452,57 +439,6 @@ final class GraphCanvasViewportController: NSObject {
 
         clip.scroll(to: origin)
         scrollView.reflectScrolledClipView(clip)
-    }
-
-    /// Document-space point under the cursor via AppKit conversion.
-    func documentPointUnderCursor() -> CGPoint? {
-        guard let scrollView,
-              let window = scrollView.window,
-              let document = scrollView.documentView
-        else { return nil }
-        let windowPoint = window.mouseLocationOutsideOfEventStream
-        return document.convert(windowPoint, from: nil)
-    }
-
-    func observeWindow(_ window: NSWindow?) {
-        if let observedWindow {
-            observedWindow.removeObserver(self, forKeyPath: "firstResponder")
-            self.observedWindow = nil
-        }
-        refreshDocumentKeyboardFocus()
-        guard let window else { return }
-        window.addObserver(self, forKeyPath: "firstResponder", options: [.new], context: nil)
-        observedWindow = window
-    }
-
-    nonisolated override func observeValue(
-        forKeyPath keyPath: String?,
-        of object: Any?,
-        change: [NSKeyValueChangeKey: Any]?,
-        context: UnsafeMutableRawPointer?
-    ) {
-        guard keyPath == "firstResponder" else {
-            super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
-            return
-        }
-        Task { @MainActor in
-            self.refreshDocumentKeyboardFocus()
-        }
-    }
-
-    private func refreshDocumentKeyboardFocus() {
-        guard let scrollView,
-              let window = scrollView.window,
-              let document = scrollView.documentView
-        else {
-            documentContainsKeyboardFocus = false
-            return
-        }
-        let responder = window.firstResponder as? NSView
-        let inside = responder === document || (responder?.isDescendant(of: document) ?? false)
-        if documentContainsKeyboardFocus != inside {
-            documentContainsKeyboardFocus = inside
-        }
     }
 }
 

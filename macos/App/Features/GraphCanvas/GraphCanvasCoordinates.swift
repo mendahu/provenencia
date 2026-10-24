@@ -3,8 +3,8 @@ import CoreGraphics
 /// Pure view ↔ document ↔ grid coordinate helpers for layout and unit tests.
 ///
 /// **Live hit-testing** under a magnified `NSScrollView` uses AppKit
-/// `NSView.convert(_:from:)` via `GraphCanvasViewportController.documentPointUnderCursor()`
-/// — do not route pointer place/ghost through these helpers alone (design note §7.2).
+/// `NSView.convert(_:from:)` — do not route pointer place/ghost through these
+/// helpers alone (design note §7.2).
 /// This enum stays the pure math seam for camera transforms, magnification clamp,
 /// and scroll-origin clamp shared by pan + zoom.
 enum GraphCanvasCoordinates {

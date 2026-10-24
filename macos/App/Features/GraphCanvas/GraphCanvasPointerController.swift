@@ -33,8 +33,6 @@ final class GraphCanvasPointerController {
     /// Items that move with the anchor. Empty for a one-card drag. Changes only
     /// at drag start and end.
     private(set) var draggingPeerIDs: Set<String> = []
-    /// Pointer is inside the document (hover for place/connect).
-    private(set) var pointerInside = false
     /// Idle hover over a nested card action (`cardID`, `actionID`), for paint.
     private(set) var hoveredCardAction: (cardID: String, actionID: String)?
     /// Tool-tip text of the hovered nested card action; nil when none is hovered
@@ -127,7 +125,6 @@ final class GraphCanvasPointerController {
     }
 
     func setPointerInside(_ inside: Bool) {
-        pointerInside = inside
         if !inside {
             hoveredCardAction = nil
             onHover?(nil)

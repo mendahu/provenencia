@@ -14,44 +14,14 @@ struct PVHoverEffect<Content: View>: View {
     @State private var isHovering = false
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.pvHostInteraction) private var hostInteraction
 
     var body: some View {
-        let hovering = hostInteraction?.isHovered ?? isHovering
-        let pressed = hostInteraction?.isPressed ?? isPressed
-        content(hovering && isEnabled)
+        content(isHovering && isEnabled)
             .contentShape(Rectangle())
             .opacity(isEnabled ? 1 : 0.45)
-            .scaleEffect(pressed && !reduceMotion ? PVMotion.pressScale : 1)
-            .pvAnimation(hoverAnimation, value: hovering)
-            .pvAnimation(PVMotion.instantStandard, value: pressed)
+            .scaleEffect(isPressed && !reduceMotion ? PVMotion.pressScale : 1)
+            .pvAnimation(hoverAnimation, value: isHovering)
+            .pvAnimation(PVMotion.instantStandard, value: isPressed)
             .onHover { isHovering = $0 }
-    }
-}
-
-/// Hover / press supplied by a host that owns the pointer itself — paint-only
-/// surfaces such as the graph canvas, where AppKit hit-tests and SwiftUI
-/// `onHover` / `isPressed` never fire. ``PVHoverEffect`` (and so every kit
-/// control built on it) prefers this over its own tracking when set.
-struct PVHostInteraction: Equatable, Sendable {
-    var isHovered: Bool
-    var isPressed: Bool
-}
-
-private struct PVHostInteractionKey: EnvironmentKey {
-    static let defaultValue: PVHostInteraction? = nil
-}
-
-extension EnvironmentValues {
-    var pvHostInteraction: PVHostInteraction? {
-        get { self[PVHostInteractionKey.self] }
-        set { self[PVHostInteractionKey.self] = newValue }
-    }
-}
-
-extension View {
-    /// Drives kit hover / press chrome from a host-owned pointer (paint-only canvas cards).
-    func pvHostInteraction(hovered: Bool, pressed: Bool) -> some View {
-        environment(\.pvHostInteraction, PVHostInteraction(isHovered: hovered, isPressed: pressed))
     }
 }

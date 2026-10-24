@@ -134,15 +134,10 @@ not as a conditional view. `Select`, `Checkbox`, and `Switch` all have the
 same shape waiting in their specs.
 
 
-### Host-owned pointer (paint-only surfaces)
+### Host-owned pointer
 
-On the graph canvas AppKit owns every click and hover; SwiftUI `onHover` and
-`ButtonStyleConfiguration.isPressed` never fire, so a kit control painted on a
-card would sit frozen at rest. Drive it from the host instead:
-`.pvHostInteraction(hovered:pressed:)` sets `\.pvHostInteraction`, which
-``PVHoverEffect`` — and every kit control built on it, such as `PVButton` —
-prefers over its own tracking. Pair it with `.allowsHitTesting(false)` so the
-host stays the only hit path. Do not fork a control to fake its states.
+Paint-only surfaces own their pointer: see the item contract in the [GraphCanvas README](../Features/GraphCanvas/README.md) and `GraphCanvasItemView`.
+
 ## What's built vs. not yet
 
 The components the **Onboarding Flow** board actually uses, plus `Toast`
