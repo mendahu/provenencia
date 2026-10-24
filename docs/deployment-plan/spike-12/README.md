@@ -19,7 +19,7 @@ Every Source has had exactly one flat Evidence graph. This spike lets a big Sour
 ## Not this spike
 
 - **Nested Sources, derivation links, named templates, per-graph credibility, layered citation output:** [`ideas/source-structure-later.md`](../../ideas/source-structure-later.md).
-- **Focus views inside one large graph:** [`ideas/graph-focus-views.md`](../../ideas/graph-focus-views.md).
+- **Focus views inside one large graph:** [`ideas/archive/graph-focus-views.md`](../../ideas/archive/graph-focus-views.md) (archived 2026-10-24).
 - **`source` Subjects, `mentions` and `remark`:** [`ideas/source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md). Graph isolation changes its assumptions; re-think it when it is pulled.
 - **Moving a Subject between graphs, or splitting a graph:** refused; graphs are fully isolated.
 - **Matching changes:** Spike 11.

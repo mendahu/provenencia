@@ -1,6 +1,6 @@
 # Deployment Plan — Spike 12
 
-A Source can be copied to start a sibling one in a single step, and a big Source can hold several isolated Evidence graphs that are each promoted on their own. The design is in [`source-structure.md`](source-structure.md). It pulls in [`ideas/source-structure.md`](source-structure.md) (moved here) and settles it as two tools; the options weighed and parked are in [`ideas/source-structure-later.md`](../../ideas/source-structure-later.md) and [`ideas/graph-focus-views.md`](../../ideas/graph-focus-views.md). One behavior, one PR.
+A Source can be copied to start a sibling one in a single step, and a big Source can hold several isolated Evidence graphs that are each promoted on their own. The design is in [`source-structure.md`](source-structure.md). It pulls in [`ideas/source-structure.md`](source-structure.md) (moved here) and settles it as two tools; the options weighed and parked are in [`ideas/source-structure-later.md`](../../ideas/source-structure-later.md) and [`ideas/archive/graph-focus-views.md`](../../ideas/archive/graph-focus-views.md) (archived 2026-10-24). One behavior, one PR.
 
 **A brief covers one view.** A PR that changes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
 
@@ -37,7 +37,7 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 | [S12-01 plan review](prs/S12-01-copy-source-engine.review.md) M-9 — Add Source and Copy Source refresh the Sources list two ways | S12-16 | — |
 | [`dogfood/ux.md`](../../dogfood/ux.md) — "Dense Evidence graphs (census-scale)" (2026-09-24, descoped from Spike 10): split a census so the household you care about is on its own graph | S12-03 – S12-15 | S12-D2 – S12-D5 |
 
-**Back in the ideas folder** — [`ideas/source-structure-later.md`](../../ideas/source-structure-later.md): nested Sources, derivation links, named templates, per-graph credibility, layered citation output. [`ideas/graph-focus-views.md`](../../ideas/graph-focus-views.md): focus views for one large graph, including the "layers or filters" half of the dense-graphs dogfood note.
+**Back in the ideas folder** — [`ideas/source-structure-later.md`](../../ideas/source-structure-later.md): nested Sources, derivation links, named templates, per-graph credibility, layered citation output. [`ideas/archive/graph-focus-views.md`](../../ideas/archive/graph-focus-views.md) (archived 2026-10-24): focus views for one large graph, including the "layers or filters" half of the dense-graphs dogfood note.
 
 ## Working rules
 
