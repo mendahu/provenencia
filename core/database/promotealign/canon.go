@@ -29,11 +29,10 @@ type candidatesMemo struct {
 }
 
 // loadCanon reads the open catalog's graph: fixed anchors, the candidates of
-// each unfixed Subject (graphalign.Candidates over the handles the shortlist
-// index offers it, remembered for the next proposal until the index changes), then every link those handles have. Link order is
-// association ref, then the neighbor's ref, which is the order the walk used to
-// break ties. Every handle's profile is built once: the shortlisted ones
-// together, the ones the walk reaches after it.
+// each unfixed Subject (loadCandidatesMemo), then every link those handles
+// have. Link order is association ref, then the neighbor's ref, which is the
+// order the walk used to break ties. Every handle's profile is built once: the
+// shortlisted ones together, the ones the walk reaches after it.
 func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer graphalign.Layer, fixed []graphalign.Fixed, cfg graphalign.Config, terms segmentcompare.Terms) (graphalign.Canon, error) {
 	props := prof.props
 	types := prof.types
@@ -87,39 +86,9 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		todo = append(todo, s)
 	}
 	if len(todo) > 0 {
-		ix, gen, err := loadShortlist(g, prof, cfg)
+		known, err := loadCandidatesMemo(g, graphID, prof, layer, todo, cfg)
 		if err != nil {
 			return graphalign.Canon{}, err
-		}
-		key := candidatesMemoKey + prof.namePattern
-		var known map[string][][]byte
-		if v, ok := g.EvidenceGraphMemo(graphID, key); ok {
-			if m, ok := v.(candidatesMemo); ok && m.gen == gen {
-				known = m.bySubject
-			}
-		}
-		var missing []graphalign.Subject
-		for _, s := range todo {
-			if _, ok := known[string(s.ID)]; !ok {
-				missing = append(missing, s)
-			}
-		}
-		if len(missing) > 0 {
-			shortlisted, err := seedHandles(g, prof, ix, missing)
-			if err != nil {
-				return graphalign.Canon{}, err
-			}
-			stored := make(map[string][][]byte, len(known)+len(missing))
-			maps.Copy(stored, known)
-			for i, s := range missing {
-				ranked := [][]byte{}
-				for _, h := range graphalign.Candidates(s.Kind, s.Values, shortlisted[i], layer.Metas, cfg) {
-					ranked = append(ranked, h.ID)
-				}
-				stored[string(s.ID)] = ranked
-			}
-			g.SetEvidenceGraphMemo(graphID, key, candidatesMemo{gen: gen, bySubject: stored})
-			known = stored
 		}
 		for _, s := range todo {
 			for _, id := range known[string(s.ID)] {
@@ -292,4 +261,47 @@ func typeKey(types map[string][]byte, id []byte) string {
 		}
 	}
 	return ""
+}
+
+// loadCandidatesMemo is the ranked candidate ids of each Subject in todo:
+// graphalign.Candidates over the handles the shortlist index offers it,
+// remembered on the Evidence graph's memo until the index changes. It reads the
+// stored memo for the current index generation, ranks only the Subjects it
+// lacks, and stores a new map, never changing the stored one.
+func loadCandidatesMemo(g *graphcache.Graph, graphID []byte, prof *profiler, layer graphalign.Layer, todo []graphalign.Subject, cfg graphalign.Config) (map[string][][]byte, error) {
+	ix, gen, err := loadShortlist(g, prof, cfg)
+	if err != nil {
+		return nil, err
+	}
+	key := candidatesMemoKey + prof.namePattern
+	var known map[string][][]byte
+	if v, ok := g.EvidenceGraphMemo(graphID, key); ok {
+		if m, ok := v.(candidatesMemo); ok && m.gen == gen {
+			known = m.bySubject
+		}
+	}
+	var missing []graphalign.Subject
+	for _, s := range todo {
+		if _, ok := known[string(s.ID)]; !ok {
+			missing = append(missing, s)
+		}
+	}
+	if len(missing) == 0 {
+		return known, nil
+	}
+	shortlisted, err := seedHandles(g, prof, ix, missing)
+	if err != nil {
+		return nil, err
+	}
+	stored := make(map[string][][]byte, len(known)+len(missing))
+	maps.Copy(stored, known)
+	for i, s := range missing {
+		ranked := [][]byte{}
+		for _, h := range graphalign.Candidates(s.Kind, s.Values, shortlisted[i], layer.Metas, cfg) {
+			ranked = append(ranked, h.ID)
+		}
+		stored[string(s.ID)] = ranked
+	}
+	g.SetEvidenceGraphMemo(graphID, key, candidatesMemo{gen: gen, bySubject: stored})
+	return stored, nil
 }

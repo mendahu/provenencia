@@ -2,6 +2,7 @@ package promotealign
 
 import (
 	"bytes"
+	"maps"
 	"slices"
 
 	"github.com/mendahu/provenencia/core/claimevidence"
@@ -338,9 +339,9 @@ func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Memb
 			if err != nil {
 				return nil, err
 			}
-			if memo == nil {
-				memo = map[string]subjectcompare.Values{}
-			}
+			stored := make(map[string]subjectcompare.Values, len(memo)+len(missing))
+			maps.Copy(stored, memo)
+			memo = stored
 			for id := range missing {
 				memo[id] = subjectprofile.ForSubject(subjectprofile.Subject{
 					Values: cands[id], NamePattern: r.in.namePattern,
