@@ -121,9 +121,9 @@ User: "plan and implement that on this same PR." Plan (D-15, D-16, STEP-12) revi
 | --- | --- | --- | --- | --- | --- |
 | CON-1 | CON | major | AC-5.6 measurement not recorded | Fix now → measured | Draw log at `3acec99d` (user driving): 11,887 draws in the pan, ~106 per card; own layers did **not** stop the repaint. Scroll and clip view layers: 6,041 in 16 s, no change. Cached-image prototype (`wantsUpdateLayer`): under 200 refreshes for open and pan; user: "noticeably much, much better". Recorded in plan §4 "Card layers after STEP-12" → D-17, STEP-13 |
 | PRF-1 | PRF | major | Layer memory unmeasured; zoomed-out scale is a user call | Fix now (measure, AC-5.8) → To user after STEP-13's numbers | `phys_footprint` 146 MB open / 175 MB after pan with own layers; 252 MB with the cached-image prototype, 1× display |
-| UX-1 | UX | minor | Placement ghost lost its scale sync | Fix now → D-17 | the ghost subclasses `GraphCanvasPaintedView`; its paint is keyed by the layer's scale |
+| UX-1 | UX | minor | Placement ghost lost its scale sync | Fix now → D-17 | the ghost subclasses `GraphCanvasItemView`; its paint is keyed by the layer's scale |
 | UX-2 | UX | minor | Cards at 1× for a frame at open on Retina | Fix now → D-17 | scale set at once on window and backing change |
-| MNT-1 | MNT | minor | `makeView` doc lacks the redraw contract | Fix now → D-17 | doc and README name `GraphCanvasPaintedView` and `invalidatePaint()` |
+| MNT-1 | MNT | minor | `makeView` doc lacks the redraw contract | Fix now → D-17 | doc and README name `GraphCanvasItemView` and `invalidatePaint()` |
 | MNT-2 | MNT | nit → minor | Codebase fit row says `makeView` | Fix now → STEP-13 | plan text |
 | CON-2 | CON | minor | A host outside the scroll view must set `contentsScale` | Logged | no such host; README says the scroll view sets it |
 
@@ -203,3 +203,49 @@ Head `27c1778f`. Gate PASS (orchestrator); CI green (Go tests, macOS tests, loca
 
 ## Result (evidence graph additions)
 Gate PASS (`27c1778f`) · CI green · open: none blocking · to user: answered — card image memory parked as `docs/ideas/evidence-graph-card-memory.md` (user, 2026-10-24) · follow-ups: shadow direction (pre-existing), untagged device RGB on P3 · CON miss: none
+
+## Canvas health — STEP-15 – STEP-17 (user, 2026-10-24)
+User: "Do groups A, B and C on this PR, and park group D as a family-tree idea file." Group D parked in `docs/ideas/graph-canvas-second-host.md`. Plan (D-19 – D-23, STEP-15 – STEP-17) reviewed in 2 rounds (review log, "Addition 2026-10-24 — canvas health"). Implemented `f2ac4573` – `ff10f66a` (14 commits); gate PASS (orchestrator). Deviations in the plan's Landed line. Preview now sits at `card.origin`, the created card's landing spot (small visible change, flagged to the user).
+
+Reviewers: CON (sonnet) Clean; MNT Changes needed; UX+PRF Changes needed.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-1 | MNT | major | README reuse contract says hit targets are document rects | Fix now → F-15 | `GraphCanvas/README.md:33` vs D-20 |
+| MNT-2 | MNT | major | Grid ↔ document conversion written three ways | Fix now → F-15 | `GraphCanvasDocumentView.swift:61-62`, `GraphCanvasItemLayer.swift:240-245` inline beside `GraphCanvasCoordinates` |
+| MNT-3 | MNT | major | "One trimmed-label rule" ships twice beside more trim copies | Fix now → F-16 | same-pass cleanup: this PR added the copies; byte-identical extensions in `EvidenceCardText.swift` |
+| MNT-4 | MNT | major | Text-height cap written twice in the Painter component | Fix now → F-15 | `PVPainter.swift:121`, `PVTextMetrics.swift:23` already differ at 0 lines |
+| MNT-5 | MNT | minor | `PVSymbolImages` doc describes the card | Fix now → F-15 | |
+| MNT-6 | MNT | minor | `previewID` convention nothing reads; preview ignores fields | Fix now → F-15 | narrower `GraphCanvasPreview` |
+| MNT-7 | MNT | minor | `intrinsicContentSize` unrounded, disagrees with the frame | Fix now → F-15 | one ceiled size |
+| UX-1 | UX | major | Connect rubber band looks solid below ~0.5× | Fix now → F-17 | width scales by `1 / m` (STEP-17), dash `[5, 4]` does not; round caps close the gap |
+| UX-2 | UX | minor | Preview paints over cards where a click does nothing | Fix now → F-17 | the old ghost sat under the items; D-22's "always on top" reversed: the preview goes under the items (an occupied cell stays visibly occupied) |
+| PRF-1 | PRF | minor | Restack re-inserts every view above the first change | Fix now → F-17 | a rebuilt view goes straight to its slot; a raise or lower moves only those views |
+| MNT-8 | MNT | minor | Bridge estimate vs measured empty-text rules | Follow-up → idea file | removed with the constants fallback in `graph-canvas-second-host.md` "Hit targets from measured layout" |
+
+Nits (logged; ride F-15 / F-16): `MNT-9 place/ghost → place/preview` · `MNT-10 rotor example "Subjects"` · `MNT-11 pointsAtCards → pointsAtItems` · `MNT-12 / CON-2 double blank line in GraphCanvasItemView` · `MNT-13 documentDelta: → delta:` · `MNT-14 tile uses a non-continuous rounded rect` · `MNT-15 item doc` · `CON-1 design-system-layers.md exception list gains PVPainter.mark`
+
+### Fix plan 8
+**F-15 — One conversion, one size, one text cap, a narrow preview, docs that match** (from MNT-1, MNT-2, MNT-4, MNT-5, MNT-6, MNT-7; nits MNT-9 – MNT-15, CON-1, CON-2)
+Files: `macos/App/Features/GraphCanvas/GraphCanvasCoordinates.swift`, `GraphCanvasDocumentView.swift`, `GraphCanvasItemLayer.swift`, `GraphCanvasItemView.swift`, `GraphCanvasPointerController.swift`, `README.md`; `macos/App/DesignSystem/Components/Painter/PVPainter.swift`, `PVTextMetrics.swift`, `Components/Icon/PVSymbolImages.swift`; `macos/App/Features/EvidenceGraph/EvidenceGraphView.swift`, `EvidenceGraphModel.swift`; `docs/design-system-layers.md`; tests `GraphCanvasCoordinatesTests.swift`, `GraphCanvasItemViewTests.swift`, `GraphCanvasItemLayerTests.swift`, `PVPainterTests.swift`.
+Failing tests first: `GraphCanvasCoordinates.gridPoint(_:origin:)` round-trips with `documentPoint`; a view with `contentSize` 40 × 30.4 has `intrinsicContentSize == frame.size`; `PVTextMetrics.maxHeight(font:lines:)` at 0 and 2 lines.
+Do:
+- `GraphCanvasCoordinates.gridPoint(_ document: CGPoint, origin: CGPoint)` *(new)*; `GraphCanvasDocumentView.gridPoint(forDocumentPoint:)` and `GraphCanvasItemLayer.place` call `GraphCanvasCoordinates` instead of inline sums.
+- `GraphCanvasItemView` derives both the init frame and `intrinsicContentSize` from one `private static func frameSize(for contentSize:)` (ceiled).
+- `PVTextMetrics.maxHeight(font:lines:)` (lines < 1 treated as 1) used by `textHeight` and `PVPainter.text`.
+- `GraphCanvasItemLayer.preview` takes a `GraphCanvasPreview(origin:model:makeView:)` *(new)*, still through `insert` / `place`; `previewID` and its README sentence go.
+- README reuse row: "string ids + grid-space rects" linking "Coordinate seams".
+- `PVSymbolImages` doc: for views that paint with AppKit, `PVPainter.symbol` draws the vector.
+- Nits: "place/preview"; neutral rotor example; `pointsAtItems`; blank lines; `EvidenceGraphModel` `documentDelta:` → `delta:`; `tile` clips with `continuous`; a better item doc line; `docs/design-system-layers.md` lists `PVPainter.mark` with the recipe-artwork exceptions.
+Check: the new tests fail first and pass; scripts/check-pr.sh PASS.
+
+**F-16 — One trimmed-label rule** (from MNT-3)
+Files: `macos/App/Platform/GenealogyStore.swift` (beside `CatalogSubject`), `macos/App/Features/EvidenceGraph/EvidenceCardText.swift`, `EvidenceCardView.swift`, `EvidenceSubjectCard.swift`, `macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift`, `macos/App/Features/Catalog/Connect/EvidenceBridgeEdgeSummary.swift`.
+Do: `extension CatalogSubject { var trimmedLabel: String? }` (nil when blank). `titleOrTypeLabel` on both placed types becomes `subject.trimmedLabel ?? typeLabel`. Every other copy of the trim (`EvidenceSubjectCard.swift` ~316, `EvidenceGraphSnapshot.swift` ~53, `EvidenceBridgeEdgeSummary.swift` ~98, ~151, and any found by `git grep -n "label.trimmingCharacters(in: .whitespacesAndNewlines)" -- macos/App`) uses `trimmedLabel` with its own fallback. `EvidenceCardView`'s `typeLine` / `typeRef` share one helper.
+Check: that grep prints only `trimmedLabel`'s definition (plus any trim of a non-Subject string, listed in the report); scripts/check-pr.sh PASS.
+
+**F-17 — The band stays dashed, the preview sits under the items, restacks move only what changed** (from UX-1, UX-2, PRF-1)
+Files: `macos/App/Features/EvidenceGraph/EvidenceGraphEdgeLayer.swift`, `macos/App/Features/GraphCanvas/GraphCanvasItemLayer.swift`, `README.md` (preview line), the plan's D-22 text (\"always on top\" → \"below every item\"), `macos/ProvenenciaTests/GraphCanvasItemLayerTests.swift`.
+Failing tests first: the preview is the first item-layer subview (below every item) across pushes; a selection-style rebuild of the middle of three items, and a raise of the first, each move only the affected view (count `addSubview` moves with a container subclass that records `didAddSubview`).
+Do: the rubber band's dash is `[5 * pixel, 4 * pixel]`. The preview is kept directly below the lowest item view (`positioned: .below`), so cards cover it and its hit-less frame never sits over a card. `insert` puts a rebuilt view straight into its desired slot (`.below` the next desired view that is already placed, else `.above` the last), and `restack` moves only views whose position differs (raised ones to the top, lowered ones back into place).
+Check: the new tests fail first and pass; T-18 – T-20 pass (T-20's "stays on top" assertion becomes "stays below every item"); scripts/check-pr.sh PASS.
