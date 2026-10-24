@@ -3,11 +3,21 @@ import AppKit
 /// Base class of every ``GraphCanvasItem`` view.
 ///
 /// A subclass draws in ``paint()``. The view is its own layer and shows an
-/// image of that paint, made in ``updateLayer()`` only when `needsDisplay` is
-/// set, so a pan, which changes only the visible rect, repaints nothing.
-/// `needsDisplay` is the one repaint signal: appearance, window, backing scale,
-/// the item layer's `contentsScale`, and a host whose content changed set it.
+/// image of that paint. ``updateLayer()`` runs on every pan and zoom step, so it
+/// reuses the last image and paints again only when the pixel size at the
+/// layer's `contentsScale` or the appearance changed, or after
+/// ``invalidatePaint()``. A subclass whose content changed calls
+/// ``invalidatePaint()``; `needsDisplay` alone shows the last image again.
 class GraphCanvasItemView: NSView {
+    private struct PaintKey: Equatable {
+        var pixelWidth: Int
+        var pixelHeight: Int
+        var appearance: NSAppearance.Name
+    }
+
+    private var image: CGImage?
+    private var imageKey: PaintKey?
+
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
@@ -58,11 +68,11 @@ class GraphCanvasItemView: NSView {
     /// bitmap, so AppKit scales shadows and the screen, tests and printing
     /// share one path.
     func renderImage(scale: CGFloat) -> CGImage? {
-        guard bounds.width > 0, bounds.height > 0 else { return nil }
+        guard let size = pixelSize(scale: scale) else { return nil }
         guard let rep = NSBitmapImageRep(
             bitmapDataPlanes: nil,
-            pixelsWide: max(1, Int((bounds.width * scale).rounded(.up))),
-            pixelsHigh: max(1, Int((bounds.height * scale).rounded(.up))),
+            pixelsWide: size.width,
+            pixelsHigh: size.height,
             bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
             colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
         )
@@ -74,10 +84,36 @@ class GraphCanvasItemView: NSView {
         return rep.cgImage
     }
 
+    /// The image's size in pixels at `scale`; nil for an empty view.
+    private func pixelSize(scale: CGFloat) -> (width: Int, height: Int)? {
+        guard bounds.width > 0, bounds.height > 0 else { return nil }
+        return (
+            max(1, Int((bounds.width * scale).rounded(.up))),
+            max(1, Int((bounds.height * scale).rounded(.up)))
+        )
+    }
+
+    /// Shows the last image, painting a new one only when there is none or the
+    /// pixel size or appearance it was made for changed.
     override func updateLayer() {
         guard let layer else { return }
-        layer.contents = renderImage(scale: layer.contentsScale)
+        let key = pixelSize(scale: layer.contentsScale).map {
+            PaintKey(pixelWidth: $0.width, pixelHeight: $0.height, appearance: effectiveAppearance.name)
+        }
+        if image == nil || key != imageKey {
+            image = renderImage(scale: layer.contentsScale)
+            imageKey = image == nil ? nil : key
+        }
+        layer.contents = image
         layer.contentsGravity = .resize
+    }
+
+    /// Drops the image and asks for a repaint. A subclass calls it when the
+    /// content it paints changed.
+    final func invalidatePaint() {
+        image = nil
+        imageKey = nil
+        needsDisplay = true
     }
 
     override func viewDidChangeEffectiveAppearance() {

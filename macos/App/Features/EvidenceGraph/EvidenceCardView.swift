@@ -72,7 +72,7 @@ final class EvidenceCardView: GraphCanvasItemView {
             loads[relPath] = Task { @MainActor [weak self] in
                 _ = await ThumbnailCache.shared.image(projectDir: projectDir, relPath: relPath)
                 guard !Task.isCancelled else { return }
-                self?.needsDisplay = true
+                self?.invalidatePaint()
             }
         }
     }

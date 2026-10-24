@@ -55,8 +55,9 @@ every item whenever anything they draw changes (selection, hover, data, drag
 start/end), never per drag frame.
 
 Item views subclass `GraphCanvasItemView` and paint in `paint()`. Each item is its
-own layer, painted when it is built, on `needsDisplay`, or when the settled zoom
-or the appearance changes; a pan moves those layers and paints nothing.
+own layer showing an image of that paint; it repaints when built, when its pixel
+size or appearance changes, or on `invalidatePaint()`. `needsDisplay` alone, a pan
+or a zoom step shows the last image again.
 
 **Never read `GraphCanvasPointerController.offsets` in a view body** that does
 more than draw live geometry. Observation is per property: one read re-runs that

@@ -19,8 +19,9 @@ struct GraphCanvasItem {
     /// so a host can push every item on any state change.
     var model: any Equatable
     /// Builds the item's view for ``model``: a ``GraphCanvasItemView`` that
-    /// paints in `paint()` and repaints on `needsDisplay`. The view is paint plus
-    /// accessibility; pointer input stays with ``GraphCanvasPointerController``.
+    /// paints in `paint()` and calls `invalidatePaint()` when its content
+    /// changes. The view is paint plus accessibility; pointer input stays with
+    /// ``GraphCanvasPointerController``.
     /// It sizes itself through `intrinsicContentSize`, outset margin included.
     var makeView: @MainActor () -> GraphCanvasItemView
 }
@@ -55,7 +56,8 @@ final class GraphCanvasItemLayer {
     /// The scale every item's layer renders at. The scroll view sets it to the
     /// window's backing scale times the settled zoom past 1x. A first paint can
     /// be cached at 1x before the window's scale is known, so this puts every
-    /// layer, even one AppKit reset, back and redraws it.
+    /// layer, even one AppKit reset, back; the new scale changes each view's paint
+    /// key, so it repaints at it.
     var contentsScale: CGFloat = 1 {
         didSet {
             for view in views.values {
@@ -147,8 +149,9 @@ final class GraphCanvasItemLayer {
     }
 
     /// Builds the item's view, which is its own layer (``GraphCanvasItemView``)
-    /// painted only when built, on `needsDisplay`, or when ``contentsScale``
-    /// changes, so a pan composites cached layers. It goes above the other items at the current ``contentsScale``.
+    /// painted when built, when its pixel size or appearance changes, or on
+    /// `invalidatePaint()`, so a pan or a zoom step composites cached layers.
+    /// It goes above the other items at the current ``contentsScale``.
     private func insert(_ item: GraphCanvasItem) -> GraphCanvasItemView {
         let view = makeView(item)
         container?.addSubview(view, positioned: .above, relativeTo: nil)

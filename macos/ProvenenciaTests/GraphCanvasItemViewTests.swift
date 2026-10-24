@@ -27,7 +27,26 @@ struct GraphCanvasItemViewTests {
         #expect(view.paints == 1)
         #expect(view.layer?.contents != nil)
         view.updateLayer()
-        #expect(view.paints == 2)
+        #expect(view.paints == 1)
+        #expect(view.layer?.contents != nil)
+    }
+
+    @Test func updateLayerRepaintsOnlyWhenTheKeyOrTheContentChanges() {
+        let view = view()
+        view.appearance = NSAppearance(named: .aqua)
+        var counts: [Int] = []
+        func step(_ change: () -> Void = {}) {
+            change()
+            view.updateLayer()
+            counts.append(view.paints)
+            #expect(view.layer?.contents != nil)
+        }
+        step()
+        step()
+        step { view.layer?.contentsScale = 2 }
+        step { view.invalidatePaint() }
+        step { view.appearance = NSAppearance(named: .darkAqua) }
+        #expect(counts == [1, 1, 2, 3, 4])
     }
 
     @Test func renderImageIsScaledAndTopLeftIsRed() throws {
