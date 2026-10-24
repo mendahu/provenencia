@@ -163,3 +163,19 @@ Go tests: `TestLargeSourceBudgets` — `perf_test.go:126: UNIQUE constraint fail
 Files: `core/database/promotealign/bench_test.go`.
 Do: one helper `benchRef(prefix string, n int) string` *(new)* returning `prefix + "-U" + fmt.Sprintf("%05d", n)` (`U` is not in `core/ref` `alphabet`); every ref `bulkCanon` writes goes through it (towns pass their own counters with a distinct prefix inside the number, e.g. `benchRef("PLC", 90000+k)`, so towns and cities stay distinct). Comment: why `U`.
 Check: `CGO_ENABLED=1 go test -tags fts5 -count=20 -run TestLargeSourceBudgets/fixture ./core/database/promotealign/` passes; `git grep -nE 'Sprintf\("[A-Z]{3}-%0|"(EVT|PAR|LOC)-"\+' -- core/database/promotealign/bench_test.go` prints nothing; scripts/check-pr.sh PASS.
+
+## STEP-14 — review and measure
+Head `cdc09696`. Gate PASS (orchestrator). Reviewers: CON (sonnet) Clean; MNT Clean; UX+PRF Clean. One minor from CON-1 / MNT-1: `benchRef` sits between `letters`' doc comment and `func letters` → F-12.
+Zoom log, user driving (built-in Retina, 110 Subjects): pinch out 23,652 `updateLayer` calls, **2** paints (2,756 at `9e1c40ae`); user: "That performed a lot better." Memory 585 MB at 1×, 338 MB zoomed out, 774 MB at 1.25×. Pinch in: 16,173 calls, **555** paints, five rounds of 110 at scales 2.52 – 2.71 — the pinch overshoots past `maxMagnification` and springs back outside `magnify(with:)`, so each spring-back step settled at a new scale → F-11.
+
+### Fix plan 5
+**F-11 — The item scale never passes the maximum zoom** (zoom log)
+Files: `macos/App/Features/GraphCanvas/GraphCanvasCoordinates.swift`, `macos/ProvenenciaTests/GraphCanvasCoordinatesTests.swift`.
+Failing test first: T-15 case `magnification: 1.355` → 2.5 (today 2.71).
+Do: `itemContentsScale` is `backingScale * min(max(1, magnification), GraphCanvasCamera.maxMagnification)`; its doc says why (a pinch overshoots and springs back). The plan's D-16 already says so.
+Check: T-15 passes; scripts/check-pr.sh PASS.
+
+**F-12 — `letters` keeps its doc comment** (from CON-1, MNT-1; MNT-4 rides)
+Files: `core/database/promotealign/bench_test.go`, `macos/App/Features/EvidenceGraph/EvidenceCardView.swift`.
+Do: move `// letters is the lowercase base 26 of k…` to sit directly above `func letters`; `loadMissingLikenesses`' doc names `invalidatePaint()`.
+Check: `go vet -tags fts5 ./core/database/promotealign/` clean; scripts/check-pr.sh PASS.
