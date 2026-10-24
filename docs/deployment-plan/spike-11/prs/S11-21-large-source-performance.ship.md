@@ -202,4 +202,4 @@ Check: `git grep -n "isPinching\|syncItemContentsScale\|magnify(with" -- macos/A
 Head `27c1778f`. Gate PASS (orchestrator); CI green (Go tests, macOS tests, localizable). F-14's observer is the code the experiment validated (pinch in: 110 paints at 2.5×; display move: 110 at 1.25×), plus its `deinit` removal — read by the orchestrator, **Resolved**.
 
 ## Result (evidence graph additions)
-Gate PASS (`27c1778f`) · CI green · open: none blocking · to user: card image memory on Retina (≈585 MB at 1×, ≈774 MB at 1.25× for 110 cards; 231–287 MB on a 1× display) · follow-ups: bound card image memory (drop off-screen images; check for a second copy), shadow direction (pre-existing), untagged device RGB on P3 · CON miss: none
+Gate PASS (`27c1778f`) · CI green · open: none blocking · to user: answered — card image memory parked as `docs/ideas/evidence-graph-card-memory.md` (user, 2026-10-24) · follow-ups: shadow direction (pre-existing), untagged device RGB on P3 · CON miss: none
