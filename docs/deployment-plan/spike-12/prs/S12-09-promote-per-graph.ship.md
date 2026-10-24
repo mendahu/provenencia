@@ -74,4 +74,4 @@ Check: `grep -rn 'EXPLAIN QUERY PLAN' core api --include='*.go'` prints only the
 Head `309e1e05`. Gate PASS (orchestrator re-run, test cache cleared). F-5 `b41d562b`: new `core/database/dbtest.QueryPlan`; `grep -rn 'EXPLAIN QUERY PLAN' core api --include='*.go'` prints only the helper; orchestrator read the diff, and each of the four tests keeps its own assertions unchanged. F-6 `309e1e05`: MNT-4, MNT-5, MNT-6 done. MNT-7: **Resolved** (orchestrator read; no round 3, by the user's go-ahead for a non-blocker Fix plan 2). `main` has not moved since `f855aaa0`.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: MNT-7 (answered: fold in) · CON miss: none
+Gate PASS · CI green (test, localizable) · open: none · follow-ups: none · to user: MNT-7 (answered: fold in) · CON miss: none
