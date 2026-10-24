@@ -71,3 +71,48 @@
 ## Refresh after S12-09 (2026-10-24)
 
 `main` moved to `cd54db8` (S12-18 #532, S12-09 #535). Every Current state row was re-checked there. Changes to the plan: `Propose` and `EvidenceRequest` take a graph id (`f.graph(src)` in the fixture); `loadInputs` no longer calls `SoleGraph`, so AC-3.3 is 0 SELECTs and AC-3.4 is 1, D-10 compares with literals, and the S12-09 Out line and Next-adds line are gone. No Decision changed. Not re-reviewed: the change removes work and adds no new choice.
+
+## Refresh 2026-10-24 — D-12 (alias index), after the ship-pr round-0 stop
+
+The user chose to cache the built alias index on the graph (ship log, Round 0). Reviewers saw only the amendment: maintainability (opus), executability (sonnet).
+
+### Writer's own calls
+- The slot holds the bare `valuecompare.AliasIndex`, keyed with `valueWords`; `base.Words` no longer reaches the alias index (M-1). Safe because `AliasToken` reads no word rule at `Same`.
+- The graph slot is renamed `AliasIndex` / `SetAliasIndex` (D-12a), beyond the comment fix M-3 asked for.
+
+### Round 1
+
+**M-1 · blocker · D-12 adds a second answer to "which word rules key alias tokens"** — `add.go` `valueWords` already keys stored tokens; `joinedKey` ignores `Folds` at `Same`, so the per-call `reflect.DeepEqual` guarded nothing.
+**Answer:** Fixed — D-12 stores only the built index, keyed with `valueWords` on the warm and cold paths; no `words` field, no DeepEqual, no fallback. Verified `core/valuecompare/text.go:112` and `add.go:152`. The import-cycle stop condition is dropped (`add.go` already imports `matchregistry`).
+
+**M-2 · major · T-11 (b) cannot fail** — **Answer:** Fixed — case dropped; T-11 is now (a) warm allocations and (b) nil graph equal to warm.
+
+**M-3 · minor · `graphcache` comments say tables** — **Answer:** Fixed — D-12a renames the slot and rewrites its comments, the `dropDerived` / `MatchIndex` / `evidence_graph.go` comments, the `namealiases` package doc and `Warm`'s doc.
+
+**M-4 · nit · pointer slot value** — **Answer:** Fixed — a value (`AliasIndex`).
+
+**X-1 · blocker · "under 10 allocations" unreachable with DeepEqual** — measured: `reflect.DeepEqual` on the registry's word rules is 26 allocations, `Default()` is 46. **Answer:** Fixed — DeepEqual is gone (M-1); AC-3.6 and T-11 take `base` outside the closure.
+
+**X-2 · blocker · STEP-9's check does not discriminate** — **Answer:** Fixed — STEP-9 is verified by T-11 (a), run red first; `evidence warm` times before and after go in the PR body; a stop condition covers a T-11 (a) that passes before the change.
+
+**X-3 · major · STEP-10 doc bullets already on the branch** — **Answer:** Fixed — STEP-10 says check them at `512a8572`, do not edit again.
+
+**X-4 · major · STEP-10 leaves map, status and completed.md wording open** — **Answer:** Fixed — STEP-10 gives the scope entry's Ships / Not this PR / Check as a set, the "Record S11-21 as landed in pull request N." commit, the plan Status and Landed note, the map row `Landed #N`, and the `completed.md` section and its content.
+
+**X-5 · major · fixture "58", unverifiable profile figures, untested error path** — **Answer:** Fixed in part — STEP-3 notes the branch measures 62. Declined for the profile figures: they come from the implementer's `-cpuprofile` run in the ship log, and the allocation count was measured while refreshing (13,341). Declined for an error-path test: the message is unchanged in kind and `Rules` had no such test before.
+
+Nits/minors logged: X-6 (copying `valueWords` maps — moot, no stored words), X-7 (which rune — moot, case dropped), X-8 (Invalidate rebuilds — D-12 says it replaces the index), X-9.
+
+### Round 2
+Maintainability (opus): **Fits**, no new blocker. Minor: `NewAliasIndex(tables, valueWords)` would be written twice. **Answer:** Fixed — STEP-9 adds private `buildIndex`, called by `Warm` and `withAliases`.
+
+Executability (sonnet): **Ready with changes**, no new blocker.
+- X-10 grep prints `resetAliasTables()` — **Fixed:** the grep is now `"\.AliasTables()\|SetAliasTables"`, expected empty (14 lines before).
+- X-11 which `graphcache` comments — **Fixed:** D-12a names every comment in `graph.go` and `evidence_graph.go` that says tables or slice.
+- X-12 where `Load` runs in T-11 (a) — **Fixed:** outside the closure.
+- X-13 `TestDropLeavesAliasIndex` value — **Fixed:** keeps `[]string{"jas"}`.
+- X-14 `Warm`'s copy — **Fixed:** dropped.
+- X-15 map scope cell and re-run — **Fixed:** STEP-10 gives the cell text and re-runs `check-pr.sh` after the landed commit.
+- X-16 nit — logged.
+
+**Refresh verdict:** Fits — Ready. No open blocker; no To user item.
