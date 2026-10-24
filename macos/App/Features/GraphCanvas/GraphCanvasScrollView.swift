@@ -71,6 +71,7 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         document.setAccessibilityLabel(accessibilityLabel)
         document.installHostingRoot(hostedRoot(context: context, items: document.items))
         scrollView.documentView = document
+        scrollView.items = document.items
         coordinator.documentView = document
         coordinator.installedContentID = contentID
         coordinator.installedContentSize = contentSize
@@ -190,10 +191,15 @@ final class GraphCanvasNSScrollView: NSScrollView {
     var onCameraChange: ((GraphCanvasCamera) -> Void)?
     private var suppressCameraReport = false
     private var isUpdatingMagnificationFloor = false
+    /// The item layer whose render scale follows the settled zoom.
+    weak var items: GraphCanvasItemLayer?
+    private var isPinching = false
+    private var itemScaleSyncPending = false
 
     override var magnification: CGFloat {
         didSet {
             guard abs(oldValue - magnification) > 0.000_1 else { return }
+            syncItemContentsScale()
             let value = magnification
             let viewport = viewport
             MainActor.assumeIsolated {
@@ -288,6 +294,41 @@ final class GraphCanvasNSScrollView: NSScrollView {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         viewport?.observeWindow(window)
+        isPinching = false
+        syncItemContentsScale()
+    }
+
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        syncItemContentsScale()
+    }
+
+    override func magnify(with event: NSEvent) {
+        if event.phase.contains(.began) { isPinching = true }
+        super.magnify(with: event)
+        if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
+            isPinching = false
+            syncItemContentsScale()
+        }
+    }
+
+    /// Sets the items' render scale to the window's backing scale times the
+    /// zoom past 1x, once per run-loop turn and never mid-pinch, so a pinch
+    /// does not repaint every card per frame. The hop also runs after AppKit's
+    /// own backing-scale update.
+    private func syncItemContentsScale() {
+        guard !isPinching, window != nil, !itemScaleSyncPending else { return }
+        itemScaleSyncPending = true
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.itemScaleSyncPending = false
+                self.items?.contentsScale = GraphCanvasCoordinates.itemContentsScale(
+                    backingScale: self.window?.backingScaleFactor ?? 1,
+                    magnification: self.magnification
+                )
+            }
+        }
     }
 
     override func scrollWheel(with event: NSEvent) {

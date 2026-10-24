@@ -57,7 +57,6 @@ final class EvidenceCardView: NSView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        syncBackingScale()
         if window == nil {
             loads.values.forEach { $0.cancel() }
             loads = [:]
@@ -79,21 +78,6 @@ final class EvidenceCardView: NSView {
                 self?.needsDisplay = true
             }
         }
-    }
-
-    override func viewDidChangeBackingProperties() {
-        super.viewDidChangeBackingProperties()
-        syncBackingScale()
-    }
-
-    /// The first display can cache the card at 1x, before the window's scale
-    /// is known. Selecting rebuilt the view and hid that; match the window
-    /// scale as soon as the card is on screen.
-    private func syncBackingScale() {
-        guard let scale = window?.backingScaleFactor, scale > 0, let layer else { return }
-        guard layer.contentsScale != scale else { return }
-        layer.contentsScale = scale
-        needsDisplay = true
     }
 
     override var intrinsicContentSize: NSSize {
