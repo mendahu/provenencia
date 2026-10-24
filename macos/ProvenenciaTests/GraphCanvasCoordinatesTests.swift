@@ -146,5 +146,6 @@ struct GraphCanvasCoordinatesTests {
         #expect(GraphCanvasCoordinates.itemContentsScale(backingScale: 2, magnification: 1) == 2)
         #expect(GraphCanvasCoordinates.itemContentsScale(backingScale: 2, magnification: 1.25) == 2.5)
         #expect(GraphCanvasCoordinates.itemContentsScale(backingScale: 1, magnification: 1.25) == 1.25)
+        #expect(GraphCanvasCoordinates.itemContentsScale(backingScale: 2, magnification: 1.355) == 2.5)
     }
 }

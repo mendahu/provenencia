@@ -19,8 +19,11 @@ enum GraphCanvasCoordinates {
     /// The `contentsScale` a canvas item's layer renders at: the window's
     /// backing scale, times the zoom once it passes 1x so a zoomed-in card stays
     /// sharp. Zoomed out, a card drawn at the backing scale is already sharp.
+    /// The zoom stops at the camera's maximum: a pinch overshoots past it and
+    /// springs back, and each step of the spring-back would otherwise settle at
+    /// a new scale and repaint every card.
     static func itemContentsScale(backingScale: CGFloat, magnification: CGFloat) -> CGFloat {
-        backingScale * max(1, magnification)
+        backingScale * min(max(1, magnification), GraphCanvasCamera.maxMagnification)
     }
 
     /// Lowest magnification at which the document still covers the viewport.
