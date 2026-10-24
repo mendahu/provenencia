@@ -17,13 +17,19 @@ import (
 // re-scores only its neighbors; and when the queue empties, only the pairs
 // whose neighbors moved are settled again.
 func Align(layer Layer, canon Canon, fixed []Fixed, cfg Config) Proposal {
+	return run(layer, canon, fixed, cfg).proposal()
+}
+
+// run is the procedure up to the proposal, so a test can read the state it ends
+// on.
+func run(layer Layer, canon Canon, fixed []Fixed, cfg Config) *state {
 	st := newState(layer, canon, fixed, cfg)
 	st.anchor()
 	st.seed()
 	st.walk()
 	st.settle()
 	st.rescoreAll()
-	return st.proposal()
+	return st
 }
 
 type state struct {
@@ -319,11 +325,12 @@ func (st *state) corresponding(link adjLink, hid []byte) []adjLink {
 	return out
 }
 
-// place puts s on h and tells its neighbors. Each canon neighbor of h through
-// a corresponding link becomes a candidate of the layer neighbor of its kind,
-// at any score, with s as the one that nominated it. A neighbor that is
-// already placed (and not fixed) is marked dirty; one that is not placed has
-// every candidate re-scored and queued.
+// place puts s on h and tells its neighbors. Of the canon neighbors of h
+// through a corresponding link, the most similar TopK plus ties, at most
+// TieCap, of the layer neighbor's kind become candidates of that neighbor, at
+// any similarity, ranked as Candidates ranks (keepTop), with s as the one that
+// nominated them. A neighbor that is already placed (and not fixed) is marked
+// dirty; one that is not placed has every candidate re-scored and queued.
 func (st *state) place(sk string, hid []byte) {
 	st.placed[sk] = append([]byte(nil), hid...)
 	st.owner[string(hid)] = sk
@@ -343,19 +350,27 @@ func (st *state) place(sk string, hid []byte) {
 			continue
 		}
 		_, nPlaced := st.placed[nk]
+		var fresh []scored
+		seen := map[string]bool{}
 		for _, ce := range st.corresponding(link, hid) {
 			g := st.handles[string(ce.neighbor)]
-			if g == nil || g.Kind != ns.Kind {
+			if g == nil || g.Kind != ns.Kind || seen[string(g.ID)] {
 				continue
 			}
-			c := st.cands[nk][string(g.ID)]
-			if c == nil {
-				c = st.candidate(nk, g)
-				// An unplaced neighbor is re-scored below, with the rest.
-				c.via, c.viaKey = append([]byte(nil), s.ID...), link.key
-			} else if st.fixedSet[nk] && len(c.via) == 0 {
-				c.via, c.viaKey = append([]byte(nil), s.ID...), link.key
+			seen[string(g.ID)] = true
+			if c := st.cands[nk][string(g.ID)]; c != nil {
+				if st.fixedSet[nk] && len(c.via) == 0 {
+					c.via, c.viaKey = append([]byte(nil), s.ID...), link.key
+				}
+				continue
 			}
+			r := st.pair(ns, g)
+			fresh = append(fresh, scored{h: *g, evidence: r.Evidence, similarity: r.Similarity})
+		}
+		for _, h := range keepTop(fresh, st.cfg.Alignment) {
+			// An unplaced neighbor is re-scored below, with the rest.
+			c := st.candidate(nk, st.handles[string(h.ID)])
+			c.via, c.viaKey = append([]byte(nil), s.ID...), link.key
 		}
 		if st.fixedSet[nk] || done[nk] {
 			continue

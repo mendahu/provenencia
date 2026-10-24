@@ -210,4 +210,21 @@ func TestLargeSourceBudgets(t *testing.T) {
 			t.Errorf("warm Evidence and Propose issued %d graph queries, want 0", n)
 		}
 	})
+
+	hubGraph := f.graph(lf.hubPage)
+	proposeHub := func() { f.propose(hubGraph, nil) }
+
+	t.Run("hub page cold", func(t *testing.T) {
+		d := fastest(2, func() time.Duration {
+			f.c.Graph().Drop()
+			return since(proposeHub)
+		})
+		over(t, "cold proposal on the hub page", d, budgetHubCold)
+	})
+
+	t.Run("hub page warm", func(t *testing.T) {
+		proposeHub()
+		d := fastest(3, func() time.Duration { return since(proposeHub) })
+		over(t, "warm proposal on the hub page", d, budgetHubWarm)
+	})
 }

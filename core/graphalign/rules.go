@@ -28,9 +28,12 @@ type Rules struct {
 	// MinSimilarity is the least similarity for a shortlisted handle to be a
 	// candidate.
 	MinSimilarity float64
-	// TopK is the candidates kept per Subject from its shortlist.
+	// TopK is the candidates kept per Subject from its shortlist, and per layer
+	// neighbor from one placed pair's links.
 	TopK int
-	// TieCap is the most candidates kept when ties at the K-th place pass K.
+	// TieCap is the most candidates kept when ties at the K-th place pass K, per
+	// Subject from its shortlist and per layer neighbor from one placed pair's
+	// links.
 	TieCap int
 	// AcceptBar is the least evidence to place a pair.
 	AcceptBar float64
