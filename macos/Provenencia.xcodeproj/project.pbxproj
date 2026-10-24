@@ -193,6 +193,7 @@
 		AA00000000000000000000FF /* PVFontTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000FE /* PVFontTests.swift */; };
 		AA0000000000000000000673 /* L10nResolutionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000672 /* L10nResolutionTests.swift */; };
 		AA0000000000000000000680 /* GraphCanvasItemLayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000067F /* GraphCanvasItemLayerTests.swift */; };
+		AA000000000000000000010B /* GraphCanvasItemViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000010A /* GraphCanvasItemViewTests.swift */; };
 		AA0000000000000000000682 /* PVTextAreaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000681 /* PVTextAreaTests.swift */; };
 		AA0000000000000000000678 /* L10nPluralTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000677 /* L10nPluralTests.swift */; };
 		A71900000000000000000002 /* CitationComposerContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71900000000000000000001 /* CitationComposerContext.swift */; };
@@ -218,6 +219,7 @@
 		AA00000000000000000004C1 /* GraphCanvasHitTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004C0 /* GraphCanvasHitTarget.swift */; };
 		AA00000000000000000004C3 /* GraphCanvasPointerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004C2 /* GraphCanvasPointerController.swift */; };
 		AA000000000000000000067E /* GraphCanvasItemLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000067D /* GraphCanvasItemLayer.swift */; };
+		AA0000000000000000000109 /* GraphCanvasItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000108 /* GraphCanvasItemView.swift */; };
 		AA00000000000000000004C5 /* GraphCanvasDocumentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004C4 /* GraphCanvasDocumentView.swift */; };
 		AA00000000000000000004C7 /* GraphCanvasPointerHitTestingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004C6 /* GraphCanvasPointerHitTestingTests.swift */; };
 		AA0000000000000000000483 /* EvidenceSubjectKindStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000482 /* EvidenceSubjectKindStyle.swift */; };
@@ -623,6 +625,7 @@
 		AA00000000000000000000F6 /* EvidenceSubjectCardFooterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceSubjectCardFooterTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000672 /* L10nResolutionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = L10nResolutionTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000067F /* GraphCanvasItemLayerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasItemLayerTests.swift; sourceTree = "<group>"; };
+		AA000000000000000000010A /* GraphCanvasItemViewTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasItemViewTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000681 /* PVTextAreaTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVTextAreaTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000677 /* L10nPluralTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = L10nPluralTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000000F8 /* EvidenceCardLayoutTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceCardLayoutTests.swift; sourceTree = "<group>"; };
@@ -652,6 +655,7 @@
 		AA00000000000000000004C0 /* GraphCanvasHitTarget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasHitTarget.swift; sourceTree = "<group>"; };
 		AA00000000000000000004C2 /* GraphCanvasPointerController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasPointerController.swift; sourceTree = "<group>"; };
 		AA000000000000000000067D /* GraphCanvasItemLayer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasItemLayer.swift; sourceTree = "<group>"; };
+		AA0000000000000000000108 /* GraphCanvasItemView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasItemView.swift; sourceTree = "<group>"; };
 		AA00000000000000000004C4 /* GraphCanvasDocumentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasDocumentView.swift; sourceTree = "<group>"; };
 		AA00000000000000000004C6 /* GraphCanvasPointerHitTestingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasPointerHitTestingTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000482 /* EvidenceSubjectKindStyle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceSubjectKindStyle.swift; sourceTree = "<group>"; };
@@ -1171,6 +1175,7 @@
 				AA00000000000000000004C0 /* GraphCanvasHitTarget.swift */,
 				AA00000000000000000004C2 /* GraphCanvasPointerController.swift */,
 				AA000000000000000000067D /* GraphCanvasItemLayer.swift */,
+				AA0000000000000000000108 /* GraphCanvasItemView.swift */,
 				AA00000000000000000004C4 /* GraphCanvasDocumentView.swift */,
 			);
 			path = GraphCanvas;
@@ -1395,6 +1400,7 @@
 				AA00000000000000000000FE /* PVFontTests.swift */,
 				AA0000000000000000000672 /* L10nResolutionTests.swift */,
 				AA000000000000000000067F /* GraphCanvasItemLayerTests.swift */,
+				AA000000000000000000010A /* GraphCanvasItemViewTests.swift */,
 				AA0000000000000000000677 /* L10nPluralTests.swift */,
 				A71B00000000000000000001 /* ConnectEndpointBindingTests.swift */,
 				A71C00000000000000000003 /* ConnectionSentenceRegistryTests.swift */,
@@ -2131,6 +2137,7 @@
 				AA00000000000000000004C1 /* GraphCanvasHitTarget.swift in Sources */,
 				AA00000000000000000004C3 /* GraphCanvasPointerController.swift in Sources */,
 				AA000000000000000000067E /* GraphCanvasItemLayer.swift in Sources */,
+				AA0000000000000000000109 /* GraphCanvasItemView.swift in Sources */,
 				AA00000000000000000004C5 /* GraphCanvasDocumentView.swift in Sources */,
 				AA000000000000000000047F /* GraphCanvasGridMapping.swift in Sources */,
 				AA0000000000000000000481 /* EvidenceSubjectCard.swift in Sources */,
@@ -2353,6 +2360,7 @@
 				AA00000000000000000000FF /* PVFontTests.swift in Sources */,
 				AA0000000000000000000673 /* L10nResolutionTests.swift in Sources */,
 				AA0000000000000000000680 /* GraphCanvasItemLayerTests.swift in Sources */,
+				AA000000000000000000010B /* GraphCanvasItemViewTests.swift in Sources */,
 				AA0000000000000000000682 /* PVTextAreaTests.swift in Sources */,
 				AA0000000000000000000678 /* L10nPluralTests.swift in Sources */,
 				A71B00000000000000000002 /* ConnectEndpointBindingTests.swift in Sources */,
