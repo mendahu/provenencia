@@ -4,6 +4,9 @@ import AppKit
 /// size. A reused `NSImage` lets AppKit keep its own representation cache
 /// across paints. The card still draws the vector through `drawTinted`, so
 /// icons stay crisp at any zoom; only the image object is cached.
+///
+/// For views that paint with AppKit, `PVPainter.symbol` draws the vector from
+/// these images.
 @MainActor
 enum PVSymbolImages {
     private struct Key: Hashable {

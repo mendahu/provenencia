@@ -17,7 +17,7 @@ catalog types so geometry stays extractable (design note §13).
 | `GraphCanvasScrollView` | AppKit magnification bridge |
 | `GraphCanvasDocumentView` | Scroll document; owns mouse; hosts the base SwiftUI layer and the item layer; canvas accessibility group and rotors |
 | `GraphCanvasItemView` | Base for item views, built with `init(contentSize:)`: the view is the content plus `paintOutset` on every side, and `paint()` draws in content coordinates; it renders into an image its layer shows, through `updateLayer` |
-| `GraphCanvasItemLayer` / `GraphCanvasItem` | One `GraphCanvasItemView` per item, built by the host (`makeView`, a `GraphCanvasItemView`), positioned by AppKit; rebuilt only when the item's `Equatable` model changes; owns each item's layer and its scale, their stack order (host order, raised items last; `stackIndex(of:)`), and the placement `preview` |
+| `GraphCanvasItemLayer` / `GraphCanvasItem` / `GraphCanvasPreview` | One `GraphCanvasItemView` per item, built by the host (`makeView`, a `GraphCanvasItemView`), positioned by AppKit; rebuilt only when the item's `Equatable` model changes; owns each item's layer and its scale, their stack order (host order, raised items last; `stackIndex(of:)`), and the placement `preview` |
 | `GraphCanvasPointerController` | Hit-test, select, drag (one item, or a group of peers that move with the anchor), empty-canvas pan, selection rectangle (marquee), Shift tracking, Shift-click toggle, place, connect |
 | `GraphCanvasHitTarget` / `GraphCanvasPointerHitTesting` | Grid-space rects + pure helpers; a click hits the item drawn on top |
 | `GraphCanvasViewportController` | Pan deltas + the live magnification |
@@ -30,7 +30,7 @@ Hosts supply product policy; GraphCanvas supplies plumbing.
 
 | Host must supply | Stays in the product folder |
 | --- | --- |
-| `hitTargets` (string ids + document rects) | Card chrome, palette, create dialogs |
+| `hitTargets` (string ids + grid-space rects, see [Coordinate seams](#coordinate-seams)) | Card chrome, palette, create dialogs |
 | Pointer `mode` + callbacks (select / toggle select / drag began / drag end / marquee ended (ids, additive) / Shift held changed / place / connect) | Catalog / store / FFI / session queries |
 | Document `rootView` (paint-only SwiftUI base layer) | Honesty copy and product card content |
 | Items pushed to `graphCanvasItems` (id, origin, model, `makeView`, rotor entry) | Rotor names and labels (localized by the host) |
@@ -60,9 +60,9 @@ size or appearance changes, or on `invalidatePaint()`. `needsDisplay` alone, a p
 or a zoom step shows the last image again.
 
 A host can show one stand-in while it waits for the researcher, such as the item a
-click would create: set `GraphCanvasItemLayer.preview` to an item with id
-`GraphCanvasItemLayer.previewID`. It is placed like an item and drawn above all of
-them, but is not one: no rotor entry, no stack index, and `update` leaves it alone.
+click would create: set `GraphCanvasItemLayer.preview` to a
+`GraphCanvasPreview(origin:model:makeView:)`. It is placed like an item and drawn above all of
+them, but is not one: no id, rotor entry or stack index, and `update` leaves it alone.
 Nil removes it.
 
 **Never read `GraphCanvasPointerController.offsets` in a view body** that does
