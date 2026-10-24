@@ -171,3 +171,22 @@ Executability (sonnet): **Ready with changes**, no new blocker.
 - X-14 nit — logged; covered by the stop condition.
 
 **Addition verdict:** Fits — Ready. Round cap reached; no open blocker; no To user item.
+
+## Addition 2026-10-24 — cached item image (D-17, STEP-13)
+
+Own layers (STEP-12) did not stop the pan repaint; a `wantsUpdateLayer` prototype did (plan §4 "Card layers after STEP-12"). Reviewers: maintainability (opus), executability (sonnet).
+
+### Round 1
+**M-1 / X-1 · blocker · removing `draw(_:)` breaks `EvidenceCardLayoutTests.bitmap(of:)`** — **Fixed:** the base keeps `draw(_:) { paint() }`; the layout tests run unchanged through it; one `renderImage(scale:)` serves `updateLayer` and T-16.
+**X-2 · blocker · image orientation and pixel mapping** — **Fixed:** D-17 gives the transform and a per-axis scale from the rounded pixel size; T-16 checks a red top-left pixel.
+**M-2 · major · contract only in docs** — **Fixed:** `makeView` returns `GraphCanvasItemView`; `insert` drops the duplicate `wantsLayer`; `SizedView` subclasses the base; AC-5.4 reworded.
+**X-3 · major · immediate scale unspecified** — **Fixed:** `applyItemContentsScale()` at once on window and backing change, then the async pass catches an AppKit reset.
+**X-4 · major · ghost scale** — **Fixed:** stated; the ghost renders at the backing scale, accepted softness above 1× up to 1.25×.
+**X-5 · major · init chain** — **Fixed:** `override init(frame:)` and an unavailable `required init?(coder:)` with `fatalError`, as the card has.
+**M-3 · minor · cache key on pixel size** — **Fixed.** **M-4 · minor · comments name `needsDisplay` vs `invalidatePaint()`** — **Fixed.** **M-5 · nit · name** — **Fixed:** `GraphCanvasItemView`. **X-6 · move `draw` body verbatim** — **Fixed.** **X-7, X-8** — **Fixed** (key comparison stated; README wording given). **M-6 · nit · third bitmap-context copy** — logged; rejected-alternatives column says why.
+
+### Round 2
+Executability (sonnet): **Ready with changes**. **X-1 · blocker · `cardView(for:)` returns `NSView`** — **Fixed:** it returns `EvidenceCardView`; `EvidenceCanvasCard.swift` in Files. **X-2 · blocker · nothing re-renders the ghost on window or backing change** — **Fixed:** the base's `viewDidMoveToWindow` / `viewDidChangeBackingProperties` set `needsDisplay`; subclasses call `super`. X-3 commit split, X-4 pending-flag order and pinch guard, X-5 T-16 pixel read, X-6 Check names T-14 — **Fixed.**
+Maintainability (opus): **Fits with changes**. **M-7 · major · the cache across `updateLayer` has no measured reason and adds a second signal** — **Fixed:** dropped; `updateLayer` always renders, `needsDisplay` is the one signal; the prototype's under-200 count is the evidence, AC-5.8 rechecks it. M-8 (= X-1), M-9 README sentence replaced not added, M-10 nits (D-13 wording, `isOpaque` on the base, empty-bounds guard) — **Fixed.**
+
+**Addition verdict:** Fits — Ready. Round cap reached; no open blocker. To user after STEP-13's numbers: the memory trade (PRF-1).

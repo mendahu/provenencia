@@ -113,3 +113,18 @@ Check: scripts/check-pr.sh PASS.
 ## Round STEP-11 — fix and re-profile
 Head `a25697b4`. Gate PASS (orchestrator). F-8 done. UX-1, MNT-1, MNT-3 **Resolved** (read by the orchestrator).
 PRF-1 **Resolved** — re-profile with the user driving (same 110-Subject Source, 20 s pan, optimized Debug build): hitch total 12.5 s → 9.4 s, worst 427 → 400 ms, hitches over 100 ms 43 → 49, main thread busy 4.3 → 3.8 s, card draw share 81 % → 72 %. Symbol and font creation are gone; `drawTinted` (vector symbol drawn on every paint) is 48 % and is the next cost. User: "I wouldn't describe it as particularly improved from an anecdotal perspective." The §3 Out row (keep each card's painted bitmap so panning never re-runs `draw(_:)`) is the fix that removes the repaint itself.
+
+## STEP-12 — card layers (user, 2026-10-24)
+User: "plan and implement that on this same PR." Plan (D-15, D-16, STEP-12) reviewed Fits / Ready in 2 rounds. Implemented at `3acec99d`; gate PASS (orchestrator). Reviewers: CON (sonnet), MNT, UX, SEC+PRF.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| CON-1 | CON | major | AC-5.6 measurement not recorded | Fix now → measured | Draw log at `3acec99d` (user driving): 11,887 draws in the pan, ~106 per card; own layers did **not** stop the repaint. Scroll and clip view layers: 6,041 in 16 s, no change. Cached-image prototype (`wantsUpdateLayer`): under 200 refreshes for open and pan; user: "noticeably much, much better". Recorded in plan §4 "Card layers after STEP-12" → D-17, STEP-13 |
+| PRF-1 | PRF | major | Layer memory unmeasured; zoomed-out scale is a user call | Fix now (measure, AC-5.8) → To user after STEP-13's numbers | `phys_footprint` 146 MB open / 175 MB after pan with own layers; 252 MB with the cached-image prototype, 1× display |
+| UX-1 | UX | minor | Placement ghost lost its scale sync | Fix now → D-17 | the ghost subclasses `GraphCanvasPaintedView`; its paint is keyed by the layer's scale |
+| UX-2 | UX | minor | Cards at 1× for a frame at open on Retina | Fix now → D-17 | scale set at once on window and backing change |
+| MNT-1 | MNT | minor | `makeView` doc lacks the redraw contract | Fix now → D-17 | doc and README name `GraphCanvasPaintedView` and `invalidatePaint()` |
+| MNT-2 | MNT | nit → minor | Codebase fit row says `makeView` | Fix now → STEP-13 | plan text |
+| CON-2 | CON | minor | A host outside the scroll view must set `contentsScale` | Logged | no such host; README says the scroll view sets it |
+
+Nits (logged): `MNT-3 · 0.000_1 tolerance repeated ~7 times in GraphCanvas` · `UX-3 · isPinching cleared only on .ended/.cancelled/window move`
