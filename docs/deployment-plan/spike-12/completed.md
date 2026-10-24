@@ -2,6 +2,12 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-18 — A Subject needs its graph
+
+**Landed 2026-10-24** in [#532](https://github.com/mendahu/provenencia/pull/532). `subjects.CreateInput` loses `SourceID` and `GraphID` is required: a new Subject names the Evidence graph it joins and the engine reads its Source from that graph, so a second graph on a Source can never send a Subject to the wrong one. `subjects.InsertTx`'s `SoleGraphTx` fallback is deleted, and the cited bridge takes only its endpoints' graph. Every test that built a Subject now passes a graph id. The researcher sees no change.
+
+**Not this PR.** Promote's `SoleGraph` use and deleting `SoleGraph` / `SoleGraphTx` (S12-09); folding the copied test Subject helpers into one fixture ([`test-subject-fixtures.md`](../../ideas/test-subject-fixtures.md)).
+
 ## S12-08 — Graph id end to end
 
 **Landed 2026-10-23** in [#528](https://github.com/mendahu/provenencia/pull/528). The Evidence graph canvas, the Citation composer and the Promote page open on an Evidence graph id, and the id travels the whole way: `WorkspaceLocation.graphId` (kept by Back, Forward and a relaunch; an old history entry for a graph surface with no graph opens the Source page), the app's `.evidenceGraph(graphId:)` cache key, every graph read and write RPC (renamed where they named a Source), and the write effects (`WriteEffects.evidence_graphs` replaces `sources`). A write on one graph reloads only that graph and patches only its progress; a Subject, an Observation and a claim name their own graph, and an Artifact or Citation write still names every graph of its Source. Delete-impact rows and reconciliation records link to the graph that holds them. Until per-graph Open (S12-11, S12-14) the Source page jump and the Sources list Open open the Source's first graph in the graph list; every Source has one graph today, so the researcher sees no change.
