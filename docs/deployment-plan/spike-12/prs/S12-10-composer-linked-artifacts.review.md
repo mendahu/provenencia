@@ -1,6 +1,6 @@
 # Review — S12-10 Composer offers linked Artifacts
 
-**Verdict:** round 1: Fits with changes — Not ready. Round 2: pending
+**Verdict:** Fits with changes — Ready with changes (round 2; every finding Fixed, no blocker open)
 **Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
@@ -75,3 +75,21 @@ Logged. `cachedCitation(id:)`'s loop is named in STEP-3; the skill lines are in 
 ### M-8 · blocker · Graph-scoped counts now read link rows, but writing a link row does not refresh them
 The M-7 fix made `CountByEvidenceGraph` join `evidence_graph_artifacts`, whose effect entry sets no `CitationSource`; a link or unlink would leave `.citationCounts(graphId:)` stale.
 **Answer:** Fixed — D-6: `registry["evidence_graph_artifacts"]` gains `CitationSource: up("graph_id", "source_id")`; D-1's sentence corrected; STEP-1 flips the `TestSourceEvidenceIsNotActivity` row and adds T-12; D-10's FakeStore link writes report `citationSources`; STEP-8 edits the effects README.
+
+### X-11 · major · D-6 deletes a switch case the switch cannot lose
+**Answer:** Fixed — D-6: the case body becomes `return .allCached(.citationCounts)`.
+
+### X-12 · major · `CatalogMutation.swift` is in no file list
+**Answer:** Fixed — §4 Mutation row; STEP-3 Files; D-6 gives the new doc comment.
+
+### X-13 · major · A Stop condition contradicts D-2 and T-2
+**Answer:** Fixed — the Stop bullet is deleted; T-2 builds CIT-A with one `CreateWithObservations` call of three inputs.
+
+### X-14 · minor · Test updates leave real choices
+**Answer:** Fixed — STEP-4 seeds graph `g1` in `seedStore` and renames `citationCountsLoadBySource`; D-8 places the key after `.citationCounts`; T-3 creates the second Artifact before Smith; T-4 states what the handler cases assert; STEP-5 names the two composer fixtures that stay.
+
+### X-15 · minor · STEP-3 is large and its check proves little
+**Answer:** Fixed — STEP-3's check adds a `CitationComposerModelTests` run. The step stays one step: its files must change together for the app to build.
+
+### X-16 · minor · Checks not runnable on Linux
+Logged. `generate-proto.sh` and every `xcodebuild` check need the macOS machine the implementer runs on. Subject erase reporting `citation_sources` is guarded by a Stop condition.
