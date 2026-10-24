@@ -53,3 +53,38 @@ The user accepted the preparatory PRs and splits. An ideas-folder pass then adde
 
 ### K-11 · minor · S11-21: extend the existing benchmark; make the budget run
 **Answer:** Fixed. S11-21 is a budgeted `Test…` on `bench_test.go`'s fixture. S11-24 deletes `BenchmarkLoadStatsNames`.
+
+## Map review — S11-34 – S11-37 (2026-10-24)
+
+**Verdict:** Fits with changes. **Rounds:** 1. **Reviewers:** maintainability (fresh agent, map questions), over S11-34 – S11-36, the "Find another record" rules, bar 10 – 11 and [`promote-find-another-record.md`](promote-find-another-record.md). The engine claims held: `checkFixed`, `loadCanon`, `anchor`, Apply and `ResolvePins` take any handle of the right kind, so S11-35 needs no Go code.
+
+### To user
+
+- **One preparatory PR added: S11-37 (one kind-scoped catalog search).** Recommendation: keep it. Without it S11-36 rebuilds the omnibar's results model and copies its private hit row inside Promote.
+- **The menu entry is a sentinel option, decided in the map** (K-6). A kit action item on `PVSelect` is cut as its own PR only if S11-D3 draws what a sentinel cannot do.
+
+### Round 1
+
+#### K-1 · major · A second search state and hit row would grow inside Promote
+**Answer:** Fixed. S11-37 moves `OmnibarResultsModel`'s search state and `OmnibarHitRowView` to a shared home with `kinds` and an optional location; S11-36 depends on it. Working rule "No new search RPC, and one search model".
+
+#### K-2 · major · A found record's reason is never refreshed
+**Answer:** Fixed. S11-35's call writes reason `decided`; the band is refreshed from the proposal. How a held record with band None reads is S11-D3's. Feature doc "Where the Swift side changes".
+
+#### K-3 · minor · `ConflictWithFixed` cannot fire for a found record
+**Answer:** Fixed. Dropped from the engine table and S11-35's tests; only Contested applies.
+
+#### K-4 · minor · S11-34 names no existing hover style
+**Answer:** Fixed. The scope names `PVMenuRowButtonStyle`, `PVListRowStyle` and `SourcesSplitZoneButtonStyle`, reuse or extend one, and says to check the board wants `PVHoverEffect`'s press scale.
+
+#### K-5 · minor · A sentinel option passed to `setTarget` marks the row decided
+**Answer:** Fixed. Working rule "The menu entry is a sentinel option"; S11-36's Check adds "opening and cancelling the search leaves the row undecided".
+
+#### K-6 · minor · S11-36 too big if the kit route is chosen
+**Answer:** Fixed. Sentinel decided in the map; the search refactor is S11-37.
+
+#### K-7 · minor · S11-35's Apply test is in the wrong package
+**Answer:** Fixed. Filing is checked in the handler or `promote` tests; the propose tests extend `promote_align_test.go` and `promotealign_test.go`.
+
+#### K-8 · minor · No skill update for a second `SearchCatalog` consumer
+**Answer:** Fixed. S11-37 updates `add-searchable-kind`.

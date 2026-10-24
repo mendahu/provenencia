@@ -39,7 +39,7 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 | Spike 10 S10-36 — Promote compares two likeness crops (moved 2026-10-17) | S11-32 (lines), S11-20 (crops) | S11-D2 |
 | Reuse inventory ([`comparison-layers.md`](comparison-layers.md#reuse-across-the-app)) | S11-05 – S11-08, S11-13, S11-19 | — |
 | S11-27 follow-up — the evidence button's hover on the S11-D1 board was not built (user, 2026-10-24) | S11-34 | — (S11-D1, agreed) |
-| [Find another record](promote-find-another-record.md) (was `ideas/promote-find-another-record.md`, from S11-05 D-16; pulled in 2026-10-24) | S11-35, S11-36 | S11-D3 |
+| [Find another record](promote-find-another-record.md) (was `ideas/promote-find-another-record.md`, from S11-05 D-16; pulled in 2026-10-24) | S11-35, S11-37, S11-36 | S11-D3 |
 
 **Stays in the ideas folder** — the rest of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md): scenario files and goldens runner, random-graph invariants, the simulated world, the scoreboard, the labeler, fitting, and dogfood export. Whether they join this spike is decided after the re-implementation.
 
@@ -82,7 +82,8 @@ These are the calls for this spike. PR plans treat them as binding.
 ### Find another record
 
 - **A found record is a decided row, nothing new** ([shape](promote-find-another-record.md#shape)). It goes to Go as a `PromoteGraphAlignmentFixed` pair like a menu pick. Go holds it and never moves it, and scores it for the row's band, Contested and evidence like any decided handle. No new proposal field, flag or reason code.
-- **No new search RPC.** The picker calls `SearchCatalog` with `kinds` set to the row's kind; hits already carry their header (S9-35).
+- **No new search RPC, and one search model.** The picker calls `SearchCatalog` with `kinds` set to the row's kind; hits already carry their header (S9-35). It reuses the omnibar's results model and hit row, moved to a shared home by S11-37, not a copy in Promote.
+- **The menu entry is a sentinel option.** `PVSelect` gets no action item; the row's binding catches the entry's token before `setTarget`, so opening or cancelling the search never marks the row decided. A kit PR is cut only if S11-D3 draws what a sentinel cannot do.
 - **The picked record joins the row's menu**, through one `PromoteFlow` call that adds the record to `row.menu` and sets the target, with `setTarget`'s follow-up. The menu stays the one list of a row's records (S11-35).
 - **Engine first, proven by tests.** S11-35 adds no Go code unless a test finds a gap: a fixed handle no shortlist key reaches is loaded, banded, contested when it conflicts, has evidence and files. A gap found there is fixed in S11-35.
 
@@ -131,7 +132,8 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-30 | Gender meets sex at birth in its own words | 3 | The sex / gender pool maps gender terms into sex at birth terms through a registry crosswalk; `man` agrees with `male` | — | S11-10 | — (bugfix, user 2026-10-21) | In review |
 | S11-34 | Evidence button hover on Promote rows | 6 | The row's assessment button (band, Contested, reason, chevron) takes the hover the S11-D1 board draws, on the kit's `PVHoverEffect` | — (S11-D1, agreed) | S11-27 | — | Scoped |
 | S11-35 | Hold a record Promote did not offer | 8 | `PromoteFlow` takes a record from outside the menu and holds it as a decided row; Go tests pin that a fixed off-shortlist handle is loaded, banded, has evidence and files; `FakeStore` holds it | — | — | — | Scoped |
-| S11-36 | Find another record in the target menu | 8 | "Find another record…" at the end of the target menu opens a search of the row's kind over `SearchCatalog`; the pick goes through S11-35 | S11-D3 | S11-35, S11-D3 | — | Scoped |
+| S11-37 | One kind-scoped catalog search | 8 | The omnibar's results model and hit row move out of `Features/Workspace` to a shared home, with a `kinds` input and an optional location; the omnibar uses them unchanged | — | — | — | Scoped |
+| S11-36 | Find another record in the target menu | 8 | "Find another record…" at the end of the target menu opens a search of the row's kind on S11-37's model; the pick goes through S11-35 | S11-D3 | S11-35, S11-37, S11-D3 | — | Scoped |
 | S11-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -211,6 +213,7 @@ SLICE 7 — Performance
 
 SLICE 8 — Find another record
   S11-35  Hold a record Promote did not offer   (any time)
+  S11-37  One kind-scoped catalog search        (any time, parallel with S11-35)
   ✎ S11-D3 ──▶ S11-36  Find another record in the target menu
   Check: on a row Promote opens New, "Find another record…" finds a differently
          named record of the row's kind; the row holds it after other rows are
@@ -219,7 +222,7 @@ SLICE 8 — Find another record
 S11-99 — Dogfood close / docs
 ```
 
-Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 7 after S11-16; slice 6 any time (S11-26 has no dependency); S11-34 any time after S11-27; S11-35 any time, and S11-D3 can be drawn while it runs. S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
+Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 7 after S11-16; slice 6 any time (S11-26 has no dependency); S11-34 any time after S11-27; S11-35 and S11-37 any time, in parallel, and S11-D3 can be drawn while they run. S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
 
 ### Dependencies at a glance
 
@@ -241,6 +244,7 @@ S10-54 ──▶ S11-32   (Spike 10)
 S11-D2 ──▶ S11-20
 S11-27 ──▶ S11-34
 S11-35 ──┐
+S11-37 ──┤
 S11-D3 ──┴──▶ S11-36
 ```
 
@@ -478,7 +482,7 @@ Split from S11-20 when it was planned (user, 2026-10-22): the engine half of the
 #### S11-34 — Evidence button hover on Promote rows
 
 Follow-up to S11-27 (user, 2026-10-24): the S11-D1 board draws a hover on the row's evidence button, and neither S11-18 nor S11-27 built it.
-**Ships.** The assessment-column button in `PromoteAlignmentRow` (`PromoteView.swift`, identifier `promote.row.<ref>.evidence`: band and Contested Badges, the reason, the chevron) shows the board's hover state, through a `ButtonStyle` built on `PVHoverEffect` like the kit's other hover chrome, with reduce-motion respected. Its hit target stays the whole column.
+**Ships.** The assessment-column button in `PromoteAlignmentRow` (`PromoteView.swift`, identifier `promote.row.<ref>.evidence`: band and Contested Badges, the reason, the chevron) shows the board's hover state, reusing a hover style the kit already has (`PVMenuRowButtonStyle` in `PVButton.swift`, `PVListRowStyle` in `PVList.swift`; feature precedent `SourcesSplitZoneButtonStyle`) or extending one through `add-ui-component`, not a third hover fill. `PVHoverEffect` adds a press scale; the plan checks the board wants it. Its hit target stays the whole column.
 **Not this PR.** Hover on subrows (S11-D1 §6 non-goals: no hover action on a subrow), on the target menu, or on the anchor rows. A new kit primitive (S11-D1 non-goals); if the hover is a reusable shape, the plan says whether it belongs on an existing kit style.
 **Check.** Pointing at the evidence button shows the board's hover; moving off clears it; clicking still opens the sheet; VoiceOver reads as before.
 **Context.** [S11-D1](design/archive/S11-D1-promote-rows.md) and its board (the hover frame); `macos/App/DesignSystem/Components/HoverEffect/PVHoverEffect.swift`; [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) if the kit changes.
@@ -523,14 +527,22 @@ Pulled in from the ideas folder on 2026-10-24. Design: [`promote-find-another-re
 
 #### S11-35 — Hold a record Promote did not offer
 
-**Ships.** A `PromoteFlow` call that takes a record from outside the row's menu (id, ref, sorted and reading titles, subtitle), adds it to `row.menu`, sets the target and marks the row decided, with `setTarget`'s duplicate-note and re-propose follow-up; `PromoteModel` exposes it. A decided row keeps the record through re-proposals with its band and reason refreshed (`makeRow`'s decided branch). Go tests in `promotealign` show that a fixed handle no shortlist key reaches is loaded into the canon, banded, flagged contested when a property conflicts, answers `GetPromoteClaimEvidence`, and files at Apply. `FakeStore`'s propose holds a fixed handle outside its candidates. No chrome.
+**Ships.** A `PromoteFlow` call that takes a record from outside the row's menu (id, ref, sorted and reading titles, subtitle), adds it to `row.menu` with reason `decided`, sets the target and marks the row decided, with `setTarget`'s duplicate-note and re-propose follow-up; `PromoteModel` exposes it. A decided row keeps the record through re-proposals with its band refreshed (`makeRow`'s decided branch; [why the reason is `decided`](promote-find-another-record.md#where-the-swift-side-changes)). Go tests show that a fixed handle no shortlist key reaches is loaded into the canon, banded, flagged contested when a property conflicts, and answers `GetPromoteClaimEvidence` (extending `promote_align_test.go` and `promotealign_test.go`), and that it files at Apply (handler or `promote` tests). `FakeStore`'s propose holds a fixed handle outside its candidates (today it finds entities only among memberships). No chrome.
 **Not this PR.** The menu entry and the search (S11-36). Any new proposal field or reason (working rule "A found record is a decided row, nothing new").
 **Check.** `PromoteFlowTests`: a row opened New, given an outside record, holds it, shows it in its menu, and keeps it after another row is decided; the Go tests above pass.
 **Context.** Working rules under [Find another record](#find-another-record); [shape](promote-find-another-record.md#shape) and [what the engine already does](promote-find-another-record.md#what-the-engine-already-does); [`add-swift-test`](../../../.agents/skills/add-swift-test/SKILL.md).
 
 #### S11-36 — Find another record in the target menu
 
-**Ships.** "Find another record…" at the end of every non-anchor row's target menu, as S11-D3 draws it, opening a search of the row's kind through `SearchCatalog` (`kinds` = the row's kind). A pick goes through S11-35's call. Hits read their header lines as the omnibar does. All copy through L10n; VoiceOver reads the entry and the hits. The plan decides between a sentinel `PVSelect` option the row's binding intercepts and a kit action item ([`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md)).
+**Ships.** "Find another record…" at the end of every non-anchor row's target menu, as S11-D3 draws it: a sentinel option the row's binding catches (working rule "The menu entry is a sentinel option"), opening a search of the row's kind on S11-37's shared model and hit row. A pick goes through S11-35's call. How a held record with band None reads is S11-D3's. All copy through L10n; VoiceOver reads the entry and the hits.
 **Not this PR.** Searching from the evidence sheet; records of another kind; merging records ([what stays later](promote-find-another-record.md#what-stays-later)). A warning for a `Different` pick, unless the user asks for one (open question 2).
-**Check.** On a row Promote opens New, the entry finds a differently named record; picking it selects it in the menu, the band and Contested show, the sheet opens on it, and Done files it.
-**Context.** S11-D3; [open questions](promote-find-another-record.md#open-questions); `macos/App/Features/Workspace/OmnibarHitPresentation.swift`; [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).
+**Check.** On a row Promote opens New, the entry finds a differently named record; picking it selects it in the menu, the band and Contested show, the sheet opens on it, and Done files it. Opening and cancelling the search leaves the row undecided.
+**Context.** S11-D3; [open questions](promote-find-another-record.md#open-questions); S11-37; [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).
+
+#### S11-37 — One kind-scoped catalog search
+
+Preparatory refactor, from the map review (K-1, 2026-10-24).
+**Ships.** `OmnibarResultsModel`'s search state (debounce, generation guard, errors, empty state) and the private `OmnibarHitRowView` move out of `Features/Workspace` to a shared home, with a `kinds` input and an optional location (Promote has none to give `SearchCatalog`). The omnibar keeps its behavior on them. [`add-searchable-kind`](../../../.agents/skills/add-searchable-kind/SKILL.md) says the omnibar is no longer the only consumer and points at the shared search.
+**Not this PR.** Promote (S11-36). Any change to ranking or hit kinds.
+**Check.** The omnibar works as before (its tests pass); a test drives the shared model with `kinds: ["person"]` and gets only person hits.
+**Context.** `macos/App/Features/Workspace/OmnibarResultsModel.swift`, `OmnibarResultsHost.swift`, `OmnibarHitPresentation.swift`; [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) for where the row view lands.
