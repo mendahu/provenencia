@@ -1,6 +1,6 @@
 # Deployment Plan — Spike 11
 
-Promote's matching is rebuilt as a stack of pure, registry-driven layers that the rest of the app borrows from, and the old matching code is deleted as each layer lands. The design is in [`comparison-layers.md`](comparison-layers.md) (layers 1–6, bands, the match registry, the reuse inventory) and [`claim-evidence.md`](claim-evidence.md) (the Promote sheet's pins). It pulls in the "make the algorithm graspable" part of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md), [connection subrows](promote-connection-subrows.md) on the Promote page, Spike 10's likeness crops on the evidence sheet (S10-36), and, added 2026-10-24, the evidence button's hover that S11-27 missed (S11-34) and [find another record](promote-find-another-record.md) in the target menu (S11-35, S11-36). PRs follow a build-then-migrate rhythm: a PR builds a layer, the next moves every caller onto it and deletes what it replaces.
+Promote's matching is rebuilt as a stack of pure, registry-driven layers that the rest of the app borrows from, and the old matching code is deleted as each layer lands. The design is in [`comparison-layers.md`](comparison-layers.md) (layers 1–6, bands, the match registry, the reuse inventory) and [`claim-evidence.md`](claim-evidence.md) (the Promote sheet's pins). It pulls in the "make the algorithm graspable" part of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md), [connection subrows](promote-connection-subrows.md) on the Promote page, Spike 10's likeness crops on the evidence sheet (S10-36), and, added 2026-10-24, the evidence button's hover that S11-27 missed (S11-34) [find another record](promote-find-another-record.md) in the target menu (S11-35 – S11-37), and [kinship shapes](kinship-shapes.md): a shared marriage, a birth's parents and a parent chain match spouse, parent and grandparent links (S11-38 – S11-40). PRs follow a build-then-migrate rhythm: a PR builds a layer, the next moves every caller onto it and deletes what it replaces.
 
 **A brief covers one view.** A PR that changes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
 
@@ -25,6 +25,7 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 9. **Connections follow their ends.** Each connection shows under a Promote row it joins. Setting John to Skip dims "Mary · parent of · John"; nothing toggles on its own, and there's no switch-off.
 10. **The rows match their board.** The Promote row's evidence button answers the pointer as S11-D1 draws it.
 11. **Any record can be the target.** A Subject Promote offers nothing for (Promote says New) can be filed on a record the researcher finds by search. The row holds that record through later decisions and shows its band, Contested when it conflicts, and its evidence.
+12. **One kinship fact, any shape.** A Source that records a marriage proposes its two people strong on a couple the tree records as spouses, and the reverse. A birth record naming the father matches a tree that says he is the child's parent. A Source with A parent of B and B parent of C matches a tree that records A as C's grandparent. A fact recorded twice on one side counts once.
 
 ## Where the notes went
 
@@ -39,9 +40,10 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 | Spike 10 S10-36 — Promote compares two likeness crops (moved 2026-10-17) | S11-32 (lines), S11-20 (crops) | S11-D2 |
 | Reuse inventory ([`comparison-layers.md`](comparison-layers.md#reuse-across-the-app)) | S11-05 – S11-08, S11-13, S11-19 | — |
 | S11-27 follow-up — the evidence button's hover on the S11-D1 board was not built (user, 2026-10-24) | S11-34 | — (S11-D1, agreed) |
+| [Kinship shapes](kinship-shapes.md) (was `ideas/relationships-from-shared-events.md`, from S11-14; grandparent added by the user; pulled in 2026-10-24) | S11-38, S11-39, S11-40 | — |
 | [Find another record](promote-find-another-record.md) (was `ideas/promote-find-another-record.md`, from S11-05 D-16; pulled in 2026-10-24) | S11-35, S11-37, S11-36 | S11-D3 |
 
-**Stays in the ideas folder** — the rest of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md): scenario files and goldens runner, random-graph invariants, the simulated world, the scoreboard, the labeler, fitting, and dogfood export. Whether they join this spike is decided after the re-implementation.
+**Stays in the ideas folder** — the kinship view for trees and person pages, and patterns beyond spouse, parent and grandparent: [`ideas/kinship-view.md`](../../ideas/kinship-view.md). And the rest of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md): scenario files and goldens runner, random-graph invariants, the simulated world, the scoreboard, the labeler, fitting, and dogfood export. Whether they join this spike is decided after the re-implementation.
 
 ## Working rules
 
@@ -87,6 +89,14 @@ These are the calls for this spike. PR plans treat them as binding.
 - **The menu entry is a sentinel option.** `PVSelect` gets no action item; the row's binding catches the entry's token before `setTarget`, so opening or cancelling the search never marks the row decided. A kit PR is cut only if S11-D3 draws what a sentinel cannot do.
 - **The picked record joins the row's menu**, through one `PromoteFlow` call that adds the record to `row.menu` and sets the target, with `setTarget`'s follow-up. The menu stays the one list of a row's records (S11-35).
 - **Engine first, proven by tests.** S11-35 adds no Go code unless a test finds a gap: a fixed handle no shortlist key reaches is loaded, banded, contested when it conflicts, has evidence and files. A gap found there is fixed in S11-35.
+
+### Kinship shapes
+
+- **Implied links, not a new comparison** ([shape](kinship-shapes.md#shape)). Each side's links are read through the kinship patterns before alignment; a pattern that holds adds a relationship link with the key a direct link would have. `segmentcompare` and `graphalign` are unchanged and stay one hop. An implied grandparent is one hop made from two parent links.
+- **Three patterns, product terms only** (user, 2026-10-24): two `spouse`s in one `marriage` imply `spouse`; a `father` or `mother` and the `subject` of one `birth` imply `parent`, directed; a parent of a parent (each direct or implied) implies `grandparent`. A grandparent never implies a parent; nothing deeper than grandparent.
+- **One pure package, `core/kinship`**, holds the patterns and the derivation, joins the purity guard, and is what trees and person pages read later. Derived at load, never stored: the layer loader and `loadCanon` call it (S11-39).
+- **One fact, one link per side.** A direct link and an implied one between the same two people with the same key merge into one link carrying both shapes' bridge Subjects, credited once.
+- **No new knob.** An implied link weighs as the direct link it stands for (the segment registry's Other pair).
 
 ### Claim evidence
 
@@ -135,6 +145,9 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-35 | Hold a record Promote did not offer | 8 | `PromoteFlow` takes a record from outside the menu and holds it as a decided row; Go tests pin that a fixed off-shortlist handle is loaded, banded, has evidence and files; `FakeStore` holds it | — | — | — | Scoped |
 | S11-37 | One kind-scoped catalog search | 8 | The omnibar's results model and hit row move out of `Features/Workspace` to a shared home, with a `kinds` input and an optional location; the omnibar uses them unchanged | — | — | — | Scoped |
 | S11-36 | Find another record in the target menu | 8 | "Find another record…" at the end of the target menu opens a search of the row's kind on S11-37's model; the pick goes through S11-35 | S11-D3 | S11-35, S11-37, S11-D3 | — | Scoped |
+| S11-38 | Kinship patterns | 9 | `core/kinship`: the three patterns and the derivation over one side's links, each implied link carrying the links behind it; the `vocabkey` term constants and their seed check | — | — | — | Scoped |
+| S11-39 | Matching reads kinship shapes | 9 | The layer loader and `loadCanon` add implied links; one link per fact per side; goldens for marriage ↔ spouse, birth parents ↔ parent, chain ↔ grandparent; canon reach and cost measured | — | S11-38 | — | Scoped |
+| S11-40 | Implied links on the evidence sheet | 9 | A corresponding implied link gives a relationship line that says how it was recorded and pins every bridge behind it; copy through L10n in the existing relationship Card | — | S11-39 | — | Scoped |
 | S11-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -220,10 +233,19 @@ SLICE 8 — Find another record
          named record of the row's kind; the row holds it after other rows are
          decided, shows its band and Contested, opens its evidence, and Done files it.
 
+SLICE 9 — Kinship shapes
+  S11-38  Kinship patterns                      (any time)
+  S11-39  Matching reads kinship shapes
+  S11-40  Implied links on the evidence sheet
+  Check: a Source marriage proposes its couple strong on two people the tree has as
+         spouses; a birth naming the father matches the tree's parent link; a parent
+         chain matches a grandparent link; the sheet says "both are spouses in the
+         marriage…" and checking it pins both participations.
+
 S11-99 — Dogfood close / docs
 ```
 
-Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 7 after S11-16; slice 6 any time (S11-26 has no dependency); S11-34 any time after S11-27; S11-35 and S11-37 any time, in parallel, and S11-D3 can be drawn while they run. S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
+Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 7 after S11-16; slice 6 any time (S11-26 has no dependency); S11-34 any time after S11-27; S11-38 any time, and slice 9 runs beside slice 8; S11-35 and S11-37 any time, in parallel, and S11-D3 can be drawn while they run. S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
 
 ### Dependencies at a glance
 
@@ -247,6 +269,7 @@ S11-27 ──▶ S11-34
 S11-35 ──┐
 S11-37 ──┤
 S11-D3 ──┴──▶ S11-36
+S11-38 ──▶ S11-39 ──▶ S11-40
 ```
 
 ---
@@ -547,3 +570,28 @@ Preparatory refactor, from the map review (K-1, 2026-10-24).
 **Not this PR.** Promote (S11-36). Any change to ranking or hit kinds.
 **Check.** The omnibar works as before (its tests pass); a test drives the shared model with `kinds: ["person"]` and gets only person hits.
 **Context.** `macos/App/Features/Workspace/OmnibarResultsModel.swift`, `OmnibarResultsHost.swift`, `OmnibarHitPresentation.swift`; [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) for where the row view lands.
+
+### Slice 9 — Kinship shapes
+
+Pulled in from the ideas folder on 2026-10-24, with grandparent added by the user. Design: [`kinship-shapes.md`](kinship-shapes.md).
+
+#### S11-38 — Kinship patterns
+
+**Ships.** `core/kinship`: the three patterns ([shape](kinship-shapes.md#shape)) and one derivation that takes a side's links (ends, `vocabkey.BridgeKey`, bridge Subjects, the event's type for participations) and returns the implied links, each with the links it was made from; a direct and an implied link with the same ends and key come back as one. `core/vocabkey` gains the term constants the patterns name, with a seed check that each is a seeded term (like S11-10's port of `TestDefaultProfileCardinality`). The package joins the one purity guard. Unit tests: each pattern, direction through `segmentcompare.Key`, grandparent from direct, implied and mixed parent links, no parent from a grandparent, nothing from catalog-only terms, the merge.
+**Not this PR.** Any caller (S11-39). Patterns beyond the three ([`ideas/kinship-view.md`](../../ideas/kinship-view.md)).
+**Check.** `go test ./core/kinship/...` passes with no build tags; the guard lists the package.
+**Context.** Working rules under [Kinship shapes](#kinship-shapes); [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) (a new layer-side package and its guard line).
+
+#### S11-39 — Matching reads kinship shapes
+
+**Ships.** `promotealign`'s layer loader adds `core/kinship`'s implied links to `Layer.Bridges` (their `Associations` are the bridges behind them, for S11-40), and `loadCanon` adds them to `Canon.Edges`, reaching as far as the patterns need (an event's other participants; a parent's parents for grandparent). Goldens in `graphalign` / `promotealign`: a Source marriage against a filed spouse relationship, a birth's father against a filed parent link, a Source parent chain against a filed grandparent, each the reverse too, and a fact recorded in two shapes on one side credited once. The obituary golden and sparse cases still pass. Times the canon reach on S11-21's fixture when it has landed, else on `bench_test.go`'s. [`matching-model.md`](../../matching-model.md) and [`promote-graph-alignment.md`](../../promote-graph-alignment.md) say links are read through the kinship patterns.
+**Not this PR.** The evidence sheet (S11-40). New knobs (working rule "No new knob").
+**Check.** The goldens above pass; a Source with only a marriage proposes the couple at the band the same Source with a spouse relationship gets.
+**Context.** [Counting once](kinship-shapes.md#counting-once), [weight](kinship-shapes.md#weight); [layer 6 procedure](comparison-layers.md#layer-6-procedure); S11-14 D-11 (link weights).
+
+#### S11-40 — Implied links on the evidence sheet
+
+**Ships.** In `claimevidence`, a relationship line from a corresponding implied link says how each side recorded the fact (through the event, through a chain, or directly) and its bundle holds every bridge behind it and the event's defining properties, so checking it pins them all. Its wording keys join the evidence wording table (S11-33's one seeded-term table) and `ConclusionVocabulary.swift` under `swift_vocabulary_test.go`; the sentences go through L10n and the existing relationship Card draws them. No new chrome.
+**Not this PR.** Trees and person pages ([`ideas/kinship-view.md`](../../ideas/kinship-view.md)).
+**Check.** A Source marriage against a filed spouse relationship shows "…both are spouses in the marriage on <date>"; checking it pins both participations; Done on an unopened row pins the same.
+**Context.** [On the evidence sheet](kinship-shapes.md#on-the-evidence-sheet); [`claim-evidence.md`](claim-evidence.md#evidence-through-relationships); [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).

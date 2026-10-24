@@ -1,0 +1,69 @@
+# Kinship shapes: one fact, several ways to record it
+
+**Status:** pulled into [Spike 11](deployment-plan.md) on 2026-10-24 (S11-38, S11-39, S11-40). Idea first written 2026-10-19 while shipping S11-14, as `docs/ideas/relationships-from-shared-events.md`; grandparent added by the user on 2026-10-24. What stays later is in [`ideas/kinship-view.md`](../../ideas/kinship-view.md).
+
+Matching today: [`comparison-layers.md`](comparison-layers.md#segments-layer-5-and-graph-alignment-layer-6) (segments, layer 6). Seeded terms: [`seeded-vocabulary.md`](../../seeded-vocabulary.md).
+
+## The problem
+
+A kinship fact can be recorded in more than one shape:
+
+| Fact | Direct | Through an event | Through a chain |
+| --- | --- | --- | --- |
+| A and B are spouses | `relationship · spouse` between A and B | A and B are both `spouse` in one `marriage` | — |
+| A is B's parent | `relationship · parent`, A parent of B | A is `father` or `mother`, B is `subject`, in one `birth` | — |
+| A is C's grandparent | `relationship · grandparent`, A grandparent of C | — | A is a parent of B, and B is a parent of C (each in any parent shape) |
+
+Matching does not know these are one fact. `segmentcompare.Corresponds` lines up keys by type, term and direction, so a participation never corresponds to a relationship. If a Source records the marriage and the research graph records the spouse relationship, the link adds nothing to the match. A sparse Source (a birth record naming the parents) against a tree built from relationships (A parent of B) gets no help from the parents.
+
+## Shape
+
+**Implied links.** Before alignment, each side's links are read through a small table of **kinship patterns**. A pattern that holds adds an **implied link**: a relationship link between the two people, with the same key a direct link would have. Graph alignment and segment compare see it as an ordinary link and need no change. They stay one hop: an implied grandparent link is one hop from A to C, made from two parent links.
+
+| Pattern | Holds when | Implies |
+| --- | --- | --- |
+| Marriage spouses | Two people are each `spouse` in one `marriage` event | `relationship · spouse` between them |
+| Birth parents | A is `father` or `mother` and B is `subject` in one `birth` event | `relationship · parent`, A parent of B |
+| Parent of a parent | A is a parent of B and B is a parent of C, each by a direct or implied link | `relationship · grandparent`, A grandparent of C |
+
+- **Directed where the roles say so.** Birth roles name the parent end (`father`, `mother`) and the child end (`subject`), so the implied parent link is directed like a recorded one, and reads through `segmentcompare.Key` with its inverse (`child`).
+- **One way only.** A chain implies a grandparent. A grandparent link does not imply a parent in between; there is no one to name.
+- **Grandparent stops at two generations.** Great-grandparent and deeper are not seeded terms and are not derived.
+- **Seeded terms only.** The patterns name product terms through `core/vocabkey` constants. `birth` and `subject` exist; S11-38 adds `marriage`, the roles `father`, `mother` and `spouse`, and the relationship terms `spouse`, `parent` and `grandparent`, with a seed check that each is a seeded term. A catalog's own terms imply nothing.
+
+**Derived, not stored.** Implied links are worked out when a side is loaded: the Source layer by `promotealign`'s layer loader, the canon neighborhood by `loadCanon`. Nothing is written to the catalog, and nothing on the Evidence graph changes.
+
+**One pure package.** `core/kinship` holds the pattern table and the derivation: it takes a side's links (each with its two ends, its key and its bridge Subjects) and returns the implied ones, each carrying the links it was made from. It imports no `core/database`, joins the one purity guard, and is the place a family tree or a person page will read later ([`ideas/kinship-view.md`](../../ideas/kinship-view.md)).
+
+## Counting once
+
+- **One fact, one link per side.** When a side records the same fact in two shapes (a spouse relationship and a shared marriage between the same two people), the side carries one spouse link between them, whose bridge Subjects are both shapes'. It is credited once.
+- **The event path still counts on its own.** When both sides record the marriage, the people still meet through the marriage event (a participation link to a different neighbor). The implied spouse link adds its own small credit (the segment registry's Other pair, 0.25 support and 0.25 credit) on top. That is the same as recording the marriage and the relationship on both sides today. Proposed: accept it; the credit is small and the facts agree.
+
+## Weight
+
+An implied link is weighed as the direct link it stands for: spouse, parent and grandparent are all the segment registry's Other pair. No new knob. Whether parent links deserve more is the S11-14 dogfood question, separate from this.
+
+## On the evidence sheet
+
+A relationship line today comes from a corresponding segment ([`claim-evidence.md`](claim-evidence.md#evidence-through-relationships)). An implied link that corresponds gives a relationship line too, and it says how it was recorded:
+
+- "They are spouses: both are spouses in the marriage on 12 May 1842" (an implied link on the Source side), or "…the record has them as spouses" (direct).
+- Checking the line pins its bundle: every bridge behind the implied link (both participations, or both parent links of a chain), and the event's defining properties, as a relationship bundle does today.
+
+The line is drawn by the sheet's existing relationship Card; only its sentence is new. No new chrome.
+
+## What stays later
+
+In [`ideas/kinship-view.md`](../../ideas/kinship-view.md):
+
+- **Family trees and person pages** reading both shapes as one fact (a canonical kinship view on `core/kinship`).
+- **Other patterns:** siblings from shared parents, aunts and uncles (`pibling`), godparents at a baptism, divorce, census households, great-grandparents.
+- **Conflicts between shapes** (a direct `sibling` and a shared marriage as spouses).
+- **A project's own patterns** (see [`ideas/term-management.md`](../../ideas/term-management.md)).
+
+## Open questions
+
+1. **Counting once across paths.** Proposed above: one link per side per fact; the event path and the implied link each credit when both sides record the event. The alternative is to drop an implied link that both sides also share through the event, which needs the walk to know the shapes.
+2. **The sheet line.** Is a line that says how a fact was recorded wanted in this spike (S11-40), or is matching enough for now?
+3. **Birth roles beyond `father` / `mother`.** A birth participant recorded with role `child` (rather than `subject`), or a baptism's parents. Proposed: birth with `subject` only; the rest waits.

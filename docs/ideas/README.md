@@ -40,7 +40,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
 - [`possible-values.md`](possible-values.md)
 - [`term-management.md`](term-management.md) — one place to manage terms, including relationship direction and inverses
-- [`relationships-from-shared-events.md`](relationships-from-shared-events.md) — two spouses in one marriage mean a spouse relationship; matching, family trees and person pages should read both shapes as one fact
+- [`kinship-view.md`](kinship-view.md) — family trees and person pages reading every kinship shape as one fact, and patterns beyond spouse, parent and grandparent (matching's part is Spike 11)
 
 ## Archived
 
