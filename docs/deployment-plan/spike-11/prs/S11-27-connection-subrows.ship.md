@@ -1,7 +1,7 @@
 # Ship log — S11-27 Connection subrows on Promote
 
 **Plan:** [`S11-27-connection-subrows.md`](S11-27-connection-subrows.md) · **Branch:** `s11-27-connection-subrows` · **PR:** #530
-**State:** fixing 5 (user change)
+**State:** ready
 
 ## Round 0 — implement
 Head `17034618`. Gate PASS (orchestrator re-ran). Draft PR #530. Report: no deviations from Decisions or Scope; three small differences recorded in the plan's Landed note (`isSymmetric` takes `EvidenceGraphPlacedBridge` after a rename on `main`; `PromoteConnectionSubrows` also takes the host ref for the expander identifier; two test helpers `link` and `mapped`). AC-3.2 – 3.4 and AC-4.4 are built but need the manual check.
@@ -114,9 +114,6 @@ Check: `rg -n "connectionHosts|host row" docs/deployment-plan/spike-11/deploymen
 ## Round 4 — fix
 Head `4d1f42bc`. Gate PASS (orchestrator re-ran). F-9 done; CON-1 (r3), MNT-8, MNT-9 **Resolved** (read by the orchestrator: `rg` prints nothing).
 
-## Result
-Gate PASS · CI green · open: none · follow-ups: — · to user: UX-4 answered (dropped); pointer and cap removed by the user (A-1 – A-5) · CON miss: none
-
 ## Round 5 — user change (2026-10-23)
 The user asked to remove the grouping selector ("Grouped by kind / assessment") and its logic: kind is the default and only grouping. Recorded in the plan as **Amended** A-6. (S11-D1 had kept both groupings; the user's call supersedes it.)
 
@@ -126,3 +123,19 @@ Files: `macos/App/Features/Promote/PromoteView.swift`, `PromoteFlow.swift`, `Pro
 Failing test first: none (removal; existing tests stay green).
 Do: delete the `PVSelect` in `mappedBar` and everything A-6 lists. `sections` returns the three kind sections only. When `model.entry.mapAll` is true the mapped bar has nothing left: do not draw it (no empty row of padding). Keep `section(...)` and `kindSection(...)` if still used; inline `section` into `kindSection` only if it then has one caller. Keep `L10n.Promote.assessment(_:)`.
 Check: `rg -n "Grouping|setGroup|groupBinding|groupKind|groupAssessment|groupLabel|groupedByKind|groupedByAssessment|promote\.page\.group" macos` prints nothing; `python3 scripts/check-localizable-xcstrings.py` OK; scripts/check-pr.sh PASS.
+
+## Round 5 — fix
+Head `7d671e74`. Gate PASS (orchestrator re-ran). F-10 done: `PVSelect`, `mappedBar`, `Grouping`, `group`, `setGroup`, `groupBinding`, the assessment branch and five strings removed; `section(...)` inlined into `kindSection`; "Opened from …" is `openedFromNote`, shown in the same cases as before (`mappedRest && !mapAll`). No deviations.
+
+## Round 5 — review
+Reviewers: CON (Sonnet), UX. Skipped: MNT (deletion only, read by the orchestrator: no leftover reader, one helper inlined); SEC+PRF (no paths of theirs; removes a branch).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| CON-1 (r5) | CON | minor | Plan body still carries AC-3.4 and §10 step 5 unmarked | Rejected | A-1 – A-5 rely on the Amended block alone ("where they differ … they win"); same convention for A-6 |
+| CON-2 (r5) | CON | nit (raised: stale text in the orchestrator's own Amended block) | A-4 row said "AC-3.4 stays" | Fixed by the orchestrator | A-4 row now reads "(AC-3.4 was kept here, then dropped by A-6.)" |
+
+Nits (logged): `UX-1 (r5) · PromoteView.swift:29 · empty notices stack may still add a 20pt gap at the top; pre-existing, check in the manual run` · `UX-2 (r5) · PromoteView.swift:161 · "Opened from" note sits 20pt above People; a smaller gap would tie it to the list (taste)`
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: — · to user: UX-4 answered (dropped); pointer and cap removed (A-1 – A-5) and grouping menu removed (A-6) by the user · CON miss: none
