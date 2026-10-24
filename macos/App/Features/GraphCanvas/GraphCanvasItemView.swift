@@ -8,7 +8,18 @@ import AppKit
 /// layer's `contentsScale` or the appearance changed, or after
 /// ``invalidatePaint()``. A subclass whose content changed calls
 /// ``invalidatePaint()``; `needsDisplay` alone shows the last image again.
+///
+/// The view is its content plus ``paintOutset`` on every side, so shadows and
+/// halos that paint outside the content are not clipped. ``paint()`` draws in
+/// content coordinates: (0, 0) is the content's top-left, not the view's.
 class GraphCanvasItemView: NSView {
+    /// Transparent margin around the content on every side.
+    static let paintOutset: CGFloat = 24
+
+    /// The size of the content, without the margin.
+    let contentSize: CGSize
+
+
     private struct PaintKey: Equatable {
         var pixelWidth: Int
         var pixelHeight: Int
@@ -18,10 +29,21 @@ class GraphCanvasItemView: NSView {
     private var image: CGImage?
     private var imageKey: PaintKey?
 
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
+    init(contentSize: CGSize) {
+        self.contentSize = contentSize
+        let outset = Self.paintOutset
+        super.init(frame: NSRect(
+            x: 0, y: 0,
+            width: ceil(contentSize.width + 2 * outset),
+            height: ceil(contentSize.height + 2 * outset)
+        ))
         wantsLayer = true
         layerContentsRedrawPolicy = .onSetNeedsDisplay
+    }
+
+    @available(*, unavailable)
+    override init(frame frameRect: NSRect) {
+        fatalError("init(frame:) has not been implemented; use init(contentSize:)")
     }
 
     @available(*, unavailable)
@@ -33,7 +55,16 @@ class GraphCanvasItemView: NSView {
     override var isOpaque: Bool { false }
     override var wantsUpdateLayer: Bool { true }
 
-    /// Draws the item in the current `NSGraphicsContext`, flipped, in `bounds`.
+    /// The content plus the margin on every side.
+    final override var intrinsicContentSize: NSSize {
+        NSSize(
+            width: contentSize.width + 2 * Self.paintOutset,
+            height: contentSize.height + 2 * Self.paintOutset
+        )
+    }
+
+    /// Draws the item in the current `NSGraphicsContext`, flipped, in content
+    /// coordinates: (0, 0) is the content's top-left and `contentSize` its extent.
     func paint() {}
 
     /// Whole points on both sides, so `bounds` is integral and the image maps
@@ -44,7 +75,11 @@ class GraphCanvasItemView: NSView {
 
     /// Keeps `cacheDisplay`, printing and bitmap tests on the same paint.
     final override func draw(_ dirtyRect: NSRect) {
+        guard let context = NSGraphicsContext.current else { return }
+        context.saveGraphicsState()
+        context.cgContext.translateBy(x: Self.paintOutset, y: Self.paintOutset)
         paint()
+        context.restoreGraphicsState()
     }
 
     /// `cacheDisplay` and printing paint directly through ``draw(_:)`` instead
@@ -63,8 +98,8 @@ class GraphCanvasItemView: NSView {
         cg.restoreGState()
     }
 
-    /// The paint as an image `scale` pixels per point, top row first, or nil
-    /// for an empty view. Goes through `cacheDisplay` into a point-sized
+    /// The paint, margin included, as an image `scale` pixels per point, top row
+    /// first, or nil for empty content. Goes through `cacheDisplay` into a point-sized
     /// bitmap, so AppKit scales shadows and the screen, tests and printing
     /// share one path.
     func renderImage(scale: CGFloat) -> CGImage? {
@@ -84,9 +119,9 @@ class GraphCanvasItemView: NSView {
         return rep.cgImage
     }
 
-    /// The image's size in pixels at `scale`; nil for an empty view.
+    /// The image's size in pixels at `scale`; nil for empty content.
     private func pixelSize(scale: CGFloat) -> (width: Int, height: Int)? {
-        guard bounds.width > 0, bounds.height > 0 else { return nil }
+        guard contentSize.width > 0, contentSize.height > 0 else { return nil }
         return (
             max(1, Int((bounds.width * scale).rounded(.up))),
             max(1, Int((bounds.height * scale).rounded(.up)))

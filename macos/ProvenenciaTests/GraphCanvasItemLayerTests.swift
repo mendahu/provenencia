@@ -6,14 +6,7 @@ import Testing
 @Suite
 @MainActor
 struct GraphCanvasItemLayerTests {
-    private final class SizedView: GraphCanvasItemView {
-        override var intrinsicContentSize: NSSize {
-            NSSize(
-                width: 100 + 2 * GraphCanvasItemLayer.paintOutset,
-                height: 40 + 2 * GraphCanvasItemLayer.paintOutset
-            )
-        }
-    }
+    private final class SizedView: GraphCanvasItemView {}
 
     private final class BuildCounter {
         var counts: [String: Int] = [:]
@@ -44,7 +37,7 @@ struct GraphCanvasItemLayerTests {
             model: model,
             makeView: {
                 counter?.counts[id, default: 0] += 1
-                return SizedView()
+                return SizedView(contentSize: CGSize(width: 100, height: 40))
             }
         )
     }
@@ -55,7 +48,7 @@ struct GraphCanvasItemLayerTests {
         layer.update([item("a", at: CGPoint(x: 300, y: 200))])
 
         let view = try #require(layer.view(for: "a"))
-        let outset = GraphCanvasItemLayer.paintOutset
+        let outset = GraphCanvasItemView.paintOutset
         #expect(view.superview === container)
         #expect(view.frame.origin == CGPoint(x: 300 - outset, y: 200 - outset))
         #expect(view.frame.width >= 100 + 2 * outset)

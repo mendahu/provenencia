@@ -3,7 +3,7 @@
 /// One host-drawn item the canvas positions in AppKit — a graph card.
 ///
 /// Each item is a ``GraphCanvasItemView`` the host builds with ``makeView``, sized by its
-/// `intrinsicContentSize` (which includes ``GraphCanvasItemLayer/paintOutset``),
+/// `contentSize` plus ``GraphCanvasItemView/paintOutset`` on every side,
 /// and a subview of ``GraphCanvasDocumentView`` above the host's base SwiftUI
 /// layer. AppKit owns where items are: a drag moves one view's frame. A view is
 /// rebuilt only when ``model`` changes.
@@ -22,7 +22,7 @@ struct GraphCanvasItem {
     /// paints in `paint()` and calls `invalidatePaint()` when its content
     /// changes. The view is paint plus accessibility; pointer input stays with
     /// ``GraphCanvasPointerController``.
-    /// It sizes itself through `intrinsicContentSize`, outset margin included.
+    /// It sizes itself through `init(contentSize:)`.
     var makeView: @MainActor () -> GraphCanvasItemView
 }
 
@@ -37,10 +37,6 @@ struct GraphCanvasRotorEntry: Equatable {
 /// Hosts ``GraphCanvasItem``s as AppKit subviews of the canvas document.
 @MainActor
 final class GraphCanvasItemLayer {
-    /// Transparent margin around each item's content, so shadows and selection
-    /// halos that paint outside the content are not clipped by its view.
-    static let paintOutset: CGFloat = 24
-
     /// Called when VoiceOver moves to an item through a rotor.
     var onRotorSelect: ((String) -> Void)?
 
@@ -153,16 +149,9 @@ final class GraphCanvasItemLayer {
     /// `invalidatePaint()`, so a pan or a zoom step composites cached layers.
     /// It goes above the other items at the current ``contentsScale``.
     private func insert(_ item: GraphCanvasItem) -> GraphCanvasItemView {
-        let view = makeView(item)
+        let view = item.makeView()
         container?.addSubview(view, positioned: .above, relativeTo: nil)
         view.layer?.contentsScale = contentsScale
-        return view
-    }
-
-    /// Creates the item's view and sizes it to its intrinsic size.
-    private func makeView(_ item: GraphCanvasItem) -> GraphCanvasItemView {
-        let view = item.makeView()
-        view.frame.size = view.fittingSize
         return view
     }
 
@@ -170,8 +159,8 @@ final class GraphCanvasItemLayer {
         guard let view = views[id], let origin = origins[id] else { return }
         let offset = dragOffsets[id] ?? .zero
         view.setFrameOrigin(CGPoint(
-            x: origin.x + offset.width - Self.paintOutset,
-            y: origin.y + offset.height - Self.paintOutset
+            x: origin.x + offset.width - GraphCanvasItemView.paintOutset,
+            y: origin.y + offset.height - GraphCanvasItemView.paintOutset
         ))
     }
 }

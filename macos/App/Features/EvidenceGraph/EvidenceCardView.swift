@@ -26,12 +26,7 @@ final class EvidenceCardView: GraphCanvasItemView {
         self.card = card
         self.isGhost = isGhost
         self.layout = Self.measure(card)
-        let outset = GraphCanvasItemLayer.paintOutset
-        super.init(frame: NSRect(
-            x: 0, y: 0,
-            width: layout.size.width + outset * 2,
-            height: layout.size.height + outset * 2
-        ))
+        super.init(contentSize: layout.size)
         if isGhost {
             setAccessibilityElement(false)
         } else {
@@ -78,13 +73,6 @@ final class EvidenceCardView: GraphCanvasItemView {
         }
     }
 
-    override var intrinsicContentSize: NSSize {
-        NSSize(
-            width: layout.size.width + GraphCanvasItemLayer.paintOutset * 2,
-            height: layout.size.height + GraphCanvasItemLayer.paintOutset * 2
-        )
-    }
-
     override func paint() {
         let alpha: CGFloat = {
             if isGhost { return 0.62 }
@@ -94,7 +82,7 @@ final class EvidenceCardView: GraphCanvasItemView {
         }()
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current?.cgContext.setAlpha(alpha)
-        _ = Self.measure(card, painter: Painter(outset: GraphCanvasItemLayer.paintOutset))
+        _ = Self.measure(card, painter: Painter())
         NSGraphicsContext.restoreGraphicsState()
     }
 
@@ -121,18 +109,13 @@ final class EvidenceCardView: GraphCanvasItemView {
 
 @MainActor
 private final class Painter {
-    let outset: CGFloat
-    init(outset: CGFloat) { self.outset = outset }
-
-    func place(_ rect: CGRect) -> CGRect { rect.offsetBy(dx: outset, dy: outset) }
-
     func fill(_ rect: CGRect, _ color: Color) {
         ns(color).setFill()
-        place(rect).fill()
+        rect.fill()
     }
 
     func fillRound(_ rect: CGRect, radius: CGFloat, _ color: Color, shadow: (CGFloat, CGFloat, CGFloat)? = nil) {
-        let path = continuous(place(rect), radius: radius)
+        let path = continuous(rect, radius: radius)
         if let shadow {
             NSGraphicsContext.saveGraphicsState()
             let shade = NSShadow()
@@ -151,7 +134,7 @@ private final class Painter {
 
     func beginClip(_ rect: CGRect, radius: CGFloat) {
         NSGraphicsContext.saveGraphicsState()
-        continuous(place(rect), radius: radius).setClip()
+        continuous(rect, radius: radius).setClip()
     }
 
     func endClip() {
@@ -159,7 +142,7 @@ private final class Painter {
     }
 
     func strokeRound(_ rect: CGRect, radius: CGFloat, _ color: Color, width: CGFloat, dash: [CGFloat] = []) {
-        let path = continuous(place(rect), radius: radius)
+        let path = continuous(rect, radius: radius)
         path.lineWidth = width
         if !dash.isEmpty { path.setLineDash(dash, count: dash.count, phase: 0) }
         ns(color).setStroke()
@@ -184,7 +167,7 @@ private final class Painter {
             .kern: kern,
         ]
         let line = max(font.boundingRectForFont.height, 1)
-        var box = place(rect)
+        var box = rect
         box.size.height = min(box.height, ceil(line) * CGFloat(max(lines, 1)))
         NSAttributedString(string: uppercased ? string.uppercased() : string, attributes: attributes)
             .draw(with: box, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine])
@@ -192,12 +175,12 @@ private final class Painter {
 
     func symbol(_ symbol: PVSymbol, in rect: CGRect, _ color: Color) {
         guard let image = EvidenceCardSymbols.image(symbol, pointSize: min(rect.width, rect.height)) else { return }
-        drawTinted(image, in: place(rect), color: ns(color))
+        drawTinted(image, in: rect, color: ns(color))
     }
 
     /// An aspect-fit image in a rounded tile; the placeholder fill when not loaded.
     func tile(_ image: NSImage?, in rect: CGRect) {
-        let target = place(rect)
+        let target = rect
         NSGraphicsContext.saveGraphicsState()
         let clip = NSBezierPath(roundedRect: target, xRadius: 4, yRadius: 4)
         clip.addClip()
@@ -217,7 +200,7 @@ private final class Painter {
 
     func mark(_ key: PVMarkKey, in rect: CGRect, _ color: Color) {
         guard let image = NSImage(named: key.assetName) else { return }
-        drawTinted(image, in: place(rect), color: ns(color))
+        drawTinted(image, in: rect, color: ns(color))
     }
 
     /// Recolors a template image in the view's current context.
@@ -245,7 +228,7 @@ private final class Painter {
     }
 
     func bracket(_ rect: CGRect) {
-        let box = place(rect)
+        let box = rect
         let x = box.minX + 8
         let top = box.minY + 12
         let bottom = box.minY + max(box.height - 12, 14)

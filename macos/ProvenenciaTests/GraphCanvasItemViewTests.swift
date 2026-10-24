@@ -15,8 +15,8 @@ struct GraphCanvasItemViewTests {
         }
     }
 
-    private func view(frame: NSRect = NSRect(x: 0, y: 0, width: 40, height: 30)) -> RedSquareView {
-        let view = RedSquareView(frame: frame)
+    private func view(contentSize: CGSize = CGSize(width: 40, height: 30)) -> RedSquareView {
+        let view = RedSquareView(contentSize: contentSize)
         view.layer?.contentsScale = 1
         return view
     }
@@ -49,19 +49,35 @@ struct GraphCanvasItemViewTests {
         #expect(counts == [1, 1, 2, 3, 4])
     }
 
-    @Test func renderImageIsScaledAndTopLeftIsRed() throws {
+    @Test func renderImageIsScaledAndTheContentOriginIsRed() throws {
+        let outset = GraphCanvasItemView.paintOutset
         let image = try #require(view().renderImage(scale: 2))
-        #expect(image.width == 80)
-        #expect(image.height == 60)
+        #expect(image.width == Int((40 + 2 * outset) * 2))
+        #expect(image.height == Int((30 + 2 * outset) * 2))
 
-        let color = try #require(NSBitmapImageRep(cgImage: image).colorAt(x: 0, y: 0))
+        let rep = NSBitmapImageRep(cgImage: image)
+        let at = Int(outset * 2)
+        let color = try #require(rep.colorAt(x: at, y: at))
         #expect(color.redComponent > 0.9)
         #expect(color.greenComponent < 0.1)
         #expect(color.blueComponent < 0.1)
+        #expect((rep.colorAt(x: at - 1, y: at - 1)?.alphaComponent ?? 0) < 0.05)
     }
 
-    @Test func emptyViewRendersNothing() {
-        #expect(view(frame: .zero).renderImage(scale: 2) == nil)
+    @Test func emptyContentRendersNothing() {
+        #expect(view(contentSize: .zero).renderImage(scale: 2) == nil)
+    }
+
+    @Test func sizeIsTheContentPlusTheOutsetOnEverySide() throws {
+        let outset = GraphCanvasItemView.paintOutset
+        let view = view()
+        #expect(view.intrinsicContentSize == NSSize(width: 40 + 2 * outset, height: 30 + 2 * outset))
+        #expect(view.frame.size == view.intrinsicContentSize)
+
+        let image = try #require(view.renderImage(scale: 1))
+        let pixel = try #require(NSBitmapImageRep(cgImage: image).colorAt(x: Int(outset), y: Int(outset)))
+        #expect(pixel.redComponent > 0.9)
+        #expect(pixel.greenComponent < 0.1)
     }
 
     private final class ShadowSquareView: GraphCanvasItemView {
@@ -85,27 +101,29 @@ struct GraphCanvasItemViewTests {
 
     @Test(arguments: [CGFloat(1), CGFloat(2)])
     func shadowOffsetKeepsItsPointSizeAtAnyScale(scale: CGFloat) throws {
-        let view = ShadowSquareView(frame: NSRect(x: 0, y: 0, width: 40, height: 40))
+        let outset = GraphCanvasItemView.paintOutset
+        let view = ShadowSquareView(contentSize: CGSize(width: 40, height: 40))
         let image = try #require(view.renderImage(scale: scale))
         let rep = NSBitmapImageRep(cgImage: image)
-        let column = Int(15 * scale)
+        let column = Int((15 + outset) * scale)
         var lowest = -1
         for y in 0..<rep.pixelsHigh where (rep.colorAt(x: column, y: y)?.alphaComponent ?? 0) > 0.5 {
             lowest = y
         }
         // The square ends at y = 20; its shadow ends 4 pt below.
-        #expect(CGFloat(lowest + 1) / scale == 24)
+        #expect(CGFloat(lowest + 1) / scale == 24 + outset)
     }
 
     @Test func fractionalFrameHeightRoundsUpAndLineStaysCrisp() throws {
-        let view = LineView(frame: NSRect(x: 0, y: 0, width: 40, height: 30))
-        view.setFrameSize(NSSize(width: 40, height: 30.4))
-        #expect(view.bounds.height == 31)
+        let outset = GraphCanvasItemView.paintOutset
+        let view = LineView(contentSize: CGSize(width: 40, height: 30.4))
+        #expect(view.bounds.height == ceil(30.4 + 2 * outset))
         let image = try #require(view.renderImage(scale: 1))
         let rep = NSBitmapImageRep(cgImage: image)
-        func alpha(_ y: Int) -> CGFloat { rep.colorAt(x: 5, y: y)?.alphaComponent ?? 0 }
-        #expect(alpha(20) > 250.0 / 255)
-        #expect(alpha(19) < 5.0 / 255)
-        #expect(alpha(21) < 5.0 / 255)
+        let line = 20 + Int(outset)
+        func alpha(_ y: Int) -> CGFloat { rep.colorAt(x: Int(outset) + 5, y: y)?.alphaComponent ?? 0 }
+        #expect(alpha(line) > 250.0 / 255)
+        #expect(alpha(line - 1) < 5.0 / 255)
+        #expect(alpha(line + 1) < 5.0 / 255)
     }
 }
