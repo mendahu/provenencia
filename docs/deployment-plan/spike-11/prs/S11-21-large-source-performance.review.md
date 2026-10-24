@@ -9,7 +9,7 @@
 ## Writer's own calls
 - The benchmarks keep their catalog through `benchShape`, except that hub events past the first 20,000 become deaths (D-4). Their numbers are reported only.
 - No name-format commit effect, although the scope entry names one: the only writer is `nameformats.Install` at onboarding, so the name format is warmed at open like the alias tables (D-9). The scope entry is rewritten in STEP-9.
-- Warm Evidence keeps `SoleGraph`'s 2 SELECTs until S12-09 deletes it; the test measures `SoleGraph`'s count in place (AC-3.3).
+- ~~Warm Evidence keeps `SoleGraph`'s 2 SELECTs until S12-09 deletes it.~~ Resolved: S12-09 landed (#535) and removed `SoleGraph` from Promote; AC-3.3 now expects 0 SELECTs and AC-3.4 expects 1.
 - Not built, measured inside budget: in-place index update, key-value profiling, a bounded canon walk.
 - Map: S11-21 depends on S11-19 as well as S11-16; S11-31 depends on S11-21 (it sizes its cap from this fixture).
 
@@ -67,3 +67,7 @@
 
 ### X-10 · nit
 **Answer:** Logged.
+
+## Refresh after S12-09 (2026-10-24)
+
+`main` moved to `cd54db8` (S12-18 #532, S12-09 #535). Every Current state row was re-checked there. Changes to the plan: `Propose` and `EvidenceRequest` take a graph id (`f.graph(src)` in the fixture); `loadInputs` no longer calls `SoleGraph`, so AC-3.3 is 0 SELECTs and AC-3.4 is 1, D-10 compares with literals, and the S12-09 Out line and Next-adds line are gone. No Decision changed. Not re-reviewed: the change removes work and adds no new choice.
