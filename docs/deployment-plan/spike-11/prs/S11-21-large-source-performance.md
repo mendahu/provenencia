@@ -1,6 +1,7 @@
 # S11-21 — Large-Source performance check
 
-**Status:** Planned
+**Status:** Landed in [#536](https://github.com/mendahu/provenencia/pull/536) (2026-10-24)
+**Landed:** none — the code matches the plan. `namealiases.withAliases` stays as a thin wrapper over `buildIndex`.
 **Spike / slice:** Spike 11 · Slice 7 — Performance
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: engine timing, caching and one test; nothing on screen changes)
