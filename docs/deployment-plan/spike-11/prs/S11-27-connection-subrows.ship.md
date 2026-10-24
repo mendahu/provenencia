@@ -138,4 +138,4 @@ Reviewers: CON (Sonnet), UX. Skipped: MNT (deletion only, read by the orchestrat
 Nits (logged): `UX-1 (r5) · PromoteView.swift:29 · empty notices stack may still add a 20pt gap at the top; pre-existing, check in the manual run` · `UX-2 (r5) · PromoteView.swift:161 · "Opened from" note sits 20pt above People; a smaller gap would tie it to the list (taste)`
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: — · to user: UX-4 answered (dropped); pointer and cap removed (A-1 – A-5) and grouping menu removed (A-6) by the user · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: — · to user: UX-4 answered (dropped); pointer and cap removed (A-1 – A-5) and grouping menu removed (A-6) by the user · CON miss: none
