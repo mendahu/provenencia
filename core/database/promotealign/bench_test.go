@@ -48,7 +48,6 @@ func largeShape(r *rand.Rand, names *zipfNames) catalogShape {
 	}
 }
 
-// letters is the lowercase base 26 of k: a for 0, ba for 26.
 // benchRef is a canonical entity ref the fixture writes. The "U" cannot appear
 // in a ref core/ref mints (its alphabet leaves out I, L, O and U), so a fixture
 // ref never equals a ref the test mints at random.
@@ -56,6 +55,7 @@ func benchRef(prefix string, n int) string {
 	return prefix + "-U" + fmt.Sprintf("%05d", n)
 }
 
+// letters is the lowercase base 26 of k: a for 0, ba for 26.
 func letters(k int) string {
 	if k == 0 {
 		return "a"

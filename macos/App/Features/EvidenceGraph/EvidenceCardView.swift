@@ -62,8 +62,9 @@ final class EvidenceCardView: GraphCanvasItemView {
         }
     }
 
-    /// One decode per missing likeness image, repainting when it lands. A
-    /// ghost, and a card with no project folder, paint the placeholder only.
+    /// One decode per missing likeness image, calling `invalidatePaint()` when
+    /// it lands. A ghost, and a card with no project folder, paint the
+    /// placeholder only.
     private func loadMissingLikenesses() {
         guard !isGhost, !card.projectDir.isEmpty else { return }
         let projectDir = card.projectDir
