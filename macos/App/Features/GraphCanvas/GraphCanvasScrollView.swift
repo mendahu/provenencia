@@ -334,9 +334,9 @@ final class GraphCanvasNSScrollView: NSScrollView {
     /// calls this and then ``syncItemContentsScale()``, so a layer AppKit resets
     /// after this call is put back on the next turn.
     private func applyItemContentsScale() {
-        guard !isPinching, window != nil else { return }
+        guard !isPinching, let window else { return }
         items?.contentsScale = GraphCanvasCoordinates.itemContentsScale(
-            backingScale: window?.backingScaleFactor ?? 1,
+            backingScale: window.backingScaleFactor,
             magnification: magnification
         )
     }

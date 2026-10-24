@@ -17,7 +17,7 @@ catalog types so geometry stays extractable (design note §13).
 | `GraphCanvasScrollView` | AppKit magnification bridge |
 | `GraphCanvasDocumentView` | Scroll document; owns mouse; hosts the base SwiftUI layer and the item layer; canvas accessibility group and rotors |
 | `GraphCanvasItemView` | Base for item views: `paint()` renders into an image its layer shows, through `updateLayer` |
-| `GraphCanvasItemLayer` / `GraphCanvasItem` | One `NSView` per item, built by the host (`makeView`, a `GraphCanvasItemView`), positioned by AppKit; rebuilt only when the item's `Equatable` model changes; owns each item's layer and its scale |
+| `GraphCanvasItemLayer` / `GraphCanvasItem` | One `GraphCanvasItemView` per item, built by the host (`makeView`, a `GraphCanvasItemView`), positioned by AppKit; rebuilt only when the item's `Equatable` model changes; owns each item's layer and its scale |
 | `GraphCanvasPointerController` | Hit-test, select, drag (one card, or a group of peers that move with the anchor), empty-canvas pan, selection rectangle (marquee), Shift tracking, Shift-click toggle, place, connect |
 | `GraphCanvasHitTarget` / `GraphCanvasPointerHitTesting` | Document rects + pure helpers |
 | `GraphCanvasViewportController` | Pan deltas + live AppKit `convert` under cursor |
@@ -48,7 +48,7 @@ Audit bar: zero Evidence / catalog / store types under `GraphCanvas/`.
 
 Cards are not part of the host's SwiftUI document. The host pushes them to the
 `graphCanvasItems` environment value (`GraphCanvasItemLayer.update(_:)`), and
-each becomes its own `NSView` above the base layer. A card drag moves that
+each becomes its own `GraphCanvasItemView` above the base layer. A card drag moves that
 one view's frame from `GraphCanvasDocumentView.mouseDragged` — no SwiftUI runs per
 pointer event. An item's view is rebuilt only when its `model` changes, so push
 every item whenever anything they draw changes (selection, hover, data, drag

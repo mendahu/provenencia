@@ -2,7 +2,7 @@
 
 /// One host-drawn item the canvas positions in AppKit — a graph card.
 ///
-/// Each item is an `NSView` the host builds with ``makeView``, sized by its
+/// Each item is a ``GraphCanvasItemView`` the host builds with ``makeView``, sized by its
 /// `intrinsicContentSize` (which includes ``GraphCanvasItemLayer/paintOutset``),
 /// and a subview of ``GraphCanvasDocumentView`` above the host's base SwiftUI
 /// layer. AppKit owns where items are: a drag moves one view's frame. A view is
@@ -123,7 +123,7 @@ final class GraphCanvasItemLayer {
     }
 
     /// The view for an item, for accessibility targets and tests.
-    func view(for id: String) -> NSView? {
+    func view(for id: String) -> GraphCanvasItemView? {
         views[id]
     }
 
