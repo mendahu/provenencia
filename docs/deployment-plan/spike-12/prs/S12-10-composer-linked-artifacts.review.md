@@ -69,3 +69,9 @@ Logged. `cachedCitation(id:)`'s loop is named in STEP-3; the skill lines are in 
 
 ### M-7 · minor · "The graph's Artifacts" means two things
 **Answer:** Fixed — D-4 counts over `evidence_graph_artifacts`; T-3 adds the unlinked-Artifact row. The canvas Files menu effect is under Writer's own calls.
+
+## Round 2
+
+### M-8 · blocker · Graph-scoped counts now read link rows, but writing a link row does not refresh them
+The M-7 fix made `CountByEvidenceGraph` join `evidence_graph_artifacts`, whose effect entry sets no `CitationSource`; a link or unlink would leave `.citationCounts(graphId:)` stale.
+**Answer:** Fixed — D-6: `registry["evidence_graph_artifacts"]` gains `CitationSource: up("graph_id", "source_id")`; D-1's sentence corrected; STEP-1 flips the `TestSourceEvidenceIsNotActivity` row and adds T-12; D-10's FakeStore link writes report `citationSources`; STEP-8 edits the effects README.
