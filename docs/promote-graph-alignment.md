@@ -163,7 +163,9 @@ Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count foll
 
 - **Decisions live in the page's draft:** the Swift row list (suggested or decided, target, sheet toggles, claim fields). They're sent as `fixed` on every call and never stored.
 - **Loads read the catalog's in-memory graph** (`graphcache`), which keeps handles, Evidence graphs (keyed by graph id) and the match index between calls, so re-runs after decisions skip loading. Each commit drops what it touched (its effects), not a whole revision.
-- **The match index** (the shortlist index) is cached on the graph and dropped by any commit that names a handle, by a vocabulary commit (its keys read term keys and metas), and by new alias tables.
+- **The match index** (the shortlist index) is cached on the graph and dropped by any commit that names a handle, by a vocabulary commit (its keys read term keys and metas), and by a new alias index (`SetAliasIndex`) or name format (`SetNameFormat`).
+- **The candidates memo** holds each Subject's ranked candidate ids on the Source's Evidence graph memo. It is valid for one match index generation: it is dropped with the Evidence graph memo and ignored when the index generation changes.
+- **Open-time warms** (the default name format and the built alias index) are held on the graph until the project closes. `SetAliasIndex` and `SetNameFormat` drop the caches derived from them.
 
 ---
 
@@ -235,7 +237,7 @@ Spike 9 was replanned around this on 2026-10-06. The close note is [`deployment-
 
 §5 and §6 describe the built walk (Spike 11, S11-16). What differs:
 
-- **Query count (§7):** every read is batched (`sqlbatch`), and the canon comes from the in-memory graph, so a warm proposal reads only the layer, the fixed rows, the shortlist index if a handle or vocabulary commit dropped it (one read of every person, event and place node), and, per sheet opened, the claim evidence. Cold, the graph loads one batch per wave of the walk.
+- **Query count (§7):** every read is batched (`sqlbatch`), and the canon comes from the in-memory graph, a warm proposal reads `MAX(revision)` only, and a warm Evidence request reads nothing from the catalog (`TestLargeSourceBudgets` `warm queries`). After a handle or vocabulary commit drops the shortlist index, the next proposal reads it again (one read of every person, event and place node). Cold, the graph loads one batch per wave of the walk.
 - **Properties compared (§6):** only the lead properties of the registry's subject section, with their pools and periods, not every Property both sides carry.
 - **Provenance (§6):** not applied. Every Subject's provenance is 1; credibility, transcription certainty, and member claim confidence don't scale comparisons yet.
 - **Bridge kinds in the loaders:** the layer loader lists its hops (participation, location, relationship, part of, succeeded by) in code. The canon follows every link the graph holds for a `connectrules` bridge, as pins and filing do.
