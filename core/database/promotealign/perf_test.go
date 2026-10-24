@@ -155,6 +155,12 @@ func TestLargeSourceBudgets(t *testing.T) {
 		over(t, "cold proposal", d, budgetCold)
 	})
 
+	t.Run("warm", func(t *testing.T) {
+		propose()
+		d := fastest(3, func() time.Duration { return since(func() { propose() }) })
+		over(t, "warm proposal", d, budgetWarm)
+	})
+
 	t.Run("memo matches a fresh run", func(t *testing.T) {
 		propose()
 		warm := propose()
