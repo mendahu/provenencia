@@ -155,3 +155,11 @@ Head `9e1c40ae`. Gate PASS (orchestrator). F-9 done; both failing tests ran red 
 AC-5.8, user driving the diagnostic build (`PVPAINT` log): open 110 paints; 10 s pan **2** paints (was 9,970); 231 MB on the 1× display; 596 MB on the built-in Retina display; 723 MB at 1.25× (peak 1.29 GB while zooming); zoom out and back in: 692 repaints (552 at 2×, 140 at 2.5×). User: "still performing really well".
 PRF-1 → **To user**: layer memory on Retina.
 Outside-lens notes for the user: card shadow offsets are positive and AppKit casts them upward (pre-existing on `main`); the image is untagged device RGB (P3 colour shift to check).
+
+## CI red on `45d48966` (docs-only commit)
+Go tests: `TestLargeSourceBudgets` — `perf_test.go:126: UNIQUE constraint failed: canonical_entities.ref`. Every earlier branch run passed. Cause: `bulkCanon` writes digit-only refs (`PER-%05d`, `PLC-%05d`, `PLC-T%04d`, `EVT-`/`PAR-`/`LOC-` + `%05d`) that are also valid `ref.Mint` tokens (Crockford alphabet, 5 chars), so a ref the fixture mints at random can collide; about 2 % a run by estimate. On `main` only the benchmarks used them; this PR runs the fixture in every CI run. Gate failure → one fix item.
+
+**F-10 — Fixture refs can never equal a minted ref**
+Files: `core/database/promotealign/bench_test.go`.
+Do: one helper `benchRef(prefix string, n int) string` *(new)* returning `prefix + "-U" + fmt.Sprintf("%05d", n)` (`U` is not in `core/ref` `alphabet`); every ref `bulkCanon` writes goes through it (towns pass their own counters with a distinct prefix inside the number, e.g. `benchRef("PLC", 90000+k)`, so towns and cities stay distinct). Comment: why `U`.
+Check: `CGO_ENABLED=1 go test -tags fts5 -count=20 -run TestLargeSourceBudgets/fixture ./core/database/promotealign/` passes; `git grep -nE 'Sprintf\("[A-Z]{3}-%0|"(EVT|PAR|LOC)-"\+' -- core/database/promotealign/bench_test.go` prints nothing; scripts/check-pr.sh PASS.
