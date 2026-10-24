@@ -1,0 +1,52 @@
+# Promote: find another record
+
+**Status:** pulled into [Spike 11](deployment-plan.md) on 2026-10-24 (S11-35, S11-36, brief S11-D3). Idea first written in S11-05 (D-16), as `docs/ideas/promote-find-another-record.md`.
+
+Today's page: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 (the page). Matching: [`comparison-layers.md`](comparison-layers.md) (relations, bands, contested).
+
+## The problem
+
+Promote's target menu lists only the records Promote offers: the proposed record and its alternatives, then New and Skip. Since matching moved onto value compare (S11-05), a record whose first given name or surname differs from the Subject's is `Different`, so it is never a candidate. A row with no candidate opens New (reason `no_match`) with nothing else in the menu.
+
+A researcher who knows the Subject and a differently named record are one person (a nickname the aliases don't hold, a recorded variant, a married name) has no way to file the Subject on that record from Promote. The only route today is New, then a merge somewhere else, which the app does not have yet.
+
+## Shape
+
+- **An entry at the end of the target menu**, "Find another record…", on every row that has a menu (not an anchor row). It opens a search over the catalog's records of the row's kind.
+- **The pick is a decision like any other row choice.** The row becomes decided on that record. The page sends it to Go as a fixed pair on each re-proposal, like a record picked from the menu.
+- **Held, not moved.** Go never moves a fixed pair. It does score it: `graphalign`'s `anchor` makes the held handle the Subject's first candidate, and `loadCanon` loads every fixed anchor whether or not the shortlist would have found it. So the row shows the record's own band, the Contested marker when a property conflicts, and the evidence sheet, just as for a menu pick (the decided-row branch of `PromoteFlow.makeRow`).
+- **The record joins the row's menu.** Once picked, the record is an entry in that row's menu, so the menu shows it as the selection and the researcher can go back to an offered record, New or Skip. It stays in the menu while the page is open.
+- **Search reuses `SearchCatalog`.** The request already takes `kinds`, and person, event and place hits already carry their list header (`SearchHit.header`, S9-35). No new search RPC.
+
+## What the engine already does
+
+| Need | Where it is today |
+| --- | --- |
+| Hold a pair Promote did not offer | `PromoteGraphAlignmentFixed` on `ProposePromoteGraphAlignmentRequest`; `graphalign.Align` places fixed pairs first |
+| Score it | `state.anchor` scores each fixed handle; `rows.go` reports its band, comparisons and `ConflictWithFixed` |
+| Load a handle the shortlist missed | `promotealign.loadCanon` adds fixed anchors before candidates |
+| Evidence for it | `GetPromoteClaimEvidence` takes any `handle_id`; `checkFixed` checks it |
+| File it | Apply files the row's target like any decided handle |
+| Find records of one kind | `SearchCatalog` with `kinds`, hits with headers |
+
+S11-35 pins this with tests rather than assuming it: a fixed handle no shortlist key reaches is loaded, banded, marked contested when it conflicts, has evidence, and files.
+
+## Where the Swift side changes
+
+- `PromoteFlow.target(for:on:)` resolves only handles in `row.menu`; any other token leaves the target as it was. A picked record needs a way in: a flow call that takes the record (id, ref, sorted and reading titles, subtitle), adds it to `row.menu` and sets the target, with the same follow-up as `setTarget` (decided, duplicate notes, re-propose).
+- A decided row keeps its `menu` across proposals (`makeRow`'s `kept = previous`), so the picked record survives a re-proposal. Its band and reason are refreshed from the proposal like a menu pick's.
+- `FakeStore`'s propose must hold a fixed handle that is not in its candidates, for the Swift tests and previews.
+- The menu entry and the search: `PVSelect` is a selection control with no action item. S11-36's plan decides between a sentinel option the row's binding intercepts and a kit extension (the latter through [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md)). The brief decides what the search looks like.
+
+## What stays later
+
+- **Searching from the evidence sheet**, or comparing two records side by side before picking.
+- **A warning beyond Contested** for a pick the comparison calls `Different`, unless the user asks for one (open question below).
+- **Records of another kind.** A person row searches persons only.
+- **Merging records.** Picking a record files this Subject on it; it does not merge two records.
+
+## Open questions
+
+1. **Search surface.** A popover or sheet with a search field and a list of hits (smaller, row-scoped), or the omnibar's results reused. Proposed: a small row-scoped picker reusing `OmnibarHitPresentation` for each hit's lines; S11-D3 draws it.
+2. **Warning on `Different`.** The held pair is scored, so a record whose name differs already shows a low band and, when a property conflicts, Contested. Proposed: no extra warning. If one is wanted, it is a Callout under the row like the conflict note.
+3. **What the search lists.** All records of the kind, or the kind minus those already in the menu and minus records another row on the page has taken. Proposed: all records, with the duplicate note (`sharesHandle`) doing its usual job when two rows share one.

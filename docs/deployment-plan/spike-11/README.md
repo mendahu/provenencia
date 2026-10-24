@@ -15,6 +15,7 @@ Spike 9 shipped Promote graph alignment, and Spike 10 tuned its comparers. This 
 | [**Matching model**](../../matching-model.md) | The one-page model: the six layers, the glossary, retired words, and the knob inventory with starting values. Kept true as layers land |
 | [**Claim evidence**](claim-evidence.md) | Design for the Promote sheet's pins: every member's evidence, grouped by property, lazily queried, in plain language |
 | [**Connection subrows**](promote-connection-subrows.md) | Design for showing connections under the Promote rows they join, with no switch-off |
+| [**Find another record**](promote-find-another-record.md) | Design for picking a record Promote did not offer from the target menu, held as a decided row |
 | [**Completed**](completed.md) | Finished steps |
 | [Design briefs](design/) | Claude Design, written just before the PR they gate |
 | [PR plans](prs/) | One per PR, written just before the PR |

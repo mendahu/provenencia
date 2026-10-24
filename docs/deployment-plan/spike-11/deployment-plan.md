@@ -1,6 +1,6 @@
 # Deployment Plan — Spike 11
 
-Promote's matching is rebuilt as a stack of pure, registry-driven layers that the rest of the app borrows from, and the old matching code is deleted as each layer lands. The design is in [`comparison-layers.md`](comparison-layers.md) (layers 1–6, bands, the match registry, the reuse inventory) and [`claim-evidence.md`](claim-evidence.md) (the Promote sheet's pins). It pulls in the "make the algorithm graspable" part of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md), [connection subrows](promote-connection-subrows.md) on the Promote page, and Spike 10's likeness crops on the evidence sheet (S10-36). PRs follow a build-then-migrate rhythm: a PR builds a layer, the next moves every caller onto it and deletes what it replaces.
+Promote's matching is rebuilt as a stack of pure, registry-driven layers that the rest of the app borrows from, and the old matching code is deleted as each layer lands. The design is in [`comparison-layers.md`](comparison-layers.md) (layers 1–6, bands, the match registry, the reuse inventory) and [`claim-evidence.md`](claim-evidence.md) (the Promote sheet's pins). It pulls in the "make the algorithm graspable" part of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md), [connection subrows](promote-connection-subrows.md) on the Promote page, Spike 10's likeness crops on the evidence sheet (S10-36), and, added 2026-10-24, the evidence button's hover that S11-27 missed (S11-34) and [find another record](promote-find-another-record.md) in the target menu (S11-35, S11-36). PRs follow a build-then-migrate rhythm: a PR builds a layer, the next moves every caller onto it and deletes what it replaces.
 
 **A brief covers one view.** A PR that changes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
 
@@ -23,6 +23,8 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 7. **One place for every knob.** Every matching number is in `core/matchregistry` and listed in the knob inventory. A guard test fails on a number anywhere else.
 8. **The old code is gone:** `core/match`, `core/database/matching`, `core/graphalign/registry.go`, the frequency stats, and `pairExhibits`.
 9. **Connections follow their ends.** Each connection shows under a Promote row it joins. Setting John to Skip dims "Mary · parent of · John"; nothing toggles on its own, and there's no switch-off.
+10. **The rows match their board.** The Promote row's evidence button answers the pointer as S11-D1 draws it.
+11. **Any record can be the target.** A Subject Promote offers nothing for (Promote says New) can be filed on a record the researcher finds by search. The row holds that record through later decisions and shows its band, Contested when it conflicts, and its evidence.
 
 ## Where the notes went
 
@@ -36,6 +38,8 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 | [Connection subrows](promote-connection-subrows.md) (was `ideas/promote-connection-subrows.md`) | S11-26, S11-27 | S11-D1 |
 | Spike 10 S10-36 — Promote compares two likeness crops (moved 2026-10-17) | S11-32 (lines), S11-20 (crops) | S11-D2 |
 | Reuse inventory ([`comparison-layers.md`](comparison-layers.md#reuse-across-the-app)) | S11-05 – S11-08, S11-13, S11-19 | — |
+| S11-27 follow-up — the evidence button's hover on the S11-D1 board was not built (user, 2026-10-24) | S11-34 | — (S11-D1, agreed) |
+| [Find another record](promote-find-another-record.md) (was `ideas/promote-find-another-record.md`, from S11-05 D-16; pulled in 2026-10-24) | S11-35, S11-36 | S11-D3 |
 
 **Stays in the ideas folder** — the rest of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md): scenario files and goldens runner, random-graph invariants, the simulated world, the scoreboard, the labeler, fitting, and dogfood export. Whether they join this spike is decided after the re-implementation.
 
@@ -74,6 +78,13 @@ These are the calls for this spike. PR plans treat them as binding.
 - **One guard, not one per package.** The purity and numeric-literal checks are one repo-walking test (like `core/writes/begin_test.go` `TestBeginOnlyInDatabaseAndWrites`) with a list of layer packages; each layer PR adds its line.
 - **One wire vocabulary.** Promote's flags and reason codes extend `graphalign.RowFlags` and `graphalign.Reason`, and Swift parses them in `Platform/ConclusionVocabulary.swift` under `api/ffi/swift_vocabulary_test.go`, along with the relation and cause codes the evidence sheet words.
 - **The pin policy has one owner, in Go.** Default pins come from the registry evidence section, applied in Go at Apply for rows whose sheet was never opened, and by the evidence RPC for rows that were.
+
+### Find another record
+
+- **A found record is a decided row, nothing new** ([shape](promote-find-another-record.md#shape)). It goes to Go as a `PromoteGraphAlignmentFixed` pair like a menu pick. Go holds it and never moves it, and scores it for the row's band, Contested and evidence like any decided handle. No new proposal field, flag or reason code.
+- **No new search RPC.** The picker calls `SearchCatalog` with `kinds` set to the row's kind; hits already carry their header (S9-35).
+- **The picked record joins the row's menu**, through one `PromoteFlow` call that adds the record to `row.menu` and sets the target, with `setTarget`'s follow-up. The menu stays the one list of a row's records (S11-35).
+- **Engine first, proven by tests.** S11-35 adds no Go code unless a test finds a gap: a fixed handle no shortlist key reaches is loaded, banded, contested when it conflicts, has evidence and files. A gap found there is fixed in S11-35.
 
 ### Claim evidence
 
@@ -118,6 +129,9 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-28 | Fold a nickname into its given name | 2 | Reconciler folds a nickname or abbreviation into its formal name, keeping the set's head; a reviewed table directs two-way pairs; cache reads the product alias tables | — | S11-06 | [plan](prs/S11-28-alias-fold.md) | Planned |
 | S11-29 | Quote nicknames and add former surnames | 2 | Nicknames in quotes everywhere; `former_surname` part type in parentheses, italic on the Person titles | — | — | [plan](prs/S11-29-name-display.md) | Planned |
 | S11-30 | Gender meets sex at birth in its own words | 3 | The sex / gender pool maps gender terms into sex at birth terms through a registry crosswalk; `man` agrees with `male` | — | S11-10 | — (bugfix, user 2026-10-21) | In review |
+| S11-34 | Evidence button hover on Promote rows | 6 | The row's assessment button (band, Contested, reason, chevron) takes the hover the S11-D1 board draws, on the kit's `PVHoverEffect` | — (S11-D1, agreed) | S11-27 | — | Scoped |
+| S11-35 | Hold a record Promote did not offer | 8 | `PromoteFlow` takes a record from outside the menu and holds it as a decided row; Go tests pin that a fixed off-shortlist handle is loaded, banded, has evidence and files; `FakeStore` holds it | — | — | — | Scoped |
+| S11-36 | Find another record in the target menu | 8 | "Find another record…" at the end of the target menu opens a search of the row's kind over `SearchCatalog`; the pick goes through S11-35 | S11-D3 | S11-35, S11-D3 | — | Scoped |
 | S11-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -126,6 +140,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | --- | --- | --- | --- |
 | [S11-D1](design/archive/S11-D1-promote-rows.md) | Promote page — rows | **S11-18**, **S11-27** | Board agreed 2026-10-20 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share)). Contested marker beside the band; move reasons in the Updated caption; connections as subrows of the rows they join, answering the [design questions](promote-connection-subrows.md#open-questions-for-design) |
 | [S11-D2](design/archive/S11-D2-evidence-sheet.md) | Promote page — evidence sheet | **S11-20** | Board agreed 2026-10-22 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), frames E01 – E14). Whole sheet: "why suggested" marks at the title, property sections, relationship lines, collapsed members, likeness crops (from Spike 10's S10-D13), copy |
+| S11-D3 | Promote page — target menu | **S11-36** | Not written. The "Find another record…" entry, the search it opens, and how a found record reads in the menu once picked. Answers the [open questions](promote-find-another-record.md#open-questions) 1 and 3 (and 2 if the user wants a warning) |
 
 ## Slices
 
@@ -183,8 +198,10 @@ SLICE 5 — Claim evidence
 SLICE 6 — Connection subrows
   S11-26  Connections file by their ends   (any time)
   ✎ S11-D1 ──▶ S11-27  Connection subrows on Promote
+  S11-34  Evidence button hover on Promote rows   (follow-up, after S11-27)
   Check: setting John to Skip dims "Mary · parent of · John" under its row; nothing
-         toggles by itself; the bottom connections panel is gone.
+         toggles by itself; the bottom connections panel is gone; the evidence
+         button answers the pointer as the board draws it.
 
 SLICE 7 — Performance
   S11-21  Large-Source performance check
@@ -192,10 +209,17 @@ SLICE 7 — Performance
   Check: a 100-Subject Source proposes within the benchmark, and a warm evidence
          open issues no catalog query; a hub page leaves at most N Sources loaded.
 
+SLICE 8 — Find another record
+  S11-35  Hold a record Promote did not offer   (any time)
+  ✎ S11-D3 ──▶ S11-36  Find another record in the target menu
+  Check: on a row Promote opens New, "Find another record…" finds a differently
+         named record of the row's kind; the row holds it after other rows are
+         decided, shows its band and Contested, opens its evidence, and Done files it.
+
 S11-99 — Dogfood close / docs
 ```
 
-Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 7 after S11-16; slice 6 any time (S11-26 has no dependency). S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
+Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 7 after S11-16; slice 6 any time (S11-26 has no dependency); S11-34 any time after S11-27; S11-35 any time, and S11-D3 can be drawn while it runs. S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
 
 ### Dependencies at a glance
 
@@ -215,6 +239,9 @@ S11-D1 ──▶ S11-18, S11-27
 S11-26 ──▶ S11-27
 S10-54 ──▶ S11-32   (Spike 10)
 S11-D2 ──▶ S11-20
+S11-27 ──▶ S11-34
+S11-35 ──┐
+S11-D3 ──┴──▶ S11-36
 ```
 
 ---
@@ -448,6 +475,14 @@ Split from S11-20 when it was planned (user, 2026-10-22): the engine half of the
 **Check.** Setting John to Skip dims his connections; setting him to New turns them on; a self-link warns.
 **Context.** [Connection subrows](promote-connection-subrows.md); S11-D1.
 
+#### S11-34 — Evidence button hover on Promote rows
+
+Follow-up to S11-27 (user, 2026-10-24): the S11-D1 board draws a hover on the row's evidence button, and neither S11-18 nor S11-27 built it.
+**Ships.** The assessment-column button in `PromoteAlignmentRow` (`PromoteView.swift`, identifier `promote.row.<ref>.evidence`: band and Contested Badges, the reason, the chevron) shows the board's hover state, through a `ButtonStyle` built on `PVHoverEffect` like the kit's other hover chrome, with reduce-motion respected. Its hit target stays the whole column.
+**Not this PR.** Hover on subrows (S11-D1 §6 non-goals: no hover action on a subrow), on the target menu, or on the anchor rows. A new kit primitive (S11-D1 non-goals); if the hover is a reusable shape, the plan says whether it belongs on an existing kit style.
+**Check.** Pointing at the evidence button shows the board's hover; moving off clears it; clicking still opens the sheet; VoiceOver reads as before.
+**Context.** [S11-D1](design/archive/S11-D1-promote-rows.md) and its board (the hover frame); `macos/App/DesignSystem/Components/HoverEffect/PVHoverEffect.swift`; [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) if the kit changes.
+
 ### Slice 7 — Performance
 
 #### S11-21 — Large-Source performance check
@@ -481,3 +516,21 @@ Asked by the user on 2026-10-19, after S11-06. Planned as two PRs, with no migra
 **Not this PR.** Migrating existing catalogs; italics on other surfaces.
 **Check.** *James “Jake” Robins*; *Jones, Mary (Smith)* with *Smith* italic.
 **Context.** [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §4; [`ideas/international-names.md`](../../ideas/international-names.md).
+
+### Slice 8 — Find another record
+
+Pulled in from the ideas folder on 2026-10-24. Design: [`promote-find-another-record.md`](promote-find-another-record.md).
+
+#### S11-35 — Hold a record Promote did not offer
+
+**Ships.** A `PromoteFlow` call that takes a record from outside the row's menu (id, ref, sorted and reading titles, subtitle), adds it to `row.menu`, sets the target and marks the row decided, with `setTarget`'s duplicate-note and re-propose follow-up; `PromoteModel` exposes it. A decided row keeps the record through re-proposals with its band and reason refreshed (`makeRow`'s decided branch). Go tests in `promotealign` show that a fixed handle no shortlist key reaches is loaded into the canon, banded, flagged contested when a property conflicts, answers `GetPromoteClaimEvidence`, and files at Apply. `FakeStore`'s propose holds a fixed handle outside its candidates. No chrome.
+**Not this PR.** The menu entry and the search (S11-36). Any new proposal field or reason (working rule "A found record is a decided row, nothing new").
+**Check.** `PromoteFlowTests`: a row opened New, given an outside record, holds it, shows it in its menu, and keeps it after another row is decided; the Go tests above pass.
+**Context.** Working rules under [Find another record](#find-another-record); [shape](promote-find-another-record.md#shape) and [what the engine already does](promote-find-another-record.md#what-the-engine-already-does); [`add-swift-test`](../../../.agents/skills/add-swift-test/SKILL.md).
+
+#### S11-36 — Find another record in the target menu
+
+**Ships.** "Find another record…" at the end of every non-anchor row's target menu, as S11-D3 draws it, opening a search of the row's kind through `SearchCatalog` (`kinds` = the row's kind). A pick goes through S11-35's call. Hits read their header lines as the omnibar does. All copy through L10n; VoiceOver reads the entry and the hits. The plan decides between a sentinel `PVSelect` option the row's binding intercepts and a kit action item ([`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md)).
+**Not this PR.** Searching from the evidence sheet; records of another kind; merging records ([what stays later](promote-find-another-record.md#what-stays-later)). A warning for a `Different` pick, unless the user asks for one (open question 2).
+**Check.** On a row Promote opens New, the entry finds a differently named record; picking it selects it in the menu, the band and Contested show, the sheet opens on it, and Done files it.
+**Context.** S11-D3; [open questions](promote-find-another-record.md#open-questions); `macos/App/Features/Workspace/OmnibarHitPresentation.swift`; [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).
