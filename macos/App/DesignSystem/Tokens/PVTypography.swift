@@ -80,7 +80,7 @@ enum PVFont {
     }
 
     static func mono(size: CGFloat = PVTypeScale.caption, weight: CGFloat = PVFontWeight.regular) -> Font {
-        Font(nsResolved(family: PVFontFamily.mono, size: size, weight: weight, italic: false))
+        Font(nsMono(size: size, weight: weight))
     }
 
     /// AppKit face used by display text, so measured card heights match paint.
@@ -93,7 +93,48 @@ enum PVFont {
         nsResolved(family: PVFontFamily.body, size: size, weight: weight, italic: italic)
     }
 
+    /// AppKit face used by mono text (ids, dates, counts).
+    static func nsMono(size: CGFloat, weight: CGFloat = PVFontWeight.regular) -> NSFont {
+        nsResolved(family: PVFontFamily.mono, size: size, weight: weight, italic: false)
+    }
+
+    private struct NSFontKey: Hashable {
+        let family: String
+        let size: CGFloat
+        let weight: CGFloat
+        let italic: Bool
+    }
+
+    /// Resolved AppKit faces, reused so card paint and SwiftUI bodies do not
+    /// rebuild a descriptor and font on every call. Lock-guarded because
+    /// `nsResolved` is reached from SwiftUI bodies as well as `draw(_:)`.
+    private static let fontLock = NSLock()
+    nonisolated(unsafe) private static var nsFonts: [NSFontKey: NSFont] = [:]
+
+    #if DEBUG
+    static func nsIsCachedForTest(family: String, size: CGFloat, weight: CGFloat, italic: Bool) -> Bool {
+        fontLock.lock()
+        defer { fontLock.unlock() }
+        return nsFonts[NSFontKey(family: family, size: size, weight: weight, italic: italic)] != nil
+    }
+    #endif
+
     private static func nsResolved(
+        family: String,
+        size: CGFloat,
+        weight: CGFloat,
+        italic: Bool
+    ) -> NSFont {
+        let key = NSFontKey(family: family, size: size, weight: weight, italic: italic)
+        fontLock.lock()
+        defer { fontLock.unlock() }
+        if let stored = nsFonts[key] { return stored }
+        let font = nsResolveUncached(family: family, size: size, weight: weight, italic: italic)
+        nsFonts[key] = font
+        return font
+    }
+
+    private static func nsResolveUncached(
         family: String,
         size: CGFloat,
         weight: CGFloat,
@@ -106,6 +147,9 @@ enum PVFont {
         let descriptor = NSFontDescriptor(fontAttributes: [.family: family, .traits: traits])
         if let nsFont = NSFont(descriptor: descriptor, size: size) {
             return nsFont
+        }
+        if family == PVFontFamily.mono {
+            return NSFont.monospacedSystemFont(ofSize: size, weight: systemNSWeight(for: weight))
         }
         return NSFont.systemFont(ofSize: size, weight: systemNSWeight(for: weight))
     }

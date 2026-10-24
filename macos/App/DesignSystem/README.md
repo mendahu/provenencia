@@ -529,7 +529,8 @@ exact folder-name semantics.
 numeric weight against whatever's registered (via `NSFontDescriptor`, not a
 hardcoded PostScript name — robust to Google Fonts renaming internal
 PostScript names between versions), falling back to the closest system
-serif/monospace face if a bundled font is ever unavailable.
+serif/monospace face if a bundled font is ever unavailable. AppKit faces
+are resolved once per family, size, weight and italic and reused.
 
 To add a new weight or style later: download it from
 `fonts.googleapis.com/css2?family=...` (see this project's own
