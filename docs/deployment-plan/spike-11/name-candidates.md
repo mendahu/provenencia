@@ -1,6 +1,6 @@
 # Name candidates: records Promote should have offered
 
-**Status:** pulled into [Spike 11](deployment-plan.md) on 2026-10-24 (S11-43, S11-44, S11-45), from two dogfood cases the user raised that day.
+**Status:** pulled into [Spike 11](deployment-plan.md) on 2026-10-24 (S11-43, S11-44, S11-46, S11-45), from two dogfood cases the user raised that day.
 
 Matching today: [`comparison-layers.md`](comparison-layers.md) (layer 1 names, layer 6 candidates), [`matching-model.md`](../../matching-model.md) (knob inventory).
 
@@ -26,10 +26,10 @@ Measured with the shipped registry on 2026-10-24. Similarity should fall as the 
 
 **Two levers:**
 
-- **Lower the gate** (`MinSimilarity`). This only changes who becomes a candidate. Bands come from evidence, and evidence does not read the gate, so no band moves. At 0.4, a Subject's one given name reaches a record with up to three extra given names and a surname.
+- **Lower the gate** (`MinSimilarity`). This only changes who becomes a candidate. Bands come from evidence, and evidence does not read the gate, so no band moves. The row's default does move: with a candidate below the accept bar the row opens Skip (`weak`) with the record as an alternative, where it opened New (`no_match`) with an empty menu (`graphalign/rows.go`). No test or golden flips at 0.4 (map review, 2026-10-24). At 0.4, a Subject's one given name reaches a record with up to three extra given names and a surname.
 - **Relax the curve** (count words only one side has at less than full weight). This also raises evidence for every partial name match, because a name's points are its weight times its similarity (Amy: 2.5 × 0.44 = 1.1), so bands move and the goldens move with them.
 
-The gate is the narrower change, so the spike ships it (S11-43) and holds the curve until dogfood shows it is still needed ([open questions](#open-questions)).
+The gate is the narrower change, so the spike ships it (S11-43) and holds the curve until dogfood shows it is still needed (user, 2026-10-24).
 
 A second cause for this case: if the Source recorded "Amy" as a surname rather than a given name, it conflicts with Long (evidence −3). No gate fixes that. Check the Subject's name parts first.
 
@@ -39,25 +39,31 @@ The record is never shortlisted. The two names share no key: the product nicknam
 
 With `{desiree, des}` as a nickname set, the pair shortlists and compares at similarity 1.0 (probe, 2026-10-24). Two changes:
 
-- **Des as a nickname of Desiree** (S11-44). The upstream list is not edited (S11-28's rule). The product adds a reviewed set of its own. Scoring reads the catalog's own alias rows, written once at create (`namealiases.Install`). `AddProductNicknames` copies new product sets into an existing catalog but has no caller today, so S11-44 also decides how an existing catalog gets them.
-- **A prefix is a weaker hit** (S11-45, user 2026-10-24). A given name that is the exact start of another given name, after case and accent folding, is a hit below an alias. This is an initial generalised: an initial is `Contains` at `InitialCredit` (0.5) with `CauseInitial`; a prefix is `Contains` at a new `PrefixCredit` with a new `CausePrefix`, from `PrefixMinLength` letters. "Des" reaches "Desiree" and "Desmond" this way, and a nickname table hit still wins when there is one.
+- **Des as a nickname of Desiree and Desirae** (S11-44, user 2026-10-24). Two sets, `{desiree, des}` and `{desirae, des}` (a nickname shared by two formal names does not join their sets, the table's rule), join `nicknameSets`, the product's nickname table, which is already a reviewed edit of the upstream list (its header; S11-28: "another found later is a one-line seed edit plus a CacheVersion bump"). Scoring reads the catalog's own alias rows, written once at create (`namealiases.Install`). `AddProductNicknames` copies new product sets into an existing catalog, reading the `nicknames` table, but has no caller today. An existing catalog gets them by a command the researcher runs (user, 2026-10-24): the tables are catalog data, so a code change alone reaches only new catalogs.
+- **A prefix is a weaker hit** (S11-45, user 2026-10-24). A given name that is the exact start of another given name, after case and accent folding, is a hit below an alias. This is an initial generalised: an initial is `Contains` at `InitialCredit` (0.5) with `CauseInitial`; a prefix is `Contains` at a new `PrefixCredit` with a new `CausePrefix`, from `PrefixMinLength` letters (2, user 2026-10-24). "Des" reaches "Desiree" and "Desmond" this way, and "Al" reaches "Albert" and "Alice", and a nickname table hit still wins when there is one.
 
 ## Prefix rule, in detail
 
-- **Words.** In `valuecompare`'s word comparer, beside the initial rule: the shorter word, at least `PrefixMinLength` letters, equals the start of the longer one after folding. Relation `Contains`, similarity `PrefixCredit`, cause `CausePrefix`. An alias hit is checked first.
-- **Roles.** Given names and nicknames only. A surname prefix ("Mac" against "MacDonald") is not a hit.
-- **Knobs.** `PrefixMinLength` (estimate 3: "Des", "Ben", "Kat"; two-letter forms such as "Al" or "Ed" would reach too many names) and `PrefixCredit` (estimate 0.7: above an initial, below a nickname table hit at 0.98) in the registry's value section, with inventory rows.
-- **Shortlist.** A prefix has to shortlist, so a given-name word is also indexed under its prefixes from `PrefixMinLength` up (`desiree` → `des`, `desi`, `desir`, `desire`) and looked up under the word itself. S11-45 measures the extra keys on S11-21's fixture (or `bench_test.go`'s), with a cap from the measurement if needed.
+- **Words.** In `valuecompare`'s word comparer (`words.go`, today: exact, initial, alias, then fold and spelling): after alias, fold and spelling, so "Ann" against "Anne" stays a spelling `Near` and the ladders hold. The shorter word, at least `PrefixMinLength` letters, equals the start of the longer one after folding. Relation `Contains`, similarity `PrefixCredit`, cause `CausePrefix`. The broader side is the shorter word (today `name.go` picks it with `IsInitial`, which is wrong for a prefix on side A). A `prefixes` flag on the word options turns it on for names; text compare never gets it.
+- **Roles.** The alias tables' role set (`namealiases.aliasPartRoles`): given, nickname and untyped parts. A surname prefix ("Mac" against "MacDonald") is not a hit.
+- **Knobs.** `PrefixMinLength` (2, user 2026-10-24: "Al", "Ed" and "Jo" count; S11-46's measurement says what the wider shortlist costs) and `PrefixCredit` (estimate 0.7: above an initial, below a nickname table hit at 0.98) in the registry's value section, with inventory rows.
+- **Shortlist** (S11-46). A prefix has to shortlist in both directions: a Subject "Des" must reach a record "Desiree", and a Subject "Desiree" a record "Des". So a record files its whole word and its prefixes from `PrefixMinLength` up under separate tags, and a Subject looks up its whole word against filed prefixes and its own prefixes against filed whole words. Today `valuecompare.WordKeys` returns one list that `shortlist.Keys` puts on both sides; S11-46 splits it into index and lookup lists first. It measures the extra keys on S11-21's fixture (or `bench_test.go`'s), with a cap from the measurement if needed.
 - **Evidence wording.** `CausePrefix` joins the cause codes the evidence sheet words, in `ConclusionVocabulary.swift` under `swift_vocabulary_test.go`, with an L10n sentence ("Des may be short for Desiree").
-- **The reconciler.** It folds on `Contains`, as with "J. Robins" into "James Robins". A prefix inside one entity would fold the same way ("Des Long" shows as "Desiree Long"); [open question 2](#open-questions).
+- **The reconciler.** Its name fold (`autoreconcile/names.go`) allows only `Same` and `CauseInitial` pairs (S11-28 widens it to aliases), so a prefix does not fold unless `CausePrefix` joins that allow-list; [open question 2](#open-questions). S11-45 lands after S11-28, which edits the same line.
 
 ## What stays later
 
-- **Two-letter prefixes and surname prefixes.** Not hits.
+- **Surname prefixes.** Not hits.
+- **Relaxing the name curve** (counting one-side-only words at less than full weight). Held until dogfood after S11-43 shows a fuller record still missing (user, 2026-10-24).
 - **A coverage rule for surname-only records** stays in [`ideas/coverage-aware-similarity.md`](../../ideas/coverage-aware-similarity.md). Lowering the gate does not change it: those records tie at similarity 1.
+
+## Decided (user, 2026-10-24)
+
+1. **Gate only.** Lower the gate to 0.4 (S11-43); leave the curve alone for now.
+2. **A prefix folds like an initial** in the reconciler: `CausePrefix` joins the fold allow-list, so "Des Long" shows as "Desiree Long" within one entity (S11-45).
+3. **New product nicknames reach an existing catalog by a command.** No backfill on open, so `add-seeded-vocabulary`'s rule stands and no marker is stored (S11-44).
+4. **Prefixes from two letters** (`PrefixMinLength` 2).
 
 ## Open questions
 
-1. **The curve.** Proposed: lower the gate to 0.4 (S11-43) and leave the curve until dogfood shows a fuller record still missing. The alternative is to also count one-side-only words at a reduced weight, which raises bands and needs the goldens re-tuned.
-2. **Prefix in the reconciler.** Proposed: a prefix folds like an initial within one entity. The alternative is that the reconciler ignores `CausePrefix` and keeps both spellings.
-3. **How an existing catalog gets new product nicknames.** Proposed: on project open, when the product nickname list has changed since the catalog last copied it, `AddProductNicknames` runs once. The alternative is a command the researcher runs.
+1. **Skip or New with a weak alternative.** Lowering the gate makes "Amy" open Skip with "Amy Lee Anne Long" offered, where it opened New. Proposed: accept it; that is how every row with a weak candidate already opens.

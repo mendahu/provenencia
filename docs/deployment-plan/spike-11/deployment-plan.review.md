@@ -132,3 +132,44 @@ The user accepted the preparatory PRs and splits. An ideas-folder pass then adde
 
 #### K-11 · minor · Event type passed twice
 **Answer:** Fixed. It is `BridgeKey.EventType`; dropped from the input.
+
+## Map review — slice 10, name candidates (2026-10-24)
+
+**Verdict:** Fits with changes. **Rounds:** 1. **Reviewers:** maintainability (fresh agent, map questions), over S11-43 – S11-45, the "Name candidates" rules, bar 13 and [`name-candidates.md`](name-candidates.md). The reviewer ran the core and api suites at `MinSimilarity` 0.4: no golden or test flips.
+
+### To user
+
+- **S11-45 split: S11-46 (prefix keys in the shortlist) goes first.** Recommendation: keep it. The shortlist needs separate index and lookup keys for a prefix to reach both ways, and S11-45 was past ten steps.
+- **A lowered gate turns a New row into Skip with the record offered.** Open question 1 in the feature doc.
+
+### Round 1
+
+#### K-1 · high · The reconciler folds only `Same` and `CauseInitial`
+**Answer:** Fixed. S11-45 adds `CausePrefix` to the fold allow-list (the user's call, the same day) and fixes the broader side; it lands after S11-28, which edits that line.
+
+#### K-2 · high · "Index prefixes, look up the word" finds one direction only
+**Answer:** Fixed. S11-46 splits `WordKeys` into index and lookup lists and keys prefixes both ways.
+
+#### K-3 · medium · The row's default moves from New to Skip
+**Answer:** Stated in S11-43, the rule and bar 13; open question for the user.
+
+#### K-4 · medium · A second reviewed list beside an existing one
+**Answer:** Fixed. The sets join `nicknameSets` with a `CacheVersion` bump; S11-44 depends on S11-28.
+
+#### K-5 · medium · On-open backfill changes a skill rule and needs a marker
+**Answer:** Moot. The user chose a command (2026-10-24); nothing runs on open, and the skill gains a line on the command.
+
+#### K-6 · medium · Rule order and roles did not match the code
+**Answer:** Fixed. The prefix rule runs after alias, fold and spelling, for the alias roles, behind a `prefixes` option text compare never sets.
+
+#### K-7 · medium · S11-45 too big
+**Answer:** Fixed by the S11-46 split.
+
+#### K-8 · low · "Similarity 1.0" with an alias
+**Answer:** Kept. The probe measured subject similarity 1.000 for the alias pair (2026-10-24).
+
+#### K-9 · low · S11-43 → S11-45 not needed
+**Answer:** Fixed. Dropped; S11-45 depends on S11-46 and S11-28.
+
+#### K-10 · low · The gate's comment
+**Answer:** Fixed in S11-43's scope.
