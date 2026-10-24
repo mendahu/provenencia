@@ -83,6 +83,7 @@ These are the calls for this spike. PR plans treat them as binding.
 
 - **A found record is a decided row, nothing new** ([shape](promote-find-another-record.md#shape)). It goes to Go as a `PromoteGraphAlignmentFixed` pair like a menu pick. Go holds it and never moves it, and scores it for the row's band, Contested and evidence like any decided handle. No new proposal field, flag or reason code.
 - **No new search RPC, and one search model.** The picker calls `SearchCatalog` with `kinds` set to the row's kind; hits already carry their header (S9-35). It reuses the omnibar's results model and hit row, moved to a shared home by S11-37, not a copy in Promote.
+- **An inline picker, every record of the kind, no warning** (user, 2026-10-24; [decided](promote-find-another-record.md#decided-user-2026-10-24)). The search opens from the row on the Promote page, not the omnibar, which is not connected to the page. It lists every canonical entity of the row's kind, ranked by `SearchCatalog`'s match to the search string, with nothing filtered out. A differently named pick shows no warning beyond the band and Contested.
 - **The menu entry is a sentinel option.** `PVSelect` gets no action item; the row's binding catches the entry's token before `setTarget`, so opening or cancelling the search never marks the row decided. A kit PR is cut only if S11-D3 draws what a sentinel cannot do.
 - **The picked record joins the row's menu**, through one `PromoteFlow` call that adds the record to `row.menu` and sets the target, with `setTarget`'s follow-up. The menu stays the one list of a row's records (S11-35).
 - **Engine first, proven by tests.** S11-35 adds no Go code unless a test finds a gap: a fixed handle no shortlist key reaches is loaded, banded, contested when it conflicts, has evidence and files. A gap found there is fixed in S11-35.
@@ -142,7 +143,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | --- | --- | --- | --- |
 | [S11-D1](design/archive/S11-D1-promote-rows.md) | Promote page — rows | **S11-18**, **S11-27** | Board agreed 2026-10-20 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share)). Contested marker beside the band; move reasons in the Updated caption; connections as subrows of the rows they join, answering the [design questions](promote-connection-subrows.md#open-questions-for-design) |
 | [S11-D2](design/archive/S11-D2-evidence-sheet.md) | Promote page — evidence sheet | **S11-20** | Board agreed 2026-10-22 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), frames E01 – E14). Whole sheet: "why suggested" marks at the title, property sections, relationship lines, collapsed members, likeness crops (from Spike 10's S10-D13), copy |
-| S11-D3 | Promote page — target menu | **S11-36** | Not written. The "Find another record…" entry, the search it opens, and how a found record reads in the menu once picked. Answers the [open questions](promote-find-another-record.md#open-questions) 1 and 3 (and 2 if the user wants a warning) |
+| S11-D3 | Promote page — target menu | **S11-36** | Not written. The "Find another record…" entry, the inline picker it opens on the row, how a found record reads in the menu once picked, and how a held record with band None reads. Product calls are [decided](promote-find-another-record.md#decided-user-2026-10-24) |
 
 ## Slices
 
@@ -485,7 +486,7 @@ Follow-up to S11-27 (user, 2026-10-24): the S11-D1 board draws a hover on the ro
 **Ships.** The assessment-column button in `PromoteAlignmentRow` (`PromoteView.swift`, identifier `promote.row.<ref>.evidence`: band and Contested Badges, the reason, the chevron) shows the board's hover state, reusing a hover style the kit already has (`PVMenuRowButtonStyle` in `PVButton.swift`, `PVListRowStyle` in `PVList.swift`; feature precedent `SourcesSplitZoneButtonStyle`) or extending one through `add-ui-component`, not a third hover fill. `PVHoverEffect` adds a press scale; the plan checks the board wants it. Its hit target stays the whole column.
 **Not this PR.** Hover on subrows (S11-D1 §6 non-goals: no hover action on a subrow), on the target menu, or on the anchor rows. A new kit primitive (S11-D1 non-goals); if the hover is a reusable shape, the plan says whether it belongs on an existing kit style.
 **Check.** Pointing at the evidence button shows the board's hover; moving off clears it; clicking still opens the sheet; VoiceOver reads as before.
-**Context.** [S11-D1](design/archive/S11-D1-promote-rows.md) and its board (the hover frame); `macos/App/DesignSystem/Components/HoverEffect/PVHoverEffect.swift`; [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) if the kit changes.
+**Context.** [S11-D1](design/archive/S11-D1-promote-rows.md) and its board, [Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share) (user, 2026-10-24). The planner may not be able to open it; the implementing agent runs locally and reads the hover from the board, so the plan names the button and the board and leaves the hover's look to the board, not to prose; `macos/App/DesignSystem/Components/HoverEffect/PVHoverEffect.swift`; [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) if the kit changes.
 
 ### Slice 7 — Performance
 
@@ -534,10 +535,10 @@ Pulled in from the ideas folder on 2026-10-24. Design: [`promote-find-another-re
 
 #### S11-36 — Find another record in the target menu
 
-**Ships.** "Find another record…" at the end of every non-anchor row's target menu, as S11-D3 draws it: a sentinel option the row's binding catches (working rule "The menu entry is a sentinel option"), opening a search of the row's kind on S11-37's shared model and hit row. A pick goes through S11-35's call. How a held record with band None reads is S11-D3's. All copy through L10n; VoiceOver reads the entry and the hits.
-**Not this PR.** Searching from the evidence sheet; records of another kind; merging records ([what stays later](promote-find-another-record.md#what-stays-later)). A warning for a `Different` pick, unless the user asks for one (open question 2).
+**Ships.** "Find another record…" at the end of every non-anchor row's target menu, as S11-D3 draws it: a sentinel option the row's binding catches (working rule "The menu entry is a sentinel option"), opening an inline picker on the row that searches every record of the row's kind, ranked by match, on S11-37's shared model and hit row (working rule "An inline picker, every record of the kind, no warning"). A pick goes through S11-35's call. How a held record with band None reads is S11-D3's. All copy through L10n; VoiceOver reads the entry and the hits.
+**Not this PR.** Searching from the evidence sheet; records of another kind; merging records ([what stays later](promote-find-another-record.md#what-stays-later)). A warning for a `Different` pick (refused, user 2026-10-24).
 **Check.** On a row Promote opens New, the entry finds a differently named record; picking it selects it in the menu, the band and Contested show, the sheet opens on it, and Done files it. Opening and cancelling the search leaves the row undecided.
-**Context.** S11-D3; [open questions](promote-find-another-record.md#open-questions); S11-37; [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).
+**Context.** S11-D3; [decided](promote-find-another-record.md#decided-user-2026-10-24); S11-37; [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).
 
 #### S11-37 — One kind-scoped catalog search
 

@@ -44,12 +44,12 @@ S11-35 pins this with tests rather than assuming it, extending the existing fixe
 ## What stays later
 
 - **Searching from the evidence sheet**, or comparing two records side by side before picking.
-- **A warning beyond Contested** for a pick the comparison calls `Different`, unless the user asks for one (open question below).
+- **A warning beyond Contested** for a pick the comparison calls `Different` (refused, user 2026-10-24).
 - **Records of another kind.** A person row searches persons only.
 - **Merging records.** Picking a record files this Subject on it; it does not merge two records.
 
-## Open questions
+## Decided (user, 2026-10-24)
 
-1. **Search surface.** A popover or sheet with a search field and a list of hits (smaller, row-scoped), or the omnibar's results reused. Proposed: a small row-scoped picker reusing `OmnibarHitPresentation` for each hit's lines; S11-D3 draws it.
-2. **Warning on `Different`.** The held pair is scored, so a record whose name differs already shows a low band and, when a property conflicts, Contested. Proposed: no extra warning. If one is wanted, it is a Callout under the row like the conflict note.
-3. **What the search lists.** All records of the kind, or the kind minus those already in the menu and minus records another row on the page has taken. Proposed: all records, with the duplicate note (`sharesHandle`) doing its usual job when two rows share one.
+1. **Search surface: an inline picker on the row.** The omnibar is not connected to the Promote page, so the search opens from the row's target menu and stays on the page. It reuses the omnibar's search model and hit row (S11-37), not its surface. S11-D3 draws it.
+2. **No warning for a differently named pick.** The row's band and Contested marker are enough. A `Different` pick shows no Callout.
+3. **The search lists every canonical entity of the row's kind**, sorted by how well it matches the search string (`SearchCatalog`'s own ranking). Records already in the menu or taken by another row are not left out; the duplicate note (`sharesHandle`) does its usual job when two rows share one.
