@@ -16,7 +16,7 @@ catalog types so geometry stays extractable (design note §13).
 | `GraphCanvasGridMapping` | Grid cell ↔ content point (snap unit) |
 | `GraphCanvasScrollView` | AppKit magnification bridge |
 | `GraphCanvasDocumentView` | Scroll document; owns mouse; hosts the base SwiftUI layer and the item layer; canvas accessibility group and rotors |
-| `GraphCanvasItemLayer` / `GraphCanvasItem` | One `NSView` per item, built by the host (`makeView`), positioned by AppKit; rebuilt only when the item's `Equatable` model changes |
+| `GraphCanvasItemLayer` / `GraphCanvasItem` | One `NSView` per item, built by the host (`makeView`), positioned by AppKit; rebuilt only when the item's `Equatable` model changes; owns each item's layer and its scale |
 | `GraphCanvasPointerController` | Hit-test, select, drag (one card, or a group of peers that move with the anchor), empty-canvas pan, selection rectangle (marquee), Shift tracking, Shift-click toggle, place, connect |
 | `GraphCanvasHitTarget` / `GraphCanvasPointerHitTesting` | Document rects + pure helpers |
 | `GraphCanvasViewportController` | Pan deltas + live AppKit `convert` under cursor |
@@ -52,6 +52,9 @@ one view's frame from `GraphCanvasDocumentView.mouseDragged` — no SwiftUI runs
 pointer event. An item's view is rebuilt only when its `model` changes, so push
 every item whenever anything they draw changes (selection, hover, data, drag
 start/end), never per drag frame.
+
+Each item is its own layer, drawn when it is built, when it asks, or when the
+settled zoom changes its scale; a pan composites those layers.
 
 **Never read `GraphCanvasPointerController.offsets` in a view body** that does
 more than draw live geometry. Observation is per property: one read re-runs that
@@ -111,7 +114,8 @@ large graph, then back toward identity. The zoom-out floor rises when `0.25` wou
 make the document smaller than the window, so the area past the canvas edge stays
 out of view. Hosts may choose different clamps.
 Deliberate zoom-*in* past ~125% is capped in the default camera so layer-scaled
-SwiftUI content does not go soft.
+SwiftUI content does not go soft. Items re-render at the settled zoom (the scroll
+view sets `GraphCanvasItemLayer.contentsScale`); the cap protects the base SwiftUI layer.
 
 `GraphCanvasViewportController.magnification` is the live zoom. The grid fades as a whole when a cell would be under about a screen point; product strokes that should stay one screen point wide use `GraphCanvasCoordinates.screenPixelDocumentWidth`.
 
