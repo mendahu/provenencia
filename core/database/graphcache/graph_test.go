@@ -240,13 +240,13 @@ func TestLoadLinksUsesTheEdgeIndex(t *testing.T) {
 	}
 }
 
-func TestDropLeavesAliasTables(t *testing.T) {
+func TestDropLeavesAliasIndex(t *testing.T) {
 	g := graphcache.New(nil)
-	g.SetAliasTables([]string{"jas"})
+	g.SetAliasIndex([]string{"jas"})
 	g.Drop()
-	raw, ok := g.AliasTables()
+	raw, ok := g.AliasIndex()
 	if !ok {
-		t.Fatal("drop cleared alias tables")
+		t.Fatal("drop cleared alias index")
 	}
 	tables, ok := raw.([]string)
 	if !ok || len(tables) != 1 || tables[0] != "jas" {
@@ -448,9 +448,9 @@ func TestMatchIndexDrops(t *testing.T) {
 	if v, ok := g.MatchIndex(); !ok || v != "index" {
 		t.Fatalf("MatchIndex = %v, %v after SetMatchIndex", v, ok)
 	}
-	g.SetAliasTables(nil)
+	g.SetAliasIndex(nil)
 	if stored() {
-		t.Error("SetAliasTables left the match index")
+		t.Error("SetAliasIndex left the match index")
 	}
 	g.SetMatchIndex("index")
 	g.SetNameFormat("western")

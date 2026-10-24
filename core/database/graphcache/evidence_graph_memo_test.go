@@ -8,7 +8,7 @@ import (
 )
 
 // T-20: an Evidence graph's memo lives as long as the graph is loaded, and a
-// drop of the graph, Drop, a vocabulary change and SetAliasTables each clear it.
+// drop of the graph, Drop, a vocabulary change and SetAliasIndex each clear it.
 func TestEvidenceGraphMemoDroppedWithSource(t *testing.T) {
 	f := newWalkFixture(t)
 	g := f.c.Graph()
@@ -81,11 +81,11 @@ func TestEvidenceGraphMemoDroppedWithSource(t *testing.T) {
 			t.Error("a vocabulary commit left the memo")
 		}
 	})
-	t.Run("SetAliasTables", func(t *testing.T) {
+	t.Run("SetAliasIndex", func(t *testing.T) {
 		load(t)
-		g.SetAliasTables(nil)
+		g.SetAliasIndex(nil)
 		if held() {
-			t.Error("SetAliasTables left the memo")
+			t.Error("SetAliasIndex left the memo")
 		}
 	})
 }
