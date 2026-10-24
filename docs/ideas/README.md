@@ -37,11 +37,10 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`large-jpeg-thumbnails.md`](large-jpeg-thumbnails.md) — JPEGs over the 64-megapixel decode budget save and keep the missing-image glyph
 - [`identity-claim-review.md`](identity-claim-review.md)
 - [`binding-order-editing.md`](binding-order-editing.md) — a per-type ordered list of properties on the Properties page, calling `ReorderSubjectTypeProperties` (engine side shipped in S11-32)
-- [`promote-find-another-record.md`](promote-find-another-record.md) — a "find another record…" entry in the Promote target menu, for a record Promote did not offer
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
 - [`possible-values.md`](possible-values.md)
 - [`term-management.md`](term-management.md) — one place to manage terms, including relationship direction and inverses
-- [`relationships-from-shared-events.md`](relationships-from-shared-events.md) — two spouses in one marriage mean a spouse relationship; matching, family trees and person pages should read both shapes as one fact
+- [`kinship-view.md`](kinship-view.md) — family trees and person pages reading every kinship shape as one fact, and patterns beyond spouse, parent and grandparent (matching's part is Spike 11)
 
 ## Archived
 

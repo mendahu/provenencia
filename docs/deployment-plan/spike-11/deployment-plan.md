@@ -1,6 +1,6 @@
 # Deployment Plan — Spike 11
 
-Promote's matching is rebuilt as a stack of pure, registry-driven layers that the rest of the app borrows from, and the old matching code is deleted as each layer lands. The design is in [`comparison-layers.md`](comparison-layers.md) (layers 1–6, bands, the match registry, the reuse inventory) and [`claim-evidence.md`](claim-evidence.md) (the Promote sheet's pins). It pulls in the "make the algorithm graspable" part of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md), [connection subrows](promote-connection-subrows.md) on the Promote page, and Spike 10's likeness crops on the evidence sheet (S10-36). PRs follow a build-then-migrate rhythm: a PR builds a layer, the next moves every caller onto it and deletes what it replaces.
+Promote's matching is rebuilt as a stack of pure, registry-driven layers that the rest of the app borrows from, and the old matching code is deleted as each layer lands. The design is in [`comparison-layers.md`](comparison-layers.md) (layers 1–6, bands, the match registry, the reuse inventory) and [`claim-evidence.md`](claim-evidence.md) (the Promote sheet's pins). It pulls in the "make the algorithm graspable" part of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md), [connection subrows](promote-connection-subrows.md) on the Promote page, Spike 10's likeness crops on the evidence sheet (S10-36), and, added 2026-10-24, the evidence button's hover that S11-27 missed (S11-34) [find another record](promote-find-another-record.md) in the target menu (S11-35 – S11-37), and [kinship shapes](kinship-shapes.md): a shared marriage, a birth's parents and a parent chain match spouse, parent and grandparent links (S11-38 – S11-42), and [name candidates](name-candidates.md): a fuller record and a shortened given name reach the target menu (S11-43 – S11-47). PRs follow a build-then-migrate rhythm: a PR builds a layer, the next moves every caller onto it and deletes what it replaces.
 
 **A brief covers one view.** A PR that changes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
 
@@ -23,6 +23,10 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 7. **One place for every knob.** Every matching number is in `core/matchregistry` and listed in the knob inventory. A guard test fails on a number anywhere else.
 8. **The old code is gone:** `core/match`, `core/database/matching`, `core/graphalign/registry.go`, the frequency stats, and `pairExhibits`.
 9. **Connections follow their ends.** Each connection shows under a Promote row it joins. Setting John to Skip dims "Mary · parent of · John"; nothing toggles on its own, and there's no switch-off.
+10. **The rows match their board.** The Promote row's evidence button answers the pointer as S11-D1 draws it.
+11. **Any record can be the target.** A Subject Promote offers nothing for (Promote says New) can be filed on a record the researcher finds by search. The row holds that record through later decisions and shows its band, Contested when it conflicts, and its evidence.
+12. **One kinship fact, any shape.** A Source that records a marriage proposes its two people on a couple the tree records as spouses at the band a spouse relationship would get, and the reverse. A birth record naming the father matches a tree that says he is the child's parent. A Source with A parent of B and B parent of C matches a tree that records A as C's grandparent. A fact recorded twice on one side counts once.
+13. **A plausible name is offered.** A Subject named Amy is offered Amy Lee Anne Long, and one named Desiree is offered Des, as alternatives in the target menu even with nothing else to compare. Promote never drafts New or Skip; a row it does not place opens unset.
 
 ## Where the notes went
 
@@ -36,8 +40,12 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 | [Connection subrows](promote-connection-subrows.md) (was `ideas/promote-connection-subrows.md`) | S11-26, S11-27 | S11-D1 |
 | Spike 10 S10-36 — Promote compares two likeness crops (moved 2026-10-17) | S11-32 (lines), S11-20 (crops) | S11-D2 |
 | Reuse inventory ([`comparison-layers.md`](comparison-layers.md#reuse-across-the-app)) | S11-05 – S11-08, S11-13, S11-19 | — |
+| S11-27 follow-up — the evidence button's hover on the S11-D1 board was not built (user, 2026-10-24) | S11-34 | — (S11-D1, agreed) |
+| Dogfood, 2026-10-24: "Amy" not offered "Amy Lee Anne Long"; "Desiree" not offered "Des" ([name candidates](name-candidates.md)) | S11-43, S11-44, S11-46, S11-45, S11-47 | — |
+| [Kinship shapes](kinship-shapes.md) (was `ideas/relationships-from-shared-events.md`, from S11-14; grandparent added by the user; pulled in 2026-10-24) | S11-41, S11-38, S11-39, S11-40, S11-42 | — |
+| [Find another record](promote-find-another-record.md) (was `ideas/promote-find-another-record.md`, from S11-05 D-16; pulled in 2026-10-24) | S11-35, S11-37, S11-36 | S11-D3 |
 
-**Stays in the ideas folder** — the rest of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md): scenario files and goldens runner, random-graph invariants, the simulated world, the scoreboard, the labeler, fitting, and dogfood export. Whether they join this spike is decided after the re-implementation.
+**Stays in the ideas folder** — the kinship view for trees and person pages, and patterns beyond spouse, parent and grandparent: [`ideas/kinship-view.md`](../../ideas/kinship-view.md). And the rest of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md): scenario files and goldens runner, random-graph invariants, the simulated world, the scoreboard, the labeler, fitting, and dogfood export. Whether they join this spike is decided after the re-implementation.
 
 ## Working rules
 
@@ -74,6 +82,31 @@ These are the calls for this spike. PR plans treat them as binding.
 - **One guard, not one per package.** The purity and numeric-literal checks are one repo-walking test (like `core/writes/begin_test.go` `TestBeginOnlyInDatabaseAndWrites`) with a list of layer packages; each layer PR adds its line.
 - **One wire vocabulary.** Promote's flags and reason codes extend `graphalign.RowFlags` and `graphalign.Reason`, and Swift parses them in `Platform/ConclusionVocabulary.swift` under `api/ffi/swift_vocabulary_test.go`, along with the relation and cause codes the evidence sheet words.
 - **The pin policy has one owner, in Go.** Default pins come from the registry evidence section, applied in Go at Apply for rows whose sheet was never opened, and by the evidence RPC for rows that were.
+
+### Find another record
+
+- **A found record is a decided row, nothing new** ([shape](promote-find-another-record.md#shape)). It goes to Go as a `PromoteGraphAlignmentFixed` pair like a menu pick. Go holds it and never moves it, and scores it for the row's band, Contested and evidence like any decided handle. No new proposal field, flag or reason code.
+- **No new search RPC, and one search model.** The picker calls `SearchCatalog` with `kinds` set to the row's kind; hits already carry their header (S9-35). It reuses the omnibar's results model and hit row, moved to a shared home by S11-37, not a copy in Promote.
+- **An inline picker, every record of the kind, no warning** (user, 2026-10-24; [decided](promote-find-another-record.md#decided-user-2026-10-24)). The search opens from the row on the Promote page, not the omnibar, which is not connected to the page. It lists every canonical entity of the row's kind, ranked by `SearchCatalog`'s match to the search string, with nothing filtered out. A differently named pick shows no warning beyond the band and Contested.
+- **The menu entry is a sentinel option.** `PVSelect` gets no action item; the row's binding catches the entry's token before `setTarget`, so opening or cancelling the search never marks the row decided. A kit PR is cut only if S11-D3 draws what a sentinel cannot do.
+- **The picked record joins the row's menu**, through one `PromoteFlow` call that adds the record to `row.menu` and sets the target, with `setTarget`'s follow-up. The menu stays the one list of a row's records (S11-35).
+- **Engine first, proven by tests.** S11-35 adds no Go code unless a test finds a gap: a fixed handle no shortlist key reaches is loaded, banded, contested when it conflicts, has evidence and files. A gap found there is fixed in S11-35.
+
+### Kinship shapes
+
+- **Implied links, not a new comparison** ([shape](kinship-shapes.md#shape)). Each side's links are read through the kinship patterns before alignment; a pattern that holds adds a relationship link with the key a direct link would have. `segmentcompare` and `graphalign` are unchanged and stay one hop. An implied grandparent is one hop made from two parent links.
+- **Three patterns, product terms only** (user, 2026-10-24): two `spouse`s in one `marriage` imply `spouse`; a `father` or `mother` and the `subject` of one `birth` imply `parent`, directed; a parent of a parent (each direct or implied) implies `grandparent`. A grandparent never implies a parent; nothing deeper than grandparent.
+- **One pure package, `core/kinship`**, holds the patterns and the derivation, joins the purity guard, and is what trees and person pages read later. Derived at load, never stored: the layer loader and `loadCanon` call it (S11-39), and so does the evidence query's `canonLinks` (S11-40). It returns only implied links, keyed through `segmentcompare.Key` with the catalog's `Terms`.
+- **One fact, one link per side.** A direct link and an implied one between the same two people with the same key merge into one link carrying both shapes' bridge Subjects, credited once, through the loaders' existing merge (`edgeSeenKey`), not a second one in `core/kinship`.
+- **No new knob.** An implied link weighs as the direct link it stands for (the segment registry's Other pair).
+
+### Name candidates
+
+- **The candidate gate drops to 0.4** (user, 2026-10-24; [case 1](name-candidates.md#case-1--amy-against-amy-lee-anne-long)). `alignment.MinSimilarity` 0.5 → 0.4, so a one-name Subject reaches a record with three more names. The gate only picks candidates; no band moves, and the row still opens unset (S11-47).
+- **Des is a nickname of Desiree and of Desirae** (user, 2026-10-24): two sets, `{desiree, des}` and `{desirae, des}`, in `nicknameSets`, the product's already-reviewed edit of the upstream list, with a `CacheVersion` bump. An existing catalog gains new product nicknames by a command the researcher runs, over `AddProductNicknames`; nothing backfills on open (S11-44).
+- **Promote suggests a record or nothing** (user, 2026-10-24; [detail](name-candidates.md#promote-suggests-a-record-or-nothing)). A proposal row carries a handle or no target, with its alternatives; Go no longer sends New or Skip, nor the row reasons `weak` and `no_match`, and Swift never drafts them. New and Skip are only the researcher's choice, still sent back as fixed pairs.
+- **Gate only; the curve is held** (user, 2026-10-24) until dogfood after S11-43 shows a fuller record still missing.
+- **A prefix is an initial generalised** (user, 2026-10-24; [prefix rule](name-candidates.md#prefix-rule-in-detail)). A word of a given, nickname or untyped part (the alias tables' roles) of at least `PrefixMinLength` letters that is the exact start of another, after folding, is `Contains` at `PrefixCredit` with `CausePrefix`, checked after alias, fold and spelling. No surname prefixes; text compare never gets it. Both knobs live in the registry's value section. `PrefixMinLength` is 2 (user, 2026-10-24). A prefix folds in the reconciler like an initial (user, 2026-10-24). The shortlist finds prefixes both ways through separate index and lookup keys (S11-46).
 
 ### Claim evidence
 
@@ -118,6 +151,20 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-28 | Fold a nickname into its given name | 2 | Reconciler folds a nickname or abbreviation into its formal name, keeping the set's head; a reviewed table directs two-way pairs; cache reads the product alias tables | — | S11-06 | [plan](prs/S11-28-alias-fold.md) | Planned |
 | S11-29 | Quote nicknames and add former surnames | 2 | Nicknames in quotes everywhere; `former_surname` part type in parentheses, italic on the Person titles | — | — | [plan](prs/S11-29-name-display.md) | Planned |
 | S11-30 | Gender meets sex at birth in its own words | 3 | The sex / gender pool maps gender terms into sex at birth terms through a registry crosswalk; `man` agrees with `male` | — | S11-10 | — (bugfix, user 2026-10-21) | In review |
+| S11-34 | Evidence button hover on Promote rows | 6 | The row's assessment button (band, Contested, reason, chevron) takes the hover the S11-D1 board draws, on the kit's `PVHoverEffect` | — (S11-D1, agreed) | S11-27 | — | Scoped |
+| S11-35 | Hold a record Promote did not offer | 8 | `PromoteFlow` takes a record from outside the menu and holds it as a decided row; Go tests pin that a fixed off-shortlist handle is loaded, banded, has evidence and files; `FakeStore` holds it | — | — | — | Scoped |
+| S11-37 | One kind-scoped catalog search | 8 | The omnibar's results model and hit row move out of `Features/Workspace` to a shared home, with a `kinds` input and an optional location; the omnibar uses them unchanged | — | — | — | Scoped |
+| S11-36 | Find another record in the target menu | 8 | "Find another record…" at the end of the target menu opens a search of the row's kind on S11-37's model; the pick goes through S11-35 | S11-D3 | S11-35, S11-37, S11-D3 | — | Scoped |
+| S11-41 | One link reading for bridges | 9 | `promotealign`'s private `linkOf` and `eventEndpoint` move to `segmentcompare`, so the loaders and `core/kinship` read a bridge as a `Link` one way | — | — | — | Scoped |
+| S11-38 | Kinship patterns | 9 | `core/kinship`: the three patterns and the derivation over one side's links, returning only implied links with the links and event behind them; `vocabkey` term constants; the matching skill | — | S11-41 | — | Scoped |
+| S11-39 | Matching reads kinship shapes | 9 | The layer loader and `loadCanon` add implied links through their existing merge; goldens for marriage ↔ spouse, birth parents ↔ parent, chain ↔ grandparent; derivation cost measured | — | S11-38 | — | Scoped |
+| S11-40 | Implied links in claim evidence | 9 | `canonLinks` derives too; a corresponding implied link gives a relationship line with how each side recorded it and the event behind it, a bundle of every bridge behind it, through the RPC to Swift | — | S11-39 | — | Scoped |
+| S11-42 | Implied links on the evidence sheet | 9 | The sheet words S11-40's line ("both are spouses in the marriage on …") in the existing relationship Card; L10n | — | S11-40 | — | Scoped |
+| S11-43 | Lower the candidate gate | 10 | `alignment.MinSimilarity` 0.5 → 0.4 with its inventory row; a test that "Amy" gets "Amy Lee Anne Long" as an alternative | — | — | — | Scoped |
+| S11-44 | Des as a nickname of Desiree and Desirae | 10 | `{desiree, des}` and `{desirae, des}` in `nicknameSets` with a `CacheVersion` bump; a command copies new product nicknames into the open catalog through `AddProductNicknames` | — | S11-28 | — | Scoped |
+| S11-47 | Promote suggests a record or nothing | 10 | Unplaced proposal rows carry no target and no `weak` / `no_match` reason; possible duplicates found among unplaced rows; Swift drafts a handle or unset only | — | — | — | Scoped |
+| S11-46 | Prefix keys in the shortlist | 10 | `WordKeys` splits into index and lookup lists; given-name words are filed and looked up under their prefixes both ways; `PrefixMinLength`; extra keys measured | — | — | — | Scoped |
+| S11-45 | Prefix names | 10 | A given name that starts another is a `Contains` hit at `PrefixCredit` (`CausePrefix`), with the broader side right; the cause worded on the sheet; the reconciler's call | — | S11-46, S11-28 | — | Scoped |
 | S11-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -126,6 +173,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | --- | --- | --- | --- |
 | [S11-D1](design/archive/S11-D1-promote-rows.md) | Promote page — rows | **S11-18**, **S11-27** | Board agreed 2026-10-20 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share)). Contested marker beside the band; move reasons in the Updated caption; connections as subrows of the rows they join, answering the [design questions](promote-connection-subrows.md#open-questions-for-design) |
 | [S11-D2](design/archive/S11-D2-evidence-sheet.md) | Promote page — evidence sheet | **S11-20** | Board agreed 2026-10-22 ([Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), frames E01 – E14). Whole sheet: "why suggested" marks at the title, property sections, relationship lines, collapsed members, likeness crops (from Spike 10's S10-D13), copy |
+| S11-D3 | Promote page — target menu | **S11-36** | Not written. The "Find another record…" entry, the inline picker it opens on the row, how a found record reads in the menu once picked, and how a held record with band None reads. Product calls are [decided](promote-find-another-record.md#decided-user-2026-10-24) |
 
 ## Slices
 
@@ -183,8 +231,10 @@ SLICE 5 — Claim evidence
 SLICE 6 — Connection subrows
   S11-26  Connections file by their ends   (any time)
   ✎ S11-D1 ──▶ S11-27  Connection subrows on Promote
+  S11-34  Evidence button hover on Promote rows   (follow-up, after S11-27)
   Check: setting John to Skip dims "Mary · parent of · John" under its row; nothing
-         toggles by itself; the bottom connections panel is gone.
+         toggles by itself; the bottom connections panel is gone; the evidence
+         button answers the pointer as the board draws it.
 
 SLICE 7 — Performance
   S11-21  Large-Source performance check
@@ -192,10 +242,39 @@ SLICE 7 — Performance
   Check: a 100-Subject Source proposes within the benchmark, and a warm evidence
          open issues no catalog query; a hub page leaves at most N Sources loaded.
 
+SLICE 8 — Find another record
+  S11-35  Hold a record Promote did not offer   (any time)
+  S11-37  One kind-scoped catalog search        (any time, parallel with S11-35)
+  ✎ S11-D3 ──▶ S11-36  Find another record in the target menu
+  Check: on a row Promote opens New, "Find another record…" finds a differently
+         named record of the row's kind; the row holds it after other rows are
+         decided, shows its band and Contested, opens its evidence, and Done files it.
+
+SLICE 9 — Kinship shapes
+  S11-41  One link reading for bridges          (any time)
+  S11-38  Kinship patterns
+  S11-39  Matching reads kinship shapes
+  S11-40  Implied links in claim evidence
+  S11-42  Implied links on the evidence sheet
+  Check: a Source marriage proposes its couple strong on two people the tree has as
+         spouses; a birth naming the father matches the tree's parent link; a parent
+         chain matches a grandparent link; the sheet says "both are spouses in the
+         marriage…" and checking it pins both participations.
+
+SLICE 10 — Name candidates
+  S11-43  Lower the candidate gate              (any time)
+  S11-44  Des as a nickname of Desiree and Desirae   (after S11-28)
+  S11-47  Promote suggests a record or nothing  (any time)
+  S11-46  Prefix keys in the shortlist          (any time)
+  S11-45  Prefix names
+  Check: "Amy" is offered "Amy Lee Anne Long"; "Desiree" and "Desirae" are offered
+         "Des" in a catalog that existed before S11-44, once the command has run; a three-letter start of a given name
+         with no nickname set is offered through the prefix rule, and the sheet says why.
+
 S11-99 — Dogfood close / docs
 ```
 
-Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 7 after S11-16; slice 6 any time (S11-26 has no dependency). S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
+Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 7 after S11-16; slice 6 any time (S11-26 has no dependency); S11-34 any time after S11-27; S11-43, S11-46 and S11-47 any time, S11-44 and S11-45 after S11-28; S11-41 any time, and slice 9 runs beside slice 8; S11-35 and S11-37 any time, in parallel, and S11-D3 can be drawn while they run. S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
 
 ### Dependencies at a glance
 
@@ -215,6 +294,13 @@ S11-D1 ──▶ S11-18, S11-27
 S11-26 ──▶ S11-27
 S10-54 ──▶ S11-32   (Spike 10)
 S11-D2 ──▶ S11-20
+S11-27 ──▶ S11-34
+S11-35 ──┐
+S11-37 ──┤
+S11-D3 ──┴──▶ S11-36
+S11-41 ──▶ S11-38 ──▶ S11-39 ──▶ S11-40 ──▶ S11-42
+S11-28 ──▶ S11-44
+S11-46, S11-28 ──▶ S11-45
 ```
 
 ---
@@ -448,6 +534,14 @@ Split from S11-20 when it was planned (user, 2026-10-22): the engine half of the
 **Check.** Setting John to Skip dims his connections; setting him to New turns them on; a self-link warns.
 **Context.** [Connection subrows](promote-connection-subrows.md); S11-D1.
 
+#### S11-34 — Evidence button hover on Promote rows
+
+Follow-up to S11-27 (user, 2026-10-24): the S11-D1 board draws a hover on the row's evidence button, and neither S11-18 nor S11-27 built it.
+**Ships.** The assessment-column button in `PromoteAlignmentRow` (`PromoteView.swift`, identifier `promote.row.<ref>.evidence`: band and Contested Badges, the reason, the chevron) shows the board's hover state, reusing a hover style the kit already has (`PVMenuRowButtonStyle` in `PVButton.swift`, `PVListRowStyle` in `PVList.swift`; feature precedent `SourcesSplitZoneButtonStyle`) or extending one through `add-ui-component`, not a third hover fill. `PVHoverEffect` adds a press scale; the plan checks the board wants it. Its hit target stays the whole column.
+**Not this PR.** Hover on subrows (S11-D1 §6 non-goals: no hover action on a subrow), on the target menu, or on the anchor rows. A new kit primitive (S11-D1 non-goals); if the hover is a reusable shape, the plan says whether it belongs on an existing kit style.
+**Check.** Pointing at the evidence button shows the board's hover; moving off clears it; clicking still opens the sheet; VoiceOver reads as before.
+**Context.** [S11-D1](design/archive/S11-D1-promote-rows.md) and its board, [Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share) (user, 2026-10-24). The planner may not be able to open it; the implementing agent runs locally and reads the hover from the board, so the plan names the button and the board and leaves the hover's look to the board, not to prose; `macos/App/DesignSystem/Components/HoverEffect/PVHoverEffect.swift`; [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) if the kit changes.
+
 ### Slice 7 — Performance
 
 #### S11-21 — Large-Source performance check
@@ -481,3 +575,110 @@ Asked by the user on 2026-10-19, after S11-06. Planned as two PRs, with no migra
 **Not this PR.** Migrating existing catalogs; italics on other surfaces.
 **Check.** *James “Jake” Robins*; *Jones, Mary (Smith)* with *Smith* italic.
 **Context.** [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §4; [`ideas/international-names.md`](../../ideas/international-names.md).
+
+### Slice 8 — Find another record
+
+Pulled in from the ideas folder on 2026-10-24. Design: [`promote-find-another-record.md`](promote-find-another-record.md).
+
+#### S11-35 — Hold a record Promote did not offer
+
+**Ships.** A `PromoteFlow` call that takes a record from outside the row's menu (id, ref, sorted and reading titles, subtitle), adds it to `row.menu` with reason `decided`, sets the target and marks the row decided, with `setTarget`'s duplicate-note and re-propose follow-up; `PromoteModel` exposes it. A decided row keeps the record through re-proposals with its band refreshed (`makeRow`'s decided branch; [why the reason is `decided`](promote-find-another-record.md#where-the-swift-side-changes)). Go tests show that a fixed handle no shortlist key reaches is loaded into the canon, banded, flagged contested when a property conflicts, and answers `GetPromoteClaimEvidence` (extending `promote_align_test.go` and `promotealign_test.go`), and that it files at Apply (handler or `promote` tests). `FakeStore`'s propose holds a fixed handle outside its candidates (today it finds entities only among memberships). No chrome.
+**Not this PR.** The menu entry and the search (S11-36). Any new proposal field or reason (working rule "A found record is a decided row, nothing new").
+**Check.** `PromoteFlowTests`: a row opened New, given an outside record, holds it, shows it in its menu, and keeps it after another row is decided; the Go tests above pass.
+**Context.** Working rules under [Find another record](#find-another-record); [shape](promote-find-another-record.md#shape) and [what the engine already does](promote-find-another-record.md#what-the-engine-already-does); [`add-swift-test`](../../../.agents/skills/add-swift-test/SKILL.md).
+
+#### S11-36 — Find another record in the target menu
+
+**Ships.** "Find another record…" at the end of every non-anchor row's target menu, as S11-D3 draws it: a sentinel option the row's binding catches (working rule "The menu entry is a sentinel option"), opening an inline picker on the row that searches every record of the row's kind, ranked by match, on S11-37's shared model and hit row (working rule "An inline picker, every record of the kind, no warning"). A pick goes through S11-35's call. How a held record with band None reads is S11-D3's. All copy through L10n; VoiceOver reads the entry and the hits.
+**Not this PR.** Searching from the evidence sheet; records of another kind; merging records ([what stays later](promote-find-another-record.md#what-stays-later)). A warning for a `Different` pick (refused, user 2026-10-24).
+**Check.** On a row Promote opens New, the entry finds a differently named record; picking it selects it in the menu, the band and Contested show, the sheet opens on it, and Done files it. Opening and cancelling the search leaves the row undecided.
+**Context.** S11-D3; [decided](promote-find-another-record.md#decided-user-2026-10-24); S11-37; [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).
+
+#### S11-37 — One kind-scoped catalog search
+
+Preparatory refactor, from the map review (K-1, 2026-10-24).
+**Ships.** `OmnibarResultsModel`'s search state (debounce, generation guard, errors, empty state) and the private `OmnibarHitRowView` move out of `Features/Workspace` to a shared home, with a `kinds` input and an optional location (Promote has none to give `SearchCatalog`). The omnibar keeps its behavior on them. [`add-searchable-kind`](../../../.agents/skills/add-searchable-kind/SKILL.md) says the omnibar is no longer the only consumer and points at the shared search.
+**Not this PR.** Promote (S11-36). Any change to ranking or hit kinds.
+**Check.** The omnibar works as before (its tests pass); a test drives the shared model with `kinds: ["person"]` and gets only person hits.
+**Context.** `macos/App/Features/Workspace/OmnibarResultsModel.swift`, `OmnibarResultsHost.swift`, `OmnibarHitPresentation.swift`; [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) for where the row view lands.
+
+### Slice 9 — Kinship shapes
+
+Pulled in from the ideas folder on 2026-10-24, with grandparent added by the user. Design: [`kinship-shapes.md`](kinship-shapes.md).
+
+#### S11-41 — One link reading for bridges
+
+Preparatory refactor, from the slice 9 map review (K-4, 2026-10-24).
+**Ships.** `linkOf` and `eventEndpoint` (`core/database/promotealign/terms.go`), which read a filed or layer bridge as a `segmentcompare.Link`, move to `core/segmentcompare` beside `Key`. The layer loader, `loadCanon`'s `canonKeys` and the evidence query call the moved functions. No behavior change.
+**Not this PR.** `core/kinship` (S11-38).
+**Check.** `go test ./core/...` passes; `promotealign` has no private link reading left (grep).
+**Context.** [`segmentcompare/key.go`](../../../core/segmentcompare/key.go); working rule "One wire vocabulary" is untouched.
+
+#### S11-38 — Kinship patterns
+
+**Ships.** `core/kinship`: the three patterns ([shape](kinship-shapes.md#shape)) and one derivation that takes a side's links (ends, `vocabkey.BridgeKey`, bridge Subjects) and `segmentcompare.Terms`, and returns only the implied links, each with the links and the event it was made from, keyed through S11-41's link reading and `segmentcompare.Key`. `core/vocabkey` gains constants for the terms the patterns name (all already seeded), checked by `TestVocabKeysMatchSeed`. The package joins the one purity guard. [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) lists `core/kinship` and gains "add a kinship pattern". Unit tests: each pattern, direction through `Key` (parent reads as `child` with ends swapped), grandparent from direct, implied and mixed parent links, no parent from a grandparent, nothing from catalog-only terms.
+**Not this PR.** Any caller (S11-39). Patterns beyond the three ([`ideas/kinship-view.md`](../../ideas/kinship-view.md)).
+**Check.** `go test ./core/kinship/...` passes with no build tags; the guard lists the package.
+**Context.** Working rules under [Kinship shapes](#kinship-shapes); [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) (a new layer-side package and its guard line).
+
+#### S11-39 — Matching reads kinship shapes
+
+**Ships.** `promotealign`'s layer loader adds `core/kinship`'s implied links to `Layer.Bridges` through its existing same-ends, same-key merge (their `Associations` are the bridges behind them, for S11-40), and `loadCanon` derives over the component it already loads and adds them to `Canon.Edges` through its dedupe. Implied bridges are never filed and never shown as connections (Apply and the subrows do not read `Layer.Bridges`); a test pins what the row's "via" reason says when the neighbor was reached through an implied link (a grandparent has no subrow on the row). Goldens in `graphalign` / `promotealign`: a Source marriage against a filed spouse relationship, a birth's father against a filed parent link, a Source parent chain against a filed grandparent, each the reverse too, and a fact recorded in two shapes on one side credited once. The obituary golden and sparse cases still pass. Times the derivation over the loaded canon on S11-21's fixture when it has landed, else on `bench_test.go`'s. [`matching-model.md`](../../matching-model.md) and [`promote-graph-alignment.md`](../../promote-graph-alignment.md) say links are read through the kinship patterns.
+**Not this PR.** The evidence sheet (S11-40). New knobs (working rule "No new knob").
+**Check.** The goldens above pass; a Source with only a marriage proposes the couple at the band the same Source with a spouse relationship gets.
+**Context.** [Counting once](kinship-shapes.md#counting-once), [weight](kinship-shapes.md#weight); [layer 6 procedure](comparison-layers.md#layer-6-procedure); S11-14 D-11 (link weights).
+
+#### S11-40 — Implied links in claim evidence
+
+**Ships.** The evidence query's canon side (`canonLinks` in `promotealign/evidence.go`, which reads graph nodes, not `Canon.Edges`) derives implied links too. In `claimevidence`, `Relationship` gains how each side recorded the fact (directly, through an event, through a chain) and the event behind it (its Subject or entity, type and date), and a corresponding implied link gives a relationship line whose bundle holds every bridge behind it and the event's defining properties. The plan decides the bundle's shape (one bundle per underlying bridge, or one bundle of several) and its pin id (`BundlePinID` keys on one bridge today). The RPC carries it (proto field, handler, `GoStore` and `FakeStore` mapping), and the shape code joins `ConclusionVocabulary.swift` under `swift_vocabulary_test.go`. Default pins at Apply follow. The sheet keeps today's sentence until S11-42.
+**Not this PR.** The sheet's new sentences (S11-42). Trees and person pages ([`ideas/kinship-view.md`](../../ideas/kinship-view.md)).
+**Check.** A Source marriage against a filed spouse relationship returns one relationship line marked "through an event" whose bundle holds both participations; a tree marriage against a Source spouse relationship returns the reverse; Done on an unopened row pins the bundle.
+**Context.** [On the evidence sheet](kinship-shapes.md#on-the-evidence-sheet); [`claim-evidence.md`](claim-evidence.md#evidence-through-relationships); `core/claimevidence/build.go` `bundles`, `pins.go`; [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md).
+
+#### S11-42 — Implied links on the evidence sheet
+
+**Ships.** The sheet words S11-40's line by how each side recorded it ("They are spouses: both are spouses in the marriage on 12 May 1842"; "…the record has them as spouses"; a chain names the parent in between), in the existing relationship Card, through L10n. No new chrome.
+**Not this PR.** Engine or wire (S11-40).
+**Check.** A Source marriage against a filed spouse relationship shows "…both are spouses in the marriage on <date>"; checking it pins both participations.
+**Context.** [On the evidence sheet](kinship-shapes.md#on-the-evidence-sheet); [`claim-evidence.md`](claim-evidence.md#evidence-through-relationships); [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).
+
+### Slice 10 — Name candidates
+
+From dogfood on 2026-10-24. Design and diagnosis: [`name-candidates.md`](name-candidates.md).
+
+#### S11-43 — Lower the candidate gate
+
+**Ships.** `alignment.MinSimilarity` 0.4 in `core/matchregistry/alignment.go`; its comment (and the inventory row in [`matching-model.md`](../../matching-model.md)) drops "at least half alike" and gives the Amy case as the reason. A `graphalign` test: a one-given-name Subject and a record with three more names is a candidate and shows as an alternative on an unplaced row; a record whose first given name differs is still not a candidate. The obituary golden and sparse cases keep their targets (the map review ran the suite at 0.4 with no flips).
+**Not this PR.** The name curve (held, user 2026-10-24; [what stays later](name-candidates.md#what-stays-later)). Surname-only ties ([`ideas/coverage-aware-similarity.md`](../../ideas/coverage-aware-similarity.md)).
+**Check.** On a real project, a row for "Amy" lists "Amy Lee Anne Long".
+**Context.** [Case 1](name-candidates.md#case-1--amy-against-amy-lee-anne-long); [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md).
+
+#### S11-44 — Des as a nickname of Desiree and Desirae
+
+**Ships.** `{desiree, des}` and `{desirae, des}` in `nicknameSets` (`namealiases/nicknames_seed.go`, already the product's reviewed edit of upstream; two sets because a shared nickname does not join two formal names), the reconciler `CacheVersion` bump and the seed hash re-pinned (S11-28's recipe). A command copies the product nicknames a catalog lacks into the open catalog through `AddProductNicknames` (no caller today), then `Invalidate`s, and reports how many sets and tokens were new (`NicknameAdd`): an FFI handler ([`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md)) and an app menu command with a toast, copy through L10n. The plan says where the command sits; if it needs a new view, it waits on a brief. Nothing runs on open; [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md) gains a line on the command.
+**Not this PR.** An editor for alias tables.
+**Check.** In a catalog created before this PR, after the command, "Desiree" and "Desirae" are offered "Des"; running it again adds nothing; a new catalog has both sets.
+**Context.** [Case 2](name-candidates.md#case-2--desiree-against-des); S11-28 (the reviewed table beside upstream).
+
+#### S11-47 — Promote suggests a record or nothing
+
+The user's call on 2026-10-24, answering S11-43's open question.
+**Ships.** `graphalign/rows.go`: a row Align does not place has no target (neither `TargetSkip` nor `TargetNew`) and no row reason `weak` or `no_match`; its alternatives stay as they are, each with its own reason (`ReasonWeak` on an alternative stays). The possible-duplicate check finds unplaced rows instead of `TargetNew` rows. `TargetNew` and `TargetSkip` stay for `Fixed`. `PromoteGraphAlignmentRow.target`'s comment says it is `handle` or empty; the handler and `FakeStore` follow. Swift: `PromoteFlow.draftTarget` drafts the proposed handle, the weak-band first alternative as today, or unset, never `.skip` or `.newKind`; `Reason`'s row cases `weak` and `noMatch` and their L10n go if nothing else reads them (`ConclusionVocabulary.swift`, `swift_vocabulary_test.go`, `PromoteModel.reasonText`). Tests asserting `TargetNew` / `TargetSkip` / `ReasonNoMatch` on a proposal row (for example `TestLifespanRulesOutAPerson`) assert an unplaced row instead. [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 says Promote drafts no New or Skip.
+**Not this PR.** Decided rows: New and Skip as fixed pairs are unchanged. Which record a weak band drafts.
+**Check.** A row with no candidate and a row whose candidate fell short both open unset; two look-alike unplaced rows still get the "also new" note once both are set to New; Done files a decided New and leaves a decided Skip off.
+**Context.** [Promote suggests a record or nothing](name-candidates.md#promote-suggests-a-record-or-nothing); [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md).
+
+#### S11-46 — Prefix keys in the shortlist
+
+Split from S11-45 by the map review (K-2, K-7, 2026-10-24).
+**Ships.** `valuecompare.WordKeys` returns separate index and lookup lists, and `shortlist.Keys` files and looks up each (no behavior change for today's keys). Words of the alias roles are also filed under their prefixes from `PrefixMinLength` up (a new registry value knob, 2 by the user's call, with its inventory row), with a tag apart from whole words; a lookup asks its whole word against filed prefixes and its own prefixes against filed whole words, so Des reaches Desiree and Desiree reaches Des. The extra keys and shortlist hits are measured on S11-21's fixture or `bench_test.go`'s, with a cap from the measurement if needed. Surnames are not keyed by prefix.
+**Not this PR.** The comparer rule (S11-45): until it lands, a prefix shortlists and the gate drops it.
+**Check.** A shortlist property test: Des ↔ Desiree both ways; "Mac" does not shortlist "MacDonald" by prefix; today's keys still pair as before.
+**Context.** [Prefix rule](name-candidates.md#prefix-rule-in-detail); `core/shortlist/shortlist.go` `Keys`; `core/valuecompare/shortlist.go`.
+
+#### S11-45 — Prefix names
+
+**Ships.** The prefix rule ([detail](name-candidates.md#prefix-rule-in-detail)): in `valuecompare`'s word comparer after alias, fold and spelling, behind a `prefixes` word option names set and text never does, for the alias roles; `PrefixCredit` in the registry value section with its inventory row; `CausePrefix`; the broader side from word length, not `IsInitial` (`name.go`). The cause joins `ConclusionVocabulary.swift` under `swift_vocabulary_test.go`, worded through L10n on the sheet's existing name line. `CausePrefix` joins the reconciler's fold allow-list (`autoreconcile/names.go`, after S11-28 widens it), so "Des Long" shows as "Desiree Long" within one entity (user, 2026-10-24). Extends the name ladders in `name_test.go` and the contract tests; "Ann" / "Anne" stays a spelling `Near`.
+**Not this PR.** Surname or two-letter prefixes.
+**Check.** "Desiree" against "Des" (no nickname set) is `Contains` with `CausePrefix` and is offered; "Desmond" against "Desiree" is not a prefix; "Mac" does not reach "MacDonald".
+**Context.** [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md); [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).

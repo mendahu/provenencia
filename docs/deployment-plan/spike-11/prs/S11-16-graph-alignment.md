@@ -108,7 +108,7 @@ Conventions. `R` is `matchregistry.Default()`; `cfg` is `R.AlignConfig()` (D-1).
 | A contested flag per alternative | S11-18, if S11-D1 draws one |
 | Memoizing layers 1–4 across re-runs; timing the index build over the canon | S11-21 |
 | Provenance below 1 (credibility, transcription, claim confidence) | Not planned — unchanged since Spike 9 ([`promote-graph-alignment.md`](../../../promote-graph-alignment.md) §12) |
-| Relationships implied by shared events | [`docs/ideas/relationships-from-shared-events.md`](../../../ideas/relationships-from-shared-events.md) |
+| Relationships implied by shared events | [`kinship-shapes.md`](../kinship-shapes.md) (moved from `docs/ideas/relationships-from-shared-events.md` on 2026-10-24) |
 | Similarity that weighs how many properties were compared (a type-only or surname-only match scores 1 today) | [`docs/ideas/coverage-aware-similarity.md`](../../../ideas/coverage-aware-similarity.md) |
 | A coarse misspelling shortlist key | Not planned — [decided 2026-10-17](../comparison-layers.md#decided-on-2026-10-17) |
 

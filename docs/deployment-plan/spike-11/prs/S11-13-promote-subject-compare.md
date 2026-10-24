@@ -125,7 +125,7 @@ Catalog tests in `core/database/promotealign` with the existing `fixture`. "Date
 | The layer 6 walk, top K with ties, similarity as the candidate gate, the alignment registry section, `seedCandidateLimit` and `core/graphalign/registry.go` deleted, `ConflictWithFixed` | S11-16 |
 | Showing the lifespan on the sheet, and saying why a person has none when their own dates contradict each other (S11-12 D-12) | S11-20 (scope entry updated with this plan) |
 | Replacing `pairExhibits` with property compare's speaking pair (and its second SQL read of the layer's Observations in `loadExhibitObservations`); the registry evidence section | S11-19, S11-25 |
-| A "find another record" entry for a record Promote did not offer | [`docs/ideas/promote-find-another-record.md`](../../../ideas/promote-find-another-record.md) |
+| A "find another record" entry for a record Promote did not offer | [`promote-find-another-record.md`](../promote-find-another-record.md) (moved from `docs/ideas/` on 2026-10-24) |
 | Merge hints (entity against entity: `subjectcompare.Compare` on two `Build` profiles) | Not planned in Spike 11 — no UI; the reuse inventory names the shape |
 | Provenance scaling comparisons | Not planned in Spike 11 ([`promote-graph-alignment.md`](../../../promote-graph-alignment.md) §12) |
 | Benchmark-driven memoization | S11-21 |
