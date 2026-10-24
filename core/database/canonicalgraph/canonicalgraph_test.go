@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -71,11 +72,12 @@ func TestNewHop(t *testing.T) {
 }
 
 type fixture struct {
-	t   *testing.T
-	c   *database.Catalog
-	src sources.Source
-	art artifacts.Artifact
-	y   int64
+	t     *testing.T
+	c     *database.Catalog
+	src   sources.Source
+	art   artifacts.Artifact
+	graph []byte // the Source's one Evidence graph
+	y     int64
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -95,7 +97,7 @@ func newFixture(t *testing.T) *fixture {
 	must(t, err)
 	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
-	return &fixture{t: t, c: c, src: src, art: art}
+	return &fixture{t: t, c: c, src: src, art: art, graph: evidencegraphstest.SoleGraph(t, c, src.ID).ID}
 }
 
 func (f *fixture) subject(kind string) subjects.Subject {
@@ -103,7 +105,7 @@ func (f *fixture) subject(kind string) subjects.Subject {
 	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
 	must(f.t, err)
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.src.ID, SubjectTypeID: st.ID}, nil)
+		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: f.graph, SubjectTypeID: st.ID}, nil)
 	})
 	must(f.t, err)
 	_, err = writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {

@@ -62,9 +62,10 @@ func TestSubjectPositions(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		graph := evidencegraphstest.SoleGraph(t, c, sourceID).ID
 		sub, _, err := writes.Run(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: sourceID, SubjectTypeID: person.ID, Label: label,
+				GraphID: graph, SubjectTypeID: person.ID, Label: label,
 			}, nil)
 		})
 		if err != nil {
@@ -224,7 +225,7 @@ func TestSubjectPositions(t *testing.T) {
 					t.Fatal(err)
 				}
 				def, jones, _ := artifactstest.Split(t, c, userID, src.ID, "Jones")
-				bea := artifactstest.SubjectOn(t, c, userID, src.ID, jones.ID, "person", "Bea")
+				bea := artifactstest.SubjectOn(t, c, userID, jones.ID, "person", "Bea")
 				for _, p := range []struct {
 					id   []byte
 					x, y int64

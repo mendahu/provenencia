@@ -75,8 +75,9 @@ func (f *walkFixture) subject(src sources.Source, name, kind string) subjects.Su
 	if err != nil {
 		f.t.Fatal(err)
 	}
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: walkUser}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, walkUser, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: st.ID}, nil)
+		return subjects.Create(tx, walkUser, subjects.CreateInput{GraphID: graph, SubjectTypeID: st.ID}, nil)
 	})
 	if err != nil {
 		f.t.Fatal(err)
@@ -218,7 +219,7 @@ func TestWalkEvidenceGraphEdges(t *testing.T) {
 		{name: "no from Subjects", hop: participates},
 	}
 	g := f.c.Graph()
-	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID)
+	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(f.t, f.c, f.src.ID).ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +266,7 @@ func TestWalkEvidenceGraphStaysOnItsGraph(t *testing.T) {
 	}
 	other, _ := f.newSource(typeID, "Elsewhere")
 	g := f.c.Graph()
-	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(t, f.c, other.ID).ID)
+	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(f.t, f.c, other.ID).ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -313,12 +314,12 @@ func TestMemberSourceAndGraph(t *testing.T) {
 	t.Run("the Default graph", func(t *testing.T) {
 		f := newWalkFixture(t)
 		james := f.subject(f.src, "james", "person")
-		check(t, f, james, evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID)
+		check(t, f, james, evidencegraphstest.SoleGraph(f.t, f.c, f.src.ID).ID)
 	})
 	t.Run("a Split graph", func(t *testing.T) {
 		f := newWalkFixture(t)
 		_, jones, _ := artifactstest.Split(t, f.c, walkUser, f.src.ID, "Jones")
-		james := artifactstest.SubjectOn(t, f.c, walkUser, f.src.ID, jones.ID, "person", "")
+		james := artifactstest.SubjectOn(t, f.c, walkUser, jones.ID, "person", "")
 		check(t, f, james, jones.ID)
 	})
 }

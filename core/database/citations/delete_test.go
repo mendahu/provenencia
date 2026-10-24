@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -72,9 +73,10 @@ func TestCitationDeleteConnectionOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	alice, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
+			GraphID: graph, SubjectTypeID: personType.ID, Label: "Alice",
 		}, &subjects.Placement{GridX: 0, GridY: 0})
 	})
 	if err != nil {
@@ -82,7 +84,7 @@ func TestCitationDeleteConnectionOnly(t *testing.T) {
 	}
 	wedding, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Wedding",
+			GraphID: graph, SubjectTypeID: eventType.ID, Label: "Wedding",
 		}, &subjects.Placement{GridX: 4, GridY: 4})
 	})
 	if err != nil {

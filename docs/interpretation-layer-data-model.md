@@ -584,7 +584,7 @@ Subjects deliberately contain little domain data. A person's name, an Event's da
 
 `description` is an optional short summary of the subject itself. Subjects do not have a multi-note table; researcher commentary about interpreted assertions belongs on the supporting Observations and can be aggregated from `observation_notes` when a subject-centric view is needed.
 
-`graph_id` is the Evidence graph the Subject belongs to ([`source-layer-data-model.md`](source-layer-data-model.md) § 7.1). A Subject belongs to one graph and never moves. The composite key `(graph_id, source_id)` keeps the graph on the Subject's home Source. `subjects.Create` takes `CreateInput.GraphID` when given, else the graph from `evidencegraphs.SoleGraphTx` while every Source has one graph.
+`graph_id` is the Evidence graph the Subject belongs to ([`source-layer-data-model.md`](source-layer-data-model.md) § 7.1). A Subject belongs to one graph and never moves. The composite key `(graph_id, source_id)` keeps the graph on the Subject's home Source. `subjects.Create` takes the graph in `CreateInput.GraphID` (required) and reads the Subject's Source from it.
 
 A subject can therefore be sparse. Creating a `person` subject does not require knowing a name, date, or any other property.
 

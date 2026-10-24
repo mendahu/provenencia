@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/project"
@@ -43,6 +44,7 @@ type bridgeWorld struct {
 	c                        *database.Catalog
 	source                   sources.Source
 	artifact                 artifacts.Artifact
+	graph                    []byte // the Source's one Evidence graph
 	personProp, eventProp    properties.Property
 	placeProp, relatedProp   properties.Property
 	roleProp, relTypeProp    properties.Property
@@ -81,7 +83,7 @@ func newBridgeWorld(t *testing.T) *bridgeWorld {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w := &bridgeWorld{t: t, c: c, source: src, artifact: art}
+	w := &bridgeWorld{t: t, c: c, source: src, artifact: art, graph: evidencegraphstest.SoleGraph(t, c, src.ID).ID}
 	w.personProp = w.prop("person")
 	w.eventProp = w.prop("event")
 	w.placeProp = w.prop("place")
@@ -124,7 +126,7 @@ func (w *bridgeWorld) node(kind, label string, x, y int64) subjects.Subject {
 	}
 	s, err := writes.Call(w.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: w.source.ID, SubjectTypeID: st.ID, Label: label,
+			GraphID: w.graph, SubjectTypeID: st.ID, Label: label,
 		}, &subjects.Placement{GridX: x, GridY: y})
 	})
 	if err != nil {

@@ -92,9 +92,10 @@ func TestGraphProgress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		graph := evidencegraphstest.SoleGraph(t, c, worked.ID).ID
 		person, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: worked.ID, SubjectTypeID: personType.ID, Label: "Alice",
+				GraphID: graph, SubjectTypeID: personType.ID, Label: "Alice",
 			}, nil)
 		})
 		if err != nil {
@@ -102,7 +103,7 @@ func TestGraphProgress(t *testing.T) {
 		}
 		place, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: worked.ID, SubjectTypeID: placeType.ID, Label: "Boston",
+				GraphID: graph, SubjectTypeID: placeType.ID, Label: "Boston",
 			}, nil)
 		})
 		if err != nil {
@@ -110,7 +111,7 @@ func TestGraphProgress(t *testing.T) {
 		}
 		if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: worked.ID, SubjectTypeID: sourceType.ID, Label: "Reify",
+				GraphID: graph, SubjectTypeID: sourceType.ID, Label: "Reify",
 			}, nil)
 		}); err != nil {
 			t.Fatal(err)
@@ -228,9 +229,9 @@ func TestGraphProgress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ada := artifactstest.SubjectOn(t, s.c, userID, s.empty.ID, def.ID, "person", "Ada")
-		artifactstest.SubjectOn(t, s.c, userID, s.empty.ID, def.ID, "person", "Ann")
-		artifactstest.SubjectOn(t, s.c, userID, s.empty.ID, jones.ID, "place", "Hull")
+		ada := artifactstest.SubjectOn(t, s.c, userID, def.ID, "person", "Ada")
+		artifactstest.SubjectOn(t, s.c, userID, def.ID, "person", "Ann")
+		artifactstest.SubjectOn(t, s.c, userID, jones.ID, "place", "Hull")
 		db, err := s.c.DB()
 		if err != nil {
 			t.Fatal(err)
@@ -352,9 +353,10 @@ func TestPrimaryAndFiledCounts(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 		sub, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: st.ID, Label: label,
+				GraphID: graph, SubjectTypeID: st.ID, Label: label,
 			}, nil)
 		})
 		if err != nil {

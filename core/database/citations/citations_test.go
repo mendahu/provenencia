@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -87,9 +88,10 @@ func TestCitations(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 		person, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
+				GraphID: graph, SubjectTypeID: personType.ID, Label: "Alice",
 			}, nil)
 		})
 		if err != nil {
@@ -97,7 +99,7 @@ func TestCitations(t *testing.T) {
 		}
 		place, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: placeType.ID, Label: "Boston",
+				GraphID: graph, SubjectTypeID: placeType.ID, Label: "Boston",
 			}, nil)
 		})
 		if err != nil {

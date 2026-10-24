@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -84,8 +85,9 @@ func (f *pinFixture) must(err error) {
 // prop, all on one Citation.
 func (f *pinFixture) record(st subjecttypes.Type, prop properties.Property, values ...string) (subjects.Subject, []observations.Observation) {
 	f.t.Helper()
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, f.artifact.SourceID).ID
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.artifact.SourceID, SubjectTypeID: st.ID}, nil)
+		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graph, SubjectTypeID: st.ID}, nil)
 	})
 	f.must(err)
 	var in []observations.Input

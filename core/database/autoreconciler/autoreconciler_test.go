@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/likenesses"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -146,8 +147,9 @@ func (f *fixture) subject(kind string) subjects.Subject { return f.subjectOn(f.s
 
 func (f *fixture) subjectOn(src sources.Source, kind string) subjects.Subject {
 	f.t.Helper()
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: f.types[kind].ID}, nil)
+		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graph, SubjectTypeID: f.types[kind].ID}, nil)
 	})
 	must(f.t, err)
 	return s

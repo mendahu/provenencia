@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -230,8 +231,9 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
+		graph := evidencegraphstest.SoleGraph(t, c, source[:]).ID
 		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID[:], subjects.CreateInput{SourceID: source[:], SubjectTypeID: st.ID}, nil)
+			return subjects.Create(tx, userID[:], subjects.CreateInput{GraphID: graph, SubjectTypeID: st.ID}, nil)
 		})
 		if err != nil {
 			return err
@@ -338,8 +340,9 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
+		graph := evidencegraphstest.SoleGraph(t, c, source[:]).ID
 		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID[:], subjects.CreateInput{SourceID: source[:], SubjectTypeID: st.ID}, nil)
+			return subjects.Create(tx, userID[:], subjects.CreateInput{GraphID: graph, SubjectTypeID: st.ID}, nil)
 		})
 		if err != nil {
 			return err

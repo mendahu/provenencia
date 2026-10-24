@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -342,8 +343,9 @@ func lookupType(t *testing.T, c *database.Catalog, key string) subjecttypes.Type
 
 func mustSubject(t *testing.T, c *database.Catalog, sourceID, typeID []byte, label string) subjects.Subject {
 	t.Helper()
+	graph := evidencegraphstest.SoleGraph(t, c, sourceID).ID
 	s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: sourceID, SubjectTypeID: typeID, Label: label}, nil)
+		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graph, SubjectTypeID: typeID, Label: label}, nil)
 	})
 	if err != nil {
 		t.Fatal(err)

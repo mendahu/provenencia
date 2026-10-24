@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -68,9 +69,10 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	}
 	mkSubject := func(label string) subjects.Subject {
 		t.Helper()
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: place.ID, Label: label,
+				GraphID: graph, SubjectTypeID: place.ID, Label: label,
 			}, nil)
 		})
 		if err != nil {

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/google/uuid"
@@ -67,8 +68,9 @@ func newPinnedHandle(t *testing.T) pinnedHandle {
 	must(err)
 	mk := func(label string) subjects.Subject {
 		t.Helper()
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: place.ID, Label: label}, nil)
+			return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graph, SubjectTypeID: place.ID, Label: label}, nil)
 		})
 		must(err)
 		return s

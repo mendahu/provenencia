@@ -347,9 +347,10 @@ func (f fixture) subjectAndCitation(t *testing.T, src sources.Source, artifactID
 	if err != nil {
 		t.Fatal(err)
 	}
+	graph := evidencegraphstest.SoleGraph(t, f.c, src.ID).ID
 	subject, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: person.ID, Label: "Ada",
+			GraphID: graph, SubjectTypeID: person.ID, Label: "Ada",
 		}, nil)
 	})
 	if err != nil {

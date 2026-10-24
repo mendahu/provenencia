@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -103,10 +104,11 @@ func TestConclusionHandleSets(t *testing.T) {
 	}
 	mk := func(typeID []byte, label string, x int64) subjects.Subject {
 		t.Helper()
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 		s, _, err := writes.Run(c, writes.Op{Action: "create_subject", UserID: userID},
 			func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 				return subjects.Create(tx, userID, subjects.CreateInput{
-					SourceID: src.ID, SubjectTypeID: typeID, Label: label,
+					GraphID: graph, SubjectTypeID: typeID, Label: label,
 				}, &subjects.Placement{GridX: x, GridY: 0})
 			})
 		if err != nil {

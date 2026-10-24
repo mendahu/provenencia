@@ -225,9 +225,10 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	place, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: placeType.ID, Label: "Leeds",
+			GraphID: graph, SubjectTypeID: placeType.ID, Label: "Leeds",
 		}, nil)
 	})
 	if err != nil {
@@ -235,7 +236,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	}
 	alice, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
+			GraphID: graph, SubjectTypeID: personType.ID, Label: "Alice",
 		}, &subjects.Placement{GridX: 0, GridY: 0})
 	})
 	if err != nil {
@@ -243,7 +244,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	}
 	wedding, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Wedding",
+			GraphID: graph, SubjectTypeID: eventType.ID, Label: "Wedding",
 		}, &subjects.Placement{GridX: 4, GridY: 4})
 	})
 	if err != nil {
@@ -517,9 +518,10 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 		bob, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Bob",
+				GraphID: graph, SubjectTypeID: personType.ID, Label: "Bob",
 			}, &subjects.Placement{GridX: 8, GridY: 0})
 		})
 		if err != nil {
@@ -755,9 +757,10 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	graph := evidencegraphstest.SoleGraph(t, c, empty.ID).ID
 	sub, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: empty.ID, SubjectTypeID: personType.ID, Label: "Alice",
+			GraphID: graph, SubjectTypeID: personType.ID, Label: "Alice",
 		}, nil)
 	})
 	if err != nil {
@@ -803,9 +806,10 @@ func TestImpactEvidenceGraph(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	sub, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
+			GraphID: graph, SubjectTypeID: personType.ID, Label: "Alice",
 		}, nil)
 	})
 	if err != nil {
@@ -1098,7 +1102,7 @@ func TestLocationsNameTheirGraph(t *testing.T) {
 		t.Fatal(err)
 	}
 	def, jones, page := artifactstest.Split(t, c, userID, src.ID, "Jones")
-	subject := artifactstest.SubjectOn(t, c, userID, src.ID, jones.ID, "place", "Leeds")
+	subject := artifactstest.SubjectOn(t, c, userID, jones.ID, "place", "Leeds")
 	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)

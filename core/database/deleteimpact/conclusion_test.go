@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -50,9 +51,10 @@ func TestImpactConclusion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	york, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: place.ID, Label: "York",
+			GraphID: graph, SubjectTypeID: place.ID, Label: "York",
 		}, nil)
 	})
 	if err != nil {
@@ -110,9 +112,10 @@ func TestImpactConclusion(t *testing.T) {
 	})
 
 	t.Run("allowed promoted subject still names the handle it leaves", func(t *testing.T) {
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 		leeds, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: place.ID, Label: "Leeds",
+				GraphID: graph, SubjectTypeID: place.ID, Label: "Leeds",
 			}, nil)
 		})
 		if err != nil {

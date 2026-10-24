@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -45,8 +46,9 @@ func personOnNewSource(t *testing.T, dir, userID, typeID, sexKey, polarity strin
 		if err != nil {
 			return err
 		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: uid[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, uid[:], subjects.CreateInput{SourceID: src.ID, SubjectTypeID: tid[:]}, nil)
+			return subjects.Create(tx, uid[:], subjects.CreateInput{GraphID: graph, SubjectTypeID: tid[:]}, nil)
 		})
 		if err != nil {
 			return err

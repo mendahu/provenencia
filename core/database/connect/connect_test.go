@@ -105,9 +105,10 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		create := func(typeID []byte, label string, x, y int64) subjects.Subject {
 			t.Helper()
+			graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 			s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 				return subjects.Create(tx, userID, subjects.CreateInput{
-					SourceID: src.ID, SubjectTypeID: typeID, Label: label,
+					GraphID: graph, SubjectTypeID: typeID, Label: label,
 				}, &subjects.Placement{GridX: x, GridY: y})
 			})
 			if err != nil {
@@ -426,7 +427,7 @@ func TestCreateCitedBridge(t *testing.T) {
 			}
 			sub, err := writes.Call(s.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 				return subjects.Create(tx, userID, subjects.CreateInput{
-					SourceID: s.source.ID, GraphID: jones.ID, SubjectTypeID: typ.ID, Label: label,
+					GraphID: jones.ID, SubjectTypeID: typ.ID, Label: label,
 				}, &subjects.Placement{GridX: x, GridY: y})
 			})
 			if err != nil {

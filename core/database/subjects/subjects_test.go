@@ -104,55 +104,6 @@ func TestSubjects(t *testing.T) {
 		run  func(t *testing.T, c *database.Catalog)
 	}{
 		{
-			name: "create joins the Source's graph",
-			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				mustSubjectTypes(t, c)
-				src := mustSource(t, c)
-				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
-				if err != nil {
-					t.Fatal(err)
-				}
-				want := evidencegraphstest.SoleGraph(t, c, src.ID).ID
-				var created []rowchange.Change
-				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
-					s, changes, err := Create(tx, userID, CreateInput{
-						SourceID: src.ID, SubjectTypeID: person.ID, Label: "Alice",
-					}, nil)
-					created = changes
-					return s, changes, err
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !bytes.Equal(s.GraphID, want) {
-					t.Fatalf("created graph %x want %x", s.GraphID, want)
-				}
-				got, err := Get(c, s.ID)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !bytes.Equal(got.GraphID, want) {
-					t.Fatalf("read graph %x want %x", got.GraphID, want)
-				}
-				if len(created) == 0 || created[0].Fields["graph_id"].New == nil {
-					t.Fatalf("create change lacks graph_id: %+v", created)
-				}
-				var deleted []rowchange.Change
-				if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-					changes, err := Delete(tx, userID, s.ID)
-					deleted = changes
-					return struct{}{}, changes, err
-				}); err != nil {
-					t.Fatal(err)
-				}
-				last := deleted[len(deleted)-1]
-				if last.EntityType != "subject" || last.Fields["graph_id"].Old == nil {
-					t.Fatalf("delete change lacks graph_id: %+v", last)
-				}
-			},
-		},
-		{
 			name: "graph id given",
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
@@ -167,7 +118,7 @@ func TestSubjects(t *testing.T) {
 				var created []rowchange.Change
 				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					s, changes, err := Create(tx, userID, CreateInput{
-						SourceID: src.ID, GraphID: jones.ID, SubjectTypeID: person.ID, Label: "Ben",
+						GraphID: jones.ID, SubjectTypeID: person.ID, Label: "Ben",
 					}, nil)
 					created = changes
 					return s, changes, err
@@ -188,51 +139,17 @@ func TestSubjects(t *testing.T) {
 			},
 		},
 		{
-			name: "graph of another source",
-			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				mustSubjectTypes(t, c)
-				srcA := mustSource(t, c)
-				typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-					Key: "census", Origin: vocabkey.OriginProvenencia, Label: "Census",
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
-				srcB, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-					return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Other"})
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
-				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
-				if err != nil {
-					t.Fatal(err)
-				}
-				other := evidencegraphstest.SoleGraph(t, c, srcB.ID)
-				_, err = writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
-					return Create(tx, userID, CreateInput{
-						SourceID: srcA.ID, GraphID: other.ID, SubjectTypeID: person.ID, Label: "X",
-					}, nil)
-				})
-				if !errors.Is(err, ErrInvalid) {
-					t.Fatalf("got %v want ErrInvalid", err)
-				}
-			},
-		},
-		{
 			name: "graph id wrong length",
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				mustSubjectTypes(t, c)
-				src := mustSource(t, c)
 				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
 				_, err = writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					return Create(tx, userID, CreateInput{
-						SourceID: src.ID, GraphID: []byte{1, 2, 3}, SubjectTypeID: person.ID, Label: "X",
+						GraphID: []byte{1, 2, 3}, SubjectTypeID: person.ID, Label: "X",
 					}, nil)
 				})
 				if !errors.Is(err, ErrInvalid) {
@@ -250,9 +167,10 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 				_, err = writes.Call(c, writes.Op{Action: "create_subject", UserID: nil}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					return Create(tx, nil, CreateInput{
-						SourceID:      src.ID,
+						GraphID:       graph,
 						SubjectTypeID: person.ID,
 						Label:         "Alice",
 					}, nil)
@@ -272,9 +190,10 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					return Create(tx, userID, CreateInput{
-						SourceID:      src.ID,
+						GraphID:       graph,
 						SubjectTypeID: person.ID,
 						Label:         "Alice",
 					}, nil)
@@ -337,9 +256,10 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					return Create(tx, userID, CreateInput{
-						SourceID:      src.ID,
+						GraphID:       graph,
 						SubjectTypeID: person.ID,
 						Label:         "Placed",
 					}, &Placement{GridX: -2, GridY: 5})
@@ -366,9 +286,10 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					return Create(tx, userID, CreateInput{
-						SourceID:      src.ID,
+						GraphID:       graph,
 						SubjectTypeID: event.ID,
 					}, nil)
 				})
@@ -390,9 +311,10 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					return Create(tx, userID, CreateInput{
-						SourceID: src.ID, SubjectTypeID: person.ID, Label: "Alice",
+						GraphID: graph, SubjectTypeID: person.ID, Label: "Alice",
 					}, nil)
 				})
 				if err != nil {
@@ -432,9 +354,10 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					return Create(tx, userID, CreateInput{
-						SourceID: src.ID, SubjectTypeID: person.ID, Label: "Bob",
+						GraphID: graph, SubjectTypeID: person.ID, Label: "Bob",
 					}, nil)
 				})
 				if err != nil {
@@ -496,14 +419,16 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				graph := evidencegraphstest.SoleGraph(t, c, srcA.ID).ID
 				a, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
-					return Create(tx, userID, CreateInput{SourceID: srcA.ID, SubjectTypeID: person.ID, Label: "A"}, nil)
+					return Create(tx, userID, CreateInput{GraphID: graph, SubjectTypeID: person.ID, Label: "A"}, nil)
 				})
 				if err != nil {
 					t.Fatal(err)
 				}
+				graphB := evidencegraphstest.SoleGraph(t, c, srcB.ID).ID
 				if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
-					return Create(tx, userID, CreateInput{SourceID: srcB.ID, SubjectTypeID: person.ID, Label: "B"}, nil)
+					return Create(tx, userID, CreateInput{GraphID: graphB, SubjectTypeID: person.ID, Label: "B"}, nil)
 				}); err != nil {
 					t.Fatal(err)
 				}
@@ -571,7 +496,7 @@ func TestInsertReadsTheGraphsSource(t *testing.T) {
 		}
 		return src
 	}
-	src, other := newSource("Deed"), newSource("Other")
+	src := newSource("Deed")
 	art, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID}, func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
 		return artifacts.Create(tx, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	})
@@ -600,9 +525,9 @@ func TestInsertReadsTheGraphsSource(t *testing.T) {
 		t.Fatalf("subject on %x of %x, want %x of %x", s.GraphID, s.SourceID, jones.ID, src.ID)
 	}
 	for name, in := range map[string]CreateInput{
-		"another Source's id": {GraphID: jones.ID, SourceID: other.ID},
-		"neither id":          {},
-		"unknown graph":       {GraphID: unknown},
+		"no graph id":           {},
+		"unknown graph":         {GraphID: unknown},
+		"graph id wrong length": {GraphID: []byte{1, 2, 3}},
 	} {
 		if _, err := create(in); !errors.Is(err, ErrInvalid) {
 			t.Fatalf("%s: got %v want ErrInvalid", name, err)

@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -49,6 +50,7 @@ type fixture struct {
 	c        *database.Catalog
 	source   sources.Source
 	artifact artifacts.Artifact
+	graph    []byte // the Source's one Evidence graph
 	name     properties.Property
 }
 
@@ -78,7 +80,7 @@ func newFixture(t *testing.T) *fixture {
 	must(t, err)
 	name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 	must(t, err)
-	return &fixture{t: t, c: c, source: src, artifact: art, name: name}
+	return &fixture{t: t, c: c, source: src, artifact: art, graph: evidencegraphstest.SoleGraph(t, c, src.ID).ID, name: name}
 }
 
 func (f *fixture) typeID(key string) []byte {
@@ -92,7 +94,7 @@ func (f *fixture) person(forms ...string) (subjects.Subject, []observations.Obse
 	f.t.Helper()
 	personType := f.typeID("person")
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: personType}, nil)
+		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: f.graph, SubjectTypeID: personType}, nil)
 	})
 	must(f.t, err)
 	var obs []observations.Observation
@@ -192,7 +194,7 @@ func TestListPersonsSortsBySortedPartsNotForm(t *testing.T) {
 	formOnly := &namevalue.Value{Form: "Aaron Aardvark"}
 	personType := f.typeID("person")
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: personType}, nil)
+		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: f.graph, SubjectTypeID: personType}, nil)
 	})
 	must(t, err)
 	_, err = writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
@@ -469,7 +471,7 @@ func (f *fixture) event(in ...observations.Input) []byte {
 	f.t.Helper()
 	eventType := f.typeID("event")
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: eventType}, nil)
+		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: f.graph, SubjectTypeID: eventType}, nil)
 	})
 	must(f.t, err)
 	if len(in) > 0 {
@@ -631,8 +633,9 @@ func (f *fixture) lowTrust(src sources.Source) {
 func (f *fixture) place(art artifacts.Artifact, names ...string) []byte {
 	f.t.Helper()
 	placeType := f.typeID("place")
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: art.SourceID, SubjectTypeID: placeType}, nil)
+		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graph, SubjectTypeID: placeType}, nil)
 	})
 	must(f.t, err)
 	f.citeToponyms(art, s.ID, names...)
@@ -662,8 +665,9 @@ func (f *fixture) citeToponyms(art artifacts.Artifact, subjectID []byte, names .
 func (f *fixture) joinPlace(art artifacts.Artifact, entityID []byte, names ...string) {
 	f.t.Helper()
 	placeType := f.typeID("place")
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: art.SourceID, SubjectTypeID: placeType}, nil)
+		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graph, SubjectTypeID: placeType}, nil)
 	})
 	must(f.t, err)
 	f.citeToponyms(art, s.ID, names...)

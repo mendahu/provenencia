@@ -24,7 +24,7 @@ func (f *fixture) bare(kind string) subjects.Subject {
 	typeID := f.typeID(kind)
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: f.source.ID, SubjectTypeID: typeID,
+			GraphID: f.graph, SubjectTypeID: typeID,
 		}, nil)
 	})
 	must(f.t, err)

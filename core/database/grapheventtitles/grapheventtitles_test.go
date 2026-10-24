@@ -74,8 +74,9 @@ func (f *fixture) subject(kind, label string, in ...observations.Input) subjects
 	f.t.Helper()
 	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
 	must(f.t, err)
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, f.src.ID).ID
 	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.src.ID, SubjectTypeID: st.ID, Label: label}, nil)
+		return subjects.Create(tx, userID, subjects.CreateInput{GraphID: graph, SubjectTypeID: st.ID, Label: label}, nil)
 	})
 	must(f.t, err)
 	_, err = writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
@@ -282,7 +283,7 @@ func TestForEvidenceGraph(t *testing.T) {
 		f := newFixture(t)
 		f.subject("event", "Default event")
 		_, jones, _ := artifactstest.Split(t, f.c, userID, f.src.ID, "Jones")
-		jonesEvent := artifactstest.SubjectOn(t, f.c, userID, f.src.ID, jones.ID, "event", "Jones event")
+		jonesEvent := artifactstest.SubjectOn(t, f.c, userID, jones.ID, "event", "Jones event")
 		eg, err := f.c.Graph().EvidenceGraph(jones.ID)
 		must(t, err)
 		got := grapheventtitles.FromStored(eg, nil, nil)
@@ -301,7 +302,7 @@ func TestForEvidenceGraph(t *testing.T) {
 
 func titlesFromStored(t *testing.T, f *fixture) []grapheventtitles.Title {
 	t.Helper()
-	eg, err := f.c.Graph().EvidenceGraph(evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID)
+	eg, err := f.c.Graph().EvidenceGraph(evidencegraphstest.SoleGraph(f.t, f.c, f.src.ID).ID)
 	must(t, err)
 	v, err := f.c.Graph().Vocabulary()
 	must(t, err)
