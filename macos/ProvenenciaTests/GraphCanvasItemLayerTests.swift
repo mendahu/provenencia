@@ -61,6 +61,24 @@ struct GraphCanvasItemLayerTests {
         #expect(view.frame.width >= 100 + 2 * outset)
     }
 
+    @Test func eachItemIsItsOwnLayerAtTheLayersScale() throws {
+        let container = flippedContainer()
+        let layer = GraphCanvasItemLayer(container: container)
+        layer.update([item("a", at: .zero)])
+
+        let first = try #require(layer.view(for: "a"))
+        #expect(first.wantsLayer)
+        #expect(first.layerContentsRedrawPolicy == .onSetNeedsDisplay)
+        #expect(first.layer?.contentsScale == 1)
+
+        layer.contentsScale = 2
+        #expect(first.layer?.contentsScale == 2)
+
+        layer.update([item("a", at: .zero), item("b", at: CGPoint(x: 200, y: 0))])
+        let second = try #require(layer.view(for: "b"))
+        #expect(second.layer?.contentsScale == 2)
+    }
+
     @Test func rebuildsContentOnlyWhenTheModelChanges() {
         let container = flippedContainer()
         let layer = GraphCanvasItemLayer(container: container)

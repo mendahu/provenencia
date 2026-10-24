@@ -51,6 +51,22 @@ final class GraphCanvasItemLayer {
     private(set) var order: [String] = []
     private var rotorEntries: [String: GraphCanvasRotorEntry] = [:]
 
+    /// The scale every item's layer renders at. The scroll view sets it to the
+    /// window's backing scale times the settled zoom past 1x. A first paint can
+    /// be cached at 1x before the window's scale is known, so this puts every
+    /// layer, even one AppKit reset, back and redraws it.
+    var contentsScale: CGFloat = 1 {
+        didSet {
+            for view in views.values {
+                guard let layer = view.layer,
+                      abs(layer.contentsScale - contentsScale) > 0.000_1
+                else { continue }
+                layer.contentsScale = contentsScale
+                view.needsDisplay = true
+            }
+        }
+    }
+
     init(container: NSView) {
         self.container = container
     }
@@ -74,16 +90,12 @@ final class GraphCanvasItemLayer {
             if let existing = views[item.id] {
                 if let previous = models[item.id], !item.model.isEqual(to: previous) {
                     existing.removeFromSuperview()
-                    let created = makeView(item)
-                    container.addSubview(created, positioned: .above, relativeTo: nil)
-                    view = created
+                    view = insert(item)
                 } else {
                     view = existing
                 }
             } else {
-                let created = makeView(item)
-                container.addSubview(created, positioned: .above, relativeTo: nil)
-                view = created
+                view = insert(item)
             }
             views[item.id] = view
             models[item.id] = item.model
@@ -131,6 +143,18 @@ final class GraphCanvasItemLayer {
             guard let entry = rotorEntries[id], entry.rotor == rotor else { return nil }
             return (id, entry.label)
         }
+    }
+
+    /// Builds the item's view as its own layer, drawn only when built, when it
+    /// asks, or when ``contentsScale`` changes, so a pan composites cached
+    /// layers. It goes above the other items at the current ``contentsScale``.
+    private func insert(_ item: GraphCanvasItem) -> NSView {
+        let view = makeView(item)
+        view.wantsLayer = true
+        view.layerContentsRedrawPolicy = .onSetNeedsDisplay
+        container?.addSubview(view, positioned: .above, relativeTo: nil)
+        view.layer?.contentsScale = contentsScale
+        return view
     }
 
     /// Creates the item's view and sizes it to its intrinsic size.
