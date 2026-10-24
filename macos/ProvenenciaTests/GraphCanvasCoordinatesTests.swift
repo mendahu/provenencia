@@ -140,4 +140,11 @@ struct GraphCanvasCoordinatesTests {
         #expect(GraphCanvasCoordinates.gridPatternOpacity(spacing: 40, magnification: 1 / 40) == 0)
         #expect(GraphCanvasCoordinates.gridPatternOpacity(spacing: 40, magnification: 0.01) == 0)
     }
+
+    @Test func itemContentsScaleGrowsOnlyPastOneTimesZoom() {
+        #expect(GraphCanvasCoordinates.itemContentsScale(backingScale: 2, magnification: 0.25) == 2)
+        #expect(GraphCanvasCoordinates.itemContentsScale(backingScale: 2, magnification: 1) == 2)
+        #expect(GraphCanvasCoordinates.itemContentsScale(backingScale: 2, magnification: 1.25) == 2.5)
+        #expect(GraphCanvasCoordinates.itemContentsScale(backingScale: 1, magnification: 1.25) == 1.25)
+    }
 }
