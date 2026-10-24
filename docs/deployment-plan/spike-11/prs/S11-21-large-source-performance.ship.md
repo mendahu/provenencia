@@ -12,13 +12,13 @@ Head `512a8572` (local, not pushed; 9 commits on `origin/main` @ `7a1398ce`). Ga
 - Cause: every `Evidence` call rebuilds the alias index from the warm alias tables. D-11 installs the product alias tables, so each rebuild is large. The plan's prototype figure ("Evidence 20 ms") was measured without them.
 - No Step, Decision or In line caches the built index. Options: (a) keep the built `valuecompare.AliasIndex` on the graph beside the alias tables (`namealiases.Warm` / `Rules`), dropped with them; (b) raise the D-1 Evidence budget.
 
-Everything else is done: STEP-1 – STEP-8 meet their ACs and budgets (cold 0.78–1.1 s / 2.5; warm 65–82 ms / 250; after commit 0.41–0.56 s / 1.5; hub cold 1.7–2.2 s / 5; hub warm 1.0–1.5 s / 3). STEP-9 docs partly done.
+Everything else is done: STEP-1 – STEP-8 meet their ACs and budgets (cold 0.78–1.1 s / 2.5; warm 65–82 ms / 250; after commit 0.41–0.56 s / 1.5; one-place Source cold 1.7–2.2 s / 5; warm 1.0–1.5 s / 3). STEP-9 docs partly done.
 
 Deviations: `benchShape()` is a function (fresh `rand` stream); `largeShape(r, names)` shares the Zipf stream; pair-memo key is `type pairKey struct{ subject, handle string }` (`[2]string` fails `TestLayerPackages`); `place` de-duplicates fresh nominations by handle id before ranking; `warmFixture` gained `artB` for T-6; `evidence warm` landed in the STEP-8 commit, not STEP-3.
 
 **Resolved (user, 2026-10-24):** "Amend the S11-21 plan with plan-pr: add a decision to keep the built valuecompare.AliasIndex on the graph beside the alias tables, then resume ship-pr." The plan gains D-12 / D-12a (the alias slot holds the built index, keyed with `valueWords`; renamed `AliasIndex` / `SetAliasIndex`), AC-3.6, STEP-9 (new) and T-11; Docs is STEP-10. Review log "Refresh 2026-10-24 — D-12": Fits / Ready after 2 rounds. Round 0 resumes at STEP-9.
 
-Resumed: head `fa3631ad`. Gate PASS (orchestrator, test cache cleared: go-test 53 s, xcode-test 19 s). Report: STEP-9 and STEP-10 done, no deviation from the Decisions; T-11 ran red first (13,340 allocations) then green. Times at head (M1): cold 796 ms, warm 66 ms, after commit 408 ms, evidence warm 7.8 ms (90.4 ms before STEP-9), hub cold 1.68 s, hub warm 974 ms.
+Resumed: head `fa3631ad`. Gate PASS (orchestrator, test cache cleared: go-test 53 s, xcode-test 19 s). Report: STEP-9 and STEP-10 done, no deviation from the Decisions; T-11 ran red first (13,340 allocations) then green. Times at head (M1): cold 796 ms, warm 66 ms, after commit 408 ms, evidence warm 7.8 ms (90.4 ms before STEP-9), one-place Source cold 1.68 s, warm 974 ms.
 
 ## Round 1 — review
 Reviewers: CON (sonnet), MNT, SEC+PRF. Skipped: UX (no `macos/App/**`, strings, or error codes).
@@ -62,11 +62,11 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/promotealign/ ./api/...
 **F-5 — The pair memo looks up without allocating** (from PRF-1)
 Files: `core/graphalign/align.go`.
 Do: `state.pairs` becomes `map[string]map[string]subjectcompare.Result` keyed by subject id, then handle id, looked up as `st.pairs[string(s.ID)][string(h.ID)]` (the shape of `st.cands`); delete `pairKey`. Store every computed pair as today.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/graphalign/ ./core/database/promotealign/ ./core/matchregistry/` passes, `TestLayerPackages` included; `TestLargeSourceBudgets -v` hub times logged in the report.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/graphalign/ ./core/database/promotealign/ ./core/matchregistry/` passes, `TestLayerPackages` included; `TestLargeSourceBudgets -v` one-place times logged in the report.
 
 **F-6 — The Landed note lists the deviations** (from CON-1, CON-2, MNT-5, MNT-8)
 Files: `docs/deployment-plan/spike-11/prs/S11-21-large-source-performance.md` (the **Landed** line only).
-Do: replace "none — the code matches the plan…" with the deviations: `benchShape()` is a function (a fresh `rand` stream per benchmark); `largeShape(r, names)` takes the shared `*zipfNames`; `zipfNames` and `largeShape` live in `bench_test.go`, not `perf_test.go`; the hub page uses the "Hub page" Source that promotes the hub place, not a second Source; the pair memo is a nested map, not `[2]string` (`TestLayerPackages` allows no numeric literal but 0 and 1); `place` de-duplicates fresh nominations by handle id before ranking; `warmFixture` gained `artB` for T-6; `evidence warm` landed in the STEP-8 commit; round 0 stopped on AC-3.1 and D-12 / D-12a / STEP-9 were added (ship log); "a new open-time warm is one line in `WarmOnOpen`" holds for the call, but a new warm also needs its own graph slot (MNT-5, follow-up); `withAliases` is inlined (F-7); `st.compare` takes the neighbor closure (F-1); `memberValues` is copy-on-write (F-4).
+Do: replace "none — the code matches the plan…" with the deviations: `benchShape()` is a function (a fresh `rand` stream per benchmark); `largeShape(r, names)` takes the shared `*zipfNames`; `zipfNames` and `largeShape` live in `bench_test.go`, not `perf_test.go`; the one-place Source is the Source that promotes the city ("Births at one place"), not a second Source; the pair memo is a nested map, not `[2]string` (`TestLayerPackages` allows no numeric literal but 0 and 1); `place` de-duplicates fresh nominations by handle id before ranking; `warmFixture` gained `artB` for T-6; `evidence warm` landed in the STEP-8 commit; round 0 stopped on AC-3.1 and D-12 / D-12a / STEP-9 were added (ship log); "a new open-time warm is one line in `WarmOnOpen`" holds for the call, but a new warm also needs its own graph slot (MNT-5, follow-up); `withAliases` is inlined (F-7); `st.compare` takes the neighbor closure (F-1); `memberValues` is copy-on-write (F-4).
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-11/prs/S11-21-large-source-performance.md` 0 errors.
 
 **F-7 — Two stale alias comments and a forwarding wrapper** (from MNT-6, MNT-9)
@@ -75,7 +75,7 @@ Do: inline `withAliases` into `Rules`' cold branch (`base.Names.Aliases = buildI
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/namealiases/ ./core/catalogsession/` passes; scripts/check-pr.sh PASS.
 
 ## Round 1 — fix
-Head `21d94329`. Gate PASS (orchestrator, test cache cleared). F-1 – F-7 done; F-1 and F-5 share one commit (`e03f3123`, both in `align.go`). Hub cold 1.46 s, hub warm 818 ms after F-5. `.cursor/rules` had no warm text to change (F-2).
+Head `21d94329`. Gate PASS (orchestrator, test cache cleared). F-1 – F-7 done; F-1 and F-5 share one commit (`e03f3123`, both in `align.go`). One-place Source cold 1.46 s, warm 818 ms after F-5. `.cursor/rules` had no warm text to change (F-2).
 Read by the orchestrator: PRF-1 **Resolved** (`state.pairs` is `map[string]map[string]subjectcompare.Result`, `pairKey` gone); CON-1 / CON-2 **Resolved** (Landed note lists the deviations).
 
 ## Round 2 — review
@@ -86,3 +86,6 @@ Nits (logged): `MNT-r2 · comparison-layers.md step 1 · "new alias tables drops
 
 ## Result
 Gate PASS (`21d94329`) · CI pending · open: none · follow-ups: MNT-5 (one keyed warm slot on the third open-time warm), MNT-r2 wording · to user: — · CON miss: none
+
+## After ready — vocabulary (user, 2026-10-24)
+User: "strike that word from the record… refer to the data using the terms we already have." "Hub" was never an approved term. It is gone from the code and the records: the test data is "a Source whose births are all located at one place with many filed events" (the one-place Source), and its place is the city. Renamed: `catalogShape.Cities` / `CityEvents`, `BenchmarkProposeColdCity` / `WarmCity`, subtests `births at one place cold` / `warm`, `TestPlaceWithManyEventsProposalStaysOnTheLayer`, the `align_test.go` place ids. Docs rewritten in this plan, its review and ship logs, the map, and the S11-15 and S11-16 plans and ship logs. Unrelated meanings left alone: the "Hubert" nickname, a film reel's hub (`L10n.swift`), "generational hubs" in `docs/narrative-layer-data-model.md`, a code "hub package" (S11-02 review). `promote-connection-subrows.md` also called an event "the hub that ties people and places"; reworded.

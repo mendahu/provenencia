@@ -7,7 +7,7 @@
 - None. Budgets and remedies were answered before review (user, 2026-10-24: "Snappy" budgets; bound + memos).
 
 ## Writer's own calls
-- The benchmarks keep their catalog through `benchShape`, except that hub events past the first 20,000 become deaths (D-4). Their numbers are reported only.
+- The benchmarks keep their catalog through `benchShape`, except that city events past the first 20,000 become deaths (D-4). Their numbers are reported only.
 - No name-format commit effect, although the scope entry names one: the only writer is `nameformats.Install` at onboarding, so the name format is warmed at open like the alias tables (D-9). The scope entry is rewritten in STEP-9.
 - ~~Warm Evidence keeps `SoleGraph`'s 2 SELECTs until S12-09 deletes it.~~ Resolved: S12-09 landed (#535) and removed `SoleGraph` from Promote; AC-3.3 now expects 0 SELECTs and AC-3.4 expects 1.
 - Not built, measured inside budget: in-place index update, key-value profiling, a bounded canon walk.
@@ -42,7 +42,7 @@
 **Answer:** Fixed — D-4: one `auto_reconciler_values` row with `value_date = valuecodec.MarshalDate`, `date_lo` / `date_hi` / `sort_key` NULL (`graphcache` `loadValues` reads only `value_date`; the planning prototype did exactly this); `fixtureDate` maps BEF / AFT / none / full day; death term and toponym writes named.
 
 ### X-2 · major · Fixture inputs underspecified
-**Answer:** Fixed — D-4a: the cumulative-weight sampler, `letters`, one PCG stream and its draw order; STEP-3: hub page is its own Source, its persons' names, participations and `locate`; Source A's events are not located; the 100-Subject count.
+**Answer:** Fixed — D-4a: the cumulative-weight sampler, `letters`, one PCG stream and its draw order; STEP-3: the one-place Source is its own Source, its persons' names, participations and `locate`; Source A's events are not located; the 100-Subject count.
 
 ### X-3 · major · `CountSelects` can deadlock; nothing checks it early
 **Answer:** Fixed — D-10 closes the `*sql.Conn` after `Raw` and clears the authorizer in `t.Cleanup`; STEP-2 adds `TestCountSelects` (T-10). `sqlite3.SQLITE_OK` is exported by mattn v1.14.50 (`sqlite3.go` line 357).

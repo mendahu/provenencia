@@ -17,33 +17,33 @@ import (
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
-// catalogShape is the catalog bulkCanon writes. Hub event i is the birth of
-// person i when i < Persons, else the death of person i % Persons; hub events
-// go round-robin over the hubs. Town event j is a death of a random person at a
+// catalogShape is the catalog bulkCanon writes. City event i is the birth of
+// person i when i < Persons, else the death of person i % Persons; city events
+// go round-robin over the cities. Town event j is a death of a random person at a
 // random town. With Dates, person i is born in 1780 + Rand.IntN(120) and dies
 // 20 + Rand.IntN(60) years later, and each event's date comes from fixtureDate.
 type catalogShape struct {
-	Persons, Hubs, HubEvents, Towns, TownEvents int
-	Name                                        func(i int) string
-	Rand                                        *rand.Rand
-	Dates                                       bool
+	Persons, Cities, CityEvents, Towns, TownEvents int
+	Name                                           func(i int) string
+	Rand                                           *rand.Rand
+	Dates                                          bool
 }
 
 // benchShape is the catalog the reported benchmarks run on: 20k persons and 30k
-// events over 5 hubs, undated (events 20,000 and up are second births of
+// events over 5 cities, undated (events 20,000 and up are second births of
 // persons 0-9,999, written as deaths).
 func benchShape() catalogShape {
 	return catalogShape{
-		Persons: 20000, Hubs: 5, HubEvents: 30000, Name: benchName,
+		Persons: 20000, Cities: 5, CityEvents: 30000, Name: benchName,
 		Rand: rand.New(rand.NewPCG(1, 2)),
 	}
 }
 
 // largeShape is the catalog TestLargeSourceBudgets runs on: 4,000 persons, one
-// hub city of 6,000 events, 50 towns of 2,000 events, Zipf names, dated.
+// city of 6,000 events, 50 towns of 2,000 events, Zipf names, dated.
 func largeShape(r *rand.Rand, names *zipfNames) catalogShape {
 	return catalogShape{
-		Persons: 4000, Hubs: 1, HubEvents: 6000, Towns: 50, TownEvents: 2000,
+		Persons: 4000, Cities: 1, CityEvents: 6000, Towns: 50, TownEvents: 2000,
 		Name: func(int) string { return names.next() }, Rand: r, Dates: true,
 	}
 }
@@ -120,16 +120,16 @@ func benchName(i int) string {
 	return fmt.Sprintf("Given%d Surname%d", i%200, i%2000)
 }
 
-// BenchmarkProposeColdHub times a cold proposal against a catalog of about
-// 20k persons, 30k events, and a few hub places, and reports the heap afterward.
-func BenchmarkProposeColdHub(b *testing.B) {
+// BenchmarkProposeColdCity times a cold proposal against a catalog of about
+// 20k persons, 30k events, and a few cities, and reports the heap afterward.
+func BenchmarkProposeColdCity(b *testing.B) {
 	f := newFixture(b)
-	city := f.place(f.source, f.artifact, "Hub")
-	hub := f.promote(city).Entity.ID
+	city := f.place(f.source, f.artifact, "City")
+	cityID := f.promote(city).Entity.ID
 	f.person(f.source, f.artifact, benchName(7))
 	db, err := f.c.DB()
 	must(b, err)
-	must(b, bulkCanon(db, hub, benchShape()))
+	must(b, bulkCanon(db, cityID, benchShape()))
 
 	b.ResetTimer()
 	var heap uint64
@@ -146,18 +146,18 @@ func BenchmarkProposeColdHub(b *testing.B) {
 	b.ReportMetric(float64(heap), "heap-B")
 }
 
-// BenchmarkProposeWarmHub times a repeat proposal on BenchmarkProposeColdHub's
+// BenchmarkProposeWarmCity times a repeat proposal on BenchmarkProposeColdCity's
 // catalog, with no drop between, and reports the heap afterward. The Source
 // holds one unfixed named person, so each proposal looks up the shortlist index
 // and the first one builds it. Reported, not gated.
-func BenchmarkProposeWarmHub(b *testing.B) {
+func BenchmarkProposeWarmCity(b *testing.B) {
 	f := newFixture(b)
-	city := f.place(f.source, f.artifact, "Hub")
-	hub := f.promote(city).Entity.ID
+	city := f.place(f.source, f.artifact, "City")
+	cityID := f.promote(city).Entity.ID
 	f.person(f.source, f.artifact, benchName(7))
 	db, err := f.c.DB()
 	must(b, err)
-	must(b, bulkCanon(db, hub, benchShape()))
+	must(b, bulkCanon(db, cityID, benchShape()))
 	_, _, err = promotealign.Propose(f.c, f.graph(f.source), nil)
 	must(b, err)
 
@@ -177,12 +177,12 @@ func BenchmarkProposeWarmHub(b *testing.B) {
 // so each one rebuilds the shortlist index. Reported, not gated.
 func BenchmarkProposeAfterCommit(b *testing.B) {
 	f := newFixture(b)
-	city := f.place(f.source, f.artifact, "Hub")
-	hub := f.promote(city).Entity.ID
+	city := f.place(f.source, f.artifact, "City")
+	cityID := f.promote(city).Entity.ID
 	f.person(f.source, f.artifact, benchName(7))
 	db, err := f.c.DB()
 	must(b, err)
-	must(b, bulkCanon(db, hub, benchShape()))
+	must(b, bulkCanon(db, cityID, benchShape()))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -201,7 +201,7 @@ func benchID(n int) []byte {
 	return id[:]
 }
 
-func bulkCanon(db *sql.DB, hub []byte, shape catalogShape) error {
+func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 	idOf := func(table, key string) ([]byte, error) {
 		var id []byte
 		err := db.QueryRow(`SELECT id FROM `+table+` WHERE key = ? AND origin = 'provenencia'`, key).Scan(&id)
@@ -320,14 +320,14 @@ func bulkCanon(db *sql.DB, hub []byte, shape catalogShape) error {
 	defer textVal.Close()
 
 	r := shape.Rand
-	hubs := make([][]byte, shape.Hubs)
-	hubs[0] = hub
-	for i := 1; i < shape.Hubs; i++ {
+	cities := make([][]byte, shape.Cities)
+	cities[0] = city
+	for i := 1; i < shape.Cities; i++ {
 		id := benchID(i)
 		if _, err := ent.Exec(id, placeT, fmt.Sprintf("PLC-%05d", i)); err != nil {
 			return err
 		}
-		hubs[i] = id
+		cities[i] = id
 	}
 	towns := make([][]byte, shape.Towns)
 	for k := range towns {
@@ -413,7 +413,7 @@ func bulkCanon(db *sql.DB, hub []byte, shape catalogShape) error {
 		}
 		return fixtureDate(r, year)
 	}
-	for i := 0; i < shape.HubEvents; i++ {
+	for i := 0; i < shape.CityEvents; i++ {
 		p, term, year := i, birthTerm, 0
 		if i < shape.Persons {
 			year = birthYear[p]
@@ -421,7 +421,7 @@ func bulkCanon(db *sql.DB, hub []byte, shape catalogShape) error {
 			p, term = i%shape.Persons, deathTerm
 			year = deathYear[p]
 		}
-		if err := event(100000, 200000, 400000, i, fmt.Sprintf("%05d", i), persons[p], hubs[i%shape.Hubs], term, dateFor(year)); err != nil {
+		if err := event(100000, 200000, 400000, i, fmt.Sprintf("%05d", i), persons[p], cities[i%shape.Cities], term, dateFor(year)); err != nil {
 			return err
 		}
 	}

@@ -715,9 +715,9 @@ func TestProposeRelationshipFromEitherEnd(t *testing.T) {
 	}
 }
 
-// A place with several events is a hub. The proposal still has one row per
-// layer subject, and the place lands on that hub.
-func TestHubPlaceProposalStaysOnTheLayer(t *testing.T) {
+// A place with several filed events still proposes one row per layer
+// subject, and the place lands on its handle.
+func TestPlaceWithManyEventsProposalStaysOnTheLayer(t *testing.T) {
 	f := newFixture(t)
 	city := f.place(f.source, f.artifact, "Gumptiontown")
 	cityH := f.promote(city)
@@ -741,7 +741,7 @@ func TestHubPlaceProposalStaysOnTheLayer(t *testing.T) {
 	}
 	row := rowFor(got, city2.ID)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, cityH.Entity.ID) {
-		t.Fatalf("place row %+v, want the hub", row.Target)
+		t.Fatalf("place row %+v, want the city's handle", row.Target)
 	}
 	if err := f.c.Graph().Verify(); err != nil {
 		t.Fatal(err)

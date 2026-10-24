@@ -21,12 +21,12 @@ import (
 // The budgets of S11-21 D-1. They assume go test runs packages in parallel on
 // four cores, as scripts/check-pr.sh and CI do.
 const (
-	budgetCold        = 2500 * time.Millisecond
-	budgetWarm        = 250 * time.Millisecond
-	budgetAfterCommit = 1500 * time.Millisecond
-	budgetEvidence    = 100 * time.Millisecond
-	budgetHubCold     = 5 * time.Second
-	budgetHubWarm     = 3 * time.Second
+	budgetCold         = 2500 * time.Millisecond
+	budgetWarm         = 250 * time.Millisecond
+	budgetAfterCommit  = 1500 * time.Millisecond
+	budgetEvidence     = 100 * time.Millisecond
+	budgetOnePlaceCold = 5 * time.Second
+	budgetOnePlaceWarm = 3 * time.Second
 )
 
 // largeFixture is a realistic large catalog (largeShape) and the Sources the
@@ -35,10 +35,11 @@ type largeFixture struct {
 	*fixture
 	// a is Source A: 100 primary Subjects, none located.
 	a sources.Source
-	// hubPage is the Source whose 30 births are all located at the hub place.
-	hubPage sources.Source
-	other   sources.Source
-	otherA  artifacts.Artifact
+	// onePlace is the Source whose 30 births are all located at one place, the
+	// city, which has 6,000 filed events.
+	onePlace sources.Source
+	other    sources.Source
+	otherA   artifacts.Artifact
 }
 
 func newLargeFixture(t *testing.T) *largeFixture {
@@ -48,9 +49,9 @@ func newLargeFixture(t *testing.T) *largeFixture {
 	must(t, namealiases.Install(f.c))
 	must(t, catalogsession.WarmOnOpen(f.c))
 
-	hubSrc, hubArt := f.newSource("Hub page")
-	hubPlace := f.place(hubSrc, hubArt, "Hub")
-	hub := f.promote(hubPlace).Entity.ID
+	placeSrc, placeArt := f.newSource("Births at one place")
+	city := f.place(placeSrc, placeArt, "City")
+	cityID := f.promote(city).Entity.ID
 
 	r := rand.New(rand.NewPCG(1, 2))
 	names := newZipfNames(r)
@@ -64,7 +65,7 @@ func newLargeFixture(t *testing.T) *largeFixture {
 
 	db, err := f.c.DB()
 	must(t, err)
-	must(t, bulkCanon(db, hub, largeShape(r, names)))
+	must(t, bulkCanon(db, cityID, largeShape(r, names)))
 	f.c.Graph().Drop()
 
 	// Source A: 40 persons, 40 births and 20 deaths, none located.
@@ -84,18 +85,18 @@ func newLargeFixture(t *testing.T) *largeFixture {
 		filedOn(names.next(), 1800+r.IntN(100), 0)
 	}
 
-	// The hub page: 30 births at the city, on an artifact of its own.
-	pageArt, err := artifactstest.Create(f.c, userID, artifacts.CreateInput{SourceID: hubSrc.ID, Label: "Page"})
+	// The one-place Source: 30 births at the city, on an artifact of its own.
+	pageArt, err := artifactstest.Create(f.c, userID, artifacts.CreateInput{SourceID: placeSrc.ID, Label: "Page"})
 	must(t, err)
 	for i := 0; i < 30; i++ {
-		p := f.person(hubSrc, pageArt, names.next())
-		b := f.eventOn(hubSrc, pageArt, "birth", fixtureDate(r, 1800+r.IntN(100)))
-		f.participation(hubSrc, pageArt, p, b, "subject")
-		f.locate(hubSrc, pageArt, b, hubPlace)
+		p := f.person(placeSrc, pageArt, names.next())
+		b := f.eventOn(placeSrc, pageArt, "birth", fixtureDate(r, 1800+r.IntN(100)))
+		f.participation(placeSrc, pageArt, p, b, "subject")
+		f.locate(placeSrc, pageArt, b, city)
 	}
 
 	otherSrc, otherArt := f.newSource("Other")
-	return &largeFixture{fixture: f, a: f.source, hubPage: hubSrc, other: otherSrc, otherA: otherArt}
+	return &largeFixture{fixture: f, a: f.source, onePlace: placeSrc, other: otherSrc, otherA: otherArt}
 }
 
 // fastest is the least of n timed runs of run; each run's own setup stays
@@ -236,20 +237,20 @@ func TestLargeSourceBudgets(t *testing.T) {
 		}
 	})
 
-	hubGraph := f.graph(lf.hubPage)
-	proposeHub := func() { f.propose(hubGraph, nil) }
+	onePlaceGraph := f.graph(lf.onePlace)
+	proposeOnePlace := func() { f.propose(onePlaceGraph, nil) }
 
-	t.Run("hub page cold", func(t *testing.T) {
+	t.Run("births at one place cold", func(t *testing.T) {
 		d := fastest(2, func() time.Duration {
 			f.c.Graph().Drop()
-			return since(proposeHub)
+			return since(proposeOnePlace)
 		})
-		over(t, "cold proposal on the hub page", d, budgetHubCold)
+		over(t, "cold proposal on the one-place Source", d, budgetOnePlaceCold)
 	})
 
-	t.Run("hub page warm", func(t *testing.T) {
-		proposeHub()
-		d := fastest(3, func() time.Duration { return since(proposeHub) })
-		over(t, "warm proposal on the hub page", d, budgetHubWarm)
+	t.Run("births at one place warm", func(t *testing.T) {
+		proposeOnePlace()
+		d := fastest(3, func() time.Duration { return since(proposeOnePlace) })
+		over(t, "warm proposal on the one-place Source", d, budgetOnePlaceWarm)
 	})
 }

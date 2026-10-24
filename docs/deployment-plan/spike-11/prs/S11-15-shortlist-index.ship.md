@@ -20,13 +20,13 @@ Taken to the user.
 **User call (2026-10-19):** accept the gap; no misspelling key. `TestSpellingVariantToponymIsAWeakMatch` asserts the new behavior (Target `new`, `no_match`), is renamed, and carries a `// dogfood:` mark to revisit the coarse misspelling key if spelling-only names or toponyms go unmatched in the Spike 11 matching dogfood. Written into the plan under §5 after D-15; AC-3.3 and T-11 name the exception; STEP-7 adds a review note to `comparison-layers.md`'s misspellings bullet. Resumed the round-0 implementer.
 
 **Round 0 resumed:** head `69af2fb6`, PR #497 (draft). Report deviations: S11-14-landed shape of D-9 (stats slot renamed to the match index; holds only the shortlist); user's call applied (`TestSpellingOnlyToponymIsNotShortlisted`, `// dogfood:` mark, comparison-layers note); STEP-3/4 share a commit; `promote-graph-alignment.md` edited in S11-14's rewritten bullet instead of D-15's quoted sentence. §10 manual check not run (user's).
-T-13 benchmark (`BenchmarkProposeWarmHub`, 20k persons, reported not gated): main 52.1 ms / 18.9 MB → branch 70.5 ms / 98.9 MB per op. Implementer: the bulk Source holds only a place, so main never loaded persons; the index build reads every indexed node. To check in triage.
+T-13 benchmark (`BenchmarkProposeWarmCity`, 20k persons, reported not gated): main 52.1 ms / 18.9 MB → branch 70.5 ms / 98.9 MB per op. Implementer: the bulk Source holds only a place, so main never loaded persons; the index build reads every indexed node. To check in triage.
 Gate (orchestrator) on `69af2fb6`: PASS against `219a3b83`.
 
 ## Round 1 — review
 Reviewers: CON (Sonnet), MNT, SEC+PRF. Skipped: UX (no `macos/App/**`, strings, or error codes). SEC+PRF routed by the matching layers (`core/valuecompare`, `core/subjectcompare`, `core/propertycompare`, `core/matchregistry`, new `core/shortlist`), `core/database/**`, and graph/cache code (`graphcache`).
 
-Orchestrator benchmark check (`BenchmarkProposeWarmHub`, `-benchtime 60x -count 3`, M1; branch's bench file copied onto a `219a3b83` worktree): main 67 / 63 / 60 ms, retained 18.9 MB per catalog; branch 93 / 83 / 79 ms, retained 98.8 MB per catalog. The CPU profile shows `loadShortlist` is the one-time cold build (stays ~2.4 s over 10x and 60x), so the per-op gap is in the warm path itself.
+Orchestrator benchmark check (`BenchmarkProposeWarmCity`, `-benchtime 60x -count 3`, M1; branch's bench file copied onto a `219a3b83` worktree): main 67 / 63 / 60 ms, retained 18.9 MB per catalog; branch 93 / 83 / 79 ms, retained 98.8 MB per catalog. The CPU profile shows `loadShortlist` is the one-time cold build (stays ~2.4 s over 10x and 60x), so the per-op gap is in the warm path itself.
 
 CON verdict: Clean (no findings). Outside its lens: the warm benchmark regression (routed to PRF).
 
@@ -36,7 +36,7 @@ CON verdict: Clean (no findings). Outside its lens: the warm benchmark regressio
 | SEC-2 | SEC | major | Alias-set key holds every token of the set | Fix now → F-2 | verified: `aliases.go` `key: strings.Join(sorted, " ")`, copied per word into `a:` keys; tables come from the catalog with no size bound. Fix keeps D-3's content key (table key + smallest token), so no Decision changes |
 | MNT-1 | MNT | major | `promote-graph-alignment.md` still describes the kind scan and stats | Fix now → F-3 | verified: lines 107, 185, 196, 283 at head |
 | CON-x (MNT, PRF outside-lens) | CON | major | Vocabulary commit keeps a match index whose keys read term keys and metas | Fix now → F-4 | verified: `graphcache/commit.go` drops labels and vocab on `set.Vocabulary`, not `matchIndex`; D-12's premise is "every input the keys read changes only through a path that drops the slot" — this completes that rule, does not change it |
-| PRF-2 | PRF | minor | Index built when nothing needs seeding; T-13 times only that case | Fix now → F-5 | verified: `canon.go` calls `loadShortlist` with empty `todo`; bench Source holds only the fixed Hub. Rides along (F-4/F-5 touch the same package; the Landed note's numbers are wrong without it) |
+| PRF-2 | PRF | minor | Index built when nothing needs seeding; T-13 times only that case | Fix now → F-5 | verified: `canon.go` calls `loadShortlist` with empty `todo`; bench Source holds only the fixed city place. Rides along (F-4/F-5 touch the same package; the Landed note's numbers are wrong without it) |
 | MNT-3 | MNT | minor | `TestShortlistSection` re-implements `Rules.Derived` | Fix now → F-6 | one line; F-1 touches the registry section and its test |
 | MNT-4 | MNT | minor | Two more test-local BEF/AFT builders | Fix now → F-6 | F-1 adds a case to `core/shortlist/shortlist_test.go`; add `datevaluetest.Before`/`After` and use them in the two new files only |
 | PRF-1 | PRF | major | Every handle commit rebuilds the whole index | Follow-up (S11-21) | plan §3 Out and D-12 defer in-place update to S11-21; reviewer's own bench shows head (128 ms) beats base (181 ms) on the promote-then-propose loop, so this PR does not make it worse. Reported to the user |
@@ -73,7 +73,7 @@ Check: the test passes; scripts/check-pr.sh PASS.
 **F-5 — Skip the index when nothing needs seeding; time a real seed** (from PRF-2)
 Files: `core/database/promotealign/canon.go`, `core/database/promotealign/bench_test.go`, the plan's Landed note.
 Failing test first: `TestProposeWithOnlyFixedSubjectsBuildsNoIndex` — a Source whose only Subject is fixed; after `Propose`, `graphcache`'s `MatchIndex()` is not set (use the existing test seam or `ResetMatchIndexForTest` neighbor).
-Do: in `loadCanon`, when `todo` is empty, skip `loadShortlist` and `seedHandles`. Give `BenchmarkProposeWarmHub` (and add `BenchmarkProposeAfterCommit` if cheap) a fixture with named persons (reuse `bulkCanon`, adding name values) and one unfixed named person on the Source, so it times the build and the lookup. Rerun both on base (bench file copied onto a `219a3b83` worktree) and head; replace the Landed note's numbers with these and say what fixture they used.
+Do: in `loadCanon`, when `todo` is empty, skip `loadShortlist` and `seedHandles`. Give `BenchmarkProposeWarmCity` (and add `BenchmarkProposeAfterCommit` if cheap) a fixture with named persons (reuse `bulkCanon`, adding name values) and one unfixed named person on the Source, so it times the build and the lookup. Rerun both on base (bench file copied onto a `219a3b83` worktree) and head; replace the Landed note's numbers with these and say what fixture they used.
 Check: the test passes; benchmarks run; scripts/check-pr.sh PASS.
 
 **F-6 — Ride-alongs** (from MNT-3, MNT-4)
@@ -83,7 +83,7 @@ Check: tests pass unchanged in meaning; scripts/check-pr.sh PASS.
 
 ## Round 1 — fix
 Head `f27112b1` (commits `db987d96`..`f27112b1`). Gate (orchestrator) PASS against `219a3b83`. F-1 to F-6 done, each failing test seen red first. Deviations: `TestAliasSetKeys` expectations rewritten for the new key text; `b42fe719` alone fails `valuecompare` (fixed by `6527d987`).
-F-5 benchmarks (named 20k persons, 30k events, one unfixed named person; `-benchtime 10x`): `BenchmarkProposeWarmHub` branch ~229 ms / 116 MB vs main ~480 ms / 102 MB; `BenchmarkProposeAfterCommit` (index rebuilt each op) branch ~522 ms vs main ~580 ms. The round-0 regression was the fixture (no seeding).
+F-5 benchmarks (named 20k persons, 30k events, one unfixed named person; `-benchtime 10x`): `BenchmarkProposeWarmCity` branch ~229 ms / 116 MB vs main ~480 ms / 102 MB; `BenchmarkProposeAfterCommit` (index rebuilt each op) branch ~522 ms vs main ~580 ms. The round-0 regression was the fixture (no seeding).
 Minors read by the orchestrator: MNT-3 **Resolved** (`registry_test.go:60` uses `Subject.Derived`); MNT-4 **Resolved** (`datevaluetest.Before`/`After`; no local `bef`/`aft` left in the two new test files). PRF-2 rode with F-5; its guard is reviewed with the SEC+PRF round 2.
 
 ## Round 2 — review

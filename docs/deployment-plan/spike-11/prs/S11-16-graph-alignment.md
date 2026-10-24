@@ -2,7 +2,7 @@
 
 **Status:** Landed in [#501](https://github.com/mendahu/provenencia/pull/501) (2026-10-19)
 
-**Landed 2026-10-19.** Differences from the plan: D-7 was built as refreshed (a candidate a neighbor already has gets `via` only when that neighbor is fixed). Expected values D-13 let change: `TestBirthIsNeverProposedOnADeath/AC-1.8` (Skip `weak`), `TestCandidateLoserDoesNotNominate`, `TestAcceptedPropertyMatchNominatesItsNeighbor` and `TestRowReasons` (a surname-only look-alike is offered as weak), all in STEP-3 (D-4); no other target, band, reason or `Via` changed. `BenchmarkProposeColdHub`: main 1.62 s/op, 986 MB/op; branch 1.55 s/op, 906 MB/op. The AC-4.4 `rg` and STEP-4's `rg` print nothing.
+**Landed 2026-10-19.** Differences from the plan: D-7 was built as refreshed (a candidate a neighbor already has gets `via` only when that neighbor is fixed). Expected values D-13 let change: `TestBirthIsNeverProposedOnADeath/AC-1.8` (Skip `weak`), `TestCandidateLoserDoesNotNominate`, `TestAcceptedPropertyMatchNominatesItsNeighbor` and `TestRowReasons` (a surname-only look-alike is offered as weak), all in STEP-3 (D-4); no other target, band, reason or `Via` changed. `BenchmarkProposeColdCity`: main 1.62 s/op, 986 MB/op; branch 1.55 s/op, 906 MB/op. The AC-4.4 `rg` and STEP-4's `rg` print nothing.
 **Spike / slice:** Spike 11 · Slice 4 — Segments and graph alignment
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: an engine rewrite; the wire, the page and its copy are unchanged, and the contested marker's chrome is S11-18 behind S11-D1)
@@ -262,7 +262,7 @@ Check: `go test -count=5 ./core/graphalign/ -run TestAlignInvariants` passes.
 **STEP-7 — Promote end to end**
 Files: `core/database/promotealign/*_test.go`, `api/ffi/handlers/promote_align_test.go`.
 Do: run the Promote suites; any changed expectation follows D-13. Add T-13. T-12, T-13.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/promotealign/ ./api/ffi/handlers/` passes; AC-4.4's `rg` prints nothing; `CGO_ENABLED=1 go test -tags fts5 -run '^$' -bench BenchmarkProposeColdHub -benchmem ./core/database/promotealign/` on `main` and on the branch, both in the PR body.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/promotealign/ ./api/ffi/handlers/` passes; AC-4.4's `rg` prints nothing; `CGO_ENABLED=1 go test -tags fts5 -run '^$' -bench BenchmarkProposeColdCity -benchmem ./core/database/promotealign/` on `main` and on the branch, both in the PR body.
 
 **STEP-8 — Docs and skill**
 Files: `docs/promote-graph-alignment.md`, `docs/matching-model.md`, `docs/matching.md`, `docs/conclusion-reconciliation.md`, `docs/conclusion-layer-data-model.md`, `docs/deployment-plan/spike-11/comparison-layers.md`, `.agents/skills/add-match-rule/SKILL.md`, `core/matchregistry/value.go`, `core/matchregistry/subject.go`, `docs/deployment-plan/spike-11/completed.md`, `docs/deployment-plan/spike-11/deployment-plan.md` (map row), this plan (status).
@@ -292,7 +292,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 AC-1.2 is asserted by T-11 (c) on AC-1.1's fixture.
 AC-4.4 is the `rg` in STEP-7's check.
 
-Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `TestGracieObituaryGolden`, `TestPartOfChainIsStrongWithoutADecision`, `TestPartOfBreaksASharedToponym`, `TestHubPlaceProposalStaysOnTheLayer`, `TestProposeQueryCountDoesNotGrowWithTheLayer`, `TestKnobInventoryMatchesRegistry`.
+Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `TestGracieObituaryGolden`, `TestPartOfChainIsStrongWithoutADecision`, `TestPartOfBreaksASharedToponym`, `TestPlaceWithManyEventsProposalStaysOnTheLayer`, `TestProposeQueryCountDoesNotGrowWithTheLayer`, `TestKnobInventoryMatchesRegistry`.
 
 ## 9. Definition of done
 
@@ -321,7 +321,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 
 | Risk | Mitigation |
 | --- | --- |
-| Unplaced compares and the larger candidate sets (ties to 20) cost more per Propose | The PR body reports `BenchmarkProposeColdHub` on `main` and on the branch (STEP-7); S11-21 sets the budget |
+| Unplaced compares and the larger candidate sets (ties to 20) cost more per Propose | The PR body reports `BenchmarkProposeColdCity` on `main` and on the branch (STEP-7); S11-21 sets the budget |
 | Settling oscillates between two pairs | `SettleRounds` caps it; AC-3.2 (T-7) pins the cap |
 | A ported golden changes band | D-13: goldens keep their targets and bands, or stop |
 

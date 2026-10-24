@@ -2231,9 +2231,9 @@ func TestContestedRow(t *testing.T) {
 // most TieCap, at any similarity (S11-21 D-7).
 func TestPlacedPairNominatesTopK(t *testing.T) {
 	cfg := matchregistry.Default().AlignConfig()
-	hubK, kidK := id("s-place"), id("s-birth")
-	hubH := id("h-hub")
-	tp, tv := textProp("toponym", "Hub")
+	placeK, kidK := id("s-place"), id("s-birth")
+	placeH := id("h-city")
+	tp, tv := textProp("toponym", "City")
 	et, etv := termProp("event_type", "birth")
 	_, dtv := termProp("event_type", "death")
 	loc := locLink()
@@ -2264,21 +2264,21 @@ func TestPlacedPairNominatesTopK(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			layer := graphalign.Layer{
 				Subjects: []graphalign.Subject{
-					{ID: hubK, Ref: "PLC-S", Kind: "place", Values: vals(tp, tv)},
+					{ID: placeK, Ref: "PLC-S", Kind: "place", Values: vals(tp, tv)},
 					{ID: kidK, Ref: "EVT-S", Kind: "event", Values: tc.layerBirth},
 				},
-				Bridges: []graphalign.Bridge{bridge(kidK, hubK, loc)},
+				Bridges: []graphalign.Bridge{bridge(kidK, placeK, loc)},
 				Metas:   mergeMetas(placeMetas(), eventMetas()),
 			}
-			canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: hubH, Ref: "PLC-1", Kind: "place", Values: vals(tp, tv)}}}
+			canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: placeH, Ref: "PLC-1", Kind: "place", Values: vals(tp, tv)}}}
 			for i := 0; i < tc.count; i++ {
 				canon.Handles = append(canon.Handles, graphalign.Handle{ID: handleID(i), Ref: fmt.Sprintf("EVT-%02d", i), Kind: "event", Values: tc.birth(i)})
-				canon.Edges = append(canon.Edges, edge(handleID(i), hubH, loc))
+				canon.Edges = append(canon.Edges, edge(handleID(i), placeH, loc))
 			}
 			if tc.candidates != nil {
 				canon.Candidates = map[string][][]byte{string(kidK): tc.candidates}
 			}
-			got := graphalign.NominatedForTest(layer, canon, []graphalign.Fixed{{SubjectID: hubK, HandleID: hubH}}, cfg, kidK)
+			got := graphalign.NominatedForTest(layer, canon, []graphalign.Fixed{{SubjectID: placeK, HandleID: placeH}}, cfg, kidK)
 			if len(got) != tc.want {
 				t.Fatalf("%d nominated candidates, want %d", len(got), tc.want)
 			}

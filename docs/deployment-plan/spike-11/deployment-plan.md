@@ -190,7 +190,7 @@ SLICE 7 — Performance
   S11-21  Large-Source performance check
   S11-31  Bound the Source cache
   Check: a 100-Subject Source proposes within the benchmark, and a warm evidence
-         open issues no catalog query; a hub page leaves at most N Sources loaded.
+         open issues no catalog query; a Source whose events are all located at one place with many filed events leaves at most N Sources loaded.
 
 S11-99 — Dogfood close / docs
 ```
@@ -452,7 +452,7 @@ Split from S11-20 when it was planned (user, 2026-10-22): the engine half of the
 
 #### S11-21 — Large-Source performance check
 
-**Ships.** The D-1 budgets in `TestLargeSourceBudgets` on the large fixture (a 100-Subject Source, a hub page of 30 births at a 6,000-event city, Zipf names, BEF / AFT dates); bounded nominations (a placed pair offers each layer neighbor its most similar `TopK` plus ties, capped at `TieCap`, at any similarity); a pair memo per `Align`; a candidates memo across proposals; the name format warmed at open by `nameformats`; the alias index built once at open by `namealiases`.
+**Ships.** The D-1 budgets in `TestLargeSourceBudgets` on the large fixture (a 100-Subject Source, a Source of 30 births all located at one place with 6,000 filed events, Zipf names, BEF / AFT dates); bounded nominations (a placed pair offers each layer neighbor its most similar `TopK` plus ties, capped at `TieCap`, at any similarity); a pair memo per `Align`; a candidates memo across proposals; the name format warmed at open by `nameformats`; the alias index built once at open by `namealiases`.
 **Not this PR.** In-place update of the shortlist index after a handle commit (680 ms against a 1.5 s budget); scoring shortlisted handles on key values first (cold 1.3 s against 2.5 s); a cross-run neighbor memo (declined by the user); a commit effect for name-format writes (no writer after onboarding).
 **Check.** `TestLargeSourceBudgets` passes in `scripts/check-pr.sh`; a warm Evidence pass issues no catalog query.
 **Context.** [Layer 6 procedure](comparison-layers.md#layer-6-procedure) step 6.
@@ -461,7 +461,7 @@ Split from S11-20 when it was planned (user, 2026-10-22): the engine half of the
 
 **Ships.** `graphcache` holds at most N loaded Evidence graphs, and evicts the least recently used one together with its `EvidenceGraphMemo` entries (S11-19 D-21). Today `g.evidenceGraphs` has no eviction, and only a commit or a reset clears it, and the claim evidence query loads every member's Source (S11-19 §14). N lives in one named constant, sized from S11-21's fixture. `Verify` checks only Sources that are still loaded. A test shows that an evicted Source reloads with the same graph, and that its memo is rebuilt.
 **Not this PR.** Evicting nodes, or the match index.
-**Check.** Opening the evidence sheet on every row of a hub page leaves at most N Sources loaded, and the sheet shows the same evidence as before.
+**Check.** Opening the evidence sheet on every row of a Source whose events are all located at one place with many filed events leaves at most N Sources loaded, and the sheet shows the same evidence as before.
 **Context.** [`graphcache`](../../../core/database/graphcache/graph.go); S11-19 §14.
 
 ### Slice 2 follow-ups — Names on the Person page
