@@ -93,6 +93,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var getEvidenceGraphProgressCalls = 0
     var deleteSourceCalls = 0
     var deleteArtifactCalls = 0
+    var deleteEvidenceGraphCalls = 0
     /// Optional Impact override keyed by entity id (tests).
     var deleteImpactByID: [String: CatalogDeleteImpact] = [:]
     /// Optional override for graph-progress rows by graph id (tests). Missing keys compute from subjects/observations.
@@ -780,6 +781,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func deleteEvidenceGraph(projectDir: String, userID _: String, graphID: String) async throws -> CatalogWriteEffects {
         try withState {
             markCatalogSessionHeld(projectDir)
+            deleteEvidenceGraphCalls += 1
             guard evidenceGraphsByProject[projectDir]?.contains(where: { $0.id == graphID }) == true else {
                 throw StoreBoom.boom
             }
@@ -3065,10 +3067,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                             id: $0.id,
                             ref: $0.ref,
                             title: $0.title.isEmpty ? $0.ref : $0.title,
-                            location: WorkspaceLocation(
-                                section: .sources,
+                            location: WorkspaceLocation.sourcePage(
                                 sourceId: $0.id,
-                                sourceSurface: .page,
                                 ref: $0.ref,
                                 title: $0.title.isEmpty ? $0.ref : $0.title
                             )
@@ -3104,10 +3104,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                             id: $0.id,
                             ref: $0.ref,
                             title: $0.title.isEmpty ? $0.ref : $0.title,
-                            location: WorkspaceLocation(
-                                section: .sources,
+                            location: WorkspaceLocation.sourcePage(
                                 sourceId: $0.id,
-                                sourceSurface: .page,
                                 ref: $0.ref,
                                 title: $0.title.isEmpty ? $0.ref : $0.title
                             )

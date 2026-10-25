@@ -56,17 +56,6 @@ struct SourceTypesModelTests {
         return (model, session)
     }
 
-    private func waitForQuery<Value>(_ handle: QueryHandle<Value>) async {
-        var waited: UInt64 = 0
-        let step: UInt64 = 10_000_000
-        while waited < 2_000_000_000 {
-            if handle.status == .ready || handle.status == .error { return }
-            await Task.yield()
-            try? await Task.sleep(nanoseconds: step)
-            waited += step
-        }
-    }
-
     private func warm(_ model: SourceTypesModel, session: WorkspaceSession) async {
         model.warmListQueries()
         if let typesHandle: QueryHandle<[CatalogSourceType]> = session.queryHandle(

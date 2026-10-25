@@ -13,7 +13,18 @@ extension WorkspaceSession {
     /// `nil` while the graph list has no value; empty when the list has no graph
     /// with that id.
     func linkedArtifacts(graphID: String, artifacts: [CatalogArtifact]) -> [CatalogArtifact]? {
-        guard let graphs = evidenceGraphsHandle?.value else { return nil }
-        return graphs.first { $0.id == graphID }?.linkedArtifacts(artifacts) ?? []
+        guard evidenceGraphsHandle?.value != nil else { return nil }
+        return evidenceGraph(id: graphID)?.linkedArtifacts(artifacts) ?? []
+    }
+
+    /// One graph by id; `nil` while the graph list has no value or has no such graph.
+    func evidenceGraph(id: String) -> CatalogEvidenceGraph? {
+        evidenceGraphsHandle?.value?.first { $0.id == id }
+    }
+
+    /// One Source's graphs in list order (sorted by name); `nil` while the graph
+    /// list has no value.
+    func evidenceGraphs(sourceID: String) -> [CatalogEvidenceGraph]? {
+        evidenceGraphsHandle?.value?.filter { $0.sourceID == sourceID }
     }
 }

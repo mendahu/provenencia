@@ -84,7 +84,13 @@ struct WorkspaceToolbarBreadcrumbTests {
         #expect(property.last?.label == "Name")
     }
 
-    @Test func evidenceGraphLeafUsesGraphTitle() {
+    private let names = WorkspaceToolbar.BreadcrumbNames(
+        sourceTitle: { $0 == "src-1" ? "1851 census" : nil },
+        graphName: { $0 == "g-1" ? "Jones household" : nil }
+    )
+
+    @Test func evidenceGraphCrumbsNameSourceAndGraph() {
+        var wentTo: WorkspaceLocation?
         let items = WorkspaceToolbar.breadcrumbItems(
             for: WorkspaceLocation(
                 section: .sources,
@@ -94,13 +100,20 @@ struct WorkspaceToolbarBreadcrumbTests {
                 ref: "SRC-AAAA",
                 title: "Deed"
             ),
-            goTo: { _ in }
+            names: names,
+            goTo: { wentTo = $0 }
         )
-        #expect(items.count == 2)
-        #expect(items[1].label == L10n.string(L10n.Workspace.evidenceGraphTitle))
+        // The names come from the lists, not from the title the location carries.
+        #expect(items.map(\.label) == [L10n.string(L10n.Workspace.sourcesTitle), "1851 census", "Jones household"])
+        #expect(items[1].action != nil)
+        #expect(items[2].action == nil)
+        items[1].action?()
+        #expect(wentTo == .sourcePage(sourceId: "src-1"))
+        #expect(wentTo?.sourceSurface == .page)
+        #expect(wentTo?.title == "1851 census")
     }
 
-    @Test func citationComposerIncludesNavigableEvidenceGraph() {
+    @Test func citationComposerCrumbsNameSourceAndGraph() {
         var wentTo: WorkspaceLocation?
         let items = WorkspaceToolbar.breadcrumbItems(
             for: WorkspaceLocation(
@@ -109,46 +122,75 @@ struct WorkspaceToolbarBreadcrumbTests {
                 graphId: "g-1",
                 subjectId: "sub-1",
                 sourceSurface: .citationComposer,
-                title: "Margt. Alderwick",
-                sourceTitle: "Alderwick family bible"
+                title: "John Jones",
+                sourceTitle: "Old title"
             ),
+            names: names,
             goTo: { wentTo = $0 }
         )
-        #expect(items.count == 3)
+        #expect(items.count == 4)
         #expect(items[0].label == L10n.string(L10n.Workspace.sourcesTitle))
-        #expect(
-            items[1].label
-                == L10n.Workspace.evidenceGraphFor(sourceTitle: "Alderwick family bible")
-        )
-        #expect(items[1].action != nil)
-        #expect(
-            items[2].label
-                == L10n.CitationComposer.breadcrumbCitationFor(scope: "Margt. Alderwick")
-        )
-        #expect(items[2].action == nil)
-        items[1].action?()
+        #expect(items[1].label == "1851 census")
+        #expect(items[2].label == "Jones household")
+        #expect(items[2].action != nil)
+        #expect(items[3].label == L10n.CitationComposer.breadcrumbCitationFor(scope: "John Jones"))
+        #expect(items[3].action == nil)
+        items[2].action?()
         #expect(wentTo?.sourceId == "src-1")
         #expect(wentTo?.graphId == "g-1")
         #expect(wentTo?.sourceSurface == .graph)
-        #expect(wentTo?.title == "Alderwick family bible")
+        #expect(wentTo?.title == "1851 census")
     }
 
-    @Test func promoteIncludesNavigableEvidenceGraph() {
+    @Test func promoteCrumbsNameSourceAndGraph() {
         var wentTo: WorkspaceLocation?
         let items = WorkspaceToolbar.breadcrumbItems(
             for: .promote(
                 sourceId: "src-1", graphId: "g-1", subjectId: "sub-1", kind: .person,
-                ref: "CPR-2AB91", title: "James Robins", sourceTitle: "1851 census"
+                ref: "SUB-AAAAA", title: "James Robins", sourceTitle: "1851 census"
             ),
+            names: names,
             goTo: { wentTo = $0 }
         )
-        #expect(items.count == 3)
-        #expect(items[1].label == L10n.Workspace.evidenceGraphFor(sourceTitle: "1851 census"))
-        #expect(items[2].label == L10n.Promote.breadcrumb(ref: "CPR-2AB91"))
-        #expect(items[2].action == nil)
+        #expect(items.count == 4)
+        #expect(items[1].label == "1851 census")
+        #expect(items[2].label == "Jones household")
+        #expect(items[3].label == L10n.Promote.breadcrumb(ref: "SUB-AAAAA"))
+        #expect(items[3].action == nil)
         items[1].action?()
+        #expect(wentTo?.sourceSurface == .page)
+        #expect(wentTo?.sourceId == "src-1")
+        items[2].action?()
         #expect(wentTo?.sourceSurface == .graph)
         #expect(wentTo?.sourceId == "src-1")
         #expect(wentTo?.graphId == "g-1")
+    }
+
+    @Test func graphCrumbsFallBackWithoutNames() {
+        let canvas = WorkspaceToolbar.breadcrumbItems(
+            for: WorkspaceLocation(
+                section: .sources, sourceId: "src-1", graphId: "g-1",
+                sourceSurface: .graph, ref: "SRC-AAAA", title: "1851 census"
+            ),
+            goTo: { _ in }
+        )
+        #expect(canvas.map(\.label) == [
+            L10n.string(L10n.Workspace.sourcesTitle),
+            "1851 census",
+            L10n.string(L10n.Workspace.evidenceGraphTitle),
+        ])
+
+        let composer = WorkspaceToolbar.breadcrumbItems(
+            for: WorkspaceLocation(
+                section: .sources, sourceId: "src-1", graphId: "g-1", subjectId: "sub-1",
+                sourceSurface: .citationComposer, title: "John Jones"
+            ),
+            goTo: { _ in }
+        )
+        #expect(composer.map(\.label) == [
+            L10n.string(L10n.Workspace.sourcesTitle),
+            L10n.string(L10n.Workspace.evidenceGraphTitle),
+            L10n.CitationComposer.breadcrumbCitationFor(scope: "John Jones"),
+        ])
     }
 }

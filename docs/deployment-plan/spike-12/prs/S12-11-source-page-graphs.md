@@ -1,6 +1,7 @@
 # S12-11 — Source page Graphs section
 
-**Status:** Planned
+**Status:** Landed in [#549](https://github.com/mendahu/provenencia/pull/549) (2026-10-25)
+**Landed:** Differences from the plan: `PVCard`'s default padding is 0, so the row and the loading card pad their content with `PVSpacing.space6` and the section takes the same top padding as Artifacts and Notes (`space11 - space9`); the header's `WorkspaceNavigation` environment read, unused once the jump left, is removed; `PlaceRegistryTests.resolvesEvidenceGraphDistinctFromPage` also gained `.evidenceGraphsList` (a D-10 consequence); T-5 applies the Source page location first so the graph list is a visible key, and waits with `waitUntil` for the row to leave; T-3 also asserts `graphsCount`'s text.
 **Spike / slice:** Spike 12 · Slice 4 — Graphs in the UI
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S12-D2](../design/archive/S12-D2-source-page-graphs.md), board agreed 2026-10-25

@@ -16,12 +16,6 @@ struct EvidenceGraphStoreTests {
         return store
     }
 
-    private func graph(_ id: String, source: String? = nil, name: String, artifacts: [String]) -> CatalogEvidenceGraph {
-        CatalogEvidenceGraph(
-            id: id, ref: "GPH-\(id)", sourceID: source ?? sourceID, name: name, description: "", artifactIDs: artifacts
-        )
-    }
-
     @Test func createThenListSortsByName() async throws {
         let store = seededStore()
         _ = try await store.createEvidenceGraph(
@@ -41,8 +35,8 @@ struct EvidenceGraphStoreTests {
     @Test func createArtifactLinksOnlyItsProjectsGraphs() async throws {
         let store = seededStore()
         let otherDir = "/tmp/other-evidence-graphs.provenencia"
-        store.evidenceGraphsByProject[projectDir] = [graph("g1", name: "Default", artifacts: [])]
-        store.evidenceGraphsByProject[otherDir] = [graph("g2", name: "Default", artifacts: [])]
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g1", name: "Default", artifactIDs: [])]
+        store.evidenceGraphsByProject[otherDir] = [evidenceGraph("g2", name: "Default", artifactIDs: [])]
         let (art, _) = try await store.createArtifact(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
             fileID: "f1", label: "Page 1", description: "", graphIDs: []
@@ -77,7 +71,7 @@ struct EvidenceGraphStoreTests {
 
     @Test func updateKeepsLinksWhenNoneGiven() async throws {
         let store = seededStore()
-        store.evidenceGraphsByProject[projectDir] = [graph("g1", name: "Default", artifacts: ["a1", "a2"])]
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g1", name: "Default", artifactIDs: ["a1", "a2"])]
         _ = try await store.updateEvidenceGraph(
             projectDir: projectDir, userID: userID, graphID: "g1", name: "Household", description: "d", artifactIDs: []
         )
@@ -108,9 +102,9 @@ struct EvidenceGraphStoreTests {
     @Test func createArtifactLinksEveryGraphWhenNoneChosen() async throws {
         let store = seededStore()
         store.evidenceGraphsByProject[projectDir] = [
-            graph("g1", name: "Default", artifacts: ["a0"]),
-            graph("g2", name: "Jones", artifacts: ["a0"]),
-            graph("g3", source: "src-2", name: "Other", artifacts: ["b0"]),
+            evidenceGraph("g1", name: "Default", artifactIDs: ["a0"]),
+            evidenceGraph("g2", name: "Jones", artifactIDs: ["a0"]),
+            evidenceGraph("g3", sourceID: "src-2", name: "Other", artifactIDs: ["b0"]),
         ]
         let (every, effects) = try await store.createArtifact(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
@@ -177,8 +171,8 @@ struct EvidenceGraphStoreTests {
             CatalogArtifact(id: "a1", ref: "ART-1", sourceID: sourceID, fileID: "", label: "P1", description: "", file: nil),
         ]
         store.evidenceGraphsByProject[projectDir] = [
-            graph("g1", name: "Default", artifacts: ["a1", "a2"]),
-            graph("g2", name: "Jones", artifacts: ["a1"]),
+            evidenceGraph("g1", name: "Default", artifactIDs: ["a1", "a2"]),
+            evidenceGraph("g2", name: "Jones", artifactIDs: ["a1"]),
         ]
         _ = try await store.deleteArtifact(projectDir: projectDir, userID: userID, artifactID: "a1")
         let afterArtifact = try await store.listEvidenceGraphs(projectDir: projectDir)

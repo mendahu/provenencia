@@ -63,8 +63,8 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     /// Denormalized jump-menu cache; ignored for navigation identity.
     /// For the citation composer this is the **subject scope** (card label), not the Source title.
     var title: String?
-    /// Denormalized Source title for composer breadcrumbs (`Evidence graph for {source}`);
-    /// ignored for navigation identity. Empty/legacy history falls back to the bare graph title.
+    /// Denormalized Source title, the Source crumb's label while the Sources list has no value
+    /// (composer, Promote); ignored for navigation identity.
     var sourceTitle: String?
     /// Id of the row at the top of a list place (Sources, People, Events, Places).
     /// Ignored for navigation identity, like `title` and `ref`. Written when leaving
@@ -170,6 +170,11 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     /// One Place's page (S9-27).
     static func placeDetail(entityId: String, ref: String, title: String?) -> WorkspaceLocation {
         WorkspaceLocation(section: .places, entityId: entityId, ref: ref, title: title)
+    }
+
+    /// One Source's page.
+    static func sourcePage(sourceId: String, ref: String? = nil, title: String? = nil) -> WorkspaceLocation {
+        WorkspaceLocation(section: .sources, sourceId: sourceId, sourceSurface: .page, ref: ref, title: title)
     }
 
     /// An Evidence graph's canvas.

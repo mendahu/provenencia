@@ -14,6 +14,7 @@ final class SourcePageModel {
     var metadata: SourceMetadataSection
     var notes: SourceNotesSection
     var artifacts: SourceArtifactsSection
+    var graphs: SourceGraphsSection
 
     /// The Copy Source form while it is open.
     var copying: SourceCopyModel?
@@ -55,30 +56,12 @@ final class SourcePageModel {
         metadata = SourceMetadataSection(context: context)
         notes = SourceNotesSection(context: context)
         artifacts = SourceArtifactsSection(context: context)
+        graphs = SourceGraphsSection(context: context)
     }
 
     var workspace: CatalogSourceWorkspace? { context.workspace }
 
     var source: CatalogSource? { context.source }
-
-    /// Where Jump to evidence graph goes: the Source's entry graph, while that
-    /// graph links an Artifact. Nil blocks the jump, including while the graph
-    /// list has no value.
-    var evidenceGraphLocation: WorkspaceLocation? {
-        guard let source else { return nil }
-        return SourcesListNavigation.graphLocation(
-            for: source, graphs: SourcesListNavigation.graphsBySource(in: context.session)
-        )
-    }
-
-    /// Why Jump to evidence graph is blocked; nil when open or unknown.
-    var evidenceGraphBlockedReason: String? {
-        SourcesListNavigation.graphBlockedReason(
-            hasArtifact: source?.hasArtifact ?? false,
-            graphListLoaded: SourcesListNavigation.graphListLoaded(in: context.session),
-            location: evidenceGraphLocation
-        )
-    }
 
     /// Project folder for resolving `objects/…` thumbnail paths.
     var pageProjectDir: String { context.projectDir }
@@ -200,6 +183,11 @@ final class SourcePageModel {
         await presentImpact(kind: "source", id: source.id, ref: source.ref, title: source.title)
     }
 
+    func askDeleteGraph(id: String) async {
+        guard let graph = context.session.evidenceGraph(id: id), graph.sourceID == context.sourceID else { return }
+        await presentImpact(kind: "evidence_graph", id: graph.id, ref: graph.ref, title: graph.name)
+    }
+
     func askDeleteArtifact(id: String) async {
         guard let art = artifacts.items.first(where: { $0.id == id }) else { return }
         await presentImpact(kind: "artifact", id: art.id, ref: art.ref, title: art.displayTitle)
@@ -210,41 +198,58 @@ final class SourcePageModel {
     func confirmResourceDelete() async -> Bool {
         let kind = deleteImpact.request?.target.kind
         let erasedSource = await deleteImpact.confirm { target in
-            if target.kind == "source" {
+            switch target.kind {
+            case "source":
                 try await context.store.deleteSource(
                     projectDir: context.projectDir,
                     userID: context.userID,
                     sourceID: target.id
                 )
                 context.session.apply(.deletedSource(id: target.id))
+            case "artifact":
+                let effects = try await context.store.deleteArtifact(
+                    projectDir: context.projectDir,
+                    userID: context.userID,
+                    artifactID: target.id
+                )
+                if var workspace = context.workspace {
+                    workspace.artifacts.removeAll { $0.id == target.id }
+                    apply(workspace)
+                    context.session.setQueryValue(
+                        CatalogQueryKey.sourceWorkspace(
+                            project: context.session.projectKey,
+                            sourceId: context.sourceID
+                        ),
+                        value: workspace
+                    )
+                }
+                context.toast = VocabularyToast(
+                    title: L10n.string(L10n.Sources.toastArtifactDeletedTitle),
+                    body: L10n.Sources.toastArtifactDeletedBody(ref: target.ref),
+                    tone: .success
+                )
+                // The refresh below is the one read of the Source's workspace: it
+                // carries the cover and `hasArtifact`, which the activity patch
+                // cannot.
+                context.session.apply(effects)
+                await context.refreshCoverFromStore()
+            case "evidence_graph":
+                // The effects refresh the graph list; a graph changes no
+                // workspace field and no cover.
+                let effects = try await context.store.deleteEvidenceGraph(
+                    projectDir: context.projectDir,
+                    userID: context.userID,
+                    graphID: target.id
+                )
+                context.toast = VocabularyToast(
+                    title: L10n.string(L10n.Sources.toastGraphDeletedTitle),
+                    body: L10n.Sources.toastGraphDeletedBody(ref: target.ref),
+                    tone: .success
+                )
+                context.session.apply(effects)
+            default:
                 return
             }
-            let effects = try await context.store.deleteArtifact(
-                projectDir: context.projectDir,
-                userID: context.userID,
-                artifactID: target.id
-            )
-            if var workspace = context.workspace {
-                workspace.artifacts.removeAll { $0.id == target.id }
-                apply(workspace)
-                context.session.setQueryValue(
-                    CatalogQueryKey.sourceWorkspace(
-                        project: context.session.projectKey,
-                        sourceId: context.sourceID
-                    ),
-                    value: workspace
-                )
-            }
-            context.toast = VocabularyToast(
-                title: L10n.string(L10n.Sources.toastArtifactDeletedTitle),
-                body: L10n.Sources.toastArtifactDeletedBody(ref: target.ref),
-                tone: .success
-            )
-            // The refresh below is the one read of the Source's workspace: it
-            // carries the cover and `hasArtifact`, which the activity patch
-            // cannot.
-            context.session.apply(effects)
-            await context.refreshCoverFromStore()
         }
         return erasedSource && kind == "source"
     }

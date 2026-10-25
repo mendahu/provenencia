@@ -103,6 +103,7 @@ private struct SourcePageContent: View {
                                 .accessibilityIdentifier("sources.page.error")
                         }
                         overviewColumns
+                        SourcePageGraphsView(model: model)
                         SourcePageArtifactsView(model: model)
                         SourcePageNotesView(model: model)
                     }

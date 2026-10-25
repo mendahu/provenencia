@@ -8706,18 +8706,6 @@
         }
       }
     },
-    "sources.page.jumpToEvidenceGraph": {
-      "comment": "Identity-header secondary button that opens this Source's Evidence graph",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jump to graph"
-          }
-        }
-      }
-    },
     "sources.page.metadataEmptyMessage": {
       "comment": "Empty-state body when a Source has no metadata rows",
       "extractionState": "manual",
@@ -12406,18 +12394,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "This Property type is not editable here yet."
-          }
-        }
-      }
-    },
-    "workspace.section.evidenceGraph.forSource": {
-      "comment": "Composer breadcrumb segment; argument is the Source title",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Evidence graph for %@"
           }
         }
       }
@@ -21899,6 +21875,138 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "sources.graph.needsArtifact": {
+      "comment": "Tooltip and VoiceOver hint on a disabled Open for an Evidence graph that links no Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add an artifact to open this evidence graph"
+          }
+        }
+      }
+    },
+    "sources.page.toastGraphDeletedTitle": {
+      "comment": "Toast title after an Evidence graph is erased",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graph deleted"
+          }
+        }
+      }
+    },
+    "sources.page.toastGraphDeletedBody": {
+      "comment": "Toast body after Evidence graph erase; argument is GPH-…",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ was erased from this source."
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.evidence_graph.one": {
+      "comment": "Singular Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "evidence graph"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.evidence_graph.other": {
+      "comment": "Plural Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "evidence graphs"
+          }
+        }
+      }
+    },
+    "sources.page.graphsCount": {
+      "comment": "Evidence graphs section count; argument is graph count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld evidence graph"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld evidence graphs"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "sources.page.graphsHeading": {
+      "comment": "Heading for the Evidence graphs section on the Source page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graphs"
+          }
+        }
+      }
+    },
+    "sources.page.graph.open": {
+      "comment": "Button on an Evidence graph row that opens its canvas",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open"
+          }
+        }
+      }
+    },
+    "sources.page.graph.openLabel": {
+      "comment": "VoiceOver label for opening an Evidence graph; argument is the graph name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open %@"
+          }
+        }
+      }
+    },
+    "sources.page.graph.deleteLabel": {
+      "comment": "VoiceOver label for deleting an Evidence graph; argument is the graph name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete %@"
           }
         }
       }
