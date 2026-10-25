@@ -52,6 +52,8 @@ DesignSystem/
       MARKS.md
     OmnibarHitRow/
       PVOmnibarHitRow.swift
+    ArtifactChecklist/
+      PVArtifactChecklist.swift
     …
   Snowflakes/                     # named kit-side one-offs (rare)
     <Name>/

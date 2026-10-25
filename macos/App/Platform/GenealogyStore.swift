@@ -1008,6 +1008,13 @@ struct CatalogSourceType: Sendable, Equatable, Identifiable {
     var suggestedFieldCount: Int = 0
 }
 
+extension [CatalogSourceType] {
+    /// The `iconKey` of the type with this id; nil when the id is nil or unlisted.
+    func iconKey(forTypeID typeID: String?) -> String? {
+        first { $0.id == typeID }?.iconKey
+    }
+}
+
 /// One `source_type_metadata_fields` join row: a field a type suggests, in
 /// its stored order. Suggestions are not a schema — a source of the type may
 /// leave any of them blank.

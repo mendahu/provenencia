@@ -9,7 +9,16 @@ struct SourcePageGraphsView: View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
             PVSectionHeader(
                 title: L10n.Sources.graphsHeading,
-                meta: rows.map { L10n.Sources.graphsCount($0.count) }
+                meta: rows.map { L10n.Sources.graphsCount($0.count) },
+                actions: {
+                    PVButton(L10n.Sources.addEvidenceGraph, variant: .primary, size: .sm, icon: .plus) {
+                        model.graphs.openAdd()
+                    }
+                    .disabled(!model.graphs.canAdd)
+                    .help(model.graphs.addBlockedReason ?? L10n.string(L10n.Sources.addEvidenceGraph))
+                    .accessibilityHint(Text(model.graphs.addBlockedReason ?? ""))
+                    .accessibilityIdentifier("sources.page.addEvidenceGraph")
+                }
             )
 
             if let rows {
@@ -93,6 +102,16 @@ private struct SourcePageGraphRow: View {
                     .accessibilityLabel(Text(L10n.Sources.openEvidenceGraphLabel(name: graph.name)))
                     .accessibilityHint(Text(reason ?? ""))
                     .accessibilityIdentifier("sources.page.graph.open.\(graph.ref)")
+
+                    PVIconButton(
+                        .penLine,
+                        label: L10n.Sources.editEvidenceGraphLabel(name: graph.name),
+                        size: .sm
+                    ) {
+                        model.graphs.openEdit(id: graph.id)
+                    }
+                    .disabled(model.source == nil)
+                    .accessibilityIdentifier("sources.page.graph.edit.\(graph.ref)")
 
                     PVIconButton(
                         .trash,

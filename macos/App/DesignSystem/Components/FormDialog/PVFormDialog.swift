@@ -190,6 +190,51 @@ extension View {
     }
 }
 
+extension View {
+    /// ``pvFormDialog(isPresented:copy:width:isRunning:isDirty:confirmDisabled:accessibilityIdentifierPrefix:onConfirm:form:)``
+    /// for a form backed by a model the host sets: presented while `item` is
+    /// non-nil. Escape, Cancel and a click outside clear `item`, except while
+    /// `isRunning` (the caller's save in flight). `onConfirm` runs the save and
+    /// answers whether it succeeded; on true the dialog clears `item`, on false
+    /// it stays open so the model's errors stay visible.
+    func pvFormDialog<Model, Form: View>(
+        item: Binding<Model?>,
+        copy: PVFormDialogCopy,
+        width: CGFloat = 480,
+        isRunning: Bool = false,
+        isDirty: Bool = false,
+        confirmDisabled: Bool = false,
+        accessibilityIdentifierPrefix: String? = nil,
+        onConfirm: @escaping @MainActor (Model) async -> Bool,
+        @ViewBuilder form: @escaping (Model) -> Form
+    ) -> some View {
+        pvFormDialog(
+            isPresented: Binding(
+                get: { item.wrappedValue != nil },
+                set: { presented in
+                    if !presented, !isRunning { item.wrappedValue = nil }
+                }
+            ),
+            copy: copy,
+            width: width,
+            isRunning: isRunning,
+            isDirty: isDirty,
+            confirmDisabled: confirmDisabled,
+            accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
+            onConfirm: {
+                guard let current = item.wrappedValue else { return }
+                Task { @MainActor in
+                    if await onConfirm(current) { item.wrappedValue = nil }
+                }
+            }
+        ) {
+            if let current = item.wrappedValue {
+                form(current)
+            }
+        }
+    }
+}
+
 #Preview("Form dialog — Add source") {
     PVFormDialogContent(
         copy: PVFormDialogCopy(

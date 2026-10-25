@@ -106,6 +106,11 @@ enum L10n {
             defaultValue: "partly checked",
             comment: "Spoken value of a PVCheckbox that is checked for some of what it covers, not all"
         )
+        static let checkboxLocked = LocalizedStringResource(
+            "designSystem.checkbox.locked",
+            defaultValue: "Locked",
+            comment: "Spoken value of a PVCheckbox for a link or binding the researcher cannot clear"
+        )
 
         static let formDialogDiscardTitle = LocalizedStringResource(
             "designSystem.formDialog.discardTitle",
@@ -5992,32 +5997,6 @@ enum L10n {
             ), title)
         }
 
-        static let copySourceArtifactsHeading = LocalizedStringResource(
-            "sources.copy.artifactsHeading",
-            defaultValue: "Artifacts",
-            comment: "Heading of the Copy Source Artifact checklist"
-        )
-
-        static let copySourceAllArtifacts = LocalizedStringResource(
-            "sources.copy.allArtifacts",
-            defaultValue: "All Artifacts",
-            comment: "Copy Source checkbox that checks or unchecks every Artifact"
-        )
-
-        static let copySourceNoArtifacts = LocalizedStringResource(
-            "sources.copy.noArtifacts",
-            defaultValue: "This Source has no Artifacts.",
-            comment: "Copy Source note when the original has no Artifacts"
-        )
-
-        static func copySourceArtifactCount(_ selected: Int, _ total: Int) -> String {
-            return L10n.format(LocalizedStringResource(
-                "sources.copy.artifactCount",
-                defaultValue: "%1$lld of %2$lld",
-                comment: "Copy Source Artifact count; arguments are the checked count and the total"
-            ), selected, total)
-        }
-
         static let copySourceEntry = LocalizedStringResource(
             "sources.copy.entry",
             defaultValue: "Copy…",
@@ -6112,10 +6091,10 @@ enum L10n {
             ), error)
         }
 
-        static let copySourceReadAgain = LocalizedStringResource(
-            "sources.copy.readAgain",
+        static let formReadAgain = LocalizedStringResource(
+            "sources.form.readAgain",
             defaultValue: "Read again",
-            comment: "Button that reloads the original's parts in the Copy Source form"
+            comment: "Button that reads a Source-page form's loaded parts again after they failed to load"
         )
 
         static let copySourceSaveErrorTitle = LocalizedStringResource(
@@ -6725,6 +6704,152 @@ enum L10n {
                 defaultValue: "Delete %@",
                 comment: "VoiceOver label for deleting an Evidence graph; argument is the graph name"
             ), name)
+        }
+
+        static let addEvidenceGraph = LocalizedStringResource(
+            "sources.page.addEvidenceGraph",
+            defaultValue: "Add evidence graph",
+            comment: "Button in the Evidence graphs header that opens the Add evidence graph form"
+        )
+
+        static let addEvidenceGraphNeedsArtifact = LocalizedStringResource(
+            "sources.graph.addNeedsArtifact",
+            defaultValue: "Add an artifact before you add an evidence graph",
+            comment: "Tooltip and VoiceOver hint of Add evidence graph when the Source has no Artifact"
+        )
+
+        static func editEvidenceGraphLabel(name: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.graph.editLabel",
+                defaultValue: "Edit %@",
+                comment: "VoiceOver label for editing an Evidence graph; argument is the graph name"
+            ), name)
+        }
+
+        static let graphFormAddTitle = LocalizedStringResource(
+            "sources.graphForm.addTitle",
+            defaultValue: "Add evidence graph",
+            comment: "Title of the Add evidence graph form"
+        )
+
+        static let graphFormAddSubtitle = LocalizedStringResource(
+            "sources.graphForm.addSubtitle",
+            defaultValue: "An evidence graph is a discrete group of subjects and their relationships. Use different graphs to isolate groups of data from a large source.",
+            comment: "Subtitle of the Add evidence graph form"
+        )
+
+        static let graphFormArtifactsHint = LocalizedStringResource(
+            "sources.graphForm.artifactsHint",
+            defaultValue: "Select all the artifacts that are relevant to this evidence graph.",
+            comment: "Caption under the Artifacts heading in the evidence graph form"
+        )
+
+        static let graphFormAddConfirm = LocalizedStringResource(
+            "sources.graphForm.addConfirm",
+            defaultValue: "Add",
+            comment: "Confirm button of the Add evidence graph form"
+        )
+
+        static let graphFormEditTitle = LocalizedStringResource(
+            "sources.graphForm.editTitle",
+            defaultValue: "Edit evidence graph",
+            comment: "Title of the Edit evidence graph form"
+        )
+
+        static let graphFormSaveConfirm = LocalizedStringResource(
+            "sources.graphForm.saveConfirm",
+            defaultValue: "Save",
+            comment: "Confirm button of the Edit evidence graph form"
+        )
+
+        static let graphFormName = LocalizedStringResource(
+            "sources.graphForm.name",
+            defaultValue: "Name",
+            comment: "Label of the evidence graph name field"
+        )
+
+        static let graphFormNamePlaceholder = LocalizedStringResource(
+            "sources.graphForm.namePlaceholder",
+            defaultValue: "Jones household",
+            comment: "Placeholder of the evidence graph name field"
+        )
+
+        static let graphFormNameRequired = LocalizedStringResource(
+            "sources.graphForm.nameRequired",
+            defaultValue: "Give the evidence graph a name.",
+            comment: "Error under the evidence graph name field when it is blank"
+        )
+
+        static let graphFormDescription = LocalizedStringResource(
+            "sources.graphForm.description",
+            defaultValue: "Description",
+            comment: "Label of the evidence graph description field"
+        )
+
+        static let graphFormDescriptionHint = LocalizedStringResource(
+            "sources.graphForm.descriptionHint",
+            defaultValue: "Which part of the source this graph covers",
+            comment: "Hint under the evidence graph description field"
+        )
+
+        static let graphFormNoneChecked = LocalizedStringResource(
+            "sources.graphForm.noneChecked",
+            defaultValue: "Check at least one artifact.",
+            comment: "Line under the Artifact checklist when no Artifact is checked"
+        )
+
+        static let graphFormKeptLinkedMessage = LocalizedStringResource(
+            "sources.graphForm.keptLinkedMessage",
+            defaultValue: "These artifacts stay linked while citations in this graph use them.",
+            comment: "Callout above the Citations that keep an Artifact linked to the graph"
+        )
+
+        static let graphFormLoading = LocalizedStringResource(
+            "sources.graphForm.loading",
+            defaultValue: "Reading the artifacts…",
+            comment: "Evidence graph form loading line while the kept links are read"
+        )
+
+        static let graphFormLoadErrorTitle = LocalizedStringResource(
+            "sources.graphForm.loadErrorTitle",
+            defaultValue: "Couldn’t read the artifacts",
+            comment: "Evidence graph form callout title when the kept links fail to load"
+        )
+
+        static func graphFormLoadErrorMessage(_ error: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.graphForm.loadErrorMessage",
+                defaultValue: "Name and description are kept. Read the artifacts again to change the links. %@",
+                comment: "Evidence graph form load error message; argument is the error text"
+            ), error)
+        }
+
+        static let graphFormSaveErrorTitle = LocalizedStringResource(
+            "sources.graphForm.saveErrorTitle",
+            defaultValue: "Couldn’t save the evidence graph",
+            comment: "Evidence graph form callout title when the save fails"
+        )
+
+        static func graphFormSaveErrorMessage(_ error: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.graphForm.saveErrorMessage",
+                defaultValue: "Nothing was saved. Your changes are kept. %@",
+                comment: "Evidence graph form save error message; argument is the error text"
+            ), error)
+        }
+
+        static let toastGraphAddedTitle = LocalizedStringResource(
+            "sources.page.toastGraphAddedTitle",
+            defaultValue: "Evidence graph added",
+            comment: "Toast title after an Evidence graph is added"
+        )
+
+        static func toastGraphAddedBody(ref: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.toastGraphAddedBody",
+                defaultValue: "%@ is ready to open.",
+                comment: "Toast body after an Evidence graph is added; argument is GPH-…"
+            ), ref)
         }
 
         static let metadataHeading = LocalizedStringResource(
@@ -7826,11 +7951,6 @@ enum L10n {
                 comment: "Callout when activating a locked binding; argument is subject type label"
             ), typeLabel)
         }
-        static let bindingLocked = LocalizedStringResource(
-            "properties.inspector.bindingLocked",
-            defaultValue: "Locked",
-            comment: "Accessibility / badge for a locked subject-type binding"
-        )
         static let bindingBound = LocalizedStringResource(
             "properties.inspector.bindingBound",
             defaultValue: "Bound",
@@ -8919,7 +9039,7 @@ enum L10n {
         )
         static let gateLastGraphBody = LocalizedStringResource(
             "deleteImpact.gate.lastGraph.body",
-            defaultValue: "A source keeps at least one evidence graph. Add another graph before you delete this one.",
+            defaultValue: "A source keeps at least one evidence graph. Use Add evidence graph to make another, then delete this one. A new evidence graph needs an artifact.",
             comment: "Extra-gate body for last_graph"
         )
 
@@ -9830,6 +9950,43 @@ enum L10n {
                 "conclusions.a11y.ref",
                 defaultValue: "Reference %@",
                 comment: "VoiceOver label of a handle's ref (PER-…)"
+            ), ref)
+        }
+    }
+
+    /// The Artifact checklist recipe (`PVArtifactChecklist`).
+    enum ArtifactChecklist {
+        static let heading = LocalizedStringResource(
+            "artifactChecklist.heading",
+            defaultValue: "Artifacts",
+            comment: "Heading of an Artifact checklist"
+        )
+
+        static let all = LocalizedStringResource(
+            "artifactChecklist.all",
+            defaultValue: "All Artifacts",
+            comment: "Checklist checkbox that checks or unchecks every Artifact"
+        )
+
+        static let empty = LocalizedStringResource(
+            "artifactChecklist.empty",
+            defaultValue: "This Source has no Artifacts.",
+            comment: "Artifact checklist note when the Source has no Artifacts"
+        )
+
+        static func count(_ selected: Int, _ total: Int) -> String {
+            return L10n.format(LocalizedStringResource(
+                "artifactChecklist.count",
+                defaultValue: "%1$lld of %2$lld",
+                comment: "Artifact checklist count; arguments are the checked count and the total"
+            ), selected, total)
+        }
+
+        static func lockedValue(ref: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "artifactChecklist.lockedValue",
+                defaultValue: "Locked, %@",
+                comment: "Spoken value of a locked Artifact checklist row; argument is the Artifact ref"
             ), ref)
         }
     }

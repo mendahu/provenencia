@@ -1174,6 +1174,24 @@ struct SourcePageModelTests {
         #expect(failed.graphs.loadError != nil)
     }
 
+    @Test func addGraphNeedsAnArtifact() async {
+        let bare = makeModel(store: makeStore())
+        await bare.warmFromSession()
+        #expect(!bare.graphs.canAdd)
+        #expect(bare.graphs.addBlockedReason == "Add an artifact before you add an evidence graph")
+        bare.graphs.openAdd()
+        #expect(bare.graphs.form == nil)
+
+        let withArtifact = makeModel(store: makeStore(artifacts: [
+            CatalogArtifact(id: "a1", ref: "ART-A1", sourceID: sourceID, fileID: "", label: "Page 1", description: ""),
+        ]))
+        await withArtifact.warmFromSession()
+        #expect(withArtifact.graphs.canAdd)
+        #expect(withArtifact.graphs.addBlockedReason == nil)
+        withArtifact.graphs.openAdd()
+        #expect(withArtifact.graphs.form != nil)
+    }
+
     @Test func deleteEmptyGraphCallsStoreAndToasts() async {
         let store = makeStore()
         store.evidenceGraphsByProject[projectDir] = [
