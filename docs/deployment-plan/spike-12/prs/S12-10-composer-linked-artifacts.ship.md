@@ -88,4 +88,4 @@ Reviewers: MNT (MNT-1 blocker; MNT-2, MNT-3, MNT-4 majors), SEC+PRF (PRF-1 major
 No new blockers from either reviewer.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none (S12-13 notes written into its map entry: graph-list id index, `noArtifactsCallout` link wording) · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: none (S12-13 notes written into its map entry: graph-list id index, `noArtifactsCallout` link wording) · to user: — · CON miss: none
