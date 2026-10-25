@@ -1,6 +1,6 @@
 # S11-35 — Hold a record Promote did not offer
 
-**Status:** Planned
+**Status:** Landed in [#543](https://github.com/mendahu/provenencia/pull/543) (2026-10-25)
 **Spike / slice:** Spike 11 · Slice 8 — Find another record
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the call has no surface until S11-36 adds the menu entry and the picker; a held record reads through the existing row readout, which already draws band None with `decided` and Contested)
@@ -317,3 +317,7 @@ None.
 
 **Title:** S11-35 — Hold a record Promote did not offer
 **Body:** objective in one sentence; what shipped against US-1 – US-3; AC evidence (test names); deviations from the plan; manual check (none, per §10); `Plan: docs/deployment-plan/spike-11/prs/S11-35-hold-found-record.md`.
+
+## Landed
+
+The code matches the plan. One difference: the Swift tests share one small private helper, `unmatched(_:)`, for the New / no-band / no-alternatives row that T-5, T-6 and T-8 start from, where the plan listed no new helper.

@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-35 — Hold a record Promote did not offer
+
+**Landed 2026-10-25** in [#543](https://github.com/mendahu/provenencia/pull/543). A Promote row can now hold a record Promote never offered. `PromoteFlow.hold(subjectID:id:ref:header:)` takes the record's id, ref and list header, titles it as the menu titles every record, adds it to the row's menu with reason `decided` and band None, and selects it like a menu pick; `PromoteModel.hold` then re-proposes with the pair fixed. The engine already loaded, scored, explained and filed such a pair, and tests now pin it (`TestProposeHoldsAnUnshortlistedHandle`, `TestProposeHoldsAFoundRecord`, `TestGetPromoteClaimEvidenceForAFoundRecord`, `TestApplyPromoteGraphAlignment/files_a_found_record`); `FakeStore` already held it, pinned by `aFoundRecordIsProposedHeldAndFiled`. No Go production code changed, and nothing on the page calls `hold` until S11-36 adds the menu entry.
+
 ## S11-31 — Bound the loaded Evidence graphs
 
 **Landed 2026-10-24** in [#541](https://github.com/mendahu/provenencia/pull/541). The catalog's in-memory graph keeps at most 64 loaded Evidence graphs. Loading one more drops the least recently used graph with its memos, and a dropped graph loads again on its next read with the same rows. A read and a memo hit both count as use, so the graph Promote is working on is not evicted by a run of member loads. The graph, its memos and its use stamp are one entry. `TestLargeSourceBudgets` runs a full evidence pass under a cap of 8 and checks every response against the default cap's. One Evidence request keeps each graph it reads, so it reads each graph once even when the cap would evict it mid-request.
