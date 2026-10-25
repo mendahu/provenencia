@@ -21902,6 +21902,18 @@
           }
         }
       }
+    },
+    "sources.graph.needsArtifact": {
+      "comment": "Tooltip and VoiceOver hint on a disabled Open for an Evidence graph that links no Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add an artifact to open this evidence graph"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

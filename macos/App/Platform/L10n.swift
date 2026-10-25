@@ -5880,6 +5880,12 @@ enum L10n {
             comment: "Tooltip on the blocked Sources list graph zone"
         )
 
+        static let graphNeedsArtifactTooltip = LocalizedStringResource(
+            "sources.graph.needsArtifact",
+            defaultValue: "Add an artifact to open this evidence graph",
+            comment: "Tooltip and VoiceOver hint on a disabled Open for an Evidence graph that links no Artifact"
+        )
+
         static let openSourcePage = LocalizedStringResource(
             "sources.list.openSourcePage",
             defaultValue: "Open source",

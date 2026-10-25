@@ -44,6 +44,11 @@ enum SourcesListNavigation {
         return L10n.string(L10n.Sources.needsArtifactTooltip)
     }
 
+    /// Why one graph's Open is blocked: it links no Artifact. Nil when it opens.
+    static func graphBlockedReason(for graph: CatalogEvidenceGraph) -> String? {
+        graph.artifactIDs.isEmpty ? L10n.string(L10n.Sources.graphNeedsArtifactTooltip) : nil
+    }
+
     /// True once the session's graph list has a value.
     @MainActor
     static func graphListLoaded(in session: WorkspaceSession) -> Bool {
@@ -53,7 +58,14 @@ enum SourcesListNavigation {
     /// Opens the entry graph's canvas when that graph links at least one
     /// Artifact. Returns `nil` when the graph zone should stay blocked.
     static func graphLocation(for source: CatalogSource, graphs: [String: [CatalogEvidenceGraph]]) -> WorkspaceLocation? {
-        guard let graph = entryGraph(sourceID: source.id, in: graphs), !graph.artifactIDs.isEmpty else { return nil }
+        guard let graph = entryGraph(sourceID: source.id, in: graphs) else { return nil }
+        return graphLocation(for: source, graph: graph)
+    }
+
+    /// Opens one graph's canvas when it links at least one Artifact; `nil`
+    /// keeps its Open blocked (`graphBlockedReason(for:)` says why).
+    static func graphLocation(for source: CatalogSource, graph: CatalogEvidenceGraph) -> WorkspaceLocation? {
+        guard !graph.artifactIDs.isEmpty else { return nil }
         return .evidenceGraph(
             sourceId: source.id,
             graphId: graph.id,
