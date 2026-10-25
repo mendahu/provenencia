@@ -87,33 +87,25 @@ private struct SourceCopyForm: View {
                 Text(L10n.Sources.copySourcePartsHeading)
                     .pvMicroCaps()
                     .foregroundStyle(PVColor.textFaint)
-                switch model.loadState {
-                case .ready:
+                SourceFormLoadArea(
+                    state: model.loadState,
+                    loadingText: L10n.Sources.copySourceLoading,
+                    errorTitle: L10n.Sources.copySourceLoadErrorTitle,
+                    errorMessage: L10n.Sources.copySourceLoadErrorMessage,
+                    onReadAgain: { model.reloadWorkspace() },
+                    accessibilityIdentifierPrefix: "sources.copy"
+                ) {
                     partCheckboxes
-                case .loading:
-                    loading
-                case .failed(let message):
-                    PVCallout(
-                        tone: .danger,
-                        title: L10n.Sources.copySourceLoadErrorTitle,
-                        message: L10n.Sources.copySourceLoadErrorMessage(message),
-                        compact: true
-                    ) {
-                        PVButton(L10n.Sources.copySourceReadAgain, variant: .secondary, size: .sm) {
-                            model.reloadWorkspace()
-                        }
-                        .accessibilityIdentifier("sources.copy.readAgain")
-                    }
-                    .accessibilityIdentifier("sources.copy.loadError")
                 }
             }
             if model.loadState == .ready, let workspace = model.workspace {
-                SourceArtifactChecklist(
+                PVArtifactChecklist(
                     artifacts: workspace.artifacts,
                     excluded: $model.choices.excludedArtifactIDs,
                     projectDir: model.projectDir,
                     sourceTypeIconKey: model.sourceTypeIconKey,
-                    isDisabled: model.isSaving
+                    isDisabled: model.isSaving,
+                    accessibilityIdentifierPrefix: "sources.copy.artifacts"
                 )
             }
         }
@@ -160,24 +152,5 @@ private struct SourceCopyForm: View {
             get: { available && model.choices[keyPath: keyPath] },
             set: { model.choices[keyPath: keyPath] = $0 }
         )
-    }
-
-    private var loading: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space5) {
-            GeometryReader { geometry in
-                VStack(alignment: .leading, spacing: PVSpacing.space5) {
-                    ForEach([0.42, 0.36, 0.48], id: \.self) { fraction in
-                        PVSkeletonBar(width: geometry.size.width * fraction, height: 12)
-                    }
-                }
-            }
-            .frame(height: 12 * 3 + PVSpacing.space5 * 2)
-            Text(L10n.Sources.copySourceLoading)
-                .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                .foregroundStyle(PVColor.textMuted)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(L10n.Sources.copySourceLoading))
-        .accessibilityIdentifier("sources.copy.loading")
     }
 }

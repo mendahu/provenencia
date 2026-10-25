@@ -382,7 +382,7 @@ private struct PropertiesContent: View {
             : L10n.string(L10n.Properties.bindingNotBound))
         parts.append(type.label)
         if locked {
-            parts.append(L10n.string(L10n.Properties.bindingLocked))
+            parts.append(L10n.string(L10n.DesignSystem.checkboxLocked))
         }
         return parts.joined(separator: ", ")
     }
@@ -622,7 +622,7 @@ private struct PropertiesContent: View {
         .buttonStyle(.plain)
         .accessibilityLabel(
             "\(type.label), \(bound ? L10n.string(L10n.Properties.bindingBound) : L10n.string(L10n.Properties.bindingNotBound))"
-            + (locked ? ", \(L10n.string(L10n.Properties.bindingLocked))" : "")
+            + (locked ? ", \(L10n.string(L10n.DesignSystem.checkboxLocked))" : "")
         )
     }
 }

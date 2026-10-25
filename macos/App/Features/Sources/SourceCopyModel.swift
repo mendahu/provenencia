@@ -11,13 +11,6 @@ struct SourceCopyChoices: Equatable {
     var excludedArtifactIDs: Set<String> = []
 }
 
-/// Which body the form's parts area shows.
-enum SourceCopyLoadState: Equatable {
-    case loading
-    case failed(String)
-    case ready
-}
-
 /// State of the Copy Source form: prefill from the original, which parts the
 /// original has, what the researcher kept, and the copy itself. Both hosts (the
 /// Source page and, later, the Sources list) present the same model through
@@ -80,7 +73,7 @@ final class SourceCopyModel {
     }
 
     /// A value wins: a failed refetch keeps the stale parts and stays `.ready`.
-    var loadState: SourceCopyLoadState {
+    var loadState: SourceFormLoadState {
         if workspaceHandle.value != nil { return .ready }
         if workspaceHandle.status == .error {
             let message = workspaceHandle.error.map { L10n.Errors.message(for: $0) }
@@ -104,9 +97,11 @@ final class SourceCopyModel {
     /// The original's Artifacts in workspace order, minus the unchecked ones. A
     /// deleted Artifact drops out and a new one starts checked.
     var artifactIDsToCopy: [String] {
-        (workspace?.artifacts ?? [])
-            .map(\.id)
-            .filter { !choices.excludedArtifactIDs.contains($0) }
+        PVArtifactChecklistState.checkedIDs(
+            ids: (workspace?.artifacts ?? []).map(\.id),
+            excluded: choices.excludedArtifactIDs,
+            locked: []
+        )
     }
 
     var canCopy: Bool {

@@ -37,6 +37,78 @@
         }
       }
     },
+    "designSystem.checkbox.locked": {
+      "comment": "Spoken value of a PVCheckbox for a link or binding the researcher cannot clear",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Locked"
+          }
+        }
+      }
+    },
+    "artifactChecklist.heading": {
+      "comment": "Heading of an Artifact checklist",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artifacts"
+          }
+        }
+      }
+    },
+    "artifactChecklist.all": {
+      "comment": "Checklist checkbox that checks or unchecks every Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All Artifacts"
+          }
+        }
+      }
+    },
+    "artifactChecklist.empty": {
+      "comment": "Artifact checklist note when the Source has no Artifacts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Source has no Artifacts."
+          }
+        }
+      }
+    },
+    "artifactChecklist.count": {
+      "comment": "Artifact checklist count; arguments are the checked count and the total",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "artifactChecklist.lockedValue": {
+      "comment": "Spoken value of a locked Artifact checklist row; argument is the Artifact ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Locked, %@"
+          }
+        }
+      }
+    },
     "designSystem.comboBox.searching": {
       "comment": "PVComboBox list line while the caller's remote search runs and no results are in yet",
       "extractionState": "manual",
@@ -5510,42 +5582,6 @@
         }
       }
     },
-    "sources.copy.allArtifacts": {
-      "comment": "Copy Source checkbox that checks or unchecks every Artifact",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "All Artifacts"
-          }
-        }
-      }
-    },
-    "sources.copy.artifactCount": {
-      "comment": "Copy Source Artifact count; arguments are the checked count and the total",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld of %2$lld"
-          }
-        }
-      }
-    },
-    "sources.copy.artifactsHeading": {
-      "comment": "Heading of the Copy Source Artifact checklist",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Artifacts"
-          }
-        }
-      }
-    },
     "sources.copy.confirm": {
       "comment": "Confirm button on the Copy Source dialog",
       "extractionState": "manual",
@@ -5702,18 +5738,6 @@
         }
       }
     },
-    "sources.copy.noArtifacts": {
-      "comment": "Copy Source note when the original has no Artifacts",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This Source has no Artifacts."
-          }
-        }
-      }
-    },
     "sources.copy.partAbsent": {
       "comment": "Hint under a Copy Source checkbox when the original has none of that part",
       "extractionState": "manual",
@@ -5738,8 +5762,8 @@
         }
       }
     },
-    "sources.copy.readAgain": {
-      "comment": "Button that reloads the original's parts in the Copy Source form",
+    "sources.form.readAgain": {
+      "comment": "Button that reads a Source-page form's loaded parts again after they failed to load",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -9506,18 +9530,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bound"
-          }
-        }
-      }
-    },
-    "properties.inspector.bindingLocked": {
-      "comment": "Accessibility / badge for a locked subject-type binding",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Locked"
           }
         }
       }

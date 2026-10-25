@@ -197,7 +197,12 @@ struct PVDeleteImpactNotice: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: PVSpacing.space7) {
                             ForEach(Array(groups.enumerated()), id: \.element.via) { _, group in
-                                groupView(group)
+                                PVDeleteImpactGroupList(
+                                    title: PVDeleteImpactCopy.heading(group),
+                                    group: group,
+                                    onNavigate: onNavigate,
+                                    dismiss: onDismiss
+                                )
                             }
                         }
                     }
@@ -220,13 +225,24 @@ struct PVDeleteImpactNotice: View {
     private var targetLine: some View {
         PVDeleteImpactTargetLine(target: target)
     }
+}
 
-    @ViewBuilder
-    private func groupView(_ group: CatalogDeleteImpactGroup) -> some View {
+/// One DeleteImpact group: a title line (with the raw `via` when it is not a
+/// known one), the listed rows as buttons, and an "and N more" line. The notice
+/// titles each group with its heading; a form that lists what blocks a change
+/// titles it with what the rows block. A row dismisses, then navigates
+/// (``PVDeleteImpactControls/activate(_:onNavigate:dismiss:then:)``).
+struct PVDeleteImpactGroupList: View {
+    let title: String
+    let group: CatalogDeleteImpactGroup
+    let onNavigate: (WorkspaceLocation) -> Void
+    let dismiss: () -> Void
+
+    var body: some View {
         let rest = PVDeleteImpactControls.remainder(total: group.total, listedCount: group.listed.count)
         VStack(alignment: .leading, spacing: PVSpacing.space3) {
             HStack(alignment: .firstTextBaseline) {
-                Text(verbatim: PVDeleteImpactCopy.heading(group))
+                Text(verbatim: title)
                     .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold))
                     .foregroundStyle(PVColor.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -241,7 +257,7 @@ struct PVDeleteImpactNotice: View {
                 ForEach(Array(group.listed.enumerated()), id: \.element.id) { index, row in
                     if index > 0 { PVDivider() }
                     Button {
-                        PVDeleteImpactControls.activate(row, onNavigate: onNavigate, dismiss: onDismiss)
+                        PVDeleteImpactControls.activate(row, onNavigate: onNavigate, dismiss: dismiss)
                     } label: {
                         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
                             Text(verbatim: row.ref)

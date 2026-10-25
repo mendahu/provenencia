@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA1214000000000000000006 /* PVArtifactChecklistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1214000000000000000005 /* PVArtifactChecklistTests.swift */; };
+		AA1214000000000000000004 /* SourceFormLoadArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1214000000000000000003 /* SourceFormLoadArea.swift */; };
+		AA1214000000000000000002 /* PVArtifactChecklist.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1214000000000000000001 /* PVArtifactChecklist.swift */; };
 		A91600000000000000000034 /* PVSymbolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91600000000000000000033 /* PVSymbolTests.swift */; };
 		A91600000000000000000032 /* PersonDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91600000000000000000031 /* PersonDetailTests.swift */; };
 		A91D00000000000000000008 /* EventDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91D00000000000000000007 /* EventDetailTests.swift */; };
@@ -50,7 +53,6 @@
 		AA0000000000000000000363 /* SourcePageIdentityHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000362 /* SourcePageIdentityHeader.swift */; };
 		AA00000000000000000C1207 /* SourceTitleTypeFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1206 /* SourceTitleTypeFields.swift */; };
 		AA00000000000000000C1209 /* SourceCopyModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1208 /* SourceCopyModel.swift */; };
-		AA00000000000000000C1211 /* SourceArtifactChecklist.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1210 /* SourceArtifactChecklist.swift */; };
 		AA00000000000000000C1213 /* SourceCopyDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1212 /* SourceCopyDialog.swift */; };
 		AA00000000000000000C1205 /* SourceTypeComboRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1204 /* SourceTypeComboRow.swift */; };
 		AA0000000000000000000365 /* SourcePageDescriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000364 /* SourcePageDescriptionView.swift */; };
@@ -441,6 +443,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AA1214000000000000000005 /* PVArtifactChecklistTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVArtifactChecklistTests.swift; sourceTree = "<group>"; };
+		AA1214000000000000000003 /* SourceFormLoadArea.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceFormLoadArea.swift; sourceTree = "<group>"; };
+		AA1214000000000000000001 /* PVArtifactChecklist.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVArtifactChecklist.swift; sourceTree = "<group>"; };
 		A91600000000000000000033 /* PVSymbolTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSymbolTests.swift; sourceTree = "<group>"; };
 		A91600000000000000000031 /* PersonDetailTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonDetailTests.swift; sourceTree = "<group>"; };
 		A91D00000000000000000007 /* EventDetailTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EventDetailTests.swift; sourceTree = "<group>"; };
@@ -481,7 +486,6 @@
 		AA0000000000000000000362 /* SourcePageIdentityHeader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageIdentityHeader.swift; sourceTree = "<group>"; };
 		AA00000000000000000C1206 /* SourceTitleTypeFields.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTitleTypeFields.swift; sourceTree = "<group>"; };
 		AA00000000000000000C1208 /* SourceCopyModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceCopyModel.swift; sourceTree = "<group>"; };
-		AA00000000000000000C1210 /* SourceArtifactChecklist.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceArtifactChecklist.swift; sourceTree = "<group>"; };
 		AA00000000000000000C1212 /* SourceCopyDialog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceCopyDialog.swift; sourceTree = "<group>"; };
 		AA00000000000000000C1204 /* SourceTypeComboRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypeComboRow.swift; sourceTree = "<group>"; };
 		AA0000000000000000000364 /* SourcePageDescriptionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageDescriptionView.swift; sourceTree = "<group>"; };
@@ -950,8 +954,8 @@
 				AA0000000000000000000362 /* SourcePageIdentityHeader.swift */,
 				AA00000000000000000C1206 /* SourceTitleTypeFields.swift */,
 				AA00000000000000000C1208 /* SourceCopyModel.swift */,
-				AA00000000000000000C1210 /* SourceArtifactChecklist.swift */,
 				AA00000000000000000C1212 /* SourceCopyDialog.swift */,
+				AA1214000000000000000003 /* SourceFormLoadArea.swift */,
 				AA00000000000000000C1204 /* SourceTypeComboRow.swift */,
 				AA0000000000000000000364 /* SourcePageDescriptionView.swift */,
 				AA0000000000000000000366 /* SourcePageCredibilityView.swift */,
@@ -1413,6 +1417,7 @@
 				AA0000000000000000000206 /* SourceTypesModelTests.swift */,
 				AA0000000000000000000312 /* SourcesModelTests.swift */,
 				AA00000000000000000C120C /* SourceCopyModelTests.swift */,
+				AA1214000000000000000005 /* PVArtifactChecklistTests.swift */,
 				AA00000000000000000C120A /* QueryHandleWaiting.swift */,
 				AA00000000000000000C1202 /* CatalogArtifactTests.swift */,
 				AA1041000000000000000003 /* SourcesListSettingsTests.swift */,
@@ -1839,6 +1844,15 @@
 			path = OmnibarHitRow;
 			sourceTree = "<group>";
 		};
+		D5C000000000000000000024 /* ArtifactChecklist */ = {
+			isa = PBXGroup;
+			children = (
+				AA1214000000000000000001 /* PVArtifactChecklist.swift */,
+			);
+			name = ArtifactChecklist;
+			path = ArtifactChecklist;
+			sourceTree = "<group>";
+		};
 		D5C000000000000000000022 /* DeleteImpact */ = {
 			isa = PBXGroup;
 			children = (
@@ -1902,6 +1916,7 @@
 				AA1041000000000000000009 /* LastUpdated */,
 				D5C00000000000000000000A /* OmnibarHitRow */,
 				D5C000000000000000000022 /* DeleteImpact */,
+				D5C000000000000000000024 /* ArtifactChecklist */,
 			);
 			name = Recipes;
 			path = Recipes;
@@ -2288,8 +2303,9 @@
 				AA0000000000000000000363 /* SourcePageIdentityHeader.swift in Sources */,
 				AA00000000000000000C1207 /* SourceTitleTypeFields.swift in Sources */,
 				AA00000000000000000C1209 /* SourceCopyModel.swift in Sources */,
-				AA00000000000000000C1211 /* SourceArtifactChecklist.swift in Sources */,
 				AA00000000000000000C1213 /* SourceCopyDialog.swift in Sources */,
+				AA1214000000000000000004 /* SourceFormLoadArea.swift in Sources */,
+				AA1214000000000000000002 /* PVArtifactChecklist.swift in Sources */,
 				AA00000000000000000C1205 /* SourceTypeComboRow.swift in Sources */,
 				AA0000000000000000000365 /* SourcePageDescriptionView.swift in Sources */,
 				AA0000000000000000000367 /* SourcePageCredibilityView.swift in Sources */,
@@ -2408,6 +2424,7 @@
 				AA0000000000000000000242 /* PVComboBoxTests.swift in Sources */,
 				AA0000000000000000000313 /* SourcesModelTests.swift in Sources */,
 				AA00000000000000000C120D /* SourceCopyModelTests.swift in Sources */,
+				AA1214000000000000000006 /* PVArtifactChecklistTests.swift in Sources */,
 				AA00000000000000000C120B /* QueryHandleWaiting.swift in Sources */,
 				AA00000000000000000C1203 /* CatalogArtifactTests.swift in Sources */,
 				AA1041000000000000000004 /* SourcesListSettingsTests.swift in Sources */,

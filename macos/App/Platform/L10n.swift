@@ -106,6 +106,11 @@ enum L10n {
             defaultValue: "partly checked",
             comment: "Spoken value of a PVCheckbox that is checked for some of what it covers, not all"
         )
+        static let checkboxLocked = LocalizedStringResource(
+            "designSystem.checkbox.locked",
+            defaultValue: "Locked",
+            comment: "Spoken value of a PVCheckbox for a link or binding the researcher cannot clear"
+        )
 
         static let formDialogDiscardTitle = LocalizedStringResource(
             "designSystem.formDialog.discardTitle",
@@ -5992,32 +5997,6 @@ enum L10n {
             ), title)
         }
 
-        static let copySourceArtifactsHeading = LocalizedStringResource(
-            "sources.copy.artifactsHeading",
-            defaultValue: "Artifacts",
-            comment: "Heading of the Copy Source Artifact checklist"
-        )
-
-        static let copySourceAllArtifacts = LocalizedStringResource(
-            "sources.copy.allArtifacts",
-            defaultValue: "All Artifacts",
-            comment: "Copy Source checkbox that checks or unchecks every Artifact"
-        )
-
-        static let copySourceNoArtifacts = LocalizedStringResource(
-            "sources.copy.noArtifacts",
-            defaultValue: "This Source has no Artifacts.",
-            comment: "Copy Source note when the original has no Artifacts"
-        )
-
-        static func copySourceArtifactCount(_ selected: Int, _ total: Int) -> String {
-            return L10n.format(LocalizedStringResource(
-                "sources.copy.artifactCount",
-                defaultValue: "%1$lld of %2$lld",
-                comment: "Copy Source Artifact count; arguments are the checked count and the total"
-            ), selected, total)
-        }
-
         static let copySourceEntry = LocalizedStringResource(
             "sources.copy.entry",
             defaultValue: "Copy…",
@@ -6112,10 +6091,10 @@ enum L10n {
             ), error)
         }
 
-        static let copySourceReadAgain = LocalizedStringResource(
-            "sources.copy.readAgain",
+        static let formReadAgain = LocalizedStringResource(
+            "sources.form.readAgain",
             defaultValue: "Read again",
-            comment: "Button that reloads the original's parts in the Copy Source form"
+            comment: "Button that reads a Source-page form's loaded parts again after they failed to load"
         )
 
         static let copySourceSaveErrorTitle = LocalizedStringResource(
@@ -7826,11 +7805,6 @@ enum L10n {
                 comment: "Callout when activating a locked binding; argument is subject type label"
             ), typeLabel)
         }
-        static let bindingLocked = LocalizedStringResource(
-            "properties.inspector.bindingLocked",
-            defaultValue: "Locked",
-            comment: "Accessibility / badge for a locked subject-type binding"
-        )
         static let bindingBound = LocalizedStringResource(
             "properties.inspector.bindingBound",
             defaultValue: "Bound",
@@ -9830,6 +9804,43 @@ enum L10n {
                 "conclusions.a11y.ref",
                 defaultValue: "Reference %@",
                 comment: "VoiceOver label of a handle's ref (PER-…)"
+            ), ref)
+        }
+    }
+
+    /// The Artifact checklist recipe (`PVArtifactChecklist`).
+    enum ArtifactChecklist {
+        static let heading = LocalizedStringResource(
+            "artifactChecklist.heading",
+            defaultValue: "Artifacts",
+            comment: "Heading of an Artifact checklist"
+        )
+
+        static let all = LocalizedStringResource(
+            "artifactChecklist.all",
+            defaultValue: "All Artifacts",
+            comment: "Checklist checkbox that checks or unchecks every Artifact"
+        )
+
+        static let empty = LocalizedStringResource(
+            "artifactChecklist.empty",
+            defaultValue: "This Source has no Artifacts.",
+            comment: "Artifact checklist note when the Source has no Artifacts"
+        )
+
+        static func count(_ selected: Int, _ total: Int) -> String {
+            return L10n.format(LocalizedStringResource(
+                "artifactChecklist.count",
+                defaultValue: "%1$lld of %2$lld",
+                comment: "Artifact checklist count; arguments are the checked count and the total"
+            ), selected, total)
+        }
+
+        static func lockedValue(ref: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "artifactChecklist.lockedValue",
+                defaultValue: "Locked, %@",
+                comment: "Spoken value of a locked Artifact checklist row; argument is the Artifact ref"
             ), ref)
         }
     }

@@ -6,8 +6,8 @@ import SwiftUI
 /// the box to the top line.
 ///
 /// `PVCheckboxMark` is the bare box for rows that are themselves the
-/// control. `isLocked` is the seeded-binding lock the Properties board
-/// draws in that same box: a filled square with a lock, not a check.
+/// control. `isLocked` is the lock drawn in that same box for a link or
+/// binding the researcher cannot clear: a filled square with a lock, not a check.
 /// The row carries the accessibility; the mark is decoration.
 struct PVCheckbox: View {
     private let label: Text?
@@ -15,6 +15,7 @@ struct PVCheckbox: View {
     @Binding private var isChecked: Bool
     private let isIndeterminate: Bool
     private let isDisabled: Bool
+    private let isLocked: Bool
     private let accessibilityLabelText: Text?
 
     init(
@@ -29,6 +30,7 @@ struct PVCheckbox: View {
         self._isChecked = isChecked
         self.isIndeterminate = isIndeterminate
         self.isDisabled = isDisabled
+        self.isLocked = false
         self.accessibilityLabelText = nil
     }
 
@@ -37,13 +39,15 @@ struct PVCheckbox: View {
         description: String? = nil,
         isChecked: Binding<Bool>,
         isIndeterminate: Bool = false,
-        isDisabled: Bool = false
+        isDisabled: Bool = false,
+        isLocked: Bool = false
     ) {
         self.label = Text(verbatim: label)
         self.description = description.map { Text(verbatim: $0) }
         self._isChecked = isChecked
         self.isIndeterminate = isIndeterminate
         self.isDisabled = isDisabled
+        self.isLocked = isLocked
         self.accessibilityLabelText = nil
     }
 
@@ -59,6 +63,7 @@ struct PVCheckbox: View {
         self._isChecked = isChecked
         self.isIndeterminate = isIndeterminate
         self.isDisabled = isDisabled
+        self.isLocked = false
         self.accessibilityLabelText = Text(accessibilityLabel)
     }
 
@@ -75,6 +80,7 @@ struct PVCheckbox: View {
         self._isChecked = isChecked
         self.isIndeterminate = isIndeterminate
         self.isDisabled = isDisabled
+        self.isLocked = false
         self.accessibilityLabelText = Text(verbatim: accessibilitySpokenLabel)
     }
 
@@ -83,7 +89,7 @@ struct PVCheckbox: View {
             isChecked.toggle()
         } label: {
             HStack(alignment: description == nil ? .center : .top, spacing: PVSpacing.space5) {
-                PVCheckboxMark(isChecked: isChecked, isIndeterminate: isIndeterminate)
+                PVCheckboxMark(isChecked: isChecked, isIndeterminate: isIndeterminate, isLocked: isLocked)
                     .padding(.top, description == nil ? 0 : 2)
                 if label != nil || description != nil {
                     VStack(alignment: .leading, spacing: 1) {
@@ -104,8 +110,9 @@ struct PVCheckbox: View {
         .opacity(isDisabled ? 0.5 : 1)
         .modifier(CheckboxAccessibility(
             spoken: label == nil ? accessibilityLabelText : nil,
-            isOn: isChecked,
-            isIndeterminate: isIndeterminate
+            isOn: isChecked || isLocked,
+            isIndeterminate: isIndeterminate,
+            isLocked: isLocked
         ))
     }
 }
@@ -161,10 +168,14 @@ private struct CheckboxAccessibility: ViewModifier {
     var isOn: Bool
     /// Some, not all: the box draws a minus and speaks "partly checked".
     var isIndeterminate = false
+    /// A link or binding the researcher cannot clear: the box speaks "Locked".
+    var isLocked = false
 
-    /// "partly checked" for a mixed box; empty otherwise, so the traits speak checked and not.
+    /// "Locked" for a locked box, "partly checked" for a mixed one; empty otherwise,
+    /// so the traits speak checked and not.
     private var value: Text {
-        isIndeterminate ? Text(L10n.DesignSystem.checkboxPartlyChecked) : Text(verbatim: "")
+        if isLocked { return Text(L10n.DesignSystem.checkboxLocked) }
+        return isIndeterminate ? Text(L10n.DesignSystem.checkboxPartlyChecked) : Text(verbatim: "")
     }
 
     func body(content: Content) -> some View {
@@ -198,6 +209,12 @@ private struct PVCheckboxPreview: View {
             PVCheckbox(verbatim: "Only records with images", description: "Excludes index-only entries", isChecked: $images)
             PVCheckbox(verbatim: "Include the index", isChecked: $index)
             PVCheckbox(verbatim: "Disabled", isChecked: .constant(true), isDisabled: true)
+            PVCheckbox(
+                verbatim: "Page 3",
+                description: "2 citations in this graph use this artifact",
+                isChecked: .constant(true),
+                isLocked: true
+            )
             HStack(spacing: PVSpacing.space4) {
                 PVCheckbox(isChecked: $pin, accessibilitySpokenLabel: "Pin")
                 PVCheckboxMark(isChecked: false)
