@@ -113,8 +113,7 @@ private struct OmnibarResultsPanel: View {
                             } label: {
                                 CatalogSearchHitRow(
                                     hit: hit,
-                                    projectDir: projectDir,
-                                    selected: false
+                                    projectDir: projectDir
                                 )
                             }
                             .buttonStyle(PVMenuRowButtonStyle(
@@ -124,7 +123,6 @@ private struct OmnibarResultsPanel: View {
                                     if hovering { results.search.selectedIndex = index }
                                 }
                             ))
-                            .accessibilityLabel(CatalogSearchHitPresentation.accessibilityLabel(for: hit))
                             .accessibilityIdentifier("workspace.toolbar.omnibar.hit.\(hit.id)")
                             .id(hit.id)
                         }

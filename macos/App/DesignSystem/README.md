@@ -232,7 +232,12 @@ added, rather than porting speculatively. Async loading is ported for remote
 results (`isLoading`): with nothing in yet the list shows a "Searching…" line
 in place of the empty line, and options already in stay until new ones
 replace them, as the omnibar keeps its hits. A failed search is the caller's
-empty line.
+empty line, and the general init takes `empty` as a view given the typed query,
+so a hint or a failure's message can be that line. When the box resets the
+field itself (a click away, the second Escape) it reports the restored text
+through `onQueryChange` too, so the caller's query and results follow the
+field. The popup window carries the field's environment, so a row sees the
+same session and `isEnabled` the field does.
 
 What is ported is the interaction contract, and it is worth restating because
 every clause of it is a decision rather than an accident:

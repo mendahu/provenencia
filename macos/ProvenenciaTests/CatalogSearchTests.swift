@@ -7,6 +7,40 @@ import Testing
 struct CatalogSearchModelTests {
     private let projectDir = "/tmp/catalog-search.provenencia"
 
+    @Test func belowMinimumQueryIsTheTwoLetterFloor() {
+        let model = CatalogSearchModel()
+        for query in ["", "P", " P "] {
+            model.query = query
+            #expect(model.isBelowMinimumQuery)
+        }
+        model.query = "Po"
+        #expect(model.isBelowMinimumQuery == false)
+    }
+
+    @Test func accessibilityLabelUsesTheGivenNameOrder() {
+        let name = CatalogNameValue(form: "John Henry Smith", parts: [
+            CatalogNameValuePart(value: "John Henry", type: "given"),
+            CatalogNameValuePart(value: "Smith", type: "surname"),
+        ])
+        let header = CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
+            name: name, nameValueCount: 1
+        )
+        let hit = CatalogSearchHit(
+            kind: "person", id: "e1", ref: "PER-1", title: "John Henry Smith", subtitle: "", matchReason: "title",
+            location: WorkspaceLocation(section: .persons, entityId: "e1", ref: "PER-1", title: "John Henry Smith"),
+            header: .person(header)
+        )
+        let orders = NameFormatOrders(natural: [], sorted: [
+            NameFormatPart(partType: "surname", trailingSeparator: ", "),
+            NameFormatPart(partType: "given", trailingSeparator: ""),
+        ])
+        let title = CatalogSearchHitPresentation.title(for: hit, orders: orders)
+        #expect(title == "Smith, John Henry")
+        #expect(CatalogSearchHitPresentation.accessibilityLabel(for: hit, orders: orders).hasPrefix(title))
+        #expect(CatalogSearchHitPresentation.accessibilityLabel(for: hit).hasPrefix(CatalogSearchHitPresentation.title(for: hit)))
+    }
+
     @Test func exactRefHitIsTop() async {
         let store = FakeStore()
         store.sourcesByProject[projectDir] = [
