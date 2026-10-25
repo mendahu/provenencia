@@ -1,7 +1,7 @@
 # Ship log — S11-31 Bound the loaded Evidence graphs
 
 **Plan:** [`S11-31-evidence-graph-cap.md`](S11-31-evidence-graph-cap.md) · **Branch:** `s11-31-evidence-graph-cap` · **PR:** #541
-**State:** stopped — PRF-1 to user (contradicts the plan's §3 Out line)
+**State:** ready
 
 ## Round 0 — implement
 Head `4d9c197d`. Gate PASS (orchestrator run against `22e3878e`). Report: no deviations; manual check (§10) not run.
@@ -60,3 +60,15 @@ Check: plan-docs passes.
 Files: `docs/promote-graph-alignment.md` (line ~165).
 Do: replace "at most 64 Evidence graphs" with "at most `maxEvidenceGraphs` Evidence graphs (`graphcache`)". Add one clause saying that one Evidence request reads each graph once (F-1). Leave `completed.md` alone.
 Check: `grep -n "64" docs/promote-graph-alignment.md` shows no cap value.
+
+## Round 1 — fix (attempt 2)
+Head `a38e8f86`. Gate PASS (orchestrator run). Before the fix, `TestEvidenceReadsEachGraphOnce` failed at `4d9c197d`: "a cap of one issued 51 graph queries, the default cap 38". F-1 rev. 2 is done (`f457b30e`). The row-graph read in `evidence()` also goes through `q.graph`. F-2 is done (`52cfe29d`) and F-3 is done (`428a5921`). Deviation: one sentence added to the S11-31 `completed.md` paragraph (`a38e8f86`), as implement-pr fix-round step 4 requires. That commit also picked up this ship log, although the implementer was told to leave it alone. This is harmless, since the log is committed at Finish anyway.
+- CON-1 (minor): **Resolved**. The Landed note is in the plan header.
+- MNT-1 (minor): **Resolved**. The domain doc names `maxEvidenceGraphs`.
+
+## Round 2 — review
+Reviewers: SEC+PRF (PRF-1 was a Fix-now major). CON and MNT are not re-sent: they had only minors, marked Resolved above.
+Head `a38e8f86`. PRF-1 **Resolved**: the reviewer ran `TestEvidenceReadsEachGraphOnce` red at `4d9c197d` and green at head. Every graph read in `evidence.go` goes through `evidenceReader.graph`. The request-local map lives for one reader only (one `Evidence` call, or one `ResolvePins` Done, which only reads). No new findings, no nits.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: none (nits CON-2, MNT-2–MNT-4 logged) · to user: PRF-1 (answered 2026-10-24: fix with a request-local map, superseding the §3 Out line) · CON miss: none
