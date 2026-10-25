@@ -70,3 +70,28 @@ Logged; taken: "record search" across D-4 – D-8.
 
 ### X-8 · minor · Tests
 **Answer:** Fixed — T-5 uses `model.recordSearch!.search`; AC titles use the fake's labels; existing `"handle:…"` test literals stay (Out).
+
+## Round 2
+
+Executability (sonnet): **Ready with changes.** Every round-1 X and M answer holds.
+
+### X-9 · blocker · STEP-3 breaks `PromoteFlowTests` readout equalities it does not list
+**Answer:** Fixed — STEP-3 adds `PromoteFlowTests.swift` with the exact edit (decided-row readouts gain `chosen: true`; lines 214, 926, and 228 if decided); Current state "Readout" lists the equality lines.
+
+### X-10 · major · `done()` ordering and the T-4 fixture
+**Answer:** Fixed — D-6: the close is the first line, before the `canFinish` guard.
+
+### X-11 · minor · D-6 names a hit `subjectID` that does not exist
+**Answer:** Fixed — D-6 reads the search's `subjectID` before closing.
+
+### X-12 · minor · Whether the list opens on appear
+**Answer:** Fixed — D-8: closed on appear (the box's focus rule); the first keystroke or a click opens it on the hint line. Board frame 21 is a specimen of the open list.
+
+### X-13 · minor · The second-Escape edge
+**Answer:** Declined — AC-3.3 already ends in the box's `.ignored` state; the stop condition covers an Escape that never reaches `.onExitCommand`.
+
+### X-14 · minor · Test fixtures
+**Answer:** Declined — each is built from the existing `PromoteFlowTests` and `CatalogSearchTests` helpers, as the reviewer notes.
+
+### X-15 · nit · "lines 566 – 585"
+Logged; fixed to 566 – 567.
