@@ -437,12 +437,11 @@ private final class FakeOCREngine: OCREngine, @unchecked Sendable {
     private(set) var recognizeCount = 0
 
     func recognizeText(in image: CGImage) async throws -> String {
-        lock.lock()
-        recognizeCount += 1
-        lastSize = CGSize(width: image.width, height: image.height)
-        let shouldHold = self.shouldHold
-        let result = self.result
-        lock.unlock()
+        let (shouldHold, result) = lock.withLock {
+            recognizeCount += 1
+            lastSize = CGSize(width: image.width, height: image.height)
+            return (self.shouldHold, self.result)
+        }
         if shouldHold {
             await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
                 lock.lock()
