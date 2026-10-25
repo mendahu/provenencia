@@ -1092,14 +1092,6 @@ enum L10n {
             comment: "Evidence graph deep place title (toolbar breadcrumb and stub)"
         )
 
-        static func evidenceGraphFor(sourceTitle: String) -> String {
-            return L10n.format(LocalizedStringResource(
-                "workspace.section.evidenceGraph.forSource",
-                defaultValue: "Evidence graph for %@",
-                comment: "Composer breadcrumb segment; argument is the Source title"
-            ), sourceTitle)
-        }
-
         static let evidenceGraphStubBody = LocalizedStringResource(
             "workspace.stub.evidenceGraph.body",
             defaultValue: "Interpret subjects on this source — canvas coming soon.",

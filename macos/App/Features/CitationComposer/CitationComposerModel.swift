@@ -787,7 +787,7 @@ final class CitationComposerModel {
     }
 
     func sourcePageLocation() -> WorkspaceLocation {
-        WorkspaceLocation(section: .sources, sourceId: sourceID, sourceSurface: .page)
+        .sourcePage(sourceId: sourceID)
     }
 
     func beginNewSubject(typeKey: String, field: CitationSubjectField) {

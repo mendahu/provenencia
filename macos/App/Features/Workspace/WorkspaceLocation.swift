@@ -172,6 +172,11 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         WorkspaceLocation(section: .places, entityId: entityId, ref: ref, title: title)
     }
 
+    /// One Source's page.
+    static func sourcePage(sourceId: String, ref: String? = nil, title: String? = nil) -> WorkspaceLocation {
+        WorkspaceLocation(section: .sources, sourceId: sourceId, sourceSurface: .page, ref: ref, title: title)
+    }
+
     /// An Evidence graph's canvas.
     static func evidenceGraph(
         sourceId: String,

@@ -80,6 +80,7 @@ struct PlaceRegistryTests {
             .connectRules(project: project),
             .sourceWorkspace(project: project, sourceId: "src-1"),
             .citationCounts(project: project, graphId: "g-1"),
+            .evidenceGraphsList(project: project),
         ])
     }
 
@@ -132,6 +133,7 @@ struct PlaceRegistryTests {
                     .confidenceGradesList(project: project),
                     .propertiesWorkspace(project: project),
                     .connectRules(project: project),
+                    .evidenceGraphsList(project: project),
                 ]
             ),
             (
@@ -165,6 +167,7 @@ struct PlaceRegistryTests {
                     .connectRules(project: project),
                     .sourceWorkspace(project: project, sourceId: "s1"),
                     .citationCounts(project: project, graphId: "g-1"),
+                    .evidenceGraphsList(project: project),
                 ]
             ),
             (

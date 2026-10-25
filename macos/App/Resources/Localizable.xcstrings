@@ -12398,18 +12398,6 @@
         }
       }
     },
-    "workspace.section.evidenceGraph.forSource": {
-      "comment": "Composer breadcrumb segment; argument is the Source title",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Evidence graph for %@"
-          }
-        }
-      }
-    },
     "artifactViewer.setPage": {
       "comment": "Commits the current viewer page into the citation locator",
       "extractionState": "manual",

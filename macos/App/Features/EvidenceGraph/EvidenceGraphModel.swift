@@ -186,10 +186,7 @@ final class EvidenceGraphModel {
         return handle?.value
     }
 
-    private var sourceRow: CatalogSource? {
-        let handle: QueryHandle<[CatalogSource]>? = session.queryHandle(sourcesListKey)
-        return handle?.value?.first { $0.id == sourceID }
-    }
+    private var sourceRow: CatalogSource? { session.source(id: sourceID) }
 
     private var placeableTypes: [CatalogSubjectType] {
         (fieldsSnapshot?.types ?? []).filter {
@@ -803,7 +800,7 @@ final class EvidenceGraphModel {
             observationId: observationID,
             ref: ref,
             title: title,
-            sourceTitle: resolvedSourceTitle()
+            sourceTitle: sourceRow?.title
         )
     }
 
@@ -884,7 +881,7 @@ final class EvidenceGraphModel {
             kind: placed.kind,
             ref: placed.subject.ref,
             title: placed.displayName(orders: session.nameFormat),
-            sourceTitle: resolvedSourceTitle()
+            sourceTitle: sourceRow?.title
         )
     }
 
@@ -905,7 +902,7 @@ final class EvidenceGraphModel {
             kind: placed.kind,
             ref: placed.subject.ref,
             title: placed.displayName(orders: session.nameFormat),
-            sourceTitle: resolvedSourceTitle(),
+            sourceTitle: sourceRow?.title,
             mapAll: true
         )
     }
@@ -997,24 +994,9 @@ final class EvidenceGraphModel {
         }
     }
 
-    private func resolvedSourceTitle() -> String? {
-        let listKey = CatalogQueryKey.sourcesList(project: session.projectKey)
-        guard let handle: QueryHandle<[CatalogSource]> = session.queryHandle(listKey),
-              let sources = handle.value,
-              let match = sources.first(where: { $0.id == sourceID })
-        else { return nil }
-        return match.title
-    }
-
     /// Source page recovery target when the graph has no Artifacts.
     func sourcePageLocation(title: String, ref: String?) -> WorkspaceLocation {
-        WorkspaceLocation(
-            section: .sources,
-            sourceId: sourceID,
-            sourceSurface: .page,
-            ref: ref,
-            title: title
-        )
+        .sourcePage(sourceId: sourceID, ref: ref, title: title)
     }
 
     @discardableResult
@@ -1079,7 +1061,7 @@ final class EvidenceGraphModel {
             connectToSubjectId: toID,
             connectBridgeTypeKey: rule.bridgeTypeKey,
             title: sentence,
-            sourceTitle: resolvedSourceTitle()
+            sourceTitle: sourceRow?.title
         )
     }
 

@@ -34,6 +34,7 @@ struct PlaceRegistry: Sendable {
                     .confidenceGradesList(project: project),
                     .propertiesWorkspace(project: project),
                     .connectRules(project: project),
+                    .evidenceGraphsList(project: project),
                 ]
             },
             deepId: { $0.subjectId }
@@ -83,6 +84,7 @@ struct PlaceRegistry: Sendable {
                     .connectRules(project: project),
                     .sourceWorkspace(project: project, sourceId: sourceId),
                     .citationCounts(project: project, graphId: graphId),
+                    .evidenceGraphsList(project: project),
                 ]
             },
             deepId: { $0.graphId }

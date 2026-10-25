@@ -4,13 +4,7 @@ import Foundation
 enum SourcesListNavigation {
     /// Opens the Source filing page.
     static func pageLocation(for source: CatalogSource) -> WorkspaceLocation {
-        WorkspaceLocation(
-            section: .sources,
-            sourceId: source.id,
-            sourceSurface: .page,
-            ref: source.ref,
-            title: source.title
-        )
+        .sourcePage(sourceId: source.id, ref: source.ref, title: source.title)
     }
 
     /// The graph the Source-level entry points open: the Source's first graph
