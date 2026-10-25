@@ -106,7 +106,7 @@ final class GraphCanvasItemLayer {
     /// Replaces the item set: adds, removes, repositions, and rebuilds the
     /// view of items whose model changed.
     func update(_ items: [GraphCanvasItem]) {
-        guard let container else { return }
+        guard container != nil else { return }
         let ids = Set(items.map(\.id))
         let stack = items.filter { !$0.isRaised }.map(\.id) + items.filter(\.isRaised).map(\.id)
         for (id, view) in views where !ids.contains(id) {
