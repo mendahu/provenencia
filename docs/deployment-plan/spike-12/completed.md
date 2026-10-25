@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-10 — Composer offers linked Artifacts
+
+**Landed 2026-10-24** in [#540](https://github.com/mendahu/provenencia/pull/540). The Citation composer on one Evidence graph offers only the Artifacts linked to that graph, and on each steps only through the graph's Citations (those with an Observation on one of its Subjects, plus those with none yet), with that graph's counts and names. `ListCitationsByArtifact` takes `graph_id` and `CitationCountsBySource` became `CitationCountsByEvidenceGraph`; the app's citation keys are per graph and link rows now report `CitationSource`, so a link, unlink or graph edit refreshes them. The empty callout reads "This evidence graph has no artifacts". On an existing project nothing visibly changes: every Source has one graph linked to all its Artifacts.
+
 ## S12-09 — Promote per graph
 
 **Landed 2026-10-24** in [#535](https://github.com/mendahu/provenencia/pull/535). Promote works on one Evidence graph: the proposal, the claim evidence sheet, Done (claims, pins and the bridges it files) and Unpromote's bridge unfiling each read or write the Subjects of one graph, and the three Promote requests carry `graph_id` in place of `source_id` (old numbers reserved). On a Source with two graphs a Done files only its own graph's Subjects, and a waiting bridge on the other graph stays unfiled until that graph's own Done. `FileSourceBridgesTx` is now `FileEvidenceGraphBridgesTx`, filing and unfiling share one `bridgeHeads` query, `UnfileBridges` takes only the Subject, and `evidencegraphs.SoleGraph` and `SoleGraphTx` are deleted. The Promote page sends the graph id it already held; the researcher sees no change.

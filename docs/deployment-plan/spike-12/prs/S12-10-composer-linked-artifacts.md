@@ -1,6 +1,6 @@
 # S12-10 — Composer offers linked Artifacts
 
-**Status:** Planned
+**Status:** Landed in [#540](https://github.com/mendahu/provenencia/pull/540) (2026-10-24)
 **Spike / slice:** Spike 12 · Slice 3 — Graph id end to end
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the composer's Artifact picker, Citation stepper and empty callout keep their look; only what they list and two strings change)
