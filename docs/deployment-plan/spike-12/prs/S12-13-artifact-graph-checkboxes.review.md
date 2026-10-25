@@ -10,7 +10,7 @@
 ## Writer's own calls
 
 - D-12: the graph list's scroll cap is the kit checklist's 264pt, not the board's 280pt, so the two checklists on the Source page are one size (M-7).
-- D-8: after any refused card save, `linkEdit` is rebuilt from the live session and the locks are read again, keeping the researcher's checkboxes (X-4).
+- D-8: each successful link or unlink patches the card's snapshot in place, and after a refusal the locks are read again over it, keeping the researcher's checkboxes (X-4, X-12).
 - D-9: the canvas waits for the graph list in `prepare()` so a graph with no links disarms the tools on open (X-5).
 - §10: the manual check uses a project built from scratch, and the composer's LK-12 copy is checked by test, because the composer cannot be opened on a graph with no links.
 
@@ -66,7 +66,7 @@
 **Answer:** Fixed — D-8: the early return covers fields and links; `clearPageError()` stays; `savingID` covers every write; `replace(_:effects:)` for `updateArtifact` only.
 
 ### X-4 · major · After a partial failure, `graphs`, `prefill` and `locked` are not said to refresh
-**Answer:** Fixed — D-8 rebuilds `linkEdit` from the live session after any error and re-reads the locks; D-6 says `loadLinkLocks()` reads the snapshot, which the rebuild refreshes; T-10 asserts the rebuilt prefill.
+**Answer:** Fixed — D-8 patches the snapshot after each successful write and re-reads the locks after any error; D-6 says `loadLinkLocks()` reads that snapshot; T-10 asserts the patched prefill. (Round 2 X-12 replaced the first answer, a rebuild from the live session.)
 
 ### X-5 · major · `fileRows` guard and `canCite` timing in `prepare()`
 **Codebase:** `EvidenceGraphModel.prepare()`; `EvidenceGraphView` `.onChange(of: model.canCite)` only republishes hit targets.
@@ -90,3 +90,11 @@
 
 ### X-11 · nit · Plan prose slips
 Logged.
+
+## Round 2
+
+### X-12 · blocker · D-8's "live session" reads are stale right after a link or unlink
+**Plan:** D-8 read `context.session.evidenceGraph(id:)` for "currently linked" and rebuilt `prefillExcluded` from it after an error.
+**Codebase:** `WorkspaceSession.apply(_:)` invalidates the graph list and starts `revalidate`, then returns; `evidenceGraph(id:)` reads the old value until the reload lands (`WorkspaceSession.swift` ~178–235).
+**Better shape:** Await `readyValue` after each write, or track successful writes locally.
+**Answer:** Fixed — D-8 tracks them locally: each successful write patches `linkEdit.prefillExcluded` and the snapshot graph's `artifactIDs`; the diff and the locks read the snapshot; nothing waits on the reload. T-10 and the Risks row updated.
