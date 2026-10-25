@@ -1575,9 +1575,10 @@ struct SourcePageModelTests {
         model.artifacts.beginEdit("P3")
         await model.artifacts.linkLoadTask?.value
         model.artifacts.linkEdit?.excluded = ["g-j"]
-        store.unlinkEvidenceGraphArtifactError = CoreInvokeError.coded(
+        let refusal = CoreInvokeError.coded(
             status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
         )
+        store.unlinkEvidenceGraphArtifactError = refusal
         store.unlinkImpactBlocksByGraph["g-j"] = [unlinkBlock("P3", citations: 1)]
         let impactCalls = store.getEvidenceGraphUnlinkImpactCalls
         await model.artifacts.saveFields(id: "P3")
@@ -1591,6 +1592,11 @@ struct SourcePageModelTests {
         #expect(model.artifacts.linkedGraphIDs.contains("g-b"))
         #expect(store.getEvidenceGraphUnlinkImpactCalls > impactCalls)
         #expect(model.artifacts.linkEdit?.locked["g-j"] == "1 citation in this graph uses this artifact")
+        // Nothing is left to save, so the callout names the graph and does not say "save again".
+        #expect(!model.artifacts.fieldsDirty("P3"))
+        #expect(model.artifacts.cardSaveError == L10n.Sources.artifactCardSaveErrorGraphKeeps(
+            graph: "Jones household", error: L10n.Errors.message(for: refusal)
+        ))
 
         store.unlinkEvidenceGraphArtifactError = nil
         store.unlinkImpactBlocksByGraph["g-j"] = []
@@ -1634,5 +1640,97 @@ struct SourcePageModelTests {
         await model.artifacts.linkLoadTask?.value
         #expect(model.artifacts.checkedGraphIDs.contains("g-j"))
         #expect(!model.artifacts.fieldsDirty("P3"))
+    }
+
+    @Test func cardFieldsOnlySaveErrorSaysChangesKept() async {
+        let (model, store, _) = await makeCensus(graphs: [graph("g-1", "Default", ["P3"])])
+        model.artifacts.beginEdit("P3")
+        model.artifacts.labels["P3"] = "Changed"
+        let failure = CoreInvokeError.failed(status: 3)
+        store.updateArtifactError = failure
+        await model.artifacts.saveFields(id: "P3")
+        #expect(model.artifacts.editingArtifactID == "P3")
+        #expect(model.artifacts.cardSaveError == L10n.Sources.artifactCardSaveErrorKept(L10n.Errors.message(for: failure)))
+    }
+
+    @Test func cardSaveErrorStaysOnTheCardThatSaved() async {
+        let (model, store, _) = await makeCensus()
+        model.artifacts.beginEdit("P3")
+        await model.artifacts.linkLoadTask?.value
+        model.artifacts.linkEdit?.excluded = ["g-j"]
+        store.unlinkEvidenceGraphArtifactError = CoreInvokeError.coded(
+            status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
+        )
+        store.holdsLinkEvidenceGraphArtifact = true
+        let save = Task { await model.artifacts.saveFields(id: "P3") }
+        #expect(await waitUntil { store.heldLinkEvidenceGraphArtifactCount == 1 })
+        model.artifacts.beginEdit("P4")
+        store.releaseLinkEvidenceGraphArtifact()
+        await save.value
+        #expect(model.artifacts.editingArtifactID == "P4")
+        #expect(model.artifacts.cardSaveError == nil)
+    }
+
+    @Test func cardSaveReloadsTheGraphListOnce() async {
+        let (model, store, _) = await makeCensus()
+        model.artifacts.beginEdit("P3")
+        await model.artifacts.linkLoadTask?.value
+        model.artifacts.linkEdit?.excluded = ["g-j"]
+        let before = store.listEvidenceGraphsCalls
+        await model.artifacts.saveFields(id: "P3")
+        #expect(linkCalls(store).count == 2)
+        #expect(store.listEvidenceGraphsCalls - before == 1)
+    }
+
+    @Test func addArtifactRetryIgnoresGraphChoice() async {
+        let (model, store, _) = await makeCensus()
+        model.artifacts.openAdd()
+        model.artifacts.draft.label = "Page 7"
+        model.artifacts.draft.filePath = "/tmp/page-7.jpg"
+        store.ingestArtifactFileError = CoreInvokeError.failed(status: 3)
+        await model.artifacts.create()
+        #expect(model.artifacts.draft.createdID != nil)
+        #expect(model.artifacts.isAdding)
+        let linksAfterFirst = linkCalls(store).count
+        model.artifacts.draft.excludedGraphIDs = ["g-b", "g-j", "g-s"]
+        #expect(model.artifacts.canSubmitDraft)
+        store.ingestArtifactFileError = nil
+        await model.artifacts.create()
+        #expect(!model.artifacts.isAdding)
+        #expect(linkCalls(store).count == linksAfterFirst)
+    }
+
+    @Test func cardSaveSkipsAGraphDeletedDuringEdit() async throws {
+        let (model, store, session) = await makeCensus()
+        model.artifacts.beginEdit("P3")
+        await model.artifacts.linkLoadTask?.value
+        model.artifacts.linkEdit?.excluded = []
+        #expect(model.artifacts.checkedGraphIDs.contains("g-b"))
+        let effects = try await store.deleteEvidenceGraph(projectDir: projectDir, userID: userID, graphID: "g-b")
+        session.apply(effects)
+        await waitForQuery(session.evidenceGraphsHandle!)
+        #expect(session.evidenceGraph(id: "g-b") == nil)
+        #expect(!model.artifacts.checkedGraphIDs.contains("g-b"))
+        model.artifacts.labels["P3"] = "Page 3, front"
+        await model.artifacts.saveFields(id: "P3")
+        #expect(linkCalls(store).isEmpty)
+        #expect(model.artifacts.cardSaveError == nil)
+        #expect(model.artifacts.editingArtifactID == nil)
+    }
+
+    @Test func cardSaveReloadFailureOffersReadAgain() async {
+        let (model, store, _) = await makeCensus()
+        model.artifacts.beginEdit("P3")
+        await model.artifacts.linkLoadTask?.value
+        model.artifacts.linkEdit?.excluded = ["g-j"]
+        store.unlinkEvidenceGraphArtifactError = CoreInvokeError.coded(
+            status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
+        )
+        store.listEvidenceGraphsError = CoreInvokeError.failed(status: 3)
+        await model.artifacts.saveFields(id: "P3")
+        guard case .failed = model.artifacts.linkEdit?.loadState else {
+            Issue.record("expected a failed read, got \(String(describing: model.artifacts.linkEdit?.loadState))")
+            return
+        }
     }
 }

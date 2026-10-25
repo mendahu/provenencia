@@ -97,8 +97,8 @@
         }
       }
     },
-    "artifactChecklist.lockedValue": {
-      "comment": "Spoken value of a locked Artifact checklist row; argument is the Artifact ref",
+    "checklist.lockedValue": {
+      "comment": "Spoken value of a locked checklist row; argument is the row's ref",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -22535,6 +22535,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn’t save the artifact"
+          }
+        }
+      }
+    },
+    "sources.page.artifact.saveErrorGraphKeeps": {
+      "comment": "Callout message on an artifact card in edit when an Evidence graph refused to drop the artifact and nothing else is left to save; %1$@ is the graph name, %2$@ is the error text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ keeps this artifact. %2$@"
+          }
+        }
+      }
+    },
+    "sources.page.artifact.saveErrorKept": {
+      "comment": "Callout message on an artifact card in edit when saving it fails before anything was written; argument is the error text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your changes are kept. %@"
           }
         }
       }

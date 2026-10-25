@@ -101,9 +101,17 @@ final class SourceArtifactsSection {
         )
     }
 
-    /// The group shows and every box is unchecked.
+    /// The Artifact is not made yet, the group shows and every box is unchecked.
+    /// After a refused file the Artifact exists and a retry does not link, so
+    /// the boxes no longer matter.
     var draftNeedsGraph: Bool {
-        visibleGraphs != nil && draftGraphIDs.isEmpty
+        draft.createdID == nil && visibleGraphs != nil && draftGraphIDs.isEmpty
+    }
+
+    /// The Add dialog's graph boxes are read-only: a retry after a refused
+    /// file saves onto the Artifact already made, which keeps its links.
+    var draftGraphsLocked: Bool {
+        draft.createdID != nil
     }
 
     var canSubmitDraft: Bool {
@@ -194,11 +202,17 @@ final class SourceArtifactsSection {
         }
     }
 
+    /// The edit's graph ids that are still in the session's graph list; a
+    /// graph deleted since edit opened drops out of every count and write.
+    private var liveGraphIDs: [String] {
+        (linkEdit?.graphIDs ?? []).filter { context.session.evidenceGraph(id: $0) != nil }
+    }
+
     /// The edit's checked graph ids in list order; a locked graph is always checked.
     var checkedGraphIDs: [String] {
         guard let edit = linkEdit else { return [] }
         return PVChecklistState.checkedIDs(
-            ids: edit.graphIDs, excluded: edit.excluded, locked: Set(edit.locked.keys)
+            ids: liveGraphIDs, excluded: edit.excluded, locked: Set(edit.locked.keys)
         )
     }
 
@@ -321,8 +335,9 @@ final class SourceArtifactsSection {
             guard edit.loadState == .ready else { return }
             let checked = Set(checkedGraphIDs)
             let linked = Set(linkedGraphIDs)
-            toLink = edit.graphIDs.filter { checked.contains($0) && !linked.contains($0) }
-            toUnlink = edit.graphIDs.filter { !checked.contains($0) && linked.contains($0) }
+            let live = liveGraphIDs
+            toLink = live.filter { checked.contains($0) && !linked.contains($0) }
+            toUnlink = live.filter { !checked.contains($0) && linked.contains($0) }
         }
         let fieldsChanged = label != art.label || desc != art.description
         if !fieldsChanged, toLink.isEmpty, toUnlink.isEmpty { return }
@@ -331,6 +346,11 @@ final class SourceArtifactsSection {
         savingID = id
         defer { savingID = nil }
         var attemptedLink = false
+        var wroteAnything = false
+        var refusedGraphID: String?
+        // The effects of the link writes that succeeded, applied once: each
+        // apply reloads the graph list.
+        var linkEffects: CatalogWriteEffects?
         do {
             if fieldsChanged {
                 let (updated, effects) = try await context.store.updateArtifact(
@@ -340,48 +360,84 @@ final class SourceArtifactsSection {
                     label: label,
                     description: desc
                 )
+                wroteAnything = true
                 replace(updated, effects: effects)
             }
             // Graph links do not change the page payload: only the session's
             // effects apply, as the graph form's writes do.
             for graphID in toLink {
                 attemptedLink = true
+                refusedGraphID = graphID
                 let effects = try await context.store.linkEvidenceGraphArtifact(
                     projectDir: context.projectDir,
                     userID: context.userID,
                     graphID: graphID,
                     artifactID: id
                 )
-                context.session.apply(effects)
+                wroteAnything = true
+                linkEffects = linkEffects?.merging(effects) ?? effects
             }
             for graphID in toUnlink {
                 attemptedLink = true
+                refusedGraphID = graphID
                 let effects = try await context.store.unlinkEvidenceGraphArtifact(
                     projectDir: context.projectDir,
                     userID: context.userID,
                     graphID: graphID,
                     artifactID: id
                 )
-                context.session.apply(effects)
+                wroteAnything = true
+                linkEffects = linkEffects?.merging(effects) ?? effects
             }
+            refusedGraphID = nil
+            if let linkEffects { context.session.apply(linkEffects) }
             if attemptedLink { _ = await graphListReloaded() }
             if editingArtifactID == id {
                 editingArtifactID = nil
                 dropLinkEdit()
             }
         } catch {
-            cardSaveError = L10n.Sources.artifactCardSaveErrorMessage(L10n.Errors.message(for: error))
+            if let linkEffects { context.session.apply(linkEffects) }
+            let message = L10n.Errors.message(for: error)
+            // Only the card that saved shows the error: another card may have
+            // opened edit while this one saved.
+            guard editingArtifactID == id else { return }
+            cardSaveError = saveErrorBody(
+                message, wroteAnything: wroteAnything, refusedGraphID: refusedGraphID, id: id
+            )
             guard attemptedLink, linkEdit?.artifactID == id else { return }
             // `session.apply` only starts the reload: wait for it, then read
             // the locks again from the new links, so a partial save, an
             // in-use Artifact and a last link all show.
-            if await graphListReloaded() == nil {
-                let reason = context.session.evidenceGraphsHandle?.error ?? error
-                linkEdit?.loadState = .failed(L10n.Errors.message(for: reason))
+            let reloaded = await graphListReloaded()
+            let reloadError = context.session.evidenceGraphsHandle?.error
+            if reloaded == nil || reloadError != nil {
+                linkEdit?.loadState = .failed(L10n.Errors.message(for: reloadError ?? error))
             } else {
                 await loadLinkLocks()
             }
+            guard editingArtifactID == id else { return }
+            cardSaveError = saveErrorBody(
+                message, wroteAnything: wroteAnything, refusedGraphID: refusedGraphID, id: id
+            )
         }
+    }
+
+    /// The card's save-error body by what is left to save: the graph that
+    /// refused when only its refusal remains; "kept" when nothing was written;
+    /// the partial-save wording otherwise.
+    private func saveErrorBody(
+        _ message: String, wroteAnything: Bool, refusedGraphID: String?, id: String
+    ) -> String {
+        if let refusedGraphID, !fieldsDirty(id),
+           let graph = context.session.evidenceGraph(id: refusedGraphID)
+        {
+            return L10n.Sources.artifactCardSaveErrorGraphKeeps(graph: graph.name, error: message)
+        }
+        if !wroteAnything {
+            return L10n.Sources.artifactCardSaveErrorKept(message)
+        }
+        return L10n.Sources.artifactCardSaveErrorMessage(message)
     }
 
     /// Waits for the session's graph list to finish reloading after a link

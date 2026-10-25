@@ -94,6 +94,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var deleteSourceCalls = 0
     var deleteArtifactCalls = 0
     var updateArtifactCalls = 0
+    /// When set, `updateArtifact` throws.
+    var updateArtifactError: Error?
     var deleteEvidenceGraphCalls = 0
     var createEvidenceGraphCalls = 0
     var updateEvidenceGraphCalls = 0
@@ -110,6 +112,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var updateEvidenceGraphError: Error?
     var getEvidenceGraphUnlinkImpactError: Error?
     var linkEvidenceGraphArtifactError: Error?
+    /// When true, each `linkEvidenceGraphArtifact` suspends until
+    /// `releaseLinkEvidenceGraphArtifact()`, so a test can act mid-save.
+    var holdsLinkEvidenceGraphArtifact = false
+    private var heldLinkEvidenceGraphArtifacts: [CheckedContinuation<Void, Never>] = []
+    var listEvidenceGraphsCalls = 0
     var unlinkEvidenceGraphArtifactError: Error?
     var getEvidenceGraphProgressError: Error?
     /// Monotonic stand-in for audit_transactions.revision (Sources Updated sort).
@@ -697,6 +704,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
         return try withState {
             updateArtifactCalls += 1
+            if let updateArtifactError { throw updateArtifactError }
             for (sourceID, arts) in artifactsBySource {
                 if let idx = arts.firstIndex(where: { $0.id == artifactID }) {
                     var copy = arts
@@ -742,6 +750,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func listEvidenceGraphs(projectDir: String) async throws -> [CatalogEvidenceGraph] {
         try withState {
+            listEvidenceGraphsCalls += 1
             if let listEvidenceGraphsError { throw listEvidenceGraphsError }
             markCatalogSessionHeld(projectDir)
             return (evidenceGraphsByProject[projectDir] ?? []).sorted(by: Self.graphListOrder)
@@ -812,7 +821,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         graphID: String,
         artifactID: String
     ) async throws -> CatalogWriteEffects {
-        try withState {
+        if withState({ holdsLinkEvidenceGraphArtifact }) {
+            await withCheckedContinuation { continuation in
+                withState { heldLinkEvidenceGraphArtifacts.append(continuation) }
+            }
+        }
+        return try withState {
             if let linkEvidenceGraphArtifactError { throw linkEvidenceGraphArtifactError }
             markCatalogSessionHeld(projectDir)
             guard let idx = evidenceGraphsByProject[projectDir]?.firstIndex(where: { $0.id == graphID }) else {
@@ -824,6 +838,19 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
             return Self.graphEffects(sourceID: evidenceGraphsByProject[projectDir]?[idx].sourceID)
         }
+    }
+
+    /// Number of `linkEvidenceGraphArtifact` calls suspended by `holdsLinkEvidenceGraphArtifact`.
+    var heldLinkEvidenceGraphArtifactCount: Int {
+        withState { heldLinkEvidenceGraphArtifacts.count }
+    }
+
+    /// Resumes the oldest held `linkEvidenceGraphArtifact` call.
+    func releaseLinkEvidenceGraphArtifact() {
+        let continuation = withState {
+            heldLinkEvidenceGraphArtifacts.isEmpty ? nil : heldLinkEvidenceGraphArtifacts.removeFirst()
+        }
+        continuation?.resume()
     }
 
     func unlinkEvidenceGraphArtifact(

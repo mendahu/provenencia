@@ -6915,6 +6915,22 @@ enum L10n {
             comment: "Callout title on an artifact card in edit when saving it fails"
         )
 
+        static func artifactCardSaveErrorKept(_ error: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.artifact.saveErrorKept",
+                defaultValue: "Your changes are kept. %@",
+                comment: "Callout message on an artifact card in edit when saving it fails before anything was written; argument is the error text"
+            ), error)
+        }
+
+        static func artifactCardSaveErrorGraphKeeps(graph: String, error: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.artifact.saveErrorGraphKeeps",
+                defaultValue: "%1$@ keeps this artifact. %2$@",
+                comment: "Callout message on an artifact card in edit when an Evidence graph refused to drop the artifact and nothing else is left to save; %1$@ is the graph name, %2$@ is the error text"
+            ), graph, error)
+        }
+
         static func artifactCardSaveErrorMessage(_ error: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "sources.page.artifact.saveErrorMessage",
@@ -10039,6 +10055,17 @@ enum L10n {
         }
     }
 
+    /// Strings shared by every id checklist (`PVChecklistCheckbox`).
+    enum Checklist {
+        static func lockedValue(ref: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "checklist.lockedValue",
+                defaultValue: "Locked, %@",
+                comment: "Spoken value of a locked checklist row; argument is the row's ref"
+            ), ref)
+        }
+    }
+
     /// The Artifact checklist recipe (`PVArtifactChecklist`).
     enum ArtifactChecklist {
         static let heading = LocalizedStringResource(
@@ -10065,14 +10092,6 @@ enum L10n {
                 defaultValue: "%1$lld of %2$lld",
                 comment: "Artifact checklist count; arguments are the checked count and the total"
             ), selected, total)
-        }
-
-        static func lockedValue(ref: String) -> String {
-            return L10n.format(LocalizedStringResource(
-                "artifactChecklist.lockedValue",
-                defaultValue: "Locked, %@",
-                comment: "Spoken value of a locked Artifact checklist row; argument is the Artifact ref"
-            ), ref)
         }
     }
 
