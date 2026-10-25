@@ -4,10 +4,10 @@ description: >-
   Adds or changes a Provenencia matching layer rule: a registry knob, a value
   comparer, a relation, cause or unit code, or a new layer package
   (core/valuecompare, core/propertycompare, core/subjectcompare,
-  core/subjectprofile, core/segmentcompare, core/shortlist, core/graphalign, core/claimevidence, core/matchregistry). Use when adding a number the
+  core/subjectprofile, core/segmentcompare, core/kinship, core/shortlist, core/graphalign, core/claimevidence, core/matchregistry). Use when adding a number the
   matching algorithm tunes, a comparer for a value type, a Relation or Cause
   code, a Subject property weight, pool or period, an entity profile rule, a
-  layer package, or a row in the matching-model.md knob inventory.
+  kinship pattern, a layer package, or a row in the matching-model.md knob inventory.
 ---
 
 # Add or change a matching rule
@@ -30,6 +30,7 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 - **Layer 3 (`core/subjectcompare`) turns outcomes into points.** It reads only the lead properties in `subject.Weights` for the kind; agree earns the agree weight, partial agree weight × similarity, conflict loses the penalty and weighs it in similarity. Registry maps are keyed by `vocabkey.SubjectType` and `vocabkey.PropertyKey`, written as `vocabkey` constants, never as string literals; no other package declares a key type. Value type and cardinality come from the catalog as `Metas`, never from the registry; a derived property's meta is fixed beside the rule that reads it (the lifespan's date meta). `subjectcompare.Points` is what one property adds to evidence, for the score and the sheet alike. `Rules.Lead` maps a pooled or period property to its lead. `Rules.Derived` names a lead with no catalog row (the lifespan); a new derived property is declared in the registry, not detected from a missing meta. Tests build values with `propertycomparetest` and metas with `subjectcomparetest.Metas`. `subject.Lifespans` declares a lifespan lead (the window) and its `Span`; `Compare` checks each side's span against the other's window, and a lifespan's agree means consistent, whatever partial relation spoke.
 - **The profile builder (`core/subjectprofile`) turns the reconciler's output into a Subject.** `Build` keeps a Property's displayed values (`ReconciledValue.Displayed`) as positives and its denied values as negatives, and leaves everything else out; `ForSubject` turns a Subject's own Observations into positives and negatives through the same conversion. Layer 3 compares either like any Subject, so entity compare is `Build` then `subjectcompare.Compare`. `Options.Excluding` reconciles each Property those members recorded again without their candidates. Callers pass `Build` `matchregistry.Default().Value`, the rules the cache was built with. The builder reads `subject.Lifespans` (passed in) to build a person's window and span from its life events.
 - **Layer 5 (`core/segmentcompare`) scores one link.** Keys come from `Key` with the catalog's `Terms`; outside tests, a bridge reads as its keys through `Keys` (or as a `Link` through `LinkOf`), with its event end from `EventEndpoint`; correspondence is `Corresponds` and nothing else. `One` (keys with an empty `End`, each holding from both ends) and `Gates` (per end) are keyed by `vocabkey.BridgeKey`. Placement (`Together`, `Apart` or `Unplaced`) comes from layer 6; the neighbor's evidence comes through layer 3. Tests build terms with `segmentcomparetest.Terms`.
+- **Kinship patterns (`core/kinship`) add implied links before alignment.** `Derive` reads one side's links (`Edge`: ends, keys from each end, bridge Subjects as `Associations`, the fields of `graphalign.Bridge`) through `eventPatterns` and one parent-of-parent chain rule and returns only the implied relationship links, keyed through `segmentcompare.Keys`; it recognizes a link by its keys alone. Callers merge implied links with direct ones through their own same-ends, same-key merge. An implied link weighs as the direct link it stands for: no knob.
 - **Layer 6 (`core/graphalign`) walks and decides.** Candidates come from the shortlist through `Candidates` or from a link to a placed pair; scores are replaced, never kept higher; placement is `Together`, `Apart` or `Unplaced`; bands, contested and moves are row output. Its section is `graphalign.Rules`.
 - **The evidence section (`core/claimevidence`) is the claim evidence view's policy, not a matching layer.** `Rules` lists the relations whose lines start checked (`Checked`), and the causes of an unknown line the researcher judges by eye, kept but never checked (`ByEye`; two different likenesses are `unjudged`), and per kind the properties a relationship line bundles (`Defining`); the inventory rows are `evidence.Checked`, `evidence.ByEye` and `evidence.Defining`. Sections are in the kind's binding order (`Inputs.Order`, from `Vocabulary.BindingOrder`, ranked by `vocabkey.CompareByOrder`), never a second order in the registry; the lifespan is a matching signal only, so `claimevidence` never shows it. `Sections` compares each incoming value that names an Observation with each accepted member (layer 2, never Promote's scores) and collapses members with an identical value into one line; `Build` adds a relationship for each link that corresponds through `segmentcompare`. A line's points come from `subjectcompare.Points`; no caller reads the speaking similarity itself (`propertycompare.Result.Similarity`). The loader, `promotealign.Evidence`, only reads. A new defining property is one `Defining` entry.
 - **Shortlist keys come from layer 1.** `WordKeys` and `YearReach` make them; `core/shortlist` only buckets and indexes. A lead whose agree weight alone can reach `alignment.Bands.Weak` needs a shortlist entry (`TestUnkeyedEvidenceStaysUnderTheWeakBand`).
@@ -80,6 +81,13 @@ A move reason is layer 6's: a `Reason` constant in `core/graphalign/types.go`.
 
 A one-cardinality link is a `One` key, and a gate a `Gates` entry, in `core/matchregistry/segment.go`, each with a source comment. Add its inventory row named by the key's `String()` (`segment.Gates.place_relationship·part_of·from.MinOwnEvidence`), make sure `TestSegmentSectionMatchesSeed` passes, and add a `TestCompare` row in `core/segmentcompare`.
 
+## Add a kinship pattern
+
+1. Add a `vocabkey` constant for each term the pattern names, and its row in `TestVocabKeysMatchSeed`. Product terms only: a catalog's own terms imply nothing.
+2. An event pattern is a row in `eventPatterns` (an event type, the roles at each end, the implied relationship term) in `core/kinship/patterns.go` (new), with a new `Pattern` code. The chain is one rule in `Derive`, parent of parent only; a pattern of another shape (siblings, great-grandparents) changes `Derive` and is planned as its own PR.
+3. Add `TestDerive` rows: the pattern holds, a near miss (another role or event type) does not, and the implied link's direction.
+4. Add no knob: the implied link weighs as the direct link it stands for (the segment registry's Other pair).
+
 ## Add a layer package
 
 Add a row to `layerPackages` in `core/matchregistry/guard_test.go`, with `numbers` true for a layer and false for a pure value or fixture package. Add the package's glob to `.cursor/rules/match-rules.mdc` and its path to the Check command below. Give it a package doc naming its layer and saying it is pure. Test it from an external `_test` package with an exact table and a fixed-seed invariants test, building fixtures with `namevaluetest` and `datevaluetest` (`core/propertycompare` is the model).
@@ -87,7 +95,7 @@ Add a row to `layerPackages` in `core/matchregistry/guard_test.go`, with `number
 ## Check
 
 ```
-go test ./core/valuecompare/... ./core/propertycompare/... ./core/subjectcompare/... ./core/subjectprofile/... ./core/segmentcompare/... ./core/shortlist/... ./core/graphalign/... ./core/claimevidence/... ./core/matchregistry/...
+go test ./core/valuecompare/... ./core/propertycompare/... ./core/subjectcompare/... ./core/subjectprofile/... ./core/segmentcompare/... ./core/kinship/... ./core/shortlist/... ./core/graphalign/... ./core/claimevidence/... ./core/matchregistry/...
 ```
 
 and `CGO_ENABLED=1 go test -tags fts5 ./core/database/subjectvocab/` after a subject section change.

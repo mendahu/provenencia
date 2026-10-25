@@ -87,10 +87,14 @@ type Role string
 
 // Seeded term keys matching reads by name.
 const (
-	EventBirth  EventType = "birth"
-	EventDeath  EventType = "death"
-	EventBurial EventType = "burial"
-	RoleSubject Role      = "subject"
+	EventBirth    EventType = "birth"
+	EventDeath    EventType = "death"
+	EventBurial   EventType = "burial"
+	EventMarriage EventType = "marriage"
+	RoleSubject   Role      = "subject"
+	RoleFather    Role      = "father"
+	RoleMother    Role      = "mother"
+	RoleSpouse    Role      = "spouse"
 
 	SexMale     = "male"   // sex_at_birth
 	SexFemale   = "female" // sex_at_birth
@@ -102,8 +106,15 @@ const (
 // relationship type or a place relationship type, typed for registry rules.
 type BridgeTerm string
 
-// TermPartOf is the place relationship type of a place within a larger one.
-const TermPartOf BridgeTerm = "part_of"
+const (
+	// TermPartOf is the place relationship type of a place within a larger one.
+	TermPartOf BridgeTerm = "part_of"
+
+	// Relationship types of a person to related_to.
+	TermSpouse      BridgeTerm = "spouse"
+	TermParent      BridgeTerm = "parent"
+	TermGrandparent BridgeTerm = "grandparent"
+)
 
 // BridgeKey is one bridge read from one end: its bridge type, its term in
 // canonical direction, the endpoint Property of the end it is read from (empty
