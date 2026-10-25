@@ -239,9 +239,12 @@
 		AA0000000000000000000441 /* WindowDragTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000440 /* WindowDragTests.swift */; };
 		AA00000000000000000003F7 /* PVOmnibarHitRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F6 /* PVOmnibarHitRow.swift */; };
 		AA00000000000000000003F9 /* OmnibarResultsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F8 /* OmnibarResultsModel.swift */; };
-		AA00000000000000000003FF /* OmnibarHitPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003FE /* OmnibarHitPresentation.swift */; };
+		AA00000000000000000003FF /* CatalogSearchHitPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003FE /* CatalogSearchHitPresentation.swift */; };
+		AA000000000000000000E372 /* CatalogSearchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000E371 /* CatalogSearchModel.swift */; };
+		AA000000000000000000E374 /* CatalogSearchHitRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000E373 /* CatalogSearchHitRow.swift */; };
 		AA00000000000000000003FB /* OmnibarResultsHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003FA /* OmnibarResultsHost.swift */; };
 		AA00000000000000000003FD /* OmnibarResultsModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003FC /* OmnibarResultsModelTests.swift */; };
+		AA000000000000000000E376 /* CatalogSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000E375 /* CatalogSearchTests.swift */; };
 		AA0000000000000000000401 /* ProjectFilesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000400 /* ProjectFilesTests.swift */; };
 		AA0000000000000000000412 /* ProjectKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000411 /* ProjectKey.swift */; };
 		AA0000000000000000000414 /* CatalogQueryKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000413 /* CatalogQueryKey.swift */; };
@@ -683,9 +686,12 @@
 		AA0000000000000000000440 /* WindowDragTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WindowDragTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000003F6 /* PVOmnibarHitRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVOmnibarHitRow.swift; sourceTree = "<group>"; };
 		AA00000000000000000003F8 /* OmnibarResultsModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarResultsModel.swift; sourceTree = "<group>"; };
-		AA00000000000000000003FE /* OmnibarHitPresentation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarHitPresentation.swift; sourceTree = "<group>"; };
+		AA00000000000000000003FE /* CatalogSearchHitPresentation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogSearchHitPresentation.swift; sourceTree = "<group>"; };
+		AA000000000000000000E371 /* CatalogSearchModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogSearchModel.swift; sourceTree = "<group>"; };
+		AA000000000000000000E373 /* CatalogSearchHitRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogSearchHitRow.swift; sourceTree = "<group>"; };
 		AA00000000000000000003FA /* OmnibarResultsHost.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarResultsHost.swift; sourceTree = "<group>"; };
 		AA00000000000000000003FC /* OmnibarResultsModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarResultsModelTests.swift; sourceTree = "<group>"; };
+		AA000000000000000000E375 /* CatalogSearchTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogSearchTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000400 /* ProjectFilesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProjectFilesTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000411 /* ProjectKey.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProjectKey.swift; sourceTree = "<group>"; };
 		AA0000000000000000000413 /* CatalogQueryKey.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogQueryKey.swift; sourceTree = "<group>"; };
@@ -884,6 +890,7 @@
 				AA0000000000000000000661 /* SubjectTypeChrome.swift */,
 				AA0000000000000000000253 /* CatalogCounts.swift */,
 				AA0000000000000000000660 /* Connect */,
+				AA000000000000000000E370 /* Search */,
 			);
 			name = Catalog;
 			path = Catalog;
@@ -898,6 +905,16 @@
 				A71700000000000000000001 /* EvidenceGraphPlacement.swift */,
 			);
 			path = Connect;
+			sourceTree = "<group>";
+		};
+		AA000000000000000000E370 /* Search */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000003FE /* CatalogSearchHitPresentation.swift */,
+				AA000000000000000000E371 /* CatalogSearchModel.swift */,
+				AA000000000000000000E373 /* CatalogSearchHitRow.swift */,
+			);
+			path = Search;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000000280 /* CatalogVocabulary */ = {
@@ -1044,7 +1061,6 @@
 				E1F203948576A1B2C3D4E5F4 /* WorkspaceNavigation.swift */,
 				AA00000000000000000003F0 /* WorkspaceToolbar.swift */,
 				AA00000000000000000003F8 /* OmnibarResultsModel.swift */,
-				AA00000000000000000003FE /* OmnibarHitPresentation.swift */,
 				AA00000000000000000003FA /* OmnibarResultsHost.swift */,
 				B8C9D0E1F203948576A1B2C1 /* WorkspaceLocation.swift */,
 				C9D0E1F203948576A1B2C3D2 /* NavigationHistoryStore.swift */,
@@ -1381,6 +1397,7 @@
 				AA0000000000000000000450 /* SubjectStoreTests.swift */,
 				AA0000000000000000000F50 /* EvidenceGraphStoreTests.swift */,
 				AA00000000000000000003FC /* OmnibarResultsModelTests.swift */,
+				AA000000000000000000E375 /* CatalogSearchTests.swift */,
 				AA00000000000000000003F4 /* WorkspaceToolbarBreadcrumbTests.swift */,
 				AA0000000000000000000440 /* WindowDragTests.swift */,
 				B567080CA23230E18488F894 /* TrafficLightsTests.swift */,
@@ -2135,7 +2152,9 @@
 				AA1211000000000000000002 /* WorkspaceSession+Sources.swift in Sources */,
 				AA00000000000000000003F1 /* WorkspaceToolbar.swift in Sources */,
 				AA00000000000000000003F9 /* OmnibarResultsModel.swift in Sources */,
-				AA00000000000000000003FF /* OmnibarHitPresentation.swift in Sources */,
+				AA00000000000000000003FF /* CatalogSearchHitPresentation.swift in Sources */,
+				AA000000000000000000E372 /* CatalogSearchModel.swift in Sources */,
+				AA000000000000000000E374 /* CatalogSearchHitRow.swift in Sources */,
 				AA00000000000000000003FB /* OmnibarResultsHost.swift in Sources */,
 				AA00000000000000000003F7 /* PVOmnibarHitRow.swift in Sources */,
 				AA0000000000000000000620 /* PVDeleteImpact.swift in Sources */,
@@ -2361,6 +2380,7 @@
 				AA0000000000000000000451 /* SubjectStoreTests.swift in Sources */,
 				AA0000000000000000000F51 /* EvidenceGraphStoreTests.swift in Sources */,
 				AA00000000000000000003FD /* OmnibarResultsModelTests.swift in Sources */,
+				AA000000000000000000E376 /* CatalogSearchTests.swift in Sources */,
 				AA00000000000000000003F5 /* WorkspaceToolbarBreadcrumbTests.swift in Sources */,
 				AA0000000000000000000441 /* WindowDragTests.swift in Sources */,
 				8B20E11A26E9E10EF915519C /* TrafficLightsTests.swift in Sources */,

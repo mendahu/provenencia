@@ -71,7 +71,7 @@ struct WorkspaceToolbar: View {
         .onChange(of: navigation.currentLocation) { _, _ in
             jumpMenu.dismiss()
         }
-        .onChange(of: omnibarResults.query) { _, _ in
+        .onChange(of: omnibarResults.search.query) { _, _ in
             omnibarResults.scheduleSearch(
                 projectDir: projectDir,
                 location: navigation.currentLocation,
@@ -169,7 +169,7 @@ struct WorkspaceToolbar: View {
 
     private var omnibarField: some View {
         PVInput(
-            text: $omnibarResults.query,
+            text: Bindable(omnibarResults.search).query,
             size: .sm,
             prompt: L10n.Workspace.omnibarPlaceholder,
             icon: .search,

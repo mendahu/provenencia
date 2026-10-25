@@ -1,7 +1,7 @@
 import Foundation
 
-/// Maps a SearchCatalog hit into omnibar row copy (kind-agnostic slots).
-enum OmnibarHitPresentation {
+/// Maps a SearchCatalog hit into result row copy (kind-agnostic slots).
+enum CatalogSearchHitPresentation {
     static func kindLabel(for kind: String) -> LocalizedStringResource {
         switch kind {
         case "source": L10n.Workspace.omnibarKindSource
@@ -96,7 +96,7 @@ enum OmnibarHitPresentation {
         }
     }
 
-    /// The lead thumbnail for every kind but `source`, which the host draws
+    /// The lead thumbnail for every kind but `source`, which `CatalogSearchHitRow` draws
     /// from the Source's own image.
     static func leadThumbnail(for hit: CatalogSearchHit) -> PVThumbnail.Content {
         if EvidencePrimaryKind(rawValue: hit.kind) != nil {

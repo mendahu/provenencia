@@ -1,68 +1,34 @@
 import Foundation
 import Observation
 
-/// Debounced SearchCatalog state for the toolbar omnibar results overlay.
+/// The toolbar omnibar's results panel: dismissal and anchor around a shared `CatalogSearchModel`.
 @MainActor
 @Observable
 final class OmnibarResultsModel {
-    static let minQueryLength = 2
-    static let debounceNanoseconds: UInt64 = 180_000_000
     static let panelWidth: CGFloat = 640
 
-    var query = ""
-    var hits: [CatalogSearchHit] = []
-    var isLoading = false
-    var hasSearched = false
+    let search = CatalogSearchModel()
     /// Set when Esc / outside click closes the panel without clearing the query.
     var userDismissed = false
-    /// Non-nil when the last completed search failed (not “no matches”).
-    var searchError: String?
-    var selectedIndex = 0
     var fieldFrame: CGRect = .zero
-
-    private var searchGeneration = 0
-    private var debounceTask: Task<Void, Never>?
-
-    var trimmedQuery: String {
-        query.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
 
     /// Panel is shown once the query is long enough and a search has run (or is in flight).
     var isPresented: Bool {
-        !userDismissed && trimmedQuery.count >= Self.minQueryLength && (hasSearched || isLoading)
-    }
-
-    var showsLoadingState: Bool {
-        isLoading && hits.isEmpty && searchError == nil
-    }
-
-    var showsErrorState: Bool {
-        searchError != nil && !isLoading
-    }
-
-    var showsEmptyState: Bool {
-        hasSearched && !isLoading && hits.isEmpty && searchError == nil
+        !userDismissed && search.showsResults
     }
 
     func closePanel() {
         userDismissed = true
-        isLoading = false
+        search.cancel()
     }
 
     func dismiss() {
-        debounceTask?.cancel()
-        debounceTask = nil
-        searchGeneration += 1
-        hits = []
-        isLoading = false
-        hasSearched = false
+        search.dismiss()
         userDismissed = false
-        searchError = nil
-        selectedIndex = 0
     }
 
     func clearAfterNavigate() {
-        query = ""
+        search.query = ""
         dismiss()
     }
 
@@ -77,75 +43,7 @@ final class OmnibarResultsModel {
         location: WorkspaceLocation,
         store: any GenealogyStore
     ) {
-        debounceTask?.cancel()
-        let q = trimmedQuery
-        guard q.count >= Self.minQueryLength else {
-            searchGeneration += 1
-            hits = []
-            isLoading = false
-            hasSearched = false
-            userDismissed = false
-            searchError = nil
-            selectedIndex = 0
-            return
-        }
-
         userDismissed = false
-        searchError = nil
-        isLoading = true
-        let generation = searchGeneration + 1
-        searchGeneration = generation
-        debounceTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: Self.debounceNanoseconds)
-            guard !Task.isCancelled else { return }
-            await self?.runSearch(
-                generation: generation,
-                projectDir: projectDir,
-                query: q,
-                location: location,
-                store: store
-            )
-        }
-    }
-
-    func moveSelection(delta: Int) {
-        selectedIndex = PVFloatingMenuSelection.moveIndex(
-            from: selectedIndex, delta: delta, count: hits.count
-        )
-    }
-
-    func selectedHit() -> CatalogSearchHit? {
-        guard hits.indices.contains(selectedIndex) else { return nil }
-        return hits[selectedIndex]
-    }
-
-    private func runSearch(
-        generation: Int,
-        projectDir: String,
-        query: String,
-        location: WorkspaceLocation,
-        store: any GenealogyStore
-    ) async {
-        do {
-            let results = try await store.searchCatalog(
-                projectDir: projectDir,
-                query: query,
-                location: location,
-                kinds: []
-            )
-            guard generation == searchGeneration else { return }
-            hits = results
-            hasSearched = true
-            searchError = nil
-            isLoading = false
-            selectedIndex = 0
-        } catch {
-            guard generation == searchGeneration else { return }
-            hits = []
-            hasSearched = true
-            searchError = L10n.Errors.message(for: error)
-            isLoading = false
-            selectedIndex = 0
-        }
+        search.scheduleSearch(projectDir: projectDir, location: location, store: store)
     }
 }
