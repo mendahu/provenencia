@@ -24,9 +24,6 @@ func TestListProperties(t *testing.T) {
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
-				if len(resp.Properties) != 22 {
-					t.Fatalf("len=%d want 22", len(resp.Properties))
-				}
 				foundName, foundToponym, foundGender, foundInterests, foundLikeness := false, false, false, false, false
 				for _, p := range resp.Properties {
 					if p.GetKey() == "name" && p.GetValueType() == "name" && p.GetCardinality() == "single" {

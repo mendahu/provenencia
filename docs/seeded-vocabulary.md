@@ -339,13 +339,15 @@ remark              text          free-text commentary about a source subject
 toponym             text          place name as interpreted from a Source (not a personal NameValue); cardinality `multiple`
 interests           text          free-text interests; cardinality `multiple`; unlocked on person
 likeness            depiction     region plus image; cardinality `multiple`; locked on person; new catalogs only (S10-32)
+religion            term          religion or denomination as recorded; cardinality `multiple`; unlocked on person; terms §3.10
+languages_spoken    term          languages the person spoke; cardinality `multiple`; unlocked on person; terms §3.11
 ```
 
 Target Subject type hints are application-only (not SQL allow-lists). See the Interpretation doc.
 
 `name_format` (Conclusion naming profiles) is not an Interpretation Property in the create-time seed. `integer` remains a valid value_type with no seed row yet.
 
-Create-time Install seeds the full §3.2 matrix, including kind/edge and person term Properties as `value_type = term` with `property_terms` (§3.4–3.7 and §3.9).
+Create-time Install seeds the full §3.2 matrix, including kind/edge and person term Properties as `value_type = term` with `property_terms` (§3.4–3.7 and §3.9–3.11).
 
 Event date Properties (`date`, `start_date`, `end_date`) are locked on `event`: Conclusion ordering and timelines may key into them; the Properties page must not unbind them. `event_type` on `event`, `role` on `participation`, and `relationship_type` on `relationship` are locked for the same reason: birth and death walks, the subject principal, and relationship identity read those slots. `name` on `person` and `toponym` on `place` are locked because the Person and Place rows, search, and composed titles read them. Place `start_date` / `end_date` (period) are locked on `place`; `place_relationship_type` / `from` / `to` / the link's dates are locked on `place_relationship`. **Coexistence:** use `date` for a single point (birth, death, marriage day); use `start_date` / `end_date` when the event spans time (residence, service, voyage). Instantaneous events leave start/end empty; spanned events may leave `date` empty when only the range is known. On a Place, the same `start_date` / `end_date` keys mean its period, not an event span.
 
@@ -360,6 +362,8 @@ person          likeness            # depiction; multiple; locked
 person          sex_at_birth        # term
 person          gender              # term; unlocked
 person          interests           # text; multiple; unlocked
+person          religion            # term; multiple; unlocked
+person          languages_spoken    # term; multiple; unlocked
 
 event           event_type          # term; locked
 event           event_name          # text; unlocked
@@ -488,6 +492,26 @@ Product-seeded **term keys** for gender identity. This is not sex recorded or as
 man            Man
 woman          Woman
 non_binary     Non-binary
+```
+
+Researchers may add further `origin=user` terms. Create is allowed. There is no product `other` term, and the list is not product-locked.
+
+## 3.10 Property terms: `religion`
+
+Product-seeded **term keys** for a person's religion or denomination as a record states it. More than one value is allowed, so a change over time keeps both.
+
+```text
+catholic       Catholic
+```
+
+Researchers may add further `origin=user` terms. Create is allowed. There is no product `other` term, and the list is not product-locked.
+
+## 3.11 Property terms: `languages_spoken`
+
+Product-seeded **term keys** for the languages a person spoke. More than one value is allowed.
+
+```text
+english        English
 ```
 
 Researchers may add further `origin=user` terms. Create is allowed. There is no product `other` term, and the list is not product-locked.
