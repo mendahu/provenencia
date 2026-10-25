@@ -197,6 +197,28 @@ struct SourceGraphFormModelTests {
         #expect(model.toast == nil)
     }
 
+    @Test func editRefusedInUseRereadsKeptLinks() async throws {
+        let linked = evidenceGraph("g-pair", name: "Pair", artifactIDs: ["a2", "a3"])
+        let (model, store, _) = await makeModel(graphs: [linked])
+        store.unlinkImpactBlocks = []
+        model.graphs.openEdit(id: "g-pair")
+        let form = try #require(model.graphs.form)
+        _ = await waitUntil { form.loadState != .loading }
+        #expect(form.locked.isEmpty)
+        form.draft.excludedArtifactIDs.insert("a2")
+        store.updateEvidenceGraphError = CoreInvokeError.coded(
+            status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
+        )
+        store.unlinkImpactBlocks = [block("a2", citations: 1)]
+        let before = form.draft
+        let saved = await form.save()
+        #expect(!saved)
+        #expect(form.saveError != nil)
+        #expect(form.draft == before)
+        #expect(form.locked.keys.contains("a2"))
+        #expect(form.checkedArtifactIDs.contains("a2"))
+    }
+
     @Test func editPreflightFailureThenReadAgain() async throws {
         let (model, store, _) = await makeModel(graphs: [smith()])
         store.getEvidenceGraphUnlinkImpactError = Boom()

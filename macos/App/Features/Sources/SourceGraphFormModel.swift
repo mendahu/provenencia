@@ -171,7 +171,16 @@ final class SourceGraphFormModel {
             }
             return true
         } catch {
-            saveError = L10n.Sources.graphFormSaveErrorMessage(L10n.Errors.message(for: error))
+            let message = L10n.Sources.graphFormSaveErrorMessage(L10n.Errors.message(for: error))
+            saveError = message
+            // A Citation took the Artifact since the form opened: read the
+            // kept links again so the row locks, and keep the refusal in view.
+            if case .coded(_, "evidencegraphs.artifact_in_use", _, _) = error as? CoreInvokeError,
+               graph != nil
+            {
+                await loadKeptLinks()
+                saveError = message
+            }
             return false
         }
     }
