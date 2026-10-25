@@ -1260,3 +1260,61 @@ func TestProposeDoesNotCompareAnUnshortlistedHandle(t *testing.T) {
 		t.Fatalf("Robnis row %+v, want New with no_match and no alternatives", row)
 	}
 }
+
+// A handle no shortlist key reaches is still loaded, scored and marked
+// contested when the researcher fixes the pair, and is not offered unfixed.
+func TestProposeHoldsAnUnshortlistedHandle(t *testing.T) {
+	tests := []struct {
+		name          string
+		filedSex      string // "" cites none
+		incomingSex   string
+		wantOutcome   propertycompare.Outcome
+		wantContested bool
+	}{
+		{name: "no sex", wantOutcome: propertycompare.OutcomeUnknown},
+		{name: "same sex", filedSex: "female", incomingSex: "female", wantOutcome: propertycompare.OutcomeAgree},
+		{name: "conflicting sex", filedSex: "female", incomingSex: "male", wantOutcome: propertycompare.OutcomeConflict, wantContested: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			sexed := func(src sources.Source, art artifacts.Artifact, name, sex string) subjects.Subject {
+				p := f.person(src, art, name)
+				if sex != "" {
+					f.cite(art, p, observations.Input{
+						PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", sex).ID,
+					})
+				}
+				return p
+			}
+			handle := f.promote(sexed(f.source, f.artifact, "Robins", tt.filedSex)).Entity.ID
+
+			src, art := f.newSource("Register")
+			robnis := sexed(src, art, "Robnis", tt.incomingSex)
+			graph := f.graph(src)
+
+			unfixed := rowFor(f.propose(graph, nil), robnis.ID)
+			if unfixed.Target == graphalign.TargetHandle && bytes.Equal(unfixed.HandleID, handle) {
+				t.Fatalf("unfixed row %+v targets the unshortlisted handle", unfixed)
+			}
+			for _, alt := range unfixed.Alternatives {
+				if bytes.Equal(alt.HandleID, handle) {
+					t.Fatalf("unfixed row %+v lists the unshortlisted handle", unfixed)
+				}
+			}
+
+			row := rowFor(f.propose(graph, []graphalign.Fixed{{SubjectID: robnis.ID, HandleID: handle}}), robnis.ID)
+			if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, handle) ||
+				row.Reason != graphalign.ReasonDecided || row.Flags.ConflictWithFixed {
+				t.Fatalf("fixed row %+v, want the handle, decided, no conflict with fixed", row)
+			}
+			comparisonOutcome(t, row, "name")
+			if got := comparisonOutcome(t, row, "sex_at_birth"); got != tt.wantOutcome {
+				t.Fatalf("sex_at_birth outcome %q, want %q", got, tt.wantOutcome)
+			}
+			if row.Flags.Contested != tt.wantContested {
+				t.Fatalf("contested %v, want %v", row.Flags.Contested, tt.wantContested)
+			}
+		})
+	}
+}
