@@ -92,3 +92,20 @@ Same as M-3. **Answer:** Fixed — see M-3.
 
 ### X-11 · nit · Lint warnings and apostrophes
 **Answer:** Fixed — STEP-7 says the "Copy…" warning is expected; AC-2.3 and the brief use the typographic apostrophe the L10n string has.
+
+## Round 2
+
+Executability (sonnet): every round-1 answer accepted; verdict **Ready with changes**.
+
+### X-12 · blocker · STEP-4 `rg` check matches kept code
+The bare `graphListLoaded` matches the kept `graphBlockedReason(hasArtifact:graphListLoaded:location:)` parameter, `SourcesModel.swift` and its tests.
+**Answer:** Fixed — the pattern is `graphListLoaded\(in`.
+
+### X-13 · minor · `sourcePage` parameter types; which title the graph crumb carries
+**Answer:** Fixed — D-16 gives `sourcePage(sourceId: String, ref: String? = nil, title: String? = nil)`; D-9's graph crumb carries the Source crumb's resolved label.
+
+### X-14 · nit · Header jump row used unlabelled `PVButton` arguments
+**Answer:** Fixed.
+
+### X-15 · nit · How to pick pbxproj ids
+**Answer:** Fixed — new ids count up from the highest `AA…` id.
