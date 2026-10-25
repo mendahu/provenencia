@@ -321,7 +321,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-12 — Graph form
 
-**Ships.** Create and edit a graph from the Graphs section: name, description, and the Artifact checklist from S12-02, all on for a new graph. Saving an edit is one `Update` call carrying the checklist (S12-04 D-7), so a refused unlink keeps the whole edit unsaved. Unavailable while the Source has no Artifact.
+**Ships.** Create and edit a graph from the Graphs section: name, description, and the Artifact checklist from S12-02, all on for a new graph. Saving an edit is one `Update` call carrying the checklist (S12-04 D-7), so a refused unlink keeps the whole edit unsaved. Unavailable while the Source has no Artifact. The `last_graph` delete notice says "Add another graph before you delete this one"; S12-11 made it reachable before any Add graph existed, so this PR checks the body names the control it adds, and words the case where Add graph is unavailable because the Source has no Artifact (S12-11 review UX-3).
 **Not this PR.** Link checkboxes in the Artifacts section (S12-13).
 **Check.** Create a Jones graph linked to one page; edit its name and links; unlink refusals show the reason.
 **Context.** Working rules "Artifact ↔ graph links", "One title and type form, one Artifact checklist"; brief S12-D3.
