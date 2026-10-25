@@ -162,13 +162,15 @@ private struct SourceGraphForm: View {
                 message: L10n.string(L10n.Sources.graphFormKeptLinkedMessage),
                 compact: true
             )
-            ForEach(model.keptLinked, id: \.artifact.id) { kept in
-                PVDeleteImpactGroupList(
-                    title: kept.artifact.displayTitle,
-                    group: kept.block.citations,
-                    onNavigate: onNavigate,
-                    dismiss: dismiss
-                )
+            PVDeleteImpactGroupStack {
+                ForEach(model.keptLinked, id: \.artifact.id) { kept in
+                    PVDeleteImpactGroupList(
+                        title: kept.artifact.displayTitle,
+                        group: kept.block.citations,
+                        onNavigate: onNavigate,
+                        dismiss: dismiss
+                    )
+                }
             }
         }
         .accessibilityIdentifier("sources.graphForm.keptLinked")

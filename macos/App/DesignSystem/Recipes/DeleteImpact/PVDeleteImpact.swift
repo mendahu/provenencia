@@ -194,19 +194,16 @@ struct PVDeleteImpactNotice: View {
                     PVCallout(tone: .neutral, title: gate.title, message: gate.body, compact: true)
                 }
                 if !groups.isEmpty {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: PVSpacing.space7) {
-                            ForEach(Array(groups.enumerated()), id: \.element.via) { _, group in
-                                PVDeleteImpactGroupList(
-                                    title: PVDeleteImpactCopy.heading(group),
-                                    group: group,
-                                    onNavigate: onNavigate,
-                                    dismiss: onDismiss
-                                )
-                            }
+                    PVDeleteImpactGroupStack {
+                        ForEach(Array(groups.enumerated()), id: \.element.via) { _, group in
+                            PVDeleteImpactGroupList(
+                                title: PVDeleteImpactCopy.heading(group),
+                                group: group,
+                                onNavigate: onNavigate,
+                                dismiss: onDismiss
+                            )
                         }
                     }
-                    .frame(maxHeight: PVDeleteImpactLayout.listMaxHeight)
                 }
             }
             .accessibilityElement(children: .contain)
@@ -224,6 +221,22 @@ struct PVDeleteImpactNotice: View {
 
     private var targetLine: some View {
         PVDeleteImpactTargetLine(target: target)
+    }
+}
+
+/// The scrolling stack of DeleteImpact groups, capped at
+/// ``PVDeleteImpactLayout/listMaxHeight`` so a long list never pushes a footer
+/// off its panel. The notice and a form's kept-linked lists both draw through it.
+struct PVDeleteImpactGroupStack<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: PVSpacing.space7) {
+                content()
+            }
+        }
+        .frame(maxHeight: PVDeleteImpactLayout.listMaxHeight)
     }
 }
 
