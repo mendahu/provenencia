@@ -79,7 +79,7 @@ struct SourcePageNotesView: View {
             }
             .padding(.top, model.notes.items.isEmpty ? PVSpacing.space7 : 0)
         }
-        .padding(.top, PVSpacing.space11 - PVSpacing.space9)
+        .sourcePageSectionTopPadding()
     }
 }
 

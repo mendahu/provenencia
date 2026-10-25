@@ -50,7 +50,7 @@ struct SourcePageArtifactsView: View {
                 .accessibilityIdentifier("sources.page.artifacts.list")
             }
         }
-        .padding(.top, PVSpacing.space11 - PVSpacing.space9)
+        .sourcePageSectionTopPadding()
     }
 
     /// Label / description / optional file form for the Add Artifact dialog.
