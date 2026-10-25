@@ -84,4 +84,6 @@ Check: `grep -rn -B4 "\.iconKey" macos/App | grep first` prints only `GenealogyS
 Head `c5e1a604`. Gate PASS (orchestrator re-ran). F-7 done. The F-7 check grep's `-B4` window also catches the unrelated whole-type lookups in `PromoteModel.swift:471` and `SourceTypesModel.swift:277,316`; no hand-rolled icon lookup is left outside the helper. `origin/main` unchanged since the branch was cut (`bfb852a9`).
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: PRF-2 · to user: — · CON miss: none
+Gate PASS · CI green (macOS tests on `89f22a27`) · open: none · follow-ups: PRF-2 · to user: — · CON miss: none
+
+After ready: the S12-14 scope commit (`89f22a27`, user 2026-10-25: Source page graph-row counts) rides on this PR.
