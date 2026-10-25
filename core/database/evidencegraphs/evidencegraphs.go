@@ -29,6 +29,14 @@ var (
 	ErrLastGraph = apperr.New(apperr.CodeEvidenceGraphsLastGraph, apperr.KindUser)
 )
 
+// SQLObservationsInGraph is the one spelling of "an Observation on this
+// Citation in graph G": the Observations of Citation c on Subjects of one
+// graph. It binds one graph id, and the Citation table is aliased c. The
+// Unlink check here and the Citation reads in core/database/citations are
+// built from it.
+const SQLObservationsInGraph = `observations o JOIN subjects s ON s.id = o.subject_id
+	WHERE o.citation_id = c.id AND s.graph_id = ?`
+
 const (
 	sqlInsert = `INSERT INTO evidence_graphs (id, ref, source_id, name, description)
 		VALUES (?, ?, ?, ?, ?)`
@@ -61,10 +69,8 @@ const (
 	sqlLinkDelete = `DELETE FROM evidence_graph_artifacts WHERE graph_id = ? AND artifact_id = ?`
 	sqlLinkCount  = `SELECT COUNT(*) FROM evidence_graph_artifacts WHERE graph_id = ?`
 	// The ref is selected for the order and dropped.
-	sqlCitationsUsing = `SELECT DISTINCT c.id, c.ref FROM citations c
-		JOIN observations o ON o.citation_id = c.id
-		JOIN subjects s ON s.id = o.subject_id
-		WHERE c.artifact_id = ? AND s.graph_id = ?
+	sqlCitationsUsing = `SELECT c.id, c.ref FROM citations c
+		WHERE c.artifact_id = ? AND EXISTS (SELECT 1 FROM ` + SQLObservationsInGraph + `)
 		ORDER BY c.ref COLLATE NOCASE`
 	sqlMissingRef = `SELECT id FROM evidence_graphs WHERE ref IS NULL`
 	sqlSetRef     = `UPDATE evidence_graphs SET ref = ? WHERE id = ?`

@@ -161,22 +161,20 @@ func TestCitations(t *testing.T) {
 			name: "create with observations text and term round-trip",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
-					return CreateWithObservations(tx, userID, CreateInput{
-						ArtifactID:    s.artifact.ID,
-						LocatorJSON:   validLocator,
-						Transcription: "Alice, female, of Boston",
-						Label:         "entry on page 10",
-					}, []observations.Input{
-						{
-							SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-							ValueText: "Boston", HasText: true,
-						},
-						{
-							SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
-							ValueTermID: s.femaleTerm.ID,
-						},
-					})
+				res, err := createCitation(c, userID, CreateInput{
+					ArtifactID:    s.artifact.ID,
+					LocatorJSON:   validLocator,
+					Transcription: "Alice, female, of Boston",
+					Label:         "entry on page 10",
+				}, []observations.Input{
+					{
+						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+						ValueText: "Boston", HasText: true,
+					},
+					{
+						SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+						ValueTermID: s.femaleTerm.ID,
+					},
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -222,16 +220,14 @@ func TestCitations(t *testing.T) {
 			name: "create audit is full-state including nulls and notes",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
-					return CreateWithObservations(tx, userID, CreateInput{
-						ArtifactID:  s.artifact.ID,
-						LocatorJSON: validLocator,
-						Notes:       []string{"see folio 12"},
-					}, []observations.Input{{
-						SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
-						ValueTermID: s.femaleTerm.ID,
-					}})
-				})
+				res, err := createCitation(c, userID, CreateInput{
+					ArtifactID:  s.artifact.ID,
+					LocatorJSON: validLocator,
+					Notes:       []string{"see folio 12"},
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+					ValueTermID: s.femaleTerm.ID,
+				}})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -321,17 +317,15 @@ func TestCitations(t *testing.T) {
 			name: "Update changes citation fields only and skips no-op",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
-					return CreateWithObservations(tx, userID, CreateInput{
-						ArtifactID:    s.artifact.ID,
-						LocatorJSON:   validLocator,
-						Transcription: "was",
-						Notes:         []string{"keep"},
-					}, []observations.Input{{
-						SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
-						ValueTermID: s.femaleTerm.ID,
-					}})
-				})
+				res, err := createCitation(c, userID, CreateInput{
+					ArtifactID:    s.artifact.ID,
+					LocatorJSON:   validLocator,
+					Transcription: "was",
+					Notes:         []string{"keep"},
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+					ValueTermID: s.femaleTerm.ID,
+				}})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -396,15 +390,13 @@ func TestCitations(t *testing.T) {
 			name: "invalid locator rejected",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				_, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
-					return CreateWithObservations(tx, userID, CreateInput{
-						ArtifactID:  s.artifact.ID,
-						LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":0}]}`,
-					}, []observations.Input{{
-						SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
-						ValueTermID: s.femaleTerm.ID,
-					}})
-				})
+				_, err := createCitation(c, userID, CreateInput{
+					ArtifactID:  s.artifact.ID,
+					LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":0}]}`,
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+					ValueTermID: s.femaleTerm.ID,
+				}})
 				if !errors.Is(err, locator.ErrInvalid) {
 					t.Fatalf("got %v want locator.ErrInvalid", err)
 				}
@@ -414,14 +406,12 @@ func TestCitations(t *testing.T) {
 			name: "list by artifact",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
-					return CreateWithObservations(tx, userID, CreateInput{
-						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-					}, []observations.Input{{
-						SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
-						ValueTermID: s.femaleTerm.ID,
-					}})
-				}); err != nil {
+				if _, err := createCitation(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+					ValueTermID: s.femaleTerm.ID,
+				}}); err != nil {
 					t.Fatal(err)
 				}
 				list, err := ListByArtifact(c, evidencegraphstest.SoleGraph(t, c, s.artifact.SourceID).ID, s.artifact.ID)
@@ -447,13 +437,11 @@ func TestCitations(t *testing.T) {
 				smith := evidencegraphstest.Create(t, c, userID, s.artifact.SourceID, "Smith", s.artifact.ID)
 				clara := subjectstest.On(t, c, userID, smith.ID, "person", "Clara")
 				mk := func(subject []byte) []byte {
-					res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
-						var obs []observations.Input
-						if subject != nil {
-							obs = []observations.Input{{SubjectID: subject, PropertyID: s.sexProp.ID, ValueTermID: s.femaleTerm.ID}}
-						}
-						return CreateWithObservations(tx, userID, CreateInput{ArtifactID: s.artifact.ID, LocatorJSON: validLocator}, obs)
-					})
+					var obs []observations.Input
+					if subject != nil {
+						obs = []observations.Input{{SubjectID: subject, PropertyID: s.sexProp.ID, ValueTermID: s.femaleTerm.ID}}
+					}
+					res, err := createCitation(c, userID, CreateInput{ArtifactID: s.artifact.ID, LocatorJSON: validLocator}, obs)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -508,10 +496,7 @@ func TestCitations(t *testing.T) {
 				in := func(subject []byte) observations.Input {
 					return observations.Input{SubjectID: subject, PropertyID: s.sexProp.ID, ValueTermID: s.femaleTerm.ID}
 				}
-				if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
-					return CreateWithObservations(tx, userID, CreateInput{ArtifactID: s.artifact.ID, LocatorJSON: validLocator},
-						[]observations.Input{in(s.person.ID), in(ben.ID), in(clara.ID)})
-				}); err != nil {
+				if _, err := createCitation(c, userID, CreateInput{ArtifactID: s.artifact.ID, LocatorJSON: validLocator}, []observations.Input{in(s.person.ID), in(ben.ID), in(clara.ID)}); err != nil {
 					t.Fatal(err)
 				}
 				d, err := ListByArtifact(c, def.ID, s.artifact.ID)
@@ -541,9 +526,7 @@ func TestCitations(t *testing.T) {
 				def := evidencegraphstest.SoleGraph(t, c, s.artifact.SourceID)
 				smith := evidencegraphstest.Create(t, c, userID, s.artifact.SourceID, "Smith", s.artifact.ID)
 				for _, art := range [][]byte{s.artifact.ID, art2.ID} {
-					if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
-						return CreateWithObservations(tx, userID, CreateInput{ArtifactID: art, LocatorJSON: validLocator}, nil)
-					}); err != nil {
+					if _, err := createCitation(c, userID, CreateInput{ArtifactID: art, LocatorJSON: validLocator}, nil); err != nil {
 						t.Fatal(err)
 					}
 				}
@@ -566,13 +549,11 @@ func TestCitations(t *testing.T) {
 			name: "create with zero observations",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
-					return CreateWithObservations(tx, userID, CreateInput{
-						ArtifactID:    s.artifact.ID,
-						LocatorJSON:   validLocator,
-						Transcription: "transcribe first",
-					}, nil)
-				})
+				res, err := createCitation(c, userID, CreateInput{
+					ArtifactID:    s.artifact.ID,
+					LocatorJSON:   validLocator,
+					Transcription: "transcribe first",
+				}, nil)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -602,34 +583,28 @@ func TestCitations(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
-					return CreateWithObservations(tx, userID, CreateInput{
-						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-					}, []observations.Input{{
-						SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
-						ValueTermID: s.femaleTerm.ID,
-					}})
-				}); err != nil {
+				if _, err := createCitation(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+					ValueTermID: s.femaleTerm.ID,
+				}}); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
-					return CreateWithObservations(tx, userID, CreateInput{
-						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-					}, []observations.Input{{
-						SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
-						ValueTermID: s.femaleTerm.ID,
-					}})
-				}); err != nil {
+				if _, err := createCitation(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+					ValueTermID: s.femaleTerm.ID,
+				}}); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
-					return CreateWithObservations(tx, userID, CreateInput{
-						ArtifactID: art2.ID, LocatorJSON: validLocator,
-					}, []observations.Input{{
-						SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
-						ValueTermID: s.femaleTerm.ID,
-					}})
-				}); err != nil {
+				if _, err := createCitation(c, userID, CreateInput{
+					ArtifactID: art2.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+					ValueTermID: s.femaleTerm.ID,
+				}}); err != nil {
 					t.Fatal(err)
 				}
 				counts, err := CountByEvidenceGraph(c, evidencegraphstest.SoleGraph(t, c, s.artifact.SourceID).ID)
@@ -647,11 +622,9 @@ func TestCitations(t *testing.T) {
 			name: "artifact delete refused while citation exists",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
-					return CreateWithObservations(tx, userID, CreateInput{
-						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-					}, nil)
-				}); err != nil {
+				if _, err := createCitation(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, nil); err != nil {
 					t.Fatal(err)
 				}
 				db, err := c.DB()
@@ -680,12 +653,10 @@ func TestCitations(t *testing.T) {
 			name: "empty citation erases and notes cascade",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				cit, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
-					return CreateWithObservations(tx, userID, CreateInput{
-						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-						Notes: []string{"keep me", "and me"},
-					}, nil)
-				})
+				cit, err := createCitation(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+					Notes: []string{"keep me", "and me"},
+				}, nil)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -715,14 +686,12 @@ func TestCitations(t *testing.T) {
 			name: "inbound observations refuse and row remains",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				cit, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
-					return CreateWithObservations(tx, userID, CreateInput{
-						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-					}, []observations.Input{{
-						SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
-						ValueTermID: s.femaleTerm.ID,
-					}})
-				})
+				cit, err := createCitation(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+					ValueTermID: s.femaleTerm.ID,
+				}})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -757,4 +726,11 @@ func TestCitations(t *testing.T) {
 			tt.run(t)
 		})
 	}
+}
+
+// createCitation creates a Citation with its Observations in one audited write.
+func createCitation(c *database.Catalog, userID []byte, in CreateInput, obs []observations.Input) (CreateResult, error) {
+	return writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (CreateResult, []rowchange.Change, error) {
+		return CreateWithObservations(tx, userID, in, obs)
+	})
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/ref"
@@ -48,37 +49,33 @@ const (
 
 	// A graph's Citations on an Artifact: those it uses, plus those with no
 	// Observation yet (a new Citation belongs to no graph until its first
-	// Observation). The "used" half is the same rule as
-	// evidencegraphs.sqlCitationsUsing (the Unlink check); change both together.
-	// Binds one graph id; the Citation table is aliased c.
-	sqlUsedByGraph = `EXISTS (SELECT 1 FROM observations o
-		JOIN subjects s ON s.id = o.subject_id
-		WHERE o.citation_id = c.id AND s.graph_id = ?)`
-	sqlInGraph = `(` + sqlUsedByGraph + ` OR NOT EXISTS (SELECT 1 FROM observations o WHERE o.citation_id = c.id))`
+	// Observation). The "used" half is the rule the Unlink check shares, spelled
+	// once in evidencegraphs.SQLObservationsInGraph. Binds one graph id; the
+	// Citation table is aliased c.
+	sqlUsedByGraph = `EXISTS (SELECT 1 FROM ` + evidencegraphs.SQLObservationsInGraph + `)`
+	sqlInGraph     = `(` + sqlUsedByGraph + ` OR NOT EXISTS (SELECT 1 FROM observations o WHERE o.citation_id = c.id))`
 
 	// Binds: graph (count), artifact, graph (filter).
 	sqlListByArtifact = `SELECT c.id, c.ref, c.artifact_id, c.locator_json,
 		COALESCE(c.transcription, ''), COALESCE(c.label, ''),
 		c.transcription_uncertain, COALESCE(c.transcription_note, ''),
-		(SELECT COUNT(*) FROM observations o JOIN subjects s ON s.id = o.subject_id
-			WHERE o.citation_id = c.id AND s.graph_id = ?)
+		(SELECT COUNT(*) FROM ` + evidencegraphs.SQLObservationsInGraph + `)
 		FROM citations c WHERE c.artifact_id = ? AND ` + sqlInGraph + `
 		ORDER BY c.ref COLLATE NOCASE`
 
 	// People a Citation names within one graph: the Observation's subject, or
 	// the subject an edge points at. Earliest Observation id wins. The caller
-	// caps the list. Binds per branch: graph, artifact, graph.
+	// caps the list. The graph filters Observations (not Citations), so it is a
+	// join here, not SQLObservationsInGraph. Binds per branch: graph, artifact.
 	sqlPersonNamesByArtifact = `
 WITH named AS (
 	SELECT o.citation_id AS cid, s.id AS sid, s.label AS label, o.id AS oid
 	FROM observations o
 	INNER JOIN citations c ON c.id = o.citation_id
-	INNER JOIN subjects so ON so.id = o.subject_id AND so.graph_id = ?
-	INNER JOIN subjects s ON s.id = o.subject_id
+	INNER JOIN subjects s ON s.id = o.subject_id AND s.graph_id = ?
 	INNER JOIN subject_types t ON t.id = s.subject_type_id
 	WHERE c.artifact_id = ? AND t.key = 'person'
 		AND TRIM(COALESCE(s.label, '')) <> ''
-		AND ` + sqlInGraph + `
 	UNION ALL
 	SELECT o.citation_id, s.id, s.label, o.id
 	FROM observations o
@@ -88,7 +85,6 @@ WITH named AS (
 	INNER JOIN subject_types t ON t.id = s.subject_type_id
 	WHERE c.artifact_id = ? AND t.key = 'person'
 		AND TRIM(COALESCE(s.label, '')) <> ''
-		AND ` + sqlInGraph + `
 )
 SELECT cid, sid, label FROM named
 GROUP BY cid, sid
@@ -523,7 +519,7 @@ func ListByArtifact(c *database.Catalog, graphID, artifactID []byte) ([]ListedCi
 }
 
 func attachPersonNames(db *sql.DB, graphID, artifactID []byte, list []ListedCitation) error {
-	rows, err := db.Query(sqlPersonNamesByArtifact, graphID, artifactID, graphID, graphID, artifactID, graphID)
+	rows, err := db.Query(sqlPersonNamesByArtifact, graphID, artifactID, graphID, artifactID)
 	if err != nil {
 		return err
 	}
