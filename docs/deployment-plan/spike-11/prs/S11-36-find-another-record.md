@@ -1,9 +1,9 @@
 # S11-36 — Find another record in the target menu
 
-**Status:** Planned
+**Status:** Landed in #558 (2026-10-25)
 **Spike / slice:** Spike 11 · Slice 8 — Find another record
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S11-D3](../design/S11-D3-promote-target-menu.md), board agreed 2026-10-25
+**Brief:** [S11-D3](../design/archive/S11-D3-promote-target-menu.md), board agreed 2026-10-25
 **Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), frames 20, 21, 22, 22b, 22c, 23, 23b, 24, 25 (and its sheet 25s), 26, 26b. The brief's **Board notes** list where the board differs from the brief; the board wins, and this plan already follows it
 **Depends on:** S11-35 (landed [#543](https://github.com/mendahu/provenencia/pull/543)), S11-37 (landed [#551](https://github.com/mendahu/provenencia/pull/551)), S11-D3 (agreed)
 **Blocks:** —
@@ -13,6 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** [Find another record § Shape](../promote-find-another-record.md#shape), [§ Where the Swift side changes](../promote-find-another-record.md#where-the-swift-side-changes), [§ Decided](../promote-find-another-record.md#decided-user-2026-10-24); working rules "A found record is a decided row, nothing new", "No new search RPC, and one search model", "An inline picker, every record of the kind, no warning", "The menu entry is a sentinel option", "The picked record joins the row's menu"; the map's S11-36 scope entry (picker on `PVComboBox`, the hit row's VoiceOver label, `selected`); [`macos/App/DesignSystem/README.md`](../../../../macos/App/DesignSystem/README.md) § "The combo box subset"
 **Planned:** 2026-10-25 against `main` @ `056b6ed` (code unchanged at `bfb852a9`)
+**Landed:** The code follows the plan. Steps 1 and 3's flow changes (`Target` tokens and `SelectionReadout.chosen`) landed in one commit, the kit and hit-row changes in a second, and the model, view, copy and docs in a third. The manual check (§10) was not run by the implementer.
 **Review:** [`S11-36-find-another-record.review.md`](S11-36-find-another-record.review.md) — Fits with changes / Ready with changes, 2 rounds
 
 ### Implementer — read this first

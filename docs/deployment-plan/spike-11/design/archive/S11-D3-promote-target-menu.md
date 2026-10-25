@@ -5,10 +5,10 @@
 **View:** Promote page — a row's target menu and the picker it opens
 **Implements later as:** PR **S11-36** (find another record in the target menu)
 **Depends on:** S11-35 (landed [#543](https://github.com/mendahu/provenencia/pull/543): `PromoteFlow.hold` holds a record Promote did not offer); S11-37 (landed [#551](https://github.com/mendahu/provenencia/pull/551): `CatalogSearchModel` and `CatalogSearchHitRow`, the omnibar's search and hit row in a shared home)
-**Related:** [`../promote-find-another-record.md`](../promote-find-another-record.md) (the feature and the [decided](../promote-find-another-record.md#decided-user-2026-10-24) product calls), [`archive/S11-D1-promote-rows.md`](archive/S11-D1-promote-rows.md) (the rows this board extends), [`../../../promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3
+**Related:** [`../promote-find-another-record.md`](../../promote-find-another-record.md) (the feature and the [decided](../../promote-find-another-record.md#decided-user-2026-10-24) product calls), [`archive/S11-D1-promote-rows.md`](archive/S11-D1-promote-rows.md) (the rows this board extends), [`../../../promote-graph-alignment.md`](../../../../promote-graph-alignment.md) §3
 **Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), agreed 2026-10-25: frames 20 – 26b (§8)
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -100,7 +100,7 @@ A researcher on the Promote page who knows a Subject is a record Promote did not
 
 | Ships in **S11-36** | Stays out |
 | --- | --- |
-| FR-1 – FR-9: the menu entry, the search field in the target cell and its list, picking and cancelling, the found record in the menu, the below-Weak wording for a chosen record, VoiceOver. | Searching from the evidence sheet, other kinds, merging ([what stays later](../promote-find-another-record.md#what-stays-later)). A Callout for a `Different` pick (refused, user 2026-10-24). Any change to the toolbar search's panel or ranking. |
+| FR-1 – FR-9: the menu entry, the search field in the target cell and its list, picking and cancelling, the found record in the menu, the below-Weak wording for a chosen record, VoiceOver. | Searching from the evidence sheet, other kinds, merging ([what stays later](../../promote-find-another-record.md#what-stays-later)). A Callout for a `Different` pick (refused, user 2026-10-24). Any change to the toolbar search's panel or ranking. |
 
 ---
 
