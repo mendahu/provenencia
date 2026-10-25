@@ -26,14 +26,7 @@ enum SourcesListNavigation {
         Dictionary(grouping: graphs, by: \.sourceID)
     }
 
-    /// The session's cached graph list grouped by Source; empty while the list
-    /// has no value.
-    @MainActor
-    static func graphsBySource(in session: WorkspaceSession) -> [String: [CatalogEvidenceGraph]] {
-        graphsBySource(session.evidenceGraphsHandle?.value ?? [])
-    }
-
-    /// Why Open graph / Jump to evidence graph is blocked, or nil when it is
+    /// Why Open graph is blocked, or nil when it is
     /// open or the reason is not yet known. With no location, a Source without
     /// an Artifact, or one whose graph list has a value but whose entry graph
     /// links none, needs an Artifact; while the graph list has no value
@@ -47,12 +40,6 @@ enum SourcesListNavigation {
     /// Why one graph's Open is blocked: it links no Artifact. Nil when it opens.
     static func graphBlockedReason(for graph: CatalogEvidenceGraph) -> String? {
         graph.artifactIDs.isEmpty ? L10n.string(L10n.Sources.graphNeedsArtifactTooltip) : nil
-    }
-
-    /// True once the session's graph list has a value.
-    @MainActor
-    static func graphListLoaded(in session: WorkspaceSession) -> Bool {
-        session.evidenceGraphsHandle?.value != nil
     }
 
     /// Opens the entry graph's canvas when that graph links at least one

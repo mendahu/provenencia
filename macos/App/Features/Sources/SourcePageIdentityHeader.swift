@@ -2,7 +2,6 @@ import SwiftUI
 
 /// Sticky identity header: thumbnail, title edit, type chip.
 struct SourcePageIdentityHeader: View {
-    @Environment(WorkspaceNavigation.self) private var navigation
     @Bindable var model: SourcePageModel
     /// Local draft so title keystrokes don't invalidate the whole Source page
     /// observation graph on every character.
@@ -18,7 +17,6 @@ struct SourcePageIdentityHeader: View {
                     titleCluster
                         .frame(maxWidth: .infinity, alignment: .leading)
                     HStack(alignment: .top, spacing: PVSpacing.space4) {
-                        evidenceGraphJump
                         copySourceButton
                         deleteSourceButton
                     }
@@ -183,25 +181,6 @@ struct SourcePageIdentityHeader: View {
         }
         .disabled(model.source == nil)
         .accessibilityIdentifier("sources.page.deleteSource")
-    }
-
-    private var evidenceGraphJump: some View {
-        let location = model.evidenceGraphLocation
-        let reason = model.evidenceGraphBlockedReason
-        return PVButton(
-            L10n.Sources.jumpToEvidenceGraph,
-            variant: .secondary,
-            size: .sm,
-            icon: .gitBranch
-        ) {
-            if let location {
-                navigation.go(to: location)
-            }
-        }
-        .disabled(location == nil)
-        .help(reason ?? L10n.string(L10n.Sources.jumpToEvidenceGraph))
-        .accessibilityHint(Text(reason ?? ""))
-        .accessibilityIdentifier("sources.page.jumpToEvidenceGraph")
     }
 
     private var metaRow: some View {

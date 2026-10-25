@@ -6208,12 +6208,6 @@ enum L10n {
             comment: "Primary save for title or type edit"
         )
 
-        static let jumpToEvidenceGraph = LocalizedStringResource(
-            "sources.page.jumpToEvidenceGraph",
-            defaultValue: "Jump to graph",
-            comment: "Identity-header secondary button that opens this Source's Evidence graph"
-        )
-
         static let editTitle = LocalizedStringResource(
             "sources.page.editTitle",
             defaultValue: "Edit title",

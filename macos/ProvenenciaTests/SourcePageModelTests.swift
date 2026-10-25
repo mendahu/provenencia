@@ -349,7 +349,7 @@ struct SourcePageModelTests {
         )
         await model.warmFromSession()
         await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
-        #expect(model.evidenceGraphLocation == nil)
+        #expect(entryGraphLocation(model) == nil)
 
         model.artifacts.openAdd()
         model.artifacts.draft.label = "Scan"
@@ -363,7 +363,7 @@ struct SourcePageModelTests {
         // after it moved no graph link, so the list reloads only if the
         // create's effects were applied too.
         await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
-        #expect(model.evidenceGraphLocation?.graphId == "g-1")
+        #expect(entryGraphLocation(model)?.graphId == "g-1")
     }
 
     @Test func useAsThumbnailAndRevertToTypeIcon() async throws {
@@ -463,7 +463,7 @@ struct SourcePageModelTests {
         #expect(model.artifacts.items.map(\.label) == ["Scan"])
         #expect(model.artifacts.items.first?.fileID.isEmpty == true)
         await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
-        #expect(model.evidenceGraphLocation?.graphId == "g-1")
+        #expect(entryGraphLocation(model)?.graphId == "g-1")
 
         store.ingestArtifactFileError = nil
         let path = FileManager.default.temporaryDirectory
@@ -1144,6 +1144,11 @@ struct SourcePageModelTests {
         let left = await model.confirmResourceDelete()
         #expect(!left)
         #expect(store.deleteSourceCalls == 0)
+    }
+
+    /// Where Open goes for the page's first graph; nil while it links no Artifact.
+    private func entryGraphLocation(_ model: SourcePageModel) -> WorkspaceLocation? {
+        model.graphs.rows?.first.flatMap { model.graphs.location(for: $0) }
     }
 
     private func graph(_ id: String, name: String, sourceID: String? = nil) -> CatalogEvidenceGraph {

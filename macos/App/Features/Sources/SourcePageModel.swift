@@ -63,25 +63,6 @@ final class SourcePageModel {
 
     var source: CatalogSource? { context.source }
 
-    /// Where Jump to evidence graph goes: the Source's entry graph, while that
-    /// graph links an Artifact. Nil blocks the jump, including while the graph
-    /// list has no value.
-    var evidenceGraphLocation: WorkspaceLocation? {
-        guard let source else { return nil }
-        return SourcesListNavigation.graphLocation(
-            for: source, graphs: SourcesListNavigation.graphsBySource(in: context.session)
-        )
-    }
-
-    /// Why Jump to evidence graph is blocked; nil when open or unknown.
-    var evidenceGraphBlockedReason: String? {
-        SourcesListNavigation.graphBlockedReason(
-            hasArtifact: source?.hasArtifact ?? false,
-            graphListLoaded: SourcesListNavigation.graphListLoaded(in: context.session),
-            location: evidenceGraphLocation
-        )
-    }
-
     /// Project folder for resolving `objects/…` thumbnail paths.
     var pageProjectDir: String { context.projectDir }
 

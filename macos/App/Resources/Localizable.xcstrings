@@ -8706,18 +8706,6 @@
         }
       }
     },
-    "sources.page.jumpToEvidenceGraph": {
-      "comment": "Identity-header secondary button that opens this Source's Evidence graph",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jump to graph"
-          }
-        }
-      }
-    },
     "sources.page.metadataEmptyMessage": {
       "comment": "Empty-state body when a Source has no metadata rows",
       "extractionState": "manual",
