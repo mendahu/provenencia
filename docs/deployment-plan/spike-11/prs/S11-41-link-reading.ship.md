@@ -21,4 +21,4 @@ No fix plan: nothing to fix. No round 2: no Fix-now blocker or major.
 Merged `origin/main` @ `bc673dd6` (S12-13 plan docs only). Gate PASS on the merged head.
 
 ## Result
-Gate PASS · CI <pending> · open: none · follow-ups: none · to user: — · CON miss: none
+Gate PASS · CI green (Go tests, macOS tests) · open: none · follow-ups: none · to user: — · CON miss: none
