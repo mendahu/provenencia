@@ -13,6 +13,9 @@ final class SourceArtifactsSection {
         var filePath: String?
         var fileName: String?
         var reject: L10n.Errors.IngestCallout?
+        /// The Artifact an earlier confirm created before its file was
+        /// refused. A retry saves onto it instead of creating another.
+        var createdID: String?
     }
 
     struct AttachDraft: Equatable {
@@ -258,19 +261,39 @@ final class SourceArtifactsSection {
         guard draft.reject == nil else { return }
         isSavingDraft = true
         defer { isSavingDraft = false }
+        let description = draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
-            var (art, created) = try await context.store.createArtifact(
-                projectDir: context.projectDir,
-                userID: context.userID,
-                sourceID: context.sourceID,
-                fileID: "",
-                label: label,
-                description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines),
-                graphIDs: []
-            )
-            // Each write's effects apply: the create linked the Artifact to the
-            // Source's graphs, which the file ingest does not report again.
-            var effects = [created]
+            var art: CatalogArtifact
+            if let id = draft.createdID, let existing = items.first(where: { $0.id == id }) {
+                art = existing
+                if label != art.label || description != art.description {
+                    let (updated, effects) = try await context.store.updateArtifact(
+                        projectDir: context.projectDir,
+                        userID: context.userID,
+                        artifactID: id,
+                        label: label,
+                        description: description
+                    )
+                    art = updated
+                    show(art, effects: effects)
+                }
+            } else {
+                let (created, effects) = try await context.store.createArtifact(
+                    projectDir: context.projectDir,
+                    userID: context.userID,
+                    sourceID: context.sourceID,
+                    fileID: "",
+                    label: label,
+                    description: description,
+                    graphIDs: []
+                )
+                art = created
+                // Shown before the file is ingested: if the file is refused,
+                // the Artifact Go created still reads on the page, and its
+                // graph links (which the ingest does not report) still apply.
+                show(art, effects: effects)
+                draft.createdID = art.id
+            }
             if let path = draft.filePath {
                 let ingested = try await context.store.ingestArtifactFile(
                     projectDir: context.projectDir,
@@ -279,19 +302,12 @@ final class SourceArtifactsSection {
                     path: path
                 )
                 art = ingested.artifact
-                effects.append(ingested.effects)
+                show(art, effects: ingested.effects)
             }
-            context.workspace?.artifacts.append(art)
-            labels[art.id] = art.label
-            descriptions[art.id] = art.description
             isAdding = false
             draftLabelError = nil
             draft.reject = nil
-            // The artifact list is appended above, so only the effects apply:
-            // the Source's row moves and its graph reads follow.
-            for write in effects {
-                context.session.apply(write)
-            }
+            draft.createdID = nil
             await context.refreshCoverFromStore()
             context.toast = VocabularyToast(
                 title: L10n.Sources.toastArtifactCreatedTitle(ref: art.ref),
@@ -439,6 +455,20 @@ final class SourceArtifactsSection {
             attachDraft.fileName = fileName
             attachDraft.reject = callout
         }
+    }
+
+    /// Puts a written Artifact on the page, appended when new. The list is
+    /// patched here, so only the effects apply: the Source's row moves and
+    /// its graph reads follow.
+    private func show(_ art: CatalogArtifact, effects: CatalogWriteEffects) {
+        if let idx = context.workspace?.artifacts.firstIndex(where: { $0.id == art.id }) {
+            context.workspace?.artifacts[idx] = art
+        } else {
+            context.workspace?.artifacts.append(art)
+        }
+        labels[art.id] = art.label
+        descriptions[art.id] = art.description
+        context.session.apply(effects)
     }
 
     private func replace(_ updated: CatalogArtifact, effects: CatalogWriteEffects) {
