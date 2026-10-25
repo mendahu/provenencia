@@ -54,7 +54,7 @@ struct PersonDetailContent: ConclusionDetailBody {
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) {
-        let header = detail.personHeader
+        let header = detail.header?.person
         let nameField = detail.fields.first { $0.propertyKey == SeededPropertyKey.name }
         var leadName: CatalogNameValue?
         if case .name(let name)? = nameField?.displayedValues.first?.value { leadName = name }

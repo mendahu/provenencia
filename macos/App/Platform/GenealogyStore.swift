@@ -768,18 +768,6 @@ struct CatalogConclusionDetail: Sendable, Equatable {
     var header: CatalogConclusionHeader?
     /// The handle's likenesses, earliest recorded first.
     var likenesses: [CatalogLikeness] = []
-
-    var personHeader: CatalogPersonHeader? {
-        if case .person(let header) = header { header } else { nil }
-    }
-
-    var eventHeader: CatalogEventHeader? {
-        if case .event(let header) = header { header } else { nil }
-    }
-
-    var placeHeader: CatalogPlaceHeader? {
-        if case .place(let header) = header { header } else { nil }
-    }
 }
 
 /// One handle's row for its kind, as the lists show it.
@@ -787,6 +775,20 @@ enum CatalogConclusionHeader: Sendable, Equatable {
     case person(CatalogPersonHeader)
     case event(CatalogEventHeader)
     case place(CatalogPlaceHeader)
+}
+
+extension CatalogConclusionHeader {
+    var person: CatalogPersonHeader? {
+        if case .person(let header) = self { header } else { nil }
+    }
+
+    var event: CatalogEventHeader? {
+        if case .event(let header) = self { header } else { nil }
+    }
+
+    var place: CatalogPlaceHeader? {
+        if case .place(let header) = self { header } else { nil }
+    }
 }
 
 /// One Observation row with Property summary (graph / card payloads).

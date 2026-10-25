@@ -431,7 +431,35 @@ struct PromoteFlow: Equatable, Sendable {
     @discardableResult
     mutating func setTarget(subjectID: String, token: String) -> Bool {
         guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }), !rows[index].anchor else { return false }
-        let next = target(for: token, on: rows[index])
+        return select(target(for: token, on: rows[index]), at: index)
+    }
+
+    /// Holds a record Promote did not offer: it joins the row's menu as the
+    /// researcher's choice, titled as the menu titles every record, then is
+    /// selected like a menu pick. Returns true when suggested rows should be
+    /// proposed again.
+    @discardableResult
+    mutating func hold(subjectID: String, id: String, ref: String, header: CatalogConclusionHeader?) -> Bool {
+        guard !id.isEmpty,
+              let index = rows.firstIndex(where: { $0.subjectID == subjectID }),
+              !rows[index].anchor else { return false }
+        let item: Alternative
+        if let offered = rows[index].menu.first(where: { $0.id == id }) {
+            item = offered
+        } else {
+            item = Self.item(
+                id: id, ref: ref, kind: rows[index].kind,
+                person: header?.person, event: header?.event, place: header?.place,
+                orders: nameOrders, assessment: .none, reason: .decided
+            )
+            rows[index].menu.append(item)
+        }
+        return select(.handle(id: item.id, ref: item.ref, title: item.title), at: index)
+    }
+
+    /// Selects a target on a working row: the old target's evidence goes, the
+    /// row is decided. Returns true.
+    private mutating func select(_ next: Target, at index: Int) -> Bool {
         if next != rows[index].target {
             // The evidence, pins and contested flag compared the old target;
             // the sheet reads them again for this one. The argument is the
@@ -707,52 +735,48 @@ struct PromoteFlow: Equatable, Sendable {
     private static func menu(for proposal: CatalogPromoteGraphAlignmentRow, kind: EvidencePrimaryKind, orders: NameFormatOrders) -> [Alternative] {
         var out: [Alternative] = []
         if proposal.target == "handle", !proposal.handleID.isEmpty {
-            out.append(Alternative(
+            out.append(item(
                 id: proposal.handleID, ref: proposal.handleRef,
-                title: headerTitle(proposal, orders: orders, style: .sorted),
-                readingTitle: headerTitle(proposal, orders: orders, style: .natural),
-                subtitle: headerSubtitle(proposal),
-                assessment: Assessment(wire: proposal.assessment), reason: Reason(proposal)
+                kind: EvidencePrimaryKind(rawValue: proposal.kind),
+                person: proposal.person, event: proposal.event, place: proposal.place,
+                orders: orders, assessment: Assessment(wire: proposal.assessment), reason: Reason(proposal)
             ))
         }
         for alt in proposal.alternatives where alt.handleID != proposal.handleID {
-            out.append(Alternative(
-                id: alt.handleID, ref: alt.handleRef,
-                title: headerTitle(alt, kind: kind, orders: orders, style: .sorted),
-                readingTitle: headerTitle(alt, kind: kind, orders: orders, style: .natural),
-                subtitle: headerSubtitle(alt, kind: kind),
-                assessment: Assessment(wire: alt.assessment), reason: Reason(alt)
+            out.append(item(
+                id: alt.handleID, ref: alt.handleRef, kind: kind,
+                person: alt.person, event: alt.event, place: alt.place,
+                orders: orders, assessment: Assessment(wire: alt.assessment), reason: Reason(alt)
             ))
         }
         return out
     }
 
-    private static func headerSubtitle(_ row: CatalogPromoteGraphAlignmentRow) -> String {
-        conclusionSubtitle(
-            kind: EvidencePrimaryKind(rawValue: row.kind),
-            person: row.person, event: row.event, place: row.place
-        )
-    }
-
-    private static func headerSubtitle(_ alt: CatalogPromoteGraphAlignmentAlternative, kind: EvidencePrimaryKind) -> String {
-        conclusionSubtitle(kind: kind, person: alt.person, event: alt.event, place: alt.place)
-    }
-
-    private static func headerTitle(_ row: CatalogPromoteGraphAlignmentRow, orders: NameFormatOrders, style: NameDisplayStyle) -> String {
-        conclusionTitle(
-            kind: EvidencePrimaryKind(rawValue: row.kind),
-            person: row.person, event: row.event, place: row.place,
-            fallback: row.handleRef,
-            orders: orders, style: style
-        )
-    }
-
-    private static func headerTitle(_ alt: CatalogPromoteGraphAlignmentAlternative, kind: EvidencePrimaryKind, orders: NameFormatOrders, style: NameDisplayStyle) -> String {
-        conclusionTitle(
-            kind: kind,
-            person: alt.person, event: alt.event, place: alt.place,
-            fallback: alt.handleRef,
-            orders: orders, style: style
+    /// One menu item, titled sorted and natural and subtitled from the record's
+    /// header, whichever way the record reached the menu.
+    private static func item(
+        id: String,
+        ref: String,
+        kind: EvidencePrimaryKind?,
+        person: CatalogPersonHeader?,
+        event: CatalogEventHeader?,
+        place: CatalogPlaceHeader?,
+        orders: NameFormatOrders,
+        assessment: Assessment,
+        reason: Reason
+    ) -> Alternative {
+        Alternative(
+            id: id, ref: ref,
+            title: conclusionTitle(
+                kind: kind, person: person, event: event, place: place,
+                fallback: ref, orders: orders, style: .sorted
+            ),
+            readingTitle: conclusionTitle(
+                kind: kind, person: person, event: event, place: place,
+                fallback: ref, orders: orders, style: .natural
+            ),
+            subtitle: conclusionSubtitle(kind: kind, person: person, event: event, place: place),
+            assessment: assessment, reason: reason
         )
     }
 

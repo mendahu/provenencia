@@ -527,7 +527,7 @@ struct CatalogQueryRegistryTests {
         // Order is Go's; the fake does not re-sort or re-derive.
         #expect(events.value == [late, early])
         #expect(places.value == [place])
-        #expect(page.value?.eventHeader == early)
+        #expect(page.value?.header?.event == early)
     }
 
     private func part(_ value: String, _ type: String) -> CatalogNameValuePart {

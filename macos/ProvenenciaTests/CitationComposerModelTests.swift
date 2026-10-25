@@ -907,16 +907,7 @@ struct CitationComposerModelTests {
                 ]
             )
         )
-        let orders = NameFormatOrders(
-            natural: [
-                NameFormatPart(partType: "given", trailingSeparator: ""),
-                NameFormatPart(partType: "surname", trailingSeparator: ""),
-            ],
-            sorted: [
-                NameFormatPart(partType: "surname", trailingSeparator: ", "),
-                NameFormatPart(partType: "given", trailingSeparator: ""),
-            ]
-        )
+        let orders = NameFormatOrders.givenSurname
         #expect(
             CitationObservationValue.summary(
                 valueType: PropertyValueType.name.rawValue,

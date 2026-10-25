@@ -148,4 +148,24 @@ func TestApplyPromoteGraphAlignment(t *testing.T) {
 			}
 		})
 	})
+
+	t.Run("files a found record", func(t *testing.T) {
+		f := newFoundRecordFixture(t)
+		var proposal engine.ProposePromoteGraphAlignmentResponse
+		mustRPC(t, ProposePromoteGraphAlignment, &engine.ProposePromoteGraphAlignmentRequest{
+			ProjectDir: f.dir, GraphId: f.graphID,
+			Fixed: []*engine.PromoteGraphAlignmentFixed{{SubjectId: f.incoming, HandleId: f.handle}},
+		}, &proposal)
+		var res engine.ApplyPromoteGraphAlignmentResponse
+		err := rpc(t, ApplyPromoteGraphAlignment, &engine.ApplyPromoteGraphAlignmentRequest{
+			ProjectDir: f.dir, UserId: f.userID, GraphId: f.graphID, SeenRevision: proposal.GetRevision(),
+			Rows: []*engine.ApplyPromoteGraphAlignmentRow{{SubjectId: f.incoming, Target: "handle", EntityId: f.handle, DefaultPins: true}},
+		}, &res)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(res.GetWritten()) != 1 || res.GetWritten()[0].GetEntity().GetId() != f.handle || res.GetWritten()[0].GetPins() == 0 {
+			t.Fatalf("written = %+v, want one row on %s with pins", res.GetWritten(), f.handle)
+		}
+	})
 }

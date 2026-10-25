@@ -335,6 +335,37 @@ struct SourcePageModelTests {
         #expect(!model.artifacts.canUseAsThumbnail(model.artifacts.items[0]))
     }
 
+    @Test func creatingAnArtifactWithAFileOpensTheGraphJump() async throws {
+        let store = makeStore()
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: "g-1", ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: []
+            ),
+        ]
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = SourcePageModel(
+            sourceID: sourceID, session: session, userID: userID,
+            sessionDisplayName: "Jake Robins", store: store
+        )
+        await model.warmFromSession()
+        await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
+        #expect(model.evidenceGraphLocation == nil)
+
+        model.artifacts.openAdd()
+        model.artifacts.draft.label = "Scan"
+        let path = FileManager.default.temporaryDirectory
+            .appendingPathComponent("scan-\(UUID().uuidString).pdf").path
+        try Data("%PDF-1.1".utf8).write(to: URL(fileURLWithPath: path))
+        model.artifacts.draft.filePath = path
+        await model.artifacts.create()
+
+        // The create linked the Artifact to the entry graph; the file ingest
+        // after it moved no graph link, so the list reloads only if the
+        // create's effects were applied too.
+        await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
+        #expect(model.evidenceGraphLocation?.graphId == "g-1")
+    }
+
     @Test func useAsThumbnailAndRevertToTypeIcon() async throws {
         let store = makeStore()
         let model = makeModel(store: store)
@@ -400,6 +431,54 @@ struct SourcePageModelTests {
         #expect(model.source?.thumbnailMediaType.isEmpty == true)
         #expect(model.source?.coverMode == "type_icon")
         #expect(model.identity.typeLabel == "Photograph")
+    }
+
+    @Test func aRefusedFileKeepsTheCreatedArtifactAndARetryAttachesToIt() async throws {
+        let store = makeStore()
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: "g-1", ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: []
+            ),
+        ]
+        store.ingestArtifactFileError = CoreInvokeError.coded(
+            status: 1, code: "ingest.invalid", kind: .user, params: []
+        )
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = SourcePageModel(
+            sourceID: sourceID, session: session, userID: userID,
+            sessionDisplayName: "Jake Robins", store: store
+        )
+        await model.warmFromSession()
+        await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
+        model.artifacts.openAdd()
+        model.artifacts.draft.label = "Scan"
+        model.artifacts.draft.filePath = "/tmp/provenencia-missing-\(UUID().uuidString).bin"
+
+        await model.artifacts.create()
+
+        // Go created the Artifact before the file was refused: the page shows
+        // it and its graph link, and the dialog stays open on the refusal.
+        #expect(model.artifacts.isAdding)
+        #expect(model.artifacts.draft.reject != nil)
+        #expect(model.artifacts.items.map(\.label) == ["Scan"])
+        #expect(model.artifacts.items.first?.fileID.isEmpty == true)
+        await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
+        #expect(model.evidenceGraphLocation?.graphId == "g-1")
+
+        store.ingestArtifactFileError = nil
+        let path = FileManager.default.temporaryDirectory
+            .appendingPathComponent("scan-\(UUID().uuidString).pdf").path
+        try Data("%PDF-1.1".utf8).write(to: URL(fileURLWithPath: path))
+        model.artifacts.applyPickedFile(url: URL(fileURLWithPath: path), into: .create)
+        model.artifacts.draft.label = "Scan, front"
+
+        await model.artifacts.create()
+
+        #expect(!model.artifacts.isAdding)
+        #expect(store.artifactsBySource[sourceID]?.count == 1)
+        #expect(model.artifacts.items.count == 1)
+        #expect(model.artifacts.items.first?.label == "Scan, front")
+        #expect(model.artifacts.items.first?.fileID.isEmpty == false)
     }
 
     @Test func ingestMissingFileSurfacesIngestInvalid() async {

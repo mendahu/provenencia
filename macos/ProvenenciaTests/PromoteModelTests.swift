@@ -414,6 +414,33 @@ struct PromoteModelTests {
         ])
     }
 
+    @Test func aFoundRecordIsProposedHeldAndFiled() async {
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.membershipBySubject["x"] = CatalogSubjectMembership(
+            subjectID: "x", claimID: "claim-x",
+            entity: CatalogCanonicalEntity(id: "e-far", ref: "PER-FAR", subjectTypeID: "type-person", label: "Polly Jones"),
+            kind: "person"
+        )
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.mapRest()
+        #expect(model.flow.row("a")?.target == .unset)
+
+        model.hold(subjectID: "a", id: "e-far", ref: "PER-FAR", header: nil)
+        _ = await waitUntil { !model.isProposing }
+        #expect(store.lastPromoteFixed == [CatalogPromoteGraphAlignmentFixed(subjectID: "a", handleID: "e-far")])
+        let ada = model.flow.row("a")
+        #expect(ada?.target.handleID == "e-far")
+        #expect(ada?.menu.first { $0.id == "e-far" }?.reason == .decided)
+
+        model.done()
+        let filed = await waitUntil { store.lastPromoteBatch != nil }
+        #expect(filed)
+        let batch = store.lastPromoteBatch?.first { $0.subjectID == "a" }
+        #expect(batch?.target == "handle")
+        #expect(batch?.entityID == "e-far")
+    }
+
     /// Ada and Bea on one page, each placed by the given proposal rows.
     private func loadedAdaAndBea(
         _ ada: CatalogPromoteGraphAlignmentRow,

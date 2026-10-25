@@ -172,6 +172,17 @@ final class PromoteModel {
 
     func setTarget(subjectID: String, token: String) {
         guard flow.setTarget(subjectID: subjectID, token: token) else { return }
+        proposeAfterDecision()
+    }
+
+    /// Holds a record Promote did not offer as the row's decided target.
+    func hold(subjectID: String, id: String, ref: String, header: CatalogConclusionHeader?) {
+        guard flow.hold(subjectID: subjectID, id: id, ref: ref, header: header) else { return }
+        proposeAfterDecision()
+    }
+
+    /// A decision changed the fixed pairs: propose again.
+    private func proposeAfterDecision() {
         flow.staleNote = nil
         let generation = nextProposal()
         Task { await repropose(generation: generation) }

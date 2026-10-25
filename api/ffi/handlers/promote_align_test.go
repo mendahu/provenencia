@@ -29,6 +29,12 @@ import (
 // Source and Subject ids.
 func personOnNewSource(t *testing.T, dir, userID, typeID, sexKey, polarity string) (sourceID, subjectID string) {
 	t.Helper()
+	return namedPersonOnNewSource(t, dir, userID, typeID, "Mary Smith", sexKey, polarity)
+}
+
+// namedPersonOnNewSource is personOnNewSource for a person with the given name.
+func namedPersonOnNewSource(t *testing.T, dir, userID, typeID, personName, sexKey, polarity string) (sourceID, subjectID string) {
+	t.Helper()
 	uid := uuid.MustParse(userID)
 	tid := uuid.MustParse(typeID)
 	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
@@ -68,7 +74,7 @@ func personOnNewSource(t *testing.T, dir, userID, typeID, sexKey, polarity strin
 			return citations.CreateWithObservations(tx, uid[:], citations.CreateInput{
 				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
 			}, []observations.Input{
-				{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluetest.Western("Mary Smith")},
+				{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluetest.Western(personName)},
 				{SubjectID: s.ID, PropertyID: sex.ID, ValueTermID: term.ID, Polarity: polarity},
 			})
 		})
@@ -133,6 +139,40 @@ func TestProposeSendsContested(t *testing.T) {
 		})
 	}
 	runRPC(t, ProposePromoteGraphAlignment, tests)
+}
+
+// A fixed pair on a record the shortlist does not reach: unfixed the row does
+// not offer it; fixed the row holds it, decided and contested on a conflict.
+func TestProposeHoldsAFoundRecord(t *testing.T) {
+	f := newFoundRecordFixture(t)
+	propose := func(fixed ...*engine.PromoteGraphAlignmentFixed) *engine.PromoteGraphAlignmentRow {
+		t.Helper()
+		var resp engine.ProposePromoteGraphAlignmentResponse
+		mustRPC(t, ProposePromoteGraphAlignment, &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: f.dir, GraphId: f.graphID, Fixed: fixed}, &resp)
+		for _, row := range resp.GetRows() {
+			if row.GetSubjectId() == f.incoming {
+				return row
+			}
+		}
+		t.Fatalf("no row for %s in %+v", f.incoming, resp.GetRows())
+		return nil
+	}
+
+	unfixed := propose()
+	if unfixed.GetHandleId() == f.handle {
+		t.Fatalf("unfixed row %+v targets the found record", unfixed)
+	}
+	for _, alt := range unfixed.GetAlternatives() {
+		if alt.GetHandleId() == f.handle {
+			t.Fatalf("unfixed row lists the found record: %+v", unfixed)
+		}
+	}
+
+	row := propose(&engine.PromoteGraphAlignmentFixed{SubjectId: f.incoming, HandleId: f.handle})
+	if row.GetTarget() != "handle" || row.GetHandleId() != f.handle || row.GetReason() != "decided" ||
+		row.GetAssessment() != "none" || !row.GetContested() {
+		t.Fatalf("fixed row %+v, want handle %s, decided, none, contested", row, f.handle)
+	}
 }
 
 // A row whose earlier pair was released carries the move's reason and the
