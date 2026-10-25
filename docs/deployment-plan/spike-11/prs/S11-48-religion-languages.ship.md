@@ -1,7 +1,7 @@
 # Ship log — S11-48 Religion and languages spoken on a person
 
-**Plan:** [`S11-48-religion-languages.md`](S11-48-religion-languages.md) · **Branch:** `s11-48-religion-languages` · **PR:** —
-**State:** implementing
+**Plan:** [`S11-48-religion-languages.md`](S11-48-religion-languages.md) · **Branch:** `s11-48-religion-languages` · **PR:** #563
+**State:** ready
 
 The branch already carries the plan, its review log and `docs/ideas/organizations.md` (commits `5badc2ad`, `f53cc97a`) with `origin/main` @ `846fa656` merged in (`fd21f78e`). `main` moved past the planning base only in S11-41's files; no Current state row is touched. The plan and the code ship as one PR.
 
@@ -36,3 +36,16 @@ Check: `grep -n "func TestInstallSeeds" core/database/subjectvocab/subjectvocab_
 Files: `.agents/skills/add-seeded-vocabulary/SKILL.md`.
 Do: in "Subject vocabulary / credibility grades", after "tests that create installs and open does not heal.", add: "For `subjectvocab`, `TestInstallMatchesRegistry` already checks every seeded Property, term and binding against the registry, so a new row needs no Install test: add its product values (labels, value type, cardinality, sort order, lock) as a case in `TestSeedProductValues`. Tests in other packages read the registry (`BindingsForType`, `len(seedProperties)`) instead of restating seed lists or counts. `core/claimevidence`'s `seedOrder` is a matching fixture, not a copy of the seed, and stays as it is."
 Check: scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `982694b6`. Gate PASS (orchestrator's run). F-1 and F-2 done (`32993358`, Landed note `982694b6`). Deviation: `TestSeedProductValues` pins the religion and languages_spoken term lists exactly, and for gender, event_type and role checks each listed term is present (with its label and not neutral) rather than the whole list.
+
+## Round 2 — review
+Scope `1fa2bd10...982694b6`. Reviewers: MNT (round 1 had Fix-now majors). CON and SEC+PRF had none.
+
+MNT-1 Resolved, MNT-2 Resolved. No new blockers.
+
+Nits (logged): `MNT-6 · subjectvocab_test.go:484 · TestSeedProductValues cases are nine positional fields; named fields would read easier` · `MNT-7 · plan rows still name the replaced tests; the Landed note covers it`
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: none · to user: — · CON miss: none. Manual check (§10) not run by the implementer; it is the user's.
