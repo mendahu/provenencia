@@ -54,4 +54,4 @@ Reviewers: MNT (had the Fix-now majors MNT-1 and MNT-2). Not sent: CON, UX, SEC+
 Scope `811db8e...68bc4c6`. MNT-1 **Resolved**, MNT-2 **Resolved** (reviewer). MNT-3 **Resolved** (orchestrator and reviewer: `NameFormatOrders.givenSurname`; no exact copy left). No new findings, no nits. No Fix plan 2.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · later PR: UX-1 → S11-D3 / S11-36 (written into the map) · to user: — · CON miss: none
+Gate PASS · CI green (macOS first run; Go on re-run: the first run missed `TestLargeSourceBudgets/cold` by 15 ms, 2.515 s against 2.5 s, with no Go production change on this PR) · open: none · follow-ups: none · later PR: UX-1 → S11-D3 / S11-36 (written into the map) · to user: — · CON miss: none
