@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-48 — Religion and languages spoken on a person
+
+**Landed 2026-10-25** in [#563](https://github.com/mendahu/provenencia/pull/563). New projects' persons take Religion and Languages spoken as term Properties (cardinality multiple), seeded with Catholic and English; the researcher adds the rest with Add custom. Catalogs made earlier get them from S11-44's command.
+
 ## S11-41 — One link reading for bridges
 
 **Landed 2026-10-25** in [#561](https://github.com/mendahu/provenencia/pull/561). Reading a bridge as a `segmentcompare.Link` moved out of `promotealign` into `core/segmentcompare/key.go`: `LinkOf`, `EventEndpoint` and a new `Keys` that returns a bridge's keys from each of its ends. The layer loader and `loadCanon`'s `canonKeys` (and through it the evidence query) call them, and the private `linkOf` and `eventEndpoint` are gone, so `core/kinship` can key an implied link the way a recorded one is keyed. Nothing changes for researchers.

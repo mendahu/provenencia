@@ -2,6 +2,7 @@ package graphcache_test
 
 import (
 	"slices"
+	"sort"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -23,7 +24,7 @@ func TestVocabularyBindings(t *testing.T) {
 		t.Fatal("the seeded vocabulary carries no bindings")
 	}
 	got := v.BindingOrder()[vocabkey.Person]
-	want := []vocabkey.PropertyKey{"name", "likeness", "sex_at_birth", "gender", "interests"}
+	want := seededPersonOrder()
 	if !slices.Equal(got, want) {
 		t.Fatalf("BindingOrder()[person] = %v, want %v", got, want)
 	}
@@ -55,7 +56,7 @@ func TestVocabularyBindingsPluginTypeSeededKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := v.BindingOrder()[vocabkey.Person]
-	want := []vocabkey.PropertyKey{"name", "likeness", "sex_at_birth", "gender", "interests"}
+	want := seededPersonOrder()
 	if !slices.Equal(got, want) {
 		t.Fatalf("BindingOrder()[person] = %v, want only the provenencia person's %v", got, want)
 	}
@@ -96,7 +97,20 @@ func TestVocabularyDropsOnBindingReorder(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := v.BindingOrder()[vocabkey.Person]
-	if len(got) != len(bs) || got[0] != "interests" || got[len(got)-1] != "name" {
+	seeded := seededPersonOrder()
+	if len(got) != len(bs) || got[0] != seeded[len(seeded)-1] || got[len(got)-1] != seeded[0] {
 		t.Fatalf("order after reorder = %v", got)
 	}
+}
+
+// seededPersonOrder is the registry's person binding order, so a seeded
+// Property costs no edit here.
+func seededPersonOrder() []vocabkey.PropertyKey {
+	bindings := subjectvocab.BindingsForType("person")
+	sort.Slice(bindings, func(i, j int) bool { return bindings[i].SortOrder < bindings[j].SortOrder })
+	out := make([]vocabkey.PropertyKey, 0, len(bindings))
+	for _, b := range bindings {
+		out = append(out, vocabkey.PropertyKey(b.PropertyKey))
+	}
+	return out
 }

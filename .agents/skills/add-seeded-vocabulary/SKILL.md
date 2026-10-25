@@ -55,7 +55,7 @@ new Install into **`onboarding.createCatalog` only**.
 
 Same pattern as Source: edit that package’s `registry.go`, keep
 `origin = provenencia`, no SQL seeds, tests that create installs and open does
-not heal. Subject type keys/prefixes: `docs/seeded-vocabulary.md` §3.1.
+not heal. For `subjectvocab`, `TestInstallMatchesRegistry` already checks every seeded Property, term and binding against the registry, so a new row needs no Install test: add its product values (labels, value type, cardinality, sort order, lock) as a case in `TestSeedProductValues`. Tests in other packages read the registry (`BindingsForType`, `len(seedProperties)`) instead of restating seed lists or counts. `core/claimevidence`'s `seedOrder` is a matching fixture, not a copy of the seed, and stays as it is. Subject type keys/prefixes: `docs/seeded-vocabulary.md` §3.1.
 Property value types: `text` \| `integer` \| `date` \| `name` \| `subject` \| **`term`** \| **`depiction`**.
 Kind/edge Properties (`event_type`, `role`, `relationship_type`) use `term` + `property_terms` (S7-01b) — not free-text Observation strings.
 **`value_type = term` and `depiction` Properties are Install/registry only** (`origin=provenencia` or `plugin:<id>`). Researcher Create Property must refuse `term` and `depiction`.
@@ -77,7 +77,7 @@ update it in the same change as product bridges. Live Mac connect reads
 
 A new subject type also adds a `subject_<key>` case to `PVMarkKey`, its `provenencia_subject_<key>` asset, and its `accessibilityName` with an `L10n.DesignSystem` string. `TestSwiftVocabularyMatchesGo` fails until the case exists.
 
-**A seeded term the Mac app names has a Swift step too.** For a term of `gender`, `sex_at_birth`, `role`, `event_type`, `relationship_type` or `place_relationship_type`, add its `Seeded…Term` constant in `macos/App/Platform/ConclusionVocabulary.swift` and its entry in `L10n.PropertyTerm.wording` (`macos/App/Platform/L10n.swift`): the term's label, and for a role, event type or relationship type its share phrase and similar phrase, each whole, with the catalog keys (`add-localized-string`). `TestSwiftVocabularyMatchesGo` fails, naming the term, when the seed has a term with no constant or a constant has no wording. A new term-bearing Property needs the same two steps and an entry in that test's list.
+**A seeded term the Mac app names has a Swift step too.** For a term of `gender`, `sex_at_birth`, `role`, `event_type`, `relationship_type` or `place_relationship_type`, add its `Seeded…Term` constant in `macos/App/Platform/ConclusionVocabulary.swift` and its entry in `L10n.PropertyTerm.wording` (`macos/App/Platform/L10n.swift`): the term's label, and for a role, event type or relationship type its share phrase and similar phrase, each whole, with the catalog keys (`add-localized-string`). `TestSwiftVocabularyMatchesGo` fails, naming the term, when the seed has a term with no constant or a constant has no wording. A new term-bearing Property whose terms the app names needs the same two steps and an entry in that test's list. One the app only shows by catalog label (`religion`, `languages_spoken`) needs neither.
 
 Uniqueness is **`UNIQUE (key, origin)`**. Lookup is always `(key, origin)`, never bare key. Domain FKs store vocabulary **`id`**, not key.
 
