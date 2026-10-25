@@ -119,3 +119,7 @@ Maintainability (opus): every round-1 answer accepted; verdict **Fits with chang
 ## Verdict
 
 Round 2 done. No open blocker; no To user item. Final: **Fits / Ready**, pending the S12-D2 board.
+
+## Board check (2026-10-25)
+
+The agreed S12-D2 board was rendered from its exported archive and every frame (1 – 9 and Twelve graphs) compared with §6. It matches: placement, card content and order, Open / bin sizes, the disabled-Open tooltip, the recipe's confirm and both notices, the count in words, the toast copy and the long-text truncation. Two plan changes followed: D-8's skeleton now mirrors the board's row-shaped skeleton (three text bars and two button blocks), and §6 Frames records the board. The board's note on web-kit gaps (SkeletonBar, `last_graph`) is an Out line: the Swift kit already has both. Status → Planned.

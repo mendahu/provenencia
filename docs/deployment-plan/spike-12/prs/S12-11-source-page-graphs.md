@@ -1,10 +1,10 @@
 # S12-11 — Source page Graphs section
 
-**Status:** Blocked — on board S12-D2
+**Status:** Planned
 **Spike / slice:** Spike 12 · Slice 4 — Graphs in the UI
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S12-D2](../design/S12-D2-source-page-graphs.md), board not agreed yet
-**Board:** none yet. Do not start this PR until this line holds the agreed Claude Design share link and Status reads Planned. At agreement the planner compares the frames with §6 and refreshes this plan where they differ (brief §7 Handoff).
+**Brief:** [S12-D2](../design/archive/S12-D2-source-page-graphs.md), board agreed 2026-10-25
+**Board:** [Claude Design](https://claude.ai/design/p/de1e1ccc-aa35-455f-9b9c-3ae269593dc7?via=share), agreed 2026-10-25. The planner rendered every frame from the exported board and checked it against §6; §6 Frames describes them in words for an implementer who cannot open the link.
 **Depends on:** S12-05 (landed [#511](https://github.com/mendahu/provenencia/pull/511)), S12-08 (landed [#528](https://github.com/mendahu/provenencia/pull/528)), S12-D2
 **Blocks:** S12-12
 **Branch:** `s12-11-source-page-graphs`, branched from `main` after the plan branch merges (so STEP-7 edits this file in the same branch)
@@ -97,6 +97,7 @@ The Source page shows every Evidence graph of its Source in a new **Evidence gra
 | Pruning history entries of a deleted graph | not planned — a deleted graph holds no Subjects; its history entry opens as any missing graph does today |
 | A localized label for a graph named `Default` | not planned (D-6) |
 | A kit list component with trailing actions | not planned — one call site (brief non-goals) |
+| The web design-system kit's missing SkeletonBar and `last_graph` delete gate, which the board registered locally (its GS-8 note) | not planned here — the Swift kit already has both (`PVSkeletonBar`, `CatalogDeleteImpactGate.lastGraph`); the web kit is backfilled from the app in the design-system project |
 | Aligning the Notes section's bare-number count with Artifacts' localized count | dogfood log (`docs/dogfood/ux.md`), one line in STEP-7 |
 
 ## 4. Current state
@@ -138,7 +139,7 @@ The Source page shows every Evidence graph of its Source in a new **Evidence gra
 | D-5 | Delete is always enabled (except while `model.source` is nil). `SourcePageModel.askDeleteGraph(id:)` *(new)* calls `presentImpact(kind: "evidence_graph", id:, ref: graph.ref, title: graph.name)`. The `confirm` closure in `confirmResourceDelete` becomes `switch target.kind` with cases `"source"` (today's body), `"artifact"` (today's fall-through body) and `"evidence_graph"` (`store.deleteEvidenceGraph`, `session.apply(effects)`, toast), and `default: return` (no write). It returns false for a graph (the page stays). | User 2026-10-25: the recipe explains, as Source and Artifact delete. A fourth kind cannot fall into `deleteArtifact` (review M-7). | Disabling Delete on the last graph; a separate `PVConfirm`; an `if` branch before the fall-through. |
 | D-6 | A graph's name is shown verbatim everywhere, including `Default`. | User 2026-10-25 (S12-03 review UX-3). Renaming is S12-12. | A localized label for `Default`. |
 | D-7 | Section placement: between `overviewColumns` and `SourcePageArtifactsView` in `SourcePageContent`. | User 2026-10-25. | Top of page; below Artifacts. |
-| D-8 | Loading is one `PVCard` holding `PVSkeletonBar(width: 160, height: 12)` over `PVSkeletonBar(width: nil, height: 10)`, spacing `PVSpacing.space4`. Error is `PVCallout(tone: .danger, message: L10n.Errors.message(for:))` under the section header. No retry button: the session revalidates the list on its next visible read. | Brief GS-8; the kit. | A spinner; a Read again button. |
+| D-8 | Loading is one `PVCard` laid out like a row (D-17): on the left a `VStack(alignment: .leading, spacing: PVSpacing.space4)` of `PVSkeletonBar(width: 320, height: 12)`, `PVSkeletonBar(width: 140, height: 10)` and `PVSkeletonBar(width: 520, height: 10)` (name, ref, description); on the right `PVSkeletonBar(width: 72, height: 28)` and `PVSkeletonBar(width: 28, height: 28)` in an `HStack(spacing: PVSpacing.space4)` (Open, Delete). The board draws it so. Error is `PVCallout(tone: .danger, message: L10n.Errors.message(for:))` under the section header. No retry button: the session revalidates the list on its next visible read. | Brief GS-8; the kit. | A spinner; a Read again button. |
 | D-9 | Breadcrumbs: `breadcrumbItems(for:names:goTo:)` takes `names: WorkspaceToolbar.BreadcrumbNames` *(new)*, a struct of `sourceTitle: (String) -> String?` and `graphName: (String) -> String?`, default `.none` (both return nil). For the graph, composer and Promote surfaces with a `graphId`: a Source crumb (id `source-<sourceId>`, label `names.sourceTitle(sourceId)` ?? the location's Source title (`title` on `.graph`, `sourceTitle` on composer and Promote), left out when both are empty; action `goTo(.sourcePage(sourceId:, ref: nil, title: label))`); then the graph crumb (id `graph-<graphId>`, label `names.graphName(graphId) ?? L10n.Workspace.evidenceGraphTitle`; on the graph surface it is the leaf with no action; on composer and Promote it goes to `.evidenceGraph(sourceId:graphId:title:)` with the Source crumb's resolved label as `title`); then Citation / Promote as today. `WorkspaceToolbar` reads `@Environment(WorkspaceSession.self)` and builds `BreadcrumbNames` from `session.evidenceGraph(id:)?.name` and `session.source(id:)?.title` (D-18). | User 2026-10-25 (Sources › Source › graph). One rule: names come from the lists, so a Source or graph rename shows at once (review M-6). The static function stays testable without a session. | A `graphName` field on `WorkspaceLocation` — stale on rename; reading the Source title from per-surface location fields only. |
 | D-10 | `PlaceRegistry` `.sourceGraph` and `.sourcePromote` append `.evidenceGraphsList(project: project)` as their last key, as `.sourceCitationComposer` does. | A restored canvas or Promote page shows its graph name without visiting the Source page. | A permanent fallback label. |
 | D-11 | Deleted: `SourcePageIdentityHeader.evidenceGraphJump`; `SourcePageModel.evidenceGraphLocation`, `evidenceGraphBlockedReason`; `SourcesListNavigation.graphsBySource(in:)`, `graphListLoaded(in:)`; `L10n.Sources.jumpToEvidenceGraph`; `L10n.Workspace.evidenceGraphFor(sourceTitle:)`; their `Localizable.xcstrings` entries. The `graphBlockedReason(hasArtifact:…)` doc comment drops "/ Jump to evidence graph". | Working rule "High tolerance for churn" (review M-3). | Keeping them for S12-14 — S12-14 reads D-3 and D-4. |
@@ -198,13 +199,13 @@ None — `ListEvidenceGraphs`, `DeleteEvidenceGraph` and `GetDeleteImpact` (kind
 | Header | remove `evidenceGraphJump` | `SourcePageIdentityHeader.swift` | The action `HStack` holds `copySourceButton`, `deleteSourceButton` |
 | Breadcrumbs | `PVBreadcrumbs` (unchanged) | `Features/Workspace/WorkspaceToolbar.swift` | D-9 |
 
-**Frames** (the brief's, as this plan builds them): frame 1 the page with one Default card under the overview columns and above Artifacts, header with Copy… and Delete only; frame 2 three cards in name order with one-line descriptions; frame 3 the Default card with Open disabled; frames 4 – 6 the existing DeleteImpact confirm and notices; frame 7 two cards and the success toast; frame 8 the header with no count and one skeleton card, then the header with a danger callout; frame 9 a two-line truncated name and a three-line truncated description.
+**Frames** (the agreed board, checked frame by frame on 2026-10-25): frame 1 the page with one Default card under the overview columns and above Artifacts, header with Copy… and Delete only; frame 2 three cards in name order with one-line descriptions; frame 3 the Default card with Open disabled; frames 4 – 6 the existing DeleteImpact confirm and notices; frame 7 two cards and the success toast; frame 8 the header with no count and one skeleton card, then the header with a danger callout; frame 9 a two-line truncated name and a three-line truncated description. Frame 4 is the recipe's existing confirm ("Delete evidence graph GPH-JONES?", Keep / Delete evidence graph), frames 5 and 6 its notices with Done; none of them needs new recipe code beyond D-12's noun. The board's error frame shows "Couldn’t read the evidence graphs." as a stand-in; the app shows `L10n.Errors.message(for:)` (D-8).
 
 States: loading, error (D-8), one graph, many graphs (no inner scroll), a graph with no linked Artifact (Open disabled), narrow window (D-17). Accessibility: Open and Delete carry the graph's name in their labels; the row's text reads in order (name, ref, description).
 
 ### Strings
 
-L10n keys *(new)*; the planner confirms them against the agreed board before Status becomes Planned:
+L10n keys *(new)*, checked against the agreed board 2026-10-25:
 
 - `L10n.Sources.graphsHeading` `sources.page.graphsHeading` = "Evidence graphs"
 - `L10n.Sources.graphsCount(_:)` `sources.page.graphsCount` = "%lld evidence graphs"
@@ -253,7 +254,7 @@ Do: run the whole gate.
 Check: `scripts/check-pr.sh` prints `check-pr: PASS`.
 
 **STEP-7 — Docs**
-Files: `docs/deployment-plan/spike-12/completed.md`, `docs/deployment-plan/spike-12/deployment-plan.md`, this plan, `docs/deployment-plan/spike-12/design/S12-D2-source-page-graphs.md` → `design/archive/`, `docs/deployment-plan/spike-12/design/README.md`, `docs/dogfood/ux.md`.
+Files: `docs/deployment-plan/spike-12/completed.md`, `docs/deployment-plan/spike-12/deployment-plan.md`, this plan, `docs/dogfood/ux.md`. (The brief was archived at board agreement.)
 Do: per the Definition of done, and:
 - `SourcesListNavigation.entryGraph`'s doc comment: "(S12-11, S12-14)" → "(S12-14)".
 - Working rule "A graph is a place": "Until S12-11 and S12-14 add per-graph Open, the Source page jump and the Sources list Open open" → "Until S12-14 adds per-graph Open, the Sources list Open opens".
@@ -291,7 +292,6 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `W
 - [ ] Version bump: none (VERSION stays 0.2.0)
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status, working rule and S12-13 scope entry reworded (STEP-7); completed.md: one short paragraph of what shipped
-- [ ] Brief S12-D2 moved to design/archive/ and design/README.md updated
 - [ ] Domain doc: none — no rule in docs/*.md changes; dogfood log line added
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```

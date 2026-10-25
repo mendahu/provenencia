@@ -4,11 +4,11 @@
 **Spike:** Provenencia Spike 12 (Source structure)
 **View:** Source page — a new Graphs section, and the header without its Evidence graph jump
 **Implements later as:** PR **S12-11**
-**Board:** not drawn yet
+**Board:** agreed 2026-10-25 — [Claude Design](https://claude.ai/design/p/de1e1ccc-aa35-455f-9b9c-3ae269593dc7?via=share)
 **Depends on:** S12-05 (graph RPCs and the graph list), S12-08 (a graph is a place)
-**Related:** [`../source-structure.md`](../source-structure.md#where-graphs-show) (the design), [`../deployment-plan.md`](../deployment-plan.md) working rules "Source page", "One graph list", "Name and description are editable; graphs list alphabetically by name". S12-D1 drew the Source page header this board edits. S12-D3 (Graph form) adds Add graph and Edit to this section and does not redraw it. S12-D5 (Sources list accordion) draws the same graphs as list rows on another view.
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** [`../source-structure.md`](../../source-structure.md#where-graphs-show) (the design), [`../deployment-plan.md`](../../deployment-plan.md) working rules "Source page", "One graph list", "Name and description are editable; graphs list alphabetically by name". S12-D1 drew the Source page header this board edits. S12-D3 (Graph form) adds Add graph and Edit to this section and does not redraw it. S12-D5 (Sources list accordion) draws the same graphs as list rows on another view.
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -152,4 +152,4 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 ## 7. Handoff
 
-When the board is agreed: move this brief to the spike's `design/archive` folder, update [`README.md`](README.md), and move the S12-11 plan from `Blocked — on board S12-D2` to `Planned` with the frames' final copy in its Strings section.
+When the board is agreed: move this brief to the spike's `design/archive` folder, update [`README.md`](../README.md), and move the S12-11 plan from `Blocked — on board S12-D2` to `Planned` with the frames' final copy in its Strings section.
