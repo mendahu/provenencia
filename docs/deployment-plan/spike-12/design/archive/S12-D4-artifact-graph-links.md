@@ -4,11 +4,11 @@
 **Spike:** Provenencia Spike 12 (Source structure)
 **View:** Source page — the Add artifact dialog and an Artifact card in edit
 **Implements later as:** PR **S12-13**
-**Board:** not drawn yet
+**Board:** agreed 2026-10-25 — [Claude Design](https://claude.ai/design/p/de1e1ccc-aa35-455f-9b9c-3ae269593dc7?via=share) (the S12-D4 frame row on the Source page board). The board moved a refused card save onto the card; LK-9 below reads as agreed, with its body reworded (user, 2026-10-25) because a save of several writes can stop partway
 **Depends on:** S12-12 (a second graph can be made, board S12-D3), S12-11 (the Evidence graphs section, board S12-D2)
-**Related:** [`../source-structure.md`](../source-structure.md#rules) (the link rules), [`../deployment-plan.md`](../deployment-plan.md) working rules "Artifact ↔ graph links", "Single-graph Sources hide link checkboxes". [S12-D3](archive/S12-D3-graph-form.md) drew the graph form, its locked rows and their hint; this board reuses the lock and the hint and does not redraw the form. The Add artifact dialog and the Artifact cards are as the Source page draws them today.
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** [`../source-structure.md`](../../source-structure.md#rules) (the link rules), [`../deployment-plan.md`](../../deployment-plan.md) working rules "Artifact ↔ graph links", "Single-graph Sources hide link checkboxes". [S12-D3](S12-D3-graph-form.md) drew the graph form, its locked rows and their hint; this board reuses the lock and the hint and does not redraw the form. The Add artifact dialog and the Artifact cards are as the Source page draws them today.
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -72,7 +72,7 @@ A census has one Evidence graph per household, each linked to the page scans it 
 | A graph whose Citations use the Artifact keeps it | On the card, that graph's box is checked and locked (the kit checkbox's lock mark, as in the graph form) with the hint under its name, the graph form's hint: "1 citation in this graph uses this artifact" / "3 citations in this graph use this artifact". No Citation list on the card; the graph's own Edit form lists them. |
 | A graph keeps at least one Artifact | When the Artifact is the only one a graph links, that graph's box is checked and locked with the hint "The only artifact in this evidence graph". |
 | The card reads before it can edit links | Opening edit on a card asks which graphs' Citations use the Artifact. Until that read returns, label and description are editable and the group shows a small loading line, "Reading the evidence graphs…"; Save is disabled. If the read fails, a compact danger callout with **Read again**, titled "Couldn’t read the evidence graphs", body "Label and description are kept. Read the evidence graphs again to change the links.", takes the group's place, and Save stays disabled. |
-| Save writes everything, Cancel nothing | Save writes the label and description, then each changed link. A refusal leaves the card in edit with the card's danger callout and the app's message for it; every field and box keeps its value. Cancel (or Esc) restores the stored label, description and links. |
+| Save writes everything, Cancel nothing | Save writes the label and description, then each changed link. A refusal leaves the card in edit with a danger callout on the card and the app's message for it; every field and box keeps its value. Cancel (or Esc) restores the stored label, description and links. |
 | A link change shows elsewhere at once | After Save, each graph's composer and canvas offer the Artifact or stop offering it; the graph form shows the new links. No toast after a card save (as today). |
 | After Add | The dialog closes, the card appears and the existing toast shows, as today. |
 
@@ -107,7 +107,7 @@ A census has one Evidence graph per household, each linked to the page scans it 
 | LK-6 | A graph whose Citations use the Artifact: the box is checked, shows the kit's lock mark, can't be clicked, and its description line reads the Citation hint ("{n} citation(s) in this graph use(s) this artifact") in place of the ref. |
 | LK-7 | A graph that links only this Artifact: the box is checked and locked the same way, with the hint "The only artifact in this evidence graph". When both apply, the Citation hint shows. |
 | LK-8 | Card loading: label and description editable; in the group's place, the forms' loading area at its compact size (one skeleton bar and the caption "Reading the evidence graphs…"); Save disabled. Read error: the forms' compact danger callout with **Read again**, title "Couldn’t read the evidence graphs", body "Label and description are kept. Read the evidence graphs again to change the links." and the error; Save disabled. |
-| LK-9 | Save is enabled when the label is not blank and any field or box changed. A refused save keeps the card in edit with the page's danger callout and the app's message; boxes keep their values. Cancel and Esc restore everything. |
+| LK-9 | Save is enabled when the label is not blank and any field or box changed. A refused save keeps the card in edit with a compact danger callout as the first item of its edit fields: title "Couldn’t save the artifact", body "Some changes may not be saved. Every field and box keeps its value — save again to finish." and the app's message; boxes keep their values. Cancel and Esc restore everything. |
 | LK-10 | VoiceOver: each row reads the graph name, "checked" or "unchecked", and its ref or hint; a locked row adds "locked". The group reads as "Evidence graphs". |
 | LK-11 | The canvas's no-artifact callout names the graph: title "No artifacts in this evidence graph", body "Citing needs an artifact linked to this evidence graph. Place tools, Connect, and Add property stay disabled until one is linked.", action **Go to Source page** (secondary). Layout unchanged. |
 | LK-12 | The Citation composer's no-artifact callout body reads "Every citation needs an artifact linked to this evidence graph. Add one on the Source page, or link an existing one from its card, then return here." Layout and button unchanged. |
@@ -144,7 +144,7 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Graph row | Component | Ship | `DesignSystem/Components/Checkbox/PVCheckbox.swift` `init(verbatim:description:isChecked:isLocked:)` | Name as label, ref or hint as `description`, `isLocked` for LK-6 / LK-7. Not a new row; not `PVArtifactChecklist` (Artifacts with thumbnails). |
 | Graph list | Snowflake | **New** | `Features/Sources/SourceArtifactGraphLinks.swift` *(new)* | One view used by the dialog and the card: rows, scroll past six, the "Check at least one" line. First call site: `SourcePageArtifactsView.addForm`; second call site: `SourcePageArtifactsView.editFields`. Both in one feature, so a feature view, not a kit recipe. |
 | Loading and read error | Snowflake | **Extend** | `Features/Sources/SourceFormLoadArea.swift` `SourceFormLoadArea` | Gains a compact size (one skeleton bar) for the card. Not a second loading body. |
-| Save refused | Component | Ship | The page's danger `PVCallout` (`pageError`) | As card save today. |
+| Save refused | Component | Ship | `PVCallout` (danger, compact) | On the card, above Label. Replaces the page-level callout for card saves. |
 | Locked mark and hint | Component | Ship | `PVCheckboxMark` `isLocked`; hint copy `PVDeleteImpactCopy.heading` | The graph form's lock and hint. |
 | Canvas callout | Component | Ship | `Features/EvidenceGraph/EvidenceGraphView.swift` `noArtifactCallout` | Copy only. |
 | Composer callout | Component | Ship | `Features/CitationComposer/CitationComposerView.swift` `noArtifactGate` | Copy only. |
@@ -155,4 +155,4 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 ## 7. Handoff
 
-When the board is agreed: move this brief to the spike's `design/archive` folder, update [`README.md`](README.md), and move the S12-13 plan from `Blocked — on board S12-D4` to `Planned` with the frames' final copy in its Strings section.
+When the board is agreed: move this brief to the spike's `design/archive` folder, update [`README.md`](../README.md), and move the S12-13 plan from `Blocked — on board S12-D4` to `Planned` with the frames' final copy in its Strings section.

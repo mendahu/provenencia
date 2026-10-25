@@ -1,11 +1,11 @@
 # S12-13 — Artifact graph checkboxes
 
-**Status:** Blocked — on board S12-D4
+**Status:** Blocked — on review-plan
 **Spike / slice:** Spike 12 · Slice 4 — Graphs in the UI
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S12-D4](../design/S12-D4-artifact-graph-links.md), board not agreed yet
-**Board:** — (not drawn yet; when it is agreed, record how the implementer sees the frames here, and if they cannot, §6 macOS describes each frame in words)
-**Depends on:** S12-12 (landed [#557](https://github.com/mendahu/provenencia/pull/557)), S12-11 (landed [#549](https://github.com/mendahu/provenencia/pull/549)), S12-10 (landed [#540](https://github.com/mendahu/provenencia/pull/540)), S12-D4
+**Brief:** [S12-D4](../design/archive/S12-D4-artifact-graph-links.md), board agreed 2026-10-25
+**Board:** [Claude Design](https://claude.ai/design/p/de1e1ccc-aa35-455f-9b9c-3ae269593dc7?via=share), agreed 2026-10-25 (the S12-D4 row of frame buttons on the Source page board). The planner rendered all thirteen S12-D4 frames from the exported board and checked them against §6; §6 Frames describes them in words for an implementer who cannot open the link
+**Depends on:** S12-12 (landed [#557](https://github.com/mendahu/provenencia/pull/557)), S12-11 (landed [#549](https://github.com/mendahu/provenencia/pull/549)), S12-10 (landed [#540](https://github.com/mendahu/provenencia/pull/540)), S12-D4 (board agreed 2026-10-25)
 **Blocks:** —
 **Branch:** `s12-13-artifact-graph-checkboxes`, branched from `main` after the plan branch merges
 **Version bump:** none — Spike 11 and 12 PRs leave `VERSION` at 0.2.0 until a release is cut, as S12-01 to S12-12 did; Swift only, no schema change ([`docs/versioning.md`](../../../versioning.md))
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** [rules](../source-structure.md#rules); working rules: "Artifact ↔ graph links", "Single-graph Sources hide link checkboxes", "One graph list", "The graph list has its own effect", "High tolerance for churn"; the S12-05 plan D-10 (store methods), the S12-10 plan D-7 and [ship log](S12-10-composer-linked-artifacts.ship.md) PRF-1 / UX-1, the S12-11 plan D-2, the S12-12 [Landed note](S12-12-graph-form.md) (`pvFormDialog(item:)`, the locked checkbox)
 **Planned:** 2026-10-25 against `main` @ `181dd41`
-**Review:** — (not reviewed yet; `review-plan` runs once the board is agreed and §6 Frames is filled)
+**Review:** — (not reviewed yet; `review-plan` is next)
 
 ### Implementer — read this first
 
@@ -59,7 +59,7 @@ On a Source with two or more Evidence graphs, the researcher chooses an Artifact
 | AC-2.4 | P9 is Brown's only Artifact; Edit on P9 | Brown is checked and locked with "The only artifact in this evidence graph"; no preflight call for Brown |
 | AC-2.5 | On P3: check Brown, uncheck Jones; Save | `linkEvidenceGraphArtifact(g-b, P3)` then `unlinkEvidenceGraphArtifact(g-j, P3)`, once each; no `updateArtifact` call (fields unchanged); the card leaves edit |
 | AC-2.6 | On P3: change label only; Save | `updateArtifact` once; no link or unlink call |
-| AC-2.7 | Link changes and the unlink throws `evidencegraphs.artifact_in_use` | The card stays in edit; `pageError` is that code's `L10n.Errors` copy; the boxes keep their values; the preflight runs again, so Jones shows locked |
+| AC-2.7 | Link changes and the unlink throws `evidencegraphs.artifact_in_use` | The card stays in edit with a compact danger callout at the top of its fields: "Couldn’t save the artifact" / "Some changes may not be saved. Every field and box keeps its value — save again to finish. {that code's `L10n.Errors` copy}"; `pageError` stays nil; the boxes keep their values; the preflight runs again, so Jones shows locked |
 | AC-2.8 | The preflight throws | A danger callout "Couldn’t read the evidence graphs" with Read again replaces the group; Save disabled; Read again repeats the preflight |
 | AC-2.9 | Uncheck Jones; Cancel | No store call; reopening edit shows Jones checked |
 | AC-2.10 | Only a box changed | Save is enabled (`canSaveFields == true`) |
@@ -88,6 +88,7 @@ On a Source with two or more Evidence graphs, the researcher chooses an Artifact
 | Graph checkbox group in card edit, saved with Save through link / unlink (LK-5, LK-9) | STEP-4, STEP-5, AC-2.* |
 | Locked boxes: Citations use it (preflight) and only artifact (LK-6, LK-7) | STEP-4, AC-2.3, AC-2.4 |
 | Card loading and read-error states; compact `SourceFormLoadArea` (LK-8) | STEP-4, STEP-5, AC-2.2, AC-2.8 |
+| A refused card save shows on the card, not the page (LK-9 as agreed on the board) | STEP-4, STEP-5, AC-2.7 |
 | Canvas `canCite` and `fileRows` read the graph's links; canvas callout copy (LK-11) | STEP-6, AC-3.1 – AC-3.3 |
 | Composer callout copy (LK-12, S12-10 review UX-1) | STEP-6, AC-3.4 |
 | Id-indexed graph list in the session behind its accessors; `SourcesModel.graphsBySourceCache` moved onto it (S12-10 PRF-1) | STEP-1, AC-4.* |
@@ -111,7 +112,7 @@ Verified at `181dd41`.
 | Area | Where | Today |
 | --- | --- | --- |
 | Add artifact model | `macos/App/Features/Sources/SourceArtifactsSection.swift` `Draft`, `openAdd()`, `canSubmitDraft`, `addSheetIsDirty`, `create()` | `create()` calls `context.store.createArtifact(…, graphIDs: [])` — every graph. `Draft` has no graph choice |
-| Card edit model | same file, `beginEdit(_:)`, `fieldsDirty(_:)`, `canSaveFields(_:)`, `cancelFields(id:)`, `saveFields(id:)` | Label and description only; one `updateArtifact` call; errors go to `context.pageError` |
+| Card edit model | same file, `beginEdit(_:)`, `fieldsDirty(_:)`, `canSaveFields(_:)`, `cancelFields(id:)`, `saveFields(id:)` | Label and description only; one `updateArtifact` call; a refusal goes to `context.pageError`, the callout at the top of the page (`SourcePageView`, `if let pageError = model.pageError`) |
 | Add artifact form | `macos/App/Features/Sources/SourcePageArtifactsView.swift` `addForm` | Label, Description, File (optional) |
 | Card edit view | same file, `editFields(_:)` | Label, Description (`PVTextArea`), Save / Cancel |
 | Dialog presentation | `macos/App/Features/Sources/SourcePageView.swift` `.pvFormDialog(isPresented:)` bound to `model.artifacts.isAdding` (line ~144, binding at ~315) | Bool-backed |
@@ -143,12 +144,12 @@ Verified at `181dd41`.
 | D-5 | Card link state is one `linkEdit: SourceArtifactLinkEdit?` *(new struct)* on `SourceArtifactsSection`, set by `beginEdit` when D-1 shows the group and cleared by `cancelFields` / a successful save: `artifactID`, `graphs: [CatalogEvidenceGraph]` (snapshot at open, name order), `checked: Set<String>`, `prefill: Set<String>`, `locked: [String: String]` (graph id → hint), `loadState: SourceFormLoadState` | One card is in edit at a time; one value makes "changed" one comparison | Per-artifact dictionaries like `labels` — only one card ever edits |
 | D-6 | Locks: a graph whose `artifactIDs == [artifactID]` is locked with `L10n.Sources.artifactGraphOnlyArtifact` locally, with no read. Every other linked graph gets one `getEvidenceGraphUnlinkImpact(graphID:, artifactIDs: [artifactID])` call, in name order, sequentially, inside `loadLinkLocks()` *(new)*; a returned block locks it with `PVDeleteImpactCopy.heading(block.citations)`, which wins over the only-artifact hint. No linked graph needing a read → `loadState = .ready` at once | The preflight is per graph (S12-05 D-8); a census has a handful of graphs; sequential keeps the fake store's counters deterministic | A new batched RPC — out of scope (Swift only) |
 | D-7 | `fieldsDirty(_:)` also returns true when `linkEdit.checked != linkEdit.prefill`; `canSaveFields(_:)` also requires `linkEdit == nil || linkEdit.loadState == .ready` | LK-9, LK-8 | A separate Save for links — product owner chose one Save |
-| D-8 | `saveFields(id:)` order: `updateArtifact` when the fields changed; then for each graph in name order, `linkEvidenceGraphArtifact` where checked and not currently linked, then `unlinkEvidenceGraphArtifact` where unchecked and currently linked. "Currently linked" reads `context.session.evidenceGraph(id:)` at save time, not `prefill`, so a retry after a partial failure sends only what is left. Each write's effects go through `context.applyWrite` as today. The first error stops the loop, sets `pageError = L10n.Errors.message(for:)` and keeps the card in edit; on `evidencegraphs.artifact_in_use` or `evidencegraphs.last_artifact` it calls `loadLinkLocks()` again | Links before unlinks so an Artifact never passes through zero graphs needlessly; the engine has no multi-graph link write; the re-read mirrors S12-12's save | One `updateEvidenceGraph` per graph with the full set — writes every other Artifact's link row again and races other edits |
+| D-8 | `saveFields(id:)` order: `updateArtifact` when the fields changed; then for each graph in name order, `linkEvidenceGraphArtifact` where checked and not currently linked, then `unlinkEvidenceGraphArtifact` where unchecked and currently linked. "Currently linked" reads `context.session.evidenceGraph(id:)` at save time, not `prefill`, so a retry after a partial failure sends only what is left. Each write's effects go through `context.applyWrite` as today. The first error stops the loop, sets `cardSaveError = L10n.Sources.artifactCardSaveErrorMessage(L10n.Errors.message(for:))` *(new, `String?` on `SourceArtifactsSection`, cleared by `beginEdit`, `cancelFields` and a successful save)* and keeps the card in edit; `saveFields` no longer writes `context.pageError`, on every Source, one graph or many (the board moved the refusal onto the card); on `evidencegraphs.artifact_in_use` or `evidencegraphs.last_artifact` it calls `loadLinkLocks()` again | Links before unlinks so an Artifact never passes through zero graphs needlessly; the engine has no multi-graph link write; the re-read mirrors S12-12's save | One `updateEvidenceGraph` per graph with the full set — writes every other Artifact's link row again and races other edits |
 | D-9 | `EvidenceGraphModel.canCite`: `guard let graph = session.evidenceGraph(id: graphID) else { return session.evidenceGraphsHandle?.value == nil }` then `!graph.artifactIDs.isEmpty`. `fileRows`: `EvidenceGraphFiles.fileBearing(session.linkedArtifacts(graphID:artifacts: workspace.artifacts) ?? [], coverArtifactID:)`. `refreshCanCite()` is deleted. The graph place already holds `.evidenceGraphsList` (`PlaceRegistry`), so `prepare()` adds no query | Map scope (moved from S12-10); a graph missing from a loaded list cannot be cited | Keeping `sourceRow.hasArtifact` — wrong on a multi-graph Source |
 | D-10 | `WorkspaceSession` gains `@ObservationIgnored private var evidenceGraphIndex: EvidenceGraphIndex?` *(new)*, where `struct EvidenceGraphIndex { let revision: Int; let byID: [String: CatalogEvidenceGraph]; let bySource: [String: [CatalogEvidenceGraph]] }` lives in `WorkspaceSession+EvidenceGraphs.swift`, built from `evidenceGraphsHandle.value` when `revision` differs (`bySource` through `SourcesListNavigation.graphsBySource`). `evidenceGraph(id:)`, `evidenceGraphs(sourceID:)` (`bySource[id] ?? []`) and a new `evidenceGraphsBySource: [String: [CatalogEvidenceGraph]]` (empty while no value) read it. `SourcesModel.graphsBySource` reads `session.evidenceGraphsBySource`; `graphsBySourceCache` is deleted | `canCite` is read per card; S12-10 PRF-1 and S12-11 D-2 sent the index here; one cache instead of two | A second cache in the canvas model |
 | D-11 | Add artifact stays on `pvFormDialog(isPresented:)`; this PR adds no dialog. The map scope sentence "Its dialogs present through the kit's `pvFormDialog(item:)`" is replaced in the map by this decision | The draft lives on the section; there is no model object to make the `item` | Wrapping the draft in a throwaway model |
-| D-12 | `SourceArtifactGraphLinks` *(new view)* in `Features/Sources/SourceArtifactGraphLinks.swift` *(new)* takes `graphs`, a `checked: Binding<Set<String>>`, `locked: [String: String]`, `showsNeedsGraph: Bool` and `accessibilityIdentifierPrefix`; rows are `PVCheckbox(verbatim: graph.name, description: locked[id] ?? graph.ref, isChecked:, isLocked: locked[id] != nil)`; past six rows it scrolls (`maxHeight` = six rows). Add binds a `Binding` that maps `excludedGraphIDs` to checked; the card binds `linkEdit.checked` | One view for both call sites (brief inventory) | `PVArtifactChecklist` — Artifacts with thumbnails |
-| D-13 | `SourceFormLoadArea` gains `var compact = false`; compact draws one skeleton bar at 0.42 width. The graph form and Copy form keep the default | Brief inventory "Extend"; one loading body | A local loading line on the card |
+| D-12 | `SourceArtifactGraphLinks` *(new view)* in `Features/Sources/SourceArtifactGraphLinks.swift` *(new)* takes `graphs`, a `checked: Binding<Set<String>>`, `locked: [String: String]`, `showsNeedsGraph: Bool` and `accessibilityIdentifierPrefix`; rows are `PVCheckbox(verbatim: graph.name, description: locked[id] ?? graph.ref, isChecked:, isLocked: locked[id] != nil)`; past six rows it scrolls (`maxHeight: 280`, the board's height). Add binds a `Binding` that maps `excludedGraphIDs` to checked; the card binds `linkEdit.checked` | One view for both call sites (brief inventory) | `PVArtifactChecklist` — Artifacts with thumbnails |
+| D-13 | `SourceFormLoadArea` gains `var compact = false`; compact draws one skeleton bar at 0.48 width, 12pt high, and the caption. The graph form and Copy form keep the default | Brief inventory "Extend"; one loading body | A local loading line on the card |
 | D-14 | Accessibility ids: `sources.page.addArtifact.graphs` (group), `.graphs.<graph id>` (row), `.graphs.needsGraph`; card: `sources.page.artifact.<id>.graphs`, `.graphs.<graph id>`, `.graphs.loading`, `.graphs.loadError`, `.graphs.readAgain` (the last three from `SourceFormLoadArea`'s prefix) | Match the existing `sources.page.…` ids | |
 
 ## 6. Design
@@ -191,17 +192,33 @@ None — every RPC exists (S12-05).
 | Add placement | `SourcePageArtifactsView.addForm` | between Description and File (optional) | LK-3 |
 | Card placement | `SourcePageArtifactsView.editFields` | between Description and the buttons | LK-5 |
 | Card loading / error | `SourceFormLoadArea(compact: true)` | `SourceFormLoadArea.swift` | LK-8 |
-| Save refused | page `pageError` callout | as today | LK-9 |
+| Save refused | `PVCallout(tone: .danger, title: L10n.Sources.artifactCardSaveErrorTitle, message: cardSaveError, compact: true)` | `SourcePageArtifactsView.editFields`, first item, above Label | LK-9; id `sources.page.artifact.<id>.saveError` |
 | Canvas callout | `noArtifactCallout` | `EvidenceGraphView.swift` | copy only |
 | Composer callout | `noArtifactGate` | `CitationComposerView.swift` | copy only |
 
 States: graph list loading → group hidden (D-1); preflight loading / failed (LK-8); twelve graphs → scrolls. Accessibility: LK-10 — `PVCheckbox` already speaks locked; the group `PVField` label is the container label.
 
-**Frames.** To be filled from the agreed S12-D4 board: one line per frame (1–11), with its final copy. Until then the brief's §5 is the reference.
+**Frames.** From the agreed S12-D4 board. Census fixture: Pages 1–6, 8 and 9 (`ART-0401` to `ART-0409`, no `ART-0407`); Brown household (`GPH-BR6KD`, links Page 9 only), Jones household (`GPH-JONES`, Pages 3, 4, 5, 9), Smith household (`GPH-7SM2T`, Pages 3 and 6; two Citations on Page 3).
+
+1. **Add, one graph** — today's Add artifact dialog: Label, Description, File (optional). No group.
+2. **Add, census** — label "Page 7"; between Description and File, a `PVField` "Evidence graphs" with the hint "Which evidence graphs can cite this artifact" over a bordered list: Brown household / `GPH-BR6KD`, Jones household / `GPH-JONES`, Smith household / `GPH-7SM2T`, each a checked kit checkbox with the ref as its description line.
+3. **Add, Jones only** — Brown and Smith unchecked; Add enabled.
+4. **Add, nothing checked** — all three unchecked; the muted italic caption "Check at least one evidence graph." under the field; **Add artifact** disabled.
+5. **Edit, one graph** — today's card edit on Page 3: Label, Description, Save artifact / Cancel. No group.
+6. **Edit, loading** — Page 3's card in edit: Label and Description filled and editable; under Description one skeleton bar (about half the card width) and the italic caption "Reading the evidence graphs…"; Save artifact disabled.
+7. **Edit, ready** — Page 3: Brown unchecked with `GPH-BR6KD`; Jones checked with `GPH-JONES`; Smith checked and locked (lock mark, not clickable) with "2 citations in this graph use this artifact" in place of its ref. Save artifact disabled until something changes.
+8. **Edit, only artifact** — Page 9: Brown checked and locked with "The only artifact in this evidence graph"; Jones checked and clickable; Smith unchecked.
+9. **Read error** — in the group's place, the compact danger callout "Couldn’t read the evidence graphs" / "Label and description are kept. Read the evidence graphs again to change the links." with the error and a **Read again** secondary button; Save artifact disabled.
+10. **Save refused** — Page 3 with a changed description and Jones unchecked: a compact danger callout as the first item of the card's edit fields, above Label, "Couldn’t save the artifact" with the body and the error (copy in §6 Strings); every field and box keeps its value.
+11. **Twelve, card** — twelve households on Page 3's card; the list scrolls inside its border at 280pt; Smith is locked.
+12. **Twelve, dialog** — the same twelve in Add artifact; the list scrolls and the dialog's buttons stay in view.
+13. **Canvas and composer** — the canvas callout (warning) "No artifacts in this evidence graph" / LK-11 body / **Go to Source page**; the composer callout with the LK-12 body, title and button unchanged.
+
+The board draws the locked row with a stand-in because the web kit's checkbox has no lock; the app uses `PVCheckbox` `isLocked`, as S12-12 did.
 
 ### Strings
 
-L10n keys *(new)*, in `L10n.Sources` unless noted, final copy from the board:
+L10n keys *(new)*, in `L10n.Sources` unless noted, final copy as agreed on the board:
 
 - `artifactGraphsLabel` = "Evidence graphs"
 - `artifactGraphsHint` = "Which evidence graphs can cite this artifact"
@@ -210,6 +227,8 @@ L10n keys *(new)*, in `L10n.Sources` unless noted, final copy from the board:
 - `artifactGraphsLoading` = "Reading the evidence graphs…"
 - `artifactGraphsLoadErrorTitle` = "Couldn’t read the evidence graphs"
 - `artifactGraphsLoadErrorMessage` = "Label and description are kept. Read the evidence graphs again to change the links. %@"
+- `artifactCardSaveErrorTitle` = "Couldn’t save the artifact"
+- `artifactCardSaveErrorMessage` = "Some changes may not be saved. Every field and box keeps its value — save again to finish. %@" (the board's "Nothing was changed" body reworded, user 2026-10-25: a save of several writes can stop partway)
 
 Changed values (same keys): `L10n.EvidenceGraph.noArtifactTitle` = "No artifacts in this evidence graph"; `L10n.EvidenceGraph.noArtifactMessage` = "Citing needs an artifact linked to this evidence graph. Place tools, Connect, and Add property stay disabled until one is linked."; `L10n.EvidenceGraph.noArtifactAction` = "Go to Source page"; `L10n.CitationComposer.noArtifactsCallout` = "Every citation needs an artifact linked to this evidence graph. Add one on the Source page, or link an existing one from its card, then return here."
 
@@ -250,7 +269,7 @@ Do: `scripts/check-pr.sh`.
 Check: prints `check-pr: PASS`.
 
 **STEP-8 — Docs**
-Files: `completed.md`, `deployment-plan.md` (S12-13 row → Landed; scope entry per D-11), this plan (status, Landed note), `design/S12-D4-artifact-graph-links.md` → `design/archive/`, `design/README.md`.
+Files: `completed.md`, `deployment-plan.md` (S12-13 row → Landed), this plan (status, Landed note), `design/README.md` (S12-D4 archived line names this PR). The brief is already in `design/archive/` (moved when the board was agreed).
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py` reports no errors.
 
@@ -269,7 +288,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-7 | Swift | same, `cardEditLocksInUseAndOnlyArtifactGraphs` *(new)* | P3 in g-j, g-s; block for g-s (2 Citations); P9 only in g-b → P3: `locked[g-s]` = "2 citations…", g-j unlocked, impact graph ids `["g-j", "g-s"]`; P9: `locked[g-b]` = only-artifact hint, no call for g-b | AC-2.2, AC-2.3, AC-2.4, D-6 |
 | T-8 | Swift | same, `cardSaveLinksThenUnlinks` *(new)* | check g-b, uncheck g-j → link calls `[(g-b, P3)]`, unlink `[(g-j, P3)]`, `updateArtifact` 0 calls, `editingArtifactID == nil` | AC-2.5, AC-2.10, D-8 |
 | T-9 | Swift | same, `cardSaveFieldsOnlyHasNoLinkCalls` *(new)* | label change → `updateArtifact` once, no link calls | AC-2.6 |
-| T-10 | Swift | same, `cardSaveRefusedKeepsEditAndRereadsLocks` *(new)* | `unlinkEvidenceGraphArtifactError` = coded `evidencegraphs.artifact_in_use` → still editing, `pageError` set, `checked` unchanged, impact calls incremented | AC-2.7, D-8 |
+| T-10 | Swift | same, `cardSaveRefusedKeepsEditAndRereadsLocks` *(new)* | `unlinkEvidenceGraphArtifactError` = coded `evidencegraphs.artifact_in_use` → still editing, `cardSaveError` set, `context.pageError == nil`, `checked` unchanged, impact calls incremented | AC-2.7, D-8 |
 | T-11 | Swift | same, `cardLinkReadFailsAndReadAgain` *(new)*, `cardCancelDropsLinkChanges` *(new)* | impact error → `loadState` `.failed`, `canSaveFields == false`; clear error, `loadLinkLocks()` → `.ready`. Uncheck g-j, cancel → no calls, reopen → g-j checked | AC-2.8, AC-2.9 |
 | T-12 | Swift | `EvidenceGraphModelTests.swift` `fileRowsAreTheGraphsLinkedArtifacts` *(new)* | graph links P3 of P1–P3 → `fileRows.map(\.id) == ["P3"]` | AC-3.1, D-9 |
 | T-13 | Swift | same, `canCiteNeedsALinkedArtifact` *(new)* | graph with `artifactIDs: []` → false; no list value → true | AC-3.2, AC-3.3 |
@@ -289,7 +308,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `E
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — or none
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
-- [ ] Brief moved to design/archive/ and design/README.md updated (if gated)
+- [ ] design/README.md: the S12-D4 archived line names this PR (the brief moved to design/archive/ at board agreement)
 - [ ] Domain doc updated if a rule in docs/*.md changed: none — the link rules in source-structure.md are unchanged
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
@@ -322,7 +341,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `E
 
 ## 12. Open questions
 
-- **Board S12-D4.** Not drawn. Recommended: draw it from the brief; on agreement, fill **Board**, §6 Frames and the final copy in §6 Strings, then run `review-plan`.
+None.
 
 ## 13. PR
 

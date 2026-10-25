@@ -123,7 +123,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S12-10 | Composer offers linked Artifacts | 3 | The Citation composer lists only the graph's linked Artifacts, and on each only the graph's Citations (citation list and counts re-keyed by graph) | — | S12-05, S12-08 | [Plan](prs/S12-10-composer-linked-artifacts.md) | Landed #540 |
 | S12-11 | Source page Graphs section | 4 | List graphs with Open and Delete; remove the header jump; breadcrumbs name the graph | S12-D2 | S12-05, S12-08, S12-D2 | [Plan](prs/S12-11-source-page-graphs.md) | Landed #549 |
 | S12-12 | Graph form | 4 | Create and edit a graph: name, description, the shared Artifact checklist | S12-D3 | S12-02, S12-11, S12-D3 | [Plan](prs/S12-12-graph-form.md) | Landed #557 |
-| S12-13 | Artifact graph checkboxes | 4 | Graph checkboxes in the Add Artifact dialog and Artifact card edit, shown with two or more graphs; Swift only | S12-D4 | S12-12, S12-D4 | [Plan](prs/S12-13-artifact-graph-checkboxes.md) | Blocked — on board S12-D4 |
+| S12-13 | Artifact graph checkboxes | 4 | Graph checkboxes in the Add Artifact dialog and Artifact card edit, shown with two or more graphs; Swift only | S12-D4 | S12-12, S12-D4 | [Plan](prs/S12-13-artifact-graph-checkboxes.md) | Blocked — on review-plan |
 | S12-14 | Graph counts in the Sources list and on the Source page | 4 | Each Sources list row expands to its graphs with per-graph progress and Open; the Source page's graph rows show the same count line | S12-D5 | S12-08, S12-D5 | — | Scoped |
 | S12-15 | Graphs in the omnibar | 4 | Graphs as a searchable kind; a hit opens the graph | — | S12-08 | — | Scoped |
 | S12-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
@@ -136,7 +136,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S12-D6 | Sources list — Copy… row menu | **S12-17** | A row's right-click menu with Copy…, opening the S12-D1 form |
 | [S12-D2](design/archive/S12-D2-source-page-graphs.md) | Source page — Graphs section | **S12-11** | One row per graph (name, ref, description, Open, delete); replaces the header jump. Board agreed 2026-10-25 |
 | [S12-D3](design/archive/S12-D3-graph-form.md) | Graph form | **S12-12** | Create and edit: name, description, the Artifact checklist from S12-D1 all on; in-use Artifacts locked with their Citations listed; the last-graph notice names Add evidence graph. Board agreed 2026-10-25 |
-| [S12-D4](design/S12-D4-artifact-graph-links.md) | Source page — Artifacts section graph links | **S12-13** | Checkboxes in the add dialog and card edit; locked boxes with the reason; canvas and composer callouts name the graph. Written 2026-10-25 |
+| [S12-D4](design/archive/S12-D4-artifact-graph-links.md) | Source page — Artifacts section graph links | **S12-13** | Checkboxes in the add dialog and card edit; locked boxes with the reason; a refused card save shows on the card; canvas and composer callouts name the graph. Board agreed 2026-10-25 |
 | S12-D5 | Sources list — graph accordion | **S12-14** | Expander per row, per-graph progress and Open; the count line on the Source page's graph rows |
 
 ## Slices
