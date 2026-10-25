@@ -165,7 +165,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-47 | Promote suggests a record or nothing | 10 | Unplaced proposal rows carry no target and no `weak` / `no_match` reason; possible duplicates found among unplaced rows; Swift drafts a handle or unset only | — | — | — | Scoped |
 | S11-46 | Prefix keys in the shortlist | 10 | `WordKeys` splits into index and lookup lists; given-name words are filed and looked up under their prefixes both ways; `PrefixMinLength`; extra keys measured | — | — | — | Scoped |
 | S11-45 | Prefix names | 10 | A given name that starts another is a `Contains` hit at `PrefixCredit` (`CausePrefix`), with the broader side right; the cause worded on the sheet; the reconciler's call | — | S11-46, S11-28 | — | Scoped |
-| S11-48 | Religion and languages spoken on a person | — | Term Properties `religion` and `languages_spoken` on person, cardinality multiple, seeded with Catholic and English | — | — | [plan](prs/S11-48-religion-languages.md) | Planned |
+| S11-48 | Religion and languages spoken on a person | — | Term Properties `religion` and `languages_spoken` on person, cardinality multiple, seeded with Catholic and English | — | — | [plan](prs/S11-48-religion-languages.md) | Landed #563 |
 | S11-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
