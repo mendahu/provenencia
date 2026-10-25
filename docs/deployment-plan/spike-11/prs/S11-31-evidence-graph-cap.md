@@ -1,6 +1,6 @@
 # S11-31 — Bound the loaded Evidence graphs
 
-**Status:** Planned
+**Status:** Landed in [#541](https://github.com/mendahu/provenencia/pull/541) (2026-10-24)
 **Spike / slice:** Spike 11 · Slice 7 — Performance
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: an engine cache gains a cap; nothing on screen changes)

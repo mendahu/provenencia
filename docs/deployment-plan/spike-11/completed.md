@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-31 — Bound the loaded Evidence graphs
+
+**Landed 2026-10-24** in [#541](https://github.com/mendahu/provenencia/pull/541). The catalog's in-memory graph keeps at most 64 loaded Evidence graphs. Loading one more drops the least recently used graph with its memos, and a dropped graph loads again on its next read with the same rows. A read and a memo hit both count as use, so the graph Promote is working on is not evicted by a run of member loads. The graph, its memos and its use stamp are one entry. `TestLargeSourceBudgets` runs a full evidence pass under a cap of 8 and checks every response against the default cap's.
+
 ## S11-21 — Large-Source performance check
 
 **Landed 2026-10-24** in [#536](https://github.com/mendahu/provenencia/pull/536). A 100-Subject Source now proposes within its budget and a page of births at a big city no longer freezes Promote. A placed pair nominates only its neighbors' most similar handles, a row decision re-proposes from remembered candidates, and a warm evidence sheet reads nothing from the catalog because the name format and the alias index are warmed when the project opens. The budgets run as `TestLargeSourceBudgets` in every `check-pr.sh`. Evidence graph cards also reuse their SF Symbol images (by symbol and point size) and AppKit fonts (by family, size, weight and italic, in `PVFont`) instead of rebuilding them on every paint, which is what stalled panning a Source with 110 Subjects. Each card is also its own layer that paints once into a cached image (`GraphCanvasItemView`, through `updateLayer`) and repaints only when it changes, so a pan no longer repaints cards.
