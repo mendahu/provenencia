@@ -70,7 +70,7 @@ A census page scan holds several households. The researcher makes one Evidence g
 | A new graph needs an Artifact | **Add evidence graph** is disabled while the Source has no Artifact, with the tooltip and VoiceOver hint "Add an artifact before you add an evidence graph". In the form, Add is disabled while no Artifact is checked. |
 | A new graph starts with every Artifact checked | The researcher unchecks the pages the household is not on. |
 | An edit needs an Artifact too | When the Source has Artifacts, Save is disabled while none is checked. A Source with no Artifacts can still rename its Default graph: the checklist area shows the line "This Source has no Artifacts." and Save is available. |
-| Some links can't be removed | When the graph's Citations use an Artifact, unlinking it is refused. The form finds these Artifacts when it opens and shows each one checked and disabled, with the hint "1 citation in this graph uses this artifact" / "3 citations in this graph use this artifact". Under the checklist, a **Kept linked** group lists those Citations (ref and title), grouped by Artifact, the way the delete notice lists what blocks a delete. |
+| Some links can't be removed | When the graph's Citations use an Artifact, unlinking it is refused. The form finds these Artifacts when it opens and shows each one with the kit checkbox's lock mark (a lock on a paper fill, the look the Properties inspector uses for a binding the researcher cannot clear), with the hint "1 citation in this graph uses this artifact" / "3 citations in this graph use this artifact". Under the checklist, a **Kept linked** group lists those Citations (ref and title), grouped by Artifact, the way the delete notice lists what blocks a delete. |
 | A Citation in that list opens it | Clicking a Citation row closes the form without saving and opens that Citation, as the delete notice's rows do. |
 | The form reads before it can edit | Edit asks which Artifacts are kept linked. Until that read returns, the name and description are shown and editable; the checklist shows a small loading state and Save is disabled. If the read fails, a danger callout with **Read again** takes the checklist's place. Add needs no read. |
 | A new Artifact starts linked | An Artifact added to the Source while the form is open appears checked. |
@@ -109,15 +109,15 @@ A census page scan holds several households. The researcher makes one Evidence g
 | GF-4 | Add and Edit open one form dialog, 520pt wide. Add: title **Add evidence graph**, subtitle "A part of this source you work and promote on its own.", confirm **Add**. Edit: title **Edit evidence graph**, subtitle the graph's ref, confirm **Save**. Cancel **Cancel** in both. |
 | GF-5 | The form body, top to bottom: **Name** (required, single-line input, empty on Add, focused when the form opens; placeholder "Jones household"); **Description** (optional, a three-line text area; hint "Which part of the source this graph covers"); a divider; the **Artifacts** checklist. |
 | GF-6 | The checklist is the Copy Source form's: a heading with "{checked} of {total}", an All Artifacts checkbox (checked, unchecked or mixed), then one row per Artifact in the Source page's order with its thumbnail, label (or `ART-` ref) and checkbox; the rows scroll inside the dialog past about eight. On Add every row is checked. On Edit the graph's linked Artifacts are checked. With no Artifacts, the line "This Source has no Artifacts." replaces it. |
-| GF-7 | A row whose Artifact the graph's Citations use is checked and disabled, with the hint under its label "{n} citation(s) in this graph use(s) this artifact". All Artifacts never unchecks it: with every other row off, All Artifacts reads mixed. |
+| GF-7 | A row whose Artifact the graph's Citations use shows the checkbox's lock mark and can't be clicked, with the hint under its label "{n} citation(s) in this graph use(s) this artifact". All Artifacts never unchecks it: with every other row off, All Artifacts reads mixed. |
 | GF-8 | When any row is locked, a **Kept linked** group sits under the checklist: a short line, "These artifacts stay linked while citations in this graph use them.", then for each locked Artifact its label and, under it, the delete notice's list of Citation rows (ref, title, arrow) with its "and N more" line past twenty. Clicking a row closes the form without saving and opens the Citation. |
 | GF-9 | Name validation follows Add artifact: Add or Save with a blank name shows "Give the evidence graph a name." under the field. With Artifacts on the Source and none checked, Add and Save are disabled and a muted line under the checklist reads "Check at least one artifact." |
-| GF-10 | Edit's loading state: name and description editable; the checklist area shows the Copy form's three skeleton bars and "Reading the artifacts…"; Save disabled. Read error: a compact danger callout, "Couldn’t read the artifacts" with the app's message and **Read again**, in the checklist's place; Save disabled. |
+| GF-10 | Edit's loading state: name and description editable; the checklist area shows the Copy form's loading area (three skeleton bars and a caption, here "Reading the artifacts…"); Save disabled. Read error: the Copy form's compact danger callout with **Read again**, titled "Couldn’t read the artifacts", in the checklist's place; Save disabled. One loading and read-error area for both forms. |
 | GF-11 | A save failure shows a danger callout at the top of the form: title "Couldn’t save the evidence graph", the app's message for the refusal as the body. Every field and checkbox keeps its value. |
 | GF-12 | The "only evidence graph" delete notice keeps its title and reads "A source keeps at least one evidence graph. Use Add evidence graph to make another, then delete this one. A new evidence graph needs an artifact." |
 | GF-13 | After Add, the dialog closes, the new row shows in name order, and the toast reads "Evidence graph added" / "{ref} is ready to open.". After Save, the dialog closes with no toast. |
 | GF-14 | Discard follows the kit's form dialog: Cancel closes at once; a click outside a changed form asks "Discard changes?". |
-| GF-15 | VoiceOver: a locked row reads its label, "checked", "dimmed" and the hint. The Kept linked rows read "{ref}, {title}". |
+| GF-15 | VoiceOver: a locked row reads its label, "checked", "locked" and the hint. The Kept linked rows read "{ref}, {title}". |
 
 ---
 
@@ -131,7 +131,7 @@ Draw the dialog at 520pt over the Source page from the S12-D2 frames.
 4. **Add, nothing checked** — every row unchecked; Add disabled; "Check at least one artifact." (GF-9).
 5. **Add, blank name** — the name error under the field (GF-9).
 6. **Edit, loading** — Edit on "Smith household": name and description filled, checklist skeleton, Save disabled (GF-10).
-7. **Edit, kept links** — "Smith household" linked to pages 3 and 4; page 3 locked with "2 citations in this graph use this artifact"; Kept linked group listing `CIT-7RQ2M` "Smith, John — 1851 census" and `CIT-8TW4N` "Smith, Mary — 1851 census" under "Page 3" (GF-7, GF-8).
+7. **Edit, kept links** — "Smith household" linked to pages 3 and 4; page 3 with the lock mark and "2 citations in this graph use this artifact"; Kept linked group listing `CIT-7RQ2M` "Smith, John — 1851 census" and `CIT-8TW4N` "Smith, Mary — 1851 census" under "Page 3" (GF-7, GF-8).
 8. **Edit, Default with no Artifacts** — renaming Default on a Source with none; "This Source has no Artifacts."; Save available (GF-6, GF-9).
 9. **Read error** and **save failed** (GF-10, GF-11).
 10. **After add** — the section with four rows and the success toast (GF-13).
@@ -150,12 +150,12 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Name | Component | Ship | `PVField` + `PVInput` | Required mark and inline error, as Add artifact's Label. |
 | Description | Component | Ship | `PVField` + `PVTextArea` | Optional, three lines. |
 | Artifact checklist | Recipe | **Extend** (promote) | `Features/Sources/SourceArtifactChecklist.swift` → `DesignSystem/Recipes/ArtifactChecklist/PVArtifactChecklist.swift` *(new)* | Its second caller is this form, so it is promoted per `add-ui-component`. Gains locked rows (checked, disabled, with a hint). The Copy Source form shows it unchanged. Not a second checklist. |
-| Row checkbox | Component | Ship | `DesignSystem/Components/Checkbox/PVCheckbox.swift` | Label, hint as `description`, disabled when locked. |
+| Row checkbox | Component | **Extend** | `DesignSystem/Components/Checkbox/PVCheckbox.swift` | Label, hint as `description`. A locked row uses the kit's lock mark (`PVCheckboxMark` `isLocked`, already drawn by the Properties inspector), which the labelled checkbox gains as a parameter. Not a dimmed check, not a local lock glyph. |
 | Artifact thumbnail | Component | Ship | `Platform/CachedThumbnail.swift` `CachedThumbnail` (32pt) | As in the Copy form. |
 | Kept linked Citation list | Recipe | **Extend** | `DesignSystem/Recipes/DeleteImpact/PVDeleteImpact.swift` (the notice's private group view, made a recipe view) | The delete notice's rows of ref, title and arrow, with its "and N more" line. One list for the notice and this form. Not a new Citation row. |
 | Kept linked intro line | Component | Ship | `PVCallout` (neutral, compact) | Above the per-Artifact lists. |
-| Loading | Component | Ship | `DesignSystem/Components/SkeletonBar/PVSkeletonBar.swift` | The Copy form's three bars. |
-| Read error, save error | Component | Ship | `PVCallout` (danger) | Read error in the checklist's place, with **Read again** (`PVButton` secondary, small); save error at the top. |
+| Loading and read error | Snowflake | **Extend** | `Features/Sources/SourceCopyDialog.swift` `SourceCopyForm.loading` and its failed callout → `Features/Sources/SourceFormLoadArea.swift` *(new)* | The Copy form's area (`PVSkeletonBar` ×3 + caption; compact danger `PVCallout` + **Read again**), shared by both forms. Not a second loading body. |
+| Save error | Component | Ship | `PVCallout` (danger) | At the top of the form. |
 | Add evidence graph | Component | Ship | `PVButton` (`.primary`, `.sm`, `plus`) in `PVSectionHeader` `actions` | The same as Add artifact. |
 | Edit | Component | Ship | `PVIconButton` (`penLine`, `.sm`) | The same as the Artifact card's edit. |
 | Graph row | Snowflake | Ship | `Features/Sources/SourcePageGraphsView.swift` `SourcePageGraphRow` | Gains Edit between Open and Delete. Nothing else changes. |
