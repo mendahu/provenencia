@@ -431,7 +431,45 @@ struct PromoteFlow: Equatable, Sendable {
     @discardableResult
     mutating func setTarget(subjectID: String, token: String) -> Bool {
         guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }), !rows[index].anchor else { return false }
-        let next = target(for: token, on: rows[index])
+        return select(target(for: token, on: rows[index]), at: index)
+    }
+
+    /// Holds a record Promote did not offer: it joins the row's menu as the
+    /// researcher's choice, titled as the menu titles every record, then is
+    /// selected like a menu pick. Returns true when suggested rows should be
+    /// proposed again.
+    @discardableResult
+    mutating func hold(subjectID: String, id: String, ref: String, header: CatalogConclusionHeader?) -> Bool {
+        guard !id.isEmpty,
+              let index = rows.firstIndex(where: { $0.subjectID == subjectID }),
+              !rows[index].anchor else { return false }
+        let item: Alternative
+        if let offered = rows[index].menu.first(where: { $0.id == id }) {
+            item = offered
+        } else {
+            let kind = rows[index].kind
+            let parts = Self.headerParts(header)
+            item = Alternative(
+                id: id, ref: ref,
+                title: Self.conclusionTitle(
+                    kind: kind, person: parts.person, event: parts.event, place: parts.place,
+                    fallback: ref, orders: nameOrders, style: .sorted
+                ),
+                readingTitle: Self.conclusionTitle(
+                    kind: kind, person: parts.person, event: parts.event, place: parts.place,
+                    fallback: ref, orders: nameOrders, style: .natural
+                ),
+                subtitle: Self.conclusionSubtitle(kind: kind, person: parts.person, event: parts.event, place: parts.place),
+                assessment: .none, reason: .decided
+            )
+            rows[index].menu.append(item)
+        }
+        return select(.handle(id: item.id, ref: item.ref, title: item.title), at: index)
+    }
+
+    /// Selects a target on a working row: the old target's evidence goes, the
+    /// row is decided. Returns true.
+    private mutating func select(_ next: Target, at index: Int) -> Bool {
         if next != rows[index].target {
             // The evidence, pins and contested flag compared the old target;
             // the sheet reads them again for this one. The argument is the
@@ -754,6 +792,16 @@ struct PromoteFlow: Equatable, Sendable {
             fallback: alt.handleRef,
             orders: orders, style: style
         )
+    }
+
+    private static func headerParts(_ header: CatalogConclusionHeader?)
+        -> (person: CatalogPersonHeader?, event: CatalogEventHeader?, place: CatalogPlaceHeader?) {
+        switch header {
+        case .person(let person): (person, nil, nil)
+        case .event(let event): (nil, event, nil)
+        case .place(let place): (nil, nil, place)
+        case nil: (nil, nil, nil)
+        }
     }
 
     private static func conclusionTitle(

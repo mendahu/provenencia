@@ -889,4 +889,165 @@ struct PromoteFlowTests {
         flow.merge(proposal(rows: [held], revision: 4), subjects: [fact("a")])
         #expect(flow.rows[0].conflictNote == "PER-1")
     }
+
+    // MARK: - A record Promote did not offer
+
+    /// A row Promote found no record for: New, no band, no alternatives, so it opens unset.
+    private func unmatched(_ id: String) -> CatalogPromoteGraphAlignmentRow {
+        var unmatched = row(id: id, target: "new", handleID: "", assessment: "none")
+        unmatched.reason = .noMatch
+        unmatched.alternatives = []
+        return unmatched
+    }
+
+    @Test func aFoundRecordIsHeldAndJoinsTheMenu() {
+        let polly = CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: "e7", ref: "PER-7", subjectTypeID: "t", label: ""),
+            name: CatalogNameValue(form: "Polly Jones", parts: [
+                CatalogNameValuePart(value: "Polly", type: "given"),
+                CatalogNameValuePart(value: "Jones", type: "surname"),
+            ]),
+            nameValueCount: 1
+        )
+        let orders = NameFormatOrders(
+            natural: [
+                NameFormatPart(partType: "given", trailingSeparator: ""),
+                NameFormatPart(partType: "surname", trailingSeparator: ""),
+            ],
+            sorted: [
+                NameFormatPart(partType: "surname", trailingSeparator: ", "),
+                NameFormatPart(partType: "given", trailingSeparator: ""),
+            ]
+        )
+        func started() -> PromoteFlow {
+            var flow = PromoteFlow(entryID: "a")
+            flow.nameOrders = orders
+            flow.load(entryID: "a", proposal: proposal(rows: [unmatched("a")]), subjects: [fact("a")], bridges: [])
+            flow.mapRest()
+            return flow
+        }
+
+        var flow = started()
+        #expect(flow.rows[0].target == .unset)
+        #expect(flow.rows[0].menu.isEmpty)
+        let accepted = flow.hold(subjectID: "a", id: "e7", ref: "PER-7", header: .person(polly))
+        #expect(accepted)
+        let held = flow.rows[0]
+        #expect(held.target == .handle(id: "e7", ref: "PER-7", title: "Jones, Polly"))
+        #expect(held.menu.last == PromoteFlow.Alternative(
+            id: "e7", ref: "PER-7", title: "Jones, Polly", readingTitle: "Polly Jones",
+            subtitle: PersonLifeDisplay.line(polly).text, assessment: .none, reason: .decided
+        ))
+        #expect(held.decided)
+        #expect(flow.manual)
+        #expect(held.readingTitle == "Polly Jones")
+        #expect(held.selectionReadout == PromoteFlow.SelectionReadout(assessment: .none, reason: .decided))
+
+        let fixed = flow.fixed(for: flow.rows.filter(\.decided))
+        #expect(fixed == [CatalogPromoteGraphAlignmentFixed(subjectID: "a", handleID: "e7")])
+        let batch = flow.batchRows().first { $0.subjectID == "a" }
+        #expect(batch?.target == "handle")
+        #expect(batch?.entityID == "e7")
+        #expect(batch?.defaultPins == true)
+
+        var bare = started()
+        let bareAccepted = bare.hold(subjectID: "a", id: "e7", ref: "PER-7", header: nil)
+        #expect(bareAccepted)
+        let item = bare.rows[0].menu.last
+        #expect(item?.title == "PER-7")
+        #expect(item?.readingTitle == "PER-7")
+        #expect(item?.subtitle == "")
+    }
+
+    @Test func aFoundRecordSurvivesAReproposalWithItsBandRefreshed() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [unmatched("a"), row(id: "b")]),
+            subjects: [fact("a"), fact("b")],
+            bridges: []
+        )
+        flow.mapRest()
+        flow.hold(subjectID: "a", id: "e7", ref: "PER-7", header: nil)
+
+        var heldA = row(id: "a", handleID: "e7", assessment: "weak")
+        heldA.handleRef = "PER-7"
+        heldA.reason = .decided
+        heldA.contested = true
+        flow.merge(proposal(rows: [heldA, row(id: "b")], revision: 4), subjects: [fact("a"), fact("b")])
+        var a = flow.rows.first { $0.subjectID == "a" }
+        #expect(a?.menu.contains { $0.id == "e7" } == true)
+        #expect(a?.menu.first { $0.id == "e7" }?.assessment == .weak)
+        #expect(a?.menu.first { $0.id == "e7" }?.reason == .decided)
+        #expect(a?.contested == true)
+        #expect(a?.target.handleRef == "PER-7")
+        if case .handle(let id, _, _)? = a?.target { #expect(id == "e7") } else { Issue.record("target is not a handle") }
+
+        flow.setTarget(subjectID: "b", token: "handle:e2")
+        flow.merge(
+            proposal(rows: [unmatched("a"), row(id: "b")], revision: 5),
+            subjects: [fact("a"), fact("b")]
+        )
+        a = flow.rows.first { $0.subjectID == "a" }
+        if case .handle(let id, _, _)? = a?.target { #expect(id == "e7") } else { Issue.record("target is not a handle") }
+        #expect(a?.menu.contains { $0.id == "e7" } == true)
+    }
+
+    @Test func aFoundRecordAlreadyInTheMenuIsPickedNotAddedAgain() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [row(id: "a")]), subjects: [fact("a")], bridges: [])
+        let offered = flow.rows[0].menu
+        #expect(offered.map(\.id) == ["e1", "e2"])
+        let accepted = flow.hold(subjectID: "a", id: "e2", ref: "PER-2", header: nil)
+        #expect(accepted)
+        #expect(flow.rows[0].menu == offered)
+        #expect(flow.rows[0].menu[1].reason == offered[1].reason)
+        #expect(flow.rows[0].target == .handle(id: "e2", ref: "PER-2", title: offered[1].title))
+    }
+
+    @Test func holdingAFoundRecordResetsTheOldTargetsEvidence() {
+        var contested = row(id: "a")
+        contested.contested = true
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [contested]), subjects: [fact("a")], bridges: [])
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:1", true)]))
+        #expect(flow.rows[0].board != nil)
+        #expect(flow.rows[0].pins == ["l:1"])
+        #expect(flow.rows[0].contested)
+
+        flow.hold(subjectID: "a", id: "e7", ref: "PER-7", header: nil)
+        #expect(flow.rows[0].board == nil)
+        #expect(flow.rows[0].pins.isEmpty)
+        #expect(flow.rows[0].contested == false)
+        #expect(flow.rows[0].move == nil)
+    }
+
+    @Test func aFoundRecordSharingAHandleNamesTheOtherRow() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [unmatched("a"), row(id: "b")]),
+            subjects: [fact("a"), fact("b")],
+            bridges: []
+        )
+        flow.mapRest()
+        flow.hold(subjectID: "a", id: "e1", ref: "PER-1", header: nil)
+        #expect(flow.rows.first { $0.subjectID == "a" }?.duplicateNote == .sharesHandle(otherName: "b", ref: "PER-1"))
+    }
+
+    @Test func anAnchorOrMissingRowOrEmptyIDHoldsNothing() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [row(id: "a"), row(id: "b")]),
+            subjects: [fact("a", anchor: true), fact("b")],
+            bridges: []
+        )
+        let before = flow.rows
+        let onAnchor = flow.hold(subjectID: "a", id: "e7", ref: "PER-7", header: nil)
+        let onMissing = flow.hold(subjectID: "zz", id: "e7", ref: "PER-7", header: nil)
+        let withNoID = flow.hold(subjectID: "b", id: "", ref: "PER-7", header: nil)
+        #expect(!onAnchor && !onMissing && !withNoID)
+        #expect(flow.rows == before)
+    }
 }
