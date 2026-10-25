@@ -2,8 +2,8 @@
 
 Covers the plan and its brief, [S12-D2](../design/S12-D2-source-page-graphs.md).
 
-**Verdict:** round 1 — Fits with changes / Not ready. Every finding Fixed; round 2 pending.
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits / Ready after 2 rounds; every finding Fixed. Blocked only on the S12-D2 board.
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
@@ -109,3 +109,13 @@ The bare `graphListLoaded` matches the kept `graphBlockedReason(hasArtifact:grap
 
 ### X-15 · nit · How to pick pbxproj ids
 **Answer:** Fixed — new ids count up from the highest `AA…` id.
+
+Maintainability (opus): every round-1 answer accepted; verdict **Fits with changes**.
+
+### M-12 · blocker · The toolbar's Source title lookup is a fourth "Source by id from `sourcesList`"
+`EvidenceGraphModel` has private `sourceRow` and `resolvedSourceTitle()` doing the same read; D-9 would add another in the toolbar.
+**Answer:** Fixed — D-18 adds `WorkspaceSession+Sources.swift` with `source(id:)`; the toolbar and `EvidenceGraphModel.sourceRow` read it; `resolvedSourceTitle()` is deleted; T-2 covers the accessor. `PromoteModel.attachSource()` stays (it awaits `readyValue`). The hand-built `sourceSurface: .page` locations in `Platform/FakeStore.swift` are fixture data, left as they are.
+
+## Verdict
+
+Round 2 done. No open blocker; no To user item. Final: **Fits / Ready**, pending the S12-D2 board.
