@@ -60,14 +60,14 @@ struct OmnibarResultsHost: View {
                     DispatchQueue.main.async { results.closePanel() }
                     return nil
                 case 125: // Down
-                    DispatchQueue.main.async { results.moveSelection(delta: 1) }
+                    DispatchQueue.main.async { results.search.moveSelection(delta: 1) }
                     return nil
                 case 126: // Up
-                    DispatchQueue.main.async { results.moveSelection(delta: -1) }
+                    DispatchQueue.main.async { results.search.moveSelection(delta: -1) }
                     return nil
                 case 36, 76: // Return / keypad Enter
                     DispatchQueue.main.async {
-                        if let hit = results.selectedHit() {
+                        if let hit = results.search.selectedHit() {
                             onActivate(hit)
                         }
                     }
@@ -96,42 +96,47 @@ private struct OmnibarResultsPanel: View {
 
     var body: some View {
         Group {
-            if results.showsErrorState {
+            if results.search.showsErrorState {
                 errorState
-            } else if results.showsEmptyState {
+            } else if results.search.showsEmptyState {
                 emptyState
-            } else if results.showsLoadingState {
+            } else if results.search.showsLoadingState {
                 loadingState
             } else {
                 // ScrollView expands to the proposed height unless we ask for
                 // the ideal (content) height — clamp only when the list is tall.
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(results.hits.enumerated()), id: \.element.id) { index, hit in
+                        ForEach(Array(results.search.hits.enumerated()), id: \.element.id) { index, hit in
                             Button {
                                 onActivate(hit)
                             } label: {
-                                OmnibarHitRowView(
+                                CatalogSearchHitRow(
                                     hit: hit,
                                     projectDir: projectDir,
                                     selected: false
                                 )
                             }
                             .buttonStyle(PVMenuRowButtonStyle(
-                                isSelected: index == results.selectedIndex,
+                                isSelected: index == results.search.selectedIndex,
                                 cornerRadius: PVRadius.xs,
                                 onHoverChange: { hovering in
-                                    if hovering { results.selectedIndex = index }
+                                    if hovering { results.search.selectedIndex = index }
                                 }
                             ))
-                            .accessibilityLabel(OmnibarHitPresentation.accessibilityLabel(for: hit))
+                            .accessibilityLabel(CatalogSearchHitPresentation.accessibilityLabel(for: hit))
                             .accessibilityIdentifier("workspace.toolbar.omnibar.hit.\(hit.id)")
+                            .id(hit.id)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .frame(maxHeight: 420)
                 .fixedSize(horizontal: false, vertical: true)
+                .pvScrollsRowIntoView(
+                    results.search.selectedHit()?.id,
+                    startsAtTopWhenRowsChange: results.search.hits.map(\.id)
+                )
             }
         }
         .padding(PVSpacing.space2)
@@ -166,7 +171,7 @@ private struct OmnibarResultsPanel: View {
     private var errorState: some View {
         PVCallout(
             tone: .danger,
-            message: results.searchError ?? L10n.string(L10n.Workspace.omnibarSearchFailed)
+            message: results.search.searchError ?? L10n.string(L10n.Workspace.omnibarSearchFailed)
         )
         .padding(.horizontal, 9)
         .padding(.vertical, 8)
@@ -175,7 +180,7 @@ private struct OmnibarResultsPanel: View {
 
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space3) {
-            Text(L10n.Workspace.omnibarNoMatchesTitle(query: results.trimmedQuery))
+            Text(L10n.Workspace.omnibarNoMatchesTitle(query: results.search.trimmedQuery))
                 .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
                 .foregroundStyle(PVColor.textPrimary)
             Text(L10n.Workspace.omnibarNoMatchesHint)
@@ -186,46 +191,6 @@ private struct OmnibarResultsPanel: View {
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityIdentifier("workspace.toolbar.omnibar.noMatches")
-    }
-}
-
-/// Resolves lead thumbnail + fills `PVOmnibarHitRow` slots for one hit.
-private struct OmnibarHitRowView: View {
-    let hit: CatalogSearchHit
-    let projectDir: String
-    var selected: Bool
-    @Environment(WorkspaceSession.self) private var session
-
-    var body: some View {
-        PVOmnibarHitRow(
-            lead: { leadView },
-            title: OmnibarHitPresentation.title(for: hit, orders: session.nameFormat),
-            kindLabel: OmnibarHitPresentation.kindLabel(for: hit.kind),
-            secondary: OmnibarHitPresentation.secondary(for: hit),
-            ref: hit.ref,
-            refAccent: OmnibarHitPresentation.refAccent(for: hit),
-            matchContext: OmnibarHitPresentation.matchContextText(
-                field: hit.matchReason,
-                snippet: hit.matchSnippet
-            ),
-            selected: selected
-        )
-    }
-
-    @ViewBuilder
-    private var leadView: some View {
-        switch hit.kind {
-        case "source":
-            CachedThumbnail(
-                projectDir: projectDir,
-                relPath: hit.thumbnailRelPath,
-                typeIconKey: hit.iconKey.isEmpty ? nil : hit.iconKey,
-                size: 40,
-                cornerRadius: PVRadius.sm
-            )
-        default:
-            PVThumbnail(OmnibarHitPresentation.leadThumbnail(for: hit), size: 40)
-        }
     }
 }
 

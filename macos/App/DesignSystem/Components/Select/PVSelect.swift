@@ -211,33 +211,29 @@ struct PVSelect<Row: View>: View {
             maxHeight: height,
             accessibilityIdentifier: PVSelectAccessibility.menuIdentifier(accessibilityIdentifier)
         ) {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(options.enumerated()), id: \.element.id) { offset, option in
-                            PVContextMenuItem(
-                                index: offset,
-                                isSelected: option.id == session.selection,
-                                showsSelectionMark: true,
-                                accessibilityIdentifier: option.accessibilityIdentifier,
-                                action: { applySession { $0.commit(index: offset, close: true) } }
-                            ) {
-                                row(option)
-                            }
-                            .id(offset)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(options.enumerated()), id: \.element.id) { offset, option in
+                        PVContextMenuItem(
+                            index: offset,
+                            isSelected: option.id == session.selection,
+                            showsSelectionMark: true,
+                            accessibilityIdentifier: option.accessibilityIdentifier,
+                            action: { applySession { $0.commit(index: offset, close: true) } }
+                        ) {
+                            row(option)
                         }
+                        .id(offset)
                     }
                 }
-                .frame(maxHeight: height)
-                .onAppear {
-                    guard session.highlightIndex >= 0 else { return }
-                    proxy.scrollTo(session.highlightIndex, anchor: .center)
-                }
-                .onChange(of: session.highlightIndex) { _, index in
-                    guard index >= 0 else { return }
-                    proxy.scrollTo(index, anchor: .center)
-                }
             }
+            .frame(maxHeight: height)
+            .pvScrollsRowIntoView(
+                session.highlightIndex >= 0 ? session.highlightIndex : nil,
+                anchor: .center,
+                animated: false,
+                scrollsOnAppear: true
+            )
         }
     }
 

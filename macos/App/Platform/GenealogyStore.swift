@@ -1339,12 +1339,12 @@ protocol GenealogyStore: Sendable {
     /// has no stored profile, so display keeps stored part order.
     func nameFormat(projectDir: String) async throws -> NameFormatOrders
     /// Catalog search (S3-07+). Empty / whitespace query → empty hits. `kinds`
-    /// restricts hits to those kinds; empty is the omnibar's default set, which
-    /// leaves out `person` / `event` / `place` until S9-35.
+    /// restricts hits to those kinds; empty is the default set (every searchable kind).
+    /// A nil `location` gives no section nudge.
     func searchCatalog(
         projectDir: String,
         query: String,
-        location: WorkspaceLocation,
+        location: WorkspaceLocation?,
         kinds: [String]
     ) async throws -> [CatalogSearchHit]
 
@@ -1623,12 +1623,5 @@ extension GenealogyStore {
             confidenceGradeID: nil,
             argument: ""
         )
-    }
-}
-
-extension GenealogyStore {
-    /// Omnibar search: the default kind set.
-    func searchCatalog(projectDir: String, query: String, location: WorkspaceLocation) async throws -> [CatalogSearchHit] {
-        try await searchCatalog(projectDir: projectDir, query: query, location: location, kinds: [])
     }
 }

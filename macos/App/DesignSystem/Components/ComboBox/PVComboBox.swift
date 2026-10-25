@@ -52,6 +52,24 @@ enum PVComboBoxMatch {
         return 2
     }
 
+    /// What the list draws under its rows.
+    enum ListLine: Equatable {
+        /// The options alone.
+        case rows
+        /// The searching line: remote results are loading and none are in yet.
+        case loading
+        /// The caller's empty line.
+        case empty
+    }
+
+    /// Options already in stay on screen while a new search runs, the way the
+    /// omnibar keeps its hits; the searching line shows only when there is
+    /// nothing else to show.
+    static func listLine(optionCount: Int, isLoading: Bool) -> ListLine {
+        if optionCount > 0 { return .rows }
+        return isLoading ? .loading : .empty
+    }
+
     /// Index of the first row that can be committed, or -1 when every row is
     /// disabled. This is the Spotlight rule's landing spot.
     static func firstEnabledIndex(in options: [PVComboBoxOption]) -> Int {
@@ -227,11 +245,15 @@ enum PVComboCommitVia: Equatable {
 /// **Remote results** (S9-11): set `onQueryChange` and the box stops
 /// filtering — the caller runs the search and passes the results as
 /// `options`, keeping the committed option among them so its label stays in
-/// the field.
+/// the field. `isLoading` is true while that search runs: with no options in
+/// yet the list shows a searching line in place of the empty line, and
+/// options already in stay on screen until the new ones replace them
+/// (`PVComboBoxMatch.listLine`). A failed search is the caller's `empty`
+/// line.
 ///
 /// **Not ported** (add here on demand, the way `PVSidebarNav` was): the
-/// multi-select token field, the "use what you typed" create row, and async
-/// `loading`. No call site needs them yet.
+/// multi-select token field and the "use what you typed" create row. No call
+/// site needs them yet.
 ///
 /// Optional host focus. The text field applies `.focused($binding, equals:)`
 /// itself, so a write to that `FocusState` lands in the field. Without this,
@@ -276,6 +298,9 @@ struct PVComboBox<Row: View, Empty: View>: View {
     /// Remote results: called with each typed query; the caller filters and
     /// passes the results as `options`. Nil filters locally.
     var onQueryChange: ((String) -> Void)?
+    /// Remote results: true while the caller's search runs. See the type's
+    /// "Remote results" note.
+    var isLoading: Bool = false
     /// One option's row content, given the typed query to highlight.
     @ViewBuilder var row: (PVComboBoxOption, String) -> Row
     /// The list's line when no option shows, given the typed query (empty
@@ -297,7 +322,6 @@ struct PVComboBox<Row: View, Empty: View>: View {
     /// stays down until then, so it does not appear at zero and resize.
     @State private var rowsMeasured = false
     @FocusState private var isFocused: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Gutter that holds the committed row's checkmark. Every row reserves it
     /// so labels stay aligned whether or not one is checked.
@@ -490,17 +514,42 @@ struct PVComboBox<Row: View, Empty: View>: View {
             ForEach(Array(visibleOptions.enumerated()), id: \.element.id) { index, option in
                 rowView(option, index: index).id(option.id)
             }
-            if visibleOptions.isEmpty {
+            switch PVComboBoxMatch.listLine(optionCount: visibleOptions.count, isLoading: isLoading) {
+            case .rows:
+                EmptyView()
+            case .loading:
+                HStack(spacing: PVSpacing.space3) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text(L10n.DesignSystem.comboBoxSearching)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall))
+                        .foregroundStyle(PVColor.textMuted)
+                }
+                .modifier(ListLineFrame(gutter: Self.checkGutter))
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier(identifier("loading") ?? "")
+            case .empty:
                 empty(highlightQuery)
                     .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
                     .foregroundStyle(PVColor.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.leading, Self.checkGutter + PVSpacing.space5)
-                    .padding(.trailing, PVSpacing.space5)
-                    .padding(.vertical, PVSpacing.space4)
+                    .modifier(ListLineFrame(gutter: Self.checkGutter))
                     .accessibilityIdentifier(identifier("empty") ?? "")
             }
+        }
+    }
+
+    /// The frame the searching and empty lines share: text starts on the
+    /// option labels' column.
+    private struct ListLineFrame: ViewModifier {
+        let gutter: CGFloat
+
+        func body(content: Content) -> some View {
+            content
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, gutter + PVSpacing.space5)
+                .padding(.trailing, PVSpacing.space5)
+                .padding(.vertical, PVSpacing.space4)
         }
     }
 
@@ -511,24 +560,14 @@ struct PVComboBox<Row: View, Empty: View>: View {
     /// window and lay out inside it means any disagreement between the two
     /// clips a row, which is exactly what happened.
     private var scroller: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                rowsStack
-            }
-            .onChange(of: activeIndex) { _, index in
-                guard visibleOptions.indices.contains(index) else { return }
-                withAnimation(reduceMotion ? nil : PVMotion.fastStandard) {
-                    proxy.scrollTo(visibleOptions[index].id)
-                }
-            }
-            .onChange(of: visibleOptions.map(\.id)) { _, ids in
-                // A narrowed list starts at the top. Without this the scroller
-                // keeps whatever offset the longer list left behind, hiding
-                // the first result of the query that just narrowed it.
-                guard let first = ids.first else { return }
-                proxy.scrollTo(first, anchor: .top)
-            }
+        let options = visibleOptions
+        return ScrollView {
+            rowsStack
         }
+        .pvScrollsRowIntoView(
+            options.indices.contains(activeIndex) ? options[activeIndex].id : nil,
+            startsAtTopWhenRowsChange: options.map(\.id)
+        )
     }
 
     /// A hidden, non-interactive copy of the rows, laid out behind the field
@@ -715,6 +754,7 @@ extension PVComboBox where Empty == Text {
         focus: PVComboFocus? = nil,
         onCommit: ((String, PVComboCommitVia) -> Bool)? = nil,
         onQueryChange: ((String) -> Void)? = nil,
+        isLoading: Bool = false,
         @ViewBuilder row: @escaping (PVComboBoxOption, String) -> Row
     ) {
         self.init(
@@ -729,6 +769,7 @@ extension PVComboBox where Empty == Text {
             onCommit: onCommit,
             focus: focus,
             onQueryChange: onQueryChange,
+            isLoading: isLoading,
             row: row,
             empty: { _ in Text(emptyLabel) }
         )
@@ -1054,6 +1095,7 @@ private final class PVComboBoxHostingView: NSHostingView<AnyView> {
 
 private struct PVComboBoxPreview: View {
     @State private var selection = ""
+    @State private var remoteSelection = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space7) {
@@ -1069,6 +1111,18 @@ private struct PVComboBoxPreview: View {
                 emptyLabel: L10n.SourceTypes.assignNoMatch,
                 label: L10n.SourceTypes.assignFieldLabel
             )
+            // Remote results mid-search: the list shows the searching line.
+            PVComboBox(
+                selection: $remoteSelection,
+                options: [],
+                placeholder: L10n.SourceTypes.assignPlaceholder,
+                emptyLabel: L10n.SourceTypes.assignNoMatch,
+                label: L10n.SourceTypes.assignFieldLabel,
+                onQueryChange: { _ in },
+                isLoading: true
+            ) { option, query in
+                PVComboBoxPlainRow(option: option, query: query)
+            }
             Text(verbatim: selection.isEmpty ? "nothing chosen" : selection)
                 .font(PVFont.mono(size: PVTypeScale.micro))
                 .foregroundStyle(PVColor.textMuted)

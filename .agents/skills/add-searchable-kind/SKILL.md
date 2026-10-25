@@ -94,6 +94,7 @@ destination UI.
   new Method if they fit `SearchHit`.
 - Swift: `CatalogSearchHit` + `GenealogyStore.searchCatalog`; FakeStore scores
   in memory with the same kind/location rules; call `markCatalogSessionHeld`.
+- Swift callers search through `CatalogSearchModel` (`macos/App/Features/Catalog/Search/`): kinds at init, an optional location per search (nil: no section nudge). The omnibar and Promote's find-another-record picker both use it; draw hits with `CatalogSearchHitRow`.
 
 Catalog RPCs use `withProjectCatalog` — see
 [`use-catalog-session`](../use-catalog-session/SKILL.md). New Method →
@@ -124,4 +125,4 @@ CGO_ENABLED=1 go test -tags fts5 ./core/search/... ./core/database/searchindex/.
 
 - Hit navigation: [`add-workspace-location`](../add-workspace-location/SKILL.md)
 - Migrations: [`add-catalog-migration`](../add-catalog-migration/SKILL.md)
-- Omnibar UI: Spike 3 S3-10 (not this skill)
+- Omnibar UI: Spike 3 S3-10; the shared search model and hit row: `macos/App/Features/Catalog/Search/` (S11-37)

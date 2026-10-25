@@ -39,7 +39,7 @@ S11-35 pinned this with tests and changed no Go code: `TestProposeHoldsAnUnshort
 - A decided row keeps its `menu` across proposals (`makeRow`'s `kept = previous`), so the picked record survives a re-proposal. Its band is refreshed from the proposal. Its reason is not: Go reports `decided` for every fixed row and `makeRow` keeps a menu item's reason when the new one is `decided`, so a menu pick keeps the sentence it was offered with. A found record was never offered, so the call writes reason `decided`. Its band can be None for a `Different` pick; S11-D3 decides how that reads.
 - `FakeStore`'s unscripted propose already holds a fixed handle of any filed record (it has no candidates); `PromoteModelTests` pins it.
 - The menu entry: `PVSelect` is a selection control with no action item. The entry is a sentinel option the row's binding intercepts before `setTarget`, which would otherwise mark the row decided and re-propose even though the target did not change; `PromoteTargetMenuRow` learns to draw it. If S11-D3 draws something a sentinel cannot do, a kit PR is cut ahead of S11-36.
-- The search: the omnibar's results model (`OmnibarResultsModel`: debounce, generation guard, errors, empty state) and its private hit row (`OmnibarHitRowView`) are Workspace internals, and the model sends no `kinds`. S11-37 moves both to a shared home with a `kinds` input and an optional location, so Promote reuses them instead of growing a copy.
+- The search: S11-37 moved the omnibar's search state to `CatalogSearchModel` and its hit row to `CatalogSearchHitRow` (`macos/App/Features/Catalog/Search/`), with kinds at init and an optional location, so Promote reuses them instead of growing a copy.
 
 ## What stays later
 

@@ -91,19 +91,17 @@ struct PVList<Item: Identifiable, Thumbnail: View, Primary: View, Secondary: Vie
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            LazyVStack(spacing: 0) {
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    row(item, index: index)
-                        .id(item.id)
-                }
-            }
-            .scrollTargetLayout()
-            .onChange(of: focusIndex) { _, index in
-                guard items.indices.contains(index) else { return }
-                proxy.scrollTo(items[index].id)
+        LazyVStack(spacing: 0) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                row(item, index: index)
+                    .id(item.id)
             }
         }
+        .scrollTargetLayout()
+        .pvScrollsRowIntoView(
+            items.indices.contains(focusIndex) ? items[focusIndex].id : nil,
+            animated: false
+        )
         .pvListChrome()
         .focusable()
         .focusEffectDisabled()

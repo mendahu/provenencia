@@ -809,13 +809,13 @@ struct GoStore: GenealogyStore {
     func searchCatalog(
         projectDir: String,
         query: String,
-        location: WorkspaceLocation,
+        location: WorkspaceLocation?,
         kinds: [String]
     ) async throws -> [CatalogSearchHit] {
         var req = Provenencia_Engine_V1_SearchCatalogRequest()
         req.projectDir = projectDir
         req.query = query
-        req.location = Self.mapWorkspaceLocationToProto(location)
+        if let location { req.location = Self.mapWorkspaceLocationToProto(location) }
         req.kinds = kinds
         let resp: Provenencia_Engine_V1_SearchCatalogResponse = try await provenenciaCall(
             method: CoreMethod.searchCatalog,

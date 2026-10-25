@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-37 — One kind-scoped catalog search
+
+**Landed 2026-10-25** in [#551](https://github.com/mendahu/provenencia/pull/551). The omnibar's search state and hit row now live in `macos/App/Features/Catalog/Search/` as `CatalogSearchModel`, `CatalogSearchHitRow` and `CatalogSearchHitPresentation`, and the omnibar is panel state around a `CatalogSearchModel` with look, copy and keyboard unchanged. The model takes the kinds to search at init and an optional location per search; `GenealogyStore.searchCatalog` takes `WorkspaceLocation?` and a nil location is sent unset, which Go reads as no section nudge. The three-argument `searchCatalog` extension is gone. Nothing outside the omnibar calls the model until S11-36's picker.
+
 ## S11-35 — Hold a record Promote did not offer
 
 **Landed 2026-10-25** in [#543](https://github.com/mendahu/provenencia/pull/543). A Promote row can now hold a record Promote never offered. `PromoteFlow.hold(subjectID:id:ref:header:)` takes the record's id, ref and list header, titles it as the menu titles every record, adds it to the row's menu with reason `decided` and band None, and selects it like a menu pick; `PromoteModel.hold` then re-proposes with the pair fixed. The engine already loaded, scored, explained and filed such a pair, and tests now pin it (`TestProposeHoldsAnUnshortlistedHandle`, `TestProposeHoldsAFoundRecord`, `TestGetPromoteClaimEvidenceForAFoundRecord`, `TestApplyPromoteGraphAlignment/files_a_found_record`); `FakeStore` already held it, pinned by `aFoundRecordIsProposedHeldAndFiled`. No Go production code changed, and nothing on the page calls `hold` until S11-36 adds the menu entry.

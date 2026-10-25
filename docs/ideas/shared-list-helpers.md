@@ -29,3 +29,14 @@ S12-02 added `macos/ProvenenciaTests/QueryHandleWaiting.swift` (`waitForQuery`, 
 ## One popup dismissal
 
 Sheets share one dismissal now (`.pvSheet`: Escape, a click outside, the discard question; S11-33). Menus and popups each dismiss their own way: `pvContextMenu`, `HistoryJumpMenuHost`, `OmnibarResultsHost` and `PVComboBox` each carry their own Escape and outside-click handling. One kit presenter for a popup, as `.pvSheet` is for a sheet, would give them the same rules; move each onto it when its host is next touched.
+
+## One popup list under the combo box and the omnibar
+
+`PVComboBox` and the omnibar results (`OmnibarResultsHost`) are the same popup list built twice. Both have a field that drives a popup of rows, ↑/↓ that stop at the ends, Return on the highlighted row, a highlight shared by the pointer and the keyboard, closing on Escape or a click outside, and the card behind the rows. Each draws them its own way:
+- **Keys.** The omnibar watches raw key codes through an `NSEvent` monitor. The combo box uses `onKeyPress` and also has Home/End, ⌘↑/⌘↓ and Page Up/Down.
+- **Highlight movement.** The omnibar moves through `PVFloatingMenuSelection.moveIndex`. The combo box moves through `PVComboBoxMatch.move`, which also skips disabled rows.
+- **Popup.** The combo box opens its own window, sized to the field and placed against the screen edges by `PVComboBoxPlacement`. The omnibar draws a 640 pt overlay in the content column.
+- **Card.** The two cards use different border and corner tokens.
+- **Scrolling** to the highlighted row is already shared (`.pvScrollsRowIntoView`).
+
+The fields are not the same, so the omnibar cannot simply become a combo box. The combo box picks a value and keeps it: `@Binding selection`, the field shows the picked label, and only typed text filters. Its Escape has two steps, and a click outside also takes focus off the field. The omnibar has no picked value: Return opens the record and clears the field, Escape keeps the query, and it has an error state of its own. The shared piece is the layer underneath: a kit popup list that owns the window and its placement, the keys, the highlight, the scrolling, closing, and the loading, empty and error lines. `PVComboBox` would add the picked-value field on top, and the omnibar the command field. It folds in the popup dismissal above.

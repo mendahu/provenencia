@@ -37,6 +37,18 @@
         }
       }
     },
+    "designSystem.comboBox.searching": {
+      "comment": "PVComboBox list line while the caller's remote search runs and no results are in yet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Searching…"
+          }
+        }
+      }
+    },
     "designSystem.formDialog.discardConfirm": {
       "comment": "Confirms discarding a form sheet's edits after an outside click",
       "extractionState": "manual",
