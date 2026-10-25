@@ -1,7 +1,7 @@
 # Review — S12-12 Graph form
 
-**Verdict:** pending round 2
-**Rounds:** 1 so far. **Reviewers:** maintainability (opus), executability (sonnet). Both read the plan and the S12-D3 brief.
+**Verdict:** Fits with changes — Ready with changes (all applied)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet). Both read the plan and the S12-D3 brief.
 
 ## To user
 
@@ -67,3 +67,41 @@
 
 ### X-7 · minor · Checks that prove little
 **Answer:** Fixed in part. STEP-3 now runs `SourcePageModelTests`, and STEP-6's app check opens both modes of the form. STEP-5 stays build-only because its view is first reachable in STEP-6, and the plan says so. The xcodebuild checks need macOS, as for every Swift PR.
+
+## Round 2
+
+Executability (sonnet) accepted the answers to X-2 – X-6 and the Out home for M-5, found every Current state row true, and raised:
+
+### X-8 · blocker · T-6 and T-8 double-start the preflight
+**Answer:** Fixed. §8 fixtures say tests never call `loadKeptLinks()` after `openEdit` starts it and wait with `waitUntil { … loadState != .loading }`. T-6 waits, and T-8 waits for `.failed`, clears the hook, then calls `loadKeptLinks()` as Read again would (2 calls).
+
+### X-9 · major · Test fixtures are private to `SourcePageModelTests`
+**Answer:** Fixed. The new test file copies `makeStore` / `makeModel` as private helpers, the repo's per-file convention. Artifacts are built as `SourceCopyModelTests.artifact(_:label:)` builds them, and §8 gives the unlink-block fixture through `PVDeleteImpactPreviewData.listed(ref:title:)`.
+
+### X-10 · major · A locked row's VoiceOver value is overwritten by the ref value
+**Answer:** Fixed. D-3 sets a locked row's value to `L10n.ArtifactChecklist.lockedValue(ref:)` ("Locked, %@"), and unlocked rows keep the ref. The key is listed in §6 Strings.
+
+### X-11 · minor · STEP-2 lists a rename in `SourceCopyModelTests.swift` that does not exist
+**Answer:** Fixed. The file was removed from STEP-2's list.
+
+### X-12 · minor · `SourceGraphForm` has no wiring for the closures
+**Answer:** Fixed. D-10: the modifier passes `onNavigate` and `dismiss` into `SourceGraphForm`'s init.
+
+### X-13 · minor · Add button help and the loading-time reason
+**Answer:** Fixed. D-11 uses `.help(reason ?? title)` as Open does. D-9 makes `addBlockedReason` nil while the workspace is loading.
+
+### X-14 · nit · T-5's edit case setup
+**Answer:** Fixed. "edit set up as T-6, with no blocks".
+
+Maintainability (opus) confirmed that M-1, M-2, M-4 – M-7 landed correctly. On M-3 it noted two stale docs and the same value-override risk as X-10 (fixed above), and raised:
+
+### M-8 · blocker · A second spoken word for the kit's lock mark beside the one Properties already uses
+**Codebase:** `L10n.Properties.bindingLocked` ("Locked"), read only at `PropertiesView.swift:385` and `:625` to voice `PVCheckboxMark(isLocked: true)`.
+**Answer:** Fixed. D-3: the kit key `designSystem.checkbox.locked` is "Locked" (the same word); both Properties readers move onto it, and `bindingLocked` and its xcstrings entry are deleted. STEP-1 lists `PropertiesView.swift`, and its `rg` check includes `Properties.bindingLocked`.
+
+### M-3 follow-ups (Q10 docs)
+**Answer:** Fixed. D-3 rewords the `PVCheckbox.swift` header comment and the README Checkbox row. STEP-2 adds `PVDeleteImpactGroupList` to the README DeleteImpact row.
+
+## Verdict
+
+No blocker is open after two rounds; the cap is reached. **Fits with changes — Ready with changes**, all applied. The plan stays `Blocked — on board S12-D3`. At board agreement the planner fills §6 Frames and Strings from the board, archives the brief and sets the plan to Planned.
